@@ -4,7 +4,6 @@
 package blackbox
 
 import (
-	"os"
 	"time"
 
 	"github.com/hashicorp/vault/api"
@@ -62,21 +61,4 @@ func (s *Session) WithParentNamespace(fn func() (*api.Secret, error)) (*api.Secr
 	s.Client.SetNamespace(parentNS)
 
 	return fn()
-}
-
-// GetParentNamespace returns the namespace from VAULT_NAMESPACE environment variable.
-// The blackbox test framework auto-creates a unique child namespace for each test
-// (e.g., "admin/bbsdk-xxxxx") for isolation. VAULT_NAMESPACE contains the base namespace
-// (e.g., "admin"), which is the parent of the test's namespace.
-// Example: VAULT_NAMESPACE="admin" → test runs in "admin/bbsdk-xxxxx" → returns "admin"
-// Note: This doesn't traverse the namespace hierarchy - it simply returns VAULT_NAMESPACE,
-// which happens to be the parent of the test namespace.
-func (s *Session) GetParentNamespace() string {
-	ns := os.Getenv("VAULT_NAMESPACE")
-	// If VAULT_NAMESPACE is not set, default to root namespace (empty string).
-	// This handles cases where tests run in non-namespaced environments.
-	if ns == "" {
-		return ""
-	}
-	return ns
 }

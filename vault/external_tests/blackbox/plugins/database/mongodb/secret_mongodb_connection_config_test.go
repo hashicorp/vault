@@ -36,7 +36,7 @@ func TestMongoDBConnectionConfigCRUDWorkflows(t *testing.T) {
 // MongoDB database connection succeeds at database/config/{name}.
 func testMongoDBConnectionConfigCreateBasic(t *testing.T, v *blackbox.Session) {
 	requireVaultEnv(t)
-	cleanup, connURL := PrepareTestContainer(t)
+	cleanup, connURL, _, _ := PrepareTestContainer(t)
 	defer cleanup()
 
 	mount := fmt.Sprintf("database-%s", sanitize(t.Name()))

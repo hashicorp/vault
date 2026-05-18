@@ -5,6 +5,7 @@ package raft
 
 import (
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
 )
@@ -13,8 +14,16 @@ import (
 func TestRaftVoters(t *testing.T) {
 	v := blackbox.New(t)
 
-	// Verify we have a healthy cluster regardless of node count
-	v.AssertClusterHealthy()
+	// Wait for a healthy cluster
+	v.EventuallyClusterHealthyUnsealed(15 * time.Second)
+
+	storage := v.MustGetConfigStorageType()
+	if storage != "raft" {
+		t.Log("skipping as cluster is not using integrated storage")
+		return
+	}
+
+	v.EventuallyRaftClusterHealthy(5 * time.Second)
 
 	t.Log("Successfully verified raft cluster is healthy with at least one voter")
 }

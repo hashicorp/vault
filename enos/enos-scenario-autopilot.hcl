@@ -175,11 +175,12 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
-      cluster_tag_key = global.vault_tag_key
-      common_tags     = global.tags
-      instance_count  = 1
-      vpc_id          = step.create_vpc.id
+      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
+      cluster_tag_key  = global.vault_tag_key
+      common_tags      = global.tags
+      instance_count   = 1
+      root_volume_size = 64
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -845,7 +846,6 @@ scenario "autopilot" {
   }
 
   step "run_verify_blackbox_tests" {
-    skip_step   = true # Skip black box tests on autopilot for now
     description = global.description.run_verify_blackbox_tests
     module      = module.vault_run_blackbox_test
     depends_on = [
@@ -869,12 +869,16 @@ scenario "autopilot" {
     ]
 
     variables {
-      leader_host      = step.get_updated_vault_cluster_ips.leader_host
-      leader_public_ip = step.get_updated_vault_cluster_ips.leader_public_ip
-      vault_root_token = step.create_vault_cluster.root_token
-      test_package     = "./vault/external_tests/blackbox/verify"
-      test_names       = ["TestVaultServerVersion"]
-      vault_edition    = matrix.edition
+      leader_host           = step.get_updated_vault_cluster_ips.leader_host
+      leader_public_ip      = step.get_updated_vault_cluster_ips.leader_public_ip
+      vault_root_token      = step.create_vault_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/verify"
+      test_names            = ["TestVaultServerVersion"]
+      vault_edition         = matrix.edition
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_install_dir     = local.vault_install_dir
     }
   }
 
