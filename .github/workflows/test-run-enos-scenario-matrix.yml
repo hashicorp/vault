@@ -43,7 +43,7 @@ on:
 
 jobs:
   metadata:
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     permissions:
       id-token: write # vault-auth
       contents: read
@@ -219,12 +219,6 @@ jobs:
 
       - uses: ./.github/actions/install-tools
 
-      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
-        with:
-          # the Terraform wrapper will break Terraform execution in Enos because
-          # it changes the output to text when we expect it to be JSON.
-          terraform_wrapper: false
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
@@ -234,10 +228,6 @@ jobs:
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-
-      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
-        with:
-          github-token: ${{ steps.secrets.outputs.github-token }}
 
       - uses: ./.github/actions/create-dynamic-config
         with:
@@ -258,7 +248,7 @@ jobs:
             echo "test_results_artifact_name=test-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
             echo "junit_results_artifact_name=junit-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
             echo "failure_summary_artifact_name=failure-summary-enos_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g').md"
-          } >> "$GITHUB_OUTPUT"
+          } | tee -a "$GITHUB_OUTPUT"
 
       - if: contains(inputs.sample-name, 'build')
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -281,50 +271,18 @@ jobs:
         run: |
           echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
 
-      - id: launch
-        name: enos scenario launch ${{ matrix.scenario.id.filter }}
-        # Continue once and retry to handle occasional blips when creating infrastructure.
-        continue-on-error: true
-        run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
-
-      - if: steps.launch.outcome == 'failure'
-        id: launch_retry
-        name: Retry enos scenario launch ${{ matrix.scenario.id.filter }}
-        run: |
-          # Output our state and plan so we can see where we're at before a retry
-          echo "Current state:"
-          enos scenario exec --cmd show --chdir ./enos ${{ matrix.scenario.id.filter }}
-          echo "Current plan:"
-          enos scenario exec --cmd plan --chdir ./enos ${{ matrix.scenario.id.filter }}
-          if ! enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}; then
-            echo "Retry failed!"
-            echo "Current state:"
-            enos scenario exec --cmd show --chdir ./enos ${{ matrix.scenario.id.filter }}
-            echo "Current plan:"
-            enos scenario exec --cmd plan --chdir ./enos ${{ matrix.scenario.id.filter }}
-          fi
-
-      - name: Upload Debug Data
-        if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - id: run-scenario
+        name: Run Enos scenario ${{ matrix.scenario.id.filter }}
+        uses: ./.github/actions/run-enos-scenario
         with:
-          # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
-          name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
-          path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
-          retention-days: 30
-        continue-on-error: true
-
-      - if: ${{ always() }}
-        id: destroy
-        name: enos scenario destroy ${{ matrix.scenario.id.filter }}
-        continue-on-error: true
-        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
-
-      - if: steps.destroy.outcome == 'failure'
-        id: destroy_retry
-        name: Retry enos scenario destroy ${{ matrix.scenario.id.filter }}
-        continue-on-error: true
-        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+          scenario-filter: ${{ matrix.scenario.id.filter }}
+          working-directory: ./enos
+          timeout: 45m0s
+          retry-timeout: 30m0s
+          destroy-timeout: 10m0s
+          upload-debug-data: 'true'
+          debug-data-retention-days: '30'
+          debug-data-path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
 
       - name: Upload Test Results
         if: always()
@@ -432,7 +390,7 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.launch.outcome }}
+          status: ${{ steps.run-scenario.outputs.launch-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
 
       - if: ${{ always() && ! cancelled() }}
@@ -440,7 +398,7 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.launch_retry.outcome }}
+          status: ${{ steps.run-scenario.outputs.launch-retry-attempted == 'true' && steps.run-scenario.outputs.launch-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
 
       - if: ${{ always() && ! cancelled() }}
@@ -448,7 +406,7 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.destroy.outcome }}
+          status: ${{ steps.run-scenario.outputs.destroy-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
 
       - if: ${{ always() && ! cancelled() }}
@@ -456,5 +414,5 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "retry enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.destroy_retry.outcome }}
+          status: ${{ steps.run-scenario.outputs.destroy-retry-attempted == 'true' && steps.run-scenario.outputs.destroy-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}

@@ -117,7 +117,7 @@ runs:
       id: build-vault-select-license
       uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
       with:
-        arch: ${{ matrix.goarch }}
+        arch: ${{ inputs.goarch }}
     - if: inputs.cgo-enabled == '0'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:

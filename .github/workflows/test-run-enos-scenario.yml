@@ -79,11 +79,6 @@ jobs:
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
         with:
           package_json_file: './ui/package.json'
-      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
-        with:
-          # the Terraform wrapper will break Terraform execution in Enos because
-          # it changes the output to text when we expect it to be JSON.
-          terraform_wrapper: false
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
         with:
@@ -93,9 +88,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Prepare scenario dependencies
         id: scenario-deps
         run: |
@@ -108,8 +100,17 @@ jobs:
         id: license
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic
       - name: Run Enos scenario
-        id: run
-        run: enos scenario run --timeout 60m0s --chdir ./enos ${{ inputs.scenario }}
+        id: run-scenario
+        uses: ./.github/actions/run-enos-scenario
+        with:
+          scenario-filter: ${{ inputs.scenario }}
+          working-directory: ./enos
+          timeout: 60m0s
+          retry-timeout: 60m0s
+          destroy-timeout: 60m0s
+          destroy-extra-args: --grpc-listen http://localhost
+          debug-data-path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
+          debug-data-retention-days: '1'
       - name: Collect logs when scenario fails
         id: collect_logs
         if: ${{ always() }}
@@ -122,15 +123,6 @@ jobs:
           name: enos-scenario-logs
           path: ${{ steps.scenario-deps.outputs.logsdir }}
           retention-days: 1
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        if: ${{ always() }}
-        with:
-          name: enos-debug-data-logs
-          path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
-          retention-days: 1
-      - name: Ensure scenario has been destroyed
-        if: ${{ always() }}
-        run: enos scenario destroy --timeout 60m0s --grpc-listen http://localhost --chdir ./enos ${{ inputs.scenario }}
       - name: Clean up Enos runtime directories
         if: ${{ always() }}
         run: |

@@ -152,6 +152,8 @@ locals {
       tls_disable = true
     }
 
+    administrative_namespace_path = "admin"
+
     storage "raft" {
       path = "/vault/data"
       node_id = "node%s"

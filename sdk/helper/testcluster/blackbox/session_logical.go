@@ -10,6 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func (s *Session) Read(path string) (*api.Secret, error) {
+	s.t.Helper()
+
+	return s.Client.Logical().Read(path)
+}
+
 func (s *Session) MustWrite(path string, data map[string]any) *api.Secret {
 	s.t.Helper()
 
