@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 )
 
@@ -157,35 +156,4 @@ func (s *Session) AssertServerVersion(version, buildDate string) {
 	s.t.Helper()
 	s.AssertVersion(version)
 	s.AssertBuildDate(version, buildDate)
-}
-
-func (s *Session) AssertReplicationDisabled() {
-	s.assertReplicationStatus("ce", "disabled")
-}
-
-func (s *Session) AssertDRReplicationStatus(expectedMode string) {
-	s.assertReplicationStatus("dr", expectedMode)
-}
-
-func (s *Session) AssertPerformanceReplicationStatus(expectedMode string) {
-	s.assertReplicationStatus("performance", expectedMode)
-}
-
-func (s *Session) assertReplicationStatus(which, expectedMode string) {
-	s.t.Helper()
-
-	secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-		return s.Client.Logical().Read("sys/replication/status")
-	})
-
-	require.NoError(s.t, err)
-	require.NotNil(s.t, secret)
-
-	data := s.AssertSecret(secret).Data()
-
-	if which == "ce" {
-		data.HasKey("mode", "disabled")
-	} else {
-		data.GetMap(which).HasKey("mode", expectedMode)
-	}
 }

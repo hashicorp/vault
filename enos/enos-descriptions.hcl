@@ -217,12 +217,6 @@ globals {
       target hosts.
     EOF
 
-    run_verify_blackbox_tests_remote = <<-EOF
-      Run blackbox verification tests directly on the Vault leader host. These tests execute
-      the Vault CLI binary on the target machine to validate version metadata and other
-      functionality that requires local binary access.
-    EOF
-
     wait_for_cluster_to_have_leader = <<-EOF
       Wait for a leader election to occur before we proceed with any further quality verification.
     EOF

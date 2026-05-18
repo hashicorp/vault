@@ -174,3 +174,7 @@ func connectPostgres(password string, useFallback bool) docker.ServiceAdapter {
 		return docker.NewServiceURL(u), nil
 	}
 }
+
+func templatedConnectionURL(connURL string) string {
+	return strings.Replace(connURL, "postgres:secret@", "{{username}}:{{password}}@", 1)
+}

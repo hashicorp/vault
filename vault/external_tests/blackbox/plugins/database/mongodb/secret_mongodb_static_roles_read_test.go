@@ -45,9 +45,9 @@ func TestMongoDBStaticRoleReadWorkflows(t *testing.T) {
 // testMongoDBStaticRoleReadReturnsConfiguration verifies reading a static role
 // returns its configuration without sensitive data.
 func testMongoDBStaticRoleReadReturnsConfiguration(t *testing.T, v *blackbox.Session) {
-	mount, connURL := setupMongoDBTest(t, v)
+	mount, _, dbName, client := setupMongoDBTest(t, v)
 
-	createMongoDBUser(t, connURL, readTestUsername, testInitialPassword)
+	createMongoDBUser(t, client, dbName, readTestUsername, testInitialPassword)
 
 	v.MustWrite(mount+"/static-roles/"+readTestRoleName, map[string]any{
 		"db_name":         testConnectionName,
@@ -68,26 +68,30 @@ func testMongoDBStaticRoleReadReturnsConfiguration(t *testing.T, v *blackbox.Ses
 	}
 
 	// Verify last_vault_rotation is present
-	v.AssertSecret(role).Data().HasKey("last_vault_rotation")
+	v.AssertSecret(role).Data().HasKeyExists("last_vault_rotation")
 }
 
 // testMongoDBStaticRoleReadNonExistentRole verifies reading a non-existent
-// static role returns an appropriate error.
+// static role returns nil secret.
 func testMongoDBStaticRoleReadNonExistentRole(t *testing.T, v *blackbox.Session) {
-	mount, _ := setupMongoDBTest(t, v)
+	mount, _, _, _ := setupMongoDBTest(t, v)
 
-	_, err := v.Read(mount + "/static-roles/nonexistent-role")
-	if err == nil {
-		t.Fatal("expected error when reading non-existent role")
+	secret, err := v.Read(mount + "/static-roles/nonexistent-role")
+	if err != nil {
+		// Error is acceptable
+		return
+	}
+	if secret != nil {
+		t.Fatal("expected nil secret when reading non-existent role")
 	}
 }
 
 // testMongoDBStaticRoleReadAfterUpdate verifies reading a static role after
 // updating it returns the updated configuration.
 func testMongoDBStaticRoleReadAfterUpdate(t *testing.T, v *blackbox.Session) {
-	mount, connURL := setupMongoDBTest(t, v)
+	mount, _, dbName, client := setupMongoDBTest(t, v)
 
-	createMongoDBUser(t, connURL, readTestUsername, testInitialPassword)
+	createMongoDBUser(t, client, dbName, readTestUsername, testInitialPassword)
 
 	v.MustWrite(mount+"/static-roles/"+readTestRoleName, map[string]any{
 		"db_name":         testConnectionName,
@@ -98,9 +102,12 @@ func testMongoDBStaticRoleReadAfterUpdate(t *testing.T, v *blackbox.Session) {
 	role1 := v.MustReadRequired(mount + "/static-roles/" + readTestRoleName)
 	v.AssertSecret(role1).Data().HasKey("rotation_period", float64(testRotationPeriod))
 
-	// Update rotation period
+	// Update rotation period. Static role updates must continue to include the
+	// existing username to avoid being treated as a username mutation.
 	newRotationPeriod := 7200
 	v.MustWrite(mount+"/static-roles/"+readTestRoleName, map[string]any{
+		"db_name":         testConnectionName,
+		"username":        readTestUsername,
 		"rotation_period": newRotationPeriod,
 	})
 
@@ -114,13 +121,13 @@ func testMongoDBStaticRoleReadAfterUpdate(t *testing.T, v *blackbox.Session) {
 // testMongoDBStaticRoleListMultipleRoles verifies LIST /static-roles
 // returns all configured role names.
 func testMongoDBStaticRoleListMultipleRoles(t *testing.T, v *blackbox.Session) {
-	mount, connURL := setupMongoDBTest(t, v)
+	mount, _, dbName, client := setupMongoDBTest(t, v)
 
 	// Create multiple static roles
 	roles := []string{"read-role-1", "read-role-2", "read-role-3"}
 	for i, roleName := range roles {
 		username := fmt.Sprintf("listuser%d", i+1)
-		createMongoDBUser(t, connURL, username, testInitialPassword)
+		createMongoDBUser(t, client, dbName, username, testInitialPassword)
 
 		v.MustWrite(mount+"/static-roles/"+roleName, map[string]any{
 			"db_name":         testConnectionName,
@@ -130,7 +137,7 @@ func testMongoDBStaticRoleListMultipleRoles(t *testing.T, v *blackbox.Session) {
 	}
 
 	list := v.MustList(mount + "/static-roles")
-	v.AssertSecret(list).Data().HasKey("keys")
+	v.AssertSecret(list).Data().HasKeyExists("keys")
 
 	keys := list.Data["keys"].([]interface{})
 	if len(keys) != 3 {

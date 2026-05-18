@@ -245,7 +245,7 @@ output "ami_ids" {
 }
 
 output "current_region" {
-  value = data.aws_region.current
+  value = data.aws_region.current.id
 }
 
 output "availability_zones" {

@@ -4,7 +4,6 @@
 package mongodb
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
@@ -45,9 +44,9 @@ func TestMongoDBStaticRoleDeleteWorkflows(t *testing.T) {
 // testMongoDBStaticRoleDeleteExistingRole verifies deleting an existing
 // static role succeeds and removes it from the list.
 func testMongoDBStaticRoleDeleteExistingRole(t *testing.T, v *blackbox.Session) {
-	mount, connURL := setupMongoDBTest(t, v)
+	mount, _, dbName, client := setupMongoDBTest(t, v)
 
-	createMongoDBUser(t, connURL, deleteTestUsername, testInitialPassword)
+	createMongoDBUser(t, client, dbName, deleteTestUsername, testInitialPassword)
 
 	v.MustWrite(mount+"/static-roles/"+deleteTestRoleName, map[string]any{
 		"db_name":         testConnectionName,
@@ -62,20 +61,24 @@ func testMongoDBStaticRoleDeleteExistingRole(t *testing.T, v *blackbox.Session) 
 	// Delete the role
 	v.MustDelete(mount + "/static-roles/" + deleteTestRoleName)
 
-	// Verify role is gone
-	_, err := v.Read(mount + "/static-roles/" + deleteTestRoleName)
-	if err == nil {
-		t.Fatal("expected error when reading deleted role")
+	// Verify role is gone - Read returns nil secret for non-existent paths
+	secret, err := v.Read(mount + "/static-roles/" + deleteTestRoleName)
+	if err != nil {
+		// Error is acceptable
+	} else if secret != nil {
+		t.Fatal("expected nil secret when reading deleted role")
 	}
 
 	// Verify role is not in list
 	list := v.MustList(mount + "/static-roles")
-	if list.Data["keys"] != nil {
-		keys := list.Data["keys"].([]interface{})
-		for _, k := range keys {
-			if k.(string) == deleteTestRoleName {
-				t.Fatalf("deleted role %s should not appear in list", deleteTestRoleName)
-			}
+	if list == nil || list.Data == nil || list.Data["keys"] == nil {
+		return
+	}
+
+	keys := list.Data["keys"].([]interface{})
+	for _, k := range keys {
+		if k.(string) == deleteTestRoleName {
+			t.Fatalf("deleted role %s should not appear in list", deleteTestRoleName)
 		}
 	}
 }
@@ -83,9 +86,9 @@ func testMongoDBStaticRoleDeleteExistingRole(t *testing.T, v *blackbox.Session) 
 // testMongoDBStaticRoleDeletePreventsCredentialAccess verifies that after
 // deleting a static role, credentials can no longer be read.
 func testMongoDBStaticRoleDeletePreventsCredentialAccess(t *testing.T, v *blackbox.Session) {
-	mount, connURL := setupMongoDBTest(t, v)
+	mount, _, dbName, client := setupMongoDBTest(t, v)
 
-	createMongoDBUser(t, connURL, deleteTestUsername, testInitialPassword)
+	createMongoDBUser(t, client, dbName, deleteTestUsername, testInitialPassword)
 
 	v.MustWrite(mount+"/static-roles/"+deleteTestRoleName, map[string]any{
 		"db_name":         testConnectionName,
@@ -95,24 +98,27 @@ func testMongoDBStaticRoleDeletePreventsCredentialAccess(t *testing.T, v *blackb
 
 	// Verify credentials can be read before deletion
 	creds := v.MustReadRequired(mount + "/static-creds/" + deleteTestRoleName)
-	v.AssertSecret(creds).Data().HasKey("username").HasKey("password")
+	v.AssertSecret(creds).Data().HasKeyExists("username")
+	v.AssertSecret(creds).Data().HasKeyExists("password")
 
 	// Delete the role
 	v.MustDelete(mount + "/static-roles/" + deleteTestRoleName)
 
-	// Verify credentials can no longer be read
-	_, err := v.Read(mount + "/static-creds/" + deleteTestRoleName)
-	if err == nil {
-		t.Fatal("expected error when reading credentials for deleted role")
+	// Verify credentials can no longer be read - Read returns nil secret for deleted roles
+	secret, err := v.Read(mount + "/static-creds/" + deleteTestRoleName)
+	if err != nil {
+		// Error is acceptable
+	} else if secret != nil {
+		t.Fatal("expected nil secret when reading credentials for deleted role")
 	}
 }
 
 // testMongoDBStaticRoleDeleteIsIdempotent verifies that deleting a role
 // multiple times succeeds without error.
 func testMongoDBStaticRoleDeleteIsIdempotent(t *testing.T, v *blackbox.Session) {
-	mount, connURL := setupMongoDBTest(t, v)
+	mount, _, dbName, client := setupMongoDBTest(t, v)
 
-	createMongoDBUser(t, connURL, deleteTestUsername, testInitialPassword)
+	createMongoDBUser(t, client, dbName, deleteTestUsername, testInitialPassword)
 
 	v.MustWrite(mount+"/static-roles/"+deleteTestRoleName, map[string]any{
 		"db_name":         testConnectionName,
@@ -123,10 +129,12 @@ func testMongoDBStaticRoleDeleteIsIdempotent(t *testing.T, v *blackbox.Session) 
 	// Delete the role first time
 	v.MustDelete(mount + "/static-roles/" + deleteTestRoleName)
 
-	// Verify role is gone
-	_, err := v.Read(mount + "/static-roles/" + deleteTestRoleName)
-	if err == nil {
-		t.Fatal("expected error when reading deleted role")
+	// Verify role is gone - Read returns nil secret for non-existent paths
+	secret, err := v.Read(mount + "/static-roles/" + deleteTestRoleName)
+	if err != nil {
+		// Error is acceptable
+	} else if secret != nil {
+		t.Fatal("expected nil secret when reading deleted role")
 	}
 
 	// Delete the role again - should succeed (idempotent)
@@ -139,18 +147,18 @@ func testMongoDBStaticRoleDeleteIsIdempotent(t *testing.T, v *blackbox.Session) 
 // testMongoDBStaticRoleDeleteNonExistentRole verifies that attempting to
 // delete a non-existent role succeeds (idempotent behavior).
 func testMongoDBStaticRoleDeleteNonExistentRole(t *testing.T, v *blackbox.Session) {
-	mount, _ := setupMongoDBTest(t, v)
+	mount, _, _, _ := setupMongoDBTest(t, v)
 
 	// Attempt to delete a role that was never created
 	v.MustDelete(mount + "/static-roles/never-existed-role")
 
-	// Verify it's still not there
-	_, err := v.Read(mount + "/static-roles/never-existed-role")
-	if err == nil {
-		t.Fatal("expected error when reading non-existent role")
+	// Verify it's still not there - Read returns nil secret for non-existent paths
+	secret, err := v.Read(mount + "/static-roles/never-existed-role")
+	if err != nil {
+		// Error is acceptable
+		return
 	}
-
-	if !strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "no value") {
-		t.Logf("Note: error message may not clearly indicate 'not found': %v", err)
+	if secret != nil {
+		t.Fatal("expected nil secret when reading non-existent role")
 	}
 }

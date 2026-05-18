@@ -178,11 +178,12 @@ scenario "smoke_sdk" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
-      cluster_tag_key = global.vault_tag_key
-      common_tags     = global.tags
-      instance_count  = 1
-      vpc_id          = step.create_vpc.id
+      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
+      cluster_tag_key  = global.vault_tag_key
+      common_tags      = global.tags
+      instance_count   = 1
+      root_volume_size = 64
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -412,7 +413,9 @@ scenario "smoke_sdk" {
 
   locals {
     // Default test packages for smoke_sdk scenario
-    default_test_packages = ["core", "secrets", "replication", "raft", "integration"]
+    // TODO: "integration" has been removed from the default packages pending
+    // a restructure to handle tests that mutate the cluster via sys endpoints.
+    default_test_packages = ["core", "secrets", "replication", "raft"]
 
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0

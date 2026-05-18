@@ -7,8 +7,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,15 +17,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
 )
 
-// =============================================================================
-// AWS Helper Functions
-// =============================================================================
+var ErrPolicyNotFound = errors.New("policy not found")
 
-// getPolicyArnByName finds and returns the ARN for an IAM policy by name.
+// getPolicyArnByName returns the ARN for a policy with the given name.
 func getPolicyArnByName(ctx context.Context, iamClient *iam.Client, policyName string) (string, error) {
 	paginator := iam.NewListPoliciesPaginator(iamClient, &iam.ListPoliciesInput{Scope: "All"})
 	for paginator.HasMorePages() {
@@ -39,10 +35,10 @@ func getPolicyArnByName(ctx context.Context, iamClient *iam.Client, policyName s
 			}
 		}
 	}
-	return "", fmt.Errorf("policy %s not found", policyName)
+	return "", ErrPolicyNotFound
 }
 
-// getRoleArnByName finds and returns the ARN for an IAM role by name.
+// getRoleArnByName returns the ARN for a role with the given name.
 func getRoleArnByName(ctx context.Context, iamClient *iam.Client, roleName string) (string, error) {
 	paginator := iam.NewListRolesPaginator(iamClient, &iam.ListRolesInput{})
 	for paginator.HasMorePages() {
@@ -59,7 +55,29 @@ func getRoleArnByName(ctx context.Context, iamClient *iam.Client, roleName strin
 	return "", fmt.Errorf("role %s not found", roleName)
 }
 
-// createTestIAMUser creates a test IAM user with DemoUser policy and returns credentials.
+// hasDemoUserPolicy determines whether or not the DemoUser policy has been
+// assigned to the AWS credential idendity being used.
+func hasDemoUserPolicy(ctx context.Context) (bool, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return false, err
+	}
+	iamClient := iam.NewFromConfig(cfg)
+
+	// Lookup DemoUser policy ARN
+	_, err = getPolicyArnByName(ctx, iamClient, "DemoUser")
+	if err == nil {
+		return true, nil
+	}
+
+	if errors.Is(err, ErrPolicyNotFound) {
+		return false, nil
+	}
+
+	return false, err
+}
+
+// createTestIAMUser creates a new IAM user with a unique name, attaches the DemoUser policy, and returns the user/access key info and AWS region.
 func createTestIAMUser(t *testing.T) (
 	userName string,
 	accessKeyID string,
@@ -159,7 +177,29 @@ func createTestIAMUser(t *testing.T) (
 	return userName, accessKeyID, secretAccessKey, demoUserPolicyArn, assumedRoleArn, awsRegion
 }
 
-// deleteIAMUserByAccessKey finds and deletes the IAM user owning the specified access key.
+// getAwsUsernameTemplate returns the username template string for Vault AWS config.
+func getAwsUsernameTemplate(awsUserName string) string {
+	const prefix = `{{ if (eq .Type "STS") }}{{ printf "`
+	const stsSuffix = `-%s-%s" (random 20) (unix_time) | truncate 32 }}{{ else }}{{ printf "`
+	const iamUserSuffix = `-%s-%s" (unix_time) (random 20) | truncate 60 }}{{ end }}`
+	return prefix + awsUserName + stsSuffix + awsUserName + iamUserSuffix
+}
+
+// getAllowDescribeRegionsPolicy returns a policy document allowing ec2:DescribeRegions.
+func getAllowDescribeRegionsPolicy() string {
+	return `{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["ec2:DescribeRegions"],
+      "Resource": ["*"]
+    }
+  ]
+}`
+}
+
+// deleteIAMUserByAccessKey deletes the IAM user that owns the given access key.
 func deleteIAMUserByAccessKey(t *testing.T, targetAccessKeyID string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
@@ -247,118 +287,4 @@ func deleteIAMUserByAccessKey(t *testing.T, targetAccessKeyID string) {
 			}
 		}
 	}
-}
-
-// getAwsUsernameTemplate builds a Vault username template for AWS credential generation.
-func getAwsUsernameTemplate(awsUserName string) string {
-	const prefix = `{{ if (eq .Type "STS") }}{{ printf "`
-	const stsSuffix = `-%s-%s" (random 20) (unix_time) | truncate 32 }}{{ else }}{{ printf "`
-	const iamUserSuffix = `-%s-%s" (unix_time) (random 20) | truncate 60 }}{{ end }}`
-	return prefix + awsUserName + stsSuffix + awsUserName + iamUserSuffix
-}
-
-// getAllowDescribeRegionsPolicy returns an IAM policy allowing ec2:DescribeRegions.
-func getAllowDescribeRegionsPolicy() string {
-	return `{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": ["ec2:DescribeRegions"],
-      "Resource": ["*"]
-    }
-  ]
-}`
-}
-
-// =============================================================================
-// Vault AWS Secrets Engine Helpers
-// =============================================================================
-
-// skipIfNoAWSCredentials skips the test if AWS credentials are missing.
-func skipIfNoAWSCredentials(t *testing.T) {
-	t.Helper()
-	accessKey := os.Getenv("AWS_ACCESS_KEY_ID")
-	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
-	if accessKey == "" || secretKey == "" {
-		t.Skip("AWS credentials not available - skipping AWS secrets engine test")
-	}
-}
-
-// setupAWSSecretsEngine enables and configures AWS secrets engine, returns mount path.
-func setupAWSSecretsEngine(t *testing.T, v *blackbox.Session, accessKeyID, secretAccessKey string, usernameTemplate string) string {
-	t.Helper()
-
-	path := fmt.Sprintf("aws-test-%d", time.Now().UnixNano())
-	t.Logf("Enabling AWS secrets engine at path: %s", path)
-	v.MustEnableSecretsEngine(path, &api.MountInput{Type: "aws"})
-
-	config := map[string]any{
-		"access_key": accessKeyID,
-		"secret_key": secretAccessKey,
-		"region":     "us-east-1",
-	}
-
-	if usernameTemplate != "" {
-		config["username_template"] = usernameTemplate
-		t.Logf("Configuring AWS secrets engine with username template")
-	} else {
-		t.Logf("Configuring AWS secrets engine with root credentials")
-	}
-
-	v.MustWrite(fmt.Sprintf("%s/config/root", path), config)
-	return path
-}
-
-// createVaultAWSRole creates a Vault AWS role with IAM user credential type.
-func createVaultAWSRole(t *testing.T, v *blackbox.Session, path, roleName, policyArn string) {
-	t.Helper()
-
-	t.Logf("Creating Vault AWS role: %s", roleName)
-	v.MustWrite(fmt.Sprintf("%s/roles/%s", path, roleName), map[string]any{
-		"credential_type":          "iam_user",
-		"permissions_boundary_arn": policyArn,
-		"policy_document":          getAllowDescribeRegionsPolicy(),
-	})
-}
-
-// verifyRoleExists checks that a Vault AWS role exists in the role list.
-func verifyRoleExists(t *testing.T, v *blackbox.Session, path, roleName string) {
-	t.Helper()
-
-	roleList := v.MustList(fmt.Sprintf("%s/roles", path))
-	if roleList == nil || roleList.Data == nil {
-		t.Fatalf("failed to list roles at path %s", path)
-	}
-
-	roleKeys, ok := roleList.Data["keys"].([]interface{})
-	if !ok || len(roleKeys) == 0 {
-		t.Fatalf("no roles found at path %s", path)
-	}
-
-	for _, key := range roleKeys {
-		if keyStr, ok := key.(string); ok && keyStr == roleName {
-			return // Role found
-		}
-	}
-
-	t.Fatalf("role %q not found in list: %v", roleName, roleKeys)
-}
-
-// verifyRoleDeleted checks that a Vault AWS role no longer exists in the role list.
-func verifyRoleDeleted(t *testing.T, v *blackbox.Session, path, roleName string) {
-	t.Helper()
-
-	t.Logf("Verifying role %q was deleted", roleName)
-	rolesList := v.MustList(fmt.Sprintf("%s/roles", path))
-	if rolesList != nil && rolesList.Data != nil {
-		if keys, ok := rolesList.Data["keys"].([]interface{}); ok {
-			for _, key := range keys {
-				if keyStr, ok := key.(string); ok && keyStr == roleName {
-					t.Fatalf("role %q still exists after deletion", roleName)
-				}
-			}
-		}
-	}
-	t.Logf("Successfully verified role %q was deleted", roleName)
 }

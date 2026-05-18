@@ -36,20 +36,19 @@ func setupLDAPSecretsEngine(t *testing.T, v *blackbox.Session, mount string) {
 	v.MustEnableSecretsEngine(mount, &api.MountInput{Type: "ldap"})
 
 	// Configure using environment variables set by ldap.tf
-	ldapServer := os.Getenv("LDAP_SERVER")
-	ldapPort := os.Getenv("LDAP_PORT")
+	ldapURLPrivate := os.Getenv("LDAP_URL_PRIVATE")
 	ldapBindDN := os.Getenv("LDAP_BIND_DN")
 	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
 	ldapUsername := os.Getenv("LDAP_USERNAME") // "enos"
 
-	if ldapServer == "" || ldapPort == "" || ldapBindDN == "" || ldapBindPass == "" {
+	if ldapURLPrivate == "" || ldapBindDN == "" || ldapBindPass == "" || ldapUsername == "" {
 		t.Fatal("Required LDAP environment variables not set")
 	}
 
 	v.MustWrite(mount+"/config", map[string]any{
 		"binddn":   ldapBindDN,
 		"bindpass": ldapBindPass,
-		"url":      "ldap://" + ldapServer + ":" + ldapPort,
+		"url":      ldapURLPrivate,
 		"userdn":   "ou=users,dc=" + ldapUsername + ",dc=com",
 	})
 }
@@ -110,14 +109,14 @@ func WriteLibrarySetWithRetry(t *testing.T, v *blackbox.Session, path string, da
 
 // checkLDAPUserExists verifies if a user exists in the LDAP directory
 func checkLDAPUserExists(t *testing.T, username string) bool {
-	ldapServer := os.Getenv("LDAP_SERVER")
-	ldapPort := os.Getenv("LDAP_PORT")
+	ldapURLPrivate := os.Getenv("LDAP_URL_PRIVATE")
 	ldapUsername := os.Getenv("LDAP_USERNAME")
 	ldapAdminPw := os.Getenv("LDAP_ADMIN_PW")
 
-	cmd := exec.Command("ldapsearch",
+	cmd := exec.Command(
+		"ldapsearch",
 		"-x",
-		"-H", "ldap://"+ldapServer+":"+ldapPort,
+		"-H", ldapURLPrivate,
 		"-b", "ou=users,dc="+ldapUsername+",dc=com",
 		"-D", "cn=admin,dc="+ldapUsername+",dc=com",
 		"-w", ldapAdminPw,
@@ -142,7 +141,7 @@ func getLDIFPath(filename string) string {
 
 // skipIfLDAPNotAvailable skips the test if LDAP configuration is not available
 func skipIfLDAPNotAvailable(t *testing.T) {
-	if os.Getenv("LDAP_SERVER") == "" {
+	if os.Getenv("LDAP_URL_PRIVATE") == "" {
 		t.Skip("LDAP configuration not available - skipping LDAP test")
 	}
 }
@@ -171,7 +170,8 @@ func waitForLDAP(t *testing.T, config *LDAPDomainConfig, timeout time.Duration) 
 
 	for time.Now().Before(deadline) {
 		attempt++
-		cmd := exec.Command("ldapsearch",
+		cmd := exec.Command(
+			"ldapsearch",
 			"-x",
 			"-H", config.SetupURL, // Use public IP for connectivity checks from GitHub runner
 			"-D", config.BindDN,
@@ -217,18 +217,17 @@ func PrepareTestLDAPDomain(
 	t.Helper()
 
 	// Get LDAP connection info from environment (set by Enos)
-	// LDAP_SERVER: private IP for Vault operations (runs on Vault leader)
-	// LDAP_SERVER_PUBLIC: public IP for setup operations (runs from GitHub runner)
-	ldapServer := os.Getenv("LDAP_SERVER")
-	ldapServerPublic := os.Getenv("LDAP_SERVER_PUBLIC")
-	ldapPort := os.Getenv("LDAP_PORT")
+	// LDAP_URL_PRIVATE: ldap url to ldap internal listerning Vault operations (runs on Vault leader)
+	// LDAP_SERVER_PUBLIC: public URL ldap external listener for setup operations (runs from GitHub runner)
+	ldapURLPrivate := os.Getenv("LDAP_URL_PRIVATE")
+	ldapURLPublic := os.Getenv("LDAP_URL_PUBLIC")
 	ldapBindDN := os.Getenv("LDAP_BIND_DN")
 	ldapBindPass := os.Getenv("LDAP_BIND_PASS")
 
-	t.Logf("LDAP Environment: SERVER=%s SERVER_PUBLIC=%s PORT=%s BIND_DN=%s BIND_PASS=%s",
-		ldapServer, ldapServerPublic, ldapPort, ldapBindDN, maskPassword(ldapBindPass))
+	t.Logf("LDAP Environment: LDAP_URL_PRIVATE=%s LDAP_URL_PUBLIC=%s LDAP_BIND_DN=%s LDAP_BIND_PASS=%s",
+		ldapURLPrivate, ldapURLPublic, ldapBindDN, maskPassword(ldapBindPass))
 
-	if ldapServer == "" || ldapServerPublic == "" || ldapPort == "" || ldapBindDN == "" || ldapBindPass == "" {
+	if ldapURLPrivate == "" || ldapURLPublic == "" || ldapBindDN == "" || ldapBindPass == "" {
 		err := fmt.Errorf("LDAP environment variables not set")
 		if requireIsolation {
 			return nil, nil, fmt.Errorf("%w - required in CI", err)
@@ -242,7 +241,7 @@ func PrepareTestLDAPDomain(
 	baseDN := "dc=enos,dc=com"      // Use existing base domain
 
 	config = &LDAPDomainConfig{
-		URL:      fmt.Sprintf("ldap://%s:%s", ldapServer, ldapPort), // Private IP for Vault
+		URL:      ldapURLPrivate,
 		BindDN:   ldapBindDN,
 		BindPass: ldapBindPass,
 		BaseDN:   baseDN,
@@ -251,7 +250,7 @@ func PrepareTestLDAPDomain(
 	}
 
 	// Store public IP for setup operations (ldapadd commands from GitHub runner)
-	config.SetupURL = fmt.Sprintf("ldap://%s:%s", ldapServerPublic, ldapPort)
+	config.SetupURL = ldapURLPublic
 
 	// Create domain structure
 	if err := createDomain(t, session, config); err != nil {
@@ -307,7 +306,8 @@ ou: %s
 
 	// Use Eventually to retry ldapadd until LDAP server is ready
 	session.Eventually(func() error {
-		cmd := exec.Command("ldapadd",
+		cmd := exec.Command(
+			"ldapadd",
 			"-x",
 			"-H", config.SetupURL, // Use public IP for setup operations from GitHub runner
 			"-D", config.BindDN,
@@ -335,7 +335,8 @@ func deleteDomain(t *testing.T, config *LDAPDomainConfig) {
 
 	// Delete both user and group OUs
 	for _, dn := range []string{config.UserDN, config.GroupDN} {
-		cmd := exec.Command("ldapdelete",
+		cmd := exec.Command(
+			"ldapdelete",
 			"-x",
 			"-r",                  // recursive
 			"-H", config.SetupURL, // Use public IP for cleanup operations from GitHub runner
@@ -383,7 +384,8 @@ userPassword: %s
 	t.Logf("  ldapsearch -x -H %s -b \"dc=enos,dc=com\" -D \"%s\" -w \"%s\" -s base",
 		config.SetupURL, userDN, password)
 
-	cmd := exec.Command("ldapadd",
+	cmd := exec.Command(
+		"ldapadd",
 		"-x",
 		"-H", config.SetupURL, // Use public IP for setup operations from GitHub runner
 		"-D", config.BindDN,
@@ -423,7 +425,8 @@ cn: %s
 %s
 `, groupDN, groupName, strings.Join(memberDNs, "\n"))
 
-	cmd := exec.Command("ldapadd",
+	cmd := exec.Command(
+		"ldapadd",
 		"-x",
 		"-H", config.URL,
 		"-D", config.BindDN,
@@ -456,7 +459,8 @@ add: member
 member: %s
 `, groupDN, userDN)
 
-	cmd := exec.Command("ldapmodify",
+	cmd := exec.Command(
+		"ldapmodify",
 		"-x",
 		"-H", config.URL,
 		"-D", config.BindDN,
@@ -489,7 +493,8 @@ delete: member
 member: %s
 `, groupDN, userDN)
 
-	cmd := exec.Command("ldapmodify",
+	cmd := exec.Command(
+		"ldapmodify",
 		"-x",
 		"-H", config.URL,
 		"-D", config.BindDN,
@@ -512,7 +517,8 @@ member: %s
 func CheckLDAPUserExistsInDomain(t *testing.T, config *LDAPDomainConfig, username string) bool {
 	t.Helper()
 
-	cmd := exec.Command("ldapsearch",
+	cmd := exec.Command(
+		"ldapsearch",
 		"-x",
 		"-H", config.URL,
 		"-b", config.UserDN,

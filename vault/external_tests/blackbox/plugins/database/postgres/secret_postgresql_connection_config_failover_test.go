@@ -74,10 +74,6 @@ func testPostgreSQLConnectionConfigCreateMultiHostPrimaryUnavailable(t *testing.
 	writeAndAssertPostgresConfig(t, v, path, templatedConnectionURL(failoverConnURL))
 }
 
-func templatedConnectionURL(connURL string) string {
-	return strings.Replace(connURL, "postgres:secret@", "{{username}}:{{password}}@", 1)
-}
-
 func writeAndAssertPostgresConfig(t *testing.T, v *blackbox.Session, path, connURL string) {
 	t.Helper()
 

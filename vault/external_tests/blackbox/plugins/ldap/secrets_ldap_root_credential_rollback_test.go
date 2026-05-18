@@ -13,6 +13,28 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
 )
 
+// TestLDAPRootCredentialRollbackWorkflows runs all rollback workflow tests
+// This is the main test function that gets triggered by enos-scenario-plugin.hcl
+func TestLDAPRootCredentialRollbackWorkflows(t *testing.T) {
+	t.Run("RollbackSuccess", func(t *testing.T) {
+		t.Parallel()
+		v := blackbox.New(t)
+		testLDAPRootCredentialRollbackSuccess(t, v)
+	})
+
+	t.Run("RollbackFailure", func(t *testing.T) {
+		t.Parallel()
+		v := blackbox.New(t)
+		testLDAPRootCredentialRollbackFailure(t, v)
+	})
+
+	t.Run("AutomaticRollback", func(t *testing.T) {
+		t.Parallel()
+		v := blackbox.New(t)
+		testLDAPRootCredentialAutomaticRollbackOnFailure(t, v)
+	})
+}
+
 // testLDAPRootCredentialRollbackSuccess tests successful rollback when rotation fails
 // Converts: secrets-rollback-invalid-config.sh
 // Scenario: Rotation fails with invalid LDAP endpoint, old password is preserved
@@ -21,7 +43,7 @@ func testLDAPRootCredentialRollbackSuccess(t *testing.T, v *blackbox.Session) {
 	cleanup, ldapConfig, err := PrepareTestLDAPDomain(t, v, isCI())
 	if err != nil {
 		if isCI() {
-			t.Fatalf("Failed to create LDAP domain in CI: %v", err)
+			t.Fatalf("LDAP domain creation failed in CI: %v", err)
 		}
 		t.Skipf("LDAP domain creation not available: %v", err)
 	}
@@ -102,7 +124,7 @@ func testLDAPRootCredentialRollbackFailure(t *testing.T, v *blackbox.Session) {
 	cleanup, ldapConfig, err := PrepareTestLDAPDomain(t, v, isCI())
 	if err != nil {
 		if isCI() {
-			t.Fatalf("Failed to create LDAP domain in CI: %v", err)
+			t.Fatalf("LDAP domain creation failed in CI: %v", err)
 		}
 		t.Skipf("LDAP domain creation not available: %v", err)
 	}
@@ -180,7 +202,7 @@ func testLDAPRootCredentialAutomaticRollbackOnFailure(t *testing.T, v *blackbox.
 	cleanup, ldapConfig, err := PrepareTestLDAPDomain(t, v, isCI())
 	if err != nil {
 		if isCI() {
-			t.Fatalf("Failed to create LDAP domain in CI: %v", err)
+			t.Fatalf("LDAP domain creation failed in CI: %v", err)
 		}
 		t.Skipf("LDAP domain creation not available: %v", err)
 	}
@@ -276,7 +298,8 @@ func verifyLDAPAuth(t *testing.T, config *LDAPDomainConfig, bindDN, password str
 	// Use SetupURL (public IP) for authentication checks from GitHub runner
 	// config.URL contains private IP which is only accessible from Vault cluster
 
-	cmd := exec.Command("ldapwhoami",
+	cmd := exec.Command(
+		"ldapwhoami",
 		"-x",
 		"-H", config.SetupURL,
 		"-D", bindDN,
@@ -290,26 +313,4 @@ func verifyLDAPAuth(t *testing.T, config *LDAPDomainConfig, bindDN, password str
 	}
 
 	return true
-}
-
-// TestLDAPRootCredentialRollbackWorkflows runs all rollback workflow tests
-// This is the main test function that gets triggered by enos-scenario-plugin.hcl
-func TestLDAPRootCredentialRollbackWorkflows(t *testing.T) {
-	t.Run("RollbackSuccess", func(t *testing.T) {
-		t.Parallel()
-		v := blackbox.New(t)
-		testLDAPRootCredentialRollbackSuccess(t, v)
-	})
-
-	t.Run("RollbackFailure", func(t *testing.T) {
-		t.Parallel()
-		v := blackbox.New(t)
-		testLDAPRootCredentialRollbackFailure(t, v)
-	})
-
-	t.Run("AutomaticRollback", func(t *testing.T) {
-		t.Parallel()
-		v := blackbox.New(t)
-		testLDAPRootCredentialAutomaticRollbackOnFailure(t, v)
-	})
 }

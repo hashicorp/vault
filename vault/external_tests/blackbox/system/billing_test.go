@@ -20,33 +20,30 @@ import (
 func TestBillingOverviewNamespaceRestrictions(t *testing.T) {
 	v := blackbox.New(t)
 
-	// Verify cluster stability first
-	v.AssertClusterHealthy()
-
 	// Check if we're in HVD (has base namespace from VAULT_NAMESPACE)
 	baseNS := v.GetParentNamespace()
 	if baseNS == "" {
 		t.Skip("Skipping namespace restriction tests - no base namespace configured (not in HVD)")
 	}
 
-	testCases := []struct {
-		name              string
+	// Verify cluster stability first
+	v.AssertClusterHealthy()
+
+	testCases := map[string]struct {
 		namespaceSwitcher func(func() (*api.Secret, error)) (*api.Secret, error)
 		expectedError     string
 	}{
-		{
-			name:              "base_namespace_supported",
+		"base_namespace_supported": {
 			namespaceSwitcher: v.WithParentNamespace,
 		},
-		{
-			name:              "root_namespace_permission_denied",
+		"root_namespace_supported": {
 			namespaceSwitcher: v.WithRootNamespace,
 			expectedError:     "permission denied",
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
 			var rawResp *api.Response
 			var err error
 			_, err = tc.namespaceSwitcher(func() (*api.Secret, error) {
