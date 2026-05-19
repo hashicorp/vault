@@ -82,7 +82,7 @@ func (c *Sys) RegisterPluginRuntime(ctx context.Context, i *RegisterPluginRuntim
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -106,7 +106,7 @@ func (c *Sys) DeregisterPluginRuntime(ctx context.Context, i *DeregisterPluginRu
 	path := pluginRuntimeCatalogPathByType(i.Type, i.Name)
 	req := c.c.NewRequest(http.MethodDelete, path)
 	resp, err := c.c.rawRequestWithContext(ctx, req)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err

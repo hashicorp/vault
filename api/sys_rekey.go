@@ -172,7 +172,7 @@ func (c *Sys) RekeyCancelWithContextWithNonce(ctx context.Context, nonce string)
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -205,7 +205,7 @@ func (c *Sys) RekeyRecoveryKeyCancelWithContextWithNonce(ctx context.Context, no
 		}
 	}
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -222,7 +222,7 @@ func (c *Sys) RekeyVerificationCancelWithContext(ctx context.Context) error {
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/verify")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -239,7 +239,7 @@ func (c *Sys) RekeyRecoveryKeyVerificationCancelWithContext(ctx context.Context)
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey-recovery-key/verify")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -380,7 +380,7 @@ func (c *Sys) RekeyDeleteBackupWithContext(ctx context.Context) error {
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/backup")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 
@@ -398,7 +398,7 @@ func (c *Sys) RekeyDeleteRecoveryBackupWithContext(ctx context.Context) error {
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/recovery-key-backup")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 
