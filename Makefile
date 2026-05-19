@@ -341,9 +341,6 @@ check-tools-external:
 check-tools-internal:
 	@$(CURDIR)/tools/tools.sh check-internal
 
-.PHONY: check-tools-pipeline
-check-tools-pipeline:
-	@$(CURDIR)/tools/tools.sh check-pipeline
 
 check-vault-in-path:
 	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
@@ -362,9 +359,6 @@ tools-external:
 tools-internal:
 	@$(CURDIR)/tools/tools.sh install-internal
 
-.PHONY: tools-pipeline
-tools-pipeline:
-	@$(CURDIR)/tools/tools.sh install-pipeline
 
 mysql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
