@@ -326,7 +326,14 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	if err != nil {
 		return "", fmt.Errorf("stored password policy is invalid: %w", err)
 	}
-	return passPolicy.Generate(ctx, rng)
+	password, err := passPolicy.Generate(ctx, rng)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate password: %w", err)
+	}
+	if policyCfg.Prefix != "" {
+		password = policyCfg.Prefix + password
+	}
+	return password, nil
 }
 
 func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
