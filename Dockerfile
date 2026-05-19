@@ -74,7 +74,7 @@ EXPOSE 8200
 # For production derivatives of this container, you should add the IPC_LOCK
 # capability so that Vault can mlock memory.
 COPY .release/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Use the Vault user as the default user for starting this container.
 USER ${NAME}
@@ -125,7 +125,7 @@ COPY ${LICENSE_SOURCE}/ /licenses/
 # this (https://github.com/hashicorp/docker-vault/blob/master/ubi/Dockerfile),
 # we copy in the Vault binary from CRT.
 RUN set -eux; \
-    microdnf install -y ca-certificates gnupg openssl libcap tzdata procps shadow-utils util-linux tar
+    microdnf install -y ca-certificates gnupg openssl libcap tzdata procps shadow-utils util-linux tar bash
 
 # Create a non-root user to run the software.
 RUN groupadd --gid 1000 vault && \
@@ -171,7 +171,7 @@ EXPOSE 8200
 # For production derivatives of this container, you should add the IPC_LOCK
 # capability so that Vault can mlock memory.
 COPY .release/docker/ubi-docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Use the Vault user as the default user for starting this container.
 USER ${NAME}
@@ -188,7 +188,7 @@ FROM ubi AS ubi-hsm-fips
 
 ## Builder:
 #
-#  A build container used to build the Vault binary. We use focal because the
+#  A build container used to build the Vault binary. We use noble because the
 #  version of glibc is old enough for all of our supported distros for editions
 #  that require CGO. This container is used in CI to build all binaries that
 #  require CGO.
@@ -206,7 +206,7 @@ FROM ubi AS ubi-hsm-fips
 #  If you have a linux machine you can also share the tools
 #    GOBIN="$(go env GOPATH)/bin" make tools
 #    docker run -it -v $(pwd):/build -v $(go env GOMODCACHE):/go-mod-cache -v "$(go env GOPATH)/bin":/opt/tools/bin --env GITHUB_TOKEN=$GITHUB_TOKEN --env GO_TAGS='ui enterprise cgo hsm venthsm' --env GOARCH=s390x --env GOOS=linux --env VERSION=1.20.0-beta1 --env VERSION_METADATA=ent.hsm --env GOMODCACHE=/go-mod-cache --env CGO_ENABLED=1 builder make ci-build
-FROM ubuntu:focal AS builder
+FROM ubuntu:noble AS builder
 
 # Pass in the GO_VERSION as a build-arg
 ARG GO_VERSION

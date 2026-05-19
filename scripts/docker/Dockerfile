@@ -59,7 +59,7 @@ EXPOSE 8200
 # For production derivatives of this container, you should add the IPC_LOCK
 # capability so that Vault can mlock memory.
 COPY ./scripts/docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-ENTRYPOINT ["docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 
 # Use the Vault user as the default user for starting this container.
 USER vault

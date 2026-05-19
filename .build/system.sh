@@ -14,6 +14,7 @@ install() {
 # https://packages.ubuntu.com/search?suite=noble&section=all&arch=any&keywords=crossbuild-essential&searchon=names
 
 apt-get update
+apt-get upgrade -y --no-install-recommends
 apt-get install -y --no-install-recommends build-essential \
   gcc-s390x-linux-gnu \
   crossbuild-essential-s390x \

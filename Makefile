@@ -1,3 +1,28 @@
+VAULT_VERSION := 0.0.0-dev-2
+
+podman-push:
+	podman push quay.io/rhn-support-gong/vault:$(VAULT_VERSION)
+
+dist/linux/amd64/vault:
+	mkdir -p dist/linux/amd64
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o dist/linux/amd64/vault .
+
+.dev-licenses:
+	mkdir -p .dev-licenses
+	cp LICENSE .dev-licenses/
+
+podman-build: dist/linux/amd64/vault .dev-licenses
+	podman build \
+	--platform linux/amd64 \
+	--target ubi \
+	--build-arg BIN_NAME=vault \
+	--build-arg NAME=vault \
+	--build-arg PRODUCT_VERSION=$(VAULT_VERSION) \
+	--build-arg LICENSE_SOURCE=.dev-licenses \
+	--build-arg LICENSE_DEST=/licenses \
+	-t quay.io/rhn-support-gong/vault:$(VAULT_VERSION) \
+	-f Dockerfile .
+
 # Determine this makefile's path.
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
