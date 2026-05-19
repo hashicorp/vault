@@ -110,7 +110,7 @@
       {{#let (get @issuer field) as |value|}}
         {{#if (includes field (array "ca_chain" "certificate"))}}
           <InfoTableRow @label={{this.label field}} @value={{value}}>
-            <CertificateCard @data={{value}} />
+            <EncodedDataCard @data={{value}} />
           </InfoTableRow>
         {{else if (eq field "key_id")}}
           <InfoTableRow @label={{this.label field}} @value={{value}}>

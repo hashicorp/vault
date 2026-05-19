@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export { default } from 'core/components/certificate-card';
+export { default } from 'core/components/encoded-data-card';
