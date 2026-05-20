@@ -17,3 +17,5 @@ declare module '@icholy/duration' {
 }
 
 declare module 'vault/tests/helpers/vault-keys';
+
+declare module '@carbon/charts/styles.css';
