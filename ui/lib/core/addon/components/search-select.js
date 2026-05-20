@@ -148,11 +148,20 @@ export default class SearchSelect extends Component {
           ? options
           : [...this.addSearchText(options)];
 
-        //  set selectedOptions and remove matches from dropdown list
-        const values = this.args.parentManageSelected
-          ? this.args.parentManageSelected.map((opt) => opt[this.idKey])
-          : this.args.inputValue;
-        this.selectedOptions = values ? this.formatInputAndUpdateDropdown(values) : [];
+        // preserve full selected objects when parent manages them, but still remove matches from dropdown
+        if (this.args.parentManageSelected) {
+          const selectedIds = this.args.parentManageSelected.map((opt) => opt[this.idKey]);
+          selectedIds.forEach((id) => {
+            const matchingOption = this.dropdownOptions.find((opt) => opt[this.idKey] === id);
+            if (matchingOption) {
+              this.dropdownOptions = removeFromArray(this.dropdownOptions, matchingOption);
+            }
+          });
+        } else {
+          this.selectedOptions = this.args.inputValue
+            ? this.formatInputAndUpdateDropdown(this.args.inputValue)
+            : [];
+        }
       }
       this.shouldUseFallback = this.args.fallbackComponent && !this.args.options?.length;
       return;

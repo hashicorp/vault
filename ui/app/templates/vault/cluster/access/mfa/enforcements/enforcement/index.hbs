@@ -3,14 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{this.model.name}} @icon="lock">
+<Page::Header @title={{@model.name}} @icon="lock">
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
         (hash label="Multi-factor authentication" route="vault.cluster.access.mfa.methods.index")
         (hash label="Enforcements" route="vault.cluster.access.mfa.enforcements.index")
-        (hash label=this.model.name)
+        (hash label=@model.name)
       }}
     />
   </:breadcrumbs>
@@ -23,7 +23,7 @@
         @route="vault.cluster.access.mfa.enforcements.enforcement"
         @query={{hash tab="targets"}}
         data-test-tab="targets"
-        @model={{this.model}}
+        @model={{@model.name}}
       >
         Targets
       </LinkTo>
@@ -31,7 +31,7 @@
         @route="vault.cluster.access.mfa.enforcements.enforcement"
         @query={{hash tab="methods"}}
         data-test-tab="methods"
-        @model={{this.model}}
+        @model={{@model.name}}
       >
         Methods
       </LinkTo>
@@ -50,7 +50,7 @@
     <div class="toolbar-separator"></div>
     <ToolbarLink
       @route="vault.cluster.access.mfa.enforcements.enforcement.edit"
-      @model={{this.model.id}}
+      @model={{@model.name}}
       data-test-enforcement-edit
     >
       Edit enforcement
@@ -110,14 +110,14 @@
     </Hds::ApplicationState>
   {{/if}}
 {{else if (eq this.tab "methods")}}
-  {{#each this.model.mfa_methods as |method|}}
+  {{#each @model.methods as |method|}}
     <Mfa::MethodListItem @model={{method}} />
   {{/each}}
 {{/if}}
 
 <ConfirmationModal
   @title="Delete enforcement?"
-  @confirmText={{this.model.name}}
+  @confirmText={{@model.name}}
   @toConfirmMsg="deleting the transformation."
   @buttonText="Delete"
   @isActive={{this.showDeleteConfirmation}}
@@ -126,7 +126,7 @@
 >
   <p class="has-bottom-margin-m">
     Deleting the
-    <strong>{{this.model.name}}</strong>
+    <strong>{{@model.name}}</strong>
     enforcement will mean that the MFA method that depends on it will no longer enforce multi-factor authentication.
     <br /><br />
     Deleting this enforcement cannot be undone; it will have to be recreated.
