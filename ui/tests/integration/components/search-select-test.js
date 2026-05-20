@@ -163,6 +163,44 @@ module('Integration | Component | search select', function (hooks) {
     assert.dom('.text-overflow-ellipsis').exists('selected option text has overflow class');
   });
 
+  test('it preserves parentManageSelected objects for rendering and removes them from dropdown options', async function (assert) {
+    const options = [
+      { id: '123456', type: 'TOTP' },
+      { id: '654321', type: 'Duo' },
+    ];
+    const selected = [options[0]];
+
+    this.set('options', options);
+    this.set('selected', selected);
+    this.set('onChange', sinon.spy());
+
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @options={{this.options}}
+        @onChange={{this.onChange}}
+        @parentManageSelected={{this.selected}}
+        @shouldRenderName={{true}}
+        @nameKey="type"
+      />
+    `);
+
+    assert
+      .dom('[data-test-selected-option="0"]')
+      .includesText('TOTP', 'selected option renders parent-managed nameKey');
+    assert.dom('[data-test-smaller-id="0"]').hasText('123456', 'selected option renders smaller id');
+
+    await clickTrigger();
+    await settled();
+
+    assert.strictEqual(component.options.length, 1, 'selected option is removed from dropdown options');
+    assert.strictEqual(
+      component.options.objectAt(0).text,
+      'Duo 654321',
+      'remaining option renders correctly'
+    );
+  });
+
   test('it filters options and adds option to create new item when text is entered', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);

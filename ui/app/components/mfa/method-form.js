@@ -22,16 +22,26 @@ import { task } from 'ember-concurrency';
  * @param {onClose} [onClose] - callback when cancel is triggered
  */
 export default class MfaMethodForm extends Component {
-  @service store;
   @service flashMessages;
+  @service api;
 
   @tracked editValidations;
   @tracked isEditModalActive = false;
 
   @task
   *save() {
+    const { data } = this.args.form.toJSON();
+
     try {
-      yield this.args.model.save();
+      if (this.args.form.type === 'totp') {
+        yield this.api.identity.mfaUpdateTotpMethod(data.id, { ...data });
+      } else if (this.args.form.type === 'duo') {
+        yield this.api.identity.mfaUpdateDuoMethod(data.id, { ...data });
+      } else if (this.args.form.type === 'okta') {
+        yield this.api.identity.mfaUpdateOktaMethod(data.id, { ...data });
+      } else if (this.args.form.type === 'pingid') {
+        yield this.api.identity.mfaUpdatePingIdaMethod(data.id, { ...data });
+      }
       this.args.onSave();
     } catch (e) {
       this.flashMessages.danger(e.errors?.join('. ') || e.message);
@@ -39,19 +49,18 @@ export default class MfaMethodForm extends Component {
   }
 
   @action
+  cancel() {
+    this.args?.onClose?.();
+  }
+
+  @action
   async initSave(e) {
     e.preventDefault();
-    const { isValid, state } = await this.args.model.validate();
+    const { isValid, state } = await this.args.form.toJSON();
     if (isValid) {
       this.isEditModalActive = true;
     } else {
       this.editValidations = state;
     }
-  }
-
-  @action
-  cancel() {
-    this.args.model.rollbackAttributes();
-    this.args.onClose();
   }
 }

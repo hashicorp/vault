@@ -38,7 +38,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
     // Fill out form
-    await fillIn('[data-test-mlef-input="name"]', 'salad-college-setting');
+    await fillIn(GENERAL.inputByAttr('name'), 'salad-college-setting');
     await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
@@ -54,9 +54,13 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('New enforcement', 'Title renders');
     await click('[data-test-mlef-save]');
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('name'))
+      .exists({ count: 1 }, 'Name field validation errors are displayed');
     assert
       .dom('[data-test-inline-error-message]')
-      .exists({ count: 3 }, 'Validation error messages are displayed');
+      .exists({ count: 2 }, 'MFA methods and Targets validation error messages are displayed');
 
     await click('[data-test-mlef-cancel]');
     assert.strictEqual(
@@ -73,7 +77,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     );
     await click('[data-test-enforcement-create]');
 
-    await fillIn('[data-test-mlef-input="name"]', 'foo');
+    await fillIn(GENERAL.inputByAttr('name'), 'foo');
     await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
@@ -168,7 +172,10 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     // methods tab
     await click(GENERAL.tab('methods'));
     assert.dom(GENERAL.tab('methods')).hasClass('active', 'Methods tab is active');
-    const method = this.owner.lookup('service:store').peekRecord('mfa-method', enforcement.mfa_method_ids[0]);
+    const methodCollections = ['mfaTotpMethods', 'mfaDuoMethods', 'mfaOktaMethods', 'mfaPingidMethods'];
+    const method = methodCollections
+      .map((collection) => this.server.db[collection].find(enforcement.mfa_method_ids[0]))
+      .find(Boolean);
     assert
       .dom(`[data-test-mfa-method-list-item="${method.id}"]`)
       .includesText(
@@ -208,10 +215,13 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click('[data-test-list-item-link="edit"]');
 
     assert.dom('h1').hasText('Update enforcement', 'Title renders');
-    assert.dom('[data-test-mlef-input="name"]').hasValue(enforcement.name, 'Name input is populated');
-    assert.dom('[data-test-mlef-input="name"]').isDisabled('Name is disabled and cannot be changed');
+    assert.dom(GENERAL.inputByAttr('name')).hasValue(enforcement.name, 'Name input is populated');
+    assert.dom(GENERAL.inputByAttr('name')).isDisabled('Name is disabled and cannot be changed');
 
-    const method = this.owner.lookup('service:store').peekRecord('mfa-method', enforcement.mfa_method_ids[0]);
+    const methodCollections = ['mfaTotpMethods', 'mfaDuoMethods', 'mfaOktaMethods', 'mfaPingidMethods'];
+    const method = methodCollections
+      .map((collection) => this.server.db[collection].find(enforcement.mfa_method_ids[0]))
+      .find(Boolean);
     assert
       .dom('[data-test-selected-option]')
       .includesText(`${method.name} ${method.id}`, 'Selected mfa method renders');
@@ -232,7 +242,6 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     await click('[data-test-mlef-remove-target="Group"]');
     await click('[data-test-mlef-remove-target="Authentication method"]');
     await click('[data-test-mlef-save]');
-
     await waitFor('[data-test-target]', { timeout: 5000 });
     assert.strictEqual(
       currentRouteName(),
