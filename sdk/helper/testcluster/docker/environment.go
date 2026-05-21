@@ -423,12 +423,16 @@ func (n *DockerClusterNode) setupCert(ip string) error {
 }
 
 func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerCluster {
+	t.Helper()
+
 	dc, err := NewTestDockerClusterWithErr(t, opts)
 	require.NoError(t, err)
 	return dc
 }
 
 func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*DockerCluster, error) {
+	t.Helper()
+
 	if opts == nil {
 		opts = &DockerClusterOptions{DisableMlock: true}
 	}
@@ -921,7 +925,6 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	envs := []string{
 		// For now we're using disable_mlock, because this is for testing
 		// anyway, and because it prevents us using external plugins.
-		"SKIP_SETCAP=true",
 		"VAULT_LOG_FORMAT=json",
 		"VAULT_LICENSE=" + opts.VaultLicense,
 		"VAULT_DISABLE_MLOCK=" + strconv.FormatBool(opts.DisableMlock),
@@ -946,7 +949,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		PreDelete:         true,
 		DoNotAutoRemove:   true,
 		PostStart:         postStartFunc,
-		Capabilities:      []string{"NET_ADMIN"},
+		Capabilities:      []string{"NET_ADMIN", "IPC_LOCK", "SETFCAP"},
 		OmitLogTimestamps: true,
 		VolumeNameToMountPoint: map[string]string{
 			n.DataVolumeName: "/vault/file",
