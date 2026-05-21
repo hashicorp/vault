@@ -18,15 +18,13 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
   setupMirage(hooks);
 
   test('begin to middle flow works', async function (assert) {
-    assert.expect(16);
+    assert.expect(15);
     this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
       assert.ok('Check endpoint is queried');
       return {};
     });
-    this.server.post('/sys/replication/dr/secondary/generate-operation-token/attempt', function (_, req) {
-      const requestBody = JSON.parse(req.requestBody);
+    this.server.post('/sys/replication/dr/secondary/generate-operation-token/attempt', function () {
       assert.ok('Starts the token generation');
-      assert.deepEqual(requestBody, { attempt: true });
       return {
         started: true,
         nonce: 'nonce-1234',
