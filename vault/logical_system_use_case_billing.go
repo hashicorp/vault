@@ -27,56 +27,159 @@ const (
 
 func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 	return []*framework.Path{
-		{
-			Pattern: "billing/overview$",
-			Fields: map[string]*framework.FieldSchema{
-				"refresh_data": {
-					Type:        framework.TypeBool,
-					Description: "If set, updates the billing counts for the current month before returning. This is an expensive operation with potential performance impact and should be used sparingly.",
-					Query:       true,
-				},
-				"start_month": {
-					Type:        framework.TypeString,
-					Description: "Start month in YYYY-MM format (inclusive). If not specified, defaults to the oldest available month within BillingRetentionMonths.",
-					Query:       true,
-				},
-				"end_month": {
-					Type:        framework.TypeString,
-					Description: "End month in YYYY-MM format (inclusive). If not specified, defaults to the current month.",
-					Query:       true,
-				},
+		b.billingOverviewPath(),
+		b.billingConfigPath(),
+	}
+}
+
+func (b *SystemBackend) billingOverviewPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "billing/overview$",
+		Fields: map[string]*framework.FieldSchema{
+			"refresh_data": {
+				Type:        framework.TypeBool,
+				Description: "If set, updates the billing counts for the current month before returning. This is an expensive operation with potential performance impact and should be used sparingly.",
+				Query:       true,
 			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleUseCaseConsumption,
-					Summary:  "Reports consumption billing metrics on a monthly granularity.",
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: http.StatusText(http.StatusOK),
-							Fields: map[string]*framework.FieldSchema{
-								"months": {
-									Type:        framework.TypeSlice,
-									Description: "List of monthly billing data.",
-								},
+			"start_month": {
+				Type:        framework.TypeString,
+				Description: "Start month in YYYY-MM format (inclusive). If not specified, defaults to the oldest available month within BillingRetentionMonths.",
+				Query:       true,
+			},
+			"end_month": {
+				Type:        framework.TypeString,
+				Description: "End month in YYYY-MM format (inclusive). If not specified, defaults to the current month.",
+				Query:       true,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleBillingOverview,
+				Summary:  "Reports consumption billing metrics on a monthly granularity.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"months": {
+								Type:        framework.TypeSlice,
+								Description: "List of monthly billing data.",
 							},
-						}},
-						http.StatusNoContent: {{
-							Description: http.StatusText(http.StatusNoContent),
-						}},
-						http.StatusBadRequest: {{
-							Description: http.StatusText(http.StatusBadRequest),
-						}},
-						http.StatusInternalServerError: {{
-							Description: http.StatusText(http.StatusInternalServerError),
-						}},
-					},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
 				},
 			},
 		},
 	}
 }
 
-func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) billingConfigPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "billing/config$",
+		Fields: map[string]*framework.FieldSchema{
+			"retention_months": {
+				Type:        framework.TypeInt,
+				Description: fmt.Sprintf("Number of months to retain billing data. Must be between %d and %d months. Defaults to %d months.", billing.MinBillingRetentionMonths, billing.MaxBillingRetentionMonths, billing.DefaultBillingRetentionMonths),
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleBillingConfigRead,
+				Summary:  "Read the billing data retention configuration.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"retention_months": {
+								Type:        framework.TypeInt,
+								Description: "Number of months of billing data to retain.",
+							},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleBillingConfigWrite,
+				Summary:  "Configure the billing data retention period.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
+			},
+		},
+	}
+}
+
+func (b *SystemBackend) handleBillingConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	retentionMonths, err := b.Core.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get billing retention configuration: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"retention_months": retentionMonths,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handleBillingConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	retentionMonths := data.Get("retention_months").(int)
+	if retentionMonths < billing.MinBillingRetentionMonths || retentionMonths > billing.MaxBillingRetentionMonths {
+		return logical.ErrorResponse(fmt.Sprintf("retention_months must be between %d and %d months", billing.MinBillingRetentionMonths, billing.MaxBillingRetentionMonths)), logical.ErrInvalidRequest
+	}
+
+	// Get current retention to check if it's being increased
+	currentRetention, err := b.Core.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current billing retention configuration: %w", err)
+	}
+
+	// Store the configuration
+	if err := b.Core.UpdateBillingRetentionMonths(ctx, retentionMonths); err != nil {
+		return nil, fmt.Errorf("failed to set billing retention configuration: %w", err)
+	}
+
+	resp := &logical.Response{}
+
+	// Add warning if retention period is being increased
+	if retentionMonths > currentRetention {
+		resp.Warnings = append(resp.Warnings, fmt.Sprintf(
+			"Retention period increased from %d to %d months. Historical data will only be available for months within the previous retention period. Older months outside the previous retention range will not have data.",
+			currentRetention, retentionMonths))
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) handleBillingOverview(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	refreshData := data.Get("refresh_data").(bool)
 
 	currentMonth := time.Now().UTC()
@@ -91,7 +194,13 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		refreshData = false
 	}
 
-	startMonth, endMonth, isOutOfRetention, err := parseStartEndMonths(data, currentMonth)
+	// Get the configured retention period
+	retentionMonths, err := b.Core.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get billing retention configuration: %w", err)
+	}
+
+	startMonth, endMonth, isOutOfRetention, err := parseStartEndMonths(data, currentMonth, retentionMonths)
 	if err != nil {
 		return nil, err
 	}
@@ -132,10 +241,10 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 }
 
 // parseStartEndMonths parses the start and end month parameters from the request and validates if they are valid.
-// If they are outside of the BillingRetentionMonths range, it returns a warning. If no parameter is specified,
-// the start and end defaults to the start of the BillingRetentionMonths range and the current month, respectively.
-func parseStartEndMonths(data *framework.FieldData, currentMonth time.Time) (time.Time, time.Time, bool, error) {
-	defaultStartMonth := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.BillingRetentionMonths+1, 0)
+// If they are outside of the retention range, it returns a warning. If no parameter is specified,
+// the start and end defaults to the start of the retention range and the current month, respectively.
+func parseStartEndMonths(data *framework.FieldData, currentMonth time.Time, retentionMonths int) (time.Time, time.Time, bool, error) {
+	defaultStartMonth := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths+1, 0)
 	defaultEndMonth := timeutil.StartOfMonth(currentMonth)
 
 	parseMonth := func(key string, defaultMonth time.Time) (time.Time, error) {

@@ -467,6 +467,9 @@ type Core struct {
 	// consumptionBillingLock protects the consumptionBilling struct
 	consumptionBillingLock sync.RWMutex
 
+	// billingConfigLock protects billing configuration reads and writes
+	billingConfigLock sync.RWMutex
+
 	// consumptionBillingSubView is the sub-view of the system barrier view that is used to store consumption billing metrics
 	consumptionBillingSubView *BarrierView
 
