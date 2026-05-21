@@ -2711,6 +2711,49 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, en
 	return mfaAny, nil
 }
 
+func (c *Core) registerAuthLeaseForToken(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth, role string) error {
+	// Populate the client token, accessor, and TTL
+	auth.ClientToken = te.ID
+	auth.Accessor = te.Accessor
+	auth.TTL = te.TTL
+	auth.Orphan = te.Parent == ""
+
+	switch auth.TokenType {
+	case logical.TokenTypeBatch:
+		// Ensure it's not marked renewable since it isn't
+		auth.Renewable = false
+	case logical.TokenTypeService, logical.TokenTypeEnt:
+		if auth.TokenType == logical.TokenTypeEnt {
+			// Ensure it's not marked renewable since enterprise tokens are not renewable
+			auth.Renewable = false
+		}
+		// Register with the expiration manager
+		if err := c.expiration.RegisterAuth(ctx, te, auth, role); err != nil {
+			return err
+		}
+		if te.ExternalID != "" {
+			auth.ClientToken = te.ExternalID
+		}
+		// Successful login, remove any entry from userFailedLoginInfo map
+		// if it exists. This is done for service tokens only.
+		if auth.TokenType == logical.TokenTypeService && auth.Alias != nil {
+			loginUserInfoKey := FailedLoginUser{
+				aliasName:     auth.Alias.Name,
+				mountAccessor: auth.Alias.MountAccessor,
+			}
+
+			// We don't need to try to delete the lockedUsers storage entry, since we're
+			// processing a login request. If a login attempt is allowed, it means the user is
+			// unlocked and we only add storage entry when the user gets locked.
+			if err := updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
 // role is the login role used as part of the creation of the token entry. If not
@@ -2752,51 +2795,13 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		c.logger.Error("failed to create token", "error", err)
 		return possiblyWrapOverloadedError("failed to create token", err)
 	}
-
-	// Populate the client token, accessor, and TTL
-	auth.ClientToken = te.ID
-	auth.Accessor = te.Accessor
-	auth.TTL = te.TTL
-	auth.Orphan = te.Parent == ""
-
-	switch auth.TokenType {
-	case logical.TokenTypeBatch:
-		// Ensure it's not marked renewable since it isn't
-		auth.Renewable = false
-	case logical.TokenTypeService:
-		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(ctx, &te, auth, role); err != nil {
-			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
-				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
-			}
-			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
-			return possiblyWrapOverloadedError("failed to register token lease during login request", err)
+	if err := c.registerAuthLeaseForToken(ctx, &te, auth, role); err != nil {
+		if revokeErr := c.tokenStore.revokeOrphan(ctx, te.ID); revokeErr != nil {
+			c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", revokeErr)
 		}
-		if te.ExternalID != "" {
-			auth.ClientToken = te.ExternalID
-		}
-		// Successful login, remove any entry from userFailedLoginInfo map
-		// if it exists. This is done for service tokens (for oss) here.
-		// For ent it is taken care by registerAuth RPC calls.
-		if auth.Alias != nil {
-			loginUserInfoKey := FailedLoginUser{
-				aliasName:     auth.Alias.Name,
-				mountAccessor: auth.Alias.MountAccessor,
-			}
-
-			// We don't need to try to delete the lockedUsers storage entry, since we're
-			// processing a login request. If a login attempt is allowed, it means the user is
-			// unlocked and we only add storage entry when the user gets locked.
-			err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true)
-			if err != nil {
-				return err
-			}
-		}
-	case logical.TokenTypeEnt:
-		// Ensure it's not marked renewable since enterprise tokens are not renewable
-		auth.Renewable = false
+		c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
+		return possiblyWrapOverloadedError("failed to register token lease during login request", err)
 	}
-
 	return nil
 }
 
