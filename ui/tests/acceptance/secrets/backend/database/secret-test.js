@@ -617,7 +617,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       path "${backend}/static-roles/*" {
         capabilities = ["delete"]
       }
-      path "${backend}/config/*" {
+      path "${backend}/config" {
         capabilities = ["list", "create", "read", "update"]
       }
       path "${backend}/creds/*" {

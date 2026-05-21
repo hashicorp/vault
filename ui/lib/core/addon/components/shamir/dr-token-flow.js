@@ -5,6 +5,7 @@
 
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { service } from '@ember/service';
 import ShamirFlowComponent from './flow';
 
 /**
@@ -20,6 +21,8 @@ import ShamirFlowComponent from './flow';
  * @param {function} onCancel - if provided, function will be triggered on Cancel
  */
 export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
+  @service api;
+
   @tracked generateWithPGP = false; // controls which form shows
   @tracked savedPgpKey = null;
   @tracked otp = '';
@@ -168,8 +171,9 @@ export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
   @action
   async onCancelClose() {
     if (!this.encodedToken && this.started) {
-      const adapter = this.store.adapterFor('cluster');
-      await adapter.generateDrOperationToken({}, { cancel: true, token: this.primaryRootToken });
+      // if primaryRootToken is not defined then make unauthenticated request
+      const headers = this.api.buildHeaders({ token: this.primaryRootToken || '' });
+      await this.api.sys.replicationDrSecondaryGenerateOperationTokenCancel(headers);
     }
     this.reset();
     if (this.args.onCancel) {

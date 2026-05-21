@@ -5,7 +5,6 @@
 
 import { action } from '@ember/object';
 import Route from '@ember/routing/route';
-import { service } from '@ember/service';
 import Ember from 'ember';
 
 /**
@@ -51,8 +50,6 @@ export function withConfirmLeave(modelPath = 'model', silentCleanupPaths) {
       return SuperClass;
     }
     return class ConfirmLeave extends SuperClass {
-      @service store;
-
       _rollbackModel(modelPath) {
         const model = this.controller.get(modelPath);
         // we only want to complete rollback if the model is dirty and not saving
