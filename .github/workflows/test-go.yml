@@ -347,20 +347,20 @@ jobs:
         name: Build Docker image with custom vault binary
         run: |
           set -exo pipefail
-          
+
           if [ "${{ needs.test-matrix.outputs.is-ent-branch }}" == "true" ]; then
             go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:latest -target=hashicorp/vault-enterprise-ci:latest -binary=./vault-binary
-            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:2.0.0-ent.hsm -target=hashicorp/vault-enterprise-ci:latest-hsm -binary=./vault-hsm-binary -hsm
-          
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:2.0.1-ent.hsm -target=hashicorp/vault-enterprise-ci:latest-hsm -binary=./vault-hsm-binary -hsm
+
             # Verify the images were built successfully
             docker images hashicorp/vault-enterprise-ci:latest
             echo "image=hashicorp/vault-enterprise-ci:latest" >> "$GITHUB_OUTPUT"
-          
+
             docker images hashicorp/vault-enterprise-ci:latest-hsm
             echo "hsmimage=hashicorp/vault-enterprise-ci:latest-hsm" >> "$GITHUB_OUTPUT"
           else
             go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault:latest -target=hashicorp/vault-ci:latest -binary=./vault-binary
-          
+
             # Verify the images was built successfully
             docker images hashicorp/vault-ci:latest
             echo "image=hashicorp/vault-ci:latest" >> "$GITHUB_OUTPUT"
