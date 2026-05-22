@@ -26,6 +26,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
     this.store = this.owner.lookup('service:store');
+    this.api = this.owner.lookup('service:api');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.server.post('/sys/auth/foo', noopStub());
     this.onMountSuccess = sinon.spy();
@@ -119,6 +120,43 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.true(
         this.flashSuccessSpy.calledWith('Successfully mounted the approle auth method at foo.'),
         'Renders correct flash message'
+      );
+    });
+
+    test('it should render identity_token_key field for WIF engine type', async function (assert) {
+      const keyListStub = sinon.stub(this.api.identity, 'oidcListKeys').resolves({ keys: ['foo'] });
+      const keyWriteStub = sinon.stub(this.api.identity, 'oidcWriteKey').resolves();
+      const authEnableStub = sinon.stub(this.api.sys, 'authEnableMethod').resolves();
+
+      await render(
+        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+      );
+      await mountBackend('aws');
+      assert.true(keyListStub.calledOnce, 'calls the API to list OIDC keys when WIF engine is selected');
+
+      await click(GENERAL.button('Method Options'));
+      assert
+        .dom(GENERAL.fieldByAttr('config.identity_token_key'))
+        .exists('renders identity_token_key field for WIF engine type');
+      await click(GENERAL.searchSelect.trigger('oidc-key'));
+      assert
+        .dom(GENERAL.searchSelect.option())
+        .hasText('foo', 'renders options from API in identity_token_key search select');
+
+      await fillIn(GENERAL.searchSelect.searchInput, 'bar');
+      await click(GENERAL.searchSelect.option());
+      await click('[data-test-oidc-key-save]');
+      assert.true(
+        keyWriteStub.calledWith('bar'),
+        'calls API to write new OIDC key when a new key is created from the identity_token_key field'
+      );
+
+      await click(GENERAL.submitButton);
+      const enginePayload = authEnableStub.lastCall.args[1];
+      assert.strictEqual(
+        enginePayload.config.identity_token_key,
+        'bar',
+        'sends selected identity_token_key in payload when mounting a WIF engine'
       );
     });
   });

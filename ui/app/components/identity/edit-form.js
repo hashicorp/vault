@@ -3,32 +3,47 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { humanize } from 'vault/helpers/humanize';
 import { waitFor } from '@ember/test-waiters';
+import PolicyForm from 'vault/forms/policy';
+import {
+  SystemApiPoliciesListAclPoliciesListEnum,
+  SystemApiSystemListPoliciesRgpListEnum,
+} from '@hashicorp/vault-client-typescript';
 
-export default Component.extend({
-  flashMessages: service(),
-  store: service(),
-  'data-test-component': 'identity-edit-form',
-  attributeBindings: ['data-test-component'],
-  model: null,
+export default class IdentityEditFormComponent extends Component {
+  @service flashMessages;
+  @service store;
+  @service api;
 
-  // 'create', 'edit', 'merge'
-  mode: 'create',
-  /*
-   * @param Function
-   * @public
-   *
-   * Optional param to call a function upon successfully saving an entity
-   */
-  onSave: () => {},
+  @tracked policies = [];
+  @tracked policyForm;
 
-  cancelLink: computed('mode', 'model.identityType', function () {
-    const { model, mode } = this;
+  constructor() {
+    super(...arguments);
+    // fetch policies to populate dropdown in form
+    this.fetchPolicies();
+  }
+
+  async fetchPolicies() {
+    const [aclResult, rgpResult] = await Promise.allSettled([
+      this.api.sys.policiesListAclPolicies(SystemApiPoliciesListAclPoliciesListEnum.TRUE),
+      this.api.sys.systemListPoliciesRgp(SystemApiSystemListPoliciesRgpListEnum.TRUE),
+    ]);
+    const aclPolicies = aclResult.status === 'fulfilled' ? aclResult.value.keys : [];
+    const rgpPolicies = rgpResult.status === 'fulfilled' ? rgpResult.value.keys : [];
+    this.policies = [...aclPolicies, ...rgpPolicies]
+      .filter((name) => name !== 'root')
+      .map((policy) => ({ id: policy }));
+  }
+
+  get cancelLink() {
+    const { model, mode } = this.args;
     const routes = {
       'create-entity': 'vault.cluster.access.identity',
       'edit-entity': 'vault.cluster.access.identity.show',
@@ -42,7 +57,7 @@ export default Component.extend({
     };
     const key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
     return routes[key];
-  }),
+  }
 
   getMessage(model, isDelete = false) {
     const mode = this.mode;
@@ -55,23 +70,23 @@ export default Component.extend({
       return `Successfully ${action} ${typeDisplay} ${model.id}.`;
     }
     return `Successfully ${action} ${typeDisplay}.`;
-  },
+  }
 
-  save: task(
-    waitFor(function* () {
-      const model = this.model;
+  save = task(
+    waitFor(async () => {
+      const { model } = this.args;
       const message = this.getMessage(model);
 
       try {
-        yield model.save();
+        await model.save();
       } catch (err) {
         // err will display via model state
         return;
       }
       this.flashMessages.success(message);
-      yield this.onSave({ saveType: 'save', model });
+      await this.args.onSave({ saveType: 'save', model });
     })
-  ).drop(),
+  );
 
   willDestroy() {
     // components are torn down after store is disconnected and will cause an error if attempt to unload record
@@ -80,17 +95,20 @@ export default Component.extend({
     if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
-    this._super(...arguments);
-  },
+    super.willDestroy(...arguments);
+  }
 
-  actions: {
-    deleteItem(model) {
-      const message = this.getMessage(model, true);
-      const flash = this.flashMessages;
-      model.destroyRecord().then(() => {
-        flash.success(message);
-        return this.onSave({ saveType: 'delete', model });
-      });
-    },
-  },
-});
+  @action
+  deleteItem(model) {
+    const message = this.getMessage(model, true);
+    const flash = this.flashMessages;
+    model.destroyRecord().then(() => {
+      flash.success(message);
+      return this.args.onSave({ saveType: 'delete', model });
+    });
+  }
+  @action
+  onCreatePolicy(name) {
+    this.policyForm = new PolicyForm({ name, enforcement_level: 'hard-mandatory' }, { isNew: true });
+  }
+}

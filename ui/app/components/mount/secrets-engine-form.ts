@@ -9,6 +9,7 @@ import { capitalize } from '@ember/string';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import OidcKeyForm from 'vault/forms/oidc/key';
 
 import type Router from '@ember/routing/router';
 import type FlashMessagesService from 'ember-cli-flash/services/flash-messages';
@@ -79,6 +80,8 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
   @tracked errorMessage: string | string[] = '';
   @tracked pluginRegistrationType: 'builtin' | 'external' = PluginRegistrationType.BUILTIN;
   @tracked selectedPluginVersion = '';
+  @tracked oidcKeys: { id: string }[] = [];
+  @tracked oidcKeyForm: OidcKeyForm | null = null;
 
   _originalBuiltinType = '';
 
@@ -490,5 +493,10 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
       transition = this.router.transitionTo('vault.cluster.secrets.backends');
     }
     return transition?.followRedirects();
+  }
+
+  @action
+  onCreateOidcKey(name: string) {
+    this.oidcKeyForm = new OidcKeyForm({ name }, { isNew: true });
   }
 }

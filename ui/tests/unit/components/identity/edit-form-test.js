@@ -3,10 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import sinon from 'sinon';
 
 module('Unit | Component | identity/edit-form', function (hooks) {
   setupTest(hooks);
@@ -59,16 +57,16 @@ module('Unit | Component | identity/edit-form', function (hooks) {
     },
   ];
   testCases.forEach(function (testCase) {
-    const model = EmberObject.create({
-      identityType: testCase.identityType,
-      rollbackAttributes: sinon.spy(),
-    });
     test(`it computes cancelLink properly: ${testCase.identityType} ${testCase.mode}`, function (assert) {
-      const component = this.owner.lookup('component:identity/edit-form');
-
-      component.set('mode', testCase.mode);
-      component.set('model', model);
-      assert.strictEqual(component.get('cancelLink'), testCase.expected, 'cancel link is correct');
+      const { identityType, mode } = testCase;
+      const named = {
+        model: { identityType },
+        mode,
+      };
+      const componentManager = this.owner.lookup('component-manager:glimmer');
+      const componentClass = this.owner.factoryFor('component:identity/edit-form').class;
+      const component = componentManager.createComponent(componentClass, { named });
+      assert.strictEqual(component.cancelLink, testCase.expected, 'cancel link is correct');
     });
   });
 });

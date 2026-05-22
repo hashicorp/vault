@@ -6,18 +6,28 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import OidcClientForm from 'vault/forms/oidc/client';
-import { IdentityApiOidcListKeysListEnum } from '@hashicorp/vault-client-typescript';
+import {
+  IdentityApiOidcListAssignmentsListEnum,
+  IdentityApiOidcListKeysListEnum,
+} from '@hashicorp/vault-client-typescript';
 
 export default class OidcClientsCreateRoute extends Route {
   @service api;
 
   async model() {
-    // fetch keys to populate dropdown in form
+    // fetch keys and assignments to populate SearchSelect
     let keys = [];
+    let assignments = [];
     try {
-      const response = await this.api.identity.oidcListKeys(IdentityApiOidcListKeysListEnum.TRUE);
+      const { keys: keyItems } = await this.api.identity.oidcListKeys(IdentityApiOidcListKeysListEnum.TRUE);
+      const { keys: assignmentItems } = await this.api.identity.oidcListAssignments(
+        IdentityApiOidcListAssignmentsListEnum.TRUE
+      );
       // SearchSelect requires options to be objects
-      keys = response.keys?.map((key) => ({ id: key }));
+      keys = keyItems?.map((key) => ({ id: key }));
+      assignments = assignmentItems
+        ?.filter((assignment) => assignment !== 'allow_all')
+        ?.map((assignment) => ({ id: assignment }));
     } catch (error) {
       // swallow error and return empty array for keys
     }
@@ -30,6 +40,7 @@ export default class OidcClientsCreateRoute extends Route {
     return {
       form: new OidcClientForm(defaults, { isNew: true }),
       keys,
+      assignments,
     };
   }
 }
