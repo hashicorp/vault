@@ -59,6 +59,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       };
       this.form = new OidcClientForm(data, { isNew: !client });
       this.keys = [{ id: 'default' }];
+      this.assignments = [{ id: 'assignment-1' }];
       this.onCancel = sinon.spy();
       this.onSave = sinon.spy();
 
@@ -66,6 +67,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         <Oidc::ClientForm
           @form={{this.form}}
           @keys={{this.keys}}
+          @assignments={{this.assignments}}
           @onCancel={{this.onCancel}}
           @onSave={{this.onSave}}
         />
@@ -115,17 +117,17 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom(validationErrors[1]).hasText('There are 3 errors with this form.', 'Renders form error count');
 
     // fill out form with valid inputs
-    await clickTrigger();
-    await fillIn('.ember-power-select-search input', 'default');
+    await click(GENERAL.searchSelect.trigger('oidc-client-form-key-select'));
+    await fillIn(GENERAL.searchSelect.searchInput, 'default');
     await searchSelect.options.objectAt(0).click();
 
     await click('[data-test-oidc-radio="limited"]');
     assert
-      .dom('[data-test-search-select-with-modal]')
+      .dom('[data-test-search-select="assignments"]')
       .exists('Limited radio button shows assignments search select');
 
-    await clickTrigger();
-    assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
+    await click(GENERAL.searchSelect.trigger('oidc-client-form-assignments-select'));
+    assert.dom(GENERAL.searchSelect.option()).hasText('assignment-1', 'dropdown renders assignments');
     await fillIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.clientSaveButton);
     assert.true(this.apiStub.calledWith('test-app'), 'API called with correct parameters');

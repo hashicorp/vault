@@ -16,7 +16,10 @@ import { getBackendEffectiveType, getEnginePathParam } from 'vault/utils/backend
 import { isValidProvider } from 'vault/utils/keymgmt-provider-utils';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
-import { SecretsApiKeyManagementListKmsProvidersForKeyListEnum } from '@hashicorp/vault-client-typescript';
+import {
+  SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
+  SecretsApiTransformListRolesListEnum,
+} from '@hashicorp/vault-client-typescript';
 
 /**
  * @type Class
@@ -58,6 +61,18 @@ export default Route.extend({
   transformSecretName(secret, modelType) {
     const noun = modelType.split('/')[1];
     return secret.replace(`${noun}/`, '');
+  },
+
+  async fetchTransformRoles(backend) {
+    try {
+      const { keys } = await this.api.secrets.transformListRoles(
+        backend,
+        SecretsApiTransformListRolesListEnum.TRUE
+      );
+      return keys || [];
+    } catch (error) {
+      return [];
+    }
   },
 
   backendType() {
@@ -326,19 +341,18 @@ export default Route.extend({
       secret = secret.replace('role/', '');
     }
     let secretModel;
+    let transformRoles;
     let capabilities;
 
     // Handle keymgmt resources with API service
     if (modelType === 'keymgmt/key') {
       secretModel = await this.fetchKeymgmtKey(backend, secret);
-      const caps = await this.fetchKeymgmtKeyCapabilities(backend, secret);
-      capabilities = caps;
+      capabilities = await this.fetchKeymgmtKeyCapabilities(backend, secret);
     } else if (modelType === 'keymgmt/provider') {
       secretModel = await this.fetchKeymgmtProvider(backend, secret);
-      const caps = await this.fetchKeymgmtProviderCapabilities(backend, secret);
-      capabilities = caps;
+      capabilities = await this.fetchKeymgmtProviderCapabilities(backend, secret);
     } else {
-      capabilities = this.capabilities(secret, modelType);
+      capabilities = await this.capabilities(secret, modelType);
       try {
         secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
       } catch (err) {
@@ -350,12 +364,17 @@ export default Route.extend({
           throw err;
         }
       }
-      await capabilities;
+    }
+
+    // fetch roles for transform type to display in detail view
+    if (modelType === 'transform') {
+      transformRoles = await this.fetchTransformRoles(backend);
     }
 
     return {
       secret: secretModel,
       capabilities,
+      transformRoles,
     };
   },
 
@@ -367,6 +386,7 @@ export default Route.extend({
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.secrets.backend').preferAdvancedEdit || false;
     const backendType = this.backendType();
+    // mode will be 'show', 'edit', 'create'
     const mode = this.routeName.split('.').pop().replace('-root', '');
 
     // Handle keymgmt forms differently - Resource or Form doesn't have setProperties
@@ -384,6 +404,7 @@ export default Route.extend({
       backend,
       preferAdvancedEdit,
       backendType,
+      transformRoles: model.transformRoles,
     });
   },
 
