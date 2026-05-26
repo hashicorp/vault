@@ -350,7 +350,7 @@ jobs:
 
           if [ "${{ needs.test-matrix.outputs.is-ent-branch }}" == "true" ]; then
             go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:latest -target=hashicorp/vault-enterprise-ci:latest -binary=./vault-binary
-            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:2.0.0-ent.hsm -target=hashicorp/vault-enterprise-ci:latest-hsm -binary=./vault-hsm-binary -hsm
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:2.0.1-ent.hsm -target=hashicorp/vault-enterprise-ci:latest-hsm -binary=./vault-hsm-binary -hsm
 
             # Verify the images were built successfully
             docker images hashicorp/vault-enterprise-ci:latest
