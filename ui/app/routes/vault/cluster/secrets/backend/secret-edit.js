@@ -16,6 +16,7 @@ import { getBackendEffectiveType, getEnginePathParam } from 'vault/utils/backend
 import { isValidProvider } from 'vault/utils/keymgmt-provider-utils';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
+import TotpKeyForm from 'vault/forms/totp/key';
 import {
   SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
   SecretsApiTransformListRolesListEnum,
@@ -126,8 +127,8 @@ export default Route.extend({
   buildModel(secret, queryParams) {
     const backend = getEnginePathParam(this);
     const modelType = this.modelType(backend, secret, { queryParams });
-    // Keymgmt resources are loaded through API-backed forms, so Ember Data hydration is unnecessary.
-    if (modelType === 'secret' || modelType.startsWith('keymgmt/')) {
+    // Keymgmt and TOTP resources are loaded through API-backed forms, so Ember Data hydration is unnecessary.
+    if (modelType === 'secret' || modelType.startsWith('keymgmt/') || modelType === 'totp-key') {
       return resolve();
     }
     return this.pathHelp.hydrateModel(modelType, backend);
@@ -219,6 +220,32 @@ export default Route.extend({
     }
 
     return { created, last_rotated, versions: versionsArray };
+  },
+
+  async fetchTotpKey(backend, name) {
+    const resp = await this.api.secrets.totpReadKey(name, backend);
+    const data = resp.data || {};
+    return new TotpKeyForm(
+      {
+        ...data,
+        name,
+        backend,
+      },
+      { isNew: false }
+    );
+  },
+
+  async fetchTotpKeyCapabilities(backend, name) {
+    const keyPath = this.capabilitiesService.pathFor('totpKey', { backend, name });
+    const keysPath = this.capabilitiesService.pathFor('totpKeys', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([keyPath, keysPath]);
+
+    return {
+      canDelete: capabilities[keyPath]?.canDelete,
+      canRead: capabilities[keyPath]?.canRead,
+      canList: capabilities[keysPath]?.canList,
+    };
   },
 
   async fetchKeymgmtKey(backend, name) {
@@ -344,8 +371,11 @@ export default Route.extend({
     let transformRoles;
     let capabilities;
 
-    // Handle keymgmt resources with API service
-    if (modelType === 'keymgmt/key') {
+    // Handle TOTP resources with API service
+    if (modelType === 'totp-key') {
+      secretModel = await this.fetchTotpKey(backend, secret);
+      capabilities = await this.fetchTotpKeyCapabilities(backend, secret);
+    } else if (modelType === 'keymgmt/key') {
       secretModel = await this.fetchKeymgmtKey(backend, secret);
       capabilities = await this.fetchKeymgmtKeyCapabilities(backend, secret);
     } else if (modelType === 'keymgmt/provider') {
@@ -389,15 +419,16 @@ export default Route.extend({
     // mode will be 'show', 'edit', 'create'
     const mode = this.routeName.split('.').pop().replace('-root', '');
 
-    // Handle keymgmt forms differently - Resource or Form doesn't have setProperties
+    // Handle keymgmt and TOTP forms differently - Resource or Form doesn't have setProperties
     const modelType = this.modelType(backend, secret);
-    if (!['keymgmt/key', 'keymgmt/provider'].includes(modelType)) {
+    const formModelTypes = ['keymgmt/key', 'keymgmt/provider', 'totp-key'];
+    if (!formModelTypes.includes(modelType)) {
       model.secret.setProperties({ backend });
     }
 
     controller.setProperties({
       model: model.secret,
-      form: ['keymgmt/key', 'keymgmt/provider'].includes(modelType) ? model.secret : null,
+      form: formModelTypes.includes(modelType) ? model.secret : null,
       capabilities: model.capabilities,
       baseKey: { id: secret },
       mode,

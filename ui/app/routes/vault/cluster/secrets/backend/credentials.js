@@ -14,6 +14,7 @@ export default Route.extend({
   pathHelp: service('path-help'),
   router: service(),
   store: service(),
+  api: service(),
 
   beforeModel(transition) {
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
@@ -56,11 +57,11 @@ export default Route.extend({
 
   async getTotpKey(backend, keyName) {
     try {
-      const key = await this.store.queryRecord('totp-key', { id: keyName, backend });
-      return key;
+      const resp = await this.api.secrets.totpReadKey(keyName, backend);
+      return resp.data || {};
     } catch (e) {
       // swallow error, non-essential data
-      return;
+      return {};
     }
   },
 

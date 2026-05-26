@@ -21,6 +21,7 @@ import { resolve } from 'rsvp';
 import {
   SecretsApiKeyManagementListKeysListEnum,
   SecretsApiKeyManagementListKmsProvidersListEnum,
+  SecretsApiTotpListKeysListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
@@ -97,8 +98,8 @@ export default Route.extend({
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
     const modelType = this.getModelType(effectiveType, tab);
-    // Keymgmt routes use API-backed forms instead of Ember Data models, so skip model hydration.
-    if (effectiveType === 'keymgmt') {
+    // Keymgmt and TOTP routes use API-backed forms instead of Ember Data models, so skip model hydration.
+    if (effectiveType === 'keymgmt' || effectiveType === 'totp') {
       return resolve();
     }
 
@@ -109,6 +110,35 @@ export default Route.extend({
 
   getModelType(type, tab) {
     return getModelTypeForEngine(type, { tab });
+  },
+
+  async fetchTotpKeys(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.totpListKeys(backend, SecretsApiTotpListKeysListEnum.TRUE);
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) => this.capabilitiesService.pathFor('totpKey', { backend, name }));
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const keyPath = this.capabilitiesService.pathFor('totpKey', { backend, name });
+        return {
+          id: name,
+          name,
+          backend,
+          canRead: capabilities[keyPath]?.canRead || false,
+          canDelete: capabilities[keyPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
   },
 
   async fetchKeysWithCapabilities(backend) {
@@ -217,9 +247,13 @@ export default Route.extend({
     const effectiveType = getEffectiveEngineType(backendModel.engineType);
     const modelType = this.getModelType(effectiveType, params.tab);
 
-    // Handle keymgmt keys with API service
+    // Handle keymgmt and TOTP resources with API service
     let secrets;
-    if (effectiveType === 'keymgmt') {
+    if (effectiveType === 'totp') {
+      const page = getValidPage(params.page);
+      secrets = await this.fetchTotpKeys(backend, page, params.pageFilter);
+      this.set('has404', false);
+    } else if (effectiveType === 'keymgmt') {
       const page = getValidPage(params.page);
       const filter = params.pageFilter;
       secrets =

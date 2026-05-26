@@ -19,13 +19,13 @@ module('Acceptance | totp key backend', function (hooks) {
   const createVaultKey = async (keyName, issuer, accountName, exported = true, qrSize = 200) => {
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
-    await fillIn(GENERAL.inputByAttr('accountName'), accountName);
+    await fillIn(GENERAL.inputByAttr('account_name'), accountName);
     if (!exported) {
       await click(GENERAL.toggleInput('toggle-exported'));
     }
     if (qrSize !== 200) {
       await click(GENERAL.button('Provider Options'));
-      await fillIn(GENERAL.inputByAttr('qrSize'), qrSize);
+      await fillIn(GENERAL.inputByAttr('qr_size'), qrSize);
     }
     await click(GENERAL.submitButton);
   };
@@ -34,7 +34,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await click(GENERAL.radioByAttr('Other service'));
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
-    await fillIn(GENERAL.inputByAttr('accountName'), accountName);
+    await fillIn(GENERAL.inputByAttr('account_name'), accountName);
     if (url) await fillIn(GENERAL.inputByAttr('url'), url);
     if (key) await fillIn(GENERAL.inputByAttr('key'), key);
     await click(GENERAL.submitButton);

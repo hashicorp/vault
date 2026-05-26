@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import EditBase from './secret-edit';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
+import TotpKeyForm from 'vault/forms/totp/key';
 import { KeyManagementUpdateKeyRequestTypeEnum } from '@hashicorp/vault-client-typescript';
 
 const secretModel = (store, backend, key) => {
@@ -47,6 +48,23 @@ export default EditBase.extend({
         credentials: {},
       };
       return new KeymgmtProviderForm(defaultValues, { isNew: true });
+    }
+
+    if (modelType === 'totp-key') {
+      return new TotpKeyForm(
+        {
+          backend,
+          generate: true,
+          algorithm: 'SHA1',
+          digits: 6,
+          period: 30,
+          exported: true,
+          key_size: 20,
+          skew: 1,
+          qr_size: 200,
+        },
+        { isNew: true }
+      );
     }
 
     if (modelType === 'role-ssh') {
