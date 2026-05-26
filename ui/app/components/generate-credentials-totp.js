@@ -14,7 +14,7 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class GenerateCredentialsTotp extends Component {
   @tracked elapsedTime = 0;
   @tracked totpCode = null;
-  @service store;
+  @service api;
   @service router;
 
   title = 'Generate TOTP code';
@@ -61,8 +61,8 @@ export default class GenerateCredentialsTotp extends Component {
   async generateTotpCode(backend, keyName) {
     // refreshing will generate a new code if the period has expired.
     try {
-      const totpCode = await this.store.adapterFor('totp-key').generateCode(backend, keyName);
-      this.totpCode = totpCode.code;
+      const resp = await this.api.secrets.totpGenerateCode(keyName, backend);
+      this.totpCode = resp?.data?.code ?? null;
     } catch (e) {
       // swallow error, non-essential data
       return;

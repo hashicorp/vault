@@ -84,4 +84,6 @@ export const PATH_MAP = {
   syncDestination: apiPath`sys/sync/destinations/${'type'}/${'name'}`,
   syncRemoveAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/remove`,
   syncSetAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/set`,
+  totpKey: apiPath`${'backend'}/keys/${'name'}`,
+  totpKeys: apiPath`${'backend'}/keys`,
 };
