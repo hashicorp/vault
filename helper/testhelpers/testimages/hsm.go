@@ -58,7 +58,7 @@ func GetImageRepoAndTag(t *testing.T, hsm bool) (string, string) {
 // If vaultImage is populated, it is split by ":" and the two pieces are returned
 // as the repo and tag.  If vault_binary is populated, an image is created based on
 // the latest hsm image.
-// (TODO: currently hardcoded as "docker.io/hashicorp/vault-enterprise:2.0.0-ent.hsm")
+// (TODO: currently hardcoded as "docker.io/hashicorp/vault-enterprise:2.0.1-ent.hsm")
 // This is done by installing SoftHSM and the vaultBinary on top of that image.
 // If neither is populated an error is returned.
 func CreateOrReturnDockerImage(hsm bool) (repo string, tag string, output []byte, err error) {
@@ -86,7 +86,7 @@ func CreateOrReturnDockerImage(hsm bool) (repo string, tag string, output []byte
 		tag := "latest"
 		source := "docker.io/" + base + ":latest"
 		if hsm {
-			source = "docker.io/hashicorp/vault-enterprise:2.0.0-ent.hsm"
+			source = "docker.io/hashicorp/vault-enterprise:2.0.1-ent.hsm"
 			tag = "latest-hsm"
 		}
 		target := fmt.Sprintf("%s:%s", repo, tag)
