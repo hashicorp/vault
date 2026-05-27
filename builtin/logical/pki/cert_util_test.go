@@ -1440,7 +1440,7 @@ func Test_JKSEncoders(t *testing.T) {
 			{name: "keystore without CA chain", alias: "1", withoutChain: true, expectedAliases: []string{"1"}},
 
 			// Trust store only (no private key)
-			// jks_alias parameter should be ignored for trust stores and always start at "1"
+			// jks_private_key_alias parameter should be ignored for trust stores and always start at "1"
 			{name: "trust store with numeric alias", alias: "2", isTrustStore: true, expectedAliases: []string{"1", "2"}},
 			{name: "trust store with non-numeric alias", alias: "myapp", isTrustStore: true, expectedAliases: []string{"1", "2"}},
 			{name: "trust store without CA chain", isTrustStore: true, withoutChain: true, expectedAliases: []string{"1"}},

@@ -60,6 +60,8 @@ func getFormat(data *framework.FieldData) string {
 
 func supportedFormats(includePKCS12 bool) []string {
 	if includePKCS12 {
+		// includePKCS12 enables both PKCS#12 and JKS output formats.
+		// JKS is included as a legacy companion format, so the flag just references pk12.
 		return []string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}
 	}
 	return []string{"pem", "der", "pem_bundle"}
@@ -855,7 +857,8 @@ func EncodeToJKS(privateKey crypto.Signer, cert *x509.Certificate, caChain []*x5
 	if privateKey != nil {
 		err = setPrivateKeyEntry(ks, alias, p, privateKey, certs)
 	} else {
-		// jks_alias is intentionally not passed to simplify unique alias generation
+		// custom aliases for trust stores are currently unsupported and
+		// incrementing aliases, starting at "1", are used to guarantee uniqueness
 		err = setTrustedCertificateEntry(ks, certs)
 	}
 	if err != nil {

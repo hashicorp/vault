@@ -270,7 +270,7 @@ func TestGenerateAndRotateRoot_JKSFormat(t *testing.T) {
 			"key_bits":    256,
 		}
 		if alias != "" {
-			data["jks_alias"] = alias
+			data["jks_private_key_alias"] = alias
 		}
 		if password != "" {
 			decryptPw = password

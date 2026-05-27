@@ -111,6 +111,7 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 	}
 
 	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addJKSPrivateKeyAlias(ret.Fields)
 	return ret
 }
 
@@ -639,7 +640,12 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 		respData["issuing_ca"] = signingCB.Certificate
 
 	case "jks_bundle":
-		alias := data.Get("jks_alias").(string)
+		var alias string
+		if _, ok := data.Schema["jks_private_key_alias"]; ok {
+			// Issue endpoints define jks_private_key_alias (defaults to "1")
+			// Sign endpoints do not define this field, so alias stays empty.
+			alias = data.Get("jks_private_key_alias").(string)
+		}
 		password := data.Get("jks_password").(string)
 		caCerts := x509Certificates(caChainGen.chain)
 		// Pass parsedBundle.PrivateKey as is. It should be nil for signed certs and set for issued certs.
