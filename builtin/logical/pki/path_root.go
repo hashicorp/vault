@@ -287,7 +287,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		resp.Data["issuing_ca"] = cb.Certificate
 
 	case "jks_bundle":
-		alias := data.Get("jks_alias").(string)
+		alias := data.Get("jks_private_key_alias").(string)
 		password := data.Get("jks_password").(string)
 		caChain := x509Certificates(parsedBundle.CAChain)
 
@@ -420,7 +420,6 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		format:         format,
 		pkcs12Encoder:  data.Get("pkcs12_encoder").(string),
 		pkcs12Password: data.Get("pkcs12_password").(string),
-		jksAlias:       data.Get("jks_alias").(string),
 		jksPassword:    data.Get("jks_password").(string),
 	}
 
@@ -575,7 +574,6 @@ type certEncodingParams struct {
 	format         string
 	pkcs12Encoder  string
 	pkcs12Password string
-	jksAlias       string
 	jksPassword    string
 }
 
@@ -667,12 +665,12 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 		resp.Data["issuing_ca"] = signingCB.Certificate
 
 	case "jks_bundle":
-		alias := encParams.jksAlias
 		password := encParams.jksPassword
 		// Use parsedBundle.CAChain (not caChain var above) because EncodeToJKS handles chain building.
 		caCerts := x509Certificates(parsedBundle.CAChain)
 		// Intermediates are signed from a CSR, pass nil because no private key should be available here.
-		jksBytes, err := EncodeToJKS(nil, parsedBundle.Certificate, caCerts, alias, password)
+		// For trust stores custom aliases are currently unsupported, pass empty string.
+		jksBytes, err := EncodeToJKS(nil, parsedBundle.Certificate, caCerts, "", password)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode to JKS format: %w", err)
 		}

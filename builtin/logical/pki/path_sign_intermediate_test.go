@@ -329,7 +329,7 @@ func TestSignIntermediate_PKCS12AndJKSFormat(t *testing.T) {
 					data["jks_password"] = tc.password
 				}
 				if tc.alias != "" {
-					data["jks_alias"] = tc.alias
+					data["jks_private_key_alias"] = tc.alias
 				}
 
 				resp, err := CBWrite(b, s, path, data)

@@ -460,7 +460,7 @@ func TestPathIssueSign_JKSFormat(t *testing.T) {
 			data["remove_roots_from_chain"] = true
 		}
 		if alias != "" {
-			data["jks_alias"] = alias
+			data["jks_private_key_alias"] = alias
 		}
 		return data
 	}
@@ -516,7 +516,7 @@ func TestPathIssueSign_JKSFormat(t *testing.T) {
 			{name: "with defaults", endpoint: "sign", expectedAliases: []string{"1", "2"}},
 			{name: "verbatim with defaults", endpoint: "sign-verbatim", expectedAliases: []string{"1", "2"}},
 			{name: "without CA chain", endpoint: "sign", removeRoot: true, expectedAliases: []string{"1"}},
-			// jks_alias should be ignored
+			// jks_private_key_alias should be ignored
 			{name: "with numeric alias", endpoint: "sign", alias: "3", expectedAliases: []string{"1", "2"}},
 			{name: "with non-numeric alias", endpoint: "sign", alias: "myapp", expectedAliases: []string{"1", "2"}},
 		}
