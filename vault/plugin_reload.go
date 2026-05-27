@@ -158,20 +158,9 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 	return reloaded, nil
 }
 
-// reloadBackendCommon is a generic method to reload a backend provided a
-// MountEntry.
-func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAuth bool) error {
-	// Make sure our cache is up-to-date. Since some singleton mounts can be
-	// tuned, we do this before the below check.
-	entry.SyncCache()
-
-	// We don't want to reload the singleton mounts. They often have specific
-	// inmemory elements and we don't want to touch them here.
-	if strutil.StrListContains(singletonMounts, entry.Type) {
-		c.logger.Debug("skipping reload of singleton mount", "type", entry.Type)
-		return nil
-	}
-
+// forceReloadBackend reloads any backend, even a singleton. It does not update the cache. Most users
+// should use reloadBackendCommon.
+func (c *Core) forceReloadBackend(ctx context.Context, entry *MountEntry, isAuth bool) error {
 	path := entry.Path
 
 	if isAuth {
@@ -294,6 +283,23 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	}
 
 	return nil
+}
+
+// reloadBackendCommon is a generic method to reload a backend provided a
+// MountEntry.
+func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAuth bool) error {
+	// Make sure our cache is up-to-date. Since some singleton mounts can be
+	// tuned, we do this before the below check.
+	entry.SyncCache()
+
+	// We don't want to reload the singleton mounts. They often have specific
+	// inmemory elements and we don't want to touch them here.
+	if strutil.StrListContains(singletonMounts, entry.Type) {
+		c.logger.Debug("skipping reload of singleton mount", "type", entry.Type)
+		return nil
+	}
+
+	return c.forceReloadBackend(ctx, entry, isAuth)
 }
 
 func (c *Core) setupPluginReload() error {
