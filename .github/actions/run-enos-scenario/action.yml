@@ -30,7 +30,7 @@ inputs:
   show-state-on-retry:
     description: Whether to show scenario state and plan before and after a failed retry (true/false)
     required: false
-    default: ${{ github.repository == 'hashicorp/vault-enterprise' && 'true' || 'false' }}
+    default: 'false'
   upload-debug-data:
     description: Whether to upload Enos debug data on failure (true/false)
     required: false
