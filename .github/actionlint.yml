@@ -9,7 +9,7 @@ self-hosted-runner:
     - large
     - xlarge
     - ubuntu-22.04-x64
-    - ubuntu-latest-x64
+    - ubuntu-22.04-x64
     - ubuntu-24.04-arm64
     - custom-linux-xl-vault-latest
     - stats

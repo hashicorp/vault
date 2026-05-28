@@ -168,10 +168,10 @@ runs:
             go_tags='ent,enterprise'
             version_metadata='${{ inputs.vault-version }}+ent'
           fi
-          compute_build='["self-hosted","ubuntu-latest-x64","xlarge"]'
-          compute_build_ui='["self-hosted","ubuntu-latest-x64","large"]'
-          compute_test_go='["self-hosted","ubuntu-latest-x64","large"]'
-          compute_test_ui='["self-hosted","ubuntu-latest-x64","large"]'
+          compute_build='["self-hosted","ubuntu-22.04-x64"]'
+          compute_build_ui='["self-hosted","ubuntu-22.04-x64"]'
+          compute_test_go='["self-hosted","ubuntu-22.04-x64"]'
+          compute_test_ui='["self-hosted","ubuntu-22.04-x64"]'
           compute_small='["self-hosted","linux","small"]'
         else
           compute_build='"custom-linux-medium-vault-latest"'
