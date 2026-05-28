@@ -644,10 +644,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-secret-list-tab="Roles"]')
       .doesNotExist(`does not show the roles tab because it does not have permissions`);
-    assert
-      .dom('[data-test-overview-card="Connections"]')
-      .exists({ count: 1 }, 'renders only the connection card');
-    await click('[data-test-action-text="Configure new"]');
+    await click(SES.createSecretLink);
     assert.strictEqual(currentURL(), `/vault/secrets-engines/${backend}/create?itemType=connection`);
   });
 });

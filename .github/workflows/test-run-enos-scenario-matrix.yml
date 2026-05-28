@@ -280,6 +280,7 @@ jobs:
           timeout: 45m0s
           retry-timeout: 30m0s
           destroy-timeout: 10m0s
+          show-state-on-retry: ${{ github.repository == 'hashicorp/vault-enterprise' && 'true' || 'false' }}
           upload-debug-data: 'true'
           debug-data-retention-days: '30'
           debug-data-path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
