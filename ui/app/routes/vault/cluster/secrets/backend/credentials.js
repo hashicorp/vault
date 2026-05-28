@@ -5,7 +5,6 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import ControlGroupError from 'vault/lib/control-group-error';
 
 const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'totp'];
 
@@ -13,7 +12,6 @@ export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',
   pathHelp: service('path-help'),
   router: service(),
-  store: service(),
   api: service(),
 
   beforeModel(transition) {
@@ -34,21 +32,42 @@ export default Route.extend({
     }
   },
 
-  getDatabaseCredential(backend, secret, roleType = '') {
-    return this.store.queryRecord('database/credential', { backend, secret, roleType }).catch((error) => {
-      if (error instanceof ControlGroupError) {
-        throw error;
+  async getDatabaseCredential(backend, secret, roleType = '') {
+    try {
+      if (roleType === 'static') {
+        const { last_vault_rotation, lease_duration, data } =
+          await this.api.secrets.databaseReadStaticRoleCredentials(secret, backend);
+        return {
+          last_vault_rotation,
+          lease_duration,
+          ...data,
+        };
+      } else {
+        const { data, lease_id, lease_duration } = await this.api.secrets.databaseGenerateCredentials(
+          secret,
+          backend
+        );
+        return {
+          ...data,
+          lease_id,
+          lease_duration,
+        };
+      }
+    } catch (error) {
+      const { response } = await this.api.parseError(error);
+      if (response.isControlGroupError) {
+        throw response;
       }
       // Unless it's a control group error, we want to pass back error info
       // so we can render it on the GenerateCredentialsDatabase component
-      return error;
-    });
+      return response;
+    }
   },
 
   async getAwsRole(backend, id) {
     try {
-      const role = await this.store.queryRecord('role-aws', { backend, id });
-      return role;
+      const { data } = await this.api.secrets.awsReadRole(id, backend);
+      return data;
     } catch (e) {
       // swallow error, non-essential data
       return;
@@ -57,8 +76,8 @@ export default Route.extend({
 
   async getTotpKey(backend, keyName) {
     try {
-      const resp = await this.api.secrets.totpReadKey(keyName, backend);
-      return resp.data || {};
+      const { data } = await this.api.secrets.totpReadKey(keyName, backend);
+      return data || {};
     } catch (e) {
       // swallow error, non-essential data
       return {};
@@ -86,19 +105,11 @@ export default Route.extend({
       roleName: role,
       roleType,
       dbCred,
-      awsRoleType: awsRole?.credentialType,
+      awsRoleType: awsRole?.credential_type,
     };
   },
 
   resetController(controller) {
     controller.reset();
-  },
-
-  actions: {
-    willTransition() {
-      // we do not want to save any of the credential information in the store.
-      // once the user navigates away from this page, remove all credential info.
-      this.store.unloadAll('database/credential');
-    },
   },
 });
