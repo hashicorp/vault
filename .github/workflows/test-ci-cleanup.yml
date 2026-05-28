@@ -7,7 +7,7 @@ on:
 
 jobs:
   setup:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     permissions: write-all
     outputs:
       regions: ${{steps.setup.outputs.regions}}
@@ -29,7 +29,7 @@ jobs:
 
   aws-nuke:
     needs: setup
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     container:
       image: ghcr.io/ekristen/aws-nuke:v3.51.0 # https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
       options:
@@ -68,7 +68,7 @@ jobs:
 
   check-quotas:
     needs: [ setup, aws-nuke ]
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     container:
       image: jantman/awslimitchecker
       env:
