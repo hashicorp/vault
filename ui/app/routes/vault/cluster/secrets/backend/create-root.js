@@ -9,6 +9,7 @@ import EditBase from './secret-edit';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
+import SshRoleForm from 'vault/forms/ssh/role';
 import { KeyManagementUpdateKeyRequestTypeEnum } from '@hashicorp/vault-client-typescript';
 
 const secretModel = (store, backend, key) => {
@@ -68,7 +69,10 @@ export default EditBase.extend({
     }
 
     if (modelType === 'role-ssh') {
-      return this.store.createRecord(modelType, { keyType: 'ca' });
+      return new SshRoleForm(
+        { backend, key_type: 'ca', not_before_duration: '30s', port: 22 },
+        { isNew: true }
+      );
     }
     if (modelType === 'transform') {
       modelType = transformModel(transition.to.queryParams);
