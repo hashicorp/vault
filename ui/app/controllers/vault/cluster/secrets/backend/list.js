@@ -7,6 +7,7 @@ import Controller from '@ember/controller';
 import { computed } from '@ember/object';
 import { or } from '@ember/object/computed';
 import { service } from '@ember/service';
+import { SecretsApiSshListRolesListEnum } from '@hashicorp/vault-client-typescript';
 import ListController from 'core/mixins/list-controller';
 import { keyIsFolder } from 'core/utils/key-utils';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
@@ -39,18 +40,32 @@ export default Controller.extend(ListController, BackendCrumbMixin, {
       this.set('selectedAction', action);
     },
 
-    toggleZeroAddress(item, backend) {
-      item.toggleProperty('zeroAddress');
+    // Adds or removes the given SSH role from the zero-address config, then reloads the list.
+    async toggleZeroAddress(item) {
+      const backendPath = item.backend;
       this.set('loading-' + item.id, true);
-      backend
-        .saveZeroAddressConfig()
-        .catch((e) => {
-          item.set('zeroAddress', false);
-          this.flashMessages.danger(e.message);
-        })
-        .finally(() => {
-          this.set('loading-' + item.id, false);
-        });
+      try {
+        const response = await this.api.secrets.sshListRoles(
+          backendPath,
+          SecretsApiSshListRolesListEnum.TRUE
+        );
+        const allRoles = this.api.keyInfoToArray(response);
+        const newValue = !item.zero_address;
+        const zeroAddressRoles = allRoles
+          .filter((role) => (role.id === item.id ? newValue : role.zero_address))
+          .map((role) => role.id);
+        if (zeroAddressRoles.length === 0) {
+          await this.api.secrets.sshDeleteZeroAddressConfiguration(backendPath);
+        } else {
+          await this.api.secrets.sshConfigureZeroAddress(backendPath, { roles: zeroAddressRoles });
+        }
+        this.send('reload');
+      } catch (e) {
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(message);
+      } finally {
+        this.set('loading-' + item.id, false);
+      }
     },
 
     async delete(item) {
@@ -77,6 +92,15 @@ export default Controller.extend(ListController, BackendCrumbMixin, {
       } else if (this.backendType === 'totp') {
         try {
           await this.api.secrets.totpDeleteKey(name, item.backend);
+          this.flashMessages.success(`${name} was successfully deleted.`);
+          this.send('reload');
+        } catch (e) {
+          const { message } = await this.api.parseError(e);
+          this.flashMessages.danger(message);
+        }
+      } else if (this.backendType === 'ssh') {
+        try {
+          await this.api.secrets.sshDeleteRole(name, item.backend);
           this.flashMessages.success(`${name} was successfully deleted.`);
           this.send('reload');
         } catch (e) {

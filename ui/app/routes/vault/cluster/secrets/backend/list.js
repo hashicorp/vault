@@ -22,6 +22,7 @@ import {
   SecretsApiKeyManagementListKeysListEnum,
   SecretsApiKeyManagementListKmsProvidersListEnum,
   SecretsApiTotpListKeysListEnum,
+  SecretsApiSshListRolesListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
@@ -98,8 +99,8 @@ export default Route.extend({
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
     const modelType = this.getModelType(effectiveType, tab);
-    // Keymgmt and TOTP routes use API-backed forms instead of Ember Data models, so skip model hydration.
-    if (effectiveType === 'keymgmt' || effectiveType === 'totp') {
+    // Keymgmt, TOTP, and SSH routes use API-backed forms instead of Ember Data models, so skip model hydration.
+    if (effectiveType === 'keymgmt' || effectiveType === 'totp' || effectiveType === 'ssh') {
       return resolve();
     }
 
@@ -240,6 +241,72 @@ export default Route.extend({
     }
   },
 
+  async fetchSshRolesWithCapabilities(backend) {
+    // Fetch roles and zero-address config in parallel (zero-address may 404 if never configured)
+    const [listResponse, zeroAddressResult] = await Promise.allSettled([
+      this.api.secrets.sshListRoles(backend, SecretsApiSshListRolesListEnum.TRUE),
+      this.api.secrets.sshReadZeroAddressConfigurationRaw({ ssh_mount_path: backend }),
+    ]);
+
+    if (listResponse.status === 'rejected') throw listResponse.reason;
+
+    const roles = this.api.keyInfoToArray(listResponse.value);
+
+    // Build set of zero-address role names from the config endpoint
+    let zeroAddressRoles = new Set();
+    if (zeroAddressResult.status === 'fulfilled') {
+      const body = await zeroAddressResult.value.raw.json();
+      const names = body?.data?.roles;
+      if (Array.isArray(names)) {
+        zeroAddressRoles = new Set(names);
+      }
+    }
+
+    // Build all capability paths for batch fetch
+    const zeroAddressPath = this.capabilitiesService.pathFor('sshZeroAddress', { backend });
+    const rolePaths = roles.map((role) => ({
+      role: this.capabilitiesService.pathFor('sshRole', { backend, id: role.id }),
+      credentials: this.capabilitiesService.pathFor('sshCredentials', { backend, id: role.id }),
+      sign: this.capabilitiesService.pathFor('sshSign', { backend, id: role.id }),
+    }));
+
+    // Fetch all capabilities in a single request
+    const allPaths = [
+      ...rolePaths.flatMap((paths) => [paths.role, paths.credentials, paths.sign]),
+      zeroAddressPath,
+    ];
+    const capabilities = await this.capabilitiesService.fetch(allPaths);
+
+    // Merge role data with capabilities
+    return roles.map((role, index) => {
+      const paths = rolePaths[index];
+      return {
+        ...role,
+        backend,
+        zero_address: zeroAddressRoles.has(role.id),
+        canRead: capabilities[paths.role]?.canRead || false,
+        canEdit: capabilities[paths.role]?.canUpdate || false,
+        canDelete: capabilities[paths.role]?.canDelete || false,
+        canGenerate: capabilities[paths.credentials]?.canUpdate || false,
+        canSign: capabilities[paths.sign]?.canUpdate || false,
+        canEditZeroAddress: capabilities[zeroAddressPath]?.canUpdate || false,
+      };
+    });
+  },
+
+  async fetchSshRoles(backend, page, pageFilter) {
+    try {
+      const roles = await this.fetchSshRolesWithCapabilities(backend);
+      return paginate(roles, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
   async model(params) {
     const secret = this.secretParam() || '';
     const backend = getEnginePathParam(this);
@@ -247,7 +314,7 @@ export default Route.extend({
     const effectiveType = getEffectiveEngineType(backendModel.engineType);
     const modelType = this.getModelType(effectiveType, params.tab);
 
-    // Handle keymgmt and TOTP resources with API service
+    // Handle TOTP, keymgmt and ssh resources with API service
     let secrets;
     if (effectiveType === 'totp') {
       const page = getValidPage(params.page);
@@ -261,6 +328,11 @@ export default Route.extend({
           ? await this.fetchKeymgmtProviders(backend, page, filter)
           : await this.fetchKeymgmtKeys(backend, page, filter);
 
+      this.set('has404', false);
+    } else if (effectiveType === 'ssh') {
+      const page = getValidPage(params.page);
+      const filter = params.pageFilter;
+      secrets = await this.fetchSshRoles(backend, page, filter);
       this.set('has404', false);
     } else {
       try {

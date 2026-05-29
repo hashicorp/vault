@@ -17,6 +17,7 @@ import { isValidProvider } from 'vault/utils/keymgmt-provider-utils';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
+import SshRoleForm from 'vault/forms/ssh/role';
 import {
   SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
   SecretsApiTransformListRolesListEnum,
@@ -127,8 +128,13 @@ export default Route.extend({
   buildModel(secret, queryParams) {
     const backend = getEnginePathParam(this);
     const modelType = this.modelType(backend, secret, { queryParams });
-    // Keymgmt and TOTP resources are loaded through API-backed forms, so Ember Data hydration is unnecessary.
-    if (modelType === 'secret' || modelType.startsWith('keymgmt/') || modelType === 'totp-key') {
+    // Keymgmt, TOTP, and SSH role resources are loaded through API-backed forms, so Ember Data hydration is unnecessary.
+    if (
+      modelType === 'secret' ||
+      modelType.startsWith('keymgmt/') ||
+      modelType === 'totp-key' ||
+      modelType === 'role-ssh'
+    ) {
       return resolve();
     }
     return this.pathHelp.hydrateModel(modelType, backend);
@@ -332,6 +338,38 @@ export default Route.extend({
     };
   },
 
+  async fetchSshRole(backend, name) {
+    try {
+      const { data } = await this.api.secrets.sshReadRole(name, backend);
+      return new SshRoleForm({ ...data, name, id: name, backend }, { isNew: false });
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      throw new Error(message);
+    }
+  },
+
+  async fetchSshRoleCapabilities(backend, name) {
+    try {
+      const rolePath = this.capabilitiesService.pathFor('sshRole', { backend, id: name });
+      const credentialsPath = this.capabilitiesService.pathFor('sshCredentials', { backend, id: name });
+      const signPath = this.capabilitiesService.pathFor('sshSign', { backend, id: name });
+
+      const capabilities = await this.capabilitiesService.fetch([rolePath, credentialsPath, signPath]);
+
+      return {
+        canDelete: capabilities[rolePath]?.canDelete,
+        canUpdate: capabilities[rolePath]?.canUpdate,
+        canEdit: capabilities[rolePath]?.canUpdate,
+        canRead: capabilities[rolePath]?.canRead,
+        canGenerate: capabilities[credentialsPath]?.canUpdate,
+        canSign: capabilities[signPath]?.canUpdate,
+      };
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      throw new Error(message);
+    }
+  },
+
   async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
     // capabilities is a promise proxy, not a real object
     // to work around this we explicitly assign it to a const and await it
@@ -371,7 +409,6 @@ export default Route.extend({
     let transformRoles;
     let capabilities;
 
-    // Handle TOTP resources with API service
     if (modelType === 'totp-key') {
       secretModel = await this.fetchTotpKey(backend, secret);
       capabilities = await this.fetchTotpKeyCapabilities(backend, secret);
@@ -381,6 +418,9 @@ export default Route.extend({
     } else if (modelType === 'keymgmt/provider') {
       secretModel = await this.fetchKeymgmtProvider(backend, secret);
       capabilities = await this.fetchKeymgmtProviderCapabilities(backend, secret);
+    } else if (modelType === 'role-ssh') {
+      secretModel = await this.fetchSshRole(backend, secret);
+      capabilities = await this.fetchSshRoleCapabilities(backend, secret);
     } else {
       capabilities = await this.capabilities(secret, modelType);
       try {
@@ -419,9 +459,9 @@ export default Route.extend({
     // mode will be 'show', 'edit', 'create'
     const mode = this.routeName.split('.').pop().replace('-root', '');
 
-    // Handle keymgmt and TOTP forms differently - Resource or Form doesn't have setProperties
+    // Handle keymgmt, TOTP, and SSH forms differently - Resource or Form doesn't have setProperties
     const modelType = this.modelType(backend, secret);
-    const formModelTypes = ['keymgmt/key', 'keymgmt/provider', 'totp-key'];
+    const formModelTypes = ['keymgmt/key', 'keymgmt/provider', 'totp-key', 'role-ssh'];
     if (!formModelTypes.includes(modelType)) {
       model.secret.setProperties({ backend });
     }
