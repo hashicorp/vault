@@ -21,6 +21,7 @@ export enum RouteName {
   REPLICATION = 'replication',
   VAULT_USAGE = 'vault-usage',
   LICENSE = 'license',
+  BILLING_DASHBOARD = 'billing-dashboard',
 }
 
 export enum NavSection {
@@ -37,7 +38,8 @@ export default class NavBar extends Helper {
   @service declare readonly flags: FlagsService;
 
   compute([navItem]: string[]) {
-    const { SECRETS_RECOVERY, SEAL, REPLICATION, VAULT_USAGE, LICENSE, SECRETS_SYNC } = RouteName;
+    const { SECRETS_RECOVERY, SEAL, REPLICATION, VAULT_USAGE, LICENSE, SECRETS_SYNC, BILLING_DASHBOARD } =
+      RouteName;
     const { RESILIENCE_AND_RECOVERY, REPORTING, CLIENT_COUNT } = NavSection;
 
     switch (navItem) {
@@ -54,6 +56,9 @@ export default class NavBar extends Helper {
         return this.supportsLicense;
       case REPORTING:
         return this.canAccessVaultUsageDashboard || this.supportsLicense;
+      // monitoring
+      case BILLING_DASHBOARD:
+        return this.supportsBillingDashboard;
       // resilience and recovery nav items
       case SECRETS_RECOVERY:
         return this.supportsSnapshots;
@@ -151,6 +156,16 @@ export default class NavBar extends Helper {
 
     // otherwise we show the link depending on whether or not the feature exists
     return this.version.hasSecretsSync;
+  }
+
+  get supportsBillingDashboard() {
+    const isCorrectNamespace = this.isRootNamespace || this.namespace.inHvdAdminNamespace;
+
+    return (
+      this.version.hasConsumptionBilling &&
+      isCorrectNamespace &&
+      this.permissions.hasNavPermission('billing', 'overview')
+    );
   }
 }
 

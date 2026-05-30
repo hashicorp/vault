@@ -8,19 +8,21 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, fillIn, setupOnerror } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ACL_CAPABILITIES, PolicyStanza } from 'core/utils/code-generators/policy';
+import { ACL_CAPABILITIES, formatStanzas, PolicyStanza } from 'core/utils/code-generators/policy';
 
 module('Integration | Component | code-generator/policy/builder', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.onPolicyChange = ({ policy, stanzas }) => {
-      this.set('policyCallback', policy);
+    this.onPolicyChange = ({ stanzas }) => {
+      // Mimics consumers of this component which use formatStanzas as needed
+      this.set('policyCallback', formatStanzas(stanzas));
       this.set('stanzas', stanzas);
     };
 
     this.policyCallback = '';
     this.policyName = undefined;
+    this.renderValidations = false;
     this.stanzas = [new PolicyStanza()];
 
     this.renderComponent = () => {
@@ -28,6 +30,7 @@ module('Integration | Component | code-generator/policy/builder', function (hook
         <CodeGenerator::Policy::Builder
           @onPolicyChange={{this.onPolicyChange}}
           @policyName={{this.policyName}}
+          @renderValidations={{this.renderValidations}}
           @stanzas={{this.stanzas}}
         />`);
     };
@@ -229,5 +232,14 @@ path "" {
     capabilities = ["delete"]
 }`;
     this.assertPolicyUpdate(assert, expectedPolicy, 'when rules do have an empty path');
+  });
+
+  test('it passes @renderValidations through to CodeGenerator::Policy::Stanza', async function (assert) {
+    this.renderValidations = true;
+    await this.renderComponent();
+    assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path cannot be empty.');
+    assert
+      .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+      .hasText('Rule must have at least one capability.');
   });
 });

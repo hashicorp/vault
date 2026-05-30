@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { toLabel } from 'core/helpers/to-label';
-import { calculateSum } from 'vault/utils/chart-helpers';
+import { calculateSum, toFixedDisplay } from 'vault/utils/chart-helpers';
 import { NormalizedBillingMetrics } from 'vault/utils/metrics-helpers';
 
 interface Args {
@@ -14,8 +14,20 @@ interface Args {
 }
 
 export default class MetricCard extends Component<Args> {
+  normalizedBillableMetrics = NormalizedBillingMetrics;
+
   get total() {
     const sums = Object.values(this.args.metrics).filter((metric) => metric !== undefined);
+    if (this.args.title === 'Credential units') {
+      const totalCredentialUnits = calculateSum(sums, 4);
+
+      if (typeof totalCredentialUnits === 'number') {
+        return toFixedDisplay(totalCredentialUnits, 4);
+      }
+
+      return totalCredentialUnits;
+    }
+
     return calculateSum(sums);
   }
 
@@ -38,11 +50,11 @@ export default class MetricCard extends Component<Args> {
     [NormalizedBillingMetrics.STATIC_SECRETS_KV]: {
       label: 'KV Secrets',
     },
-    [NormalizedBillingMetrics.DYNAMIC_ROLES]: {
+    [NormalizedBillingMetrics.DYNAMIC_ROLES_TOTAL]: {
       label: 'Dynamic roles',
       tooltipText: 'Highest number of dynamic roles for the month',
     },
-    [NormalizedBillingMetrics.STATIC_ROLES]: {
+    [NormalizedBillingMetrics.AUTO_ROTATED_ROLES_TOTAL]: {
       label: 'Static roles',
       tooltipText: 'Highest number of static roles for the month',
     },
@@ -55,6 +67,14 @@ export default class MetricCard extends Component<Args> {
       tooltipText:
         'Total number of SSH one-time passwords issued, normalized by their duration. Each OTP is 0.0014 units.',
     },
+    [NormalizedBillingMetrics.ID_TOKEN_UNITS_OIDC]: {
+      label: 'OIDC token units',
+      tooltipText: 'Total number of ID tokens issued, normalized by their duration.',
+    },
+    [NormalizedBillingMetrics.ID_TOKEN_UNITS_SPIFFE]: {
+      label: 'SPIFFE JWT units',
+      tooltipText: 'Total number of SPIFFE JWT tokens issued, normalized by their duration.',
+    },
     [NormalizedBillingMetrics.SSH_UNITS_CERTIFICATE_UNITS]: {
       label: 'SSH certificate units',
       tooltipText: 'Total number of SSH certificates issued, normalized by their duration.',
@@ -64,6 +84,9 @@ export default class MetricCard extends Component<Args> {
     },
     [NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TRANSFORM]: {
       label: 'Transform',
+    },
+    [NormalizedBillingMetrics.DATA_PROTECTION_CALLS_GCPKMS]: {
+      label: 'GCP KMS',
     },
     [NormalizedBillingMetrics.MANAGED_KEYS_TOTP]: {
       label: 'TOTP',

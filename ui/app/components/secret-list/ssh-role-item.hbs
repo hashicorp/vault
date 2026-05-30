@@ -5,7 +5,7 @@
 
 <LinkedBlock
   @params={{array
-    (concat "vault.cluster.secrets.backend." (if (eq @item.keyType "ca") "sign" "credentials") (unless @item.id "-root"))
+    (concat "vault.cluster.secrets.backend." (if (eq @item.key_type "ca") "sign" "credentials") (unless @item.id "-root"))
     @item.id
   }}
   class="list-item-row"
@@ -17,7 +17,7 @@
       <LinkTo
         @route={{concat
           "vault.cluster.secrets.backend."
-          (if (eq @item.keyType "ca") "sign" "credentials")
+          (if (eq @item.key_type "ca") "sign" "credentials")
           (unless @item.id "-root")
         }}
         @model={{@item.id}}
@@ -27,8 +27,8 @@
         <div class="role-item-details">
           <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
           <br />
-          <Hds::Badge @text={{@item.keyType}} />
-          {{#if @item.zeroAddress}}
+          <Hds::Badge @text={{@item.key_type}} />
+          {{#if @item.zero_address}}
             <span class="has-text-grey is-size-7">Zero-Address</span>
           {{/if}}
         </div>
@@ -43,30 +43,18 @@
             @hasChevron={{false}}
             data-test-popup-menu-trigger
           />
-          {{#if (eq @item.keyType "otp")}}
-            {{#if @item.generatePath.isPending}}
-              <dd.Generic class="has-text-center">
-                <LoadingDropdownOption />
-              </dd.Generic>
-            {{else if @item.canGenerate}}
-              <dd.Interactive
-                @route="vault.cluster.secrets.backend.credentials"
-                @model={{@item.id}}
-                data-test-role-ssh-link="generate"
-              >Generate credentials</dd.Interactive>
-            {{/if}}
-          {{else if (eq @item.keyType "ca")}}
-            {{#if @item.signPath.isPending}}
-              <dd.Generic class="has-text-center">
-                <LoadingDropdownOption />
-              </dd.Generic>
-            {{else if @item.canGenerate}}
-              <dd.Interactive
-                @route="vault.cluster.secrets.backend.sign"
-                @model={{@item.id}}
-                data-test-role-ssh-link="generate"
-              >Sign Keys</dd.Interactive>
-            {{/if}}
+          {{#if (and (eq @item.key_type "otp") @item.canGenerate)}}
+            <dd.Interactive
+              @route="vault.cluster.secrets.backend.credentials"
+              @model={{@item.id}}
+              data-test-role-ssh-link="generate"
+            >Generate credentials</dd.Interactive>
+          {{else if (and (eq @item.key_type "ca") @item.canSign)}}
+            <dd.Interactive
+              @route="vault.cluster.secrets.backend.sign"
+              @model={{@item.id}}
+              data-test-role-ssh-link="generate"
+            >Sign Keys</dd.Interactive>
           {{/if}}
           {{#if @loadingToggleZeroAddress}}
             <dd.Generic class="has-text-center">
@@ -74,35 +62,29 @@
             </dd.Generic>
           {{else if @item.canEditZeroAddress}}
             <dd.Interactive {{on "click" @toggleZeroAddress}}>
-              {{if @item.zeroAddress "Disable Zero Address" "Enable Zero Address"}}
+              {{if @item.zero_address "Disable Zero Address" "Enable Zero Address"}}
             </dd.Interactive>
           {{/if}}
-          {{#if @item.updatePath.isPending}}
-            <dd.Generic class="has-text-center">
-              <LoadingDropdownOption />
-            </dd.Generic>
-          {{else}}
-            {{#if @item.canRead}}
-              <dd.Interactive
-                @route="vault.cluster.secrets.backend.show"
-                @model={{@item.id}}
-                data-test-role-ssh-link="show"
-              >Details</dd.Interactive>
-            {{/if}}
-            {{#if @item.canEdit}}
-              <dd.Interactive
-                @route="vault.cluster.secrets.backend.edit"
-                @model={{@item.id}}
-                data-test-role-ssh-link="edit"
-              >Edit</dd.Interactive>
-            {{/if}}
-            {{#if @item.canDelete}}
-              <dd.Interactive
-                @color="critical"
-                {{on "click" (fn (mut this.showConfirmModal) true)}}
-                data-test-ssh-role-delete
-              >Delete</dd.Interactive>
-            {{/if}}
+          {{#if @item.canRead}}
+            <dd.Interactive
+              @route="vault.cluster.secrets.backend.show"
+              @model={{@item.id}}
+              data-test-role-ssh-link="show"
+            >Details</dd.Interactive>
+          {{/if}}
+          {{#if @item.canEdit}}
+            <dd.Interactive
+              @route="vault.cluster.secrets.backend.edit"
+              @model={{@item.id}}
+              data-test-role-ssh-link="edit"
+            >Edit</dd.Interactive>
+          {{/if}}
+          {{#if @item.canDelete}}
+            <dd.Interactive
+              @color="critical"
+              {{on "click" (fn (mut this.showConfirmModal) true)}}
+              data-test-ssh-role-delete
+            >Delete</dd.Interactive>
           {{/if}}
         </Hds::Dropdown>
       {{/if}}

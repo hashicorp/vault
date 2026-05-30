@@ -74,18 +74,19 @@ const (
 	mountPathCubbyhole     = "cubbyhole/"
 	mountPathAgentRegistry = "agent-registry/"
 
-	mountTypeSystem        = "system"
-	mountTypeNSSystem      = "ns_system"
-	mountTypeIdentity      = "identity"
-	mountTypeNSIdentity    = "ns_identity"
-	mountTypeCubbyhole     = "cubbyhole"
-	mountTypePlugin        = "plugin"
-	mountTypeKV            = "kv"
-	mountTypeNSCubbyhole   = "ns_cubbyhole"
-	mountTypeToken         = "token"
-	mountTypeNSToken       = "ns_token"
-	mountTypeDatabase      = "database"
-	mountTypeAgentRegistry = "agent_registry"
+	mountTypeSystem          = "system"
+	mountTypeNSSystem        = "ns_system"
+	mountTypeIdentity        = "identity"
+	mountTypeNSIdentity      = "ns_identity"
+	mountTypeCubbyhole       = "cubbyhole"
+	mountTypePlugin          = "plugin"
+	mountTypeKV              = "kv"
+	mountTypeNSCubbyhole     = "ns_cubbyhole"
+	mountTypeToken           = "token"
+	mountTypeNSToken         = "ns_token"
+	mountTypeDatabase        = "database"
+	mountTypeAgentRegistry   = "agent_registry"
+	mountTypeNSAgentRegistry = "ns_agent_registry"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -1435,6 +1436,18 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 		}
 	}
 
+	if !c.IsPerfSecondary() {
+		var modified bool
+		var err error
+		c.mounts.Entries, modified, err = c.addRequiredNamespaceMounts(c.mounts.Entries)
+		if err != nil {
+			return err
+		}
+		if modified {
+			needPersist = true
+		}
+	}
+
 	// Upgrade to table-scoped entries
 	for _, entry := range c.mounts.Entries {
 		if !c.PR1103disabled && entry.Type == mountTypeNSCubbyhole && !entry.Local && !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationDRSecondary) {
@@ -2082,7 +2095,11 @@ func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *
 	case mountTypeIdentity:
 		c.identityStore = backend.(*IdentityStore)
 	case mountTypeAgentRegistry:
-		c.agentRegistry = backend.(*AgentRegistry)
+		// core should only have a reference to the root namespace's
+		// agent registry
+		if entry.NamespaceID == namespace.RootNamespaceID {
+			c.agentRegistry = backend.(*AgentRegistry)
+		}
 	}
 }
 

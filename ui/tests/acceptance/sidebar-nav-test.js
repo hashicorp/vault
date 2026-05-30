@@ -43,12 +43,13 @@ module('Acceptance | sidebar navigation', function (hooks) {
   });
 
   test('it should link to correct routes at the cluster level', async function (assert) {
-    assert.expect(8);
+    assert.expect(9);
 
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
     const subNavs = [
       { label: 'Access control', route: 'policies/acl' },
+      { label: 'Secrets', route: 'secrets-engines' },
       { label: 'Operational tools', route: 'tools/wrap' },
     ];
 
@@ -62,10 +63,8 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
     const links = [
       { label: 'Raft storage', route: '/vault/storage/raft' },
-      { label: 'Secrets', route: '/vault/secrets-engines' },
       { label: 'Dashboard', route: '/vault/dashboard' },
     ];
-
     for (const l of links) {
       await click(link(l.label));
       assert.strictEqual(currentURL(), l.route, `${l.label} route renders`);

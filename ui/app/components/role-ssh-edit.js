@@ -3,14 +3,21 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import RoleEdit from './role-edit';
+import Component from '@ember/component';
+import { service } from '@ember/service';
 import { computed } from '@ember/object';
+import { isBlank } from '@ember/utils';
 
-export default RoleEdit.extend({
-  init() {
-    this._super(...arguments);
-    this.set('backendType', 'ssh');
-  },
+const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
+const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
+
+export default Component.extend({
+  api: service(),
+  router: service(),
+  flashMessages: service(),
+
+  mode: null,
+  form: null,
 
   breadcrumbs: computed('root', 'title', function () {
     return [
@@ -31,17 +38,52 @@ export default RoleEdit.extend({
     }
   }),
 
-  subtitle: computed('mode', 'model.id', function () {
+  subtitle: computed('mode', 'form.name', function () {
     if (this.mode === 'create' || this.mode === 'edit') return;
+    return this.form.name;
+  }),
 
-    return this.model.id;
+  displayFields: computed('form.{data.key_type,displayFields}', function () {
+    return this.form?.displayFields ?? [];
   }),
 
   actions: {
+    async createOrUpdate(type, event) {
+      event.preventDefault();
+
+      const { form } = this;
+      const { name, id, backend, ...roleData } = form.data;
+      const roleName = id || name;
+
+      if (type === 'create' && isBlank(roleName)) {
+        this.flashMessages.danger('Role name is required');
+        return;
+      }
+
+      try {
+        await this.api.secrets.sshWriteRole(roleName, backend, roleData);
+        this.router.transitionTo(SHOW_ROUTE, roleName);
+      } catch (error) {
+        const { message } = await this.api.parseError(error);
+        this.flashMessages.danger(message);
+      }
+    },
+
+    async delete() {
+      const { form } = this;
+      const { name, backend } = form.data;
+
+      try {
+        await this.api.secrets.sshDeleteRole(name, backend);
+        this.router.transitionTo(LIST_ROOT_ROUTE);
+      } catch (error) {
+        const { message } = await this.api.parseError(error);
+        this.flashMessages.danger(message);
+      }
+    },
+
     updateTtl(path, val) {
-      const model = this.model;
-      const valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
-      model.set(path, valueToSet);
+      this.form[path] = val.enabled === true ? `${val.seconds}s` : undefined;
     },
   },
 });

@@ -758,6 +758,16 @@ type TokenStore struct {
 func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *logical.BackendConfig) (*TokenStore, error) {
 	// Create a sub-view
 	view := core.systemBarrierView.SubView(tokenSubPath)
+	if core.IsDRSecondary() {
+		// Generally speaking, DR secondaries do not handle requests using tokens
+		// from the TokenStore.  Requests to DR secondaries should either be
+		// unauthenticated, or use a batch token, or use a DR operation token
+		// created using the generate-operation-token api.  With the change to
+		// make generate-operation-token authenticated by default, we're now also
+		// allowing regular root tokens from the primary cluster to be used.
+		//
+		view.setReadOnlyErr(logical.ErrReadOnly)
+	}
 
 	// Initialize the store
 	t := &TokenStore{
@@ -1508,17 +1518,16 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
+	normalizedID := normalizeEnterpriseTokenToID(id)
 
 	// If it starts with "b." it's a batch token
-	if IsBatchToken(id) {
-		return ts.lookupBatchToken(ctx, id)
+	if IsBatchToken(normalizedID) {
+		return ts.lookupBatchToken(ctx, normalizedID)
 	}
-
-	lock := locksutil.LockForKey(ts.tokenLocks, id)
+	lock := locksutil.LockForKey(ts.tokenLocks, normalizedID)
 	lock.RLock()
 	defer lock.RUnlock()
-
-	return ts.lookupInternal(ctx, id, false, false)
+	return ts.lookupInternal(ctx, normalizedID, false, false)
 }
 
 func (ts *TokenStore) stripBatchPrefix(id string) string {
@@ -1742,6 +1751,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 				return nil, fmt.Errorf("failed to persist token upgrade: %w", err)
 			}
 		}
+		return entry, nil
+	}
+
+	if entry.IsRoot() {
+		// We don't need to check for persistence or expiration for root tokens.
 		return entry, nil
 	}
 
@@ -2669,7 +2683,8 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
-	if !orphan && IsEnterpriseToken(req.ClientToken) {
+	normalizedClientToken := normalizeEnterpriseTokenToID(req.ClientToken)
+	if !orphan && IsEnterpriseTokenId(normalizedClientToken) {
 		return logical.ErrorResponse("enterprise tokens cannot create child tokens"), logical.ErrInvalidRequest
 	}
 
@@ -3340,7 +3355,8 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
-	if IsEnterpriseToken(id) {
+	normalizedID := normalizeEnterpriseTokenToID(id)
+	if IsEnterpriseTokenId(normalizedID) {
 		return logical.ErrorResponse("cannot revoke ent token"), nil
 	}
 	te, err := ts.Lookup(ctx, id)
@@ -3387,7 +3403,8 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	if IsEnterpriseToken(id) {
+	normalizedID := normalizeEnterpriseTokenToID(id)
+	if IsEnterpriseTokenId(normalizedID) {
 		return logical.ErrorResponse("enterprise token cannot be revoked"), nil
 	}
 
@@ -3429,7 +3446,19 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 	if IsEnterpriseToken(id) {
-		id = getEnterpriseTokenId(req.EnterpriseTokenMetadata)
+		// If the token specified in the request body is different from the caller's
+		// token, resolve the token ID based on the body token's claims (JTI) instead
+		// of req.EnterpriseTokenMetadata, otherwise we may silently return the caller's
+		// own token entry or fail for non-Enterprise token callers.
+		if id == req.ClientToken {
+			id = getEnterpriseTokenId(req.EnterpriseTokenMetadata)
+		} else {
+			resolvedID, err := resolveEnterpriseTokenIDForLookup(id)
+			if err != nil {
+				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+			}
+			id = resolvedID
+		}
 	}
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
@@ -3542,7 +3571,8 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
-	if IsEnterpriseToken(id) {
+	normalizedID := normalizeEnterpriseTokenToID(id)
+	if IsEnterpriseTokenId(normalizedID) {
 		return logical.ErrorResponse("enterprise tokens cannot be renewed"), nil
 	}
 	incrementRaw := data.Get("increment").(int)

@@ -1558,6 +1558,9 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 // Register is used to take a request and response with an associated
 // lease. The secret gets assigned a LeaseID and the management of
 // the lease is assumed by the expiration manager.
+//
+// For enterprise tokens, Register uses the token entry ID for indexing and
+// caps secret leases at token expiration, marking them non-renewable.
 func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, resp *logical.Response, loginRole string) (id string, retErr error) {
 	defer metrics.MeasureSince([]string{"expire", "register"}, time.Now())
 
@@ -1605,6 +1608,9 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		ExpireTime:      resp.Secret.ExpirationTime(),
 		namespace:       ns,
 		Version:         1,
+	}
+	if te.Type == logical.TokenTypeEnt {
+		le.ClientToken = te.ID
 	}
 
 	var indexToken string
@@ -1658,14 +1664,19 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 			le.ExpireTime = tokenLeaseTimes.ExpireTime
 		}
 	}
-
-	// If the token is an ent token, derive TTL from the ent token
 	if te.Type == logical.TokenTypeEnt {
-		entTokenExpireTime := deriveExpireTimeFromEntToken(te)
-		if !entTokenExpireTime.IsZero() && le.ExpireTime.After(entTokenExpireTime) {
-			// Use the ent token's expiration time for the lease
-			le.ExpireTime = entTokenExpireTime
+		tokenExpireTime := deriveExpireTimeFromEntToken(te)
+		if tokenExpireTime.IsZero() && te.TTL > 0 {
+			tokenExpireTime = time.Unix(te.CreationTime, 0).Add(te.TTL)
 		}
+		if !tokenExpireTime.IsZero() && (le.ExpireTime.IsZero() || le.ExpireTime.After(tokenExpireTime)) {
+			le.ExpireTime = tokenExpireTime
+			le.Secret.TTL = le.ExpireTime.Sub(le.IssueTime)
+			if le.Secret.TTL < 0 {
+				le.Secret.TTL = 0
+			}
+		}
+		le.Secret.Renewable = false
 	}
 
 	// Acquire the lock here so persistEntry and updatePending are atomic,
@@ -2339,20 +2350,18 @@ func (m *ExpirationManager) deleteEntry(ctx context.Context, le *leaseEntry) err
 
 // createIndexByToken creates a secondary index from the token to a lease entry
 func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
-	var tokenNS *namespace.Namespace
-	var saltCtx context.Context
-	var err error
-
-	if IsEnterpriseToken(token) {
-		// fetch the namespace from the lease rather than the req context to allow for cross namespace access
-		tokenNS, err = m.getNamespaceFromLeaseID(ctx, le.LeaseID)
+	tokenNS := namespace.RootNamespace
+	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
+	// For enterprise token IDs, derive namespace context from the lease rather than
+	// parsing token segments.
+	if IsEnterpriseTokenId(token) {
+		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
 		if err != nil {
 			return err
 		}
+		tokenNS = ns
 		saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
 	} else {
-		tokenNS = namespace.RootNamespace
-		saltCtx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 		_, nsID := namespace.SplitIDFromString(token)
 		if nsID != "" {
 			var err error
@@ -2391,15 +2400,24 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*logical.StorageEntry, error) {
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, tokenNS)
-	_, nsID := namespace.SplitIDFromString(le.ClientToken)
-	if nsID != "" {
-		var err error
-		tokenNS, err = NamespaceByID(ctx, nsID, m.core)
+	if IsEnterpriseTokenId(le.ClientToken) {
+		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
 		if err != nil {
 			return nil, err
 		}
-		if tokenNS != nil {
-			saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+		tokenNS = ns
+		saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+	} else {
+		_, nsID := namespace.SplitIDFromString(le.ClientToken)
+		if nsID != "" {
+			var err error
+			tokenNS, err = NamespaceByID(ctx, nsID, m.core)
+			if err != nil {
+				return nil, err
+			}
+			if tokenNS != nil {
+				saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
+			}
 		}
 	}
 
@@ -2424,20 +2442,16 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 
 // removeIndexByToken removes the secondary index from the token to a lease entry
 func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
-	var tokenNS *namespace.Namespace
-	var saltCtx context.Context
-	var err error
-
-	if IsEnterpriseToken(token) {
-		tokenNS, err = namespace.FromContext(ctx)
+	tokenNS := namespace.RootNamespace
+	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
+	if IsEnterpriseTokenId(token) {
+		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
 		if err != nil {
 			return err
 		}
-
+		tokenNS = ns
 		saltCtx = namespace.ContextWithNamespace(ctx, tokenNS)
 	} else {
-		tokenNS = namespace.RootNamespace
-		saltCtx = namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 		_, nsID := namespace.SplitIDFromString(token)
 		if nsID != "" {
 			var err error
@@ -2832,6 +2846,11 @@ func (m *ExpirationManager) markLeaseIrrevocable(ctx context.Context, le *leaseE
 	m.nonexpiring.Delete(le.LeaseID)
 }
 
+// getNamespaceFromLeaseID resolves the namespace encoded in a lease ID suffix.
+// Lease IDs are generated by the expiration manager and include ".<nsID>" for
+// non-root namespaces; root-namespace lease IDs have no namespace suffix.
+// For persisted leaseEntry records, LeaseID is always set at creation, so
+// namespace derivation from LeaseID is expected to be stable.
 func (m *ExpirationManager) getNamespaceFromLeaseID(ctx context.Context, leaseID string) (*namespace.Namespace, error) {
 	_, nsID := namespace.SplitIDFromString(leaseID)
 

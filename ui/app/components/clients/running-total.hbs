@@ -4,43 +4,43 @@
 }}
 
 {{#if @byMonthClients.length}}
-  <Clients::CountsCard @title="Client usage trends" @description={{this.chartContainerText}} @legend={{this.chartLegend}}>
-
+  <Clients::CountsCard @title="Client usage trends" @description={{this.chartContainerText}}>
     <:dataLeft>
-      <Hds::Text::Body @tag="p">Client count and type distribution</Hds::Text::Body>
-      <VaultReporting::DonutChart
-        @data={{this.donutChartData}}
-        @title={{if this.flags.isHvdManaged "Total unique clients" "Total clients"}}
-        class="donut-chart"
+      <Clients::Charts::CarbonChart
+        @chartData={{this.donutChartData}}
+        @chartOptions={{this.donutChartOptions}}
+        @chartType={{this.chartTypes.DONUT}}
+        data-test-chart="Client count and type distribution"
       />
     </:dataLeft>
 
     <:dataRight>
-      <div class="flex space-between has-bottom-margin-xl left-padding-16">
-        <Hds::Text::Body @tag="p">Client usage by month</Hds::Text::Body>
-        <Hds::Form::Toggle::Field
-          data-test-input="toggle view"
-          {{on "change" (fn (mut this.showStacked) (not this.showStacked))}}
-          as |F|
-        >
-          <F.Label>Split by client type</F.Label>
-        </Hds::Form::Toggle::Field>
+      <div class="chart-container">
+        <div class="chart-container-toggle">
+          <Hds::Form::Toggle::Field
+            data-test-input="toggle view"
+            {{on "change" (fn (mut this.showStacked) (not this.showStacked))}}
+            as |F|
+          >
+            <F.Label>Split by client type</F.Label>
+          </Hds::Form::Toggle::Field>
+        </div>
+        {{#if this.showStacked}}
+          <Clients::Charts::CarbonChart
+            @chartData={{this.stackedChartData}}
+            @chartOptions={{this.stackedChartOptions}}
+            @chartType={{this.chartTypes.STACKED_BAR}}
+            data-test-chart="Client usage by month (stacked)"
+          />
+        {{else}}
+          <Clients::Charts::CarbonChart
+            @chartData={{this.simpleChartData}}
+            @chartOptions={{this.simpleChartOptions}}
+            @chartType={{this.chartTypes.SIMPLE_BAR}}
+            data-test-chart="Client usage by month (simple)"
+          />
+        {{/if}}
       </div>
-      {{#if this.showStacked}}
-        <Clients::Charts::VerticalBarStacked
-          @chartTitle="Client usage by month"
-          @data={{this.runningTotalData}}
-          @chartLegend={{this.chartLegend}}
-          @chartHeight={{200}}
-        />
-      {{else}}
-        <Clients::Charts::VerticalBarBasic
-          @chartTitle="Client usage by month"
-          @data={{this.runningTotalData}}
-          @dataKey={{this.dataKey}}
-          @chartHeight={{200}}
-        />
-      {{/if}}
     </:dataRight>
   </Clients::CountsCard>
 {{else}}

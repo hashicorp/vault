@@ -16,7 +16,7 @@
 </Page::Header>
 
 <Oidc::KeyForm
-  @model={{this.model}}
+  @form={{this.model}}
   @onCancel={{transition-to "vault.cluster.access.oidc.keys"}}
   @onSave={{transition-to "vault.cluster.access.oidc.keys.key.details" this.model.name}}
 />

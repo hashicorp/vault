@@ -6,6 +6,11 @@
 import { hash } from 'rsvp';
 import { service } from '@ember/service';
 import EditBase from './secret-edit';
+import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
+import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
+import TotpKeyForm from 'vault/forms/totp/key';
+import SshRoleForm from 'vault/forms/ssh/role';
+import { KeyManagementUpdateKeyRequestTypeEnum } from '@hashicorp/vault-client-typescript';
 
 const secretModel = (store, backend, key) => {
   const model = store.createRecord('secret', {
@@ -27,8 +32,47 @@ export default EditBase.extend({
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     let modelType = this.modelType(backend, null, { queryParams: transition.to.queryParams });
+
+    // Handle keymgmt/key with Form class
+    if (modelType === 'keymgmt/key') {
+      const defaultValues = {
+        backend,
+        type: KeyManagementUpdateKeyRequestTypeEnum.RSA_2048,
+        deletion_allowed: false,
+      };
+      return new KeymgmtKeyForm(defaultValues, { isNew: true });
+    }
+
+    if (modelType === 'keymgmt/provider') {
+      const defaultValues = {
+        backend,
+        credentials: {},
+      };
+      return new KeymgmtProviderForm(defaultValues, { isNew: true });
+    }
+
+    if (modelType === 'totp-key') {
+      return new TotpKeyForm(
+        {
+          backend,
+          generate: true,
+          algorithm: 'SHA1',
+          digits: 6,
+          period: 30,
+          exported: true,
+          key_size: 20,
+          skew: 1,
+          qr_size: 200,
+        },
+        { isNew: true }
+      );
+    }
+
     if (modelType === 'role-ssh') {
-      return this.store.createRecord(modelType, { keyType: 'ca' });
+      return new SshRoleForm(
+        { backend, key_type: 'ca', not_before_duration: '30s', port: 22 },
+        { isNew: true }
+      );
     }
     if (modelType === 'transform') {
       modelType = transformModel(transition.to.queryParams);
@@ -37,7 +81,7 @@ export default EditBase.extend({
       modelType = 'database/role';
     }
     if (modelType !== 'secret') {
-      return this.store.createRecord(modelType);
+      return this.store.createRecord(modelType, { backend });
     }
     return secretModel(this.store, backend, transition.to.queryParams.initialKey);
   },

@@ -295,6 +295,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleGenerateRootAttempt,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "read",
 						OperationSuffix: "progress2|progress",
@@ -349,7 +351,9 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary: "Initializes a new root generation attempt.",
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleGenerateRootAttempt,
+					Summary:                   "Initializes a new root generation attempt.",
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "initialize",
 						OperationSuffix: "2|",
@@ -404,6 +408,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					},
 				},
 				logical.DeleteOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleGenerateRootAttempt,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb:   "cancel",
 						OperationSuffix: "2|",
@@ -434,6 +440,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
+					ForwardPerformanceStandby: true,
+					Callback:                  b.handleGenerateRootUpdate,
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationPrefix: "root-token-generation",
 						OperationVerb:   "update",
@@ -4007,7 +4015,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 						OperationSuffix: "tuning-information",
 					},
 					Summary:     "Reads the given auth path's configuration.",
-					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
+					Description: "This endpoint requires sudo capability on the final path. The equivalent endpoint at `sys/mounts/auth/[auth-path]/tune` also requires sudo capability.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -4022,7 +4030,7 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 						OperationSuffix: "configuration-parameters",
 					},
 					Summary:     "Tune configuration parameters for a given auth path.",
-					Description: "This endpoint requires sudo capability on the final path, but the same functionality can be achieved without sudo via `sys/mounts/auth/[auth-path]/tune`.",
+					Description: "This endpoint requires sudo capabilities on the final path. The equivalent endpoint at `sys/mounts/auth/[auth-path]/tune` also requires sudo capabilities.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
@@ -4663,7 +4671,7 @@ func (b *SystemBackend) mountsPaths() []*framework.Path {
 						OperationSuffix: "tuning-information",
 					},
 					Summary:     "Reads the given auth path's configuration.",
-					Description: "This endpoint does NOT require sudo capability. For the sudo-required alternative, use the endpoint at `sys/auth/[auth-path]/tune`.",
+					Description: "This endpoint requires sudo capability on the final path. The equivalent endpoint at `sys/auth/[auth-path]/tune` also requires sudo capability.",
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
@@ -4678,7 +4686,7 @@ func (b *SystemBackend) mountsPaths() []*framework.Path {
 						OperationSuffix: "configuration-parameters",
 					},
 					Summary:     "Tune configuration parameters for a given auth path.",
-					Description: "This endpoint does NOT require sudo capability. The same functionality can be achieved with sudo via the `sys/auth/[auth-path]/tune` endpoint.",
+					Description: "This endpoint requires sudo capability on the final path. The equivalent endpoint at `sys/auth/[auth-path]/tune` also requires sudo capability.",
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",

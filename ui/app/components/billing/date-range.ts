@@ -24,8 +24,8 @@ export default class BillingDateRange extends Component<Args> {
     const options = [];
 
     for (const option of this.args.months) {
-      const formattedDate = dateFormat([option.month, 'MMM yyyy'], {});
-      options.push({ label: `From start of ${formattedDate}`, value: option.month });
+      const formattedDate = dateFormat([option.month, 'MMMM yyyy'], {});
+      options.push({ label: formattedDate, value: option.month });
     }
 
     return options;

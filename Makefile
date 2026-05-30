@@ -170,18 +170,24 @@ protolint: prep check-tools-external
 	@echo "==> Linting protobufs..."
 	@buf lint
 
-# prep runs `go generate` to build the dynamically generated
-# source files.
+# prep runs `go generate` to build the dynamically generated source files.
+# Since generated files are committed to git, this is usually not needed.
+# Set SKIP_GEN=1 to skip generation (for savvy users who know they don't need it).
 #
 # n.b.: prep used to depend on fmtcheck, but since fmtcheck is
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version clean
-	@echo "==> Running go generate..."
-	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
-	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
-	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+prep: check-go-version
+	@if [ "$(SKIP_GEN)" = "1" ]; then \
+		echo "==> Skipping go generate (SKIP_GEN=1)"; \
+	else \
+		$(MAKE) clean; \
+		echo "==> Running go generate..."; \
+		GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES); \
+		(cd api && GOARCH= GOOS= $(GO_CMD) generate $(API_PACKAGES)); \
+		(cd sdk && GOARCH= GOOS= $(GO_CMD) generate $(SDK_PACKAGES)); \
+	fi
 
 # Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
 # whenever a make target is invoked.
@@ -244,10 +250,10 @@ proto: check-tools-external
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 importfmt: check-tools-external
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gosimports -w
 
 fmt: importfmt
-	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
+	find . -name '*.go' -not -path './.git/*' | grep -v pb.go | grep -v vendor | xargs gofumpt -w
 
 fmtcheck: check-go-fmt
 

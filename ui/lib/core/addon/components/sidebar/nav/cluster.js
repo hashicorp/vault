@@ -22,6 +22,7 @@ export default class SidebarNavClusterComponent extends Component {
 
   routeName = {
     vaultUsage: RouteName.VAULT_USAGE,
+    billingDashboard: RouteName.BILLING_DASHBOARD,
   };
 
   get cluster() {

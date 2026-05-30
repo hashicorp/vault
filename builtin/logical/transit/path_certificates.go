@@ -106,9 +106,6 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 	if p == nil {
 		return logical.ErrorResponse(fmt.Sprintf("key with provided name '%s' not found", name)), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false) // NOTE: No lock on "read" operations?
-	}
 	defer p.Unlock()
 
 	// Check if transit key supports signing
@@ -162,17 +159,15 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	name := d.Get("name").(string)
 
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: req.Storage,
-		Name:    name,
+		Storage:     req.Storage,
+		Name:        name,
+		WriteLocked: true,
 	}, b.GetRandomReader())
 	if err != nil {
 		return nil, err
 	}
 	if p == nil {
 		return logical.ErrorResponse(fmt.Sprintf("key with provided name '%s' not found", name)), logical.ErrInvalidRequest
-	}
-	if !b.System().CachingDisabled() {
-		p.Lock(true) // NOTE: Lock as we are might write to the policy
 	}
 	defer p.Unlock()
 

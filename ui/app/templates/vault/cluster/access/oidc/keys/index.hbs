@@ -11,18 +11,18 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#each this.model as |model|}}
+{{#each this.model.keys as |key|}}
   <LinkedBlock
     class="list-item-row"
-    @params={{array "vault.cluster.access.oidc.keys.key.details" model.name}}
-    data-test-oidc-key-linked-block={{model.name}}
+    @params={{array "vault.cluster.access.oidc.keys.key.details" key}}
+    data-test-oidc-key-linked-block={{key}}
   >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
           <Icon @name="key" class="has-text-grey-light" />
           <span class="has-text-weight-semibold is-underline" data-test-item>
-            {{model.name}}
+            {{key}}
           </span>
         </div>
       </div>
@@ -37,16 +37,20 @@
             />
             <dd.Interactive
               @route="vault.cluster.access.oidc.keys.key.details"
-              @model={{model.name}}
-              @disabled={{eq model.canRead false}}
+              @model={{key}}
+              @disabled={{not (has-capability @model.capabilities "read" pathKey="oidcKey" params=key)}}
               data-test-oidc-key-menu-link="details"
-            >Details</dd.Interactive>
+            >
+              Details
+            </dd.Interactive>
             <dd.Interactive
               @route="vault.cluster.access.oidc.keys.key.edit"
-              @model={{model.name}}
-              @disabled={{eq model.canEdit false}}
+              @model={{key}}
+              @disabled={{not (has-capability @model.capabilities "update" pathKey="oidcKey" params=key)}}
               data-test-oidc-key-menu-link="edit"
-            >Edit</dd.Interactive>
+            >
+              Edit
+            </dd.Interactive>
           </Hds::Dropdown>
         </div>
       </div>

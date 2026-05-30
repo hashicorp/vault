@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{@model.id}}>
+<Page::Header @title={{@model.name}}>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
@@ -16,20 +16,20 @@
       @extension={{if (eq @model.policyType "acl") @model.format "sentinel"}}
       @text="Download policy"
     />
-    {{#if (and (not-eq @model.id "root") (or @model.canUpdate @model.canDelete))}}
+    {{#if (and (not-eq @model.name "root") (or @model.capabilities.canUpdate @model.capabilities.canDelete))}}
       <Hds::Button
         @icon="edit"
         @text="Edit policy"
         @route="vault.cluster.policy.edit"
-        @models={{array @model.policyType @model.id}}
+        @models={{array @model.policyType @model.name}}
         data-test-button="Edit policy"
       />
     {{/if}}
   </:actions>
 
   <:badges>
-    {{#if @model.enforcementLevel}}
-      <Hds::Badge @text={{@model.enforcementLevel}} aria-label="Enforcement level: {{@model.enforcementLevel}}" />
+    {{#if @model.enforcement_level}}
+      <Hds::Badge @text={{@model.enforcement_level}} aria-label="Enforcement level: {{@model.enforcement_level}}" />
     {{/if}}
   </:badges>
 </Page::Header>

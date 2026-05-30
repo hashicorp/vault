@@ -2,15 +2,14 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
+<NamespaceReminder @mode={{if @form.isNew "create" "edit"}} @noun="policy" />
 
 <Hds::Form {{on "submit" (perform this.save)}} data-test-policy-form class="has-bottom-margin-xs" as |FORM|>
   <FORM.Section @isFullWidth={{true}}>
-    <MessageError @errorMessage={{this.errorBanner}} />
+    <MessageError @errorMessage={{this.errorBanner}} @errorDetails={{this.errorDetails}} />
   </FORM.Section>
 
-  {{#if @model.isNew}}
+  {{#if @form.isNew}}
     <FORM.Section @isFullWidth={{true}} as |FS|>
       <FS.Header as |FSH|>
         <FSH.Title @tag="h2">
@@ -34,7 +33,8 @@
       {{else}}
         <Hds::Form::TextInput::Field
           name="name"
-          @value={{lowercase @model.name}}
+          @value={{lowercase @form.data.name}}
+          @isRequired={{true}}
           placeholder="Enter the policy name"
           autocomplete="off"
           spellcheck="false"
@@ -50,7 +50,7 @@
 
   {{#unless this.showFileUpload}}
     <FORM.Section @isFullWidth={{true}} as |FS|>
-      {{#if @model.isNew}}
+      {{#if @form.isNew}}
         <FS.Header @tag="h3" data-test-form-header="Policy rules" as |FSH|>
           <FSH.Title>Policy rules</FSH.Title>
 
@@ -84,15 +84,16 @@
 
       {{#if (and (this.isActiveEditor "visual") this.visualEditorSupported)}}
         <CodeGenerator::Policy::Builder
-          @policyName={{@model.name}}
+          @policyName={{@form.data.name}}
           @onPolicyChange={{this.handlePolicyChange}}
           @stanzas={{this.stanzas}}
+          @renderValidations={{if (this.validationError "stanzas") true false}}
           data-test-field="visual editor"
         />
       {{else}}
         <JsonEditor
           @title="Policy editor"
-          @value={{@model.policy}}
+          @value={{@form.data.policy}}
           @valueUpdated={{this.setPolicy}}
           @mode="hcl"
           @extraKeys={{hash Shift-Enter=(perform this.save)}}
@@ -114,16 +115,16 @@
     </FORM.Section>
   {{/unless}}
 
-  {{#if @model.additionalAttrs}}
+  {{#if @form.additionalFields}}
     <FORM.Section @isFullWidth={{true}}>
-      {{#each @model.additionalAttrs as |attr|}}
-        <FormField @attr={{attr}} @model={{@model}} />
+      {{#each @form.additionalFields as |attr|}}
+        <FormField @attr={{attr}} @model={{@form}} />
       {{/each}}
     </FORM.Section>
   {{/if}}
 
   {{! Automation snippets are currently only supported for ACL policies }}
-  {{#if (and (eq @model.policyType "acl") (not @isCompact))}}
+  {{#if (and (eq @form.policyType "acl") (not @isCompact))}}
     <FORM.Separator />
 
     <FORM.Section @isFullWidth={{true}}>
@@ -141,7 +142,7 @@
   <FORM.Footer as |FF|>
     <FF.ButtonSet>
       <Hds::Button
-        @text={{if @model.isNew "Create policy" "Save"}}
+        @text={{if @form.isNew "Create policy" "Save"}}
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}
@@ -151,7 +152,7 @@
         @text="Cancel"
         @color="secondary"
         disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
+        {{on "click" @onCancel}}
         data-test-cancel
       />
     </FF.ButtonSet>
@@ -169,11 +170,11 @@
   >
     <M.Header data-test-modal-header="Example policy">
       Example
-      {{uppercase @model.policyType}}
+      {{uppercase @form.policyType}}
       Policy
     </M.Header>
     <M.Body>
-      <PolicyExample @policyType={{@model.policyType}} />
+      <PolicyExample @policyType={{@form.policyType}} />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-close-button />

@@ -105,12 +105,19 @@ func (x *EventReceived) BexprDatum() any {
 		}
 	}
 
+	sourcePluginMount := ""
+	isLocal := false
+	if x.PluginInfo != nil {
+		sourcePluginMount = x.PluginInfo.MountPath
+		isLocal = x.PluginInfo.IsLocal
+	}
+
 	return &EventReceivedBexpr{
 		EventType:           x.EventType,
 		Operation:           operation,
-		SourcePluginMount:   x.PluginInfo.MountPath,
+		SourcePluginMount:   sourcePluginMount,
 		DataPath:            dataPath,
 		Namespace:           x.Namespace,
-		SourcePluginIsLocal: x.PluginInfo.IsLocal,
+		SourcePluginIsLocal: isLocal,
 	}
 }

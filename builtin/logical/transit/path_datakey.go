@@ -117,9 +117,6 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	params.factories = make([]any, 0)

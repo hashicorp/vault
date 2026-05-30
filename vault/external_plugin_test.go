@@ -75,9 +75,6 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 				},
 			})
 
-			cluster.Start()
-			defer cluster.Cleanup()
-
 			c := cluster.Cores[0].Core
 			TestWaitActive(t, c)
 

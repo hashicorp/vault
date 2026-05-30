@@ -4,7 +4,7 @@
 provider "enos" "default" {}
 
 provider "helm" "default" {
-  kubernetes {
+  kubernetes = {
     config_path = abspath(joinpath(path.root, "kubeconfig"))
   }
 }

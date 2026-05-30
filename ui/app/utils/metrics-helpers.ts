@@ -3,26 +3,34 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { calculateSum } from 'vault/utils/chart-helpers';
+
 import type { Month, NormalizedMetricsData } from 'vault/vault/billing/overview';
 
 export enum NormalizedBillingMetrics {
+  AUTO_ROTATED_ROLES_TOTAL = 'auto_rotated_roles_total',
+  CREDENTIAL_UNITS_TOTAL = 'credential_units_total',
+  DATA_PROTECTION_CALLS_TOTAL = 'data_protection_calls_total',
   DATA_PROTECTION_CALLS_TRANSFORM = 'data_protection_calls_transform',
   DATA_PROTECTION_CALLS_TRANSIT = 'data_protection_calls_transit',
-  DYNAMIC_ROLES = 'dynamic_roles',
+  DATA_PROTECTION_CALLS_GCPKMS = 'data_protection_calls_gcpkms',
+  DYNAMIC_ROLES_TOTAL = 'dynamic_roles_total',
+  EXTERNAL_PLUGINS_TOTAL = 'external_plugins_total',
+  ID_TOKEN_UNITS_TOTAL = 'id_token_units_total',
+  ID_TOKEN_UNITS_OIDC = 'id_token_units_oidc',
+  ID_TOKEN_UNITS_SPIFFE = 'id_token_units_spiffe',
   KMIP_USED_IN_MONTH = 'kmip_used_in_month',
   MANAGED_KEYS = 'managed_keys',
   MANAGED_KEYS_KMSE = 'managed_keys_kmse',
+  MANAGED_KEYS_TOTAL = 'managed_keys_total',
   MANAGED_KEYS_TOTP = 'managed_keys_totp',
   PKI_UNITS_TOTAL = 'pki_units_total',
   SSH_UNITS = 'ssh_units',
   SSH_UNITS_CERTIFICATE_UNITS = 'ssh_units_certificate_units',
   SSH_UNITS_OTP_UNITS = 'ssh_units_otp_units',
-  STATIC_ROLES = 'static_roles',
+  SSH_UNITS_TOTAL = 'ssh_units_total',
   STATIC_SECRETS_KV = 'static_secrets_kv',
   STATIC_SECRETS_TOTAL = 'static_secrets_total',
-  DATA_PROTECTION_CALLS_TOTAL = `data_protection_calls_total`,
-  MANAGED_KEYS_TOTAL = `managed_keys_total`,
-  EXTERNAL_PLUGINS_TOTAL = 'external_plugins_total',
 }
 
 export enum BillingMetricsKeys {
@@ -67,8 +75,24 @@ export function normalizeMetricData(metric: Month | null | undefined) {
       normalized[detailName] = detail.count;
     }
   }
-  // The API omits metrics that have zero usage rather than returning them with a count of 0.
-  // To avoid blank values in the UI, we explicitly set any missing metric keys to 0.
+
+  // Calculate credential_units_total as the sum of ssh_units, pki_units, and id_token_units
+  const sshUnitsTotal =
+    typeof normalized[NormalizedBillingMetrics.SSH_UNITS_TOTAL] === 'number'
+      ? normalized[NormalizedBillingMetrics.SSH_UNITS_TOTAL]
+      : 0;
+  const pkiUnitsTotal =
+    typeof normalized[NormalizedBillingMetrics.PKI_UNITS_TOTAL] === 'number'
+      ? normalized[NormalizedBillingMetrics.PKI_UNITS_TOTAL]
+      : 0;
+  const idTokenUnitsTotal =
+    typeof normalized[NormalizedBillingMetrics.ID_TOKEN_UNITS_TOTAL] === 'number'
+      ? normalized[NormalizedBillingMetrics.ID_TOKEN_UNITS_TOTAL]
+      : 0;
+  normalized[NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL] =
+    calculateSum([sshUnitsTotal, pkiUnitsTotal, idTokenUnitsTotal], 4) ?? 0;
+
+  // Explicitly set any missing metric keys to 0.
   for (const metricsKey of Object.values(NormalizedBillingMetrics)) {
     if (!(metricsKey in normalized)) {
       normalized[metricsKey] = 0;

@@ -88,11 +88,14 @@ func New(t *testing.T, opts ...SessionOpts) *Session {
 
 	t.Cleanup(func() {
 		if session.NoCleanup {
-			t.Logf("WARN: NoDebug has been set, not cleaning up namespace")
+			t.Logf("WARN: NoCleanup has been set, not cleaning up namespace")
 			return
 		}
-		_, err = privClient.Logical().Delete(nsURLPath)
-		require.NoError(t, err)
+		privClient.SetClientTimeout(time.Second)
+		session.Eventually(func() error {
+			_, err = privClient.Logical().Delete(nsURLPath)
+			return err
+		})
 		t.Logf("Cleaned up namespace %s", nsName)
 	})
 

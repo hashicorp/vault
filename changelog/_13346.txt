@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Warn if the Country field on roles and when generating CAs is not ISO 3166 compliant
+```

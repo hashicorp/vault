@@ -6,7 +6,7 @@
 <Page::Header @title={{this.title}} @subtitle={{this.subtitle}}>
   <:breadcrumbs>
     <KeyValueHeader
-      @baseKey={{@model}}
+      @baseKey={{@form}}
       @path="vault.cluster.secrets.backend.list"
       @mode={{@mode}}
       @root={{this.breadcrumbs}}
@@ -16,16 +16,24 @@
 </Page::Header>
 
 {{#if (eq @mode "show")}}
-  <Totp::KeyDetails @model={{@model}} @onDelete={{this.deleteKey}} />
+  <Totp::KeyDetails
+    @key={{this.key}}
+    @capabilities={{@capabilities}}
+    @onDelete={{this.deleteKey}}
+    @displayFields={{this.displayFields}}
+  />
 {{else if (eq @mode "create")}}
   {{#if this.hasGenerated}}
-    <Totp::KeyQrCode @model={{@model}} @onReset={{this.reset}} />
+    <Totp::KeyQrCode
+      @qrSize={{@form.data.qr_size}}
+      @key={{this.key}}
+      @onReset={{this.reset}}
+      @generatedFields={{this.generatedFields}}
+    />
   {{else}}
     <Totp::KeyCreate
       @onSubmit={{this.createKey}}
-      @model={{@model}}
-      @defaultKeyFormFields={{this.defaultKeyFormFields}}
-      @groups={{this.groups}}
+      @form={{@form}}
       @modelValidations={{this.modelValidations}}
       @invalidFormAlert={{this.invalidFormAlert}}
     />

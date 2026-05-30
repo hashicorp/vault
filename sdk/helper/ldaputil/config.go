@@ -22,10 +22,10 @@ import (
 
 var (
 	ldapDerefAliasMap = map[string]int{
-	"never":     ldap.NeverDerefAliases,
-	"finding":   ldap.DerefFindingBaseObj,
-	"searching": ldap.DerefInSearching,
-	"always":    ldap.DerefAlways,
+		"never":     ldap.NeverDerefAliases,
+		"finding":   ldap.DerefFindingBaseObj,
+		"searching": ldap.DerefInSearching,
+		"always":    ldap.DerefAlways,
 	}
 
 	cannotDeriveUserBindDNError = errors.New("cannot derive UserBindDN")

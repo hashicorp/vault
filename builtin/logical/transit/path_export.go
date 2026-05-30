@@ -94,9 +94,6 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	if p == nil {
 		return nil, nil
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	if !p.Exportable && exportType != exportTypePublicKey && exportType != exportTypeCertificateChain {

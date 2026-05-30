@@ -107,12 +107,9 @@ test('intro pages workflow', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'New to Auth methods?' })).not.toBeVisible();
 
     await basePage.dismissFlashMessages();
-
-    await page.getByRole('link', { name: 'Back to main navigation' }).click();
   });
 
   await test.step('verify namespace intro page content and workflow', async () => {
-    await page.getByRole('link', { name: 'Access control', exact: true }).click();
     await page.getByRole('link', { name: 'Namespaces' }).click();
 
     await expect(page.getByRole('heading', { name: 'Welcome to Namespaces' })).toBeVisible();

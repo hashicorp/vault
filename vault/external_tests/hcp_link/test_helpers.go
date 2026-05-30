@@ -103,8 +103,6 @@ func TestClusterWithHCPLinkEnabled(t *testing.T, cluster *vault.TestCluster, ena
 	}
 	hcpLinkIns := NewVaultHCPLinkInstances()
 
-	cluster.Start()
-
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
 

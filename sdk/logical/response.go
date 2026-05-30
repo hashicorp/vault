@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync/atomic"
 
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -267,14 +268,16 @@ type StatusHeaderResponseWriter struct {
 	wroteHeader bool
 	StatusCode  int
 	headers     map[string][]*CustomHeader
+	cspNonce    string
 }
 
-func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*CustomHeader) *StatusHeaderResponseWriter {
+func NewStatusHeaderResponseWriter(w http.ResponseWriter, h map[string][]*CustomHeader, cspNonce string) *StatusHeaderResponseWriter {
 	return &StatusHeaderResponseWriter{
 		wrapped:     w,
 		wroteHeader: false,
 		StatusCode:  200,
 		headers:     h,
+		cspNonce:    cspNonce,
 	}
 }
 
@@ -332,7 +335,12 @@ func (w *StatusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 	// setter function to set the headers
 	setter := func(hvl []*CustomHeader) {
 		for _, hv := range hvl {
-			w.Header().Set(hv.Name, hv.Value)
+			headerValue := hv.Value
+			// Inject CSP nonce if this is a Content-Security-Policy header and we have a nonce
+			if hv.Name == "Content-Security-Policy" && w.cspNonce != "" {
+				headerValue = MergeNonceIntoCSP(headerValue, w.cspNonce, "style-src")
+			}
+			w.Header().Set(hv.Name, headerValue)
 		}
 	}
 
@@ -351,6 +359,37 @@ func (w *StatusHeaderResponseWriter) setCustomResponseHeaders(status int) {
 	}
 
 	return
+}
+
+// MergeNonceIntoCSP merges a nonce into the specified directive of a CSP policy
+func MergeNonceIntoCSP(cspPolicy, nonce string, targetDirective string) string {
+	if cspPolicy == "" || nonce == "" {
+		return cspPolicy
+	}
+
+	nonceDirective := fmt.Sprintf("'nonce-%s'", nonce)
+	directives := strings.Split(cspPolicy, ";")
+	directiveFound := false
+
+	for i, directive := range directives {
+		directive = strings.TrimSpace(directive)
+		if strings.HasPrefix(directive, targetDirective) {
+			directiveFound = true
+			// Check if nonce is already present
+			if !strings.Contains(directive, nonceDirective) {
+				// Add nonce after the directive keyword
+				directives[i] = directive + " " + nonceDirective
+			}
+			break
+		}
+	}
+
+	// If target directive doesn't exist, add it
+	if !directiveFound {
+		directives = append(directives, targetDirective+" "+nonceDirective)
+	}
+
+	return strings.Join(directives, ";")
 }
 
 var _ WrappingResponseWriter = &StatusHeaderResponseWriter{}

@@ -3,7 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title={{if this.method (concat "Configure " this.method.name " MFA") "Multi-factor authentication"}}>
+<Page::Header
+  @title={{if this.method.type (concat "Configure " this.methodNameFromType " MFA") "Multi-factor authentication"}}
+>
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
@@ -33,16 +35,16 @@
         Learn more
       </Hds::Link::Inline>
     </p>
-    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-shadowless" />
+    <Mfa::MethodForm @form={{this.method}} @validations={{this.methodErrors}} class="is-shadowless" />
     <Mfa::MfaLoginEnforcementHeader
       @isInline={{true}}
       @radioCardGroupValue={{this.enforcementPreference}}
       @onRadioCardSelect={{this.onEnforcementPreferenceChange}}
-      @onEnforcementSelect={{fn (mut this.enforcement)}}
+      @onEnforcementSelect={{this.onEnforcementSelect}}
     />
     {{#if (eq this.enforcementPreference "new")}}
       <Mfa::MfaLoginEnforcementForm
-        @model={{this.enforcement}}
+        @form={{this.enforcement}}
         @isInline={{true}}
         @modelErrors={{this.enforcementErrors}}
         class="has-top-margin-l"

@@ -408,12 +408,6 @@ module "vault_wait_for_cluster_unsealed" {
   vault_install_dir = var.vault_install_dir
 }
 
-module "vault_verify_version" {
-  source = "./modules/vault_verify_version"
-
-  vault_install_dir = var.vault_install_dir
-}
-
 module "vault_wait_for_leader" {
   source = "./modules/vault_wait_for_leader"
 

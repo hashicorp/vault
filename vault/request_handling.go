@@ -242,7 +242,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	var secondEntity *identity.Entity
 	if IsEnterpriseToken(req.ClientToken) {
-		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
+		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, chosenProfile, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate enterprise token", "error", err)
 		}
@@ -251,10 +251,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 		req.EnterpriseTokenMetadata = getEnterpriseTokenMetadata(tokenMetadataContainer)
 		req.EnterpriseTokenIssuer = getEnterpriseTokenIssuer(tokenMetadataContainer)
+		req.EnterpriseTokenTransaction = getEnterpriseTokenTransaction(tokenMetadataContainer)
 		req.EnterpriseTokenAudience = getEnterpriseTokenAudience(tokenMetadataContainer)
+		_, req.EnterpriseTokenAuthorizationDetailsPresent = tokenMetadataContainer["authorization_details"]
 		req.EnterpriseTokenAuthorizationDetails = getEnterpriseTokenAuthorizationDetails(tokenMetadataContainer)
 		secondEntity = actorEntity
-		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity)
+		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity, chosenProfile)
 		if err != nil {
 			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
 				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
@@ -419,9 +421,19 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 }
 
 // restoreForwardingTokenHeaders restores client token headers so forwarded
-// requests preserve the original auth source on the active node.
+// requests preserve the caller's original token representation on the active
+// node. It prefers Request.InboundSSCToken (captured before any token
+// normalization) and falls back to Request.ClientToken when no inbound value is
+// available.
 func restoreForwardingTokenHeaders(req *logical.Request) {
-	if req == nil || req.ClientToken == "" {
+	if req == nil {
+		return
+	}
+	tokenToForward := req.InboundSSCToken
+	if tokenToForward == "" {
+		tokenToForward = req.ClientToken
+	}
+	if tokenToForward == "" {
 		return
 	}
 	if req.Headers == nil {
@@ -429,9 +441,9 @@ func restoreForwardingTokenHeaders(req *logical.Request) {
 	}
 	switch req.ClientTokenSource {
 	case logical.ClientTokenFromVaultHeader:
-		req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
+		req.Headers[consts.AuthHeaderName] = []string{tokenToForward}
 	case logical.ClientTokenFromAuthzHeader:
-		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
+		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", tokenToForward))
 	}
 }
 
@@ -675,12 +687,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		// forward this request properly to the active node.
 		if retErr.ErrorOrNil() != nil && checkErrControlGroupTokenNeedsCreated(retErr) &&
 			c.perfStandby && len(req.ClientToken) != 0 {
-			switch req.ClientTokenSource {
-			case logical.ClientTokenFromVaultHeader:
-				req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
-			case logical.ClientTokenFromAuthzHeader:
-				req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
-			}
+			restoreForwardingTokenHeaders(req)
 			// We also return the appropriate error so that the caller can forward the
 			// request to the active node
 			return auth, te, logical.ErrPerfStandbyPleaseForward
@@ -915,7 +922,10 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			}
 			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
-			requestBodyToken = token.(string)
+			requestBodyToken, ok = token.(string)
+			if !ok {
+				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
+			}
 			if IsSSCToken(token.(string)) && !IsEnterpriseToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
@@ -2701,6 +2711,49 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, en
 	return mfaAny, nil
 }
 
+func (c *Core) registerAuthLeaseForToken(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth, role string) error {
+	// Populate the client token, accessor, and TTL
+	auth.ClientToken = te.ID
+	auth.Accessor = te.Accessor
+	auth.TTL = te.TTL
+	auth.Orphan = te.Parent == ""
+
+	switch auth.TokenType {
+	case logical.TokenTypeBatch:
+		// Ensure it's not marked renewable since it isn't
+		auth.Renewable = false
+	case logical.TokenTypeService, logical.TokenTypeEnt:
+		if auth.TokenType == logical.TokenTypeEnt {
+			// Ensure it's not marked renewable since enterprise tokens are not renewable
+			auth.Renewable = false
+		}
+		// Register with the expiration manager
+		if err := c.expiration.RegisterAuth(ctx, te, auth, role); err != nil {
+			return err
+		}
+		if te.ExternalID != "" {
+			auth.ClientToken = te.ExternalID
+		}
+		// Successful login, remove any entry from userFailedLoginInfo map
+		// if it exists. This is done for service tokens only.
+		if auth.TokenType == logical.TokenTypeService && auth.Alias != nil {
+			loginUserInfoKey := FailedLoginUser{
+				aliasName:     auth.Alias.Name,
+				mountAccessor: auth.Alias.MountAccessor,
+			}
+
+			// We don't need to try to delete the lockedUsers storage entry, since we're
+			// processing a login request. If a login attempt is allowed, it means the user is
+			// unlocked and we only add storage entry when the user gets locked.
+			if err := updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
 // role is the login role used as part of the creation of the token entry. If not
@@ -2742,51 +2795,13 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		c.logger.Error("failed to create token", "error", err)
 		return possiblyWrapOverloadedError("failed to create token", err)
 	}
-
-	// Populate the client token, accessor, and TTL
-	auth.ClientToken = te.ID
-	auth.Accessor = te.Accessor
-	auth.TTL = te.TTL
-	auth.Orphan = te.Parent == ""
-
-	switch auth.TokenType {
-	case logical.TokenTypeBatch:
-		// Ensure it's not marked renewable since it isn't
-		auth.Renewable = false
-	case logical.TokenTypeService:
-		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(ctx, &te, auth, role); err != nil {
-			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
-				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
-			}
-			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
-			return possiblyWrapOverloadedError("failed to register token lease during login request", err)
+	if err := c.registerAuthLeaseForToken(ctx, &te, auth, role); err != nil {
+		if revokeErr := c.tokenStore.revokeOrphan(ctx, te.ID); revokeErr != nil {
+			c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", revokeErr)
 		}
-		if te.ExternalID != "" {
-			auth.ClientToken = te.ExternalID
-		}
-		// Successful login, remove any entry from userFailedLoginInfo map
-		// if it exists. This is done for service tokens (for oss) here.
-		// For ent it is taken care by registerAuth RPC calls.
-		if auth.Alias != nil {
-			loginUserInfoKey := FailedLoginUser{
-				aliasName:     auth.Alias.Name,
-				mountAccessor: auth.Alias.MountAccessor,
-			}
-
-			// We don't need to try to delete the lockedUsers storage entry, since we're
-			// processing a login request. If a login attempt is allowed, it means the user is
-			// unlocked and we only add storage entry when the user gets locked.
-			err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true)
-			if err != nil {
-				return err
-			}
-		}
-	case logical.TokenTypeEnt:
-		// Ensure it's not marked renewable since enterprise tokens are not renewable
-		auth.Renewable = false
+		c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
+		return possiblyWrapOverloadedError("failed to register token lease during login request", err)
 	}
-
 	return nil
 }
 

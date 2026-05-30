@@ -44,6 +44,67 @@ export const CONFIG_RESPONSE = {
   },
 };
 
+export const LICENSE_STATUS_RESPONSE = {
+  request_id: 'my-license-request-id',
+  data: {
+    autoloaded: {
+      license_id: 'my-license-id',
+      start_time: formatRFC3339(LICENSE_START),
+      expiration_time: formatRFC3339(endOfMonth(addMonths(STATIC_NOW, 6))),
+    },
+  },
+};
+
+export const VERSION_HISTORY_RESPONSE = {
+  request_id: 'version-history-request-id',
+  data: {
+    keys: ['1.9.0', '1.9.1', '1.10.1', '1.10.3', '1.14.4', '1.16.0', '1.17.0'],
+    key_info: {
+      // entity/non-entity breakdown added
+      '1.9.0': {
+        // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.11.0
+        build_date: null,
+        previous_version: null,
+        timestamp_installed: '2023-07-02T00:00:00Z',
+      },
+      '1.9.1': {
+        build_date: null,
+        previous_version: '1.9.0',
+        timestamp_installed: '2023-08-02T00:00:00Z',
+      },
+      // auth mount attribution added in 1.10.0
+      '1.10.1': {
+        build_date: null,
+        previous_version: '1.9.1',
+        timestamp_installed: '2023-09-02T00:00:00Z', // same as UPGRADE_DATE
+      },
+      '1.10.3': {
+        build_date: null,
+        previous_version: '1.10.1',
+        timestamp_installed: '2023-10-23T00:00:00Z',
+      },
+      // no notable UI changes
+      '1.14.4': {
+        build_date: '2023-11-02T00:00:00Z',
+        previous_version: '1.10.3',
+        timestamp_installed: '2023-11-02T00:00:00Z',
+      },
+      // sync clients added
+      '1.16.0': {
+        build_date: '2023-11-23T00:00:00Z',
+        previous_version: '1.14.4',
+        timestamp_installed: '2023-11-23T00:00:00Z',
+      },
+      // acme_clients separated from non-entity clients
+      '1.17.0': {
+        build_date: '2023-12-02T00:00:00Z',
+        previous_version: '1.16.0',
+        timestamp_installed: '2023-12-02T00:00:00Z',
+      },
+    },
+  },
+};
+
 // --------- FOR DATA GENERATION
 function getSum(array, key) {
   return array.reduce((sum, { counts }) => sum + counts[key], 0);
@@ -163,7 +224,7 @@ function generateMonths(startDate, endDate, namespaces) {
   return months;
 }
 
-function generateActivityResponse(startDate, endDate) {
+function generateActivityData(startDate, endDate) {
   let namespaces = Array.from(Array(12)).map((v, idx) => generateNamespaceBlock(idx, null, null, true));
   const months = generateMonths(startDate, endDate, namespaces);
   if (months.length) {
@@ -276,19 +337,56 @@ function filterActivityResponse(originalData, namespacePath) {
   };
 }
 
+export function generateActivityResponse(start, end, namespace, activities) {
+  let start_time = start;
+  let end_time = end;
+  if (!start_time) {
+    // if there are no date query params, the activity log default behavior
+    // queries from the builtin license start timestamp to the current month
+    start_time = LICENSE_START.toISOString();
+  }
+  if (!end_time) {
+    end_time = STATIC_NOW.toISOString();
+  }
+  // backend returns a timestamp if given unix time, so first convert to timestamp string here
+  if (!start_time?.includes('T')) start_time = fromUnixTime(start_time).toISOString();
+  if (!end_time?.includes('T')) end_time = fromUnixTime(end_time).toISOString();
+
+  const record = activities?.findBy({ start_time, end_time });
+  let data;
+  if (record) {
+    // if we already have data for the given start/end time, use that
+    data = {
+      start_time: record.start_time,
+      end_time: record.end_time,
+      by_namespace: record.by_namespace,
+      months: record.months,
+      total: record.total,
+    };
+  } else {
+    data = generateActivityData(start_time, end_time);
+    activities?.create(data);
+  }
+  return {
+    request_id: 'some-activity-id',
+    lease_id: '',
+    renewable: false,
+    lease_duration: 0,
+    data: filterActivityResponse(data, namespace),
+    wrap_info: null,
+    warnings: end
+      ? null
+      : [
+          'Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month.',
+        ],
+    auth: null,
+  };
+}
+
 // --------- SERVER FN
 export default function (server) {
   server.get('sys/license/status', function () {
-    return {
-      request_id: 'my-license-request-id',
-      data: {
-        autoloaded: {
-          license_id: 'my-license-id',
-          start_time: formatRFC3339(LICENSE_START),
-          expiration_time: formatRFC3339(endOfMonth(addMonths(STATIC_NOW, 6))),
-        },
-      },
-    };
+    return LICENSE_STATUS_RESPONSE;
   });
 
   server.get('sys/internal/counters/config', function () {
@@ -298,49 +396,8 @@ export default function (server) {
   server.get('/sys/internal/counters/activity', (schema, req) => {
     const activities = schema['clients/activities'];
     const namespace = req.requestHeaders['X-Vault-Namespace'];
-    let { start_time, end_time } = req.queryParams;
-
-    if (!start_time) {
-      // if there are no date query params, the activity log default behavior
-      // queries from the builtin license start timestamp to the current month
-      start_time = LICENSE_START.toISOString();
-    }
-    if (!end_time) {
-      end_time = STATIC_NOW.toISOString();
-    }
-    // backend returns a timestamp if given unix time, so first convert to timestamp string here
-    if (!start_time?.includes('T')) start_time = fromUnixTime(start_time).toISOString();
-    if (!end_time?.includes('T')) end_time = fromUnixTime(end_time).toISOString();
-
-    const record = activities.findBy({ start_time, end_time });
-    let data;
-    if (record) {
-      // if we already have data for the given start/end time, use that
-      data = {
-        start_time: record.start_time,
-        end_time: record.end_time,
-        by_namespace: record.by_namespace,
-        months: record.months,
-        total: record.total,
-      };
-    } else {
-      data = generateActivityResponse(start_time, end_time);
-      activities.create(data);
-    }
-    const response = {
-      request_id: 'some-activity-id',
-      lease_id: '',
-      renewable: false,
-      lease_duration: 0,
-      data: filterActivityResponse(data, namespace),
-      wrap_info: null,
-      warnings: req.queryParams.end_time
-        ? null
-        : [
-            'Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month.',
-          ],
-      auth: null,
-    };
+    const { start_time, end_time } = req.queryParams;
+    const response = generateActivityResponse(start_time, end_time, namespace, activities);
     // need to set Content-Length header for api service to show warnings
     return new Response(200, { 'Content-Length': JSON.stringify(response).length }, response);
   });
@@ -348,54 +405,6 @@ export default function (server) {
   // client counting has changed in different ways since 1.9 see link below for details
   // https://developer.hashicorp.com/vault/docs/concepts/client-count/faq#client-count-faq
   server.get('sys/version-history', function () {
-    return {
-      request_id: 'version-history-request-id',
-      data: {
-        keys: ['1.9.0', '1.9.1', '1.10.1', '1.10.3', '1.14.4', '1.16.0', '1.17.0'],
-        key_info: {
-          // entity/non-entity breakdown added
-          '1.9.0': {
-            // we don't currently use build_date, including for accuracy. it's only tracked in versions >= 1.11.0
-            build_date: null,
-            previous_version: null,
-            timestamp_installed: '2023-07-02T00:00:00Z',
-          },
-          '1.9.1': {
-            build_date: null,
-            previous_version: '1.9.0',
-            timestamp_installed: '2023-08-02T00:00:00Z',
-          },
-          // auth mount attribution added in 1.10.0
-          '1.10.1': {
-            build_date: null,
-            previous_version: '1.9.1',
-            timestamp_installed: '2023-09-02T00:00:00Z', // same as UPGRADE_DATE
-          },
-          '1.10.3': {
-            build_date: null,
-            previous_version: '1.10.1',
-            timestamp_installed: '2023-10-23T00:00:00Z',
-          },
-          // no notable UI changes
-          '1.14.4': {
-            build_date: '2023-11-02T00:00:00Z',
-            previous_version: '1.10.3',
-            timestamp_installed: '2023-11-02T00:00:00Z',
-          },
-          // sync clients added
-          '1.16.0': {
-            build_date: '2023-11-23T00:00:00Z',
-            previous_version: '1.14.4',
-            timestamp_installed: '2023-11-23T00:00:00Z',
-          },
-          // acme_clients separated from non-entity clients
-          '1.17.0': {
-            build_date: '2023-12-02T00:00:00Z',
-            previous_version: '1.16.0',
-            timestamp_installed: '2023-12-02T00:00:00Z',
-          },
-        },
-      },
-    };
+    return VERSION_HISTORY_RESPONSE;
   });
 }

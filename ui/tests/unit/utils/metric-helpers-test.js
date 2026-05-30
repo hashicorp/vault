@@ -74,12 +74,16 @@ module('Unit | Utility | metric utils', function () {
     };
     const expected = {
       auto_rotated_roles_total: 0,
+      credential_units_total: 0,
+      data_protection_calls_gcpkms: 0,
       data_protection_calls_total: 0,
       data_protection_calls_transform: 0,
       data_protection_calls_transit: 0,
-      dynamic_roles: 0,
       dynamic_roles_total: 0,
       external_plugins_total: 0,
+      id_token_units_oidc: 0,
+      id_token_units_spiffe: 0,
+      id_token_units_total: 0,
       kmip_used_in_month: false,
       managed_keys: 0,
       managed_keys_kmse: 0,
@@ -89,7 +93,7 @@ module('Unit | Utility | metric utils', function () {
       ssh_units: 0,
       ssh_units_certificate_units: 0,
       ssh_units_otp_units: 0,
-      static_roles: 0,
+      ssh_units_total: 0,
       static_secrets_kv: 0,
       static_secrets_total: 0,
     };

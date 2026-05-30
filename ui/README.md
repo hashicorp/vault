@@ -38,9 +38,8 @@ Respective versions for `ember-cli`, `ember-source` and `ember-data` for each ve
 You will need the following things properly installed on your computer.
 
 - [Git](https://git-scm.com/)
-- [Node.js](https://nodejs.org/)
+- [nvm](https://github.com/nvm-sh/nvm) to install and switch to the Node.js version mirrored in the repo root `.nvmrc` and `.node-version` files
 - [pnpm](https://pnpm.io/)
-- [Ember CLI](https://cli.emberjs.com/release/)
 - [Google Chrome](https://google.com/chrome/)
 
 ## Running a Vault Server
@@ -62,18 +61,22 @@ _All of the commands below assume you're in the `ui/` directory._
 > and enable live rebuilding of the application as you change the UI application code.
 > Visit your app at [http://localhost:4200](http://localhost:4200).
 
-1. Install dependencies:
+1. Use the mirrored Node.js version from the repo root:
+
+`nvm use`
+
+2. Install dependencies:
 
 `pnpm i`
 
-2. Run Vault UI and proxy back to a Vault server running on the default port, 8200:
+3. Run Vault UI and proxy back to a Vault server running on the default port, 8200:
 
 `pnpm start`
 
 > If your Vault server is running on a different port you can use the
 > long-form version of the npm script:
 
-`ember server --proxy=http://localhost:PORT`
+`pnpm exec ember server --proxy=http://localhost:PORT`
 
 ### Mirage
 
@@ -109,22 +112,22 @@ setting `VAULT_UI` environment variable.
 | `pnpm start`                                      | start the app with live reloading (vault must be running on port :8200) |
 | `export MIRAGE_DEV_HANDLER=<handler>; pnpm start` | start the app with the mocked mirage backend, with handler provided     |
 | `make static-dist && make dev-ui`                 | build a Vault binary with UI assets (run from root directory not `/ui`) |
-| `ember g component foo -ir core`                  | generate a component in the /addon engine                               |
+| `pnpm exec ember g component foo -ir core`        | generate a component in the /addon engine                               |
 | `pnpm test:filter`                                | run non-enterprise in the browser                                       |
 | `pnpm test:filter -f='<test name>'`               | run tests in the browser, filtering by test name                        |
 | `pnpm lint:js`                                    | lint javascript files                                                   |
 
 ### Code Generators
 
-Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
+Make use of the many generators for code, try `pnpm exec ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
 
 eg. a reusable component named foo that you'd like in the core engine (read more about Ember engines [here](https://ember-engines.com/docs)).
 
-- `ember g component foo -ir core`
+- `pnpm exec ember g component foo -ir core`
 
 The above command creates a template-only component by default. If you'd like to add a backing class, add the `-gc` flag:
 
-- `ember g component foo -gc -ir core`
+- `pnpm exec ember g component foo -gc -ir core`
 
 ### Running Tests
 

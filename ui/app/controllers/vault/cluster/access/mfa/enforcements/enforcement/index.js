@@ -11,6 +11,7 @@ import { service } from '@ember/service';
 export default class MfaLoginEnforcementIndexController extends Controller {
   @service router;
   @service flashMessages;
+  @service api;
 
   queryParams = ['tab'];
   tab = 'targets';
@@ -21,7 +22,7 @@ export default class MfaLoginEnforcementIndexController extends Controller {
   @action
   async delete() {
     try {
-      await this.model.destroyRecord();
+      await this.api.identity.mfaDeleteLoginEnforcement(this.model.name);
       this.showDeleteConfirmation = false;
       this.flashMessages.success('MFA login enforcement deleted successfully');
       this.router.transitionTo('vault.cluster.access.mfa.enforcements');

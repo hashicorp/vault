@@ -33,7 +33,6 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 		InmemCluster:         true,
 		// Not setting EnableAutopilot here.
 	})
-	defer cluster.Cleanup()
 
 	cli := cluster.Cores[0].Client
 	state, err := cli.Sys().RaftAutopilotState()
@@ -62,7 +61,6 @@ func TestRaft_Autopilot_BinaryVersionPlumbing(t *testing.T) {
 	require.Empty(t, coreCfg.EffectiveSDKVersion)
 
 	c := vault.NewTestCluster(t, coreCfg, &clusterOpts)
-	defer c.Cleanup()
 
 	// Wait for follower to be perf standby (in Ent, in CE it will only wait for
 	// active). In either Enterprise or CE case, this should pass if we've plumbed
@@ -89,7 +87,6 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 			"performance_multiplier": "5",
 		},
 	})
-	defer cluster.Cleanup()
 
 	// Check that autopilot execution state is running
 	client := cluster.Cores[0].Client
@@ -160,7 +157,6 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 	})
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 	configCheckFunc := func(config *api.AutopilotConfig) {
@@ -267,7 +263,6 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	})
 
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	defer cluster.Cleanup()
 	testhelpers.WaitForActiveNode(t, cluster)
 
 	// Check that autopilot execution state is running
@@ -363,7 +358,6 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 		EnableAutopilot:      true,
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 	testhelpers.WaitForActiveNode(t, cluster)
 
 	// Create a very large stabilization time so we can test the state between
@@ -423,7 +417,6 @@ func TestRaft_VotersStayVoters(t *testing.T) {
 			2: version.Version,
 		},
 	})
-	defer cluster.Cleanup()
 	testhelpers.WaitForActiveNode(t, cluster)
 
 	client := cluster.Cores[0].Client
@@ -472,7 +465,6 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 		EnableAutopilot:      true,
 		NumCores:             4,
 	})
-	defer cluster.Cleanup()
 	testhelpers.WaitForActiveNode(t, cluster)
 
 	// Join 2 extra nodes manually, store the 3rd for later

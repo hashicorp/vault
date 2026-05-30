@@ -201,11 +201,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
-
 	activeClient := cores[0].Client
 	standbyClient := cores[1].Client
 
@@ -322,8 +318,6 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	cleanup := func() {
 		// We wait for a tiny bit for things such as agent renewal to exit properly
 		time.Sleep(50 * time.Millisecond)
-
-		cluster.Cleanup()
 		os.Setenv(api.EnvVaultAddress, origEnvVaultAddress)
 		os.Setenv(api.EnvVaultCACert, origEnvVaultCACert)
 		listener.Close()

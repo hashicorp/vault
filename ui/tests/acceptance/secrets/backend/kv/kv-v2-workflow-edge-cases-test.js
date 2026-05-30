@@ -574,11 +574,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks) {
   setupApplicationTest(hooks);
 
-  const navToEngine = async (backend) => {
-    await click(GENERAL.navLink('Secrets'));
-    return await click(GENERAL.linkTo(`${backend}/`));
-  };
-
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
     ['delete', 'destroy', 'undelete'].forEach((toolbar) => {
       if (expected.includes(toolbar)) {
@@ -637,7 +632,9 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-create-secret';
-      await navToEngine(backend);
+
+      await click(GENERAL.navLink('Secrets'));
+      await click(GENERAL.linkTo(`${backend}/`));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/list?namespace=${ns}`,
@@ -690,8 +687,8 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       const ns = this.namespace;
       const secret = 'my-delete-secret';
       await writeVersionedSecret(backend, secret, 'foo', 'bar', 2, ns);
-      await navToEngine(backend);
-
+      await click(GENERAL.navLink('Secrets engines'));
+      await click(GENERAL.linkTo(`${backend}/`));
       await click(PAGE.list.item(secret));
       assert.strictEqual(
         currentURL(),
