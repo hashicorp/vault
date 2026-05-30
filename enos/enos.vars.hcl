@@ -44,7 +44,7 @@
 // distro_version_sles = "16.0" // or "15.7"
 
 // distro_version_ubuntu is the version of ubuntu to use for "distro:ubuntu" variants
-// distro_version_ubuntu = "22.04" // or "24.04"
+// distro_version_ubuntu = "22.04" // or "26.04"
 
 // tags are a map of tags that will be applied to infrastructure resources that
 // support tagging.

@@ -36,10 +36,17 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
 
   validations: Validations = {
     name: [{ type: 'presence', message: 'Name is required.' }],
+    stanzas: [
+      {
+        validator: ({ stanzas }) =>
+          stanzas.length > 0 && stanzas.every((stanza: PolicyStanza) => stanza.isValid),
+        message: 'Invalid policy content.',
+      },
+    ],
   };
 
+  @tracked errorDetails: string[] = [];
   @tracked errorMessage = '';
-  @tracked policyContent = '';
   @tracked policyName = '';
   @tracked showFlyout = false;
   @tracked stanzas: PolicyStanza[] = this.defaultStanzas;
@@ -61,9 +68,12 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   }
 
   @action
-  handlePolicyChange({ policy, stanzas }: PolicyData) {
-    this.policyContent = policy;
+  handlePolicyChange({ stanzas }: PolicyData) {
     this.stanzas = stanzas;
+  }
+
+  get policyContent() {
+    return formatStanzas(this.stanzas);
   }
 
   get snippetArgs() {
@@ -77,10 +87,15 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
     event.preventDefault();
     this.resetErrors();
 
-    const { isValid, state, invalidFormMessage } = validate({ name: this.policyName }, this.validations);
+    const { isValid, state } = validate({ name: this.policyName, stanzas: this.stanzas }, this.validations);
+
     if (!isValid) {
       this.validationErrors = state;
-      this.errorMessage = invalidFormMessage;
+      this.errorDetails = Object.values(state).flatMap((s) => s.errors);
+      // Render general error message instead of exact count from validate() because
+      // stanzas (which are validated as a single input) can have up to 2 errors each.
+      const msg = this.errorDetails.length > 1 ? 'are errors' : 'is an error';
+      this.errorMessage = `There ${msg} with this form.`;
       return;
     }
 
@@ -125,11 +140,11 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   resetErrors() {
     this.validationErrors = null;
     this.errorMessage = '';
+    this.errorDetails = [];
   }
 
   resetFlyoutState() {
     this.policyName = '';
-    this.policyContent = '';
     this.stanzas = [new PolicyStanza()];
   }
 

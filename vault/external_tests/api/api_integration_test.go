@@ -59,7 +59,6 @@ func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api
 		HandlerFunc: http.Handler,
 		NumCores:    1,
 	})
-	cluster.Start()
 
 	// Make it easy to get access to the active
 	core := cluster.Cores[0].Core
@@ -76,5 +75,5 @@ func testVaultServerCoreConfig(t testing.TB, coreConfig *vault.CoreConfig) (*api
 		unsealKeys[i] = base64.StdEncoding.EncodeToString(cluster.BarrierKeys[i])
 	}
 
-	return client, unsealKeys, func() { defer cluster.Cleanup() }
+	return client, unsealKeys, func() {}
 }

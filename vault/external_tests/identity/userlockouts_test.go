@@ -38,8 +38,6 @@ func TestIdentityStore_DisableUserLockoutTest(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	// standby client
 	client := cluster.Cores[1].Client

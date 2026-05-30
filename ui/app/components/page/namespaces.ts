@@ -34,10 +34,13 @@ import type { PaginatedMetadata } from 'core/utils/paginate-list';
 interface Args {
   model: {
     namespaces: NamespaceModel[] & PaginatedMetadata;
+    page: number;
+    pageSize: number;
     pageFilter: string | null;
   };
   onFilterChange: CallableFunction;
   onRefresh: CallableFunction;
+  onPageChange: CallableFunction;
 }
 
 interface NamespaceModel {
@@ -147,7 +150,7 @@ export default class PageNamespacesComponent extends Component<Args> {
   @action
   handleSearch(evt: HTMLElementEvent<HTMLInputElement>) {
     evt.preventDefault();
-    this.args.onFilterChange(this.query);
+    this.args.onFilterChange({ pageFilter: this.query });
   }
 
   @action
@@ -187,8 +190,14 @@ export default class PageNamespacesComponent extends Component<Args> {
     this.shouldRenderIntroModal = true;
   }
 
-  @action handlePageChange() {
-    this.args.onRefresh();
+  // handles page change but keeps pageFilters if there are any
+  @action handlePageChange(page: number) {
+    this.args.onPageChange({ page: page, pageFilter: this.query, pageSize: this.args.model.pageSize });
+  }
+
+  // handles page size change but keeps any current pageFilters
+  @action handlePageSizeChange(pageSize: number) {
+    this.args.onPageChange({ page: 1, pageFilter: this.query, pageSize: pageSize });
   }
 
   @action

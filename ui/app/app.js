@@ -47,6 +47,7 @@ export default class App extends Application {
     replication: {
       dependencies: {
         services: [
+          'api',
           'auth',
           'capabilities',
           'flash-messages',

@@ -330,11 +330,13 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 
 func testParseEntropy(t *testing.T, oss bool) {
 	tests := []struct {
+		name       string
 		inConfig   string
 		outErr     error
 		outEntropy configutil.Entropy
 	}{
 		{
+			name: "good",
 			inConfig: `entropy "seal" {
 				mode = "augmentation"
 				}`,
@@ -342,18 +344,21 @@ func testParseEntropy(t *testing.T, oss bool) {
 			outEntropy: configutil.Entropy{Mode: configutil.EntropyAugmentation},
 		},
 		{
+			name: "bad mode",
 			inConfig: `entropy "seal" {
 				mode = "a_mode_that_is_not_supported"
 				}`,
 			outErr: fmt.Errorf("the specified entropy mode %q is not supported", "a_mode_that_is_not_supported"),
 		},
 		{
+			name: "bad device",
 			inConfig: `entropy "device_that_is_not_supported" {
 				mode = "augmentation"
 				}`,
 			outErr: fmt.Errorf("only the %q type of external entropy is supported", "seal"),
 		},
 		{
+			name: "duplicate section",
 			inConfig: `entropy "seal" {
 				mode = "augmentation"
 				}
@@ -362,6 +367,15 @@ func testParseEntropy(t *testing.T, oss bool) {
 				}`,
 			outErr: fmt.Errorf("only one %q block is permitted", "entropy"),
 		},
+		{
+			name: "json",
+			inConfig: `{
+              "entropy": {
+                 "seal": {"mode": "augmentation"}
+              }`,
+			outErr:     nil,
+			outEntropy: configutil.Entropy{Mode: configutil.EntropyAugmentation},
+		},
 	}
 
 	config := Config{
@@ -369,25 +383,27 @@ func testParseEntropy(t *testing.T, oss bool) {
 	}
 
 	for _, test := range tests {
-		obj, _ := hcl.Parse(strings.TrimSpace(test.inConfig))
-		list, _ := obj.Node.(*ast.ObjectList)
-		objList := list.Filter("entropy")
-		err := configutil.ParseEntropy(config.SharedConfig, objList, "entropy")
-		// validate the error, both should be nil or have the same Error()
-		switch {
-		case oss:
-			if config.Entropy != nil {
-				t.Fatalf("parsing Entropy should not be possible in oss but got a non-nil config.Entropy: %#v", config.Entropy)
-			}
-		case err != nil && test.outErr != nil:
-			if err.Error() != test.outErr.Error() {
+		t.Run(test.name, func(t *testing.T) {
+			obj, _ := hcl.Parse(strings.TrimSpace(test.inConfig))
+			list, _ := obj.Node.(*ast.ObjectList)
+			objList := list.Filter("entropy")
+			err := configutil.ParseEntropy(config.SharedConfig, objList, "entropy")
+			// validate the error, both should be nil or have the same Error()
+			switch {
+			case oss:
+				if config.Entropy != nil {
+					t.Fatalf("parsing Entropy should not be possible in oss but got a non-nil config.Entropy: %#v", config.Entropy)
+				}
+			case err != nil && test.outErr != nil:
+				if err.Error() != test.outErr.Error() {
+					t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
+				}
+			case err != test.outErr:
 				t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
+			case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
+				t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 			}
-		case err != test.outErr:
-			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
-		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
-		}
+		})
 	}
 }
 

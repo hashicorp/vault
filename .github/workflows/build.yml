@@ -83,7 +83,7 @@ jobs:
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     permissions: write-all # vault-auth
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
@@ -186,7 +186,7 @@ jobs:
       startsWith(github.event.pull_request.base.ref, 'ce/')
     runs-on:
       - self-hosted
-      - ubuntu-latest-x64
+      - ubuntu-22.04-x64
     permissions: write-all # vault-auth
     needs:
       - setup
@@ -293,40 +293,13 @@ jobs:
     needs: setup
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-build-ui) }}
     outputs:
-      cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
+      cache-key: ${{ steps.build-ui.outputs.cache-key }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
-      - name: Get UI hash
-        id: ui-hash
-        run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
-      - name: Set up UI asset cache
-        id: cache-ui-assets
-        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
-        with:
-          enableCrossOsArchive: true
-          lookup-only: true
-          path: http/web_ui
-          # Only restore the UI asset cache if we haven't modified anything in the ui directory.
-          # Never do a partial restore of the web_ui if we don't get a cache hit.
-          key: ui-${{ steps.ui-hash.outputs.ui-hash }}
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Install PNPM
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
-        with:
-          run_install: false
-          package_json_file: './ui/package.json'
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Set up node and pnpm
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
-        with:
-          node-version-file: ui/package.json
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Build UI
-        run: make ci-build-ui
+      - uses: ./.github/actions/build-ui
+        id: build-ui
 
   # Artifacts is where we'll build the various Vault binaries and package them into their respective
   # Zip bundles, RPM and Deb packages, and container images. After we've packaged them we upload
@@ -485,7 +458,7 @@ jobs:
         include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-packages) || fromJSON(needs.artifacts-ce.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
-      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-latest-x64"]' }}
+      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-22.04-x64"]' }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
@@ -560,7 +533,7 @@ jobs:
         github.event_name == 'schedule' ||
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
       )
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     needs:
       - setup
@@ -616,6 +589,39 @@ jobs:
       - id: slackbot-webhook-url
         run:
           echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        name: Download failure summaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: failure-summary-*.md
+          path: failure-summaries
+          merge-multiple: true
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        id: prepare-failure-summary
+        name: Prepare failure summary
+        run: |
+          # Sort all of the summary table rows and push them to a temp file.
+          temp_file_name=temp-$(date +%s)
+          find failure-summaries -name '*.md' -type f -exec cat {} \; 2>/dev/null | sort >> "$temp_file_name" || true
+
+          # If there are test failures, present them in a format of a GitHub Markdown table.
+          if [ -s "$temp_file_name" ]; then
+            # Here we create the headings for the summary table
+            {
+              echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
+              echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
+              cat "$temp_file_name"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ "${{ steps.status.outputs.result }}" == 'success' ]; then
+              echo "### All required tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          {
+            echo 'table-test-results<<EOFTABLE'
+            cat "$temp_file_name"
+            echo EOFTABLE
+          } | tee -a "$GITHUB_OUTPUT"
       - if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
@@ -631,6 +637,20 @@ jobs:
           TEST_CONTAINERS: ${{ needs.test-containers.result }}
           UI: ${{ needs.ui.result }}
         run: ./.github/scripts/report-build-status.sh
+      - name: Create test results comment
+        if: |
+          needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
+          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') &&
+          needs.setup.outputs.is-fork == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.event.repository.name }}
+          RESULT: ${{ steps.status.outputs.result }}
+          TABLE_DATA: ${{ steps.prepare-failure-summary.outputs.table-test-results }}
+        run: ./.github/scripts/report-ci-status.sh
       - name: Notify build failures in Slack
         if: |
           always() &&

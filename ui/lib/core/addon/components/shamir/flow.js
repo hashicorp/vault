@@ -42,7 +42,8 @@ import { tracked } from '@glimmer/tracking';
  *
  */
 export default class ShamirFlowComponent extends Component {
-  @service store;
+  @service api;
+
   @tracked errors = null;
   @tracked attemptResponse = null;
 
@@ -69,28 +70,39 @@ export default class ShamirFlowComponent extends Component {
    * 2. Attempt progress. This method assumes the correct data
    * has already been extracted (use this.extractData to customize)
    * @param {object} data arbitrary data which will be passed to adapter method
+   * @param {string} primaryToken optional primary root token for DR secondary operations
    * @returns Promise which should resolve unless throwing error to parent.
    */
-  async attemptProgress(data) {
-    this.errors = null;
-    const action = this.action;
-    const adapter = this.store.adapterFor('cluster');
-    const method = adapter[action];
-    // Only used for DR token generate
-    const checkStatus = data ? false : true;
-
+  async attemptProgress(data, primaryToken) {
     try {
-      const resp = await method.call(adapter, data, { checkStatus });
-      this.updateProgress(resp);
-      this.handleComplete(resp);
-      return;
+      this.errors = null;
+      let response;
+      const headers = this.api.buildHeaders(primaryToken || '');
+
+      if (this.args.action === 'generate-dr-operation-token') {
+        if (!data) {
+          // check status
+          response = await this.api.sys.replicationDrSecondaryGenerateOperationTokenReadProgress(headers);
+        } else if (data.pgp_key || data.attempt) {
+          // initialize a new generate-operation-token attempt
+          response = await this.api.sys.replicationDrSecondaryGenerateOperationTokenInitialize(data, headers);
+        } else {
+          // progress the operation
+          response = await this.api.sys.replicationDrSecondaryGenerateOperationTokenUpdate(data, headers);
+        }
+      } else if (this.args.action === 'unseal') {
+        const resp = await this.api.request.put('/sys/unseal', data, headers);
+        response = await resp.json();
+      }
+      this.updateProgress(response?.data || response);
+      this.handleComplete(response?.data || response);
     } catch (e) {
-      if (e.httpStatus === 400) {
-        this.errors = e.errors;
-        return;
+      const { status, response } = await this.api.parseError(e);
+      if (status === 400) {
+        this.errors = response.errors;
       } else {
         // if licensing error, trigger parent method to handle
-        if (e.httpStatus === 500 && e.errors?.join(' ').includes('licensing is in an invalid state')) {
+        if (status === 500 && response.errors?.join(' ').includes('licensing is in an invalid state')) {
           this.args.onLicenseError();
         }
         throw e;

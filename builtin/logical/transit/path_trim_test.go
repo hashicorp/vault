@@ -59,6 +59,8 @@ func TestTransit_Trim(t *testing.T) {
 		t.Fatalf("bad: len of archived keys; expected: 2, actual: %d", len(archive.Keys))
 	}
 
+	p.Unlock()
+
 	// Ensure that there are 5 key versions, by rotating the key 4 times
 	for i := 0; i < 4; i++ {
 		req.Path = "keys/aes/rotate"

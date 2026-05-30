@@ -18,7 +18,7 @@
 <hr class="has-background-gray-300 is-marginless" />
 
 <PolicyForm
-  @model={{this.model}}
+  @form={{this.model}}
   @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
   @onCancel={{transition-to "vault.cluster.policies.index"}}
 />

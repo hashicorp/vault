@@ -54,10 +54,19 @@ func LockIndexForKey(key string) uint8 {
 	return uint8(cryptoutil.Blake2b256Hash(key)[0])
 }
 
+// LockForKey returns the striped lock entry for a key.
+// Different logical keys can hash to the same underlying lock, so callers must
+// not assume two keys imply two distinct RWMutexes. If a code path needs to
+// lock more than one key, prefer LocksForKeys to deduplicate aliased stripes and
+// avoid self-deadlocking by re-entering the same lock.
 func LockForKey(locks []*LockEntry, key string) *LockEntry {
 	return locks[LockIndexForKey(key)]
 }
 
+// LocksForKeys returns the unique striped lock entries for a set of keys in a
+// stable slice order. Use this when a code path needs more than one keyed lock:
+// it deduplicates keys that alias to the same stripe and supports consistent
+// acquisition ordering across callers.
 func LocksForKeys(locks []*LockEntry, keys []string) []*LockEntry {
 	lockIndexes := make(map[uint8]struct{}, len(keys))
 	for _, k := range keys {

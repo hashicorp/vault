@@ -5,12 +5,12 @@
 
 import { module, test } from 'qunit';
 import sinon from 'sinon';
-import EmberObject from '@ember/object';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import timestamp from 'core/utils/timestamp';
+import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 
 module('Integration | Component | keymgmt/key-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,10 +20,15 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
   });
   hooks.beforeEach(function () {
     const now = this.timestampStub();
-    const model = EmberObject.create({
+    const form = new KeymgmtKeyForm({
       name: 'Unicorns',
-      id: 'Unicorns',
-      minEnabledVersion: 1,
+      backend: 'keymgmt',
+      type: 'rsa-2048',
+      deletion_allowed: false,
+      min_enabled_version: 1,
+      latest_version: 2,
+      created: now,
+      last_rotated: null,
       versions: [
         {
           id: 1,
@@ -34,16 +39,22 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
           creation_time: now.toString(),
         },
       ],
-      canDelete: true,
     });
-    this.model = model;
+    this.form = form;
+    this.capabilities = {
+      canDelete: true,
+      canEdit: true,
+      canRead: true,
+    };
     this.tab = '';
   });
 
   // TODO: Add capabilities tests
   test('it renders show view as default', async function (assert) {
     assert.expect(8);
-    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @tab={{this.tab}} />`);
+    await render(
+      hbs`<Keymgmt::KeyEdit @form={{this.form}} @capabilities={{this.capabilities}} @tab={{this.tab}} />`
+    );
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Unicorns', 'Shows key name');
     assert.dom('[data-test-keymgmt-key-toolbar]').exists('Subnav toolbar exists');
     assert.dom('[data-test-tab="Details"]').exists('Details tab exists');
@@ -60,14 +71,19 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
 
   test('it renders the correct elements on edit view', async function (assert) {
     assert.expect(4);
-    const model = EmberObject.create({
+    const form = new KeymgmtKeyForm({
       name: 'Unicorns',
-      id: 'Unicorns',
+      backend: 'keymgmt',
+      type: 'rsa-2048',
+      deletion_allowed: false,
+      min_enabled_version: 1,
     });
     this.set('mode', 'edit');
-    this.set('model', model);
+    this.set('form', form);
 
-    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
+    await render(
+      hbs`<Keymgmt::KeyEdit @form={{this.form}} @capabilities={{this.capabilities}} @mode={{this.mode}} />`
+    );
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
@@ -76,11 +92,16 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
 
   test('it renders the correct elements on create view', async function (assert) {
     assert.expect(4);
-    const model = EmberObject.create({});
+    const form = new KeymgmtKeyForm(
+      { backend: 'keymgmt', type: 'rsa-2048', deletion_allowed: false },
+      { isNew: true }
+    );
     this.set('mode', 'create');
-    this.set('model', model);
+    this.set('form', form);
 
-    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
+    await render(
+      hbs`<Keymgmt::KeyEdit @form={{this.form}} @capabilities={{this.capabilities}} @mode={{this.mode}} />`
+    );
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
@@ -89,10 +110,15 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
 
   test('it defaults to keyType rsa-2048', async function (assert) {
     assert.expect(1);
-    const store = this.owner.lookup('service:store');
-    this.model = store.createRecord('keymgmt/key');
+    const form = new KeymgmtKeyForm(
+      { backend: 'keymgmt', type: 'rsa-2048', deletion_allowed: false },
+      { isNew: true }
+    );
     this.set('mode', 'create');
-    await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
+    this.set('form', form);
+    await render(
+      hbs`<Keymgmt::KeyEdit @form={{this.form}} @capabilities={{this.capabilities}} @mode={{this.mode}} />`
+    );
     assert.dom('[data-test-input="type"]').hasValue('rsa-2048', 'Has type rsa-2048 by default');
   });
 });

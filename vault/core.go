@@ -279,6 +279,16 @@ type Core struct {
 	// endpoints (false, default).
 	enableUnauthRekey *atomic.Bool
 
+	// enableUnauthGenerateRoot controls whether generate-root endpoints are registered as
+	// unauthenticated endpoints (true) or as authenticated sys backend
+	// endpoints (false, default).
+	enableUnauthGenerateRoot *atomic.Bool
+
+	// enableUnauthDROperationToken controls whether DR operation token endpoints are registered as
+	// unauthenticated endpoints (true) or as authenticated sys backend
+	// endpoints (false, default).
+	enableUnauthDROperationToken *atomic.Bool
+
 	// HABackend may be available depending on the physical backend
 	ha physical.HABackend
 
@@ -358,10 +368,6 @@ type Core struct {
 	manualStepDownCh     chan struct{}
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
-
-	// enterpriseTokenGetAuthRegisterFunc is an optional per-core test seam for
-	// enterprise token auth registration lookup.
-	enterpriseTokenGetAuthRegisterFunc func(*Core) (RegisterAuthFunc, error)
 
 	// shutdownDoneCh is used to notify when core.Shutdown() completes.
 	// core.Shutdown() is typically issued in a goroutine to allow Vault to
@@ -460,6 +466,9 @@ type Core struct {
 
 	// consumptionBillingLock protects the consumptionBilling struct
 	consumptionBillingLock sync.RWMutex
+
+	// billingConfigLock protects billing configuration reads and writes
+	billingConfigLock sync.RWMutex
 
 	// consumptionBillingSubView is the sub-view of the system barrier view that is used to store consumption billing metrics
 	consumptionBillingSubView *BarrierView
@@ -594,6 +603,10 @@ type Core struct {
 
 	// pluginFilePermissions is the permissions of the plugin files and directory
 	pluginFilePermissions int
+
+	// devPluginPGPKey is either a raw PGP public key or a path to a PGP public
+	// key file to use for plugin signature verification in dev mode.
+	devPluginPGPKey string
 
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *plugincatalog.PluginCatalog
@@ -900,6 +913,11 @@ type CoreConfig struct {
 	PluginDirectory string
 	PluginTmpdir    string
 
+	// DevPluginPGPKey is either a raw PGP public key or a path to a PGP public
+	// key file to use for plugin signature verification in dev mode. This allows
+	// testing enterprise plugins with custom signatures without rebuilding Vault.
+	DevPluginPGPKey string
+
 	PluginFileUid int
 
 	PluginFilePermissions int
@@ -1171,6 +1189,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rpcLastSuccessfulHeartbeat:     new(atomic.Value),
 		reportingScanDirectory:         conf.ReportingScanDirectory,
 		enableUnauthRekey:              new(atomic.Bool),
+		enableUnauthGenerateRoot:       new(atomic.Bool),
+		enableUnauthDROperationToken:   new(atomic.Bool),
 	}
 
 	c.certCountManager = cert_count.InitCertificateCountManager(c.logger)
@@ -1316,7 +1336,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// For recovery mode we've now configured enough to return early.
 	if c.recoveryMode {
-		checkResult, err := c.checkForSealMigration(context.Background(), conf.UnwrapSeal)
+		checkResult, _, err := c.checkForSealMigration(context.Background(), conf.UnwrapSeal)
 		if err != nil {
 			return nil, fmt.Errorf("error checking if a seal migration is needed: %w", err)
 		}
@@ -1344,6 +1364,25 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	if conf.PluginFilePermissions != 0 {
 		c.pluginFilePermissions = conf.PluginFilePermissions
+	}
+
+	if conf.DevPluginPGPKey != "" {
+		// Check if it's a raw PGP key or a file path
+		if strings.HasPrefix(strings.TrimSpace(conf.DevPluginPGPKey), "-----BEGIN PGP PUBLIC KEY BLOCK-----") {
+			// It's a raw PGP key, use it directly
+			c.devPluginPGPKey = conf.DevPluginPGPKey
+		} else {
+			// It's a file path, validate and convert to absolute path
+			c.devPluginPGPKey, err = filepath.Abs(conf.DevPluginPGPKey)
+			if err != nil {
+				return nil, fmt.Errorf("core setup failed, could not verify dev plugin PGP key path: %w", err)
+			}
+
+			// Validate file exists at startup
+			if _, err := os.Stat(c.devPluginPGPKey); err != nil {
+				return nil, fmt.Errorf("core setup failed, dev plugin PGP key file does not exist: %w", err)
+			}
+		}
 	}
 
 	// Create secondaries (this will only impact Enterprise versions of Vault)
@@ -1454,11 +1493,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.clusterAddrBridge = conf.ClusterAddrBridge
 	c.licenseReloadCh = conf.LicenseReload
 
-	// Check if "rekey" is in the EnableUnauthenticatedAccess list
+	// Check if endpoints are in the EnableUnauthenticatedAccess list
 	for _, endpoint := range conf.EnableUnauthenticatedAccess {
-		if endpoint == "rekey" {
+		switch endpoint {
+		case "rekey":
 			c.enableUnauthRekey.Store(true)
-			break
+		case "generate-root":
+			c.enableUnauthGenerateRoot.Store(true)
+		case "generate-operation-token":
+			c.enableUnauthDROperationToken.Store(true)
 		}
 	}
 
@@ -1796,7 +1839,7 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 		return fmt.Errorf("can't perform a seal migration while joining a raft cluster")
 	}
 	if !migrate && c.migrationInfo != nil {
-		done, err := c.sealMigrated(ctx)
+		done, _, err := c.sealMigrated(ctx)
 		if err != nil {
 			return fmt.Errorf("error checking to see if seal is migrated: %w", err)
 		}
@@ -1830,6 +1873,10 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 	// Check if already unsealed
 	if !c.Sealed() {
 		return nil
+	}
+
+	if err := c.ValidateMultiSealConfig(ctx, false); err != nil {
+		return err
 	}
 
 	sealToUse := c.seal
@@ -2028,26 +2075,28 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 // For the auto->auto same seal migration scenario, it will return false even
 // if the preceding conditions are true but we cannot decrypt the master key
 // in storage using the configured seal.
-func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
+// When no error is returned, returns a string that gives more information about
+// why the bool return value is set as it is.
+func (c *Core) sealMigrated(ctx context.Context) (bool, string, error) {
 	sealMigDone := c.sealMigrationDone.Load()
 	if sealMigDone != nil && !sealMigDone.IsZero() {
-		return true, nil
+		return true, "sealMigrationDone nonzero", nil
 	}
 
 	existBarrierSealConfig, existRecoverySealConfig, err := c.PhysicalSealConfigs(ctx)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 
 	if !c.seal.BarrierSealConfigType().IsSameAs(existBarrierSealConfig.Type) {
-		return false, nil
+		return false, "barrier seal config type in seal matches what's in storage", nil
 	}
 	if c.seal.RecoveryKeySupported() && !SealConfigTypeRecovery.IsSameAs(existRecoverySealConfig.Type) {
-		return false, nil
+		return false, "recovery seal config type in seal matches what's in storage", nil
 	}
 
 	if c.seal.BarrierSealConfigType() != c.migrationInfo.seal.BarrierSealConfigType() {
-		return true, nil
+		return true, "barrier seal config type in seal doesn't match what's in storage", nil
 	}
 
 	// The above checks can handle the auto->shamir and shamir->auto
@@ -2059,13 +2108,13 @@ func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
 
 	switch {
 	case len(keys) > 0 && err == nil:
-		return true, nil
+		return true, "seal has stored keys", nil
 	case len(keysMig) > 0 && errMig == nil:
-		return false, nil
+		return false, "migration seal has stored keys", nil
 	case errors.Is(err, &ErrDecrypt{}) && errors.Is(errMig, &ErrDecrypt{}):
-		return false, fmt.Errorf("decrypt error, neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
+		return false, "", fmt.Errorf("decrypt error, neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
 	default:
-		return false, fmt.Errorf("neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
+		return false, "", fmt.Errorf("neither the old nor new seal can read stored keys: old seal err=%v, new seal err=%v", errMig, err)
 	}
 }
 
@@ -2077,17 +2126,17 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		return c.migrateMultiSealConfig(ctx)
 	}
 
-	ok, err := c.sealMigrated(ctx)
+	ok, info, err := c.sealMigrated(ctx)
 	if err != nil {
 		return fmt.Errorf("error checking if seal is migrated or not: %w", err)
 	}
 
 	if ok {
-		c.logger.Info("migration is already performed")
+		c.logger.Info("migration is already performed", "info", info)
 		return nil
 	}
 
-	c.logger.Info("seal migration initiated")
+	c.logger.Info("seal migration initiated", "info", info)
 
 	switch {
 	case c.migrationInfo.seal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
@@ -2733,6 +2782,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		Tmpdir:               c.containerPluginTmpdir,
 		EnableMlock:          c.enableMlock,
 		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
+		PluginPGPKey:         c.devPluginPGPKey,
 	})
 	if err != nil {
 		return err
@@ -3300,16 +3350,16 @@ const (
 	sealMigrationCheckDoNotAjust
 )
 
-func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (sealMigrationCheckResult, error) {
+func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (sealMigrationCheckResult, string, error) {
 	existBarrierSealConfig, _, err := c.PhysicalSealConfigs(ctx)
 	if err != nil {
-		return sealMigrationCheckError, fmt.Errorf("Error checking for existing seal: %s", err)
+		return sealMigrationCheckError, "", fmt.Errorf("Error checking for existing seal: %s", err)
 	}
 
 	// If we don't have an existing config or if it's the deprecated auto seal
 	// which needs an upgrade, skip out
 	if existBarrierSealConfig == nil || existBarrierSealConfig.Type == WrapperTypeHsmAutoDeprecated.String() {
-		return sealMigrationCheckSkip, nil
+		return sealMigrationCheckSkip, "no seal config or deprecated", nil
 	}
 
 	if unwrapSeal == nil {
@@ -3323,28 +3373,28 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 		case storedType == configuredType:
 			// We have the same barrier type and the unwrap seal is nil so we're not
 			// migrating from same to same, IOW we assume it's not a migration.
-			return sealMigrationCheckDoNotAjust, nil
+			return sealMigrationCheckDoNotAjust, "same barrier and unwrap seal is nil", nil
 		case configuredType == SealConfigTypeShamir:
 			// The stored barrier config is not shamir, there is no disabled seal
 			// in config, and either no configured seal (which equates to Shamir)
 			// or an explicitly configured Shamir seal.
-			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
+			return sealMigrationCheckError, "", fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
 				existBarrierSealConfig.Type)
 		case storedType == SealConfigTypeShamir:
 			// The configured seal is not Shamir, the stored seal config is Shamir.
 			// This is a migration away from Shamir.
 
-			return sealMigrationCheckAdjust, nil
+			return sealMigrationCheckAdjust, "configured seal is not shamir and stored seal config is", nil
 		case configuredType == SealConfigTypeMultiseal && c.IsMultisealEnabled():
 			// We are going from a single non-shamir seal to multiseal, and multi seal is supported.
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
 
-			return sealMigrationCheckDoNotAjust, nil
+			return sealMigrationCheckDoNotAjust, "single non-shamir to multiseal", nil
 		case configuredType == SealConfigTypeMultiseal:
 			// The configured seal is multiseal and we know the stored type is not shamir, thus
 			// we are going from auto seal to multiseal.
-			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
+			return sealMigrationCheckError, "", fmt.Errorf("cannot seal migrate from %q to %q, multiple seals are not supported",
 				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		case storedType == SealConfigTypeMultiseal:
 			// The stored type is multiseal and we know the type the configured type is not shamir,
@@ -3353,12 +3403,12 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
 			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
 
-			return sealMigrationCheckDoNotAjust, nil
+			return sealMigrationCheckDoNotAjust, "multiseal to autoseal", nil
 		default:
 			// We know at this point that there is a configured non-Shamir seal,
 			// that it does not match the stored non-Shamir seal config, and that
 			// there is no explicitly disabled seal stanza.
-			return sealMigrationCheckError, fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
+			return sealMigrationCheckError, "", fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
 				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		}
 	} else {
@@ -3366,9 +3416,9 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 		// in the config and disabled.
 
 		if unwrapSeal.BarrierSealConfigType() == SealConfigTypeShamir {
-			return sealMigrationCheckError, errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
+			return sealMigrationCheckError, "", errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
 		}
-		return sealMigrationCheckDoNotAjust, nil
+		return sealMigrationCheckDoNotAjust, "unchanged", nil
 	}
 }
 
@@ -3394,7 +3444,7 @@ func (c *Core) checkForSealMigration(ctx context.Context, unwrapSeal Seal) (seal
 func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	ctx := context.Background()
 
-	checkResult, err := c.checkForSealMigration(ctx, unwrapSeal)
+	checkResult, _, err := c.checkForSealMigration(ctx, unwrapSeal)
 	if err != nil {
 		return err
 	}
@@ -3678,7 +3728,7 @@ func (c *Core) IsSealMigrated(lock bool) bool {
 		c.stateLock.RLock()
 		defer c.stateLock.RUnlock()
 	}
-	done, _ := c.sealMigrated(context.Background())
+	done, _, _ := c.sealMigrated(context.Background())
 	return done
 }
 
@@ -4465,16 +4515,24 @@ func (c *Core) ReloadEnableUnauthenticatedAccess() {
 		return
 	}
 
-	// Check if "rekey" is in the EnableUnauthenticatedAccess list
+	// Check which endpoints are in the EnableUnauthenticatedAccess list
 	enableRekey := false
+	enableGenerateRoot := false
+	enableDROperationToken := false
 	for _, endpoint := range conf.(*server.Config).EnableUnauthenticatedAccess {
-		if endpoint == "rekey" {
+		switch endpoint {
+		case "rekey":
 			enableRekey = true
-			break
+		case "generate-root":
+			enableGenerateRoot = true
+		case "generate-operation-token":
+			enableDROperationToken = true
 		}
 	}
 
 	c.enableUnauthRekey.Store(enableRekey)
+	c.enableUnauthGenerateRoot.Store(enableGenerateRoot)
+	c.enableUnauthDROperationToken.Store(enableDROperationToken)
 }
 
 type PeerNode struct {
@@ -4968,4 +5026,20 @@ func (c *Core) GetEnableUnauthRekey() bool {
 
 func (c *Core) SetEnableUnauthRekey(val bool) {
 	c.enableUnauthRekey.Store(val)
+}
+
+func (c *Core) GetEnableUnauthGenerateRoot() bool {
+	return c.enableUnauthGenerateRoot.Load()
+}
+
+func (c *Core) SetEnableUnauthGenerateRoot(val bool) {
+	c.enableUnauthGenerateRoot.Store(val)
+}
+
+func (c *Core) GetEnableUnauthDROperationToken() bool {
+	return c.enableUnauthDROperationToken.Load()
+}
+
+func (c *Core) SetEnableUnauthDROperationToken(val bool) {
+	c.enableUnauthDROperationToken.Store(val)
 }

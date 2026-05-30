@@ -5,21 +5,21 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { paginate, PaginateOptions } from 'core/utils/paginate-list';
-import sortObjects from 'vault/utils/sort-objects';
-import { fetchRoleCapabilities } from 'ldap/utils/capabilities-helper';
 import {
-  SecretsApiLdapListStaticRolesListEnum,
   SecretsApiLdapListDynamicRolesListEnum,
-  SecretsApiLdapListStaticRolePathListEnum,
   SecretsApiLdapListRolePathListEnum,
+  SecretsApiLdapListStaticRolePathListEnum,
+  SecretsApiLdapListStaticRolesListEnum,
 } from '@hashicorp/vault-client-typescript';
+import { paginate, PaginateOptions } from 'core/utils/paginate-list';
+import { fetchRoleCapabilities } from 'ldap/utils/capabilities-helper';
+import sortObjects from 'vault/utils/sort-objects';
 
-import type ApiService from 'vault/services/api';
-import type SecretMountPath from 'vault/services/secret-mount-path';
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
-import type CapabilitiesService from 'vault/services/capabilities';
 import type { LdapRole } from 'vault/secrets/ldap';
+import type ApiService from 'vault/services/api';
+import type CapabilitiesService from 'vault/services/capabilities';
+import type SecretMountPath from 'vault/services/secret-mount-path';
 
 // Base class for roles/index and roles/subdirectory routes
 export default class LdapRolesRoute extends Route {
@@ -41,12 +41,12 @@ export default class LdapRolesRoute extends Route {
         subType === 'static'
           ? [
               this.api.secrets.ldapListStaticRolePath(
-                currentPath,
                 path,
+                currentPath,
                 SecretsApiLdapListStaticRolePathListEnum.TRUE
               ),
             ]
-          : [this.api.secrets.ldapListRolePath(currentPath, path, SecretsApiLdapListRolePathListEnum.TRUE)];
+          : [this.api.secrets.ldapListRolePath(path, currentPath, SecretsApiLdapListRolePathListEnum.TRUE)];
     } else {
       requests = [
         this.api.secrets.ldapListStaticRoles(currentPath, SecretsApiLdapListStaticRolesListEnum.TRUE),

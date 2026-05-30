@@ -209,7 +209,6 @@ func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConf
 	tb.Helper()
 
 	cluster := vault.NewTestCluster(tb, coreConfig, opts)
-	cluster.Start()
 
 	// Make it easy to get access to the active
 	core := cluster.Cores[0].Core
@@ -226,7 +225,7 @@ func testVaultServerCoreConfigWithOpts(tb testing.TB, coreConfig *vault.CoreConf
 		keys = cluster.BarrierKeys
 	}
 
-	return client, encodeKeys(keys), cluster.Cleanup
+	return client, encodeKeys(keys), func() {}
 }
 
 // Convert the unseal keys to base64 encoded, since these are how the user

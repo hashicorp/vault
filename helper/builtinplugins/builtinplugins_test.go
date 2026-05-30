@@ -50,9 +50,6 @@ func TestBuiltinPluginsWork(t *testing.T) {
 		},
 	)
 
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client

@@ -35,8 +35,6 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		HandlerFunc: Handler,
 		Logger:      logging.NewVaultLoggerWithWriter(ioutil.Discard, log.Error),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
 
 	// make it easy to get access to the active

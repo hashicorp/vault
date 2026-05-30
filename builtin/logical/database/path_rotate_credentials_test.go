@@ -19,8 +19,7 @@ func TestRotateRootPassword_Postgres(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
-	cluster, sys := getClusterWithFactory(t, Factory)
-	defer cluster.Cleanup()
+	_, sys := getClusterWithFactory(t, Factory)
 
 	connURL = strings.Replace(connURL, "postgres:secret", "{{username}}:{{password}}", 1)
 
@@ -50,8 +49,7 @@ func TestRotateRootKeypair_Snowflake_Acc(t *testing.T) {
 		t.Skip("VAULT_SNOWFLAKE_USERNAME not set, skipping test")
 	}
 
-	cluster, sys := getClusterWithFactory(t, Factory)
-	defer cluster.Cleanup()
+	_, sys := getClusterWithFactory(t, Factory)
 
 	testRotateRoot(t, sys, false, connURL, "snowflake-database-plugin", username, string(keyFile))
 }

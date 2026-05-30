@@ -313,6 +313,7 @@ func TestRouter_RootPath(t *testing.T) {
 		Root: []string{
 			"root",
 			"policy/*",
+			"mounts/auth/+/tune",
 		},
 	}
 	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
@@ -332,6 +333,9 @@ func TestRouter_RootPath(t *testing.T) {
 		{"prod/aws/policy", false},
 		{"prod/aws/policy/", true},
 		{"prod/aws/policy/ops", true},
+		{"prod/aws/mounts/auth/userpass/tune", true},
+		{"prod/aws/mounts/auth/userpass", false},
+		{"prod/aws/mounts/auth/userpass/roles", false},
 	}
 
 	for _, tc := range tcases {

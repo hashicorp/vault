@@ -8,17 +8,15 @@ import { service } from '@ember/service';
 
 export default class MfaConfigureRoute extends Route {
   @service router;
-  @service store;
+  @service api;
 
-  beforeModel() {
-    return this.store
-      .query('mfa-method', {})
-      .then(() => {
-        // if response then they should transition to the methods page instead of staying on the configure page.
-        this.router.transitionTo('vault.cluster.access.mfa.methods.index');
-      })
-      .catch(() => {
-        // stay on the landing page
-      });
+  async beforeModel() {
+    try {
+      // if response then they should transition to the methods page instead of staying on the configure page.
+      await this.api.identity.mfaListMethods(true);
+      this.router.transitionTo('vault.cluster.access.mfa.methods.index');
+    } catch (e) {
+      // stay on the landing page
+    }
   }
 }

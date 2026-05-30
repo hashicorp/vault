@@ -677,7 +677,6 @@ func (r *CreateBackportReq) backportRef(
 			Strategy: libgit.MergeStrategyORT,
 			StrategyOptions: []libgit.MergeStrategyOption{
 				libgit.MergeStrategyOptionTheirs,
-				libgit.MergeStrategyOptionIgnoreSpaceChange,
 			},
 		})
 		if err != nil {
@@ -757,6 +756,20 @@ func (r *CreateBackportReq) backportRef(
 	)
 	if err != nil {
 		res.Error = fmt.Errorf("assigning ownership to backport pull request %w", err)
+		return res
+	}
+
+	// Request review from the PR author
+	err = addReviewers(
+		ctx,
+		github,
+		r.Owner,
+		r.Repo,
+		int(res.PullRequest.GetNumber()),
+		[]string{pr.GetUser().GetLogin()},
+	)
+	if err != nil {
+		res.Error = fmt.Errorf("requesting review from PR author on backport pull request %w", err)
 		return res
 	}
 

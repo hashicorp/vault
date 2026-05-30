@@ -119,10 +119,7 @@ func testAgentExitAfterAuth(t *testing.T, viaFlag bool) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	client := cluster.Cores[0].Client
 
 	// Setup Vault
@@ -308,9 +305,7 @@ func TestAgent_RequireRequestHeader(t *testing.T) {
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
 	serverClient := cluster.Cores[0].Client
 
 	// Enable the approle auth method
@@ -620,10 +615,7 @@ func TestAgent_Template_UserAgent(t *testing.T) {
 					return &h
 				}),
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that agent picks up the right test
@@ -790,10 +782,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that agent picks up the right test
@@ -1097,10 +1086,7 @@ func TestAgent_Template_VaultClientFromEnv(t *testing.T) {
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	roleIDPath, secretIDPath := setupAppRoleAndKVMounts(t, serverClient)
@@ -1274,10 +1260,7 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that agent picks up the right test
@@ -1572,10 +1555,7 @@ func TestAgent_Template_Retry(t *testing.T) {
 					return &h
 				}),
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that agent picks up the right test
@@ -1852,8 +1832,6 @@ func TestAgent_AutoAuth_UserAgent(t *testing.T) {
 				return &h
 			}),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1968,8 +1946,6 @@ func TestAgent_APIProxyWithoutCache_UserAgent(t *testing.T) {
 				return &h
 			}),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -2054,8 +2030,6 @@ func TestAgent_APIProxyWithCache_UserAgent(t *testing.T) {
 				return &h
 			}),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -2129,8 +2103,6 @@ func TestAgent_Cache_DynamicSecret(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -2251,10 +2223,7 @@ func TestAgent_ApiProxy_Retry(t *testing.T) {
 				return &h
 			}),
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that agent picks up the right test
@@ -2397,10 +2366,7 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 			NumCores:    1,
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that agent picks up the right test
@@ -2690,9 +2656,7 @@ func TestAgent_Metrics(t *testing.T) {
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
 	serverClient := cluster.Cores[0].Client
 
 	// Create a config file
@@ -3164,8 +3128,6 @@ func TestAgent_NonTLSListener_SIGHUP(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -3238,8 +3200,6 @@ func TestAgent_TokenRenewal(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -3479,10 +3439,7 @@ func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
 			NumCores:    1,
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Set up KVv2

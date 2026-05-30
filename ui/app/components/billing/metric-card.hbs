@@ -18,8 +18,11 @@
       <Hds::Text::Body @tag="p">{{or this.total "0"}}</Hds::Text::Body>
     </Hds::Layout::Flex::Item>
     {{#each-in @metrics as |metricKey metricValue|}}
+      {{#if (eq metricKey this.normalizedBillableMetrics.ID_TOKEN_UNITS_OIDC)}}
+        <Hds::Layout::Flex::Item @basis="20%" @grow={{true}} @shrink={{true}} data-test-metric-detail={{metricKey}} />
+      {{/if}}
       {{#let (this.metricDetails metricKey) as |display|}}
-        <Hds::Layout::Flex::Item @basis="15%" @grow={{true}} @shrink={{true}} data-test-metric-detail={{metricKey}}>
+        <Hds::Layout::Flex::Item @basis="20%" @grow={{true}} @shrink={{true}} data-test-metric-detail={{metricKey}}>
           {{#if display.tooltipText}}
             <Hds::Text::Display @tag="h3" @color="foreground-primary">
               {{display.label}}

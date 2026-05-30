@@ -5,12 +5,12 @@ package misc
 
 import (
 	"context"
-	"os"
 	"path"
 	"testing"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/testimages"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/mitchellh/mapstructure"
@@ -26,26 +26,20 @@ func TestRecovery_Docker(t *testing.T) {
 	ctx := context.TODO()
 
 	t.Parallel()
-	binary := os.Getenv("VAULT_BINARY")
-	if binary == "" {
-		t.Skip("only running docker test when $VAULT_BINARY present")
-	}
+	repo, tag := testimages.GetImageRepoAndTag(t, false)
 	opts := &docker.DockerClusterOptions{
-		ImageRepo:    "hashicorp/vault",
+		ImageRepo:    repo,
 		DisableMlock: true,
 		// We're replacing the binary anyway, so we're not too particular about
 		// the docker image version tag.
-		ImageTag:    "latest",
-		VaultBinary: binary,
+		ImageTag: tag,
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores: 1,
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",
-				// If you want the test to run faster locally, you could
-				// uncomment this performance_multiplier change.
-				//StorageOptions: map[string]string{
-				//	"performance_multiplier": "1",
-				//},
+				StorageOptions: map[string]string{
+					"performance_multiplier": "1",
+				},
 			},
 		},
 	}
@@ -130,6 +124,7 @@ func TestRecovery_Docker(t *testing.T) {
 		newOpts := *opts
 		opts := &newOpts
 		opts.Args = []string{"-recovery"}
+		opts.SkipUnsealWaitActiveNode = true
 		opts.StartProbe = func(client *api.Client) error {
 			// In recovery mode almost no paths are supported, and pretty much
 			// the only ones that don't require a recovery token are the ones used

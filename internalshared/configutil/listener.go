@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-sockaddr/template"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -203,6 +204,7 @@ func (l *Listener) GoString() string {
 
 func (l *Listener) Validate(path string) []ConfigError {
 	results := append(ValidateUnusedFields(l.UnusedKeys, path), ValidateUnusedFields(l.Telemetry.UnusedKeys, path)...)
+	results = append(results, l.validateForwardedForSettings(path)...)
 	return append(results, ValidateUnusedFields(l.Profiling.UnusedKeys, path)...)
 }
 
@@ -661,6 +663,80 @@ func (l *Listener) parseForwardedForSettings() error {
 	l.XForwardedForAuthorizedAddrsRaw = nil
 
 	return nil
+}
+
+func (l *Listener) validateForwardedForSettings(fileName string) []ConfigError {
+	configErrors := []ConfigError{}
+
+	if len(l.XForwardedForAuthorizedAddrs) == 0 {
+		if l.XForwardedForRejectNotAuthorizedRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_reject_not_authorized was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForRejectNotPresentRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_reject_not_present was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForHopSkipsRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_hops_skips was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForClientCertHeader != "" {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_client_cert_header was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForClientCertHeaderDecoders != "" {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_client_cert_header_decoders was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+	}
+
+	if l.XForwardedForClientCertHeader == "" && l.XForwardedForClientCertHeaderDecoders != "" {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header_decoders was set, but not x_forwarded_for_client_cert_header was set to be decoded",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+	if l.XForwardedForClientCertHeader != "" && l.XForwardedForClientCertHeaderDecoders == "" {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header was set, but no x_forwarded_for_client_cert_header_decoders were set to decode that header",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+	if strings.Contains(l.XForwardedForClientCertHeaderDecoders, "DER") && !strings.HasSuffix(l.XForwardedForClientCertHeaderDecoders, "DER") {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header_decoders DER decoder actually decodes PEM into DER, and therefore can only function as the final decoder",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+
+	return configErrors
 }
 
 // parseTelemetrySettings attempts to parse the raw listener telemetry settings.

@@ -1,0 +1,9 @@
+```release-note:security
+core: Update golang.org/x/net to resolve GO-2026-4918"
+```
+```release-note:security
+sdk: Update golang.org/x/net to resolve GO-2026-4918"
+```
+```release-note:security
+api: Update golang.org/x/net to resolve GO-2026-4918"
+```

@@ -9,6 +9,12 @@ import sinon from 'sinon';
 import localStorage from 'vault/lib/local-storage';
 import { DISMISSED_WIZARD_KEY } from 'vault/utils/constants/wizard';
 
+const STEPS = [
+  { title: 'Step 1', component: 'wizard/step-1' },
+  { title: 'Step 2', component: 'wizard/step-2' },
+  { title: 'Step 3', component: 'wizard/step-3' },
+];
+
 module('Unit | Service | wizard', function (hooks) {
   setupTest(hooks);
 
@@ -229,6 +235,128 @@ module('Unit | Service | wizard', function (hooks) {
       assert.false(this.service.isIntroVisible('wizard1'), 'wizard1 is not visible');
       assert.true(this.service.isIntroVisible('wizard2'), 'wizard2 is visible');
       assert.false(this.service.isIntroVisible('wizard3'), 'wizard3 is not visible');
+    });
+  });
+
+  /* Step state management */
+  module('#getState / #updateState', function () {
+    test('getState returns empty object for uninitialized wizard', function (assert) {
+      assert.deepEqual(this.service.getState('namespace'), {}, 'returns empty object when not set');
+    });
+
+    test('updateState sets a single key without mutating other keys', function (assert) {
+      this.service.updateState('namespace', 'choice', 'strict');
+
+      assert.strictEqual(this.service.getState('namespace').choice, 'strict', 'updates the specified key');
+    });
+
+    test('successive updates accumulate correctly', function (assert) {
+      this.service.updateState('namespace', 'choice', 'strict');
+      this.service.updateState('namespace', 'data', ['ns1', 'ns2']);
+
+      const state = this.service.getState('namespace');
+      assert.strictEqual(state.choice, 'strict', 'first update persists');
+      assert.deepEqual(state.data, ['ns1', 'ns2'], 'second update persists');
+    });
+
+    test('updating one wizard does not affect another', function (assert) {
+      this.service.updateState('namespace', 'choice', 'strict');
+
+      assert.strictEqual(this.service.getState('namespace').choice, 'strict', 'namespace updated');
+      assert.strictEqual(this.service.getState('acl-policy').choice, undefined, 'acl-policy unchanged');
+    });
+  });
+
+  module('#clearWizardState', function () {
+    test('resets state to empty object and step to 0', function (assert) {
+      this.service.updateState('namespace', 'choice', 'strict');
+      this.service.setCurrentStep('namespace', 2);
+
+      this.service.clearWizardState('namespace');
+
+      assert.deepEqual(this.service.getState('namespace'), {}, 'state is empty after clear');
+      assert.strictEqual(this.service.getCurrentStep('namespace'), 0, 'step resets to 0');
+    });
+
+    test('preserves step configuration after clear', function (assert) {
+      this.service.setSteps('namespace', STEPS);
+
+      this.service.clearWizardState('namespace');
+
+      assert.deepEqual(this.service.getSteps('namespace'), STEPS, 'step config is preserved');
+    });
+  });
+
+  module('#getCurrentStep / #setCurrentStep', function () {
+    test('returns 0 for uninitialized wizard', function (assert) {
+      assert.strictEqual(this.service.getCurrentStep('namespace'), 0, 'defaults to 0');
+    });
+
+    test('setCurrentStep updates the active step', function (assert) {
+      this.service.setCurrentStep('namespace', 2);
+
+      assert.strictEqual(this.service.getCurrentStep('namespace'), 2, 'step is updated');
+    });
+
+    test('step changes for one wizard do not affect another', function (assert) {
+      this.service.setCurrentStep('namespace', 1);
+
+      assert.strictEqual(this.service.getCurrentStep('namespace'), 1, 'namespace at step 1');
+      assert.strictEqual(this.service.getCurrentStep('acl-policy'), 0, 'acl-policy still at step 0');
+    });
+  });
+
+  module('#getSteps / #setSteps', function () {
+    test('getSteps returns empty array for uninitialized wizard', function (assert) {
+      assert.deepEqual(this.service.getSteps('namespace'), [], 'returns empty array');
+    });
+
+    test('setSteps replaces the step configuration', function (assert) {
+      this.service.setSteps('namespace', STEPS);
+
+      assert.deepEqual(this.service.getSteps('namespace'), STEPS, 'step config is stored');
+    });
+
+    test('setSteps for one wizard does not affect another', function (assert) {
+      this.service.setSteps('namespace', STEPS);
+
+      assert.strictEqual(this.service.getSteps('namespace').length, 3, 'namespace has 3 steps');
+      assert.deepEqual(this.service.getSteps('acl-policy'), [], 'acl-policy still has no steps');
+    });
+  });
+
+  module('#isFinalStep', function () {
+    test('returns false for uninitialized wizard (no steps)', function (assert) {
+      assert.false(this.service.isFinalStep('namespace'), 'returns false when no steps registered');
+    });
+
+    test('returns false when not on the last step', function (assert) {
+      this.service.setSteps('namespace', STEPS);
+
+      assert.false(this.service.isFinalStep('namespace'), 'returns false on step 0 of 3');
+
+      this.service.setCurrentStep('namespace', 1);
+      assert.false(this.service.isFinalStep('namespace'), 'returns false on step 1 of 3');
+    });
+
+    test('returns true when on the last step', function (assert) {
+      this.service.setSteps('namespace', STEPS);
+      this.service.setCurrentStep('namespace', 2);
+
+      assert.true(this.service.isFinalStep('namespace'), 'returns true on final step');
+    });
+
+    test('reflects the new final step after setSteps reduces the step count', function (assert) {
+      this.service.setSteps('namespace', STEPS);
+      this.service.setCurrentStep('namespace', 1);
+
+      // Reduce to 2 steps — step 1 is now the final step
+      this.service.setSteps('namespace', [STEPS[0], STEPS[2]]);
+
+      assert.true(
+        this.service.isFinalStep('namespace'),
+        'correctly identifies new final step after setSteps'
+      );
     });
   });
 });

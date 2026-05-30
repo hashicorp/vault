@@ -109,7 +109,6 @@ func ParamTestSealMigrationTransitToShamir_Post14(t *testing.T, logger hclog.Log
 	opts.SealFunc = func() vault.Seal { return nil }
 	leaderIdx := migratePost14(t, storage, cluster, opts, cluster.RecoveryKeys)
 	validateMigration(t, storage, cluster, leaderIdx, verifySealConfigShamir)
-
 	cluster.Cleanup()
 	storage.Cleanup(t, cluster)
 
@@ -218,7 +217,6 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 	storage.Setup(&conf, &opts)
 	conf.DisableAutopilot = true
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)
@@ -299,7 +297,6 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)
@@ -591,7 +588,6 @@ func initializeShamir(t *testing.T, logger hclog.Logger, storage teststorage.Reu
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 
 	leader := cluster.Cores[0]
 	client := leader.Client
@@ -645,7 +641,6 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)
@@ -723,7 +718,6 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 
 	leader := cluster.Cores[0]
 	client := leader.Client
@@ -777,7 +771,6 @@ func runAutoseal(t *testing.T, logger hclog.Logger, storage teststorage.Reusable
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)

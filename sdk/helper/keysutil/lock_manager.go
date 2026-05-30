@@ -74,6 +74,9 @@ type PolicyRequest struct {
 
 	// HybridConfig contains the key types and parameters for hybrid keys
 	HybridConfig HybridKeyConfig
+
+	// WriteLocked determines whether the returned policy will have an exclusive lock
+	WriteLocked bool
 }
 
 type HybridKeyConfig struct {
@@ -298,7 +301,7 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 	return backup, nil
 }
 
-// When the function returns, if caching was disabled, the Policy's lock must
+// When the function returns, the Policy's lock must
 // be unlocked when the caller is done (and it should not be re-locked).
 func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io.Reader) (retP *Policy, retUpserted bool, retErr error) {
 	var p *Policy
@@ -315,6 +318,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		if atomic.LoadUint32(&p.deleted) == 1 {
 			return nil, false, nil
 		}
+		p.Lock(req.WriteLocked)
 		return p, false, nil
 	}
 
@@ -328,10 +332,10 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 	// return from here with the lock still held.
 	cleanup := func() {
 		switch {
-		// If using the cache we always unlock, the caller locks the policy
-		// themselves
-		case lm.useCache:
+		// If using the cache we use the policy request to determine which lock type to use
+		case lm.useCache && retP != nil:
 			lock.Unlock()
+			retP.Lock(req.WriteLocked)
 
 		// If not using the cache, if we aren't returning a policy the caller
 		// doesn't have a lock, so we must unlock

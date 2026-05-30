@@ -122,7 +122,10 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Edit', functio
     await click(FORM.saveBtn);
     assert
       .dom(FORM.validationError('max_versions'))
-      .hasText('Maximum versions must be a number.', 'Validation message is shown for max_versions');
+      .hasText(
+        'Maximum versions must be a non-negative number.',
+        'Validation message is shown for max_versions'
+      );
 
     await click(FORM.cancelBtn);
     assert.true(this.onCancel.called, 'onCancel action is called');

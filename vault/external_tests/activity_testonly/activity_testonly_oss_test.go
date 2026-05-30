@@ -79,8 +79,6 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    2,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	active := testhelpers.DeriveStableActiveCore(t, cluster)
 	client := active.Client

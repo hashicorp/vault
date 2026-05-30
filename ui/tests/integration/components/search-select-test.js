@@ -7,73 +7,47 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { create } from 'ember-cli-page-object';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
-import Service from '@ember/service';
 import { click, render, settled } from '@ember/test-helpers';
-import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import searchSelect from '../../pages/components/search-select';
 import { isWildcardString } from 'vault/helpers/is-wildcard-string';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 const component = create(searchSelect);
 
-const storeService = Service.extend({
-  query(modelType) {
-    return new Promise((resolve, reject) => {
-      switch (modelType) {
-        case 'policy/acl':
-          resolve([
-            { id: '1', name: '1' },
-            { id: '2', name: '2' },
-            { id: '3', name: '3' },
-          ]);
-          break;
-        case 'policy/rgp':
-          reject({ httpStatus: 403, message: 'permission denied' });
-          break;
-        case 'identity/entity':
-          resolve([
-            { id: '7', name: 'seven' },
-            { id: '8', name: 'eight' },
-            { id: '9', name: 'nine' },
-          ]);
-          break;
-        case 'server/error':
-          var error = new Error('internal server error');
-          error.httpStatus = 500;
-          reject(error);
-          break;
-        case 'transform/transformation':
-          resolve([
-            { id: 'foo', name: 'bar' },
-            { id: 'foobar', name: '' },
-            { id: 'barfoo1', name: 'different' },
-          ]);
-          break;
-        case 'some/model':
-          resolve([
-            { id: 'model-a-id', name: 'model-a', uuid: 'a123', type: 'a' },
-            { id: 'model-b-id', name: 'model-b', uuid: 'b456', type: 'b' },
-            { id: 'model-c-id', name: 'model-c', uuid: 'c789', type: 'c' },
-          ]);
-          break;
-        case 'pki/issuer':
-          resolve([
-            { id: 'issuer-a-id', issuerName: 'my-first-issuer' },
-            { id: 'issuer-b-id' },
-            { id: 'issuer-c-id', issuerName: 'my-issuer-again' },
-          ]);
-          break;
-        default:
-          reject({ httpStatus: 404 });
-          break;
-      }
-      reject({ httpStatus: 404 });
-    });
+const responses = {
+  acl: { keys: ['1', '2', '3'] },
+  rgp: getErrorResponse({ errors: ['permission denied'] }, 403),
+  entity: {
+    keys: ['7', '8', '9'],
+    key_info: { 7: { name: 'seven' }, 8: { name: 'eight' }, 9: { name: 'nine' } },
   },
-});
+  transformation: {
+    keys: ['foo', 'foobar', 'barfoo1'],
+    key_info: { foo: { name: 'bar' }, foobar: { name: '' }, barfoo1: { name: 'different' } },
+  },
+  key: getErrorResponse(),
+  alphabet: {
+    keys: ['letter-a-id', 'letter-b-id', 'letter-c-id'],
+    key_info: {
+      'letter-a-id': { alpha_name: 'my-first-letter' },
+      'letter-b-id': {},
+      'letter-c-id': { alpha_name: 'my-letter-again' },
+    },
+  },
+  mfa: {
+    keys: ['model-a-id', 'model-b-id', 'model-c-id'],
+    key_info: {
+      'model-a-id': { name: 'model-a', uuid: 'a123', type: 'a' },
+      'model-b-id': { name: 'model-b', uuid: 'b456', type: 'b' },
+      'model-c-id': { name: 'model-c', uuid: 'c789', type: 'c' },
+    },
+  },
+  role: getErrorResponse({ message: 'internal server error' }, 500),
+};
 
 module('Integration | Component | search select', function (hooks) {
   setupRenderingTest(hooks);
@@ -87,10 +61,16 @@ module('Integration | Component | search select', function (hooks) {
       return !modelExists ? 'The model associated with this id no longer exists' : false;
     };
     this.set('renderTooltip', mockFunctionFromParent);
-    run(() => {
-      this.owner.unregister('service:store');
-      this.owner.register('service:store', storeService);
-    });
+
+    this.api = this.owner.lookup('service:api');
+    sinon.stub(this.api.sys, 'policiesListAclPolicies').resolves(responses.acl);
+    sinon.stub(this.api.sys, 'systemListPoliciesRgp').rejects(responses.rgp);
+    sinon.stub(this.api.identity, 'entityListByName').resolves(responses.entity);
+    sinon.stub(this.api.secrets, 'transformListTransformations').resolves(responses.transformation);
+    sinon.stub(this.api.secrets, 'keyManagementListKeys').rejects(responses.key);
+    sinon.stub(this.api.secrets, 'transformListAlphabets').resolves(responses.alphabet);
+    sinon.stub(this.api.sys, 'systemListMfaMethod').resolves(responses.mfa);
+    sinon.stub(this.api.secrets, 'databaseListRoles').rejects(responses.role);
   });
 
   test('it renders', async function (assert) {
@@ -163,6 +143,44 @@ module('Integration | Component | search select', function (hooks) {
     assert.dom('.text-overflow-ellipsis').exists('selected option text has overflow class');
   });
 
+  test('it preserves parentManageSelected objects for rendering and removes them from dropdown options', async function (assert) {
+    const options = [
+      { id: '123456', type: 'TOTP' },
+      { id: '654321', type: 'Duo' },
+    ];
+    const selected = [options[0]];
+
+    this.set('options', options);
+    this.set('selected', selected);
+    this.set('onChange', sinon.spy());
+
+    await render(hbs`
+      <SearchSelect
+        @label="foo"
+        @options={{this.options}}
+        @onChange={{this.onChange}}
+        @parentManageSelected={{this.selected}}
+        @shouldRenderName={{true}}
+        @nameKey="type"
+      />
+    `);
+
+    assert
+      .dom('[data-test-selected-option="0"]')
+      .includesText('TOTP', 'selected option renders parent-managed nameKey');
+    assert.dom('[data-test-smaller-id="0"]').hasText('123456', 'selected option renders smaller id');
+
+    await clickTrigger();
+    await settled();
+
+    assert.strictEqual(component.options.length, 1, 'selected option is removed from dropdown options');
+    assert.strictEqual(
+      component.options.objectAt(0).text,
+      'Duo 654321',
+      'remaining option renders correctly'
+    );
+  });
+
   test('it filters options and adds option to create new item when text is entered', async function (assert) {
     const models = ['identity/entity'];
     this.set('models', models);
@@ -193,7 +211,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it counts options when wildcard is used and displays the count', async function (assert) {
-    const models = ['transform/transformation'];
+    const models = ['transform'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
     await render(hbs`
@@ -384,7 +402,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it shows no results if endpoint 404s', async function (assert) {
-    const models = ['test'];
+    const models = ['keymgmt/key'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
     await render(hbs`
@@ -437,7 +455,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it shows selected items not in the returned response and if one model 404s', async function (assert) {
-    const models = ['test', 'policy/acl'];
+    const models = ['keymgmt/key', 'policy/acl'];
     this.set('models', models);
     this.set('inputValue', ['test-1', 'test-2']);
     this.set('onChange', sinon.spy());
@@ -486,7 +504,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it renders correctly when model keys are not standardized', async function (assert) {
-    const models = ['pki/issuer'];
+    const models = ['transform/alphabet'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
     this.set('disallowNewItems', true);
@@ -497,7 +515,7 @@ module('Integration | Component | search select', function (hooks) {
         @onChange={{this.onChange}}
         @inputValue={{this.inputValue}}
         @shouldRenderName={{true}}
-        @nameKey="issuerName"
+        @nameKey="alpha_name"
         @disallowNewItems={{this.disallowNewItems}}
       />
     `);
@@ -505,15 +523,15 @@ module('Integration | Component | search select', function (hooks) {
     assert.strictEqual(component.options.length, 3, 'shows three options');
     assert.strictEqual(
       component.options.objectAt(0).text,
-      'my-first-issuer issuer-a-id',
+      'my-first-letter letter-a-id',
       'first option renders custom ID and name'
     );
     assert.strictEqual(
       component.options.objectAt(1).text,
-      'issuer-b-id',
+      'letter-b-id',
       `second option renders only id at custom key`
     );
-    await typeInSearch('issuer-a');
+    await typeInSearch('letter-a');
     await settled();
     assert.strictEqual(
       component.options.length,
@@ -521,12 +539,12 @@ module('Integration | Component | search select', function (hooks) {
       'shows two options after filter, filtering on both name and id keys'
     );
     this.set('disallowNewItems', false);
-    await typeInSearch('new-issuer');
+    await typeInSearch('new-letter');
     await settled();
     assert.strictEqual(component.options.length, 1, 'shows suggestion');
     assert.strictEqual(
       component.options.objectAt(0).text,
-      'Click to add new item: new-issuer',
+      'Click to add new item: new-letter',
       'Prompts to add new item'
     );
   });
@@ -551,7 +569,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it throws an error if endpoint 500s', async function (assert) {
-    const models = ['server/error'];
+    const models = ['database/role'];
     this.set('models', models);
     this.set('onChange', sinon.spy());
     const promise = waitForError();
@@ -624,7 +642,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test(`it returns custom object if passObject=true and multiple objectKeys with objectKeys[0]='id'`, async function (assert) {
-    const models = ['some/model'];
+    const models = ['mfa-method'];
     const spy = sinon.spy();
     this.set('models', models);
     this.set('onChange', spy);
@@ -677,7 +695,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it returns custom object and renders name if passObject=true and multiple objectKeys', async function (assert) {
-    const models = ['some/model'];
+    const models = ['mfa-method'];
     const spy = sinon.spy();
     const objectKeys = ['uuid', 'name'];
     this.set('models', models);
@@ -783,7 +801,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it renders when passed multiple models, passObject=true and one model does not have the attr in objectKeys', async function (assert) {
-    const models = ['policy/acl', 'some/model'];
+    const models = ['policy/acl', 'mfa-method'];
     const spy = sinon.spy();
     const objectKeys = ['uuid'];
     this.set('models', models);
@@ -833,7 +851,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it renders when passed multiple models, passedObject=false and one model does not have the attr in objectKeys', async function (assert) {
-    const models = ['policy/acl', 'some/model'];
+    const models = ['policy/acl', 'mfa-method'];
     const spy = sinon.spy();
     const objectKeys = ['uuid'];
     this.set('models', models);
@@ -866,7 +884,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it renders a tooltip beside selection if does not match a record returned from query when passObject=false, passed objectKeys', async function (assert) {
-    const models = ['some/model'];
+    const models = ['mfa-method'];
     const spy = sinon.spy();
     const objectKeys = ['uuid'];
     const inputValue = ['a123', 'non-existent-model'];
@@ -897,7 +915,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it renders a tooltip beside selection if does not match a record returned from query when passObject=true, passed objectKeys', async function (assert) {
-    const models = ['some/model'];
+    const models = ['mfa-method'];
     const spy = sinon.spy();
     const objectKeys = ['uuid'];
     const inputValue = ['a123', 'non-existent-model'];
@@ -930,7 +948,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it renders a tooltip beside selection if does not match a record returned from query when passObject=true and idKey=id', async function (assert) {
-    const models = ['some/model'];
+    const models = ['mfa-method'];
     const spy = sinon.spy();
     const inputValue = ['model-a-id', 'non-existent-model'];
     this.set('models', models);
@@ -960,7 +978,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it renders a tooltip beside selection if does not match a record returned from query when passObject=false and idKey=id', async function (assert) {
-    const models = ['some/model'];
+    const models = ['mfa-method'];
     const spy = sinon.spy();
     const inputValue = ['model-a-id', 'non-existent-model', 'wildcard*'];
     this.set('models', models);
@@ -992,7 +1010,7 @@ module('Integration | Component | search select', function (hooks) {
   });
 
   test('it does not render a tooltip beside selection if not passed @renderTooltip', async function (assert) {
-    const models = ['some/model'];
+    const models = ['mfa-method'];
     const spy = sinon.spy();
     const inputValue = ['model-a-id', 'non-existent-model', 'wildcard*'];
     this.set('models', models);

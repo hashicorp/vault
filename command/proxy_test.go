@@ -74,10 +74,7 @@ func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	client := cluster.Cores[0].Client
 
 	// Setup Vault
@@ -237,8 +234,6 @@ func TestProxy_NoTriggerAutoAuth_BadPolicy(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		Logger:      vaultLogger,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -550,8 +545,6 @@ func TestProxy_ReTriggerAutoAuth_ForceAutoAuthToken(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		Logger:      vaultLogger,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -709,8 +702,6 @@ func TestProxy_ReTriggerAutoAuth_ProxyIsAutoAuthToken(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		Logger:      vaultLogger,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -899,8 +890,6 @@ func TestProxy_ReTriggerAutoAuth_RevokedToken(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		Logger:      vaultLogger,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1093,8 +1082,6 @@ func TestProxy_AutoAuth_UserAgent(t *testing.T) {
 				return &h
 			}),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1240,8 +1227,6 @@ func TestProxy_APIProxyWithoutCache_UserAgent(t *testing.T) {
 				return &h
 			}),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1326,8 +1311,6 @@ func TestProxy_APIProxyWithCache_UserAgent(t *testing.T) {
 				return &h
 			}),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1403,8 +1386,6 @@ func TestProxy_Cache_DynamicSecret(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1509,8 +1490,6 @@ func TestProxy_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	serverClient := cluster.Cores[0].Client
 
@@ -1636,10 +1615,7 @@ func TestProxy_ApiProxy_Retry(t *testing.T) {
 				return &h
 			}),
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	serverClient := cluster.Cores[0].Client
 
 	// Unset the environment variable so that proxy picks up the right test
@@ -1772,9 +1748,7 @@ func TestProxy_Metrics(t *testing.T) {
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})
-	cluster.Start()
-	defer cluster.Cleanup()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
+
 	serverClient := cluster.Cores[0].Client
 
 	// Create a config file

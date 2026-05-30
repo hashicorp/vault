@@ -7,8 +7,9 @@
   @model={{this.paginatedTableData}}
   @columns={{@columns}}
   @isSelectable={{if @selectionKeyField true false}}
-  class="has-bottom-margin-s"
+  @hasResizableColumns={{true}}
   @onSelectionChange={{@onSelectionChange}}
+  class="has-bottom-margin-s"
   {{did-update this.resetPagination @data}}
 >
   <:body as |B|>

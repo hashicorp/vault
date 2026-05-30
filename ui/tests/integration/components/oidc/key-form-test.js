@@ -9,10 +9,13 @@ import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
-import { OIDC_BASE_URL, CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
+import { CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import OidcKeyForm from 'vault/forms/oidc/key';
+import sinon from 'sinon';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 
 module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,8 +23,33 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
   hooks.beforeEach(function () {
     oidcConfigHandlers(this.server);
-    this.store = this.owner.lookup('service:store');
-    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
+
+    const api = this.owner.lookup('service:api');
+    sinon.stub(api.identity, 'oidcReadClient').resolves({ data: CLIENT_LIST_RESPONSE });
+    this.writeStub = sinon.stub(api.identity, 'oidcWriteKey').resolves();
+
+    this.onSave = sinon.spy();
+    this.onCancel = sinon.spy();
+    this.clients = [{ name: 'app-1' }];
+
+    this.renderComponent = (client = {}) => {
+      const defaultValues = {
+        algorithm: 'RS256',
+        rotation_period: '24h',
+        verification_ttl: '24h',
+      };
+      const data = { ...defaultValues, ...client };
+      this.form = new OidcKeyForm(data, { isNew: !Object.keys(client).length });
+      return render(hbs`
+        <Oidc::KeyForm
+          @form={{this.form}}
+          @clients={{this.clients}}
+          @onCancel={{this.onCancel}}
+          @onSave={{this.onSave}}
+        />
+      `);
+    };
+
     setRunOptions({
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
@@ -36,20 +64,8 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
   test('it should save new key', async function (assert) {
     assert.expect(8);
-    this.server.post('/identity/oidc/key/test-key', (schema, req) => {
-      assert.ok(true, 'Request made to save key');
-      return JSON.parse(req.requestBody);
-    });
-    this.model = this.store.createRecord('oidc/key');
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-    await render(hbs`
-    <Oidc::KeyForm
-    @model={{this.model}}
-    @onCancel={{this.onCancel}}
-    @onSave={{this.onSave}}
-    />
-    `);
 
+    await this.renderComponent();
     assert.dom(SELECTORS.keySaveButton).hasText('Create', 'Save button has correct text');
     assert.dom('[data-test-input="algorithm"]').hasValue('RS256', 'default algorithm is correct');
     assert.strictEqual(findAll('[data-test-field]').length, 4, 'renders all input fields');
@@ -67,34 +83,16 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
     assert.dom('[data-test-oidc-radio="limited"] input').isDisabled('limit radio button disabled on create');
     await fillIn('[data-test-input="name"]', 'test-key');
+
     await click(SELECTORS.keySaveButton);
+    assert.true(this.onSave.calledOnce, 'onSave callback fires on save success');
+    assert.true(this.writeStub.calledWith('test-key'), 'API called to save key with correct parameters');
   });
 
   test('it should update key and limit access to selected applications', async function (assert) {
     assert.expect(11);
 
-    this.server.post('/identity/oidc/key/test-key', (schema, req) => {
-      assert.ok(true, 'Request made to update key');
-      return JSON.parse(req.requestBody);
-    });
-
-    this.store.pushPayload('oidc/key', {
-      modelName: 'oidc/key',
-      name: 'test-key',
-      allowed_client_ids: ['*'],
-    });
-
-    this.model = this.store.peekRecord('oidc/key', 'test-key');
-    this.onSave = () => assert.ok(true, 'onSave callback fires on update success');
-
-    await render(hbs`
-      <Oidc::KeyForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
-
+    await this.renderComponent({ name: 'test-key', allowed_client_ids: ['*'] });
     assert.dom(SELECTORS.keySaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test-key', 'Name input is populated with model value');
@@ -102,9 +100,9 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
     await click('[data-test-oidc-radio="limited"]');
     assert
-      .dom('[data-test-component="search-select"]#allowedClientIds')
+      .dom('[data-test-component="search-select"]#oidc-key-form-client-select')
       .exists('Limited radio button shows clients search select');
-    await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
+    await clickTrigger();
     assert.strictEqual(findAll('li.ember-power-select-option').length, 1, 'dropdown only renders one option');
     assert
       .dom('li.ember-power-select-option')
@@ -113,91 +111,42 @@ module('Integration | Component | oidc/key-form', function (hooks) {
 
     await click('[data-test-oidc-radio="allow-all"]');
     assert
-      .dom('[data-test-component="search-select"]#allowedClientIds')
+      .dom('[data-test-component="search-select"]#oidc-key-form-client-select')
       .doesNotExist('Allow all radio button hides search select');
 
     await click(SELECTORS.keySaveButton);
+    assert.true(this.onSave.calledOnce, 'onSave callback fires on save success');
+    assert.true(this.writeStub.calledWith('test-key'), 'API called to save key with correct parameters');
   });
 
-  test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(4);
-    this.model = this.store.createRecord('oidc/key');
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
+  test('it should fire callback on cancel', async function (assert) {
+    assert.expect(1);
 
-    await render(hbs`
-      <Oidc::KeyForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
-
+    await this.renderComponent({ name: 'test-key' });
     await click(SELECTORS.keyCancelButton);
-    assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
-
-    this.store.pushPayload('oidc/key', {
-      modelName: 'oidc/key',
-      name: 'test-key',
-      allowed_client_ids: ['*'],
-    });
-
-    this.model = this.store.peekRecord('oidc/key', 'test-key');
-
-    await render(hbs`
-      <Oidc::KeyForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
-
-    await click('[data-test-oidc-radio="limited"]');
-    await click(SELECTORS.keyCancelButton);
-    assert.strictEqual(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
+    assert.true(this.onCancel.calledOnce, 'onCancel callback fires on cancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
     assert.expect(1);
 
-    this.server.post('/identity/oidc/key/test-key', (schema, req) => {
-      assert.ok(true, 'Request made to update key');
-      return JSON.parse(req.requestBody);
-    });
-
-    this.store.pushPayload('oidc/key', {
-      modelName: 'oidc/key',
-      name: 'test-key',
-      allowed_client_ids: ['*'],
-    });
-
-    this.model = this.store.peekRecord('oidc/key', 'test-key');
-
-    this.server.get('/identity/oidc/client', () => overrideResponse(403));
-    await render(hbs`
-      <Oidc::KeyForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    this.clients = [];
+    await this.renderComponent({ name: 'test-key', allowed_client_ids: ['*'] });
 
     await click('[data-test-oidc-radio="limited"]');
     assert
-      .dom('[data-test-component="search-select"]#allowedClientIds [data-test-component="string-list"]')
+      .dom(
+        '[data-test-component="search-select"]#oidc-key-form-client-select [data-test-component="string-list"]'
+      )
       .exists('Radio toggle shows client string-list input');
   });
 
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
-    this.model = this.store.createRecord('oidc/key');
-    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/keys'));
-    await render(hbs`
-      <Oidc::KeyForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+
+    this.writeStub.rejects(getErrorResponse());
+
+    await this.renderComponent();
     await fillIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.keySaveButton);
     assert

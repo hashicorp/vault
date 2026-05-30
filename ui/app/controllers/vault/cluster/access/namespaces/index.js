@@ -27,7 +27,16 @@ export default class ManageNamespacesController extends Controller {
   @action
   navigate(pageFilter) {
     const route = 'vault.cluster.access.namespaces.index';
-    const args = [route, { queryParams: { page: 1, pageFilter: pageFilter || null } }];
+    const args = [
+      route,
+      {
+        queryParams: {
+          page: pageFilter.page || 1,
+          pageFilter: pageFilter.pageFilter || null,
+          pageSize: pageFilter.pageSize || null,
+        },
+      },
+    ];
     this.router.transitionTo(...args);
   }
 

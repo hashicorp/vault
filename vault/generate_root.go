@@ -7,9 +7,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -90,9 +93,11 @@ type GenerateRootResult struct {
 }
 
 // GenerateRootProgress is used to return the root generation progress (num shares)
-func (c *Core) GenerateRootProgress() (int, error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) GenerateRootProgress(grabLock bool) (int, error) {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() && !c.recoveryMode {
 		return 0, consts.ErrSealed
 	}
@@ -108,9 +113,11 @@ func (c *Core) GenerateRootProgress() (int, error) {
 
 // GenerateRootConfiguration is used to read the root generation configuration
 // It stubbornly refuses to return the OTP if one is there.
-func (c *Core) GenerateRootConfiguration() (*GenerateRootConfig, error) {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) GenerateRootConfiguration(grabLock bool) (*GenerateRootConfig, error) {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() && !c.recoveryMode {
 		return nil, consts.ErrSealed
 	}
@@ -133,7 +140,7 @@ func (c *Core) GenerateRootConfiguration() (*GenerateRootConfig, error) {
 }
 
 // GenerateRootInit is used to initialize the root generation settings
-func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrategy) error {
+func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrategy, grabLock bool) error {
 	var fingerprint string
 	switch {
 	case len(otp) > 0:
@@ -156,8 +163,10 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 		return fmt.Errorf("otp or pgp_key parameter must be provided")
 	}
 
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() && !c.recoveryMode {
 		return consts.ErrSealed
 	}
@@ -209,7 +218,7 @@ func (c *Core) GenerateRootInit(otp, pgpKey string, strategy GenerateRootStrateg
 }
 
 // GenerateRootUpdate is used to provide a new key part
-func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string, strategy GenerateRootStrategy) (*GenerateRootResult, error) {
+func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string, strategy GenerateRootStrategy, grabLock bool) (*GenerateRootResult, error) {
 	// Verify the key length
 	min, max := c.barrier.KeyLength()
 	max += shamir.ShareOverhead
@@ -241,8 +250,10 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 	}
 
 	// Ensure we are already unsealed
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() && !c.recoveryMode {
 		return nil, consts.ErrSealed
 	}
@@ -362,9 +373,11 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 }
 
 // GenerateRootCancel is used to cancel an in-progress root generation
-func (c *Core) GenerateRootCancel() error {
-	c.stateLock.RLock()
-	defer c.stateLock.RUnlock()
+func (c *Core) GenerateRootCancel(grabLock bool) error {
+	if grabLock {
+		c.stateLock.RLock()
+		defer c.stateLock.RUnlock()
+	}
 	if c.Sealed() && !c.recoveryMode {
 		return consts.ErrSealed
 	}
@@ -379,4 +392,177 @@ func (c *Core) GenerateRootCancel() error {
 	c.generateRootConfig = nil
 	c.generateRootProgress = nil
 	return nil
+}
+
+// GenerateRootStatusResponse is the response structure for generate root status
+type GenerateRootStatusResponse struct {
+	Nonce            string `json:"nonce"`
+	Started          bool   `json:"started"`
+	Progress         int    `json:"progress"`
+	Required         int    `json:"required"`
+	Complete         bool   `json:"complete"`
+	EncodedToken     string `json:"encoded_token"`
+	EncodedRootToken string `json:"encoded_root_token"`
+	PGPFingerprint   string `json:"pgp_fingerprint"`
+	OTP              string `json:"otp"`
+	OTPLength        int    `json:"otp_length"`
+}
+
+// GenerateRootInitRequest is the request structure for initializing generate root
+type GenerateRootInitRequest struct {
+	OTP    string `json:"otp"`
+	PGPKey string `json:"pgp_key"`
+}
+
+// GenerateRootUpdateRequest is the request structure for updating generate root
+type GenerateRootUpdateRequest struct {
+	Nonce string `json:"nonce"`
+	Key   string `json:"key"`
+}
+
+// HandleSysGenerateRootAttemptGet returns the status of a generate root attempt.
+// In the event of an error, we return both the error and the HTTP status code to
+// return that error with.
+func HandleSysGenerateRootAttemptGet(ctx context.Context, core *Core, otp string, grabLock bool) (*GenerateRootStatusResponse, int, error) {
+	// Get the current seal configuration
+	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	if barrierConfig == nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("server is not yet initialized")
+	}
+
+	sealConfig := barrierConfig
+	if core.SealAccess().RecoveryKeySupported() {
+		sealConfig, err = core.SealAccess().RecoveryConfig(ctx)
+		if err != nil {
+			return nil, http.StatusInternalServerError, err
+		}
+	}
+
+	// Get the generation configuration
+	generationConfig, err := core.GenerateRootConfiguration(grabLock)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	// Get the progress
+	progress, err := core.GenerateRootProgress(grabLock)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+
+	var otpLength int
+	if core.DisableSSCTokens() {
+		otpLength = TokenLength + OldTokenPrefixLength
+	} else {
+		otpLength = TokenLength + TokenPrefixLength
+	}
+
+	// Format the status
+	status := &GenerateRootStatusResponse{
+		Started:   false,
+		Progress:  progress,
+		Required:  sealConfig.SecretThreshold,
+		Complete:  false,
+		OTPLength: otpLength,
+		OTP:       otp,
+	}
+	if generationConfig != nil {
+		status.Nonce = generationConfig.Nonce
+		status.Started = true
+		status.PGPFingerprint = generationConfig.PGPFingerprint
+	}
+
+	return status, 0, nil
+}
+
+// HandleSysGenerateRootAttemptPut initializes a new generate root attempt.
+// In the event of an error, we return both the error and the HTTP status code to
+// return that error with.
+func HandleSysGenerateRootAttemptPut(core *Core, strategy GenerateRootStrategy, req *GenerateRootInitRequest, grabLock bool) (string, int, error) {
+	var err error
+	var genned bool
+	otp := req.OTP
+
+	switch {
+	case len(req.PGPKey) > 0, len(req.OTP) > 0:
+	default:
+		genned = true
+		if core.DisableSSCTokens() {
+			otp, err = base62.Random(TokenLength + OldTokenPrefixLength)
+		} else {
+			otp, err = base62.Random(TokenLength + TokenPrefixLength)
+		}
+		if err != nil {
+			return "", http.StatusInternalServerError, err
+		}
+	}
+
+	// Initialize the generation
+	if err := core.GenerateRootInit(otp, req.PGPKey, strategy, grabLock); err != nil {
+		return "", http.StatusBadRequest, err
+	}
+
+	if genned {
+		return otp, 0, nil
+	}
+
+	return "", 0, nil
+}
+
+// HandleSysGenerateRootAttemptDelete cancels any in-progress generate root attempt.
+// In the event of an error, we return both the error and the HTTP status code to
+// return that error with.
+func HandleSysGenerateRootAttemptDelete(core *Core, grabLock bool) (int, error) {
+	err := core.GenerateRootCancel(grabLock)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+	return 0, nil
+}
+
+// HandleSysGenerateRootUpdate processes a key share for generate root.
+// In the event of an error, we return both the error and the HTTP status code to
+// return that error with.
+func HandleSysGenerateRootUpdate(ctx context.Context, core *Core, strategy GenerateRootStrategy, req *GenerateRootUpdateRequest, grabLock bool) (*GenerateRootStatusResponse, int, error) {
+	if req.Key == "" {
+		return nil, http.StatusBadRequest, fmt.Errorf("'key' must be specified in request body as JSON")
+	}
+
+	// Decode the key, which is base64 or hex encoded
+	min, max := core.BarrierKeyLength()
+	key, err := hex.DecodeString(req.Key)
+	// We check min and max here to ensure that a string that is base64
+	// encoded but also valid hex will not be valid and we instead base64
+	// decode it
+	if err != nil || len(key) < min || len(key) > max {
+		key, err = base64.StdEncoding.DecodeString(req.Key)
+		if err != nil {
+			return nil, http.StatusBadRequest, fmt.Errorf("'key' must be a valid hex or base64 string")
+		}
+	}
+
+	// Use the key to make progress on root generation
+	result, err := core.GenerateRootUpdate(ctx, key, req.Nonce, strategy, grabLock)
+	if err != nil {
+		return nil, http.StatusBadRequest, err
+	}
+
+	resp := &GenerateRootStatusResponse{
+		Complete:       result.Progress == result.Required,
+		Nonce:          req.Nonce,
+		Progress:       result.Progress,
+		Required:       result.Required,
+		Started:        true,
+		EncodedToken:   result.EncodedToken,
+		PGPFingerprint: result.PGPFingerprint,
+	}
+
+	if strategy == GenerateStandardRootTokenStrategy {
+		resp.EncodedRootToken = result.EncodedToken
+	}
+
+	return resp, 0, nil
 }

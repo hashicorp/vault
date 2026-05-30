@@ -5,21 +5,46 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import OidcAssingmentForm from 'vault/forms/oidc/assignment';
+import sinon from 'sinon';
 
 module('Integration | Component | oidc/assignment-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    oidcConfigHandlers(this.server);
-    this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', () => {});
+
+    this.assignment = {
+      name: 'test',
+      entity_ids: ['1234-12345'],
+      group_ids: ['abcdef-123'],
+    };
+    this.entities = [{ id: '1234-12345', name: 'test-entity' }];
+    this.groups = [{ id: 'abcdef-123', name: 'test-group' }];
+    this.onCancel = sinon.spy();
+    this.onSave = sinon.spy();
+
+    this.writeStub = sinon.stub(this.owner.lookup('service:api').identity, 'oidcWriteAssignment').resolves();
+
+    this.renderComponent = (assignment) => {
+      this.form = new OidcAssingmentForm(assignment, { isNew: !assignment });
+      return render(hbs`
+        <Oidc::AssignmentForm
+          @form={{this.form}}
+          @entities={{this.entities}}
+          @groups={{this.groups}}
+          @onCancel={{this.onCancel}}
+          @onSave={{this.onSave}}
+        />
+      `);
+    };
+
     setRunOptions({
       rules: {
         // TODO: Fix SearchSelect component
@@ -30,56 +55,39 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
   });
 
   test('it should save new assignment', async function (assert) {
-    assert.expect(5);
-    this.model = this.store.createRecord('oidc/assignment');
-    this.server.post('/identity/oidc/assignment/test', (schema, req) => {
-      assert.ok(true, 'Request made to save assignment');
-      return JSON.parse(req.requestBody);
-    });
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+    assert.expect(6);
 
-    await render(hbs`
-      <Oidc::AssignmentForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    await this.renderComponent();
 
     assert.dom('[data-test-oidc-assignment-save]').hasText('Create', 'Save button has correct label');
     await click('[data-test-oidc-assignment-save]');
+
     assert
-      .dom('[data-test-inline-alert]')
+      .dom(GENERAL.validationErrorByAttr('name'))
       .hasText('Name is required.', 'Validation message is shown for name');
-    assert.strictEqual(
-      findAll('[data-test-inline-error-message]').length,
-      2,
-      `there are two validations errors.`
-    );
+    assert
+      .dom(GENERAL.validationErrorByAttr('target'))
+      .hasText('At least one entity or group is required.', 'Validation message is shown for target');
+    assert
+      .dom('[data-test-invalid-form-alert]')
+      .hasText('There are 2 errors with this form.', 'Renders form error count');
+
     await fillIn('[data-test-input="name"]', 'test');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     await click('[data-test-oidc-assignment-save]');
+
+    assert.true(this.onSave.calledOnce, 'onSave callback fires on save success');
+    assert.true(
+      this.writeStub.calledWith('test', { entity_ids: ['1234-12345'] }),
+      'API is called with correct payload'
+    );
   });
 
   test('it should populate fields with model data on edit view and update an assignment', async function (assert) {
     assert.expect(5);
 
-    this.store.pushPayload('oidc/assignment', {
-      modelName: 'oidc/assignment',
-      name: 'test',
-      entity_ids: ['1234-12345'],
-      group_ids: ['abcdef-123'],
-    });
-    this.model = this.store.peekRecord('oidc/assignment', 'test');
-
-    await render(hbs`
-      <Oidc::AssignmentForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    await this.renderComponent(this.assignment);
 
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update', 'Save button has correct label');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
@@ -94,17 +102,11 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
 
   test('it should use fallback component on create if no permissions for entities or groups', async function (assert) {
     assert.expect(2);
-    this.model = this.store.createRecord('oidc/assignment');
-    this.server.get('/identity/entity/id', () => overrideResponse(403));
-    this.server.get('/identity/group/id', () => overrideResponse(403));
 
-    await render(hbs`
-      <Oidc::AssignmentForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    this.entities = [];
+    this.groups = [];
+
+    await this.renderComponent();
 
     assert
       .dom('[data-test-component="search-select"]#entities [data-test-component="string-list"]')
@@ -116,23 +118,11 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
 
   test('it should use fallback component on edit if no permissions for entities or groups', async function (assert) {
     assert.expect(8);
-    this.store.pushPayload('oidc/assignment', {
-      modelName: 'oidc/assignment',
-      name: 'test',
-      entity_ids: ['1234-12345'],
-      group_ids: ['abcdef-123'],
-    });
-    this.model = this.store.peekRecord('oidc/assignment', 'test');
-    this.server.get('/identity/entity/id', () => overrideResponse(403));
-    this.server.get('/identity/group/id', () => overrideResponse(403));
 
-    await render(hbs`
-    <Oidc::AssignmentForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-  `);
+    this.entities = [];
+    this.groups = [];
+
+    await this.renderComponent(this.assignment);
 
     assert
       .dom('[data-test-component="search-select"]#entities [data-test-component="string-list"]')

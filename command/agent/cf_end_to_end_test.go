@@ -38,9 +38,6 @@ func TestCFEndToEnd(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 	})
 
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client

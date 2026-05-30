@@ -544,11 +544,7 @@ func Test_RotationQueueInitialized(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    2,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 	err := client.Sys().Mount("aws", &api.MountInput{
 		Type: "aws",

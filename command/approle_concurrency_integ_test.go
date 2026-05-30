@@ -27,14 +27,7 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
 	client := cores[0].Client
 
 	err = client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{

@@ -37,8 +37,6 @@ func TestSysPprof(t *testing.T) {
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
@@ -58,8 +56,6 @@ func TestSysPprof_MaxRequestDuration(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	transport := cleanhttp.DefaultPooledTransport()

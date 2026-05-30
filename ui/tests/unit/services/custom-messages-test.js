@@ -49,11 +49,11 @@ module('Unit | Service | custom-messages', function (hooks) {
       };
     });
 
-    this.authServiceStub = sinon.stub(this.owner.lookup('service:auth'), 'currentToken').value('token');
+    this.currentTokenStub = sinon.stub(this.owner.lookup('service:auth'), 'currentToken').value('token');
   });
 
   test('it should fetch unauthenticated messages', async function (assert) {
-    this.authServiceStub.reset();
+    this.currentTokenStub.value(undefined);
     await this.customMessages.fetchMessages();
 
     assert.true(this.unauthMessagesApiStub.called, 'API call made for unauthenticated messages');

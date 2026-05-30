@@ -189,9 +189,8 @@ func (b *databaseBackend) performRootRotation(ctx context.Context, req *logical.
 			if err != nil {
 				return nil, err
 			}
-			config.ConnectionDetails["private_key"] = string(newPrivateKey)
-
 			oldPrivateKey := config.ConnectionDetails["private_key"].(string)
+			config.ConnectionDetails["private_key"] = string(newPrivateKey)
 			walEntry = NewRotateRootCredentialsWALPrivateKeyEntry(name, rootUsername, string(newPublicKey), string(newPrivateKey), oldPrivateKey)
 			updateReq = v5.UpdateUserRequest{
 				Username:       rootUsername,
@@ -210,9 +209,8 @@ func (b *databaseBackend) performRootRotation(ctx context.Context, req *logical.
 		if err != nil {
 			return nil, err
 		}
-		config.ConnectionDetails["password"] = newPassword
-
 		oldPassword := config.ConnectionDetails["password"].(string)
+		config.ConnectionDetails["password"] = newPassword
 		walEntry = NewRotateRootCredentialsWALPasswordEntry(name, rootUsername, newPassword, oldPassword)
 		updateReq = v5.UpdateUserRequest{
 			Username:       rootUsername,

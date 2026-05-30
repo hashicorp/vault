@@ -6,6 +6,7 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -24,6 +25,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/errwrap"
@@ -234,22 +236,52 @@ func (h HandlerFunc) Handler(props *vault.HandlerProperties) http.Handler {
 
 var _ vault.HandlerHandler = HandlerFunc(func(props *vault.HandlerProperties) http.Handler { return nil })
 
+type handlerSettings struct {
+	unauthRekey            bool
+	unauthGenerateRoot     bool
+	unauthDROperationToken bool
+}
+
+func getHandlerSettings(core *vault.Core) handlerSettings {
+	return handlerSettings{
+		unauthRekey:            core.GetEnableUnauthRekey(),
+		unauthGenerateRoot:     core.GetEnableUnauthGenerateRoot(),
+		unauthDROperationToken: core.GetEnableUnauthDROperationToken(),
+	}
+}
+
 // handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func handler(props *vault.HandlerProperties) http.Handler {
-	handlerUnauth := handlerWithUnauthRekey(props, true)
-	handlerAuth := handlerWithUnauthRekey(props, false)
+	var l sync.RWMutex
+	settings := getHandlerSettings(props.Core)
+	hws := handlerWithSettings(props, settings)
 
 	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
-		if props.Core.GetEnableUnauthRekey() {
-			handlerUnauth.ServeHTTP(writer, req)
-		} else {
-			handlerAuth.ServeHTTP(writer, req)
+		newSettings := getHandlerSettings(props.Core)
+
+		l.RLock()
+		changed := settings != newSettings
+		// Create a local copy so that we don't have to hold the lock while
+		// running the handler
+		myhws := hws
+		l.RUnlock()
+
+		if changed {
+			l.Lock()
+			if settings != newSettings {
+				settings = newSettings
+				hws = handlerWithSettings(props, settings)
+				myhws = hws
+			}
+			l.Unlock()
 		}
+
+		myhws.ServeHTTP(writer, req)
 	})
 }
 
-func handlerWithUnauthRekey(props *vault.HandlerProperties, unauthRekey bool) http.Handler {
+func handlerWithSettings(props *vault.HandlerProperties, settings handlerSettings) http.Handler {
 	core := props.Core
 
 	// Create the muxer to handle the actual endpoints
@@ -285,14 +317,19 @@ func handlerWithUnauthRekey(props *vault.HandlerProperties, unauthRekey bool) ht
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
 		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core, chrootNamespace))
-		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
-			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
-		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
-			handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
+
+		// Register generate-root endpoints as unauthenticated handlers only if unauthGenerateRoot is true.
+		// When false, these endpoints will be handled by the sys backend as authenticated endpoints.
+		if settings.unauthGenerateRoot {
+			mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
+				handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
+			mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
+				handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
+		}
 
 		// Register rekey endpoints as unauthenticated handlers only if unauthRekey is true.
 		// When false (the default), these endpoints will be handled by the sys backend as authenticated endpoints.
-		if unauthRekey {
+		if settings.unauthRekey {
 			mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
 			mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
 			mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
@@ -347,7 +384,9 @@ func handlerWithUnauthRekey(props *vault.HandlerProperties, unauthRekey bool) ht
 		} else {
 			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core, chrootNamespace))
 		}
-		entAdditionalRoutes(mux, core)
+		if settings.unauthDROperationToken {
+			entDROperationRoutes(mux, core)
+		}
 	}
 
 	// Build up a chain of wrapping handlers.
@@ -421,10 +460,7 @@ func (w *copyResponseWriter) WriteHeader(code int) {
 
 func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origBody := new(bytes.Buffer)
-		reader := io.NopCloser(io.TeeReader(r.Body, origBody))
-		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
+		req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
 			return
@@ -473,6 +509,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 	var hf func(w http.ResponseWriter, r *http.Request)
 	hf = func(w http.ResponseWriter, r *http.Request) {
+		// Generate CSP nonce once for this request
+		cspNonce, err := generateCSPNonce()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate CSP nonce: %w", err))
+			return
+		}
+
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
@@ -483,17 +526,19 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				customHeaders = listenerCustomHeaders.StatusCodeHeaderMap
 			}
 		}
+
 		// saving start time for the in-flight requests
 		inFlightReqStartTime := time.Now()
 
-		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders)
+		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders, cspNonce)
 
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		nw.Header().Set("Cache-Control", "no-store")
 
-		// Start with the request context
+		// Start with the request context and store the CSP nonce
 		ctx := r.Context()
+		ctx = context.WithValue(ctx, cspNonceContextKey{}, cspNonce)
 		var cancelFunc context.CancelFunc
 		// Add our timeout, but not for the monitor or events endpoints, as they are streaming
 		// Request URL path for sys/monitor looks like /v1/sys/monitor
@@ -810,6 +855,15 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 	})
 }
 
+// generateCSPNonce generates a cryptographically secure random nonce for CSP
+func generateCSPNonce() (string, error) {
+	nonceBytes := make([]byte, 16)
+	if _, err := rand.Read(nonceBytes); err != nil {
+		return "", fmt.Errorf("failed to generate CSP nonce: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(nonceBytes), nil
+}
+
 func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		header := w.Header()
@@ -820,8 +874,22 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 			return
 		}
 
+		// Retrieve CSP nonce from request context (generated in wrapGenericHandler)
+		nonce, ok := req.Context().Value(cspNonceContextKey{}).(string)
+		if !ok || nonce == "" {
+			// Fallback: generate a new nonce if not found in context
+			nonce, err = generateCSPNonce()
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+		}
+
 		for k := range userHeaders {
 			v := userHeaders.Get(k)
+			if k == "Content-Security-Policy" {
+				v = logical.MergeNonceIntoCSP(v, nonce, "style-src")
+			}
 			header.Set(k, v)
 		}
 
@@ -829,14 +897,72 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 	})
 }
 
+// cspNonceContextKey is used to store the CSP nonce in the request context
+type cspNonceContextKey struct{}
+
 func handleUI(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// The fileserver handler strips trailing slashes and does a redirect.
 		// We don't want the redirect to happen so we preemptively trim the slash
 		// here.
 		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
+
+		// For relevant HTML requests, wrap the response writer to inject the nonce
+		hasExtension := strings.Contains(req.URL.Path, ".")
+		if !hasExtension {
+			nonce, ok := req.Context().Value(cspNonceContextKey{}).(string)
+			if ok && nonce != "" {
+				nrw := &nonceResponseWriter{
+					ResponseWriter: w,
+					nonce:          nonce,
+				}
+				h.ServeHTTP(nrw, req)
+				// Flush the buffered content after the handler completes
+				nrw.flush()
+				return
+			}
+		}
+
 		h.ServeHTTP(w, req)
 	})
+}
+
+// nonceResponseWriter wraps http.ResponseWriter to inject CSP nonce into HTML
+type nonceResponseWriter struct {
+	http.ResponseWriter
+	nonce       string
+	wroteHeader bool
+	buf         bytes.Buffer
+}
+
+func (nrw *nonceResponseWriter) Write(b []byte) (int, error) {
+	if !nrw.wroteHeader {
+		nrw.WriteHeader(http.StatusOK)
+	}
+
+	// Buffer the content
+	nrw.buf.Write(b)
+	return len(b), nil
+}
+
+func (nrw *nonceResponseWriter) WriteHeader(statusCode int) {
+	if nrw.wroteHeader {
+		return
+	}
+	nrw.wroteHeader = true
+	nrw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (nrw *nonceResponseWriter) flush() {
+	// Inject nonce into buffered content
+	htmlContent := nrw.buf.String()
+	if htmlContent != "" && nrw.nonce != "" {
+		nonceMetaTag := fmt.Sprintf(`<meta name="csp-nonce" content="%s">`, nrw.nonce)
+		htmlContent = strings.Replace(htmlContent, "<head>", "<head>\n    "+nonceMetaTag, 1)
+	}
+
+	// Write the modified content
+	nrw.ResponseWriter.Write([]byte(htmlContent))
 }
 
 func handleUIStub() http.Handler {

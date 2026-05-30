@@ -25,8 +25,8 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |item|}}
+{{#if (gt this.model.enforcements.length 0)}}
+  {{#each this.model.enforcements as |item|}}
     <Mfa::LoginEnforcementListItem @model={{item}} />
   {{/each}}
 {{else}}

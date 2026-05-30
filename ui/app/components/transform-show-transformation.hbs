@@ -17,9 +17,8 @@
         @type={{attr.type}}
         @isLink={{eq attr.name "allowed_roles"}}
         @queryParam="role"
-        @modelType="transform/role"
-        @wildcardLabel={{attr.options.wildcardLabel}}
-        @backend={{this.model.backend}}
+        @arrayOptions={{if (eq attr.name "allowed_roles") @transformRoles null}}
+        @wildcardLabel={{if (eq attr.name "allowed_roles") attr.options.wildcardLabel null}}
       />
     {{else}}
       <InfoTableRow

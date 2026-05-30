@@ -21,11 +21,17 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
-func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (exported bool, format string, role *issuing.RoleEntry, errorResp *logical.Response) {
+type generationParams struct {
+	exported bool
+	format   string
+	role     *issuing.RoleEntry
+}
+
+func getCAGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (params generationParams, warnings []string, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
-		exported = true
+		params.exported = true
 	case "internal":
 	case "existing":
 	case "kms":
@@ -35,11 +41,26 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		return
 	}
 
-	format = getFormat(data)
-	if format == "" {
-		errorResp = logical.ErrorResponse(
-			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
+	// PKCS#12/JKS formats are only supported for root certificate generation.
+	// For non-root operations, only a CSR is generated and PKCS#12/JKS is not a valid output format.
+	params.format = getFormat(data)
+	isKeystoreFormat := params.format == "pkcs12_bundle" || params.format == "jks_bundle"
+	if params.format == "" || (!isRoot && isKeystoreFormat) {
+		errorMsg := `the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`
+		if !isRoot {
+			errorMsg = `the "format" parameter must be "pem", "der" or "pem_bundle"`
+		}
+		errorResp = logical.ErrorResponse(errorMsg)
 		return
+	}
+
+	if params.format == "pkcs12_bundle" {
+		// Cast to encoder type and validate it is a permitted value
+		_, err := validatePKCS12Encoder(data.Get("pkcs12_encoder").(string))
+		if err != nil {
+			errorResp = logical.ErrorResponse(`invalid "pkcs12_encoder" parameter: %v`, err)
+			return
+		}
 	}
 
 	keyType, keyBits, err := sc.getKeyTypeAndBitsForRole(data)
@@ -48,7 +69,12 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		return
 	}
 
-	role = &issuing.RoleEntry{
+	country := data.Get("country").([]string)
+	if err := validateCountry(country); err != nil {
+		warnings = append(warnings, err.Error())
+	}
+
+	role := &issuing.RoleEntry{
 		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
 		KeyType:                   keyType,
 		KeyBits:                   keyBits,
@@ -65,7 +91,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		AllowedUserIDs:            []string{"*"},
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
-		Country:                   data.Get("country").([]string),
+		Country:                   country,
 		Locality:                  data.Get("locality").([]string),
 		Province:                  data.Get("province").([]string),
 		StreetAddress:             data.Get("street_address").([]string),
@@ -74,6 +100,7 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		CNValidations:             []string{"disabled"},
 		KeyUsage:                  data.Get("key_usage").([]string),
 	}
+	params.role = role
 	*role.AllowWildcardCertificates = true
 
 	if role.KeyBits, err = certutil.ValidateDefaultOrValueKeyType(role.KeyType, role.KeyBits); err != nil {

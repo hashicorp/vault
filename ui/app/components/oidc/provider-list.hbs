@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#each @model as |provider|}}
+{{#each @model.providers as |provider|}}
   <LinkedBlock
     class="list-item-row"
     @params={{array "vault.cluster.access.oidc.providers.provider.details" provider.name}}
@@ -24,7 +24,7 @@
       </div>
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
-          {{#if (or provider.canRead provider.canEdit)}}
+          {{#if (has-capability @model.capabilities "read" "update" pathKey="oidcProvider" params=provider)}}
             <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
               <dd.ToggleIcon
                 @icon="more-horizontal"
@@ -32,19 +32,23 @@
                 @hasChevron={{false}}
                 data-test-popup-menu-trigger
               />
-              {{#if provider.canRead}}
+              {{#if (has-capability @model.capabilities "read" pathKey="oidcProvider" params=provider)}}
                 <dd.Interactive
                   @route="vault.cluster.access.oidc.providers.provider.details"
                   @model={{provider.name}}
                   data-test-oidc-provider-menu-link="details"
-                >Details</dd.Interactive>
+                >
+                  Details
+                </dd.Interactive>
               {{/if}}
-              {{#if provider.canEdit}}
+              {{#if (has-capability @model.capabilities "update" pathKey="oidcProvider" params=provider)}}
                 <dd.Interactive
                   @route="vault.cluster.access.oidc.providers.provider.edit"
                   @model={{provider.name}}
                   data-test-oidc-provider-menu-link="edit"
-                >Edit</dd.Interactive>
+                >
+                  Edit
+                </dd.Interactive>
               {{/if}}
             </Hds::Dropdown>
           {{/if}}

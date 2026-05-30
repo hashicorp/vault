@@ -15,7 +15,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/consul"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/testimages"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	"github.com/stretchr/testify/require"
@@ -34,26 +34,18 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 
 	consulStorage := consul.NewClusterStorage()
 
-	// Create  cluster logger that will write cluster logs to a file in CI.
-	logger := corehelpers.NewTestLogger(t)
-	logger.SetLevel(hclog.Trace)
-
 	clusterOpts := docker.DefaultOptions(t)
-	// We can use an enterprise image here because we are swapping out the binary anyway.
-	clusterOpts.ImageRepo = "hashicorp/vault-enterprise"
-	clusterOpts.ClusterOptions.Logger = logger
+	clusterOpts.VaultBinary = ""
+	clusterOpts.ImageRepo, clusterOpts.ImageTag = testimages.GetImageRepoAndTag(t, false)
 
 	clusterOpts.Storage = consulStorage
 
-	logger.Info("==> starting cluster")
 	c, err := docker.NewDockerCluster(ctx, clusterOpts)
 	require.NoError(t, err)
-	logger.Info("  ✅ done.", "root_token", c.GetRootToken(),
-		"consul_token", consulStorage.Config().Token)
-
-	logger.Info("==> waiting for leader")
 	leaderIdx, err := testcluster.WaitForActiveNode(ctx, c)
 	require.NoError(t, err)
+
+	logger := c.Logger.Named("test")
 
 	leader := c.Nodes()[leaderIdx]
 	leaderClient := leader.APIClient()
@@ -64,7 +56,6 @@ func TestConsulFencing_PartitionedLeaderCantWrite(t *testing.T) {
 	}
 
 	// Mount a KV v2 backend
-	logger.Info("==> mounting KV")
 	err = leaderClient.Sys().Mount("/test", &api.MountInput{
 		Type: "kv-v2",
 	})
@@ -300,7 +291,6 @@ func waitForKVv2Upgrade(t *testing.T, ctx context.Context, client *api.Client, p
 		if err == nil {
 			return
 		}
-		t.Logf("waitForKVv2Upgrade: write failed: %s", err)
 		select {
 		case <-ctx.Done():
 			t.Fatalf("context cancelled waiting for KVv2 (%s) upgrade to complete: %s",

@@ -40,6 +40,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     this.store.pushPayload('database-role', {
       modelName: 'database/role',
       database: ['my-mongodb-database'],
+      backend: 'database',
       id: 'test-role',
       type: 'static',
       name: 'test-role',

@@ -1,0 +1,76 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Text::Display @tag="h1" @size="400" data-test-text-display="Step title">
+  Choose your implementation method
+</Hds::Text::Display>
+
+<Hds::Form::RadioCard::Group @name="implementation-method" @alignment="center" as |G|>
+  {{#each this.creationMethodOptions as |option|}}
+    <G.RadioCard
+      @alignment="left"
+      @checked={{eq option.label this.creationMethodChoice}}
+      {{on "change" (fn this.onChange option)}}
+      data-test-radio-card={{option.label}}
+      as |R|
+    >
+      <R.Icon @name={{option.icon}} />
+      <R.Label>{{option.label}}</R.Label>
+      {{#if option.isRecommended}}
+        <R.Badge @color="highlight" @text="Recommended" />
+      {{/if}}
+      <R.Description>{{option.description}}</R.Description>
+    </G.RadioCard>
+  {{/each}}
+</Hds::Form::RadioCard::Group>
+
+{{#unless (eq this.creationMethodChoice this.methods.UI)}}
+  <Hds::Text::Display @tag="h2" @size="400">Edit configuration</Hds::Text::Display>
+  <Hds::Text::Body @tag="p">
+    This configuration is generated based on your input in the previous step.
+    {{#if (eq this.creationMethodChoice this.methods.APICLI)}}
+      Copy it and run it in your terminal/use with Vault API to apply.
+    {{else}}
+      Copy and paste it directly to your Terraform Vault Provider terminal. For more details on the configuration language,
+      read the
+      <Hds::Link::Inline @href={{doc-link "/terraform/tutorials/configuration-language"}}>Terraform guide</Hds::Link::Inline>.
+    {{/if}}
+  </Hds::Text::Body>
+  <Hds::Card::Container @hasBorder={{true}} class="has-top-padding-m has-bottom-padding-m side-padding-24">
+    {{#if (eq this.creationMethodChoice this.methods.APICLI)}}
+      <CodeGenerator::AutomationSnippets @customTabs={{this.customTabs}} @onTabChange={{this.onTabChange}} />
+    {{else}}
+      <Hds::CodeBlock
+        @language="hcl"
+        @value={{this.tfSnippet}}
+        @hasLineNumbers={{true}}
+        @hasCopyButton={{true}}
+        data-test-field="terraform"
+      />
+      <div class="is-flex-end has-top-margin-l has-bottom-margin-s">
+        <div>
+          <DownloadButton
+            @color="secondary"
+            @filename="vault-resources"
+            @data={{this.tfSnippet}}
+            @extension="tf"
+            @stringify={{true}}
+            @text="Export as tf file"
+          />
+        </div>
+      </div>
+    {{/if}}
+  </Hds::Card::Container>
+{{/unless}}
+
+<div class="is-flex-center is-flex-between">
+  <Hds::Button @text="Back" @color="tertiary" @icon="chevron-left" {{on "click" @onBack}} />
+  <div>
+    <Hds::Button @text="Done & exit" @color="secondary" {{on "click" @onDone}} />
+    {{#if (eq this.creationMethodChoice this.methods.UI)}}
+      <Hds::Button @text="Apply changes" @color="primary" {{on "click" @onApply}} />
+    {{/if}}
+  </div>
+</div>

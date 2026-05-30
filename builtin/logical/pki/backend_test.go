@@ -26,7 +26,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
 	"reflect"
 	"slices"
 	"sort"
@@ -51,6 +50,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -259,6 +259,41 @@ func TestPKI_DeviceCert(t *testing.T) {
 	if notAfter != "9999-12-31T23:59:59Z" {
 		t.Fatal(fmt.Errorf("not after from certificate  is not matching with input parameter"))
 	}
+}
+
+// TestPKI_NotAfterRespectsRoleMaxTTL tests that the not_after time is respected and does not exceed the role's max_ttl.
+func TestPKI_NotAfterRespectsRoleMaxTTL(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "myvault.com",
+		"ttl":         "3h",
+	})
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "roles/example", map[string]interface{}{
+		"allowed_domains":    "example.com",
+		"allow_bare_domains": true,
+		"max_ttl":            "1h",
+	})
+	require.NoError(t, err)
+
+	now := time.Now()
+	// Issue a certificate with a requested not_after time that exceeds the role's max_ttl.
+	resp, err := CBWrite(b, s, "issue/example", map[string]interface{}{
+		"common_name": "example.com",
+		"not_after":   now.Add(2 * time.Hour).Format(time.RFC3339),
+	})
+	require.NoError(t, err)
+
+	var certBundle certutil.CertBundle
+	err = mapstructure.Decode(resp.Data, &certBundle)
+	require.NoError(t, err)
+
+	parsedCertBundle, err := certBundle.ToParsedCertBundle()
+	require.NoError(t, err)
+
+	require.WithinDuration(t, now.Add(time.Hour), parsedCertBundle.Certificate.NotAfter, 5*time.Second)
 }
 
 func TestBackend_InvalidParameter(t *testing.T) {
@@ -936,7 +971,7 @@ func generateTestCsr(t *testing.T, keyType certutil.PrivateKeyType, keyBits int)
 
 	csrTemplate := x509.CertificateRequest{
 		Subject: pkix.Name{
-			Country:      []string{"MyCountry"},
+			Country:      []string{"MC"},
 			PostalCode:   []string{"MyPostalCode"},
 			SerialNumber: "MySerialNumber",
 			CommonName:   "my@example.com",
@@ -1561,10 +1596,10 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 	}
 	// Country tests
 	{
-		roleVals.Country = []string{"foo"}
+		roleVals.Country = []string{"jp"}
 		addTests(getCountryCheck(roleVals))
 
-		roleVals.Country = []string{"foo", "bar"}
+		roleVals.Country = []string{"us", "ca"}
 		addTests(getCountryCheck(roleVals))
 	}
 	// OU tests
@@ -2414,9 +2449,10 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 
 	// Now check signing a certificate using the not_after input using the Y10K value
+	// Note that we do not specify the role in the sign-verbatim request, so the role's max TTL does not apply
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "sign-verbatim/test",
+		Path:      "sign-verbatim",
 		Storage:   storage,
 		Data: map[string]interface{}{
 			"csr":       pemCSR,
@@ -3646,8 +3682,6 @@ func TestBackend_AllowedURISANsTemplate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
@@ -3771,8 +3805,6 @@ func TestBackend_AllowedDomainsTemplate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
@@ -3904,8 +3936,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Mount PKI.
@@ -4152,8 +4183,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
@@ -5633,8 +5663,7 @@ func TestBackend_IfModifiedSinceHeaders(t *testing.T) {
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Mount PKI.
@@ -6812,8 +6841,6 @@ func TestStandby_Operations(t *testing.T) {
 		},
 	}, nil, teststorage.InmemBackendSetup)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	standbyCores := testhelpers.DeriveStandbyCores(t, cluster)
@@ -7042,8 +7069,7 @@ func TestProperAuthing(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 	token := client.Token()
 
@@ -7766,8 +7792,8 @@ func TestIssuance_DeltaCRLDistributionPoint(t *testing.T) {
 		"-text",
 		"-in", filePath,
 	}
-	out, err := exec.Command(opensslCmd, args...).CombinedOutput()
-	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+
+	out := runOpenSSL(t, log, opensslCmd, args)
 	require.Regexp(t, `\s+X509v3 Freshest CRL:\s+Full Name:\s+URI:http://example.com/crl/delta\s+Full Name:\s+URI:http://backup\.example\.com/crl/delta`, string(out))
 }
 
@@ -8330,4 +8356,27 @@ func TestBackend_IDNWithWildcards_AltNames(t *testing.T) {
 			}
 		})
 	}
+}
+
+func stringSliceContainsAny(sl []string, substr string) bool {
+	return slices.ContainsFunc(sl, func(s string) bool { return strings.Contains(s, substr) })
+}
+
+func nilFunction(ctx context.Context, req *logical.Request, data *framework.FieldData, role *issuing.RoleEntry) (*logical.Response, error) {
+	return nil, nil
+}
+
+// TestBackend_MetricsWrapManagesNilResp validates that when wrapping a function that returns nil, nil (no error, no
+// response), we pass on the lack of error and lack of response (and don't panic).
+func TestBackend_MetricsWrapManagesNilResp(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	req := &logical.Request{Storage: s}
+	fieldData := &framework.FieldData{Schema: map[string]*framework.FieldSchema{}, Raw: map[string]interface{}{}}
+
+	wrappedFunc := b.metricsWrap("huh", roleOptional, nilFunction)
+	resp, err := wrappedFunc(context.Background(), req, fieldData)
+	require.NoError(t, err)
+	require.Nil(t, resp)
 }

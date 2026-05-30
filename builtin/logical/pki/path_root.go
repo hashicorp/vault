@@ -141,10 +141,17 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	// Tell getGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
-	exported, format, role, errorResp := getGenerationParams(sc, data, true)
+	resp := &logical.Response{
+		Data: make(map[string]any),
+	}
+
+	// Tell getCAGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
+	genParams, warnings, errorResp := getCAGenerationParams(sc, data, true)
 	if errorResp != nil {
 		return errorResp, nil
+	}
+	if len(warnings) > 0 {
+		resp.Warnings = append(resp.Warnings, warnings...)
 	}
 
 	maxPathLengthIface, ok := data.GetOk("max_path_length")
@@ -153,7 +160,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		if maxPathLength < -1 {
 			return logical.ErrorResponse("requested max_path_length %d is invalid: must be a non-negative integer or -1 for no constraint", maxPathLength), nil
 		}
-		role.MaxPathLength = &maxPathLength
+		genParams.role.MaxPathLength = &maxPathLength
 	}
 
 	issuerName, err := getIssuerName(sc, data)
@@ -178,7 +185,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	input := &inputBundle{
 		req:     req,
 		apiData: data,
-		role:    role,
+		role:    genParams.role,
 	}
 	b.adjustInputBundle(input)
 	parsedBundle, warnings, err := generateCert(sc, input, nil, true, b.Backend.GetRandomReader())
@@ -196,12 +203,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
-			"serial_number": cb.SerialNumber,
-		},
-	}
+	resp.Data["expiration"] = int64(parsedBundle.Certificate.NotAfter.Unix())
+	resp.Data["serial_number"] = cb.SerialNumber
 
 	if keyUsages, ok := data.GetOk("key_usage"); ok {
 		err = validateCaKeyUsages(keyUsages.([]string))
@@ -237,11 +240,12 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		resp.AddWarning("This mount has configured Delta CRL distribution points are set but no CRL Distribution Points.")
 	}
 
+	format := genParams.format
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
 		resp.Data["issuing_ca"] = cb.Certificate
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
@@ -249,7 +253,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	case "pem_bundle":
 		resp.Data["issuing_ca"] = cb.Certificate
 
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = cb.PrivateKey
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 			resp.Data["certificate"] = fmt.Sprintf("%s\n%s", cb.PrivateKey, cb.Certificate)
@@ -260,10 +264,45 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	case "der":
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
 		resp.Data["issuing_ca"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
-		if exported {
+		if genParams.exported {
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
+
+	case "pkcs12_bundle":
+		password := data.Get("pkcs12_password").(string)
+		encoder := data.Get("pkcs12_encoder").(string)
+		caChain := x509Certificates(parsedBundle.CAChain)
+
+		var privateKey crypto.Signer
+		if genParams.exported {
+			privateKey = parsedBundle.PrivateKey
+		}
+
+		pkcs12Bytes, err := EncodeToPKCS12(encoder, privateKey, parsedBundle.Certificate, caChain, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
+		resp.Data["issuing_ca"] = cb.Certificate
+
+	case "jks_bundle":
+		alias := data.Get("jks_private_key_alias").(string)
+		password := data.Get("jks_password").(string)
+		caChain := x509Certificates(parsedBundle.CAChain)
+
+		var privateKey crypto.Signer
+		if genParams.exported {
+			privateKey = parsedBundle.PrivateKey
+		}
+
+		jksBytes, err := EncodeToJKS(privateKey, parsedBundle.Certificate, caChain, alias, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to JKS format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(jksBytes)
+		resp.Data["issuing_ca"] = cb.Certificate
+
 	default:
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
@@ -344,7 +383,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
 		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
 		observe.NewAdditionalPKIMetadata("key_type", myKey.PrivateKeyType),
-		observe.NewAdditionalPKIMetadata("role_name", role.Name),
+		observe.NewAdditionalPKIMetadata("role_name", genParams.role.Name),
 		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(parsedBundle.Certificate)),
 		observe.NewAdditionalPKIMetadata("type", format),
 		observe.NewAdditionalPKIMetadata("common_name", parsedBundle.Certificate.Subject.CommonName),
@@ -368,7 +407,20 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	format := getFormat(data)
 	if format == "" {
-		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
+		return logical.ErrorResponse(`the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`), nil
+	}
+	if format == "pkcs12_bundle" {
+		// Cast to encoder type and validate it is a permitted value
+		_, err := validatePKCS12Encoder(data.Get("pkcs12_encoder").(string))
+		if err != nil {
+			return logical.ErrorResponse(`invalid "pkcs12_encoder" parameter: %v`, err), nil
+		}
+	}
+	encParams := certEncodingParams{
+		format:         format,
+		pkcs12Encoder:  data.Get("pkcs12_encoder").(string),
+		pkcs12Password: data.Get("pkcs12_password").(string),
+		jksPassword:    data.Get("jks_password").(string),
 	}
 
 	role := &issuing.RoleEntry{
@@ -474,7 +526,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
-	resp, err := signIntermediateResponse(signingBundle, parsedBundle, format, warnings)
+	resp, err := signIntermediateResponse(signingBundle, parsedBundle, encParams, warnings)
 	if err != nil {
 		return nil, err
 	}
@@ -518,7 +570,14 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	return resp, nil
 }
 
-func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, format string, warnings []string) (*logical.Response, error) {
+type certEncodingParams struct {
+	format         string
+	pkcs12Encoder  string
+	pkcs12Password string
+	jksPassword    string
+}
+
+func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, encParams certEncodingParams, warnings []string) (*logical.Response, error) {
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
@@ -569,6 +628,7 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 
 	caChain := append([]string{cb.Certificate}, cb.CAChain...)
 
+	format := encParams.format
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
@@ -590,6 +650,32 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 			derCaChain = append(derCaChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
 		resp.Data["ca_chain"] = derCaChain
+
+	case "pkcs12_bundle":
+		password := encParams.pkcs12Password
+		encoder := encParams.pkcs12Encoder
+		// Use parsedBundle.CAChain (not caChain var above) because EncodeToPKCS12 handles chain building.
+		caCerts := x509Certificates(parsedBundle.CAChain)
+		// Intermediates are signed from a CSR, pass nil because no private key should be available here.
+		pkcs12Bytes, err := EncodeToPKCS12(encoder, nil, parsedBundle.Certificate, caCerts, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
+		resp.Data["issuing_ca"] = signingCB.Certificate
+
+	case "jks_bundle":
+		password := encParams.jksPassword
+		// Use parsedBundle.CAChain (not caChain var above) because EncodeToJKS handles chain building.
+		caCerts := x509Certificates(parsedBundle.CAChain)
+		// Intermediates are signed from a CSR, pass nil because no private key should be available here.
+		// For trust stores custom aliases are currently unsupported, pass empty string.
+		jksBytes, err := EncodeToJKS(nil, parsedBundle.Certificate, caCerts, "", password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to JKS format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(jksBytes)
+		resp.Data["issuing_ca"] = cb.Certificate
 
 	default:
 		return nil, fmt.Errorf("unsupported format argument: %s", format)

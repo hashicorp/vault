@@ -708,15 +708,7 @@ func TestLogical_AuditPort(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	if err := c.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",
@@ -812,15 +804,7 @@ func TestLogical_ErrRelativePath(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	err := c.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
@@ -917,15 +901,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Enable the audit backend
 	tempDir := t.TempDir()
@@ -997,15 +973,7 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	if err := c.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",

@@ -23,8 +23,6 @@ func TestSysRekey_Init_pgpKeysEntriesForRekey(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cl := cluster.Cores[0].Client
 
 	_, err := cl.Logical().Write("sys/rekey/init", map[string]interface{}{
@@ -42,7 +40,6 @@ func TestSysRekey_Init_Status(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
 	cl := cluster.Cores[0].Client
 
 	testCases := []struct {
@@ -126,8 +123,6 @@ func TestSysRekey_Init_Setup(t *testing.T) {
 			HandlerFunc: Handler,
 			NumCores:    1,
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		cl := cluster.Cores[0].Client
 
 		// Start rekey
@@ -195,7 +190,6 @@ func TestSysRekey_Init_Cancel(t *testing.T) {
 			HandlerFunc: Handler,
 			NumCores:    1,
 		})
-		defer cluster.Cleanup()
 		cl := cluster.Cores[0].Client
 
 		initResp, err := cl.Logical().Write("sys/rekey/init", map[string]interface{}{
@@ -295,7 +289,6 @@ func TestSysRekey_Update(t *testing.T) {
 				HandlerFunc: Handler,
 				NumCores:    1,
 			})
-			defer cluster.Cleanup()
 			cl := cluster.Cores[0].Client
 
 			reqToken := ""
