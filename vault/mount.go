@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
@@ -155,6 +156,18 @@ func (c *Core) generateMountAccessor(entryType string) (string, error) {
 type MountTable struct {
 	Type    string        `json:"type"`
 	Entries []*MountEntry `json:"entries"`
+}
+
+func (m *MountTable) Clone() (*MountTable, error) {
+	entries := make([]*MountEntry, 0, len(m.Entries))
+	for _, entry := range m.Entries {
+		clonedEntry, err := entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, clonedEntry)
+	}
+	return &MountTable{Type: m.Type, Entries: entries}, nil
 }
 
 //go:generate enumer -type=MountMigrationStatus -trimprefix=MigrationStatus -transform=kebab
@@ -1360,7 +1373,17 @@ func (c *Core) loadMounts(ctx context.Context) error {
 	// If this node is a performance standby we do not want to attempt to
 	// upgrade the mount table, this will be the active node's responsibility.
 	if !c.perfStandby {
-		err := c.runMountUpdates(ctx, needPersist)
+		oldMounts, err := c.mounts.Clone()
+		if err != nil {
+			c.logger.Error("failed to clone mount table", "error", err)
+			return err
+		}
+		err = c.runMountUpdates(ctx, needPersist, true)
+		if errors.Is(err, physical.ErrValueSize) {
+			c.logger.Error("Cannot add default mounts because the mount table is too large to write to storage. If you are using integrated storage, increase the max_mount_and_namespace_table_entry_size in your Vault config file to add all default mounts to all namespaces. If you are using Consul storage, increase the txn_max_req_len in your Consul config file to add all default mounts to all namespaces. Continuing without default mounts")
+			c.mounts = oldMounts
+			err = c.runMountUpdates(ctx, needPersist, false)
+		}
 		if err != nil {
 			c.logger.Error("failed to run mount table upgrades", "error", err)
 			return err
@@ -1406,7 +1429,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 
 // Note that this is only designed to work with singletons, as it checks by
 // type only.
-func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
+func (c *Core) runMountUpdates(ctx context.Context, needPersist, tryAddingRequiredMounts bool) error {
 	// Upgrade to typed mount table
 	if c.mounts.Type == "" {
 		c.mounts.Type = mountTableType
@@ -1430,13 +1453,13 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 		// ensure this comes over. If we upgrade first, we simply don't
 		// create the mount, so we won't conflict when we sync. If this is
 		// local (e.g. cubbyhole) we do still add it.
-		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) {
+		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) && tryAddingRequiredMounts {
 			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
 			needPersist = true
 		}
 	}
 
-	if !c.IsPerfSecondary() {
+	if !c.IsPerfSecondary() && tryAddingRequiredMounts {
 		var modified bool
 		var err error
 		c.mounts.Entries, modified, err = c.addRequiredNamespaceMounts(c.mounts.Entries)
@@ -1499,7 +1522,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 	// Persist both mount tables
 	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
 		c.logger.Error("failed to persist mount table", "error", err)
-		return errLoadMountsFailed
+		return errors.Join(errLoadMountsFailed, err)
 	}
 	return nil
 }
