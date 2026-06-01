@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 func TestIdentityStore_ListGroupAlias(t *testing.T) {
@@ -153,7 +153,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 	}
 	ldapMountAccessor1 := auths["ldap/"].Accessor
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	// Configure LDAP auth
@@ -255,7 +255,7 @@ func TestIdentityStore_ExternalGroupMembershipsAcrossMounts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup2, cfg2 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup2, cfg2 := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup2()
 
 	// Configure LDAP auth
