@@ -20,10 +20,6 @@ export default Route.extend({
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendType)) {
       return this.router.transitionTo('vault.cluster.secrets.backend.list-root', backendPath);
     }
-    // hydrate model if backend type is ssh
-    if (backendType === 'ssh') {
-      this.pathHelp.hydrateModel('ssh-otp-credential', backendPath);
-    }
 
     // assign back button route
     if (backendType === 'totp') {

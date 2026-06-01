@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -52,8 +52,8 @@ module('Acceptance | ssh | roles', function (hooks) {
         await click(GENERAL.inputByAttr('allow_empty_principals'));
       },
       async fillInGenerate() {
-        await fillIn(GENERAL.inputByAttr('publicKey'), PUB_KEY);
-        await click('[data-test-toggle-button]');
+        await fillIn(GENERAL.inputByAttr('public_key'), PUB_KEY);
+        await click(GENERAL.button('More options'));
 
         await click(GENERAL.ttl.toggle('TTL'));
         await fillIn(GENERAL.selectByAttr('ttl-unit'), 'm');
