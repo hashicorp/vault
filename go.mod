@@ -41,8 +41,8 @@ require (
 	cloud.google.com/go/cloudsqlconn v1.21.0
 	cloud.google.com/go/monitoring v1.26.0
 	cloud.google.com/go/spanner v1.89.0
-	cloud.google.com/go/storage v1.62.1
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.0
+	cloud.google.com/go/storage v1.62.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/Azure/go-autorest/autorest v0.11.29
@@ -247,7 +247,7 @@ require (
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 )
 
-require github.com/aws/aws-sdk-go-v2/service/iam v1.53.10
+require github.com/aws/aws-sdk-go-v2/service/iam v1.53.6
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
@@ -308,7 +308,7 @@ require (
 	github.com/99designs/keyring v1.2.2 // indirect
 	github.com/Azure/azure-pipeline-go v0.2.3 // indirect
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/internal v1.11.2 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/internal v1.12.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.10.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.1 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2 v2.2.0 // indirect
@@ -343,14 +343,14 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apache/arrow-go/v18 v18.4.0 // indirect
 	github.com/avast/retry-go/v4 v4.6.1 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.41.7
+	github.com/aws/aws-sdk-go-v2 v1.41.5
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.8 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.14 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.21 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.6.21 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.23 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.21 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.21 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.6 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.22 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.297.0 // indirect
@@ -363,7 +363,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.30.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.19 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.41.10
-	github.com/aws/smithy-go v1.25.1 // indirect
+	github.com/aws/smithy-go v1.24.3 // indirect
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/benbjohnson/immutable v0.4.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -491,14 +491,14 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mediocregopher/radix/v4 v4.1.4 // indirect
-	github.com/microsoft/kiota-abstractions-go v1.9.3 // indirect
+	github.com/microsoft/kiota-abstractions-go v1.9.4 // indirect
 	github.com/microsoft/kiota-authentication-azure-go v1.3.1 // indirect
 	github.com/microsoft/kiota-http-go v1.5.5 // indirect
-	github.com/microsoft/kiota-serialization-form-go v1.1.2 // indirect
+	github.com/microsoft/kiota-serialization-form-go v1.1.3 // indirect
 	github.com/microsoft/kiota-serialization-json-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-multipart-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-text-go v1.1.3 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go v1.96.0 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go v1.97.0 // indirect
 	github.com/microsoftgraph/msgraph-sdk-go-core v1.4.0 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
