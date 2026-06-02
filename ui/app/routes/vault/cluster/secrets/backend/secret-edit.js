@@ -341,7 +341,7 @@ export default Route.extend({
   async fetchSshRole(backend, name) {
     try {
       const { data } = await this.api.secrets.sshReadRole(name, backend);
-      return new SshRoleForm({ ...data, name, id: name, backend }, { isNew: false });
+      return new SshRoleForm({ ...data, name, backend }, { isNew: false });
     } catch (error) {
       const { message } = await this.api.parseError(error);
       throw new Error(message);
