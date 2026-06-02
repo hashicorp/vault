@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	cloud.google.com/go/compute/metadata v0.9.0
 	cloud.google.com/go/iam v1.5.2
-	github.com/hashicorp/vault/api v1.22.0
+	github.com/hashicorp/vault/api v1.23.0
 	google.golang.org/genproto v0.0.0-20250505200425-f936aa4a68b2
 )
 
