@@ -2,7 +2,7 @@ module github.com/hashicorp/vault/api/auth/azure
 
 go 1.25.0
 
-require github.com/hashicorp/vault/api v1.22.0
+require github.com/hashicorp/vault/api v1.23.0
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
