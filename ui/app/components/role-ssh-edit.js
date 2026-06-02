@@ -52,17 +52,16 @@ export default Component.extend({
       event.preventDefault();
 
       const { form } = this;
-      const { name, id, backend, ...roleData } = form.data;
-      const roleName = id || name;
+      const { name, backend, ...roleData } = form.data;
 
-      if (type === 'create' && isBlank(roleName)) {
+      if (type === 'create' && isBlank(name)) {
         this.flashMessages.danger('Role name is required');
         return;
       }
 
       try {
-        await this.api.secrets.sshWriteRole(roleName, backend, roleData);
-        this.router.transitionTo(SHOW_ROUTE, roleName);
+        await this.api.secrets.sshWriteRole(name, backend, roleData);
+        this.router.transitionTo(SHOW_ROUTE, name);
       } catch (error) {
         const { message } = await this.api.parseError(error);
         this.flashMessages.danger(message);

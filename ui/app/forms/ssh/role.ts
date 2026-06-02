@@ -139,7 +139,6 @@ const FIELDS: Record<string, FormField> = {
 
 type SshRoleData = {
   name: string;
-  id: string;
   backend: string;
   key_type: string;
   [key: string]: unknown;

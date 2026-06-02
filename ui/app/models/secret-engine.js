@@ -270,13 +270,4 @@ export default class SecretEngineModel extends Model {
       },
     ];
   }
-
-  /* ACTIONS */
-  saveZeroAddressConfig() {
-    return this.save({
-      adapterOptions: {
-        adapterMethod: 'saveZeroAddressConfig',
-      },
-    });
-  }
 }
