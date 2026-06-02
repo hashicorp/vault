@@ -678,6 +678,8 @@ type Core struct {
 	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
 	// holds the lock for modifying pendingRaftPeers
 	pendingRaftPeersLock sync.RWMutex
+	// Limits the number of concurrent retrying raft join background workers.
+	raftJoinRetryLimiter chan struct{}
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value
@@ -1161,6 +1163,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		postUnsealStarted:              new(uint32),
 		raftInfo:                       new(atomic.Value),
 		raftJoinDoneCh:                 make(chan struct{}),
+		raftJoinRetryLimiter:           make(chan struct{}, raftMaxConcurrentRetryJoins),
 		clusterHeartbeatInterval:       clusterHeartbeatInterval,
 		activityLogConfig:              conf.ActivityLogConfig,
 		billingConfig:                  conf.BillingConfig,
