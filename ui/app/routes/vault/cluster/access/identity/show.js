@@ -11,9 +11,9 @@ import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 import { service } from '@ember/service';
 
-export default Route.extend({
-  router: service(),
-  store: service(),
+export default class IdentityShowRoute extends Route {
+  @service router;
+  @service store;
 
   model(params) {
     const { section } = params;
@@ -43,7 +43,7 @@ export default Route.extend({
       model,
       section,
     });
-  },
+  }
 
   activate() {
     // if we're just entering the route, and it's not a hard reload
@@ -54,14 +54,14 @@ export default Route.extend({
         this.controller.model.reload();
       });
     }
-  },
+  }
 
   afterModel(resolvedModel) {
     const { section, model } = resolvedModel;
     if (model?.identityType === 'group' && model?.type === 'internal' && section === 'aliases') {
       return this.router.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
     }
-  },
+  }
 
   setupController(controller, resolvedModel) {
     const { model, section } = resolvedModel;
@@ -69,5 +69,5 @@ export default Route.extend({
       model,
       section,
     });
-  },
-});
+  }
+}
