@@ -17,21 +17,10 @@
  * @param {string} [itemType] - itemType is used to calculate whether an item is readable or
  */
 
-import { computed } from '@ember/object';
-import Component from '@ember/component';
+import Component from '@glimmer/component';
 
-export default Component.extend({
-  item: null,
-  itemPath: '',
-  itemType: '',
-
-  isBuiltin: computed('item', 'itemType', function () {
-    const item = this.item;
-    if (this.itemType === 'alphabet' || this.itemType === 'template') {
-      return item.id.startsWith('builtin/');
-    }
-    return false;
-  }),
-
-  backendType: 'transform',
-});
+export default class TransformListItemComponent extends Component {
+  get isBuiltin() {
+    return this.args.item?.isBuiltin || false;
+  }
+}

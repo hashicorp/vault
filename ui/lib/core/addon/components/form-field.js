@@ -180,7 +180,7 @@ export default class FormFieldComponent extends Component {
   }
 
   get isReadOnly() {
-    const readonly = this.args.attr.options?.readOnly || false;
+    const readonly = this.args.attr.options?.readOnly || this.args.attr.options?.editDisabled || false;
     return readonly && this.args.mode === 'edit';
   }
 

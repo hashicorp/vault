@@ -23,6 +23,10 @@ import {
   SecretsApiKeyManagementListKmsProvidersListEnum,
   SecretsApiTotpListKeysListEnum,
   SecretsApiSshListRolesListEnum,
+  SecretsApiTransformListTransformationsListEnum,
+  SecretsApiTransformListRolesListEnum,
+  SecretsApiTransformListTemplatesListEnum,
+  SecretsApiTransformListAlphabetsListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
@@ -99,8 +103,13 @@ export default Route.extend({
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
     const modelType = this.getModelType(effectiveType, tab);
-    // Keymgmt, TOTP, and SSH routes use API-backed forms instead of Ember Data models, so skip model hydration.
-    if (effectiveType === 'keymgmt' || effectiveType === 'totp' || effectiveType === 'ssh') {
+    // Keymgmt, TOTP, SSH, and Transform routes use API-backed forms instead of Ember Data models, so skip model hydration.
+    if (
+      effectiveType === 'keymgmt' ||
+      effectiveType === 'totp' ||
+      effectiveType === 'ssh' ||
+      effectiveType === 'transform'
+    ) {
       return resolve();
     }
 
@@ -307,6 +316,150 @@ export default Route.extend({
     }
   },
 
+  async fetchTransformTransformations(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListTransformations(
+        backend,
+        SecretsApiTransformListTransformationsListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformTransformation', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformTransformation', { backend, name });
+        return {
+          id: name,
+          name,
+          backend,
+          canRead: capabilities[itemPath]?.canRead || false,
+          canUpdate: capabilities[itemPath]?.canUpdate || false,
+          canDelete: capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchTransformRolesList(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListRoles(
+        backend,
+        SecretsApiTransformListRolesListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformRole', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformRole', { backend, name });
+        return {
+          id: name,
+          name,
+          backend,
+          canRead: capabilities[itemPath]?.canRead || false,
+          canUpdate: capabilities[itemPath]?.canUpdate || false,
+          canDelete: capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchTransformTemplates(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListTemplates(
+        backend,
+        SecretsApiTransformListTemplatesListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformTemplate', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformTemplate', { backend, name });
+        const isBuiltin = name.startsWith('builtin/');
+        return {
+          id: name,
+          name,
+          backend,
+          isBuiltin,
+          canRead: isBuiltin ? false : capabilities[itemPath]?.canRead || false,
+          canUpdate: isBuiltin ? false : capabilities[itemPath]?.canUpdate || false,
+          canDelete: isBuiltin ? false : capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
+  async fetchTransformAlphabets(backend, page, pageFilter) {
+    try {
+      const resp = await this.api.secrets.transformListAlphabets(
+        backend,
+        SecretsApiTransformListAlphabetsListEnum.TRUE
+      );
+      const keys = resp.keys || [];
+
+      const pathsToFetch = keys.map((name) =>
+        this.capabilitiesService.pathFor('transformAlphabet', { backend, name })
+      );
+      const capabilities = pathsToFetch.length ? await this.capabilitiesService.fetch(pathsToFetch) : {};
+
+      const items = keys.map((name) => {
+        const itemPath = this.capabilitiesService.pathFor('transformAlphabet', { backend, name });
+        const isBuiltin = name.startsWith('builtin/');
+        return {
+          id: name,
+          name,
+          backend,
+          isBuiltin,
+          canRead: isBuiltin ? false : capabilities[itemPath]?.canRead || false,
+          canUpdate: isBuiltin ? false : capabilities[itemPath]?.canUpdate || false,
+          canDelete: isBuiltin ? false : capabilities[itemPath]?.canDelete || false,
+        };
+      });
+
+      return paginate(items, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
+  },
+
   async model(params) {
     const secret = this.secretParam() || '';
     const backend = getEnginePathParam(this);
@@ -333,6 +486,20 @@ export default Route.extend({
       const page = getValidPage(params.page);
       const filter = params.pageFilter;
       secrets = await this.fetchSshRoles(backend, page, filter);
+      this.set('has404', false);
+    } else if (effectiveType === 'transform') {
+      const page = getValidPage(params.page);
+      const filter = params.pageFilter;
+      const tab = params.tab;
+      if (tab === 'role') {
+        secrets = await this.fetchTransformRolesList(backend, page, filter);
+      } else if (tab === 'template') {
+        secrets = await this.fetchTransformTemplates(backend, page, filter);
+      } else if (tab === 'alphabet') {
+        secrets = await this.fetchTransformAlphabets(backend, page, filter);
+      } else {
+        secrets = await this.fetchTransformTransformations(backend, page, filter);
+      }
       this.set('has404', false);
     } else {
       try {
