@@ -11,6 +11,7 @@ import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
 import SshRoleForm from 'vault/forms/ssh/role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
+import TemplateForm from 'vault/forms/transform/template';
 import { KeyManagementUpdateKeyRequestTypeEnum } from '@hashicorp/vault-client-typescript';
 
 const secretModel = (store, backend, key) => {
@@ -77,6 +78,9 @@ export default EditBase.extend({
     }
     if (modelType === 'transform/alphabet') {
       return new AlphabetForm({ backend }, { isNew: true });
+    }
+    if (modelType === 'transform/template') {
+      return new TemplateForm({ backend }, { isNew: true });
     }
     // TODO: Remove once all transform sub-types (template, role, transformation) are migrated to Form classes.
     if (modelType === 'transform') {

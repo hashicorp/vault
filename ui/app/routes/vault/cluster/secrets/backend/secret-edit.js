@@ -19,6 +19,7 @@ import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
 import SshRoleForm from 'vault/forms/ssh/role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
+import TemplateForm from 'vault/forms/transform/template';
 import Form from 'vault/forms/form';
 import {
   SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
@@ -394,6 +395,37 @@ export default Route.extend({
     };
   },
 
+  async fetchTransformTemplate(backend, name) {
+    const resp = await this.api.secrets.transformReadTemplate(name, backend);
+    const data = resp.data || {};
+    return new TemplateForm(
+      {
+        name,
+        backend,
+        type: data.type,
+        pattern: data.pattern,
+        alphabet: data.alphabet ? [data.alphabet] : [],
+        encode_format: data.encode_format,
+        decode_formats: data.decode_formats,
+      },
+      { isNew: false }
+    );
+  },
+
+  async fetchTransformTemplateCapabilities(backend, name) {
+    const templatePath = this.capabilitiesService.pathFor('transformTemplate', { backend, name });
+    const templatesPath = this.capabilitiesService.pathFor('transformTemplates', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([templatePath, templatesPath]);
+
+    return {
+      canDelete: capabilities[templatePath]?.canDelete,
+      canUpdate: capabilities[templatePath]?.canUpdate,
+      canRead: capabilities[templatePath]?.canRead,
+      canList: capabilities[templatesPath]?.canList,
+    };
+  },
+
   async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
     // capabilities is a promise proxy, not a real object
     // to work around this we explicitly assign it to a const and await it
@@ -448,6 +480,9 @@ export default Route.extend({
     } else if (modelType === 'transform/alphabet') {
       secretModel = await this.fetchTransformAlphabet(backend, secret);
       capabilities = await this.fetchTransformAlphabetCapabilities(backend, secret);
+    } else if (modelType === 'transform/template') {
+      secretModel = await this.fetchTransformTemplate(backend, secret);
+      capabilities = await this.fetchTransformTemplateCapabilities(backend, secret);
     } else {
       capabilities = await this.capabilities(secret, modelType);
       try {
