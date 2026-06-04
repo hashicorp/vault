@@ -33,16 +33,16 @@
     <AutocompleteInput
       @label="Encode format"
       @subText="Use the groups above to define how the input will be encoded. Refer to each group with $N. This is optional; if not specified, pattern will be used."
-      @value={{@model.encodeFormat}}
+      @value={{@model.encode_format}}
       @optionsTrigger="$"
       @options={{this.inputOptions}}
-      @onChange={{fn (mut @model.encodeFormat)}}
+      @onChange={{fn (mut @model.encode_format)}}
       class="has-top-margin-l"
       data-test-encode-format
     />
     <KvObjectEditor
-      @value={{@model.decodeFormats}}
-      @onChange={{fn (mut @model.decodeFormats)}}
+      @value={{@model.decode_formats}}
+      @onChange={{fn (mut @model.decode_formats)}}
       @label="Decode formats"
       @subText="Using the groups above, define how this data will be decoded. Multiple decode_formats can be used. Optional. If not specified, pattern will be used."
       @keyPlaceholder="name"
