@@ -24,7 +24,7 @@
       </SecretLink>
     </div>
     <div class="column has-text-right">
-      {{#if (or @item.updatePath.canRead @item.updatePath.canUpdate)}}
+      {{#if (or @item.canRead @item.canUpdate)}}
         <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
           <dd.ToggleIcon
             @icon="more-horizontal"
@@ -32,10 +32,10 @@
             @hasChevron={{false}}
             data-test-popup-menu-trigger
           />
-          {{#if @item.updatePath.canRead}}
+          {{#if @item.canRead}}
             <dd.Interactive @route="vault.cluster.secrets.backend.show" @model={{@item.id}}>Details</dd.Interactive>
           {{/if}}
-          {{#if @item.updatePath.canUpdate}}
+          {{#if @item.canUpdate}}
             <dd.Interactive @route="vault.cluster.secrets.backend.edit" @model={{@item.id}}>Edit</dd.Interactive>
           {{/if}}
         </Hds::Dropdown>

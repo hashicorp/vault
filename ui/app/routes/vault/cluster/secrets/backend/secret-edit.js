@@ -18,6 +18,8 @@ import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
 import SshRoleForm from 'vault/forms/ssh/role';
+import AlphabetForm from 'vault/forms/transform/alphabet';
+import Form from 'vault/forms/form';
 import {
   SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
   SecretsApiTransformListRolesListEnum,
@@ -128,13 +130,15 @@ export default Route.extend({
   buildModel(secret, queryParams) {
     const backend = getEnginePathParam(this);
     const modelType = this.modelType(backend, secret, { queryParams });
-    // Keymgmt, TOTP, and SSH role resources are loaded through API-backed forms, so Ember Data hydration is unnecessary.
-    if (
+    // TODO: Remove buildModel once all remaining engine types (e.g. database, transit) are migrated
+    // to API-backed Form instances — none will need hydrateModel and this function becomes redundant.
+    const skipHydration =
       modelType === 'secret' ||
       modelType.startsWith('keymgmt/') ||
+      modelType.startsWith('transform') ||
       modelType === 'totp-key' ||
-      modelType === 'role-ssh'
-    ) {
+      modelType === 'role-ssh';
+    if (skipHydration) {
       return resolve();
     }
     return this.pathHelp.hydrateModel(modelType, backend);
@@ -370,6 +374,26 @@ export default Route.extend({
     }
   },
 
+  async fetchTransformAlphabet(backend, name) {
+    const resp = await this.api.secrets.transformReadAlphabet(name, backend);
+    const data = resp.data || {};
+    return new AlphabetForm({ ...data, name, backend }, { isNew: false });
+  },
+
+  async fetchTransformAlphabetCapabilities(backend, name) {
+    const alphabetPath = this.capabilitiesService.pathFor('transformAlphabet', { backend, name });
+    const alphabetsPath = this.capabilitiesService.pathFor('transformAlphabets', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([alphabetPath, alphabetsPath]);
+
+    return {
+      canDelete: capabilities[alphabetPath]?.canDelete,
+      canUpdate: capabilities[alphabetPath]?.canUpdate,
+      canRead: capabilities[alphabetPath]?.canRead,
+      canList: capabilities[alphabetsPath]?.canList,
+    };
+  },
+
   async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
     // capabilities is a promise proxy, not a real object
     // to work around this we explicitly assign it to a const and await it
@@ -421,6 +445,9 @@ export default Route.extend({
     } else if (modelType === 'role-ssh') {
       secretModel = await this.fetchSshRole(backend, secret);
       capabilities = await this.fetchSshRoleCapabilities(backend, secret);
+    } else if (modelType === 'transform/alphabet') {
+      secretModel = await this.fetchTransformAlphabet(backend, secret);
+      capabilities = await this.fetchTransformAlphabetCapabilities(backend, secret);
     } else {
       capabilities = await this.capabilities(secret, modelType);
       try {
@@ -459,16 +486,16 @@ export default Route.extend({
     // mode will be 'show', 'edit', 'create'
     const mode = this.routeName.split('.').pop().replace('-root', '');
 
-    // Handle keymgmt, TOTP, and SSH forms differently - Resource or Form doesn't have setProperties
-    const modelType = this.modelType(backend, secret);
-    const formModelTypes = ['keymgmt/key', 'keymgmt/provider', 'totp-key', 'role-ssh'];
-    if (!formModelTypes.includes(modelType)) {
+    // Form-based models (keymgmt, TOTP, SSH, transform sub-types) use Form class instances which
+    // don't have the Ember Data setProperties method.
+    const isFormModel = model.secret instanceof Form;
+    if (!isFormModel) {
       model.secret.setProperties({ backend });
     }
 
     controller.setProperties({
       model: model.secret,
-      form: formModelTypes.includes(modelType) ? model.secret : null,
+      form: isFormModel ? model.secret : null,
       capabilities: model.capabilities,
       baseKey: { id: secret },
       mode,
