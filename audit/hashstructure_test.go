@@ -435,18 +435,18 @@ func TestHashWalker_TimeStructs(t *testing.T) {
 
 // TestCopy_request_EnterpriseTokenFields verifies that copystructure.Copy
 // correctly deep-copies a logical.Request that carries enterprise token fields,
-// including EnterpriseTokenAuthorizationDetails which is []map[string]any and
+// including JwtAuthorizationDetails which is []map[string]any and
 // would silently lose data under a shallow copy.
 func TestCopy_request_EnterpriseTokenFields(t *testing.T) {
 	expected := logical.Request{
 		Data: map[string]interface{}{
 			"foo": "bar",
 		},
-		EnterpriseTokenMetadata:    "test-token-abc",
-		EnterpriseTokenIssuer:      "https://issuer.example.com",
-		EnterpriseTokenTransaction: "txn-copy-1",
-		EnterpriseTokenAudience:    []string{"vault", "api"},
-		EnterpriseTokenAuthorizationDetails: []logical.AuthorizationDetail{
+		JwtUniqueId:         "test-token-abc",
+		JwtIssuer:           "https://issuer.example.com",
+		JwtTransactionClaim: "txn-copy-1",
+		JwtAudienceClaim:    []string{"vault", "api"},
+		JwtAuthorizationDetails: []logical.AuthorizationDetail{
 			{
 				"type":            "vault:path_access",
 				"path_constraint": "secret/data/users/alice",

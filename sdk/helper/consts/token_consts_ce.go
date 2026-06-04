@@ -5,6 +5,6 @@
 
 package consts
 
-func GetEnterpriseTokenPrefix() string {
+func GetOAuthJwtPrefix() string {
 	return "unimplemented"
 }

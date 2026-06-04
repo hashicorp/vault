@@ -7,6 +7,6 @@ package vault
 
 import "errors"
 
-func resolveEnterpriseTokenIDForLookup(_ string) (string, error) {
+func resolveOAuthJwtIdForLookup(_ string) (string, error) {
 	return "", errors.New("enterprise build required")
 }

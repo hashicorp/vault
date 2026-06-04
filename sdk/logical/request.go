@@ -141,25 +141,25 @@ type Request struct {
 	// hashed.
 	ClientToken string `json:"client_token" structs:"client_token" mapstructure:"client_token" sentinel:""`
 
-	// EnterpriseTokenMetadata stores enterprise token metadata.
-	EnterpriseTokenMetadata string `json:"enterprise_token_metadata" structs:"enterprise_token_metadata" mapstructure:"enterprise_token_metadata" sentinel:""`
+	// JwtUniqueId stores the unique id of JWTs used as part of OAuth authorization to Vault.
+	JwtUniqueId string `json:"jwt_unique_id" structs:"jwt_unique_id" mapstructure:"jwt_unique_id" sentinel:""`
 
-	// EnterpriseTokenIssuer stores the enterprise token issuer.
-	EnterpriseTokenIssuer string `json:"enterprise_token_issuer,omitempty" structs:"enterprise_token_issuer" mapstructure:"enterprise_token_issuer"`
+	// JwtIssuer stores the issuer of JWTs used as part of OAuth authorization to Vault.
+	JwtIssuer string `json:"jwt_issuer,omitempty" structs:"jwt_issuer" mapstructure:"jwt_issuer"`
 
-	// EnterpriseTokenTransaction stores the enterprise token transaction claim.
-	EnterpriseTokenTransaction string `json:"enterprise_token_transaction,omitempty" structs:"enterprise_token_transaction" mapstructure:"enterprise_token_transaction"`
+	// JwtTransactionClaim stores the transaction claim of JWTs used as part of OAuth authorization to Vault.
+	JwtTransactionClaim string `json:"jwt_transaction_claim,omitempty" structs:"jwt_transaction_claim" mapstructure:"jwt_transaction_claim"`
 
-	// EnterpriseTokenAudience stores enterprise token audience values.
-	EnterpriseTokenAudience []string `json:"enterprise_token_audience,omitempty" structs:"enterprise_token_audience" mapstructure:"enterprise_token_audience"`
+	// JwtAudienceClaim stores token audience values of JWTs used as part of OAuth authorization to Vault.
+	JwtAudienceClaim []string `json:"jwt_audience_claim,omitempty" structs:"jwt_audience_claim" mapstructure:"jwt_audience_claim"`
 
-	// EnterpriseTokenAuthorizationDetails stores enterprise token authorization details.
-	EnterpriseTokenAuthorizationDetails []AuthorizationDetail `json:"enterprise_token_authorization_details,omitempty" structs:"enterprise_token_authorization_details" mapstructure:"enterprise_token_authorization_details"`
+	// JwtAuthorizationDetails stores authorization details forr JWTs used as part of OAuth authorization to Vault.
+	JwtAuthorizationDetails []AuthorizationDetail `json:"jwt_authorization_details,omitempty" structs:"jwt_authorization_details" mapstructure:"jwt_authorization_details"`
 
-	// EnterpriseTokenAuthorizationDetailsPresent indicates whether the inbound
-	// enterprise token included an authorization_details claim at all. This lets
+	// JwtAuthorizationDetailsClaimPresent indicates whether the inbound
+	// JWT included an authorization_details claim at all. This lets
 	// callers distinguish "claim missing" from "claim present but empty".
-	EnterpriseTokenAuthorizationDetailsPresent bool `json:"enterprise_token_authorization_details_present,omitempty" structs:"enterprise_token_authorization_details_present" mapstructure:"enterprise_token_authorization_details_present"`
+	JwtAuthorizationDetailsClaimPresent bool `json:"jwt_authorization_details_claim_present,omitempty" structs:"jwt_authorization_details_claim_present" mapstructure:"jwt_authorization_details_claim_present"`
 
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
