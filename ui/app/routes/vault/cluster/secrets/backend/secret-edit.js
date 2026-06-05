@@ -20,6 +20,8 @@ import TotpKeyForm from 'vault/forms/totp/key';
 import SshRoleForm from 'vault/forms/ssh/role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
 import TemplateForm from 'vault/forms/transform/template';
+import RoleForm from 'vault/forms/transform/role';
+import TransformationForm from 'vault/forms/transform/transformation';
 import Form from 'vault/forms/form';
 import {
   SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
@@ -426,6 +428,62 @@ export default Route.extend({
     };
   },
 
+  async fetchTransformRole(backend, name) {
+    const resp = await this.api.secrets.transformReadRole(name, backend);
+    const data = resp.data || {};
+    return new RoleForm({ name, backend, transformations: data.transformations || [] }, { isNew: false });
+  },
+
+  async fetchTransformRoleCapabilities(backend, name) {
+    const rolePath = this.capabilitiesService.pathFor('transformRole', { backend, name });
+    const rolesPath = this.capabilitiesService.pathFor('transformRoles', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([rolePath, rolesPath]);
+
+    return {
+      canDelete: capabilities[rolePath]?.canDelete,
+      canUpdate: capabilities[rolePath]?.canUpdate,
+      canRead: capabilities[rolePath]?.canRead,
+      canList: capabilities[rolesPath]?.canList,
+    };
+  },
+
+  async fetchTransformTransformation(backend, name) {
+    const resp = await this.api.secrets.transformReadTransformation(name, backend);
+    const data = resp.data || resp || {};
+    return new TransformationForm(
+      {
+        name,
+        backend,
+        type: data.type || 'fpe',
+        tweak_source: data.tweak_source,
+        masking_character: data.masking_character,
+        template: data.template ? [data.template] : [],
+        allowed_roles: data.allowed_roles || [],
+        deletion_allowed: data.deletion_allowed,
+        mapping_mode: data.mapping_mode,
+        convergent: data.convergent,
+        max_ttl: data.max_ttl,
+        stores: data.stores || [],
+      },
+      { isNew: false }
+    );
+  },
+
+  async fetchTransformTransformationCapabilities(backend, name) {
+    const transformationPath = this.capabilitiesService.pathFor('transformTransformation', { backend, name });
+    const transformationsPath = this.capabilitiesService.pathFor('transformTransformations', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([transformationPath, transformationsPath]);
+
+    return {
+      canDelete: capabilities[transformationPath]?.canDelete,
+      canUpdate: capabilities[transformationPath]?.canUpdate,
+      canRead: capabilities[transformationPath]?.canRead,
+      canList: capabilities[transformationsPath]?.canList,
+    };
+  },
+
   async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
     // capabilities is a promise proxy, not a real object
     // to work around this we explicitly assign it to a const and await it
@@ -462,7 +520,6 @@ export default Route.extend({
       secret = secret.replace('role/', '');
     }
     let secretModel;
-    let transformRoles;
     let capabilities;
 
     if (modelType === 'totp-key') {
@@ -483,6 +540,12 @@ export default Route.extend({
     } else if (modelType === 'transform/template') {
       secretModel = await this.fetchTransformTemplate(backend, secret);
       capabilities = await this.fetchTransformTemplateCapabilities(backend, secret);
+    } else if (modelType === 'transform/role') {
+      secretModel = await this.fetchTransformRole(backend, secret);
+      capabilities = await this.fetchTransformRoleCapabilities(backend, secret);
+    } else if (modelType === 'transform') {
+      secretModel = await this.fetchTransformTransformation(backend, secret);
+      capabilities = await this.fetchTransformTransformationCapabilities(backend, secret);
     } else {
       capabilities = await this.capabilities(secret, modelType);
       try {
@@ -498,15 +561,9 @@ export default Route.extend({
       }
     }
 
-    // fetch roles for transform type to display in detail view
-    if (modelType === 'transform') {
-      transformRoles = await this.fetchTransformRoles(backend);
-    }
-
     return {
       secret: secretModel,
       capabilities,
-      transformRoles,
     };
   },
 
@@ -537,7 +594,6 @@ export default Route.extend({
       backend,
       preferAdvancedEdit,
       backendType,
-      transformRoles: model.transformRoles,
     });
   },
 
