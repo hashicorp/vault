@@ -12,6 +12,8 @@ import TotpKeyForm from 'vault/forms/totp/key';
 import SshRoleForm from 'vault/forms/ssh/role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
 import TemplateForm from 'vault/forms/transform/template';
+import RoleForm from 'vault/forms/transform/role';
+import TransformationForm from 'vault/forms/transform/transformation';
 import { KeyManagementUpdateKeyRequestTypeEnum } from '@hashicorp/vault-client-typescript';
 
 const secretModel = (store, backend, key) => {
@@ -19,13 +21,6 @@ const secretModel = (store, backend, key) => {
     path: key,
   });
   return model;
-};
-
-const transformModel = (queryParams) => {
-  const modelType = 'transform';
-  if (!queryParams || !queryParams.itemType) return modelType;
-
-  return `${modelType}/${queryParams.itemType}`;
 };
 
 export default EditBase.extend({
@@ -82,9 +77,11 @@ export default EditBase.extend({
     if (modelType === 'transform/template') {
       return new TemplateForm({ backend }, { isNew: true });
     }
-    // TODO: Remove once all transform sub-types (template, role, transformation) are migrated to Form classes.
+    if (modelType === 'transform/role') {
+      return new RoleForm({ backend }, { isNew: true });
+    }
     if (modelType === 'transform') {
-      modelType = transformModel(transition.to.queryParams);
+      return new TransformationForm({ backend, type: 'fpe' }, { isNew: true });
     }
     if (modelType === 'database/connection' && transition.to?.queryParams?.itemType === 'role') {
       modelType = 'database/role';
