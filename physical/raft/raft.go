@@ -1080,6 +1080,9 @@ func ApplyConfigSettings(logger log.Logger, parsedConf map[string]string, config
 		if err != nil {
 			return err
 		}
+		if multiplier <= 0 {
+			return fmt.Errorf("performance_multiplier must be greater than 0")
+		}
 	}
 	config.ElectionTimeout *= time.Duration(multiplier)
 	config.HeartbeatTimeout *= time.Duration(multiplier)
