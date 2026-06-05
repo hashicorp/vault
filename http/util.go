@@ -72,7 +72,7 @@ func wrapTokenHeaderSizeHandler(handler http.Handler, props *vault.HandlerProper
 			bearerPrefix := "Bearer "
 			tokenLen := int64(len(r.Header.Get(consts.AuthHeaderName)))
 			if tokenLen > maxTokenHeaderSize {
-				respondError(w, http.StatusBadRequest,
+				respondError(w, http.StatusRequestHeaderFieldsTooLarge,
 					fmt.Errorf("authentication token exceeds maximum allowed header size of %d bytes", maxTokenHeaderSize))
 				return
 			}
@@ -87,7 +87,7 @@ func wrapTokenHeaderSizeHandler(handler http.Handler, props *vault.HandlerProper
 				}
 				bearerTokenLen := int64(len(strings.TrimSpace(v[len(bearerPrefix):])))
 				if bearerTokenLen > maxTokenHeaderSize {
-					respondError(w, http.StatusBadRequest,
+					respondError(w, http.StatusRequestHeaderFieldsTooLarge,
 						fmt.Errorf("authentication token exceeds maximum allowed header size of %d bytes", maxTokenHeaderSize))
 					return
 				}

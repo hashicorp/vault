@@ -1,0 +1,3 @@
+```release-note:change
+http: Return 431 status code instead of 400 when token header size validation fails.
+```
