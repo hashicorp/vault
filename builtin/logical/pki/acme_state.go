@@ -164,15 +164,6 @@ func (a *acmeState) writeConfig(sc *storageContext, config *acmeConfigEntry) (*a
 	return config, nil
 }
 
-func generateRandomBase64(srcBytes int) (string, error) {
-	data := make([]byte, 21)
-	if _, err := io.ReadFull(rand.Reader, data); err != nil {
-		return "", err
-	}
-
-	return base64.RawURLEncoding.EncodeToString(data), nil
-}
-
 func (a *acmeState) GetNonce() (string, time.Time, error) {
 	return a.nonces.Get()
 }
@@ -720,5 +711,10 @@ func getOrderPath(accountId string, orderId string) string {
 }
 
 func getACMEToken() (string, error) {
-	return generateRandomBase64(tokenBytes)
+	data := make([]byte, tokenBytes)
+	if _, err := io.ReadFull(rand.Reader, data); err != nil {
+		return "", err
+	}
+
+	return base64.RawURLEncoding.EncodeToString(data), nil
 }
