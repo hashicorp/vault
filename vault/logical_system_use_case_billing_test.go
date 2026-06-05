@@ -39,13 +39,13 @@ func TestSystemBackend_BillingOverviewMonthFormat(t *testing.T) {
 	// Verify the response structure
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok, "months should be a slice")
-	require.Len(t, months, billing.BillingRetentionMonths, "should have billing.BillingRetentionMonths months")
+	require.Len(t, months, billing.DefaultBillingRetentionMonths, "should have billing.DefaultBillingRetentionMonths months")
 
 	now := time.Now()
 	currentMonthStart := timeutil.StartOfMonth(now)
 
 	// Loop through all months and verify format
-	for i := 0; i < billing.BillingRetentionMonths; i++ {
+	for i := 0; i < billing.DefaultBillingRetentionMonths; i++ {
 		monthData, ok := months[i].(map[string]interface{})
 		require.True(t, ok, "month %d should be a map", i)
 
@@ -86,9 +86,9 @@ func TestSystemBackend_BillingOverview_StartEndMonthParams(t *testing.T) {
 	previousMonth := timeutil.StartOfPreviousMonth(now).Format("2006-01")
 	nextMonth := timeutil.StartOfNextMonth(now).Format("2006-01")
 	twoMonthsAfterCurrent := timeutil.StartOfMonth(now).AddDate(0, 2, 0).Format("2006-01")
-	retentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.BillingRetentionMonths+1, 0).Format("2006-01")
-	beforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.BillingRetentionMonths, 0).Format("2006-01")
-	twoMonthsBeforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.BillingRetentionMonths-1, 0).Format("2006-01")
+	retentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.DefaultBillingRetentionMonths+1, 0).Format("2006-01")
+	beforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.DefaultBillingRetentionMonths, 0).Format("2006-01")
+	twoMonthsBeforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -billing.DefaultBillingRetentionMonths-1, 0).Format("2006-01")
 
 	testCases := []struct {
 		name            string
@@ -107,20 +107,20 @@ func TestSystemBackend_BillingOverview_StartEndMonthParams(t *testing.T) {
 		{
 			name:            "start before retention period, default end",
 			startMonth:      beforeRetentionStart,
-			expectedMonths:  billing.BillingRetentionMonths + 1,
+			expectedMonths:  billing.DefaultBillingRetentionMonths + 1,
 			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
 		},
 		{
 			name:            "end after retention period, default start",
 			endMonth:        nextMonth,
-			expectedMonths:  billing.BillingRetentionMonths + 1,
+			expectedMonths:  billing.DefaultBillingRetentionMonths + 1,
 			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
 		},
 		{
 			name:           "start is exactly start of retention period",
 			startMonth:     retentionStart,
 			endMonth:       previousMonth,
-			expectedMonths: billing.BillingRetentionMonths - 1,
+			expectedMonths: billing.DefaultBillingRetentionMonths - 1,
 		},
 		{
 			name:            "start and end after retention period",
@@ -143,7 +143,7 @@ func TestSystemBackend_BillingOverview_StartEndMonthParams(t *testing.T) {
 		},
 		{
 			name:           "no parameters, default start and end",
-			expectedMonths: billing.BillingRetentionMonths,
+			expectedMonths: billing.DefaultBillingRetentionMonths,
 		},
 		{
 			name:          "start after end",
@@ -240,6 +240,102 @@ func TestSystemBackend_BillingOverview_StartEndMonthParams(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_BillingOverview_StartEndMonthParams_CustomRetention tests that the
+// billing overview endpoint correctly validates start_month and end_month parameters
+// against a custom retention period. This verifies that the retention boundary logic
+// uses the configured retention period rather than the default.
+func TestSystemBackend_BillingOverview_StartEndMonthParams_CustomRetention(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	// Set custom retention to 15 months
+	customRetention := 15
+	err := c.UpdateBillingRetentionMonths(ctx, customRetention)
+	require.NoError(t, err)
+
+	// Verify the custom retention was set
+	retentionMonths, err := c.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, customRetention, retentionMonths)
+
+	now := time.Now().UTC()
+	currentMonth := now.Format("2006-01")
+	previousMonth := timeutil.StartOfPreviousMonth(now).Format("2006-01")
+
+	// With 15 months retention:
+	// - retentionStart is 14 months ago (oldest retained month)
+	// - beforeRetentionStart is 15 months ago (should trigger warning)
+	retentionStart := timeutil.StartOfMonth(now).AddDate(0, -(customRetention - 1), 0).Format("2006-01")
+	beforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -customRetention, 0).Format("2006-01")
+	twoMonthsBeforeRetentionStart := timeutil.StartOfMonth(now).AddDate(0, -(customRetention + 1), 0).Format("2006-01")
+
+	testCases := []struct {
+		name            string
+		startMonth      interface{}
+		endMonth        interface{}
+		expectedMonths  int
+		expectedWarning string
+	}{
+		{
+			name:           "start and end within custom retention period",
+			startMonth:     previousMonth,
+			endMonth:       currentMonth,
+			expectedMonths: 2,
+		},
+		{
+			name:            "start before custom retention period",
+			startMonth:      beforeRetentionStart,
+			expectedMonths:  customRetention + 1,
+			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
+		},
+		{
+			name:           "start is exactly start of custom retention period",
+			startMonth:     retentionStart,
+			endMonth:       previousMonth,
+			expectedMonths: customRetention - 1,
+		},
+		{
+			name:            "start and end before custom retention period",
+			startMonth:      twoMonthsBeforeRetentionStart,
+			endMonth:        beforeRetentionStart,
+			expectedMonths:  2,
+			expectedWarning: WarningStartEndMonthOutOfRetentionRange,
+		},
+		{
+			name:           "no parameters with custom retention",
+			expectedMonths: customRetention,
+		},
+	}
+
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			req := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
+			if test.startMonth != nil {
+				req.Data["start_month"] = test.startMonth
+			}
+			if test.endMonth != nil {
+				req.Data["end_month"] = test.endMonth
+			}
+
+			resp, err := b.HandleRequest(ctx, req)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			// Check for expected warning
+			if test.expectedWarning != "" {
+				require.NotNil(t, resp.Warnings)
+				require.Contains(t, resp.Warnings, test.expectedWarning)
+			}
+
+			// Verify the number of months returned matches custom retention
+			months, ok := resp.Data["months"].([]interface{})
+			require.True(t, ok)
+			require.Len(t, months, test.expectedMonths,
+				"should return %d months with custom retention of %d", test.expectedMonths, customRetention)
+		})
+	}
+}
+
 // TestSystemBackend_BillingOverview_WithMetrics tests the billing overview endpoint
 // with actual KV secrets created to generate billing metrics. It verifies that KV v2
 // secrets are properly counted in billing, the static_secrets metric appears in the
@@ -280,7 +376,7 @@ func TestSystemBackend_BillingOverview_WithMetrics(t *testing.T) {
 	// Verify the response contains metrics
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	currentMonthData, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -323,7 +419,7 @@ func TestSystemBackend_BillingOverview_WithMetrics(t *testing.T) {
 
 	// Verify that all previous months (without data) have empty usage_metrics
 	currentMonthStart := timeutil.StartOfMonth(currentMonth)
-	for i := 1; i < billing.BillingRetentionMonths; i++ {
+	for i := 1; i < billing.DefaultBillingRetentionMonths; i++ {
 		monthData, ok := months[i].(map[string]interface{})
 		require.True(t, ok, "month %d should be a map", i)
 
@@ -503,7 +599,7 @@ func TestSystemBackend_BillingOverview_MetricTypeFormat(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	currentMonthData, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -693,10 +789,10 @@ func TestSystemBackend_BillingOverview_HistoricalMonths(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	// Loop through all months and verify timestamps
-	for i := 0; i < billing.BillingRetentionMonths; i++ {
+	for i := 0; i < billing.DefaultBillingRetentionMonths; i++ {
 		monthData, ok := months[i].(map[string]interface{})
 		require.True(t, ok, "month %d should be a map", i)
 
@@ -745,7 +841,7 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 	// Verify the response structure exists
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	// Check current month has all metrics with zero values
 	currentMonth, ok := months[0].(map[string]interface{})
@@ -903,7 +999,7 @@ func TestSystemBackend_BillingOverview_EmptyMetrics(t *testing.T) {
 	}
 
 	// Verify all previous months also have zero values
-	for i := 1; i < billing.BillingRetentionMonths; i++ {
+	for i := 1; i < billing.DefaultBillingRetentionMonths; i++ {
 		monthData, ok := months[i].(map[string]interface{})
 		require.True(t, ok, "month %d should be a map", i)
 		require.Contains(t, monthData, "usage_metrics", "month %d should have usage_metrics", i)
@@ -996,7 +1092,7 @@ func TestSystemBackend_BillingOverview_MultipleMetricTypes(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	currentMonthData, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -1042,7 +1138,7 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	currentMonth, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -1059,7 +1155,7 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 	require.Equal(t, firstTime, lastUpdate, "stored timestamp should match response timestamp")
 
 	// Verify all previous months have zero timestamp (no data stored for them)
-	for i := 1; i < billing.BillingRetentionMonths; i++ {
+	for i := 1; i < billing.DefaultBillingRetentionMonths; i++ {
 		prevMonth, ok := months[i].(map[string]interface{})
 		require.True(t, ok, "month %d should be a map", i)
 
@@ -1085,7 +1181,7 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 
 	months, ok = resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	currentMonth, ok = months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -1105,7 +1201,7 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp(t *testing.T) {
 		"updated_at without refresh should be identical to the stored timestamp")
 
 	// Verify all previous months' timestamps remain the same (zero time)
-	for i := 1; i < billing.BillingRetentionMonths; i++ {
+	for i := 1; i < billing.DefaultBillingRetentionMonths; i++ {
 		prevMonth, ok := months[i].(map[string]interface{})
 		require.True(t, ok, "month %d should be a map", i)
 
@@ -1139,7 +1235,7 @@ func TestSystemBackend_BillingOverview_UpdatedAtTimestamp_NoStoredTimestamp(t *t
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	currentMonth, ok := months[0].(map[string]interface{})
 	require.True(t, ok)
@@ -1184,7 +1280,7 @@ func TestSystemBackend_BillingOverview_AllMetricTypesPresent(t *testing.T) {
 	// Verify the response structure exists
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	// Check current month has all metrics
 	currentMonth, ok := months[0].(map[string]interface{})
@@ -1321,7 +1417,7 @@ func TestSystemBackend_BillingOverview_PreviousMonth_WithError(t *testing.T) {
 
 	months, ok := resp.Data["months"].([]interface{})
 	require.True(t, ok)
-	require.Len(t, months, billing.BillingRetentionMonths)
+	require.Len(t, months, billing.DefaultBillingRetentionMonths)
 
 	// Check previous month data
 	previousMonthData, ok := months[1].(map[string]interface{})
@@ -1589,4 +1685,165 @@ func TestRoundUsageMetrics(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestSystemBackend_BillingConfig_Read tests reading the billing retention configuration
+func TestSystemBackend_BillingConfig_Read(t *testing.T) {
+	_, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	// Read config when not set - should return default
+	req := logical.TestRequest(t, logical.ReadOperation, "billing/config")
+	resp, err := b.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, billing.DefaultBillingRetentionMonths, resp.Data["retention_months"])
+}
+
+// TestSystemBackend_BillingConfig_Write tests writing the billing retention configuration
+func TestSystemBackend_BillingConfig_Write(t *testing.T) {
+	_, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	testCases := []struct {
+		name            string
+		retentionMonths int
+		expectError     bool
+		errorContains   string
+		expectWarning   bool
+		warningContains string
+	}{
+		{
+			name:            "valid minimum value",
+			retentionMonths: billing.MinBillingRetentionMonths,
+			expectError:     false,
+			expectWarning:   false, // Less than default, no warning
+		},
+		{
+			name:            "valid maximum value",
+			retentionMonths: billing.MaxBillingRetentionMonths,
+			expectError:     false,
+			expectWarning:   true, // Greater than default (37), should warn
+			warningContains: "Retention period increased",
+		},
+		{
+			name:            "valid middle value below default",
+			retentionMonths: 24,
+			expectError:     false,
+			expectWarning:   false, // Less than default, no warning
+		},
+		{
+			name:            "valid middle value above default",
+			retentionMonths: 48,
+			expectError:     false,
+			expectWarning:   true, // Greater than default (37), should warn
+			warningContains: "Retention period increased",
+		},
+		{
+			name:            "below minimum",
+			retentionMonths: billing.MinBillingRetentionMonths - 1,
+			expectError:     true,
+			errorContains:   "must be between",
+		},
+		{
+			name:            "above maximum",
+			retentionMonths: billing.MaxBillingRetentionMonths + 1,
+			expectError:     true,
+			errorContains:   "must be between",
+		},
+		{
+			name:            "zero value",
+			retentionMonths: 0,
+			expectError:     true,
+			errorContains:   "must be between",
+		},
+		{
+			name:            "negative value",
+			retentionMonths: -1,
+			expectError:     true,
+			errorContains:   "must be between",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+			req.Data = map[string]interface{}{
+				"retention_months": tc.retentionMonths,
+			}
+
+			resp, err := b.HandleRequest(ctx, req)
+
+			if tc.expectError {
+				require.Equal(t, logical.ErrInvalidRequest, err)
+				require.NotNil(t, resp)
+				require.True(t, resp.IsError())
+				require.Contains(t, resp.Error().Error(), tc.errorContains)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.False(t, resp.IsError())
+
+				// Check for warning when increasing retention
+				if tc.expectWarning {
+					require.Len(t, resp.Warnings, 1, "should have warning when increasing retention above default")
+					require.Contains(t, resp.Warnings[0], tc.warningContains)
+				} else {
+					require.Empty(t, resp.Warnings, "should not have warnings when not increasing retention")
+				}
+
+				// Verify the value was stored by reading it back
+				readReq := logical.TestRequest(t, logical.ReadOperation, "billing/config")
+				readResp, err := b.HandleRequest(ctx, readReq)
+				require.NoError(t, err)
+				require.NotNil(t, readResp)
+				require.Equal(t, tc.retentionMonths, readResp.Data["retention_months"])
+			}
+		})
+	}
+}
+
+// TestSystemBackend_BillingConfig_AffectsOverview tests that config affects billing overview
+func TestSystemBackend_BillingConfig_AffectsOverview(t *testing.T) {
+	_, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	// Set retention to minimum (13 months)
+	writeReq := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeReq.Data = map[string]interface{}{
+		"retention_months": billing.MinBillingRetentionMonths,
+	}
+	_, err := b.HandleRequest(ctx, writeReq)
+	require.NoError(t, err)
+
+	// Request billing overview
+	overviewReq := logical.TestRequest(t, logical.ReadOperation, "billing/overview")
+	resp, err := b.HandleRequest(ctx, overviewReq)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Verify we get 13 months of data
+	months, ok := resp.Data["months"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, months, billing.MinBillingRetentionMonths)
+
+	// Set retention to maximum (72 months)
+	writeReq = logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeReq.Data = map[string]interface{}{
+		"retention_months": billing.MaxBillingRetentionMonths,
+	}
+	_, err = b.HandleRequest(ctx, writeReq)
+	require.NoError(t, err)
+
+	// Request billing overview again
+	overviewReq = logical.TestRequest(t, logical.ReadOperation, "billing/overview")
+	resp, err = b.HandleRequest(ctx, overviewReq)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	// Verify we get 72 months of data
+	months, ok = resp.Data["months"].([]interface{})
+	require.True(t, ok)
+	require.Len(t, months, billing.MaxBillingRetentionMonths)
 }

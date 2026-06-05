@@ -17,11 +17,18 @@ import (
 )
 
 const (
-	// BillingRetentionMonths is the number of months of billing data to retain.
+	// DefaultBillingRetentionMonths is the default number of months of billing data to retain.
 	// This includes the current month plus previous months (e.g., 37 = current + 36 previous months).
-	BillingRetentionMonths = 37
+	DefaultBillingRetentionMonths = 37
+
+	// MinBillingRetentionMonths is the minimum allowed retention period (13 months = 1 year + current month)
+	MinBillingRetentionMonths = 13
+
+	// MaxBillingRetentionMonths is the maximum allowed retention period (72 months = 6 years)
+	MaxBillingRetentionMonths = 72
 
 	BillingSubPath                          = "billing/"
+	BillingConfigPath                       = "config"
 	ReplicatedPrefix                        = "replicated/"
 	RoleHWMCountsHWM                        = "maxRoleCounts/"
 	TotpHWMCountsHWM                        = "maxTotpCounts/"
