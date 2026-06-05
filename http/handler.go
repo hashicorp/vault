@@ -584,7 +584,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		cleanedPath := cleanPath(originalPath)
 		switch {
 		case originalPath != cleanedPath:
-			respondError(nw, http.StatusBadRequest, errors.New("vault request paths must be canonical and not relative"))
+			http.Redirect(w, r, r.URL.Path, http.StatusTemporaryRedirect)
 			cancelFunc()
 			return
 		case strings.HasPrefix(r.URL.Path, "/v1/"):

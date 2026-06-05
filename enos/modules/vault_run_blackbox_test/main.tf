@@ -38,7 +38,7 @@ resource "enos_local_exec" "run_blackbox_test" {
   environment = merge(
     {
       VAULT_TOKEN        = var.vault_root_token
-      VAULT_ADDR         = var.vault_addr != null ? var.vault_addr : "http://${var.leader_public_ip}:8200"
+      VAULT_ADDR         = var.vault_addr != null ? var.vault_addr : (contains(split("", var.leader_public_ip), ":") ? "http://[${var.leader_public_ip}]:8200" : "http://${var.leader_public_ip}:8200")
       VAULT_TEST_PACKAGE = var.test_package
       VAULT_TEST_MATRIX  = length(local.test_names) > 0 ? local_file.test_matrix.filename : ""
       VAULT_EDITION      = var.vault_edition
@@ -51,7 +51,8 @@ resource "enos_local_exec" "run_blackbox_test" {
     var.vault_install_dir != null ? { VAULT_INSTALL_DIR = var.vault_install_dir } : {},
     local.ldap_environment,
     local.postgres_environment,
-    local.mongodb_environment
+    local.mongodb_environment,
+    var.test_env_vars
   )
 }
 
