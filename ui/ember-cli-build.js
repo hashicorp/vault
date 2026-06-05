@@ -88,6 +88,7 @@ module.exports = function (defaults) {
   app.import(
     'node_modules/@hashicorp/design-system-components/dist/styles/@hashicorp/design-system-components.css'
   );
+  app.import('node_modules/@carbon/charts/dist/styles.css');
 
   return app.toTree();
 };

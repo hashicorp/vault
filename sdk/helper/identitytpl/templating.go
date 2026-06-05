@@ -27,6 +27,9 @@ var (
 const (
 	ACLTemplating = iota // must be the first value for backwards compatibility
 	JSONTemplating
+
+	// QuotedTemplating is like ACLTemplating, but quotes are escaped (for example `a "` becomes `a \"`)
+	QuotedTemplating
 )
 
 type PopulateStringInput struct {
@@ -53,25 +56,42 @@ type templateHandlerFunc func(interface{}, ...string) (string, error)
 // aclTemplateHandler processes known parameter data types when operating
 // in ACL mode.
 func aclTemplateHandler(v interface{}, keys ...string) (string, error) {
+	return simpleTemplateHandler(v, keys, func(s string) string {
+		return s
+	})
+}
+
+func simpleTemplateHandler(v interface{}, keys []string, quoteFunc func(s string) string) (string, error) {
 	switch t := v.(type) {
 	case string:
 		if t == "" {
 			return "", ErrTemplateValueNotFound
 		}
-		return t, nil
+		return quoteFunc(t), nil
 	case []string:
 		return "", ErrTemplateValueNotFound
 	case map[string]string:
 		if len(keys) > 0 {
 			val, ok := t[keys[0]]
 			if ok {
-				return val, nil
+				return quoteFunc(val), nil
 			}
 		}
 		return "", ErrTemplateValueNotFound
 	}
 
 	return "", fmt.Errorf("unknown type: %T", v)
+}
+
+// quotedTemplateHandler uses strconv.Quote to quote values
+func quotedTemplateHandler(v interface{}, keys ...string) (string, error) {
+	return simpleTemplateHandler(v, keys, func(s string) string {
+		escaped := strconv.Quote(s)
+		if len(escaped) < 2 {
+			return escaped
+		}
+		return escaped[1 : len(escaped)-1]
+	})
 }
 
 // jsonTemplateHandler processes known parameter data types when operating
@@ -120,6 +140,8 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 		p.templateHandler = aclTemplateHandler
 	case JSONTemplating:
 		p.templateHandler = jsonTemplateHandler
+	case QuotedTemplating:
+		p.templateHandler = quotedTemplateHandler
 	default:
 		return false, "", fmt.Errorf("unknown mode %q", p.Mode)
 	}
@@ -235,7 +257,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 				}
 			}
 			if alias == nil {
-				if p.Mode == ACLTemplating {
+				if p.Mode == ACLTemplating || p.Mode == QuotedTemplating {
 					return "", errors.New("alias not found")
 				}
 
