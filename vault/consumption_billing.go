@@ -131,8 +131,15 @@ func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 }
 
 func (c *Core) deleteExpiredBillingMetrics(ctx context.Context, currentMonth time.Time) error {
-	// Delete data from BillingRetentionMonths ago (keeping current month + previous (BillingRetentionMonths - 1) months = BillingRetentionMonths total)
-	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.BillingRetentionMonths, 0)
+	// Get the configured retention period
+	retentionMonths, err := c.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		c.logger.Warn("failed to get billing retention configuration, using default")
+		retentionMonths = billing.DefaultBillingRetentionMonths
+	}
+
+	// Delete data from retentionMonths ago (keeping current month + previous (retentionMonths - 1) months = retentionMonths total)
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths, 0)
 	// Delete billing metrics from both replicated and local prefixes
 	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 		// If we are not the primary, then do not delete replicate metrics

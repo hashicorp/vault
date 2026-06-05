@@ -456,6 +456,53 @@ func (c *Core) GetBillingSubView() (*BarrierView, bool) {
 	return c.consumptionBillingSubView, true
 }
 
+func (c *Core) GetBillingRetentionMonths(ctx context.Context) (int, error) {
+	c.billingConfigLock.RLock()
+	defer c.billingConfigLock.RUnlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return billing.DefaultBillingRetentionMonths, nil
+	}
+
+	entry, err := view.Get(ctx, billing.BillingConfigPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read billing config: %w", err)
+	}
+	if entry == nil {
+		// No config stored, return default
+		return billing.DefaultBillingRetentionMonths, nil
+	}
+
+	retentionMonths, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+
+	return retentionMonths, nil
+}
+
+func (c *Core) UpdateBillingRetentionMonths(ctx context.Context, retentionMonths int) error {
+	c.billingConfigLock.Lock()
+	defer c.billingConfigLock.Unlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return fmt.Errorf("billing sub view not available")
+	}
+
+	entry := &logical.StorageEntry{
+		Key:   billing.BillingConfigPath,
+		Value: []byte(strconv.Itoa(retentionMonths)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("failed to store billing config: %w", err)
+	}
+
+	return nil
+}
+
 // storeTransitCallCountsLocked must be called with BillingStorageLock held
 func (c *Core) storeTransitCallCountsLocked(ctx context.Context, transitCount uint64, localPathPrefix string, month time.Time) error {
 	// Store count for each data protection type separately because they are atomic counters
