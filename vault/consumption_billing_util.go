@@ -186,8 +186,9 @@ func (c *Core) GetStoredHWMKvCounts(ctx context.Context, localPathPrefix string,
 	return c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, month)
 }
 
-// UpdateMaxKvCounts updates the HWM kv counts for the given month, and returns the value that was stored.
-func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (int, error) {
+// UpdateMaxKvCounts updates the HWM kv counts for the given month by comparing the current counts passed in with the stored count,
+// and returns the updated stored value.
+func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentKvCounts int) (int, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
@@ -199,16 +200,6 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	local := localPathPrefix == billing.LocalPrefix
-
-	// Get the current count of all KV secrets
-	currentKvCounts, err := c.GetKvUsageMetricsByNamespace(ctx, "0", "", local, !local, false)
-	if err != nil {
-		c.logger.Error("error getting count of all KV secrets", "error", err)
-		return 0, err
-	}
-	totalKvCounts := getTotalSecretsAcrossAllNamespaces(currentKvCounts)
-
 	// Get the stored max kv counts
 	maxKvCounts, err := c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, currentMonth)
 	if err != nil {
@@ -216,11 +207,11 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 		return 0, err
 	}
 	if maxKvCounts == 0 {
-		maxKvCounts = totalKvCounts
+		maxKvCounts = currentKvCounts
 	}
-	if totalKvCounts > maxKvCounts {
-		c.logger.Info("updating max kv counts", "totalKvCounts", totalKvCounts, "maxKvCounts", maxKvCounts)
-		maxKvCounts = totalKvCounts
+	if currentKvCounts > maxKvCounts {
+		c.logger.Info("updating max kv counts", "currentKvCounts", currentKvCounts, "maxKvCounts", maxKvCounts)
+		maxKvCounts = currentKvCounts
 	}
 	err = c.storeMaxKvCountsLocked(ctx, maxKvCounts, localPathPrefix, currentMonth)
 	if err != nil {
@@ -244,7 +235,9 @@ func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *Role
 	return view.Put(ctx, entry)
 }
 
-func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (*RoleCounts, *ManagedKeyCounts, error) {
+// UpdateMaxRoleAndManagedKeyCounts updates the HWM role and managed key counts for the given month by comparing the current counts
+// passed in with the stored counts.
+func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentRoleCounts *RoleCounts, currentManagedKeyCounts *ManagedKeyCounts) (*RoleCounts, *ManagedKeyCounts, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
@@ -256,18 +249,21 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	local := localPathPrefix == billing.LocalPrefix
-	currentRoleCounts, currentManagedKeyCounts, err := c.getRoleAndManagedKeyCountsInternal(local, !local, true)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Add nil checks before dereferencing
-	if currentRoleCounts == nil {
-		currentRoleCounts = &RoleCounts{}
-	}
-	if currentManagedKeyCounts == nil {
-		currentManagedKeyCounts = &ManagedKeyCounts{}
+	// If somehow the current counts is empty, we should try get the counts here
+	if currentRoleCounts == nil || currentManagedKeyCounts == nil {
+		c.logger.Debug("current role or managed key counts is empty, trying to get counts again")
+		metrics, err := c.CountMetricsFromMounts(true)
+		if err != nil {
+			c.logger.Error("error getting current role and managed key counts", "error", err)
+			return nil, nil, err
+		}
+		if localPathPrefix == billing.LocalPrefix {
+			currentRoleCounts = metrics.LocalRoleCounts
+			currentManagedKeyCounts = metrics.LocalManagedKeys
+		} else {
+			currentRoleCounts = metrics.ReplicatedRoleCounts
+			currentManagedKeyCounts = metrics.ReplicatedManagedKeys
+		}
 	}
 
 	// get max role counts

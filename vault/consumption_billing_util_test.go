@@ -281,7 +281,8 @@ func TestHWMRoleCounts(t *testing.T) {
 	firstCounts := core.GetRoleCounts()
 	verifyExpectedRoleCounts(t, firstCounts, 5)
 
-	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys := core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -297,7 +298,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 2)
 	}
 
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -313,7 +315,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 8)
 	}
 
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -329,7 +332,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 5)
 	}
 
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
