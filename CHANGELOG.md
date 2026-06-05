@@ -3,6 +3,23 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 2.0.2
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+CHANGES:
+
+* core: Bump Go version to 1.26.4
+* secrets/azure (enterprise): Update plugin to [v0.26.4+ent](https://github.com/hashicorp/vault-plugin-secrets-azure-enterprise/releases/tag/v0.26.4+ent)
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* ui/transit: Fix key version dropdown selected state when editing a transit key.
+
 ## 2.0.1
 ### May 19, 2026
 BREAKING CHANGES:
@@ -340,6 +357,24 @@ BUG FIXES:
 * ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
 * ui: fix renew token button rendering for denied renew-self.
 * ui: remove unnecessary 'credential type' form input when generating AWS secrets
+
+## 1.21.7 Enterprise
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+
+CHANGES:
+
+* core: Bump Go version to 1.25.11
+* secrets/azure (enterprise): Update plugin to [v0.25.3+ent](https://github.com/hashicorp/vault-plugin-secrets-azure-enterprise/releases/tag/v0.25.3+ent)
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* ui/transit: Fix key version dropdown selected state when editing a transit key.
 
 ## 1.21.6 Enterprise
 ### May 19, 2026
@@ -809,6 +844,22 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.12 Enterprise
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+
+CHANGES:
+
+* core: Bump Go version to 1.25.11
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
 
 ## 1.20.11 Enterprise
 ### May 19, 2026
@@ -1369,6 +1420,23 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.18 Enterprise
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+
+CHANGES:
+
+* core: Bump Go version to 1.25.11
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* ui/transit: Fix key version dropdown selected state when editing a transit key.
 
 ## 1.19.17 Enterprise
 ### May 19, 2026
