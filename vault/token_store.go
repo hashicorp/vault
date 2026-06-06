@@ -758,6 +758,16 @@ type TokenStore struct {
 func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *logical.BackendConfig) (*TokenStore, error) {
 	// Create a sub-view
 	view := core.systemBarrierView.SubView(tokenSubPath)
+	if core.IsDRSecondary() {
+		// Generally speaking, DR secondaries do not handle requests using tokens
+		// from the TokenStore.  Requests to DR secondaries should either be
+		// unauthenticated, or use a batch token, or use a DR operation token
+		// created using the generate-operation-token api.  With the change to
+		// make generate-operation-token authenticated by default, we're now also
+		// allowing regular root tokens from the primary cluster to be used.
+		//
+		view.setReadOnlyErr(logical.ErrReadOnly)
+	}
 
 	// Initialize the store
 	t := &TokenStore{
@@ -1107,9 +1117,11 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	switch entry.Type {
-	case logical.TokenTypeDefault, logical.TokenTypeService:
+	case logical.TokenTypeDefault, logical.TokenTypeService, logical.TokenTypeEnt:
 		// In case it was default, force to service
-		entry.Type = logical.TokenTypeService
+		if entry.Type == logical.TokenTypeDefault {
+			entry.Type = logical.TokenTypeService
+		}
 
 		// Generate an ID if necessary
 		userSelectedID := true
@@ -1126,7 +1138,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			}
 		}
 
-		if userSelectedID {
+		if userSelectedID && entry.Type != logical.TokenTypeEnt {
 			switch {
 			case strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 'hvs.' prefix")
@@ -1151,7 +1163,10 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
-		if tokenNS.ID != namespace.RootNamespaceID || strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) || strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) {
+		if tokenNS.ID != namespace.RootNamespaceID ||
+			strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) ||
+			strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) ||
+			strings.HasPrefix(entry.ID, consts.GetEnterpriseTokenPrefix()) {
 			if entry.CubbyholeID == "" {
 				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
@@ -1163,7 +1178,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 		// If the user didn't specifically pick the ID, e.g. because they were
 		// sudo/root, check for collision; otherwise trust the process
-		if userSelectedID {
+		if userSelectedID || entry.Type == logical.TokenTypeEnt {
 			exist, _ := ts.lookupInternal(ctx, entry.ID, false, true)
 			if exist != nil {
 				return fmt.Errorf("cannot create a token with a duplicate ID")
@@ -1503,17 +1518,16 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
+	normalizedID := normalizeEnterpriseTokenToID(id)
 
 	// If it starts with "b." it's a batch token
-	if IsBatchToken(id) {
-		return ts.lookupBatchToken(ctx, id)
+	if IsBatchToken(normalizedID) {
+		return ts.lookupBatchToken(ctx, normalizedID)
 	}
-
-	lock := locksutil.LockForKey(ts.tokenLocks, id)
+	lock := locksutil.LockForKey(ts.tokenLocks, normalizedID)
 	lock.RLock()
 	defer lock.RUnlock()
-
-	return ts.lookupInternal(ctx, id, false, false)
+	return ts.lookupInternal(ctx, normalizedID, false, false)
 }
 
 func (ts *TokenStore) stripBatchPrefix(id string) string {
@@ -1636,7 +1650,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		// If possible, always use the token's namespace. If it doesn't match
 		// the request namespace, ensure the request namespace is a child
 		_, nsID := namespace.SplitIDFromString(id)
-		if nsID != "" {
+		if nsID != "" || strings.HasPrefix(id, consts.GetEnterpriseTokenPrefix()) {
 			tokenNS, err := NamespaceByID(ctx, nsID, ts.core)
 			if err != nil {
 				return nil, fmt.Errorf("failed to look up namespace from the token: %w", err)
@@ -1740,6 +1754,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		return entry, nil
 	}
 
+	if entry.IsRoot() {
+		// We don't need to check for persistence or expiration for root tokens.
+		return entry, nil
+	}
+
 	// Perform these checks on upgraded fields, but before persisting
 
 	// If we are still restoring the expiration manager, we want to ensure the
@@ -1751,6 +1770,11 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		default:
 			return nil, errors.New("expiration manager is nil on tokenstore")
 		}
+	}
+
+	// don't check for lease
+	if entry.Type == logical.TokenTypeEnt {
+		return entry, nil
 	}
 
 	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
@@ -2266,6 +2290,11 @@ func (ts *TokenStore) handleTidy(ctx context.Context, req *logical.Request, data
 				return fmt.Errorf("failed to fetch cubbyhole storage keys: %w", err)
 			}
 
+			err = ts.handleTidyEnterpriseTokens(quitCtx, ns, tidyErrors)
+			if err != nil {
+				return err
+			}
+
 			var countParentEntries, deletedCountParentEntries, countParentList, deletedCountParentList int64
 
 			// Scan through the secondary index entries; if there is an entry
@@ -2654,6 +2683,11 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
+	normalizedClientToken := normalizeEnterpriseTokenToID(req.ClientToken)
+	if !orphan && IsEnterpriseTokenId(normalizedClientToken) {
+		return logical.ErrorResponse("enterprise tokens cannot create child tokens"), logical.ErrInvalidRequest
+	}
+
 	// Read the parent policy
 	parent, err := ts.Lookup(ctx, req.ClientToken)
 	if err != nil {
@@ -3321,6 +3355,10 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
+	normalizedID := normalizeEnterpriseTokenToID(id)
+	if IsEnterpriseTokenId(normalizedID) {
+		return logical.ErrorResponse("cannot revoke ent token"), nil
+	}
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -3365,6 +3403,11 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	normalizedID := normalizeEnterpriseTokenToID(id)
+	if IsEnterpriseTokenId(normalizedID) {
+		return logical.ErrorResponse("enterprise token cannot be revoked"), nil
+	}
+
 	// Do a lookup. Among other things, that will ensure that this is either
 	// running in the same namespace or a parent.
 	te, err := ts.Lookup(ctx, id)
@@ -3402,7 +3445,21 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
-
+	if IsEnterpriseToken(id) {
+		// If the token specified in the request body is different from the caller's
+		// token, resolve the token ID based on the body token's claims (JTI) instead
+		// of req.EnterpriseTokenMetadata, otherwise we may silently return the caller's
+		// own token entry or fail for non-Enterprise token callers.
+		if id == req.ClientToken {
+			id = getEnterpriseTokenId(req.EnterpriseTokenMetadata)
+		} else {
+			resolvedID, err := resolveEnterpriseTokenIDForLookup(id)
+			if err != nil {
+				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+			}
+			id = resolvedID
+		}
+	}
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
@@ -3513,6 +3570,10 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+	normalizedID := normalizeEnterpriseTokenToID(id)
+	if IsEnterpriseTokenId(normalizedID) {
+		return logical.ErrorResponse("enterprise tokens cannot be renewed"), nil
 	}
 	incrementRaw := data.Get("increment").(int)
 

@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"slices"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
@@ -18,11 +21,24 @@ import (
 // Session holds the test context and Vault client
 type Session struct {
 	t         *testing.T
+	NoCleanup bool
 	Client    *api.Client
 	Namespace string
 }
 
-func New(t *testing.T) *Session {
+func (s *Session) T() *testing.T {
+	return s.t
+}
+
+type SessionOpts func(s *Session)
+
+func WithNoCleanup() SessionOpts {
+	return func(s *Session) {
+		s.NoCleanup = true
+	}
+}
+
+func New(t *testing.T, opts ...SessionOpts) *Session {
 	t.Helper()
 
 	addr := os.Getenv("VAULT_ADDR")
@@ -37,22 +53,69 @@ func New(t *testing.T) *Session {
 
 	config := api.DefaultConfig()
 	config.Address = addr
+	config.Timeout = 120 * time.Second // Increase timeout for LDAP operations that verify service accounts
 
 	privClient, err := api.NewClient(config)
 	require.NoError(t, err)
 	privClient.SetToken(token)
 
-	nsName := fmt.Sprintf("bbsdk-%s", randomString(8))
+	// Auto-detect protocol: if we get HTTP/HTTPS mismatch, retry with correct protocol
+	if strings.HasPrefix(addr, "http://") {
+		// Try HTTP first, but be ready to switch to HTTPS
+		testResp, testErr := privClient.Sys().Health()
+		if testErr != nil && (strings.Contains(testErr.Error(), "Client sent an HTTP request to an HTTPS server") ||
+			strings.Contains(testErr.Error(), "server gave HTTP response to HTTPS client")) {
+			// Server is using HTTPS, create completely fresh config
+			httpsAddr := strings.Replace(addr, "http://", "https://", 1)
+
+			httpsConfig := api.DefaultConfig()
+			httpsConfig.Address = httpsAddr
+			httpsConfig.Timeout = 120 * time.Second
+
+			// Disable TLS verification for test environments
+			tlsConfig := &api.TLSConfig{
+				Insecure: true,
+			}
+			if err := httpsConfig.ConfigureTLS(tlsConfig); err != nil {
+				require.NoError(t, err, "Failed to configure TLS")
+			}
+
+			privClient, err = api.NewClient(httpsConfig)
+			require.NoError(t, err)
+			privClient.SetToken(token)
+			t.Logf("Auto-detected HTTPS protocol, switched from %s to %s (TLS verification disabled)", addr, httpsAddr)
+		} else if testErr != nil && testResp == nil {
+			// Some other error, fail normally
+			require.NoError(t, testErr, "Failed to connect to Vault at %s", addr)
+		}
+	}
+
+	// Use timestamp to ensure uniqueness across test retries
+	nsName := fmt.Sprintf("bbsdk-%d-%s", time.Now().UnixNano(), randomString(8))
 	nsURLPath := fmt.Sprintf("sys/namespaces/%s", nsName)
 
+	// Try to create the namespace, but if it already exists (from a previous failed run),
+	// delete it first and retry
 	_, err = privClient.Logical().Write(nsURLPath, nil)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		_, err = privClient.Logical().Delete(nsURLPath)
-		require.NoError(t, err)
-		t.Logf("Cleaned up namespace %s", nsName)
-	})
+	if err != nil {
+		// Check if namespace already exists
+		if resp, readErr := privClient.Logical().Read(nsURLPath); readErr == nil && resp != nil {
+			t.Logf("RETRY DETECTED: Namespace %s already exists from previous failed test run, cleaning up and retrying", nsName)
+			_, delErr := privClient.Logical().Delete(nsURLPath)
+			if delErr != nil {
+				t.Fatalf("RETRY CLEANUP FAILED: Could not delete existing namespace %s: %v (original creation error: %v)", nsName, delErr, err)
+			}
+			// Retry creation after deletion
+			_, err = privClient.Logical().Write(nsURLPath, nil)
+			if err != nil {
+				t.Fatalf("RETRY FAILED: Could not create namespace %s after cleanup: %v", nsName, err)
+			}
+			t.Logf("RETRY SUCCESS: Namespace %s created after cleanup", nsName)
+		} else {
+			// This is the initial failure, not a retry
+			require.NoError(t, err, "INITIAL TEST FAILURE: Failed to create namespace %s. If you see this error followed by a retry with a different error, the cluster state was not properly reset.", nsName)
+		}
+	}
 
 	// session client should get the full namespace of parent + test
 	fullNSPath := nsName
@@ -71,6 +134,23 @@ func New(t *testing.T) *Session {
 		Client:    sessionClient,
 		Namespace: nsName,
 	}
+
+	for opt := range slices.Values(opts) {
+		opt(session)
+	}
+
+	t.Cleanup(func() {
+		if session.NoCleanup {
+			t.Logf("WARN: NoCleanup has been set, not cleaning up namespace")
+			return
+		}
+		privClient.SetClientTimeout(time.Second)
+		session.Eventually(func() error {
+			_, err = privClient.Logical().Delete(nsURLPath)
+			return err
+		})
+		t.Logf("Cleaned up namespace %s", nsName)
+	})
 
 	// make sure the namespace has been created
 	session.Eventually(func() error {

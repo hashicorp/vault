@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { baseResourceFactory } from 'vault/resources/base-factory';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 import {
   supportedSecretBackends,
   SupportedSecretBackendsEnum,
 } from 'vault/helpers/supported-secret-backends';
+import { baseResourceFactory } from 'vault/resources/base-factory';
 import { INTERNAL_ENGINE_TYPES, isAddonEngine } from 'vault/utils/all-engines-metadata';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type { Mount } from 'vault/mount';
 

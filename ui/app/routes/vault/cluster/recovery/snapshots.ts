@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { SystemListStorageRaftSnapshotLoadListEnum } from '@hashicorp/vault-client-typescript';
+import { SystemApiSystemListStorageRaftSnapshotLoadListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
 import type Capabilities from 'vault/services/capabilities';
@@ -50,7 +50,7 @@ export default class RecoverySnapshotsRoute extends Route {
       // By default, the api service uses the current namespace context, so we'll need to specify otherwise.
       // Snapshot operations do not have this constraint.
       const { keys } = await this.api.sys.systemListStorageRaftSnapshotLoad(
-        SystemListStorageRaftSnapshotLoadListEnum.TRUE,
+        SystemApiSystemListStorageRaftSnapshotLoadListEnum.TRUE,
         this.api.buildHeaders({ namespace: '' })
       );
       return keys as string[];

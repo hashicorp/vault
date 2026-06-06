@@ -1,0 +1,213 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+{{!
+  TODO: Support other field types based on field.type.
+    - [ ] Key Value Input
+    - [ ] File Input
+}}
+
+{{#if (eq @field.type "TextArea")}}
+  <Hds::Form::Textarea::Field
+    @value={{@value}}
+    @isInvalid={{this.isInvalid}}
+    @isRequired={{@field.isRequired}}
+    @isDisabled={{@field.isDisabled}}
+    name={{this.name}}
+    placeholder={{@field.placeholder}}
+    {{on "input" (pick "target.value" (fn this.handleChange this.name))}}
+    as |F|
+  >
+    <F.Label>{{this.label}}</F.Label>
+    {{#if this.helperText}}
+      <F.HelperText>{{this.helperText}}</F.HelperText>
+    {{/if}}
+    {{#if this.isInvalid}}
+      <F.Error as |E|>
+        {{#each this.errors as |errorMessage|}}
+          <E.Message>{{errorMessage}}</E.Message>
+        {{/each}}
+      </F.Error>
+    {{/if}}
+  </Hds::Form::Textarea::Field>
+
+{{else if (eq @field.type "Select")}}
+  <Hds::Form::Select::Field
+    @value={{@value}}
+    @isInvalid={{this.isInvalid}}
+    @isRequired={{@field.isRequired}}
+    @isDisabled={{@field.isDisabled}}
+    name={{this.name}}
+    {{on "change" (pick "target.value" (fn this.handleChange this.name))}}
+    as |F|
+  >
+    <F.Label>{{this.label}}</F.Label>
+    {{#if this.helperText}}
+      <F.HelperText>{{this.helperText}}</F.HelperText>
+    {{/if}}
+
+    <F.Options>
+      {{#if @field.placeholder}}
+        <option value="">{{@field.placeholder}}</option>
+      {{/if}}
+
+      {{#each @field.options as |opt|}}
+        <option selected={{eq @value opt.value}} value={{opt.value}}>
+          {{opt.label}}
+        </option>
+      {{/each}}
+
+    </F.Options>
+    {{#if this.isInvalid}}
+      <F.Error as |E|>
+        {{#each this.errors as |errorMessage|}}
+          <E.Message>{{errorMessage}}</E.Message>
+        {{/each}}
+      </F.Error>
+    {{/if}}
+  </Hds::Form::Select::Field>
+
+{{else if (eq @field.type "Toggle")}}
+  <Hds::Form::Toggle::Field
+    checked={{@value}}
+    name={{this.name}}
+    disabled={{@field.isDisabled}}
+    {{on "change" (pick "target.checked" (fn this.handleChange this.name))}}
+    as |F|
+  >
+    <F.Label>{{this.label}}</F.Label>
+    {{#if this.helperText}}
+      <F.HelperText>{{this.helperText}}</F.HelperText>
+    {{/if}}
+  </Hds::Form::Toggle::Field>
+
+{{else if (eq @field.type "Checkbox")}}
+  <Hds::Form::Checkbox::Field
+    checked={{@value}}
+    @isInvalid={{this.isInvalid}}
+    @isRequired={{@field.isRequired}}
+    @isDisabled={{@field.isDisabled}}
+    name={{this.name}}
+    {{on "change" (pick "target.checked" (fn this.handleChange this.name))}}
+    as |F|
+  >
+    <F.Label>{{this.label}}</F.Label>
+    {{#if this.helperText}}
+      <F.HelperText>{{this.helperText}}</F.HelperText>
+    {{/if}}
+    {{#if this.isInvalid}}
+      <F.Error as |E|>
+        {{#each this.errors as |errorMessage|}}
+          <E.Message>{{errorMessage}}</E.Message>
+        {{/each}}
+      </F.Error>
+    {{/if}}
+  </Hds::Form::Checkbox::Field>
+
+{{else if (eq @field.type "Radio")}}
+  <Hds::Form::Radio::Group @name={{this.name}} as |G|>
+    <G.Legend>{{this.label}}</G.Legend>
+    {{#if this.helperText}}
+      <G.HelperText>{{this.helperText}}</G.HelperText>
+    {{/if}}
+    {{#each @field.options as |option|}}
+      <G.RadioField
+        checked={{eq @value option.value}}
+        @isDisabled={{@field.isDisabled}}
+        {{on "change" (fn this.handleChange this.name option.value)}}
+        as |F|
+      >
+        <F.Label>{{option.label}}</F.Label>
+      </G.RadioField>
+    {{/each}}
+    {{#if this.isInvalid}}
+      <G.Error as |E|>
+        {{#each this.errors as |errorMessage|}}
+          <E.Message>{{errorMessage}}</E.Message>
+        {{/each}}
+      </G.Error>
+    {{/if}}
+  </Hds::Form::Radio::Group>
+
+{{else if (eq @field.type "RadioCard")}}
+  <Hds::Form::RadioCard::Group @name={{this.name}} @alignment="left" as |G|>
+    <G.Legend>{{this.label}}</G.Legend>
+    {{#if this.helperText}}
+      <G.HelperText>{{this.helperText}}</G.HelperText>
+    {{/if}}
+    {{#each @field.options as |option|}}
+      <G.RadioCard
+        checked={{eq @value option.value}}
+        @isDisabled={{@field.isDisabled}}
+        {{on "change" (fn this.handleChange this.name option.value)}}
+        as |R|
+      >
+        <R.Label>{{option.label}}</R.Label>
+        {{#if option.description}}
+          <R.Description>{{option.description}}</R.Description>
+        {{/if}}
+      </G.RadioCard>
+    {{/each}}
+    {{#if this.isInvalid}}
+      <G.Error as |E|>
+        {{#each this.errors as |errorMessage|}}
+          <E.Message>{{errorMessage}}</E.Message>
+        {{/each}}
+      </G.Error>
+    {{/if}}
+  </Hds::Form::RadioCard::Group>
+
+{{else if (eq @field.type "MaskedInput")}}
+  <Hds::Form::MaskedInput::Field
+    @value={{@value}}
+    @isInvalid={{this.isInvalid}}
+    @isRequired={{@field.isRequired}}
+    @isDisabled={{@field.isDisabled}}
+    name={{this.name}}
+    placeholder={{@field.placeholder}}
+    {{on "input" (pick "target.value" (fn this.handleChange this.name))}}
+    as |F|
+  >
+    <F.Label>{{this.label}}</F.Label>
+    {{#if this.helperText}}
+      <F.HelperText>{{this.helperText}}</F.HelperText>
+    {{/if}}
+    {{#if this.isInvalid}}
+      <F.Error as |E|>
+        {{#each this.errors as |errorMessage|}}
+          <E.Message>{{errorMessage}}</E.Message>
+        {{/each}}
+      </F.Error>
+    {{/if}}
+  </Hds::Form::MaskedInput::Field>
+
+{{else}}
+  {{!
+    Fallback for TextInput type and unsupported field types.
+    For unsupported types, a console warning is logged.
+  }}
+  <Hds::Form::TextInput::Field
+    @type={{this.inputType}}
+    @value={{@value}}
+    @isInvalid={{this.isInvalid}}
+    @isRequired={{@field.isRequired}}
+    name={{this.name}}
+    placeholder={{@field.placeholder}}
+    disabled={{@field.isDisabled}}
+    {{on "input" (pick "target.value" (fn this.handleChange this.name))}}
+    as |F|
+  >
+    <F.Label>{{this.label}}</F.Label>
+    {{#if this.helperText}}
+      <F.HelperText>{{this.helperText}}</F.HelperText>
+    {{/if}}
+    {{#if this.isInvalid}}
+      <F.Error as |E|>
+        {{#each this.errors as |errorMessage|}}
+          <E.Message>{{errorMessage}}</E.Message>
+        {{/each}}
+      </F.Error>
+    {{/if}}
+  </Hds::Form::TextInput::Field>
+{{/if}}

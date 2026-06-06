@@ -38,7 +38,8 @@
   {{#if
     (or
       (and this.isRootNamespace (has-permission "status" routeParams="raft"))
-      (and (has-permission "clients" routeParams="activity") (not this.hasChrootNamespace))
+      (display-nav-item this.navSection.clientCount)
+      (display-nav-item this.routeName.billingDashboard)
     )
   }}
     <Nav.Title data-test-sidebar-nav-heading="Monitoring">Monitoring</Nav.Title>
@@ -57,6 +58,14 @@
       @text="Client count"
       @hasSubItems={{true}}
       data-test-sidebar-nav-link="Client count"
+    />
+  {{/if}}
+  {{#if (display-nav-item this.routeName.billingDashboard)}}
+    <Nav.Link
+      @route="vault.cluster.billing.overview"
+      @text="Billing metrics"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Billing metrics"
     />
   {{/if}}
   {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}

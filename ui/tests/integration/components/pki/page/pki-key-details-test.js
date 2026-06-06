@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
@@ -74,7 +74,7 @@ module('Integration | Component | pki key details page', function (hooks) {
     assert.dom(PKI_KEYS.keyEditLink).doesNotExist('does not render edit button if no permission');
   });
 
-  test('it renders the private key as a <CertificateCard> component when there is a private key', async function (assert) {
+  test('it renders the private key as a <EncodedDataCard> component when there is a private key', async function (assert) {
     this.key.private_key = 'private-key-value';
 
     await this.renderComponent();

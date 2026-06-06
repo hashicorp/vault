@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	metrics "github.com/hashicorp/go-metrics/compat"
+	"github.com/jackc/pgx/v5/pgconn"
 	"google.golang.org/grpc/status"
 )
 
@@ -296,7 +297,7 @@ func (mw *DatabaseErrorSanitizerMiddleware) RotateRootCredentials(ctx context.Co
 
 func (mw *DatabaseErrorSanitizerMiddleware) Initialize(ctx context.Context, conf map[string]interface{}, verifyConnection bool) error {
 	_, err := mw.Init(ctx, conf, verifyConnection)
-	return err
+	return mw.sanitize(err)
 }
 
 func (mw *DatabaseErrorSanitizerMiddleware) Init(ctx context.Context, conf map[string]interface{}, verifyConnection bool) (saveConf map[string]interface{}, err error) {
@@ -313,9 +314,11 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errwrap.ContainsType(err, new(url.Error)) {
+
+	if errwrap.ContainsType(err, new(url.Error)) || errwrap.ContainsType(err, new(pgconn.ParseConfigError)) {
 		return errors.New("unable to parse connection url")
 	}
+
 	if mw.secretsFn != nil {
 		for k, v := range mw.secretsFn() {
 			if k == "" {

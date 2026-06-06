@@ -10,12 +10,14 @@ import (
 )
 
 const (
-	entitiesTable      = "entities"
-	entityAliasesTable = "entity_aliases"
-	groupsTable        = "groups"
-	groupAliasesTable  = "group_aliases"
-	oidcClientsTable   = "oidc_clients"
-	scimClientsTable   = "scim_clients"
+	entitiesTable              = "entities"
+	entityAliasesTable         = "entity_aliases"
+	groupsTable                = "groups"
+	groupAliasesTable          = "group_aliases"
+	oidcClientsTable           = "oidc_clients"
+	scimClientsTable           = "scim_clients"
+	factorsIndex               = "factors"
+	issuerAndExternalIdFactors = "issuer_externalid_factors"
 )
 
 func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
@@ -54,8 +56,8 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Field: "ID",
 				},
 			},
-			"factors": {
-				Name:   "factors",
+			factorsIndex: {
+				Name:   factorsIndex,
 				Unique: true,
 				Indexer: &memdb.CompoundIndex{
 					Indexes: []memdb.Indexer{
@@ -69,6 +71,23 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					},
 				},
 			},
+			issuerAndExternalIdFactors: {
+				Name: issuerAndExternalIdFactors,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{
+							Field: "Issuer",
+						},
+						&memdb.StringFieldIndex{
+							Field: "ExternalID",
+						},
+						&memdb.StringFieldIndex{
+							Field: "NamespaceID",
+						},
+					},
+				},
+				AllowMissing: true,
+			},
 			"namespace_id": {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
@@ -80,6 +99,16 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				AllowMissing: true,
 				Indexer: &memdb.StringFieldIndex{
 					Field: "LocalBucketKey",
+				},
+			},
+			"scim_client_id": {
+				Name:         "scim_client_id",
+				AllowMissing: true,
+				Indexer: &memdb.CompoundIndex{
+					Indexes: []memdb.Indexer{
+						&memdb.StringFieldIndex{Field: "NamespaceID"},
+						&memdb.StringFieldIndex{Field: "ScimClientID"},
+					},
 				},
 			},
 		},

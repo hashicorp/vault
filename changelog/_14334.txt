@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add migration_done_at_epoch to sys/seal-status response.
+```

@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { paginate } from 'core/utils/paginate-list';
-import { KmipListScopesListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiKmipListScopesListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -38,7 +38,10 @@ export default class KmipScopesRoute extends Route {
     const { secretsEngine } = this.modelFor('application') as KmipApplicationModel;
 
     try {
-      const { keys } = await this.api.secrets.kmipListScopes(currentPath, KmipListScopesListEnum.TRUE);
+      const { keys } = await this.api.secrets.kmipListScopes(
+        currentPath,
+        SecretsApiKmipListScopesListEnum.TRUE
+      );
       const scopes = keys ? paginate(keys, { page: Number(page) || 1, filter: pageFilter }) : [];
       // fetch capabilities for filtered scopes
       const paths = scopes.map((scope) =>

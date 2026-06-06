@@ -60,7 +60,11 @@
                 {{/if}}
               {{/if}}
               {{#if item.canEdit}}
-                <dd.Interactive @route="vault.cluster.access.identity.edit" @model={{item.id}}>Edit</dd.Interactive>
+                <dd.Interactive
+                  data-test-popup-menu="edit"
+                  @route="vault.cluster.access.identity.edit"
+                  @model={{item.id}}
+                >Edit</dd.Interactive>
                 {{#if item.disabled}}
                   <dd.Interactive {{on "click" (action "toggleDisabled" item)}}>Enable</dd.Interactive>
                 {{else if (eq this.identityType "entity")}}
@@ -96,7 +100,7 @@
   />
 
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @title="No {{pluralize this.identityType}} yet" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message

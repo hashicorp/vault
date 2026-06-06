@@ -15,7 +15,7 @@
     as |F|
   >
     {{#if @label}}
-      <F.Label>{{@label}}</F.Label>
+      <F.Label data-test-form-label={{@label}}>{{@label}}</F.Label>
     {{/if}}
     {{#if @subText}}
       <F.HelperText>{{@subText}}</F.HelperText>

@@ -5,7 +5,7 @@
 
 /* eslint-disable ember/no-settled-after-test-helper */
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, settled, findAll } from '@ember/test-helpers';
@@ -83,7 +83,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     this.setup();
     await this.renderComponent();
     assert.dom(overview.optInBanner.container).doesNotExist();
-    assert.dom(cta.summary).exists();
   });
 
   test('it should render header, tabs and toolbar for overview state if destinations exist', async function (assert) {
@@ -96,7 +95,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     await this.renderComponent();
 
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync', 'Page title renders');
-    assert.dom(cta.summary).doesNotExist('CTA does not render');
     assert.dom(tab('Overview')).hasText('Overview', 'Overview tab renders');
     assert.dom(tab('Destinations')).hasText('Destinations', 'Destinations tab renders');
     assert.dom(overview.createDestination).hasText('Create new destination', 'Toolbar action renders');
@@ -116,9 +114,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     assert.dom(overview.optInBanner.container).doesNotExist('Opt-in banner is not shown');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync');
-    assert.dom(GENERAL.badge('Plus feature')).hasText('Plus feature', 'Plus feature badge renders');
+    assert
+      .dom(GENERAL.badge('Standard feature'))
+      .hasText('Standard feature', 'Standard feature badge renders');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
-    assert.dom(cta.summary).exists();
   });
 
   test('it should show activation error if cluster is not Plus tier', async function (assert) {
@@ -139,11 +138,10 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     const errorBanners = findAll(overview.optInError);
 
     assert.dom(errorBanners[0]).containsText('Something bad happened', 'shows the API error message');
-
     assert
       .dom(errorBanners[1])
       .containsText(
-        'Error Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.',
+        'Error Secrets Sync is available for Standard tier clusters only. Please check the tier of your cluster to enable Secrets Sync.',
         'shows the custom tier-related error message'
       );
 
@@ -160,7 +158,6 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
 
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets sync');
     assert.dom(cta.button).hasText('Create first destination', 'CTA action renders');
-    assert.dom(cta.summary).exists();
   });
 
   test('it should show the opt-in banner without permissions to activate', async function (assert) {

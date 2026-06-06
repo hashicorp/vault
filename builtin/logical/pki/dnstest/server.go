@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -241,7 +242,9 @@ func (ts *TestServer) PushConfig() {
 				return fmt.Errorf("failed to update zone mtime: %w", err)
 			}
 		}
-		ts.runner.DockerAPI.ContainerKill(ts.ctx, ts.startup.Container.ID, "SIGHUP")
+		_, _ = ts.runner.DockerAPI.ContainerKill(ts.ctx, ts.startup.Container.ID, client.ContainerKillOptions{
+			Signal: "SIGHUP",
+		})
 
 		// Connect to our bind resolver.
 		resolver := &net.Resolver{

@@ -61,6 +61,13 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 // is used by `PrepareTestContainer` which is used typically in tests that rely
 // on Consul but run tested code within the test process.
 func RunContainer(ctx context.Context, namePrefix, version string, isEnterprise bool, doBootstrapSetup bool) (func(), *Config, error) {
+	return RunContainerConfig(ctx, namePrefix, version, isEnterprise, doBootstrapSetup, "")
+}
+
+// RunContainerConfig starts Consul with an optional additional config string.
+// The addlConfig variable should be hcl and will be added to the default
+// Consul configuration
+func RunContainerConfig(ctx context.Context, namePrefix, version string, isEnterprise bool, doBootstrapSetup bool, addlConfig string) (func(), *Config, error) {
 	if retAddress := os.Getenv("CONSUL_HTTP_ADDR"); retAddress != "" {
 		shp, err := docker.NewServiceHostPortParse(retAddress)
 		if err != nil {
@@ -105,12 +112,16 @@ func RunContainer(ctx context.Context, namePrefix, version string, isEnterprise 
 		repo = dockerRepo
 	}
 
+	cmd := []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", config}
+	if addlConfig != "" {
+		cmd = append(cmd, "-hcl", addlConfig)
+	}
 	dockerOpts := docker.RunOptions{
 		ContainerName: name,
 		ImageRepo:     repo,
 		ImageTag:      version,
 		Env:           envVars,
-		Cmd:           []string{"agent", "-dev", "-client", "0.0.0.0", "-hcl", config},
+		Cmd:           cmd,
 		Ports:         []string{"8500/tcp"},
 		AuthUsername:  os.Getenv("CONSUL_DOCKER_USERNAME"),
 		AuthPassword:  os.Getenv("CONSUL_DOCKER_PASSWORD"),

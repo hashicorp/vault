@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
@@ -406,27 +405,6 @@ module('Unit | Model | secret-engine', function (hooks) {
         local: false,
       });
       assert.strictEqual(model.localDisplay, 'replicated');
-    });
-  });
-
-  module('saveZeroAddressConfig', function () {
-    test('calls save with correct params', async function (assert) {
-      assert.expect(1);
-      const model = this.store.createRecord('secret-engine', {});
-      const saveStub = sinon.stub(model, 'save').callsFake((params) => {
-        assert.deepEqual(
-          params,
-          {
-            adapterOptions: {
-              adapterMethod: 'saveZeroAddressConfig',
-            },
-          },
-          'send correct params to save'
-        );
-        return;
-      });
-      await model.saveZeroAddressConfig();
-      saveStub.restore();
     });
   });
 });

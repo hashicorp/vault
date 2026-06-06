@@ -6,6 +6,7 @@ package logical
 import (
 	"crypto/x509"
 	"math"
+	"time"
 )
 
 // CertificateCounter is an interface for incrementing the count of issued and stored
@@ -28,16 +29,20 @@ type CertCount struct {
 	// purposes. Each certificate's billable units = (Validity Hours ÷ 730), rounded to 4 decimal
 	// places.
 	PkiDurationAdjustedCerts float64
+	SSHIssuedCerts           float64
+	SSHIssuedOTPs            float64
 }
 
 func (i *CertCount) Add(other CertCount) {
 	i.IssuedCerts += other.IssuedCerts
 	i.StoredCerts += other.StoredCerts
 	i.PkiDurationAdjustedCerts += other.PkiDurationAdjustedCerts
+	i.SSHIssuedCerts += other.SSHIssuedCerts
+	i.SSHIssuedOTPs += other.SSHIssuedOTPs
 }
 
 func (i *CertCount) IsZero() bool {
-	return i.IssuedCerts == 0 && i.StoredCerts == 0 && i.PkiDurationAdjustedCerts == 0
+	return i.IssuedCerts == 0 && i.StoredCerts == 0 && i.PkiDurationAdjustedCerts == 0 && i.SSHIssuedCerts == 0 && i.SSHIssuedOTPs == 0
 }
 
 // durationAdjustedCertificateCount calculates the billable units for a certificate based on its
@@ -53,11 +58,18 @@ func durationAdjustedCertificateCount(validitySeconds int64) float64 {
 	validityHours := float64(validitySeconds) / 3600.0
 	units := validityHours / standardDuration
 	// Round to 4 decimal places
-	return math.Round(units*10000) / 10000
+	ret := math.Round(units*10000) / 10000
+	if ret == 0.0 && validitySeconds > 0 {
+		// Ensure we don't return 0.0, which would be interpreted as no billable units.
+		return 0.0001
+	}
+	return ret
 }
 
 type CertCountIncrementer interface {
 	AddIssuedCertificate(stored bool, cert *x509.Certificate) CertCountIncrementer
+	AddSSHCertificate(ttl time.Duration) CertCountIncrementer
+	AddSSHOTP() CertCountIncrementer
 }
 
 type certCountIncrementer struct {
@@ -85,6 +97,24 @@ func (c *certCountIncrementer) AddIssuedCertificate(stored bool, cert *x509.Cert
 		count.StoredCerts = 1
 	}
 	c.counter.AddCount(count)
+
+	return c
+}
+
+func (c *certCountIncrementer) AddSSHCertificate(ttl time.Duration) CertCountIncrementer {
+	count := CertCount{
+		SSHIssuedCerts: durationAdjustedCertificateCount(int64(ttl.Seconds())),
+	}
+
+	c.counter.AddCount(count)
+
+	return c
+}
+
+func (c *certCountIncrementer) AddSSHOTP() CertCountIncrementer {
+	c.counter.AddCount(CertCount{
+		SSHIssuedOTPs: 0.0014,
+	})
 
 	return c
 }

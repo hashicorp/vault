@@ -1,0 +1,3 @@
+```release-note:bug
+secrets (pki): Allow issuance of certificates without the server_flag key usage from SCEP, EST and CMPV2 protocols.
+```

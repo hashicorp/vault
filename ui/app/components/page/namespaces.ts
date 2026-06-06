@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 import keys from 'core/utils/keys';
-import { WIZARD_ID } from 'vault/components/wizard/namespaces/namespace-wizard';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 import errorMessage from 'vault/utils/error-message';
 
 import type ApiService from 'vault/services/api';
@@ -34,10 +34,13 @@ import type { PaginatedMetadata } from 'core/utils/paginate-list';
 interface Args {
   model: {
     namespaces: NamespaceModel[] & PaginatedMetadata;
+    page: number;
+    pageSize: number;
     pageFilter: string | null;
   };
   onFilterChange: CallableFunction;
   onRefresh: CallableFunction;
+  onPageChange: CallableFunction;
 }
 
 interface NamespaceModel {
@@ -62,9 +65,29 @@ export default class PageNamespacesComponent extends Component<Args> {
   @tracked showSetupAlert = false;
   @tracked shouldRenderIntroModal = false;
 
+  wizardId = WIZARD_ID_MAP.namespace;
+
+  tableColumns = [
+    {
+      key: 'id',
+      label: 'Path',
+    },
+    {
+      key: 'popupMenu',
+      label: 'Action',
+      width: '75px',
+    },
+  ];
+
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     this.query = this.args.model.pageFilter || '';
+  }
+
+  get namespaceIds() {
+    return this.args.model.namespaces.map((namespace) => {
+      return { id: namespace.id };
+    });
   }
 
   // show the full available namespace path e.g. "root/ns1/child2", "admin/ns1/child2"
@@ -91,16 +114,22 @@ export default class PageNamespacesComponent extends Component<Args> {
   // Show header and breadcrumbs when viewing the intro page or during the list view.
   // Do not show during Guided Start as that has its own header
   get showPageHeader() {
-    return !this.showWizard || this.wizard.isIntroVisible(WIZARD_ID);
+    return !this.showWizard || this.wizard.isIntroVisible(this.wizardId);
+  }
+
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
   }
 
   get showIntroButton() {
-    return !this.showWizard && !this.hasNamespaces;
+    return this.showContent && !this.hasNamespaces;
   }
 
   get showWizard() {
     // Show when there are no existing namespaces and it is not in a dismissed state
-    return !this.wizard.isDismissed(WIZARD_ID) && !this.hasNamespaces;
+    return !this.wizard.isDismissed(this.wizardId) && !this.hasNamespaces;
   }
 
   @action
@@ -121,11 +150,12 @@ export default class PageNamespacesComponent extends Component<Args> {
   @action
   handleSearch(evt: HTMLElementEvent<HTMLInputElement>) {
     evt.preventDefault();
-    this.args.onFilterChange(this.query);
+    this.args.onFilterChange({ pageFilter: this.query });
   }
 
   @action
-  async deleteNamespace(nsToDelete: NamespaceModel) {
+  async deleteNamespace(namespaceId: string) {
+    const nsToDelete = this.args.model.namespaces.find((ns) => ns.id === namespaceId) as NamespaceModel;
     try {
       // Attempt to destroy the record
       await nsToDelete.destroyRecord();
@@ -156,12 +186,18 @@ export default class PageNamespacesComponent extends Component<Args> {
   @action
   showIntroPage() {
     // Reset the wizard dismissal state to allow re-entering the wizard
-    this.wizard.reset(WIZARD_ID);
+    this.wizard.reset(this.wizardId);
     this.shouldRenderIntroModal = true;
   }
 
-  @action handlePageChange() {
-    this.args.onRefresh();
+  // handles page change but keeps pageFilters if there are any
+  @action handlePageChange(page: number) {
+    this.args.onPageChange({ page: page, pageFilter: this.query, pageSize: this.args.model.pageSize });
+  }
+
+  // handles page size change but keeps any current pageFilters
+  @action handlePageSizeChange(pageSize: number) {
+    this.args.onPageChange({ page: 1, pageFilter: this.query, pageSize: pageSize });
   }
 
   @action

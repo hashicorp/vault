@@ -1,0 +1,3 @@
+```release-note:security
+core: Correctly remove any Vault tokens from the Authorization header when this header is forwarded to plugin backends. The header will only be forwarded if "Authorization" is explicitly included in the list of passthrough request headers.  
+```

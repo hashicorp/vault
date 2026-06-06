@@ -62,6 +62,12 @@ variable "backend_log_level" {
   default     = "trace"
 }
 
+variable "blackbox_test_filter" {
+  type        = list(string)
+  description = "Override list of specific blackbox test packages (e.g., ['core', 'secrets']) or test names (e.g., ['TestUnsealedStatus']). Empty list uses scenario defaults. Package names are converted to directory paths automatically."
+  default     = []
+}
+
 variable "distro_version_amzn" {
   description = "The version of Amazon Linux 2 to use"
   type        = string
@@ -83,7 +89,7 @@ variable "distro_version_sles" {
 variable "distro_version_ubuntu" {
   description = "The version of Ubuntu Linux to use"
   type        = string
-  default     = "24.04" // or "22.04"
+  default     = "26.04" // or "22.04" or "24.04"
 }
 
 variable "project_name" {
@@ -157,6 +163,18 @@ variable "vault_license_path" {
   default     = null
 }
 
+variable "vault_ibm_license_path" {
+  description = "The path to a valid IBM PAO license. This is only required when testing a license update during the upgrade scenario"
+  type        = string
+  default     = null
+}
+
+variable "vault_ibm_license_edition" {
+  description = "The edition to select when using an IBM PAO license. This should match the edition of a valid Vault entitlement in the license located at var.vault_ibm_license_path."
+  type        = string
+  default     = null
+}
+
 variable "vault_local_build_tags" {
   description = "The build tags to pass to the Go compiler for builder:local variants"
   type        = list(string)
@@ -202,17 +220,17 @@ variable "verify_aws_secrets_engine" {
 variable "verify_kmip_secrets_engine" {
   description = "If true we'll verify KMIP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_ldap_secrets_engine" {
   description = "If true we'll verify LDAP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_log_secrets" {
   description = "If true and var.vault_enable_audit_devices is true we'll verify that the audit log does not contain unencrypted secrets. Requires var.vault_radar_license_path to be set to a valid license file."
   type        = bool
-  default     = false
+  default     = false // Only because it requires a Vault Radar license
 }

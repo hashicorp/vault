@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, render, triggerEvent, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import recoveryHandler from 'vault/mirage/handlers/recovery';
@@ -78,6 +78,7 @@ module('Integration | Component | recovery/snapshots-load', function (hooks) {
 
     await click(GENERAL.inputByAttr('manual'));
     await triggerEvent('[data-test-file-input]', 'change', { files: [file] });
+    await waitFor('[data-test-file-info]');
     await click(GENERAL.submitButton);
 
     assert.true(

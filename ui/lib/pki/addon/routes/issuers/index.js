@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { paginate } from 'core/utils/paginate-list';
-import { PkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
 import { verifyCertificates, parseCertificate } from 'vault/utils/parse-pki-cert';
 
 export default class PkiIssuersListRoute extends Route {
@@ -32,7 +32,7 @@ export default class PkiIssuersListRoute extends Route {
     try {
       const listResponse = await this.api.secrets.pkiListIssuers(
         this.secretMountPath.currentPath,
-        PkiListIssuersListEnum.TRUE
+        SecretsApiPkiListIssuersListEnum.TRUE
       );
       // fetch full issuer data only if there are less than 10 issuers to avoid making too many requests
       if (listResponse.keys.length <= 10) {

@@ -1,0 +1,16 @@
+# Generated at {{ .GeneratedAt.Format "2006-01-02 15:04:05" }}
+# Current Version: {{ .Version }}
+
+# Get last 3 versions before current version
+Versions (N-Minus 3):
+{{- $versions := VersionsNMinus "vault" "enterprise" .Version 3 "minor" }}
+{{- range $versions }}
+  - {{ . }}
+{{- end }}
+
+# Example: Get versions between bounds
+Versions (Bounded 1.17.0 to 1.18.0):
+{{- $bounded := VersionsBounded "vault" "enterprise" "1.18.0" "1.17.0" "minor" }}
+{{- range $bounded }}
+  - {{ . }}
+{{- end }}

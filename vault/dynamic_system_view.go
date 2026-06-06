@@ -383,6 +383,9 @@ func (d dynamicSystemView) RegisterRotationJobWithResponse(ctx context.Context, 
 		return nil, fmt.Errorf("error configuring rotation job: %s", err)
 	}
 
+	// Set the MountPoint here from the mountEntry so plugins cannot force-set a mount point other than its own
+	job.MountPoint = mountEntry.APIPath()
+
 	resp, err := d.core.RegisterRotationJob(nsCtx, job)
 	if err != nil {
 		return nil, fmt.Errorf("error registering rotation job: %s", err)

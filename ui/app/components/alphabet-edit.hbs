@@ -11,13 +11,13 @@
 {{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if @model.updatePath.canDelete}}
+      {{#if @capabilities.canDelete}}
         <Hds::Button @text="Delete alphabet" @color="secondary" class="toolbar-button" {{on "click" this.onDelete}} />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if @model.updatePath.canUpdate}}
+      {{#if @capabilities.canUpdate}}
         <ToolbarSecretLink
-          @secret={{concat @model.idPrefix @model.id}}
+          @secret={{concat "alphabet/" @form.data.name}}
           @mode="edit"
           data-test-edit-link={{true}}
           @replace={{true}}
@@ -34,27 +34,8 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorMessage}} />
       <NamespaceReminder @mode={{@mode}} @noun="transform alphabet" />
-      {{#each @model.attrs as |attr|}}
-        {{#if (and (eq attr.name "name") (eq @mode "edit"))}}
-          <label for={{attr.name}} class="is-label">
-            {{attr.options.label}}
-          </label>
-          {{#if attr.options.subText}}
-            <p class="sub-text">{{attr.options.subText}}</p>
-          {{/if}}
-          <input
-            data-test-input={{attr.name}}
-            id={{attr.name}}
-            autocomplete="off"
-            spellcheck="false"
-            value={{or (get @model attr.name) @model.id}}
-            readonly
-            class="field input is-readOnly"
-            type={{attr.type}}
-          />
-        {{else}}
-          <FormField data-test-field @attr={{attr}} @model={{@model}} />
-        {{/if}}
+      {{#each @form.formFields as |field|}}
+        <FormField data-test-field @attr={{field}} @model={{@form}} @mode={{@mode}} />
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
@@ -65,7 +46,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.list-root"
-            @model={{@model.backend}}
+            @model={{@form.data.backend}}
             @query={{hash tab="alphabet"}}
           />
         {{else}}
@@ -73,8 +54,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.show"
-            @models={{array @model.backend (concat "alphabet/" @model.id)}}
-            @query={{hash tab="alphabet"}}
+            @models={{array @form.data.backend (concat "alphabet/" @form.data.name)}}
           />
         {{/if}}
       </Hds::ButtonSet>
@@ -82,23 +62,22 @@
   </form>
 {{else}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each @model.attrs as |attr|}}
-      {{#if (eq attr.type "object")}}
+    {{#each @form.formFields as |field|}}
+      {{#if (eq field.type "object")}}
         <InfoTableRow
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{stringify (get @model attr.name)}}
+          @label={{capitalize (or field.options.label (humanize (dasherize field.name)))}}
+          @value={{stringify (get @form.data field.name)}}
         />
-      {{else if (eq attr.type "array")}}
+      {{else if (eq field.type "array")}}
         <InfoTableRow
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get @model attr.name}}
-          @type={{attr.type}}
-          @isLink={{eq attr.name "transformations"}}
+          @label={{capitalize (or field.options.label (humanize (dasherize field.name)))}}
+          @value={{get @form.data field.name}}
+          @type={{field.type}}
         />
       {{else}}
         <InfoTableRow
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get @model attr.name}}
+          @label={{capitalize (or field.options.label (humanize (dasherize field.name)))}}
+          @value={{get @form.data field.name}}
         />
       {{/if}}
     {{/each}}

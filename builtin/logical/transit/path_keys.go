@@ -49,105 +49,7 @@ func (b *backend) pathKeys() *framework.Path {
 			OperationSuffix: "key",
 		},
 
-		Fields: map[string]*framework.FieldSchema{
-			"name": {
-				Type:        framework.TypeString,
-				Description: "Name of the key",
-			},
-
-			"type": {
-				Type:    framework.TypeString,
-				Default: "aes256-gcm96",
-				Description: `
-The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
-(asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
-(asymmetric), "rsa-4096" (asymmetric), "ml-dsa" (asymmetric), "slh-dsa" (asymmetric) are supported.  Defaults to "aes256-gcm96".
-`,
-			},
-
-			"derived": {
-				Type: framework.TypeBool,
-				Description: `Enables key derivation mode. This
-allows for per-transaction unique
-keys for encryption operations.`,
-			},
-
-			"convergent_encryption": {
-				Type: framework.TypeBool,
-				Description: `Whether to support convergent encryption.
-This is only supported when using a key with
-key derivation enabled and will require all
-requests to carry both a context and 96-bit
-(12-byte) nonce. The given nonce will be used
-in place of a randomly generated nonce. As a
-result, when the same context and nonce are
-supplied, the same ciphertext is generated. It
-is *very important* when using this mode that
-you ensure that all nonces are unique for a
-given context. Failing to do so will severely
-impact the ciphertext's security.`,
-			},
-
-			"exportable": {
-				Type: framework.TypeBool,
-				Description: `Enables keys to be exportable.
-This allows for all the valid keys
-in the key ring to be exported.`,
-			},
-
-			"allow_plaintext_backup": {
-				Type: framework.TypeBool,
-				Description: `Enables taking a backup of the named
-key in plaintext format. Once set,
-this cannot be disabled.`,
-			},
-
-			"context": {
-				Type: framework.TypeString,
-				Description: `Base64 encoded context for key derivation.
-When reading a key with key derivation enabled,
-if the key type supports public keys, this will
-return the public key for the given context.`,
-			},
-
-			"auto_rotate_period": {
-				Type:    framework.TypeDurationSecond,
-				Default: 0,
-				Description: `Amount of time the key should live before
-being automatically rotated. A value of 0
-(default) disables automatic rotation for the
-key.`,
-			},
-			"key_size": {
-				Type:        framework.TypeInt,
-				Default:     0,
-				Description: fmt.Sprintf("The key size in bytes for the algorithm.  Only applies to HMAC and must be no fewer than %d bytes and no more than %d", keysutil.HmacMinKeySize, keysutil.HmacMaxKeySize),
-			},
-			"managed_key_name": {
-				Type:        framework.TypeString,
-				Description: "The name of the managed key to use for this transit key",
-			},
-			"managed_key_id": {
-				Type:        framework.TypeString,
-				Description: "The UUID of the managed key to use for this transit key",
-			},
-			"parameter_set": {
-				Type: framework.TypeString,
-				Description: `The parameter set to use. Applies to ML-DSA and SLH-DSA key types.
-For ML-DSA key types, valid values are 44, 65, or 87.
-For SLH-DSA key types, valid values are SLH-DSA-SHA2-128s, SLH-DSA-SHAKE-128s, SLH-DSA-SHA2-128f, SLH-DSA-SHAKE-128f, SLH-DSA-SHA2-192s, SLH-DSA-SHAKE-192s, SLH-DSA-SHA2-192f, SLH-DSA-SHAKE-192f, SLH-DSA-SHA2-256s, SLH-DSA-SHAKE-256s, SLH-DSA-SHA2-256f, SLH-DSA-SHAKE-256f`,
-			},
-			"hybrid_key_type_pqc": {
-				Type: framework.TypeString,
-				Description: `The key type of the post-quantum key to use for hybrid signature schemes.
-Supported types are: ML-DSA.`,
-			},
-			"hybrid_key_type_ec": {
-				Type: framework.TypeString,
-				Description: `The key type of the elliptic curve key to use for hybrid signature schemes.
-Supported types are: ecdsa-p256, ecdsa-p384, ecdsa-p521, and ed25519.`,
-			},
-		},
+		Fields: pathKeyCreateFields(),
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -166,6 +68,12 @@ Supported types are: ecdsa-p256, ecdsa-p384, ecdsa-p521, and ed25519.`,
 				Callback: b.pathPolicyRead,
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "read",
+				},
+				Responses: map[int][]framework.Response{
+					200: {{
+						Description: "OK",
+						Fields:      pathKeyReadResponseFields(),
+					}},
 				},
 			},
 		},
@@ -225,6 +133,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		Exportable:           exportable,
 		AllowPlaintextBackup: allowPlaintextBackup,
 		AutoRotatePeriod:     autoRotatePeriod,
+		WriteLocked:          true,
 	}
 
 	switch keyType {
@@ -336,9 +245,6 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		return nil, fmt.Errorf("error generating key: returned policy was nil")
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(true)
-	}
 	defer p.Unlock()
 
 	resp, err := b.formatKeyPolicy(p, nil)
@@ -378,9 +284,6 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 	if p == nil {
 		return nil, nil
-	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
 	}
 	defer p.Unlock()
 
@@ -632,6 +535,234 @@ func getHybridKeyConfig(pqcKeyType, parameterSet, ecKeyType string) (keysutil.Hy
 	}
 
 	return config, nil
+}
+
+// pathKeySharedFields returns FieldSchema entries common to both the create/update
+// request and the read response for the keys/:name path.
+func pathKeySharedFields() map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
+		"name": {
+			Type:        framework.TypeString,
+			Description: "Name of the key.",
+		},
+		"type": {
+			Type:    framework.TypeString,
+			Default: "aes256-gcm96",
+			Description: `The type of key. Symmetric types: "aes128-gcm96", "aes256-gcm96", "chacha20-poly1305",
+"aes128-cbc", "aes256-cbc", "aes128-cmac", "aes192-cmac", "aes256-cmac". Asymmetric types: "ecdsa-p256",
+"ecdsa-p384", "ecdsa-p521", "ed25519", "rsa-2048", "rsa-3072", "rsa-4096", "ml-dsa", "slh-dsa", "hybrid".
+Defaults to "aes256-gcm96"`,
+			AllowedValues: []interface{}{
+				"aes128-gcm96", "aes256-gcm96", "chacha20-poly1305",
+				"aes128-cbc", "aes256-cbc",
+				"aes128-cmac", "aes192-cmac", "aes256-cmac",
+				"ecdsa-p256", "ecdsa-p384", "ecdsa-p521",
+				"ed25519", "rsa-2048", "rsa-3072", "rsa-4096",
+				"hmac", "managed_key",
+				"ml-dsa", "slh-dsa", "hybrid",
+			},
+		},
+		"derived": {
+			Type: framework.TypeBool,
+			Description: `Enables key derivation mode. This allows for per-transaction unique
+keys for encryption operations.`,
+		},
+		"convergent_encryption": {
+			Type: framework.TypeBool,
+			Description: `Whether to support convergent encryption. This is only supported when using a key
+with key derivation enabled and will require all requests to carry both a context and 96-bit (12-byte) nonce.
+The given nonce will be used in place of a randomly generated nonce. As a result, when the same context and
+nonce are supplied, the same ciphertext is generated. It is *very important* when using this mode that you
+ensure that all nonces are unique for a given context. Failing to do so will severely impact the ciphertext's
+security.`,
+		},
+		"exportable": {
+			Type: framework.TypeBool,
+			Description: `Enables keys to be exportable. This allows for all the valid keys
+in the key ring to be exported.`,
+		},
+		"allow_plaintext_backup": {
+			Type: framework.TypeBool,
+			Description: `Enables taking a backup of the named key in plaintext format.
+Once set, this cannot be disabled.`,
+		},
+		"auto_rotate_period": {
+			Type:    framework.TypeDurationSecond,
+			Default: 0,
+			Description: `Amount of time the key should live before being automatically rotated.
+A value of 0 (default) disables automatic rotation for the key.`,
+		},
+		"key_size": {
+			Type:        framework.TypeInt,
+			Default:     0,
+			Description: fmt.Sprintf("The key size in bytes for the algorithm. Only applies to HMAC and must be no fewer than %d bytes and no more than %d.", keysutil.HmacMinKeySize, keysutil.HmacMaxKeySize),
+		},
+		"parameter_set": {
+			Type: framework.TypeString,
+			Description: `The parameter set to use for post-quantum key types. For ML-DSA, valid values are 44, 65,
+or 87. For SLH-DSA, valid values are the full parameter set identifiers (e.g. "slh-dsa-sha2-128s").
+Applies to ML-DSA, SLH-DSA, and Hybrid key types.`,
+			AllowedValues: []interface{}{
+				// ML-DSA
+				"44", "65", "87",
+				// SLH-DSA
+				"slh-dsa-sha2-128s", "slh-dsa-shake128s",
+				"slh-dsa-sha2-128f", "slh-dsa-shake128f",
+				"slh-dsa-sha2-192s", "slh-dsa-shake192s",
+				"slh-dsa-sha2-192f", "slh-dsa-shake192f",
+				"slh-dsa-sha2-256s", "slh-dsa-shake256s",
+				"slh-dsa-sha2-256f", "slh-dsa-shake256f",
+			},
+		},
+		"hybrid_key_type_pqc": {
+			Type: framework.TypeString,
+			Description: `The post-quantum key type to use for hybrid signature schemes.
+Supported types are: ml-dsa.`,
+			AllowedValues: []interface{}{
+				"ml-dsa",
+			},
+		},
+		"hybrid_key_type_ec": {
+			Type: framework.TypeString,
+			Description: `The elliptic curve key type to use for hybrid signature schemes.
+Supported types are: ecdsa-p256, ecdsa-p384, ecdsa-p521, and ed25519.`,
+			AllowedValues: []interface{}{
+				"ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "ed25519",
+			},
+		},
+	}
+}
+
+// pathKeyCreateFields returns the field schema for create requests on the keys/:name path.
+// It extends pathKeySharedFields with request-only parameters and default values.
+func pathKeyCreateFields() map[string]*framework.FieldSchema {
+	fields := pathKeySharedFields()
+	fields["context"] = &framework.FieldSchema{
+		Type: framework.TypeString,
+		Description: `Base64 encoded context for key derivation. When reading a key with key derivation
+enabled, if the key type supports public keys, this will return the public key for the given context.`,
+	}
+	fields["managed_key_name"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "The name of the managed key to use for this transit key",
+	}
+	fields["managed_key_id"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "The UUID of the managed key to use for this transit key",
+	}
+	return fields
+}
+
+// pathKeyReadResponseFields returns the field schema for read response
+// It extends pathKeySharedFields with response-only fields and marks always-present fields as Required.
+func pathKeyReadResponseFields() map[string]*framework.FieldSchema {
+	fields := pathKeySharedFields()
+
+	// Mark fields that are always present in the read response.
+	for _, k := range []string{
+		// convergent_encryption, key_size, parameter_set, and hybrid_key_type_* are intentionally
+		// omitted: they are only set conditionally in formatKeyPolicy.
+		"name", "type", "derived", "exportable", "allow_plaintext_backup", "auto_rotate_period",
+	} {
+		fields[k].Required = true
+	}
+
+	// Response-only fields — unconditionally present.
+	fields["deletion_allowed"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether deletion of the key is allowed.`,
+		Required:    true,
+	}
+	fields["min_available_version"] = &framework.FieldSchema{
+		Type: framework.TypeInt,
+		Description: `The minimum version of the key available for use. Versions below this have
+been permanently deleted.`,
+		Required: true,
+	}
+	fields["min_decryption_version"] = &framework.FieldSchema{
+		Type: framework.TypeInt,
+		Description: `The minimum version of the key allowed for decryption. For signing keys,
+the minimum version allowed for verification.`,
+		Required: true,
+	}
+	fields["min_encryption_version"] = &framework.FieldSchema{
+		Type: framework.TypeInt,
+		Description: `The minimum version of the key allowed for encryption. For signing keys,
+the minimum version allowed for signing. If set to 0, only the latest version is allowed.`,
+		Required: true,
+	}
+	fields["latest_version"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Description: `The latest (current) version of the key.`,
+		Required:    true,
+	}
+	fields["supports_encryption"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether this key type supports encryption operations.`,
+		Required:    true,
+	}
+	fields["supports_decryption"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether this key type supports decryption operations.`,
+		Required:    true,
+	}
+	fields["supports_signing"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether this key type supports signing operations.`,
+		Required:    true,
+	}
+	fields["supports_derivation"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether this key type supports key derivation.`,
+		Required:    true,
+	}
+	fields["imported_key"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether this key was imported rather than generated by Vault.`,
+		Required:    true,
+	}
+	// Response-only fields — conditionally present.
+	fields["imported_key_allow_rotation"] = &framework.FieldSchema{
+		Type:        framework.TypeBool,
+		Description: `Whether rotation is allowed for this imported key. Only present if the key was imported.`,
+	}
+	fields["backup_info"] = &framework.FieldSchema{
+		Type: framework.TypeMap,
+		Description: `Information about the most recent backup of this key. Contains "time" and "version"
+fields. Only present if the key has been backed up.`,
+	}
+	fields["restore_info"] = &framework.FieldSchema{
+		Type: framework.TypeMap,
+		Description: `Information about when this key was restored from backup. Contains "time" and "version"
+fields. Only present if the key has been restored.`,
+	}
+	fields["kdf"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The key derivation function used. Only present if key derivation is enabled.`,
+		AllowedValues: []interface{}{
+			"hmac-sha256-counter",
+			"hkdf_sha256",
+		},
+	}
+	fields["kdf_mode"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The key derivation function mode. Only present if KDF is "hmac-sha256-counter".`,
+		AllowedValues: []interface{}{
+			"hmac-sha256-counter",
+		},
+	}
+	fields["convergent_encryption_version"] = &framework.FieldSchema{
+		Type:        framework.TypeInt,
+		Description: `The version of convergent encryption. Only present if convergent encryption is enabled.`,
+	}
+	fields["keys"] = &framework.FieldSchema{
+		Type: framework.TypeMap,
+		Description: `A map of active key versions. For memory efficiency, transit keeps a working set of
+versions from "min_decryption_version" through the latest version. Older versions may still be retained in
+archived storage if they are at or above "min_available_version". Versions older than "min_available_version"
+are permanently deleted. Not present for hmac, managed_key, and CMAC key types.`,
+	}
+	return fields
 }
 
 const pathPolicyHelpSyn = `Managed named encryption keys`

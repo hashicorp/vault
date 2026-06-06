@@ -4,35 +4,33 @@
  */
 
 import {
+  click,
   currentRouteName,
   currentURL,
-  settled,
-  click,
-  findAll,
   fillIn,
-  visit,
+  findAll,
   typeIn,
-  waitFor,
+  visit,
+  waitUntil,
 } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { module, skip, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 import { create } from 'ember-cli-page-object';
-import page from 'vault/tests/pages/settings/mount-secret-backend';
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
-import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
-import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
+import { adminOidcCreate, adminOidcCreateRead } from 'vault/tests/helpers/secret-engine/policy-generator';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { default as mountSecrets, default as page } from 'vault/tests/pages/settings/mount-secret-backend';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const consoleComponent = create(consoleClass);
 
@@ -130,33 +128,6 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
     assert.dom('[data-test-input="config.max_lease_ttl"] [data-test-select="ttl-unit"]').hasValue('s');
   });
 
-  test('it throws error if setting duplicate path name', async function (assert) {
-    const path = `kv-duplicate`;
-
-    await consoleComponent.runCommands([
-      // delete any kv-duplicate previously written here so that tests can be re-run
-      `delete sys/mounts/${path}`,
-    ]);
-
-    await page.visit();
-
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.index');
-    await mountBackend('kv', path);
-    await page.secretList();
-    await settled();
-    await page.enableEngine();
-    await mountBackend('kv', path);
-    await waitFor('[data-test-message-error-description]');
-    assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.enable.create');
-
-    await page.secretList();
-    await settled();
-    assert
-      .dom(GENERAL.tableData(`${path}/`, 'path'))
-      .exists({ count: 1 }, 'renders only one instance of the engine');
-  });
-
   test('it should transition to mountable addon engine after mount success', async function (assert) {
     // test supported backends that ARE ember engines (enterprise only engines are tested individually)
     const addons = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
@@ -210,9 +181,11 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
       const route = engineDisplayData(engine.type)?.isOnlyMountable
         ? 'configuration.general-settings'
         : 'list-root';
+      const expectedRoute = `vault.cluster.secrets.backend.${route}`;
+      await waitUntil(() => currentRouteName() === expectedRoute);
       assert.strictEqual(
         currentRouteName(),
-        `vault.cluster.secrets.backend.${route}`,
+        expectedRoute,
         `${engine.type} navigates to the correct view (either list if not configuration only or configuration if it is).`
       );
 
@@ -223,7 +196,7 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
     }
   });
 
-  test('it should transition back to backend list for unsupported backends', async function (assert) {
+  test('it should transition to general settings configuration page for unsupported backends', async function (assert) {
     const unsupported = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
       (e) => !supportedSecretBackends().includes(e.type)
     );
@@ -239,7 +212,7 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
 
       assert.strictEqual(
         currentRouteName(),
-        `vault.cluster.secrets.backends`,
+        `vault.cluster.secrets.backend.configuration.general-settings`,
         `${engine.type} returns to backends list`
       );
     }
@@ -289,11 +262,12 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
 
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backends',
-      'redirects to the backends page'
+      'vault.cluster.secrets.backend.configuration.general-settings',
+      'redirects to the configuration page'
     );
-
-    assert.ok(GENERAL.tableData(`${enginePath}/`, 'path'), 'shows the alicloud engine');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText(`${enginePath} configuration`, 'shows the correct page header title');
 
     // cleanup
     await runCmd(`delete sys/mounts/${enginePath}`);
@@ -306,11 +280,12 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
 
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backends',
-      'redirects to the backends page'
+      'vault.cluster.secrets.backend.configuration.general-settings',
+      'redirects to the configuration page'
     );
-
-    assert.ok(GENERAL.tableData(`${enginePath}/`, 'path'), 'shows the gcpkms engine');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText(`${enginePath} configuration`, 'shows the correct page header title');
     // cleanup
     await runCmd(`delete sys/mounts/${enginePath}`);
   });
@@ -323,8 +298,10 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
       await page.visit();
       await click(GENERAL.cardContainer('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
       await click(GENERAL.button('Method Options'));
-      assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
-      await clickTrigger('#key');
+      assert
+        .dom(GENERAL.fieldByAttr('config.identity_token_key'))
+        .exists('Search select component renders for oidc key');
+      await clickTrigger('#oidc-key');
       const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
       assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
       await click(GENERAL.searchSelect.option(GENERAL.searchSelect.optionIndex('some-key')));
@@ -335,8 +312,8 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
       // Choose a non-wif engine
       await click(GENERAL.cardContainer('ssh'));
       assert
-        .dom('[data-test-search-select-with-modal]')
-        .doesNotExist('for type ssh, the modal field does not render.');
+        .dom(GENERAL.fieldByAttr('config.identity_token_key'))
+        .doesNotExist('for type ssh, the identity_token_key field does not render.');
       // cleanup
       await runCmd(`delete identity/oidc/key/some-key`);
     });

@@ -30,3 +30,6 @@ provider "hcp" "default" {
 
 provider "docker" "default" {
 }
+
+provider "local" "default" {
+}

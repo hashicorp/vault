@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -21,11 +21,11 @@ module('Integration | Component | message-error', function (hooks) {
 
     this.renderComponent = () => {
       return render(hbs`
-        <MessageError 
-        @errorMessage={{this.errorMessage}} 
-        @errors={{this.errors}} 
-        @model={{this.model}} 
-        @onDismiss={{this.onDismiss}} 
+        <MessageError
+        @errorMessage={{this.errorMessage}}
+        @errors={{this.errors}}
+        @model={{this.model}}
+        @onDismiss={{this.onDismiss}}
         />`);
     };
   });
@@ -109,5 +109,27 @@ module('Integration | Component | message-error', function (hooks) {
     await this.renderComponent();
     await click(GENERAL.icon('x'));
     assert.true(this.onDismiss.calledOnce, '@onDismiss is called once');
+  });
+
+  test('it renders @errorDetails as a list under the error message', async function (assert) {
+    this.errorMessage = 'There is an error with this form.';
+    await render(hbs`
+      <MessageError
+        @errorMessage={{this.errorMessage}}
+        @errorDetails={{array "Path cannot be empty." "Rule must have at least one capability."}}
+      />`);
+    assert.dom(GENERAL.messageError).exists({ count: 1 });
+    assert.dom(GENERAL.messageDescription).hasTextContaining('There is an error with this form.');
+    assert.dom(`${GENERAL.messageDescription} li`).exists({ count: 2 });
+    assert.dom(`${GENERAL.messageDescription} li:first-child`).hasText('Path cannot be empty.');
+    assert
+      .dom(`${GENERAL.messageDescription} li:last-child`)
+      .hasText('Rule must have at least one capability.');
+  });
+
+  test('it does not render error details list when @errorDetails is not provided', async function (assert) {
+    this.errorMessage = 'Something went wrong';
+    await this.renderComponent();
+    assert.dom(`${GENERAL.messageDescription} ul`).doesNotExist();
   });
 });

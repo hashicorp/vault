@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
-import { PkiListKeysListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListKeysListEnum } from '@hashicorp/vault-client-typescript';
 import { paginate } from 'core/utils/paginate-list';
 
 @withConfig()
@@ -53,7 +53,7 @@ export default class PkiKeysIndexRoute extends Route {
     try {
       const response = await this.api.secrets.pkiListKeys(
         this.secretMountPath.currentPath,
-        PkiListKeysListEnum.TRUE
+        SecretsApiPkiListKeysListEnum.TRUE
       );
       const keys = this.api.keyInfoToArray(response, 'key_id');
       const capabilities = await this.fetchCapabilities(keys);

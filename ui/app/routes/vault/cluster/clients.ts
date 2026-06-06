@@ -9,7 +9,7 @@ import { ModelFrom } from 'vault/route';
 
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
-import { VersionHistoryListEnum } from '@hashicorp/vault-client-typescript';
+import { SystemApiVersionHistoryListEnum } from '@hashicorp/vault-client-typescript';
 
 export type ClientsRouteModel = ModelFrom<ClientsRoute>;
 
@@ -20,7 +20,9 @@ export default class ClientsRoute extends Route {
   async model() {
     const { canRead: canReadConfig, canUpdate: canUpdateConfig } =
       await this.capabilities.for('clientsConfig');
-    const response = await this.api.sys.versionHistory(VersionHistoryListEnum.TRUE).catch(() => undefined);
+    const response = await this.api.sys
+      .versionHistory(SystemApiVersionHistoryListEnum.TRUE)
+      .catch(() => undefined);
     const versionHistory = response ? this.api.keyInfoToArray(response, 'version') : [];
     const config = await this.api.sys.internalClientActivityReadConfiguration().catch(() => ({}));
     return { canReadConfig, canUpdateConfig, versionHistory, config };

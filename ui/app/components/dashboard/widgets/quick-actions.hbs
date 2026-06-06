@@ -1,0 +1,134 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div data-test-card="quick-actions">
+  <Hds::Text::Display @size="300" data-test-text-display="Quick actions">Quick actions</Hds::Text::Display>
+  <div class="has-top-margin-s has-bottom-margin-s">
+    <Hds::Button
+      @text="Create ACL policy"
+      @route="vault.cluster.policies.create"
+      @model="acl"
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @color="secondary"
+      class="has-bottom-margin-m"
+    />
+    <Hds::Button
+      @text="Secrets sync"
+      @route="vault.cluster.sync.secrets.overview"
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @color="secondary"
+      class="has-bottom-margin-m"
+    />
+    <Hds::Button
+      @text="API explorer"
+      @route="vault.cluster.tools.open-api-explorer.index"
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @color="secondary"
+      class="has-bottom-margin-m"
+    />
+    <Hds::Button
+      @text="Set up MFA"
+      @route="vault.cluster.access.mfa.methods.create"
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @color="secondary"
+      class="has-bottom-margin-m"
+    />
+    <Hds::Button
+      @text="Usage metrics"
+      @route="vault.cluster.usage-reporting"
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @color="secondary"
+      class="has-bottom-margin-m"
+    />
+  </div>
+
+  {{#if this.filteredSecretsEngines}}
+    <Hds::Separator @spacing="0" />
+    <div class="has-top-margin-s has-bottom-margin-s">
+      <Hds::Form::SuperSelect::Single::Field
+        @options={{this.filteredSecretsEngines}}
+        @selected={{this.selectedEngine}}
+        @searchEnabled={{true}}
+        @searchField="id"
+        @placeholder="Select a mount"
+        @searchPlaceholder="Type to search for mounts"
+        @onChange={{this.handleSearchEngineSelect}}
+        data-test-super-select="secrets-engines"
+        as |F|
+      >
+        <F.Label data-test-form-label="Select secret engine mount">Select secret engine mount</F.Label>
+        <F.HelperText>Supported engines include databases, KV version 2, and PKI.</F.HelperText>
+        <F.Options>{{F.options.id}}</F.Options>
+      </Hds::Form::SuperSelect::Single::Field>
+    </div>
+
+    {{#if this.selectedEngine}}
+      <Hds::Form::SuperSelect::Single::Field
+        @options={{this.actionOptions}}
+        @selected={{this.selectedAction}}
+        @searchEnabled={{false}}
+        @placeholder="Select one"
+        @onChange={{this.setSelectedAction}}
+        data-test-super-select="actions"
+        as |F|
+      >
+        <F.Label>Action</F.Label>
+        <F.Options>{{F.options}}</F.Options>
+      </Hds::Form::SuperSelect::Single::Field>
+
+      {{#if this.selectedAction}}
+        <div class="has-top-margin-m">
+          {{#if this.fetchOptions.isRunning}}
+            <Hds::Icon @name="loading" @isInline={{true}} />
+            <p class="has-left-margin-xs" data-test-loading>Loading options...</p>
+          {{else if this.searchSelectParams.isKV}}
+            {{! use special input to allow searching for KVv2 secrets inside a directory }}
+            <KvSuggestionInput
+              @label="Secret Path"
+              @value={{this.paramValue}}
+              @mountPath={{this.selectedEngine.id}}
+              @onChange={{fn (mut this.paramValue)}}
+            />
+          {{else if this.searchSelectOptions}}
+            <Hds::Form::SuperSelect::Single::Field
+              @options={{this.searchSelectOptions}}
+              @selected={{this.paramValue}}
+              @searchEnabled={{true}}
+              @placeholder={{this.searchSelectParams.placeholder}}
+              @searchPlaceholder={{this.searchSelectParams.searchPlaceholder}}
+              @onChange={{fn (mut this.paramValue)}}
+              data-test-super-select="params"
+              as |F|
+            >
+              <F.Label data-test-form-label="param">{{this.searchSelectParams.title}}</F.Label>
+              <F.Options>{{F.options}}</F.Options>
+            </Hds::Form::SuperSelect::Single::Field>
+          {{else}}
+            <InputSearch
+              @id={{this.searchSelectParams.title}}
+              @label={{this.searchSelectParams.title}}
+              @placeholder={{this.searchSelectParams.inputPlaceholder}}
+              @onChange={{fn (mut this.paramValue)}}
+            />
+          {{/if}}
+        </div>
+        <div>
+          <Hds::Button
+            @text={{this.searchSelectParams.buttonText}}
+            class="has-top-margin-m"
+            disabled={{(not (and this.selectedAction this.selectedEngine this.paramValue))}}
+            {{on "click" this.navigateToPage}}
+            data-test-button={{this.searchSelectParams.buttonText}}
+          />
+        </div>
+      {{/if}}
+    {{/if}}
+  {{/if}}
+</div>

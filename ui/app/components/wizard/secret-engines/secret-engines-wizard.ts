@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -17,24 +18,17 @@ interface Args {
   onRefresh: CallableFunction;
 }
 
-export const WIZARD_ID = 'secret-engines';
-
 export default class WizardSecretEnginesWizardComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly wizard: WizardService;
 
-  wizardId = WIZARD_ID;
+  wizardId = WIZARD_ID_MAP.secretEngines;
 
   @action
   onDismiss() {
     this.wizard.dismiss(this.wizardId);
     this.args.onRefresh();
-  }
-
-  @action
-  onIntroChange(visible: boolean) {
-    this.wizard.setIntroVisible(this.wizardId, visible);
   }
 }

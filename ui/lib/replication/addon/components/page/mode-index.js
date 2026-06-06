@@ -33,6 +33,17 @@ export default class PageModeIndex extends Component {
     return 'Enable replication';
   }
 
+  get description() {
+    if (this.args.replicationMode === 'dr') {
+      return 'Maintain a synchronized standby cluster to enable business continuity and data preservation in the event of a primary site failure.';
+    }
+    return 'Pair geographically distributed clusters that share a common configuration to scale Vault.';
+  }
+
+  get docLink() {
+    return this.args.replicationMode === 'dr' ? '/vault/gui/dr' : '/vault/gui/pr';
+  }
+
   canEnable = (type) => {
     const { cluster, replicationMode } = this.args;
     let perm;

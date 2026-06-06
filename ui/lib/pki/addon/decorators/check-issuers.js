@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { PkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
 
 /**
  * the overview, roles, issuers, certificates, and key routes all need to be aware of the whether there is a config for the engine
@@ -36,7 +36,7 @@ export function withConfig() {
         try {
           await this.api.secrets.pkiListIssuers(
             this.secretMountPath.currentPath,
-            PkiListIssuersListEnum.TRUE
+            SecretsApiPkiListIssuersListEnum.TRUE
           );
           this.pkiMountHasConfig = true;
         } catch (e) {

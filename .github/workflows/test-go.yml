@@ -147,7 +147,7 @@ jobs:
       - uses: ./.github/actions/install-tools # for gotestsum
       - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
       - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
-        uses: actions/cache/restore@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ${{ steps.local-metadata.outputs.go-test-dir }}
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
@@ -185,7 +185,7 @@ jobs:
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*,*verify*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files '${{ steps.local-metadata.outputs.go-test-dir }}/*.json' > matrix.json
           )
@@ -338,7 +338,33 @@ jobs:
         # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
         env:
           GOPRIVATE: github.com/hashicorp/*
-        run: time make prep dev
+        run: |
+          set -exo pipefail
+          time make prep dev
+          mv bin/vault vault-binary
+      - if: inputs.binary-tests && matrix.id == inputs.total-runners
+        id: build-docker-image
+        name: Build Docker image with custom vault binary
+        run: |
+          set -exo pipefail
+
+          if [ "${{ needs.test-matrix.outputs.is-ent-branch }}" == "true" ]; then
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:latest -target=hashicorp/vault-enterprise-ci:latest -binary=./vault-binary
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault-enterprise:2.0.1-ent.hsm -target=hashicorp/vault-enterprise-ci:latest-hsm -binary=./vault-hsm-binary -hsm
+
+            # Verify the images were built successfully
+            docker images hashicorp/vault-enterprise-ci:latest
+            echo "image=hashicorp/vault-enterprise-ci:latest" >> "$GITHUB_OUTPUT"
+
+            docker images hashicorp/vault-enterprise-ci:latest-hsm
+            echo "hsmimage=hashicorp/vault-enterprise-ci:latest-hsm" >> "$GITHUB_OUTPUT"
+          else
+            go run ./tools/testimagemaker/ -source=docker.io/hashicorp/vault:latest -target=hashicorp/vault-ci:latest -binary=./vault-binary
+
+            # Verify the images was built successfully
+            docker images hashicorp/vault-ci:latest
+            echo "image=hashicorp/vault-ci:latest" >> "$GITHUB_OUTPUT"
+          fi
       - if: needs.test-matrix.outputs.is-ent-repo != 'true'
         # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
         name: Install gVisor
@@ -402,17 +428,26 @@ jobs:
           # The docker/binary tests are more expensive, and we've had problems with timeouts when running at full
           # parallelism.  The default if -p isn't specified is to use NumCPUs, which seems fine for regular tests.
           package_parallelism=""
+          test_parallelism="${{ inputs.go-test-parallelism }}"
 
-          if [ -f vault-hsm-binary ]; then
-            VAULT_HSM_BINARY="$(pwd)/vault-hsm-binary"
-            export VAULT_HSM_BINARY
+          # The image will be preferred by most docker tests, since it doesn't require the extra
+          # overhead of mutating an image to add the current binary.  We still populate $VAULT_BINARY
+          # for the sake of exec tests like TestSysPprof_Exec.
+          if [ -f vault-binary ]; then
+            VAULT_BINARY=$(pwd)/vault-binary
+            export VAULT_BINARY
+            export VAULT_IMAGE=${{ steps.build-docker-image.outputs.image }}
           fi
 
-          if [ -f bin/vault ]; then
-            VAULT_BINARY="$(pwd)/bin/vault"
-            export VAULT_BINARY
+          if [ -f vault-hsm-binary ]; then
+            VAULT_HSM_BINARY=$(pwd)/vault-hsm-binary
+            export VAULT_HSM_BINARY
+            export VAULT_HSM_IMAGE=${{ steps.build-docker-image.outputs.hsmimage }}
+          fi
 
+          if [ -f vault-binary ] || [ -f vault-hsm-binary ]; then
             package_parallelism="-p 2"
+            test_parallelism=4
           fi
 
           # If running Go tests on the enterprise repo, add a flag to rerun failed tests.
@@ -436,7 +471,7 @@ jobs:
               $package_parallelism \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ inputs.go-test-timeout }} \
-              -parallel=${{ inputs.go-test-parallelism }} \
+              -parallel="$test_parallelism" \
               ${{ inputs.extra-flags }} \
       - if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         name: Prepare datadog-ci
@@ -473,14 +508,14 @@ jobs:
           tar -cvf '${{ steps.metadata.outputs.go-test-log-archive-name }}' -C "${{ steps.metadata.outputs.go-test-log-dir }}" .
       - if: success() || failure()
         name: Upload test logs archives
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           path: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           retention-days: 7
       - if: success() || failure()
         name: Upload test results
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ steps.metadata.outputs.go-test-results-upload-key }}
           path: |
@@ -518,7 +553,7 @@ jobs:
           echo "data-race-result=${result}" | tee -a "$GITHUB_OUTPUT"
       - if: (success() || failure()) && steps.data-race-check.outputs.data-race-result == 'failure'
         name: Upload data race detector failure log
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
           path: ${{ steps.metadata.outputs.go-test-dir }}/${{ steps.metadata.outputs.data-race-log-file }}
@@ -530,7 +565,7 @@ jobs:
       # so we have to fetch it from the API
       - if: success() || failure()
         name: Fetch job logs URL
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
         continue-on-error: true
         with:
           retries: 3
@@ -592,7 +627,7 @@ jobs:
           >> '${{ steps.metadata.outputs.failure-summary-file-name }}'
       - if: success() || failure()
         name: Upload failure summary
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
           path: ${{ steps.metadata.outputs.failure-summary-file-name }}
@@ -609,7 +644,7 @@ jobs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
     steps:
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: ${{ needs.test-go.outputs.data-race-log-download-pattern }}
           path: data-race-logs
@@ -651,7 +686,7 @@ jobs:
           } | tee -a "$GITHUB_OUTPUT"
       # Aggregate, prune, and cache our timing data
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-save }}
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
@@ -659,7 +694,7 @@ jobs:
             ${{ inputs.test-timing-cache-key }}-
             go-test-timing-
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-save }}
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}

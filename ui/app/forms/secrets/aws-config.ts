@@ -41,6 +41,7 @@ export default class AwsConfigForm extends WifConfigForm<AwsConfigFormData> {
   optionFields = [
     new FormField('region', 'string', {
       possibleValues: regions(),
+      noDefault: true,
       subText:
         'Specifies the AWS region. If not set it will use the AWS_REGION env var, AWS_DEFAULT_REGION env var, or us-east-1 in that order.',
     }),

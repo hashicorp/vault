@@ -34,7 +34,7 @@ module('Acceptance | console', function (hooks) {
     await consoleComponent.runCommands('refresh');
     await settled();
     for (const id of ids) {
-      assert.dom(GENERAL.tableRow(`console-route-${id}/`)).exists('new engine is shown on the page');
+      assert.dom(GENERAL.listItem(`console-route-${id}/`)).exists('new engine is shown on the page');
     }
     // Clean up
     for (const id of ids) {
@@ -45,7 +45,7 @@ module('Acceptance | console', function (hooks) {
     await consoleComponent.runCommands('refresh');
     await settled();
     for (const id of ids) {
-      assert.dom(GENERAL.tableRow(`console-route-${id}/`)).doesNotExist('engine was removed');
+      assert.dom(GENERAL.listItem(`console-route-${id}/`)).doesNotExist('engine was removed');
     }
   });
 

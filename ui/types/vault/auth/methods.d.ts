@@ -41,6 +41,12 @@ interface AuthResponseDataKey extends SharedAuthResponseData {
 }
 
 // METHOD SPECIFIC RESPONSES
+export interface CertLoginApiResponse extends ApiResponse {
+  auth: AuthResponseAuthKey & {
+    metadata: { cert_name: string; common_name: string };
+  };
+}
+
 export interface GithubLoginApiResponse extends ApiResponse {
   auth: AuthResponseAuthKey & {
     metadata: { org: string; username: string };

@@ -10,12 +10,16 @@ module.exports = function (environment) {
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
     'img-src': ["'self'", 'data:'],
-    'style-src': ["'unsafe-inline'", "'self'"],
+    'style-src': ["'self'"],
     'media-src': ["'self'"],
     'form-action': ["'none'"],
   };
 
   policy['connect-src'].push('https://eu.i.posthog.com');
+
+  if (environment === 'test') {
+    policy['style-src'].push("'unsafe-inline'");
+  }
 
   return {
     delivery: ['header', 'meta'],

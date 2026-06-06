@@ -6,11 +6,11 @@
 import Model, { attr, hasMany } from '@ember-data/model';
 import ArrayProxy from '@ember/array/proxy';
 import PromiseProxyMixin from '@ember/object/promise-proxy-mixin';
-import { withModelValidations } from 'vault/decorators/model-validations';
-import { isPresent } from '@ember/utils';
 import { service } from '@ember/service';
+import { isPresent } from '@ember/utils';
+import { filterEnginesByMountCategory } from 'core/utils/all-engines-metadata';
+import { withModelValidations } from 'vault/decorators/model-validations';
 import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],

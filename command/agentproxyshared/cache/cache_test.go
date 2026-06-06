@@ -62,8 +62,6 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
@@ -151,12 +149,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
-	client := cores[0].Client
+	client := cluster.Cores[0].Client
 
 	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

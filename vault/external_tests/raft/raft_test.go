@@ -27,6 +27,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -54,6 +55,36 @@ type RaftClusterOpts struct {
 	EffectiveSDKVersionMap         map[int]string
 	PerNodePhysicalFactoryConfig   map[int]map[string]interface{}
 	DisableMlock                   bool
+}
+
+// TestRaft_Retry_JoinLimiter verifies that only 20 concurrent retry joins are allowed.
+func TestRaft_Retry_JoinLimiter(t *testing.T) {
+	t.Parallel()
+	const maxConcurrentRetryJoins = 20
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+		NumCores:             2, // 1 leader + 1 follower; limiter is per-core, so test repeated joins on one core
+	})
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			LeaderAPIAddr: "https://127.0.0.1:1",
+			Retry:         true,
+		},
+	}
+
+	ctx, cancel := context.WithCancel(namespace.RootContext(context.Background()))
+	defer cancel()
+	followerCore := cluster.Cores[1]
+	for i := 0; i < maxConcurrentRetryJoins; i++ {
+		_, err := followerCore.JoinRaftCluster(ctx, leaderInfos, false)
+		require.NoError(t, err)
+	}
+	_, err := followerCore.JoinRaftCluster(ctx, leaderInfos, false)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "too many concurrent raft retry joins in progress")
 }
 
 func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig, vault.TestClusterOptions) {
@@ -113,7 +144,6 @@ func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig
 func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vault.TestClusterOptions) {
 	conf, opts := raftClusterBuilder(t, ropts)
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	return cluster, &opts
 }
 
@@ -132,9 +162,6 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 		},
 	}
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	defer cluster.Cleanup()
-
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	leaderClient := cluster.Cores[0].Client
 
 	// Write a few keys
@@ -176,7 +203,6 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 		InmemCluster:         true,
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 
@@ -210,7 +236,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 		InmemCluster:         true,
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -244,7 +269,6 @@ func TestRaft_Retry_Join(t *testing.T) {
 	// Unseal the leader and wait for the other cores to unseal
 	cluster.UnsealCore(t, leaderCore)
 	wg.Wait()
-
 	vault.TestWaitActive(t, leaderCore.Core)
 
 	corehelpers.RetryUntil(t, 10*time.Second, func() error {
@@ -266,7 +290,6 @@ func TestRaftChallenge_sameAnswerSameID_concurrent(t *testing.T) {
 		DisableFollowerJoins: true,
 		NumCores:             1,
 	})
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	challenges := make(chan string, 15)
@@ -303,7 +326,6 @@ func TestRaftChallenge_sameAnswerSameID(t *testing.T) {
 		DisableFollowerJoins: true,
 		NumCores:             1,
 	})
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 	res, err := client.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 		"server_id": "node1",
@@ -335,7 +357,6 @@ func TestRaftChallenge_evicted(t *testing.T) {
 		DisableFollowerJoins: true,
 		NumCores:             1,
 	})
-	defer cluster.Cleanup()
 	firstResponse := map[string]interface{}{}
 	client := cluster.Cores[0].Client
 	for i := 0; i < vault.RaftInitialChallengeLimit+1; i++ {
@@ -391,7 +412,6 @@ func TestRaft_ChallengeSpam(t *testing.T) {
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	// Execute 2 * MaxInFlightRequests, over a period that should allow some to proceed as the token bucket
 	// refills.
@@ -424,7 +444,6 @@ func TestRaft_Join(t *testing.T) {
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -471,7 +490,6 @@ func TestRaft_Join(t *testing.T) {
 func TestRaft_RemovePeer(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -545,7 +563,6 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
 			cluster, _ := raftCluster(t, tc.ropts)
-			defer cluster.Cleanup()
 
 			for i, c := range cluster.Cores {
 				if c.Core.Sealed() {
@@ -582,14 +599,12 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 	Raft_Configuration_Test(t, cluster)
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
 		if c.Core.Sealed() {
@@ -601,7 +616,6 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 func TestRaft_SnapshotAPI(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
 
@@ -665,7 +679,6 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 		NumCores: 1,
 		Seal:     autoSeal,
 	})
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
 
@@ -770,7 +783,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
 			})
-			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
 
@@ -974,7 +986,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			cluster, _ := raftCluster(t, &RaftClusterOpts{
 				DisablePerfStandby: tCaseLocal.DisablePerfStandby,
 			})
-			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
 
@@ -1161,7 +1172,6 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
 
@@ -1207,7 +1217,6 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	// Cluster 2
 	{
 		cluster2, _ := raftCluster(t, nil)
-		defer cluster2.Cleanup()
 
 		leaderClient := cluster2.Cores[0].Client
 
@@ -1254,7 +1263,6 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
 	cluster, _ := raftCluster(b, nil)
-	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
 
@@ -1288,7 +1296,6 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 		InmemCluster:         true,
 		DisableFollowerJoins: true,
 	})
-	defer cluster.Cleanup()
 
 	leaderCore := cluster.Cores[0]
 	leaderAPI := leaderCore.Client.Address()
@@ -1372,7 +1379,6 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 func TestRaftCluster_Removed(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	follower := cluster.Cores[2]
 	followerClient := follower.Client
@@ -1417,7 +1423,6 @@ func TestRaftCluster_Removed_RaftConfig(t *testing.T) {
 	conf, opts := raftClusterBuilder(t, nil)
 	conf.ClusterHeartbeatInterval = 5 * time.Minute
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 	follower := cluster.Cores[2]
 	followerClient := follower.Client
@@ -1458,7 +1463,6 @@ func TestSysHealth_Raft(t *testing.T) {
 		ClusterHeartbeatInterval: heartbeat,
 	}
 	vaultCluster := vault.NewTestCluster(t, conf, opts)
-	defer vaultCluster.Cleanup()
 	testhelpers.WaitForActiveNodeAndStandbys(t, vaultCluster)
 	followerClient := vaultCluster.Cores[1].Client
 
@@ -1565,7 +1569,6 @@ func TestSysHealth_Raft(t *testing.T) {
 func TestRaftCluster_Removed_ReAdd(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
-	defer cluster.Cleanup()
 
 	leader := cluster.Cores[0]
 	follower := cluster.Cores[2]
@@ -1589,7 +1592,6 @@ func TestCore_RaftDataDirPath(t *testing.T) {
 	t.Run("raft", func(t *testing.T) {
 		t.Parallel()
 		cluster, _ := raftCluster(t, nil)
-		defer cluster.Cleanup()
 		path, ok := cluster.Cores[0].RaftDataDirPath()
 		require.True(t, ok)
 		require.NotEmpty(t, path)
@@ -1608,7 +1610,6 @@ func TestCore_RaftDataDirPath(t *testing.T) {
 		opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 		teststorage.RaftHASetup(&conf, &opts, teststorage.MakeFileBackend)
 		cluster := vault.NewTestCluster(t, &conf, &opts)
-		defer cluster.Cleanup()
 		path, ok := cluster.Cores[0].RaftDataDirPath()
 		require.False(t, ok)
 		require.Empty(t, path)
@@ -1631,9 +1632,6 @@ func TestRaft_SnapshotLargerMaxRequestSize(t *testing.T) {
 	}
 
 	cluster := vault.NewTestCluster(t, conf, &opts)
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
-	defer cluster.Cleanup()
-
 	client := cluster.Cores[0].Client
 	for i := 0; i < 4096; i++ {
 		path, err := uuid.GenerateUUID()
@@ -1658,4 +1656,15 @@ func TestRaft_SnapshotLargerMaxRequestSize(t *testing.T) {
 	err = client.Sys().RaftSnapshotRestore(bytes.NewReader(snap), false)
 	require.NoError(t, err)
 	testhelpers.WaitForActiveNode(t, cluster)
+}
+
+// TestRaft_BootstrapWhenSealed ensures raft does not attempt to bootstrap when sealed.
+func TestRaft_BootstrapWhenSealed(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	cluster.EnsureCoresSealed(t)
+
+	_, err := client.Logical().Write("sys/storage/raft/bootstrap", nil)
+	require.ErrorContains(t, err, "node must be unsealed to bootstrap")
 }

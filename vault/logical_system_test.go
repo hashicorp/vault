@@ -242,6 +242,7 @@ func TestSystemBackend_mounts(t *testing.T) {
 				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
+				"allowed_response_headers":    []string{"Location"},
 			},
 			"local":                  false,
 			"seal_wrap":              false,
@@ -399,6 +400,7 @@ func TestSystemBackend_mount(t *testing.T) {
 				"max_lease_ttl":               resp.Data["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 				"force_no_cache":              false,
 				"passthrough_request_headers": []string{"Authorization"},
+				"allowed_response_headers":    []string{"Location"},
 			},
 			"local":                  false,
 			"seal_wrap":              false,
@@ -2720,8 +2722,8 @@ func TestSystemBackend_policyList(t *testing.T) {
 	)
 
 	exp := map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"default", "default-ceiling", "root"},
+		"policies": []string{"default", "default-ceiling", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -2799,8 +2801,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "foo", "root"},
-		"policies": []string{"default", "foo", "root"},
+		"keys":     []string{"default", "default-ceiling", "foo", "root"},
+		"policies": []string{"default", "default-ceiling", "foo", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -2842,8 +2844,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"default", "default-ceiling", "root"},
+		"policies": []string{"default", "default-ceiling", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -4607,6 +4609,7 @@ func TestSystemBackend_InternalUIMounts(t *testing.T) {
 					"max_lease_ttl":               resp.Data["secret"].(map[string]interface{})["identity/"].(map[string]interface{})["config"].(map[string]interface{})["max_lease_ttl"].(int64),
 					"force_no_cache":              false,
 					"passthrough_request_headers": []string{"Authorization"},
+					"allowed_response_headers":    []string{"Location"},
 				},
 				"local":                  false,
 				"seal_wrap":              false,
@@ -7380,9 +7383,6 @@ func TestPathInternalUICustomMessagesCommon(t *testing.T) {
 func TestGetLeaderStatus_RedactionSettings(t *testing.T) {
 	testCluster := NewTestCluster(t, nil, nil)
 
-	testCluster.Start()
-	defer testCluster.Cleanup()
-
 	testCore := testCluster.Cores[0]
 
 	// Check with no redaction settings
@@ -7418,9 +7418,6 @@ func TestGetSealStatus_RedactionSettings(t *testing.T) {
 	testCluster := NewTestCluster(t, &CoreConfig{
 		ClusterName: "secret-cluster-name",
 	}, nil)
-
-	testCluster.Start()
-	defer testCluster.Cleanup()
 
 	testCore := testCluster.Cores[0]
 

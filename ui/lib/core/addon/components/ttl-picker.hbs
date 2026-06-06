@@ -46,6 +46,7 @@
         <label for="select-ttl-unit" class="sr-only">Unit for TTL</label>
         {{! Select automatically gets id based on name }}
         <Select
+          @ariaLabel="TTL unit for {{this.label}}"
           @name="ttl-unit"
           @options={{this.unitOptions}}
           @onChange={{this.updateUnit}}
@@ -116,6 +117,7 @@
             <label for="unit-{{this.elementId}}" class="sr-only">Unit for TTL</label>
             <Select
               id="unit-{{this.elementId}}"
+              @ariaLabel="TTL unit for {{this.label}}"
               @name="ttl-unit"
               @options={{this.unitOptions}}
               @onChange={{this.updateUnit}}

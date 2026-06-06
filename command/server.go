@@ -128,6 +128,7 @@ type ServerCommand struct {
 	flagDevNoStoreToken    bool
 	flagDevPluginDir       string
 	flagDevPluginInit      bool
+	flagDevPluginPGPKey    string
 	flagDevHA              bool
 	flagDevLatency         int
 	flagDevLatencyJitter   int
@@ -314,6 +315,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Name:    "dev-plugin-init",
 		Target:  &c.flagDevPluginInit,
 		Default: true,
+		Hidden:  true,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "dev-plugin-pgp-key",
+		Target:  &c.flagDevPluginPGPKey,
+		Default: "",
 		Hidden:  true,
 	})
 
@@ -552,7 +560,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	hasPartialPaths, err := vault.HasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
 		return 1
@@ -691,6 +699,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
+			MaxHeaderBytes:    vaulthttp.TokenHeaderMaxBytes(ln.Config),
 		}
 
 		go server.Serve(ln.Listener)
@@ -1516,7 +1525,8 @@ func (c *ServerCommand) Run(args []string) int {
 	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
 		Core: core,
 		ListenerConfig: &configutil.Listener{
-			DisableJSONLimitParsing: true,
+			DisableJSONLimitParsing:       true,
+			DisableTokenHeaderSizeParsing: true,
 		},
 	}))
 
@@ -1925,7 +1935,7 @@ func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Confi
 		return nil, nil, fmt.Errorf("Error getting seal generation info: %v", err)
 	}
 
-	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	hasPartialPaths, err := vault.HasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Cannot determine if there are partially seal wrapped entries in storage: %v", err)
 	}
@@ -2348,6 +2358,9 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 	// Set Introspection Endpoint to enabled with new value in the config after reload
 	core.ReloadIntrospectionEndpointEnabled()
 
+	// Reload unauthenticated endpoints override configuration
+	core.ReloadEnableUnauthenticatedAccess()
+
 	// Send a message that we reloaded. This prevents "guessing" sleep times
 	// in tests.
 	select {
@@ -2739,23 +2752,14 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Enabled:    multisealEnabled,
 	}
 
-	if multisealEnabled || (existingSealGenInfo != nil && existingSealGenInfo.Enabled) {
-		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
-		if err != nil {
-			return nil, err
-		}
+	// Validate multi seal concerns of the seal configuration. Note that at this
+	// point Vault is starting up, not initializing (as in "vault operator init").
+	err := vaultseal.ValidateMultiSealGenerationInfo(false, newSealGenInfo, existingSealGenInfo, hasPartiallyWrappedPaths)
+	if err != nil {
+		return nil, err
 	}
 
 	return newSealGenInfo, nil
-}
-
-func hasPartiallyWrappedPaths(ctx context.Context, backend physical.Backend) (bool, error) {
-	paths, err := vault.GetPartiallySealWrappedPaths(ctx, backend)
-	if err != nil {
-		return false, err
-	}
-
-	return len(paths) > 0, nil
 }
 
 func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {
@@ -3000,6 +3004,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
 		ObservationSystemConfig:        config.Observations,
 		ReportingScanDirectory:         config.ReportingScanDirectory,
+		EnableUnauthenticatedAccess:    config.EnableUnauthenticatedAccess,
 	}
 
 	if c.flagDev {
@@ -3011,6 +3016,9 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		}
 		if c.flagDevPluginDir != "" {
 			coreConfig.PluginDirectory = c.flagDevPluginDir
+		}
+		if c.flagDevPluginPGPKey != "" {
+			coreConfig.DevPluginPGPKey = c.flagDevPluginPGPKey
 		}
 		if c.flagDevLatency > 0 {
 			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
@@ -3061,6 +3069,16 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
+
+				// Skip directories (e.g., enterprise plugin packages)
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					return fmt.Errorf("Error reading plugin file info %s: %s", name, err)
+				}
+				if fileInfo.IsDir() {
+					continue
+				}
+
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
 					if !errwrap.Contains(err, plugincatalog.ErrPluginBadType.Error()) {
 						return fmt.Errorf("Error enabling plugin %s: %s", name, err)
@@ -3194,6 +3212,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
+			MaxHeaderBytes:    vaulthttp.TokenHeaderMaxBytes(ln.Config),
 		}
 
 		// override server defaults with config values for read/write/idle timeouts if configured

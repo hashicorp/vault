@@ -38,7 +38,7 @@ dn: ou=groups,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: groups
 EOF
-ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF}
+ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF} || echo "OUs may already exist"
 
 ADMIN_LDIF="admin.ldif"
 cat << EOF > ${ADMIN_LDIF}
@@ -49,7 +49,7 @@ cn: admin
 description: LDAP administrator
 userPassword: $LDAP_ADMIN_PW
 EOF
-ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${ADMIN_LDIF}
+ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${ADMIN_LDIF} || echo "Admin may already exist"
 
 # Dedicated LDAP user for static role tests
 LDAP_STATIC_USERNAME="${LDAP_STATIC_USERNAME:-vault-static-user}"
@@ -79,7 +79,7 @@ objectClass: groupOfNames
 cn: devs
 member: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
 EOF
-ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF}
+ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF} || echo "Users may already exist"
 
 echo "Vault: Adding vault-admins group and adding existing user to it"
 ADMIN_GROUP_LDIF="vault-admins.ldif"
@@ -93,7 +93,7 @@ EOF
 ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" \
   -D "cn=admin,dc=${LDAP_USERNAME},dc=com" \
   -w "${LDAP_ADMIN_PW}" \
-  -f ${ADMIN_GROUP_LDIF}
+  -f ${ADMIN_GROUP_LDIF} || echo "Admin group may already exist"
 echo "LDAP configuration completed successfully."
 
 "$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"

@@ -8,15 +8,15 @@
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
-        (hash label="Keys" route="vault.cluster.access.oidc.keys")
-        (hash label="Create Key")
+        (hash label="OIDC provider: Keys" route="vault.cluster.access.oidc.keys")
+        (hash label="Create key")
       }}
     />
   </:breadcrumbs>
 </Page::Header>
 
 <Oidc::KeyForm
-  @model={{this.model}}
+  @form={{this.model}}
   @onCancel={{transition-to "vault.cluster.access.oidc.keys"}}
   @onSave={{transition-to "vault.cluster.access.oidc.keys.key.details" this.model.name}}
 />

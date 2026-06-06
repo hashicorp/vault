@@ -5,10 +5,10 @@
 
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 import { SecurityPolicy } from 'vault/components/wizard/namespaces/step-1';
-import { CreationMethod } from 'vault/components/wizard/namespaces/step-3';
+import { CreationMethod } from 'vault/utils/constants/snippet';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type ApiService from 'vault/services/api';
 import type Block from 'vault/components/wizard/namespaces/step-2';
@@ -16,8 +16,9 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
 import type WizardService from 'vault/services/wizard';
+import type { StepConfig } from 'vault/services/wizard';
 
-const DEFAULT_STEPS = [
+const DEFAULT_STEPS: StepConfig[] = [
   { title: 'Select setup', component: 'wizard/namespaces/step-1' },
   { title: 'Map out namespaces', component: 'wizard/namespaces/step-2' },
   { title: 'Apply changes', component: 'wizard/namespaces/step-3' },
@@ -26,6 +27,7 @@ const DEFAULT_STEPS = [
 interface Args {
   isIntroModal: boolean;
   onRefresh: CallableFunction;
+  onFlexiblePolicyComplete: CallableFunction;
 }
 
 interface WizardState {
@@ -36,7 +38,13 @@ interface WizardState {
   codeSnippet: string | null;
 }
 
-export const WIZARD_ID = 'namespace';
+const DEFAULT_WIZARD_STATE: WizardState = {
+  securityPolicyChoice: null,
+  namespacePaths: null,
+  namespaceBlocks: null,
+  creationMethod: null,
+  codeSnippet: null,
+};
 
 export default class WizardNamespacesWizardComponent extends Component<Args> {
   @service declare readonly api: ApiService;
@@ -45,20 +53,23 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
   @service declare readonly wizard: WizardService;
   @service declare namespace: NamespaceService;
 
-  @tracked currentStep = 0;
-  @tracked steps = DEFAULT_STEPS;
-  @tracked wizardState: WizardState = {
-    securityPolicyChoice: null,
-    namespacePaths: null,
-    namespaceBlocks: null,
-    creationMethod: null,
-    codeSnippet: null,
-  };
-
   methods = CreationMethod;
   policy = SecurityPolicy;
 
-  wizardId = WIZARD_ID;
+  wizardId = WIZARD_ID_MAP.namespace;
+
+  get currentStep() {
+    return this.wizard.getCurrentStep(this.wizardId);
+  }
+
+  get steps() {
+    const steps = this.wizard.getSteps(this.wizardId);
+    return steps.length > 0 ? steps : DEFAULT_STEPS;
+  }
+
+  get wizardState(): WizardState {
+    return { ...DEFAULT_WIZARD_STATE, ...this.wizard.getState<Partial<WizardState>>(this.wizardId) };
+  }
 
   // Whether the current step requirements have been met to proceed to the next step
   get canProceed() {
@@ -75,7 +86,7 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
   }
 
   get isFinalStep() {
-    return this.currentStep === this.steps.length - 1;
+    return this.wizard.isFinalStep(this.wizardId);
   }
 
   get shouldShowExitButton() {
@@ -91,18 +102,18 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
 
   updateSteps() {
     if (this.wizardState.securityPolicyChoice === SecurityPolicy.FLEXIBLE) {
-      this.steps = [
+      this.wizard.setSteps(this.wizardId, [
         { title: 'Select setup', component: 'wizard/namespaces/step-1' },
         { title: 'Apply changes', component: 'wizard/namespaces/step-3' },
-      ];
+      ]);
     } else {
-      this.steps = DEFAULT_STEPS;
+      this.wizard.setSteps(this.wizardId, DEFAULT_STEPS);
     }
   }
 
   @action
   onStepChange(step: number) {
-    this.currentStep = step;
+    this.wizard.setCurrentStep(this.wizardId, step);
     // if user policy selection changes which steps we show, update upon page navigation
     // instead of flashing the changes when toggling
     this.updateSteps();
@@ -110,10 +121,21 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
 
   @action
   updateWizardState(key: string, value: unknown) {
-    this.wizardState = {
-      ...this.wizardState,
-      [key]: value,
-    };
+    this.wizard.updateState(this.wizardId, key, value);
+  }
+
+  @action
+  async onDone() {
+    await this.onDismiss();
+    this.args.onFlexiblePolicyComplete();
+    this.flashMessages.success(`Your current setup is 1 namespace.`, { title: 'Guided start complete' });
+  }
+
+  @action
+  async onDismiss() {
+    this.wizard.dismiss(this.wizardId);
+    this.wizard.clearWizardState(this.wizardId);
+    await this.args.onRefresh();
   }
 
   @action
@@ -127,12 +149,6 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
         // In these cases, there is no submit button
         break;
     }
-  }
-
-  @action
-  async onDismiss() {
-    this.wizard.dismiss(this.wizardId);
-    await this.args.onRefresh();
   }
 
   @action
@@ -155,7 +171,7 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
         await this.createNamespace(namespaceName, fullPath);
       }
 
-      this.flashMessages.success(`The namespaces have been successfully created.`);
+      this.flashMessages.success('Your new configuration has been applied.', { title: 'Namespaces created' });
     } catch (error) {
       const { message } = await this.api.parseError(error);
       this.flashMessages.danger(`Error creating namespaces: ${message}`);

@@ -46,8 +46,8 @@ const navToBackend = async (backend) => {
   await visit(`/vault/secrets-engines`);
   // Use search to find the specific backend instead of relying on pagination
   await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
-  await waitUntil(() => find(`${GENERAL.tableData(`${backend}/`, 'path')} a`));
-  return click(`${GENERAL.tableData(`${backend}/`, 'path')} a`);
+  await waitFor(GENERAL.linkTo(`${backend}/`));
+  return click(GENERAL.linkTo(`${backend}/`));
 };
 const assertPolicyGenerator = async (assert, expectedPaths) => {
   assert.dom(GENERAL.cardContainer()).exists({ count: expectedPaths.length });

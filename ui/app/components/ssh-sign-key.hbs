@@ -1,0 +1,81 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Sign SSH key">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
+
+{{#if this.signedKeyData}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    <Hds::Alert @type="inline" @color="warning" class="has-top-margin-s has-bottom-margin-s" as |A|>
+      <A.Title>Warning</A.Title>
+      <A.Description>
+        You will not be able to access this information later, so please copy the information below.
+      </A.Description>
+    </Hds::Alert>
+    {{#each this.signDisplayRows as |row|}}
+      <InfoTableRow @label={{row.label}} @value={{row.value}} />
+    {{/each}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <Hds::Copy::Button
+        @text="Copy key"
+        @textToCopy={{this.signedKeyData.signed_key}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+        class="primary"
+      />
+    </div>
+    {{#if this.signedKeyData.lease_id}}
+      <div class="control">
+        <Hds::Copy::Button
+          @text="Copy lease ID"
+          @textToCopy={{this.signedKeyData.lease_id}}
+          @onError={{(fn
+            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+          )}}
+          class="secondary"
+        />
+      </div>
+    {{/if}}
+    <div class="control">
+      <Hds::Button @text="Back" @color="secondary" {{on "click" this.reset}} data-test-back-button />
+    </div>
+  </div>
+{{else}}
+  <form {{on "submit" (perform this.sign)}} data-test-secret-generate-form="true">
+    <div class="box is-sideless is-fullwidth is-marginless">
+      <MessageError @errorMessage={{this.errorMessage}} />
+      <NamespaceReminder @mode="sign" @noun="SSH key" />
+      <FormFieldGroups
+        @model={{this.signForm}}
+        @mode="create"
+        @groupName="formFieldGroups"
+        @modelValidations={{this.modelValidations}}
+      />
+      {{#if this.invalidFormAlert}}
+        <AlertInline @type="danger" @message={{this.invalidFormAlert}} class="has-top-padding-s" />
+      {{/if}}
+    </div>
+    <Hds::ButtonSet class="has-top-bottom-margin">
+      <Hds::Button
+        @text="Sign"
+        @icon={{if this.sign.isRunning "loading"}}
+        type="submit"
+        disabled={{this.sign.isRunning}}
+        data-test-submit
+      />
+      <Hds::Button
+        @text="Cancel"
+        @color="secondary"
+        @route="vault.cluster.secrets.backend.list-root"
+        @model={{@backendPath}}
+        data-test-cancel
+      />
+    </Hds::ButtonSet>
+  </form>
+{{/if}}

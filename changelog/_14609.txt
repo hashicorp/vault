@@ -1,0 +1,14 @@
+```release-note:improvement
+consumption-billing: Increased billing data retention from 2 months to 37 months. The `/sys/internal/billing/overview` API endpoint now returns 37 months of historical consumption billing data by default.
+```
+
+```release-note:improvement
+consumption-billing: The `/sys/internal/billing/overview` API endpoint now always returns all metric types in the response, even when their values are zero. This ensures consistent response structure for easier client-side parsing.
+```
+
+```release-note:improvement
+consumption-billing: Added consumption billing metrics for SPIFFE JWT tokens.
+```
+
+```release-note:improvement
+consumption-billing: Added consumption billing metrics for GCP KMS data protection operations.

@@ -13,6 +13,20 @@ import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import { getModelTypeForEngine } from 'vault/utils/model-helpers/secret-engine-helpers';
 import { getBackendEffectiveType, getEnginePathParam } from 'vault/utils/backend-route-helpers';
+import { isValidProvider } from 'vault/utils/keymgmt-provider-utils';
+import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
+import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
+import TotpKeyForm from 'vault/forms/totp/key';
+import SshRoleForm from 'vault/forms/ssh/role';
+import AlphabetForm from 'vault/forms/transform/alphabet';
+import TemplateForm from 'vault/forms/transform/template';
+import RoleForm from 'vault/forms/transform/role';
+import TransformationForm from 'vault/forms/transform/transformation';
+import Form from 'vault/forms/form';
+import {
+  SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
+  SecretsApiTransformListRolesListEnum,
+} from '@hashicorp/vault-client-typescript';
 
 /**
  * @type Class
@@ -21,6 +35,8 @@ export default Route.extend({
   store: service(),
   router: service(),
   pathHelp: service('path-help'),
+  api: service(),
+  capabilitiesService: service('capabilities'),
 
   secretParam() {
     const { secret } = this.paramsFor(this.routeName);
@@ -52,6 +68,18 @@ export default Route.extend({
   transformSecretName(secret, modelType) {
     const noun = modelType.split('/')[1];
     return secret.replace(`${noun}/`, '');
+  },
+
+  async fetchTransformRoles(backend) {
+    try {
+      const { keys } = await this.api.secrets.transformListRoles(
+        backend,
+        SecretsApiTransformListRolesListEnum.TRUE
+      );
+      return keys || [];
+    } catch (error) {
+      return [];
+    }
   },
 
   backendType() {
@@ -105,7 +133,15 @@ export default Route.extend({
   buildModel(secret, queryParams) {
     const backend = getEnginePathParam(this);
     const modelType = this.modelType(backend, secret, { queryParams });
-    if (modelType === 'secret') {
+    // TODO: Remove buildModel once all remaining engine types (e.g. database, transit) are migrated
+    // to API-backed Form instances — none will need hydrateModel and this function becomes redundant.
+    const skipHydration =
+      modelType === 'secret' ||
+      modelType.startsWith('keymgmt/') ||
+      modelType.startsWith('transform') ||
+      modelType === 'totp-key' ||
+      modelType === 'role-ssh';
+    if (skipHydration) {
       return resolve();
     }
     return this.pathHelp.hydrateModel(modelType, backend);
@@ -120,6 +156,332 @@ export default Route.extend({
       secret,
       itemType: options.queryParams?.itemType,
     });
+  },
+
+  async fetchKeyProvider(name, backend) {
+    try {
+      const providerResp = await this.api.secrets.keyManagementListKmsProvidersForKey(
+        name,
+        backend,
+        SecretsApiKeyManagementListKmsProvidersForKeyListEnum.TRUE
+      );
+      return providerResp.keys?.[0] || null;
+    } catch (e) {
+      const { status } = await this.api.parseError(e);
+      if (status === 403) {
+        return { permissionsError: true };
+      }
+      if (status === 404) {
+        return [];
+      }
+      throw e;
+    }
+  },
+
+  async fetchKeyDistribution(name, provider, backend) {
+    try {
+      const distResp = await this.api.secrets.keyManagementReadKeyInKmsProvider(name, provider, backend);
+      return {
+        ...distResp.data,
+        purposeArray: distResp.data?.purpose?.split(',') || [],
+      };
+    } catch (e) {
+      const { status } = await this.api.parseError(e);
+      // Return null for 403 - distribution is optional, no need for permissionsError like provider
+      if (status === 403) {
+        return null;
+      }
+      throw e;
+    }
+  },
+
+  buildKeyVersionsData(versions) {
+    let created = null;
+    let last_rotated = null;
+    let versionsArray = [];
+
+    if (versions) {
+      const versionKeys = Object.keys(versions);
+      if (versionKeys.length > 0) {
+        // This computes value of "created" from first version
+        const firstKey = versionKeys[0];
+        const firstVersion = versions[firstKey];
+        if (firstVersion?.creation_time) {
+          created = new Date(firstVersion.creation_time);
+        }
+
+        // This computes value of "last_rotated" from last version (if more than one)
+        if (versionKeys.length > 1) {
+          const lastKey = versionKeys[versionKeys.length - 1];
+          const lastVersion = versions[lastKey];
+          if (lastVersion?.creation_time) {
+            last_rotated = new Date(lastVersion.creation_time);
+          }
+        }
+
+        versionsArray = versionKeys
+          .map((key) => {
+            const version = versions[key];
+            if (!version?.creation_time) return null;
+            return {
+              ...version,
+              id: parseInt(key, 10),
+            };
+          })
+          .filter((v) => v !== null);
+      }
+    }
+
+    return { created, last_rotated, versions: versionsArray };
+  },
+
+  async fetchTotpKey(backend, name) {
+    const resp = await this.api.secrets.totpReadKey(name, backend);
+    const data = resp.data || {};
+    return new TotpKeyForm(
+      {
+        ...data,
+        name,
+        backend,
+      },
+      { isNew: false }
+    );
+  },
+
+  async fetchTotpKeyCapabilities(backend, name) {
+    const keyPath = this.capabilitiesService.pathFor('totpKey', { backend, name });
+    const keysPath = this.capabilitiesService.pathFor('totpKeys', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([keyPath, keysPath]);
+
+    return {
+      canDelete: capabilities[keyPath]?.canDelete,
+      canRead: capabilities[keyPath]?.canRead,
+      canList: capabilities[keysPath]?.canList,
+    };
+  },
+
+  async fetchKeymgmtKey(backend, name) {
+    const { data } = await this.api.secrets.keyManagementReadKey(name, backend);
+
+    const provider = await this.fetchKeyProvider(name, backend);
+
+    let distribution = null;
+    if (isValidProvider(provider)) {
+      distribution = await this.fetchKeyDistribution(name, provider, backend);
+    }
+
+    // This builds computed version data.
+    const { created, last_rotated, versions } = this.buildKeyVersionsData(data.versions);
+
+    const form = new KeymgmtKeyForm(
+      {
+        ...data,
+        name,
+        backend,
+        provider,
+        distribution,
+        created,
+        last_rotated,
+        versions,
+      },
+      { isNew: false }
+    );
+    return form;
+  },
+
+  async fetchKeymgmtKeyCapabilities(backend, name) {
+    const keyPath = this.capabilitiesService.pathFor('keymgmtKey', { backend, name });
+    const keysPath = this.capabilitiesService.pathFor('keymgmtKeys', { backend });
+    const keyProvidersPath = this.capabilitiesService.pathFor('keymgmtKeyProviders', { backend, name });
+
+    const capabilities = await this.capabilitiesService.fetch([keyPath, keysPath, keyProvidersPath]);
+
+    return {
+      canDelete: capabilities[keyPath]?.canDelete,
+      canUpdate: capabilities[keyPath]?.canUpdate,
+      canEdit: capabilities[keyPath]?.canUpdate,
+      canRead: capabilities[keyPath]?.canRead,
+      canList: capabilities[keysPath]?.canList,
+      canListProviders: capabilities[keyProvidersPath]?.canList,
+    };
+  },
+
+  async fetchKeymgmtProvider(backend, name) {
+    const { data } = await this.api.secrets.keyManagementReadKmsProvider(name, backend);
+
+    const form = new KeymgmtProviderForm(
+      {
+        ...data,
+        name,
+        backend,
+        keys: [],
+      },
+      { isNew: false }
+    );
+
+    return form;
+  },
+
+  async fetchKeymgmtProviderCapabilities(backend, name) {
+    const providerPath = this.capabilitiesService.pathFor('keymgmtProvider', { backend, id: name });
+    const providersPath = this.capabilitiesService.pathFor('keymgmtProviders', { backend });
+    const providerKeysPath = this.capabilitiesService.pathFor('keymgmtProviderKeys', { backend, id: name });
+
+    const capabilities = await this.capabilitiesService.fetch([
+      providerPath,
+      providersPath,
+      providerKeysPath,
+    ]);
+
+    return {
+      canDelete: capabilities[providerPath]?.canDelete,
+      canUpdate: capabilities[providerPath]?.canUpdate,
+      canEdit: capabilities[providerPath]?.canUpdate,
+      canRead: capabilities[providerPath]?.canRead,
+      canList: capabilities[providersPath]?.canList,
+      canListKeys: capabilities[providerKeysPath]?.canList,
+      canCreateKeys: capabilities[providerKeysPath]?.canCreate,
+    };
+  },
+
+  async fetchSshRole(backend, name) {
+    try {
+      const { data } = await this.api.secrets.sshReadRole(name, backend);
+      return new SshRoleForm({ ...data, name, backend }, { isNew: false });
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      throw new Error(message);
+    }
+  },
+
+  async fetchSshRoleCapabilities(backend, name) {
+    try {
+      const rolePath = this.capabilitiesService.pathFor('sshRole', { backend, id: name });
+      const credentialsPath = this.capabilitiesService.pathFor('sshCredentials', { backend, id: name });
+      const signPath = this.capabilitiesService.pathFor('sshSign', { backend, id: name });
+
+      const capabilities = await this.capabilitiesService.fetch([rolePath, credentialsPath, signPath]);
+
+      return {
+        canDelete: capabilities[rolePath]?.canDelete,
+        canUpdate: capabilities[rolePath]?.canUpdate,
+        canEdit: capabilities[rolePath]?.canUpdate,
+        canRead: capabilities[rolePath]?.canRead,
+        canGenerate: capabilities[credentialsPath]?.canUpdate,
+        canSign: capabilities[signPath]?.canUpdate,
+      };
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      throw new Error(message);
+    }
+  },
+
+  async fetchTransformAlphabet(backend, name) {
+    const resp = await this.api.secrets.transformReadAlphabet(name, backend);
+    const data = resp.data || {};
+    return new AlphabetForm({ ...data, name, backend }, { isNew: false });
+  },
+
+  async fetchTransformAlphabetCapabilities(backend, name) {
+    const alphabetPath = this.capabilitiesService.pathFor('transformAlphabet', { backend, name });
+    const alphabetsPath = this.capabilitiesService.pathFor('transformAlphabets', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([alphabetPath, alphabetsPath]);
+
+    return {
+      canDelete: capabilities[alphabetPath]?.canDelete,
+      canUpdate: capabilities[alphabetPath]?.canUpdate,
+      canRead: capabilities[alphabetPath]?.canRead,
+      canList: capabilities[alphabetsPath]?.canList,
+    };
+  },
+
+  async fetchTransformTemplate(backend, name) {
+    const resp = await this.api.secrets.transformReadTemplate(name, backend);
+    const data = resp.data || {};
+    return new TemplateForm(
+      {
+        name,
+        backend,
+        type: data.type,
+        pattern: data.pattern,
+        alphabet: data.alphabet ? [data.alphabet] : [],
+        encode_format: data.encode_format,
+        decode_formats: data.decode_formats,
+      },
+      { isNew: false }
+    );
+  },
+
+  async fetchTransformTemplateCapabilities(backend, name) {
+    const templatePath = this.capabilitiesService.pathFor('transformTemplate', { backend, name });
+    const templatesPath = this.capabilitiesService.pathFor('transformTemplates', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([templatePath, templatesPath]);
+
+    return {
+      canDelete: capabilities[templatePath]?.canDelete,
+      canUpdate: capabilities[templatePath]?.canUpdate,
+      canRead: capabilities[templatePath]?.canRead,
+      canList: capabilities[templatesPath]?.canList,
+    };
+  },
+
+  async fetchTransformRole(backend, name) {
+    const resp = await this.api.secrets.transformReadRole(name, backend);
+    const data = resp.data || {};
+    return new RoleForm({ name, backend, transformations: data.transformations || [] }, { isNew: false });
+  },
+
+  async fetchTransformRoleCapabilities(backend, name) {
+    const rolePath = this.capabilitiesService.pathFor('transformRole', { backend, name });
+    const rolesPath = this.capabilitiesService.pathFor('transformRoles', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([rolePath, rolesPath]);
+
+    return {
+      canDelete: capabilities[rolePath]?.canDelete,
+      canUpdate: capabilities[rolePath]?.canUpdate,
+      canRead: capabilities[rolePath]?.canRead,
+      canList: capabilities[rolesPath]?.canList,
+    };
+  },
+
+  async fetchTransformTransformation(backend, name) {
+    const resp = await this.api.secrets.transformReadTransformation(name, backend);
+    const data = resp.data || resp || {};
+    return new TransformationForm(
+      {
+        name,
+        backend,
+        type: data.type || 'fpe',
+        tweak_source: data.tweak_source,
+        masking_character: data.masking_character,
+        template: data.template ? [data.template] : [],
+        allowed_roles: data.allowed_roles || [],
+        deletion_allowed: data.deletion_allowed,
+        mapping_mode: data.mapping_mode,
+        convergent: data.convergent,
+        max_ttl: data.max_ttl,
+        stores: data.stores || [],
+      },
+      { isNew: false }
+    );
+  },
+
+  async fetchTransformTransformationCapabilities(backend, name) {
+    const transformationPath = this.capabilitiesService.pathFor('transformTransformation', { backend, name });
+    const transformationsPath = this.capabilitiesService.pathFor('transformTransformations', { backend });
+
+    const capabilities = await this.capabilitiesService.fetch([transformationPath, transformationsPath]);
+
+    return {
+      canDelete: capabilities[transformationPath]?.canDelete,
+      canUpdate: capabilities[transformationPath]?.canUpdate,
+      canRead: capabilities[transformationPath]?.canRead,
+      canList: capabilities[transformationsPath]?.canList,
+    };
   },
 
   async handleSecretModelError(capabilitiesPromise, secretId, modelType, error) {
@@ -158,20 +520,46 @@ export default Route.extend({
       secret = secret.replace('role/', '');
     }
     let secretModel;
+    let capabilities;
 
-    const capabilities = this.capabilities(secret, modelType);
-    try {
-      secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
-    } catch (err) {
-      // we've failed the read request, but if it's a kv-v1 type backend, we want to
-      // do additional checks of the capabilities
-      if (err.httpStatus === 403 && modelType === 'secret') {
-        secretModel = await this.handleSecretModelError(capabilities, secret, modelType, err);
-      } else {
-        throw err;
+    if (modelType === 'totp-key') {
+      secretModel = await this.fetchTotpKey(backend, secret);
+      capabilities = await this.fetchTotpKeyCapabilities(backend, secret);
+    } else if (modelType === 'keymgmt/key') {
+      secretModel = await this.fetchKeymgmtKey(backend, secret);
+      capabilities = await this.fetchKeymgmtKeyCapabilities(backend, secret);
+    } else if (modelType === 'keymgmt/provider') {
+      secretModel = await this.fetchKeymgmtProvider(backend, secret);
+      capabilities = await this.fetchKeymgmtProviderCapabilities(backend, secret);
+    } else if (modelType === 'role-ssh') {
+      secretModel = await this.fetchSshRole(backend, secret);
+      capabilities = await this.fetchSshRoleCapabilities(backend, secret);
+    } else if (modelType === 'transform/alphabet') {
+      secretModel = await this.fetchTransformAlphabet(backend, secret);
+      capabilities = await this.fetchTransformAlphabetCapabilities(backend, secret);
+    } else if (modelType === 'transform/template') {
+      secretModel = await this.fetchTransformTemplate(backend, secret);
+      capabilities = await this.fetchTransformTemplateCapabilities(backend, secret);
+    } else if (modelType === 'transform/role') {
+      secretModel = await this.fetchTransformRole(backend, secret);
+      capabilities = await this.fetchTransformRoleCapabilities(backend, secret);
+    } else if (modelType === 'transform') {
+      secretModel = await this.fetchTransformTransformation(backend, secret);
+      capabilities = await this.fetchTransformTransformationCapabilities(backend, secret);
+    } else {
+      capabilities = await this.capabilities(secret, modelType);
+      try {
+        secretModel = await this.store.queryRecord(modelType, { id: secret, backend, type });
+      } catch (err) {
+        // we've failed the read request, but if it's a kv-v1 type backend, we want to
+        // do additional checks of the capabilities
+        if (err.httpStatus === 403 && modelType === 'secret') {
+          secretModel = await this.handleSecretModelError(capabilities, secret, modelType, err);
+        } else {
+          throw err;
+        }
       }
     }
-    await capabilities;
 
     return {
       secret: secretModel,
@@ -187,13 +575,22 @@ export default Route.extend({
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.secrets.backend').preferAdvancedEdit || false;
     const backendType = this.backendType();
-    model.secret.setProperties({ backend });
+    // mode will be 'show', 'edit', 'create'
+    const mode = this.routeName.split('.').pop().replace('-root', '');
+
+    // Form-based models (keymgmt, TOTP, SSH, transform sub-types) use Form class instances which
+    // don't have the Ember Data setProperties method.
+    const isFormModel = model.secret instanceof Form;
+    if (!isFormModel) {
+      model.secret.setProperties({ backend });
+    }
+
     controller.setProperties({
       model: model.secret,
+      form: isFormModel ? model.secret : null,
       capabilities: model.capabilities,
       baseKey: { id: secret },
-      // mode will be 'show', 'edit', 'create'
-      mode: this.routeName.split('.').pop().replace('-root', ''),
+      mode,
       backend,
       preferAdvancedEdit,
       backendType,

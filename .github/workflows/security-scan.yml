@@ -16,7 +16,7 @@ on:
 
 jobs:
   scan:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ondemand","os=linux","type=c6a.4xlarge;c6a.2xlarge;m8a.4xlarge;c6a.8xlarge"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64","xlarge"]') }}
     # The first check ensures this doesn't run on community-contributed PRs, who won't have the
     # permissions to run this job.
     if: |
@@ -27,7 +27,7 @@ jobs:
     - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
     - name: Set up Go
-      uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+      uses: actions/setup-go@4b73464bb391d4059bd26b0524d20df3927bd417 # v6.3.0
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
         go-version: 'stable'

@@ -100,12 +100,13 @@
     </div>
     <div class="grid-item-third-row">
       {{#if (is-empty this.knownPrimaryClusterAddrs)}}
-        <Hds::ApplicationState @align="center" data-test-empty-state as |A|>
-          <A.Header @title="No known_primary_cluster_addrs" @titleTag="h2" />
+        <Hds::ApplicationState data-test-empty-state as |A|>
+          <A.Header @title="No known_primary_cluster_addrs" @titleTag="h2" data-test-empty-state-title />
           <A.Body
             @text="These addresses are used by the secondary to communicate with the primary cluster. Should always be non-zero in a functioning replication setup."
+            data-test-empty-state-message
           />
-          <A.Footer @hasDivider={{true}} as |F|>
+          <A.Footer @hasDivider={{true}} data-test-empty-state-actions as |F|>
             <F.LinkStandalone
               @icon="help"
               @text="Learn more about replication"

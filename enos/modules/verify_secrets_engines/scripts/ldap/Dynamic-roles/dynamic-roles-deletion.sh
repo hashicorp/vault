@@ -119,6 +119,7 @@ test_role_deletion_with_active_leases() {
   "$binpath" lease revoke -prefix "${MOUNT}/creds/${lease_role}" > /dev/null 2>&1
 
   # Define the check function
+  # shellcheck disable=SC2329
   wait_for_user_deletion() {
     check_user=$(ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" \
         -b "dc=${LDAP_USERNAME},dc=com" \

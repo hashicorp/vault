@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixed custom messages list to display the expiration time on Inactive message badges.
+```

@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -63,8 +63,8 @@ module('Integration | Component | code-generator/automation-snippets', function 
     };
     await this.renderComponent();
     const expectedTfvp = `resource "vault_mount" "<local identifier>" {
- path = "my-mount" 
- type = "kv-v2" 
+ path = "my-mount"
+ type = "kv-v2"
 }`;
     const expectedCli = 'vault kv delete -mount=secret creds';
     await click(GENERAL.hdsTab('cli'));
@@ -79,8 +79,8 @@ module('Integration | Component | code-generator/automation-snippets', function 
     await this.renderComponent();
     const expectedSnippet = `resource "vault_mount" "<local identifier>" {
  namespace = "admin"
- path = "my-mount" 
- type = "kv-v2" 
+ path = "my-mount"
+ type = "kv-v2"
 }`;
     assert
       .dom(GENERAL.fieldByAttr('terraform'))

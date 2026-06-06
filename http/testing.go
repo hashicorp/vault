@@ -36,10 +36,16 @@ func TestServerWithListenerAndProperties(tb testing.TB, ln net.Listener, addr st
 	mux.Handle("/_test/auth", http.HandlerFunc(testHandleAuth))
 	mux.Handle("/", Handler.Handler(props))
 
+	var lnConfig *configutil.Listener
+	if props != nil {
+		lnConfig = props.ListenerConfig
+	}
+
 	server := &http.Server{
-		Addr:     ln.Addr().String(),
-		Handler:  mux,
-		ErrorLog: core.Logger().StandardLogger(nil),
+		Addr:           ln.Addr().String(),
+		Handler:        mux,
+		ErrorLog:       core.Logger().StandardLogger(nil),
+		MaxHeaderBytes: TokenHeaderMaxBytes(lnConfig),
 	}
 	go server.Serve(ln)
 }

@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 terraform {
@@ -151,6 +151,8 @@ locals {
       cluster_address = "0.0.0.0:8201"
       tls_disable = true
     }
+
+    administrative_namespace_path = "admin"
 
     storage "raft" {
       path = "/vault/data"

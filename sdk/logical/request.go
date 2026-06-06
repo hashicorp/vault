@@ -86,6 +86,10 @@ func IndexStateFromContext(ctx context.Context) *WALState {
 	return s
 }
 
+// AuthorizationDetail stores one enterprise token authorization detail object.
+// The "type" field is required.
+type AuthorizationDetail map[string]any
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
@@ -137,6 +141,26 @@ type Request struct {
 	// hashed.
 	ClientToken string `json:"client_token" structs:"client_token" mapstructure:"client_token" sentinel:""`
 
+	// EnterpriseTokenMetadata stores enterprise token metadata.
+	EnterpriseTokenMetadata string `json:"enterprise_token_metadata" structs:"enterprise_token_metadata" mapstructure:"enterprise_token_metadata" sentinel:""`
+
+	// EnterpriseTokenIssuer stores the enterprise token issuer.
+	EnterpriseTokenIssuer string `json:"enterprise_token_issuer,omitempty" structs:"enterprise_token_issuer" mapstructure:"enterprise_token_issuer"`
+
+	// EnterpriseTokenTransaction stores the enterprise token transaction claim.
+	EnterpriseTokenTransaction string `json:"enterprise_token_transaction,omitempty" structs:"enterprise_token_transaction" mapstructure:"enterprise_token_transaction"`
+
+	// EnterpriseTokenAudience stores enterprise token audience values.
+	EnterpriseTokenAudience []string `json:"enterprise_token_audience,omitempty" structs:"enterprise_token_audience" mapstructure:"enterprise_token_audience"`
+
+	// EnterpriseTokenAuthorizationDetails stores enterprise token authorization details.
+	EnterpriseTokenAuthorizationDetails []AuthorizationDetail `json:"enterprise_token_authorization_details,omitempty" structs:"enterprise_token_authorization_details" mapstructure:"enterprise_token_authorization_details"`
+
+	// EnterpriseTokenAuthorizationDetailsPresent indicates whether the inbound
+	// enterprise token included an authorization_details claim at all. This lets
+	// callers distinguish "claim missing" from "claim present but empty".
+	EnterpriseTokenAuthorizationDetailsPresent bool `json:"enterprise_token_authorization_details_present,omitempty" structs:"enterprise_token_authorization_details_present" mapstructure:"enterprise_token_authorization_details_present"`
+
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
 	ClientTokenAccessor string `json:"client_token_accessor" structs:"client_token_accessor" mapstructure:"client_token_accessor" sentinel:""`
@@ -186,6 +210,12 @@ type Request struct {
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
 	EntityID string `json:"entity_id" structs:"entity_id" mapstructure:"entity_id" sentinel:""`
+
+	// ActorEntityID is the entity ID of the actor in a request.
+	ActorEntityID string `json:"actor_entity_id" structs:"actor_entity_id" mapstructure:"actor_entity_id" sentinel:""`
+
+	// ActorEntityName is the name of the actor entity in a request.
+	ActorEntityName string `json:"actor_entity_name" structs:"actor_entity_name" mapstructure:"actor_entity_name" sentinel:""`
 
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies
@@ -257,8 +287,11 @@ type Request struct {
 	// client token.
 	ClientID string `json:"client_id" structs:"client_id" mapstructure:"client_id" sentinel:""`
 
-	// InboundSSCToken is the token that arrives on an inbound request, supplied
-	// by the vault user.
+	// InboundSSCToken stores the original token value as supplied by the caller
+	// on the inbound request (header/body), before token decoding or
+	// normalization (for example SSCT decoding or enterprise token normalization
+	// to internal IDs). This allows response/forwarding paths to preserve the
+	// caller-visible token representation when needed.
 	InboundSSCToken string
 
 	// When a request has been forwarded, contains information of the host the request was forwarded 'from'

@@ -6,6 +6,7 @@
 import MountForm from 'vault/forms/mount';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
+import { ALL_ENGINES } from 'core/utils/all-engines-metadata';
 
 import type { AuthMethodFormData } from 'vault/auth/methods';
 
@@ -48,15 +49,22 @@ export default class AuthMethodForm extends MountForm<AuthMethodFormData> {
     });
   }
 
-  formFieldGroups = [
-    new FormFieldGroup('default', [this.fields.path]),
-    new FormFieldGroup('Method Options', [
+  get optionFields() {
+    const isWIF = !!ALL_ENGINES.find((engine) => engine.type === this.normalizedType && engine.isWIF);
+    const keyField = new FormField('config.identity_token_key', undefined, {
+      label: 'Identity token key',
+      subText: `A named key to sign tokens. If not provided, this will default to Vault's OIDC default key.`,
+      editType: 'yield',
+    });
+
+    return [
       this.fields.description,
       this.fields.listingVisibility,
       this.fields.local,
       this.fields.sealWrap,
       this.fields.defaultLeaseTtl,
       this.fields.maxLeaseTtl,
+      ...(isWIF ? [keyField] : []),
       new FormField('config.token_type', 'string', {
         label: 'Token type',
         helpText:
@@ -69,6 +77,13 @@ export default class AuthMethodForm extends MountForm<AuthMethodFormData> {
       this.fields.passthroughRequestHeaders,
       this.fields.allowedResponseHeaders,
       this.fields.pluginVersion,
-    ]),
-  ];
+    ];
+  }
+
+  get formFieldGroups() {
+    return [
+      new FormFieldGroup('default', [this.fields.path]),
+      new FormFieldGroup('Method Options', this.optionFields),
+    ];
+  }
 }

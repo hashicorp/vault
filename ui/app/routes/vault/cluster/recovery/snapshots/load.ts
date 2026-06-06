@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { SystemListStorageRaftSnapshotAutoConfigListEnum } from '@hashicorp/vault-client-typescript';
+import { SystemApiSystemListStorageRaftSnapshotAutoConfigListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
 import type { Breadcrumb } from 'vault/vault/app-types';
@@ -34,7 +34,7 @@ export default class RecoverySnapshotsLoadRoute extends Route {
 
     try {
       const { keys } = await this.api.sys.systemListStorageRaftSnapshotAutoConfig(
-        SystemListStorageRaftSnapshotAutoConfigListEnum.TRUE
+        SystemApiSystemListStorageRaftSnapshotAutoConfigListEnum.TRUE
       );
       configs = keys ?? [];
     } catch (e) {

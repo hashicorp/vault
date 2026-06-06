@@ -145,9 +145,11 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			Config:           config.ConnectionDetails,
 			VerifyConnection: config.VerifyConnection,
 		}
-		initResp, err := dbw.Initialize(ctx, initReq)
+		// verify_connection can perform a live handshake here, so bound how long
+		// Vault waits before failing the write and releasing the caller.
+		initResp, err := b.initializeConnection(ctx, dbw, initReq)
 		if err != nil {
-			dbw.Close()
+			b.closeDatabaseWrapperAfterInitError(dbw, err)
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}
 		config.ConnectionDetails = initResp.Config

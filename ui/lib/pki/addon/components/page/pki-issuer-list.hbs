@@ -125,14 +125,18 @@
     {{/each}}
   </:list>
   <:empty>
-    <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
-      <Hds::Link::Standalone
-        @icon="chevron-right"
-        @iconPosition="trailing"
-        @text="Configure PKI"
-        @route="configuration.create"
-        @model={{@backend}}
-      />
-    </EmptyState>
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="PKI not configured" @titleTag="h2" data-test-empty-state-title />
+      <A.Body @text={{this.notConfiguredMessage}} data-test-empty-state-message />
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="chevron-right"
+          @iconPosition="trailing"
+          @text="Configure PKI"
+          @route="configuration.create"
+          @model={{@backend}}
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
   </:empty>
 </PkiPaginatedList>

@@ -348,8 +348,7 @@ DONELISTHANDLING:
 }
 
 // validateWrappingToken checks whether a token is a wrapping token. The passed
-// in logical request will be updated if the wrapping token was provided within
-// a JWT token.
+// in logical request may be updated.
 func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) (valid bool, err error) {
 	if req == nil {
 		return false, fmt.Errorf("invalid request")
@@ -409,13 +408,8 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	}
 
 	// Check for it being a JWT. If it is, and it is valid, we extract the
-	// internal client token from it and use that during lookup. The second
-	// check is a quick check to verify that we don't consider a namespaced
-	// token to be a JWT -- namespaced tokens have two dots too, but Vault
-	// token types (for now at least) begin with a letter representing a type
-	// and then a dot.
+	// internal client token from it and use that during lookup.
 	if IsJWT(token) {
-		// Implement the jose library way
 		parsedJWT, err := jwt.ParseSigned(token)
 		if err != nil {
 			return false, fmt.Errorf("wrapping token could not be parsed: %w", err)

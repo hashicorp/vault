@@ -284,6 +284,87 @@ func TestPopulateAutomatedRotationData(t *testing.T) {
 	}
 }
 
+func TestPopulateSetAutomatedRotationData(t *testing.T) {
+	tests := []struct {
+		name        string
+		inputParams *AutomatedRotationParams
+		expected    map[string]interface{}
+		unexpected  map[string]interface{}
+	}{
+		{
+			name: "only schedule and window set",
+			expected: map[string]interface{}{
+				"rotation_schedule":          "*/15 * * * *",
+				"rotation_window":            time.Duration(60).Seconds(),
+				"rotation_policy":            "",
+				"disable_automated_rotation": false,
+			},
+			unexpected: map[string]interface{}{
+				"rotation_period": "",
+			},
+			inputParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "only schedule set",
+			expected: map[string]interface{}{
+				"rotation_schedule":          "*/15 * * * *",
+				"rotation_window":            time.Duration(0).Seconds(),
+				"rotation_policy":            "",
+				"disable_automated_rotation": false,
+			},
+			unexpected: map[string]interface{}{
+				"rotation_period": "",
+			},
+			inputParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "only period set",
+			expected: map[string]interface{}{
+				"rotation_period":            time.Duration(120).Seconds(),
+				"rotation_policy":            "",
+				"disable_automated_rotation": false,
+			},
+			unexpected: map[string]interface{}{
+				"rotation_schedule": "",
+				"rotation_window":   "",
+			},
+			inputParams: &AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           120,
+				DisableAutomatedRotation: false,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := make(map[string]interface{})
+
+			tt.inputParams.PopulateSetAutomatedRotationData(m)
+
+			if !reflect.DeepEqual(m, tt.expected) {
+				t.Errorf("PopulateSetAutomatedRotationData() error comparing values; got %v, expected %v", m, tt.expected)
+			}
+
+			for k, v := range tt.unexpected {
+				if m[k] == v {
+					t.Errorf("PopulateSetAutomatedRotationData() unexpected value for key %s; got %v", k, m[k])
+				}
+			}
+		})
+	}
+}
+
 func TestShouldRegisterRotationJob(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -441,6 +522,225 @@ func TestAddAutomatedRotationFields(t *testing.T) {
 			got := tt.input
 			AddAutomatedRotationFields(got)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestAutomatedRotationParams_Equals(t *testing.T) {
+	testcases := []struct {
+		name     string
+		p1       AutomatedRotationParams
+		p2       AutomatedRotationParams
+		expected bool
+	}{
+		{
+			name: "equal-all-fields",
+			p1: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			p2: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			expected: true,
+		},
+		{
+			name: "equal-zero-values",
+			p1: AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "",
+			},
+			p2: AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "",
+			},
+			expected: true,
+		},
+		{
+			name: "different-schedule",
+			p1: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			p2: AutomatedRotationParams{
+				RotationSchedule:         "*/30 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			expected: false,
+		},
+		{
+			name: "different-window",
+			p1: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			p2: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           120 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			expected: false,
+		},
+		{
+			name: "different-period",
+			p1: AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           10 * time.Second,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			p2: AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           20 * time.Second,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			expected: false,
+		},
+		{
+			name: "different-disable-flag",
+			p1: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			p2: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: true,
+				RotationPolicy:           "policy1",
+			},
+			expected: false,
+		},
+		{
+			name: "different-policy",
+			p1: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy1",
+			},
+			p2: AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           60 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "policy2",
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.p1.Equals(tt.p2)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestAutomatedRotationParams_Equals_Embedded(t *testing.T) {
+	// Test with embedded struct
+	type ConfigWithRotationParams struct {
+		Name string
+		AutomatedRotationParams
+	}
+
+	testcases := []struct {
+		name     string
+		c1       ConfigWithRotationParams
+		c2       ConfigWithRotationParams
+		expected bool
+	}{
+		{
+			name: "embedded-equal",
+			c1: ConfigWithRotationParams{
+				Name: "config1",
+				AutomatedRotationParams: AutomatedRotationParams{
+					RotationSchedule:         "*/15 * * * *",
+					RotationWindow:           60 * time.Second,
+					RotationPeriod:           0,
+					DisableAutomatedRotation: false,
+					RotationPolicy:           "policy1",
+				},
+			},
+			c2: ConfigWithRotationParams{
+				Name: "config2", // Different name, but we only compare AutomatedRotationParams
+				AutomatedRotationParams: AutomatedRotationParams{
+					RotationSchedule:         "*/15 * * * *",
+					RotationWindow:           60 * time.Second,
+					RotationPeriod:           0,
+					DisableAutomatedRotation: false,
+					RotationPolicy:           "policy1",
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "embedded-different",
+			c1: ConfigWithRotationParams{
+				Name: "config1",
+				AutomatedRotationParams: AutomatedRotationParams{
+					RotationSchedule:         "*/15 * * * *",
+					RotationWindow:           60 * time.Second,
+					RotationPeriod:           0,
+					DisableAutomatedRotation: false,
+					RotationPolicy:           "policy1",
+				},
+			},
+			c2: ConfigWithRotationParams{
+				Name: "config1",
+				AutomatedRotationParams: AutomatedRotationParams{
+					RotationSchedule:         "*/30 * * * *",
+					RotationWindow:           60 * time.Second,
+					RotationPeriod:           0,
+					DisableAutomatedRotation: false,
+					RotationPolicy:           "policy1",
+				},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Test comparing the embedded fields directly
+			result := tt.c1.AutomatedRotationParams.Equals(tt.c2.AutomatedRotationParams)
+			assert.Equal(t, tt.expected, result)
+
+			// Test using method promotion
+			result2 := tt.c1.Equals(tt.c2.AutomatedRotationParams)
+			assert.Equal(t, tt.expected, result2)
 		})
 	}
 }

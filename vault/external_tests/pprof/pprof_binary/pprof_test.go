@@ -28,7 +28,6 @@ func TestSysPprof_Exec(t *testing.T) {
 		BinaryPath:        binary,
 		BaseListenAddress: "127.0.0.1:8208",
 	})
-	defer cluster.Cleanup()
 
 	pprof.SysPprof_Test(t, cluster)
 }

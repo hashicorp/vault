@@ -3,50 +3,59 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Dashboard::VaultVersionTitle @version={{@version}} />
+<Page::Header
+  @title="Vault {{@version.versionDisplay}}"
+  @icon="dashboard"
+  @description="Review the status of your Vault cluster, including: currently enabled secrets engines and authentication methods, and system configurations."
+  class="dashboard-header-with-gradient has-bottom-margin-xl"
+>
+  <:badges>
+    {{#if @version.isEnterprise}}
+      <Hds::Badge @text={{this.namespace.currentNamespace}} @icon="org" data-test-badge-namespace />
+    {{/if}}
+  </:badges>
+</Page::Header>
 
 <div class="has-bottom-margin-xl">
-  <div class="is-flex-row gap-24">
+  <Hds::Layout::Flex @wrap={{true}} @gap="32" as |LF|>
     {{#if @version.isEnterprise}}
-      <div class="is-flex-column is-flex-1 gap-24">
-        {{#if (and (has-permission "clients" routeParams="activity") this.shouldShowClientCount)}}
-          <Dashboard::ClientCountCard />
-        {{/if}}
+      <LF.Item @basis="58%" @grow={{true}} @shrink={{true}}>
+        <Dashboard::Widgets::SecretsEngines @secretsEngines={{@secretsEngines}} />
         {{#if
           (and (has-permission "status" routeParams="replication") (not (is-empty-value @replication)) @isRootNamespace)
         }}
-          <Dashboard::ReplicationCard
+          <Dashboard::Widgets::Replication
             @replication={{@replication}}
             @version={{@version}}
             @refresh={{@refreshModel}}
             @updatedAt={{@replicationUpdatedAt}}
+            class="has-top-margin-xl"
           />
         {{/if}}
-        <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
-      </div>
+        {{#if @vaultConfiguration}}
+          <Dashboard::Widgets::ClusterConfiguration @vaultConfiguration={{@vaultConfiguration}} />
+        {{/if}}
+      </LF.Item>
 
-      <div class="is-flex-column is-flex-1 gap-24">
-        <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
-        {{#if @vaultConfiguration}}
-          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />
+      <LF.Item @basis="38%" @grow={{true}} @shrink={{true}}>
+        <Dashboard::Widgets::QuickActions @secretsEngines={{@secretsEngines}} />
+        {{#if (and (has-permission "clients" routeParams="activity") this.shouldShowClientCount)}}
+          <Dashboard::Widgets::ClientCount class="has-top-margin-xl" />
         {{/if}}
-        <div>
-          <Dashboard::LearnMoreCard @isEnterprise={{@version.isEnterprise}} />
-        </div>
-      </div>
+
+        <Dashboard::Widgets::LearnMore @isEnterprise={{@version.isEnterprise}} class="has-top-margin-xl" />
+      </LF.Item>
     {{else}}
-      <div class="is-flex-column is-flex-1 gap-24">
-        <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
-        <div>
-          <Dashboard::LearnMoreCard @isEnterprise={{@version.isEnterprise}} />
-        </div>
-      </div>
-      <div class="is-flex-column is-flex-1 gap-24">
-        <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
+      <LF.Item @basis="58%" @grow={{true}} @shrink={{true}}>
+        <Dashboard::Widgets::SecretsEngines @secretsEngines={{@secretsEngines}} />
         {{#if @vaultConfiguration}}
-          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />
+          <Dashboard::Widgets::ClusterConfiguration @vaultConfiguration={{@vaultConfiguration}} />
         {{/if}}
-      </div>
+      </LF.Item>
+      <LF.Item @basis="38%" @grow={{true}} @shrink={{true}}>
+        <Dashboard::Widgets::QuickActions @secretsEngines={{@secretsEngines}} />
+        <Dashboard::Widgets::LearnMore @isEnterprise={{@version.isEnterprise}} class="has-top-margin-xl" />
+      </LF.Item>
     {{/if}}
-  </div>
+  </Hds::Layout::Flex>
 </div>

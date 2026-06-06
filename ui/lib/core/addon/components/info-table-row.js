@@ -28,10 +28,13 @@ import { action } from '@ember/object';
  * @param {string} [type=array] - The type of value being passed in.  This is used for when you want to trim an array.  For example, if you have an array value that can equal length 15+ this will trim to show 5 and count how many more are there
  *
  * @param {boolean} [isLink=true] - Passed through to InfoTableItemArray. Indicates if the item should contain a link-to component.  Only setup for arrays, but this could be changed if needed.
- * @param {string} [modelType=null] - Passed through to InfoTableItemArray. Tells what model you want data for the allOptions to be returned from.  Used in conjunction with the the isLink.
  * @param {string} [queryParam] - Passed through to InfoTableItemArray. If you want to specific a tab for the View All XX to display to.  Ex= role
+ * @param {array} [arrayOptions] - Passed through to InfoTableItemArray for wildcard match counts.
+ * @param {string} [wildcardLabel] - Passed through to InfoTableItemArray for wildcard badge text.
  * @param {string} [backend] - Passed through to InfoTableItemArray. To specify secrets backend to point link to  Ex= transformation
- * @param {string} [viewAll] - Passed through to InfoTableItemArray. Specify the word at the end of the link View all.
+ * @param {string | array} [rootRoute] - Passed through to InfoTableItemArray for the View all link target.
+ * @param {string | array} [itemRoute] - Passed through to InfoTableItemArray for individual array item links.
+ * @param {boolean} [doNotTruncate=false] - Passed through to InfoTableItemArray to disable truncation and use ReadMore instead.
  */
 
 export default class InfoTableRowComponent extends Component {

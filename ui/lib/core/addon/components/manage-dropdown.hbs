@@ -1,0 +1,46 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Dropdown as |D|>
+  {{#if this.isIcon}}
+    <D.ToggleIcon
+      @icon="more-horizontal"
+      @text="{{if @model.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
+      @hasChevron={{false}}
+      data-test-popup-menu-trigger
+    />
+  {{else}}
+    <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+  {{/if}}
+
+  {{! Yield point for engine-specific custom menu items (e.g., KV's Generate policy) }}
+  {{yield D}}
+
+  <D.Interactive
+    @icon="settings"
+    @route={{@configRoute}}
+    @model={{this.configureRouteModel}}
+    data-test-popup-menu="Configure"
+  >Configure</D.Interactive>
+
+  {{#if this.shouldShowDelete}}
+    <D.Interactive
+      {{on "click" (fn this.handleDeleteClick @model)}}
+      @color="critical"
+      @icon="trash"
+      data-test-popup-menu="Delete"
+    >Delete</D.Interactive>
+  {{/if}}
+</Hds::Dropdown>
+
+{{#if this.engineToDisable}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Any data in this engine will be permanently deleted."
+    @confirmTitle="Disable engine?"
+    @onClose={{this.handleModalClose}}
+    @onConfirm={{this.handleModalConfirm}}
+  />
+{{/if}}

@@ -4,9 +4,9 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
-import hbs from 'htmlbars-inline-precompile';
+import { hbs } from 'ember-cli-htmlbars';
 
 module('Integration | Component | transform-edit-base', function (hooks) {
   setupRenderingTest(hooks);
@@ -15,7 +15,7 @@ module('Integration | Component | transform-edit-base', function (hooks) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
-    await render(hbs`{{transform-edit-base}}`);
+    await render(hbs`<TransformEditBase />`);
 
     assert.dom(this.element).hasText('');
 

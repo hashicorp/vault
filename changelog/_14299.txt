@@ -1,0 +1,6 @@
+```release-note:security
+core: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+```
+```release-note:security
+sdk: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+```

@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import engineDisplayData, { unknownEngineMetadata } from 'core/helpers/engines-display-data';
 import { module, test } from 'qunit';
-import engineDisplayData, { unknownEngineMetadata } from 'vault/helpers/engines-display-data';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 module('Unit | Helper | engines-display-data', function () {

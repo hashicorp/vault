@@ -18,6 +18,7 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
     this.server.get('/sys/internal/ui/feature-flags', () => {
       return { feature_flags: ['VAULT_CLOUD_ADMIN_NAMESPACE'] };
     });
+    window.localStorage.clear();
   });
 
   test('it shows the managed namespace toolbar when feature flag exists', async function (assert) {

@@ -384,8 +384,6 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 	mountPKIEndpoint(t, client, "pki")
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{

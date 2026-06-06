@@ -2,14 +2,13 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<Page::Header @icon={{this.model.method.icon}} @title={{this.model.method.name}}>
+<Page::Header @icon={{this.model.method.icon}} @title={{this.model.method.displayName}}>
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
-        (hash label="Methods" route="vault.cluster.access.mfa.methods.index")
-        (hash label=this.model.method.name)
+        (hash label="Multi-factor authentication" route="vault.cluster.access.mfa.methods.index")
+        (hash label=this.model.method.displayName)
       }}
     />
   </:breadcrumbs>
@@ -64,22 +63,17 @@
   </Toolbar>
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     <InfoTableRow @label="ID" @value={{this.model.method.id}} @addCopyButton={{true}} />
-    {{#each this.model.method.attrs as |attr|}}
-      {{#if (eq attr.type "object")}}
-        <InfoTableRow
-          @alwaysRender={{not (is-empty-value (get this.model.method attr.name))}}
-          @label={{or attr.options.label (to-label attr.name)}}
-          @value={{stringify (get this.model.method attr.name)}}
-        />
-      {{else}}
-        <InfoTableRow
-          @alwaysRender={{not (is-empty-value (get this.model.method attr.name))}}
-          @label={{or attr.options.label (to-label attr.name)}}
-          @value={{get this.model.method attr.name}}
-          @formatTtl={{eq attr.options.editType "ttl"}}
-          @helperText={{attr.options.helperText}}
-        />
-      {{/if}}
+    <InfoTableRow @label="Type" @value={{this.model.method.type}} />
+    {{#if this.model.method.namespace_path}}
+      <InfoTableRow @label="Namespace" @value={{this.model.method.namespace_path}} />
+    {{/if}}
+    {{#each this.displayFields as |field|}}
+      <InfoTableRow
+        @alwaysRender={{not (is-empty-value (get this.model.method field))}}
+        @label={{this.label field}}
+        @value={{get this.model.method field}}
+        @formatTtl={{eq field "period"}}
+      />
     {{/each}}
   </div>
 {{else if (eq this.tab "enforcements")}}
@@ -92,10 +86,11 @@
   </Toolbar>
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#if (is-empty this.model.enforcements)}}
-      <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
-        <A.Header @title="No enforcements found." @titleTag="h2" />
+      <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
+        <A.Header @title="No enforcements found." @titleTag="h2" data-test-empty-state-title />
         <A.Body
           @text="No enforcements are applied to this MFA method. Edit an existing enforcement or add a new one to get started."
+          data-test-empty-state-message
         />
       </Hds::ApplicationState>
     {{else}}

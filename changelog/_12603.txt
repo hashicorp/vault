@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: The root/sign-intermediate endpoint should not fail when provided a CSR with a basic constraint extension containing isCa set to true
+```

@@ -1,0 +1,6 @@
+```release-note:change
+core: sys/generate-root and sys/replication/dr/secondary/generate-operation-token endpoints are now authenticated by default, with the old unauthenticated behaviour enabled by setting the new HCL config key enable_unauthenticated_access to include the value "generate-root" or "generate-operation-token" respectively.
+```
+```release-note:change
+core: secondary DR requests can now be authenticated using a root token generated on the primary.
+```

@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
@@ -82,7 +82,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
 
     assert.dom('[data-test-row-label="Certificate"]').exists('Certificate label renders');
     assert.dom('[data-test-certificate-card]').exists('Certificate card component renders');
-    assert.dom('[data-test-certificate-icon]').hasClass('hds-icon-certificate', 'Certificate icon renders');
+    assert.dom(GENERAL.icon('certificate')).exists();
     assert.dom(GENERAL.copyButton).exists('Certificate copy button renders');
     assert.dom('[data-test-certificate-label]').hasText('PEM Format', 'Certificate label renders');
     assert

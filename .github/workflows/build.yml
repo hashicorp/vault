@@ -83,7 +83,7 @@ jobs:
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     permissions: write-all # vault-auth
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
@@ -186,7 +186,7 @@ jobs:
       startsWith(github.event.pull_request.base.ref, 'ce/')
     runs-on:
       - self-hosted
-      - ubuntu-latest-x64
+      - ubuntu-22.04-x64
     permissions: write-all # vault-auth
     needs:
       - setup
@@ -293,40 +293,13 @@ jobs:
     needs: setup
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-build-ui) }}
     outputs:
-      cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
+      cache-key: ${{ steps.build-ui.outputs.cache-key }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
-      - name: Get UI hash
-        id: ui-hash
-        run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
-      - name: Set up UI asset cache
-        id: cache-ui-assets
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        with:
-          enableCrossOsArchive: true
-          lookup-only: true
-          path: http/web_ui
-          # Only restore the UI asset cache if we haven't modified anything in the ui directory.
-          # Never do a partial restore of the web_ui if we don't get a cache hit.
-          key: ui-${{ steps.ui-hash.outputs.ui-hash }}
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Install PNPM
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
-        with:
-          run_install: false
-          package_json_file: './ui/package.json'
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Set up node and pnpm
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version-file: ui/package.json
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Build UI
-        run: make ci-build-ui
+      - uses: ./.github/actions/build-ui
+        id: build-ui
 
   # Artifacts is where we'll build the various Vault binaries and package them into their respective
   # Zip bundles, RPM and Deb packages, and container images. After we've packaged them we upload
@@ -392,23 +365,75 @@ jobs:
       web-ui-cache-key: ${{ needs.ui.outputs.cache-key }}
     secrets: inherit
 
+  # Setup HCP input parameters with proper validation
+  hcp-setup:
+    runs-on: ubuntu-latest
+    outputs:
+      pull-request-number: ${{ steps.pr-logic.outputs.pull-request-number }}
+      branch-name: ${{ steps.branch-logic.outputs.branch-name }}
+    steps:
+      - id: pr-logic
+        name: Determine pull request number
+        run: |
+          echo "Analyzing PR context for event: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            PR_NUM="${{ github.event.pull_request.number }}"
+            if [[ -n "$PR_NUM" && "$PR_NUM" != "null" ]]; then
+              echo "PR context detected, using number: $PR_NUM"
+            else
+              echo "PR context but no valid number found, using 0"
+              PR_NUM="0"
+            fi
+          else
+            PR_NUM="0"
+            echo "Non-PR context, using fallback value: $PR_NUM"
+          fi
+          echo "pull-request-number=$PR_NUM" >> "$GITHUB_OUTPUT"
+
+      - id: branch-logic
+        name: Determine branch name
+        run: |
+          echo "Analyzing branch context for event: ${{ github.event_name }}"
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            BRANCH="main"
+            echo "Schedule context, using branch: $BRANCH"
+          else
+            BRANCH=""
+            echo "Non-schedule context, using empty branch"
+          fi
+          echo "branch-name=$BRANCH" >> "$GITHUB_OUTPUT"
+
   hcp-image:
+    # Logic: Run HCP image job if:
+    #   if needs.setup.outputs.is-ent-branch != 'true' then
+    #     false
+    #   elseif needs.setup.outputs.workflow-trigger == 'schedule' then
+    #     true
+    #   elseif needs.setup.outputs.workflow-trigger == 'pull_request' and (
+    #       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+    #     ) then
+    #     true
+    #   end
     if: |
-      needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.is-ent-branch != 'true' ) && false ||
+      ( needs.setup.outputs.workflow-trigger == 'schedule' ) && true ||
       ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
-        (
+        ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
         )
-      )
+      ) && true
     needs:
       - setup
       - artifacts-ent
+      - hcp-setup
     uses: ./.github/workflows/build-hcp-image.yml
     with:
-      pull-request: ${{ needs.setup.outputs.workflow-trigger == 'pull_request' && github.event.pull_request.number || '' }}
-      branch: ${{ needs.setup.outputs.workflow-trigger == 'schedule' && 'main' || '' }}
+      pull-request: ${{ fromJSON(needs.hcp-setup.outputs.pull-request-number) }}
+      branch: ${{ needs.hcp-setup.outputs.branch-name }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
@@ -433,7 +458,7 @@ jobs:
         include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-packages) || fromJSON(needs.artifacts-ce.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
-      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-latest-x64"]' }}
+      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-22.04-x64"]' }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
@@ -473,11 +498,17 @@ jobs:
     # Test our custom HCP image if our image build was successful and we've
     # been configured with the correct label.
     if: |
-      needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'pull_request' &&
-      needs.artifacts-ent.result == 'success' &&
-      needs.hcp-image.result == 'success' &&
-      contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+      needs.setup.outputs.is-ent-branch == 'true' && (
+        ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          needs.artifacts-ent.result == 'success' &&
+          needs.hcp-image.result == 'success' &&
+          ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') || contains(fromJSON(needs.setup.outputs.labels), 'hcp/test') )
+        ) || (
+          needs.setup.outputs.workflow-trigger == 'schedule' &&
+          needs.artifacts-ent.result == 'success' &&
+          needs.hcp-image.result == 'success'
+        )
+      )
     needs:
       - setup
       - artifacts-ent
@@ -502,7 +533,7 @@ jobs:
         github.event_name == 'schedule' ||
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
       )
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     needs:
       - setup
@@ -558,6 +589,39 @@ jobs:
       - id: slackbot-webhook-url
         run:
           echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        name: Download failure summaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: failure-summary-*.md
+          path: failure-summaries
+          merge-multiple: true
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        id: prepare-failure-summary
+        name: Prepare failure summary
+        run: |
+          # Sort all of the summary table rows and push them to a temp file.
+          temp_file_name=temp-$(date +%s)
+          find failure-summaries -name '*.md' -type f -exec cat {} \; 2>/dev/null | sort >> "$temp_file_name" || true
+
+          # If there are test failures, present them in a format of a GitHub Markdown table.
+          if [ -s "$temp_file_name" ]; then
+            # Here we create the headings for the summary table
+            {
+              echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
+              echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
+              cat "$temp_file_name"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ "${{ steps.status.outputs.result }}" == 'success' ]; then
+              echo "### All required tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          {
+            echo 'table-test-results<<EOFTABLE'
+            cat "$temp_file_name"
+            echo EOFTABLE
+          } | tee -a "$GITHUB_OUTPUT"
       - if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
@@ -573,12 +637,26 @@ jobs:
           TEST_CONTAINERS: ${{ needs.test-containers.result }}
           UI: ${{ needs.ui.result }}
         run: ./.github/scripts/report-build-status.sh
+      - name: Create test results comment
+        if: |
+          needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
+          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') &&
+          needs.setup.outputs.is-fork == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.event.repository.name }}
+          RESULT: ${{ steps.status.outputs.result }}
+          TABLE_DATA: ${{ steps.prepare-failure-summary.outputs.table-test-results }}
+        run: ./.github/scripts/report-ci-status.sh
       - name: Notify build failures in Slack
         if: |
           always() &&
           steps.status.outputs.result != 'success' &&
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
         with:
           errors: true # exit with an error if the payload is invalid
           retries: rapid # retry if we're being rated limited
@@ -617,7 +695,7 @@ jobs:
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json

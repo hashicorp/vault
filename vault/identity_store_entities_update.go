@@ -15,10 +15,12 @@ import (
 
 // EntityBuilder is used to construct or update an identity.Entity.
 type EntityBuilder struct {
-	store  *IdentityStore
-	entity *identity.Entity
-	isNew  bool
-	err    error
+	store          *IdentityStore
+	entity         *identity.Entity
+	isNew          bool
+	originalSCIMID string
+	modifiedFields []string
+	err            error
 }
 
 // NewEntityBuilder creates a new builder instance.
@@ -57,6 +59,7 @@ func (b *EntityBuilder) WithID(id string) *EntityBuilder {
 	}
 
 	b.entity = entity
+	b.originalSCIMID = b.entity.ScimClientID
 	b.isNew = false
 	return b
 }
@@ -76,10 +79,12 @@ func (b *EntityBuilder) WithExternalID(ctx context.Context, externalID string) *
 	if entityByExternalID != nil {
 		// An entity with this external ID already exists, so we'll update it.
 		b.entity = entityByExternalID
+		b.originalSCIMID = b.entity.ScimClientID
 		b.isNew = false
 	} else {
 		// No entity found, so we're just setting the external ID on the current one.
 		b.entity.ExternalID = externalID
+		b.modifiedFields = append(b.modifiedFields, "external_id")
 	}
 
 	return b
@@ -103,6 +108,7 @@ func (b *EntityBuilder) WithName(ctx context.Context, name string) *EntityBuilde
 	case b.isNew:
 		// We haven't loaded an entity yet, but one with this name exists. Let's update it.
 		b.entity = entityByName
+		b.originalSCIMID = b.entity.ScimClientID
 		b.isNew = false
 	case b.entity.ID == entityByName.ID:
 		// The loaded entity and the one found by name are the same. No-op.
@@ -112,6 +118,9 @@ func (b *EntityBuilder) WithName(ctx context.Context, name string) *EntityBuilde
 		return b
 	}
 
+	if b.entity.Name != name {
+		b.modifiedFields = append(b.modifiedFields, "name")
+	}
 	b.entity.Name = name
 	return b
 }
@@ -125,6 +134,10 @@ func (b *EntityBuilder) WithPolicies(policies []string) *EntityBuilder {
 		b.err = fmt.Errorf("policies cannot contain root")
 		return b
 	}
+	dedupedPolicies := strutil.RemoveDuplicates(policies, false)
+	if !strutil.EquivalentSlices(b.entity.Policies, dedupedPolicies) {
+		b.modifiedFields = append(b.modifiedFields, "policies")
+	}
 	b.entity.Policies = strutil.RemoveDuplicates(policies, false)
 	return b
 }
@@ -134,14 +147,24 @@ func (b *EntityBuilder) WithDisabled(disabled bool) *EntityBuilder {
 	if b.err != nil {
 		return b
 	}
+	if b.entity.Disabled != disabled {
+		b.modifiedFields = append(b.modifiedFields, "disabled")
+	}
 	b.entity.Disabled = disabled
 	return b
 }
 
 // WithMetadata sets the metadata for the entity.
+// The original entity's value for duplicate_of_canonical_id will be preserved.
 func (b *EntityBuilder) WithMetadata(metadata map[string]string) *EntityBuilder {
 	if b.err != nil {
 		return b
+	}
+	if value, ok := b.entity.Metadata[duplicateCanonicalIDMetadataKey]; ok {
+		metadata[duplicateCanonicalIDMetadataKey] = value
+	}
+	if !strutil.EqualStringMaps(b.entity.Metadata, metadata) {
+		b.modifiedFields = append(b.modifiedFields, "metadata")
 	}
 	b.entity.Metadata = metadata
 	return b
@@ -161,6 +184,10 @@ func (b *EntityBuilder) Build(ctx context.Context) (*logical.Response, error) {
 	// If any previous step set an error, return it immediately.
 	if b.err != nil {
 		return logical.ErrorResponse(b.err.Error()), nil
+	}
+
+	if err := b.store.scimResourceCheck(ctx, b.entity, b.originalSCIMID, b.isNew, b.modifiedFields); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrPermissionDenied
 	}
 
 	// Sanitize and persist the entity

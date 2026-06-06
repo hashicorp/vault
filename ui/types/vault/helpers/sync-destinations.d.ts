@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { DestinationName, DestinationType } from 'vault/sync';
+import { DestinationType } from 'sync/utils/constants';
+import { DestinationName, DestinationRoleTypeOption } from 'vault/sync';
 
 export interface SyncDestination {
   name: DestinationName;
@@ -13,4 +14,5 @@ export interface SyncDestination {
   maskedParams: Array<string>;
   readonlyParams: Array<string>;
   defaultValues: object;
+  roleTypeOptions?: Array<DestinationRoleTypeOption>;
 }

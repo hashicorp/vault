@@ -102,6 +102,9 @@ oOyBJU/HMVvBfv4g+OVFLVgSwwm6owwsouZ0+D/LasbuHqYyqYqdyPJQYzWA2Y+F
 )
 
 // TestCore returns a pure in-memory, uninitialized core for testing.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCore(t testing.TB) *Core {
 	return TestCoreWithSeal(t, nil, false)
 }
@@ -121,6 +124,9 @@ func TestCoreNewSeal(t testing.TB) *Core {
 
 // TestCoreWithConfig returns a pure in-memory, uninitialized core with the
 // specified core configurations overridden for testing.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreWithConfig(t testing.TB, conf *CoreConfig) *Core {
 	return TestCoreWithSealAndUI(t, conf)
 }
@@ -271,7 +277,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
 	conf.BillingConfig = opts.BillingConfig
-	testApplyEntBaseConfig(conf, opts)
+	TestApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -387,6 +393,9 @@ func TestCoreSeal(core *Core) error {
 
 // TestCoreUnsealed returns a pure in-memory core that is already
 // initialized and unsealed.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreUnsealed(t testing.TB) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCore(t)
@@ -420,6 +429,9 @@ func TestCoreUnsealedWithMetricsAndConfig(t testing.TB, conf *CoreConfig) (*Core
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
 // initialized, unsealed, and with raw endpoints enabled.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreUnsealedRaw(t testing.TB) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreRaw(t)
@@ -427,7 +439,10 @@ func TestCoreUnsealedRaw(t testing.TB) (*Core, [][]byte, string) {
 }
 
 // TestCoreUnsealedWithConfig returns a pure in-memory core that is already
-// initialized, unsealed, with the any provided core config values overridden.
+// initialized, unsealed, with any provided core config values overridden.
+//
+// NOTE: Writing your test using NewTestCluster in a new package is strongly
+// preferable to writing a test in the vault package utilizing the TestCore functions.
 func TestCoreUnsealedWithConfig(t testing.TB, conf *CoreConfig) (*Core, [][]byte, string) {
 	t.Helper()
 	core := TestCoreWithConfig(t, conf)
@@ -559,8 +574,13 @@ var (
 	testCredentialBackends = map[string]logical.Factory{}
 )
 
-// This adds a credential backend for the test core. This needs to be
+// AddTestCredentialBackend adds a credential backend for the test core. This needs to be
 // invoked before the test core is created.
+//
+// Deprecated: Relies upon global test variables, and prone to race conditions,
+// and tests using this function cannot run in parallel.
+// A test utilizing NewTestCluster living outside the Vault package should
+// be strongly preferred instead.
 func AddTestCredentialBackend(name string, factory logical.Factory) error {
 	if name == "" {
 		return fmt.Errorf("missing backend name")
@@ -572,8 +592,13 @@ func AddTestCredentialBackend(name string, factory logical.Factory) error {
 	return nil
 }
 
-// This adds a logical backend for the test core. This needs to be
+// AddTestLogicalBackend adds a logical backend for the test core. This needs to be
 // invoked before the test core is created.
+//
+// Deprecated: Relies upon global test variables, and prone to race conditions,
+// and tests using this function cannot run in parallel.
+// A test utilizing NewTestCluster living outside the Vault package should
+// be strongly preferred instead.
 func AddTestLogicalBackend(name string, factory logical.Factory) error {
 	if name == "" {
 		return fmt.Errorf("missing backend name")
@@ -675,6 +700,8 @@ func TestWaitPerfStandby(t testing.TB, core *Core) {
 	}
 }
 
+// TestWaitActive waits for a given core to become the active node.
+// This function is NOT required on a new cluster returned by NewTestCluster.
 func TestWaitActive(t testing.TB, core *Core) {
 	t.Helper()
 	if err := TestWaitActiveWithError(core); err != nil {
@@ -739,6 +766,7 @@ type TestCluster struct {
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
+	cleanupOnce       sync.Once
 }
 
 func (c *TestCluster) SetRootToken(token string) {
@@ -746,9 +774,6 @@ func (c *TestCluster) SetRootToken(token string) {
 	for _, c := range c.Cores {
 		c.Client.SetToken(token)
 	}
-}
-
-func (c *TestCluster) Start() {
 }
 
 func (c *TestCluster) start(t testing.TB) {
@@ -991,37 +1016,45 @@ func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
 	return c.Core.clusterNetworkLayer
 }
 
+// Cleanup cleans up the Vault cluster. It's called automatically and tied to t.Cleanup().
+// This remains for now to satisfy the VaultCluster interface. Changing that could be breaking
+// for users of the SDK.
+//
+// Deprecated: This should almost never be called directly for clusters resulting from
+// NewTestCluster.
 func (c *TestCluster) Cleanup() {
-	c.Logger.Info("cleaning up vault cluster")
-	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
-		tl.StopLogging()
-	}
+	c.cleanupOnce.Do(func() {
+		c.Logger.Info("cleaning up vault cluster")
+		if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 
-	wg := &sync.WaitGroup{}
-	for _, core := range c.Cores {
-		wg.Add(1)
-		lc := core
+		wg := &sync.WaitGroup{}
+		for _, core := range c.Cores {
+			wg.Add(1)
+			lc := core
 
-		go func() {
-			defer wg.Done()
-			if err := lc.stop(); err != nil {
-				// Note that this log won't be seen if using TestLogger, due to
-				// the above call to StopLogging.
-				lc.Logger().Error("error during cleanup", "error", err)
-			}
-		}()
-	}
+			go func() {
+				defer wg.Done()
+				if err := lc.stop(); err != nil {
+					// Note that this log won't be seen if using TestLogger, due to
+					// the above call to StopLogging.
+					lc.Logger().Error("error during cleanup", "error", err)
+				}
+			}()
+		}
 
-	wg.Wait()
+		wg.Wait()
 
-	// Remove any temp dir that exists
-	if c.TempDir != "" {
-		os.RemoveAll(c.TempDir)
-	}
+		// Remove any temp dir that exists
+		if c.TempDir != "" {
+			os.RemoveAll(c.TempDir)
+		}
 
-	if c.CleanupFunc != nil {
-		c.CleanupFunc()
-	}
+		if c.CleanupFunc != nil {
+			c.CleanupFunc()
+		}
+	})
 }
 
 func (c *TestCluster) ensureCoresSealed() error {
@@ -1170,6 +1203,7 @@ type TestClusterOptions struct {
 
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
+	DisableTLS      bool
 }
 
 type TestPluginConfig struct {
@@ -1371,6 +1405,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		})
 	}
 
+	scheme := "https"
+	if opts.DisableTLS {
+		scheme = "http"
+	}
 	//
 	// Listener setup
 	//
@@ -1427,9 +1465,13 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		tlsConfigs = append(tlsConfigs, tlsConfig)
 		lns := []*TestListener{
 			{
-				Listener: tls.NewListener(ln, tlsConfig),
-				Address:  ln.Addr().(*net.TCPAddr),
+				Address: ln.Addr().(*net.TCPAddr),
 			},
+		}
+		if opts.DisableTLS {
+			lns[0].Listener = ln
+		} else {
+			lns[0].Listener = tls.NewListener(ln, tlsConfig)
 		}
 		listeners = append(listeners, lns)
 		var handler http.Handler = http.NewServeMux()
@@ -1458,8 +1500,8 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 			audit.TypeSocket: audit.NewSocketBackend,
 			audit.TypeSyslog: audit.NewSyslogBackend,
 		},
-		RedirectAddr:    fmt.Sprintf("https://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:     "https://127.0.0.1:0",
+		RedirectAddr:    fmt.Sprintf(scheme+"://127.0.0.1:%d", listeners[0][0].Address.Port),
+		ClusterAddr:     scheme + "://127.0.0.1:0",
 		DisableMlock:    true,
 		EnableUI:        true,
 		EnableRaw:       true,
@@ -1556,8 +1598,9 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
 		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
+		coreConfig.EnableUnauthenticatedAccess = base.EnableUnauthenticatedAccess
 
-		testApplyEntBaseConfig(coreConfig, base)
+		TestApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
 		coreConfig.ClusterName = t.Name()
@@ -1733,6 +1776,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		// once, otherwise when they re-initialize themselves they can yield 500s.
 		time.Sleep(coreConfig.PeriodicLeaderRefreshInterval)
 	}
+
+	// Register cleanup with t.Cleanup so it's automatically called when the test ends
+	t.Cleanup(testCluster.Cleanup)
+
 	return &testCluster
 }
 
@@ -1849,7 +1896,11 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 		firstCoreNumber = opts.FirstCoreNumber
 	}
 
-	localConfig.RedirectAddr = fmt.Sprintf("https://127.0.0.1:%d", listeners[0].Address.Port)
+	scheme := "https"
+	if opts != nil && opts.DisableTLS {
+		scheme = "http"
+	}
+	localConfig.RedirectAddr = fmt.Sprintf(scheme+"://127.0.0.1:%d", listeners[0].Address.Port)
 
 	// if opts.SealFunc is provided, use that to generate a seal for the config instead
 	if opts != nil && opts.SealFunc != nil {
@@ -1913,10 +1964,10 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 
 	if opts != nil && opts.ClusterLayers != nil {
 		localConfig.ClusterNetworkLayer = opts.ClusterLayers.Layers()[idx]
-		localConfig.ClusterAddr = "https://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
+		localConfig.ClusterAddr = scheme + "://" + localConfig.ClusterNetworkLayer.Listeners()[0].Addr().String()
 	}
 	if opts != nil && opts.BaseClusterListenPort != 0 {
-		localConfig.ClusterAddr = fmt.Sprintf("https://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
+		localConfig.ClusterAddr = fmt.Sprintf(scheme+"://127.0.0.1:%d", opts.BaseClusterListenPort+idx)
 	}
 
 	switch {
@@ -2137,7 +2188,11 @@ func (testCluster *TestCluster) getAPIClient(
 	port int, tlsConfig *tls.Config,
 ) *api.Client {
 	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = tlsConfig.Clone()
+	scheme := "http"
+	if opts != nil && !opts.DisableTLS {
+		scheme = "https"
+		transport.TLSClientConfig = tlsConfig.Clone()
+	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}
@@ -2152,7 +2207,7 @@ func (testCluster *TestCluster) getAPIClient(
 	if config.Error != nil {
 		t.Fatal(config.Error)
 	}
-	config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+	config.Address = fmt.Sprintf(scheme+"://127.0.0.1:%d", port)
 	config.HttpClient = client
 	config.MaxRetries = 0
 	apiClient, err := api.NewClient(config)

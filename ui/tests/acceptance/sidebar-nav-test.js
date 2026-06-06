@@ -11,6 +11,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -19,7 +20,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     // set storage_type to raft to test link
     this.server.get('/sys/seal-status', (schema, req) => {
       return modifyPassthroughResponse(req, { storage_type: 'raft' });
@@ -31,7 +32,9 @@ module('Acceptance | sidebar navigation', function (hooks) {
         'nested-interactive': { enabled: false },
       },
     });
-    return login();
+    await login();
+    // dismiss wizard
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
   });
 
   test('it should navigate back to the dashboard when logo is clicked in app header', async function (assert) {
@@ -40,12 +43,13 @@ module('Acceptance | sidebar navigation', function (hooks) {
   });
 
   test('it should link to correct routes at the cluster level', async function (assert) {
-    assert.expect(8);
+    assert.expect(9);
 
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
     const subNavs = [
       { label: 'Access control', route: 'policies/acl' },
+      { label: 'Secrets', route: 'secrets-engines' },
       { label: 'Operational tools', route: 'tools/wrap' },
     ];
 
@@ -59,10 +63,8 @@ module('Acceptance | sidebar navigation', function (hooks) {
 
     const links = [
       { label: 'Raft storage', route: '/vault/storage/raft' },
-      { label: 'Secrets', route: '/vault/secrets-engines' },
       { label: 'Dashboard', route: '/vault/dashboard' },
     ];
-
     for (const l of links) {
       await click(link(l.label));
       assert.strictEqual(currentURL(), l.route, `${l.label} route renders`);

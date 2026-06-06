@@ -1,0 +1,7 @@
+```release-note:security
+core: reject URL-encoded paths that do not specify a canonical path
+```
+
+```release-note:change
+core: Vault now rejects paths that are not canonical, such as paths containing double slashes (`path//to/resource`)
+```

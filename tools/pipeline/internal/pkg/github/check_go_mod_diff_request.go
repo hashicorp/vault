@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"os"
 
-	libgithub "github.com/google/go-github/v81/github"
+	libgithub "github.com/google/go-github/v83/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/golang"
 	"github.com/jedib0t/go-pretty/v6/table"

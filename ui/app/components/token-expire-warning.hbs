@@ -37,15 +37,17 @@
             on
             {{date-format @expirationDate "MMMM do yyyy, h:mm:ss a O"}}.
           </A.Description>
-          <A.Button
-            @text="Renew token"
-            @color="secondary"
-            @icon={{if this.renewToken.isRunning "loading" "reload"}}
-            @iconPosition="trailing"
-            disabled={{this.renewToken.isRunning}}
-            {{on "click" (perform this.renewToken)}}
-            data-test-renew-token-button
-          />
+          {{#if this.canShowRenew}}
+            <A.Button
+              @text="Renew token"
+              @color="secondary"
+              @icon={{if this.renewToken.isRunning "loading" "reload"}}
+              @iconPosition="trailing"
+              disabled={{this.renewToken.isRunning}}
+              {{on "click" (perform this.renewToken)}}
+              data-test-renew-token-button
+            />
+          {{/if}}
           <A.LinkStandalone
             @icon="arrow-right"
             @iconPosition="trailing"

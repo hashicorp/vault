@@ -56,8 +56,14 @@ export default function (server) {
     const dataKey = isMethod ? 'id' : 'name';
     const data = records.reduce(
       (resp, record) => {
-        resp.key_info[record[dataKey]] = record;
-        resp.keys.push(record[dataKey]);
+        const key = record[dataKey];
+        // For enforcements, ensure both id and name are set to the same value
+        if (!isMethod && key) {
+          record.id = key;
+          record.name = key;
+        }
+        resp.key_info[key] = record;
+        resp.keys.push(key);
         return resp;
       },
       {
@@ -161,12 +167,13 @@ export default function (server) {
         }
       );
     }
-    if (schema.db.mfaLoginEnforcements.findBy({ name })) {
-      schema.db.mfaLoginEnforcements.update({ name }, data);
+    const existingRecord = schema.db.mfaLoginEnforcements.findBy({ name });
+    if (existingRecord) {
+      schema.db.mfaLoginEnforcements.update(existingRecord.id, { ...data, name });
     } else {
-      schema.db.mfaLoginEnforcements.insert(data);
+      server.create('mfa-login-enforcement', { ...data, name });
     }
-    return { ...data, id: data.name };
+    return { data: { ...data, name, id: name } };
   });
   // delete enforcement
   server.delete('/identity/mfa/login-enforcement/:name', (schema, { params: { name } }) => {

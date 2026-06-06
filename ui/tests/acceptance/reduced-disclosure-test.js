@@ -10,12 +10,11 @@ import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@em
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { createTokenCmd, deleteNS, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const { unsealKeys } = VAULT_KEYS;
+const unsealKeys = ['unseal-key-1', 'unseal-key-2', 'unseal-key-3'];
 const SELECTORS = {
   footerVersion: `[data-test-footer-version]`,
 };
@@ -24,11 +23,15 @@ module('Acceptance | reduced disclosure test', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     reducedDisclosureHandlers(this.server);
     this.unsealCount = 0;
     this.sealed = false;
     this.versionSvc = this.owner.lookup('service:version');
+    this.versionFor = {
+      header: () => `Vault v${this.versionSvc.version.replace('+ent', '')}`,
+      footer: () => `Vault ${this.versionSvc.version}`,
+    };
     return logout();
   });
 
@@ -38,22 +41,20 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/dashboard');
 
     // Ensure it shows version on dashboard
-    assert.dom(GENERAL.hdsPageHeaderTitle).includesText(`Vault v1.`);
-    assert
-      .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
+    assert.dom(GENERAL.hdsPageHeaderTitle).includesText(this.versionFor.header());
+    assert.dom(SELECTORS.footerVersion).hasText(this.versionFor.footer(), 'shows Vault version after login');
 
     const token = await runCmd(createTokenCmd('default'));
 
     await logout();
-    assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
+    assert.dom(SELECTORS.footerVersion).hasText('Vault', 'no vault version after logout');
 
     await login(token);
     assert.strictEqual(currentURL(), '/vault/dashboard');
 
     assert
       .dom(SELECTORS.footerVersion)
-      .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+      .hasText(this.versionFor.footer(), 'shows Vault version for default policy in namespace');
   });
 
   test('shows correct version on unseal flow', async function (assert) {
@@ -91,7 +92,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
-    await click('[data-test-seal]');
+    await click(GENERAL.button('Seal'));
     await click(GENERAL.confirmButton);
     await pollCluster(this.owner);
     await settled();
@@ -100,9 +101,9 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
     // unseal
     for (const key of unsealKeys) {
-      await fillIn('[data-test-shamir-key-input]', key);
+      await fillIn(GENERAL.inputByAttr('shamir-key'), key);
 
-      await click('button[type="submit"]');
+      await click(GENERAL.submitButton);
 
       await pollCluster(this.owner);
       await settled();
@@ -118,7 +119,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
   module('enterprise', function () {
     test('does not allow access to replication pages', async function (assert) {
       await login();
-      assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
+      assert.dom(GENERAL.navLink('Replication')).doesNotExist('hides replication nav item');
 
       await visit(`/vault/replication/dr`);
       assert.strictEqual(
@@ -149,17 +150,14 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       await login(token);
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+        .hasText(this.versionFor.footer(), 'shows Vault version for default policy in namespace');
 
       // navigate to child namespace
       await visit(`/vault/dashboard?namespace=${namespace}`);
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(
-          `Vault ${this.versionSvc.version}`,
-          'shows Vault version for default policy in child namespace'
-        );
-      assert.dom(GENERAL.hdsPageHeaderTitle).includesText('Vault v1.');
+        .hasText(this.versionFor.footer(), 'shows Vault version for default policy in child namespace');
+      assert.dom(GENERAL.hdsPageHeaderTitle).includesText(this.versionFor.header());
 
       // log in to "root" before deleting
       await login();
@@ -173,17 +171,17 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       assert.strictEqual(currentURL(), '/vault/dashboard');
 
       // Ensure it shows version on dashboard
-      assert.dom(GENERAL.hdsPageHeaderTitle).includesText(`Vault v1.`);
+      assert.dom(GENERAL.hdsPageHeaderTitle).includesText(this.versionFor.header());
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
+        .hasText(this.versionFor.footer(), 'shows Vault version after login');
 
       await runCmd(`write sys/namespaces/${namespace} -f`, false);
       await loginNs(namespace);
 
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version within namespace');
+        .hasText(this.versionFor.footer(), 'shows Vault version within namespace');
 
       const token = await runCmd(createTokenCmd('default'));
 
@@ -194,7 +192,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       assert.strictEqual(currentURL(), '/vault/dashboard?namespace=reduced-disclosure');
       assert
         .dom(SELECTORS.footerVersion)
-        .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+        .hasText(this.versionFor.footer(), 'shows Vault version for default policy in namespace');
 
       // log in to "root" before deleting
       await login();

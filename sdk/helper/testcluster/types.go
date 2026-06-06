@@ -45,11 +45,7 @@ type VaultNodeConfig struct {
 	// 	 DisableMlock bool  `hcl:"disable_mlock"`
 
 	// Not configurable yet:
-	//   Listeners []*Listener `hcl:"-"`
-	//   Seals   []*KMS   `hcl:"-"`
-	//   Entropy *Entropy `hcl:"-"`
 	//   Telemetry *Telemetry `hcl:"telemetry"`
-	//   HCPLinkConf *HCPLinkConfig `hcl:"cloud"`
 	//   PidFile string `hcl:"pid_file"`
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
@@ -58,6 +54,9 @@ type VaultNodeConfig struct {
 	AdditionalListeners      []VaultNodeListenerConfig `json:"-"`
 	CustomListenerConfigOpts map[string]interface{}    `json:"-"`
 	AdditionalTCPPorts       []int                     `json:"-"`
+	Seal                     []VaultNodeSealConfig     `json:"-"`
+	KMSLibrary               []VaultNodeKMSLibrary     `json:"-"`
+	Entropy                  *VaultNodeEntropy         `json:"-"`
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`
@@ -83,6 +82,8 @@ type VaultNodeConfig struct {
 	EnableResponseHeaderRaftNodeID bool          `json:"enable_response_header_raft_node_id"`
 	LicensePath                    string        `json:"license_path"`
 	FeatureFlags                   []string      `json:"feature_flags,omitempty"`
+	EnableUnauthenticatedAccess    []string      `json:"enable_unauthenticated_access,omitempty"`
+	EnableMultiSeal                bool          `json:"enable_multiseal"`
 }
 
 type ClusterNode struct {
@@ -99,6 +100,10 @@ type ClusterOptions struct {
 	ClusterName                 string
 	KeepStandbysSealed          bool
 	SkipInit                    bool
+	SkipUnsealWaitActiveNode    bool
+	BarrierKeys                 [][]byte
+	RecoveryKeys                [][]byte
+	RootToken                   string
 	CACert                      []byte
 	NumCores                    int
 	TmpDir                      string
@@ -115,6 +120,21 @@ type VaultNodeListenerConfig struct {
 	RedactClusterName bool
 	RedactVersion     bool
 	TLSCipherSuites   []uint16
+}
+
+type VaultNodeSealConfig struct {
+	Type   string
+	Config map[string]string
+}
+
+type VaultNodeKMSLibrary struct {
+	Type    string
+	Name    string
+	Library string
+}
+
+type VaultNodeEntropy struct {
+	SealName string
 }
 
 type CA struct {

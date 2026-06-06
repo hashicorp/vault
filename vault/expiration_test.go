@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1832,6 +1833,13 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 
 func TestExpiration_Renew(t *testing.T) {
 	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+	ch, cancel, err := exp.core.events.Subscribe(ctx, namespace.RootNamespace, leaseEventTypeRenewed, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -1885,6 +1893,8 @@ func TestExpiration_Renew(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	expectedPath := req.Path
+
 	noop.Lock()
 	defer noop.Unlock()
 
@@ -1899,10 +1909,24 @@ func TestExpiration_Renew(t *testing.T) {
 	if req.Operation != logical.RenewOperation {
 		t.Fatalf("Bad: %v", req)
 	}
+
+	select {
+	case receivedEvent := <-ch:
+		assertLeaseRenewEvent(t, receivedEvent, leaseEventTypeRenewed, expectedPath, id)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout waiting for %s event", leaseEventTypeRenewed)
+	}
 }
 
 func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+	ch, cancel, err := exp.core.events.Subscribe(ctx, namespace.RootNamespace, leaseEventTypeRenewFailed, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -1949,6 +1973,13 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 
 	if len(noop.Requests) != 0 {
 		t.Fatalf("Bad: %#v", noop.Requests)
+	}
+
+	select {
+	case receivedEvent := <-ch:
+		assertLeaseRenewEvent(t, receivedEvent, leaseEventTypeRenewFailed, req.Path, "")
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout waiting for %s event", leaseEventTypeRenewFailed)
 	}
 }
 
@@ -3505,5 +3536,35 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 	numLeases := numLeasesRaw.(int)
 	if numLeases != expectedNumLeases {
 		t.Errorf("bad lease count. expected %d, got %d", expectedNumLeases, numLeases)
+	}
+}
+
+func assertLeaseRenewEvent(t *testing.T, receivedEvent *eventlogger.Event, expectedEventType, expectedPath, expectedLeaseID string) {
+	t.Helper()
+
+	if receivedEvent == nil || receivedEvent.Payload == nil {
+		t.Fatal("missing event payload")
+	}
+
+	received, ok := receivedEvent.Payload.(*logical.EventReceived)
+	if !ok || received == nil {
+		t.Fatalf("unexpected payload type: %T", receivedEvent.Payload)
+	}
+	if received.EventType != expectedEventType {
+		t.Fatalf("unexpected event type: %s", received.EventType)
+	}
+	if received.Event == nil || received.Event.Metadata == nil {
+		t.Fatal("missing event metadata")
+	}
+
+	metadata := received.Event.Metadata.Fields
+	if metadata[logical.EventMetadataOperation].GetStringValue() != leaseOperationRenew {
+		t.Fatalf("unexpected operation: %s", metadata[logical.EventMetadataOperation].GetStringValue())
+	}
+	if metadata[logical.EventMetadataPath].GetStringValue() != expectedPath {
+		t.Fatalf("unexpected path: %s", metadata[logical.EventMetadataPath].GetStringValue())
+	}
+	if expectedLeaseID != "" && metadata[leaseMetadataLeaseID].GetStringValue() != expectedLeaseID {
+		t.Fatalf("unexpected lease id: %s", metadata[leaseMetadataLeaseID].GetStringValue())
 	}
 }

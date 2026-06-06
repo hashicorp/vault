@@ -32,7 +32,6 @@ func TestACMEBilling(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	var activeCore *vault.TestClusterCore
 	{

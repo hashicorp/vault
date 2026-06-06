@@ -218,11 +218,12 @@ scenario "pr_replication" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
-      cluster_tag_key = global.vault_tag_key
-      common_tags     = global.tags
-      instance_count  = 1
-      vpc_id          = step.create_vpc.id
+      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["26.04"]
+      cluster_tag_key  = global.vault_tag_key
+      common_tags      = global.tags
+      instance_count   = 1
+      root_volume_size = 64
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -339,7 +340,7 @@ scenario "pr_replication" {
     variables {
       hosts      = step.create_external_integration_target.hosts
       ip_version = matrix.ip_version
-      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
+      packages   = concat(global.packages, global.distro_packages["ubuntu"]["26.04"], ["podman", "podman-docker"])
       ports      = global.integration_host_ports
     }
   }
@@ -687,9 +688,9 @@ scenario "pr_replication" {
     }
   }
 
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
+  step "run_verify_blackbox_tests" {
+    description = global.description.run_verify_blackbox_tests
+    module      = module.vault_run_blackbox_test
     depends_on  = [step.get_primary_cluster_ips]
 
     providers = {
@@ -705,14 +706,16 @@ scenario "pr_replication" {
     ]
 
     variables {
-      hosts                 = step.create_primary_cluster_targets.hosts
-      vault_addr            = step.create_primary_cluster.api_addr_localhost
+      leader_host           = step.get_primary_cluster_ips.leader_host
+      leader_public_ip      = step.get_primary_cluster_ips.leader_public_ip
+      vault_root_token      = step.create_primary_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/verify"
+      test_names            = ["TestVaultServerVersion"]
       vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_primary_cluster.root_token
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
     }
   }
 
@@ -777,6 +780,7 @@ scenario "pr_replication" {
       vault_edition          = matrix.edition
       vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
       vault_root_token       = step.create_primary_cluster.root_token
+      vault_audit_log_path   = step.create_primary_cluster.audit_device_file_path
     }
   }
 
@@ -793,7 +797,7 @@ scenario "pr_replication" {
       step.get_secondary_cluster_ips,
       step.verify_secrets_engines_on_primary,
       // Wait base verification to complete...
-      step.verify_vault_version,
+      step.run_verify_blackbox_tests,
       step.verify_ui,
     ]
 

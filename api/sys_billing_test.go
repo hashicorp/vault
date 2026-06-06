@@ -33,32 +33,46 @@ func TestSys_BillingOverview(t *testing.T) {
 	currentMonth := resp.Months[0]
 	require.Equal(t, "2026-01", currentMonth.Month)
 	require.Equal(t, "2026-01-14T10:49:00Z", currentMonth.UpdatedAt)
-	require.Len(t, currentMonth.UsageMetrics, 4)
+	require.Len(t, currentMonth.UsageMetrics, 9, "should have all 9 metrics")
 
-	// Verify static_secrets metric
-	staticSecretsMetric := currentMonth.UsageMetrics[0]
-	require.Equal(t, "static_secrets", staticSecretsMetric.MetricName)
-	require.NotNil(t, staticSecretsMetric.MetricData)
+	// Create a map to verify all expected metrics are present
+	metricsMap := make(map[string]UsageMetric)
+	for _, metric := range currentMonth.UsageMetrics {
+		metricsMap[metric.MetricName] = metric
+	}
+
+	// Verify all expected metrics are present
+	expectedMetrics := []string{
+		"static_secrets",
+		"dynamic_roles",
+		"auto_rotated_roles",
+		"kmip",
+		"external_plugins",
+		"data_protection_calls",
+		"pki_units",
+		"managed_keys",
+		"ssh_units",
+	}
+
+	for _, metricName := range expectedMetrics {
+		metric, exists := metricsMap[metricName]
+		require.True(t, exists, "metric %s should be present", metricName)
+		require.NotNil(t, metric.MetricData, "metric_data should not be nil for %s", metricName)
+	}
+
+	// Verify specific metric structures
+	staticSecretsMetric := metricsMap["static_secrets"]
 	require.Contains(t, staticSecretsMetric.MetricData, "total")
 	require.Contains(t, staticSecretsMetric.MetricData, "metric_details")
 
-	// Verify kmip metric
-	kmipMetric := currentMonth.UsageMetrics[1]
-	require.Equal(t, "kmip", kmipMetric.MetricName)
-	require.NotNil(t, kmipMetric.MetricData)
+	kmipMetric := metricsMap["kmip"]
 	require.Contains(t, kmipMetric.MetricData, "used_in_month")
 	require.Equal(t, true, kmipMetric.MetricData["used_in_month"])
 
-	// Verify pki_units metric
-	pkiMetric := currentMonth.UsageMetrics[2]
-	require.Equal(t, "pki_units", pkiMetric.MetricName)
-	require.NotNil(t, pkiMetric.MetricData)
+	pkiMetric := metricsMap["pki_units"]
 	require.Contains(t, pkiMetric.MetricData, "total")
 
-	// Verify managed_keys metric
-	managedKeysMetric := currentMonth.UsageMetrics[3]
-	require.Equal(t, "managed_keys", managedKeysMetric.MetricName)
-	require.NotNil(t, managedKeysMetric.MetricData)
+	managedKeysMetric := metricsMap["managed_keys"]
 	require.Contains(t, managedKeysMetric.MetricData, "total")
 	require.Contains(t, managedKeysMetric.MetricData, "metric_details")
 
@@ -73,6 +87,10 @@ func TestSys_BillingOverview(t *testing.T) {
 	require.Equal(t, "external_plugins", externalPluginsMetric.MetricName)
 	require.NotNil(t, externalPluginsMetric.MetricData)
 	require.Contains(t, externalPluginsMetric.MetricData, "total")
+
+	sshMetric := metricsMap["ssh_units"]
+	require.Contains(t, sshMetric.MetricData, "total")
+	require.Contains(t, sshMetric.MetricData, "metric_details")
 }
 
 func mockVaultBillingHandler(w http.ResponseWriter, _ *http.Request) {
@@ -103,9 +121,75 @@ const billingOverviewResponse = `{
             }
           },
           {
+            "metric_name": "dynamic_roles",
+            "metric_data": {
+              "total": 15,
+              "metric_details": [
+                {
+                  "type": "aws_dynamic",
+                  "count": 5
+                },
+                {
+                  "type": "azure_dynamic",
+                  "count": 5
+                },
+                {
+                  "type": "database_dynamic",
+                  "count": 5
+                }
+              ]
+            }
+          },
+          {
+            "metric_name": "auto_rotated_roles",
+            "metric_data": {
+              "total": 15,
+              "metric_details": [
+                {
+                  "type": "aws_static",
+                  "count": 5
+                },
+                {
+                  "type": "azure_static",
+                  "count": 5
+                },
+                {
+                  "type": "os_local_account_static",
+                  "count": 5
+                }
+              ]
+            }
+          },
+          {
             "metric_name": "kmip",
             "metric_data": {
               "used_in_month": true
+            }
+          },
+          {
+            "metric_name": "external_plugins",
+            "metric_data": {
+              "total": 3
+            }
+          },
+          {
+            "metric_name": "data_protection_calls",
+            "metric_data": {
+              "total": 100,
+              "metric_details": [
+                {
+                  "type": "transit",
+                  "count": 50
+                },
+                {
+                  "type": "transform",
+                  "count": 50
+                },
+                {
+                  "type": "gcpkms",
+                  "count": 50
+                }
+              ]
             }
           },
           {
@@ -123,11 +207,27 @@ const billingOverviewResponse = `{
                   "type": "totp",
                   "count": 5
                 },
-				{
-				  "type": "kmse",
-				  "count": 5
-				}
+                {
+                  "type": "kmse",
+                  "count": 5
+                }
               ]
+            }
+          },
+          {
+            "metric_name": "ssh_units",
+            "metric_data": {
+              "total": 8.4,
+              "metric_details": [
+                {
+                  "type": "otp_units",
+                  "count": 5
+                },
+				{
+				  "type": "certificate_units",
+				  "count": 3.4
+				}
+			  ]
             }
           }
         ]
@@ -145,6 +245,49 @@ const billingOverviewResponse = `{
         ]
       }
     ]
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}`
+
+// TestSys_BillingConfig tests the GetBillingConfig and SetBillingConfig API client methods
+func TestSys_BillingConfig(t *testing.T) {
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultBillingConfigHandler))
+	defer mockVaultServer.Close()
+
+	// Create API client pointing to mock server
+	cfg := DefaultConfig()
+	cfg.Address = mockVaultServer.URL
+	client, err := NewClient(cfg)
+	require.NoError(t, err)
+
+	// Test GetBillingConfig
+	resp, err := client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, 37, resp.RetentionMonths)
+
+	// Test SetBillingConfig
+	err = client.Sys().SetBillingConfig(48)
+	require.NoError(t, err)
+}
+
+func mockVaultBillingConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		_, _ = w.Write([]byte(billingConfigResponse))
+	} else if r.Method == http.MethodPost {
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+const billingConfigResponse = `{
+  "request_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "retention_months": 37
   },
   "wrap_info": null,
   "warnings": null,

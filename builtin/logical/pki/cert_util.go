@@ -4,6 +4,7 @@
 package pki
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -15,10 +16,10 @@ import (
 	"math/big"
 	"net"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
@@ -27,8 +28,10 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"golang.org/x/crypto/cryptobyte"
 	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 type inputBundle struct {
@@ -36,33 +39,6 @@ type inputBundle struct {
 	req     *logical.Request
 	apiData *framework.FieldData
 }
-
-var (
-	// labelRegex is a single label from a valid domain name and was extracted
-	// from hostnameRegex below for use in leftWildLabelRegex, without any
-	// label separators (`.`).
-	labelRegex = `([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])`
-
-	// A note on hostnameRegex: although we set the StrictDomainName option
-	// when doing the idna conversion, this appears to only affect output, not
-	// input, so it will allow e.g. host^123.example.com straight through. So
-	// we still need to use this to check the output.
-	hostnameRegex = regexp.MustCompile(`^(\*\.)?(` + labelRegex + `\.)*` + labelRegex + `\.?$`)
-
-	// Left Wildcard Label Regex is equivalent to a single domain label
-	// component from hostnameRegex above, but with additional wildcard
-	// characters added. There are four possibilities here:
-	//
-	//  1. Entire label is a wildcard,
-	//  2. Wildcard exists at the start,
-	//  3. Wildcard exists at the end,
-	//  4. Wildcard exists in the middle.
-	allWildRegex       = `\*`
-	startWildRegex     = `\*` + labelRegex
-	endWildRegex       = labelRegex + `\*`
-	middleWildRegex    = labelRegex + `\*` + labelRegex
-	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
-)
 
 func doesPublicKeyAlgoMatchSignatureAlgo(pubKey x509.PublicKeyAlgorithm, algo x509.SignatureAlgorithm) bool {
 	return issuing.DoesPublicKeyAlgoMatchSignatureAlgo(pubKey, algo)
@@ -74,10 +50,21 @@ func getFormat(data *framework.FieldData) string {
 	case "pem":
 	case "der":
 	case "pem_bundle":
+	case "pkcs12_bundle":
+	case "jks_bundle":
 	default:
 		format = ""
 	}
 	return format
+}
+
+func supportedFormats(includePKCS12 bool) []string {
+	if includePKCS12 {
+		// includePKCS12 enables both PKCS#12 and JKS output formats.
+		// JKS is included as a legacy companion format, so the flag just references pk12.
+		return []string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}
+	}
+	return []string{"pem", "der", "pem_bundle"}
 }
 
 // fetchCAInfo will fetch the CA info, will return an error if no ca info exists, this does NOT support
@@ -796,4 +783,153 @@ func (i CertNotAfterInputFromFieldData) GetTTL() int {
 
 func (i CertNotAfterInputFromFieldData) GetOptionalNotAfter() (interface{}, bool) {
 	return i.data.GetOk("not_after")
+}
+
+func validateCountry(country []string) error {
+	for _, c := range country {
+		if len(c) != 2 {
+			return fmt.Errorf("country must be a 2 character ISO 3166 code, have: %v", c)
+		}
+		for _, cc := range c {
+			cc = unicode.ToUpper(cc)
+			if cc < 'A' || cc > 'Z' {
+				return fmt.Errorf("country code characters must be between A and Z, have: %v", c)
+			}
+		}
+	}
+	return nil
+}
+
+type pkcs12EncoderType string
+
+const (
+	PKCS12EncoderModern2026 pkcs12EncoderType = "modern2026"
+	PKCS12EncoderModern2023 pkcs12EncoderType = "modern2023"
+)
+
+// validatePKCS12Encoder validates the encoder string and returns the typed value.
+// Returns an error if the encoder type is invalid.
+func validatePKCS12Encoder(encoderStr string) (pkcs12EncoderType, error) {
+	encoder := pkcs12EncoderType(encoderStr)
+	switch encoder {
+	case "":
+		return PKCS12EncoderModern2026, nil
+	case PKCS12EncoderModern2026, PKCS12EncoderModern2023:
+		return encoder, nil
+	default:
+		return "", fmt.Errorf("encoder must be %q or %q; received: %q", PKCS12EncoderModern2026, PKCS12EncoderModern2023, encoder)
+	}
+}
+
+func (e pkcs12EncoderType) encodeToPKCS12(privateKey crypto.Signer, cert *x509.Certificate, caChain []*x509.Certificate, password string) ([]byte, error) {
+	var enc *pkcs12.Encoder
+	switch e {
+	case PKCS12EncoderModern2026:
+		enc = pkcs12.Modern2026
+	case PKCS12EncoderModern2023:
+		enc = pkcs12.Modern2023
+	default:
+		return nil, fmt.Errorf("unexpected encoder type: %q; encoder must be %q or %q", e, PKCS12EncoderModern2026, PKCS12EncoderModern2023)
+	}
+
+	if privateKey != nil {
+		return enc.Encode(privateKey, cert, caChain, password)
+	}
+	// For trust store (no private key), include the issued cert + CA chain
+	certs := append([]*x509.Certificate{cert}, caChain...)
+	return enc.EncodeTrustStore(certs, password)
+}
+
+// EncodeToPKCS12 encodes the certificate, optional private key, and CA chain into a PKCS#12 archive.
+func EncodeToPKCS12(encoder string, privateKey crypto.Signer, cert *x509.Certificate, caChain []*x509.Certificate, password string) ([]byte, error) {
+	return pkcs12EncoderType(encoder).encodeToPKCS12(privateKey, cert, caChain, password)
+}
+
+// EncodeToJKS encodes the certificate, optional private key, and CA chain into a JKS keystore.
+func EncodeToJKS(privateKey crypto.Signer, cert *x509.Certificate, caChain []*x509.Certificate, alias string, password string) ([]byte, error) {
+	certs := append([]*x509.Certificate{cert}, caChain...)
+	p := []byte(password)
+	defer clear(p)
+
+	ks := keystore.New()
+
+	var err error
+	if privateKey != nil {
+		err = setPrivateKeyEntry(ks, alias, p, privateKey, certs)
+	} else {
+		// custom aliases for trust stores are currently unsupported and
+		// incrementing aliases, starting at "1", are used to guarantee uniqueness
+		err = setTrustedCertificateEntry(ks, certs)
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Encode keystore to bytes
+	var buf bytes.Buffer
+	if err := ks.Store(&buf, p); err != nil {
+		return nil, fmt.Errorf("failed to encode keystore: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// setPrivateKeyEntry creates a single PrivateKeyEntry containing a private key and chain
+// and adds it to the java keystore
+func setPrivateKeyEntry(ks keystore.KeyStore, alias string, p []byte, privateKey crypto.Signer, certs []*x509.Certificate) error {
+	var ksCerts []keystore.Certificate
+	for _, cert := range certs {
+		ksCerts = append(ksCerts, keystore.Certificate{
+			Type:    "X509",
+			Content: cert.Raw,
+		})
+	}
+
+	// Private key entry must be PKCS#8 DER
+	privKeyBytes, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return fmt.Errorf("failed to marshal private key: %w", err)
+	}
+
+	pke := keystore.PrivateKeyEntry{
+		CreationTime:     time.Now(),
+		PrivateKey:       privKeyBytes,
+		CertificateChain: ksCerts,
+	}
+
+	if err := ks.SetPrivateKeyEntry(alias, pke, p); err != nil {
+		return fmt.Errorf("failed to set keystore private key entry: %w", err)
+	}
+
+	return nil
+}
+
+// setTrustedCertificateEntry creates a TrustedCertificateEntry for each cert in the chain
+// and adds each to the java keystore. It assigns an incrementing string numeric alias
+// for each entry, starting at "1".
+func setTrustedCertificateEntry(ks keystore.KeyStore, certs []*x509.Certificate) error {
+	for i, cert := range certs {
+		// Create TrustedCertificateEntry for each cert in the chain
+		tce := keystore.TrustedCertificateEntry{
+			CreationTime: time.Now(),
+			Certificate: keystore.Certificate{
+				Type:    "X509",
+				Content: cert.Raw,
+			},
+		}
+
+		alias := fmt.Sprintf("%d", i+1)
+		if err := ks.SetTrustedCertificateEntry(alias, tce); err != nil {
+			return fmt.Errorf("failed to set keystore trusted certificate entry for alias: %s, %w", alias, err)
+		}
+	}
+	return nil
+}
+
+func x509Certificates(chain []*certutil.CertBlock) []*x509.Certificate {
+	var certs []*x509.Certificate
+	for _, cert := range chain {
+		certs = append(certs, cert.Certificate)
+	}
+	return certs
 }

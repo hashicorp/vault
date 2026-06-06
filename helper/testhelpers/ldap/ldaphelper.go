@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,6 +17,24 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
+
+// safeBuffer is a thread-safe bytes.Buffer wrapper
+type safeBuffer struct {
+	buf bytes.Buffer
+	mu  sync.Mutex
+}
+
+func (s *safeBuffer) Write(p []byte) (n int, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.Write(p)
+}
+
+func (s *safeBuffer) String() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.buf.String()
+}
 
 // DefaultVersion is the default version of the container to pull.
 // NOTE: This is currently pinned to a sha instead of "master", see: https://github.com/rroemhild/docker-test-openldap/issues/62
@@ -28,7 +47,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 		t.Skip("Skipping, as this image is not supported on ARM architectures")
 	}
 
-	logsWriter := bytes.NewBuffer([]byte{})
+	logsWriter := &safeBuffer{}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "ghcr.io/rroemhild/docker-test-openldap",

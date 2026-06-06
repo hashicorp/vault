@@ -20,13 +20,13 @@ import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type {
-  PkiGenerateRootExportedEnum,
-  PkiIssuersGenerateRootExportedEnum,
+  SecretsApiPkiGenerateRootExportedEnum,
+  SecretsApiPkiIssuersGenerateRootExportedEnum,
   PkiGenerateRootRequest,
   PkiGenerateRootResponse,
   PkiIssuersGenerateRootRequest,
   PkiIssuersGenerateRootResponse,
-  PkiRotateRootExportedEnum,
+  SecretsApiPkiRotateRootExportedEnum,
   PkiRotateRootRequest,
 } from '@hashicorp/vault-client-typescript';
 
@@ -146,7 +146,7 @@ export default class PkiGenerateRootComponent extends Component<Args> {
 
     if (this.args.rotateCertData) {
       return this.api.secrets.pkiRotateRoot(
-        type as PkiRotateRootExportedEnum,
+        type as SecretsApiPkiRotateRootExportedEnum,
         currentPath,
         data as PkiRotateRootRequest
       );
@@ -154,13 +154,13 @@ export default class PkiGenerateRootComponent extends Component<Args> {
       const canUseIssuer = await this.fetchIssuerCapabilities();
       if (canUseIssuer) {
         return this.api.secrets.pkiIssuersGenerateRoot(
-          type as PkiIssuersGenerateRootExportedEnum,
+          type as SecretsApiPkiIssuersGenerateRootExportedEnum,
           this.secretMountPath.currentPath,
           data as PkiIssuersGenerateRootRequest
         );
       } else {
         return this.api.secrets.pkiGenerateRoot(
-          type as PkiGenerateRootExportedEnum,
+          type as SecretsApiPkiGenerateRootExportedEnum,
           this.secretMountPath.currentPath,
           data as PkiGenerateRootRequest
         );

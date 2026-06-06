@@ -97,6 +97,8 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 	return nil
 }
 
+// Use PopulateSetAutomatedRotationData instead, *unless* all these
+// fields are necessary to maintain backwards compatibility with the plugin's pre-existing response API.
 // PopulateAutomatedRotationData adds PluginIdentityTokenParams info into the given map.
 func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]interface{}) {
 	m["rotation_schedule"] = p.RotationSchedule
@@ -104,6 +106,26 @@ func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]int
 	m["rotation_period"] = p.RotationPeriod.Seconds()
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
 	m["rotation_policy"] = p.RotationPolicy
+}
+
+// PopulateSetAutomatedRotationData adds PluginIdentityTokenParams info into the given map, based
+// on which fields were set for rotation. Setting a rotation schedule will not return a rotation
+// period, and setting a rotation period will not return a rotation schedule or rotation window.
+func (p *AutomatedRotationParams) PopulateSetAutomatedRotationData(m map[string]interface{}) {
+	// Always set these even if they are zero values, to avoid confusion.
+	m["disable_automated_rotation"] = p.DisableAutomatedRotation
+	m["rotation_policy"] = p.RotationPolicy
+
+	// Set both of these if a schedule is set.
+	if p.RotationSchedule != "" {
+		m["rotation_schedule"] = p.RotationSchedule
+		m["rotation_window"] = p.RotationWindow.Seconds()
+	}
+
+	// Set this if a period is set.
+	if p.RotationPeriod != 0 {
+		m["rotation_period"] = p.RotationPeriod.Seconds()
+	}
 }
 
 // PopulateRotationInfo adds RotationInfoResponseParams info into the given map.
@@ -227,4 +249,10 @@ func AddAutomatedRotationFieldsWithGroup(m map[string]*framework.FieldSchema, gr
 // future utils that define fields should include a group parameter
 func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 	AddAutomatedRotationFieldsWithGroup(m, "default")
+}
+
+// Equals returns true if the automated rotation parameters match the other instance.
+// Useful for detecting configuration changes after parsing new field data.
+func (p *AutomatedRotationParams) Equals(other AutomatedRotationParams) bool {
+	return *p == other
 }

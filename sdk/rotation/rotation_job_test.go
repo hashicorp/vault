@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestConfigureRotationJob(t *testing.T) {
@@ -19,33 +20,36 @@ func TestConfigureRotationJob(t *testing.T) {
 		{
 			name: "no rotation params",
 			req: &RotationJobConfigureRequest{
-				MountPoint:       "aws",
-				ReqPath:          "config/root",
-				RotationSchedule: "",
-				RotationWindow:   60,
-				RotationPeriod:   0,
+				MountPoint:                     "aws",
+				ReqPath:                        "config/root",
+				RotationSchedule:               "",
+				RotationWindow:                 60,
+				RotationPeriod:                 0,
+				MigratedLegacyNextRotationTime: time.Time{},
 			},
 			expectedError: "RotationSchedule or RotationPeriod is required to set up rotation job",
 		},
 		{
 			name: "no mount point",
 			req: &RotationJobConfigureRequest{
-				MountPoint:       "",
-				ReqPath:          "config/root",
-				RotationSchedule: "",
-				RotationWindow:   60,
-				RotationPeriod:   5,
+				MountPoint:                     "",
+				ReqPath:                        "config/root",
+				RotationSchedule:               "",
+				RotationWindow:                 60,
+				RotationPeriod:                 5,
+				MigratedLegacyNextRotationTime: time.Time{},
 			},
 			expectedError: "MountPoint is required",
 		},
 		{
 			name: "no req path",
 			req: &RotationJobConfigureRequest{
-				MountPoint:       "aws",
-				ReqPath:          "",
-				RotationSchedule: "",
-				RotationWindow:   60,
-				RotationPeriod:   5,
+				MountPoint:                     "aws",
+				ReqPath:                        "",
+				RotationSchedule:               "",
+				RotationWindow:                 60,
+				RotationPeriod:                 5,
+				MigratedLegacyNextRotationTime: time.Time{},
 			},
 			expectedError: "ReqPath is required",
 		},

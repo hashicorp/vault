@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-sockaddr/template"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/hcl/hcl/token"
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -176,6 +177,15 @@ type Listener struct {
 	// CustomMaxJSONToken determines the maximum number of tokens in a JSON.
 	CustomMaxJSONTokenRaw interface{} `hcl:"max_json_token"`
 	CustomMaxJSONToken    int64       `hcl:"-"`
+
+	// DisableTokenHeaderSizeParsing disables the token header size check. This is only applicable
+	// to the listener config passed into the Cluster listener since forwarded requests have already
+	// been checked via the API listener on the originating node.
+	DisableTokenHeaderSizeParsing bool `hcl:"-"`
+
+	// CustomMaxTokenHeaderSize defines the maximum allowed size in bytes for an authentication token header.
+	CustomMaxTokenHeaderSizeRaw interface{} `hcl:"max_token_header_size"`
+	CustomMaxTokenHeaderSize    int64       `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
@@ -194,6 +204,7 @@ func (l *Listener) GoString() string {
 
 func (l *Listener) Validate(path string) []ConfigError {
 	results := append(ValidateUnusedFields(l.UnusedKeys, path), ValidateUnusedFields(l.Telemetry.UnusedKeys, path)...)
+	results = append(results, l.validateForwardedForSettings(path)...)
 	return append(results, ValidateUnusedFields(l.Profiling.UnusedKeys, path)...)
 }
 
@@ -499,6 +510,13 @@ func (l *Listener) parseRequestSettings() error {
 		return err
 	}
 
+	if err := parseAndClearInt(&l.CustomMaxTokenHeaderSizeRaw, &l.CustomMaxTokenHeaderSize); err != nil {
+		return fmt.Errorf("error parsing max_token_header_size: %w", err)
+	}
+	// A negative value disables the check entirely, matching the max_request_size
+	// convention. Unlike the CustomMaxJSON* fields, negative is intentionally
+	// allowed here (not an error).
+
 	return nil
 }
 
@@ -645,6 +663,80 @@ func (l *Listener) parseForwardedForSettings() error {
 	l.XForwardedForAuthorizedAddrsRaw = nil
 
 	return nil
+}
+
+func (l *Listener) validateForwardedForSettings(fileName string) []ConfigError {
+	configErrors := []ConfigError{}
+
+	if len(l.XForwardedForAuthorizedAddrs) == 0 {
+		if l.XForwardedForRejectNotAuthorizedRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_reject_not_authorized was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForRejectNotPresentRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_reject_not_present was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForHopSkipsRaw != nil {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_hops_skips was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForClientCertHeader != "" {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_client_cert_header was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+		if l.XForwardedForClientCertHeaderDecoders != "" {
+			configErrors = append(configErrors, ConfigError{
+				"x_forwarded_for_authorized_addrs is not set, so forwarding is not enabled but x_forwarded_for_client_cert_header_decoders was set",
+				token.Pos{
+					Filename: fileName,
+				},
+			})
+		}
+	}
+
+	if l.XForwardedForClientCertHeader == "" && l.XForwardedForClientCertHeaderDecoders != "" {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header_decoders was set, but not x_forwarded_for_client_cert_header was set to be decoded",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+	if l.XForwardedForClientCertHeader != "" && l.XForwardedForClientCertHeaderDecoders == "" {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header was set, but no x_forwarded_for_client_cert_header_decoders were set to decode that header",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+	if strings.Contains(l.XForwardedForClientCertHeaderDecoders, "DER") && !strings.HasSuffix(l.XForwardedForClientCertHeaderDecoders, "DER") {
+		configErrors = append(configErrors, ConfigError{
+			"x_forwarded_for_client_cert_header_decoders DER decoder actually decodes PEM into DER, and therefore can only function as the final decoder",
+			token.Pos{
+				Filename: fileName,
+			},
+		})
+	}
+
+	return configErrors
 }
 
 // parseTelemetrySettings attempts to parse the raw listener telemetry settings.

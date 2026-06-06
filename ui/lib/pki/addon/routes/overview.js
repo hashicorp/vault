@@ -8,9 +8,9 @@ import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import {
-  PkiListCertsListEnum,
-  PkiListRolesListEnum,
-  PkiListIssuersListEnum,
+  SecretsApiPkiListCertsListEnum,
+  SecretsApiPkiListRolesListEnum,
+  SecretsApiPkiListIssuersListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 export const PKI_DEFAULT_EMPTY_STATE_MSG =
@@ -32,7 +32,7 @@ export default class PkiOverviewRoute extends Route {
     try {
       const { keys } = await this.api.secrets.pkiListCerts(
         this.secretMountPath.currentPath,
-        PkiListCertsListEnum.TRUE
+        SecretsApiPkiListCertsListEnum.TRUE
       );
       return keys;
     } catch (e) {
@@ -47,7 +47,7 @@ export default class PkiOverviewRoute extends Route {
     try {
       const { keys } = await this.api.secrets.pkiListRoles(
         this.secretMountPath.currentPath,
-        PkiListRolesListEnum.TRUE
+        SecretsApiPkiListRolesListEnum.TRUE
       );
       return keys;
     } catch (e) {
@@ -62,7 +62,7 @@ export default class PkiOverviewRoute extends Route {
     try {
       const { keys } = await this.api.secrets.pkiListIssuers(
         this.secretMountPath.currentPath,
-        PkiListIssuersListEnum.TRUE
+        SecretsApiPkiListIssuersListEnum.TRUE
       );
       return keys;
     } catch (e) {
