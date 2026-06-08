@@ -367,6 +367,7 @@ module('Acceptance | transit', function (hooks) {
     await click(SELECTORS.rotate.trigger);
     await click(GENERAL.confirmButton);
 
+    await waitFor(SELECTORS.versionRow(2));
     assert.dom(SELECTORS.versionRow(2)).exists('two key versions after rotate');
 
     // navigate back to actions tab
@@ -487,6 +488,7 @@ module('Acceptance | transit', function (hooks) {
       await click(SELECTORS.rotate.trigger);
 
       await click(GENERAL.confirmButton);
+      await waitFor('[data-test-transit-version="2"]');
       assert
         .dom('[data-test-transit-version]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
