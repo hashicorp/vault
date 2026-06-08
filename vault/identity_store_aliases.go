@@ -704,7 +704,7 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 		return nil, err
 	}
 	if ns.ID != alias.NamespaceID {
-		return logical.ErrorResponse("alias and request are in different namespaces"), logical.ErrPermissionDenied
+		return nil, nil
 	}
 
 	respData := map[string]interface{}{}
@@ -769,7 +769,7 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 			return nil, err
 		}
 		if ns.ID != alias.NamespaceID {
-			return logical.ErrorResponse("request and alias are in different namespaces"), logical.ErrPermissionDenied
+			return nil, nil
 		}
 
 		scimClientID := scimClientIDFromContext(ctx)
