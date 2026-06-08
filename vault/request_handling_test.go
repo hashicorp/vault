@@ -829,13 +829,13 @@ func TestAuth_AuthorizationDetails_CopiedFromRequest(t *testing.T) {
 
 	auth := &logical.Auth{}
 	req := &logical.Request{
-		EnterpriseTokenAuthorizationDetails: details,
+		JwtAuthorizationDetails: details,
 	}
 
 	// Simulate the assignment performed in CheckToken.
-	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+	auth.AuthorizationDetails = req.JwtAuthorizationDetails
 
-	require.Equal(t, details, auth.AuthorizationDetails, "auth.AuthorizationDetails must equal req.EnterpriseTokenAuthorizationDetails")
+	require.Equal(t, details, auth.AuthorizationDetails, "auth.AuthorizationDetails must equal req.JwtAuthorizationDetails")
 }
 
 // TestAuth_AuthorizationDetails_NilWhenAbsent verifies that auth.AuthorizationDetails is nil
@@ -846,7 +846,7 @@ func TestAuth_AuthorizationDetails_NilWhenAbsent(t *testing.T) {
 	auth := &logical.Auth{}
 	req := &logical.Request{}
 
-	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+	auth.AuthorizationDetails = req.JwtAuthorizationDetails
 
 	require.Nil(t, auth.AuthorizationDetails)
 }
