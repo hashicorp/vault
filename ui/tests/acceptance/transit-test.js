@@ -3,7 +3,17 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, currentURL, settled, visit, findAll, waitFor } from '@ember/test-helpers';
+import {
+  click,
+  fillIn,
+  find,
+  currentURL,
+  settled,
+  visit,
+  findAll,
+  waitFor,
+  waitUntil,
+} from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -233,14 +243,15 @@ module('Acceptance | transit', function (hooks) {
     const name = `test-generate-${this.uid}`;
     await click(SES.createSecretLink);
 
-    await fillIn(SELECTORS.form('name'), name);
-    await fillIn(SELECTORS.form('type'), type);
-    await click(SELECTORS.form('exportable'));
-    await click(SELECTORS.form('derived'));
-    await click(SELECTORS.form('convergent-encryption'));
+    await fillIn(GENERAL.inputByAttr('name'), name);
+    await fillIn(GENERAL.inputByAttr('type'), type);
+    await click(GENERAL.inputByAttr('exportable'));
+    await click(GENERAL.inputByAttr('derived'));
+    await click(GENERAL.inputByAttr('convergent_encryption'));
     await click(GENERAL.ttl.toggle('Auto-rotation period'));
     await click(SELECTORS.form('create'));
 
+    await waitUntil(() => currentURL() === `/vault/secrets-engines/${this.path}/show/${name}?tab=details`);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets-engines/${this.path}/show/${name}?tab=details`,
@@ -305,30 +316,30 @@ module('Acceptance | transit', function (hooks) {
       },
       {
         type: 'aes128-gcm96',
-        'convergent-encryption': true,
+        convergent_encryption: true,
         derived: true,
         exportable: true,
       },
       {
         type: 'aes256-gcm96',
-        'convergent-encryption': true,
+        convergent_encryption: true,
         derived: true,
         exportable: true,
       },
       {
         type: 'chacha20-poly1305',
-        'convergent-encryption': true,
+        convergent_encryption: true,
         derived: true,
         exportable: true,
       },
     ];
     for (const key of KEY_OPTIONS) {
       const { type } = key;
-      await fillIn(SELECTORS.form('type'), type);
+      await fillIn(GENERAL.inputByAttr('type'), type);
 
-      for (const checkbox of ['exportable', 'derived', 'convergent-encryption']) {
+      for (const checkbox of ['exportable', 'derived', 'convergent_encryption']) {
         const assertion = key[checkbox] ? 'exists' : 'doesNotExist';
-        assert.dom(SELECTORS.form(checkbox))[assertion](`${type} ${checkbox} ${assertion}`);
+        assert.dom(GENERAL.inputByAttr(checkbox))[assertion](`${type} ${checkbox} ${assertion}`);
       }
     }
   });

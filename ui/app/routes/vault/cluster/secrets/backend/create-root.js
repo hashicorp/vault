@@ -9,6 +9,7 @@ import EditBase from './secret-edit';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
+import TransitKeyForm from 'vault/forms/transit/key';
 import SshRoleForm from 'vault/forms/ssh/role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
 import TemplateForm from 'vault/forms/transform/template';
@@ -60,6 +61,17 @@ export default EditBase.extend({
           key_size: 20,
           skew: 1,
           qr_size: 200,
+        },
+        { isNew: true }
+      );
+    }
+
+    if (modelType === 'transit-key') {
+      return new TransitKeyForm(
+        {
+          backend,
+          type: 'aes256-gcm96',
+          auto_rotate_period: '0s',
         },
         { isNew: true }
       );

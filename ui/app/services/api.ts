@@ -125,8 +125,14 @@ export default class ApiService extends Service {
     }
     // if the requested path is locked by a control group we need to create a new error response
     const json = await this.readJson(response);
+
+    // derive from REQUEST, not response - transit export is making an api request but trying to also set vault header on the request, not the response - causing a control group error.
+    const wasWrapTTLRequested = (context.init.headers as Headers)?.get?.('X-Vault-Wrap-TTL');
     const wrapTtl = headers.get('X-Vault-Wrap-TTL');
-    const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(json, wrapTtl);
+    const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(
+      json,
+      wasWrapTTLRequested ? wasWrapTTLRequested : wrapTtl
+    );
 
     if (isLockedByControlGroup && json) {
       const error = {
