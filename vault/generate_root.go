@@ -321,6 +321,7 @@ func (c *Core) GenerateRootUpdate(ctx context.Context, key []byte, nonce string,
 			return nil, fmt.Errorf("failed to compute root key: %w", err)
 		}
 	}
+	defer memzero(combinedKey)
 
 	if err := strategy.authenticate(ctx, c, combinedKey); err != nil {
 		c.logger.Error("root generation aborted", "error", err.Error())

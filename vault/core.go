@@ -1907,15 +1907,25 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 	if c.isRaftUnseal() {
 		return c.unsealWithRaft(combinedKey)
 	}
+	if !migrate {
+		defer memzero(combinedKey)
+	}
 	masterKey, err := c.unsealKeyToMasterKeyPreUnseal(ctx, sealToUse, combinedKey)
 	if err != nil {
 		return err
 	}
+	defer memzero(masterKey)
 	return c.unsealInternal(ctx, masterKey)
 }
 
 func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	ctx := context.Background()
+	zeroCombinedKey := true
+	defer func() {
+		if zeroCombinedKey {
+			memzero(combinedKey)
+		}
+	}()
 
 	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
@@ -1948,9 +1958,14 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 		// Reset the state
 		c.raftInfo.Store((*raftInformation)(nil))
 	}
+	zeroCombinedKey = false
 
 	go func() {
 		var masterKey []byte
+		defer func() {
+			memzero(combinedKey)
+			memzero(masterKey)
+		}()
 		keyringFound := false
 
 		// Wait until we at least have the keyring before we attempt to
@@ -2197,6 +2212,11 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.unsealKey); err != nil {
 			return fmt.Errorf("error setting new recovery key information: %w", err)
 		}
+		// migrationInfo.unsealKey is single-use and is repopulated by a new migrate
+		// unseal flow if migration is retried; clear it now to reduce key material
+		// residency in process memory.
+		memzero(c.migrationInfo.unsealKey)
+		c.migrationInfo.unsealKey = nil
 
 		// Generate a new master key
 		newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)
