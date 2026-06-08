@@ -23,6 +23,17 @@ type LockEntry struct {
 	sync.RWMutex
 }
 
+type RWMutex interface {
+	sync.Locker
+	RLock()
+	RUnlock()
+}
+
+type LockArray interface {
+	LockForKey(string) RWMutex
+	LocksForKeys([]string) []RWMutex
+}
+
 // CreateLocks returns an array so that the locks can be iterated over in
 // order.
 //
@@ -34,7 +45,7 @@ type LockEntry struct {
 // Lock B, Lock A
 //
 // Where process 1 is now deadlocked trying to lock B, and process 2 deadlocked trying to lock A
-func CreateLocks() []*LockEntry {
+func CreateLocks() StandardLockArray {
 	ret := make([]*LockEntry, LockCount)
 	for i := range ret {
 		ret[i] = new(LockEntry)
@@ -42,10 +53,47 @@ func CreateLocks() []*LockEntry {
 	return ret
 }
 
-func CreateLocksWithDeadlockDetection() []*DeadlockRWMutex {
+func CreateLocksWithDeadlockDetection() DeadlockDetectingLockArray {
 	ret := make([]*DeadlockRWMutex, LockCount)
 	for i := range ret {
 		ret[i] = new(DeadlockRWMutex)
+	}
+	return ret
+}
+
+func CreateLockArray(detectDeadlocks bool) LockArray {
+	if detectDeadlocks {
+		return CreateLocksWithDeadlockDetection()
+	}
+	return CreateLocks()
+}
+
+type DeadlockDetectingLockArray []*DeadlockRWMutex
+
+func (d DeadlockDetectingLockArray) LockForKey(s string) RWMutex {
+	return LockForKeyWithDeadLockDetection(d, s)
+}
+
+func (d DeadlockDetectingLockArray) LocksForKeys(s []string) []RWMutex {
+	locks := LocksForKeysWithDeadLockDetection(d, s)
+	ret := make([]RWMutex, len(locks))
+	for i, v := range locks {
+		ret[i] = v
+	}
+	return ret
+}
+
+type StandardLockArray []*LockEntry
+
+func (d StandardLockArray) LockForKey(s string) RWMutex {
+	return LockForKey(d, s)
+}
+
+func (d StandardLockArray) LocksForKeys(s []string) []RWMutex {
+	locks := LocksForKeys(d, s)
+	ret := make([]RWMutex, len(locks))
+	for i, v := range locks {
+		ret[i] = v
 	}
 	return ret
 }
