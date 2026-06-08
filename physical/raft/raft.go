@@ -2016,7 +2016,7 @@ func (b *RaftBackend) validateCommandEntrySizes(command *LogData) (uint64, error
 		if op.OpType == putOp {
 			entrySize := b.entrySizeLimitForPath(op.Key)
 			if len(op.Value) > int(entrySize) {
-				return 0, fmt.Errorf("%s, max value size for key %s is %d, got %d", physical.ErrValueTooLarge, op.Key, entrySize, len(op.Value))
+				return 0, fmt.Errorf("%w, max value size for key %s is %d, got %d", physical.ErrValueSize, op.Key, entrySize, len(op.Value))
 			}
 			if entrySize > largestEntryLimit {
 				largestEntryLimit = entrySize
