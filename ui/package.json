@@ -71,7 +71,7 @@
     "@tsconfig/ember": "~2.0.0",
     "@types/d3-array": "~3.2.2",
     "@types/ember-data": "~4.4.16",
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.2",
     "@types/qunit": "~2.19.14",
     "@types/rsvp": "~4.0.9",
     "@types/shell-quote": "~1.7.5",
@@ -204,6 +204,24 @@
     "handlebars": "4.7.9",
     "posthog-js": "1.236.1",
     "uuid": "9.0.1"
+  },
+  "pnpm": {
+    "overrides": {
+      "@babel/runtime": "7.27.0",
+      "@xmldom/xmldom": "0.9.10",
+      "ansi-html": "0.0.8",
+      "async": "2.6.4",
+      "braces": "3.0.3",
+      "json5": "1.0.2",
+      "kind-of": "6.0.3",
+      "lodash": "4.18.0",
+      "lodash-es": "4.18.0",
+      "markdown-it": "14.1.1",
+      "micromatch": "4.0.8",
+      "qs": "6.14.1",
+      "rollup": "2.80.0",
+      "@ember/test-waiters": "4.1.1"
+    }
   },
   "packageManager": "pnpm@10.22.0+sha512.bf049efe995b28f527fd2b41ae0474ce29186f7edcb3bf545087bd61fbbebb2bf75362d1307fda09c2d288e1e499787ac12d4fcb617a974718a6051f2eee741c",
   "scarfSettings": {
