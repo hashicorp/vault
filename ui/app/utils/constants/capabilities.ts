@@ -90,6 +90,8 @@ export const PATH_MAP = {
   syncSetAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/set`,
   totpKey: apiPath`${'backend'}/keys/${'name'}`,
   totpKeys: apiPath`${'backend'}/keys`,
+  transitKeyRotate: apiPath`${'backend'}/keys/${'name'}/rotate`,
+  transitKey: apiPath`${'backend'}/keys/${'name'}`,
   transformAlphabet: apiPath`${'backend'}/alphabet/${'name'}`,
   transformAlphabets: apiPath`${'backend'}/alphabet`,
   transformRole: apiPath`${'backend'}/role/${'name'}`,

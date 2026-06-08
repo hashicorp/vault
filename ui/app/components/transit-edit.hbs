@@ -10,36 +10,16 @@
 </Page::Header>
 
 {{#if (eq this.mode "create")}}
-  <TransitFormCreate
-    @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
-    @setValueOnKey={{action "setValueOnKey" "exportable"}}
-    @autoRotateInvalid={{this.autoRotateInvalid}}
-    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
-    @derivedChange={{action "derivedChange" value="target.checked"}}
-    @convergentEncryptionChange={{action "convergentEncryptionChange" value="target.checked"}}
-    @key={{this.key}}
-    @errorMessage={{this.errorMessage}}
-    @requestInFlight={{this.requestInFlight}}
-  />
+  <TransitFormCreate @form={{this.form}} @errorMessage={{this.errorMessage}} />
 {{else if (eq this.mode "edit")}}
-  <TransitFormEdit
-    @createOrUpdateKey={{action "createOrUpdateKey" this.mode}}
-    @setValueOnKey={{action "setValueOnKey" "deletionAllowed"}}
-    @autoRotateInvalid={{this.autoRotateInvalid}}
-    @handleAutoRotateChange={{action "handleAutoRotateChange"}}
-    @deleteKey={{action "deleteKey"}}
-    @key={{this.key}}
-    @requestInFlight={{this.requestInFlight}}
-    @model={{this.model}}
-  />
+  <TransitFormEdit @form={{this.form}} @capabilities={{this.capabilities}} />
 {{else if (eq this.mode "show")}}
   <TransitFormShow
     @refresh={{action "refresh"}}
     @tab={{this.tab}}
-    @key={{this.key}}
+    @form={{this.form}}
+    @capabilities={{this.capabilities}}
     @mode={{this.mode}}
-    @model={{this.model}}
-    @backend={{this.backend}}
   />
 {{else}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>

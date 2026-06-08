@@ -8,9 +8,9 @@
     <ul>
       <li class={{if (eq @tab "actions") "is-active"}}>
         <SecretLink
-          @secret={{@key.id}}
+          @secret={{@form.data.id}}
           @mode="show"
-          @backend={{@key.backend}}
+          @backend={{@form.data.backend}}
           @replace={{true}}
           @queryParams={{hash tab="actions"}}
           data-test-transit-key-actions-link={{true}}
@@ -21,9 +21,9 @@
 
       <li class={{if (eq @tab "details") "is-active"}}>
         <SecretLink
-          @secret={{@key.id}}
+          @secret={{@form.data.id}}
           @mode="show"
-          @backend={{@key.backend}}
+          @backend={{@form.data.backend}}
           @replace={{true}}
           @queryParams={{hash tab="details"}}
           data-test-transit-link="details"
@@ -34,9 +34,9 @@
 
       <li class={{if (eq @tab "versions") "is-active"}}>
         <SecretLink
-          @secret={{@key.id}}
+          @secret={{@form.data.id}}
           @mode="show"
-          @backend={{@key.backend}}
+          @backend={{@form.data.backend}}
           @replace={{true}}
           @queryParams={{hash tab="versions"}}
           data-test-transit-link="versions"
@@ -50,7 +50,7 @@
 {{#if (not-eq @tab "actions")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (and (eq @tab "versions") @key.canRotate)}}
+      {{#if (and (eq @tab "versions") @capabilities.canRotate)}}
         <ConfirmAction
           @buttonText="Rotate key"
           class="toolbar-button"
@@ -63,8 +63,8 @@
         />
       {{/if}}
       {{#if (eq @mode "show")}}
-        {{#if (or @model.canUpdate @model.canDelete)}}
-          <ToolbarSecretLink @secret={{@key.id}} @backend={{@key.backend}} @mode="edit" replace={{true}}>
+        {{#if (or @capabilities.canUpdate @capabilities.canDelete)}}
+          <ToolbarSecretLink @secret={{@form.data.id}} @backend={{@form.data.backend}} @mode="edit" replace={{true}}>
             Edit key
           </ToolbarSecretLink>
         {{/if}}
@@ -75,9 +75,9 @@
 
 {{#if (eq @tab "actions")}}
   <div class="transit-card-container">
-    {{#each @model.supportedActions as |supportedAction|}}
+    {{#each @form.data.supportedActions as |supportedAction|}}
       <LinkedBlock
-        @params={{array "vault.cluster.secrets.backend.actions" @model.backend @model.id}}
+        @params={{array "vault.cluster.secrets.backend.actions" @form.data.backend @form.data.id}}
         @queryParams={{hash action=supportedAction.name}}
         class="transit-card"
         data-test-transit-card={{supportedAction.name}}
@@ -86,7 +86,7 @@
           <Icon
             @name={{supportedAction.glyph}}
             class="has-text-grey auto-width"
-            aria-label={{concat @backend.path " options"}}
+            aria-label={{concat @form.data.backend.path " options"}}
           />
         </div>
         <div class="transit-description">
@@ -105,8 +105,10 @@
     {{/each}}
   </div>
 {{else if (eq @tab "versions")}}
-  {{#if (or (eq @key.type "aes256-gcm96") (eq @key.type "chacha20-poly1305") (eq @key.type "aes128-gcm96"))}}
-    {{#each-in @key.keys as |version creationTimestamp|}}
+  {{#if
+    (or (eq @form.data.type "aes256-gcm96") (eq @form.data.type "chacha20-poly1305") (eq @form.data.type "aes128-gcm96"))
+  }}
+    {{#each-in @form.data.keys as |version creationTimestamp|}}
       <div class="linked-block list-item-row no-destination" data-test-transit-version={{version}}>
         <div class="columns is-mobile">
           <div class="column is-3">
@@ -118,13 +120,13 @@
           <div class="column is-4">
             <div class="td is-borderless">
               <small class="help has-text-grey">
-                {{date-from-now creationTimestamp addSuffix=true}}
+                {{this.getTimestamp creationTimestamp}}
               </small>
             </div>
           </div>
           <div class="column is-5">
             <div class="td is-borderless">
-              {{#if (coerce-eq @key.minDecryptionVersion version)}}
+              {{#if (coerce-eq @form.data.min_decryption_version version)}}
                 <p class="help level level-left">
                   <Icon @name="check-circle-fill" class="has-text-success" />
                   Current minimum decryption version
@@ -136,7 +138,7 @@
       </div>
     {{/each-in}}
   {{else}}
-    {{#each-in @key.keys as |version meta|}}
+    {{#each-in @form.data.keys as |version meta|}}
       <div class="linked-block list-item-row" data-test-transit-version={{version}}>
         <div class="columns is-mobile">
           <div class="column is-3">
@@ -154,7 +156,7 @@
           </div>
           <div class="column is-4">
             <div class="td is-borderless">
-              {{#if (coerce-eq @key.minDecryptionVersion version)}}
+              {{#if (coerce-eq @form.data.min_decryption_version version)}}
                 <p class="help level level-left">
                   <Icon @name="check-circle-fill" class="has-text-success" />
                   Current minimum decryption version
@@ -178,15 +180,15 @@
     {{/each-in}}
   {{/if}}
 {{else}}
-  <InfoTableRow @label="Type" @value={{@key.type}} />
+  <InfoTableRow @label="Type" @value={{@form.data.type}} />
   <InfoTableRow
     @label="Auto-rotation period"
-    @value={{or (format-duration @key.autoRotatePeriod) "Key will not be automatically rotated"}}
+    @value={{or (format-duration @form.data.auto_rotate_period) "Key will not be automatically rotated"}}
   />
-  <InfoTableRow @label="Deletion allowed" @value={{stringify @key.deletionAllowed}} />
+  <InfoTableRow @label="Deletion allowed" @value={{stringify @form.data.deletion_allowed}} />
 
-  {{#if @key.derived}}
-    <InfoTableRow @label="Derived" @value={{@key.derived}} />
-    <InfoTableRow @label="Convergent encryption" @value={{@key.convergentEncryption}} />
+  {{#if @form.data.derived}}
+    <InfoTableRow @label="Derived" @value={{@form.data.derived}} />
+    <InfoTableRow @label="Convergent encryption" @value={{@form.data.convergent_encryption}} />
   {{/if}}
 {{/if}}
