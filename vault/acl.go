@@ -287,6 +287,8 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			if len(pc.Permissions.SubscribeEventTypes) > 0 {
 				if len(existingPerms.SubscribeEventTypes) > 0 {
 					existingPerms.SubscribeEventTypes = strutil.RemoveDuplicates(append(existingPerms.SubscribeEventTypes, pc.Permissions.SubscribeEventTypes...), false)
+				} else {
+					existingPerms.SubscribeEventTypes = slices.Clone(pc.Permissions.SubscribeEventTypes)
 				}
 			}
 
