@@ -6,7 +6,6 @@ package inmem
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -176,7 +175,7 @@ func (i *InmemBackend) PutInternal(ctx context.Context, entry *physical.Entry) e
 	}
 
 	if i.maxValueSize > 0 && len(entry.Value) > i.maxValueSize {
-		return fmt.Errorf("%s", physical.ErrValueTooLarge)
+		return physical.ErrValueSize
 	}
 
 	i.root.Insert(entry.Key, entry.Value)
