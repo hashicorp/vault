@@ -218,7 +218,7 @@ scenario "pr_replication" {
     }
 
     variables {
-      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
+      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["26.04"]
       cluster_tag_key  = global.vault_tag_key
       common_tags      = global.tags
       instance_count   = 1
@@ -340,7 +340,7 @@ scenario "pr_replication" {
     variables {
       hosts      = step.create_external_integration_target.hosts
       ip_version = matrix.ip_version
-      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
+      packages   = concat(global.packages, global.distro_packages["ubuntu"]["26.04"], ["podman", "podman-docker"])
       ports      = global.integration_host_ports
     }
   }
