@@ -454,7 +454,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		return nil, err
 	}
 	if ns.ID != group.NamespaceID {
-		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+		return nil, nil
 	}
 
 	respData := map[string]interface{}{}
@@ -566,7 +566,7 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 		return nil, err
 	}
 	if group.NamespaceID != ns.ID {
-		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+		return nil, nil
 	}
 
 	scimID := scimClientIDFromContext(ctx)
