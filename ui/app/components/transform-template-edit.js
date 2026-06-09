@@ -49,24 +49,27 @@ export default class TransformTemplateEditComponent extends Component {
   }
 
   get breadcrumbs() {
-    // ideally this is created on the controller in the parent route but this is a generic route and adding breadcrumbs to the controller requires a larger refactor.
     const backend = this.args.form?.data?.backend;
+    const name = this.args.form?.data?.name;
     return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      { label: 'Secrets engines', route: 'vault.cluster.secrets.backends' },
       {
         label: backend,
         route: 'vault.cluster.secrets.backend.list-root',
         model: backend,
         query: { tab: 'template' },
       },
-      { label: 'Template' },
+      { label: this.title },
+      { label: this.args.mode === 'create' ? 'template' : name },
     ];
   }
 
   get title() {
     if (this.args.mode === 'create') {
-      return 'Create Template';
+      return 'Create template';
     } else if (this.args.mode === 'edit') {
-      return 'Edit Template';
+      return 'Edit template';
     } else {
       return 'Template';
     }
