@@ -919,7 +919,7 @@ scenario "upgrade" {
 
   step "verify_ui" {
     description = global.description.verify_ui
-    module      = module.vault_verify_ui
+    module      = module.vault_run_blackbox_test
     depends_on  = [step.verify_vault_unsealed]
 
     providers = {
@@ -929,8 +929,13 @@ scenario "upgrade" {
     verifies = quality.vault_ui_assets
 
     variables {
-      hosts      = step.create_vault_cluster_targets.hosts
-      vault_addr = step.create_vault_cluster.api_addr_localhost
+      ip_version       = matrix.ip_version
+      leader_host      = step.get_vault_cluster_ips.leader_host
+      leader_public_ip = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token = step.create_vault_cluster.root_token
+      test_package     = "./vault/external_tests/blackbox/verify"
+      test_names       = ["TestVaultUIAvailability"]
+      vault_edition    = matrix.edition
     }
   }
 
