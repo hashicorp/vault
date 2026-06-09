@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -453,6 +454,55 @@ func testACLPolicyMerge(t *testing.T, ns *namespace.Namespace) {
 			t.Fatalf("Max wrapping TTL did not match, Expected: %#v, Got: %#v", tc.maxWrappingTTL, p.MaxWrappingTTL)
 		}
 	}
+}
+
+// TestACL_SubscribeEventTypesMerge verifies that subscribe_event_types are preserved
+// when merged with another policy stanza for the same path that omits them.
+func TestACL_SubscribeEventTypesMerge(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+
+		withSubscribe, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+			path "secret/foo" {
+				capabilities = ["read", "subscribe"]
+				subscribe_event_types = ["abc", "def"]
+			}
+		`))
+		require.NoError(t, err)
+
+		withoutSubscribeEventTypes, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+			path "secret/foo" {
+				capabilities = ["read", "update"]
+			}
+		`))
+		require.NoError(t, err)
+
+		testCases := []struct {
+			name     string
+			policies []*Policy
+		}{
+			{
+				name:     "subscribe policy first",
+				policies: []*Policy{withSubscribe, withoutSubscribeEventTypes},
+			},
+			{
+				name:     "subscribe policy second",
+				policies: []*Policy{withoutSubscribeEventTypes, withSubscribe},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				ctx := namespace.RootContext(context.Background())
+				acl, err := NewACL(ctx, tc.policies)
+				require.NoError(t, err)
+
+				caps, eventTypes := acl.CapabilitiesAndSubscribeEventTypes(ctx, "secret/foo")
+				require.Contains(t, caps, SubscribeCapability)
+				require.ElementsMatch(t, []string{"abc", "def"}, eventTypes)
+			})
+		}
+	})
 }
 
 func TestACL_AllowOperation(t *testing.T) {
