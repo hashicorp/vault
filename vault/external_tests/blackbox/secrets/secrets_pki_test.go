@@ -16,8 +16,9 @@ func testPKISecretsCreate(t *testing.T, v *blackbox.Session) {
 	v.MustEnableSecretsEngine("pki-create", &api.MountInput{Type: "pki"})
 
 	// Configure max TTL for the mount
+	maxLeaseTTL := "87600h"
 	err := v.Client.Sys().TuneMountAllowNilWithContext(t.Context(), "pki-create", api.TuneMountConfigInput{
-		MaxLeaseTTL: new(string("87600h")),
+		MaxLeaseTTL: &maxLeaseTTL,
 	})
 	if err != nil {
 		t.Fatalf("Failed to tune PKI mount: %v: %v", err, v.Client.Address())
