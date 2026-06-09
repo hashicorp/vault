@@ -252,8 +252,13 @@ func (s *Session) MustGetNonLeaderNode() string {
 		}
 
 		// Check if this is not the leader
+		// We check both address and nodeID because:
+		// - address: The network address (host:port) of the node
+		// - nodeID: The unique identifier of the node in the raft cluster
+		// In some configurations, the leader might be identified by either field,
+		// so we need to ensure this node doesn't match the leader in either way
 		address, ok := serverMap["address"].(string)
-		if ok && address != leader {
+		if ok && address != leader && nodeID != leader {
 			return nodeID
 		}
 	}
