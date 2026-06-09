@@ -2,7 +2,7 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Page::Header @title={{this.title}}>
+<Page::Header @title={{this.title}} @subtitle={{this.subtitle}}>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
@@ -12,7 +12,13 @@
   <Toolbar>
     <ToolbarActions>
       {{#if @capabilities.canDelete}}
-        <Hds::Button @text="Delete alphabet" @color="secondary" class="toolbar-button" {{on "click" this.onDelete}} />
+        <Hds::Button
+          @text="Delete alphabet"
+          @color="secondary"
+          class="toolbar-button"
+          data-test-delete
+          {{on "click" this.onDelete}}
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if @capabilities.canUpdate}}

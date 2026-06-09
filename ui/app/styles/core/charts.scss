@@ -32,6 +32,29 @@ $third: var(--clients-chart-color-third);
 $fourth: var(--clients-chart-color-fourth);
 
 // Carbon Charts tooltip styling
+.cds--cc--tooltip {
+  background-color: #000;
+  box-shadow: none;
+  color: #fff;
+  font-weight: 700;
+
+  .content-box {
+    color: #fff;
+  }
+}
+
 .carbon-chart-tooltip {
+  background-color: #000;
+  border: 0;
+  box-shadow: none;
+  color: #fff;
+  font-weight: 700;
   padding: 8px 12px;
+
+  &::before,
+  &::after {
+    background-color: #000;
+    border: 0;
+    box-shadow: none;
+  }
 }

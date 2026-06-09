@@ -275,13 +275,19 @@ export default class TransformationEditComponent extends Component {
         max_ttl,
         stores,
       });
-      this.flashMessages.success('Transformation saved.');
-      await this.handleRoleSync(name, backend);
-      this.transition();
     } catch (e) {
       const { message } = await this.api.parseError(e);
       this.errorMessage = message;
+      return;
     }
+
+    this.flashMessages.success('Transformation saved.');
+
+    // handleRoleSync handles its own errors internally with flash messages;
+    // guard against any unexpected throws to ensure navigation always happens after a successful save.
+    await this.handleRoleSync(name, backend).catch(() => {});
+
+    this.transition();
   }
 
   @action async onDelete() {

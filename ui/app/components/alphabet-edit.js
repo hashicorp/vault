@@ -29,27 +29,37 @@ export default class AlphabetEditComponent extends Component {
   @tracked errorMessage = '';
 
   get breadcrumbs() {
-    // ideally this is created on the controller in the parent route but this is a generic route and adding breadcrumbs to the controller requires a larger refactor.
     const backend = this.args.form?.data?.backend;
+    const name = this.args.form?.data?.name;
     return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      { label: 'Secrets engines', route: 'vault.cluster.secrets.backends' },
       {
         label: backend,
         route: 'vault.cluster.secrets.backend.list-root',
         model: backend,
         query: { tab: 'alphabet' },
       },
-      { label: 'Alphabet' },
+      { label: this.title },
+      { label: this.args?.mode === 'create' ? 'alphabet' : name },
     ];
   }
 
   get title() {
     if (this.args?.mode === 'create') {
-      return 'Create Alphabet';
+      return 'Create alphabet';
     } else if (this.args?.mode === 'edit') {
-      return 'Edit Alphabet';
+      return 'Edit alphabet';
     } else {
-      return this.args?.form?.data?.name;
+      return 'Alphabet';
     }
+  }
+
+  get subtitle() {
+    if (this.args?.mode === 'show') {
+      return this.args.form?.data?.name;
+    }
+    return '';
   }
 
   transition(route = 'show') {
