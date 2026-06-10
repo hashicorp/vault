@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { visit, currentURL, waitFor, click, fillIn } from '@ember/test-helpers';
+import { visit, currentURL, waitFor, waitUntil, click, fillIn, triggerEvent } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { mockedResponseWithData, mockedEmptyResponse } from 'vault/tests/helpers/vault-usage/mocks';
@@ -26,6 +26,65 @@ const loginWithReportingToken = async (capability = 'read') => {
   await login(token);
 };
 
+const assertTooltipValueForChart = async (assert, cardSelector, label, value) => {
+  const bars = Array.from(document.querySelectorAll(`${cardSelector} [data-carbon-chart] path.bar`));
+  if (!bars.length) {
+    throw new Error(`Unable to find Carbon chart bars for selector: ${cardSelector}`);
+  }
+
+  const tooltipSelector = `${cardSelector} [data-carbon-chart] .cds--cc--tooltip:not(.hidden)`;
+  const observedTooltipTexts = new Set();
+
+  for (const [index, bar] of bars.entries()) {
+    const rect = bar.getBoundingClientRect();
+    const clientX = rect.left + rect.width / 2;
+    const clientY = rect.top + rect.height / 2;
+    const eventOptions = {
+      bubbles: true,
+      cancelable: true,
+      clientX,
+      clientY,
+      screenX: clientX,
+      screenY: clientY,
+    };
+
+    await triggerEvent(bar, 'pointerenter', eventOptions);
+    await triggerEvent(bar, 'pointermove', eventOptions);
+    await triggerEvent(bar, 'mouseenter', eventOptions);
+    await triggerEvent(bar, 'mouseover', eventOptions);
+    await triggerEvent(bar, 'mousemove', eventOptions);
+
+    try {
+      await waitUntil(
+        () => {
+          const tooltip = document.querySelector(tooltipSelector);
+          const tooltipText = tooltip?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+          if (tooltipText) {
+            observedTooltipTexts.add(tooltipText);
+          }
+
+          return tooltipText.includes(label) && tooltipText.includes(String(value));
+        },
+        {
+          timeout: 750,
+          timeoutMessage: `Tooltip for bar index ${index} did not match expected label and value`,
+        }
+      );
+
+      assert.true(true, `tooltip shows "${label}" with value "${value}"`);
+      return;
+    } catch {
+      // Try the next bar if this hover did not produce the expected tooltip.
+    }
+  }
+
+  const observedTooltips = Array.from(observedTooltipTexts).join(' || ') || 'none';
+  assert.true(
+    false,
+    `could not find tooltip with label "${label}" and value "${value}". Observed tooltip text: ${observedTooltips}`
+  );
+};
+
 module('Acceptance | enterprise vault-reporting', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -41,7 +100,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
     await click(GENERAL.navLink('Reporting'));
     await click(GENERAL.navLink('Vault usage'));
     assert.strictEqual(currentURL(), '/vault/usage-reporting', 'navigates to usage reporting dashboard');
-    assert.dom(GENERAL.hdsPageHeaderTitle).includesText('Vault Usage', 'renders the "Vault Usage" header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).includesText('Vault usage', 'renders the "Vault usage" header');
   });
 
   test('it hides the nav item if policy does not allow access to sys/utilization-report', async function (assert) {
@@ -95,9 +154,17 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       )
       .exists('description is present')
       .hasText('Enabled secret engines for this cluster.', 'description is correct');
+
     assert
-      .dom('[data-test-vault-reporting-dashboard-secret-engines]')
-      .includesText('aws nomad cubbyhole 47 46 45');
+      .dom('[data-test-vault-reporting-dashboard-secret-engines] [data-carbon-chart] path.bar')
+      .exists({ count: 3 }, 'renders a bar for each secret engine category');
+
+    await assertTooltipValueForChart(
+      assert,
+      '[data-test-vault-reporting-dashboard-secret-engines]',
+      'AWS',
+      47
+    );
   });
 
   test('dashboard card: Authentication methods', async function (assert) {
@@ -126,9 +193,17 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       )
       .exists('description is present')
       .hasText('Enabled authentication methods for this cluster.', 'description is correct');
+
     assert
-      .dom('[data-test-vault-reporting-dashboard-auth-methods]')
-      .includesText('kubernetes userpass aws 44 43 42');
+      .dom('[data-test-vault-reporting-dashboard-auth-methods] [data-carbon-chart] path.bar')
+      .exists({ count: 3 }, 'renders a bar for each authentication method category');
+
+    await assertTooltipValueForChart(
+      assert,
+      '[data-test-vault-reporting-dashboard-auth-methods]',
+      'Kubernetes',
+      44
+    );
   });
 
   test('dashboard card: Global lease count quota', async function (assert) {
@@ -196,10 +271,10 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
       );
     assert
       .dom('[data-test-vault-reporting-secrets-sync-destinations-row]')
-      .includesText('Destination', 'Destinations header is present');
+      .includesText('1 destination', 'destination count is present');
     assert
       .dom('[data-test-vault-reporting-secrets-sync-destinations-row]')
-      .includesText('aws: 1', 'aws destination is present');
+      .includesText('AWS: 1', 'AWS destination is present');
   });
 
   test('dashboard card: Cluster replication status', async function (assert) {
