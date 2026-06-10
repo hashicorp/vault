@@ -98,8 +98,6 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	cluster := NewTestCluster(t, nil, &TestClusterOptions{
 		KeepStandbysSealed: true,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
 
 	// Wait for core to become active
@@ -216,8 +214,6 @@ func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOpt
 		w.WriteHeader(203)
 		w.Write([]byte("core3"))
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	root := cluster.RootToken
 

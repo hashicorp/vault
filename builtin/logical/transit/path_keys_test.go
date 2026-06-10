@@ -34,13 +34,7 @@ func TestTransit_Issue_2958(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
 	client := cores[0].Client
 
 	err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
@@ -143,10 +137,7 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 	err := client.Sys().Mount("transit", &api.MountInput{
 		Type: "transit",
@@ -365,10 +356,7 @@ func TestTransit_CreateKey(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 	err := client.Sys().Mount("transit", &api.MountInput{
 		Type: "transit",

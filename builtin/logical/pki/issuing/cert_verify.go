@@ -43,9 +43,17 @@ func VerifyCertificate(issuer *IssuerEntry, system logical.SystemView, parsedBun
 	// Note that we use github.com/google/certificate-transparency-go/x509 to perform certificate verification,
 	// since that library provides options to disable checks that the standard library does not.
 	options := ctx509.VerifyOptions{
-		KeyUsages:                      nil,
-		MaxConstraintComparisions:      0, // Use the library's 'sensible default'
-		DisableTimeChecks:              true,
+		KeyUsages:                 nil,
+		MaxConstraintComparisions: 0, // Use the library's 'sensible default'
+		DisableTimeChecks:         true,
+		// The go certificate transparency library enforces Extended Key Usage (EKU) support down-the-chain.  That is,
+		// it prevents an intermediate Certificate Authority from supporting an EKU which was not supported by its
+		// parent.  See: https://pkg.go.dev/crypto/x509#Certificate.Verify
+		// This doesn't reflect how our customers use the product: our customers expect EKU flags to restrict
+		// what the certificate can do, but not what the certificates it issues can do.  This down-the-chain behaviour
+		// is not mandated by the RFC, nor by NIAP.
+		// NIAP (and RFC) restrictions on EKU usage (requiring certain base key usage flags) are not implemented by
+		// this validation.  Those checks are separately implemented in roles_eku_checks_ent.go of this project.
 		DisableEKUChecks:               true,
 		DisableCriticalExtensionChecks: false,
 		DisableNameChecks:              false,

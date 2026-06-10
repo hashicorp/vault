@@ -15,7 +15,7 @@ func testLDAPSecretsCreate(t *testing.T, v *blackbox.Session) {
 	cleanup, ldapConfig, err := PrepareTestLDAPDomain(t, v, isCI())
 	if err != nil {
 		if isCI() {
-			t.Fatalf("Failed to create LDAP domain in CI: %v", err)
+			t.Fatalf("LDAP domain creation failed in CI: %v", err)
 		}
 		t.Skipf("LDAP domain creation not available: %v", err)
 	}
@@ -51,7 +51,7 @@ func testLDAPSecretsRead(t *testing.T, v *blackbox.Session) {
 	cleanup, ldapConfig, err := PrepareTestLDAPDomain(t, v, isCI())
 	if err != nil {
 		if isCI() {
-			t.Fatalf("Failed to create LDAP domain in CI: %v", err)
+			t.Fatalf("LDAP domain creation failed in CI: %v", err)
 		}
 		t.Skipf("LDAP domain creation not available: %v", err)
 	}
@@ -105,7 +105,7 @@ func testLDAPSecretsDelete(t *testing.T, v *blackbox.Session) {
 	cleanup, ldapConfig, err := PrepareTestLDAPDomain(t, v, isCI())
 	if err != nil {
 		if isCI() {
-			t.Fatalf("Failed to create LDAP domain in CI: %v", err)
+			t.Fatalf("LDAP domain creation failed in CI: %v", err)
 		}
 		t.Skipf("LDAP domain creation not available: %v", err)
 	}

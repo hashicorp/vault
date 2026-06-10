@@ -55,14 +55,25 @@ interface Args {
   data: Array<object>;
   columns: TableColumn[];
   selectionKeyField?: string;
+  page?: number; // optional page number to set current page, needed to keep pagination sync with url query param
+  pageSize?: number; // optional page size, needed to keep pagination sync with url query param & keep page size
   onSelectionChange?: OnSelectionChange;
+  onPageChange?: CallableFunction;
+  onPageSizeChange?: CallableFunction;
 }
 
 export default class ListTable extends Component<Args> {
-  @tracked currentPage = 1;
-  @tracked pageSize = 10;
+  @tracked currentPage;
+  @tracked pageSize;
   //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
   @tracked renderPagination = true;
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+
+    this.currentPage = args.page || 1;
+    this.pageSize = args.pageSize || 10;
+  }
 
   get paginatedTableData() {
     const paginated = paginate(this.args.data, {
@@ -73,8 +84,18 @@ export default class ListTable extends Component<Args> {
   }
 
   @action
-  handlePaginationChange(action: 'currentPage' | 'pageSize', value: number) {
+  async handlePaginationChange(action: 'currentPage' | 'pageSize', value: number) {
+    if (action === 'pageSize') {
+      await this.resetPagination();
+      // external callback to handle page size changes and bubble up to parent component
+      this.args.onPageSizeChange?.(value);
+    }
     this[action] = value;
+
+    // external callback to handle current page changes and bubble up to parent component
+    if (action === 'currentPage') {
+      this.args.onPageChange?.(value);
+    }
   }
 
   @action
@@ -88,9 +109,9 @@ export default class ListTable extends Component<Args> {
   }
 
   // TEMPLATE HELPERS
-  isObject = (value: any) => typeof value === 'object' && value !== null;
+  isObject = (value: unknown) => typeof value === 'object' && value !== null;
 
-  identifier = (cellData: Record<string, any>) => {
+  identifier = (cellData: Record<string, unknown>) => {
     const firstColumn = this.args.columns[0]?.key;
     // Use selectionKeyField if provided, otherwise default to value of the first column
     const identifier = this.args.selectionKeyField || firstColumn;

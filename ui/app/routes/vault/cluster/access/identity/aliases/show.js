@@ -10,8 +10,8 @@ import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 import { service } from '@ember/service';
 
-export default Route.extend({
-  store: service(),
+export default class IdentityAliasesShowRoute extends Route {
+  @service store;
 
   model(params) {
     const { section } = params;
@@ -28,7 +28,7 @@ export default Route.extend({
       model: this.store.findRecord(modelType, params.item_alias_id),
       section,
     });
-  },
+  }
 
   setupController(controller, resolvedModel) {
     const { model, section } = resolvedModel;
@@ -36,5 +36,5 @@ export default Route.extend({
       model,
       section,
     });
-  },
-});
+  }
+}

@@ -1,0 +1,57 @@
+# Copyright IBM Corp. 2016, 2026
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Build UI
+description: |
+  Build the Vault Web UI assets and cache the results.
+
+inputs:
+  github-token:
+    description: An elevated Github token to access private dependencies if necessary.
+    default: ""
+
+outputs:
+  cache-key:
+    description: "The cache key for the built UI assets (format: ui-<git-hash>)"
+    value: ${{ steps.ui-hash.outputs.cache-key }}
+  cache-hit:
+    description: "Whether the UI was restored from cache (true) or built fresh (false)"
+    value: ${{ steps.cache-ui-assets.outputs.cache-hit }}
+
+runs:
+  using: composite
+  steps:
+    - name: Get UI hash
+      id: ui-hash
+      shell: bash
+      run: |
+        ui_hash=$(git ls-tree HEAD ui --object-only)
+        echo "cache-key=ui-${ui_hash}" | tee -a "$GITHUB_OUTPUT"
+    - name: Set up UI asset cache
+      id: cache-ui-assets
+      uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
+      with:
+        enableCrossOsArchive: true
+        lookup-only: true
+        path: http/web_ui
+        # Only restore the UI asset cache if we haven't modified anything in the ui directory.
+        # Never do a partial restore of the web_ui if we don't get a cache hit.
+        key: ${{ steps.ui-hash.outputs.cache-key }}
+    - name: Install PNPM
+      if: ${{ steps.cache-ui-assets.outputs.cache-hit != 'true' }}
+      uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      with:
+        run_install: false
+        package_json_file: './ui/package.json'
+    - name: Set up node and pnpm
+      if: ${{ steps.cache-ui-assets.outputs.cache-hit != 'true' }}
+      uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+      with:
+        node-version-file: ui/package.json
+        cache: pnpm
+        cache-dependency-path: ui/pnpm-lock.yaml
+    - name: Build UI
+      if: ${{ steps.cache-ui-assets.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: make ci-build-ui

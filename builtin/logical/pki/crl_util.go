@@ -2162,6 +2162,12 @@ WRITE:
 			return nil, fmt.Errorf("could not create crl delta indicator extension: %w", err)
 		}
 		extensions = []pkix.Extension{ext}
+	} else if crlInfo.EnableDelta && signingBundle.URLs != nil && len(signingBundle.URLs.DeltaCRLDistributionPoints) > 0 {
+		ext, err := certutil.CreateDeltaCRLExtension(signingBundle.URLs.DeltaCRLDistributionPoints)
+		if err != nil {
+			return nil, fmt.Errorf("could not create freshest crl extension: %w", err)
+		}
+		extensions = []pkix.Extension{ext}
 	}
 
 	revocationListTemplate := &x509.RevocationList{

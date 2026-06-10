@@ -54,8 +54,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -97,8 +95,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -133,8 +129,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -167,8 +161,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -201,8 +193,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -238,8 +228,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -276,8 +264,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -313,8 +299,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -352,8 +336,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -393,8 +375,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -431,8 +411,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")
@@ -459,8 +437,6 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 			HandlerFunc: HandlerFunc(testHandler),
 		})
-		cluster.Start()
-		defer cluster.Cleanup()
 		client := cluster.Cores[0].Client
 
 		req := client.NewRequest("GET", "/")

@@ -1045,27 +1045,28 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 	}
 	*entry.AllowWildcardCertificates = allowWildcardCertificates.(bool)
 
-	warning := ""
+	var warnings []string
 	// no_store implies generate_lease := false
 	if entry.NoStore {
 		*entry.GenerateLease = false
 		if data.Get("generate_lease").(bool) {
-			warning = "mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority"
+			warnings = append(warnings, "mutually exclusive values no_store=true and generate_lease=true were both specified; no_store=true takes priority")
 		}
 	} else {
 		*entry.GenerateLease = data.Get("generate_lease").(bool)
 		if *entry.GenerateLease {
-			warning = "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates"
+			warnings = append(warnings, "it is encouraged to disable generate_lease and rely on PKI's native capabilities when possible; this option can cause Vault-wide issues with large numbers of issued certificates")
 		}
 	}
 
-	userError, warnings, err := validateRole(b, entry, ctx, req.Storage)
+	userError, vrWarns, err := validateRole(b, entry, ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-	if warning != "" {
-		warnings = append(warnings, warning)
+	if len(vrWarns) > 0 {
+		warnings = append(warnings, vrWarns...)
 	}
+
 	if userError != "" {
 		return logical.ErrorResponse(userError), nil
 	}
@@ -1112,6 +1113,11 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 		return fmt.Sprintf("error setting keyBits %v on role for keyType %v: %v", entry.KeyBits, entry.KeyType, err.Error()), nil, nil
 	}
 
+	var warnings []string
+	if err := validateCountry(entry.Country); err != nil {
+		warnings = append(warnings, err.Error())
+	}
+
 	if entry.SerialNumberSource != "" &&
 		entry.SerialNumberSource != "json-csr" &&
 		entry.SerialNumberSource != "json" {
@@ -1142,7 +1148,6 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 		issuer = defaultRef
 	}
 
-	var warnings []string
 	// Check that the issuers reference set resolves to something
 	if !b.UseLegacyBundleCaStorage() {
 		sc := b.makeStorageContext(ctx, s)

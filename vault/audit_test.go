@@ -681,7 +681,6 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 // only options on a non-Enterprise version of Vault.
 func TestAudit_enableAudit(t *testing.T) {
 	cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
-	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
 
@@ -707,7 +706,6 @@ func TestAudit_enableAudit(t *testing.T) {
 // with Enterprise only options on a non-Enterprise version of Vault.
 func TestAudit_newAuditBackend(t *testing.T) {
 	cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
-	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
 

@@ -14,6 +14,17 @@ variable "leader_public_ip" {
   description = "The public IP of the Vault leader"
 }
 
+variable "ip_version" {
+  type        = number
+  description = "The IP version used for the Vault TCP listener"
+  default     = 4
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
 variable "vault_root_token" {
   type        = string
   description = "The vault root token"
@@ -52,4 +63,34 @@ variable "vault_edition" {
   type        = string
   description = "The Vault edition (ce, ent, ent.hsm, ent.fips1402, ent.hsm.fips1402)"
   default     = "ent"
+}
+
+variable "vault_product_version" {
+  type        = string
+  description = "The Vault product version (e.g., 1.15.0)"
+  default     = null
+}
+
+variable "vault_revision" {
+  type        = string
+  description = "The Vault git revision/commit SHA"
+  default     = null
+}
+
+variable "vault_build_date" {
+  type        = string
+  description = "The Vault build date"
+  default     = null
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where Vault is installed"
+  default     = null
+}
+
+variable "test_env_vars" {
+  type        = map(string)
+  description = "Additional environment variables to pass to the test"
+  default     = {}
 }

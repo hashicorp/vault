@@ -27,19 +27,6 @@ func scimClientSchema(_ bool) *memdb.TableSchema {
 					Field: "ClientID",
 				},
 			},
-			"client_id": {
-				Name: "client_id",
-				Indexer: &memdb.CompoundIndex{
-					Indexes: []memdb.Indexer{
-						&memdb.StringFieldIndex{
-							Field: "NamespaceID",
-						},
-						&memdb.StringFieldIndex{
-							Field: "ClientID",
-						},
-					},
-				},
-			},
 			"client_name": {
 				Name:   "client_name",
 				Unique: true,

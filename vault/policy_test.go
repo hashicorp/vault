@@ -4,12 +4,14 @@
 package vault
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var rawPolicy = strings.TrimSpace(`
@@ -254,7 +256,7 @@ func TestPolicy_Parse(t *testing.T) {
 			Path:         "test/patch",
 			Capabilities: []string{"patch"},
 			Permissions: &ACLPermissions{
-				CapabilitiesBitmap: (PatchCapabilityInt),
+				CapabilitiesBitmap: PatchCapabilityInt,
 			},
 		},
 		{
@@ -540,5 +542,69 @@ func TestPolicy_Recover(t *testing.T) {
 	}
 	if policy.Paths[0].Permissions.CapabilitiesBitmap&RecoverCapabilityInt == 0 {
 		t.Fatalf("Recover capability should be present in capabilities bitmap")
+	}
+}
+
+// TestPolicy_NamespaceRequired verifies that Policy objects require a namespace
+// to be set. When NewACL processes policies, it calls addGrantingPoliciesToMap
+// which accesses policy.namespace.ID and policy.namespace.Path. Without a namespace,
+// this would cause a nil pointer error.
+func TestPolicy_NamespaceRequired(t *testing.T) {
+	t.Parallel()
+
+	// Parse a policy with a namespace
+	policy, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	path "secret/*" {
+		capabilities = ["read"]
+	}
+	`))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Verify the namespace is set
+	if policy.namespace == nil {
+		t.Fatal("Policy namespace should be set by ParseACLPolicy")
+	}
+	if policy.namespace.ID != namespace.RootNamespaceID {
+		t.Fatalf("Expected root namespace ID, got: %s", policy.namespace.ID)
+	}
+
+	// Create an ACL from the policy - this exercises addGrantingPoliciesToMap
+	// which requires policy.namespace to be set
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatalf("NewACL should succeed with policy that has namespace set: %v", err)
+	}
+	if acl == nil {
+		t.Fatal("ACL should not be nil")
+	}
+
+	// Verify that AllowOperation works and includes namespace information in granting policies
+	req := &logical.Request{
+		Path:      "secret/test",
+		Operation: logical.ReadOperation,
+	}
+	result := acl.AllowOperation(ctx, req, false)
+	if result == nil {
+		t.Fatal("AllowOperation should return a result")
+	}
+	if !result.Allowed {
+		t.Fatal("Request should be allowed")
+	}
+
+	// Verify granting policies include namespace information
+	// This proves that policy.namespace was accessed successfully
+	if len(result.GrantingPolicies) == 0 {
+		t.Fatal("Should have granting policies")
+	}
+	for _, grantingPolicy := range result.GrantingPolicies {
+		if grantingPolicy.NamespaceId == "" {
+			t.Error("Granting policy should have namespace ID set")
+		}
+		if grantingPolicy.NamespaceId != namespace.RootNamespaceID {
+			t.Errorf("Expected root namespace ID in granting policy, got: %s", grantingPolicy.NamespaceId)
+		}
 	}
 }

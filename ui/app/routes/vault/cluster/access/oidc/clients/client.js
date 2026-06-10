@@ -7,9 +7,12 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 export default class OidcClientRoute extends Route {
-  @service store;
+  @service api;
+  @service capabilities;
 
-  model({ name }) {
-    return this.store.findRecord('oidc/client', name);
+  async model({ name }) {
+    const { data } = await this.api.identity.oidcReadClient(name);
+    const capabilities = await this.capabilities.for('oidcClient', { name });
+    return { client: { ...data, name }, capabilities };
   }
 }

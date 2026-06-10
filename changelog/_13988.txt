@@ -1,0 +1,3 @@
+```release-note:breaking-change
+containers: set cap_ipc_lock capability on vault at build time. Container runtimes will need to add `IPC_LOCK` capabilities when running the vault container.
+```

@@ -54,6 +54,56 @@ func TestRequiresMaterializedTokenState(t *testing.T) {
 	}
 }
 
+// TestRestoreForwardingTokenHeaders_UsesInboundToken verifies Authorization
+// forwarding prefers the original inbound token when present.
+func TestRestoreForwardingTokenHeaders_UsesInboundToken(t *testing.T) {
+	t.Parallel()
+
+	req := &logical.Request{
+		ClientToken:       "jwt.internal-id",
+		InboundSSCToken:   "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
+		ClientTokenSource: logical.ClientTokenFromAuthzHeader,
+		Headers: map[string][]string{
+			"Authorization": {"Basic abc123"},
+		},
+	}
+
+	restoreForwardingTokenHeaders(req)
+
+	require.Equal(t, []string{"Basic abc123", "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig"}, req.Headers["Authorization"])
+}
+
+// TestRestoreForwardingTokenHeaders_FallsBackToClientToken verifies fallback to
+// req.ClientToken when no inbound token is present.
+func TestRestoreForwardingTokenHeaders_FallsBackToClientToken(t *testing.T) {
+	t.Parallel()
+
+	req := &logical.Request{
+		ClientToken:       "jwt.jti-value",
+		ClientTokenSource: logical.ClientTokenFromVaultHeader,
+	}
+
+	restoreForwardingTokenHeaders(req)
+
+	require.Equal(t, []string{"jwt.jti-value"}, req.Headers["X-Vault-Token"])
+}
+
+// TestRestoreForwardingTokenHeaders_UsesInboundTokenForVaultHeader verifies
+// X-Vault-Token forwarding prefers the original inbound token.
+func TestRestoreForwardingTokenHeaders_UsesInboundTokenForVaultHeader(t *testing.T) {
+	t.Parallel()
+
+	req := &logical.Request{
+		ClientToken:       "jwt.jti-value",
+		InboundSSCToken:   "jwt.raw.value",
+		ClientTokenSource: logical.ClientTokenFromVaultHeader,
+	}
+
+	restoreForwardingTokenHeaders(req)
+
+	require.Equal(t, []string{"jwt.raw.value"}, req.Headers["X-Vault-Token"])
+}
+
 func TestRequestHandling_Wrapping(t *testing.T) {
 	core, _, root := TestCoreUnsealed(t)
 
@@ -779,13 +829,13 @@ func TestAuth_AuthorizationDetails_CopiedFromRequest(t *testing.T) {
 
 	auth := &logical.Auth{}
 	req := &logical.Request{
-		EnterpriseTokenAuthorizationDetails: details,
+		JwtAuthorizationDetails: details,
 	}
 
 	// Simulate the assignment performed in CheckToken.
-	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+	auth.AuthorizationDetails = req.JwtAuthorizationDetails
 
-	require.Equal(t, details, auth.AuthorizationDetails, "auth.AuthorizationDetails must equal req.EnterpriseTokenAuthorizationDetails")
+	require.Equal(t, details, auth.AuthorizationDetails, "auth.AuthorizationDetails must equal req.JwtAuthorizationDetails")
 }
 
 // TestAuth_AuthorizationDetails_NilWhenAbsent verifies that auth.AuthorizationDetails is nil
@@ -796,7 +846,7 @@ func TestAuth_AuthorizationDetails_NilWhenAbsent(t *testing.T) {
 	auth := &logical.Auth{}
 	req := &logical.Request{}
 
-	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+	auth.AuthorizationDetails = req.JwtAuthorizationDetails
 
 	require.Nil(t, auth.AuthorizationDetails)
 }
@@ -973,4 +1023,20 @@ func TestRequestHandling_fetchACLTokenEntryAndEntity_NonExpiring_RootIgnoresCIDR
 	require.NotNil(t, acl)
 	require.NotNil(t, te)
 	require.Equal(t, time.Duration(0), te.TTL)
+}
+
+// TestRequestHandling_handleCancelableTestNumericToken tests that if a token
+// that is passed in, is somehow a number rather than a string (not currently
+// possible), then the handling will error, not panic.
+func TestRequestHandling_handleCancelableTestNumericToken(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	data := map[string]interface{}{"token": 5}
+	req := &logical.Request{Data: data, Path: "auth/token/lookup"}
+
+	resp, err := core.handleCancelableRequest(ctx, req)
+	require.True(t, resp != nil && err != nil)
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+	require.ErrorContains(t, resp.Error(), "invalid token")
 }

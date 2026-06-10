@@ -1,0 +1,44 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Hds::Modal id="search-select-modal" @onClose={{@onCancel}} as |M|>
+  <M.Header data-test-modal-title>
+    Create new policy
+  </M.Header>
+
+  <M.Body>
+    {{#if @form.policyType}}
+      <Hds::Tabs as |T|>
+        <T.Tab data-test-tab-your-policy>
+          Your Policy
+        </T.Tab>
+        <T.Tab Tab data-test-tab-example-policy>
+          Example Policy
+        </T.Tab>
+
+        <T.Panel>
+          <PolicyForm @onSave={{@onSave}} @form={{@form}} @onCancel={{@onCancel}} @isCompact={{true}} />
+        </T.Panel>
+        <T.Panel class="has-top-padding-m">
+          <PolicyExample @policyType={{@form.policyType}} />
+        </T.Panel>
+      </Hds::Tabs>
+    {{else}}
+      <Select
+        @name="policyType"
+        @label="Type"
+        @options={{this.policyOptions}}
+        @isFullwidth={{true}}
+        @selectedValue={{@form.policyType}}
+        @onChange={{fn (mut @form.policyType)}}
+        @noDefault={{true}}
+        data-test-type-select
+      />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+        <A.Header @title="No policy type selected" @titleTag="h2" data-test-empty-state-title />
+        <A.Body @text="Select a policy type to continue creating." data-test-empty-state-message />
+      </Hds::ApplicationState>
+    {{/if}}
+  </M.Body>
+</Hds::Modal>

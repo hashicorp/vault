@@ -63,7 +63,9 @@ export class BasePage {
     if (options?.external) {
       // Prerequisite: mock plugin catalog endpoint in the test so the External plugin option is available.
       await this.page.locator('label:nth-child(2) > .hds-form-radio-card__control-wrapper').click();
-      await this.page.getByLabel('Plugin version Required').selectOption(options.pluginVersion);
+      if (options.pluginVersion) {
+        await this.page.getByLabel('Plugin version Required').selectOption(options.pluginVersion);
+      }
     }
 
     if (options?.defaultLeaseTtl) {

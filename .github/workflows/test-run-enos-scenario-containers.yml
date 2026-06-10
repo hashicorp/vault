@@ -34,7 +34,7 @@ on:
 
 jobs:
   metadata:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
       is-ent-repo: ${{ steps.global-metadata.outputs.is-ent-repo }}
@@ -73,7 +73,7 @@ jobs:
   run:
     needs: metadata
     name: run ${{ matrix.scenario.id.filter }}
-    runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ondemand","os=ubuntu-arm","type=c6g.xlarge;c6g.2xlarge;c6g.4xlarge"]' || '["self-hosted","ubuntu-latest-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
+    runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ubuntu-24.04-arm64"]' || '["self-hosted","ubuntu-22.04-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs
       matrix:
@@ -82,14 +82,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
-        with:
-          # the Terraform wrapper will break Terraform execution in Enos because
-          # it changes the output to text when we expect it to be JSON.
-          terraform_wrapper: false
-      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Download Docker Image
         id: download
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -101,40 +93,22 @@ jobs:
         run: |
           echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Run Enos scenario
-        id: run
-        # Continue once and retry to handle occasional blips when creating
-        # infrastructure.
-        continue-on-error: true
+        id: run-scenario
         env:
           ENOS_VAR_terraform_plugin_cache_dir: ../support/terraform-plugin-cache
           ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
           ENOS_VAR_vault_version: ${{ needs.metadata.outputs.vault-version }}
           ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
           ENOS_VAR_container_image_archive: ${{steps.download.outputs.download-path}}/${{ inputs.build-artifact-name }}
-        run: |
-          mkdir -p ./enos/support/terraform-plugin-cache
-          enos scenario run --timeout 10m0s --chdir ./enos/k8s ${{ matrix.scenario.id.filter }}
-      - name: Retry Enos scenario
-        id: run_retry
-        if: steps.run.outcome == 'failure'
-        env:
-          ENOS_VAR_terraform_plugin_cache_dir: ../support/terraform-plugin-cache
-          ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
-          ENOS_VAR_vault_version: ${{ needs.metadata.outputs.vault-version }}
-          ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
-          ENOS_VAR_container_image_archive: ${{steps.download.outputs.download-path}}/${{ inputs.build-artifact-name }}
-        run: |
-          enos scenario run --timeout 10m0s --chdir ./enos/k8s ${{ matrix.scenario.id.filter }}
-      - name: Destroy Enos scenario
-        if: ${{ always() }}
-        env:
-          ENOS_VAR_terraform_plugin_cache_dir: ../support/terraform-plugin-cache
-          ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
-          ENOS_VAR_vault_version: ${{ needs.metadata.outputs.vault-version }}
-          ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
-          ENOS_VAR_container_image_archive: ${{steps.download.outputs.download-path}}/${{ inputs.build-artifact-name }}
-        run: |
-          enos scenario destroy --timeout 10m0s --grpc-listen http://localhost --chdir ./enos/k8s ${{ matrix.scenario.id.filter }}
+        uses: ./.github/actions/run-enos-scenario
+        with:
+          scenario-filter: ${{ matrix.scenario.id.filter }}
+          working-directory: ./enos/k8s
+          timeout: 10m0s
+          retry-timeout: 10m0s
+          destroy-timeout: 10m0s
+          show-state-on-retry: ${{ github.repository == 'hashicorp/vault-enterprise' && 'true' || 'false' }}
+          destroy-extra-args: --grpc-listen http://localhost
       - name: Cleanup Enos runtime directories
         if: ${{ always() }}
         run: |

@@ -9,7 +9,7 @@
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
         (hash label="Multi-factor authentication" route="vault.cluster.access.mfa.methods.index")
-        (hash label=this.model.method.id route="vault.cluster.access.method" model=this.model.method.id)
+        (hash label=this.model.method.id route="vault.cluster.access.mfa.methods.method" model=this.model.method.id)
         (hash label="Configure")
       }}
     />
@@ -17,7 +17,7 @@
 </Page::Header>
 
 <Mfa::MethodForm
-  @model={{this.model.method}}
+  @form={{this.model.form}}
   @hasActions={{true}}
   @onSave={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}
   @onClose={{transition-to "vault.cluster.access.mfa.methods.method" this.model.method.id}}

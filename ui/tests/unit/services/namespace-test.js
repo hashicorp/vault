@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import { ADMINISTRATIVE_NAMESPACE, ROOT_NAMESPACE } from 'vault/services/namespace';
+import { ADMINISTRATIVE_NAMESPACE, ROOT_NAMESPACE } from 'vault/utils/constants/namespace';
 import sinon from 'sinon';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 

@@ -250,3 +250,9 @@ func AddAutomatedRotationFieldsWithGroup(m map[string]*framework.FieldSchema, gr
 func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 	AddAutomatedRotationFieldsWithGroup(m, "default")
 }
+
+// Equals returns true if the automated rotation parameters match the other instance.
+// Useful for detecting configuration changes after parsing new field data.
+func (p *AutomatedRotationParams) Equals(other AutomatedRotationParams) bool {
+	return *p == other
+}

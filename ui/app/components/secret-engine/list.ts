@@ -62,23 +62,23 @@ export default class SecretEngineList extends Component<Args> {
     {
       key: 'accessor',
       label: 'Accessor',
-      width: '175px',
+      width: '205px',
     },
     {
       key: 'description',
       label: 'Description',
-      width: '300px',
+      width: '320px',
     },
     {
       key: 'running_plugin_version',
       label: 'Version',
       isSortable: true,
-      width: '170px',
+      width: '175px',
     },
     {
       key: 'popupMenu',
       label: 'Action',
-      width: '75px',
+      width: '80px',
     },
   ];
 

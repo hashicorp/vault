@@ -11,7 +11,6 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { encodeString } from 'vault/utils/b64';
-import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module TransitKeyActions
@@ -90,9 +89,9 @@ const SUCCESS_MESSAGE_FOR_ACTION = {
 };
 
 export default class TransitKeyActions extends Component {
-  @service store;
   @service flashMessages;
   @service router;
+  @service api;
 
   @tracked isModalActive = false;
   @tracked errors = null;
@@ -126,7 +125,7 @@ export default class TransitKeyActions extends Component {
       this.props = { ...this.props, ...resp.data };
 
       // While we do not pass ciphertext as a value to the JsonEditor, so that navigating from rewrap to decrypt will not show ciphertext in the editor, we still want to clear it from the props after rewrapping.
-      if (action === 'rewrap' && !this.args.key.supportsEncryption) {
+      if (action === 'rewrap' && !this.args.key.supports_encryption) {
         this.props.ciphertext = null;
       }
     }
@@ -211,13 +210,43 @@ export default class TransitKeyActions extends Component {
     const payload = formData ? this.compactData(formData) : null;
 
     try {
-      const resp = yield this.store
-        .adapterFor('transit-key')
-        .keyAction(action, { backend, id, payload }, options);
-
+      let resp;
+      if (action === 'encrypt') {
+        resp = yield this.api.secrets.transitEncrypt(id, backend, payload);
+      } else if (action === 'decrypt') {
+        resp = yield this.api.secrets.transitDecrypt(id, backend, payload);
+      } else if (action === 'datakey') {
+        resp = yield this.api.secrets.transitGenerateDataKey(id, payload.param, backend, {
+          ...payload,
+        });
+      } else if (action === 'rewrap') {
+        resp = yield this.api.secrets.transitRewrap(id, backend, payload);
+      } else if (action === 'sign') {
+        resp = yield this.api.secrets.transitSign(id, backend, payload);
+      } else if (action === 'verify') {
+        resp = yield this.api.secrets.transitVerify(id, backend, payload);
+      } else if (action === 'hmac') {
+        resp = yield this.api.secrets.transitGenerateHmac(id, backend, payload);
+      } else if (action === 'export') {
+        const [type, version] = payload.param;
+        // if wrap ttl is present, the header needs to be set on the request for the api service to return the wrapped token in response - otherwise it would ignore and return data keys
+        const overrideOptions = options.wrapTTL
+          ? { headers: { 'X-Vault-Wrap-TTL': options.wrapTTL }, wrapTTL: options.wrapTTL }
+          : {};
+        resp = version
+          ? yield this.api.secrets.transitExportKeyVersion(
+              id,
+              `${type}-key`,
+              version,
+              backend,
+              overrideOptions
+            )
+          : yield this.api.secrets.transitExportKey(id, `${type}-key`, backend, overrideOptions);
+      }
       this.handleSuccess(resp, options, action);
     } catch (e) {
-      this.errors = errorMessage(e);
+      const { message } = yield this.api.parseError(e);
+      this.errors = message;
     }
   }
 }

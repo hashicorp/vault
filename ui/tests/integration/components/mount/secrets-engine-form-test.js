@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { module, test } from 'qunit';
@@ -15,6 +15,7 @@ import {
   overrideResponse,
 } from 'vault/tests/helpers/stubs';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -51,6 +52,7 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       form: this.form,
       availableVersions: [],
       hasUnversionedPlugins: false,
+      oidcKeys: [{ id: 'specialKey' }],
     };
   });
 
@@ -193,16 +195,16 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       assert.strictEqual(
         this.form.data.config.identity_token_key,
         undefined,
-        'On init identity_token_key is not set on the model'
+        'On init identity_token_key is not set on form'
       );
 
-      // SearchSelectWithModal likely uses fallback component when no OIDC models are found
-      await typeIn(GENERAL.inputSearch('key'), 'specialKey');
+      await clickTrigger('#oidc-key');
+      await click(GENERAL.searchSelect.option());
 
       assert.strictEqual(
         this.form.data.config.identity_token_key,
         'specialKey',
-        'updates model with custom identity_token_key'
+        'updates form with custom identity_token_key'
       );
     });
   });

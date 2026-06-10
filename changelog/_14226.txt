@@ -1,0 +1,6 @@
+```release-note:security
+core: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+```
+```release-note:security
+sdk: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+```

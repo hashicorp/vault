@@ -5,6 +5,10 @@
 
 package vault
 
-func IsEnterpriseToken(token string) bool {
+func IsOAuthJwt(token string) bool {
+	return false
+}
+
+func IsOAuthJwtId(tokenID string) bool {
 	return false
 }

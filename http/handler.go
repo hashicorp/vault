@@ -6,6 +6,7 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -508,6 +509,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 	var hf func(w http.ResponseWriter, r *http.Request)
 	hf = func(w http.ResponseWriter, r *http.Request) {
+		// Generate CSP nonce once for this request
+		cspNonce, err := generateCSPNonce()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate CSP nonce: %w", err))
+			return
+		}
+
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
@@ -518,17 +526,19 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				customHeaders = listenerCustomHeaders.StatusCodeHeaderMap
 			}
 		}
+
 		// saving start time for the in-flight requests
 		inFlightReqStartTime := time.Now()
 
-		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders)
+		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders, cspNonce)
 
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		nw.Header().Set("Cache-Control", "no-store")
 
-		// Start with the request context
+		// Start with the request context and store the CSP nonce
 		ctx := r.Context()
+		ctx = context.WithValue(ctx, cspNonceContextKey{}, cspNonce)
 		var cancelFunc context.CancelFunc
 		// Add our timeout, but not for the monitor or events endpoints, as they are streaming
 		// Request URL path for sys/monitor looks like /v1/sys/monitor
@@ -584,7 +594,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		cleanedPath := cleanPath(originalPath)
 		switch {
 		case originalPath != cleanedPath:
-			respondError(nw, http.StatusBadRequest, errors.New("vault request paths must be canonical and not relative"))
+			http.Redirect(w, r, r.URL.Path, http.StatusTemporaryRedirect)
 			cancelFunc()
 			return
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
@@ -845,6 +855,15 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 	})
 }
 
+// generateCSPNonce generates a cryptographically secure random nonce for CSP
+func generateCSPNonce() (string, error) {
+	nonceBytes := make([]byte, 16)
+	if _, err := rand.Read(nonceBytes); err != nil {
+		return "", fmt.Errorf("failed to generate CSP nonce: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(nonceBytes), nil
+}
+
 func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		header := w.Header()
@@ -855,8 +874,22 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 			return
 		}
 
+		// Retrieve CSP nonce from request context (generated in wrapGenericHandler)
+		nonce, ok := req.Context().Value(cspNonceContextKey{}).(string)
+		if !ok || nonce == "" {
+			// Fallback: generate a new nonce if not found in context
+			nonce, err = generateCSPNonce()
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+		}
+
 		for k := range userHeaders {
 			v := userHeaders.Get(k)
+			if k == "Content-Security-Policy" {
+				v = logical.MergeNonceIntoCSP(v, nonce, "style-src")
+			}
 			header.Set(k, v)
 		}
 
@@ -864,14 +897,72 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 	})
 }
 
+// cspNonceContextKey is used to store the CSP nonce in the request context
+type cspNonceContextKey struct{}
+
 func handleUI(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// The fileserver handler strips trailing slashes and does a redirect.
 		// We don't want the redirect to happen so we preemptively trim the slash
 		// here.
 		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
+
+		// For relevant HTML requests, wrap the response writer to inject the nonce
+		hasExtension := strings.Contains(req.URL.Path, ".")
+		if !hasExtension {
+			nonce, ok := req.Context().Value(cspNonceContextKey{}).(string)
+			if ok && nonce != "" {
+				nrw := &nonceResponseWriter{
+					ResponseWriter: w,
+					nonce:          nonce,
+				}
+				h.ServeHTTP(nrw, req)
+				// Flush the buffered content after the handler completes
+				nrw.flush()
+				return
+			}
+		}
+
 		h.ServeHTTP(w, req)
 	})
+}
+
+// nonceResponseWriter wraps http.ResponseWriter to inject CSP nonce into HTML
+type nonceResponseWriter struct {
+	http.ResponseWriter
+	nonce       string
+	wroteHeader bool
+	buf         bytes.Buffer
+}
+
+func (nrw *nonceResponseWriter) Write(b []byte) (int, error) {
+	if !nrw.wroteHeader {
+		nrw.WriteHeader(http.StatusOK)
+	}
+
+	// Buffer the content
+	nrw.buf.Write(b)
+	return len(b), nil
+}
+
+func (nrw *nonceResponseWriter) WriteHeader(statusCode int) {
+	if nrw.wroteHeader {
+		return
+	}
+	nrw.wroteHeader = true
+	nrw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (nrw *nonceResponseWriter) flush() {
+	// Inject nonce into buffered content
+	htmlContent := nrw.buf.String()
+	if htmlContent != "" && nrw.nonce != "" {
+		nonceMetaTag := fmt.Sprintf(`<meta name="csp-nonce" content="%s">`, nrw.nonce)
+		htmlContent = strings.Replace(htmlContent, "<head>", "<head>\n    "+nonceMetaTag, 1)
+	}
+
+	// Write the modified content
+	nrw.ResponseWriter.Write([]byte(htmlContent))
 }
 
 func handleUIStub() http.Handler {

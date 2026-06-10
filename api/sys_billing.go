@@ -68,3 +68,71 @@ type UsageMetric struct {
 	MetricName string                 `json:"metric_name" mapstructure:"metric_name"`
 	MetricData map[string]interface{} `json:"metric_data" mapstructure:"metric_data"`
 }
+
+// GetBillingConfig returns the current billing retention configuration.
+func (c *Sys) GetBillingConfig() (*BillingConfigResponse, error) {
+	return c.GetBillingConfigWithContext(context.Background())
+}
+
+// GetBillingConfigWithContext returns the current billing retention configuration.
+func (c *Sys) GetBillingConfigWithContext(ctx context.Context) (*BillingConfigResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/billing/config")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	var result BillingConfigResponse
+	err = mapstructure.Decode(secret.Data, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+// SetBillingConfig sets the billing retention configuration.
+func (c *Sys) SetBillingConfig(retentionMonths int) error {
+	return c.SetBillingConfigWithContext(context.Background(), retentionMonths)
+}
+
+// SetBillingConfigWithContext sets the billing retention configuration.
+func (c *Sys) SetBillingConfigWithContext(ctx context.Context, retentionMonths int) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	body := map[string]interface{}{
+		"retention_months": retentionMonths,
+	}
+
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/billing/config")
+	if err := r.SetJSONBody(body); err != nil {
+		return err
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+// BillingConfigResponse represents the response from the billing config endpoint.
+type BillingConfigResponse struct {
+	RetentionMonths int `json:"retention_months" mapstructure:"retention_months"`
+}

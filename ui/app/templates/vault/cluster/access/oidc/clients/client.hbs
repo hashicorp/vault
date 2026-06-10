@@ -4,13 +4,13 @@
 }}
 
 {{#if (not-eq this.router.currentRoute.localName "edit")}}
-  <Page::Header @title={{this.model.name}}>
+  <Page::Header @title={{this.model.client.name}}>
     <:breadcrumbs>
       <Page::Breadcrumbs
         @breadcrumbs={{array
           (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
           (hash label="OIDC provider: Applications" route="vault.cluster.access.oidc.clients")
-          (hash label=this.model.name)
+          (hash label=this.model.client.name)
         }}
       />
     </:breadcrumbs>
@@ -21,14 +21,14 @@
       <ul>
         <LinkTo
           @route="vault.cluster.access.oidc.clients.client.details"
-          @model={{this.model}}
+          @model={{this.model.client.name}}
           data-test-oidc-client-details
         >
           Details
         </LinkTo>
         <LinkTo
           @route="vault.cluster.access.oidc.clients.client.providers"
-          @model={{this.model}}
+          @model={{this.model.client.name}}
           data-test-oidc-client-providers
         >
           Available providers

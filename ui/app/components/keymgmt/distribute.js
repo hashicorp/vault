@@ -7,9 +7,15 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { KEY_TYPES } from '../../models/keymgmt/key';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import {
+  KeyManagementUpdateKeyRequestTypeEnum,
+  SecretsApiKeyManagementListKeysListEnum,
+  SecretsApiKeyManagementListKmsProvidersListEnum,
+} from '@hashicorp/vault-client-typescript';
+
+const KEY_TYPES = Object.values(KeyManagementUpdateKeyRequestTypeEnum);
 
 /**
  * @module KeymgmtDistribute
@@ -19,7 +25,7 @@ import { waitFor } from '@ember/test-waiters';
  * ```js
  * <KeymgmtDistribute @backend="keymgmt" @key="my-key" @provider="my-kms" />
  * ```
- * @param {string} backend - name of backend, which will be the basis of other store queries
+ * @param {string} backend - name of backend, which is used in API requests
  * @param {string} [key] - key is the name of the existing key which is being distributed. Will hide the key field in UI
  * @param {string} [provider] - provider is the name of the existing provider which is being distributed to. Will hide the provider field in UI
  */
@@ -37,14 +43,16 @@ const VALID_TYPES_BY_PROVIDER = {
   azurekeyvault: ['rsa-2048', 'rsa-3072', 'rsa-4096'],
 };
 export default class KeymgmtDistribute extends Component {
-  @service pagination;
-  @service store;
+  @service api;
   @service flashMessages;
-  @service router;
 
   @tracked keyModel;
   @tracked isNewKey = false;
+  @tracked keyOptions = [];
+  @tracked canListKeys = true;
   @tracked providerType;
+  @tracked providerOptions = [];
+  @tracked canListProviders = true;
   @tracked formData;
   @tracked formErrors;
 
@@ -57,9 +65,13 @@ export default class KeymgmtDistribute extends Component {
     // Side effects to get types of key or provider passed in
     if (this.args.provider) {
       this.getProviderType(this.args.provider);
+    } else {
+      this.fetchProviderOptions();
     }
     if (this.args.key) {
       this.getKeyInfo(this.args.key);
+    } else {
+      this.fetchKeyOptions();
     }
     this.formData.operations = [];
   }
@@ -122,29 +134,42 @@ export default class KeymgmtDistribute extends Component {
   }
 
   async getKeyInfo(keyName, isNew = false) {
-    let key;
     if (isNew) {
       this.isNewKey = true;
-      key = this.store.createRecord(`keymgmt/key`, {
+      this.keyModel = {
         backend: this.args.backend,
-        id: keyName,
         name: keyName,
-      });
+        type: null,
+      };
     } else {
-      key = await this.store
-        .queryRecord(`keymgmt/key`, {
-          backend: this.args.backend,
-          id: keyName,
-          recordOnly: true,
-        })
-        .catch(() => {
-          // Key type isn't essential for distributing, so if
-          // we can't read it for some reason swallow the error
-          // and allow the API to respond with any key/provider
-          // type matching errors
-        });
+      try {
+        const { data } = await this.api.secrets.keyManagementReadKey(keyName, this.args.backend);
+        this.keyModel = { ...data, name: keyName, backend: this.args.backend };
+      } catch (error) {
+        // Key type isn't essential for distributing, so if
+        // we can't read it for some reason swallow the error
+        // and allow the API to respond with any key/provider
+        // type matching errors
+        this.keyModel = null;
+      }
     }
-    this.keyModel = key;
+  }
+
+  async fetchKeyOptions() {
+    try {
+      const { keys } = await this.api.secrets.keyManagementListKeys(
+        this.args.backend,
+        SecretsApiKeyManagementListKeysListEnum.TRUE
+      );
+      this.keyOptions = (keys || []).map((name) => ({ id: name, name }));
+      this.canListKeys = true;
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 403) {
+        this.canListKeys = false;
+      }
+      this.keyOptions = [];
+    }
   }
 
   async getProviderType(id) {
@@ -153,22 +178,32 @@ export default class KeymgmtDistribute extends Component {
       return;
     }
 
-    const provider = await this.store
-      .queryRecord('keymgmt/provider', {
-        backend: this.args.backend,
-        id,
-      })
-      .catch(() => {});
-    this.providerType = provider?.provider;
+    try {
+      const { data } = await this.api.secrets.keyManagementReadKmsProvider(id, this.args.backend);
+      this.providerType = data.provider;
+    } catch {
+      this.providerType = '';
+    }
+  }
+
+  async fetchProviderOptions() {
+    try {
+      const { keys } = await this.api.secrets.keyManagementListKmsProviders(
+        this.args.backend,
+        SecretsApiKeyManagementListKmsProvidersListEnum.TRUE
+      );
+      this.providerOptions = (keys || []).map((name) => ({ id: name, name }));
+      this.canListProviders = true;
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 403) {
+        this.canListProviders = false;
+      }
+      this.providerOptions = [];
+    }
   }
 
   destroyKey() {
-    if (this.isNewKey) {
-      // Delete record from store if it was created here
-      this.keyModel.destroyRecord().finally(() => {
-        this.keyModel = null;
-      });
-    }
     this.isNewKey = false;
     this.keyModel = null;
   }
@@ -184,22 +219,19 @@ export default class KeymgmtDistribute extends Component {
     return { key, provider, purpose: operations.join(','), protection };
   }
 
-  distributeKey(backend, data) {
-    const adapter = this.store.adapterFor('keymgmt/key');
+  async distributeKey(backend, data) {
     const { key, provider, purpose, protection } = data;
-    return adapter
-      .distribute(backend, provider, key, { purpose, protection })
-      .then(() => {
-        this.flashMessages.success(`Successfully distributed key ${key} to ${provider}`);
-        // update keys on provider model
-        this.pagination.clearDataset('keymgmt/key');
-        const providerModel = this.store.peekRecord('keymgmt/provider', provider);
-        providerModel.fetchKeys(providerModel.keys?.meta?.currentPage || 1);
-        this.args.onClose();
-      })
-      .catch((e) => {
-        this.formErrors = `${e.errors}`;
+    try {
+      await this.api.secrets.keyManagementDistributeKeyInKmsProvider(key, provider, backend, {
+        purpose,
+        protection,
       });
+      this.flashMessages.success(`Successfully distributed key ${key} to ${provider}`);
+      this.args.onClose();
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      this.formErrors = message;
+    }
   }
 
   @action
@@ -216,7 +248,9 @@ export default class KeymgmtDistribute extends Component {
   }
   @action
   handleKeyType(evt) {
-    this.keyModel.set('type', evt.target.value);
+    if (this.keyModel) {
+      this.keyModel = { ...this.keyModel, type: evt.target.value };
+    }
   }
 
   @action
@@ -233,13 +267,33 @@ export default class KeymgmtDistribute extends Component {
 
   @action
   async handleKeySelect(selected) {
-    const selectedKey = selected[0] || null;
-    if (!selectedKey) {
+    let keyName;
+    let isNew = false;
+
+    if (typeof selected === 'string') {
+      keyName = selected;
+    } else if (Array.isArray(selected)) {
+      const selectedKey = selected[0] || null;
+      if (!selectedKey) {
+        this.formData.key = null;
+        return this.destroyKey();
+      }
+
+      if (typeof selectedKey === 'string') {
+        keyName = selectedKey;
+      } else {
+        keyName = selectedKey.id;
+        isNew = !!selectedKey.isNew;
+      }
+    }
+
+    if (!keyName) {
       this.formData.key = null;
       return this.destroyKey();
     }
-    this.formData.key = selectedKey.id;
-    return this.getKeyInfo(selectedKey.id, selectedKey.isNew);
+
+    this.formData.key = keyName;
+    return this.getKeyInfo(keyName, isNew);
   }
 
   @task
@@ -254,18 +308,16 @@ export default class KeymgmtDistribute extends Component {
     }
     if (this.isNewKey) {
       try {
-        yield this.keyModel.save();
+        // Create the key first
+        const keyData = { type: this.keyModel.type };
+        yield this.api.secrets.keyManagementUpdateKey(this.keyModel.name, backend, keyData);
         this.flashMessages.success(`Successfully created key ${this.keyModel.name}`);
-      } catch (e) {
-        this.flashMessages.danger(`Error creating new key ${this.keyModel.name}: ${e.errors}`);
+      } catch (error) {
+        const { message } = yield this.api.parseError(error);
+        this.flashMessages.danger(`Error creating new key ${this.keyModel.name}: ${message}`);
         return;
       }
     }
     yield this.distributeKey(backend, data);
-    // Reload key to get dist info
-    yield this.store.queryRecord(`keymgmt/key`, {
-      backend: this.args.backend,
-      id: this.keyModel.name,
-    });
   }
 }

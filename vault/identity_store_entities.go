@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http"
 	"slices"
 	"strings"
 
@@ -208,6 +209,23 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathEntityIDList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of  entity ids`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `Entity details keyed by the entity id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 

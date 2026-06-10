@@ -5,116 +5,56 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// LEGEND STYLING (positioning is in chart-container.scss)
-$single: #1c345f;
+:root {
+  --clients-chart-color-single: var(--token-color-palette-blue-500);
+
+  /* HDS Hue Cycle - Level 200 (Vibrant) */
+
+  --clients-chart-color-first: var(--token-color-palette-blue-200);
+  --clients-chart-color-second: var(--token-color-palette-purple-200);
+  --clients-chart-color-third: var(--token-color-palette-green-200);
+  --clients-chart-color-fourth: var(--token-color-palette-amber-200);
+  --clients-chart-color-fifth: var(--token-color-palette-red-200);
+
+  /* HDS Hue Cycle - Level 400 (Deep) */
+  --clients-chart-color-sixth: var(--token-color-palette-blue-400);
+  --clients-chart-color-seventh: var(--token-color-palette-purple-400);
+  --clients-chart-color-eighth: var(--token-color-palette-green-400);
+  --clients-chart-color-ninth: var(--token-color-palette-amber-400);
+  --clients-chart-color-tenth: var(--token-color-palette-red-400);
+}
+
+$single: var(--clients-chart-color-single);
 // stacked bar chart color scheme
-$first: #4269d0;
-$second: #efb117;
-$third: #ff725c;
-$fourth: #6cc5b0;
+$first: var(--clients-chart-color-first);
+$second: var(--clients-chart-color-second);
+$third: var(--clients-chart-color-third);
+$fourth: var(--clients-chart-color-fourth);
 
-.legend-container {
-  .dots {
-    height: 10px;
-    width: 10px;
-    border-radius: 50%;
-    display: inline-block;
-  }
-  .legend-dot-total {
-    background-color: $single;
-  }
-  // numbers are indices because chart legend is iterated over to ensure
-  // legend colors match the correct stacked-bar-# class below
-  .legend-dot-0 {
-    background-color: $first;
-  }
-  .legend-dot-1 {
-    background-color: $second;
-  }
-  .legend-dot-2 {
-    background-color: $third;
-  }
-  .legend-dot-3 {
-    background-color: $fourth;
+// Carbon Charts tooltip styling
+.cds--cc--tooltip {
+  background-color: #000;
+  box-shadow: none;
+  color: #fff;
+  font-weight: 700;
+
+  .content-box {
+    color: #fff;
   }
 }
 
-.chart-tooltip {
-  background-color: hsl(0, 0%, 4%);
-  color: var(--token-color-foreground-high-contrast);
-  font-size: size_variables.$size-9;
-  padding: 6px;
-  border-radius: var(--token-border-radius-small);
-  flex-wrap: nowrap;
-  width: fit-content;
+.carbon-chart-tooltip {
+  background-color: #000;
+  border: 0;
+  box-shadow: none;
+  color: #fff;
+  font-weight: 700;
+  padding: 8px 12px;
 
-  .bold {
-    font-weight: var(--token-typography-font-weight-bold);
+  &::before,
+  &::after {
+    background-color: #000;
+    border: 0;
+    box-shadow: none;
   }
-  // styling below handles tooltip position
-  position: absolute;
-  transform-style: preserve-3d;
-  bottom: 30px;
-  left: -20px;
-  pointer-events: none;
-  width: 140px;
-  transform: translate(calc(1px * var(--x, 0)), calc(-1px * var(--y, 0)));
-  transform-origin: bottom left;
-  z-index: 100;
-  margin-bottom: size_variables.$spacing-8;
-}
-
-.chart-tooltip-arrow {
-  width: 0;
-  height: 0;
-  border-left: 5px solid transparent;
-  border-right: 5px solid transparent;
-  border-top: 9px solid hsl(0, 0%, 4%);
-  position: absolute;
-  opacity: 0.8;
-  bottom: -9px;
-  left: calc(50% - 5px);
-}
-
-// LINEAL STYLING //
-.lineal-chart {
-  position: relative;
-  padding: 10px 10px 20px 50px;
-  width: 100%;
-  svg {
-    overflow: visible;
-  }
-}
-
-.lineal-chart-bar {
-  fill: $single;
-}
-
-.lineal-axis {
-  color: var(--token-color-palette-neutral-400);
-  text {
-    font-size: 0.75rem;
-  }
-  line {
-    color: var(--token-color-palette-neutral-300);
-  }
-}
-
-// @colorScale arg for Lineal::VBars is "stacked-bar", numbers are added by lineal (not 0-indexed)
-.stacked-bar-1 {
-  color: $first;
-  fill: $first;
-}
-.stacked-bar-2 {
-  color: $second;
-  fill: $second;
-}
-.stacked-bar-3 {
-  color: $third;
-  fill: $third;
-}
-// MUST BE LAST because conditionally renders and legend color mapping for stacked bars will be off otherwise
-.stacked-bar-4 {
-  color: $fourth;
-  fill: $fourth;
 }

@@ -21,6 +21,7 @@ const mountsEnableSecretsEngineConfig: FormConfig<
   unknown
 > = {
   name: 'mountsEnableSecretsEngine',
+  path: '/sys/mounts/{path}',
   description: 'Mount a new backend at a new path.',
   submit: async (api: ApiService, payload: SystemApiMountsEnableSecretsEngineOperationRequest) => {
     return await api.sys.mountsEnableSecretsEngineRaw(payload);
@@ -69,7 +70,7 @@ const mountsEnableSecretsEngineConfig: FormConfig<
         {
           name: 'MountsEnableSecretsEngineRequest.external_entropy_access',
           type: 'TextInput',
-          label: 'External Entropy Access',
+          label: 'External entropy access',
           helperText: "Whether to give the mount access to Vault's external entropy.",
         },
         {
@@ -89,19 +90,19 @@ const mountsEnableSecretsEngineConfig: FormConfig<
         {
           name: 'MountsEnableSecretsEngineRequest.plugin_name',
           type: 'TextInput',
-          label: 'Plugin Name',
+          label: 'Plugin name',
           helperText: 'Name of the plugin to mount based from the name registered in the plugin catalog.',
         },
         {
           name: 'MountsEnableSecretsEngineRequest.plugin_version',
           type: 'TextInput',
-          label: 'Plugin Version',
+          label: 'Plugin version',
           helperText: 'The semantic version of the plugin to use, or image tag if oci_image is provided.',
         },
         {
           name: 'MountsEnableSecretsEngineRequest.seal_wrap',
           type: 'TextInput',
-          label: 'Seal Wrap',
+          label: 'Seal wrap',
           helperText: 'Whether to turn on seal wrapping for the mount.',
         },
         {

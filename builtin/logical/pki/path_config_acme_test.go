@@ -18,7 +18,6 @@ func TestAcmeConfig(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	cases := []struct {
 		name        string
@@ -158,8 +157,7 @@ func TestAcmeExternalPolicyOss(t *testing.T) {
 func TestAcmeIPRangeConfiguration(t *testing.T) {
 	t.Parallel()
 
-	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
+	_, client, _ := setupAcmeBackend(t)
 
 	testCtx := context.Background()
 

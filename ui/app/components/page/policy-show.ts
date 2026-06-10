@@ -4,17 +4,22 @@
  */
 
 import Component from '@glimmer/component';
-import { policySnippetArgs } from 'core/utils/code-generators/policy';
+import { policySnippetArgs, PolicyTypes } from 'core/utils/code-generators/policy';
 
-import type PolicyModel from 'vault/vault/models/policy';
-
+interface PolicyModel {
+  name: string;
+  policy: string;
+  policyType: PolicyTypes;
+  format: string;
+  capabilities: object;
+}
 interface Args {
   model: PolicyModel;
 }
 export default class PagePolicyShow extends Component<Args> {
   get breadcrumbs() {
     // Provide defaults so crumbs don't error as the component is torn down
-    const { policyType = 'acl', id = 'policy' } = this.args.model || {};
+    const { policyType = 'acl', name = 'policy' } = this.args.model || {};
     return [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       {
@@ -22,11 +27,11 @@ export default class PagePolicyShow extends Component<Args> {
         route: 'vault.cluster.policies',
         model: policyType,
       },
-      { label: id },
+      { label: name },
     ];
   }
 
   get snippetArgs() {
-    return policySnippetArgs(this.args.model.id, this.args.model.policy);
+    return policySnippetArgs(this.args.model.name, this.args.model.policy);
   }
 }

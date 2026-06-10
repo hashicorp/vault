@@ -12,8 +12,12 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
-func getEnterpriseTokenId(_ string) string {
+func getOAuthJwtId(_ string) string {
 	return ""
+}
+
+func normalizeOAuthJwtToId(token string) string {
+	return token
 }
 
 func (ts *TokenStore) handleTidyEnterpriseTokens(_ context.Context, _ *namespace.Namespace, _ *multierror.Error) error {

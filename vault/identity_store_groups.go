@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
@@ -130,8 +131,27 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 				OperationSuffix: "by-id",
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathGroupIDList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathGroupIDList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of  entity ids`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `Entity details keyed by the entity id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupHelp["group-id-list"][0]),
@@ -434,7 +454,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 		return nil, err
 	}
 	if ns.ID != group.NamespaceID {
-		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+		return nil, nil
 	}
 
 	respData := map[string]interface{}{}
@@ -546,7 +566,7 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 		return nil, err
 	}
 	if group.NamespaceID != ns.ID {
-		return logical.ErrorResponse("request namespace is not the same as the group namespace"), logical.ErrPermissionDenied
+		return nil, nil
 	}
 
 	scimID := scimClientIDFromContext(ctx)

@@ -506,7 +506,7 @@ func TestBackend_DefaultUserTemplate_WithStaticPrefix(t *testing.T) {
 
 func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
@@ -556,7 +556,7 @@ func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T)
 
 func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
@@ -1784,7 +1784,7 @@ func TestBackend_DisallowUserProvidedKeyIDs(t *testing.T) {
 
 func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
@@ -1880,7 +1880,7 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 
 func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
@@ -1927,7 +1927,7 @@ func TestBackend_EmptyAllowedExtensionFailsClosed(t *testing.T) {
 
 func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// Get auth accessor for identity template.
@@ -2160,7 +2160,6 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 	client := cluster.Cores[0].Client
 
 	// Write test policy for userpass auth method.
@@ -2222,7 +2221,7 @@ func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
 	expectedValidPrincipal string, testEntityMetadata map[string]string,
 ) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
@@ -2282,7 +2281,7 @@ func testAllowedPrincipalsTemplate(t *testing.T, testAllowedDomainsTemplate stri
 	roleConfigPayload map[string]interface{}, signingPayload map[string]interface{},
 ) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 
 	// set metadata "ssh_username" to userpass username
@@ -3096,8 +3095,7 @@ func TestProperAuthing(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
+
 	client := cluster.Cores[0].Client
 	token := client.Token()
 

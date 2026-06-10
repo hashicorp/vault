@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Update DR operation token generation to accept a primary root token for authentication.
+```

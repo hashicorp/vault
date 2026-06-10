@@ -555,7 +555,6 @@ func TestSysRekey_Verification_Invalid(t *testing.T) {
 // TestCancelRekey_Nonce verifies that cancelling a rekey operation requires a
 // nonce
 func TestCancelRekey_Nonce(t *testing.T) {
-	t.Parallel()
 	tests := []struct {
 		recovery bool
 		config   *SealConfig

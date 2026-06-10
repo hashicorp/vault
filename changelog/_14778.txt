@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix failure to detect errors during storage writes of totp keys.
+```

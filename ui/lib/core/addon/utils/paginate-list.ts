@@ -34,31 +34,33 @@ export function paginate<T>(data: T[], options: PaginateOptions = {}) {
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE, filter, filterKey } = options;
 
   if (Array.isArray(data)) {
-    let filteredData = [...data];
-    // filter data before paginating if filter is provided
-    if (filter) {
-      filteredData = data.filter((item) => {
-        const filterValue = filterKey ? (item as Record<string, unknown>)[filterKey] : item;
-        if (typeof filterValue === 'string') {
-          return filterValue.toLowerCase().includes(filter.toLowerCase());
-        }
-        return false;
-      });
-    }
+    let filteredData = filter
+      ? data.filter((item) => {
+          const filterValue = filterKey ? (item as Record<string, unknown>)[filterKey] : item;
+          if (typeof filterValue === 'string') {
+            return filterValue.toLowerCase().includes(filter.toLowerCase());
+          }
+          return false;
+        })
+      : [...data];
 
-    const lastPage = Math.ceil(filteredData.length / pageSize);
-    const start = (page - 1) * pageSize;
+    const filteredTotal = filteredData.length;
+    const lastPage = Math.ceil(filteredTotal / pageSize);
+    // Verify that the page number does not go out of bounds, if so adjust to show
+    // the first page of results
+    const currentPage = page > lastPage ? 1 : page;
+    const start = (currentPage - 1) * pageSize;
     const end = start + pageSize;
     filteredData = filteredData.slice(start, end);
     // add meta data previously from lazyPaginatedQuery since components expect it
     Object.defineProperty(filteredData, 'meta', {
       value: {
-        currentPage: page,
+        currentPage,
         lastPage,
         nextPage: page + 1,
         prevPage: page - 1,
         total: data.length,
-        filteredTotal: filteredData.length,
+        filteredTotal,
         pageSize,
       },
       writable: false,

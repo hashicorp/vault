@@ -44,7 +44,6 @@ func newTestClusterForTokenHeader(t *testing.T, opts *vault.TestClusterOptions) 
 	}
 	opts.HandlerFunc = Handler
 	cluster := vault.NewTestCluster(t, nil, opts)
-	cluster.Start()
 
 	core := cluster.Cores[0]
 	transport := cleanhttp.DefaultPooledTransport()
@@ -54,7 +53,7 @@ func newTestClusterForTokenHeader(t *testing.T, opts *vault.TestClusterOptions) 
 }
 
 // TestTokenHeader_ExceedsDefaultLimit_IsRejected verifies that tokens larger than
-// DefaultMaxTokenHeaderSize are rejected with 400 before token validation occurs.
+// DefaultMaxTokenHeaderSize are rejected with 431 before token validation occurs.
 func TestTokenHeader_ExceedsDefaultLimit_IsRejected(t *testing.T) {
 	t.Parallel()
 
@@ -99,8 +98,8 @@ func TestTokenHeader_ExceedsDefaultLimit_IsRejected(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			require.Equal(t, http.StatusBadRequest, resp.StatusCode,
-				"token of %d bytes must be rejected by Vault middleware (want 400, not 403)",
+			require.Equal(t, http.StatusRequestHeaderFieldsTooLarge, resp.StatusCode,
+				"token of %d bytes must be rejected by Vault middleware (want 431, not 403)",
 				tc.headerSize)
 		})
 	}
@@ -173,8 +172,8 @@ func TestTokenHeader_ConfigurableLimit_Enforced(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode,
-		"token exceeding custom limit of %d bytes must be rejected with 400", customLimit)
+	require.Equal(t, http.StatusRequestHeaderFieldsTooLarge, resp.StatusCode,
+		"token exceeding custom limit of %d bytes must be rejected with 431", customLimit)
 
 	atLimit := strings.Repeat("x", customLimit)
 	resp2, err := sendTokenHeaderRequest(t, client, addr, consts.AuthHeaderName, atLimit)
@@ -204,7 +203,7 @@ func TestTokenHeader_MultipleAuthorizationHeaders_BypassPrevented(t *testing.T) 
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode,
+	require.Equal(t, http.StatusRequestHeaderFieldsTooLarge, resp.StatusCode,
 		"oversized Bearer token must be rejected even when a non-Bearer Authorization header precedes it")
 }
 
@@ -243,7 +242,7 @@ func TestTokenHeader_ErrorResponseFormat(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+	require.Equal(t, http.StatusRequestHeaderFieldsTooLarge, resp.StatusCode)
 	require.Equal(t, "application/json", resp.Header.Get("Content-Type"))
 
 	body, err := io.ReadAll(resp.Body)
@@ -505,7 +504,7 @@ func TestTokenHeader_ClusterListener_SkipsCheck(t *testing.T) {
 		resp, err := cleanhttp.DefaultClient().Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
-		require.Equal(t, http.StatusBadRequest, resp.StatusCode,
+		require.Equal(t, http.StatusRequestHeaderFieldsTooLarge, resp.StatusCode,
 			"API listener must reject a token that exceeds the default size limit")
 	})
 }

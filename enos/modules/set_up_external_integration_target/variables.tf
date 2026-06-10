@@ -41,3 +41,17 @@ variable "ports" {
     description = string
   }))
 }
+
+
+variable "database_configs" {
+  description = "Database configurations for setting up database servers"
+  type = map(object({
+    port        = number
+    version     = string
+    username    = string
+    password    = string
+    database    = string
+    description = string
+  }))
+  default = {}
+}

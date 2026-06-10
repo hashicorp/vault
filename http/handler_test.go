@@ -897,13 +897,7 @@ func TestHandler_Parse_Form(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	c := cleanhttp.DefaultClient()
 	c.Transport = &http.Transport{
@@ -967,8 +961,6 @@ func TestHandler_MaxRequestSize(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 	_, err := client.KVv2("secret").Put(context.Background(), "foo", map[string]interface{}{
@@ -1203,8 +1195,6 @@ func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
 					},
 				},
 			})
-			cluster.Start()
-			defer cluster.Cleanup()
 
 			client := cluster.Cores[0].Client
 			client.SetToken(cluster.RootToken)
@@ -1252,9 +1242,6 @@ func TestAutoSnapshotLoadForwarded(t *testing.T) {
 		NumCores:    2,
 		HandlerFunc: Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[1].Client
 	client.SetToken(cluster.RootToken)

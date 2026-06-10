@@ -29,14 +29,24 @@ locals {
     port = var.ports.mysql.port
     host = var.hosts[0]
   }
+  # Database configurations are now pulled from var.database_configs
+  database_servers = {
+    for db_name, db_config in var.database_configs : db_name => merge(db_config, {
+      host = var.hosts[0]
+    })
+  }
 }
 
 # Outputs
 output "state" {
-  value = {
-    ldap = local.ldap_server
-    kmip = local.kmip_client
-  }
+  value = merge(
+    {
+      ldap = local.ldap_server
+      kmip = local.kmip_client
+    },
+    # Add database servers dynamically
+    { for db_name, db_server in local.database_servers : db_name => db_server }
+  )
 }
 
 # We run install_packages before we install Vault because for some combinations of
@@ -124,4 +134,20 @@ resource "enos_remote_exec" "create_kmip" {
       host = local.kmip_client.host.public_ip
     }
   }
+}
+
+# Creating Database Servers using generic database_container module
+module "database_servers" {
+  for_each = var.database_configs
+  source   = "../database_container"
+
+  database_type      = each.key
+  db_version         = each.value.version
+  username           = each.value.username
+  password           = each.value.password
+  database           = each.value.database
+  port               = each.value.port
+  host               = var.hosts[0]
+  instance_name      = "default"
+  depends_on_modules = [module.install_packages]
 }

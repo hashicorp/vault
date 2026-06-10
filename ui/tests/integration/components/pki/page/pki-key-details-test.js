@@ -74,7 +74,7 @@ module('Integration | Component | pki key details page', function (hooks) {
     assert.dom(PKI_KEYS.keyEditLink).doesNotExist('does not render edit button if no permission');
   });
 
-  test('it renders the private key as a <CertificateCard> component when there is a private key', async function (assert) {
+  test('it renders the private key as a <EncodedDataCard> component when there is a private key', async function (assert) {
     this.key.private_key = 'private-key-value';
 
     await this.renderComponent();

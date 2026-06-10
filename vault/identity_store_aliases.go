@@ -136,6 +136,42 @@ This field is deprecated, use canonical_id.`,
 	}
 }
 
+// validateAliasMountAccessor validates mount_accessor values for entity aliases.
+//
+// It accepts either a real mounted backend accessor or a supported synthetic
+// accessor validated by the synthetic alias accessor validator extension point.
+//
+// For mounted backend accessors, this returns the matched mount entry. For
+// synthetic accessors, this returns a minimal entry carrying namespace/local
+// semantics used by alias create/update checks.
+func (i *IdentityStore) validateAliasMountAccessor(ctx context.Context, mountAccessor string) (*MountEntry, error) {
+	if mountAccessor == "" {
+		return nil, fmt.Errorf("invalid mount accessor %q", mountAccessor)
+	}
+	if mountEntry := i.router.MatchingMountByAccessor(mountAccessor); mountEntry != nil {
+		return mountEntry, nil
+	}
+
+	if i.syntheticAliasAccessorValidator == nil {
+		i.logger.Error("synthetic alias accessor validator is not configured", "mount_accessor", mountAccessor)
+		return nil, fmt.Errorf("failed to validate mount accessor %q due to internal configuration error", mountAccessor)
+	}
+
+	valid, err := i.syntheticAliasAccessorValidator.validateSyntheticAliasAccessor(ctx, mountAccessor)
+	if err != nil {
+		return nil, err
+	}
+	if !valid {
+		return nil, fmt.Errorf("invalid mount accessor %q", mountAccessor)
+	}
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &MountEntry{NamespaceID: ns.ID}, nil
+}
+
 func aliasFieldSchema() map[string]*framework.FieldSchema {
 	return map[string]*framework.FieldSchema{
 		"id": {
@@ -279,20 +315,31 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			}
 		}
 
+		// If they didn't provide an ID or Mount Accessor, but provided an issuer, validate that the issuer has been
+		// registered. Return error if issuer has not been registered.
+		if mountAccessor == "" && issuer != "" {
+			// Generate synthetic Mount Accessor
+			syntheticAccessor, err := i.syntheticAliasAccessorValidator.generateSyntheticAliasAccessor(ctx, issuer)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			mountAccessor = syntheticAccessor
+		}
+
 		// If they didn't provide an ID, we must have both accessor and name provided
 		if mountAccessor == "" || name == "" {
 			return logical.ErrorResponse("'id' or 'mount_accessor' and 'name' must be provided"), nil
 		}
 
-		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
-		if mountEntry == nil {
-			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
+		mountEntry, err := i.validateAliasMountAccessor(ctx, mountAccessor)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
-		if mountEntry.NamespaceID != ns.ID {
+		if mountEntry != nil && mountEntry.NamespaceID != ns.ID {
 			return logical.ErrorResponse("matching mount is in a different namespace than request"), logical.ErrPermissionDenied
 		}
 
-		localMount := mountEntry.Local
+		localMount := mountEntry != nil && mountEntry.Local
 
 		// Look up the alias by factors; if it's found it's an update
 		return i.handleAliasCreateUpdateCommon(ctx, ns, mountAccessor, name, canonicalID, externalID, issuer, customMetadata, localMount, "")
@@ -497,11 +544,11 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		!strutil.EqualStringMaps(customMetadata, alias.CustomMetadata) ||
 		issuer != alias.Issuer || externalID != alias.ExternalID {
 		// Check here to see if such an alias already exists, if so bail
-		mountEntry := i.router.MatchingMountByAccessor(mountAccessor)
-		if mountEntry == nil {
-			return logical.ErrorResponse(fmt.Sprintf("invalid mount accessor %q", mountAccessor)), nil
+		mountEntry, err := i.validateAliasMountAccessor(ctx, mountAccessor)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
 		}
-		if mountEntry.NamespaceID != alias.NamespaceID {
+		if mountEntry != nil && mountEntry.NamespaceID != alias.NamespaceID {
 			return logical.ErrorResponse("given mount accessor is not in the same namespace as the existing alias"), logical.ErrPermissionDenied
 		}
 
@@ -536,15 +583,16 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		alias.CustomMetadata = customMetadata
 	}
 
-	mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor)
-	if mountValidationResp == nil {
-		return nil, fmt.Errorf("invalid mount accessor %q", alias.MountAccessor)
+	mountEntry, err := i.validateAliasMountAccessor(ctx, alias.MountAccessor)
+	if err != nil {
+		return nil, err
 	}
+	mountIsLocal := mountEntry != nil && mountEntry.Local
 
 	newEntity := currentEntity
 	if canonicalID != "" && canonicalID != alias.CanonicalID {
 		// Don't allow moving local aliases between entities.
-		if mountValidationResp.MountLocal {
+		if mountIsLocal {
 			return logical.ErrorResponse("local aliases can't be moved between entities"), nil
 		}
 
@@ -590,11 +638,11 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 		currentEntity = nil
 	}
 
-	if mountValidationResp.MountLocal {
+	if mountIsLocal {
 		alias, err = i.processLocalAlias(ctx, &logical.Alias{
 			MountAccessor:  mountAccessor,
 			Name:           name,
-			Local:          mountValidationResp.MountLocal,
+			Local:          mountIsLocal,
 			CustomMetadata: customMetadata,
 			Issuer:         issuer,
 			ExternalID:     externalID,
@@ -656,7 +704,7 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 		return nil, err
 	}
 	if ns.ID != alias.NamespaceID {
-		return logical.ErrorResponse("alias and request are in different namespaces"), logical.ErrPermissionDenied
+		return nil, nil
 	}
 
 	respData := map[string]interface{}{}
@@ -721,7 +769,7 @@ func (i *IdentityStore) pathAliasIDDelete() framework.OperationFunc {
 			return nil, err
 		}
 		if ns.ID != alias.NamespaceID {
-			return logical.ErrorResponse("request and alias are in different namespaces"), logical.ErrPermissionDenied
+			return nil, nil
 		}
 
 		scimClientID := scimClientIDFromContext(ctx)

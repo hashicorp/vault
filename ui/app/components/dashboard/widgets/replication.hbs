@@ -1,0 +1,109 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<div data-test-card="replication" ...attributes>
+  <div class="is-flex-between">
+    <Hds::Text::Display @size="300" data-test-text-display="Cluster replication">Cluster replication</Hds::Text::Display>
+
+    {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+      <Hds::Link::Standalone
+        @icon="arrow-right"
+        @text="Details"
+        @iconPosition="trailing"
+        @route="vault.cluster.replication.index"
+        data-test-link-to="Details"
+      />
+    {{else}}
+      <Hds::Link::Standalone
+        @icon="arrow-right"
+        @text="Enable replication"
+        @iconPosition="trailing"
+        @route="vault.cluster.replication"
+        data-test-link-to="Enable replication"
+      />
+    {{/if}}
+  </div>
+
+  <div class="has-top-margin-s">
+    <Hds::Text::Body @tag="p" @size="100" @color="faint">
+      Updated
+      {{date-format @updatedAt "MMMM d, yyyy, h:mm:ss aaa" withTimeZone=true}}
+    </Hds::Text::Body>
+  </div>
+  {{#if (or @version.hasPerfReplication @version.hasDRReplication)}}
+    <Hds::Table class="has-top-margin-s" @caption="Vault configuration details">
+      <:body as |B|>
+        {{#if @version.hasDRReplication}}
+          <B.Tr data-test-table-row="0">
+            <B.Td class="one-half-width" data-test-table-data="DR">
+              <Hds::Text::Body @tag="p" @color="faint" class="is-flex align-items-center">
+                Disaster recovery
+                {{if (not-eq @replication.dr.mode "disabled") @replication.dr.mode}}
+                <Hds::TooltipButton
+                  @text="The cluster's current operating state."
+                  aria-label="The cluster's current operating state."
+                  class="has-left-margin-xs"
+                >
+                  <Hds::Icon @name="info" @color="faint" @size="16" />
+                </Hds::TooltipButton>
+              </Hds::Text::Body>
+              {{#if (not-eq @replication.dr.mode "disabled")}}
+                <Hds::Text::Body @tag="p" @color="faint" class="has-top-margin-s is-flex align-items-center">
+                  Known secondaries
+                  <Hds::TooltipButton
+                    @text="Number of secondaries connected to the primary."
+                    aria-label="Number of secondaries connected to the primary."
+                    class="has-left-margin-xs"
+                  >
+                    <Hds::Icon @name="info" @color="faint" @size="16" />
+                  </Hds::TooltipButton>
+                </Hds::Text::Body>
+              {{/if}}
+            </B.Td>
+            <B.Td class="one-half-width" data-test-table-data="DR value">
+              {{#let (cluster-states @replication.dr.state) as |clusterState|}}
+                <Hds::Badge
+                  data-test-badge="DR"
+                  @color={{if @replication.dr.clusterId clusterState.color "warning"}}
+                  @text={{if @replication.dr.clusterId (capitalize @replication.dr.state) "Not set up"}}
+                />
+              {{/let}}
+              {{#if (not-eq @replication.dr.mode "disabled")}}
+                <Hds::Text::Body @tag="p" class="has-top-margin-s">
+                  {{or @replication.dr.knownSecondaries.length 0}}
+                </Hds::Text::Body>
+              {{/if}}
+            </B.Td>
+          </B.Tr>
+        {{/if}}
+        {{#if @version.hasPerfReplication}}
+          <B.Tr data-test-table-row="1">
+            <B.Td class="one-half-width" data-test-table-data="Performance">
+              <Hds::Text::Body @tag="p" @color="faint" class="is-flex align-items-center">
+                Performance replication
+                {{if (not-eq @replication.performance.mode "disabled") @replication.performance.mode}}
+                <Hds::TooltipButton
+                  @text="The cluster's current operating state."
+                  aria-label="The cluster's current operating state."
+                  class="has-left-margin-xs"
+                >
+                  <Hds::Icon @name="info" @color="faint" @size="16" />
+                </Hds::TooltipButton>
+              </Hds::Text::Body>
+            </B.Td>
+            <B.Td class="one-half-width" data-test-table-data="Performance value">
+              {{#let (cluster-states @replication.performance.state) as |clusterState|}}
+                <Hds::Badge
+                  data-test-badge="Performance"
+                  @color={{if @replication.performance.clusterId clusterState.color "warning"}}
+                  @text={{if @replication.performance.clusterId (capitalize @replication.performance.state) "Not set up"}}
+                />
+              {{/let}}
+            </B.Td>
+          </B.Tr>
+        {{/if}}
+      </:body>
+    </Hds::Table>
+  {{/if}}
+</div>

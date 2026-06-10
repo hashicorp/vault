@@ -178,11 +178,12 @@ scenario "plugin" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
-      cluster_tag_key = "plugin-integration"
-      common_tags     = global.tags
-      instance_count  = 1
-      vpc_id          = step.create_vpc.id
+      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["26.04"]
+      cluster_tag_key  = "plugin-integration"
+      common_tags      = global.tags
+      instance_count   = 1
+      root_volume_size = 64
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -226,7 +227,7 @@ scenario "plugin" {
     description = "Set up external plugin services (LDAP server, databases, etc.) for plugin testing"
     module      = module.set_up_external_integration_target
     depends_on = [
-      step.create_plugin_integration_target
+      step.create_vault_cluster_targets
     ]
 
     providers = {
@@ -234,10 +235,11 @@ scenario "plugin" {
     }
 
     variables {
-      hosts      = step.create_plugin_integration_target.hosts
-      ip_version = matrix.ip_version
-      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
-      ports      = global.integration_host_ports
+      hosts            = step.create_plugin_integration_target.hosts
+      ip_version       = matrix.ip_version
+      packages         = concat(global.packages, global.distro_packages["ubuntu"]["26.04"], ["podman", "podman-docker"])
+      ports            = global.integration_host_ports
+      database_configs = global.database_configs
     }
   }
 
@@ -432,10 +434,10 @@ scenario "plugin" {
     }
   }
 
-  step "verify_vault_version" {
-    description = global.description.verify_vault_version
-    module      = module.vault_verify_version
-    depends_on  = [step.verify_vault_unsealed]
+  step "run_verify_blackbox_tests" {
+    description = global.description.run_verify_blackbox_tests
+    module      = module.vault_run_blackbox_test
+    depends_on  = [step.verify_vault_unsealed, step.get_vault_cluster_ips]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -450,14 +452,17 @@ scenario "plugin" {
     ]
 
     variables {
-      hosts                 = step.create_vault_cluster_targets.hosts
-      vault_addr            = step.create_vault_cluster.api_addr_localhost
+      leader_host           = step.get_vault_cluster_ips.leader_host
+      leader_public_ip      = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token      = step.create_vault_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/verify"
+      test_names            = ["TestVaultServerVersion"]
       vault_edition         = matrix.edition
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_root_token      = step.create_vault_cluster.root_token
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+
     }
   }
 
@@ -465,7 +470,7 @@ scenario "plugin" {
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
 
-    // For plugins, if package filter is provided, convert to paths, otherwise use default plugins path
+    // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin tests
     plugin_test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
       for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/plugins/${pkg}/..."
     ] : ["./vault/external_tests/blackbox/plugins/..."]
@@ -475,14 +480,19 @@ scenario "plugin" {
   step "run_plugin_blackbox_tests" {
     description = local.is_test_name_filter ? "Run specific plugin tests: ${join(", ", var.blackbox_test_filter)}" : "Run plugin blackbox tests from: ${join(", ", length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? var.blackbox_test_filter : ["plugins"])}"
     module      = module.vault_run_blackbox_test
-    depends_on  = [step.get_vault_cluster_ips, step.set_up_plugin_services, step.verify_vault_version]
+    depends_on  = [step.get_vault_cluster_ips, step.set_up_plugin_services, step.run_verify_blackbox_tests]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     verifies = [
-      // Plugin testing quality - tests will define their own verification
+      quality.vault_secrets_ldap_write_config,
+      quality.vault_secrets_kmip_write_config,
+      quality.vault_secrets_kv_read,
+      quality.vault_secrets_kv_write,
+      quality.vault_mount_auth,
+      quality.vault_mount_kv,
     ]
 
     variables {
@@ -543,7 +553,6 @@ scenario "plugin" {
 
   output "plugin_test_results" {
     description = "Results from plugin blackbox tests"
-    sensitive   = true
     value       = step.run_plugin_blackbox_tests.test_results_summary
   }
 }

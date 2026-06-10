@@ -63,9 +63,6 @@ func TestKVHelpers(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 	})
 
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
 	core := cores[0].Core
 	client := cluster.Cores[0].Client

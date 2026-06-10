@@ -66,10 +66,7 @@ func TestOCIEndToEnd(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	client := cluster.Cores[0].Client
 
 	// Setup Vault

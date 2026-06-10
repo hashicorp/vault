@@ -26,6 +26,7 @@ module('Integration | Component | code-generator/policy/stanza', function (hooks
           @onChange={{this.onChange}}
           @onDelete={{this.onDelete}}
           @stanza={{this.stanza}}
+          @renderValidations={{this.renderValidations}}
         />`);
     };
   });
@@ -167,5 +168,62 @@ module('Integration | Component | code-generator/policy/stanza', function (hooks
     await this.renderComponent();
     await click(GENERAL.button('Delete'));
     assert.true(this.onDelete.calledOnce, 'onDelete is called');
+  });
+
+  test('it does not render validations when @renderValidations is undefined', async function (assert) {
+    await this.renderComponent();
+    // Make sure path and capabilities are empty (which would normally render validations)
+    assert.dom(GENERAL.inputByAttr('path')).hasNoValue();
+    ACL_CAPABILITIES.forEach((capability) => {
+      assert.dom(GENERAL.fieldLabel(capability)).hasText(capability);
+      assert.dom(GENERAL.checkboxByAttr(capability)).isNotChecked();
+    });
+    assert.dom('[data-test-validation-error]').doesNotExist();
+  });
+
+  module('validations', function (hooks) {
+    hooks.beforeEach(function () {
+      this.renderValidations = true;
+    });
+
+    test('it renders validations when path is empty', async function (assert) {
+      await this.renderComponent();
+      // Click capability to just assert path
+      await click(GENERAL.checkboxByAttr('update'));
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).exists().hasText('Path cannot be empty.');
+      assert.dom('[data-test-validation-error]').exists({ count: 1 });
+    });
+
+    test('it renders validations when no capabilities are selected', async function (assert) {
+      await this.renderComponent();
+      // Fill in path to only assert capabilities
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      assert
+        .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+        .exists()
+        .hasText('Rule must have at least one capability.');
+      assert.dom('[data-test-validation-error]').exists({ count: 1 });
+    });
+
+    test('it renders validations for neither path or capabilities', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).exists();
+      assert.dom(GENERAL.validationErrorByAttr('capabilities-0')).exists();
+      assert.dom('[data-test-validation-error]').exists({ count: 2 });
+    });
+
+    test('it removes validation when path is valid', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).exists();
+      await fillIn(GENERAL.inputByAttr('path'), 'secret/data/*');
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).doesNotExist();
+    });
+
+    test('it removes validation when at least one capability is selected', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.validationErrorByAttr('capabilities-0')).exists();
+      await click(GENERAL.checkboxByAttr('read'));
+      assert.dom(GENERAL.validationErrorByAttr('capabilities-0')).doesNotExist();
+    });
   });
 });

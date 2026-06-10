@@ -353,6 +353,14 @@ func (r *RedShift) customDeleteUser(ctx context.Context, req dbplugin.DeleteUser
 	return dbplugin.DeleteUserResponse{}, tx.Commit()
 }
 
+func quoteLiteral(value string) string {
+	end := strings.IndexRune(value, 0)
+	if end > -1 {
+		value = value[:end]
+	}
+	return `'` + strings.ReplaceAll(value, `'`, `''`) + `'`
+}
+
 func (r *RedShift) defaultDeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) (dbplugin.DeleteUserResponse, error) {
 	db, err := r.getConnection(ctx)
 	if err != nil {
@@ -448,7 +456,7 @@ SELECT COUNT(process) INTO qtyconns FROM stv_sessions WHERE user_name=dbusername
 END
 $$;`)
 
-		revocationStmts = append(revocationStmts, fmt.Sprintf(`call terminateloop('%s');`, username))
+		revocationStmts = append(revocationStmts, fmt.Sprintf(`call terminateloop(%s);`, quoteLiteral(username)))
 	}
 
 	// again, here, we do not stop on error, as we want to remove as

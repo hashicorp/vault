@@ -39,7 +39,12 @@ const (
 	minRootCredRollbackAge  = 1 * time.Minute
 )
 
-var databaseConfigNameFromRotationIDRegex = regexp.MustCompile("^.+/config/(.+$)")
+var (
+	databaseInitTimeout                   = 10 * time.Second
+	databaseConfigNameFromRotationIDRegex = regexp.MustCompile("^.+/config/(.+$)")
+)
+
+var errDatabaseInitializeTimeout = errors.New("timeout exceeded during Initialize")
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -378,6 +383,61 @@ func (b *databaseBackend) CloseIfShutdown(db *dbPluginInstance, err error) {
 			b.connections.PopIfEqual(db.name, db.id)
 		}()
 	}
+}
+
+type initializeConnectionResult struct {
+	resp v5.InitializeResponse
+	err  error
+}
+
+// initializeConnection bounds how long Vault waits for plugin initialization.
+// Some drivers and plugins do not reliably honor context cancellation during
+// connection verification, so Initialize runs in a goroutine and is raced
+// against a timeout to keep rotation and connection creation from hanging
+// indefinitely while locks are held.
+func (b *databaseBackend) initializeConnection(ctx context.Context, dbw databaseVersionWrapper, initReq v5.InitializeRequest) (v5.InitializeResponse, error) {
+	timeoutCtx, cancel := context.WithTimeout(ctx, databaseInitTimeout)
+	defer cancel()
+
+	done := make(chan initializeConnectionResult, 1)
+
+	go func() {
+		resp, err := dbw.Initialize(timeoutCtx, initReq)
+		done <- initializeConnectionResult{resp: resp, err: err}
+	}()
+
+	select {
+	case result := <-done:
+		return result.resp, result.err
+	case <-timeoutCtx.Done():
+		// Preserve the caller's cancellation or deadline when it fired first.
+		if ctx.Err() != nil {
+			return v5.InitializeResponse{}, ctx.Err()
+		}
+		// This only bounds Vault's wait; the underlying Initialize call may still
+		// be blocked below the plugin boundary until that implementation notices cancellation.
+		return v5.InitializeResponse{}, fmt.Errorf("%w: %v", errDatabaseInitializeTimeout, timeoutCtx.Err())
+	}
+}
+
+// closeDatabaseWrapperAfterInitError treats init timeouts differently because a
+// synchronous Close can block behind the same stuck initialization path.
+func (b *databaseBackend) closeDatabaseWrapperAfterInitError(dbw databaseVersionWrapper, err error) {
+	/*
+	 * Use async close when the init goroutine may still be running. This
+	 * covers both Vault's own databaseInitTimeout sentinel and the case where
+	 * the caller's context fired first (path B1 in initializeConnection),
+	 * which returns the raw ctx.Err() rather than the wrapped sentinel.
+	 */
+	if errors.Is(err, errDatabaseInitializeTimeout) ||
+		errors.Is(err, context.DeadlineExceeded) ||
+		errors.Is(err, context.Canceled) {
+		// Let the caller unwind immediately; best-effort cleanup continues in the background.
+		go dbw.Close()
+		return
+	}
+
+	_ = dbw.Close()
 }
 
 // clean closes all connections from all database types

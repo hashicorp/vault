@@ -67,10 +67,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 		Physical: inm,
 	}
 	cluster := vault.NewTestCluster(t, &conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	client := cluster.Cores[0].Client
 	client.SetMaxRetries(0)
 
@@ -221,7 +218,6 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 		// still be the old keys (which are still currently set)
 		cluster.EnsureCoresSealed(t)
 		cluster.UnsealCores(t)
-		vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 		// Should be able to init again and get back to where we were
 		doRekeyInitialSteps()
@@ -257,8 +253,6 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 		opts.SealFunc = nil // post rekey we should use the barrier config on disk
 		cluster = vault.NewTestCluster(t, &conf, opts)
 		cluster.BarrierKeys = oldKeys
-		cluster.Start()
-		defer cluster.Cleanup()
 
 		if err := cluster.UnsealCoresWithError(t, false); err == nil {
 			t.Fatal("expected error")

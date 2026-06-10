@@ -66,6 +66,8 @@ Vagrantfile
 enos-local.vars.hcl
 enos/**/support
 enos/**/kubeconfig
+enos/modules/**/plan.yml
+enos/sarif**.json
 .terraform
 .terraform.lock.hcl
 .tfstate.*

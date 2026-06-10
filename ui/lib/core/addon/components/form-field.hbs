@@ -93,6 +93,7 @@
           name={{@attr.name}}
           @id={{@attr.name}}
           @isInvalid={{this.validationError}}
+          disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           {{on "change" this.onChangeWithEvent}}
           data-test-input={{@attr.name}}
           as |F|

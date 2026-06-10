@@ -8,12 +8,15 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { normalizeMetricData, NormalizedBillingMetrics } from 'vault/utils/metrics-helpers';
+import { subMonths } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 
 import type ApiService from 'vault/services/api';
 import type { Month, NormalizedMetricsData } from 'vault/vault/billing/overview';
 import type { SystemReadBillingOverviewResponse } from '@hashicorp/vault-client-typescript';
 
 const REFRESH_PERIOD_MS = 10 * 60 * 1000 + 30 * 1000; // 10 minutes 30 seconds
+export const INVALID_DATE_TIME = '0001-01-01T00:00:00Z';
 
 export default class BillingPageOverview extends Component {
   @service declare readonly api: ApiService;
@@ -28,31 +31,51 @@ export default class BillingPageOverview extends Component {
   /** Milliseconds to wait between each poll. Updated dynamically based on API response. */
   private _interval = 5000;
 
+  invalidDateTime = INVALID_DATE_TIME;
+
   detailsByMetric = {
     Secrets: [
       NormalizedBillingMetrics.STATIC_SECRETS_KV,
-      NormalizedBillingMetrics.DYNAMIC_ROLES,
-      NormalizedBillingMetrics.STATIC_ROLES,
+      NormalizedBillingMetrics.DYNAMIC_ROLES_TOTAL,
+      NormalizedBillingMetrics.AUTO_ROTATED_ROLES_TOTAL,
     ],
     'Credential units': [
       NormalizedBillingMetrics.PKI_UNITS_TOTAL,
       NormalizedBillingMetrics.SSH_UNITS_OTP_UNITS,
       NormalizedBillingMetrics.SSH_UNITS_CERTIFICATE_UNITS,
+      NormalizedBillingMetrics.ID_TOKEN_UNITS_OIDC,
+      NormalizedBillingMetrics.ID_TOKEN_UNITS_SPIFFE,
     ],
     'Data protection calls': [
       NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TRANSFORM,
       NormalizedBillingMetrics.DATA_PROTECTION_CALLS_TRANSIT,
+      NormalizedBillingMetrics.DATA_PROTECTION_CALLS_GCPKMS,
     ],
     'Managed keys': [NormalizedBillingMetrics.MANAGED_KEYS_TOTP, NormalizedBillingMetrics.MANAGED_KEYS_KMSE],
   };
 
   constructor(owner: unknown, args: object) {
     super(owner, args);
-    this.startPoll();
+    this.initializeBillingMetrics();
+  }
+
+  get isCurrentMonth() {
+    if (!this.selectedDateOption?.month) return false;
+    const selectedDate = new Date(`${this.selectedDateOption.month}-01T00:00:00Z`);
+    const currentDate = new Date();
+
+    return (
+      selectedDate.getUTCFullYear() === currentDate.getUTCFullYear() &&
+      selectedDate.getUTCMonth() === currentDate.getUTCMonth()
+    );
   }
 
   get selectedDate() {
     return this.selectedDateOption ?? this.months[0] ?? null;
+  }
+
+  get isSelectedDateInvalid() {
+    return this.selectedDate?.updated_at === this.invalidDateTime;
   }
 
   /**
@@ -66,9 +89,14 @@ export default class BillingPageOverview extends Component {
   }
 
   fetchBillingMetrics = async () => {
+    const today = new Date();
+    const currentMonth = formatInTimeZone(today, 'UTC', 'yyyy-MM');
+    const previousMonth = formatInTimeZone(subMonths(today, 1), 'UTC', 'yyyy-MM');
+
     const response: SystemReadBillingOverviewResponse | null | undefined =
-      await this.api.sys.systemReadBillingOverview();
-    this.months = (response?.months as Month[]) || [];
+      await this.api.sys.systemReadBillingOverview(currentMonth, undefined, previousMonth);
+
+    this.months = (response?.months?.slice(0, 2) as Month[]) || [];
     const updatedMonthFromSelectedMonth = this.months.find(
       (month: Month) => month.month === this.selectedDateOption?.month
     );
@@ -78,13 +106,26 @@ export default class BillingPageOverview extends Component {
       this._interval = this.calculatePollingInterval(updatedMonth.updated_at);
     }
 
-    this.onDateChange(updatedMonth ?? null);
+    this.selectedDateOption = updatedMonth ?? null;
+    this.normalizedMetricData = normalizeMetricData(updatedMonth);
     return this.months;
   };
 
+  async initializeBillingMetrics() {
+    await this.fetchBillingMetrics();
+    this.updatePollingState();
+  }
+
+  updatePollingState() {
+    if (this.isCurrentMonth) {
+      this.startPoll();
+    } else {
+      this.stopPoll();
+    }
+  }
+
   /**
-   * Starts the polling loop, invoking fetchBillingMetrics immediately and then
-   * repeatedly on each interval. No-ops if polling is already active.
+   * Starts the polling loop and repeatedly invokes fetchBillingMetrics on each interval.
    */
   startPoll() {
     if (this._timer) return;
@@ -101,7 +142,7 @@ export default class BillingPageOverview extends Component {
       }
     };
 
-    poll();
+    this._timer = setTimeout(poll, this._interval);
   }
 
   /**
@@ -126,9 +167,16 @@ export default class BillingPageOverview extends Component {
   };
 
   @action
-  onDateChange(dropdownOption: Month | null | undefined) {
+  async onDateChange(dropdownOption: Month | null | undefined) {
     this.selectedDateOption = dropdownOption;
     this.normalizedMetricData = normalizeMetricData(dropdownOption);
+
+    if (this.isCurrentMonth) {
+      this.stopPoll();
+      await this.fetchBillingMetrics();
+    }
+
+    this.updatePollingState();
   }
 
   willDestroy() {
