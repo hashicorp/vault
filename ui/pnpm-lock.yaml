@@ -118,9 +118,6 @@ importers:
       '@icholy/duration':
         specifier: ~5.1.0
         version: 5.1.0
-      '@lineal-viz/lineal':
-        specifier: ~0.5.1
-        version: 0.5.1(@babel/core@7.26.10)(@glint/template@1.7.7)(ember-source@5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.7)(rsvp@4.8.5)(webpack@5.107.2))
       '@playwright/test':
         specifier: ^1.60.0
         version: 1.60.0
