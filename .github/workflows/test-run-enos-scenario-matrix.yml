@@ -271,6 +271,17 @@ jobs:
         run: |
           echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
 
+      - name: Capture AWS Resource Counts Before Test
+        id: capture-aws-before
+        continue-on-error: true
+        run: |
+          chmod +x ./.github/scripts/capture-aws-resources.sh
+          ./.github/scripts/capture-aws-resources.sh \
+            "${{ matrix.attributes.aws_region }}" \
+            "${{ matrix.scenario.id.filter }}" \
+            "enos-aws-resource-before.txt" \
+            "Before Enos Test"
+
       - id: run-scenario
         name: Run Enos scenario ${{ matrix.scenario.id.filter }}
         uses: ./.github/actions/run-enos-scenario
@@ -283,6 +294,45 @@ jobs:
           upload-debug-data: 'true'
           debug-data-retention-days: '30'
           debug-data-path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
+
+      - name: Capture AWS Resource Counts After Test
+        id: capture-aws-after
+        if: always()
+        continue-on-error: true
+        run: |
+          chmod +x ./.github/scripts/capture-aws-resources.sh
+          ./.github/scripts/capture-aws-resources.sh \
+            "${{ matrix.attributes.aws_region }}" \
+            "${{ matrix.scenario.id.filter }}" \
+            "enos-aws-resource-after.txt" \
+            "After Enos Test"
+
+      - name: Show AWS Resource Differences
+        id: show-resource-diff
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "=== AWS Resource Count Differences ==="
+          echo ""
+          if [[ -f "enos-aws-resource-before.txt" && -f "enos-aws-resource-after.txt" ]]; then
+            echo "Comparing before and after resource counts..."
+            echo ""
+            diff -u enos-aws-resource-before.txt enos-aws-resource-after.txt || true
+          else
+            echo "Could not find both before and after files for comparison"
+          fi
+
+      - name: Upload AWS Resource Snapshots
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: aws-resources_${{ matrix.scenario.id.filter }}
+          path: |
+            enos-aws-resource-before.txt
+            enos-aws-resource-after.txt
+          retention-days: 30
+          if-no-files-found: ignore
+        continue-on-error: true
 
       - name: Upload Test Results
         if: always()
