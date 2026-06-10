@@ -28,6 +28,18 @@ interface Args {
   runningTotals: TotalClients;
 }
 
+interface DonutTooltipDatum {
+  label?: string;
+  group?: string;
+  value: number | null;
+}
+
+interface DonutTooltipItem {
+  label?: string;
+  group?: string;
+  value?: number | string | null;
+}
+
 const CHART_HEIGHT = '300px';
 const MIN_STACKED_Y_AXIS_MAX = 4;
 
@@ -73,6 +85,28 @@ export default class RunningTotal extends Component<Args> {
     ];
   }
 
+  formatTooltipLabel(label: string) {
+    if (!label) {
+      return label;
+    }
+
+    if (label.startsWith('ACME')) {
+      return label;
+    }
+
+    return `${label.charAt(0).toLowerCase()}${label.slice(1)}`;
+  }
+
+  formatTooltipValue(value: number, label: string) {
+    return `${value.toLocaleString()} ${this.formatTooltipLabel(label)}`;
+  }
+
+  getDonutTooltipLabel(data: unknown, datum: DonutTooltipDatum) {
+    const tooltipItem = Array.isArray(data) ? (data[0] as DonutTooltipItem | undefined) : undefined;
+
+    return tooltipItem?.label || tooltipItem?.group || datum?.group || datum?.label || '';
+  }
+
   get donutChartOptions(): DonutChartOptions {
     const title = 'Client count and type distribution';
     const donutLabel = this.flags.isHvdManaged ? 'Total unique clients' : 'Total clients';
@@ -103,6 +137,16 @@ export default class RunningTotal extends Component<Args> {
       },
       toolbar: {
         enabled: false,
+      },
+      tooltip: {
+        customHTML: (data: unknown, _defaultHTML: string, datum: DonutTooltipDatum) => {
+          if (!datum || datum.value === null) return '';
+
+          const label = this.getDonutTooltipLabel(data, datum);
+          if (!label) return '';
+
+          return this.formatTooltipValue(datum.value, label);
+        },
       },
       accessibility: {
         svgAriaLabel: title,
@@ -281,11 +325,10 @@ export default class RunningTotal extends Component<Args> {
             `;
           }
 
-          const formattedValue = value.toLocaleString();
           return `
             <div class="cds--tooltip cds--tooltip--shown carbon-chart-tooltip">
               <p class="tooltip-month">${month}</p>
-              <p class="tooltip-value">${formattedValue} ${label}</p>
+              <p class="tooltip-value">${this.formatTooltipValue(value, label)}</p>
             </div>
           `;
         },
@@ -351,8 +394,7 @@ export default class RunningTotal extends Component<Args> {
 
           const rows = data
             .map((d) => {
-              const formattedValue = (d.value ?? 0).toLocaleString();
-              return `<p class="tooltip-value">${formattedValue} ${d.group}</p>`;
+              return `<p class="tooltip-value">${this.formatTooltipValue(d.value ?? 0, d.group)}</p>`;
             })
             .join('');
 
