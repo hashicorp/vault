@@ -58,3 +58,36 @@ $fourth: var(--clients-chart-color-fourth);
     box-shadow: none;
   }
 }
+
+.usage-reporting-chart-tooltip {
+  padding: 8px 12px;
+  background: #000;
+  border: 0;
+  box-shadow: none;
+  color: #fff;
+  display: block;
+  font-weight: var(--token-typography-font-weight-bold);
+}
+
+.cds--cc--tooltip:has(.usage-reporting-chart-tooltip) {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.usage-reporting-chart-tooltip * {
+  color: inherit;
+  font-weight: inherit;
+}
+
+.usage-reporting-chart-tooltip::before,
+.usage-reporting-chart-tooltip::after {
+  background: #000;
+  border: 0;
+  box-shadow: none;
+}
+
+.usage-reporting-chart-tooltip__label,
+.usage-reporting-chart-tooltip__value {
+  margin: 0;
+}
