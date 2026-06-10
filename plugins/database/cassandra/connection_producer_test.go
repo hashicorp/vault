@@ -8,12 +8,16 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"io/ioutil"
+	"encoding/pem"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
+	pkihelper "github.com/hashicorp/vault/helper/testhelpers/pki"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
@@ -25,12 +29,17 @@ var insecureFileMounts = map[string]string{
 }
 
 func TestSelfSignedCA(t *testing.T) {
+	// Generate certificates dynamically to avoid expiration issues
+	certBundle := generateCassandraCerts(t)
+
 	copyFromTo := map[string]string{
-		"test-fixtures/with_tls/stores":  "/bitnami/cassandra/secrets/",
-		"test-fixtures/with_tls/cqlshrc": "/.cassandra/cqlshrc",
+		certBundle.StoresDir:   "/bitnami/cassandra/secrets/",
+		certBundle.CqlshrcFile: "/.cassandra/cqlshrc",
 	}
 
-	tlsConfig := loadServerCA(t, "test-fixtures/with_tls/ca.pem")
+	tlsConfig := &tls.Config{
+		RootCAs: certBundle.CertPool,
+	}
 	// Note about CI behavior: when running these tests locally, they seem to pass without issue. However, if the
 	// ServerName is not set, the tests fail within CI. It's not entirely clear to me why they are failing in CI
 	// however by manually setting the ServerName we can get around the hostname/DNS issue and get them passing.
@@ -58,8 +67,8 @@ func TestSelfSignedCA(t *testing.T) {
 		expectErr bool
 	}
 
-	caPEM := loadFile(t, "test-fixtures/with_tls/ca.pem")
-	badCAPEM := loadFile(t, "test-fixtures/with_tls/bad_ca.pem")
+	caPEM := certBundle.CaPEM
+	badCAPEM := certBundle.BadCaPEM
 
 	tests := map[string]testCase{
 		// ///////////////////////
@@ -202,27 +211,132 @@ func assertNewUser(t *testing.T, db *Cassandra, sslOpts *gocql.SslOptions) {
 	assertCreds(t, db.Hosts, db.Port, newUserResp.Username, newUserReq.Password, sslOpts, 5*time.Second)
 }
 
-func loadServerCA(t *testing.T, file string) *tls.Config {
-	t.Helper()
-
-	pemData, err := ioutil.ReadFile(file)
-	require.NoError(t, err)
-
-	pool := x509.NewCertPool()
-	pool.AppendCertsFromPEM(pemData)
-
-	config := &tls.Config{
-		RootCAs: pool,
-	}
-	return config
+type cassandraCertBundle struct {
+	CaPEM       string
+	BadCaPEM    string
+	CertPool    *x509.CertPool
+	StoresDir   string
+	CqlshrcFile string
 }
 
-func loadFile(t *testing.T, filename string) string {
+// generateCassandraCerts generates fresh certificates for Cassandra testing
+func generateCassandraCerts(t *testing.T) *cassandraCertBundle {
 	t.Helper()
 
-	contents, err := ioutil.ReadFile(filename)
+	// Generate CA and server certificate using pkihelper
+	result := pkihelper.GenerateCertWithRoot(t)
+
+	// Create a temporary directory for all certificate files
+	tempDir := t.TempDir()
+	storesDir := filepath.Join(tempDir, "stores")
+	err := os.MkdirAll(storesDir, 0o755)
 	require.NoError(t, err)
-	return string(contents)
+
+	// Write CA PEM
+	caPEM := string(pem.EncodeToMemory(result.RootCa.CertPem))
+
+	// Generate a "bad" CA for negative testing
+	badCA := pkihelper.GenerateRootCa(t)
+	badCaPEM := string(pem.EncodeToMemory(badCA.CertPem))
+
+	// Create cert pool for TLS config
+	certPool := x509.NewCertPool()
+	certPool.AppendCertsFromPEM([]byte(caPEM))
+
+	// Create PKCS12 keystore and truststore for Cassandra
+	// Cassandra needs: keystore (server cert + key) and truststore (CA cert)
+	createCassandraStores(t, storesDir, result)
+
+	// Create cqlshrc file
+	cqlshrcFile := filepath.Join(tempDir, "cqlshrc")
+	cqlshrcContent := `[ssl]
+validate = false
+version = SSLv23
+`
+	err = os.WriteFile(cqlshrcFile, []byte(cqlshrcContent), 0o644)
+	require.NoError(t, err)
+
+	return &cassandraCertBundle{
+		CaPEM:       caPEM,
+		BadCaPEM:    badCaPEM,
+		CertPool:    certPool,
+		StoresDir:   storesDir,
+		CqlshrcFile: cqlshrcFile,
+	}
+}
+
+// createCassandraStores creates Java keystore and truststore files for Cassandra
+func createCassandraStores(t *testing.T, storesDir string, result pkihelper.LeafWithRoot) {
+	t.Helper()
+
+	// Check if keytool is available
+	_, err := exec.LookPath("keytool")
+	if err != nil {
+		t.Skip("keytool not found in PATH, skipping keystore generation")
+	}
+
+	// Create PKCS12 file with server certificate and key
+	p12File := filepath.Join(storesDir, "server.p12")
+
+	// First, create a temporary PEM file with both cert and key
+	certKeyPEM := filepath.Join(storesDir, "server-cert-key.pem")
+	keyBytes, err := x509.MarshalECPrivateKey(result.Leaf.Key)
+	require.NoError(t, err)
+	certKeyData := append(pem.EncodeToMemory(result.Leaf.CertPem), pem.EncodeToMemory(&pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyBytes,
+	})...)
+	err = os.WriteFile(certKeyPEM, certKeyData, 0o644)
+	require.NoError(t, err)
+
+	// Convert to PKCS12 using openssl
+	_, err = exec.LookPath("openssl")
+	if err != nil {
+		t.Skip("openssl not found in PATH, skipping keystore generation")
+	}
+
+	cmd := exec.Command("openssl", "pkcs12", "-export",
+		"-in", certKeyPEM,
+		"-name", "cassandra",
+		"-out", p12File,
+		"-passout", "pass:cassandra")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to create PKCS12 file: %v\nOutput: %s", err, output)
+	}
+
+	// Create keystore from PKCS12
+	keystoreFile := filepath.Join(storesDir, "keystore")
+	cmd = exec.Command("keytool", "-importkeystore",
+		"-srckeystore", p12File,
+		"-srcstoretype", "PKCS12",
+		"-srcstorepass", "cassandra",
+		"-destkeystore", keystoreFile,
+		"-deststoretype", "JKS",
+		"-deststorepass", "cassandra",
+		"-noprompt")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to create keystore: %v\nOutput: %s", err, output)
+	}
+
+	// Create truststore with CA certificate
+	truststoreFile := filepath.Join(storesDir, "truststore")
+	caCertFile := filepath.Join(storesDir, "ca.pem")
+	err = os.WriteFile(caCertFile, pem.EncodeToMemory(result.RootCa.CertPem), 0o644)
+	require.NoError(t, err)
+
+	cmd = exec.Command("keytool", "-import",
+		"-file", caCertFile,
+		"-alias", "cassandra-ca",
+		"-keystore", truststoreFile,
+		"-storetype", "JKS",
+		"-storepass", "cassandra",
+		"-noprompt")
+	output, err = cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("Failed to create truststore: %v\nOutput: %s", err, output)
+	}
 }
 
 func toJSON(t *testing.T, val interface{}) string {
