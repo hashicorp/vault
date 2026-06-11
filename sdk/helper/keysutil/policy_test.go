@@ -210,9 +210,7 @@ func testKeyUpgradeCommon(t *testing.T, lm *LockManager) {
 	if !upserted {
 		t.Fatal("expected an upsert")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	testBytes := make([]byte, len(p.Keys["1"].Key))
 	copy(testBytes, p.Keys["1"].Key)
@@ -259,9 +257,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{{}, p.Keys["1"]}
@@ -316,9 +312,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	checkKeys(t, ctx, p, storage, keysArchive, "upgrade", 10, 10, 10)
 
@@ -356,9 +350,7 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("policy nil after bad delete")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	// Now do it properly
 	p.DeletionAllowed = true
@@ -419,9 +411,7 @@ func testArchivingCommon(t *testing.T, lm *LockManager) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
-	if !lm.useCache {
-		p.Unlock()
-	}
+	p.Unlock()
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{{}, p.Keys["1"]}
@@ -573,6 +563,7 @@ func Test_StorageErrorSafety(t *testing.T) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
+	defer p.Unlock()
 
 	// Store the initial key in the archive
 	keysArchive := []KeyEntry{{}, p.Keys["1"]}
@@ -620,6 +611,7 @@ func Test_BadUpgrade(t *testing.T) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
+	defer p.Unlock()
 
 	orig, err := copystructure.Copy(p)
 	if err != nil {
@@ -685,6 +677,7 @@ func Test_BadArchive(t *testing.T) {
 	if p == nil {
 		t.Fatal("nil policy")
 	}
+	defer p.Unlock()
 
 	for i := 2; i <= 10; i++ {
 		err = p.Rotate(ctx, storage, rand.Reader)
@@ -934,6 +927,7 @@ func BenchmarkSymmetric(b *testing.B) {
 		KeyType: KeyType_AES256_GCM96,
 		Name:    "test",
 	}, rand.Reader)
+	defer p.Unlock()
 	key, _ := p.GetKey(nil, 1, 32)
 	pt := make([]byte, 10)
 	ad := make([]byte, 10)

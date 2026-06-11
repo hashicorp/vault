@@ -52,8 +52,9 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: req.Storage,
-		Name:    name,
+		Storage:     req.Storage,
+		Name:        name,
+		WriteLocked: true,
 	}, b.GetRandomReader())
 	if err != nil {
 		// the error here will be something about "couldn't get policy")
@@ -63,9 +64,6 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		b.Logger().Error("failed to rotate key on user request", "name", name, "error", "key not found")
 		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
-	}
-	if !b.System().CachingDisabled() {
-		p.Lock(true)
 	}
 	defer p.Unlock()
 	var keyId string
