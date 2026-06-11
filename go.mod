@@ -103,7 +103,7 @@ require (
 	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.18
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.23
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.10
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.4
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.11
