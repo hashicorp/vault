@@ -73,7 +73,7 @@ export default class KvSecretMetadataDetails extends Component {
       this.didRequestData = true;
     } catch (err) {
       const { message, response } = await this.api.parseError(err);
-      if (response.isControlGroupError) {
+      if (response?.isControlGroupError) {
         this.controlGroup.saveTokenFromError(response);
         this.error = this.controlGroup.logFromError(response);
         this.error.isControlGroup = true;
