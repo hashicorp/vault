@@ -8,11 +8,36 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 
 const ROOT_DIR = path.join(__dirname, '..');
 const PKG_PATH = path.join(ROOT_DIR, 'package.json');
 const LOCK_PATH = path.join(ROOT_DIR, 'pnpm-lock.yaml');
+const LIST_MAX_BUFFER = 1024 * 1024 * 100;
+const LIST_DEPTHS = ['Infinity', 8, 6, 4, 2];
+
+/**
+ * Validates that a package name follows npm naming conventions.
+ * Prevents command injection by ensuring only safe characters are present.
+ * @param {string} name - The package name to validate
+ * @returns {boolean} - True if valid, false otherwise
+ */
+function isValidPackageName(name) {
+  if (!name || typeof name !== 'string') return false;
+
+  // npm package names can contain:
+  // - lowercase letters, numbers, hyphens, underscores, dots
+  // - @ symbol (for scoped packages)
+  // - / (for scoped packages)
+  // Must not contain shell metacharacters: $, `, ;, |, &, <, >, (, ), etc.
+  const validPattern = /^[@a-z0-9\-_./]+$/i;
+
+  // Additional checks
+  const maxLength = 214; // npm package name limit
+  if (name.length > maxLength) return false;
+
+  return validPattern.test(name);
+}
 
 /**
  * Simple exact-version comparison.
@@ -42,6 +67,86 @@ function writeReport(report, error) {
     error || '✅ Dependency override audit complete! Project has been restored to its original state.';
   console.log(message);
   console.log('📄 See DEP_OVERRIDE_REPORT.md for details.');
+}
+
+function getCommandOutput(error) {
+  const stdout = error.stdout ? error.stdout.toString().trim() : '';
+  const stderr = error.stderr ? error.stderr.toString().trim() : '';
+  return { stdout, stderr, errorMsg: stderr || stdout || error.message };
+}
+
+function shouldRetryWithReducedDepth(error) {
+  const { errorMsg } = getCommandOutput(error);
+  return error.code === 'ENOBUFS' || errorMsg.includes('Invalid string length');
+}
+
+function getDependencyTree(packageName) {
+  // Validate package name to prevent command injection
+  if (!isValidPackageName(packageName)) {
+    throw new Error(
+      `Invalid package name: "${packageName}". Package names must contain only alphanumeric characters, hyphens, underscores, dots, @, and /.`
+    );
+  }
+
+  let lastError;
+
+  for (const depth of LIST_DEPTHS) {
+    try {
+      // Use spawnSync with array arguments to prevent shell injection
+      const result = spawnSync(
+        'pnpm',
+        ['list', packageName, '--recursive', '--depth', String(depth), '--json'],
+        {
+          cwd: ROOT_DIR,
+          maxBuffer: LIST_MAX_BUFFER,
+          encoding: 'utf8',
+        }
+      );
+
+      // Check for errors
+      if (result.error) {
+        throw result.error;
+      }
+
+      const stdout = result.stdout || '';
+      const stderr = result.stderr || '';
+
+      // pnpm exits with code 1 and an empty JSON array when the package is absent
+      if (stdout.trim() === '[]') {
+        return { orphaned: true };
+      }
+
+      // If there's an error status, create an error object similar to execSync
+      if (result.status !== 0) {
+        const error = new Error(`Command failed with exit code ${result.status}`);
+        error.code = result.status === null ? 'ENOBUFS' : undefined;
+        error.stdout = Buffer.from(stdout);
+        error.stderr = Buffer.from(stderr);
+        throw error;
+      }
+
+      return {
+        data: JSON.parse(stdout),
+        usedFallbackDepth: depth !== 'Infinity',
+        depth,
+      };
+    } catch (error) {
+      const { stdout } = getCommandOutput(error);
+
+      // pnpm exits with code 1 and an empty JSON array when the package is absent.
+      if (stdout === '[]') {
+        return { orphaned: true };
+      }
+
+      if (!shouldRetryWithReducedDepth(error)) {
+        throw error;
+      }
+
+      lastError = error;
+    }
+  }
+
+  throw lastError;
 }
 
 function genOverrideReport() {
@@ -87,38 +192,32 @@ function genOverrideReport() {
       console.log(`🔎 Auditing natural resolution for ${overrideName}...`);
       const culprits = new Map();
 
-      let rawJson;
+      let treeResult;
       try {
-        rawJson = execSync(`pnpm list "${overrideName}" --recursive --depth Infinity --json`, {
-          cwd: ROOT_DIR,
-          maxBuffer: 1024 * 1024 * 100,
-        }).toString();
+        treeResult = getDependencyTree(overrideName);
       } catch (e) {
         console.error(`└──⚠️ Could not fetch tree for ${overrideName}.`);
-        // execSync attaches stdout and stderr to the error object when a command fails
-        const stdout = e.stdout ? e.stdout.toString().trim() : '';
-        const stderr = e.stderr ? e.stderr.toString().trim() : '';
+        const { errorMsg } = getCommandOutput(e);
 
         report += `## \`${overrideName}\`\n**Target Override:** \`${targetVersion}\`\n\n`;
 
-        // If pnpm exited with 1 but output an empty JSON array, it means "Not Found"
-        if (stdout === '[]') {
-          report += `✅ **SAFE TO REMOVE (Orphaned)**\n\n`;
-          report += `> This package does not exist anywhere in the naturally resolved dependency tree. It was likely removed by an upstream dependency update.\n`;
-        } else if (e.code === 'ENOBUFS') {
-          report += `❓ **UNKNOWN (Buffer Overflow)**\n\n`;
-          report += `> The dependency tree is too large for the allocated memory.\n`;
-        } else {
-          const errorMsg = stderr || e.message;
-          report += `❓ **UNKNOWN (Error)**\n\n`;
-          report += `> The script encountered an error resolving this package:\n> \`${errorMsg}\`\n`;
-        }
+        report += `❓ **UNKNOWN (Error)**\n\n`;
+        report += `> The script encountered an error resolving this package:\n> \`${errorMsg}\`\n`;
 
         report += `\n---\n`;
         continue; // Immediately jump to the next override in the loop
       }
 
-      const data = JSON.parse(rawJson);
+      report += `## \`${overrideName}\`\n**Target Override:** \`${targetVersion}\`\n\n`;
+
+      if (treeResult.orphaned) {
+        report += `✅ **SAFE TO REMOVE (Orphaned)**\n\n`;
+        report += `> This package does not exist anywhere in the naturally resolved dependency tree. It was likely removed by an upstream dependency update.\n`;
+        report += `\n---\n`;
+        continue;
+      }
+
+      const data = treeResult.data;
 
       const scanTree = (parentName, parentVersion, depsObject) => {
         if (!depsObject) return;
@@ -155,8 +254,11 @@ function genOverrideReport() {
       });
 
       // Generate markdown segment
-      report += `## \`${overrideName}\`\n**Target Override:** \`${targetVersion}\`\n\n`;
       if (culprits.size > 0) {
+        if (treeResult.usedFallbackDepth) {
+          report += `> pnpm could not serialize the full recursive tree for this package, so this result is based on a bounded recursive scan to depth ${treeResult.depth}. Older versions were found within that scanned portion of the tree.\n\n`;
+        }
+
         report += `⚠️ **REQUIRED**\n\n`;
         report += `> These packages will continue to receive the overridden version until they are updated to naturally resolve to >= ${targetVersion}.\n\n`;
         report += `| Parent Package | Naturally Resolved Version |\n| :--- | :--- |\n`;
@@ -165,6 +267,10 @@ function genOverrideReport() {
           report += `| \`${parent}\` | \`${resolved}\` |\n`;
         }
       } else {
+        if (treeResult.usedFallbackDepth) {
+          report += `> pnpm could not serialize the full recursive tree for this package, so this result is based on a bounded recursive scan to depth ${treeResult.depth}. No older versions were found within that scanned portion of the tree, but deeper paths were not inspected.\n\n`;
+        }
+
         report += `✅ **SAFE TO REMOVE**\n\n`;
         report += `> All packages naturally resolve to >= ${targetVersion} without the override.\n`;
       }
