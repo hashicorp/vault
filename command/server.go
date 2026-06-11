@@ -3069,6 +3069,16 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
+
+				// Skip directories (e.g., enterprise plugin packages)
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					return fmt.Errorf("Error reading plugin file info %s: %s", name, err)
+				}
+				if fileInfo.IsDir() {
+					continue
+				}
+
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
 					if !errwrap.Contains(err, plugincatalog.ErrPluginBadType.Error()) {
 						return fmt.Errorf("Error enabling plugin %s: %s", name, err)
