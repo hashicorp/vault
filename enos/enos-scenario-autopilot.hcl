@@ -820,12 +820,13 @@ scenario "autopilot" {
 
   step "verify_replication" {
     description = global.description.verify_replication_status
-    module      = module.vault_verify_replication
+    module      = module.vault_run_blackbox_test
     depends_on = [
       step.create_vault_cluster_upgrade_targets,
       step.upgrade_vault_cluster_with_autopilot,
       step.verify_raft_auto_join_voter,
-      step.remove_old_nodes
+      step.remove_old_nodes,
+      step.get_updated_vault_cluster_ips
     ]
 
     providers = {
@@ -839,9 +840,14 @@ scenario "autopilot" {
     ]
 
     variables {
-      hosts         = step.upgrade_vault_cluster_with_autopilot.hosts
-      vault_addr    = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_edition = matrix.edition
+      leader_host       = step.get_updated_vault_cluster_ips.leader_host
+      leader_public_ip  = step.get_updated_vault_cluster_ips.leader_public_ip
+      vault_root_token  = step.create_vault_cluster.root_token
+      test_package      = "./vault/external_tests/blackbox/verify"
+      test_names        = ["TestReplicationAvailability"]
+      vault_edition     = matrix.edition
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      ip_version        = matrix.ip_version
     }
   }
 
