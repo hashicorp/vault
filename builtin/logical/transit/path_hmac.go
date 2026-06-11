@@ -133,9 +133,6 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	switch {
@@ -290,9 +287,6 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	}
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
-	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
 	}
 	defer p.Unlock()
 

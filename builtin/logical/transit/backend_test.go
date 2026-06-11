@@ -1823,6 +1823,7 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				p.Unlock()
 
 				// Run the rotation check and validate the state of key rotations
 				b.checkAutoRotateAfter = time.Now()
@@ -2422,12 +2423,11 @@ func TestTransit_VerifyWithImportedPublicKey(t *testing.T) {
 	}
 
 	// Retrieve public wrapping key
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
 
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	// generate ciphertext
