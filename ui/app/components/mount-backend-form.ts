@@ -147,7 +147,7 @@ export default class MountBackendForm extends Component<Args> {
       this.args.onMountSuccess(type, path, false);
     } catch (error) {
       const { status, response, message } = yield this.api.parseError(error);
-      this.onMountError(status, response.errors, message);
+      this.onMountError(status, response?.errors, message);
     }
   }
 
