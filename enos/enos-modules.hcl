@@ -392,10 +392,6 @@ module "vault_verify_replication" {
   source = "./modules/vault_verify_replication"
 }
 
-module "vault_verify_ui" {
-  source = "./modules/vault_verify_ui"
-}
-
 module "vault_wait_for_cluster_unsealed" {
   source = "./modules/vault_wait_for_cluster_unsealed"
 
