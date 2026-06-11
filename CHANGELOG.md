@@ -375,6 +375,7 @@ BUG FIXES:
 
 * plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
 * ui/transit: Fix key version dropdown selected state when editing a transit key.
+* secret-sync (enterprise): Fix a panic when creating Secrets Sync destinations if `fetch_identity_token` callback fields are present in store configuration.
 
 ## 1.21.6 Enterprise
 ### May 19, 2026
@@ -860,6 +861,7 @@ CHANGES:
 BUG FIXES:
 
 * plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* secret-sync (enterprise): Fix a panic when creating Secrets Sync destinations if `fetch_identity_token` callback fields are present in store configuration.
 
 ## 1.20.11 Enterprise
 ### May 19, 2026
