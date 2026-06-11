@@ -1,0 +1,3 @@
+```release-note:improvement
+ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
+```

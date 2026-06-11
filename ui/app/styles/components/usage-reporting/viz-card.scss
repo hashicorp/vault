@@ -1,0 +1,35 @@
+/**
+ * Copyright IBM Corp. 2025, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.ssu-horizontal-bar-chart__container {
+  padding: 16px;
+  overflow: hidden;
+  font-size: 13px;
+}
+
+.ssu-horizontal-bar-chart__carbon-chart {
+  margin: 16px 0;
+  padding-left: 10px;
+}
+
+// Hide the left y-axis domain line (vertical line) but keep the labels
+.ssu-horizontal-bar-chart__carbon-chart .axis.left .ticks path.domain,
+// Hide the bottom x-axis domain line (horizontal line) but keep the labels
+.ssu-horizontal-bar-chart__carbon-chart .axis.bottom .ticks path.domain {
+  display: none !important;
+}
+
+.ssu-horizontal-bar-chart__separator {
+  margin-bottom: 10px;
+}
+
+.ssu-horizontal-bar-chart__empty-state {
+  min-width: 66%;
+  margin: 16px auto;
+}
+
+.ssu-horizontal-bar-chart__total {
+  color: var(--token-color-foreground-primary);
+}

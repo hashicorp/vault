@@ -101,5 +101,13 @@
 @use 'components/type-form';
 @use 'components/unseal-warning';
 @use 'components/usage-page';
+@use 'components/usage-reporting/base/title-row';
+@use 'components/usage-reporting/cluster-replication';
+@use 'components/usage-reporting/counter';
+@use 'components/usage-reporting/global-lease';
+@use 'components/usage-reporting/viz-card';
+@use 'components/usage-reporting/namespace-picker' as usage-reporting-namespace-picker;
+@use 'components/usage-reporting/secrets-sync';
+@use 'components/usage-reporting/views/dashboard';
 @use 'components/vault-loading';
 @use 'components/wizard';

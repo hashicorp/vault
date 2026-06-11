@@ -1,0 +1,65 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container ...attributes class="ssu-horizontal-bar-chart__container" @hasBorder={{true}}>
+  <UsageReporting::Base::TitleRow
+    @title={{@title}}
+    @description={{this.description}}
+    @linkUrl={{this.linkUrl}}
+    @linkRoute={{this.linkRoute}}
+    @linkText={{@linkText}}
+    @linkTarget={{@linkTarget}}
+    @linkIcon={{@linkIcon}}
+  />
+
+  {{#if this.hasData}}
+    <div class="ssu-horizontal-bar-chart__carbon-chart" data-test-vault-reporting-horizontal-bar-chart-carbon>
+      <Clients::Charts::CarbonChart
+        @chartData={{this.chartData}}
+        @chartOptions={{this.chartOptions}}
+        @chartType={{this.chartType}}
+      />
+    </div>
+
+    <Hds::Separator class="ssu-horizontal-bar-chart__separator" @spacing="0" />
+    <Hds::Text::Body
+      class="ssu-horizontal-bar-chart__total"
+      @size="200"
+      @tag="p"
+      data-test-vault-reporting-horizontal-bar-chart-total
+    >
+      Total:
+      {{this.total}}
+    </Hds::Text::Body>
+  {{else}}
+    <Hds::ApplicationState
+      data-test-vault-reporting-horizontal-bar-chart-empty-state
+      class="ssu-horizontal-bar-chart__empty-state"
+      as |A|
+    >
+      {{#if (has-block "empty")}}
+        {{yield A to="empty"}}
+      {{else}}
+        <A.Header data-test-vault-reporting-horizontal-bar-chart-empty-state-title @title={{this.emptyStateTitle}} />
+        <A.Body
+          data-test-vault-reporting-horizontal-bar-chart-empty-state-description
+          @text={{this.emptyStateDescription}}
+        />
+
+        {{#if (or this.emptyStateLinkUrl this.emptyStateLinkRoute)}}
+          <A.Footer as |F|>
+            <F.LinkStandalone
+              data-test-vault-reporting-horizontal-bar-chart-empty-state-link
+              @icon="plus"
+              @text={{this.emptyStateLinkText}}
+              @href={{this.emptyStateLinkUrl}}
+              @route={{this.emptyStateLinkRoute}}
+            />
+          </A.Footer>
+        {{/if}}
+      {{/if}}
+    </Hds::ApplicationState>
+  {{/if}}
+</Hds::Card::Container>
