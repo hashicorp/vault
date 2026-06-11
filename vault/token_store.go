@@ -1166,7 +1166,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if tokenNS.ID != namespace.RootNamespaceID ||
 			strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) ||
 			strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) ||
-			strings.HasPrefix(entry.ID, consts.GetEnterpriseTokenPrefix()) {
+			strings.HasPrefix(entry.ID, consts.GetOAuthJwtPrefix()) {
 			if entry.CubbyholeID == "" {
 				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
@@ -1518,7 +1518,7 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
-	normalizedID := normalizeEnterpriseTokenToID(id)
+	normalizedID := normalizeOAuthJwtToId(id)
 
 	// If it starts with "b." it's a batch token
 	if IsBatchToken(normalizedID) {
@@ -1650,7 +1650,7 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 		// If possible, always use the token's namespace. If it doesn't match
 		// the request namespace, ensure the request namespace is a child
 		_, nsID := namespace.SplitIDFromString(id)
-		if nsID != "" || strings.HasPrefix(id, consts.GetEnterpriseTokenPrefix()) {
+		if nsID != "" || strings.HasPrefix(id, consts.GetOAuthJwtPrefix()) {
 			tokenNS, err := NamespaceByID(ctx, nsID, ts.core)
 			if err != nil {
 				return nil, fmt.Errorf("failed to look up namespace from the token: %w", err)
@@ -2683,9 +2683,9 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
-	normalizedClientToken := normalizeEnterpriseTokenToID(req.ClientToken)
-	if !orphan && IsEnterpriseTokenId(normalizedClientToken) {
-		return logical.ErrorResponse("enterprise tokens cannot create child tokens"), logical.ErrInvalidRequest
+	normalizedClientToken := normalizeOAuthJwtToId(req.ClientToken)
+	if !orphan && IsOAuthJwtId(normalizedClientToken) {
+		return logical.ErrorResponse("JWTs cannot create child tokens"), logical.ErrInvalidRequest
 	}
 
 	// Read the parent policy
@@ -3355,9 +3355,9 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
-	normalizedID := normalizeEnterpriseTokenToID(id)
-	if IsEnterpriseTokenId(normalizedID) {
-		return logical.ErrorResponse("cannot revoke ent token"), nil
+	normalizedID := normalizeOAuthJwtToId(id)
+	if IsOAuthJwtId(normalizedID) {
+		return logical.ErrorResponse("cannot revoke JWTs"), nil
 	}
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
@@ -3403,9 +3403,9 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	normalizedID := normalizeEnterpriseTokenToID(id)
-	if IsEnterpriseTokenId(normalizedID) {
-		return logical.ErrorResponse("enterprise token cannot be revoked"), nil
+	normalizedID := normalizeOAuthJwtToId(id)
+	if IsOAuthJwtId(normalizedID) {
+		return logical.ErrorResponse("JWTs cannot be revoked"), nil
 	}
 
 	// Do a lookup. Among other things, that will ensure that this is either
@@ -3445,15 +3445,15 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
-	if IsEnterpriseToken(id) {
+	if IsOAuthJwt(id) {
 		// If the token specified in the request body is different from the caller's
 		// token, resolve the token ID based on the body token's claims (JTI) instead
-		// of req.EnterpriseTokenMetadata, otherwise we may silently return the caller's
+		// of req.JwtUniqueId, otherwise we may silently return the caller's
 		// own token entry or fail for non-Enterprise token callers.
 		if id == req.ClientToken {
-			id = getEnterpriseTokenId(req.EnterpriseTokenMetadata)
+			id = getOAuthJwtId(req.JwtUniqueId)
 		} else {
-			resolvedID, err := resolveEnterpriseTokenIDForLookup(id)
+			resolvedID, err := resolveOAuthJwtIdForLookup(id)
 			if err != nil {
 				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 			}
@@ -3571,9 +3571,9 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
-	normalizedID := normalizeEnterpriseTokenToID(id)
-	if IsEnterpriseTokenId(normalizedID) {
-		return logical.ErrorResponse("enterprise tokens cannot be renewed"), nil
+	normalizedID := normalizeOAuthJwtToId(id)
+	if IsOAuthJwtId(normalizedID) {
+		return logical.ErrorResponse("JWTs cannot be renewed"), nil
 	}
 	incrementRaw := data.Get("increment").(int)
 

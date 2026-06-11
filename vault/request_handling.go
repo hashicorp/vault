@@ -240,28 +240,28 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	var secondEntity *identity.Entity
-	if IsEnterpriseToken(req.ClientToken) {
-		isValidEnterpriseToken, tokenMetadataContainer, entity, actorEntity, chosenProfile, err := c.validateEnterpriseTokenAndFetchEntity(ctx, req.ClientToken)
+	var actorEntity *identity.Entity
+	if IsOAuthJwt(req.ClientToken) {
+		isValidEnterpriseJwt, tokenMetadataContainer, entity, jwtActor, chosenProfile, err := c.validateOAuthJwtAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
-			c.logger.Error("failed to validate enterprise token", "error", err)
+			c.logger.Error("failed to validate jwt", "error", err)
 		}
-		if !isValidEnterpriseToken {
+		if !isValidEnterpriseJwt {
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
-		req.EnterpriseTokenMetadata = getEnterpriseTokenMetadata(tokenMetadataContainer)
-		req.EnterpriseTokenIssuer = getEnterpriseTokenIssuer(tokenMetadataContainer)
-		req.EnterpriseTokenTransaction = getEnterpriseTokenTransaction(tokenMetadataContainer)
-		req.EnterpriseTokenAudience = getEnterpriseTokenAudience(tokenMetadataContainer)
-		_, req.EnterpriseTokenAuthorizationDetailsPresent = tokenMetadataContainer["authorization_details"]
-		req.EnterpriseTokenAuthorizationDetails = getEnterpriseTokenAuthorizationDetails(tokenMetadataContainer)
-		secondEntity = actorEntity
-		err = c.createAndStoreEnterpriseTokenEntry(ctx, req, tokenMetadataContainer, entity, actorEntity, chosenProfile)
+		req.JwtUniqueId = getJwtUniqueId(tokenMetadataContainer)
+		req.JwtIssuer = getJwtIssuer(tokenMetadataContainer)
+		req.JwtTransactionClaim = getJwtTransaction(tokenMetadataContainer)
+		req.JwtAudienceClaim = getJwtAudience(tokenMetadataContainer)
+		_, req.JwtAuthorizationDetailsClaimPresent = tokenMetadataContainer["authorization_details"]
+		req.JwtAuthorizationDetails = getJwtAuthorizationDetails(tokenMetadataContainer)
+		actorEntity = jwtActor
+		err = c.createAndStoreOAuthJwtTokenEntry(ctx, req, tokenMetadataContainer, entity, jwtActor, chosenProfile)
 		if err != nil {
 			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
 				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
 			}
-			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing enterprise token"))
+			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing jwt"))
 		}
 	}
 
@@ -270,8 +270,8 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	switch req.TokenEntry() {
 	case nil:
 		var err error
-		if IsEnterpriseToken(req.ClientToken) {
-			te, err = c.tokenStore.Lookup(ctx, getEnterpriseTokenId(req.EnterpriseTokenMetadata))
+		if IsOAuthJwt(req.ClientToken) {
+			te, err = c.tokenStore.Lookup(ctx, getOAuthJwtId(req.JwtUniqueId))
 		} else {
 			te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		}
@@ -290,12 +290,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
 	}
 
-	if secondEntity != nil {
+	if actorEntity != nil {
 		if req.Auth == nil {
 			req.Auth = &logical.Auth{}
 		}
-		req.Auth.ActorEntityID = secondEntity.ID
-		req.Auth.ActorEntityName = secondEntity.Name
+		req.Auth.ActorEntityID = actorEntity.ID
+		req.Auth.ActorEntityName = actorEntity.Name
 	}
 
 	// CIDR checks bind all tokens except non-expiring root tokens
@@ -348,15 +348,15 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		policyNames[nsID] = policyutil.SanitizePolicies(append(policyNames[nsID], nsPolicies...), false)
 	}
 
-	var secondEntityPolicyNames map[string][]string
-	if secondEntity != nil {
-		c.logger.Debug("building separate ACL for second entity", "entity_id", secondEntity.ID)
-		secondEntityPolicyNames = make(map[string][]string)
-		secondEntityIdentityPolicies, err := c.fetchCeilingPolicies(ctx, secondEntity)
+	var actorEntityPolicyNames map[string][]string
+	if actorEntity != nil {
+		c.logger.Debug("building separate ACL for actor entity", "entity_id", actorEntity.ID)
+		actorEntityPolicyNames = make(map[string][]string)
+		actorEntityIdentityPolicies, err := c.fetchCeilingPolicies(ctx, actorEntity)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		allowOnly, err := c.allPoliciesAllowOnly(ctx, secondEntityIdentityPolicies)
+		allowOnly, err := c.allPoliciesAllowOnly(ctx, actorEntityIdentityPolicies)
 		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
 		}
@@ -364,8 +364,8 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		// Store second entity policies separately - do NOT merge with primary entity's policies
-		for nsID, nsPolicies := range secondEntityIdentityPolicies {
-			secondEntityPolicyNames[nsID] = policyutil.SanitizePolicies(nsPolicies, false)
+		for nsID, nsPolicies := range actorEntityIdentityPolicies {
+			actorEntityPolicyNames[nsID] = policyutil.SanitizePolicies(nsPolicies, false)
 		}
 	}
 
@@ -409,8 +409,8 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
-	if secondEntity != nil {
-		newAcl, err := c.performSecondaryEntityTokenChecks(tokenCtx, acl, secondEntity, secondEntityPolicyNames)
+	if actorEntity != nil {
+		newAcl, err := c.performDelegationTokenChecks(tokenCtx, acl, actorEntity, actorEntityPolicyNames)
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
@@ -643,7 +643,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.ActorEntityName = req.Auth.ActorEntityName
 	}
 	// Copy authorization details from the request to auth so plugins can access them.
-	auth.AuthorizationDetails = req.EnterpriseTokenAuthorizationDetails
+	auth.AuthorizationDetails = req.JwtAuthorizationDetails
 
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
 	var alternateRecoverCapability *logical.Operation
@@ -926,7 +926,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			if !ok {
 				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
 			}
-			if IsSSCToken(token.(string)) && !IsEnterpriseToken(token.(string)) {
+			if IsSSCToken(token.(string)) && !IsOAuthJwt(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
@@ -1248,13 +1248,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// these requests.
 	if ctErr == nil && te != nil && te.Type == logical.TokenTypeEnt && !te.IsStorageBacked() &&
 		requiresMaterializedTokenState(req.Path) {
-		materializedReq, matErr := c.materializeEnterpriseTokenForUsage(ctx, req, auth, c.perfStandby)
+		materializedReq, matErr := c.materializeOAuthJwtForUsage(ctx, req, auth, c.perfStandby)
 		if matErr != nil {
 			if errors.Is(matErr, logical.ErrPerfStandbyPleaseForward) {
 				restoreForwardingTokenHeaders(req)
 				return nil, nil, matErr
 			}
-			c.logger.Error("failed to materialize enterprise token for token endpoint", "request_path", req.Path, "error", matErr)
+			c.logger.Error("failed to materialize jwt for token endpoint", "request_path", req.Path, "error", matErr)
 			retErr = multierror.Append(retErr, ErrInternalError)
 			return nil, auth, retErr
 		}
@@ -1545,13 +1545,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		if registerLease {
 			registerReq := req
 			if te := req.TokenEntry(); te != nil && !te.IsStorageBacked() {
-				registerReq, err = c.materializeEnterpriseTokenForUsage(ctx, req, auth, c.perfStandby)
+				registerReq, err = c.materializeOAuthJwtForUsage(ctx, req, auth, c.perfStandby)
 				if err != nil {
 					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) {
 						restoreForwardingTokenHeaders(req)
 						return nil, nil, err
 					}
-					c.logger.Error("failed to materialize enterprise token for lease", "request_path", req.Path, "error", err)
+					c.logger.Error("failed to materialize jwt for lease", "request_path", req.Path, "error", err)
 					retErr = multierror.Append(retErr, ErrInternalError)
 					return nil, auth, retErr
 				}

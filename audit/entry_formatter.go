@@ -261,39 +261,39 @@ func mergeEnterpriseTokenMetadata(a *auth, req *logical.Request) error {
 		return nil
 	}
 
-	if req.EnterpriseTokenMetadata == "" &&
-		req.EnterpriseTokenIssuer == "" &&
-		req.EnterpriseTokenTransaction == "" &&
-		len(req.EnterpriseTokenAudience) == 0 &&
-		len(req.EnterpriseTokenAuthorizationDetails) == 0 {
+	if req.JwtUniqueId == "" &&
+		req.JwtIssuer == "" &&
+		req.JwtTransactionClaim == "" &&
+		len(req.JwtAudienceClaim) == 0 &&
+		len(req.JwtAuthorizationDetails) == 0 {
 		return nil
 	}
 
 	if a.Metadata == nil {
 		a.Metadata = make(map[string]string)
 	}
-	if req.EnterpriseTokenMetadata != "" {
-		a.Metadata["enterprise_token_metadata"] = req.EnterpriseTokenMetadata
+	if req.JwtUniqueId != "" {
+		a.Metadata["jwt_unique_id"] = req.JwtUniqueId
 	}
-	if req.EnterpriseTokenIssuer != "" {
-		a.Metadata["enterprise_token_issuer"] = req.EnterpriseTokenIssuer
+	if req.JwtIssuer != "" {
+		a.Metadata["jwt_issuer"] = req.JwtIssuer
 	}
-	if req.EnterpriseTokenTransaction != "" {
-		a.Metadata["enterprise_token_transaction"] = req.EnterpriseTokenTransaction
+	if req.JwtTransactionClaim != "" {
+		a.Metadata["jwt_transaction_claim"] = req.JwtTransactionClaim
 	}
-	if len(req.EnterpriseTokenAudience) > 0 {
-		audJSON, err := json.Marshal(req.EnterpriseTokenAudience)
+	if len(req.JwtAudienceClaim) > 0 {
+		audJSON, err := json.Marshal(req.JwtAudienceClaim)
 		if err != nil {
-			return fmt.Errorf("unable to marshal enterprise token audience for audit: %w", err)
+			return fmt.Errorf("unable to marshal jwt audience for audit: %w", err)
 		}
-		a.Metadata["enterprise_token_audience"] = string(audJSON)
+		a.Metadata["jwt_audience_claim"] = string(audJSON)
 	}
-	if len(req.EnterpriseTokenAuthorizationDetails) > 0 {
-		authzJSON, err := json.Marshal(req.EnterpriseTokenAuthorizationDetails)
+	if len(req.JwtAuthorizationDetails) > 0 {
+		authzJSON, err := json.Marshal(req.JwtAuthorizationDetails)
 		if err != nil {
-			return fmt.Errorf("unable to marshal enterprise token authorization details for audit: %w", err)
+			return fmt.Errorf("unable to marshal jwt authorization details for audit: %w", err)
 		}
-		a.Metadata["enterprise_token_authorization_details"] = string(authzJSON)
+		a.Metadata["jwt_authorization_details"] = string(authzJSON)
 	}
 	return nil
 }
