@@ -12,11 +12,11 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
-func getEnterpriseTokenId(_ string) string {
+func getOAuthJwtId(_ string) string {
 	return ""
 }
 
-func normalizeEnterpriseTokenToID(token string) string {
+func normalizeOAuthJwtToId(token string) string {
 	return token
 }
 

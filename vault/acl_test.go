@@ -782,6 +782,146 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 	}
 }
 
+// TestACL_ListTrailingSlashDeny exercises the SECVULN-45175 fix: a
+// trailing-slash LIST request must respect more-specific DENY policies even
+// when a broader ALLOW rule is also reachable via the trimmed form of the path.
+// It also guards the VAULT-3825 regression: a segment-wildcard rule without a
+// trailing slash must continue to grant LIST on trailing-slash paths.
+func TestACL_ListTrailingSlashDeny(t *testing.T) {
+	t.Parallel()
+
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	type tc struct {
+		name     string
+		policies []string
+		path     string
+		wantList bool
+	}
+
+	cases := []tc{
+		// CVE core case: a more-specific prefix deny must not be bypassed by
+		// the trimmed-path lookup reaching only the broader allow.
+		{
+			name: "prefix-deny-more-specific-than-prefix-allow",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: false,
+		},
+		// Inverse: more-specific allow must win over broader deny.
+		{
+			name: "prefix-allow-more-specific-than-prefix-deny",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["deny"] }`,
+				`path "kv1/private/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: true,
+		},
+		// VAULT-3825 regression: a segment-wildcard policy written without a
+		// trailing slash ("kv1/+") must still grant LIST on trailing-slash paths
+		// ("kv1/private/") — that was the original intent of the slash-stripping
+		// logic.
+		{
+			name: "segwc-allow-no-slash-grants-list-on-slash-path",
+			policies: []string{
+				`path "kv1/+" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: true,
+		},
+		// CRITICAL regression guard: a segment-wildcard deny "kv1/+" must still
+		// fire on "kv1/private/" even when a broader prefix allow "kv1/*" exists.
+		// If the segwc deny is silently dropped the fix is incomplete.
+		{
+			name: "segwc-deny-preserved-over-prefix-allow",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+				`path "kv1/+" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: false,
+		},
+		// The LIST trailing-slash branch only fires when the path ends in "/";
+		// requests without one must use the normal (non-trailing-slash) code path.
+		{
+			name: "no-trailing-slash-allow-unchanged",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private",
+			wantList: true,
+		},
+		// "kv1/private/*" (stored as prefix key "kv1/private/") does NOT match
+		// the query "kv1/private" (no slash) because LongestPrefix requires the
+		// query to start with the key, and "kv1/private" does not start with
+		// "kv1/private/".  The broader allow "kv1/*" wins; this is correct.
+		{
+			name: "no-trailing-slash-no-deny-correct-semantics",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private",
+			wantList: true,
+		},
+		// The deny on kv1/private/* must not affect the sibling kv1/public/*.
+		{
+			name: "sibling-path-not-affected-by-specific-deny",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/public/",
+			wantList: true,
+		},
+		// Baseline: a plain prefix allow, no deny at all.
+		{
+			name: "allow-only-prefix-slash-path",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/anything/",
+			wantList: true,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var policies []*Policy
+			for i, pstr := range tc.policies {
+				p, err := ParseACLPolicy(ns, pstr)
+				if err != nil {
+					t.Fatalf("policy %d parse error: %v", i, err)
+				}
+				policies = append(policies, p)
+			}
+
+			acl, err := NewACL(ctx, policies)
+			if err != nil {
+				t.Fatalf("NewACL error: %v", err)
+			}
+
+			req := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      tc.path,
+			}
+			result := acl.AllowOperation(ctx, req, false)
+			if result.Allowed != tc.wantList {
+				t.Errorf("AllowOperation(%q, LIST).Allowed = %v, want %v",
+					tc.path, result.Allowed, tc.wantList)
+			}
+		})
+	}
+}
+
 func TestACL_SegmentWildcardPriority_BareMount(t *testing.T) {
 	ns := namespace.RootNamespace
 	ctx := namespace.ContextWithNamespace(context.Background(), ns)
