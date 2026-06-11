@@ -107,6 +107,7 @@ jobs:
           timeout: 10m0s
           retry-timeout: 10m0s
           destroy-timeout: 10m0s
+          show-state-on-retry: ${{ github.repository == 'hashicorp/vault-enterprise' && 'true' || 'false' }}
           destroy-extra-args: --grpc-listen http://localhost
       - name: Cleanup Enos runtime directories
         if: ${{ always() }}
