@@ -721,7 +721,7 @@ scenario "pr_replication" {
 
   step "verify_ui" {
     description = global.description.verify_ui
-    module      = module.vault_verify_ui
+    module      = module.vault_run_blackbox_test
     depends_on  = [step.get_primary_cluster_ips]
 
     providers = {
@@ -731,8 +731,13 @@ scenario "pr_replication" {
     verifies = quality.vault_ui_assets
 
     variables {
-      vault_addr = step.create_primary_cluster.api_addr_localhost
-      hosts      = step.create_primary_cluster_targets.hosts
+      ip_version       = matrix.ip_version
+      leader_host      = step.get_primary_cluster_ips.leader_host
+      leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
+      vault_root_token = step.create_primary_cluster.root_token
+      test_package     = "./vault/external_tests/blackbox/verify"
+      test_names       = ["TestVaultUIAvailability"]
+      vault_edition    = matrix.edition
     }
   }
 
