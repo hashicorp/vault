@@ -871,8 +871,8 @@ scenario "upgrade" {
 
   step "verify_replication" {
     description = global.description.verify_replication_status
-    module      = module.vault_verify_replication
-    depends_on  = [step.verify_vault_unsealed]
+    module      = module.vault_run_blackbox_test
+    depends_on  = [step.verify_vault_unsealed, step.get_updated_vault_cluster_ips]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -885,9 +885,14 @@ scenario "upgrade" {
     ]
 
     variables {
-      hosts         = step.create_vault_cluster_targets.hosts
-      vault_addr    = step.create_vault_cluster.api_addr_localhost
-      vault_edition = matrix.edition
+      leader_host       = step.get_updated_vault_cluster_ips.leader_host
+      leader_public_ip  = step.get_updated_vault_cluster_ips.leader_public_ip
+      vault_root_token  = step.create_vault_cluster.root_token
+      test_package      = "./vault/external_tests/blackbox/verify"
+      test_names        = ["TestReplicationAvailability"]
+      vault_edition     = matrix.edition
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      ip_version        = matrix.ip_version
     }
   }
 
