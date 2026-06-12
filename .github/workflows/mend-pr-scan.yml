@@ -11,7 +11,7 @@ concurrency:
 jobs:
   mend-scan:
     if: ${{ github.repository == 'hashicorp/vault-enterprise' }}
-    runs-on: [self-hosted, ubuntu-latest-x64]
+    runs-on: [self-hosted, ubuntu-22.04-x64]
     permissions:
       id-token: write
       contents: read

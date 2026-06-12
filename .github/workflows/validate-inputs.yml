@@ -1,0 +1,120 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+name: validate-inputs
+on:
+  workflow_dispatch:
+    inputs:
+      branches:
+        description: |
+          A space-separated list of Vault branches
+          Ex. "release/1.16.x+ent release/1.19.x+ent release/1.20.x+ent release/1.21.x+ent main"
+        required: false
+        type: string
+      ibm-emails:
+        description: |
+          A space-separated list of IBM emails
+        required: false
+        type: string
+    
+  workflow_call:
+    inputs:
+      branches:
+        description: |
+          A space-separated list of Vault branches
+          Ex. "release/1.16.x+ent release/1.19.x+ent release/1.20.x+ent release/1.21.x+ent main"
+        required: false
+        type: string
+      ibm-emails:
+        description: |
+          A space-separated list of IBM emails
+        required: false
+        type: string
+
+    outputs:
+      invalid_emails:
+        description: |
+          A space-separated list of the input emails that are not valid IBM emails
+        value: ${{ jobs.validate-inputs.outputs.invalid_emails }}
+      valid_emails:
+        description: |
+          A space-separated list of the input emails that are valid IBM emails
+        value: ${{ jobs.validate-inputs.outputs.valid_emails }}
+      invalid_branches:
+        description: |
+          A space-separated list of the input branches that were not found
+        value: ${{ jobs.validate-inputs.outputs.invalid_branches }}
+      valid_branches:
+        description: |
+          A space-separated list of the input branches that were found
+        value: ${{ jobs.validate-inputs.outputs.valid_branches }}
+
+
+jobs:
+  validate-inputs:
+    name: Validate Inputs
+    runs-on: [ self-hosted, ubuntu-22.04-x64, small ]
+    permissions: write-all
+    env:
+      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+    outputs:
+      invalid_emails: ${{ steps.validate-emails.outputs.invalid_emails }}
+      valid_emails: ${{ steps.validate-emails.outputs.valid_emails }}
+      invalid_branches: ${{ steps.validate-branches.outputs.invalid_branches }}
+      valid_branches: ${{ steps.validate-branches.outputs.valid_branches }}
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+      
+      - id: validate-branches
+        name: Validate Branches
+        continue-on-error: true # we don't want to exit if a branch is not found
+        shell: bash
+        run: |
+          invalid_branches=""
+          valid_branches=""
+
+          read -ra branches <<< '${{ inputs.branches }}'
+          if [[ ${#branches[@]} -eq 0 ]]; then
+            echo "no branches provided - skipping validation"
+          else
+            for branch in "${branches[@]}"; do
+              status=$(gh api -i "repos/hashicorp/vault-enterprise/branches/${branch}" 2>&1 | awk 'NR==1{print $2}' || echo "404")
+              if [ "$status" != "200" ]; then
+                echo "Error: branch '$branch' not found"
+                invalid_branches+="$branch "
+              else
+                valid_branches+="$branch "
+              fi
+            done
+          fi
+          
+          echo "invalid_branches=$invalid_branches" | tee -a "$GITHUB_OUTPUT"
+          echo "valid_branches=$valid_branches" | tee -a "$GITHUB_OUTPUT"
+
+      - id: validate-emails
+        name: Validate Emails
+        shell: bash
+        run: |
+          email_regex="^[a-zA-Z0-9._%+-]+@ibm\.com$"
+          invalid_emails=""
+          valid_emails=""
+
+          read -ra emails <<< '${{ inputs.ibm-emails }}'
+          if [[ ${#emails[@]} -eq 0 ]]; then
+            echo "no emails provided - skipping validation"
+          else
+            for email in "${emails[@]}"; do
+              if [[ ! $email =~ $email_regex ]]; then
+                echo "Error: email '$email' is not a valid IBM email address."
+                invalid_emails+="${email} "
+              else
+                valid_emails+="${email} "
+              fi
+            done
+          fi
+          
+          echo "valid_emails=$valid_emails" | tee -a "$GITHUB_OUTPUT"
+          echo "invalid_emails=$invalid_emails" | tee -a "$GITHUB_OUTPUT"

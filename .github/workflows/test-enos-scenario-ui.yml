@@ -35,7 +35,7 @@ on:
 jobs:
   get-metadata:
     name: Get metadata
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     outputs:
       is-ent-branch: ${{ steps.metadata.outputs.is-ent-branch }}
       is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
@@ -48,7 +48,7 @@ jobs:
       - id: get-outputs
         run: |
           if [[ '${{ steps.metadata.outputs.is-ent-repo }}' == 'true' ]]; then
-            echo 'runs-on=["self-hosted","ubuntu-latest-x64","xlarge"]' >> "$GITHUB_OUTPUT"
+            echo 'runs-on=["self-hosted","ubuntu-22.04-x64","xlarge"]' >> "$GITHUB_OUTPUT"
           else
             echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
           fi
