@@ -1,0 +1,3 @@
+```release-note:bug
+plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+```

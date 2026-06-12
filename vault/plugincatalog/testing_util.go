@@ -15,20 +15,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// gereratePGPKeyPair generates a PGP key pair for testing purposes
-func generatePGPKeyPair(t *testing.T) (*crypto.Key, string) {
+// generatePGPKeyPair generates a PGP key pair for testing purposes
+func generatePGPKeyPair(t *testing.T) (*crypto.Key, string, error) {
 	pgp := crypto.PGP()
 	user := "test" + uuid.NewString()[:5]
 	privKey, err := pgp.KeyGeneration().AddUserId(user, fmt.Sprintf("%s@hashicorp.com", user)).New().GenerateKey()
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to generate key: %w", err)
+	}
 
 	pubkey, err := privKey.ToPublic()
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get public key: %w", err)
+	}
 
 	armored, err := pubkey.Armor()
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to armor public key: %w", err)
+	}
 
-	return privKey, armored
+	return privKey, armored, nil
 }
 
 // generatePluginArtifactContents generates file contents for a plugin artifact for testing purposes

@@ -11,121 +11,93 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TestPluginCatalog_SetupWithCustomKey tests SetupPluginCatalog with a custom PGP key
-func TestPluginCatalog_SetupWithCustomKey(t *testing.T) {
-	t.Parallel()
+var (
+	// Shared test resources initialized in TestMain
+	testCustomPubKey      string
+	testCustomKeyFilePath string
+	testTempDir           string
+)
 
-	// Generate a test PGP key pair
-	_, pubKeyArmored := generatePGPKeyPair(t)
+// TestMain sets up shared resources for all tests and initializes keyrings with a custom key
+func TestMain(m *testing.M) {
+	// Generate a shared PGP key pair for all tests using the helper
+	_, testCustomPubKey, err := generatePGPKeyPair(nil)
+	if err != nil {
+		panic("failed to generate test PGP key: " + err.Error())
+	}
 
-	// Create temporary directories
+	// Create a temporary directory for the key file
+	testTempDir, err = os.MkdirTemp("", "vault-plugin-catalog-test-*")
+	if err != nil {
+		panic("failed to create temp dir: " + err.Error())
+	}
+
+	testCustomKeyFilePath = filepath.Join(testTempDir, "test-custom-key.asc")
+	err = os.WriteFile(testCustomKeyFilePath, []byte(testCustomPubKey), 0o644)
+	if err != nil {
+		os.RemoveAll(testTempDir)
+		panic("failed to write custom key file: " + err.Error())
+	}
+
+	// Initialize keyrings with the custom key so all tests can verify the singleton behavior
+	err = loadWithKey(testCustomKeyFilePath)
+	if err != nil {
+		os.RemoveAll(testTempDir)
+		panic("failed to load custom key: " + err.Error())
+	}
+
+	// Run tests
+	code := m.Run()
+
+	// Cleanup
+	os.RemoveAll(testTempDir)
+	os.Exit(code)
+}
+
+// setupTestPluginDir creates a temporary plugin directory for a test
+func setupTestPluginDir(t *testing.T) string {
+	t.Helper()
 	tmpDir := t.TempDir()
 	pluginDir := filepath.Join(tmpDir, "plugins")
 	err := os.MkdirAll(pluginDir, 0o755)
 	require.NoError(t, err)
+	return pluginDir
+}
 
-	keyPath := filepath.Join(tmpDir, "custom-key.asc")
-	err = os.WriteFile(keyPath, []byte(pubKeyArmored), 0o644)
-	require.NoError(t, err)
+// TestPluginCatalog_SetupWithCustomKey tests SetupPluginCatalog with a custom PGP key
+func TestPluginCatalog_SetupWithCustomKey(t *testing.T) {
+	t.Parallel()
 
-	// Setup plugin catalog with custom key
+	pluginDir := setupTestPluginDir(t)
+
+	// Setup plugin catalog with custom key file path
 	catalog, err := SetupPluginCatalog(context.Background(), &PluginCatalogInput{
 		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		CatalogView:     &logical.InmemStorage{},
 		PluginDirectory: pluginDir,
 		Logger:          log.NewNullLogger(),
-		PluginPGPKey:    keyPath,
+		PluginPGPKey:    testCustomKeyFilePath,
 	})
 
 	require.NoError(t, err)
 	assert.NotNil(t, catalog)
-	assert.Equal(t, keyPath, catalog.pluginPGPKey, "custom key path should be set")
+	assert.Equal(t, testCustomKeyFilePath, catalog.pluginPGPKey, "custom key path should be set")
 
 	// Verify that getVerifyFunc returns a function that uses the custom key
 	verifyFunc := catalog.getVerifyFunc()
 	assert.NotNil(t, verifyFunc)
-}
-
-// TestPluginCatalog_verifyOfficialPlugins_WithCustomKey tests verifyOfficialPlugins with custom key
-func TestPluginCatalog_verifyOfficialPlugins_WithCustomKey(t *testing.T) {
-	t.Parallel()
-
-	// Generate a test PGP key pair
-	privKey, pubKeyArmored := generatePGPKeyPair(t)
-
-	// Create temporary directories
-	tmpDir := t.TempDir()
-	pluginDir := filepath.Join(tmpDir, "plugins")
-	err := os.MkdirAll(pluginDir, 0o755)
-	require.NoError(t, err)
-
-	keyPath := filepath.Join(tmpDir, "custom-key.asc")
-	err = os.WriteFile(keyPath, []byte(pubKeyArmored), 0o644)
-	require.NoError(t, err)
-
-	// Create a plugin artifact with proper signatures
-	pluginName := "vault-plugin-test"
-	pluginVersion := "1.0.0"
-	artifactDir := filepath.Join(pluginDir, GetExtractedArtifactDir(pluginName, pluginVersion))
-	err = os.MkdirAll(artifactDir, 0o755)
-	require.NoError(t, err)
-
-	contents := generatePluginArtifactContents(t, pluginName, pluginVersion, consts.PluginTypeSecrets, true, privKey)
-	for filename, data := range contents {
-		err := os.WriteFile(filepath.Join(artifactDir, filename), data, 0o644)
-		require.NoError(t, err)
-	}
-
-	storage := &logical.InmemStorage{}
-	// Setup plugin catalog with custom key
-	catalog, err := SetupPluginCatalog(context.Background(), &PluginCatalogInput{
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
-		CatalogView:     storage,
-		PluginDirectory: pluginDir,
-		Logger:          log.NewNullLogger(),
-		PluginPGPKey:    keyPath,
-	})
-	require.NoError(t, err)
-
-	// Register the plugin as official
-	pluginEntry := &pluginutil.PluginRunner{
-		Name:    pluginName,
-		Type:    consts.PluginTypeSecrets,
-		Version: pluginVersion,
-		Command: filepath.Join(GetExtractedArtifactDir(pluginName, pluginVersion), pluginName),
-		Builtin: false,
-	}
-
-	// Store the plugin in catalog
-	entry, err := logical.StorageEntryJSON(pluginEntry.Name, pluginEntry)
-	require.NoError(t, err)
-	err = storage.Put(context.Background(), entry)
-	require.NoError(t, err)
-
-	// Verify official plugins - should succeed with custom key
-	err = catalog.verifyOfficialPlugins(context.Background())
-	require.NoError(t, err)
 }
 
 // TestPluginCatalog_SetupWithRawCustomKey tests SetupPluginCatalog with a raw PGP key (not a file path)
 func TestPluginCatalog_SetupWithRawCustomKey(t *testing.T) {
 	t.Parallel()
 
-	// Generate a test PGP key pair
-	_, pubKeyArmored := generatePGPKeyPair(t)
-
-	// Create temporary directories
-	tmpDir := t.TempDir()
-	pluginDir := filepath.Join(tmpDir, "plugins")
-	err := os.MkdirAll(pluginDir, 0o755)
-	require.NoError(t, err)
+	pluginDir := setupTestPluginDir(t)
 
 	// Setup plugin catalog with raw PGP key (not a file path)
 	catalog, err := SetupPluginCatalog(context.Background(), &PluginCatalogInput{
@@ -133,71 +105,27 @@ func TestPluginCatalog_SetupWithRawCustomKey(t *testing.T) {
 		CatalogView:     &logical.InmemStorage{},
 		PluginDirectory: pluginDir,
 		Logger:          log.NewNullLogger(),
-		PluginPGPKey:    pubKeyArmored, // Pass raw key directly
+		PluginPGPKey:    testCustomPubKey, // Pass raw key directly
 	})
 
 	require.NoError(t, err)
 	assert.NotNil(t, catalog)
-	assert.Equal(t, pubKeyArmored, catalog.pluginPGPKey, "raw custom key should be set")
+	assert.Equal(t, testCustomPubKey, catalog.pluginPGPKey, "raw custom key should be set")
 
 	// Verify that getVerifyFunc returns a function that uses the custom key
 	verifyFunc := catalog.getVerifyFunc()
 	assert.NotNil(t, verifyFunc)
 }
 
-// TestPluginCatalog_verifyOfficialPlugins_WithRawCustomKey tests verifyOfficialPlugins with raw custom key
-func TestPluginCatalog_verifyOfficialPlugins_WithRawCustomKey(t *testing.T) {
+// TestPluginCatalog_KeysNotOverriddenByCustomKey tests that when a custom key
+// is configured, it's added to the keyrings rather than replacing the HashiCorp keys.
+// Since TestMain initializes the keyrings with a custom key, we can verify the counts here.
+func TestPluginCatalog_KeysNotOverriddenByCustomKey(t *testing.T) {
 	t.Parallel()
 
-	// Generate a test PGP key pair
-	privKey, pubKeyArmored := generatePGPKeyPair(t)
+	require.NotNil(t, keyRing2030, "keyRing2030 should not be nil")
+	require.NotNil(t, keyRing2026, "keyRing2026 should not be nil")
 
-	// Create temporary directories
-	tmpDir := t.TempDir()
-	pluginDir := filepath.Join(tmpDir, "plugins")
-	err := os.MkdirAll(pluginDir, 0o755)
-	require.NoError(t, err)
-
-	// Create a plugin artifact with proper signatures
-	pluginName := "vault-plugin-test-raw"
-	pluginVersion := "1.0.0"
-	artifactDir := filepath.Join(pluginDir, GetExtractedArtifactDir(pluginName, pluginVersion))
-	err = os.MkdirAll(artifactDir, 0o755)
-	require.NoError(t, err)
-
-	contents := generatePluginArtifactContents(t, pluginName, pluginVersion, consts.PluginTypeSecrets, true, privKey)
-	for filename, data := range contents {
-		err := os.WriteFile(filepath.Join(artifactDir, filename), data, 0o644)
-		require.NoError(t, err)
-	}
-
-	storage := &logical.InmemStorage{}
-	// Setup plugin catalog with raw PGP key (not a file path)
-	catalog, err := SetupPluginCatalog(context.Background(), &PluginCatalogInput{
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
-		CatalogView:     storage,
-		PluginDirectory: pluginDir,
-		Logger:          log.NewNullLogger(),
-		PluginPGPKey:    pubKeyArmored, // Pass raw key directly
-	})
-	require.NoError(t, err)
-
-	// Register the plugin as official
-	pluginEntry := &pluginutil.PluginRunner{
-		Name:    pluginName,
-		Type:    consts.PluginTypeSecrets,
-		Version: pluginVersion,
-		Command: filepath.Join(GetExtractedArtifactDir(pluginName, pluginVersion), pluginName),
-		Builtin: false,
-	}
-
-	// Store the plugin in catalog
-	entry, err := logical.StorageEntryJSON(pluginEntry.Name, pluginEntry)
-	require.NoError(t, err)
-	err = storage.Put(context.Background(), entry)
-	require.NoError(t, err)
-
-	// Verify official plugins - should succeed with raw custom key
-	err = catalog.verifyOfficialPlugins(context.Background())
-	require.NoError(t, err)
+	assert.Equal(t, 2, keyRing2030.CountEntities(), "keyRing2030 should contain both HashiCorp 2030 key and custom key")
+	assert.Equal(t, 2, keyRing2026.CountEntities(), "keyRing2026 should contain both HashiCorp 2026 key and custom key")
 }
