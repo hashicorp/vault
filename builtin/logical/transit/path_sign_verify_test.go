@@ -1129,3 +1129,81 @@ func testTransit_SignVerify_RSA_PSS(t *testing.T, bits int) {
 		}
 	}
 }
+
+func TestSignVerify_CachingDisabled(t *testing.T) {
+	t.Parallel()
+
+	storage := &logical.InmemStorage{}
+	b := createBackendWithForceNoCacheWithSysViewWithStorage(t, storage)
+
+	testCases := []string{
+		"rsa-2048",
+		"rsa-3072",
+		"rsa-4096",
+		"ecdsa-p256",
+		"ecdsa-p384",
+		"ecdsa-p521",
+		"ed25519",
+	}
+
+	for _, keyType := range testCases {
+		t.Run(keyType, func(t *testing.T) {
+			// First create a key
+			req := &logical.Request{
+				Storage:   storage,
+				Operation: logical.UpdateOperation,
+				Path:      "keys/" + keyType,
+				Data: map[string]interface{}{
+					"type": keyType,
+				},
+			}
+			resp, err := b.HandleRequest(context.Background(), req)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			require.NoError(t, resp.Error())
+
+			message := base64.StdEncoding.EncodeToString([]byte("test"))
+
+			signReq := &logical.Request{
+				Storage:   storage,
+				Operation: logical.UpdateOperation,
+				Path:      "sign/" + keyType,
+				Data: map[string]interface{}{
+					"input": message,
+				},
+			}
+
+			resp, err = b.HandleRequest(context.Background(), signReq)
+			if err != nil {
+				t.Fatalf("error signing message: %s", err)
+			}
+
+			signature, ok := resp.Data["signature"]
+			if !ok {
+				t.Fatal("could not find field 'signature' in response")
+			}
+
+			verifyReq := &logical.Request{
+				Storage:   storage,
+				Operation: logical.UpdateOperation,
+				Path:      "verify/" + keyType,
+				Data: map[string]interface{}{
+					"input":     message,
+					"signature": signature,
+				},
+			}
+
+			resp, err = b.HandleRequest(context.Background(), verifyReq)
+			if err != nil {
+				t.Fatalf("error verifying message: %s", err)
+			}
+
+			valid, ok := resp.Data["valid"]
+			if !ok {
+				t.Fatal("could not find field 'valid' in response")
+			}
+
+			require.True(t, valid.(bool))
+		})
+	}
+}

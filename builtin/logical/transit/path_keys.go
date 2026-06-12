@@ -419,8 +419,13 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{
-				PublicKey:    v.FormattedPublicKey,
 				CreationTime: v.CreationTime,
+			}
+			switch p.Type {
+			case keysutil.KeyType_HYBRID, keysutil.KeyType_ML_DSA, keysutil.KeyType_SLH_DSA:
+				key.HybridPublicKey = getFormattedPQCPublicKey(p.Type, v)
+			default:
+				key.PublicKey = v.FormattedPublicKey
 			}
 			if key.CreationTime.IsZero() {
 				key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
@@ -480,6 +485,8 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 				key.PublicKey = pubKey
 			case keysutil.KeyType_ML_DSA:
 				key.Name = "ml-dsa-" + p.ParameterSet
+			case keysutil.KeyType_SLH_DSA:
+				key.Name = "slh-dsa" + p.ParameterSet
 			}
 
 			retKeys[k] = structs.New(key).Map()
