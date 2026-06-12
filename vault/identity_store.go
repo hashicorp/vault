@@ -132,6 +132,11 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		InitializeFunc: iStore.initialize,
 		ActivationFunc: iStore.activate,
 		PathsSpecial: &logical.Paths{
+			// Root paths require the token have sudo capability.
+			Root: []string{
+				// Entity merge is destructive and can operate on every entity, so requires a higher privilege as a result
+				"entity/merge*",
+			},
 			Unauthenticated: unauthenticatedPaths,
 			LocalStorage: []string{
 				localAliasesBucketsPrefix,
