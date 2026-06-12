@@ -49,7 +49,7 @@ func ValidateKeyAuthorization(keyAuthz string, token string, thumbprint string) 
 	tokenPart := parts[0]
 	thumbprintPart := parts[1]
 
-	if token != tokenPart || thumbprint != thumbprintPart {
+	if subtle.ConstantTimeCompare([]byte(token), []byte(tokenPart)) != 1 || subtle.ConstantTimeCompare([]byte(thumbprint), []byte(thumbprintPart)) != 1 {
 		return false, fmt.Errorf("%w: %s", ErrIncorrectResponse, fmt.Errorf("key authorization was invalid").Error())
 	}
 
