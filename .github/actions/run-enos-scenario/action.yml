@@ -100,13 +100,13 @@ runs:
   steps:
     - if: inputs.setup-terraform == 'true'
       name: Setup Terraform
-      uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+      uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
       with:
         terraform_wrapper: false
 
     - if: inputs.setup-enos == 'true'
       name: Setup Enos
-      uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
+      uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
 
     - id: prepare-artifacts
       name: Prepare artifacts and debug directory
@@ -205,7 +205,7 @@ runs:
     - if: failure() && inputs.upload-debug-data == 'true'
       name: Upload debug data
       continue-on-error: true
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.prepare-artifacts.outputs.debug-data-artifact-name }}
         path: ${{ steps.prepare-artifacts.outputs.debug-data-dir }}
