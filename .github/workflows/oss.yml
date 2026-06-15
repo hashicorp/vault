@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - if: github.event.pull_request != null
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - if: github.event.pull_request != null
         uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
         id: changes
@@ -68,7 +68,7 @@ jobs:
       - if: github.event.pull_request != null && steps.changes.outputs.ui == 'true'
         run: echo "PROJECT=171" >> "$GITHUB_ENV"
 
-      - uses: actions/add-to-project@244f685bbc3b7adfa8466e08b698b5577571133e # v1.0.2
+      - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # v2.0.0
         with:
           project-url: https://github.com/orgs/hashicorp/projects/${{ env.PROJECT }}
           github-token: ${{ secrets.TRIAGE_GITHUB_TOKEN }}
