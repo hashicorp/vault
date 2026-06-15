@@ -4,11 +4,11 @@ on:
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '05 02 * * *'
+  workflow_dispatch:
 
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all
     outputs:
       regions: ${{steps.setup.outputs.regions}}
     steps:
@@ -29,9 +29,9 @@ jobs:
 
   aws-nuke:
     needs: setup
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64","xlarge"]') }}
     container:
-      image: ghcr.io/ekristen/aws-nuke:v3.51.0 # https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
+      image: ghcr.io/ekristen/aws-nuke:v3.65.0 # https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
       options:
          --user root
          -t
@@ -67,13 +67,10 @@ jobs:
           aws-nuke run -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log | grep -v "level=error" || true
 
   check-quotas:
-    needs: [ setup, aws-nuke ]
+    needs:
+      - setup
+      - aws-nuke
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    container:
-      image: jantman/awslimitchecker
-      env:
-        AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID_CI_09042025 }}
-        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
     strategy:
       matrix:
         region: ${{ fromJSON(needs.setup.outputs.regions) }}
@@ -88,6 +85,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      # Currently just checking VPC limits across all region, can add more checks here in future
-      - name: Check AWS Quotas
-        run: awslimitchecker -S "VPC" -r ${{matrix.region}}
+      - name: Run limit checker
+        run: |
+          docker run --rm -v "$(pwd):/repo" --workdir /repo docker.mirror.hashicorp.services/jantman/awslimitchecker@sha256:ac3301f5c4410eac99aa5191823199ea06857fb64cc616fd0c583037461b3896 -S "VPC" -r ${{matrix.region}}
