@@ -458,7 +458,7 @@ jobs:
         include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-packages) || fromJSON(needs.artifacts-ce.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
-      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-22.04-x64"]' }}
+      runs-on: ${{ needs.setup.outputs.compute-build }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
