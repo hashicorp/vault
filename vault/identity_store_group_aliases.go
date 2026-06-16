@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/helper/identity"
@@ -118,9 +119,27 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 				OperationPrefix: "group",
 				OperationSuffix: "aliases-by-id",
 			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathGroupAliasIDList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathGroupAliasIDList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of group alias ids`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `Group alias details keyed by the group alias id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias-id-list"][0]),
