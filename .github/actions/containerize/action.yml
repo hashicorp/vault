@@ -39,7 +39,7 @@ runs:
   using: composite
   steps:
     - if: inputs.vault-edition != 'ce' && (inputs.docker == 'true' || inputs.redhat == 'true')
-      uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      uses: hashicorp-forge/actions-pao-tool/select-license@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
       id: build-vault-select-license
       with:
         arch: ${{ matrix.goarch }}
