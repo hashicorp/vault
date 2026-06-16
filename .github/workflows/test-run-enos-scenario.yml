@@ -35,7 +35,7 @@ on:
 jobs:
   enos-run-vault-interactive-test:
     name:  Enos run Vault interactive test
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64", "large"]') }}
     permissions: write-all
     timeout-minutes: 120
     env:
