@@ -3,6 +3,50 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 2.0.3
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+* secrets/spiffe (enterprise): Ensure template values are properly escaped.
+* transform (enterprise): Add appropriate db specific quoting and escaping.
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.23.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.23.1)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+* secrets/azure: Update plugin to [v0.26.5+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.26.5+ent)
+
+FEATURES:
+
+* **AI Agent Support (Beta/Enterprise)**: Adds beta support for first-class AI agents. Adds
+an Agent Registry to register agents, and adds support for using Vault as an OAuth resource server
+for registered agent entities. When configured, allows OAuth 2.0 JWTs to be used to directly authorize
+requests to Vault, without needing a Vault token.
+
+IMPROVEMENTS:
+
+* consumption-billing: Add a new `sys/billing/config` endpoint to allow configuration of billing data retention (min 13 months, max 6 years).
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* identity/scim (enterprise): Update PATCH operations on scim/v2/Users to allow multiple modifications in the same patch call, support for patch operations on user metadata and name in addition to active status, and allow specifying `path` value in patch operations
+* sdk/helper/keysutil: The lock manager's GetPolicy function now always returns a locked Policy, even when caching is
+enabled. The PolicyRequest struct has a new field to indicate whether the caller requires a write lock on the policy.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* kmip (enterprise): Fix a bug that prevents the legacy CA from working on a named listener.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* secrets/transit: Add managed key support to Transit rewrap endpoint.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
+
 ## 2.0.2
 ### June 05, 2026
 BREAKING CHANGES:
@@ -357,6 +401,37 @@ BUG FIXES:
 * ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
 * ui: fix renew token button rendering for denied renew-self.
 * ui: remove unnecessary 'credential type' form input when generating AWS secrets
+
+## 1.21.8 Enterprise
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.22.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.22.1)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+* secrets/azure: Update plugin to [v0.25.4+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.25.4+ent)
+
+IMPROVEMENTS:
+
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* core: Fix failure to detect errors during storage writes of totp keys.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* secrets/transit: Add managed key support to Transit rewrap endpoint.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
 
 ## 1.21.7 Enterprise
 ### June 05, 2026
@@ -845,6 +920,34 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.13 Enterprise
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.21.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.21.1)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+
+IMPROVEMENTS:
+
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
 
 ## 1.20.12 Enterprise
 ### June 05, 2026
@@ -1422,6 +1525,34 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.19 Enterprise
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.20.2](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.20.2)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+
+IMPROVEMENTS:
+
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
 
 ## 1.19.18 Enterprise
 ### June 05, 2026
