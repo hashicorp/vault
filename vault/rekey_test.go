@@ -630,7 +630,6 @@ func TestCancelRekey_Nonce(t *testing.T) {
 // starts a rekey operation. The test verifies that the spammed cancel requests
 // are not able to cancel the rekey, because they do not provide a nonce.
 func TestCancelRekey_Regression(t *testing.T) {
-	t.Parallel()
 	testCases := []struct {
 		recovery bool
 		config   *SealConfig
