@@ -5,7 +5,6 @@ package audit
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -270,7 +269,7 @@ func mergeEnterpriseTokenMetadata(a *auth, req *logical.Request) error {
 	}
 
 	if a.Metadata == nil {
-		a.Metadata = make(map[string]string)
+		a.Metadata = make(map[string]any)
 	}
 	if req.JwtUniqueId != "" {
 		a.Metadata["jwt_unique_id"] = req.JwtUniqueId
@@ -282,18 +281,10 @@ func mergeEnterpriseTokenMetadata(a *auth, req *logical.Request) error {
 		a.Metadata["jwt_transaction_claim"] = req.JwtTransactionClaim
 	}
 	if len(req.JwtAudienceClaim) > 0 {
-		audJSON, err := json.Marshal(req.JwtAudienceClaim)
-		if err != nil {
-			return fmt.Errorf("unable to marshal jwt audience for audit: %w", err)
-		}
-		a.Metadata["jwt_audience_claim"] = string(audJSON)
+		a.Metadata["jwt_audience_claim"] = req.JwtAudienceClaim
 	}
 	if len(req.JwtAuthorizationDetails) > 0 {
-		authzJSON, err := json.Marshal(req.JwtAuthorizationDetails)
-		if err != nil {
-			return fmt.Errorf("unable to marshal jwt authorization details for audit: %w", err)
-		}
-		a.Metadata["jwt_authorization_details"] = string(authzJSON)
+		a.Metadata["jwt_authorization_details"] = req.JwtAuthorizationDetails
 	}
 	return nil
 }
@@ -370,6 +361,13 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 		tokenIssueTime = input.IssueTime.Format(time.RFC3339)
 	}
 
+	var metadataForAudit map[string]any
+	if metadata != nil {
+		metadataForAudit = make(map[string]any)
+		for k, v := range metadata {
+			metadataForAudit[k] = v
+		}
+	}
 	return &auth{
 		Accessor:                  input.Accessor,
 		ClientToken:               input.ClientToken,
@@ -378,7 +376,7 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 		EntityID:                  input.EntityID,
 		ExternalNamespacePolicies: extNSPolicies,
 		IdentityPolicies:          identityPolicies,
-		Metadata:                  metadata,
+		Metadata:                  metadataForAudit,
 		NoDefaultPolicy:           input.NoDefaultPolicy,
 		NumUses:                   input.NumUses,
 		Policies:                  policies,

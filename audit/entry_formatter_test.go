@@ -672,13 +672,13 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 	cases := map[string]struct {
 		Auth                     *logical.Auth
 		Req                      *logical.Request
-		WantActorEntityID        string
-		WantActorEntityName      string
+		WantActorEntityID        any
+		WantActorEntityName      any
 		WantMetadata             string
 		WantIssuer               string
 		WantTransaction          string
-		WantAudience             string
-		WantAuthorizationDetails string
+		WantAudience             any
+		WantAuthorizationDetails any
 	}{
 		"enterprise-token-with-actor-and-authorization-details": {
 			Auth: &logical.Auth{
@@ -708,8 +708,8 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 			WantMetadata:             "test-token-abc",
 			WantIssuer:               "https://issuer.example.com",
 			WantTransaction:          "txn-actor-1",
-			WantAudience:             `["vault"]`,
-			WantAuthorizationDetails: `[{"currency":"USD","type":"payment_initiation"}]`,
+			WantAudience:             []interface{}{"vault"},
+			WantAuthorizationDetails: []interface{}{map[string]interface{}{"currency": "USD", "type": "payment_initiation"}},
 		},
 		"enterprise-token-base-fields-only": {
 			Auth: &logical.Auth{
@@ -731,10 +731,12 @@ func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
 					RemoteAddr: "127.0.0.1",
 				},
 			},
-			WantMetadata:    "test-token-xyz",
-			WantIssuer:      "https://issuer.example.com",
-			WantTransaction: "txn-base-1",
-			WantAudience:    `["vault"]`,
+			WantMetadata:        "test-token-xyz",
+			WantIssuer:          "https://issuer.example.com",
+			WantTransaction:     "txn-base-1",
+			WantAudience:        []interface{}{"vault"},
+			WantActorEntityName: nil,
+			WantActorEntityID:   nil,
 		},
 	}
 
@@ -867,7 +869,7 @@ func TestEntryFormatter_Process_Response_EnterpriseToken(t *testing.T) {
 	require.Equal(t, "resp-token-abc", result.Auth.Metadata["jwt_unique_id"])
 	require.Equal(t, "https://issuer.example.com", result.Auth.Metadata["jwt_issuer"])
 	require.Equal(t, "txn-response-1", result.Auth.Metadata["jwt_transaction_claim"])
-	require.Equal(t, `["vault","api"]`, result.Auth.Metadata["jwt_audience_claim"])
+	require.Equal(t, []interface{}{"vault", "api"}, result.Auth.Metadata["jwt_audience_claim"])
 
 	// Response auth must also have enterprise token fields in metadata
 	require.NotNil(t, result.Response)
@@ -875,7 +877,7 @@ func TestEntryFormatter_Process_Response_EnterpriseToken(t *testing.T) {
 	require.Equal(t, "resp-token-abc", result.Response.Auth.Metadata["jwt_unique_id"])
 	require.Equal(t, "https://issuer.example.com", result.Response.Auth.Metadata["jwt_issuer"])
 	require.Equal(t, "txn-response-1", result.Response.Auth.Metadata["jwt_transaction_claim"])
-	require.Equal(t, `["vault","api"]`, result.Response.Auth.Metadata["jwt_audience_claim"])
+	require.Equal(t, []interface{}{"vault", "api"}, result.Response.Auth.Metadata["jwt_audience_claim"])
 }
 
 // TestEntryFormatter_EnterpriseTokenFieldsNotOnRequestOrAuthTopLevel verifies that
@@ -955,7 +957,7 @@ func TestEntryFormatter_EnterpriseTokenFieldsNotOnRequestOrAuthTopLevel(t *testi
 	}
 
 	// But auth.metadata MUST have them
-	var metadataMap map[string]string
+	var metadataMap map[string]any
 	require.NoError(t, json.Unmarshal(authMap["metadata"], &metadataMap))
 	entityID, ok := metadataMap["actor_entity_id"]
 	require.True(t, ok)
@@ -979,11 +981,11 @@ func TestEntryFormatter_EnterpriseTokenFieldsNotOnRequestOrAuthTopLevel(t *testi
 
 	tokenAudience, ok := metadataMap["jwt_audience_claim"]
 	require.True(t, ok)
-	require.Equal(t, `["vault"]`, tokenAudience)
+	require.Equal(t, []interface{}{"vault"}, tokenAudience)
 
 	tokenAuthzDetails, ok := metadataMap["jwt_authorization_details"]
 	require.True(t, ok)
-	require.Contains(t, tokenAuthzDetails, `"type":"access"`)
+	require.Equal(t, tokenAuthzDetails, []interface{}{map[string]interface{}{"type": "access"}})
 }
 
 // TestEntryFormatter_Process_Request exercises entryFormatter process an event
