@@ -4,8 +4,8 @@
  */
 
 import { modifier } from 'ember-modifier';
-import { SimpleBarChart, StackedBarChart, DonutChart } from '@carbon/charts';
-import type { BarChartOptions, DonutChartOptions } from '@carbon/charts/dist/interfaces';
+import { SimpleBarChart, StackedBarChart, DonutChart, MeterChart } from '@carbon/charts';
+import type { BarChartOptions, DonutChartOptions, MeterChartOptions } from '@carbon/charts/dist/interfaces';
 
 /**
  * Chart type constants for Carbon Charts
@@ -14,6 +14,7 @@ export const CHART_TYPES = {
   SIMPLE_BAR: 'simple',
   STACKED_BAR: 'stacked',
   DONUT: 'donut',
+  METER: 'meter',
 } as const;
 
 export type ChartType = (typeof CHART_TYPES)[keyof typeof CHART_TYPES];
@@ -27,7 +28,7 @@ interface ChartDataPoint {
 interface CarbonChartModifierSignature {
   Element: HTMLDivElement;
   Args: {
-    Positional: [ChartDataPoint[], BarChartOptions | DonutChartOptions, ChartType];
+    Positional: [ChartDataPoint[], BarChartOptions | DonutChartOptions | MeterChartOptions, ChartType];
   };
 }
 
@@ -44,10 +45,11 @@ const CHART_CLASS_MAP = {
   [CHART_TYPES.SIMPLE_BAR]: SimpleBarChart,
   [CHART_TYPES.STACKED_BAR]: StackedBarChart,
   [CHART_TYPES.DONUT]: DonutChart,
+  [CHART_TYPES.METER]: MeterChart,
 } as const;
 
 export default modifier<CarbonChartModifierSignature>((element, [chartData, chartOptions, chartType]) => {
-  let chart: SimpleBarChart | StackedBarChart | DonutChart | null = null;
+  let chart: SimpleBarChart | StackedBarChart | DonutChart | MeterChart | null = null;
 
   if (chartData && Array.isArray(chartData) && chartData.length > 0) {
     const ChartClass = CHART_CLASS_MAP[chartType];

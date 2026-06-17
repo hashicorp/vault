@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
@@ -126,8 +127,27 @@ This field is deprecated, use canonical_id.`,
 				OperationSuffix: "aliases-by-id",
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: i.pathAliasIDList(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDList(),
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of alias ids`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `Alias details keyed by the alias id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id-list"][0]),

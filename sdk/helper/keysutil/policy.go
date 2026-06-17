@@ -87,17 +87,17 @@ const (
 	ParameterSet_ML_DSA_65          = "65"
 	ParameterSet_ML_DSA_87          = "87"
 	ParameterSet_SLH_DSA_SHA2_128S  = "slh-dsa-sha2-128s"
-	ParameterSet_SLH_DSA_SHAKE_128S = "slh-dsa-shake-128s"
+	ParameterSet_SLH_DSA_SHAKE_128S = "slh-dsa-shake128s"
 	ParameterSet_SLH_DSA_SHA2_128F  = "slh-dsa-sha2-128f"
-	ParameterSet_SLH_DSA_SHAKE_128F = "slh-dsa-shake-128f"
+	ParameterSet_SLH_DSA_SHAKE_128F = "slh-dsa-shake128f"
 	ParameterSet_SLH_DSA_SHA2_192S  = "slh-dsa-sha2-192s"
-	ParameterSet_SLH_DSA_SHAKE_192S = "slh-dsa-shake-192s"
+	ParameterSet_SLH_DSA_SHAKE_192S = "slh-dsa-shake192s"
 	ParameterSet_SLH_DSA_SHA2_192F  = "slh-dsa-sha2-192f"
-	ParameterSet_SLH_DSA_SHAKE_192F = "slh-dsa-shake-192f"
+	ParameterSet_SLH_DSA_SHAKE_192F = "slh-dsa-shake192f"
 	ParameterSet_SLH_DSA_SHA2_256S  = "slh-dsa-sha2-256s"
-	ParameterSet_SLH_DSA_SHAKE_256S = "slh-dsa-shake-256s"
+	ParameterSet_SLH_DSA_SHAKE_256S = "slh-dsa-shake256s"
 	ParameterSet_SLH_DSA_SHA2_256F  = "slh-dsa-sha2-256f"
-	ParameterSet_SLH_DSA_SHAKE_256F = "slh-dsa-shake-256f"
+	ParameterSet_SLH_DSA_SHAKE_256F = "slh-dsa-shake256f"
 )
 
 const (

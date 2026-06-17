@@ -45,11 +45,13 @@ func (c *TokenCreateCommand) Help() string {
 	helpText := `
 Usage: vault token create [options]
 
-  Creates a new token that can be used for authentication. This token will be
-  created as a child of the currently authenticated token. The generated token
-  will inherit all policies and permissions of the currently authenticated
-  token unless you explicitly define a subset list policies to assign to the
-  token.
+  Creates a new token that can be used for authentication. This token
+  will be created as a child of the currently authenticated token.
+  When created in the same namespace as its parent and no policies are
+  specified, the generated token inherits the parent token's direct policies.
+  When created in a different namespace than its parent, the generated
+  token uses only explicitly requested target-namespace policies, plus
+  "default" unless disabled.
 
   A ttl can also be associated with the token. If a ttl is not associated
   with the token, then it cannot be renewed. If a ttl is associated with

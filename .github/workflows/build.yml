@@ -104,12 +104,12 @@ jobs:
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
         id: checkout
       # Get the vault version metadata
-      - uses: hashicorp/actions-set-product-version@2ec1b51402b3070bccf7ca95306afbd039e574ff # v2.0.1
+      - uses: hashicorp/actions-set-product-version@d9be602dfa87e201c79a3937c038f19391c9a430 # v2.0.2
         id: set-product-version
         with:
           checkout: false # don't override the reference we've checked out
@@ -126,7 +126,7 @@ jobs:
       - if: steps.metadata.outputs.is-ent-repo == 'true'
         id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -191,14 +191,14 @@ jobs:
     needs:
       - setup
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       # Get the elevated github token
       - id: vault-auth
         name: Vault Authenticate
         run: vault-auth
       - id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -295,7 +295,7 @@ jobs:
     outputs:
       cache-key: ${{ steps.build-ui.outputs.cache-key }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
       - uses: ./.github/actions/build-ui
@@ -458,7 +458,7 @@ jobs:
         include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-packages) || fromJSON(needs.artifacts-ce.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
-      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-22.04-x64"]' }}
+      runs-on: ${{ needs.setup.outputs.compute-build }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
@@ -545,7 +545,7 @@ jobs:
       - test-containers
       - test-hcp-image
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - id: disallow-merge-on-ce
         if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
@@ -579,7 +579,7 @@ jobs:
       - if: needs.setup.outputs.is-ent-repo == 'true'
         id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -656,7 +656,7 @@ jobs:
           always() &&
           steps.status.outputs.result != 'success' &&
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
         with:
           errors: true # exit with an error if the payload is invalid
           retries: rapid # retry if we're being rated limited
@@ -688,14 +688,14 @@ jobs:
                     emoji: true
                   url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - uses: hashicorp/actions-generate-metadata@f1d852525201cb7bbbf031dd2e985fb4c22307fc # v1.1.3
+      - uses: hashicorp/actions-generate-metadata@a43468dfb100445f2c2aa52cdc3d57b2c982a0f3 # v1.1.4
         # create build metadata if we successfully created artifacts
         if: needs.artifacts-ent.result == 'success' || needs.artifacts-ce.result == 'success'
         id: generate-metadata-file
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json
@@ -703,7 +703,7 @@ jobs:
           if-no-files-found: error
       - if: needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result == 'success'
         id: generate-pao-metadata
-        uses: hashicorp-forge/actions-pao-tool/collect@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+        uses: hashicorp-forge/actions-pao-tool/collect@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status
         run: |

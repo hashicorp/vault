@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/scim (enterprise): Fix Group PATCH to support filtered member paths of the form `members[value eq "uuid"]` for `add` and `replace` operations, matching the path format already supported for `remove`. This resolves an Okta error ("unsupported path") during Group Push membership updates. Group ownership mismatches now return 403 Forbidden (previously 404 Not Found); attempting to add/replace members owned by a different SCIM client now returns 403 (previously 400 with a not found-style detail).
+```

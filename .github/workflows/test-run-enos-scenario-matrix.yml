@@ -43,7 +43,7 @@ on:
 
 jobs:
   metadata:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64", "large"]') }}
     permissions:
       id-token: write # vault-auth
       contents: read
@@ -53,7 +53,7 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.vault-revision }}
       - if: inputs.vault-edition != 'ce'
@@ -63,14 +63,14 @@ jobs:
       - if: inputs.vault-edition != 'ce'
         id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
+      - uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
         with:
           github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/create-dynamic-config
@@ -114,7 +114,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.vault-revision }}
       - if: needs.metadata.outputs.is-ent-repo == 'true'
@@ -124,7 +124,7 @@ jobs:
       - if: needs.metadata.outputs.is-ent-repo == 'true'
         id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -220,7 +220,7 @@ jobs:
       - uses: ./.github/actions/install-tools
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           aws-access-key-id: ${{ steps.secrets.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ steps.secrets.outputs.aws-secret-access-key }}
@@ -325,7 +325,7 @@ jobs:
 
       - name: Upload AWS Resource Snapshots
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: aws-resources_${{ matrix.scenario.id.filter }}
           path: |
@@ -338,7 +338,7 @@ jobs:
       - name: Upload Test Results
         if: always()
         id: upload_test_results
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.prepare_scenario.outputs.test_results_artifact_name }}
           path: /tmp/vault_test_results_*.json
@@ -349,7 +349,7 @@ jobs:
       - name: Upload JUnit Test Results
         if: always()
         id: upload_junit_results
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.prepare_scenario.outputs.junit_results_artifact_name }}
           path: /tmp/vault_test_results_*.xml
@@ -416,7 +416,7 @@ jobs:
 
       - name: Upload Failure Summary
         if: always() && steps.check_test_results.outputs.has_results == 'true'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
           path: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
