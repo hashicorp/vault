@@ -10,7 +10,7 @@ import (
 	"maps"
 	"math/rand"
 	"slices"
-	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -34,6 +34,8 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+var ErrSCIMBadRequest = errors.New("unsupported filter operator")
 
 var (
 	errCycleDetectedPrefix = "cyclic relationship detected for member group ID"
@@ -1958,6 +1960,62 @@ func (i *IdentityStore) MemDBDeleteEntityByID(entityID string) error {
 	return nil
 }
 
+func (i *IdentityStore) MemDBEntitiesByScimClientIDWithFilter(ctx context.Context, scimClientID string, maxResultSet int, filterName string, filterValue string) ([]*identity.Entity, error) {
+	if scimClientID == "" {
+		return nil, nil
+	}
+
+	txn := i.db.Txn(false)
+	defer txn.Abort()
+
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// 1. Optimized Index Lookup
+	// If the filter targets a specific unique index, we use O(1) lookup.
+	var useIndex bool
+	var indexName string
+
+	// filterName will always be/need to be lowercased
+	switch filterName {
+	case "username":
+		indexName = "name"
+		useIndex = true
+	case "externalid":
+		indexName = "external_id"
+		useIndex = true
+	}
+
+	if useIndex {
+		// Perform the direct lookup
+		raw, err := txn.First(entitiesTable, indexName, ns.ID, filterValue)
+		if err != nil {
+			return nil, fmt.Errorf("database error looking up filter %s: %w", filterName, err)
+		}
+		if raw == nil {
+			return []*identity.Entity{}, nil
+		}
+
+		entity := raw.(*identity.Entity)
+
+		// Security Check: Verify Ownership
+		if entity.ScimClientID != scimClientID {
+			return []*identity.Entity{}, nil
+		}
+
+		cloned, err := entity.Clone()
+		if err != nil {
+			return nil, err
+		}
+		return []*identity.Entity{cloned}, nil
+	}
+
+	// 2. Fallback: Iterative Scan
+	return i.MemDBEntitiesByScimClientIDInTxn(ctx, txn, scimClientID, maxResultSet, filterName, filterValue)
+}
+
 func (i *IdentityStore) MemDBEntitiesByScimClientID(ctx context.Context, scimClientID string, maxResultSet int) ([]*identity.Entity, error) {
 	if scimClientID == "" {
 		return nil, nil
@@ -1966,7 +2024,7 @@ func (i *IdentityStore) MemDBEntitiesByScimClientID(ctx context.Context, scimCli
 	txn := i.db.Txn(false)
 	defer txn.Abort()
 
-	entities, err := i.MemDBEntitiesByScimClientIDInTxn(ctx, txn, scimClientID, maxResultSet)
+	entities, err := i.MemDBEntitiesByScimClientIDInTxn(ctx, txn, scimClientID, maxResultSet, "", "")
 	if err != nil {
 		return nil, err
 	}
@@ -1977,32 +2035,17 @@ func (i *IdentityStore) MemDBEntitiesByScimClientID(ctx context.Context, scimCli
 // MemDBEntitiesByScimClientIDInTxn retrieves a fully sorted list of all entities
 // belonging to a specific SCIM client.
 //
-// Implementation Pattern: Filter-Then-Sort
-// This function implements the "filter then sort" pattern, which is the idiomatic
-// approach for this type of query in go-memdb. The process involves two steps:
-//  1. Filtering: A simple two-part compound index on `(NamespaceID, ScimClientID)`
-//     is used with `txn.Get()` to efficiently retrieve all entities for the client.
-//  2. Sorting: The resulting slice of entities is then sorted in-memory by name
-//     using Go's native `sort.Slice`.
+// The three-part CompoundIndex on (NamespaceID, ScimClientID, Name) is queried
+// via a prefix lookup on (NamespaceID, ScimClientID), which causes go-memdb to
+// return results already sorted by Name. This avoids the need for an extra
+// in-memory sort step.
 //
-// Why This Pattern is Used (memdb Limitations):
-// It might seem more efficient to perform the sorting at the database level
-// using a single ordered index, memdb's built-in `CompoundIndex` does not support
-// using a partial key (e.g., just `NamespaceID` and `ScimClientID`) to get an
-// ordered iterator over the remaining fields (e.g., `Name`). The indexer's
-// internal `FromArgs` method requires a value for every field defined in the index.
-// This makes a single-operation "filter and ordered scan" impossible with the
-// standard indexers.
-//
-// Given that go-memdb is an in-memory database, sorting a pre-filtered slice
-// is extremely fast and avoids the complexity of creating a custom indexer.
 // This function returns the entire sorted list; the caller is responsible for
 // any subsequent pagination.
-func (i *IdentityStore) MemDBEntitiesByScimClientIDInTxn(ctx context.Context, txn *memdb.Txn, scimClientID string, maxResultSet int) ([]*identity.Entity, error) {
+func (i *IdentityStore) MemDBEntitiesByScimClientIDInTxn(ctx context.Context, txn *memdb.Txn, scimClientID string, maxResultSet int, filterName string, filterValue string) ([]*identity.Entity, error) {
 	if txn == nil {
 		return nil, fmt.Errorf("nil txn")
 	}
-
 	if scimClientID == "" {
 		return nil, fmt.Errorf("empty scim client id key")
 	}
@@ -2012,42 +2055,63 @@ func (i *IdentityStore) MemDBEntitiesByScimClientIDInTxn(ctx context.Context, tx
 		return nil, err
 	}
 
-	ws := memdb.NewWatchSet()
-
-	entitiesIter, err := txn.Get(entitiesTable, "scim_client_id", ns.ID, scimClientID)
+	entitiesIter, err := txn.Get(entitiesTable, "scim_client_id_prefix", ns.ID, scimClientID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to lookup entities using scim client id: %w", err)
 	}
 
-	ws.Add(entitiesIter.WatchCh())
+	var entities []*identity.Entity
+	limit := maxResultSet
+	noLimit := limit <= 0
 
-	for {
+	for item := entitiesIter.Next(); item != nil; item = entitiesIter.Next() {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		default:
-			break
 		}
 
-		var entities []*identity.Entity
-		for item := entitiesIter.Next(); item != nil; item = entitiesIter.Next() {
-			if len(entities) > maxResultSet {
-				return nil, fmt.Errorf("query returned more than the server's limit of %d results. Please use more specific filters", maxResultSet)
-			}
-
-			entity, err := item.(*identity.Entity).Clone()
-			if err != nil {
-				return nil, err
-			}
-			entities = append(entities, entity)
+		entityRaw, ok := item.(*identity.Entity)
+		if !ok {
+			return nil, fmt.Errorf("failed to declare the type of fetched entity")
 		}
 
-		sort.Slice(entities, func(i, j int) bool {
-			return entities[i].Name < entities[j].Name
-		})
+		if filterName != "" {
+			match := false
+			switch filterName {
+			case "active":
+				wantActive, err := strconv.ParseBool(filterValue)
+				if err != nil {
+					return nil, fmt.Errorf("invalid filter value for 'active': %s (expected true/false)", filterValue)
+				}
 
-		return entities, nil
+				isActuallyActive := !entityRaw.Disabled
+				if isActuallyActive == wantActive {
+					match = true
+				}
+			default:
+				// According to RFC 7644, if we don't support the filter, we must reject the request
+				// rather than returning unfiltered results (which leaks data or kills performance).
+				return nil, ErrSCIMBadRequest
+			}
+
+			if !match {
+				continue
+			}
+		}
+
+		if !noLimit && len(entities) >= limit {
+			return nil, fmt.Errorf("query returned more than the server's limit of %d results. Please use more specific filters", limit)
+		}
+
+		entity, err := entityRaw.Clone()
+		if err != nil {
+			return nil, err
+		}
+		entities = append(entities, entity)
 	}
+
+	return entities, nil
 }
 
 // FetchEntityForLocalAliasInTxn fetches the entity associated with the provided
