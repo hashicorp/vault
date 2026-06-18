@@ -78,7 +78,7 @@ type auth struct {
 	EntityID                  string              `json:"entity_id,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
-	Metadata                  map[string]string   `json:"metadata,omitempty"`
+	Metadata                  map[string]any      `json:"metadata,omitempty"`
 	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	Policies                  []string            `json:"policies,omitempty"`

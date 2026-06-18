@@ -476,7 +476,7 @@ func TestHashRequest_EnterpriseTokenFieldsInMetadata(t *testing.T) {
 	// Verify that hashAuth does not HMAC metadata values.
 	auditAuth := &auth{
 		ClientToken: "secret-token",
-		Metadata: map[string]string{
+		Metadata: map[string]any{
 			"enterprise_token_metadata":    "test-token-xyz",
 			"enterprise_token_issuer":      "https://issuer.example.com",
 			"enterprise_token_transaction": "txn-hash-1",
