@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Preserve wrapping metadata when Control Group unwrap replays an approved request that returns a wrapped response.
+```
