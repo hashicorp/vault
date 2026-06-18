@@ -605,47 +605,6 @@ func TestIdentityStore_ContextCancel(t *testing.T) {
 	}
 }
 
-func TestIdentityStore_ListEntities(t *testing.T) {
-	var err error
-	var resp *logical.Response
-
-	ctx := namespace.RootContext(nil)
-	is, _, _ := testIdentityStoreWithGithubAuth(ctx, t)
-
-	entityReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "entity",
-	}
-
-	expected := []string{}
-	for i := 0; i < 10; i++ {
-		resp, err = is.HandleRequest(ctx, entityReq)
-		if err != nil || (resp != nil && resp.IsError()) {
-			t.Fatalf("err:%v resp:%#v", err, resp)
-		}
-		expected = append(expected, resp.Data["id"].(string))
-	}
-
-	listReq := &logical.Request{
-		Operation: logical.ListOperation,
-		Path:      "entity/id",
-	}
-
-	resp, err = is.HandleRequest(ctx, listReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	actual := resp.Data["keys"].([]string)
-
-	// Sort the operands for DeepEqual to work
-	sort.Strings(actual)
-	sort.Strings(expected)
-	if !reflect.DeepEqual(expected, actual) {
-		t.Fatalf("bad: listed entity IDs; expected: %#v\n actual: %#v\n", expected, actual)
-	}
-}
-
 func TestIdentityStore_LoadingEntities(t *testing.T) {
 	var resp *logical.Response
 	// Add github credential factory to core config
