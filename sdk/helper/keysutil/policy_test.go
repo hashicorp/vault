@@ -386,8 +386,8 @@ func testArchivingUpgradeCommon(t *testing.T, lm *LockManager) {
 func Test_Archiving(t *testing.T) {
 	lockManagerWithCache, _ := NewLockManager(true, 0)
 	lockManagerWithoutCache, _ := NewLockManager(false, 0)
-	testArchivingUpgradeCommon(t, lockManagerWithCache)
-	testArchivingUpgradeCommon(t, lockManagerWithoutCache)
+	testArchivingCommon(t, lockManagerWithCache)
+	testArchivingCommon(t, lockManagerWithoutCache)
 }
 
 func testArchivingCommon(t *testing.T, lm *LockManager) {

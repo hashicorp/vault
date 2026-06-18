@@ -115,10 +115,11 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 		HelpDescription: pathGenerateRootHelpDesc,
 	}
 
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{}, supportedFormats(true))
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
 	ret.Fields = addCACertKeyUsage(ret.Fields)
+	ret.Fields = addJKSPrivateKeyAlias(ret.Fields)
 	return ret
 }
 
@@ -190,7 +191,8 @@ func buildPathGenerateIntermediate(b *backend, pattern string, displayAttrs *fra
 		HelpDescription: pathGenerateIntermediateHelpDesc,
 	}
 
-	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
+	// PKCS#12 (pkcs12_bundle) is not a valid format for encoding CSRs
+	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{}, supportedFormats(false))
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields["add_basic_constraints"] = &framework.FieldSchema{
 		Type: framework.TypeBool,

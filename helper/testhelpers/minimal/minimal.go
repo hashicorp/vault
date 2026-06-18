@@ -20,10 +20,10 @@ import (
 )
 
 // NewTestSoloCluster is a simpler version of NewTestCluster that only creates
-// single-node clusters.  It is intentionally minimalist, if you need something
-// from vault.TestClusterOptions, use NewTestCluster instead.  It should work fine
-// with a nil config argument. There is no need to call Cleanup or
-// TestWaitActive on the resulting cluster.
+// single-node clusters. It is intentionally minimalist, if you need something
+// from vault.TestClusterOptions, use NewTestCluster instead. It should work fine
+// with a nil config argument. There is no need to call Cleanup or TestWaitActive
+// on the resulting cluster.
 func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestCluster {
 	logger := corehelpers.NewTestLogger(t)
 
@@ -69,6 +69,11 @@ func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestClust
 	}
 	if mycfg.BuiltinRegistry == nil {
 		mycfg.BuiltinRegistry = builtinplugins.Registry
+	}
+
+	// Apply the entConfig values to mycfg too.
+	if config != nil {
+		vault.TestApplyEntBaseConfig(mycfg, config)
 	}
 
 	cluster := vault.NewTestCluster(t, mycfg, &vault.TestClusterOptions{

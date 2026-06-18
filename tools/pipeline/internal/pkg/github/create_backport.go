@@ -759,6 +759,20 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 
+	// Request review from the PR author
+	err = addReviewers(
+		ctx,
+		github,
+		r.Owner,
+		r.Repo,
+		int(res.PullRequest.GetNumber()),
+		[]string{pr.GetUser().GetLogin()},
+	)
+	if err != nil {
+		res.Error = fmt.Errorf("requesting review from PR author on backport pull request %w", err)
+		return res
+	}
+
 	// Copy non-backport labels from the original PR to the backport PR
 	labelsToAdd := filterNonBackportLabels(pr.Labels, r.BackportLabelPrefix)
 	err = addLabelsToIssue(

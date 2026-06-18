@@ -17,11 +17,18 @@ import (
 )
 
 const (
-	// BillingRetentionMonths is the number of months of billing data to retain.
+	// DefaultBillingRetentionMonths is the default number of months of billing data to retain.
 	// This includes the current month plus previous months (e.g., 37 = current + 36 previous months).
-	BillingRetentionMonths = 37
+	DefaultBillingRetentionMonths = 37
+
+	// MinBillingRetentionMonths is the minimum allowed retention period (13 months = 1 year + current month)
+	MinBillingRetentionMonths = 13
+
+	// MaxBillingRetentionMonths is the maximum allowed retention period (72 months = 6 years)
+	MaxBillingRetentionMonths = 72
 
 	BillingSubPath                          = "billing/"
+	BillingConfigPath                       = "config"
 	ReplicatedPrefix                        = "replicated/"
 	RoleHWMCountsHWM                        = "maxRoleCounts/"
 	TotpHWMCountsHWM                        = "maxTotpCounts/"
@@ -39,6 +46,7 @@ const (
 	SSHCertificateMetric                    = "ssh/normalized-certs-issued"
 	SSHOTPMetric                            = "ssh/credential-count"
 	OidcDurationAdjustedCountPrefix         = "oidcNormalizedTokenUnits/"
+	ExternalCaDurationAdjustedCountPrefix   = "externalCaNormalizedCertsIssued/"
 
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
@@ -62,6 +70,9 @@ type ConsumptionBilling struct {
 	KmipSeenEnabledThisMonth atomic.Bool
 
 	IdentityTokenUnits IdentityTokenUnits
+
+	// ExternalCaCertUnits tracks duration-adjusted PKI external CA certificate units
+	ExternalCaCertUnits *uberatomic.Float64
 }
 
 type BillingConfig struct {
@@ -145,6 +156,15 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.DataProtectionCallCounts.GcpKms.Add(val)
+	case "external-ca":
+		// External CA uses float64 for duration-adjusted units
+		val, ok := data["units"].(float64)
+		if !ok {
+			err := fmt.Errorf("invalid value type for external-ca")
+			return err
+		}
+
+		s.ExternalCaCertUnits.Add(val)
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err

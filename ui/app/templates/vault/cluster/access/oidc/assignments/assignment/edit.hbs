@@ -17,7 +17,9 @@
 </Page::Header>
 
 <Oidc::AssignmentForm
-  @model={{this.model}}
-  @onCancel={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
-  @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
+  @form={{this.model.form}}
+  @entities={{this.model.entities}}
+  @groups={{this.model.groups}}
+  @onCancel={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.form.data.name}}
+  @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.form.data.name}}
 />

@@ -380,7 +380,35 @@ func TestPopulate_Basic(t *testing.T) {
 			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
 			output:              `{}`,
 		},
-
+		// QuotedTemplating tests
+		{
+			mode:       QuotedTemplating,
+			name:       "SPIFFE quote in the middle",
+			input:      "{{identity.entity.name}}",
+			entityName: `entity"name`,
+			output:     `entity\"name`,
+		},
+		{
+			mode:     QuotedTemplating,
+			name:     "SPIFFE quoted value",
+			input:    "{{identity.entity.metadata.color}}",
+			metadata: map[string]string{"color": `"green blue"`},
+			output:   `\"green blue\"`,
+		},
+		{
+			mode:          QuotedTemplating,
+			name:          "escaped alias accessor not found",
+			input:         "{{identity.entity.aliases.aws_123.custom_metadata.foo}}",
+			aliasAccessor: "not_gonna_match",
+			err:           errors.New("alias not found"),
+		},
+		{
+			mode:     QuotedTemplating,
+			name:     "escaped metadata object disallowed",
+			input:    "{{identity.entity.metadata}}",
+			metadata: map[string]string{"foo": "bar"},
+			err:      ErrTemplateValueNotFound,
+		},
 		// wildcard templating tests
 		{
 			name:       "wildcard_glob_entity_injection",
@@ -485,67 +513,69 @@ path"secret/metadata/{{identity.entity.metadata.team}}/*" {
 	}
 
 	for _, test := range tests {
-		var entity *logical.Entity
-		if !test.nilEntity {
-			entity = &logical.Entity{
-				ID:       "entityID",
-				Name:     test.entityName,
-				Metadata: test.metadata,
+		t.Run(test.name, func(t *testing.T) {
+			var entity *logical.Entity
+			if !test.nilEntity {
+				entity = &logical.Entity{
+					ID:       "entityID",
+					Name:     test.entityName,
+					Metadata: test.metadata,
+				}
 			}
-		}
-		if test.aliasAccessor != "" {
-			entity.Aliases = []*logical.Alias{
-				{
-					MountAccessor:  test.aliasAccessor,
-					ID:             test.aliasID,
-					Name:           test.aliasName,
-					Metadata:       test.aliasMetadata,
-					CustomMetadata: test.aliasCustomMetadata,
-				},
+			if test.aliasAccessor != "" {
+				entity.Aliases = []*logical.Alias{
+					{
+						MountAccessor:  test.aliasAccessor,
+						ID:             test.aliasID,
+						Name:           test.aliasName,
+						Metadata:       test.aliasMetadata,
+						CustomMetadata: test.aliasCustomMetadata,
+					},
+				}
 			}
-		}
-		var groups []*logical.Group
-		if test.groupName != "" {
-			groups = append(groups, &logical.Group{
-				ID:          "groupID",
-				Name:        test.groupName,
-				Metadata:    test.groupMetadata,
-				NamespaceID: "root",
-			})
-		}
-
-		if test.groupMemberships != nil {
-			for i, groupName := range test.groupMemberships {
+			var groups []*logical.Group
+			if test.groupName != "" {
 				groups = append(groups, &logical.Group{
-					ID:   fmt.Sprintf("%s_%d", groupName, i),
-					Name: groupName,
+					ID:          "groupID",
+					Name:        test.groupName,
+					Metadata:    test.groupMetadata,
+					NamespaceID: "root",
 				})
 			}
-		}
 
-		subst, out, err := PopulateString(PopulateStringInput{
-			Mode:              test.mode,
-			ValidityCheckOnly: test.validityCheckOnly,
-			String:            test.input,
-			Entity:            entity,
-			Groups:            groups,
-			NamespaceID:       "root",
-			Now:               test.now,
+			if test.groupMemberships != nil {
+				for i, groupName := range test.groupMemberships {
+					groups = append(groups, &logical.Group{
+						ID:   fmt.Sprintf("%s_%d", groupName, i),
+						Name: groupName,
+					})
+				}
+			}
+
+			subst, out, err := PopulateString(PopulateStringInput{
+				Mode:              test.mode,
+				ValidityCheckOnly: test.validityCheckOnly,
+				String:            test.input,
+				Entity:            entity,
+				Groups:            groups,
+				NamespaceID:       "root",
+				Now:               test.now,
+			})
+			if err != nil {
+				if test.err == nil {
+					t.Fatalf("%s: expected success, got error: %v", test.name, err)
+				}
+				if err.Error() != test.err.Error() {
+					t.Fatalf("%s: got error: %v", test.name, err)
+				}
+			}
+			if out != test.output {
+				t.Fatalf("%s: bad output: %s, expected: %s", test.name, out, test.output)
+			}
+			if err == nil && !subst && out != test.input {
+				t.Fatalf("%s: bad subst flag", test.name)
+			}
 		})
-		if err != nil {
-			if test.err == nil {
-				t.Fatalf("%s: expected success, got error: %v", test.name, err)
-			}
-			if err.Error() != test.err.Error() {
-				t.Fatalf("%s: got error: %v", test.name, err)
-			}
-		}
-		if out != test.output {
-			t.Fatalf("%s: bad output: %s, expected: %s", test.name, out, test.output)
-		}
-		if err == nil && !subst && out != test.input {
-			t.Fatalf("%s: bad subst flag", test.name)
-		}
 	}
 }
 

@@ -16,8 +16,14 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
 import type WizardService from 'vault/services/wizard';
-import type PolicyModel from 'vault/vault/models/policy';
 import type { PaginatedMetadata } from 'core/utils/paginate-list';
+
+interface PolicyModel {
+  name: string;
+  policy: string;
+  capabilities: object;
+  policyType: string;
+}
 
 interface Args {
   filter: string | null;
@@ -62,7 +68,7 @@ export default class PagePoliciesComponent extends Component<Args> {
   get filterMatchesKey(): boolean {
     const filter = this.filter;
     const content = this.args.model;
-    return !!(content && content.length && content.find((c: PolicyModel) => c['id'] === filter));
+    return !!(content && content.length && content.find((c: PolicyModel) => c['name'] === filter));
   }
 
   // Find the first policy that partially matches the filter (starts with filter)
@@ -77,7 +83,7 @@ export default class PagePoliciesComponent extends Component<Args> {
     return filterMatchesKey
       ? undefined
       : content.find((key: PolicyModel) => {
-          return re.test(key['id'] as string);
+          return re.test(key['name'] as string);
         });
   }
 

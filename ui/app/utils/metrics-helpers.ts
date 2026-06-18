@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { calculateSum } from 'vault/utils/chart-helpers';
+
 import type { Month, NormalizedMetricsData } from 'vault/vault/billing/overview';
 
 export enum NormalizedBillingMetrics {
@@ -88,10 +90,9 @@ export function normalizeMetricData(metric: Month | null | undefined) {
       ? normalized[NormalizedBillingMetrics.ID_TOKEN_UNITS_TOTAL]
       : 0;
   normalized[NormalizedBillingMetrics.CREDENTIAL_UNITS_TOTAL] =
-    sshUnitsTotal + pkiUnitsTotal + idTokenUnitsTotal;
+    calculateSum([sshUnitsTotal, pkiUnitsTotal, idTokenUnitsTotal], 4) ?? 0;
 
-  // The API omits metrics that have zero usage rather than returning them with a count of 0.
-  // To avoid blank values in the UI, we explicitly set any missing metric keys to 0.
+  // Explicitly set any missing metric keys to 0.
   for (const metricsKey of Object.values(NormalizedBillingMetrics)) {
     if (!(metricsKey in normalized)) {
       normalized[metricsKey] = 0;

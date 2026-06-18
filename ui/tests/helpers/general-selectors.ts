@@ -85,6 +85,7 @@ export const GENERAL = {
   inputGroupByAttr: (attr: string) => `[data-test-input-group="${attr}"]`,
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   labelById: (id: string) => `label[id="${id}"]`,
+  labelFor: (name: string) => `label[for="${name}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   maskedInput: '[data-test-masked-input]',
   radioByAttr: (attr: string) => (attr ? `[data-test-radio="${attr}"]` : '[data-test-radio]'),
@@ -150,8 +151,8 @@ export const GENERAL = {
   inlineError: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
   messageDescription: '[data-test-message-error-description]',
-  validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
-  validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
+  validationErrorByAttr: (attr: string) => `[data-test-validation-error="${attr}"]`,
+  validationWarningByAttr: (attr: string) => `[data-test-validation-warning="${attr}"]`,
 
   pageError: {
     error: '[data-test-page-error]',

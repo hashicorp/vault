@@ -28,7 +28,7 @@
         <Hds::Form id="flyout-policy-form" {{on "submit" (perform this.onSave)}} data-test-policy-form as |FORM|>
           {{#if this.errorMessage}}
             <FORM.Section @isFullWidth={{true}}>
-              <MessageError @errorMessage={{this.errorMessage}} />
+              <MessageError @errorMessage={{this.errorMessage}} @errorDetails={{this.errorDetails}} />
             </FORM.Section>
           {{/if}}
 
@@ -65,6 +65,7 @@
               @policyName={{this.policyName}}
               @onPolicyChange={{this.handlePolicyChange}}
               @stanzas={{this.stanzas}}
+              @renderValidations={{if (this.validationError "stanzas") true false}}
               data-test-field="visual editor"
             />
           </FORM.Section>

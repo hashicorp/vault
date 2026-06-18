@@ -10,20 +10,24 @@
 </Page::Header>
 
 {{#if this.isDistributing}}
-  <Keymgmt::Distribute @backend={{@model.backend}} @provider={{@model.id}} @onClose={{fn (mut this.isDistributing) false}} />
+  <Keymgmt::Distribute
+    @backend={{@form.data.backend}}
+    @provider={{@form.data.name}}
+    @onClose={{fn (mut this.isDistributing) false}}
+  />
 {{else}}
   {{#if this.isShowing}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs" aria-label="navigation for managing providers">
         <ul>
           <li class={{unless this.viewingKeys "active"}} data-test-kms-provider-tab="details">
-            <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab=""}}>
+            <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@form.data.name}} @query={{hash tab=""}}>
               Details
             </LinkTo>
           </li>
-          {{#if @model.canListKeys}}
+          {{#if @capabilities.canListKeys}}
             <li class={{if this.viewingKeys "active"}} data-test-kms-provider-tab="keys">
-              <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
+              <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@form.data.name}} @query={{hash tab="keys"}}>
                 Keys
               </LinkTo>
             </li>
@@ -34,10 +38,10 @@
     {{#unless this.viewingKeys}}
       <Toolbar
         data-test-kms-provider-details-actions
-        aria-label="options for managing for key/management provider {{@model.id}}"
+        aria-label="options for managing for key/management provider {{@form.data.name}}"
       >
         <ToolbarActions>
-          {{#if @model.canDelete}}
+          {{#if @capabilities.canDelete}}
             <ConfirmAction
               @buttonText="Delete provider"
               class="toolbar-button"
@@ -45,20 +49,20 @@
               @confirmTitle="Delete this provider?"
               @onConfirmAction={{this.onDelete}}
               @disabledMessage={{if
-                @model.keys.length
+                this.keyCount
                 (concat
                   "This provider cannot be deleted until all "
-                  @model.keys.length
+                  this.keyCount
                   " key(s) distributed to it are revoked. This can be done from the Keys tab."
                 )
               }}
               data-test-kms-provider-delete
             />
           {{/if}}
-          {{#if (and @model.canDelete (or @model.canListKeys @model.canEdit))}}
+          {{#if (and @capabilities.canDelete (or @capabilities.canListKeys @capabilities.canEdit))}}
             <div class="toolbar-separator"></div>
           {{/if}}
-          {{#if (or @model.canListKeys @model.canCreateKeys)}}
+          {{#if (or @capabilities.canListKeys @capabilities.canCreateKeys)}}
             <Hds::Button
               @text="Distribute key"
               @icon="chevron-right"
@@ -69,13 +73,13 @@
               data-test-distribute-key
             />
           {{/if}}
-          {{#if @model.canEdit}}
+          {{#if @capabilities.canEdit}}
             <ToolbarSecretLink
-              @secret={{@model.id}}
+              @secret={{@form.data.name}}
               @mode="edit"
               @replace={{true}}
               @queryParams={{hash itemType="provider"}}
-              disabled={{(not @model.canEdit)}}
+              disabled={{(not @capabilities.canEdit)}}
             >
               Update credentials
             </ToolbarSecretLink>
@@ -87,16 +91,21 @@
     <form aria-label="update credentials" {{on "submit" this.onSave}}>
       <div class="box is-sideless is-fullwidth is-marginless">
         {{#if this.isCreating}}
-          {{#each @model.createFields as |attr index|}}
+          {{#each @form.createFields as |attr index|}}
             {{#if (eq index 2)}}
               <div class="has-border-top-light">
                 <h2 class="title is-5 has-top-margin-l has-bottom-margin-m" data-test-kms-provider-config-title>
                   Provider configuration
                 </h2>
               </div>
-              {{#if @model.provider}}
+              {{#if @form.data.provider}}
                 {{! Only show last field if provider selected }}
-                <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+                <FormField
+                  @attr={{attr}}
+                  @model={{@form}}
+                  @modelValidations={{this.modelValidations}}
+                  @onChange={{this.onFieldChange}}
+                />
               {{else}}
                 <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>
                   <A.Header @title="No provider selected" @titleTag="h2" data-test-empty-state-title />
@@ -104,7 +113,12 @@
                 </Hds::ApplicationState>
               {{/if}}
             {{else}}
-              <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+              <FormField
+                @attr={{attr}}
+                @model={{@form}}
+                @modelValidations={{this.modelValidations}}
+                @onChange={{this.onFieldChange}}
+              />
             {{/if}}
           {{/each}}
         {{/if}}
@@ -116,8 +130,13 @@
             Old credentials cannot be read and will be lost as soon as new ones are added. Do this carefully.
           </p>
         {{/unless}}
-        {{#each @model.credentialFields as |cred|}}
-          <FormField @attr={{cred}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+        {{#each @form.credentialFields as |cred|}}
+          <FormField
+            @attr={{cred}}
+            @model={{@form}}
+            @modelValidations={{this.modelValidations}}
+            @onChange={{this.onFieldChange}}
+          />
         {{/each}}
       </div>
       <div class="field is-grouped box is-fullwidth is-bottomless">
@@ -133,7 +152,7 @@
             @text="Cancel"
             @color="secondary"
             @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
-            @model={{if this.isCreating @root.model @model.id}}
+            @model={{if this.isCreating @root.model @form.data.name}}
             @query={{if this.isCreating (hash tab="provider") (hash itemType="provider")}}
             disabled={{this.saveTask.isRunning}}
             data-test-kms-provider-cancel
@@ -147,8 +166,8 @@
     <div class="has-bottom-margin-s">
       {{#if this.viewingKeys}}
         {{#let (options-for-backend "keymgmt" "key") as |options|}}
-          {{#if @model.keys.meta.total}}
-            {{#each @model.keys as |key|}}
+          {{#if @form.data.keys.meta.total}}
+            {{#each @form.data.keys as |key|}}
               <SecretList::Item
                 @item={{key}}
                 @backendModel={{@root}}
@@ -161,11 +180,11 @@
               />
             {{/each}}
             <Hds::Pagination::Numbered
-              @currentPage={{@model.keys.meta.currentPage}}
-              @currentPageSize={{@model.keys.meta.pageSize}}
+              @currentPage={{@form.data.keys.meta.currentPage}}
+              @currentPageSize={{@form.data.keys.meta.pageSize}}
               @route="vault.cluster.secrets.backend.show"
               @showSizeSelector={{false}}
-              @totalItems={{@model.keys.meta.total}}
+              @totalItems={{@form.data.keys.meta.total}}
               @onPageChange={{perform this.fetchKeys}}
             />
 
@@ -185,28 +204,28 @@
           {{/if}}
         {{/let}}
       {{else}}
-        {{#each @model.showFields as |attr|}}
-          {{#if attr.hasBlock}}
-            <InfoTableRow @label={{attr.label}} @value={{attr.value}} data-test-kms-provider-field={{attr.name}}>
-              {{#if attr.icon}}
-                <Icon @name={{attr.icon}} class="icon" />
-              {{/if}}
-              {{#if attr.isLink}}
-                <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
-                  {{attr.value}}
+        {{#each this.displayFields as |field|}}
+          {{#if (eq field "provider")}}
+            <InfoTableRow
+              @label={{this.label field}}
+              @value={{this.providerTypeName @form.data.provider}}
+              data-test-kms-provider-field={{field}}
+            >
+              <Icon @name={{this.providerIcon @form.data.provider}} class="icon" />
+              {{this.providerTypeName @form.data.provider}}
+            </InfoTableRow>
+          {{else if (eq field "keys")}}
+            <InfoTableRow @label={{this.label field}} @value={{this.keysValue}} data-test-kms-provider-field={{field}}>
+              {{#if this.keyCount}}
+                <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@form.data.name}} @query={{hash tab="keys"}}>
+                  {{this.keysValue}}
                 </LinkTo>
               {{else}}
-                {{attr.value}}
+                {{this.keysValue}}
               {{/if}}
             </InfoTableRow>
           {{else}}
-            <InfoTableRow
-              @alwaysRender={{true}}
-              @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-              @value={{get @model attr.name}}
-              @defaultShown={{attr.options.defaultShown}}
-              @formatDate={{if (eq attr.type "date") "MMM d yyyy, h:mm:ss aaa"}}
-            />
+            <InfoTableRow @alwaysRender={{true}} @label={{this.label field}} @value={{get @form.data field}} />
           {{/if}}
         {{/each}}
       {{/if}}

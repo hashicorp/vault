@@ -43,6 +43,7 @@ globals {
     ubuntu = {
       "22.04" = ["netcat", "ldap-utils"]
       "24.04" = ["netcat-openbsd", "ldap-utils"]
+      "26.04" = ["netcat-openbsd", "ldap-utils"]
     }
   }
   distro_version = {

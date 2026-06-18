@@ -12,14 +12,14 @@ jobs:
     # as we need secrets to install enos.
     if: "! github.event.pull_request.head.repo.fork"
     name: metadata
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     outputs:
       runs-on: ${{ steps.metadata.outputs.runs-on }}
       version: ${{ steps.metadata.outputs.version }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - id: set-product-version
-        uses: hashicorp/actions-set-product-version@2ec1b51402b3070bccf7ca95306afbd039e574ff # v2.0.1
+        uses: hashicorp/actions-set-product-version@d9be602dfa87e201c79a3937c038f19391c9a430 # v2.0.2
         with:
           checkout: false # There's no need to check out again
       - id: metadata
@@ -27,7 +27,7 @@ jobs:
           echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
           github_repository="${{ github.repository }}"
           if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-            echo 'runs-on=["self-hosted","ubuntu-latest-x64","type=m7a.2xlarge;m6i.2xlarge;m6a.2xlarge;m5a.2xlarge;m5.2xlarge"]' >> "$GITHUB_OUTPUT"
+            echo 'runs-on=["self-hosted","ubuntu-22.04-x64","large"]' >> "$GITHUB_OUTPUT"
           else
             echo 'runs-on="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
           fi
@@ -36,16 +36,16 @@ jobs:
     needs: metadata
     runs-on: ${{ fromJSON(needs.metadata.outputs.runs-on) }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
       - uses: ./.github/actions/set-up-go
         with:
           no-restore: true
           no-save: true
       - uses: ./.github/actions/install-tools
-      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_wrapper: false
-      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
+      - uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
       - name: Ensure shellcheck is available for linting
         run: which shellcheck || (sudo apt update && sudo apt install -y shellcheck)
       - name: lint

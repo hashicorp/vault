@@ -6,18 +6,27 @@
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
+import PolicyForm from 'vault/forms/policy';
 
 export default Route.extend(UnsavedModelRoute, {
   router: service(),
-  store: service(),
+  api: service(),
   version: service(),
 
-  model() {
+  async model() {
     const policyType = this.policyType();
     if (!this.version.hasSentinel && policyType !== 'acl') {
       return this.router.transitionTo('vault.cluster.policies', policyType);
     }
-    return this.store.createRecord(`policy/${policyType}`, {});
+
+    const form = new PolicyForm(
+      {
+        enforcement_level: 'hard-mandatory',
+      },
+      { isNew: true }
+    );
+    form.policyType = policyType;
+    return form;
   },
 
   setupController(controller) {

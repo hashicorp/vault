@@ -4,6 +4,7 @@
 package kv
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -19,7 +20,7 @@ import (
 // provided, bypassing the Go API client's path normalization. This is necessary
 // for testing URL-encoded path traversal sequences like %2e%2e that would
 // otherwise be resolved by path.Join in the standard client.
-func rawVaultRequest(t *testing.T, c *api.Client, token, method, rawPath, body string) *http.Response {
+func rawVaultRequest(t *testing.T, c *api.Client, token, method, rawPath, body, redirectsTo string) *http.Response {
 	t.Helper()
 
 	baseAddr := c.Address()
@@ -50,7 +51,16 @@ func rawVaultRequest(t *testing.T, c *api.Client, token, method, rawPath, body s
 
 	// Use the same HTTP client as the Vault API client to inherit TLS config
 	httpClient := c.CloneConfig().HttpClient
-	httpClient.CheckRedirect = nil
+	httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		pathWithoutPrefix := strings.TrimPrefix(req.URL.Path, "/v1/")
+		if redirectsTo != "" && pathWithoutPrefix != redirectsTo {
+			return fmt.Errorf("redirect expected to %s but got %s", redirectsTo, pathWithoutPrefix)
+		}
+		if len(via) == 10 {
+			return errors.New("too many redirects")
+		}
+		return nil
+	}
 	resp, err := httpClient.Do(req)
 	require.NoError(t, err, "failed to execute request %s %s", method, rawPath)
 
@@ -104,49 +114,56 @@ func TestKV_PathTraversal(t *testing.T) {
 	attackerClient.SetToken(attackerToken)
 
 	testCases := []struct {
-		name       string
-		path       string
-		operation  string
-		body       []byte
-		expectCode int
+		name              string
+		path              string
+		operation         string
+		body              []byte
+		expectCode        int
+		expectRedirectsTo string
 	}{
 		{
-			name:       "read secret",
-			path:       "kv-v2/data/team/public/../protected/dbcreds",
-			operation:  "GET",
-			expectCode: 400,
+			name:              "read secret",
+			path:              "kv-v2/data/team/public/../protected/dbcreds",
+			operation:         "GET",
+			expectCode:        403,
+			expectRedirectsTo: "kv-v2/data/team/protected/dbcreds",
 		},
 		{
-			name:       "read encoded",
-			path:       "kv-v2/data/team/public/%2e%2e/protected/dbcreds",
-			operation:  "GET",
-			expectCode: 400,
+			name:              "read encoded",
+			path:              "kv-v2/data/team/public/%2e%2e/protected/dbcreds",
+			operation:         "GET",
+			expectCode:        403,
+			expectRedirectsTo: "kv-v2/data/team/protected/dbcreds",
 		},
 		{
-			name:       "destroy",
-			path:       "kv-v2/destroy/team/public/../protected/dbcreds",
-			body:       []byte(`{"versions":[1]}`),
-			operation:  "PUT",
-			expectCode: 400,
+			name:              "destroy",
+			path:              "kv-v2/destroy/team/public/../protected/dbcreds",
+			body:              []byte(`{"versions":[1]}`),
+			operation:         "PUT",
+			expectCode:        403,
+			expectRedirectsTo: "kv-v2/destroy/team/protected/dbcreds",
 		},
 		{
-			name:       "destroy encoded",
-			path:       "kv-v2/destroy/team/public/%2e%2e/protected/dbcreds",
-			body:       []byte(`{"versions":[1]}`),
-			operation:  "PUT",
-			expectCode: 400,
+			name:              "destroy encoded",
+			path:              "kv-v2/destroy/team/public/%2e%2e/protected/dbcreds",
+			body:              []byte(`{"versions":[1]}`),
+			operation:         "PUT",
+			expectCode:        403,
+			expectRedirectsTo: "kv-v2/destroy/team/protected/dbcreds",
 		},
 		{
-			name:       "metadata read",
-			path:       "kv-v2/metadata/team/public/../protected/dbcreds",
-			operation:  "GET",
-			expectCode: 400,
+			name:              "metadata read",
+			path:              "kv-v2/metadata/team/public/../protected/dbcreds",
+			operation:         "GET",
+			expectCode:        403,
+			expectRedirectsTo: "kv-v2/metadata/team/protected/dbcreds",
 		},
 		{
-			name:       "metadata read encoded",
-			path:       "kv-v2/metadata/team/public/%2e%2e/protected/dbcreds",
-			operation:  "GET",
-			expectCode: 400,
+			name:              "metadata read encoded",
+			path:              "kv-v2/metadata/team/public/%2e%2e/protected/dbcreds",
+			operation:         "GET",
+			expectCode:        403,
+			expectRedirectsTo: "kv-v2/metadata/team/protected/dbcreds",
 		},
 		{
 			name:       "metadata read double encoded",
@@ -155,22 +172,25 @@ func TestKV_PathTraversal(t *testing.T) {
 			expectCode: 404,
 		},
 		{
-			name:       "metadata read double slash",
-			path:       "kv-v2/metadata/team/public////protected/dbcreds",
-			operation:  "GET",
-			expectCode: 400,
+			name:              "metadata read double slash",
+			path:              "kv-v2/metadata/team/public////protected/dbcreds",
+			operation:         "GET",
+			expectCode:        404,
+			expectRedirectsTo: "kv-v2/metadata/team/public/protected/dbcreds",
 		},
 		{
-			name:       "metadata read double slash encoded",
-			path:       "kv-v2/metadata/team/public/%2F%2F/protected/dbcreds",
-			operation:  "GET",
-			expectCode: 400,
+			name:              "metadata read double slash encoded",
+			path:              "kv-v2/metadata/team/public/%2F%2F/protected/dbcreds",
+			operation:         "GET",
+			expectCode:        404,
+			expectRedirectsTo: "kv-v2/metadata/team/public/protected/dbcreds",
 		},
 		{
-			name:       "metadata read empty path piece",
-			path:       "kv-v2/metadata/team/public//protected/dbcreds",
-			operation:  "GET",
-			expectCode: 400,
+			name:              "metadata read empty path piece",
+			path:              "kv-v2/metadata/team/public//protected/dbcreds",
+			operation:         "GET",
+			expectCode:        404,
+			expectRedirectsTo: "kv-v2/metadata/team/public/protected/dbcreds",
 		},
 		{
 			name:       "ending slash",
@@ -182,7 +202,7 @@ func TestKV_PathTraversal(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			rawResp := rawVaultRequest(t, c, attackerToken, tc.operation,
-				"/v1/"+tc.path, string(tc.body))
+				"/v1/"+tc.path, string(tc.body), tc.expectRedirectsTo)
 			defer rawResp.Body.Close()
 			require.Equal(t, tc.expectCode, rawResp.StatusCode)
 		})

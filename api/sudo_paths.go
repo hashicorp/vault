@@ -49,6 +49,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/rotate":                                 regexp.MustCompile(`^/sys/rotate$`),
 	"/sys/seal":                                   regexp.MustCompile(`^/sys/seal$`),
 	"/sys/step-down":                              regexp.MustCompile(`^/sys/step-down$`),
+	"/identity/entity/merge":                      regexp.MustCompile(`^/identity/entity/merge/?$`),
 
 	// enterprise-only paths
 	"/sys/replication/dr/primary/secondary-token":          regexp.MustCompile(`^/sys/replication/dr/primary/secondary-token$`),

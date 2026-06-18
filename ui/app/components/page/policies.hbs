@@ -96,12 +96,12 @@
     </Toolbar>
     {{#if @model.meta.total}}
       {{#each @model as |item|}}
-        {{#if (eq item.id "root")}}
+        {{#if (eq item.name "root")}}
           <div class="list-item-row is-flex" data-test-policy-item>
             <Icon @name="file" class="has-text-grey-light" />
             <div>
               <span class="has-text-weight-semibold has-text-grey" data-test-policy-name>
-                {{item.id}}
+                {{item.name}}
               </span>
               <p class="help has-text-grey">
                 The
@@ -112,20 +112,20 @@
           </div>
         {{else}}
           <LinkedBlock
-            @params={{array "vault.cluster.policy.show" @policyType item.id}}
+            @params={{array "vault.cluster.policy.show" @policyType item.name}}
             class="list-item-row"
-            data-test-policy-link={{item.id}}
+            data-test-policy-link={{item.name}}
           >
             <div class="columns is-mobile">
               <div class="column is-10">
                 <LinkTo
                   @route="vault.cluster.policy.show"
-                  @models={{array @policyType item.id}}
+                  @models={{array @policyType item.name}}
                   class="has-text-black has-text-weight-semibold"
                   data-test-policy-item={{true}}
                 >
                   <Icon @name="file" class="has-text-grey-light" />
-                  <span class="is-underline" data-test-policy-name>{{item.id}}</span>
+                  <span class="is-underline" data-test-policy-name>{{item.name}}</span>
                 </LinkTo>
               </div>
               <div class="column has-text-right">
@@ -141,21 +141,23 @@
                       <LoadingDropdownOption />
                     </dd.Generic>
                   {{else}}
-                    {{#if item.canRead}}
+                    {{#if item.capabilities.canRead}}
                       <dd.Interactive
                         @route="vault.cluster.policy.show"
-                        @models={{array @policyType item.id}}
+                        @models={{array @policyType item.name}}
                         data-test-policy-link="show"
                       >Details</dd.Interactive>
                     {{/if}}
-                    {{#if item.canEdit}}
+                    {{#if item.capabilities.canUpdate}}
                       <dd.Interactive
                         @route="vault.cluster.policy.edit"
-                        @models={{array @policyType item.id}}
+                        @models={{array @policyType item.name}}
                         data-test-policy-link="edit"
                       >Edit</dd.Interactive>
                     {{/if}}
-                    {{#if (and item.canDelete (not-eq item.name "default") (not-eq item.name "default-ceiling"))}}
+                    {{#if
+                      (and item.capabilities.canDelete (not-eq item.name "default") (not-eq item.name "default-ceiling"))
+                    }}
                       <dd.Interactive
                         @color="critical"
                         data-test-confirm-action-trigger

@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 
@@ -19,50 +20,166 @@ const (
 	WarningRefreshIgnoredOnStandby = "refresh_data parameter is supported only on the active node. " +
 		"Since this parameter was set on a performance standby, the billing data was not refreshed " +
 		"and retrieved from storage without update."
+
+	WarningStartEndMonthOutOfRetentionRange = "the specified start_month and/or end_month fall outside the range of the current billing data retention period." +
+		"Months that are not covered in the retention period will show a zero updated_at timestamp and no metrics."
 )
 
 func (b *SystemBackend) useCaseConsumptionBillingPaths() []*framework.Path {
 	return []*framework.Path{
-		{
-			Pattern: "billing/overview$",
-			Fields: map[string]*framework.FieldSchema{
-				"refresh_data": {
-					Type:        framework.TypeBool,
-					Description: "If set, updates the billing counts for the current month before returning. This is an expensive operation with potential performance impact and should be used sparingly.",
-					Query:       true,
-				},
+		b.billingOverviewPath(),
+		b.billingConfigPath(),
+	}
+}
+
+func (b *SystemBackend) billingOverviewPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "billing/overview$",
+		Fields: map[string]*framework.FieldSchema{
+			"refresh_data": {
+				Type:        framework.TypeBool,
+				Description: "If set, updates the billing counts for the current month before returning. This is an expensive operation with potential performance impact and should be used sparingly.",
+				Query:       true,
 			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleUseCaseConsumption,
-					Summary:  fmt.Sprintf("Reports consumption billing metrics for %d months (current month + previous %d months).", billing.BillingRetentionMonths, billing.BillingRetentionMonths-1),
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: http.StatusText(http.StatusOK),
-							Fields: map[string]*framework.FieldSchema{
-								"months": {
-									Type:        framework.TypeSlice,
-									Description: fmt.Sprintf("List of monthly billing data for %d months (current month + previous %d months).", billing.BillingRetentionMonths, billing.BillingRetentionMonths-1),
-								},
+			"start_month": {
+				Type:        framework.TypeString,
+				Description: "Start month in YYYY-MM format (inclusive). If not specified, defaults to the oldest available month within BillingRetentionMonths.",
+				Query:       true,
+			},
+			"end_month": {
+				Type:        framework.TypeString,
+				Description: "End month in YYYY-MM format (inclusive). If not specified, defaults to the current month.",
+				Query:       true,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleBillingOverview,
+				Summary:  "Reports consumption billing metrics on a monthly granularity.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"months": {
+								Type:        framework.TypeSlice,
+								Description: "List of monthly billing data.",
 							},
-						}},
-						http.StatusNoContent: {{
-							Description: http.StatusText(http.StatusNoContent),
-						}},
-						http.StatusBadRequest: {{
-							Description: http.StatusText(http.StatusBadRequest),
-						}},
-						http.StatusInternalServerError: {{
-							Description: http.StatusText(http.StatusInternalServerError),
-						}},
-					},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
 				},
 			},
 		},
 	}
 }
 
-func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) billingConfigPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "billing/config$",
+		Fields: map[string]*framework.FieldSchema{
+			"retention_months": {
+				Type:        framework.TypeInt,
+				Description: fmt.Sprintf("Number of months to retain billing data. Must be between %d and %d months. Defaults to %d months.", billing.MinBillingRetentionMonths, billing.MaxBillingRetentionMonths, billing.DefaultBillingRetentionMonths),
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleBillingConfigRead,
+				Summary:  "Read the billing data retention configuration.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+						Fields: map[string]*framework.FieldSchema{
+							"retention_months": {
+								Type:        framework.TypeInt,
+								Description: "Number of months of billing data to retain.",
+							},
+						},
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleBillingConfigWrite,
+				Summary:  "Configure the billing data retention period.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: http.StatusText(http.StatusOK),
+					}},
+					http.StatusNoContent: {{
+						Description: http.StatusText(http.StatusNoContent),
+					}},
+					http.StatusBadRequest: {{
+						Description: http.StatusText(http.StatusBadRequest),
+					}},
+					http.StatusInternalServerError: {{
+						Description: http.StatusText(http.StatusInternalServerError),
+					}},
+				},
+			},
+		},
+	}
+}
+
+func (b *SystemBackend) handleBillingConfigRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	retentionMonths, err := b.Core.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get billing retention configuration: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"retention_months": retentionMonths,
+		},
+	}, nil
+}
+
+func (b *SystemBackend) handleBillingConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	retentionMonths := data.Get("retention_months").(int)
+	if retentionMonths < billing.MinBillingRetentionMonths || retentionMonths > billing.MaxBillingRetentionMonths {
+		return logical.ErrorResponse(fmt.Sprintf("retention_months must be between %d and %d months", billing.MinBillingRetentionMonths, billing.MaxBillingRetentionMonths)), logical.ErrInvalidRequest
+	}
+
+	// Get current retention to check if it's being increased
+	currentRetention, err := b.Core.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current billing retention configuration: %w", err)
+	}
+
+	// Store the configuration
+	if err := b.Core.UpdateBillingRetentionMonths(ctx, retentionMonths); err != nil {
+		return nil, fmt.Errorf("failed to set billing retention configuration: %w", err)
+	}
+
+	resp := &logical.Response{}
+
+	// Add warning if retention period is being increased
+	if retentionMonths > currentRetention {
+		resp.Warnings = append(resp.Warnings, fmt.Sprintf(
+			"Retention period increased from %d to %d months. Historical data will only be available for months within the previous retention period. Older months outside the previous retention range will not have data.",
+			currentRetention, retentionMonths))
+	}
+
+	return resp, nil
+}
+
+func (b *SystemBackend) handleBillingOverview(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	refreshData := data.Get("refresh_data").(bool)
 
 	currentMonth := time.Now().UTC()
@@ -77,24 +194,37 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		refreshData = false
 	}
 
-	// Build billing data for BillingRetentionMonths (current month + previous months)
-	months := make([]interface{}, 0, billing.BillingRetentionMonths)
-
-	// Handle current month first (with optional refresh)
-	currentMonthTime := timeutil.StartOfMonth(currentMonth)
-	currentMonthData, err := b.buildMonthBillingData(ctx, currentMonthTime, refreshData)
+	// Get the configured retention period
+	retentionMonths, err := b.Core.GetBillingRetentionMonths(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("error building billing data for month %s: %w", currentMonthTime.Format("2006-01"), err)
+		return nil, fmt.Errorf("failed to get billing retention configuration: %w", err)
 	}
-	months = append(months, currentMonthData)
 
-	// Handle previous months (no refresh needed)
-	for i := 1; i < billing.BillingRetentionMonths; i++ {
-		monthTime := timeutil.StartOfMonth(currentMonth).AddDate(0, -i, 0)
+	startMonth, endMonth, isOutOfRetention, err := parseStartEndMonths(data, currentMonth, retentionMonths)
+	if err != nil {
+		return nil, err
+	}
 
-		monthData, err := b.buildMonthBillingData(ctx, monthTime, false)
+	if isOutOfRetention {
+		warnings = append(warnings, WarningStartEndMonthOutOfRetentionRange)
+	}
+
+	// Build list of months to retrieve (from end to start, newest first)
+	monthsToRetrieve := []time.Time{}
+	for month := endMonth; !month.Before(startMonth); month = month.AddDate(0, -1, 0) {
+		monthsToRetrieve = append(monthsToRetrieve, month)
+	}
+
+	// Build billing data for requested months
+	months := make([]interface{}, 0, len(monthsToRetrieve))
+
+	for _, month := range monthsToRetrieve {
+		// Only refresh current month if refresh_data is true
+		shouldRefresh := refreshData && month.Equal(timeutil.StartOfMonth(currentMonth))
+
+		monthData, err := b.buildMonthBillingData(ctx, month, shouldRefresh)
 		if err != nil {
-			return nil, fmt.Errorf("error building billing data for month %s: %w", monthTime.Format("2006-01"), err)
+			return nil, fmt.Errorf("error building billing data for month %s: %w", month.Format("2006-01"), err)
 		}
 
 		months = append(months, monthData)
@@ -108,6 +238,48 @@ func (b *SystemBackend) handleUseCaseConsumption(ctx context.Context, req *logic
 		Data:     resp,
 		Warnings: warnings,
 	}, nil
+}
+
+// parseStartEndMonths parses the start and end month parameters from the request and validates if they are valid.
+// If they are outside of the retention range, it returns a warning. If no parameter is specified,
+// the start and end defaults to the start of the retention range and the current month, respectively.
+func parseStartEndMonths(data *framework.FieldData, currentMonth time.Time, retentionMonths int) (time.Time, time.Time, bool, error) {
+	defaultStartMonth := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths+1, 0)
+	defaultEndMonth := timeutil.StartOfMonth(currentMonth)
+
+	parseMonth := func(key string, defaultMonth time.Time) (time.Time, error) {
+		if monthStr := data.Get(key).(string); monthStr != "" {
+			return time.Parse("2006-01", monthStr)
+		}
+		return defaultMonth, nil
+	}
+
+	var startMonth, endMonth time.Time
+	var isOutOfRetention bool
+	var err error
+
+	startMonth, err = parseMonth("start_month", defaultStartMonth)
+	if err != nil {
+		return time.Time{}, time.Time{}, false, fmt.Errorf("invalid start_month format: %w", err)
+	}
+
+	endMonth, err = parseMonth("end_month", defaultEndMonth)
+	if err != nil {
+		return time.Time{}, time.Time{}, false, fmt.Errorf("invalid end_month format: %w", err)
+	}
+
+	if startMonth.After(endMonth) {
+		return time.Time{}, time.Time{}, false, fmt.Errorf("start_month is later than end_month")
+	}
+
+	// We don't need to check for startMonth after the current month because either an even later endMonth is
+	// specified which would be caught by the second condition, or no end was set and it defaulted to the current month,
+	// which would have been caught in the check above. Vice versa for endMonth before the default start month.
+	if startMonth.Before(defaultStartMonth) || endMonth.After(defaultEndMonth) {
+		isOutOfRetention = true
+	}
+
+	return startMonth, endMonth, isOutOfRetention, nil
 }
 
 // buildMonthBillingData constructs billing data for a specific month
@@ -151,9 +323,8 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	// Build the usage metrics
 	usageMetrics := []map[string]interface{}{}
 
-	kvDetails := []map[string]interface{}{}
-	if combinedKvCounts > 0 {
-		kvDetails = append(kvDetails, map[string]interface{}{"type": "kv", "count": combinedKvCounts})
+	kvDetails := []map[string]interface{}{
+		{"type": "kv", "count": combinedKvCounts},
 	}
 	usageMetrics = append(usageMetrics, map[string]interface{}{
 		"metric_name": "static_secrets",
@@ -181,15 +352,10 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		},
 	})
 
-	dataProtectionDetails := []map[string]interface{}{}
-	if transitCounts > 0 {
-		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "transit", "count": transitCounts})
-	}
-	if transformCounts > 0 {
-		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "transform", "count": transformCounts})
-	}
-	if gcpKmsCounts > 0 {
-		dataProtectionDetails = append(dataProtectionDetails, map[string]interface{}{"type": "gcpkms", "count": gcpKmsCounts})
+	dataProtectionDetails := []map[string]interface{}{
+		{"type": "transit", "count": transitCounts},
+		{"type": "transform", "count": transformCounts},
+		{"type": "gcpkms", "count": gcpKmsCounts},
 	}
 
 	usageMetrics = append(usageMetrics, map[string]interface{}{
@@ -206,12 +372,9 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	}
 	usageMetrics = append(usageMetrics, pkiMetric)
 
-	managedKeysDetails := []map[string]interface{}{}
-	if combinedManagedKeyCounts.TotpKeys > 0 {
-		managedKeysDetails = append(managedKeysDetails, map[string]interface{}{"type": "totp", "count": combinedManagedKeyCounts.TotpKeys})
-	}
-	if combinedManagedKeyCounts.KmseKeys > 0 {
-		managedKeysDetails = append(managedKeysDetails, map[string]interface{}{"type": "kmse", "count": combinedManagedKeyCounts.KmseKeys})
+	managedKeysDetails := []map[string]interface{}{
+		{"type": "totp", "count": combinedManagedKeyCounts.TotpKeys},
+		{"type": "kmse", "count": combinedManagedKeyCounts.KmseKeys},
 	}
 	usageMetrics = append(usageMetrics, map[string]interface{}{
 		"metric_name": "managed_keys",
@@ -233,6 +396,17 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 	}
 	usageMetrics = append(usageMetrics, idTokenUnitsMetric)
 
+	externalCaMetric, err := b.buildExternalCaBillingMetric(ctx, month)
+	if err != nil {
+		return nil, err
+	}
+	usageMetrics = append(usageMetrics, externalCaMetric)
+
+	// Round all float64 values in usageMetrics to 4 decimal places.
+	// Rounding time for usage metrics is insignificant, so we can keep it centralized here.
+	// This prevents us from having to do it in each individual metric.
+	roundUsageMetrics(usageMetrics)
+
 	dataUpdatedAt := b.Core.computeUpdatedAt(ctx, month, currentMonth)
 
 	monthStr := month.Format("2006-01")
@@ -242,6 +416,33 @@ func (b *SystemBackend) buildMonthBillingData(ctx context.Context, month time.Ti
 		"updated_at":    dataUpdatedAt.Format(time.RFC3339),
 		"usage_metrics": usageMetrics,
 	}, nil
+}
+
+// roundUsageMetrics rounds all float64 values in the usage metrics to 4 decimal places
+func roundUsageMetrics(metrics []map[string]interface{}) {
+	for _, metric := range metrics {
+		if metricData, ok := metric["metric_data"].(map[string]interface{}); ok {
+			// Round the total if it's a float64
+			if total, ok := metricData["total"].(float64); ok {
+				metricData["total"] = roundToFour(total)
+			}
+
+			// Round values in metric_details if present
+			if details, ok := metricData["metric_details"].([]map[string]interface{}); ok {
+				for _, detail := range details {
+					if count, ok := detail["count"].(float64); ok {
+						detail["count"] = roundToFour(count)
+					}
+				}
+			}
+		}
+	}
+}
+
+// roundToFour takes a float64 and rounds it to 4 decimal places.
+func roundToFour(val float64) float64 {
+	ratio := math.Pow(10, 4)
+	return math.Round(val*ratio) / ratio
 }
 
 // computeUpdatedAt determines the appropriate updated_at timestamp for billing data
@@ -281,63 +482,54 @@ func (c *Core) computeUpdatedAt(ctx context.Context, month, currentMonth time.Ti
 // buildDynamicRolesMetric creates the dynamic_roles metric from role counts.
 func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 	total := 0
+	awsCount := 0
+	azureCount := 0
+	databaseCount := 0
+	gcpCount := 0
+	ldapCount := 0
+	openldapCount := 0
+	alicloudCount := 0
+	rabbitmqCount := 0
+	consulCount := 0
+	nomadCount := 0
+	kubernetesCount := 0
+	mongodbatlasCount := 0
+	terraformCount := 0
+
 	if counts != nil {
-		total = counts.AWSDynamicRoles +
-			counts.AzureDynamicRoles +
-			counts.DatabaseDynamicRoles +
-			counts.GCPRolesets +
-			counts.LDAPDynamicRoles +
-			counts.OpenLDAPDynamicRoles +
-			counts.AlicloudDynamicRoles +
-			counts.RabbitMQDynamicRoles +
-			counts.ConsulDynamicRoles +
-			counts.NomadDynamicRoles +
-			counts.KubernetesDynamicRoles +
-			counts.MongoDBAtlasDynamicRoles +
-			counts.TerraformCloudDynamicRoles
+		awsCount = counts.AWSDynamicRoles
+		azureCount = counts.AzureDynamicRoles
+		databaseCount = counts.DatabaseDynamicRoles
+		gcpCount = counts.GCPRolesets
+		ldapCount = counts.LDAPDynamicRoles
+		openldapCount = counts.OpenLDAPDynamicRoles
+		alicloudCount = counts.AlicloudDynamicRoles
+		rabbitmqCount = counts.RabbitMQDynamicRoles
+		consulCount = counts.ConsulDynamicRoles
+		nomadCount = counts.NomadDynamicRoles
+		kubernetesCount = counts.KubernetesDynamicRoles
+		mongodbatlasCount = counts.MongoDBAtlasDynamicRoles
+		terraformCount = counts.TerraformCloudDynamicRoles
+
+		total = awsCount + azureCount + databaseCount + gcpCount + ldapCount +
+			openldapCount + alicloudCount + rabbitmqCount + consulCount +
+			nomadCount + kubernetesCount + mongodbatlasCount + terraformCount
 	}
 
-	details := []map[string]interface{}{}
-	if counts != nil {
-		if counts.AWSDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "aws_dynamic", "count": counts.AWSDynamicRoles})
-		}
-		if counts.AzureDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "azure_dynamic", "count": counts.AzureDynamicRoles})
-		}
-		if counts.DatabaseDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "database_dynamic", "count": counts.DatabaseDynamicRoles})
-		}
-		if counts.GCPRolesets > 0 {
-			details = append(details, map[string]interface{}{"type": "gcp_dynamic", "count": counts.GCPRolesets})
-		}
-		if counts.LDAPDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "ldap_dynamic", "count": counts.LDAPDynamicRoles})
-		}
-		if counts.OpenLDAPDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "openldap_dynamic", "count": counts.OpenLDAPDynamicRoles})
-		}
-		if counts.AlicloudDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "alicloud_dynamic", "count": counts.AlicloudDynamicRoles})
-		}
-		if counts.RabbitMQDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "rabbitmq_dynamic", "count": counts.RabbitMQDynamicRoles})
-		}
-		if counts.ConsulDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "consul_dynamic", "count": counts.ConsulDynamicRoles})
-		}
-		if counts.NomadDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "nomad_dynamic", "count": counts.NomadDynamicRoles})
-		}
-		if counts.KubernetesDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "kubernetes_dynamic", "count": counts.KubernetesDynamicRoles})
-		}
-		if counts.MongoDBAtlasDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "mongodbatlas_dynamic", "count": counts.MongoDBAtlasDynamicRoles})
-		}
-		if counts.TerraformCloudDynamicRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "terraform_dynamic", "count": counts.TerraformCloudDynamicRoles})
-		}
+	details := []map[string]interface{}{
+		{"type": "aws_dynamic", "count": awsCount},
+		{"type": "azure_dynamic", "count": azureCount},
+		{"type": "database_dynamic", "count": databaseCount},
+		{"type": "gcp_dynamic", "count": gcpCount},
+		{"type": "ldap_dynamic", "count": ldapCount},
+		{"type": "openldap_dynamic", "count": openldapCount},
+		{"type": "alicloud_dynamic", "count": alicloudCount},
+		{"type": "rabbitmq_dynamic", "count": rabbitmqCount},
+		{"type": "consul_dynamic", "count": consulCount},
+		{"type": "nomad_dynamic", "count": nomadCount},
+		{"type": "kubernetes_dynamic", "count": kubernetesCount},
+		{"type": "mongodbatlas_dynamic", "count": mongodbatlasCount},
+		{"type": "terraform_dynamic", "count": terraformCount},
 	}
 
 	return map[string]interface{}{
@@ -352,39 +544,38 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 // buildAutoRotatedRolesMetric creates the auto_rotated_roles metric from role counts.
 func buildAutoRotatedRolesMetric(counts *RoleCounts) map[string]interface{} {
 	total := 0
+	awsCount := 0
+	azureCount := 0
+	databaseCount := 0
+	gcpStaticCount := 0
+	gcpImpersonatedCount := 0
+	ldapCount := 0
+	openldapCount := 0
+	osLocalAccountCount := 0
+
 	if counts != nil {
-		total = counts.AWSStaticRoles +
-			counts.AzureStaticRoles +
-			counts.DatabaseStaticRoles +
-			counts.GCPStaticAccounts +
-			counts.GCPImpersonatedAccounts +
-			counts.LDAPStaticRoles +
-			counts.OpenLDAPStaticRoles
+		awsCount = counts.AWSStaticRoles
+		azureCount = counts.AzureStaticRoles
+		databaseCount = counts.DatabaseStaticRoles
+		gcpStaticCount = counts.GCPStaticAccounts
+		gcpImpersonatedCount = counts.GCPImpersonatedAccounts
+		ldapCount = counts.LDAPStaticRoles
+		openldapCount = counts.OpenLDAPStaticRoles
+		osLocalAccountCount = counts.OSLocalAccountRoles
+
+		total = awsCount + azureCount + databaseCount + gcpStaticCount +
+			gcpImpersonatedCount + ldapCount + openldapCount + osLocalAccountCount
 	}
 
-	details := []map[string]interface{}{}
-	if counts != nil {
-		if counts.AWSStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "aws_static", "count": counts.AWSStaticRoles})
-		}
-		if counts.AzureStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "azure_static", "count": counts.AzureStaticRoles})
-		}
-		if counts.DatabaseStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "database_static", "count": counts.DatabaseStaticRoles})
-		}
-		if counts.GCPStaticAccounts > 0 {
-			details = append(details, map[string]interface{}{"type": "gcp_static", "count": counts.GCPStaticAccounts})
-		}
-		if counts.GCPImpersonatedAccounts > 0 {
-			details = append(details, map[string]interface{}{"type": "gcp_impersonated", "count": counts.GCPImpersonatedAccounts})
-		}
-		if counts.LDAPStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "ldap_static", "count": counts.LDAPStaticRoles})
-		}
-		if counts.OpenLDAPStaticRoles > 0 {
-			details = append(details, map[string]interface{}{"type": "openldap_static", "count": counts.OpenLDAPStaticRoles})
-		}
+	details := []map[string]interface{}{
+		{"type": "aws_static", "count": awsCount},
+		{"type": "azure_static", "count": azureCount},
+		{"type": "database_static", "count": databaseCount},
+		{"type": "gcp_static", "count": gcpStaticCount},
+		{"type": "gcp_impersonated", "count": gcpImpersonatedCount},
+		{"type": "ldap_static", "count": ldapCount},
+		{"type": "openldap_static", "count": openldapCount},
+		{"type": "os_local_account_static", "count": osLocalAccountCount},
 	}
 
 	return map[string]interface{}{
@@ -415,14 +606,9 @@ func (b *SystemBackend) buildPkiBillingMetric(ctx context.Context, month time.Ti
 func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
 	var totalTokens float64
 
-	idTokenDetails := []map[string]interface{}{}
 	oidcTokenCount, err := b.Core.GetStoredOidcDurationAdjustedCount(ctx, month)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving OIDC duration-adjusted token count for month: %w", err)
-	}
-
-	if oidcTokenCount > 0 {
-		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "oidc", "count": oidcTokenCount})
 	}
 
 	totalTokens += oidcTokenCount
@@ -432,17 +618,33 @@ func (b *SystemBackend) buildIdTokenUnitsBillingMetric(ctx context.Context, mont
 		return nil, fmt.Errorf("error retrieving JWT Spiffe duration-adjusted token count for month: %w", err)
 	}
 
-	if spiffeJwtUnits > 0 {
-		idTokenDetails = append(idTokenDetails, map[string]interface{}{"type": "spiffe", "count": spiffeJwtUnits})
-	}
-
 	totalTokens += spiffeJwtUnits
+
+	idTokenDetails := []map[string]interface{}{
+		{"type": "oidc", "count": oidcTokenCount},
+		{"type": "spiffe", "count": spiffeJwtUnits},
+	}
 
 	return map[string]interface{}{
 		"metric_name": "id_token_units",
 		"metric_data": map[string]interface{}{
 			"total":          totalTokens,
 			"metric_details": idTokenDetails,
+		},
+	}, nil
+}
+
+// buildExternalCaBillingMetric creates the billing metric for external CA certificate counts.
+func (b *SystemBackend) buildExternalCaBillingMetric(ctx context.Context, month time.Time) (map[string]interface{}, error) {
+	count, err := b.Core.GetStoredExternalCaCertUnits(ctx, month)
+	if err != nil {
+		return nil, fmt.Errorf("error retrieving external CA certificate units for month: %w", err)
+	}
+
+	return map[string]interface{}{
+		"metric_name": "external_ca_pki_units",
+		"metric_data": map[string]interface{}{
+			"total": count,
 		},
 	}, nil
 }

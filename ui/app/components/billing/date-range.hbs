@@ -30,7 +30,10 @@
     {{#if @isSelectedDateInvalid}}
       No data available.
     {{else}}
-      Values update every 10 minutes. Last updated:
+      {{#if @isCurrentMonth}}
+        Values update every 10 minutes.
+      {{/if}}
+      Last updated:
       {{date-format @selectedDateOption.updated_at "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}
     {{/if}}
   </Hds::Text::Body>

@@ -4,9 +4,11 @@
 package pki
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // TestSignIntermediate_MaxPathLengthValidation verifies that when signing an
@@ -217,5 +219,129 @@ func TestSignIntermediate_MaxPathLengthValidation(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestSignIntermediate_PKCS12AndJKSFormat validates PKCS12 and JKS output for intermediate signing
+// and asserts encoder (PK12) or alias (JKS) parameter handling and trust store structure.
+// PKCS12/JKS archive should be a trust store (no private key) containing the signed intermediate and CA chain.
+func TestSignIntermediate_PKCS12AndJKSFormat(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate a root CA
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root CA",
+		"issuer_name": "root-ca",
+		"ttl":         "87600h",
+		"key_type":    "ec",
+		"key_bits":    256,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Generate an intermediate CSR
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "Intermediate CA",
+		"key_type":    "ec",
+		"key_bits":    256,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	intermediateCsr := resp.Data["csr"].(string)
+
+	for _, path := range []string{"root/sign-intermediate", "issuer/root-ca/sign-intermediate"} {
+
+		t.Run("invalid format", func(t *testing.T) {
+			_, err := CBWrite(b, s, path, map[string]interface{}{
+				"format": "invalid",
+				"csr":    intermediateCsr,
+				"ttl":    "43800h",
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), `the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`)
+		})
+
+		testCasesPKCS12 := []struct {
+			name         string
+			encoder      string
+			omitPassword bool
+			password     string
+			shouldError  bool
+		}{
+			{name: "custom password", password: "intermediate-password"},
+			{name: "default password", password: pkcs12.DefaultPassword, omitPassword: true},
+			{name: "empty password", password: ""},
+			{name: "with modern2026 encoder", password: "intermediate-password", encoder: "modern2026"},
+			{name: "with modern2023 encoder", password: "intermediate-password", encoder: "modern2023"},
+			{name: "with invalid encoder", encoder: "modern2020", shouldError: true},
+		}
+
+		for _, tc := range testCasesPKCS12 {
+			name := fmt.Sprintf("PKCS12 endpoint=%q %s", path, tc.name)
+			t.Run(name, func(t *testing.T) {
+				data := map[string]interface{}{
+					"format": "pkcs12_bundle",
+					"csr":    intermediateCsr,
+					"ttl":    "43800h",
+				}
+				if !tc.omitPassword {
+					data["pkcs12_password"] = tc.password
+				}
+				if tc.encoder != "" {
+					data["pkcs12_encoder"] = tc.encoder
+				}
+
+				resp, err := CBWrite(b, s, path, data)
+				pkcs12Bytes := verifyAndDecodePKCS12(t, path, resp, err, tc.shouldError)
+				if !tc.shouldError {
+					certs := requireDecodesPKCS12TrustStore(t, pkcs12Bytes, tc.password)
+					// First cert should be the intermediate
+					require.Len(t, certs, 2, "should contain intermediate + root CA")
+					require.True(t, certs[0].IsCA, "first cert should be a CA")
+					require.Equal(t, "Intermediate CA", certs[0].Subject.CommonName)
+					require.True(t, certs[1].IsCA, "second cert should be CA")
+					require.Equal(t, "Root CA", certs[1].Subject.CommonName)
+				}
+			})
+		}
+
+		testCasesJKS := []struct {
+			name            string
+			alias           string
+			password        string
+			expectedAliases []string
+		}{
+			{name: "default password and alias", expectedAliases: []string{"1", "2"}},
+			{name: "custom password and alias", alias: "myapp", expectedAliases: []string{"1", "2"}, password: "my-very-secure-password"},
+			{name: "custom numeric alias", alias: "4", expectedAliases: []string{"1", "2"}},
+		}
+
+		for _, tc := range testCasesJKS {
+			name := fmt.Sprintf("JKS endpoint=%q %s", path, tc.name)
+			t.Run(name, func(t *testing.T) {
+				decryptPw := pkcs12.DefaultPassword
+				data := map[string]interface{}{
+					"format": "jks_bundle",
+					"csr":    intermediateCsr,
+					"ttl":    "43800h",
+				}
+				if tc.password != "" {
+					decryptPw = tc.password
+					data["jks_password"] = tc.password
+				}
+				if tc.alias != "" {
+					data["jks_private_key_alias"] = tc.alias
+				}
+
+				resp, err := CBWrite(b, s, path, data)
+				pkcs12Bytes := verifyAndDecodeJKS(t, path, resp, err)
+				certs := requireDecodesJKSTrustStore(t, pkcs12Bytes, decryptPw, tc.expectedAliases)
+				// First cert should be the intermediate
+				require.Len(t, certs, 2, "should contain intermediate + root CA")
+				require.True(t, certs[0].IsCA, "first cert should be a CA")
+				require.Equal(t, "Intermediate CA", certs[0].Subject.CommonName)
+				require.True(t, certs[1].IsCA, "second cert should be CA")
+				require.Equal(t, "Root CA", certs[1].Subject.CommonName)
+			})
+		}
 	}
 }

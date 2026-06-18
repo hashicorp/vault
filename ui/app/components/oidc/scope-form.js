@@ -5,9 +5,9 @@
 
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module OidcScopeForm
@@ -15,17 +15,19 @@ import { service } from '@ember/service';
  *
  * @example
  * ```js
- * <Oidc::ScopeForm @model={{this.model}} />
+ * <Oidc::ScopeForm @form={{this.model}} />
  * ```
  * @callback onCancel
  * @callback onSave
- * @param {Object} model - oidc scope model
+ * @param {Object} form - oidc scope form
  * @param {onCancel} onCancel - callback triggered when cancel button is clicked
  * @param {onSave} onSave - callback triggered on save success
  */
 
 export default class OidcScopeFormComponent extends Component {
+  @service api;
   @service flashMessages;
+
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
@@ -45,41 +47,38 @@ export default class OidcScopeFormComponent extends Component {
       { label: 'OIDC provider: Scopes', route: 'vault.cluster.access.oidc.scopes' },
     ];
 
-    if (!this.args.model.isNew) {
+    if (!this.args.form.isNew) {
       crumbs.push({
-        label: this.args.model.name,
+        label: this.args.form.data.name,
         route: 'vault.cluster.access.oidc.scopes.scope.details',
-        model: this.args.model.name,
+        model: this.args.form.data.name,
       });
     }
 
-    crumbs.push({ label: this.args.model.isNew ? 'Create scope' : 'Edit scope' });
+    crumbs.push({ label: this.args.form.isNew ? 'Create scope' : 'Edit scope' });
     return crumbs;
   }
 
-  @task
-  *save(event) {
-    event.preventDefault();
-    try {
-      const { isValid, state, invalidFormMessage } = this.args.model.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
-      if (isValid) {
-        const { isNew, name } = this.args.model;
-        yield this.args.model.save();
-        this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the scope ${name}.`);
-        this.args.onSave();
+  save = task(
+    waitFor(async (event) => {
+      event.preventDefault();
+      try {
+        const { isNew } = this.args.form;
+        const { isValid, state, invalidFormMessage, data } = this.args.form.toJSON();
+        this.modelValidations = isValid ? null : state;
+        this.invalidFormAlert = invalidFormMessage;
+
+        if (isValid) {
+          const { name, ...payload } = data;
+          await this.api.identity.oidcWriteScope(name, payload);
+          this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the scope ${name}.`);
+          this.args.onSave();
+        }
+      } catch (error) {
+        const { message } = await this.api.parseError(error);
+        this.errorBanner = message;
+        this.invalidFormAlert = 'There was an error submitting this form.';
       }
-    } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.errorBanner = message;
-      this.invalidFormAlert = 'There was an error submitting this form.';
-    }
-  }
-  @action
-  cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
-    this.args.onCancel();
-  }
+    })
+  );
 }

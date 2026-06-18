@@ -175,11 +175,12 @@ scenario "smoke" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
-      cluster_tag_key = global.vault_tag_key
-      common_tags     = global.tags
-      instance_count  = 1
-      vpc_id          = step.create_vpc.id
+      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["26.04"]
+      cluster_tag_key  = global.vault_tag_key
+      common_tags      = global.tags
+      instance_count   = 1
+      root_volume_size = 64
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -233,7 +234,7 @@ scenario "smoke" {
     variables {
       hosts      = step.create_external_integration_target.hosts
       ip_version = matrix.ip_version
-      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
+      packages   = concat(global.packages, global.distro_packages["ubuntu"]["26.04"], ["podman", "podman-docker"])
       ports      = global.integration_host_ports
     }
   }
@@ -529,40 +530,9 @@ scenario "smoke" {
       vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
       vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
       vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-
+      ip_version            = matrix.ip_version
     }
   }
-
-  step "run_verify_blackbox_tests_remote" {
-    description = global.description.run_verify_blackbox_tests_remote
-    module      = module.vault_run_blackbox_test
-    depends_on  = [step.run_verify_blackbox_tests]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_version_build_date,
-      quality.vault_version_edition,
-      quality.vault_version_release,
-    ]
-
-    variables {
-      leader_host           = step.get_vault_cluster_ips.leader_host
-      leader_public_ip      = step.get_vault_cluster_ips.leader_public_ip
-      vault_root_token      = step.create_vault_cluster.root_token
-      test_package          = "./vault/external_tests/blackbox/verify"
-      test_names            = ["TestVaultCLIVersionLocal"]
-      vault_edition         = matrix.edition
-      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
-      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
-      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
-      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
-
-    }
-  }
-
 
   step "verify_raft_auto_join_voter" {
     description = global.description.verify_raft_cluster_all_nodes_are_voters
@@ -675,8 +645,8 @@ scenario "smoke" {
 
   step "verify_replication" {
     description = global.description.verify_replication_status
-    module      = module.vault_verify_replication
-    depends_on  = [step.vault_remove_node_and_verify]
+    module      = module.vault_run_blackbox_test
+    depends_on  = [step.vault_remove_node_and_verify, step.get_vault_cluster_ips]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -689,9 +659,14 @@ scenario "smoke" {
     ]
 
     variables {
-      hosts         = step.create_vault_cluster_targets.hosts
-      vault_addr    = step.create_vault_cluster.api_addr_localhost
-      vault_edition = matrix.edition
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token  = step.create_vault_cluster.root_token
+      test_package      = "./vault/external_tests/blackbox/verify"
+      test_names        = ["TestReplicationAvailability"]
+      vault_edition     = matrix.edition
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      ip_version        = matrix.ip_version
     }
   }
 
@@ -784,7 +759,7 @@ scenario "smoke" {
 
   step "verify_ui" {
     description = global.description.verify_ui
-    module      = module.vault_verify_ui
+    module      = module.vault_run_blackbox_test
     depends_on  = [step.vault_remove_node_and_verify]
 
     providers = {
@@ -794,8 +769,13 @@ scenario "smoke" {
     verifies = quality.vault_ui_assets
 
     variables {
-      hosts      = step.create_vault_cluster_targets.hosts
-      vault_addr = step.create_vault_cluster.api_addr_localhost
+      ip_version       = matrix.ip_version
+      leader_host      = step.get_vault_cluster_ips.leader_host
+      leader_public_ip = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token = step.create_vault_cluster.root_token
+      test_package     = "./vault/external_tests/blackbox/verify"
+      test_names       = ["TestVaultUIAvailability"]
+      vault_edition    = matrix.edition
     }
   }
 

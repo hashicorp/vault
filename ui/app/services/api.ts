@@ -125,8 +125,14 @@ export default class ApiService extends Service {
     }
     // if the requested path is locked by a control group we need to create a new error response
     const json = await this.readJson(response);
+
+    // derive from REQUEST, not response - transit export is making an api request but trying to also set vault header on the request, not the response - causing a control group error.
+    const wasWrapTTLRequested = (context.init.headers as Headers)?.get?.('X-Vault-Wrap-TTL');
     const wrapTtl = headers.get('X-Vault-Wrap-TTL');
-    const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(json, wrapTtl);
+    const isLockedByControlGroup = this.controlGroup.isRequestedPathLocked(
+      json,
+      wasWrapTTLRequested ? wasWrapTTLRequested : wrapTtl
+    );
 
     if (isLockedByControlGroup && json) {
       const error = {
@@ -264,31 +270,37 @@ export default class ApiService extends Service {
 
   // interface for making raw fetch requests outside of the generated API methods
   // this should only be used in cases where it's not possible to use the client
-  private async rawRequest(path: string, method: HTTPMethod, body?: unknown) {
+  private async rawRequest(path: string, method: HTTPMethod, body?: unknown, headers?: HeadersInit) {
     const context = {
-      url: `${this.configuration.basePath}${path}`,
+      url: `${this.configuration.basePath}${path.charAt(0) === '/' ? path : `/${path}`}`,
       init: { method } as RequestInit,
     };
 
     if (body) {
       context.init.body = JSON.stringify(body);
     }
+    if (headers) {
+      context.init.headers = headers;
+    }
 
     const { url, init } = await this.setHeaders(context as RequestContext);
 
     const response = await this.configuration.fetchApi?.(new Request(url, init));
     if (!response?.ok) {
-      throw response;
+      throw new ResponseError(response as Response);
     }
     // with various content types like application/pem-certificate-chain or application/pkix-cert for example,
     // return the response so the caller can read the body with the appropriate method (blob, text, json etc.)
     return response;
   }
   request = {
-    get: (path: string) => this.rawRequest(path, 'GET'),
-    post: (path: string, body?: unknown) => this.rawRequest(path, 'POST', body),
-    put: (path: string, body?: unknown) => this.rawRequest(path, 'PUT', body),
-    patch: (path: string, body?: unknown) => this.rawRequest(path, 'PATCH', body),
-    delete: (path: string, body?: unknown) => this.rawRequest(path, 'DELETE', body),
+    get: (path: string, headers?: HeadersInit) => this.rawRequest(path, 'GET', undefined, headers),
+    post: (path: string, body?: unknown, headers?: HeadersInit) =>
+      this.rawRequest(path, 'POST', body, headers),
+    put: (path: string, body?: unknown, headers?: HeadersInit) => this.rawRequest(path, 'PUT', body, headers),
+    patch: (path: string, body?: unknown, headers?: HeadersInit) =>
+      this.rawRequest(path, 'PATCH', body, headers),
+    delete: (path: string, body?: unknown, headers?: HeadersInit) =>
+      this.rawRequest(path, 'DELETE', body, headers),
   };
 }

@@ -1,0 +1,266 @@
+# Copyright IBM Corp. 2016, 2026
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Run and retry an Enos scenario
+description: |
+  Run an Enos scenario with a standard launch retry flow, optional state/plan diagnostics,
+  automatic debug data artifact naming, and destroy cleanup with a destroy retry.
+
+inputs:
+  scenario-filter:
+    description: Enos scenario filter/identifier (for example "ui edition:ent backend:raft")
+    required: true
+  working-directory:
+    description: Working directory to pass to enos via --chdir
+    required: false
+    default: ./enos
+  timeout:
+    description: Timeout for the initial launch command
+    required: false
+    default: 45m0s
+  retry-timeout:
+    description: Timeout for the retry launch attempt
+    required: false
+    default: 30m0s
+  destroy-timeout:
+    description: Timeout for the destroy command
+    required: false
+    default: 10m0s
+  show-state-on-retry:
+    description: Whether to show scenario state and plan before and after a failed retry (true/false)
+    required: false
+    default: 'false'
+  upload-debug-data:
+    description: Whether to upload Enos debug data on failure (true/false)
+    required: false
+    default: "true"
+  debug-data-retention-days:
+    description: Retention period in days for uploaded debug data artifacts
+    required: false
+    default: "30"
+  debug-data-path:
+    description: Debug data root directory to create and upload
+    required: false
+    default: ""
+  setup-terraform:
+    description: Whether to install Terraform in the action (true/false)
+    required: false
+    default: "true"
+  setup-enos:
+    description: Whether to install Enos in the action (true/false)
+    required: false
+    default: "true"
+  launch-extra-args:
+    description: Extra arguments to append to the launch command before the scenario filter
+    required: false
+    default: ""
+  retry-extra-args:
+    description: Extra arguments to append to the retry launch command before the scenario filter
+    required: false
+    default: ""
+  destroy-extra-args:
+    description: Extra arguments to append to the destroy command before the scenario filter
+    required: false
+    default: ""
+  pre-destroy-command:
+    description: Optional enos scenario command to run before destroying (e.g., "exec")
+    required: false
+    default: ""
+  pre-destroy-extra-args:
+    description: Extra arguments to append to the pre-destroy command before the scenario filter
+    required: false
+    default: ""
+
+outputs:
+  launch-outcome:
+    description: Final execution outcome for the main phase (success or failure)
+    value: ${{ steps.determine-launch-outcome.outputs.outcome }}
+  launch-retry-attempted:
+    description: Whether a retry was attempted for the main phase
+    value: ${{ steps.determine-launch-outcome.outputs.retry-attempted }}
+  destroy-outcome:
+    description: Final destroy outcome (success or failure)
+    value: ${{ steps.determine-destroy-outcome.outputs.outcome }}
+  destroy-retry-attempted:
+    description: Whether a destroy retry was attempted
+    value: ${{ steps.determine-destroy-outcome.outputs.retry-attempted }}
+  debug-data-artifact-name:
+    description: Debug data artifact name prepared by the action
+    value: ${{ steps.prepare-artifacts.outputs.debug-data-artifact-name }}
+  debug-data-dir:
+    description: Debug data directory prepared by the action
+    value: ${{ steps.prepare-artifacts.outputs.debug-data-dir }}
+  error-message:
+    description: Error message captured from a failed retry
+    value: ${{ steps.launch-retry.outputs.error-message }}
+
+runs:
+  using: composite
+  steps:
+    - if: inputs.setup-terraform == 'true'
+      name: Setup Terraform
+      uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+      with:
+        terraform_wrapper: false
+
+    - if: inputs.setup-enos == 'true'
+      name: Setup Enos
+      uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
+
+    - id: prepare-artifacts
+      name: Prepare artifacts and debug directory
+      shell: bash
+      run: |
+        artifact_name="enos-debug-data_$(echo "${{ inputs.scenario-filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+        debug_dir="${{ inputs.debug-data-path }}"
+        if [ -z "${debug_dir}" ]; then
+          debug_dir="${ENOS_DEBUG_DATA_ROOT_DIR:-/tmp/enos-debug-data}"
+        fi
+        mkdir -p "${debug_dir}"
+        {
+          echo "debug-data-artifact-name=${artifact_name}"
+          echo "debug-data-dir=${debug_dir}"
+        } | tee -a "$GITHUB_OUTPUT"
+
+    - id: launch
+      name: Run Enos scenario
+      continue-on-error: true
+      shell: bash
+      run: |
+        enos scenario launch \
+          --timeout ${{ inputs.timeout }} \
+          ${{ inputs.launch-extra-args }} \
+          --chdir ${{ inputs.working-directory }} \
+          ${{ inputs.scenario-filter }}
+
+    - if: steps.launch.outcome == 'failure' && inputs.show-state-on-retry == 'true'
+      name: Show scenario state before retry
+      shell: bash
+      run: |
+        echo "::group::Scenario state before retry"
+        enos scenario exec --cmd show \
+          --chdir ${{ inputs.working-directory }} \
+          ${{ inputs.scenario-filter }} || true
+        echo "::endgroup::"
+        echo "::group::Scenario plan before retry"
+        enos scenario exec --cmd plan \
+          --chdir ${{ inputs.working-directory }} \
+          ${{ inputs.scenario-filter }} || true
+        echo "::endgroup::"
+
+    - if: steps.launch.outcome == 'failure'
+      id: launch-retry
+      name: Retry Enos scenario
+      shell: bash
+      run: |
+        if ! output=$(enos scenario launch \
+          --timeout ${{ inputs.retry-timeout }} \
+          ${{ inputs.retry-extra-args }} \
+          --chdir ${{ inputs.working-directory }} \
+          ${{ inputs.scenario-filter }} 2>&1); then
+          if [ "${{ inputs.show-state-on-retry }}" = "true" ]; then
+            echo "::group::Scenario state after retry"
+            enos scenario exec --cmd show \
+              --chdir ${{ inputs.working-directory }} \
+              ${{ inputs.scenario-filter }} || true
+            echo "::endgroup::"
+            echo "::group::Scenario plan after retry"
+            enos scenario exec --cmd plan \
+              --chdir ${{ inputs.working-directory }} \
+              ${{ inputs.scenario-filter }} || true
+            echo "::endgroup::"
+          fi
+          echo "::group::Scenario retry failure"
+          echo "$output" >&2
+          {
+            echo "# Enos Scenario Failed!"
+            echo 'See the [workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more information'
+            echo '```'
+            echo "$output"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "::endgroup::"
+          exit 1
+        fi
+
+    - id: determine-launch-outcome
+      name: Determine launch outcome
+      shell: bash
+      run: |
+        retry_attempted=false
+        if [ "${{ steps.launch.outcome }}" = "failure" ]; then
+          retry_attempted=true
+        fi
+        if [ "${{ steps.launch.outcome }}" = "success" ] || [ "${{ steps.launch-retry.outcome }}" = "success" ]; then
+          outcome=success
+        else
+          outcome=failure
+        fi
+        {
+          echo "outcome=${outcome}"
+          echo "retry-attempted=${retry_attempted}"
+        } | tee -a "$GITHUB_OUTPUT"
+
+    - if: failure() && inputs.upload-debug-data == 'true'
+      name: Upload debug data
+      continue-on-error: true
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: ${{ steps.prepare-artifacts.outputs.debug-data-artifact-name }}
+        path: ${{ steps.prepare-artifacts.outputs.debug-data-dir }}
+        retention-days: ${{ inputs.debug-data-retention-days }}
+
+    - if: always() && inputs.pre-destroy-command != ''
+      id: pre-destroy
+      name: Run pre-destroy command
+      continue-on-error: true
+      shell: bash
+      run: |
+        enos scenario ${{ inputs.pre-destroy-command }} \
+          --chdir ${{ inputs.working-directory }} \
+          ${{ inputs.scenario-filter }} \
+          ${{ inputs.pre-destroy-extra-args }}
+
+    - if: always()
+      id: destroy
+      name: Destroy Enos scenario
+      continue-on-error: true
+      shell: bash
+      run: |
+        enos scenario destroy \
+          --timeout ${{ inputs.destroy-timeout }} \
+          ${{ inputs.destroy-extra-args }} \
+          --chdir ${{ inputs.working-directory }} \
+          ${{ inputs.scenario-filter }}
+
+    - if: steps.destroy.outcome == 'failure'
+      id: destroy-retry
+      name: Retry Enos scenario destroy
+      continue-on-error: true
+      shell: bash
+      run: |
+        enos scenario destroy \
+          --timeout ${{ inputs.destroy-timeout }} \
+          ${{ inputs.destroy-extra-args }} \
+          --chdir ${{ inputs.working-directory }} \
+          ${{ inputs.scenario-filter }}
+
+    - if: always()
+      id: determine-destroy-outcome
+      name: Determine destroy outcome
+      shell: bash
+      run: |
+        retry_attempted=false
+        if [ "${{ steps.destroy.outcome }}" = "failure" ]; then
+          retry_attempted=true
+        fi
+        if [ "${{ steps.destroy.outcome }}" = "success" ] || [ "${{ steps.destroy-retry.outcome }}" = "success" ]; then
+          outcome=success
+        else
+          outcome=failure
+        fi
+        {
+          echo "outcome=${outcome}"
+          echo "retry-attempted=${retry_attempted}"
+        } | tee -a "$GITHUB_OUTPUT"

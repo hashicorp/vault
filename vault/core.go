@@ -369,10 +369,6 @@ type Core struct {
 	keepHALockOnStepDown *uint32
 	heldHALock           physical.Lock
 
-	// enterpriseTokenGetAuthRegisterFunc is an optional per-core test seam for
-	// enterprise token auth registration lookup.
-	enterpriseTokenGetAuthRegisterFunc func(*Core) (RegisterAuthFunc, error)
-
 	// shutdownDoneCh is used to notify when core.Shutdown() completes.
 	// core.Shutdown() is typically issued in a goroutine to allow Vault to
 	// release the stateLock. This channel is marked atomic to prevent race
@@ -470,6 +466,9 @@ type Core struct {
 
 	// consumptionBillingLock protects the consumptionBilling struct
 	consumptionBillingLock sync.RWMutex
+
+	// billingConfigLock protects billing configuration reads and writes
+	billingConfigLock sync.RWMutex
 
 	// consumptionBillingSubView is the sub-view of the system barrier view that is used to store consumption billing metrics
 	consumptionBillingSubView *BarrierView
@@ -679,6 +678,8 @@ type Core struct {
 	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
 	// holds the lock for modifying pendingRaftPeers
 	pendingRaftPeersLock sync.RWMutex
+	// Limits the number of concurrent retrying raft join background workers.
+	raftJoinRetryLimiter chan struct{}
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value
@@ -1162,6 +1163,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		postUnsealStarted:              new(uint32),
 		raftInfo:                       new(atomic.Value),
 		raftJoinDoneCh:                 make(chan struct{}),
+		raftJoinRetryLimiter:           make(chan struct{}, raftMaxConcurrentRetryJoins),
 		clusterHeartbeatInterval:       clusterHeartbeatInterval,
 		activityLogConfig:              conf.ActivityLogConfig,
 		billingConfig:                  conf.BillingConfig,
@@ -1876,6 +1878,10 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 		return nil
 	}
 
+	if err := c.ValidateMultiSealConfig(ctx, false); err != nil {
+		return err
+	}
+
 	sealToUse := c.seal
 	if migrate {
 		c.logger.Info("unsealing using migration seal")
@@ -1900,15 +1906,25 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 	if c.isRaftUnseal() {
 		return c.unsealWithRaft(combinedKey)
 	}
+	if !migrate {
+		defer memzero(combinedKey)
+	}
 	masterKey, err := c.unsealKeyToMasterKeyPreUnseal(ctx, sealToUse, combinedKey)
 	if err != nil {
 		return err
 	}
+	defer memzero(masterKey)
 	return c.unsealInternal(ctx, masterKey)
 }
 
 func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	ctx := context.Background()
+	zeroCombinedKey := true
+	defer func() {
+		if zeroCombinedKey {
+			memzero(combinedKey)
+		}
+	}()
 
 	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
@@ -1941,9 +1957,14 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 		// Reset the state
 		c.raftInfo.Store((*raftInformation)(nil))
 	}
+	zeroCombinedKey = false
 
 	go func() {
 		var masterKey []byte
+		defer func() {
+			memzero(combinedKey)
+			memzero(masterKey)
+		}()
 		keyringFound := false
 
 		// Wait until we at least have the keyring before we attempt to
@@ -2190,6 +2211,11 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.unsealKey); err != nil {
 			return fmt.Errorf("error setting new recovery key information: %w", err)
 		}
+		// migrationInfo.unsealKey is single-use and is repopulated by a new migrate
+		// unseal flow if migration is retried; clear it now to reduce key material
+		// residency in process memory.
+		memzero(c.migrationInfo.unsealKey)
+		c.migrationInfo.unsealKey = nil
 
 		// Generate a new master key
 		newMasterKey, err := c.barrier.GenerateKey(c.secureRandomReader)

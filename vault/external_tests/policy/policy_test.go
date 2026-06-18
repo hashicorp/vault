@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/ldap"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -45,7 +45,7 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 	}
 
 	// Configure LDAP auth backend
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{
@@ -103,7 +103,7 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	}
 
 	// Configure LDAP auth backend
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	_, err = client.Logical().Write("auth/ldap/config", map[string]interface{}{

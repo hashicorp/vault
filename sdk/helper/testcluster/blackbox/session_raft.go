@@ -4,11 +4,10 @@
 package blackbox
 
 import (
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,20 +32,78 @@ func (s *Session) AssertRaftStable(numNodes int, allowNonVoters bool) {
 	}
 }
 
-func (s *Session) AssertRaftHealthy() {
+func (s *Session) raftConfig() (*api.Secret, error) {
+	// TODO
+	// query the autopilot state endpoint and verify that all nodes are healthy according to autopilot
+	var state *api.Secret
+	return state, s.Req(
+		func(c *api.Client) error {
+			var err error
+			state, err = c.Logical().Read("sys/storage/raft/autopilot/state")
+			return err
+		},
+		WithClientRootNamespace(),
+		WithClientTimeout(2*time.Second),
+	)
+}
+
+// EventuallyRaftClusterHealthy verifies that the raft cluster eventually becomes
+// healthy regardless of node count.
+func (s *Session) EventuallyRaftClusterHealthy(timeout time.Duration) {
 	s.t.Helper()
 
-	// query the autopilot state endpoint and verify that all nodes are healthy according to autopilot
+	s.EventuallyWithTimeout(
+		func() error {
+			healthy, err := s.autopilotStateHealthy()
+			if err != nil {
+				return err
+			}
+
+			if !healthy {
+				return fmt.Errorf("expected raft state to be healthy: got %t", healthy)
+			}
+
+			return nil
+		}, timeout,
+	)
+
+	// TODO: Perhaps move the server config and voter checks into the retry above.
+
+	// Get raft configuration to ensure we have at least one node
 	secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-		return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
+		return s.Client.Logical().Read("sys/storage/raft/configuration")
 	})
 
 	require.NoError(s.t, err)
 	require.NotNil(s.t, secret)
 
-	_ = s.AssertSecret(secret).
+	// Verify we have at least one server configured
+	servers := s.AssertSecret(secret).
 		Data().
-		HasKey("healthy", true)
+		GetMap("config").
+		GetSlice("servers")
+
+	// Ensure we have at least 1 server
+	if len(servers.data) < 1 {
+		s.t.Fatal("Expected at least 1 raft server, got 0")
+	}
+
+	// Verify that we have at least one voter in the cluster
+	hasVoter := false
+	for _, server := range servers.data {
+		if serverMap, ok := server.(map[string]any); ok {
+			if voter, exists := serverMap["voter"]; exists {
+				if voterBool, ok := voter.(bool); ok && voterBool {
+					hasVoter = true
+					break
+				}
+			}
+		}
+	}
+
+	if !hasVoter {
+		s.t.Fatal("Expected at least one voter in the raft cluster")
+	}
 }
 
 // AssertRaftClusterHealthy verifies that the raft cluster is healthy regardless of node count
@@ -56,7 +113,7 @@ func (s *Session) AssertRaftClusterHealthy() {
 	s.t.Helper()
 
 	// First verify autopilot reports the cluster as healthy
-	s.AssertRaftHealthy()
+	s.AssertAutopilotHealthy()
 
 	// Get raft configuration to ensure we have at least one node
 	secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
@@ -98,8 +155,10 @@ func (s *Session) AssertRaftClusterHealthy() {
 func (s *Session) MustRaftRemovePeer(nodeID string) {
 	s.t.Helper()
 
-	_, err := s.Client.Logical().Write("sys/storage/raft/remove-peer", map[string]any{
-		"server_id": nodeID,
+	_, err := s.WithRootNamespace(func() (*api.Secret, error) {
+		return s.Client.Logical().Write("sys/storage/raft/remove-peer", map[string]any{
+			"server_id": nodeID,
+		})
 	})
 	require.NoError(s.t, err)
 }
@@ -150,210 +209,60 @@ func (s *Session) MustStepDownLeader() {
 	require.NoError(s.t, err)
 }
 
-// GetClusterNodeCount returns the number of nodes in the raft cluster
-func (s *Session) GetClusterNodeCount() int {
+// MustGetClusterNodeCount returns the number of nodes in the cluster
+func (s *Session) MustGetClusterNodeCount() int {
 	s.t.Helper()
 
+	count, err := s.getClusterNodeCount()
+	require.NoError(s.t, err)
+
+	return count
+}
+
+// MustGetNonLeaderNode returns a non-leader node ID from the raft cluster
+func (s *Session) MustGetNonLeaderNode() string {
+	s.t.Helper()
+
+	// Get current leader
+	leader := s.MustGetCurrentLeader()
+
+	// Get raft configuration
 	secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
 		return s.Client.Logical().Read("sys/storage/raft/configuration")
 	})
-	if err != nil {
-		s.t.Logf("Failed to read raft configuration: %v", err)
-		return 0
-	}
-
-	if secret == nil {
-		s.t.Log("Raft configuration response was nil")
-		return 0
-	}
+	require.NoError(s.t, err)
+	require.NotNil(s.t, secret)
 
 	configData, ok := secret.Data["config"].(map[string]any)
-	if !ok {
-		s.t.Log("Could not parse raft config data")
-		return 0
-	}
+	require.True(s.t, ok, "Could not parse raft config data")
 
 	serversData, ok := configData["servers"].([]any)
-	if !ok {
-		s.t.Log("Could not parse raft servers data")
-		return 0
-	}
+	require.True(s.t, ok, "Could not parse raft servers data")
 
-	return len(serversData)
-}
-
-// WaitForNewLeader waits for a new leader to be elected that is different from initialLeader
-// and for the cluster to become healthy. For single-node clusters, it just waits for the
-// cluster to become healthy again after stepdown. Uses reasonable timeouts to detect race conditions early.
-func (s *Session) WaitForNewLeader(initialLeader string, timeoutSeconds int) {
-	s.t.Helper()
-
-	// Use reasonable timeout - if it takes more than a few seconds, there's likely a race condition
-	if timeoutSeconds > 10 {
-		s.t.Logf("Warning: timeout of %d seconds is quite high, consider investigating potential race conditions", timeoutSeconds)
-	}
-
-	// Check cluster size to handle single-node case
-	nodeCount := s.GetClusterNodeCount()
-	if nodeCount <= 1 {
-		s.t.Logf("Single-node cluster detected, waiting for cluster to recover after stepdown...")
-
-		// Use backoff helper for single-node recovery
-		b := backoff.NewBackoff(20, 100*time.Millisecond, 1*time.Second) // Max ~10 seconds with backoff
-
-		err := b.Retry(func() error {
-			secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-				return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
-			})
-			if err != nil {
-				return err
-			}
-			if secret == nil {
-				return errors.New("no autopilot state returned")
-			}
-
-			healthy, ok := secret.Data["healthy"].(bool)
-			if !ok {
-				return errors.New("autopilot healthy status not found")
-			}
-			if !healthy {
-				return errors.New("cluster not yet healthy")
-			}
-
-			return nil
-		})
-		if err != nil {
-			s.t.Fatalf("Single-node cluster failed to recover: %v", err)
-		}
-
-		s.t.Log("Single-node cluster has recovered and is healthy")
-		return
-	}
-
-	// Multi-node cluster logic - wait for actual leader change
-	s.t.Logf("Multi-node cluster detected, waiting for new leader election...")
-
-	// Phase 1: Wait for new leader (should be fast)
-	leaderBackoff := backoff.NewBackoff(20, 100*time.Millisecond, 500*time.Millisecond) // Max ~5 seconds
-	var currentLeader string
-
-	err := leaderBackoff.Retry(func() error {
-		secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-			return s.Client.Logical().Read("sys/leader")
-		})
-		if err != nil {
-			return err
-		}
-		if secret == nil {
-			return errors.New("no leader data returned")
-		}
-
-		leaderAddress, ok := secret.Data["leader_address"].(string)
-		if !ok || leaderAddress == "" {
-			return errors.New("no leader address found")
-		}
-
-		if leaderAddress == initialLeader {
-			return errors.New("still waiting for new leader")
-		}
-
-		currentLeader = leaderAddress
-		return nil
-	})
-	if err != nil {
-		s.t.Fatalf("Failed to elect new leader: %v", err)
-	}
-
-	s.t.Logf("New leader elected: %s (was: %s)", currentLeader, initialLeader)
-
-	// Phase 2: Wait for cluster health (should also be fast)
-	healthBackoff := backoff.NewBackoff(20, 100*time.Millisecond, 500*time.Millisecond) // Max ~5 seconds
-
-	err = healthBackoff.Retry(func() error {
-		secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-			return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
-		})
-		if err != nil {
-			return err
-		}
-		if secret == nil {
-			return errors.New("no autopilot state returned")
-		}
-
-		healthy, ok := secret.Data["healthy"].(bool)
+	// Find a non-leader node
+	for _, server := range serversData {
+		serverMap, ok := server.(map[string]any)
 		if !ok {
-			return errors.New("autopilot healthy status not found")
-		}
-		if !healthy {
-			return errors.New("cluster not yet healthy")
+			continue
 		}
 
-		return nil
-	})
-	if err != nil {
-		s.t.Fatalf("Cluster failed to become healthy with new leader: %v", err)
-	}
-
-	s.t.Logf("Cluster is now healthy with new leader: %s", currentLeader)
-}
-
-// AssertClusterHealthy verifies that the cluster is healthy, with fallback for managed environments
-// like HCP where raft APIs may not be accessible. This is the recommended method for general
-// cluster health checks in blackbox tests. Uses backoff helper for reasonable retry logic.
-func (s *Session) AssertClusterHealthy() {
-	s.t.Helper()
-
-	// Use backoff helper for cluster readiness checks
-	b := backoff.NewBackoff(15, 200*time.Millisecond, 2*time.Second) // Max ~15 seconds with backoff
-
-	err := b.Retry(func() error {
-		// Try raft-based health check first (works for self-managed clusters)
-		secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
-			return s.Client.Logical().Read("sys/storage/raft/autopilot/state")
-		})
-
-		if err == nil && secret != nil {
-			// Check if autopilot reports healthy
-			if healthy, ok := secret.Data["healthy"].(bool); ok && healthy {
-				// Raft API is available and healthy, use full raft health check
-				s.AssertRaftClusterHealthy()
-				return nil
-			} else if ok && !healthy {
-				return errors.New("cluster not yet healthy according to autopilot")
-			}
-		}
-
-		// Raft API not accessible or no healthy status - check basic connectivity
-		sealStatus, err := s.WithRootNamespace(func() (*api.Secret, error) {
-			return s.Client.Logical().Read("sys/seal-status")
-		})
-		if err != nil {
-			return err
-		}
-
-		if sealStatus == nil {
-			return errors.New("seal status response was nil")
-		}
-
-		// Verify cluster is unsealed
-		sealed, ok := sealStatus.Data["sealed"].(bool)
+		nodeID, ok := serverMap["node_id"].(string)
 		if !ok {
-			return errors.New("could not determine seal status")
+			continue
 		}
 
-		if sealed {
-			return errors.New("cluster is sealed")
+		// Check if this is not the leader
+		// We check both address and nodeID because:
+		// - address: The network address (host:port) of the node
+		// - nodeID: The unique identifier of the node in the raft cluster
+		// In some configurations, the leader might be identified by either field,
+		// so we need to ensure this node doesn't match the leader in either way
+		address, ok := serverMap["address"].(string)
+		if ok && address != leader && nodeID != leader {
+			return nodeID
 		}
-
-		// If we get here, cluster is unsealed and responsive
-		if secret != nil {
-			s.t.Log("Cluster health verified (self-managed environment)")
-		} else {
-			s.t.Log("Cluster health verified (managed environment - raft APIs not accessible)")
-		}
-		return nil
-	})
-	if err != nil {
-		s.t.Fatalf("Cluster health check failed: %v", err)
 	}
+
+	s.t.Fatal("Could not find a non-leader node in the cluster")
+	return ""
 }

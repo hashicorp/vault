@@ -281,7 +281,8 @@ func TestHWMRoleCounts(t *testing.T) {
 	firstCounts := core.GetRoleCounts()
 	verifyExpectedRoleCounts(t, firstCounts, 5)
 
-	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys := core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -297,7 +298,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 2)
 	}
 
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -313,7 +315,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 8)
 	}
 
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -329,7 +332,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 5)
 	}
 
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -1616,4 +1620,45 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	counts, err = core.GetStoredGcpKmsCallCounts(ctx, currentMonth)
 	require.NoError(t, err)
 	require.Equal(t, uint64(3), counts)
+}
+
+// TestCore_BillingRetentionMonths tests the GetBillingRetentionMonths and UpdateBillingRetentionMonths methods.
+func TestCore_BillingRetentionMonths(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	// When no configuration is stored, should return default value
+	retentionMonths, err := core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, billing.DefaultBillingRetentionMonths, retentionMonths)
+
+	// Update to minimum value and verify
+	err = core.UpdateBillingRetentionMonths(ctx, billing.MinBillingRetentionMonths)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, billing.MinBillingRetentionMonths, retentionMonths)
+
+	// Update to maximum value and verify
+	err = core.UpdateBillingRetentionMonths(ctx, billing.MaxBillingRetentionMonths)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, billing.MaxBillingRetentionMonths, retentionMonths)
+
+	// Update to custom value and verify persistence
+	customRetention := 48
+	err = core.UpdateBillingRetentionMonths(ctx, customRetention)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, customRetention, retentionMonths)
+
+	// Update to a different custom value and verify persistence
+	newRetention := 60
+	err = core.UpdateBillingRetentionMonths(ctx, newRetention)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, newRetention, retentionMonths)
 }

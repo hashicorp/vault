@@ -3,51 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { run } from '@ember/runloop';
-import { resolve } from 'rsvp';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, find, fillIn, blur, triggerEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
-import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-
-const storeStub = Service.extend({
-  callArgs: null,
-  keyActionReturnVal: null,
-  rootKeyActionReturnVal: null,
-  adapterFor() {
-    const self = this;
-    return {
-      keyAction(action, { backend, id, payload }, options) {
-        self.set('callArgs', { action, backend, id, payload });
-        self.set('callArgsOptions', options);
-        const rootResp = { ...self.get('rootKeyActionReturnVal') };
-        const resp =
-          Object.keys(rootResp).length > 0
-            ? rootResp
-            : {
-                data: { ...self.get('keyActionReturnVal') },
-              };
-        return resolve(resp);
-      },
-    };
-  },
-});
+import sinon from 'sinon';
 
 module('Integration | Component | transit key actions', function (hooks) {
   setupRenderingTest(hooks);
-
-  hooks.beforeEach(function () {
-    run(() => {
-      this.owner.unregister('service:store');
-      this.owner.register('service:store', storeStub);
-      this.storeService = this.owner.lookup('service:store');
-    });
-  });
 
   test('it requires `key`', async function (assert) {
     const promise = waitForError();
@@ -141,118 +108,142 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
-    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
+    const keyDefaults = {
+      backend: 'transit',
+      id: 'akey',
+      supportedActions: ['encrypt'].concat(actions),
+    };
 
     const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
     this.set('selectedAction', 'encrypt');
-    this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
+
+    this.apiStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitEncrypt').resolves({
+      data: { ciphertext: 'secret' },
+    });
+
     await render(hbs`
-    <TransitKeyActions @selectedAction={{this.selectedAction}} @key={{this.key}} />`);
+    <TransitKeyActions
+      @selectedAction={{this.selectedAction}}
+      @key={{this.key}}
+    />
+  `);
 
     let editor;
     await waitFor('.cm-editor');
     editor = codemirror('#plaintext-control');
     setCodeEditorValue(editor, 'plaintext');
+
     await click('button[type="submit"]');
-    assert.deepEqual(
-      this.storeService.callArgs,
-      {
-        action: 'encrypt',
-        backend: 'transit',
-        id: 'akey',
-        payload: {
-          plaintext: encodeString('plaintext'),
-        },
-      },
-      'passes expected args to the adapter'
+
+    assert.true(this.apiStub.calledOnce, 'calls the API to encrypt');
+
+    assert.true(
+      this.apiStub.calledWith('akey', 'transit', {
+        plaintext: encodeString('plaintext'),
+      }),
+      'passes expected args to transitEncrypt'
     );
 
     assert.strictEqual(find('[data-test-encrypted-value="ciphertext"]').innerText, 'secret');
 
     // exit modal
     await click('dialog button');
+
     // Encrypt again, with pre-encoded value and checkbox selected
     const preEncodedValue = encodeString('plaintext');
+
     await waitFor('.cm-editor');
     editor = codemirror('#plaintext-control');
     setCodeEditorValue(editor, preEncodedValue);
+
     await click('input[data-test-transit-input="encodedBase64"]');
     await click('button[type="submit"]');
 
-    assert.deepEqual(
-      this.storeService.callArgs,
-      {
-        action: 'encrypt',
-        backend: 'transit',
-        id: 'akey',
-        payload: {
-          plaintext: preEncodedValue,
-        },
-      },
-      'passes expected args to the adapter'
+    assert.strictEqual(this.apiStub.callCount, 2, 'calls the API to encrypt again');
+
+    assert.true(
+      this.apiStub.secondCall.calledWith('akey', 'transit', {
+        plaintext: preEncodedValue,
+      }),
+      'passes pre-encoded value without re-encoding'
     );
+
     await click('dialog button');
   }
 
   test('it encrypts', doEncrypt);
 
   test('it shows key version selection', async function (assert) {
-    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
-    const keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
+    const keyDefaults = {
+      backend: 'transit',
+      id: 'akey',
+      supportedActions: ['encrypt'],
+    };
+    const keyattrs = {
+      keysForEncryption: [3, 2, 1],
+      latestVersion: 3,
+    };
+
     const key = { ...keyDefaults, ...keyattrs };
     this.set('key', key);
-    this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
+    const encryptStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitEncrypt').resolves({
+      data: { ciphertext: 'secret' },
+    });
+
     await render(hbs`
-    <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
+    <TransitKeyActions
+      @selectedAction="encrypt"
+      @key={{this.key}}
+    />
+  `);
 
     await waitFor('.cm-editor');
+
     const editor = codemirror();
     setCodeEditorValue(editor, 'plaintext');
+
     assert.dom('#key_version').exists({ count: 1 }, 'it renders the key version selector');
 
     await triggerEvent('#key_version', 'change');
     await click('button[type="submit"]');
-    assert.deepEqual(
-      this.storeService.callArgs,
-      {
-        action: 'encrypt',
-        backend: 'transit',
-        id: 'akey',
-        payload: {
-          plaintext: encodeString('plaintext'),
-          key_version: '0',
-        },
-      },
+
+    assert.true(encryptStub.calledOnce, 'calls transitEncrypt');
+
+    assert.true(
+      encryptStub.calledWith('akey', 'transit', {
+        plaintext: encodeString('plaintext'),
+        key_version: '0',
+      }),
       'includes key_version in the payload'
     );
   });
 
   test('it hides key version selection', async function (assert) {
-    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
+    const keyDefaults = {
+      backend: 'transit',
+      id: 'akey',
+      supportedActions: ['encrypt'],
+    };
+
     const keyattrs = { keysForEncryption: [1] };
     const key = { ...keyDefaults, ...keyattrs };
+
     this.set('key', key);
-    this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
+
     await render(hbs`
-    <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
+    <TransitKeyActions
+      @selectedAction="encrypt"
+      @key={{this.key}}
+    />
+  `);
 
     await waitFor('.cm-editor');
+
     const editor = codemirror('#plaintext-control');
     setCodeEditorValue(editor, 'plaintext');
+
     assert.dom('#key_version').doesNotExist('it does not render the selector when there is only one key');
-  });
-
-  test('it does not carry ciphertext value over to decrypt', async function (assert) {
-    assert.expect(4);
-    const plaintext = 'not so secret';
-    await doEncrypt.call(this, assert, ['decrypt']);
-
-    this.set('storeService.keyActionReturnVal', { plaintext });
-    this.set('selectedAction', 'decrypt');
-    await waitFor('.cm-editor');
-    const editor = codemirror('#ciphertext-control');
-    assert.strictEqual(getCodeEditorValue(editor), '', 'does not prefill ciphertext value');
   });
 
   const setupExport = async function () {
@@ -268,23 +259,30 @@ module('Integration | Component | transit key actions', function (hooks) {
   };
 
   test('it can export a key:default behavior', async function (assert) {
-    this.set('storeService.rootKeyActionReturnVal', { wrap_info: { token: 'wrapped-token' } });
+    const exportStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitExportKey').resolves({
+      wrap_info: { token: 'wrapped-token' },
+    });
+
     await setupExport.call(this);
     await click('button[type="submit"]');
 
+    assert.true(exportStub.calledOnce);
     assert.deepEqual(
-      this.storeService.callArgs,
-      {
-        action: 'export',
-        backend: 'transit',
-        id: 'akey',
-        payload: {
-          param: ['encryption'],
+      exportStub.firstCall.args,
+      [
+        'akey',
+        'encryption-key',
+        'transit',
+        {
+          headers: {
+            'X-Vault-Wrap-TTL': '30m',
+          },
+          wrapTTL: '30m',
         },
-      },
-      'passes expected args to the adapter'
+      ],
+      'passes expected args to api service'
     );
-    assert.strictEqual(this.storeService.callArgsOptions.wrapTTL, '30m', 'passes value for wrapTTL');
+
     assert.strictEqual(
       find('[data-test-encrypted-value="export"]').innerText,
       'wrapped-token',
@@ -293,77 +291,112 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   test('it can export a key:unwrapped behavior', async function (assert) {
-    const response = { keys: { a: 'key' } };
-    this.set('storeService.keyActionReturnVal', response);
+    const response = {
+      data: {
+        keys: { a: 'key' },
+        type: 'encryption',
+        name: 'akey',
+      },
+    };
+    sinon.stub(this.owner.lookup('service:api').secrets, 'transitExportKey').resolves(response);
+
     await setupExport.call(this);
     await click('[data-test-toggle-label="Wrap response"]');
     await click(GENERAL.submitButton);
+
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
-      response,
+      {
+        keys: { a: 'key' },
+        type: 'encryption',
+        name: 'akey',
+      },
       'prints json response'
     );
   });
 
   test('it can export a key: unwrapped, single version', async function (assert) {
-    const response = { keys: { a: 'key' } };
-    this.set('storeService.keyActionReturnVal', response);
+    const response = {
+      data: {
+        keys: { a: 'key' },
+        type: 'encryption',
+        name: 'akey',
+      },
+    };
+    const exportVersionStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'transitExportKeyVersion')
+      .resolves(response);
+
     await setupExport.call(this);
     await click('[data-test-toggle-label="Wrap response"]');
     await click('#exportVersion');
     await triggerEvent('#exportVersion', 'change');
     await click(GENERAL.submitButton);
+
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
-      response,
+      {
+        keys: { a: 'key' },
+        type: 'encryption',
+        name: 'akey',
+      },
       'prints json response'
     );
+
+    assert.true(exportVersionStub.calledOnce);
     assert.deepEqual(
-      this.storeService.callArgs,
-      {
-        action: 'export',
-        backend: 'transit',
-        id: 'akey',
-        payload: {
-          param: ['encryption', 1],
-        },
-      },
-      'passes expected args to the adapter'
+      exportVersionStub.firstCall.args,
+      ['akey', 'encryption-key', 1, 'transit', {}],
+      'passes expected args to api service'
     );
   });
 
   test('it includes algorithm param for HMAC', async function (assert) {
-    // Return mocked data so a11y-testing doesn't get mad about empty copy button contents
-    this.set('storeService.rootKeyActionReturnVal', { data: { hmac: 'vault:v1:hmac-token' } });
+    const hmacStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitGenerateHmac').resolves({
+      data: {
+        hmac: 'vault:v1:hmac-token',
+      },
+    });
+
     this.set('key', {
       backend: 'transit',
       id: 'akey',
       supportedActions: ['hmac'],
       validKeyVersions: [1],
     });
+
     await render(hbs`
-    <TransitKeyActions @key={{this.key}} @selectedAction="hmac" />`);
+    <TransitKeyActions
+      @key={{this.key}}
+      @selectedAction="hmac"
+    />
+  `);
+
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
+
     await waitFor('.cm-editor');
     const editor = codemirror();
     setCodeEditorValue(editor, 'plaintext');
+
     await click('input[data-test-transit-input="encodedBase64"]');
     await click(GENERAL.submitButton);
+
+    assert.true(hmacStub.calledOnce, 'calls transitGenerateHmac');
+
     assert.deepEqual(
-      this.storeService.callArgs,
-      {
-        action: 'hmac',
-        backend: 'transit',
-        id: 'akey',
-        payload: {
+      hmacStub.firstCall.args,
+      [
+        'akey',
+        'transit',
+        {
           algorithm: 'sha2-384',
           input: 'plaintext',
         },
-      },
-      'passes expected args to the adapter'
+      ],
+      'passes expected args to the API'
     );
   });
 });

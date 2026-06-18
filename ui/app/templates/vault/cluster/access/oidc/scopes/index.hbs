@@ -11,19 +11,19 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#if (gt this.model.length 0)}}
-  {{#each this.model as |model|}}
+{{#if this.model.scopes}}
+  {{#each this.model.scopes as |scope|}}
     <LinkedBlock
       class="list-item-row"
-      @params={{array "vault.cluster.access.oidc.scopes.scope.details" model.name}}
-      data-test-oidc-scope-linked-block={{model.name}}
+      @params={{array "vault.cluster.access.oidc.scopes.scope.details" scope}}
+      data-test-oidc-scope-linked-block={{scope}}
     >
       <div class="level is-mobile">
         <div class="level-left">
           <div>
             <Icon @name="file" class="has-text-grey-light" />
             <span class="has-text-weight-semibold is-underline">
-              {{model.name}}
+              {{scope}}
             </span>
           </div>
         </div>
@@ -38,16 +38,24 @@
               />
               <dd.Interactive
                 @route="vault.cluster.access.oidc.scopes.scope.details"
-                @model={{model.name}}
-                @disabled={{eq model.canRead false}}
+                @model={{scope}}
+                @disabled={{not
+                  (has-capability this.model.capabilities "read" pathKey="oidcScope" params=(hash name=scope))
+                }}
                 data-test-oidc-scope-menu-link="details"
-              >Details</dd.Interactive>
+              >
+                Details
+              </dd.Interactive>
               <dd.Interactive
                 @route="vault.cluster.access.oidc.scopes.scope.edit"
-                @model={{model.name}}
-                @disabled={{eq model.canEdit false}}
+                @model={{scope}}
+                @disabled={{not
+                  (has-capability this.model.capabilities "update" pathKey="oidcScope" params=(hash name=scope))
+                }}
                 data-test-oidc-scope-menu-link="edit"
-              >Edit</dd.Interactive>
+              >
+                Edit
+              </dd.Interactive>
             </Hds::Dropdown>
           </div>
         </div>

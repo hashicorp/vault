@@ -9,6 +9,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { isValidProvider } from 'vault/utils/keymgmt-provider-utils';
 
 /**
  * @module KeymgmtKeyEdit
@@ -26,27 +27,77 @@ import { waitFor } from '@ember/test-waiters';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class KeymgmtKeyEdit extends Component {
-  @service store;
+  @service api;
   @service router;
   @service flashMessages;
   @tracked isDeleteModalOpen = false;
+  @tracked isDistributing = false;
 
-  breadcrumbs = [
+  get breadcrumbs() {
+    return [
+      {
+        label: 'Vault',
+        icon: 'vault',
+        route: 'vault.cluster.dashboard',
+      },
+      {
+        label: 'Secrets engines',
+        route: 'vault.cluster.secrets.backends',
+      },
+      {
+        label: this.args.form.data.backend,
+        route: 'vault.cluster.secrets.backend.list-root',
+        model: this.args.form.data.backend,
+      },
+      { label: this.title },
+    ];
+  }
+
+  displayFields = [
+    'name',
+    'created',
+    'type',
+    'deletion_allowed',
+    'latest_version',
+    'min_enabled_version',
+    'last_rotated',
+  ];
+
+  label(field) {
+    const labels = {
+      name: 'Key name',
+      created: 'Created',
+      type: 'Type',
+      deletion_allowed: 'Allow deletion',
+      latest_version: 'Current version',
+      min_enabled_version: 'Minimum enabled version',
+      last_rotated: 'Last rotated',
+    };
+    return labels[field] || field;
+  }
+
+  defaultShown(field) {
+    const defaults = {
+      min_enabled_version: 'All versions enabled',
+      last_rotated: 'Not yet rotated',
+    };
+    return defaults[field];
+  }
+
+  formatDate(field) {
+    const dateFields = ['created', 'last_rotated'];
+    return dateFields.includes(field) ? 'MMM d yyyy, h:mm:ss aaa' : undefined;
+  }
+
+  distributionFields = [
     {
-      label: 'Vault',
-      icon: 'vault',
-      route: 'vault.cluster.dashboard',
+      name: 'name',
+      type: 'string',
+      label: 'Distributed name',
+      subText: 'The name given to the key by the provider.',
     },
-    {
-      label: 'Secrets engines',
-      route: 'vault.cluster.secrets.backends',
-    },
-    {
-      label: this.args.model.backend,
-      route: 'vault.cluster.secrets.backend.list-root',
-      model: this.args.model.backend,
-    },
-    { label: this.title },
+    { name: 'purpose', type: 'string', label: 'Key Purpose' },
+    { name: 'protection', type: 'string', subText: 'Where cryptographic operations are performed.' },
   ];
 
   get title() {
@@ -57,15 +108,11 @@ export default class KeymgmtKeyEdit extends Component {
     } else if (this.args.mode === 'edit') {
       return 'Edit key';
     }
-    return this.args.model.id;
+    return this.args.form.data.name;
   }
 
   get mode() {
     return this.args.mode || 'show';
-  }
-
-  get keyAdapter() {
-    return this.store.adapterFor('keymgmt/key');
   }
 
   get isMutable() {
@@ -76,68 +123,101 @@ export default class KeymgmtKeyEdit extends Component {
     return this.args.mode === 'create';
   }
 
+  get hasValidProvider() {
+    return isValidProvider(this.args.form?.data?.provider);
+  }
+
   @task
   @waitFor
   *saveKey(evt) {
     evt.preventDefault();
-    const { model } = this.args;
+    const { form } = this.args;
+    const backend = form.data.backend;
+    const name = form.data.name;
+
     try {
-      yield model.save();
-      this.router.transitionTo(SHOW_ROUTE, model.name);
+      if (this.isCreating) {
+        yield this.api.secrets.keyManagementUpdateKey(name, backend, { type: form.data.type });
+
+        // These fields can only be set after key creation
+        try {
+          yield this.api.secrets.keyManagementUpdateKey(name, backend, {
+            deletion_allowed: form.data.deletion_allowed,
+            min_enabled_version: form.data.min_enabled_version || 0,
+          });
+        } catch (error) {
+          this.flashMessages.danger(`Key ${name} was created, but not all settings were saved`);
+          this.router.transitionTo(SHOW_ROUTE, name);
+          return;
+        }
+      } else {
+        yield this.api.secrets.keyManagementUpdateKey(name, backend, {
+          deletion_allowed: form.data.deletion_allowed,
+          min_enabled_version: form.data.min_enabled_version,
+        });
+      }
+
+      this.router.transitionTo(SHOW_ROUTE, name);
     } catch (error) {
-      let errorMessage = error;
-      if (error.errors) {
-        // if errors come directly from API they will be in this shape
-        errorMessage = error.errors.join('. ');
-      }
-      this.flashMessages.danger(errorMessage);
-      if (!error.errors) {
-        // If error was custom from save, only partial fail
-        // so it's safe to show the key
-        this.router.transitionTo(SHOW_ROUTE, model.name);
-      }
+      const { message } = yield this.api.parseError(error);
+      this.flashMessages.danger(message);
     }
   }
 
   @task
   @waitFor
   *removeKey() {
+    const { form } = this.args;
+    const backend = form.data.backend;
+    const name = form.data.name;
+    const provider = form.data.provider;
+
+    if (!this.hasValidProvider) {
+      this.flashMessages.danger('Cannot remove key: invalid provider');
+      return;
+    }
+
     try {
-      yield this.keyAdapter.removeFromProvider(this.args.model);
-      yield this.args.model.reload();
+      yield this.api.secrets.keyManagementDeleteKeyInKmsProvider(name, provider, backend);
       this.flashMessages.success('Key has been successfully removed from provider');
+      this.router.refresh();
     } catch (error) {
-      this.flashMessages.danger(error.errors?.join('. '));
+      const { message } = yield this.api.parseError(error);
+      this.flashMessages.danger(message);
     }
   }
 
   @action
   deleteKey() {
-    const secret = this.args.model;
-    const backend = secret.backend;
-    secret
-      .destroyRecord()
+    const { form } = this.args;
+    const backend = form.data.backend;
+    const name = form.data.name;
+
+    this.api.secrets
+      .keyManagementDeleteKey(name, backend)
       .then(() => {
         this.router.transitionTo(LIST_ROOT_ROUTE, backend);
       })
-      .catch((e) => {
-        this.flashMessages.danger(e.errors?.join('. '));
+      .catch(async (e) => {
+        const { message } = await this.api.parseError(e);
+        this.flashMessages.danger(message);
       });
   }
 
   @task
   @waitFor
   *rotateKey() {
-    const id = this.args.model.name;
-    const backend = this.args.model.backend;
-    const adapter = this.keyAdapter;
-    yield adapter
-      .rotateKey(backend, id)
-      .then(() => {
-        this.flashMessages.success(`Success: ${id} connection was rotated`);
-      })
-      .catch((e) => {
-        this.flashMessages.danger(e.errors);
-      });
+    const { form } = this.args;
+    const name = form.data.name;
+    const backend = form.data.backend;
+
+    try {
+      yield this.api.secrets.keyManagementRotateKey(name, backend);
+      this.flashMessages.success(`Success: ${name} key was rotated`);
+      this.router.refresh();
+    } catch (error) {
+      const { message } = yield this.api.parseError(error);
+      this.flashMessages.danger(message);
+    }
   }
 }

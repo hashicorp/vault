@@ -105,12 +105,6 @@ if [ "$1" = 'vault' ]; then
     fi
 fi
 
-if ! output=$(vault -version 2>&1); then
-    if echo "$output" | grep -q "not permitted"; then
-        echo "Vault requires the IPC_LOCK capability. Please use --cap-add IPC_LOCK or add it to the securityContext capabilities" >&2
-    fi
-fi
-
 # In case of Docker, where swap may be enabled, we
 # still require mlocking to be available. So this script
 # was executed as root to make this happen, however,

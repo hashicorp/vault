@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -367,4 +368,46 @@ func TestAudit_BeforePostUnseal(t *testing.T) {
 	cluster.UnsealCores(t)
 	testhelpers.WaitForActiveNode(t, cluster)
 	require.False(t, didPanic.Load())
+}
+
+// TestAudit_PluginDirectorySecurityCheck_WithPathOrFilePath validates that
+// the audit security check runs when either 'path' or 'file_path' is used.
+func TestAudit_PluginDirectorySecurityCheck_WithPathOrFilePath(t *testing.T) {
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+	})
+	client := cluster.Cores[0].Client
+
+	auditPluginFilePath := pluginDir + "/audit.log"
+
+	// Try to enable audit device using 'path'
+	devicePath := "file"
+	deviceData := map[string]any{
+		"type":        "file",
+		"description": "Test audit device with path in plugin directory",
+		"local":       false,
+		"options": map[string]any{
+			"path": auditPluginFilePath,
+		},
+	}
+
+	// This should fail because path points to plugin directory
+	_, err := client.Logical().Write("sys/audit/"+devicePath, deviceData)
+	require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
+
+	// Try to enable audit device using 'file_path'
+	devicePathFilePath := "file_path"
+	deviceDataFilePath := map[string]any{
+		"type":        "file",
+		"description": "Test audit device with file_path in plugin directory",
+		"local":       false,
+		"options": map[string]any{
+			"file_path": auditPluginFilePath,
+		},
+	}
+
+	// This should fail because file_path points to plugin directory
+	_, err = client.Logical().Write("sys/audit/"+devicePathFilePath, deviceDataFilePath)
+	require.ErrorContains(t, err, "audit file target may not be in the plugin directory")
 }

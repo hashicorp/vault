@@ -11,7 +11,6 @@ import sinon from 'sinon';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { visit, settled, currentURL, waitFor, currentRouteName, fillIn, click } from '@ember/test-helpers';
-import { clearRecord } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
 import queryParamString from 'vault/utils/query-param-string';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -121,7 +120,6 @@ module('Acceptance | oidc provider', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    this.store = this.owner.lookup('service:store');
     await login();
     await settled();
     this.oidcSetupInformation = await setupOidc(this.uid);
@@ -129,6 +127,11 @@ module('Acceptance | oidc provider', function (hooks) {
   });
 
   hooks.afterEach(async function () {
+    const api = this.owner.lookup('service:api');
+    await Promise.allSettled([
+      api.identity.oidcDeleteProvider(WEB_APP_NAME),
+      api.identity.oidcDeleteProvider(PROVIDER_NAME),
+    ]);
     await login();
   });
 
@@ -169,10 +172,6 @@ module('Acceptance | oidc provider', function (hooks) {
       .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
     const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
     assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
-
-    //* clean up test state
-    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
-    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
@@ -220,10 +219,6 @@ module('Acceptance | oidc provider', function (hooks) {
     );
     assert.strictEqual(currentRouteName(), 'vault.cluster.oidc-provider');
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
-
-    //* clean up test state
-    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
-    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
 
   // Error handling test coverage, see issue for more context https://github.com/hashicorp/vault/issues/27772
@@ -271,7 +266,5 @@ module('Acceptance | oidc provider', function (hooks) {
     //* clean up test state
     authStub.restore();
     await login();
-    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
-    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
 });

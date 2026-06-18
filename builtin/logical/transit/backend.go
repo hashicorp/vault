@@ -4,7 +4,9 @@
 package transit
 
 import (
+	"container/heap"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
@@ -90,6 +92,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 	}
 
 	b.backendUUID = conf.BackendUUID
+	b.initializeRotationQueue()
 
 	// determine cacheSize to use. Defaults to 0 which means unlimited
 	cacheSize := 0
@@ -131,7 +134,64 @@ type backend struct {
 	cacheSizeChanged     bool
 	checkAutoRotateAfter time.Time
 	autoRotateOnce       sync.Once
+	rotationQueue        *rotationQueue
 	backendUUID          string
+}
+
+type keyRotationEntry struct {
+	rotateAt time.Time
+	keyPath  string
+}
+
+func (kre keyRotationEntry) isZero() bool {
+	return kre.rotateAt.IsZero() && kre.keyPath == ""
+}
+
+// rotationQueue stores information about which keys need to be rotated at what time.  It's a priority queue, which
+// implements hash.Interface.
+type rotationQueue []keyRotationEntry
+
+var _ heap.Interface = &rotationQueue{}
+
+func (rq rotationQueue) Len() int { return len(rq) }
+func (rq rotationQueue) Less(i, j int) bool {
+	if i < 0 || j < 0 || i >= rq.Len() || j >= rq.Len() { // If out of bounds, don't switch
+		return false
+	}
+	return rq[i].rotateAt.Before(rq[j].rotateAt)
+}
+
+func (rq rotationQueue) Swap(i, j int) {
+	if i < 0 || j < 0 || i >= len(rq) || j >= len(rq) {
+		return
+	}
+	rq[i], rq[j] = rq[j], rq[i]
+}
+
+func (rq *rotationQueue) Push(kre any) {
+	if kre.(keyRotationEntry).isZero() {
+		return
+	}
+	*rq = append(*rq, kre.(keyRotationEntry))
+}
+
+func (rq *rotationQueue) Pop() any {
+	if len(*rq) == 0 {
+		return keyRotationEntry{}
+	}
+	old := *rq
+	n := len(old)
+	item := (*rq)[n-1]
+	*rq = old[0 : n-1]
+	return item
+}
+
+func (rq rotationQueue) Peek() keyRotationEntry {
+	if len(rq) == 0 {
+		return keyRotationEntry{}
+	} else {
+		return rq[0]
+	}
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
@@ -224,8 +284,7 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 // periodicFunc is a central collection of functions that run on an interval.
 // Anything that should be called regularly can be placed within this method.
 func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error {
-	// These operations ensure the auto-rotate only happens once simultaneously. It's an unlikely edge
-	// given the time scale, but a safeguard nonetheless.
+	// These operations ensure the auto-rotate only happens once simultaneously.
 	var err error
 	didAutoRotate := false
 	autoRotateOnceFn := func() {
@@ -248,6 +307,35 @@ func (b *backend) periodicFunc(ctx context.Context, req *logical.Request) error 
 // auto rotate period defined which has passed. This operation only happens
 // on primary nodes and performance secondary nodes which have a local mount.
 func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) error {
+	// Early exit if not a primary or performance secondary with a local mount.
+	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
+		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		return nil
+	}
+
+	// Collect errors in a multierror to ensure a single failure doesn't prevent
+	// all keys from being rotated.
+	var errs *multierror.Error
+
+	// If we haven't initialized yet, exit out
+	if b.rotationQueue == nil {
+		errs = multierror.Append(errs, errors.New("auto-rotation can not run because backend is not initialized"))
+		return errs.ErrorOrNil()
+	}
+
+	// Between once-per-hour rotations, check to see if any keys that need rotating are in the heap
+	if b.rotationQueue.Len() == 0 {
+		// No keys are scheduled for rotation this hour
+	} else {
+		for !b.rotationQueue.Peek().isZero() && b.rotationQueue.Peek().rotateAt.Before(time.Now()) {
+			kre := heap.Pop(b.rotationQueue).(keyRotationEntry)
+			_, err := b.rotateByPath(ctx, req, kre.keyPath)
+			if err != nil {
+				errs = multierror.Append(errs, err)
+			}
+		}
+	}
+
 	// Only check for autorotation once an hour to avoid unnecessarily iterating
 	// over all keys too frequently.
 	if time.Now().Before(b.checkAutoRotateAfter) {
@@ -255,82 +343,99 @@ func (b *backend) autoRotateKeys(ctx context.Context, req *logical.Request) erro
 	}
 	b.checkAutoRotateAfter = time.Now().Add(1 * time.Hour)
 
-	// Early exit if not a primary or performance secondary with a local mount.
-	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
-		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
-		return nil
-	}
-
 	// Retrieve all keys and loop over them to check if they need to be rotated.
 	keys, err := req.Storage.List(ctx, "policy/")
 	if err != nil {
 		return err
 	}
 
-	// Collect errors in a multierror to ensure a single failure doesn't prevent
-	// all keys from being rotated.
-	var errs *multierror.Error
-
 	for _, key := range keys {
-		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
-			Storage:     req.Storage,
-			Name:        key,
-			WriteLocked: true,
-		}, b.GetRandomReader())
-		if err != nil {
-			errs = multierror.Append(errs, err)
-			continue
-		}
-
-		// If the policy is nil, move onto the next one.
-		if p == nil {
-			continue
-		}
-
-		// rotateIfRequired properly acquires/releases the lock on p
-		err = b.rotateIfRequired(ctx, req, key, p)
+		kre, err := b.rotateByPath(ctx, req, key)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
-
-		p.Unlock()
+		if !kre.isZero() {
+			heap.Push(b.rotationQueue, kre)
+		}
 	}
 
 	return errs.ErrorOrNil()
 }
 
-// rotateIfRequired rotates a key if it is due for autorotation.
-func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, key string, p *keysutil.Policy) error {
+func (b *backend) rotateByPath(ctx context.Context, req *logical.Request, keyPath string) (keyRotationEntry, error) {
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
+		Storage:     req.Storage,
+		Name:        keyPath,
+		WriteLocked: true,
+	}, b.GetRandomReader())
+	if err != nil {
+		return keyRotationEntry{}, err
+	}
+
+	// If the policy is nil, move onto the next one.
+	if p == nil {
+		return keyRotationEntry{}, nil
+	}
+
+	// rotateIfRequired properly acquires/releases the lock on p
+	kre, err := b.rotateIfRequired(ctx, req, keyPath, p)
+	if err != nil {
+		return kre, err
+	}
+
+	p.Unlock()
+	return kre, err
+}
+
+// rotateIfRequired rotates a key if it is due for autorotation.  If it isn't due for autorotation, but will be due
+// soon (within an hour), it returns a keyRotationEntry.
+func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, key string, p *keysutil.Policy) (kre keyRotationEntry, err error) {
 	// If the key is imported, it can only be rotated from within Vault if allowed.
 	if p.Imported && !p.AllowImportedKeyRotation {
-		return nil
+		return keyRotationEntry{}, nil
 	}
 
 	// If the policy's automatic rotation period is 0, it should not
 	// automatically rotate.
 	if p.AutoRotatePeriod == 0 {
-		return nil
+		return keyRotationEntry{}, nil
 	}
 
 	// We can't auto-rotate managed keys
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		return nil
+		return keyRotationEntry{}, nil
 	}
 
 	// Retrieve the latest version of the policy and determine if it is time to rotate.
 	latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
-	if time.Now().After(latestKey.CreationTime.Add(p.AutoRotatePeriod)) {
+	autoRotateAt := latestKey.CreationTime.Add(p.AutoRotatePeriod)
+	if time.Now().After(autoRotateAt) {
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("automatically rotating key", "key", key)
 		}
-		return p.Rotate(ctx, req.Storage, b.GetRandomReader())
-
+		return keyRotationEntry{}, p.Rotate(ctx, req.Storage, b.GetRandomReader())
+	} else {
+		// Check if it will be time to rotate the key within the next hour
+		if time.Now().Add(1 * time.Hour).After(autoRotateAt) {
+			kre = keyRotationEntry{
+				rotateAt: autoRotateAt,
+				keyPath:  key,
+			}
+			return kre, nil
+		}
 	}
-	return nil
+
+	return keyRotationEntry{}, nil
 }
 
 func (b *backend) initialize(ctx context.Context, request *logical.InitializationRequest) error {
 	return b.initializeEnt(ctx, request)
+}
+
+func (b *backend) initializeRotationQueue() {
+	rotationQueue := &rotationQueue{}
+	heap.Init(rotationQueue)
+	b.rotationQueue = rotationQueue
 }
 
 func (b *backend) cleanup(ctx context.Context) {

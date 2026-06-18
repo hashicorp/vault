@@ -22,6 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -1741,6 +1742,10 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				err = b.Initialize(context.Background(), &logical.InitializationRequest{Storage: storage})
+				if err != nil {
+					t.Fatal(err)
+				}
 
 				// Write a key with the default auto rotate value (0/disabled)
 				req := &logical.Request{
@@ -1858,6 +1863,184 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 			},
 		)
 	}
+}
+
+// TestTransit_AutoRotateKeysNotAffectedByManualRotation sets up a backend, then tests: that a (1h auto-rotate) key
+// which was manually rotated is not auto-rotated 1hour after initial creation, rather 1hour after it's manual rotation.
+// Because auto-rotation sets up a priority queue to do this, the ordering of that queue needs to be tested: this tests
+// that by setting up two auto-rotating keys.
+func TestTransit_AutoRotateKeysNotAffectedByManualRotation(t *testing.T) {
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	conf := &logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	}
+
+	synctest.Test(t, func(t *testing.T) {
+		b, _ := Backend(context.Background(), conf)
+		if b == nil {
+			t.Fatal("failed to create backend")
+		}
+
+		err := b.Backend.Setup(context.Background(), conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = b.Backend.Initialize(context.Background(), &logical.InitializationRequest{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Write a key with 1h rotate value
+		req := &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test1",
+			Data: map[string]interface{}{
+				"auto_rotate_period": 1 * time.Hour,
+			},
+		}
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		// Write a second key with an auto rotate value
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test2",
+			Data: map[string]interface{}{
+				"auto_rotate_period": 1 * time.Hour,
+			},
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 10)
+
+		// Manually Rotate the First Key
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test1/rotate",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 10)
+
+		// Manually Rotate the Second Key
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test2/rotate",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 41)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that no auto-rotation happened when keys were only 50, 40 minutes old
+		// If this is the case version should be "2" - the keys were rotated once manually
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      "keys/test1",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+
+		// This is when the auto-rotation of key test1 should happen
+		time.Sleep(time.Minute * 11)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that the first key auto-rotated when it reached an hour old (but the second didn't at 50 minutes)
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      "keys/test1",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 3 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 3)
+		}
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+
+		time.Sleep(time.Minute * 10)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that the second key auto-rotated when it reached an hour old
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 3 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 3)
+		}
+	})
 }
 
 func TestTransit_AEAD(t *testing.T) {

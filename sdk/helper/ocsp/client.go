@@ -924,12 +924,28 @@ func (c *Client) extractOCSPCacheResponseValue(cacheValue *ocspCachedResponse, s
 
 	sdkOcspStatus := internalStatusCodeToSDK(cacheValue.status)
 
-	return validateOCSP(conf, &ocsp.Response{
+	status, err := validateOCSP(conf, &ocsp.Response{
 		ProducedAt: time.Unix(int64(cacheValue.producedAt), 0).UTC(),
 		ThisUpdate: time.Unix(int64(cacheValue.thisUpdate), 0).UTC(),
 		NextUpdate: time.Unix(int64(cacheValue.nextUpdate), 0).UTC(),
 		Status:     sdkOcspStatus,
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	// If this cached OCSP response is going to expire in the next 15 seconds treat this as a missed cache.  This
+	// prevents an error where the OCSP response is valid now, but is not valid after OCSP responses from other certs
+	// has returned.  OCSP timeouts are generally 5-15 seconds.
+	if curTime.Add(15 * time.Second).After(time.Unix(int64(cacheValue.nextUpdate), 0).UTC()) {
+		return &ocspStatus{
+			code: ocspCacheExpired,
+			err: fmt.Errorf("ocsp response expires within 15 seconds.  treating as expired to provide grade period. current: %v, nextUpdate time: %v",
+				time.Unix(int64(currentTime), 0).UTC(), time.Unix(int64(cacheValue.nextUpdate), 0).UTC()),
+		}, nil
+	}
+
+	return status, nil
 }
 
 func internalStatusCodeToSDK(internalStatusCode ocspStatusCode) int {

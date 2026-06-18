@@ -8,36 +8,38 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SELECTORS, OIDC_BASE_URL } from 'vault/tests/helpers/oidc-config';
-import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
+import OidcScopeForm from 'vault/forms/oidc/scope';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | oidc/scope-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
+    const api = this.owner.lookup('service:api');
+    this.writeStub = sinon.stub(api.identity, 'oidcWriteScope').resolves();
+    this.onCancel = sinon.spy();
+    this.onSave = sinon.spy();
+
+    this.renderComponent = (scope) => {
+      this.form = new OidcScopeForm(scope || {}, { isNew: !scope });
+      return render(hbs`
+        <Oidc::ScopeForm
+          @form={{this.form}}
+          @onCancel={{this.onCancel}}
+          @onSave={{this.onSave}}
+        />
+      `);
+    };
   });
 
   test('it should save new scope', async function (assert) {
     assert.expect(8);
 
-    this.server.post('/identity/oidc/scope/test', (schema, req) => {
-      assert.ok(true, 'Request made to save scope');
-      return JSON.parse(req.requestBody);
-    });
-
-    this.model = this.store.createRecord('oidc/scope');
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-
-    await render(hbs`
-      <Oidc::ScopeForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    await this.renderComponent();
 
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Create', 'Save button has correct label');
@@ -62,31 +64,18 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     await fillIn(GENERAL.inputByAttr('name'), 'test');
     await fillIn(GENERAL.inputByAttr('description'), 'this is a test');
     await click(SELECTORS.scopeSaveButton);
+
+    assert.true(this.onSave.calledOnce, 'onSave callback is called on successful save');
+    assert.true(
+      this.writeStub.calledWith('test', { description: 'this is a test' }),
+      'API is called with correct parameters'
+    );
   });
 
   test('it should update scope', async function (assert) {
     assert.expect(9);
 
-    this.server.post('/identity/oidc/scope/test', (schema, req) => {
-      assert.ok(true, 'Request made to save scope');
-      return JSON.parse(req.requestBody);
-    });
-
-    this.store.pushPayload('oidc/scope', {
-      modelName: 'oidc/scope',
-      name: 'test',
-      description: 'this is a test',
-    });
-    this.model = this.store.peekRecord('oidc/scope', 'test');
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-
-    await render(hbs`
-      <Oidc::ScopeForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    await this.renderComponent({ name: 'test', description: 'this is a test' });
 
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Update', 'Save button has correct label');
@@ -105,62 +94,28 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('description'), 'this is an edit test');
     await click(SELECTORS.scopeSaveButton);
+
+    assert.true(this.onSave.calledOnce, 'onSave callback is called on successful save');
+    assert.true(
+      this.writeStub.calledWith('test', { description: 'this is an edit test' }),
+      'API is called with correct parameters'
+    );
   });
 
-  test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(4);
+  test('it should trigger on cancel callback', async function (assert) {
+    assert.expect(1);
 
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
-
-    this.model = this.store.createRecord('oidc/scope');
-
-    await render(hbs`
-      <Oidc::ScopeForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
-
+    await this.renderComponent();
     await click(SELECTORS.scopeCancelButton);
-    assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
-
-    this.store.pushPayload('oidc/scope', {
-      modelName: 'oidc/scope',
-      name: 'test',
-      description: 'this is a test',
-    });
-    this.model = this.store.peekRecord('oidc/scope', 'test');
-
-    await render(hbs`
-    <Oidc::ScopeForm
-      @model={{this.model}}
-      @onCancel={{this.onCancel}}
-      @onSave={{this.onSave}}
-    />
-      `);
-
-    await fillIn(GENERAL.inputByAttr('description'), 'changed description attribute');
-    await click(SELECTORS.scopeCancelButton);
-    assert.strictEqual(
-      this.model.description,
-      'this is a test',
-      'Model attributes are rolled back on cancel'
-    );
+    assert.true(this.onCancel.calledOnce, 'onCancel callback is called when cancel button is clicked');
   });
 
   test('it should show example template modal', async function (assert) {
     assert.expect(5);
-    const MODAL = (e) => `[data-test-scope-modal="${e}"]`;
-    this.model = this.store.createRecord('oidc/scope');
 
-    await render(hbs`
-      <Oidc::ScopeForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    const MODAL = (e) => `[data-test-scope-modal="${e}"]`;
+
+    await this.renderComponent();
 
     await click('[data-test-oidc-scope-example]');
     assert.dom(MODAL('title')).hasText('Scope template', 'Modal title renders');
@@ -173,15 +128,10 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
-    this.model = this.store.createRecord('oidc/scope');
-    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/scopes'));
-    await render(hbs`
-      <Oidc::ScopeForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+
+    this.writeStub.rejects(getErrorResponse());
+    await this.renderComponent();
+
     await fillIn(GENERAL.inputByAttr('name'), 'test-scope');
     await click(SELECTORS.scopeSaveButton);
     assert

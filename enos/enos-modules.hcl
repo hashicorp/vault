@@ -388,20 +388,6 @@ module "vault_verify_raft_auto_join_voter" {
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
 
-module "vault_verify_replication" {
-  source = "./modules/vault_verify_replication"
-}
-
-module "vault_verify_ui" {
-  source = "./modules/vault_verify_ui"
-}
-
-module "vault_verify_undo_logs" {
-  source = "./modules/vault_verify_undo_logs"
-
-  vault_install_dir = var.vault_install_dir
-}
-
 module "vault_wait_for_cluster_unsealed" {
   source = "./modules/vault_wait_for_cluster_unsealed"
 

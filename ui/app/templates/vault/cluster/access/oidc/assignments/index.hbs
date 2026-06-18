@@ -11,21 +11,21 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#each this.model as |model|}}
+{{#each this.model.assignments as |assignment|}}
   <LinkedBlock
-    class="list-item-row {{if (eq model.name 'allow_all') 'is-disabled'}}"
-    @params={{array "vault.cluster.access.oidc.assignments.assignment.details" model.name}}
-    @disabled={{eq model.name "allow_all"}}
-    data-test-oidc-assignment-linked-block={{model.name}}
+    class="list-item-row {{if (eq assignment 'allow_all') 'is-disabled'}}"
+    @params={{array "vault.cluster.access.oidc.assignments.assignment.details" assignment}}
+    @disabled={{eq assignment "allow_all"}}
+    data-test-oidc-assignment-linked-block={{assignment}}
   >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
           <Icon @name="users" class="has-text-grey-light" />
-          <span class="has-text-weight-semibold {{if (not-eq model.name 'allow_all') 'is-underline'}}">
-            {{model.name}}
+          <span class="has-text-weight-semibold {{if (not-eq assignment 'allow_all') 'is-underline'}}">
+            {{assignment}}
           </span>
-          {{#if (eq model.name "allow_all")}}
+          {{#if (eq assignment "allow_all")}}
             <div class="is-size-8">
               This is a built-in assignment that cannot be modified or deleted.
               <DocLink @path="/vault/docs/concepts/oidc-provider#assignments">
@@ -35,7 +35,7 @@
           {{/if}}
         </div>
       </div>
-      {{#if (not-eq model.name "allow_all")}}
+      {{#if (not-eq assignment "allow_all")}}
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
             <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
@@ -47,16 +47,24 @@
               />
               <dd.Interactive
                 @route="vault.cluster.access.oidc.assignments.assignment.details"
-                @model={{model.name}}
-                @disabled={{eq model.canRead false}}
+                @model={{assignment}}
+                @disabled={{not
+                  (has-capability this.model.capabilities "read" pathKey="oidcAssignment" params=(hash name=assignment))
+                }}
                 data-test-oidc-assignment-menu-link="details"
-              >Details</dd.Interactive>
+              >
+                Details
+              </dd.Interactive>
               <dd.Interactive
                 @route="vault.cluster.access.oidc.assignments.assignment.edit"
-                @model={{model.name}}
-                @disabled={{eq model.canEdit false}}
+                @model={{assignment}}
+                @disabled={{not
+                  (has-capability this.model.capabilities "update" pathKey="oidcAssignment" params=(hash name=assignment))
+                }}
                 data-test-oidc-assignment-menu-link="edit"
-              >Edit</dd.Interactive>
+              >
+                Edit
+              </dd.Interactive>
             </Hds::Dropdown>
           </div>
         </div>

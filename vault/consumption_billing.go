@@ -36,7 +36,8 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			OidcTokenDuration: uberAtomic.NewFloat64(0),
 			SpiffeJwt:         uberAtomic.NewFloat64(0),
 		},
-		Logger: logger,
+		ExternalCaCertUnits: uberAtomic.NewFloat64(0),
+		Logger:              logger,
 	}
 	if c.systemBarrierView != nil {
 		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
@@ -130,8 +131,15 @@ func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 }
 
 func (c *Core) deleteExpiredBillingMetrics(ctx context.Context, currentMonth time.Time) error {
-	// Delete data from BillingRetentionMonths ago (keeping current month + previous (BillingRetentionMonths - 1) months = BillingRetentionMonths total)
-	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.BillingRetentionMonths, 0)
+	// Get the configured retention period
+	retentionMonths, err := c.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		c.logger.Warn("failed to get billing retention configuration, using default")
+		retentionMonths = billing.DefaultBillingRetentionMonths
+	}
+
+	// Delete data from retentionMonths ago (keeping current month + previous (retentionMonths - 1) months = retentionMonths total)
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths, 0)
 	// Delete billing metrics from both replicated and local prefixes
 	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 		// If we are not the primary, then do not delete replicate metrics
@@ -186,6 +194,7 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
 	c.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Store(0)
+	c.consumptionBilling.ExternalCaCertUnits.Store(0)
 	return nil
 }
 
@@ -206,11 +215,18 @@ func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time
 	} else if c.standby {
 		// Do nothing if we are a standby. All requests get forwarded anyway
 	} else {
+		// Collect all mount metrics in a single pass through the mount table
+		metrics, err := c.CountMetricsFromMounts(true)
+		if err != nil {
+			c.logger.Error("error collecting mount metrics", "error", err)
+			return err
+		}
+
 		// The active node will need to flush max role counts to storage
 		if c.isPrimary() {
-			c.UpdateReplicatedHWMMetrics(ctx, currentMonth)
+			c.UpdateReplicatedHWMMetrics(ctx, currentMonth, metrics)
 		}
-		c.UpdateLocalHWMMetrics(ctx, currentMonth)
+		c.UpdateLocalHWMMetrics(ctx, currentMonth, metrics)
 		if err := c.UpdateLocalAggregatedMetrics(ctx, currentMonth); err != nil {
 			c.logger.Error("error updating cluster data protection call counts", "error", err)
 		} else {
@@ -232,15 +248,18 @@ func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time)
 	return c.updateBillingMetricsLocked(ctx, currentMonth)
 }
 
-func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	_, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, currentMonth)
+func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time, metrics *MountMetrics) error {
+	// Update role and managed key counts using pre-collected billing metric counts
+	_, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedRoleCounts, metrics.ReplicatedManagedKeys)
 	if err != nil {
 		c.logger.Error("error updating replicated max role and managed key counts", "error", err)
 		// We won't return an error. Instead we will log the errors and attempt to continue
 	} else {
 		c.logger.Info("updated replicated hwm role and managed key counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
 	}
-	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth); err != nil {
+
+	// Update KV counts using pre-collected KV mounts
+	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedKvCounts); err != nil {
 		// We won't return an error. Instead we will log the errors and attempt to continue
 		c.logger.Error("error updating replicated max kv counts", "error", err)
 	} else {
@@ -249,13 +268,16 @@ func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time
 	return nil
 }
 
-func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	if _, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
+func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time, metrics *MountMetrics) error {
+	// Update role and managed key counts using pre-collected billing metric counts
+	if _, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalRoleCounts, metrics.LocalManagedKeys); err != nil {
 		c.logger.Error("error updating local max role and managed key counts", "error", err)
 	} else {
 		c.logger.Info("updated local max role and managed key counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
-	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
+
+	// Update KV counts using pre-collected KV mounts
+	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalKvCounts); err != nil {
 		c.logger.Error("error updating local max kv counts", "error", err)
 	} else {
 		c.logger.Info("updated local max kv counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
@@ -293,6 +315,9 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	}
 	if _, err := c.UpdateGcpKmsCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store GCP KMS data protection call counts: %w", err)
+	}
+	if _, err := c.UpdateExternalCaCertUnits(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store external CA certificate units: %w", err)
 	}
 	return nil
 }

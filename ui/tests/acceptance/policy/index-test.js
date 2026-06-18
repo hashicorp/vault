@@ -110,11 +110,12 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createPolicy);
 
     await fillIn(GENERAL.inputByAttr('name'), policyName);
+    // Select code editor first to bypass visual policy editor validations so we get an API error
+    await click(GENERAL.radioByAttr('code'));
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
-    await click(GENERAL.radioByAttr('code'));
     await waitFor('.cm-editor');
     const editor = codemirror();
     setCodeEditorValue(editor, policyString);

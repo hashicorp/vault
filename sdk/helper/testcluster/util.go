@@ -89,6 +89,27 @@ func UnsealNode(ctx context.Context, cluster VaultCluster, nodeIdx int) error {
 	return NodeHealthy(ctx, cluster, nodeIdx)
 }
 
+func UnsealNodeWithOptions(ctx context.Context, cluster VaultCluster, nodeIdx int, reset, migrate bool) error {
+	if nodeIdx >= len(cluster.Nodes()) {
+		return fmt.Errorf("invalid nodeIdx %d for cluster", nodeIdx)
+	}
+	node := cluster.Nodes()[nodeIdx]
+	client := node.APIClient()
+
+	for _, key := range cluster.GetBarrierOrRecoveryKeys() {
+		_, err := client.Sys().UnsealWithOptionsWithContext(ctx, &api.UnsealOpts{
+			Key:     hex.EncodeToString(key),
+			Reset:   reset,
+			Migrate: migrate,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return NodeHealthy(ctx, cluster, nodeIdx)
+}
+
 func UnsealAllNodes(ctx context.Context, cluster VaultCluster) error {
 	for i := range cluster.Nodes() {
 		if err := UnsealNode(ctx, cluster, i); err != nil {

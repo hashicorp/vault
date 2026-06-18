@@ -24,6 +24,7 @@
         @inputValue={{if @form.data.key (array @form.data.key)}}
         @disabled={{not @form.isNew}}
         class="is-marginless"
+        data-test-search-select="keys"
       />
     </FormFieldGroups>
   </div>
@@ -51,17 +52,16 @@
       />
     </div>
     {{#if (eq this.radioCardGroupValue "limited")}}
-      <SearchSelectWithModal
-        @id="assignments"
+      <SearchSelect
+        @id="oidc-client-form-assignments-select"
         @label="Assignment name"
         @subText="Search for an existing assignment, or type a new name to create it."
-        @models={{array "oidc/assignment"}}
-        @inputValue={{this.modelAssignments}}
+        @options={{@assignments}}
+        @parentManageSelected={{this.modelAssignments}}
         @onChange={{this.handleAssignmentSelection}}
-        @excludeOptions={{array "allow_all"}}
+        @onCreate={{this.onAssignmentCreate}}
         @fallbackComponent="string-list"
-        @modalFormTemplate="modal-form/oidc-assignment-template"
-        @modalSubtext="Use assignment to specify which Vault entities and groups are allowed to authenticate."
+        data-test-search-select="assignments"
       />
     {{/if}}
   </div>
@@ -90,3 +90,23 @@
     {{/if}}
   </div>
 </form>
+
+{{#if this.oidcAssignmentForm}}
+  <Hds::Modal id="search-select-modal" @onClose={{fn (mut this.oidcAssignmentForm) null}} as |M|>
+    <M.Header data-test-modal-title>
+      Create new assignment
+    </M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s" data-test-modal-subtext>
+        Use assignment to specify which Vault entities and groups are allowed to authenticate.
+      </p>
+      <Oidc::AssignmentForm
+        @form={{this.oidcAssignmentForm}}
+        @entities={{this.entities}}
+        @groups={{this.groups}}
+        @onCancel={{fn (mut this.oidcAssignmentForm) null}}
+        @onSave={{fn (mut this.oidcAssignmentForm) null}}
+      />
+    </M.Body>
+  </Hds::Modal>
+{{/if}}

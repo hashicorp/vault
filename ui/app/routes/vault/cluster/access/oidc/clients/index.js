@@ -25,7 +25,10 @@ export default class OidcClientsRoute extends Route {
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
-        return [];
+        return {
+          clients: [],
+          capabilities: {},
+        };
       } else {
         throw error;
       }
@@ -33,7 +36,7 @@ export default class OidcClientsRoute extends Route {
   }
 
   afterModel(model) {
-    if (model.length === 0) {
+    if (model.clients.length === 0) {
       this.router.transitionTo('vault.cluster.access.oidc');
     }
   }

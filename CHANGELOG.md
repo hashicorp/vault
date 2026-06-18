@@ -3,6 +3,155 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 2.0.3
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+* secrets/spiffe (enterprise): Ensure template values are properly escaped.
+* transform (enterprise): Add appropriate db specific quoting and escaping.
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.23.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.23.1)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+* secrets/azure: Update plugin to [v0.26.5+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.26.5+ent)
+
+FEATURES:
+
+* **AI Agent Support (Beta/Enterprise)**: Adds beta support for first-class AI agents. Adds
+an Agent Registry to register agents, and adds support for using Vault as an OAuth resource server
+for registered agent entities. When configured, allows OAuth 2.0 JWTs to be used to directly authorize
+requests to Vault, without needing a Vault token.
+
+IMPROVEMENTS:
+
+* consumption-billing: Add a new `sys/billing/config` endpoint to allow configuration of billing data retention (min 13 months, max 6 years).
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* identity/scim (enterprise): Update PATCH operations on scim/v2/Users to allow multiple modifications in the same patch call, support for patch operations on user metadata and name in addition to active status, and allow specifying `path` value in patch operations
+* sdk/helper/keysutil: The lock manager's GetPolicy function now always returns a locked Policy, even when caching is
+enabled. The PolicyRequest struct has a new field to indicate whether the caller requires a write lock on the policy.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* kmip (enterprise): Fix a bug that prevents the legacy CA from working on a named listener.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* secrets/transit: Add managed key support to Transit rewrap endpoint.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
+
+## 2.0.2
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+CHANGES:
+
+* core: Bump Go version to 1.26.4
+* secrets/azure (enterprise): Update plugin to [v0.26.4+ent](https://github.com/hashicorp/vault-plugin-secrets-azure-enterprise/releases/tag/v0.26.4+ent)
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* ui/transit: Fix key version dropdown selected state when editing a transit key.
+
+## 2.0.1
+### May 19, 2026
+BREAKING CHANGES:
+
+* containers: set cap_ipc_lock capability on vault at build time. Container runtimes will need to add `IPC_LOCK` capabilities when running the vault container.
+
+SECURITY:
+
+* api: Update golang.org/x/net to resolve GO-2026-4918"
+* core/identity: reject wildcards in rendered identity templates
+* core: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* core: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* core: Update github.com/apache/thrift to fix security vulnerability GHSA-wf45-q9ch-q8gh
+* core: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* core: Update golang.org/x/net to resolve GO-2026-4918"
+* core: Validate both `path` and `file_path` cannot be empty for requests to `sys/audit/{path}`
+* sdk: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* sdk: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* sdk: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* sdk: Update golang.org/x/net to resolve GO-2026-4918"
+
+CHANGES:
+
+* auth/jwt: Update plugin to [v0.26.3](https://github.com/hashicorp/vault-plugin-auth-jwt/releases/tag/v0.26.3)
+* core: Bump Go version to 1.26.3
+* identity: Require `sudo` capability to invoke the identity entity merge API endpoint (`identity/entity/merge`).
+* secrets/azure: Update plugin to [v0.26.2+ent](https://github.com/hashicorp/vault-plugin-secrets-azure-enterprise/releases/tag/v0.26.2+ent)
+* secrets/openldap: Update plugin to [v0.18.1+ent](https://github.com/hashicorp/vault-plugin-secrets-openldap-enterprise/releases/tag/v0.18.1+ent)
+
+FEATURES:
+
+* **Billing metrics dashboard**: Create a new billing dashboard with responsive layout to display metric data.
+* **Secrets Sync UI**: Added Workload Identity Federation (WIF) support in the UI for AWS, Azure, and GCP sync destinations
+
+IMPROVEMENTS:
+
+* api: Add `start_month` and `end_month` parameters to `/sys/billing/overview` endpoint to allow querying billing data for specific time ranges.
+* api: Add migration_done_at_epoch to sys/seal-status response.
+* consumption-billing: Add billing tracking for OS Local Account static roles to support consumption-based billing metrics and high-water mark (HWM) tracking.
+* consumption-billing: Added consumption billing metrics for OIDC tokens.
+* consumption-billing: Added consumption billing metrics for PKI External CA certificates.
+* consumption-billing: Added consumption billing metrics for SPIFFE JWT tokens.
+* consumption-billing: Enabled `sys/billing/overview` endpoint in admin namespace.
+* consumption-billing: Float64 values returned by `sys/billing/overview` are now rounded to 4 decimal places.
+* consumption-billing: Increased billing data retention from 2 months to 37 months. The `/sys/internal/billing/overview` API endpoint now returns 37 months of historical consumption billing data by default.
+* consumption-billing: The `/sys/internal/billing/overview` API endpoint now always returns all metric types in the response, even when their values are zero. This ensures consistent response structure for easier client-side parsing.
+* core (Enterprise): Sanitized config now shows kms_library config.
+* core/seal (enterprise): Make it possible for new nodes to join a cluster configured with Seal High Availability.
+* scim: The SCIM Group PATCH handler now supports the path field in the form members[value eq "id"] on remove operations.
+* sdk: Expand support for docker test cluster options like seals, kms libraries, and entropy augmentation. DockerClusterNode.UpdateConfig now takes a full set of cluster options instead of just node config.
+* sdk: add WIF and rotation helpers for checking if params were updated to allow
+the consumer to know when changes need to be persisted to storage
+* secrets/pki (enterprise): Allow SCEP to use an issuer that is backed by an RSA based PKCS#11 managed key
+* secrets/transit: Change to using Trail of Bits libraries for PQC signature implementation in Transit
+* ui/dashboard: Reorganized dashboard widgets to improve layout and usability. Updated widgets to use HDS table components for better consistency. Enhanced the Quick Actions card with frequently used links alongside existing actions.
+* ui: Set pagination size to 10 for custom messages list view and toggle the "Apply filters" button visibility based on filter selection.
+* ui: Update copy on merge entities page to specify entity ID is the required data input when merging entities.
+* ui: add validations to the ACL visual policy editor to prevent it from saving policies with empty paths or capabilities.
+
+BUG FIXES:
+
+* auth/aws: fix bug where rotation and wif config updates were not persisted to storage
+* client/ocsp: Adds a grace period to renew the cached entry for OCSP response.
+* core: Fix failure to detect errors during storage writes of totp keys.
+* database/mssql: Fix "sysadmin" requirement during lease revocation by replacing the undocumented `sp_msloginmappings` procedure with a granular metadata query. This allows the plugin to function with `VIEW ANY DEFINITION` instead of full `sysadmin` privileges.
+* database/mssql: Fix dynamic secret revocation by executing custom statements as a single batch instead of splitting on semicolons
+* database/snowflake: Fix WAL rollback issue for key-pair root credential rotation.
+* database: prevent static role rotation and connection init from hanging indefinitely when database calls block by adding timeouts around UpdateUser and Initialize
+* events (enterprise): Fix panic when replicating lease events.
+* go-plugin: Upgrade go-plugin to fix a bug where file descriptors could be leaked when spawning external plugins
+* identity: fixed a rare but possible data race issue with identities.
+* sdk: Small bugfixes relating to docker test container cleanup and image building.
+* secrets-sync (enterprise): Fix destination PATCH handling for WIF identity_token_ttl normalization and GCP service_account_email decoding.
+* secrets/kmip (enterprise): Address a nil pointer within the invalidation handler for managed objects.
+* secrets/ldap: enable proper license checking on 'openldap' plugin alias. This enables enterprise features when configuring mounts with the 'openldap' alias.
+* secrets/pki (enterprise): Fix SCEP nonce logging in audit data.
+* secrets/pki (enterprise): Include root CA in chain for CIEPS endpoints when root is the direct issuer, unless `remove_roots_from_chain` is true.
+* secrets/pki: Remove invalid value from the supported list of ACME algorithms.
+* ui: Add name field validation to LDAP create and edit roles forms.
+* ui: Fix LDAP hierarchical role navigation in UI
+* ui: Fix entities page to show success message after successfully editing an entity.
+* ui: Fix secrets to secrets-engines redirect for bookmarked URLs.
+* ui: Fixed custom messages list to display the expiration time on Inactive message badges.
+* ui: Fixed sidebar navigation animation issues
+* ui: Restore re-sizable columns for secrets and namespaces tables.
+* ui: Update DR operation token generation to accept a primary root token for authentication.
+* ui: Update KV max_version validation to disallow negative values.
+
 ## 2.0.0  
 ### April 14, 2026  
 
@@ -252,6 +401,114 @@ BUG FIXES:
 * ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
 * ui: fix renew token button rendering for denied renew-self.
 * ui: remove unnecessary 'credential type' form input when generating AWS secrets
+
+## 1.21.8 Enterprise
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.22.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.22.1)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+* secrets/azure: Update plugin to [v0.25.4+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.25.4+ent)
+
+IMPROVEMENTS:
+
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* core: Fix failure to detect errors during storage writes of totp keys.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* secrets/transit: Add managed key support to Transit rewrap endpoint.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
+
+## 1.21.7 Enterprise
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+
+CHANGES:
+
+* core: Bump Go version to 1.25.11
+* secrets/azure (enterprise): Update plugin to [v0.25.3+ent](https://github.com/hashicorp/vault-plugin-secrets-azure-enterprise/releases/tag/v0.25.3+ent)
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* ui/transit: Fix key version dropdown selected state when editing a transit key.
+* secret-sync (enterprise): Fix a panic when creating Secrets Sync destinations if `fetch_identity_token` callback fields are present in store configuration.
+
+## 1.21.6 Enterprise
+### May 19, 2026
+BREAKING CHANGES:
+
+* containers: set cap_ipc_lock capability on vault at build time. Container runtimes will need to add `IPC_LOCK` capabilities when running the vault container.
+
+SECURITY:
+
+* api: Update golang.org/x/net to resolve GO-2026-4918"
+* core/identity: reject wildcards in rendered identity templates
+* core: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* core: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* core: Update github.com/apache/thrift to fix security vulnerability GHSA-wf45-q9ch-q8gh
+* core: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* core: Update golang.org/x/net to resolve GO-2026-4918"
+* core: Validate both `path` and `file_path` cannot be empty for requests to `sys/audit/{path}`
+* sdk: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* sdk: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* sdk: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* sdk: Update golang.org/x/net to resolve GO-2026-4918"
+
+CHANGES:
+
+* auth/jwt: Update plugin to [v0.25.1](https://github.com/hashicorp/vault-plugin-auth-jwt/releases/tag/v0.25.1)
+* core: Bump Go version to 1.25.10
+* identity: Require `sudo` capability to invoke the identity entity merge API endpoint (`identity/entity/merge`).
+* secrets/azure: Update plugin to [v0.25.2+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.25.2+ent)
+
+IMPROVEMENTS:
+
+* api: Add migration_done_at_epoch to sys/seal-status response.
+* core (Enterprise): Sanitized config now shows kms_library config.
+* core/seal (enterprise): Make it possible for new nodes to join a cluster configured with Seal High Availability.
+* sdk: Expand support for docker test cluster options like seals, kms libraries, and entropy augmentation. DockerClusterNode.UpdateConfig now takes a full set of cluster options instead of just node config.
+* secrets/pki (enterprise): Allow SCEP to use an issuer that is backed by an RSA based PKCS#11 managed key
+* ui: `unsafe-inline` is no longer included in the `style-src` CSP directive.
+
+BUG FIXES:
+
+* client/ocsp: Adds a grace period to renew the cached entry for OCSP response.
+* database/mssql: Fix "sysadmin" requirement during lease revocation by replacing the undocumented `sp_msloginmappings` procedure with a granular metadata query. This allows the plugin to function with `VIEW ANY DEFINITION` instead of full `sysadmin` privileges.
+* database/mssql: Fix dynamic secret revocation by executing custom statements as a single batch instead of splitting on semicolons
+* database/snowflake: Fix WAL rollback issue for key-pair root credential rotation.
+* database: prevent static role rotation and connection init from hanging indefinitely when database calls block by adding timeouts around UpdateUser and Initialize
+* go-plugin: Upgrade go-plugin to fix a bug where file descriptors could be leaked when spawning external plugins
+* identity: fixed a rare but possible data race issue with identities.
+* plugins/database/hana: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL identifiers before ALTER USER and DROP USER statements.
+plugins/database/redshift: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL string literals when invoking terminateloop(...), preventing statement-structure manipulation.
+* sdk: Small bugfixes relating to docker test container cleanup and image building.
+* secrets/kmip (enterprise): Address a nil pointer within the invalidation handler for managed objects.
+* secrets/pki (enterprise): Include root CA in chain for CIEPS endpoints when root is the direct issuer, unless `remove_roots_from_chain` is true.
+* ui: Fix LDAP check-out capabilities check.
+* ui: Fix entities page to show success message after successfully editing an entity.
+* ui: Fix secrets table pagination when switching page sizes.
+* ui: Fixed custom messages list to display the expiration time on Inactive message badges.
+* ui: Restore re-sizable columns for secrets and namespaces tables.
+* ui: Update KV max_version validation to disallow negative values.
 
 ## 1.21.5  Enterprise
 ### April 14, 2026  
@@ -663,6 +920,106 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.13 Enterprise
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.21.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.21.1)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+
+IMPROVEMENTS:
+
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
+
+## 1.20.12 Enterprise
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+
+CHANGES:
+
+* core: Bump Go version to 1.25.11
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* secret-sync (enterprise): Fix a panic when creating Secrets Sync destinations if `fetch_identity_token` callback fields are present in store configuration.
+
+## 1.20.11 Enterprise
+### May 19, 2026
+BREAKING CHANGES:
+
+* containers: set cap_ipc_lock capability on vault at build time. Container runtimes will need to add `IPC_LOCK` capabilities when running the vault container.
+
+SECURITY:
+
+* api: Update golang.org/x/net to resolve GO-2026-4918"
+* core/identity: reject wildcards in rendered identity templates
+* core: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* core: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* core: Update github.com/apache/thrift to fix security vulnerability GHSA-wf45-q9ch-q8gh
+* core: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* core: Update golang.org/x/net to resolve GO-2026-4918"
+* core: Validate both `path` and `file_path` cannot be empty for requests to `sys/audit/{path}`
+* sdk: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* sdk: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* sdk: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* sdk: Update golang.org/x/net to resolve GO-2026-4918"
+
+CHANGES:
+
+* auth/jwt: Update plugin to [v0.24.2](https://github.com/hashicorp/vault-plugin-auth-jwt/releases/tag/v0.24.2)
+* core: Bump Go version to 1.25.10
+* identity: Require `sudo` capability to invoke the identity entity merge API endpoint (`identity/entity/merge`).
+
+IMPROVEMENTS:
+
+* api: Add migration_done_at_epoch to sys/seal-status response.
+* core (Enterprise): Sanitized config now shows kms_library config.
+* core/seal (enterprise): Make it possible for new nodes to join a cluster configured with Seal High Availability.
+* sdk: Expand support for docker test cluster options like seals, kms libraries, and entropy augmentation. DockerClusterNode.UpdateConfig now takes a full set of cluster options instead of just node config.
+* secrets/pki (enterprise): Allow SCEP to use an issuer that is backed by an RSA based PKCS#11 managed key
+* ui: `unsafe-inline` is no longer included in the `style-src` CSP directive.
+
+BUG FIXES:
+
+* client/ocsp: Adds a grace period to renew the cached entry for OCSP response.
+* core: Fix failure to detect errors during storage writes of totp keys.
+* database/mssql: Fix "sysadmin" requirement during lease revocation by replacing the undocumented `sp_msloginmappings` procedure with a granular metadata query. This allows the plugin to function with `VIEW ANY DEFINITION` instead of full `sysadmin` privileges.
+* database/mssql: Fix dynamic secret revocation by executing custom statements as a single batch instead of splitting on semicolons
+* database/snowflake: Fix WAL rollback issue for key-pair root credential rotation.
+* database: prevent static role rotation and connection init from hanging indefinitely when database calls block by adding timeouts around UpdateUser and Initialize
+* go-plugin: Upgrade go-plugin to fix a bug where file descriptors could be leaked when spawning external plugins
+* identity: fixed a rare but possible data race issue with identities.
+* plugins/database/hana: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL identifiers before ALTER USER and DROP USER statements.
+plugins/database/redshift: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL string literals when invoking terminateloop(...), preventing statement-structure manipulation.
+* sdk: Small bugfixes relating to docker test container cleanup and image building.
+* secrets/kmip (enterprise): Address a nil pointer within the invalidation handler for managed objects.
+* secrets/pki (enterprise): Include root CA in chain for CIEPS endpoints when root is the direct issuer, unless `remove_roots_from_chain` is true.
+* ui/transit: Fix key version dropdown selected state when editing a transit key.
+* ui: Fix LDAP check-out capabilities check.
+* ui: Fix entities page to show success message after successfully editing an entity.
 
 ## 1.20.10  Enterprise
 ### April 14, 2026  
@@ -1168,6 +1525,105 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.19 Enterprise
+### June 17, 2026
+
+SECURITY:
+
+* auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+* core/acl: Fix LIST ACL bypass where a trailing-slash request could skip a more-specific deny rule.
+* core: Use constant-time recovery token comparison
+
+CHANGES:
+
+* auth/cf: Update plugin to [v0.20.2](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.20.2)
+* core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
+* core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
+
+IMPROVEMENTS:
+
+* core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
+* ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview dashboard.
+
+BUG FIXES:
+
+* core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
+* secret-sync (enterprise): Fix GCP Secret Manager replication policy persistence across Vault restarts.
+* secrets/database/mssql: Deregister stale TLS configurations when MySQL connection TLS settings change or the connection is closed, preventing retained certificate pools from accumulating.
+* secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+* storage/raft: reject `performance_multiplier` values less than or equal to zero
+
+## 1.19.18 Enterprise
+### June 05, 2026
+BREAKING CHANGES:
+
+* containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
+* secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+
+
+CHANGES:
+
+* core: Bump Go version to 1.25.11
+
+BUG FIXES:
+
+* plugins: Fix plugin signature verification failure with expired pgp key when registering a plugin.
+* ui/transit: Fix key version dropdown selected state when editing a transit key.
+
+## 1.19.17 Enterprise
+### May 19, 2026
+BREAKING CHANGES:
+
+* containers: set cap_ipc_lock capability on vault at build time. Container runtimes will need to add `IPC_LOCK` capabilities when running the vault container.
+
+SECURITY:
+
+* api: Update golang.org/x/net to resolve GO-2026-4918"
+* core/identity: reject wildcards in rendered identity templates
+* core: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* core: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* core: Update github.com/apache/thrift to fix security vulnerability GHSA-wf45-q9ch-q8gh
+* core: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* core: Update golang.org/x/net to resolve GO-2026-4918"
+* core: Validate both `path` and `file_path` cannot be empty for requests to `sys/audit/{path}`
+* sdk: Resolve GHSA-j88v-2chj-qfwx by removing our dependency on github.com/jackc/pgx/v3 and github.com/jackc/pgx/v4
+* sdk: Update github.com/Azure/go-ntlmssp to fix security vulnerability v0.1.1.
+* sdk: Update github.com/jackc/pgx/v5 to fix security vulnerability GHSA-j88v-2chj-qfwx.
+* sdk: Update golang.org/x/net to resolve GO-2026-4918"
+
+CHANGES:
+
+* auth/jwt: Update plugin to [v0.23.3](https://github.com/hashicorp/vault-plugin-auth-jwt/releases/tag/v0.23.3)
+* core: Bump Go version to 1.25.10
+* core: secondary DR requests can now be authenticated using a root token generated on the primary.
+* core: sys/generate-root and sys/replication/dr/secondary/generate-operation-token endpoints are now authenticated by default, with the old unauthenticated behaviour enabled by setting the new HCL config key enable_unauthenticated_access to include the value "generate-root" or "generate-operation-token" respectively.
+* core: sys/rekey endpoints are now authenticated by default, with the old unauthenticated behaviour enabled by setting the new HCL config key enable_unauthenticated_access to include the value "rekey".
+* identity: Require `sudo` capability to invoke the identity entity merge API endpoint (`identity/entity/merge`).
+
+IMPROVEMENTS:
+
+* api: Add migration_done_at_epoch to sys/seal-status response.
+* core (Enterprise): Sanitized config now shows kms_library config.
+* core/seal (enterprise): Make it possible for new nodes to join a cluster configured with Seal High Availability.
+* sdk: Expand support for docker test cluster options like seals, kms libraries, and entropy augmentation. DockerClusterNode.UpdateConfig now takes a full set of cluster options instead of just node config.
+
+BUG FIXES:
+
+* client/ocsp: Adds a grace period to renew the cached entry for OCSP response.
+* core: Fix failure to detect errors during storage writes of totp keys.
+* database/mssql: Fix "sysadmin" requirement during lease revocation by replacing the undocumented `sp_msloginmappings` procedure with a granular metadata query. This allows the plugin to function with `VIEW ANY DEFINITION` instead of full `sysadmin` privileges.
+* database/mssql: Fix dynamic secret revocation by executing custom statements as a single batch instead of splitting on semicolons
+* database/snowflake: Fix WAL rollback issue for key-pair root credential rotation.
+* database: prevent static role rotation and connection init from hanging indefinitely when database calls block by adding timeouts around UpdateUser and Initialize
+* go-plugin: Upgrade go-plugin to fix a bug where file descriptors could be leaked when spawning external plugins
+* identity: fixed a rare but possible data race issue with identities.
+* plugins/database/hana: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL identifiers before ALTER USER and DROP USER statements.
+plugins/database/redshift: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL string literals when invoking terminateloop(...), preventing statement-structure manipulation.
+* sdk: Small bugfixes relating to docker test container cleanup and image building.
+* secrets/kmip (enterprise): Address a nil pointer within the invalidation handler for managed objects.
+* secrets/pki (enterprise): Include root CA in chain for CIEPS endpoints when root is the direct issuer, unless `remove_roots_from_chain` is true.
+* ui: Update DR operation token generation to accept a primary root token for authentication.
 
 ## 1.19.16  Enterprise
 ### April 14, 2026  

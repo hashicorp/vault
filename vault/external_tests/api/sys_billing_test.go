@@ -83,7 +83,7 @@ func Test_BillingOverview(t *testing.T) {
 
 	// Validate response structure
 	require.NotNil(t, resp.Months)
-	require.Len(t, resp.Months, billing.BillingRetentionMonths, "should have billing.BillingRetentionMonths months")
+	require.Len(t, resp.Months, billing.DefaultBillingRetentionMonths, "should have billing.DefaultBillingRetentionMonths months")
 
 	// Check current month data
 	currentMonth := resp.Months[0]
@@ -132,7 +132,7 @@ func Test_BillingOverview_WithoutUpdateCounts(t *testing.T) {
 
 	// Validate basic response structure
 	require.NotNil(t, resp.Months)
-	require.Len(t, resp.Months, billing.BillingRetentionMonths, "should have billing.BillingRetentionMonths months")
+	require.Len(t, resp.Months, billing.DefaultBillingRetentionMonths, "should have billing.DefaultBillingRetentionMonths months")
 
 	// Check that months are properly formatted
 	for _, month := range resp.Months {
@@ -155,7 +155,7 @@ func Test_BillingOverview_EmptyCluster(t *testing.T) {
 	require.NotNil(t, resp)
 
 	require.NotNil(t, resp.Months)
-	require.Len(t, resp.Months, billing.BillingRetentionMonths)
+	require.Len(t, resp.Months, billing.DefaultBillingRetentionMonths)
 
 	currentMonth := resp.Months[0]
 	require.NotEmpty(t, currentMonth.Month)
@@ -176,6 +176,7 @@ func Test_BillingOverview_EmptyCluster(t *testing.T) {
 		"managed_keys":          false,
 		"ssh_units":             false,
 		"id_token_units":        false,
+		"external_ca_pki_units": false,
 	}
 
 	for _, metric := range currentMonth.UsageMetrics {
@@ -210,16 +211,121 @@ func Test_BillingOverview_MonthFormat(t *testing.T) {
 
 	// Verify months are in descending order (current, then previous months)
 	require.Greater(t, resp.Months[0].Month, resp.Months[1].Month, "first month should be more recent than second")
-	// Verify we have billing.BillingRetentionMonths months
-	require.Len(t, resp.Months, billing.BillingRetentionMonths)
+	// Verify we have billing.DefaultBillingRetentionMonths months
+	require.Len(t, resp.Months, billing.DefaultBillingRetentionMonths)
 
-	// Verify the oldest month is exactly (billing.BillingRetentionMonths - 1) months before the current month
+	// Verify the oldest month is exactly (billing.DefaultBillingRetentionMonths - 1) months before the current month
 	currentMonthTime, err := time.Parse("2006-01", resp.Months[0].Month)
 	require.NoError(t, err, "should parse current month")
-	oldestMonthTime, err := time.Parse("2006-01", resp.Months[billing.BillingRetentionMonths-1].Month)
+	oldestMonthTime, err := time.Parse("2006-01", resp.Months[billing.DefaultBillingRetentionMonths-1].Month)
 	require.NoError(t, err, "should parse oldest month")
 
-	expectedOldestMonth := currentMonthTime.AddDate(0, -(billing.BillingRetentionMonths - 1), 0)
+	expectedOldestMonth := currentMonthTime.AddDate(0, -(billing.DefaultBillingRetentionMonths - 1), 0)
 	require.Equal(t, expectedOldestMonth.Format("2006-01"), oldestMonthTime.Format("2006-01"),
-		"oldest month should be exactly %d months before current month", billing.BillingRetentionMonths-1)
+		"oldest month should be exactly %d months before current month", billing.DefaultBillingRetentionMonths-1)
+}
+
+// Test_BillingConfig tests the GetBillingConfig and SetBillingConfig API methods
+func Test_BillingConfig(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// Test GetBillingConfig - should return default value
+	config, err := client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.NotNil(t, config)
+	require.Equal(t, billing.DefaultBillingRetentionMonths, config.RetentionMonths)
+
+	// Test SetBillingConfig with valid value
+	err = client.Sys().SetBillingConfig(24)
+	require.NoError(t, err)
+
+	// Verify the value was updated
+	config, err = client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.Equal(t, 24, config.RetentionMonths)
+
+	// Test SetBillingConfig with minimum value
+	err = client.Sys().SetBillingConfig(billing.MinBillingRetentionMonths)
+	require.NoError(t, err)
+
+	config, err = client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.Equal(t, billing.MinBillingRetentionMonths, config.RetentionMonths)
+
+	// Test SetBillingConfig with maximum value
+	err = client.Sys().SetBillingConfig(billing.MaxBillingRetentionMonths)
+	require.NoError(t, err)
+
+	config, err = client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.Equal(t, billing.MaxBillingRetentionMonths, config.RetentionMonths)
+}
+
+// Test_BillingConfig_InvalidValues tests that invalid retention values are rejected
+func Test_BillingConfig_InvalidValues(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// Test below minimum
+	err := client.Sys().SetBillingConfig(billing.MinBillingRetentionMonths - 1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must be between")
+
+	// Test above maximum
+	err = client.Sys().SetBillingConfig(billing.MaxBillingRetentionMonths + 1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must be between")
+
+	// Test zero
+	err = client.Sys().SetBillingConfig(0)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must be between")
+
+	// Test negative
+	err = client.Sys().SetBillingConfig(-1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must be between")
+}
+
+// Test_BillingConfig_AffectsOverview tests that config changes affect billing overview
+func Test_BillingConfig_AffectsOverview(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// Set retention to minimum
+	err := client.Sys().SetBillingConfig(billing.MinBillingRetentionMonths)
+	require.NoError(t, err)
+
+	// Get billing overview
+	resp, err := client.Sys().BillingOverview(false)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Months, billing.MinBillingRetentionMonths)
+
+	// Set retention to maximum
+	err = client.Sys().SetBillingConfig(billing.MaxBillingRetentionMonths)
+	require.NoError(t, err)
+
+	// Get billing overview again
+	resp, err = client.Sys().BillingOverview(false)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Months, billing.MaxBillingRetentionMonths)
+
+	// Set back to default
+	err = client.Sys().SetBillingConfig(billing.DefaultBillingRetentionMonths)
+	require.NoError(t, err)
+
+	// Verify default is restored
+	resp, err = client.Sys().BillingOverview(false)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Months, billing.DefaultBillingRetentionMonths)
 }

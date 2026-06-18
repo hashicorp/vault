@@ -9,6 +9,11 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import OidcAssignmentForm from 'vault/forms/oidc/assignment';
+import {
+  IdentityApiEntityListByIdListEnum,
+  IdentityApiGroupListByIdListEnum,
+} from '@hashicorp/vault-client-typescript';
 /**
  * @module OidcClientForm
  * OidcClientForm components are used to create and update OIDC clients (a.k.a. applications)
@@ -30,6 +35,9 @@ export default class OidcClientForm extends Component {
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked radioCardGroupValue = 'limited';
+  @tracked oidcAssignmentForm;
+  @tracked entities;
+  @tracked groups;
 
   constructor() {
     super(...arguments);
@@ -79,6 +87,21 @@ export default class OidcClientForm extends Component {
       this.radioCardGroupValue = selection;
       this.args.form.data.assignments = [];
     }
+  }
+
+  @action
+  async onAssignmentCreate(name) {
+    // fetch entities and groups for assignment form component
+    if (!this.entities || !this.groups) {
+      const [entitiesResult, groupsResult] = await Promise.allSettled([
+        this.api.identity.entityListById(IdentityApiEntityListByIdListEnum.TRUE),
+        this.api.identity.groupListById(IdentityApiGroupListByIdListEnum.TRUE),
+      ]);
+      this.entities =
+        entitiesResult.status === 'fulfilled' ? this.api.keyInfoToArray(entitiesResult.value) : [];
+      this.groups = groupsResult.status === 'fulfilled' ? this.api.keyInfoToArray(groupsResult.value) : [];
+    }
+    this.oidcAssignmentForm = new OidcAssignmentForm({ name }, { isNew: true });
   }
 
   @action

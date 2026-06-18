@@ -21,17 +21,20 @@
       />
 
       <FormFieldGroups @model={{this.mountForm}} @renderGroup="Method Options" @groupName="formFieldGroups">
-        <SearchSelectWithModal
-          @id="key"
+        <SearchSelect
+          @id="oidc-key"
           @fallbackComponent="input-search"
+          @options={{this.oidcKeys}}
           @inputValue={{this.mountForm.data.config.identity_token_key}}
-          @onChange={{this.handleIdentityTokenKeyChange}}
-          @models={{array "oidc/key"}}
           @selectLimit="1"
-          @modalFormTemplate="modal-form/oidc-key-template"
-          @placeholder="Search for an existing OIDC key, or type a new key name to create it."
-          @fallbackComponentPlaceholder="Input a key name"
-          @modalSubtext="This key will be created in the OIDC key path."
+          @placeholder={{if
+            this.oidcKeys
+            "Search for an existing OIDC key, or type a new key name to create it."
+            "Input a key name"
+          }}
+          @onChange={{this.handleIdentityTokenKeyChange}}
+          @onCreate={{this.onCreateOidcKey}}
+          data-test-field="config.identity_token_key"
         />
       </FormFieldGroups>
 
@@ -65,3 +68,20 @@
     />
   {{/if}}
 </div>
+
+{{#if this.oidcKeyForm}}
+  <Hds::Modal id="oidc-key-modal" @onClose={{fn (mut this.oidcKeyForm) null}} as |M|>
+    <M.Header data-test-modal-title>Create new key</M.Header>
+    <M.Body>
+      <p class="has-bottom-margin-s" data-test-modal-subtext>
+        This key will be created in the OIDC key path.
+      </p>
+      <Oidc::KeyForm
+        @form={{this.oidcKeyForm}}
+        @onSave={{fn (mut this.oidcKeyForm) null}}
+        @onCancel={{fn (mut this.oidcKeyForm) null}}
+        @isModalForm={{true}}
+      />
+    </M.Body>
+  </Hds::Modal>
+{{/if}}

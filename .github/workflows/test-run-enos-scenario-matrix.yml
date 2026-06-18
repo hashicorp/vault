@@ -43,7 +43,7 @@ on:
 
 jobs:
   metadata:
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64", "large"]') }}
     permissions:
       id-token: write # vault-auth
       contents: read
@@ -53,7 +53,7 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.vault-revision }}
       - if: inputs.vault-edition != 'ce'
@@ -63,14 +63,14 @@ jobs:
       - if: inputs.vault-edition != 'ce'
         id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
+      - uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
         with:
           github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/create-dynamic-config
@@ -114,7 +114,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.vault-revision }}
       - if: needs.metadata.outputs.is-ent-repo == 'true'
@@ -124,7 +124,7 @@ jobs:
       - if: needs.metadata.outputs.is-ent-repo == 'true'
         id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -219,14 +219,8 @@ jobs:
 
       - uses: ./.github/actions/install-tools
 
-      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
-        with:
-          # the Terraform wrapper will break Terraform execution in Enos because
-          # it changes the output to text when we expect it to be JSON.
-          terraform_wrapper: false
-
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           aws-access-key-id: ${{ steps.secrets.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ steps.secrets.outputs.aws-secret-access-key }}
@@ -234,10 +228,6 @@ jobs:
           role-to-assume: ${{ steps.secrets.outputs.aws-role-arn }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-
-      - uses: hashicorp/action-setup-enos@6ec106c8f809fe645162d73bea565c65f3269907 # v1.52
-        with:
-          github-token: ${{ steps.secrets.outputs.github-token }}
 
       - uses: ./.github/actions/create-dynamic-config
         with:
@@ -258,7 +248,7 @@ jobs:
             echo "test_results_artifact_name=test-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
             echo "junit_results_artifact_name=junit-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
             echo "failure_summary_artifact_name=failure-summary-enos_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g').md"
-          } >> "$GITHUB_OUTPUT"
+          } | tee -a "$GITHUB_OUTPUT"
 
       - if: contains(inputs.sample-name, 'build')
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -281,55 +271,74 @@ jobs:
         run: |
           echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
 
-      - id: launch
-        name: enos scenario launch ${{ matrix.scenario.id.filter }}
-        # Continue once and retry to handle occasional blips when creating infrastructure.
+      - name: Capture AWS Resource Counts Before Test
+        id: capture-aws-before
         continue-on-error: true
-        run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
-
-      - if: steps.launch.outcome == 'failure'
-        id: launch_retry
-        name: Retry enos scenario launch ${{ matrix.scenario.id.filter }}
         run: |
-          # Output our state and plan so we can see where we're at before a retry
-          echo "Current state:"
-          enos scenario exec --cmd show --chdir ./enos ${{ matrix.scenario.id.filter }}
-          echo "Current plan:"
-          enos scenario exec --cmd plan --chdir ./enos ${{ matrix.scenario.id.filter }}
-          if ! enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}; then
-            echo "Retry failed!"
-            echo "Current state:"
-            enos scenario exec --cmd show --chdir ./enos ${{ matrix.scenario.id.filter }}
-            echo "Current plan:"
-            enos scenario exec --cmd plan --chdir ./enos ${{ matrix.scenario.id.filter }}
+          chmod +x ./.github/scripts/capture-aws-resources.sh
+          ./.github/scripts/capture-aws-resources.sh \
+            "${{ matrix.attributes.aws_region }}" \
+            "${{ matrix.scenario.id.filter }}" \
+            "enos-aws-resource-before.txt" \
+            "Before Enos Test"
+
+      - id: run-scenario
+        name: Run Enos scenario ${{ matrix.scenario.id.filter }}
+        uses: ./.github/actions/run-enos-scenario
+        with:
+          scenario-filter: ${{ matrix.scenario.id.filter }}
+          working-directory: ./enos
+          timeout: 45m0s
+          retry-timeout: 30m0s
+          destroy-timeout: 10m0s
+          show-state-on-retry: ${{ github.repository == 'hashicorp/vault-enterprise' && 'true' || 'false' }}
+          upload-debug-data: 'true'
+          debug-data-retention-days: '30'
+          debug-data-path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
+
+      - name: Capture AWS Resource Counts After Test
+        id: capture-aws-after
+        if: always()
+        continue-on-error: true
+        run: |
+          chmod +x ./.github/scripts/capture-aws-resources.sh
+          ./.github/scripts/capture-aws-resources.sh \
+            "${{ matrix.attributes.aws_region }}" \
+            "${{ matrix.scenario.id.filter }}" \
+            "enos-aws-resource-after.txt" \
+            "After Enos Test"
+
+      - name: Show AWS Resource Differences
+        id: show-resource-diff
+        if: always()
+        continue-on-error: true
+        run: |
+          echo "=== AWS Resource Count Differences ==="
+          echo ""
+          if [[ -f "enos-aws-resource-before.txt" && -f "enos-aws-resource-after.txt" ]]; then
+            echo "Comparing before and after resource counts..."
+            echo ""
+            diff -u enos-aws-resource-before.txt enos-aws-resource-after.txt || true
+          else
+            echo "Could not find both before and after files for comparison"
           fi
 
-      - name: Upload Debug Data
-        if: failure()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - name: Upload AWS Resource Snapshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
-          name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
-          path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
+          name: aws-resources_${{ matrix.scenario.id.filter }}
+          path: |
+            enos-aws-resource-before.txt
+            enos-aws-resource-after.txt
           retention-days: 30
+          if-no-files-found: ignore
         continue-on-error: true
-
-      - if: ${{ always() }}
-        id: destroy
-        name: enos scenario destroy ${{ matrix.scenario.id.filter }}
-        continue-on-error: true
-        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
-
-      - if: steps.destroy.outcome == 'failure'
-        id: destroy_retry
-        name: Retry enos scenario destroy ${{ matrix.scenario.id.filter }}
-        continue-on-error: true
-        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
 
       - name: Upload Test Results
         if: always()
         id: upload_test_results
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.prepare_scenario.outputs.test_results_artifact_name }}
           path: /tmp/vault_test_results_*.json
@@ -340,7 +349,7 @@ jobs:
       - name: Upload JUnit Test Results
         if: always()
         id: upload_junit_results
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.prepare_scenario.outputs.junit_results_artifact_name }}
           path: /tmp/vault_test_results_*.xml
@@ -407,7 +416,7 @@ jobs:
 
       - name: Upload Failure Summary
         if: always() && steps.check_test_results.outputs.has_results == 'true'
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
           path: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
@@ -432,7 +441,7 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.launch.outcome }}
+          status: ${{ steps.run-scenario.outputs.launch-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
 
       - if: ${{ always() && ! cancelled() }}
@@ -440,7 +449,7 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "retry enos scenario launch ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.launch_retry.outcome }}
+          status: ${{ steps.run-scenario.outputs.launch-retry-attempted == 'true' && steps.run-scenario.outputs.launch-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
 
       - if: ${{ always() && ! cancelled() }}
@@ -448,7 +457,7 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.destroy.outcome }}
+          status: ${{ steps.run-scenario.outputs.destroy-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}
 
       - if: ${{ always() && ! cancelled() }}
@@ -456,5 +465,5 @@ jobs:
         uses: hashicorp/actions-slack-status@1a3f63b30bd476aee1f3bd6f9d8f2aacc4f14d81 # v2.0.1
         with:
           failure-message: "retry enos scenario destroy ${{ matrix.scenario.id.filter}} failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{ steps.destroy_retry.outcome }}
+          status: ${{ steps.run-scenario.outputs.destroy-retry-attempted == 'true' && steps.run-scenario.outputs.destroy-outcome == 'failure' && 'failure' || 'success' }}
           slack-webhook-url: ${{ steps.secrets.outputs.slack-webhook-url }}

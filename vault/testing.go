@@ -277,7 +277,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
 	conf.BillingConfig = opts.BillingConfig
-	testApplyEntBaseConfig(conf, opts)
+	TestApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -1600,7 +1600,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
 		coreConfig.EnableUnauthenticatedAccess = base.EnableUnauthenticatedAccess
 
-		testApplyEntBaseConfig(coreConfig, base)
+		TestApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
 		coreConfig.ClusterName = t.Name()

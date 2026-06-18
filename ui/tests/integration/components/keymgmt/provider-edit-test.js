@@ -11,6 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, settled, fillIn } from '@ember/test-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -25,20 +26,18 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.push({
-      data: {
-        id: 'foo-bar',
-        type: 'keymgmt/provider',
-        attributes: {
-          name: 'foo-bar',
-          provider: 'azurekeyvault',
-          keyCollection: 'keyvault-1',
-          backend: 'keymgmt',
-        },
-      },
+    this.form = new KeymgmtProviderForm({
+      name: 'foo-bar',
+      provider: 'azurekeyvault',
+      key_collection: 'keyvault-1',
+      backend: 'keymgmt',
     });
-    this.model = this.store.peekRecord('keymgmt/provider', 'foo-bar');
+    this.capabilities = {
+      canDelete: false,
+      canListKeys: false,
+      canEdit: false,
+      canCreateKeys: false,
+    };
     this.root = root;
     this.owner.lookup('service:router').reopen({
       currentURL: '/ui/vault/secrets-engines/keymgmt/show/foo-bar',
@@ -60,13 +59,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   test('it should render show view', async function (assert) {
     assert.expect(11);
 
-    // override capability getters
-    Object.defineProperties(this.model, {
-      canDelete: { value: true },
-      canListKeys: { value: true },
-    });
+    this.capabilities = { canDelete: true, canListKeys: true, canEdit: false, canCreateKeys: false };
 
-    this.server.post('/sys/capabilities-self', () => ({}));
     this.server.get('/keymgmt/kms/foo-bar/key', () => {
       return {
         data: {
@@ -83,7 +77,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     await render(hbs`
       <Keymgmt::ProviderEdit
         @root={{this.root}}
-        @model={{this.model}}
+        @form={{this.form}}
+        @capabilities={{this.capabilities}}
         @mode="show"
         @tab={{this.tab}}
       />`);
@@ -117,11 +112,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   test('it should delete a provider', async function (assert) {
     assert.expect(5);
 
-    // override capability getters
-    Object.defineProperties(this.model, {
-      canDelete: { value: true },
-      canListKeys: { value: true },
-    });
+    this.capabilities = { canDelete: true, canListKeys: true, canEdit: false, canCreateKeys: false };
 
     this.server.post('/sys/capabilities-self', () => ({}));
     this.server.get('/keymgmt/kms/foo-bar/key', () => {
@@ -146,7 +137,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     await render(hbs`
       <Keymgmt::ProviderEdit
         @root={{this.root}}
-        @model={{this.model}}
+        @form={{this.form}}
+        @capabilities={{this.capabilities}}
         @mode="show"
         @tab={{this.tab}}
       />`);
@@ -162,10 +154,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   test('it should render create view', async function (assert) {
     assert.expect(14);
 
-    this.server.put('/keymgmt/kms/foo', (schema, req) => {
+    this.server.post('/keymgmt/kms/foo', (schema, req) => {
       const params = {
-        name: 'foo',
-        backend: 'keymgmt',
         provider: 'gcpckms',
         key_collection: 'keyvault-1',
         credentials: {
@@ -186,12 +176,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
-    this.model = this.store.createRecord('keymgmt/provider', { backend: 'keymgmt' });
+    this.form = new KeymgmtProviderForm({ backend: 'keymgmt' }, { isNew: true });
 
     await render(hbs`
       <Keymgmt::ProviderEdit
         @root={{this.root}}
-        @model={{this.model}}
+        @form={{this.form}}
         @mode="create"
       />`);
 
@@ -216,18 +206,16 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     assert.dom(`[data-test-input="credentials.service_account_file"]`).exists(`GCP - cred field renders`);
 
     await fillIn('[data-test-input="name"]', 'foo');
-    await fillIn('[data-test-input="keyCollection"]', 'keyvault-1');
+    await fillIn('[data-test-input="key_collection"]', 'keyvault-1');
     await fillIn('[data-test-input="credentials.service_account_file"]', 'test');
     await click(`[${ts}-submit]`);
   });
 
   test('it should render edit view', async function (assert) {
-    assert.expect(3);
+    assert.expect(7);
 
-    this.server.put('/keymgmt/kms/foo', (schema, req) => {
+    this.server.post('/keymgmt/kms/foo-bar', (schema, req) => {
       const params = {
-        name: 'foo-bar',
-        backend: 'keymgmt',
         provider: 'azurekeyvault',
         key_collection: 'keyvault-1',
         credentials: {
@@ -246,14 +234,14 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
           'vault.cluster.secrets.backend.show',
           'Show route sent in transitionTo on save'
         );
-        assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
+        assert.strictEqual(model, 'foo-bar', 'Provider name sent in transitionTo on save');
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
     await render(hbs`
       <Keymgmt::ProviderEdit
         @root={{this.root}}
-        @model={{this.model}}
+        @form={{this.form}}
         @mode="edit"
       />`);
 
@@ -265,5 +253,29 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       await fillIn(`[data-test-input="credentials.${prop}"]`, `${prop} test`);
     }
     await click(`[${ts}-submit]`);
+  });
+
+  test('it should clear all validations when provider type changes', async function (assert) {
+    assert.expect(3);
+
+    this.form = new KeymgmtProviderForm({ backend: 'keymgmt' }, { isNew: true });
+
+    await render(hbs`
+      <Keymgmt::ProviderEdit
+        @root={{this.root}}
+        @form={{this.form}}
+        @mode="create"
+      />`);
+
+    await click(`[${ts}-submit]`);
+    assert.dom('[data-test-validation-error]').exists('Validation errors shown after submit');
+
+    await fillIn('[data-test-input="provider"]', 'gcpckms');
+    assert
+      .dom('[data-test-validation-error]')
+      .doesNotExist('Validation errors cleared when provider changes');
+
+    await click(`[${ts}-submit]`);
+    assert.dom('[data-test-validation-error]').exists('Validation errors re-appear after next submit');
   });
 });

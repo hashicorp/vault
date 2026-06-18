@@ -1856,7 +1856,7 @@ func (m *ExpirationManager) FetchLeaseTimesByToken(ctx context.Context, te *logi
 				ClientTokenType: logical.TokenTypeEnt,
 			}, nil
 		}
-		return nil, errors.New("enterprise token has no valid expiration time")
+		return nil, errors.New("JWT has no valid expiration time")
 	}
 
 	tokenNS, err := NamespaceByID(ctx, te.NamespaceID, m.core)
@@ -2155,7 +2155,7 @@ func (m *ExpirationManager) revokeEntry(ctx context.Context, le *leaseEntry) err
 
 		// ent tokens are managed by external IdPs and should not be revoked through Vault backends
 		if le.ClientTokenType == logical.TokenTypeEnt {
-			return errors.New("enterprise tokens are managed by external IdPs and cannot be revoked by Vault")
+			return errors.New("JWTs are managed by external IdPs and cannot be revoked by Vault")
 		}
 
 		if err := m.tokenStore.revokeTree(ctx, le); err != nil {
@@ -2209,7 +2209,7 @@ func (m *ExpirationManager) renewAuthEntry(ctx context.Context, req *logical.Req
 	}
 
 	if le.ClientTokenType == logical.TokenTypeEnt {
-		return logical.ErrorResponse("enterprise tokens cannot be renewed"), nil
+		return logical.ErrorResponse("JWTs cannot be renewed"), nil
 	}
 
 	auth := *le.Auth
@@ -2354,7 +2354,7 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
 	// For enterprise token IDs, derive namespace context from the lease rather than
 	// parsing token segments.
-	if IsEnterpriseTokenId(token) {
+	if IsOAuthJwtId(token) {
 		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
 		if err != nil {
 			return err
@@ -2400,7 +2400,7 @@ func (m *ExpirationManager) createIndexByToken(ctx context.Context, le *leaseEnt
 func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*logical.StorageEntry, error) {
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, tokenNS)
-	if IsEnterpriseTokenId(le.ClientToken) {
+	if IsOAuthJwtId(le.ClientToken) {
 		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
 		if err != nil {
 			return nil, err
@@ -2444,7 +2444,7 @@ func (m *ExpirationManager) indexByToken(ctx context.Context, le *leaseEntry) (*
 func (m *ExpirationManager) removeIndexByToken(ctx context.Context, le *leaseEntry, token string) error {
 	tokenNS := namespace.RootNamespace
 	saltCtx := namespace.ContextWithNamespace(ctx, namespace.RootNamespace)
-	if IsEnterpriseTokenId(token) {
+	if IsOAuthJwtId(token) {
 		ns, err := m.getNamespaceFromLeaseID(ctx, le.LeaseID)
 		if err != nil {
 			return err
@@ -3062,7 +3062,7 @@ func (le *leaseEntry) renewable() (bool, error) {
 		return false, nil
 
 	case le.ClientTokenType == logical.TokenTypeEnt:
-		return false, fmt.Errorf("enterprise tokens cannot be renewed")
+		return false, fmt.Errorf("JWTs cannot be renewed")
 
 	// Determine if the lease is expired
 	case le.ExpireTime.Before(time.Now()):

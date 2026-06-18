@@ -57,6 +57,36 @@ type RaftClusterOpts struct {
 	DisableMlock                   bool
 }
 
+// TestRaft_Retry_JoinLimiter verifies that only 20 concurrent retry joins are allowed.
+func TestRaft_Retry_JoinLimiter(t *testing.T) {
+	t.Parallel()
+	const maxConcurrentRetryJoins = 20
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+		NumCores:             2, // 1 leader + 1 follower; limiter is per-core, so test repeated joins on one core
+	})
+
+	leaderInfos := []*raft.LeaderJoinInfo{
+		{
+			LeaderAPIAddr: "https://127.0.0.1:1",
+			Retry:         true,
+		},
+	}
+
+	ctx, cancel := context.WithCancel(namespace.RootContext(context.Background()))
+	defer cancel()
+	followerCore := cluster.Cores[1]
+	for i := 0; i < maxConcurrentRetryJoins; i++ {
+		_, err := followerCore.JoinRaftCluster(ctx, leaderInfos, false)
+		require.NoError(t, err)
+	}
+	_, err := followerCore.JoinRaftCluster(ctx, leaderInfos, false)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "too many concurrent raft retry joins in progress")
+}
+
 func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig, vault.TestClusterOptions) {
 	if ropts == nil {
 		ropts = &RaftClusterOpts{

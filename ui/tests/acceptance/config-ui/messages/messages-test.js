@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, visit, fillIn, findAll, waitFor } from '@ember/test-helpers';
+import { click, visit, fillIn, findAll, waitFor, currentURL } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { format, addDays, startOfDay } from 'date-fns';
@@ -200,6 +200,64 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await fillIn(GENERAL.filter('status'), 'inactive');
     await click(GENERAL.submitButton);
     assert.dom(GENERAL.listItem()).exists({ count: 1 }, 'list filters by status again');
+
+    // delete the created messages
+    await this.deleteMessages();
+  });
+
+  test('it should clear filter params when switching between tabs', async function (assert) {
+    await this.createMessageRepl({ title: 'tab-switch-test-1', type: 'banner', authenticated: true });
+    await this.createMessageRepl({ title: 'tab-switch-test-2', type: 'modal', authenticated: false });
+
+    // Start on authenticated tab with filters applied
+    await visit('vault/config-ui/messages?authenticated=true&pageFilter=test&status=active&type=banner');
+
+    // Verify filters are applied
+    assert.dom(GENERAL.filter('pageFilter')).hasValue('test', 'pageFilter is set');
+    assert.dom(GENERAL.filter('status')).hasValue('active', 'status filter is set');
+    assert.dom(GENERAL.filter('type')).hasValue('banner', 'type filter is set');
+
+    // Switch to unauthenticated tab
+    await click(CUSTOM_MESSAGES.tab('On login page'));
+
+    // Verify filters are cleared after tab switch
+    assert.dom(GENERAL.filter('pageFilter')).hasValue('', 'pageFilter is cleared after tab switch');
+    assert.dom(GENERAL.filter('status')).hasValue('', 'status filter is cleared after tab switch');
+    assert.dom(GENERAL.filter('type')).hasValue('', 'type filter is cleared after tab switch');
+
+    // Verify URL params are cleared (except authenticated and page)
+    const unauthenticatedUrl = currentURL();
+    assert.true(unauthenticatedUrl.includes('authenticated=false'), 'authenticated param is set to false');
+    assert.false(unauthenticatedUrl.includes('pageFilter'), 'pageFilter param is not in URL');
+    assert.false(unauthenticatedUrl.includes('status'), 'status param is not in URL');
+    assert.false(unauthenticatedUrl.includes('type'), 'type param is not in URL');
+
+    // Apply filters on unauthenticated tab
+    await fillIn(GENERAL.filter('pageFilter'), 'modal-test');
+    await fillIn(GENERAL.filter('type'), 'modal');
+    await click(GENERAL.submitButton);
+
+    // Verify filters are applied
+    assert
+      .dom(GENERAL.filter('pageFilter'))
+      .hasValue('modal-test', 'pageFilter is set on unauthenticated tab');
+    assert.dom(GENERAL.filter('type')).hasValue('modal', 'type filter is set on unauthenticated tab');
+
+    // Switch back to authenticated tab
+    await click(CUSTOM_MESSAGES.tab('After user logs in'));
+
+    // Verify filters are cleared again
+    assert.dom(GENERAL.filter('pageFilter')).hasValue('', 'pageFilter is cleared when switching back');
+    assert.dom(GENERAL.filter('type')).hasValue('', 'type filter is cleared when switching back');
+
+    // Verify URL params are cleared
+    const authenticated = currentURL();
+    const authenticatedParam =
+      authenticated.includes('authenticated=true') || !authenticated.includes('authenticated=false');
+    assert.true(authenticatedParam, 'authenticated param is set to true or uses default');
+    assert.false(authenticated.includes('pageFilter'), 'pageFilter param is not in URL after switching back');
+    assert.false(authenticated.includes('status'), 'status param is not in URL after switching back');
+    assert.false(authenticated.includes('type'), 'type param is not in URL after switching back');
 
     // delete the created messages
     await this.deleteMessages();

@@ -4,7 +4,7 @@
 }}
 
 <Toolbar />
-{{#if (gt this.model.length 0)}}
+{{#if (gt this.model.providers.length 0)}}
   <Oidc::ProviderList @model={{this.model}} />
 {{else}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>

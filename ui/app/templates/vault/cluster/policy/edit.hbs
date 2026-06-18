@@ -2,14 +2,17 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<Page::Header @title={{this.model.id}}>
+<Page::Header @title={{this.model.name}}>
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
-        (hash label=(concat (uppercase this.policyType) " policies") route="vault.cluster.policies" model=this.policyType)
-        (hash label=this.model.id route="vault.cluster.policy.show" model=this.model.id)
+        (hash
+          label=(concat (uppercase this.model.policyType) " policies")
+          route="vault.cluster.policies"
+          model=this.model.policyType
+        )
+        (hash label=this.model.name route="vault.cluster.policy.show" model=this.model.name)
         (hash label="Edit")
       }}
     />
@@ -21,10 +24,12 @@
   </:badges>
 </Page::Header>
 
-{{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
+{{#if (and (not-eq this.model.name "root") (or this.model.capabilities.canUpdate this.model.capabilities.canDelete))}}
   <Toolbar>
     <ToolbarActions>
-      {{#if (and (not-eq this.model.id "default") (not-eq this.model.id "default-ceiling") this.model.canDelete)}}
+      {{#if
+        (and (not-eq this.model.name "default") (not-eq this.model.name "default-ceiling") this.model.capabilities.canDelete)
+      }}
         <ConfirmAction
           @buttonText="Delete policy"
           class="toolbar-button"
@@ -34,7 +39,7 @@
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-button="Back to policy">
+      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.name}} data-test-button="Back to policy">
         Back to policy
       </ToolbarLink>
     </ToolbarActions>
@@ -42,7 +47,7 @@
 {{/if}}
 
 <PolicyForm
-  @model={{this.model}}
+  @form={{this.model}}
   @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
   @onCancel={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
 />

@@ -50,10 +50,15 @@ function getTransformModelTypeFromParams(transformType?: string): string {
 
 /**
  * Main helper function to determine the transform model type based on context.
- * @param context - Context object containing secret path, transformType, or tab
+ * @param context - Context object containing secret path, transformType, tab, or itemType
  * @returns The appropriate transform model type
  */
-function getTransformModelType(context: { transformType?: string; tab?: string; secret?: string }): string {
+function getTransformModelType(context: {
+  transformType?: string;
+  tab?: string;
+  secret?: string;
+  itemType?: string;
+}): string {
   // Check secret name prefix first (for existing secrets)
   if (context.secret) {
     const secretBasedType = getTransformModelTypeFromSecretPath(context.secret);
@@ -64,7 +69,8 @@ function getTransformModelType(context: { transformType?: string; tab?: string; 
   }
 
   // Fall back to query parameters (for new secrets or navigation, or when secret has no recognized prefix)
-  const transformType = context.transformType || context.tab;
+  // Check transformType, tab, and itemType — consistent with how keymgmt uses itemType for sub-type resolution.
+  const transformType = context.transformType || context.tab || context.itemType;
   return getTransformModelTypeFromParams(transformType);
 }
 

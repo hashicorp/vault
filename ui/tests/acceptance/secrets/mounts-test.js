@@ -298,8 +298,10 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
       await page.visit();
       await click(GENERAL.cardContainer('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
       await click(GENERAL.button('Method Options'));
-      assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
-      await clickTrigger('#key');
+      assert
+        .dom(GENERAL.fieldByAttr('config.identity_token_key'))
+        .exists('Search select component renders for oidc key');
+      await clickTrigger('#oidc-key');
       const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
       assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
       await click(GENERAL.searchSelect.option(GENERAL.searchSelect.optionIndex('some-key')));
@@ -310,8 +312,8 @@ module('Acceptance | secrets-engines/enable', function (hooks) {
       // Choose a non-wif engine
       await click(GENERAL.cardContainer('ssh'));
       assert
-        .dom('[data-test-search-select-with-modal]')
-        .doesNotExist('for type ssh, the modal field does not render.');
+        .dom(GENERAL.fieldByAttr('config.identity_token_key'))
+        .doesNotExist('for type ssh, the identity_token_key field does not render.');
       // cleanup
       await runCmd(`delete identity/oidc/key/some-key`);
     });

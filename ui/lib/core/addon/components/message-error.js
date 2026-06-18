@@ -16,6 +16,7 @@ import Component from '@glimmer/component';
  * @param {object} [model=null] - An Ember data model that will be used to bind error states to the internal `errors` property.
  * @param {array} [errors=null] - An array of error strings to show.
  * @param {string} [errorMessage=null] - An Error string to display.
+ * @param {array} [errorDetails=null] - Renders a list of errors when error is not from the API. Helpful for rendering a list of client-side validation errors.
  */
 
 export default class MessageError extends Component {
