@@ -19,14 +19,14 @@
     {{on "input" (pick "target.value" (fn this.handleChange this.name))}}
     as |F|
   >
-    <F.Label>{{this.label}}</F.Label>
+    <F.Label data-test-form-label={{this.label}}>{{this.label}}</F.Label>
     {{#if this.helperText}}
-      <F.HelperText>{{this.helperText}}</F.HelperText>
+      <F.HelperText data-test-help-text>{{this.helperText}}</F.HelperText>
     {{/if}}
     {{#if this.isInvalid}}
       <F.Error as |E|>
         {{#each this.errors as |errorMessage|}}
-          <E.Message>{{errorMessage}}</E.Message>
+          <E.Message data-test-message-error>{{errorMessage}}</E.Message>
         {{/each}}
       </F.Error>
     {{/if}}
@@ -40,11 +40,12 @@
     @isDisabled={{@field.isDisabled}}
     name={{this.name}}
     {{on "change" (pick "target.value" (fn this.handleChange this.name))}}
+    data-test-select={{this.name}}
     as |F|
   >
-    <F.Label>{{this.label}}</F.Label>
+    <F.Label data-test-form-label={{this.label}}>{{this.label}}</F.Label>
     {{#if this.helperText}}
-      <F.HelperText>{{this.helperText}}</F.HelperText>
+      <F.HelperText data-test-help-text>{{this.helperText}}</F.HelperText>
     {{/if}}
 
     <F.Options>
@@ -62,7 +63,7 @@
     {{#if this.isInvalid}}
       <F.Error as |E|>
         {{#each this.errors as |errorMessage|}}
-          <E.Message>{{errorMessage}}</E.Message>
+          <E.Message data-test-message-error>{{errorMessage}}</E.Message>
         {{/each}}
       </F.Error>
     {{/if}}
@@ -76,9 +77,9 @@
     {{on "change" (pick "target.checked" (fn this.handleChange this.name))}}
     as |F|
   >
-    <F.Label>{{this.label}}</F.Label>
+    <F.Label data-test-form-label={{this.label}}>{{this.label}}</F.Label>
     {{#if this.helperText}}
-      <F.HelperText>{{this.helperText}}</F.HelperText>
+      <F.HelperText data-test-help-text>{{this.helperText}}</F.HelperText>
     {{/if}}
   </Hds::Form::Toggle::Field>
 
@@ -90,16 +91,17 @@
     @isDisabled={{@field.isDisabled}}
     name={{this.name}}
     {{on "change" (pick "target.checked" (fn this.handleChange this.name))}}
+    data-test-checkbox={{this.name}}
     as |F|
   >
-    <F.Label>{{this.label}}</F.Label>
+    <F.Label data-test-form-label={{this.label}}>{{this.label}}</F.Label>
     {{#if this.helperText}}
-      <F.HelperText>{{this.helperText}}</F.HelperText>
+      <F.HelperText data-test-help-text>{{this.helperText}}</F.HelperText>
     {{/if}}
     {{#if this.isInvalid}}
       <F.Error as |E|>
         {{#each this.errors as |errorMessage|}}
-          <E.Message>{{errorMessage}}</E.Message>
+          <E.Message data-test-message-error>{{errorMessage}}</E.Message>
         {{/each}}
       </F.Error>
     {{/if}}
@@ -116,15 +118,16 @@
         checked={{eq @value option.value}}
         @isDisabled={{@field.isDisabled}}
         {{on "change" (fn this.handleChange this.name option.value)}}
+        data-test-radio={{option.value}}
         as |F|
       >
-        <F.Label>{{option.label}}</F.Label>
+        <F.Label data-test-form-label={{option.label}}>{{option.label}}</F.Label>
       </G.RadioField>
     {{/each}}
     {{#if this.isInvalid}}
       <G.Error as |E|>
         {{#each this.errors as |errorMessage|}}
-          <E.Message>{{errorMessage}}</E.Message>
+          <E.Message data-test-message-error>{{errorMessage}}</E.Message>
         {{/each}}
       </G.Error>
     {{/if}}
@@ -141,6 +144,7 @@
         checked={{eq @value option.value}}
         @isDisabled={{@field.isDisabled}}
         {{on "change" (fn this.handleChange this.name option.value)}}
+        data-test-radio-card={{option.value}}
         as |R|
       >
         <R.Label>{{option.label}}</R.Label>
@@ -152,7 +156,7 @@
     {{#if this.isInvalid}}
       <G.Error as |E|>
         {{#each this.errors as |errorMessage|}}
-          <E.Message>{{errorMessage}}</E.Message>
+          <E.Message data-test-message-error>{{errorMessage}}</E.Message>
         {{/each}}
       </G.Error>
     {{/if}}
@@ -167,16 +171,17 @@
     name={{this.name}}
     placeholder={{@field.placeholder}}
     {{on "input" (pick "target.value" (fn this.handleChange this.name))}}
+    data-test-masked-input
     as |F|
   >
-    <F.Label>{{this.label}}</F.Label>
+    <F.Label data-test-form-label={{this.label}}>{{this.label}}</F.Label>
     {{#if this.helperText}}
-      <F.HelperText>{{this.helperText}}</F.HelperText>
+      <F.HelperText data-test-help-text>{{this.helperText}}</F.HelperText>
     {{/if}}
     {{#if this.isInvalid}}
       <F.Error as |E|>
         {{#each this.errors as |errorMessage|}}
-          <E.Message>{{errorMessage}}</E.Message>
+          <E.Message data-test-message-error>{{errorMessage}}</E.Message>
         {{/each}}
       </F.Error>
     {{/if}}
@@ -196,16 +201,17 @@
     placeholder={{@field.placeholder}}
     disabled={{@field.isDisabled}}
     {{on "input" (pick "target.value" (fn this.handleChange this.name))}}
+    data-test-input={{this.name}}
     as |F|
   >
-    <F.Label>{{this.label}}</F.Label>
+    <F.Label data-test-form-label={{this.label}}>{{this.label}}</F.Label>
     {{#if this.helperText}}
-      <F.HelperText>{{this.helperText}}</F.HelperText>
+      <F.HelperText data-test-help-text>{{this.helperText}}</F.HelperText>
     {{/if}}
     {{#if this.isInvalid}}
       <F.Error as |E|>
         {{#each this.errors as |errorMessage|}}
-          <E.Message>{{errorMessage}}</E.Message>
+          <E.Message data-test-message-error>{{errorMessage}}</E.Message>
         {{/each}}
       </F.Error>
     {{/if}}
