@@ -134,6 +134,7 @@ type Access interface {
 	// considered to be up-to-date if its generation matches the Access generation, and if
 	// it has a slot with a key ID that match the current key ID of each of the Access
 	// wrappers.
+	// WARNING: if value is transitory, the seal generation will not be considered.
 	IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKeyIdRefresh bool) (bool, error)
 
 	// GetEnabledWrappers returns all the enabled seal Wrappers, in order of priority.
@@ -151,7 +152,10 @@ type Access interface {
 	// GetEnabledSealWrappersByPriority returns the SealWrappers for the enabled seal wrappers.
 	GetEnabledSealWrappersByPriority() []*SealWrapper
 
-	// AllSealsWrappersHealthy returns whether all enabled SealWrappers are currently healthy.
+	// HealthyEnabledSealWrapperCount returns the number of healthy enabled SealWrappers.
+	HealthyEnabledSealWrapperCount() int
+
+	// AllSealWrappersHealthy returns whether all enabled SealWrappers are currently healthy.
 	AllSealWrappersHealthy() bool
 
 	GetSealGenerationInfo() *SealGenerationInfo
@@ -363,6 +367,12 @@ const (
 	wrapperDecryptHighPriorityHeadStart = 2 * time.Second
 )
 
+func (a *access) HealthyEnabledSealWrapperCount() int {
+	// This list of wrappers has to be the same that are used by Encrypt when there
+	// are healthy wrappers.
+	return len(a.filterSealWrappers(enabledWrappers, healthyWrappers))
+}
+
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
 func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*MultiWrapValue, map[string]error) {
 	errs := make(map[string]error)
@@ -371,7 +381,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 	candidateWrappers := a.filterSealWrappers(enabledWrappers, healthyWrappers)
 	if len(candidateWrappers) > 0 {
 		// As there are healthy wrappers, add errors for any unhealthy ones, so that it
-		// it is clear that the resulting MultiWrapValue is missing ciphertext for some seals.
+		// is clear that the resulting MultiWrapValue is missing ciphertext for some seals.
 		for i, unhealthyWrapper := range a.filterSealWrappers(enabledWrappers, unhealthyWrappers) {
 			var keyId string
 			if unhealthyWrapper.Wrapper != nil {
