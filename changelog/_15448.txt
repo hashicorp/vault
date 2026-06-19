@@ -1,0 +1,3 @@
+```release-note:improvement
+identity: Include entity status and entity/alias timestamp details in entity list key_info responses.
+```
