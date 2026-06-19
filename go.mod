@@ -181,6 +181,7 @@ require (
 	github.com/hashicorp/vault/sdk v0.25.1
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
+	github.com/instana/go-sensor v1.68.0
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.1
@@ -251,6 +252,13 @@ require (
 )
 
 require (
+	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
+	github.com/looplab/fsm v1.0.3 // indirect
+)
+
+require (
+	code.dny.dev/ssrf v0.2.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	// We're currently pulling v0.23.0 + a 32 bit fix: https://github.com/apache/thrift/commit/d2acd3c49e5832cb0179f72b111c4ad5bd89c4c5
 	// until a new version is release.
