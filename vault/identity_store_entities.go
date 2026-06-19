@@ -732,15 +732,20 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 			keys = append(keys, entity.Name)
 		}
 		entityInfoEntry := map[string]interface{}{
-			"name": entity.Name,
+			"name":             entity.Name,
+			"creation_time":    ptypes.TimestampString(entity.CreationTime),
+			"last_update_time": ptypes.TimestampString(entity.LastUpdateTime),
+			"disabled":         entity.Disabled,
 		}
 		if len(entity.Aliases) > 0 {
 			aliasList := make([]interface{}, 0, len(entity.Aliases))
 			for _, alias := range entity.Aliases {
 				entry := map[string]interface{}{
-					"id":             alias.ID,
-					"name":           alias.Name,
-					"mount_accessor": alias.MountAccessor,
+					"id":               alias.ID,
+					"name":             alias.Name,
+					"mount_accessor":   alias.MountAccessor,
+					"creation_time":    ptypes.TimestampString(alias.CreationTime),
+					"last_update_time": ptypes.TimestampString(alias.LastUpdateTime),
 				}
 
 				mi, ok := mountAccessorMap[alias.MountAccessor]
