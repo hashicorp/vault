@@ -15,10 +15,9 @@ import (
 )
 
 type Config struct {
-	DSN       string
-	Table     string
-	SAKeyFile string
-	shp       *docker.ServiceHostPort
+	DSN   string
+	Table string
+	shp   *docker.ServiceHostPort
 }
 
 func (c *Config) Address() string {
@@ -50,9 +49,8 @@ func PrepareTestContainer(t *testing.T) (func(), *Config) {
 
 	if dsn := os.Getenv(ydbconsts.EnvDSN); dsn != "" {
 		cfg := &Config{
-			DSN:       dsn,
-			Table:     tableName,
-			SAKeyFile: os.Getenv(ydbconsts.EnvSAKeyFile),
+			DSN:   dsn,
+			Table: tableName,
 		}
 
 		// Ensure the table exists on the remote DSN and return a cleanup that

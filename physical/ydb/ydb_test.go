@@ -110,21 +110,9 @@ func TestResolveYDBAuth(t *testing.T) {
 		t.Helper()
 		for _, key := range []string{
 			ydbconsts.EnvToken,
-			ydbconsts.EnvSAKeyFile,
-			ydbconsts.EnvSAKey,
 			ydbconsts.EnvStaticCredentialsUser,
 			ydbconsts.EnvStaticCredentialsPassword,
-			ydbconsts.EnvMetadataAuth,
 			ydbconsts.EnvAnonymousCredentials,
-			"YDB_SERVICE_ACCOUNT_KEY_CREDENTIALS",
-			"YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS",
-			"YDB_METADATA_CREDENTIALS",
-			"YDB_ACCESS_TOKEN_CREDENTIALS",
-			"YDB_STATIC_CREDENTIALS_USER",
-			"YDB_STATIC_CREDENTIALS_PASSWORD",
-			"YDB_STATIC_CREDENTIALS_ENDPOINT",
-			"YDB_OAUTH2_KEY_FILE",
-			"YDB_ANONYMOUS_CREDENTIALS",
 		} {
 			t.Setenv(key, "")
 		}
@@ -138,34 +126,23 @@ func TestResolveYDBAuth(t *testing.T) {
 		wantValue string
 	}{
 		{
-			name: "config service account file used without env fallback",
+			name: "config token supported directly",
 			conf: map[string]string{
-				"service_account_key_file": "/path/to/sa.json",
+				"token": "config-token",
 			},
-			wantKind:  "service_account_key_file",
-			wantValue: "/path/to/sa.json",
+			wantKind:  "token",
+			wantValue: "config-token",
 		},
 		{
 			name: "vault env token overrides config",
 			conf: map[string]string{
-				"service_account_key_file": "/path/to/sa.json",
+				"token": "config-token",
 			},
 			env: map[string]string{
 				ydbconsts.EnvToken: "vault-token",
 			},
 			wantKind:  "token",
 			wantValue: "vault-token",
-		},
-		{
-			name: "empty generic ydb env does not override config",
-			conf: map[string]string{
-				"service_account_key_file": "/path/to/sa.json",
-			},
-			env: map[string]string{
-				"YDB_SERVICE_ACCOUNT_KEY_FILE_CREDENTIALS": "",
-			},
-			wantKind:  "service_account_key_file",
-			wantValue: "/path/to/sa.json",
 		},
 		{
 			name: "config static credentials supported directly",
@@ -190,18 +167,11 @@ func TestResolveYDBAuth(t *testing.T) {
 			wantValue: "env-user",
 		},
 		{
-			name: "generic ydb env used as fallback",
-			env: map[string]string{
-				"YDB_ACCESS_TOKEN_CREDENTIALS": "sdk-token",
-			},
-			wantKind: "environ",
-		},
-		{
-			name: "metadata config supported directly",
+			name: "anonymous config supported directly",
 			conf: map[string]string{
-				"metadata_auth": "true",
+				"anonymous_credentials": "true",
 			},
-			wantKind: "metadata",
+			wantKind: "anonymous",
 		},
 	}
 

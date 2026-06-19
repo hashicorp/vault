@@ -251,7 +251,7 @@ func quoteYDBIdentifier(identifier string) (string, error) {
 
 	for idx, segment := range segments {
 		if segment == "" {
-			if !(hasLeadingSlash && idx == 0) {
+			if !hasLeadingSlash || idx != 0 {
 				return "", fmt.Errorf("empty identifier segment")
 			}
 			continue
