@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,6 +26,26 @@ const (
 )
 
 func defaultRunOpts(t *testing.T) docker.RunOptions {
+	// Buffer the container logs and only surface them if the test fails. We
+	// deliberately avoid calling t.Failed() (or any other *testing.T method)
+	// from the LogConsumer: it runs on a background goroutine that follows the
+	// docker logs and can outlive the test, which races with the testing
+	// framework's teardown. Instead, collect the lines under a mutex and flush
+	// them from a t.Cleanup, which runs synchronously as part of the test's
+	// lifecycle where t.Failed() is safe to call.
+	var (
+		mu   sync.Mutex
+		logs []string
+	)
+	t.Cleanup(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		if t.Failed() {
+			for _, line := range logs {
+				t.Logf("container logs: %s", line)
+			}
+		}
+	})
 	return docker.RunOptions{
 		ContainerName: "postgres",
 		ImageRepo:     defaultPGImage,
@@ -37,9 +58,9 @@ func defaultRunOpts(t *testing.T) docker.RunOptions {
 		DoNotAutoRemove:   false,
 		OmitLogTimestamps: true,
 		LogConsumer: func(s string) {
-			if t.Failed() {
-				t.Logf("container logs: %s", s)
-			}
+			mu.Lock()
+			defer mu.Unlock()
+			logs = append(logs, s)
 		},
 	}
 }
