@@ -65,6 +65,7 @@ on:
       - ce/**
   schedule:
     - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
+      timezone: "America/New_York"
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}-build

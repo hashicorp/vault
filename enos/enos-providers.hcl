@@ -25,6 +25,9 @@ provider "enos" "ubuntu" {
   }
 }
 
+provider "time" "default" {
+}
+
 provider "hcp" "default" {
 }
 
