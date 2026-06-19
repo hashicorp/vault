@@ -90,9 +90,10 @@ ENV NAME=$NAME
 # Create a non-root user to run the software.
 RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 
-# NOTE: zlib is only here to resolve ALPINE-CVE-2026-27171, it can be removed
-# when when our Alpine release is >= 3.23.4
-RUN apk update && apk add --upgrade --no-cache su-exec dumb-init tzdata zlib
+# Install su-exec for exec-ing Vault when the container is run with a privileged
+# user. Install dumb-init to use as the entrypoint PID 1 to handle reaping
+# zombie processes. Update our timezone database.
+RUN apk update && apk add --upgrade --no-cache su-exec dumb-init tzdata
 
 COPY dist/$TARGETOS/$TARGETARCH/${BIN_NAME} /bin/${BIN_NAME}
 
@@ -174,11 +175,13 @@ COPY ${LICENSE_SOURCE} ${LICENSE_DEST}/
 # Note the trailing slash on the first argument -- plain files meet the requirement but directories do not.
 COPY ${LICENSE_SOURCE}/ /licenses/
 
-# Set up certificates, our base tools, and Vault. Unlike the other version of
-# this (https://github.com/hashicorp/docker-vault/blob/master/ubi/Dockerfile),
-# we copy in the Vault binary from CRT.
-RUN set -eux; \
-    microdnf install -y ca-certificates gnupg openssl tzdata procps shadow-utils util-linux tar
+# Update our timezone database. Install shadow-utils for creating our vault user
+# and group. Install util-linux for su for exec when the container is run as root.
+# Add tar as tar as it is necessary for some of our testing.
+RUN microdnf update -y && \
+  microdnf install -y tzdata shadow-utils util-linux tar && \
+  rm -rf /var/cache/yum && \
+  microdnf clean all
 
 # Create a non-root user to run the software.
 RUN groupadd --gid 1000 vault && \
