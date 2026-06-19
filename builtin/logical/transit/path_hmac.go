@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -207,9 +206,9 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		var retBytes []byte
 
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
-			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-			if !ok {
-				response[i].err = errors.New("unsupported system view")
+			managedKeySystemView, err := b.GetManagedKeySystemView()
+			if err != nil {
+				response[i].err = err
 			}
 
 			retBytes, err = p.HMACWithManagedKey(ctx, ver, managedKeySystemView, b.backendUUID, algorithm, input)
