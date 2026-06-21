@@ -443,6 +443,21 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 				return nil, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
 			}
 		}
+
+		// Try ML-DSA key formats (stored as raw bytes in PKCS8 PEM blocks)
+		if len(p.PrivateKeyBytes) == mldsa65.PrivateKeySize {
+			var sk mldsa65.PrivateKey
+			if err := sk.UnmarshalBinary(p.PrivateKeyBytes); err == nil {
+				return &sk, nil
+			}
+		}
+		if len(p.PrivateKeyBytes) == mldsa87.PrivateKeySize {
+			var sk mldsa87.PrivateKey
+			if err := sk.UnmarshalBinary(p.PrivateKeyBytes); err == nil {
+				return &sk, nil
+			}
+		}
+
 		return nil, errutil.UserError{Err: fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
 	default:
 		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA and EC are supported"}
@@ -459,20 +474,34 @@ func (p *ParsedCertBundle) SetParsedPrivateKey(privateKey crypto.Signer, private
 
 func getPKCS8Type(bs []byte) (PrivateKeyType, error) {
 	k, err := x509.ParsePKCS8PrivateKey(bs)
-	if err != nil {
-		return UnknownPrivateKey, errutil.UserError{Err: fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
+	if err == nil {
+		switch k.(type) {
+		case *ecdsa.PrivateKey:
+			return ECPrivateKey, nil
+		case *rsa.PrivateKey:
+			return RSAPrivateKey, nil
+		case ed25519.PrivateKey:
+			return Ed25519PrivateKey, nil
+		default:
+			return UnknownPrivateKey, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
+		}
 	}
 
-	switch k.(type) {
-	case *ecdsa.PrivateKey:
-		return ECPrivateKey, nil
-	case *rsa.PrivateKey:
-		return RSAPrivateKey, nil
-	case ed25519.PrivateKey:
-		return Ed25519PrivateKey, nil
-	default:
-		return UnknownPrivateKey, errutil.UserError{Err: "Found unknown private key type in pkcs#8 wrapping"}
+	// Try ML-DSA key formats (stored as raw bytes in PKCS8 PEM blocks)
+	if len(bs) == mldsa65.PrivateKeySize {
+		var sk mldsa65.PrivateKey
+		if unmarshalErr := sk.UnmarshalBinary(bs); unmarshalErr == nil {
+			return MLDSA65PrivateKey, nil
+		}
 	}
+	if len(bs) == mldsa87.PrivateKeySize {
+		var sk mldsa87.PrivateKey
+		if unmarshalErr := sk.UnmarshalBinary(bs); unmarshalErr == nil {
+			return MLDSA87PrivateKey, nil
+		}
+	}
+
+	return UnknownPrivateKey, errutil.UserError{Err: fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
 }
 
 // ToParsedCSRBundle converts a string-based CSR bundle
@@ -605,6 +634,20 @@ func (p *ParsedCSRBundle) getSigner() (crypto.Signer, error) {
 		if err != nil {
 			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private Ed25519 key: %s", err)}
 		}
+
+	case MLDSA65PrivateKey:
+		var sk mldsa65.PrivateKey
+		if err := sk.UnmarshalBinary(p.PrivateKeyBytes); err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse ML-DSA-65 private key: %s", err)}
+		}
+		signer = &sk
+
+	case MLDSA87PrivateKey:
+		var sk mldsa87.PrivateKey
+		if err := sk.UnmarshalBinary(p.PrivateKeyBytes); err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse ML-DSA-87 private key: %s", err)}
+		}
+		signer = &sk
 
 	default:
 		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA, Ed25519 and EC are supported"}

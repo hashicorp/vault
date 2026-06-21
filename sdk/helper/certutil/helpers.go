@@ -257,6 +257,22 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 		return
 	}
 
+	// Try ML-DSA-65
+	if len(privateKeyBytes) == mldsa65.PrivateKeySize {
+		var sk mldsa65.PrivateKey
+		if unmarshalErr := sk.UnmarshalBinary(privateKeyBytes); unmarshalErr == nil {
+			return &sk, PKCS8Block, nil
+		}
+	}
+
+	// Try ML-DSA-87
+	if len(privateKeyBytes) == mldsa87.PrivateKeySize {
+		var sk mldsa87.PrivateKey
+		if unmarshalErr := sk.UnmarshalBinary(privateKeyBytes); unmarshalErr == nil {
+			return &sk, PKCS8Block, nil
+		}
+	}
+
 	return nil, UnknownBlock, fmt.Errorf("got errors attempting to parse DER private key:\n1. %v\n2. %v\n3. %v", firstError, secondError, thirdError)
 }
 
@@ -420,6 +436,22 @@ func generatePrivateKey(keyType string, keyBits int, container ParsedPrivateKeyC
 		if err != nil {
 			return errutil.InternalError{Err: fmt.Sprintf("error marshalling Ed25519 private key: %v", err)}
 		}
+	case "ml-dsa-65":
+		privateKeyType = MLDSA65PrivateKey
+		_, sk, genErr := mldsa65.GenerateKey(randReader)
+		if genErr != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error generating ML-DSA-65 private key: %v", genErr)}
+		}
+		privateKey = sk
+		privateKeyBytes = sk.Bytes()
+	case "ml-dsa-87":
+		privateKeyType = MLDSA87PrivateKey
+		_, sk, genErr := mldsa87.GenerateKey(randReader)
+		if genErr != nil {
+			return errutil.InternalError{Err: fmt.Sprintf("error generating ML-DSA-87 private key: %v", genErr)}
+		}
+		privateKey = sk
+		privateKeyBytes = sk.Bytes()
 	default:
 		return errutil.UserError{Err: fmt.Sprintf("unknown key type: %s", keyType)}
 	}
