@@ -1067,19 +1067,24 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 		if privateKeyType == ManagedPrivateKey {
 			privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
 		}
-		switch privateKeyType {
-		case RSAPrivateKey:
-			certTemplateSetSigAlgo(certTemplate, data)
-		case Ed25519PrivateKey:
-			certTemplate.SignatureAlgorithm = x509.PureEd25519
-		case ECPrivateKey:
-			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(data.SigningBundle.PrivateKey.Public(), data.Params.SignatureBits)
-		}
 
 		caCert := data.SigningBundle.Certificate
 		certTemplate.AuthorityKeyId = caCert.SubjectKeyId
 
-		certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
+		if isMLDSAKey(data.SigningBundle.PrivateKey) {
+			// ML-DSA signing requires custom certificate construction
+			certBytes, err = createMLDSACertificate(certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
+		} else {
+			switch privateKeyType {
+			case RSAPrivateKey:
+				certTemplateSetSigAlgo(certTemplate, data)
+			case Ed25519PrivateKey:
+				certTemplate.SignatureAlgorithm = x509.PureEd25519
+			case ECPrivateKey:
+				certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(data.SigningBundle.PrivateKey.Public(), data.Params.SignatureBits)
+			}
+			certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, result.PrivateKey.Public(), data.SigningBundle.PrivateKey)
+		}
 	} else {
 		// Creating a self-signed root
 		if data.Params.MaxPathLength == 0 {
@@ -1089,18 +1094,23 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 			certTemplate.MaxPathLen = data.Params.MaxPathLength
 		}
 
-		switch data.Params.KeyType {
-		case "rsa":
-			certTemplateSetSigAlgo(certTemplate, data)
-		case "ed25519":
-			certTemplate.SignatureAlgorithm = x509.PureEd25519
-		case "ec":
-			certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
-		}
-
 		certTemplate.AuthorityKeyId = subjKeyID
 		certTemplate.BasicConstraintsValid = true
-		certBytes, err = x509.CreateCertificate(randReader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
+
+		if isMLDSAKeyType(data.Params.KeyType) {
+			// ML-DSA self-signed root requires custom certificate construction
+			certBytes, err = createMLDSACertificate(certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
+		} else {
+			switch data.Params.KeyType {
+			case "rsa":
+				certTemplateSetSigAlgo(certTemplate, data)
+			case "ed25519":
+				certTemplate.SignatureAlgorithm = x509.PureEd25519
+			case "ec":
+				certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
+			}
+			certBytes, err = x509.CreateCertificate(randReader, certTemplate, certTemplate, result.PrivateKey.Public(), result.PrivateKey)
+		}
 	}
 
 	if err != nil {
@@ -1110,7 +1120,16 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 	result.CertificateBytes = certBytes
 	result.Certificate, err = x509.ParseCertificate(certBytes)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+		// Go's x509.ParseCertificate may not support ML-DSA certificates.
+		// Use a lenient parser that tolerates unknown signature algorithms.
+		if isMLDSAKeyType(data.Params.KeyType) || (data.SigningBundle != nil && isMLDSAKey(data.SigningBundle.PrivateKey)) {
+			result.Certificate, err = parseMLDSACertificate(certBytes)
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse ML-DSA certificate: %s", err)}
+			}
+		} else {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+		}
 	}
 
 	if data.SigningBundle != nil {
@@ -1248,24 +1267,42 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 		csrTemplate.ExtraExtensions = append(csrTemplate.ExtraExtensions, ext)
 	}
 
-	switch data.Params.KeyType {
-	case "rsa":
-		// use specified RSA algorithm defaulting to the appropriate SHA256 RSA signature type
-		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForRSA(data)
-	case "ec":
-		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
-	case "ed25519":
-		csrTemplate.SignatureAlgorithm = x509.PureEd25519
-	}
+	var csr []byte
+	if isMLDSAKeyType(data.Params.KeyType) {
+		// ML-DSA CSR requires custom construction
+		csr, err = createMLDSACSR(csrTemplate, result.PrivateKey)
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create ML-DSA CSR: %s", err)}
+		}
+	} else {
+		switch data.Params.KeyType {
+		case "rsa":
+			// use specified RSA algorithm defaulting to the appropriate SHA256 RSA signature type
+			csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForRSA(data)
+		case "ec":
+			csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
+		case "ed25519":
+			csrTemplate.SignatureAlgorithm = x509.PureEd25519
+		}
 
-	csr, err := x509.CreateCertificateRequest(randReader, csrTemplate, result.PrivateKey)
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
+		csr, err = x509.CreateCertificateRequest(randReader, csrTemplate, result.PrivateKey)
+		if err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
+		}
 	}
 
 	result.CSRBytes = csr
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
+		// For ML-DSA CSRs, Go's x509.ParseCertificateRequest may not
+		// recognize the signature algorithm. Store raw bytes but skip
+		// signature validation in that case.
+		if isMLDSAKeyType(data.Params.KeyType) {
+			// We cannot parse ML-DSA CSRs with Go's standard library yet,
+			// so we store only the raw bytes.
+			result.CSR = nil
+			return result, nil
+		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
 	}
 
