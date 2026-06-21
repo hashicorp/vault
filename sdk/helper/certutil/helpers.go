@@ -29,6 +29,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -178,6 +180,10 @@ func GetSubjectKeyID(pub interface{}) ([]byte, error) {
 		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
 	case ed25519.PublicKey:
 		publicKeyBytes = pub
+	case *mldsa65.PublicKey:
+		publicKeyBytes = pub.Bytes()
+	case *mldsa87.PublicKey:
+		publicKeyBytes = pub.Bytes()
 	default:
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported public key type: %T", pub)}
 	}
@@ -501,6 +507,20 @@ func ComparePublicKeys(key1Iface, key2Iface crypto.PublicKey) (bool, error) {
 			return false, nil
 		}
 		return true, nil
+	case *mldsa65.PublicKey:
+		key1 := key1Iface.(*mldsa65.PublicKey)
+		key2, ok := key2Iface.(*mldsa65.PublicKey)
+		if !ok {
+			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
+		}
+		return key1.Equal(key2), nil
+	case *mldsa87.PublicKey:
+		key1 := key1Iface.(*mldsa87.PublicKey)
+		key2, ok := key2Iface.(*mldsa87.PublicKey)
+		if !ok {
+			return false, fmt.Errorf("key types do not match: %T and %T", key1Iface, key2Iface)
+		}
+		return key1.Equal(key2), nil
 	default:
 		return false, fmt.Errorf("cannot compare key with type %T", key1Iface)
 	}
@@ -723,11 +743,11 @@ func DefaultOrValueHashBits(keyType string, hashBits int) (int, error) {
 		// To match previous behavior (and ignoring NIST's recommendations for
 		// hash size to align with RSA key sizes), default to SHA-2-256.
 		hashBits = 256
-	} else if keyType == "ed25519" || keyType == "ed448" {
-		// No-op; ed25519 and ed448 internally specify their own hash and
-		// we do not need to select one. Double hashing isn't supported in
-		// certificate signing. Additionally, the any key type can't know
-		// what hash algorithm to use yet, so default to zero.
+	} else if keyType == "ed25519" || keyType == "ed448" || keyType == "ml-dsa-65" || keyType == "ml-dsa-87" {
+		// No-op; ed25519, ed448, and ML-DSA internally specify their own
+		// hash and we do not need to select one. Double hashing isn't
+		// supported in certificate signing. Additionally, the any key type
+		// can't know what hash algorithm to use yet, so default to zero.
 		return 0, nil
 	}
 
@@ -798,7 +818,7 @@ func ValidateDefaultOrValueHashBits(keyType string, hashBits int) (int, error) {
 // calculation is a known, approved value.
 func ValidateSignatureLength(keyType string, hashBits int) error {
 	keyType = strings.ToLower(keyType)
-	if keyType == "any" || keyType == "ec" || keyType == "ecdsa" || keyType == "ed25519" || keyType == "ed448" {
+	if keyType == "any" || keyType == "ec" || keyType == "ecdsa" || keyType == "ed25519" || keyType == "ed448" || keyType == "ml-dsa-65" || keyType == "ml-dsa-87" {
 		// ed25519 and ed448 include built-in hashing and is not externally
 		// configurable. There are three modes for each of these schemes:
 		//
@@ -851,7 +871,7 @@ func ValidateKeyTypeLength(keyType string, keyBits int) error {
 		if !present {
 			return fmt.Errorf("unsupported bit length for EC key: %d", keyBits)
 		}
-	case "any", "ed25519":
+	case "any", "ed25519", "ml-dsa-65", "ml-dsa-87":
 	default:
 		return fmt.Errorf("unknown key type %s", keyType)
 	}
@@ -1510,6 +1530,12 @@ func GetPublicKeySize(key crypto.PublicKey) int {
 	}
 	if key, ok := key.(dsa.PublicKey); ok {
 		return key.Y.BitLen()
+	}
+	if _, ok := key.(*mldsa65.PublicKey); ok {
+		return mldsa65.PublicKeySize * 8
+	}
+	if _, ok := key.(*mldsa87.PublicKey); ok {
+		return mldsa87.PublicKeySize * 8
 	}
 
 	return -1

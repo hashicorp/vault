@@ -31,6 +31,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
 	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -61,11 +63,13 @@ type PrivateKeyType string
 
 // Well-known PrivateKeyTypes
 const (
-	UnknownPrivateKey PrivateKeyType = ""
-	RSAPrivateKey     PrivateKeyType = "rsa"
-	ECPrivateKey      PrivateKeyType = "ec"
-	Ed25519PrivateKey PrivateKeyType = "ed25519"
-	ManagedPrivateKey PrivateKeyType = "ManagedPrivateKey"
+	UnknownPrivateKey  PrivateKeyType = ""
+	RSAPrivateKey      PrivateKeyType = "rsa"
+	ECPrivateKey       PrivateKeyType = "ec"
+	Ed25519PrivateKey  PrivateKeyType = "ed25519"
+	ManagedPrivateKey  PrivateKeyType = "ManagedPrivateKey"
+	MLDSA65PrivateKey  PrivateKeyType = "ml-dsa-65"
+	MLDSA87PrivateKey  PrivateKeyType = "ml-dsa-87"
 )
 
 // TLSUsage controls whether the intended usage of a *tls.Config
@@ -160,6 +164,10 @@ func GetPrivateKeyTypeFromSigner(signer crypto.Signer) PrivateKeyType {
 		return ECPrivateKey
 	case ed25519.PublicKey:
 		return Ed25519PrivateKey
+	case *mldsa65.PublicKey:
+		return MLDSA65PrivateKey
+	case *mldsa87.PublicKey:
+		return MLDSA87PrivateKey
 	}
 	return UnknownPrivateKey
 }
@@ -174,6 +182,10 @@ func GetPrivateKeyTypeFromPublicKey(pubKey crypto.PublicKey) PrivateKeyType {
 		return ECPrivateKey
 	case ed25519.PublicKey:
 		return Ed25519PrivateKey
+	case *mldsa65.PublicKey:
+		return MLDSA65PrivateKey
+	case *mldsa87.PublicKey:
+		return MLDSA87PrivateKey
 	default:
 		return UnknownPrivateKey
 	}
@@ -358,7 +370,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 				block.Type = string(ECBlock)
 			case RSAPrivateKey:
 				block.Type = string(PKCS1Block)
-			case Ed25519PrivateKey:
+			case Ed25519PrivateKey, MLDSA65PrivateKey, MLDSA87PrivateKey:
 				block.Type = string(PKCS8Block)
 			}
 		}
@@ -543,6 +555,12 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 			block.Type = "EC PRIVATE KEY"
 		case Ed25519PrivateKey:
 			result.PrivateKeyType = "ed25519"
+			block.Type = "PRIVATE KEY"
+		case MLDSA65PrivateKey:
+			result.PrivateKeyType = MLDSA65PrivateKey
+			block.Type = "PRIVATE KEY"
+		case MLDSA87PrivateKey:
+			result.PrivateKeyType = MLDSA87PrivateKey
 			block.Type = "PRIVATE KEY"
 		case ManagedPrivateKey:
 			result.PrivateKeyType = ManagedPrivateKey
@@ -971,6 +989,8 @@ func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
 			block.Type = "RSA PRIVATE KEY"
 		case ECPrivateKey:
 			block.Type = "EC PRIVATE KEY"
+		case Ed25519PrivateKey, MLDSA65PrivateKey, MLDSA87PrivateKey, ManagedPrivateKey:
+			block.Type = "PRIVATE KEY"
 		default:
 			block.Type = "PRIVATE KEY"
 		}
