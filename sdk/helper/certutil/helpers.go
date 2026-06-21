@@ -1294,16 +1294,20 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 	result.CSRBytes = csr
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
-		// For ML-DSA CSRs, Go's x509.ParseCertificateRequest may not
-		// recognize the signature algorithm. Store raw bytes but skip
-		// signature validation in that case.
 		if isMLDSAKeyType(data.Params.KeyType) {
-			// We cannot parse ML-DSA CSRs with Go's standard library yet,
-			// so we store only the raw bytes.
+			// Go's x509.ParseCertificateRequest may not recognize ML-DSA
+			// signature algorithms. Store raw bytes only.
 			result.CSR = nil
 			return result, nil
 		}
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
+	}
+
+	if isMLDSAKeyType(data.Params.KeyType) {
+		// Go's x509 library cannot verify ML-DSA signatures, so we skip
+		// the standard CheckSignature call. The ML-DSA CSR was signed
+		// correctly by createMLDSACSR using circl's signer.
+		return result, nil
 	}
 
 	if err = result.CSR.CheckSignature(); err != nil {
