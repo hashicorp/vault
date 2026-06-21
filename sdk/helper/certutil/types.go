@@ -89,10 +89,12 @@ type BlockType string
 
 // Well-known formats
 const (
-	UnknownBlock BlockType = ""
-	PKCS1Block   BlockType = "RSA PRIVATE KEY"
-	PKCS8Block   BlockType = "PRIVATE KEY"
-	ECBlock      BlockType = "EC PRIVATE KEY"
+	UnknownBlock   BlockType = ""
+	PKCS1Block     BlockType = "RSA PRIVATE KEY"
+	PKCS8Block     BlockType = "PRIVATE KEY"
+	ECBlock        BlockType = "EC PRIVATE KEY"
+	MLDSA65Block   BlockType = "ML-DSA-65 PRIVATE KEY"
+	MLDSA87Block   BlockType = "ML-DSA-87 PRIVATE KEY"
 )
 
 // ParsedPrivateKeyContainer allows common key setting for certs and CSRs
@@ -306,6 +308,10 @@ func extractAndSetPrivateKey(c *CertBundle, parsedBundle *ParsedCertBundle) erro
 		parsedBundle.PrivateKeyType, c.PrivateKeyType = ECPrivateKey, ECPrivateKey
 	case PKCS1Block:
 		c.PrivateKeyType, parsedBundle.PrivateKeyType = RSAPrivateKey, RSAPrivateKey
+	case MLDSA65Block:
+		c.PrivateKeyType, parsedBundle.PrivateKeyType = MLDSA65PrivateKey, MLDSA65PrivateKey
+	case MLDSA87Block:
+		c.PrivateKeyType, parsedBundle.PrivateKeyType = MLDSA87PrivateKey, MLDSA87PrivateKey
 	case PKCS8Block:
 		t, err := getPKCS8Type(pemBlock.Bytes)
 		if err != nil {
@@ -321,6 +327,10 @@ func extractAndSetPrivateKey(c *CertBundle, parsedBundle *ParsedCertBundle) erro
 			c.PrivateKeyType = Ed25519PrivateKey
 		case ManagedPrivateKey:
 			c.PrivateKeyType = ManagedPrivateKey
+		case MLDSA65PrivateKey:
+			c.PrivateKeyType = MLDSA65PrivateKey
+		case MLDSA87PrivateKey:
+			c.PrivateKeyType = MLDSA87PrivateKey
 		}
 	default:
 		return errutil.UserError{Err: fmt.Sprintf("Unsupported key block type: %s", pemBlock.Type)}
@@ -370,8 +380,12 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 				block.Type = string(ECBlock)
 			case RSAPrivateKey:
 				block.Type = string(PKCS1Block)
-			case Ed25519PrivateKey, MLDSA65PrivateKey, MLDSA87PrivateKey:
+			case Ed25519PrivateKey:
 				block.Type = string(PKCS8Block)
+			case MLDSA65PrivateKey:
+				block.Type = string(MLDSA65Block)
+			case MLDSA87PrivateKey:
+				block.Type = string(MLDSA87Block)
 			}
 		}
 
@@ -434,6 +448,20 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse CA's private RSA key: %s", err)}
 		}
 
+	case MLDSA65Block:
+		var sk mldsa65.PrivateKey
+		if err := sk.UnmarshalBinary(p.PrivateKeyBytes); err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse ML-DSA-65 private key: %s", err)}
+		}
+		return &sk, nil
+
+	case MLDSA87Block:
+		var sk mldsa87.PrivateKey
+		if err := sk.UnmarshalBinary(p.PrivateKeyBytes); err != nil {
+			return nil, errutil.UserError{Err: fmt.Sprintf("Unable to parse ML-DSA-87 private key: %s", err)}
+		}
+		return &sk, nil
+
 	case PKCS8Block:
 		if k, err := x509.ParsePKCS8PrivateKey(p.PrivateKeyBytes); err == nil {
 			switch k := k.(type) {
@@ -444,7 +472,8 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 			}
 		}
 
-		// Try ML-DSA key formats (stored as raw bytes in PKCS8 PEM blocks)
+		// Try ML-DSA key formats for backwards compatibility with keys
+		// previously stored as raw bytes under the generic PKCS8 PEM label
 		if len(p.PrivateKeyBytes) == mldsa65.PrivateKeySize {
 			var sk mldsa65.PrivateKey
 			if err := sk.UnmarshalBinary(p.PrivateKeyBytes); err == nil {
@@ -460,7 +489,7 @@ func (p *ParsedCertBundle) getSigner() (crypto.Signer, error) {
 
 		return nil, errutil.UserError{Err: fmt.Sprintf("Failed to parse pkcs#8 key: %v", err)}
 	default:
-		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA and EC are supported"}
+		return nil, errutil.UserError{Err: "Unable to determine type of private key; only RSA, EC, Ed25519, and ML-DSA are supported"}
 	}
 	return signer, nil
 }
@@ -487,7 +516,8 @@ func getPKCS8Type(bs []byte) (PrivateKeyType, error) {
 		}
 	}
 
-	// Try ML-DSA key formats (stored as raw bytes in PKCS8 PEM blocks)
+	// Try ML-DSA key formats for backwards compatibility with keys
+	// previously stored as raw bytes under the generic PKCS8 PEM label
 	if len(bs) == mldsa65.PrivateKeySize {
 		var sk mldsa65.PrivateKey
 		if unmarshalErr := sk.UnmarshalBinary(bs); unmarshalErr == nil {
@@ -523,6 +553,12 @@ func (c *CSRBundle) ToParsedCSRBundle() (*ParsedCSRBundle, error) {
 			result.PrivateKeyType = ECPrivateKey
 		case PKCS1Block:
 			result.PrivateKeyType = RSAPrivateKey
+		case MLDSA65Block:
+			result.PrivateKeyType = MLDSA65PrivateKey
+			c.PrivateKeyType = MLDSA65PrivateKey
+		case MLDSA87Block:
+			result.PrivateKeyType = MLDSA87PrivateKey
+			c.PrivateKeyType = MLDSA87PrivateKey
 		default:
 			// Try to figure it out and correct
 			if _, err := x509.ParseECPrivateKey(pemBlock.Bytes); err == nil {
@@ -587,10 +623,10 @@ func (p *ParsedCSRBundle) ToCSRBundle() (*CSRBundle, error) {
 			block.Type = "PRIVATE KEY"
 		case MLDSA65PrivateKey:
 			result.PrivateKeyType = MLDSA65PrivateKey
-			block.Type = "PRIVATE KEY"
+			block.Type = string(MLDSA65Block)
 		case MLDSA87PrivateKey:
 			result.PrivateKeyType = MLDSA87PrivateKey
-			block.Type = "PRIVATE KEY"
+			block.Type = string(MLDSA87Block)
 		case ManagedPrivateKey:
 			result.PrivateKeyType = ManagedPrivateKey
 			block.Type = "PRIVATE KEY"
@@ -1032,8 +1068,12 @@ func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
 			block.Type = "RSA PRIVATE KEY"
 		case ECPrivateKey:
 			block.Type = "EC PRIVATE KEY"
-		case Ed25519PrivateKey, MLDSA65PrivateKey, MLDSA87PrivateKey, ManagedPrivateKey:
+		case Ed25519PrivateKey, ManagedPrivateKey:
 			block.Type = "PRIVATE KEY"
+		case MLDSA65PrivateKey:
+			block.Type = string(MLDSA65Block)
+		case MLDSA87PrivateKey:
+			block.Type = string(MLDSA87Block)
 		default:
 			block.Type = "PRIVATE KEY"
 		}

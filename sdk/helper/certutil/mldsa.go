@@ -10,13 +10,20 @@ import (
 	"encoding/asn1"
 	"fmt"
 	"math/big"
+	"net"
+	"net/url"
 	"time"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
-// OIDs for ML-DSA signature algorithms as defined in NIST FIPS 204
-// and registered under id-ml-dsa in the NIST algorithm OID arc.
+// OIDs for ML-DSA algorithms as defined in NIST FIPS 204.
+// Per FIPS 204, the key OID and signature OID are identical for ML-DSA:
+// the same OID identifies both the public key algorithm in
+// SubjectPublicKeyInfo and the signature algorithm in
+// signatureAlgorithm / TBS signatureAlgorithm fields.
 var (
 	oidMLDSA65 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 18}
 	oidMLDSA87 = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 19}
@@ -58,26 +65,20 @@ func mldsaSignatureAlgorithmOID(signer crypto.Signer) (asn1.ObjectIdentifier, er
 // construct the certificate manually using ASN.1.
 //
 // The approach:
-// 1. Use a placeholder signature algorithm in the template so Go's
-//    x509.CreateCertificate can marshal the TBS structure.
-// 2. Extract the TBS certificate bytes from the resulting DER.
-// 3. Patch the signature algorithm OID to the correct ML-DSA OID.
-// 4. Sign the TBS with the ML-DSA signer.
-// 5. Reassemble the final certificate DER.
+// 1. Build the TBS certificate structure directly using ASN.1,
+//    embedding the correct ML-DSA signature algorithm OID.
+// 2. Marshal the TBS to DER.
+// 3. Sign the TBS DER bytes with the ML-DSA signer.
+// 4. Assemble the final certificate DER with signature.
+// 5. Verify the signature to ensure correctness.
 func createMLDSACertificate(template, parent *x509.Certificate, pub crypto.PublicKey, signer crypto.Signer) ([]byte, error) {
 	sigAlgOID, err := mldsaSignatureAlgorithmOID(signer)
 	if err != nil {
 		return nil, err
 	}
 
-	// Step 1: Use Ed25519 as placeholder since it also uses no parameters
-	// and accepts arbitrary public keys. This lets us leverage Go's full
-	// template-to-TBS marshaling logic.
-	template.SignatureAlgorithm = x509.PureEd25519
-
-	// We need to create a temporary self-signed placeholder to get the
-	// TBS bytes. We can't use x509.CreateCertificate because it will
-	// reject the ML-DSA public key. Instead, build TBS from scratch.
+	// Build the TBS certificate from scratch because Go's
+	// x509.CreateCertificate does not support ML-DSA public keys.
 	tbsCert, err := buildTBSCertificate(template, parent, pub, sigAlgOID)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error building TBS certificate: %v", err)}
@@ -106,6 +107,11 @@ func createMLDSACertificate(template, parent *x509.Certificate, pub crypto.Publi
 	certDER, err := asn1.Marshal(cert)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("error marshaling certificate: %v", err)}
+	}
+
+	// Step 5: Verify the signature to ensure correctness
+	if err := verifyMLDSASignature(signer.Public(), tbsDER, sig); err != nil {
+		return nil, errutil.InternalError{Err: fmt.Sprintf("post-creation signature verification failed: %v", err)}
 	}
 
 	return certDER, nil
@@ -160,11 +166,6 @@ func marshalPublicKeyInfo(pub crypto.PublicKey, algOID asn1.ObjectIdentifier) (a
 	}
 
 	return asn1.RawValue{FullBytes: pkiDER}, nil
-}
-
-// marshalTime marshals a time.Time to ASN.1 for certificate validity.
-func marshalTimeASN1(t asn1.RawValue) asn1.RawValue {
-	return t
 }
 
 // buildTBSCertificate constructs a TBS certificate structure from the template.
@@ -528,7 +529,30 @@ func createMLDSACSR(template *x509.CertificateRequest, signer crypto.Signer) ([]
 		Signature:                asn1.BitString{Bytes: sig, BitLength: len(sig) * 8},
 	}
 
+	// Verify the signature to ensure correctness
+	if err := verifyMLDSASignature(signer.Public(), criDER, sig); err != nil {
+		return nil, fmt.Errorf("post-creation CSR signature verification failed: %v", err)
+	}
+
 	return asn1.Marshal(csr)
+}
+
+// verifyMLDSASignature verifies an ML-DSA signature using the appropriate
+// circl verification function based on the public key type.
+func verifyMLDSASignature(pub crypto.PublicKey, msg, sig []byte) error {
+	switch pk := pub.(type) {
+	case *mldsa65.PublicKey:
+		if !mldsa65.Verify(pk, msg, nil, sig) {
+			return fmt.Errorf("ML-DSA-65 signature verification failed")
+		}
+	case *mldsa87.PublicKey:
+		if !mldsa87.Verify(pk, msg, nil, sig) {
+			return fmt.Errorf("ML-DSA-87 signature verification failed")
+		}
+	default:
+		return fmt.Errorf("unsupported public key type for ML-DSA verification: %T", pub)
+	}
+	return nil
 }
 
 // parseMLDSACertificate parses an ML-DSA certificate from DER bytes.
@@ -546,9 +570,9 @@ func parseMLDSACertificate(der []byte) (*x509.Certificate, error) {
 				NotBefore time.Time
 				NotAfter  time.Time
 			}
-			Subject   asn1.RawValue
-			PublicKey asn1.RawValue
-			// We skip parsing extensions individually for now
+			Subject    asn1.RawValue
+			PublicKey  asn1.RawValue
+			Extensions []pkix.Extension `asn1:"optional,explicit,tag:3"`
 		} `asn1:"sequence"`
 		SigAlg    pkix.AlgorithmIdentifier
 		Signature asn1.BitString
@@ -590,7 +614,122 @@ func parseMLDSACertificate(der []byte) (*x509.Certificate, error) {
 		SignatureAlgorithm: x509.UnknownSignatureAlgorithm,
 	}
 
+	// Parse extensions
+	for _, ext := range cert.TBS.Extensions {
+		result.Extensions = append(result.Extensions, ext)
+
+		switch {
+		case ext.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 19}): // Basic Constraints
+			var bc struct {
+				IsCA       bool `asn1:"optional"`
+				MaxPathLen int  `asn1:"optional,default:-1"`
+			}
+			if _, err := asn1.Unmarshal(ext.Value, &bc); err == nil {
+				result.BasicConstraintsValid = true
+				result.IsCA = bc.IsCA
+				if bc.MaxPathLen >= 0 {
+					result.MaxPathLen = bc.MaxPathLen
+					if bc.MaxPathLen == 0 {
+						result.MaxPathLenZero = true
+					}
+				}
+			}
+
+		case ext.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 14}): // Subject Key Identifier
+			var skid []byte
+			if _, err := asn1.Unmarshal(ext.Value, &skid); err == nil {
+				result.SubjectKeyId = skid
+			}
+
+		case ext.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 35}): // Authority Key Identifier
+			var akid struct {
+				KeyIdentifier []byte `asn1:"optional,tag:0"`
+			}
+			if _, err := asn1.Unmarshal(ext.Value, &akid); err == nil {
+				result.AuthorityKeyId = akid.KeyIdentifier
+			}
+
+		case ext.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 15}): // Key Usage
+			var bitString asn1.BitString
+			if _, err := asn1.Unmarshal(ext.Value, &bitString); err == nil {
+				var usage int
+				for i, b := range bitString.Bytes {
+					for bit := 0; bit < 8; bit++ {
+						if (b>>uint(7-bit))&1 != 0 {
+							usage |= 1 << uint(i*8+bit)
+						}
+					}
+				}
+				result.KeyUsage = x509.KeyUsage(usage)
+			}
+
+		case ext.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 17}): // Subject Alternative Names
+			parseSANExtension(ext.Value, result)
+
+		case ext.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 37}): // Extended Key Usage
+			var oids []asn1.ObjectIdentifier
+			if _, err := asn1.Unmarshal(ext.Value, &oids); err == nil {
+				for _, oid := range oids {
+					if eku, ok := oidToExtKeyUsage(oid); ok {
+						result.ExtKeyUsage = append(result.ExtKeyUsage, eku)
+					} else {
+						result.UnknownExtKeyUsage = append(result.UnknownExtKeyUsage, oid)
+					}
+				}
+			}
+
+		default:
+			result.ExtraExtensions = append(result.ExtraExtensions, ext)
+		}
+	}
+
 	return result, nil
+}
+
+// parseSANExtension parses the Subject Alternative Name extension value
+// and populates the certificate's DNSNames, EmailAddresses, IPAddresses,
+// and URIs fields.
+func parseSANExtension(value []byte, cert *x509.Certificate) {
+	var rawValues []asn1.RawValue
+	if _, err := asn1.Unmarshal(value, &rawValues); err != nil {
+		return
+	}
+	for _, v := range rawValues {
+		switch v.Tag {
+		case 1: // rfc822Name (email)
+			cert.EmailAddresses = append(cert.EmailAddresses, string(v.Bytes))
+		case 2: // dNSName
+			cert.DNSNames = append(cert.DNSNames, string(v.Bytes))
+		case 6: // uniformResourceIdentifier
+			if u, err := url.Parse(string(v.Bytes)); err == nil {
+				cert.URIs = append(cert.URIs, u)
+			}
+		case 7: // iPAddress
+			cert.IPAddresses = append(cert.IPAddresses, net.IP(v.Bytes))
+		}
+	}
+}
+
+// oidToExtKeyUsage maps a known EKU OID to x509.ExtKeyUsage.
+func oidToExtKeyUsage(oid asn1.ObjectIdentifier) (x509.ExtKeyUsage, bool) {
+	switch {
+	case oid.Equal(asn1.ObjectIdentifier{2, 5, 29, 37, 0}):
+		return x509.ExtKeyUsageAny, true
+	case oid.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 1}):
+		return x509.ExtKeyUsageServerAuth, true
+	case oid.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 2}):
+		return x509.ExtKeyUsageClientAuth, true
+	case oid.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 3}):
+		return x509.ExtKeyUsageCodeSigning, true
+	case oid.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 4}):
+		return x509.ExtKeyUsageEmailProtection, true
+	case oid.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 8}):
+		return x509.ExtKeyUsageTimeStamping, true
+	case oid.Equal(asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 3, 9}):
+		return x509.ExtKeyUsageOCSPSigning, true
+	default:
+		return 0, false
+	}
 }
 
 // marshalCSRSANExtension builds the SAN extension DER for a CSR template.

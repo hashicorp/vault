@@ -106,9 +106,9 @@ func TestMLDSA65KeyRoundTrip(t *testing.T) {
 		t.Fatalf("failed to generate key: %v", err)
 	}
 
-	// Round-trip through PEM encoding
+	// Round-trip through PEM encoding using the correct ML-DSA-65 PEM label
 	pemBlock := &pem.Block{
-		Type:  "PRIVATE KEY",
+		Type:  string(MLDSA65Block),
 		Bytes: bundle.PrivateKeyBytes,
 	}
 	pemBytes := pem.EncodeToMemory(pemBlock)
@@ -124,8 +124,8 @@ func TestMLDSA65KeyRoundTrip(t *testing.T) {
 		t.Fatalf("failed to parse DER key: %v", err)
 	}
 
-	if blockType != PKCS8Block {
-		t.Fatalf("expected block type %s, got %s", PKCS8Block, blockType)
+	if blockType != MLDSA65Block {
+		t.Fatalf("expected block type %s, got %s", MLDSA65Block, blockType)
 	}
 
 	keyType := GetPrivateKeyTypeFromSigner(signer)
@@ -154,8 +154,9 @@ func TestMLDSA87KeyRoundTrip(t *testing.T) {
 		t.Fatalf("failed to generate key: %v", err)
 	}
 
+	// Use the correct ML-DSA-87 PEM label
 	pemBlock := &pem.Block{
-		Type:  "PRIVATE KEY",
+		Type:  string(MLDSA87Block),
 		Bytes: bundle.PrivateKeyBytes,
 	}
 	pemBytes := pem.EncodeToMemory(pemBlock)
@@ -534,8 +535,8 @@ func TestMLDSA65CreateKeyBundle(t *testing.T) {
 		t.Fatalf("failed to get PEM string: %v", err)
 	}
 
-	if !strings.Contains(pemStr, "PRIVATE KEY") {
-		t.Fatal("PEM string does not contain expected header")
+	if !strings.Contains(pemStr, string(MLDSA65Block)) {
+		t.Fatalf("PEM string does not contain expected header %q", MLDSA65Block)
 	}
 }
 
@@ -558,8 +559,8 @@ func TestMLDSA87CreateKeyBundle(t *testing.T) {
 		t.Fatalf("failed to get PEM string: %v", err)
 	}
 
-	if !strings.Contains(pemStr, "PRIVATE KEY") {
-		t.Fatal("PEM string does not contain expected header")
+	if !strings.Contains(pemStr, string(MLDSA87Block)) {
+		t.Fatalf("PEM string does not contain expected header %q", MLDSA87Block)
 	}
 }
 

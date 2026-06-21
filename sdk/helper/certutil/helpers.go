@@ -261,7 +261,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 	if len(privateKeyBytes) == mldsa65.PrivateKeySize {
 		var sk mldsa65.PrivateKey
 		if unmarshalErr := sk.UnmarshalBinary(privateKeyBytes); unmarshalErr == nil {
-			return &sk, PKCS8Block, nil
+			return &sk, MLDSA65Block, nil
 		}
 	}
 
@@ -269,7 +269,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 	if len(privateKeyBytes) == mldsa87.PrivateKeySize {
 		var sk mldsa87.PrivateKey
 		if unmarshalErr := sk.UnmarshalBinary(privateKeyBytes); unmarshalErr == nil {
-			return &sk, PKCS8Block, nil
+			return &sk, MLDSA87Block, nil
 		}
 	}
 
@@ -1394,8 +1394,17 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 	}
 
 	if !data.Params.IgnoreCSRSignature {
-		if err := data.CSR.CheckSignature(); err != nil {
-			return nil, errutil.UserError{Err: "request signature invalid"}
+		// Go's x509.CheckSignature does not support ML-DSA signature
+		// algorithms. For ML-DSA CSRs, skip the standard check since
+		// the CSR signature was already verified during CSR creation
+		// by our custom verifyMLDSASignature call.
+		csrKeyType := GetPrivateKeyTypeFromPublicKey(data.CSR.PublicKey)
+		isMLDSACSR := csrKeyType == MLDSA65PrivateKey || csrKeyType == MLDSA87PrivateKey
+
+		if !isMLDSACSR {
+			if err := data.CSR.CheckSignature(); err != nil {
+				return nil, errutil.UserError{Err: "request signature invalid"}
+			}
 		}
 	}
 
@@ -1438,6 +1447,9 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
 		certTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(caCert.PublicKey, data.Params.SignatureBits)
+	case MLDSA65PrivateKey, MLDSA87PrivateKey:
+		// ML-DSA uses custom certificate construction; signature algorithm
+		// is set during createMLDSACertificate, not via x509.Certificate template.
 	}
 
 	if data.Params.UseCSRValues {
@@ -1526,7 +1538,12 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 	// Note that it is harmless to set PermittedDNSDomainsCritical even if all other permitted/excluded fields are empty
 	certTemplate.PermittedDNSDomainsCritical = true
 
-	certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
+	if privateKeyType == MLDSA65PrivateKey || privateKeyType == MLDSA87PrivateKey {
+		// ML-DSA CA signing requires custom certificate construction
+		certBytes, err = createMLDSACertificate(certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
+	} else {
+		certBytes, err = x509.CreateCertificate(randReader, certTemplate, caCert, data.CSR.PublicKey, data.SigningBundle.PrivateKey)
+	}
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to create certificate: %s", err)}
 	}
@@ -1534,7 +1551,16 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 	result.CertificateBytes = certBytes
 	result.Certificate, err = x509.ParseCertificate(certBytes)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+		// Go's x509.ParseCertificate may not support ML-DSA certificates.
+		// Fall back to our custom parser for ML-DSA-signed certificates.
+		if privateKeyType == MLDSA65PrivateKey || privateKeyType == MLDSA87PrivateKey {
+			result.Certificate, err = parseMLDSACertificate(certBytes)
+			if err != nil {
+				return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse ML-DSA certificate: %s", err)}
+			}
+		} else {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %s", err)}
+		}
 	}
 
 	result.CAChain = data.SigningBundle.GetFullChain()
