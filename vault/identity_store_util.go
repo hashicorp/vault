@@ -3684,7 +3684,7 @@ func (i *IdentityStore) MakeDeduplicationDoneChan() {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	i.activateDeduplicationDone = make(chan struct{})
+	i.activateDeduplicationDone = make(chan struct{}, 1)
 }
 
 // WaitForActivateDeduplicationDone is a test helper to wait for the identity
