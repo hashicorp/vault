@@ -43,7 +43,7 @@ scenario "plugin" {
     config_mode     = global.config_modes
     consul_edition  = global.consul_editions
     consul_version  = global.consul_versions
-    distro          = global.distros
+    distro          = global.distros_aws
     edition         = global.editions
     ip_version      = global.ip_versions
     seal            = global.seals
