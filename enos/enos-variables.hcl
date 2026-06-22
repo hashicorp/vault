@@ -68,14 +68,62 @@ variable "blackbox_test_filter" {
   default     = []
 }
 
+variable "fyre_expiration" {
+  type        = string
+  description = "The Fyre VM expiration time in hours"
+  default     = null
+}
+
+variable "fyre_quota_type" {
+  type        = string
+  description = "The Fyre quota type to use when provisioning VMs. quick_burn is not available for z"
+  default     = "product_group" // or "quick_burn",
+}
+
+variable "fyre_quick_burn_ttl" {
+  type        = string
+  description = "If using the quick_burn quota, the time to live in hours"
+  default     = "12"
+}
+
+variable "fyre_product_group_id" {
+  type        = number
+  description = "The Fyre product group ID used to provision test VMs"
+  default     = null
+}
+
+variable "fyre_public_key_path" {
+  type        = string
+  description = "Path to the RFC 4716 formatted public key used for SSH access to Fyre VMs"
+  default     = "./support/ssh_key.pub"
+}
+
+variable "fyre_private_key_path" {
+  type        = string
+  description = "Path to the private key corresponding to fyre_vm_public_key_path"
+  default     = "./support/ssh_key"
+}
+
 variable "distro_version_amzn" {
   description = "The version of Amazon Linux 2 to use"
   type        = string
   default     = "2023" // or "2", though pkcs11 has not been tested with 2
 }
 
+variable "distro_version_centos" {
+  description = "The version of CentOS Stream to use"
+  type        = string
+  default     = "10" // or "9"
+}
+
 variable "distro_version_rhel" {
   description = "The version of RedHat Enterprise Linux to use"
+  type        = string
+  default     = "10.1" // or "8.10", "9.7"
+}
+
+variable "distro_version_rocky" {
+  description = "The version of Rocky Enterprise Linux to use"
   type        = string
   default     = "10.1" // or "8.10", "9.7"
 }
@@ -89,7 +137,7 @@ variable "distro_version_sles" {
 variable "distro_version_ubuntu" {
   description = "The version of Ubuntu Linux to use"
   type        = string
-  default     = "26.04" // or "22.04" or "24.04"
+  default     = "24.04" // or "22.04" or "24.04"
 }
 
 variable "project_name" {
@@ -208,7 +256,7 @@ variable "vault_revision" {
 variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
   type        = string
-  default     = "1.13.13"
+  default     = "1.16.31"
 }
 
 variable "verify_aws_secrets_engine" {
