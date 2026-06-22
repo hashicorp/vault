@@ -38,6 +38,7 @@ import (
 	physS3 "github.com/hashicorp/vault/physical/s3"
 	physSpanner "github.com/hashicorp/vault/physical/spanner"
 	physSwift "github.com/hashicorp/vault/physical/swift"
+	physYDB "github.com/hashicorp/vault/physical/ydb"
 	physZooKeeper "github.com/hashicorp/vault/physical/zookeeper"
 	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
@@ -68,6 +69,7 @@ func newFullAddonHandlers() (map[string]physical.Factory, map[string]LoginHandle
 		"spanner":               physSpanner.NewBackend,
 		"swift":                 physSwift.NewSwiftBackend,
 		"zookeeper":             physZooKeeper.NewZooKeeperBackend,
+		"ydb":                   physYDB.NewYDBBackend,
 	}
 	addonLoginHandlers := map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},

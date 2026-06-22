@@ -1158,6 +1158,7 @@ var storageAddressKeys = map[string][]string{
 	"spanner":                {},
 	"swift":                  {"auth_url", "storage_url"},
 	"zookeeper":              {"address"},
+	"ydb":                    {"dsn"},
 }
 
 // normalizeStorageConfigAddresses takes a storage name, a configuration key

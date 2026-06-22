@@ -1,0 +1,3 @@
+```release-note:feature
+storage/ydb: Add YDB as a physical storage backend with HA and transaction support
+```
