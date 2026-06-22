@@ -1086,9 +1086,9 @@ func (p *KeyBundle) ToPrivateKeyPemString() (string, error) {
 
 // PolicyIdentifierWithQualifierEntry Structure for Internal Storage
 type PolicyIdentifierWithQualifierEntry struct {
-	PolicyIdentifierOid string `json:"oid",mapstructure:"oid"`
-	CPS                 string `json:"cps,omitempty",mapstructure:"cps"`
-	Notice              string `json:"notice,omitempty",mapstructure:"notice"`
+	PolicyIdentifierOid string `json:"oid" mapstructure:"oid"`
+	CPS                 string `json:"cps,omitempty" mapstructure:"cps"`
+	Notice              string `json:"notice,omitempty" mapstructure:"notice"`
 }
 
 // GetPolicyIdentifierFromString parses out the internal structure of a Policy Identifier
