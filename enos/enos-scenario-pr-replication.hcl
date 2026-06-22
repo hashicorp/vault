@@ -50,7 +50,7 @@ scenario "pr_replication" {
     config_mode       = global.config_modes
     consul_edition    = global.consul_editions
     consul_version    = global.consul_versions
-    distro            = global.distros
+    distro            = global.distros_aws
     edition           = global.enterprise_editions
     ip_version        = global.ip_versions
     primary_backend   = global.backends
@@ -790,6 +790,32 @@ scenario "pr_replication" {
     }
   }
 
+  step "verify_aws_secrets_engine_on_primary" {
+    description = "Create and configure AWS secrets engine"
+    skip_step   = !var.verify_aws_secrets_engine
+    module      = module.vault_verify_aws_secrets_engine_create
+    depends_on = [
+      step.get_primary_cluster_ips
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_secrets_aws_config_root_write,
+      quality.vault_secrets_aws_role_write,
+    ]
+
+    variables {
+      hosts             = step.create_primary_cluster_targets.hosts
+      leader_host       = step.get_primary_cluster_ips.leader_host
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_primary_cluster.root_token
+    }
+  }
+
   step "configure_performance_replication_primary" {
     description = <<-EOF
       Create the necessary superuser auth policy necessary for performance replication, assign it
@@ -1009,6 +1035,32 @@ scenario "pr_replication" {
     }
   }
 
+  step "verify_aws_secrets_engine_replicate_data" {
+    description = "Verify AWS secrets engine credential generation"
+    skip_step   = !var.verify_aws_secrets_engine
+    module      = module.vault_verify_aws_secrets_engine_read
+    depends_on = [
+      step.verify_aws_secrets_engine_on_primary,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_secrets_aws_creds_read,
+    ]
+
+    variables {
+      create_state            = step.verify_aws_secrets_engine_on_primary.state
+      hosts                   = step.get_primary_cluster_ips.follower_hosts
+      vault_addr              = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token        = step.create_primary_cluster.root_token
+      verify_aws_engine_creds = true
+    }
+  }
+
   step "verify_secrets_engines_delete" {
     description = global.description.verify_secrets_engines_delete
     module      = module.vault_verify_secrets_engines_delete
@@ -1033,6 +1085,29 @@ scenario "pr_replication" {
       vault_install_dir  = global.vault_install_dir[matrix.artifact_type]
       vault_root_token   = step.create_secondary_cluster.root_token
       verify_ssh_secrets = false
+    }
+  }
+
+  step "verify_aws_secrets_engine_delete" {
+    description = "Clean up AWS secrets engine resources"
+    skip_step   = !var.verify_aws_secrets_engine
+    module      = module.vault_verify_aws_secrets_engine_delete
+    depends_on = [
+      step.verify_secrets_engines_on_primary,
+      step.verify_aws_secrets_engine_replicate_data,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      create_state      = step.verify_aws_secrets_engine_on_primary.state
+      hosts             = step.get_primary_cluster_ips.follower_hosts
+      leader_host       = step.get_primary_cluster_ips.leader_host
+      vault_addr        = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_primary_cluster.root_token
     }
   }
 
