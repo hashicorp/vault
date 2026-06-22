@@ -179,18 +179,12 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 func (b *backend) generateDataKey(ctx context.Context, p *keysutil.Policy, params *DataKeyParams) (string, string, error) {
 	factories := params.factories
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-		if !ok {
-			return "", "", errors.New("unsupported system view")
+		factory, err := b.GetManagedKeyFactory(ctx)
+		if err != nil {
+			return "", "", err
 		}
 
-		factories = append(params.factories, ManagedKeyFactory{
-			managedKeyParams: keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeySystemView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
-			},
-		})
+		factories = append(params.factories, factory)
 	}
 
 	newKey := make([]byte, params.bits/8)

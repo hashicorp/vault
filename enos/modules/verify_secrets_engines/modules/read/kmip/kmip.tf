@@ -33,6 +33,11 @@ variable "ip_version" {
   default     = "4"
 }
 
+variable "integration_host_user" {
+  type        = string
+  description = "The username to use for accessing the integration host"
+}
+
 variable "vault_edition" {
   type        = string
   description = "IP Version (4 or 6)"
@@ -64,8 +69,8 @@ resource "enos_remote_exec" "kmip_client_configure" {
 
   transport = {
     ssh = {
+      user = var.integration_host_user
       host = var.create_state.kmip.test_server_ip
-      user = "ubuntu" # Assuming Ubuntu for the test server
     }
   }
 }
