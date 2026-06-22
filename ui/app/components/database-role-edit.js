@@ -152,7 +152,6 @@ export default class DatabaseRoleEdit extends Component {
       const { mode, model } = this.args;
 
       if (mode === 'create') {
-        model.id = model.name;
         const path = model.type === 'static' ? 'static-roles' : 'roles';
         model.path = path;
       }
