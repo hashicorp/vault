@@ -273,6 +273,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			KeyVersion: item.KeyVersion,
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, plaintext, factories...)

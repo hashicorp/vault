@@ -577,6 +577,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
 			IV:         item.DecodedIV,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, item.Plaintext, factories...)
