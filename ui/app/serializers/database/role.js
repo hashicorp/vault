@@ -53,8 +53,11 @@ export default RESTSerializer.extend({
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     const nullResponses = ['updateRecord', 'createRecord', 'deleteRecord'];
+    // For create/update/delete, pull name and backend from the adapter response payload.
+    // For create specifically, snapshot.id is null (id is not pre-set on the record),
+    // so the adapter response is the source of truth for the record id.
     const roles = nullResponses.includes(requestType)
-      ? { name: id, backend: payload.backend }
+      ? { name: payload.data?.name || id, backend: payload.data?.backend || payload.backend }
       : this.normalizeSecrets(payload);
     const { modelName } = primaryModelClass;
     let transformedPayload = { [modelName]: roles };
