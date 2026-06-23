@@ -691,7 +691,7 @@ scenario "dr_replication" {
       leader_host           = step.get_primary_cluster_ips.leader_host
       leader_public_ip      = step.get_primary_cluster_ips.leader_public_ip
       vault_root_token      = step.create_primary_cluster.root_token
-      test_package          = "./vault/external_tests/blackbox/verify"
+      test_package          = "./vault/external_tests/blackbox/isolated/verify"
       test_names            = ["TestVaultServerVersion"]
       vault_edition         = matrix.edition
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
@@ -717,8 +717,8 @@ scenario "dr_replication" {
       leader_host      = step.get_primary_cluster_ips.leader_host
       leader_public_ip = step.get_primary_cluster_ips.leader_public_ip
       vault_root_token = step.create_primary_cluster.root_token
-      test_package     = "./vault/external_tests/blackbox/verify"
-      test_names       = ["TestVaultUIAvailability"]
+      test_package     = "./vault/external_tests/blackbox/isolated/verify"
+      test_names       = ["TestUIAssets"]
       vault_edition    = matrix.edition
     }
   }
