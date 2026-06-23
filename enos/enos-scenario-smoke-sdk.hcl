@@ -446,6 +446,9 @@ scenario "smoke_sdk" {
       test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.test_packages)
       integration_host_state = step.set_up_external_integration_target.state
       vault_edition          = matrix.edition
+      vault_product_version  = var.vault_product_version
+      vault_build_date       = var.vault_build_date
+      vault_revision         = var.vault_revision
     }
   }
 
