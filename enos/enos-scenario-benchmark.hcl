@@ -579,4 +579,9 @@ scenario "benchmark" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
   }
+
+  output "k6_host" {
+    description = "The IP of the k6 host"
+    value       = step.create_k6_target.hosts[0]
+  }
 }

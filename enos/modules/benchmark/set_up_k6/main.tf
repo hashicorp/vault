@@ -86,7 +86,7 @@ resource "enos_remote_exec" "install_k6" {
 resource "enos_file" "k6_scripts" {
   depends_on = [enos_remote_exec.install_k6]
 
-  for_each    = fileset(abspath("${path.module}/../k6-templates"), "*.tpl")
+  for_each    = fileset(abspath("${path.module}/k6-templates"), "*.tpl")
   destination = "/home/ubuntu/scripts/${replace(basename(each.value), ".tpl", "")}"
   content = templatefile("${path.module}/k6-templates/${each.value}", {
     hosts       = var.vault_hosts
