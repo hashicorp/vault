@@ -11,12 +11,12 @@ import errorMessage from 'vault/utils/error-message';
 
 export default class IdentityPopupAlias extends Component {
   @service flashMessages;
+  @service api;
+  @service router;
   @tracked showConfirmModal = false;
 
   onSuccess(type, id) {
-    if (this.args.onSuccess) {
-      this.args.onSuccess();
-    }
+    this.router.transitionTo('vault.cluster.access.identity.aliases');
     this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
   }
   onError(err, type, id) {
@@ -31,7 +31,8 @@ export default class IdentityPopupAlias extends Component {
   async deleteAlias() {
     const { identityType, id } = this.args.item;
     try {
-      await this.args.item.destroyRecord();
+      const methodType = identityType === 'group' ? 'groupDeleteAliasById' : 'entityDeleteAliasById';
+      await this.api.identity[methodType](id);
       this.onSuccess(identityType, id);
     } catch (e) {
       this.onError(e, identityType, id);

@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @model.parentGroupIds.length}}
-  {{#each @model.parentGroupIds as |gid|}}
+{{#if (not (is-empty @model.parent_group_ids))}}
+  {{#each @model.parent_group_ids as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
       <div class="columns is-mobile">
         <div class="column is-10">

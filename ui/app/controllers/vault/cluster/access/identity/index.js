@@ -9,6 +9,7 @@ import ListController from 'core/mixins/list-controller';
 
 export default Controller.extend(ListController, {
   flashMessages: service(),
+  api: service(),
 
   entityToDisable: null,
   itemToDelete: null,
@@ -23,21 +24,22 @@ export default Controller.extend(ListController, {
   },
 
   actions: {
-    delete(model) {
-      const type = model.identityType;
+    async delete(model) {
+      const type = this.identityType;
       const id = model.id;
-      return model
-        .destroyRecord()
-        .then(() => {
-          this.send('reload');
-          this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
-        })
-        .catch((e) => {
-          this.flashMessages.danger(
-            `There was a problem deleting ${type}: ${id} - ${e.errors?.join(' ') || e.message}`
-          );
-        })
-        .finally(() => this.set('itemToDelete', null));
+
+      try {
+        const methodType = type === 'group' ? 'groupDeleteById' : 'entityDeleteById';
+        await this.api.identity[methodType](id);
+        this.flashMessages.success('Successfully deleted');
+      } catch (e) {
+        const { message } = await this.api.parseError(e);
+
+        this.flashMessages.danger(`There was a problem deleting ${type}: ${id} - ${message}`);
+      } finally {
+        this.set('itemToDelete', null);
+        this.send('reload');
+      }
     },
 
     toggleDisabled(model) {
@@ -58,8 +60,8 @@ export default Controller.extend(ListController, {
         })
         .finally(() => this.set('entityToDisable', null));
     },
-    reloadRecord(model) {
-      model.reload();
+    reloadRecord() {
+      this.send('reload');
     },
   },
 });

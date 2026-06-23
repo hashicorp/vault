@@ -3,29 +3,30 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import AdapterError from '@ember-data/adapter/error';
 import { hash } from 'rsvp';
-import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 import { service } from '@ember/service';
 
 export default class IdentityAliasesShowRoute extends Route {
-  @service store;
+  @service api;
 
-  model(params) {
+  async model(params) {
     const { section } = params;
-    const itemType = this.modelFor('vault.cluster.access.identity') + '-alias';
+    const identityType = this.modelFor('vault.cluster.access.identity');
+    const itemType = identityType + '-alias';
     const tabs = TABS[itemType];
-    const modelType = `identity/${itemType}`;
+
     if (!tabs.includes(section)) {
-      const error = new AdapterError();
-      set(error, 'httpStatus', 404);
+      const error = new Error(`Invalid section: ${section}`);
+      error.httpStatus = 404;
       throw error;
     }
-    // TODO peekRecord here to see if we have the record already
+    const methodType = identityType === 'group' ? 'groupReadAliasById' : 'entityReadAliasById';
+    const { data } = await this.api.identity[methodType](params.item_alias_id);
+
     return hash({
-      model: this.store.findRecord(modelType, params.item_alias_id),
+      model: { ...data, itemType, identityType },
       section,
     });
   }

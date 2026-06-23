@@ -4,47 +4,88 @@
  */
 
 import Route from '@ember/routing/route';
-import ListRoute from 'core/mixins/list-route';
 import { service } from '@ember/service';
+import { IdentityApiAliasListByIdListEnum } from '@hashicorp/vault-client-typescript';
+import { paginate } from 'core/utils/paginate-list';
 
-export default Route.extend(ListRoute, {
-  pagination: service(),
+export default class IdentityAliasesIndexRoute extends Route {
+  @service api;
+  @service capabilities;
 
-  model(params) {
-    const itemType = this.modelFor('vault.cluster.access.identity');
-    const modelType = `identity/${itemType}-alias`;
-    return this.pagination
-      .lazyPaginatedQuery(modelType, {
-        responsePath: 'data.keys',
-        page: params.page,
-        pageFilter: params.pageFilter,
-        sortBy: 'name',
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+    pageFilter: {
+      refreshModel: true,
+    },
+  };
+
+  async model(params) {
+    try {
+      const identityType = this.modelFor('vault.cluster.access.identity');
+      const methodType = identityType === 'group' ? 'groupListAliasesById' : 'entityListAliasesById';
+      const response = await this.api.identity[methodType](IdentityApiAliasListByIdListEnum.TRUE);
+      const aliases = await this.api.keyInfoToArray(response);
+
+      // Build capability paths for all aliases
+      const capabilityPaths = aliases.map((alias) =>
+        this.capabilities.pathFor('identityCapabilities', {
+          identityType,
+          id: alias.id,
+        })
+      );
+
+      // Fetch capabilities for all aliases
+      const capabilitiesMap = await this.capabilities.fetch(capabilityPaths);
+
+      // Attach capabilities to each alias
+      const aliasesWithCapabilities = aliases.map((alias) => {
+        const aliasCapabilityPath = this.capabilities.pathFor('identityCapabilities', {
+          identityType,
+          id: alias.id,
+        });
+        const aliasCapabilities = capabilitiesMap[aliasCapabilityPath];
+
+        return {
+          ...alias,
+          canDelete: aliasCapabilities?.canDelete || false,
+          canEdit: aliasCapabilities?.canUpdate || false,
+        };
       });
-  },
 
-  setupController(controller) {
-    this._super(...arguments);
-    controller.set('identityType', this.modelFor('vault.cluster.access.identity'));
-  },
-
-  actions: {
-    willTransition(transition) {
-      window.scrollTo(0, 0);
-      if (!transition || transition.targetName !== this.routeName) {
-        this.pagination.clearDataset();
+      return paginate(aliasesWithCapabilities, { page: params.page, filter: params.pageFilter });
+    } catch (err) {
+      const { status } = await this.api.parseError(err);
+      if (status === 404) {
+        return [];
+      } else {
+        throw err;
       }
-      return true;
-    },
-    reload() {
-      this.pagination.clearDataset();
-      this.refresh();
-    },
-  },
-});
+    }
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const { pageFilter } = this.paramsFor(this.routeName);
+    const identityType = this.modelFor('vault.cluster.access.identity');
+
+    controller.setProperties({
+      identityType,
+      filter: pageFilter || '',
+      page: resolvedModel?.meta?.currentPage || 1,
+    });
+  }
+
+  resetController(controller, isExiting) {
+    super.resetController(controller, isExiting);
+    if (isExiting) {
+      controller.set('pageFilter', null);
+      controller.set('filter', null);
+    }
+  }
+
+  reload() {
+    this.refresh();
+  }
+}
