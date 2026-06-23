@@ -27,13 +27,6 @@ const (
 	driverMySQL   = "mysql"
 )
 
-var (
-	// These aliases call the production MySQL driver TLS registry functions and
-	// allow tests to stub registration/deregistration behavior.
-	registerMySQLTLSConfig   = mysql.RegisterTLSConfig
-	deregisterMySQLTLSConfig = mysql.DeregisterTLSConfig
-)
-
 // mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type mySQLConnectionProducer struct {
 	ConnectionURL            string      `json:"connection_url"          mapstructure:"connection_url"          structs:"connection_url"`
@@ -54,6 +47,11 @@ type mySQLConnectionProducer struct {
 
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
 	tlsConfigName string
+
+	// TLS registry hooks are injectable for tests.
+	// Optional test hooks; nil means use mysql driver defaults.
+	registerTLSConfig   func(string, *tls.Config) error
+	deregisterTLSConfig func(string)
 
 	// cloudDriverName is a globally unique name that references the cloud dialer config for this instance of the driver
 	cloudDriverName    string
@@ -250,6 +248,17 @@ func (c *mySQLConnectionProducer) Close() error {
 }
 
 func (c *mySQLConnectionProducer) ensureTLSRegistration(tlsConfig *tls.Config) error {
+	registerTLSConfig := c.registerTLSConfig
+	if registerTLSConfig == nil {
+		// Default to production mysql driver registration.
+		registerTLSConfig = mysql.RegisterTLSConfig
+	}
+	deregisterTLSConfig := c.deregisterTLSConfig
+	if deregisterTLSConfig == nil {
+		// Default to production mysql driver deregistration.
+		deregisterTLSConfig = mysql.DeregisterTLSConfig
+	}
+
 	if tlsConfig == nil {
 		c.clearTLSRegistration()
 		return nil
@@ -263,23 +272,28 @@ func (c *mySQLConnectionProducer) ensureTLSRegistration(tlsConfig *tls.Config) e
 		return fmt.Errorf("unable to generate UUID for TLS configuration: %w", err)
 	}
 
-	if err := registerMySQLTLSConfig(nextTLSConfigName, tlsConfig); err != nil {
+	if err := registerTLSConfig(nextTLSConfigName, tlsConfig); err != nil {
 		return fmt.Errorf("unable to register TLS config: %w", err)
 	}
 
 	c.tlsConfigName = nextTLSConfigName
 	if previousTLSConfigName != "" {
-		deregisterMySQLTLSConfig(previousTLSConfigName)
+		deregisterTLSConfig(previousTLSConfigName)
 	}
 	return nil
 }
 
 func (c *mySQLConnectionProducer) clearTLSRegistration() {
+	deregisterTLSConfig := c.deregisterTLSConfig
+	if deregisterTLSConfig == nil {
+		deregisterTLSConfig = mysql.DeregisterTLSConfig
+	}
+
 	if c.tlsConfigName == "" {
 		return
 	}
 
-	deregisterMySQLTLSConfig(c.tlsConfigName)
+	deregisterTLSConfig(c.tlsConfigName)
 
 	c.tlsConfigName = ""
 }
