@@ -17,6 +17,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 // Helper to create an entity or group
 async function createEntityOrGroup(itemType, name) {
   await visit(`/vault/access/identity/${itemType}/create`);
+
   if (itemType === 'groups') {
     await fillIn(GENERAL.inputByAttr('type'), 'external');
   }
@@ -29,7 +30,9 @@ async function createEntityOrGroup(itemType, name) {
 async function createAlias(itemType, itemGeneratedId, name) {
   await visit(`/vault/access/identity/${itemType}/aliases/add/${itemGeneratedId}`);
   await fillIn(GENERAL.inputByAttr('name'), name);
+
   await click(GENERAL.submitButton);
+
   return document.querySelector(GENERAL.infoRowValue('ID')).innerText;
 }
 
@@ -77,6 +80,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
         .hasText(name, `${itemType}: renders the alias name on the alias show page`);
 
       await visit(`/vault/access/identity/${itemType}/aliases`);
+
       assert
         .dom(`[data-test-identity-link="${aliasGeneratedId}"]`)
         .exists(`${itemType}: lists the entity alias`);
@@ -84,6 +88,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       await click(GENERAL.menuItem(name));
       await click('[data-test-popup-menu="delete"]');
       await click(GENERAL.confirmButton);
+
       assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
     });
 

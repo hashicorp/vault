@@ -4,17 +4,16 @@
  */
 
 import Route from '@ember/routing/route';
-import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
-import { service } from '@ember/service';
+import AliasIdentityForm from 'vault/forms/identity/alias';
 
-export default Route.extend(UnsavedModelRoute, {
-  store: service(),
-
+export default class VaultClusterAccessIdentityAliasesAddRoute extends Route {
   model(params) {
-    const itemType = this.modelFor('vault.cluster.access.identity');
-    const modelType = `identity/${itemType}-alias`;
-    return this.store.createRecord(modelType, {
+    const identityType = this.modelFor('vault.cluster.access.identity');
+
+    return {
       canonicalId: params.item_id,
-    });
-  },
-});
+      form: new AliasIdentityForm({ canonical_id: params.item_id }, { isNew: true }),
+      identityType,
+    };
+  }
+}

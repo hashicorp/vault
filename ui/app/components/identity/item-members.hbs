@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @model.hasMembers}}
-  {{#each @model.memberGroupIds as |gid|}}
+{{#if (or (not (is-empty @model.member_group_ids)) (not (is-empty @model.member_entity_ids)))}}
+  {{#each @model.member_group_ids as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
       <div class="columns is-mobile">
         <div class="column is-10">
@@ -18,13 +18,13 @@
         </div>
         <div class="column has-text-right">
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @model={{@model}} @groupArray="memberGroupIds" @memberId={{gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="member_group_ids" @memberId={{gid}} />
           {{/if}}
         </div>
       </div>
     </LinkedBlock>
   {{/each}}
-  {{#each @model.memberEntityIds as |gid|}}
+  {{#each @model.member_entity_ids as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
       <div class="columns">
         <div class="column is-10">
@@ -38,7 +38,7 @@
         </div>
         <div class="column has-text-right">
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @model={{@model}} @groupArray="memberEntityIds" @memberId={{gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="member_entity_ids" @memberId={{gid}} />
           {{/if}}
         </div>
       </div>

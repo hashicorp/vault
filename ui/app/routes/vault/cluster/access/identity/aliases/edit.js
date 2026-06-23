@@ -4,15 +4,31 @@
  */
 
 import Route from '@ember/routing/route';
-import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 import { service } from '@ember/service';
+import AliasIdentityForm from 'vault/forms/identity/alias';
 
-export default Route.extend(UnsavedModelRoute, {
-  store: service(),
+export default class IdentityAliasesEditRoute extends Route {
+  @service api;
+  @service capabilities;
 
-  model(params) {
-    const itemType = this.modelFor('vault.cluster.access.identity');
-    const modelType = `identity/${itemType}-alias`;
-    return this.store.findRecord(modelType, params.item_alias_id);
-  },
-});
+  async model(params) {
+    const identityType = this.modelFor('vault.cluster.access.identity');
+    const methodType = identityType === 'group' ? 'groupReadAliasById' : 'entityReadAliasById';
+
+    const { data } = await this.api.identity[methodType](params.item_alias_id);
+
+    // Check canDelete capability for this alias
+    const identityCapabilities = await this.capabilities.for('identityCapabilities', {
+      identityType,
+      id: params.item_alias_id,
+    });
+
+    return {
+      canDelete: identityCapabilities?.canDelete || false,
+      canonicalId: params.item_alias_id,
+      form: new AliasIdentityForm(data, { isNew: false }),
+      identityType,
+      name: data.name,
+    };
+  }
+}
