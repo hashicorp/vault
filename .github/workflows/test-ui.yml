@@ -37,7 +37,7 @@ jobs:
     outputs:
       ui-go-binary-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
@@ -85,7 +85,7 @@ jobs:
     outputs:
       ui-js-bundle-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
@@ -114,7 +114,7 @@ jobs:
       matrix:
         ci-index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
