@@ -155,8 +155,10 @@ func (s *Session) AssertRaftClusterHealthy() {
 func (s *Session) MustRaftRemovePeer(nodeID string) {
 	s.t.Helper()
 
-	_, err := s.Client.Logical().Write("sys/storage/raft/remove-peer", map[string]any{
-		"server_id": nodeID,
+	_, err := s.WithRootNamespace(func() (*api.Secret, error) {
+		return s.Client.Logical().Write("sys/storage/raft/remove-peer", map[string]any{
+			"server_id": nodeID,
+		})
 	})
 	require.NoError(s.t, err)
 }
@@ -215,4 +217,47 @@ func (s *Session) MustGetClusterNodeCount() int {
 	require.NoError(s.t, err)
 
 	return count
+}
+
+// MustGetNonLeaderNode returns a non-leader node ID from the raft cluster
+func (s *Session) MustGetNonLeaderNode() string {
+	s.t.Helper()
+
+	// Get current leader
+	leader := s.MustGetCurrentLeader()
+
+	// Get raft configuration
+	secret, err := s.WithRootNamespace(func() (*api.Secret, error) {
+		return s.Client.Logical().Read("sys/storage/raft/configuration")
+	})
+	require.NoError(s.t, err)
+	require.NotNil(s.t, secret)
+
+	configData, ok := secret.Data["config"].(map[string]any)
+	require.True(s.t, ok, "Could not parse raft config data")
+
+	serversData, ok := configData["servers"].([]any)
+	require.True(s.t, ok, "Could not parse raft servers data")
+
+	// Find a non-leader node
+	for _, server := range serversData {
+		serverMap, ok := server.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		nodeID, ok := serverMap["node_id"].(string)
+		if !ok {
+			continue
+		}
+
+		// Check if this is not the leader
+		address, ok := serverMap["address"].(string)
+		if ok && address != leader {
+			return nodeID
+		}
+	}
+
+	s.t.Fatal("Could not find a non-leader node in the cluster")
+	return ""
 }
