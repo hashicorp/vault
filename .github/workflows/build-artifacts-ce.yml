@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -209,7 +209,7 @@ jobs:
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -236,7 +236,7 @@ jobs:
       - core
       - extended
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Determine status

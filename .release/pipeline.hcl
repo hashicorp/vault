@@ -307,7 +307,10 @@ changed_files {
   // The "ui" group matches the Web UI source
   group "ui" {
     match {
-      base_dir = ["ui"]
+      base_dir = [
+        joinpath(".github", "actions", "build-ui"),
+        "ui",
+      ]
     }
   }
 
