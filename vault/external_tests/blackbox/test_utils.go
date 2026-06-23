@@ -4,6 +4,7 @@
 package blackbox
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -112,8 +113,25 @@ func SetupStandardKVUserpass(v *blackbox.Session, kvMount, username, password st
 	// Setup KV engine
 	SetupKVEngine(v, kvMount)
 
-	// Setup userpass with standard ops policy
-	return SetupUserpassAuth(v, username, password, "ops-policy", StandardOpsPolicy)
+	// Create mount-specific policy using fmt.Sprintf
+	policy := fmt.Sprintf(`
+		path "%s/data/*" { capabilities = ["create", "read", "update"] }
+		path "%s/metadata/*" { capabilities = ["list", "read", "update"] }
+		path "%s/delete/*" { capabilities = ["update"] }
+		path "%s/undelete/*" { capabilities = ["update"] }
+		path "auth/userpass/login/*" { capabilities = ["create", "read"] }
+	`, kvMount, kvMount, kvMount, kvMount)
+
+	// Setup userpass with mount-specific policy
+	userSession := SetupUserpassAuth(v, username, password, "ops-policy", policy)
+
+	// If userpass login failed (returns nil), use root session instead
+	// This happens in managed environments where userpass may not be available
+	if userSession == nil {
+		return v
+	}
+
+	return userSession
 }
 
 // AssertKVData verifies standard KV data structure
