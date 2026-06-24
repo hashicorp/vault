@@ -205,6 +205,10 @@ func (c *Core) collectMountMetrics(ctx context.Context, entry *MountEntry, targe
 		dynamicRoles := apiList(entry, "role")
 		targetRoleCounts.TerraformCloudDynamicRoles += len(dynamicRoles)
 
+	case pluginconsts.SecretEngineTransit:
+		transitKeys := apiList(entry, "keys")
+		targetManagedKeys.TransitKeys += len(transitKeys)
+
 	case pluginconsts.SecretEngineTOTP:
 		keyCountPerEntry := apiList(entry, "keys")
 		targetManagedKeys.TotpKeys += len(keyCountPerEntry)

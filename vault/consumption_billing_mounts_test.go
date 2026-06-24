@@ -13,6 +13,7 @@ import (
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/builtin/logical/totp"
+	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
@@ -32,6 +33,7 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 			pluginconsts.SecretEngineDatabase: roleLogicalBackends[pluginconsts.SecretEngineDatabase],
 			pluginconsts.SecretEngineKV:       logicalKv.Factory,
 			pluginconsts.SecretEngineTOTP:     totp.Factory,
+			pluginconsts.SecretEngineTransit:  logicalTransit.Factory,
 		},
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
@@ -51,6 +53,8 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 		{pluginconsts.SecretEngineDatabase, "local-db", "static-role/", true, 10},
 		{pluginconsts.SecretEngineTOTP, "totp", "my-key-%d", false, 10},
 		{pluginconsts.SecretEngineTOTP, "local-totp", "my-key-%d", true, 10},
+		{pluginconsts.SecretEngineTransit, "transit", "my-key-%d", false, 10},
+		{pluginconsts.SecretEngineTransit, "local-transit", "my-key-%d", true, 10},
 		{"kv-v1", "kv", "secret-%d", false, 10},
 		{"kv-v2", "local-kv", "secret-%d", true, 10},
 	}
@@ -75,6 +79,11 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 				keyName := fmt.Sprintf(mount.keyName, i)
 				addTotpKeyToStorage(t, ctx, core, mount.path, root, keyName)
 			}
+		case pluginconsts.SecretEngineTransit:
+			for i := 0; i < mount.numKeys; i++ {
+				keyName := fmt.Sprintf(mount.keyName, i)
+				addTransitKeyToStorage(t, ctx, core, mount.path, root, keyName)
+			}
 		case "kv-v1", "kv-v2":
 			for i := 0; i < mount.numKeys; i++ {
 				secretName := fmt.Sprintf(mount.keyName, i)
@@ -97,10 +106,12 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 		DatabaseStaticRoles: 10,
 	}
 	expectedReplicatedManagedKeys := &ManagedKeyCounts{
-		TotpKeys: 10,
+		TotpKeys:    10,
+		TransitKeys: 10,
 	}
 	expectedLocalManagedKeys := &ManagedKeyCounts{
-		TotpKeys: 10,
+		TotpKeys:    10,
+		TransitKeys: 10,
 	}
 
 	// Verify counts

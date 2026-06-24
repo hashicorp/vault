@@ -869,8 +869,9 @@ type RoleCounts struct {
 }
 
 type ManagedKeyCounts struct {
-	TotpKeys int `json:"totp_keys"`
-	KmseKeys int `json:"kmse_keys"`
+	TotpKeys    int `json:"totp_keys"`
+	KmseKeys    int `json:"kmse_keys"`
+	TransitKeys int `json:"transit_keys"`
 }
 
 // GetRoleCountsForCluster returns the total role counts across all mounts for a primary or secondary cluster
@@ -884,6 +885,18 @@ func (c *Core) GetRoleCountsForCluster() *RoleCounts {
 		return combineRoleCounts(m.LocalRoleCounts, m.ReplicatedRoleCounts)
 	}
 	return m.LocalRoleCounts
+}
+
+// GetManagedKeyCountsForCluster returns the total managed key counts across all mounts
+func (c *Core) GetManagedKeyCountsForCluster() *ManagedKeyCounts {
+	m, err := c.CountMetricsFromMounts(false)
+	if err != nil {
+		return nil
+	}
+	if c.isPrimary() {
+		return combineManagedKeyCounts(m.LocalManagedKeys, m.ReplicatedManagedKeys)
+	}
+	return m.LocalManagedKeys
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts.
