@@ -24,7 +24,12 @@ concurrency:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all # vault-auth
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
@@ -168,6 +173,12 @@ jobs:
     name: Run Go tests
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
       # The regular Go tests use an extra runner to execute the binary-dependent tests. We isolate
       # them there so that the other tests aren't slowed down waiting for a binary build.
@@ -190,6 +201,12 @@ jobs:
     name: Run Go tests tagged with testonly
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
@@ -215,6 +232,12 @@ jobs:
     name: Run Go tests with data race detection
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       env-vars: |
@@ -243,6 +266,12 @@ jobs:
         )
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       env-vars: |
@@ -263,6 +292,12 @@ jobs:
     needs: setup
     if: needs.setup.outputs.run-ui-tests == 'true'
     uses: ./.github/workflows/test-ui.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       runs-on: ${{ needs.setup.outputs.compute-build }}
@@ -282,7 +317,11 @@ jobs:
       - test-ui
     if: always()
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all # Ensure we have id-token:write access for vault-auth.
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Determine the overall status of our required test jobs.

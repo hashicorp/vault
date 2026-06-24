@@ -23,6 +23,10 @@ jobs:
       ! github.event.pull_request.head.repo.fork &&
       github.actor != 'dependabot[bot]' &&
       github.actor != 'hc-github-team-secure-vault-core'
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
