@@ -35,6 +35,12 @@ on:
 jobs:
   metadata:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
       is-ent-repo: ${{ steps.global-metadata.outputs.is-ent-repo }}
@@ -73,6 +79,8 @@ jobs:
   run:
     needs: metadata
     name: run ${{ matrix.scenario.id.filter }}
+    permissions:
+      contents: read
     runs-on: ${{ fromJSON(needs.metadata.outputs.is-ent-repo == 'true' && (contains(inputs.build-artifact-name, 'arm64') && '["self-hosted","ubuntu-24.04-arm64"]' || '["self-hosted","ubuntu-22.04-x64"]') || (contains(inputs.build-artifact-name, 'arm64') && '"ubuntu-22.04-arm"' || '"ubuntu-latest"')) }}
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs

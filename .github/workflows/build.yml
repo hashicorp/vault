@@ -84,7 +84,12 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all # vault-auth
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
@@ -187,7 +192,11 @@ jobs:
     runs-on:
       - self-hosted
       - ubuntu-22.04-x64
-    permissions: write-all # vault-auth
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     needs:
       - setup
     steps:
@@ -292,6 +301,11 @@ jobs:
       )
     needs: setup
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-build-ui) }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     outputs:
       cache-key: ${{ steps.build-ui.outputs.cache-key }}
     steps:
@@ -327,6 +341,11 @@ jobs:
       - setup
       - ui # Don't build and test artifacts unless the UI build was triggered.
     uses: ./.github/workflows/build-artifacts-ce.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
       build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
       build-date: ${{ needs.setup.outputs.build-date }}
@@ -353,6 +372,11 @@ jobs:
       - setup
       - ui # Don't build and test artifacts unless the UI build was triggered.
     uses: ./.github/workflows/build-artifacts-ent.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
       build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
       build-date: ${{ needs.setup.outputs.build-date }}
@@ -368,6 +392,11 @@ jobs:
   # Setup HCP input parameters with proper validation
   hcp-setup:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     outputs:
       pull-request-number: ${{ steps.pr-logic.outputs.pull-request-number }}
       branch-name: ${{ steps.branch-logic.outputs.branch-name }}
@@ -431,6 +460,11 @@ jobs:
       - artifacts-ent
       - hcp-setup
     uses: ./.github/workflows/build-hcp-image.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
       pull-request: ${{ fromJSON(needs.hcp-setup.outputs.pull-request-number) }}
       branch: ${{ needs.hcp-setup.outputs.branch-name }}
@@ -452,6 +486,11 @@ jobs:
       - artifacts-ce
       - artifacts-ent
     uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     strategy:
       fail-fast: false
       matrix:
@@ -481,6 +520,12 @@ jobs:
       - artifacts-ce
       - artifacts-ent
     uses: ./.github/workflows/test-run-enos-scenario-containers.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     strategy:
       fail-fast: false
       matrix:
@@ -514,6 +559,11 @@ jobs:
       - artifacts-ent
       - hcp-image
     uses: ./.github/workflows/test-run-enos-scenario-cloud.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
       hcp-environment: int
       product-version: ${{ fromJSON(needs.hcp-image.outputs.image).product_version }}
@@ -534,7 +584,12 @@ jobs:
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
       )
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all # Ensure we have id-token:write access for vault-auth.
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: write
+      pull-requests: write
     needs:
       - setup
       - ui
