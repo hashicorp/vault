@@ -455,7 +455,7 @@ scenario "plugin" {
       leader_host           = step.get_vault_cluster_ips.leader_host
       leader_public_ip      = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token      = step.create_vault_cluster.root_token
-      test_package          = "./vault/external_tests/blackbox/verify"
+      test_package          = "./vault/external_tests/blackbox/isolated/verify"
       test_names            = ["TestVaultServerVersion"]
       vault_edition         = matrix.edition
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
@@ -472,8 +472,8 @@ scenario "plugin" {
 
     // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin and system tests
     plugin_test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
-      for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/plugins/${pkg}/..."
-    ] : ["./vault/external_tests/blackbox/plugins/..."]
+      for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/isolated/plugins/${pkg}/..."
+    ] : ["./vault/external_tests/blackbox/isolated/plugins/..."]
   }
 
   // Run comprehensive plugin blackbox tests

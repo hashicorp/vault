@@ -83,17 +83,61 @@ if [[ "${VAULT_ADDR}" == http://* ]]; then
     unset VAULT_CACERT VAULT_CAPATH
 fi
 
+# Determine base tags based on edition
 case $VAULT_EDITION in
-    ent | ent.hsm | ent.hsm.fips1402 | ent.hsm.fips1403 | ent.fips1403 | ent.fips1402)
-        tags="-tags=ent,enterprise"
+    ent.hsm.fips1403)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_3"
+        ;;
+    ent.hsm.fips1402)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_2"
+        ;;
+    ent.hsm)
+        base_tags="ent,enterprise,cgo,hsm,venthsm"
+        ;;
+    ent.fips1403)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_3"
+        ;;
+    ent.fips1402)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_2"
+        ;;
+    ent)
+        base_tags="ent,enterprise"
         ;;
     ce)
-        tags=""
+        base_tags=""
         ;;
     *)
         fail "unknown VAULT_EDITION: $VAULT_EDITION"
         ;;
 esac
+
+# Add build tags based on test package paths (handle multiple categories)
+category_tags=""
+if [[ "$VAULT_TEST_PACKAGE" == *"/isolated/"* ]]; then
+    # Skip isolated tests on CE - they require namespaces which are enterprise-only
+    if [[ "$VAULT_EDITION" == "ce" ]]; then
+        echo "Skipping isolated tests on CE edition (requires enterprise features like namespaces)"
+        exit 0
+  fi
+    category_tags="isolated"
+fi
+if [[ "$VAULT_TEST_PACKAGE" == *"/scenario/"* ]]; then
+    category_tags="${category_tags:+${category_tags},}scenario"
+fi
+if [[ "$VAULT_TEST_PACKAGE" == *"/system/"* ]]; then
+    category_tags="${category_tags:+${category_tags},}system"
+fi
+
+# Combine tags
+if [[ -n "$base_tags" && -n "$category_tags" ]]; then
+    tags="-tags=${base_tags},${category_tags}"
+elif [[ -n "$base_tags" ]]; then
+    tags="-tags=${base_tags}"
+elif [[ -n "$category_tags" ]]; then
+    tags="-tags=${category_tags}"
+else
+    tags=""
+fi
 
 # Build gotestsum command based on whether we have specific tests
 # Convert VAULT_TEST_PACKAGE to array to handle multiple package paths properly

@@ -413,9 +413,9 @@ scenario "smoke_sdk" {
 
   locals {
     // Default test packages for smoke_sdk scenario
-    // TODO: "integration" has been removed from the default packages pending
-    // a restructure to handle tests that mutate the cluster via sys endpoints.
-    default_test_packages = ["core", "secrets", "replication", "raft"]
+    // Note: isolated/verify tests require special environment variables (EXPECTED_STATE, TIMEOUT_SECONDS, RETRY_INTERVAL)
+    // and should be run in dedicated scenarios, not smoke_sdk
+    default_test_packages = ["isolated/secrets", "isolated/auth", "scenario/raft"]
 
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
