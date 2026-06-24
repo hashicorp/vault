@@ -1,3 +1,3 @@
 ```release-note:bug
-agent/proxy: Stop caching responses to lease renewal requests, so a proxied client's lifetime watcher sees the true remaining TTL and refreshes a dynamic secret before its lease expires.
+agent/proxy: Stop caching responses to lease and token renewal requests, so a proxied client's lifetime watcher sees the true remaining TTL and refreshes a dynamic secret or token before it expires.
 ```
