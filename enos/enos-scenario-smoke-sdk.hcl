@@ -31,7 +31,7 @@ scenario "smoke_sdk" {
       definitions in enos-variables.hcl)
       - vault_artifact_path (the path to where you have a Vault artifact already downloaded,
       if using `artifact_source:crt` in your filter)
-      - vault_license_path (if using an ENT edition of Vault)
+      - vault_license_path (if using an ENT edition of Vault)..
   EOF
 
   matrix {
