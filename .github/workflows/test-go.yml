@@ -96,7 +96,12 @@ env: ${{ fromJSON(inputs.env-vars) }}
 
 jobs:
   test-matrix:
-    permissions: write-all # vault-auth
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     runs-on: ${{ fromJSON(inputs.runs-on-small) }}
     outputs:
       is-ent-branch: ${{ steps.global-metadata.outputs.is-ent-branch }}
@@ -231,7 +236,9 @@ jobs:
     permissions:
       actions: read
       contents: read
-      id-token: write  # Note: this permission is explicitly required for Vault auth
+      id-token: write
+      issues: read
+      pull-requests: write
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -658,6 +665,11 @@ jobs:
       - test-matrix
       - test-go
     runs-on: ${{ fromJSON(inputs.runs-on-small) }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     outputs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
