@@ -167,7 +167,7 @@ path "identity/oidc/provider/+/authorize" {
 	// defaultCeilingPolicy is the default ceiling policy.
 	defaultCeilingPolicy = `
 # Allow an entity to inspect its own registration information
-path "agent-registry/registration/entity_id/{{identity.entity.id}}" {
+path "agent-registry/registration/entity-id/{{identity.entity.id}}" {
   capabilities = ["read"]
 }
 
