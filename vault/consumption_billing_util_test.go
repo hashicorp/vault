@@ -1190,6 +1190,13 @@ func deleteTotpKeyFromStorage(t *testing.T, ctx context.Context, core *Core, mou
 	require.NoError(t, err)
 }
 
+func addTransitKeyToStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, keyName string) {
+	req := logical.TestRequest(t, logical.CreateOperation, fmt.Sprintf("%v/keys/%s", mount, keyName))
+	req.ClientToken = token
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+}
+
 // TestGetStoredOidcDurationAdjustedCount tests reading OIDC duration-adjusted token counts from storage
 func TestGetStoredOidcDurationAdjustedCount(t *testing.T) {
 	tests := []struct {

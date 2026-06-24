@@ -137,6 +137,23 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 	}
 }
 
+func combineManagedKeyCounts(a, b *ManagedKeyCounts) *ManagedKeyCounts {
+	if a == nil && b == nil {
+		return &ManagedKeyCounts{}
+	}
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	return &ManagedKeyCounts{
+		a.TotpKeys + b.TotpKeys,
+		a.KmseKeys + b.KmseKeys,
+		a.TransitKeys + b.TransitKeys,
+	}
+}
+
 // storeMaxKvCountsLocked must be called with BillingStorageLock held
 func (c *Core) storeMaxKvCountsLocked(ctx context.Context, maxKvCounts int, localPathPrefix string, month time.Time) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.KvHWMCountsHWM)
