@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/require"
 )
@@ -168,4 +169,102 @@ func randomString(n int) string {
 		panic(err)
 	}
 	return hex.EncodeToString(bytes)
+}
+
+// SkipIfVersionBelow skips the test if the Vault version is below the specified constraint.
+// The version is read from the VAULT_VERSION environment variable.
+// Example usage: s.SkipIfVersionBelow("2.0.0")
+func (s *Session) SkipIfVersionBelow(minVersion string) {
+	s.t.Helper()
+
+	vaultVersion := os.Getenv("VAULT_VERSION")
+	if vaultVersion == "" {
+		s.t.Skip("VAULT_VERSION environment variable not set, skipping version check")
+		return
+	}
+
+	// Parse the current Vault version
+	currentVer, err := version.NewVersion(vaultVersion)
+	if err != nil {
+		s.t.Fatalf("Failed to parse VAULT_VERSION '%s': %v", vaultVersion, err)
+	}
+
+	// Parse the minimum required version
+	minVer, err := version.NewVersion(minVersion)
+	if err != nil {
+		s.t.Fatalf("Invalid minimum version constraint '%s': %v", minVersion, err)
+	}
+
+	// Skip if current version is less than minimum required
+	if currentVer.LessThan(minVer) {
+		s.t.Skipf("Vault version %s is below required version %s", currentVer.String(), minVer.String())
+	}
+}
+
+// SkipIfVersionAbove skips the test if the Vault version is above the specified constraint.
+// The version is read from the VAULT_VERSION environment variable.
+// Example usage: s.SkipIfVersionAbove("1.15.0")
+func (s *Session) SkipIfVersionAbove(maxVersion string) {
+	s.t.Helper()
+
+	vaultVersion := os.Getenv("VAULT_VERSION")
+	if vaultVersion == "" {
+		s.t.Skip("VAULT_VERSION environment variable not set, skipping version check")
+		return
+	}
+
+	// Parse the current Vault version
+	currentVer, err := version.NewVersion(vaultVersion)
+	if err != nil {
+		s.t.Skipf("Failed to parse VAULT_VERSION '%s': %v", vaultVersion, err)
+		return
+	}
+
+	// Parse the maximum allowed version
+	maxVer, err := version.NewVersion(maxVersion)
+	if err != nil {
+		s.t.Fatalf("Invalid maximum version constraint '%s': %v", maxVersion, err)
+	}
+
+	// Skip if current version is greater than maximum version
+	if currentVer.GreaterThan(maxVer) {
+		s.t.Skipf("Test requires Vault version <= %s, but current version is %s", maxVersion, vaultVersion)
+	}
+}
+
+// SkipIfVersionNotInRange skips the test if the Vault version is not within the specified range.
+// The version is read from the VAULT_VERSION environment variable.
+// Example usage: s.SkipIfVersionNotInRange("1.15.0", "2.0.0")
+func (s *Session) SkipIfVersionNotInRange(minVersion, maxVersion string) {
+	s.t.Helper()
+
+	vaultVersion := os.Getenv("VAULT_VERSION")
+	if vaultVersion == "" {
+		s.t.Skip("VAULT_VERSION environment variable not set, skipping version check")
+		return
+	}
+
+	// Parse the current Vault version
+	currentVer, err := version.NewVersion(vaultVersion)
+	if err != nil {
+		s.t.Skipf("Failed to parse VAULT_VERSION '%s': %v", vaultVersion, err)
+		return
+	}
+
+	// Parse the minimum required version
+	minVer, err := version.NewVersion(minVersion)
+	if err != nil {
+		s.t.Fatalf("Invalid minimum version constraint '%s': %v", minVersion, err)
+	}
+
+	// Parse the maximum allowed version
+	maxVer, err := version.NewVersion(maxVersion)
+	if err != nil {
+		s.t.Fatalf("Invalid maximum version constraint '%s': %v", maxVersion, err)
+	}
+
+	// Skip if current version is outside the range
+	if currentVer.LessThan(minVer) || currentVer.GreaterThan(maxVer) {
+		s.t.Skipf("Test requires Vault version between %s and %s, but current version is %s", minVersion, maxVersion, vaultVersion)
+	}
 }
