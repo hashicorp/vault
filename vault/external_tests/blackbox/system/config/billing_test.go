@@ -20,8 +20,13 @@ import (
 // In HVD, tests run in admin/bbsdk-xxxxx, and this test verifies:
 // - Calling from base namespace (admin) works
 // - Calling from root namespace (empty) returns "permission denied"
+
+// This test requires Vault version >= 2.0.0 as the billing endpoint was introduced in that version.
 func TestBillingOverviewNamespaceRestrictions(t *testing.T) {
 	v := blackbox.New(t)
+
+	// Skip if Vault version is below 2.0.0 (billing endpoint not available)
+	v.SkipIfVersionBelow("2.0.0")
 
 	// Check if we're in HVD (has base namespace from VAULT_NAMESPACE)
 	baseNS := v.GetParentNamespace()

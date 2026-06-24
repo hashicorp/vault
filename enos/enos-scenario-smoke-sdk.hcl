@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 scenario "smoke_sdk" {
@@ -447,9 +447,9 @@ scenario "smoke_sdk" {
       test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.test_packages)
       integration_host_state = step.set_up_external_integration_target.state
       vault_edition          = matrix.edition
-      vault_product_version  = var.vault_product_version
-      vault_build_date       = var.vault_build_date
-      vault_revision         = var.vault_revision
+      vault_product_version  = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision         = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date       = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
     }
   }
 

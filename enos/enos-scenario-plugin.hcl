@@ -471,7 +471,7 @@ scenario "plugin" {
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
 
-    // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin tests
+    // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin and system tests
     plugin_test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
       for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/isolated/plugins/${pkg}/..."
     ] : ["./vault/external_tests/blackbox/isolated/plugins/..."]
@@ -504,6 +504,8 @@ scenario "plugin" {
       test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.plugin_test_packages)
       integration_host_state = step.set_up_plugin_services.state
       vault_edition          = matrix.edition
+      vault_product_version  = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision         = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
     }
   }
 
