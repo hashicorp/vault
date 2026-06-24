@@ -12,3 +12,4 @@ consumption-billing: Added consumption billing metrics for SPIFFE JWT tokens.
 
 ```release-note:improvement
 consumption-billing: Added consumption billing metrics for GCP KMS data protection operations.
+```
