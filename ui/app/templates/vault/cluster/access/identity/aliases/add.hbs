@@ -5,4 +5,4 @@
 
 <Page::Header @title="Create {{titleize (humanize this.model.identityType)}} for {{this.model.canonicalId}}" />
 
-<Identity::EditForm @model={{this.model}} @onSave={{action "navAfterSave"}} />
+<Identity::EditForm @model={{this.model}} @mode="create" @onSave={{action "navAfterSave"}} />

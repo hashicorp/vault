@@ -15,14 +15,15 @@ import {
   SystemApiPoliciesListAclPoliciesListEnum,
   SystemApiSystemListPoliciesRgpListEnum,
 } from '@hashicorp/vault-client-typescript';
+import { performSaveOperation, extractSavedId } from 'vault/utils/identity-helpers';
 
 export default class IdentityEditFormComponent extends Component {
   @service flashMessages;
-  @service store;
   @service api;
 
   @tracked policies = [];
   @tracked policyForm;
+  @tracked errorBanner;
 
   constructor() {
     super(...arguments);
@@ -44,69 +45,103 @@ export default class IdentityEditFormComponent extends Component {
 
   get cancelLink() {
     const { model, mode } = this.args;
-    const routes = {
-      'create-entity': 'vault.cluster.access.identity',
-      'edit-entity': 'vault.cluster.access.identity.show',
-      'merge-entity-merge': 'vault.cluster.access.identity',
-      'create-entity-alias': 'vault.cluster.access.identity.aliases',
-      'edit-entity-alias': 'vault.cluster.access.identity.aliases.show',
-      'create-group': 'vault.cluster.access.identity',
-      'edit-group': 'vault.cluster.access.identity.show',
-      'create-group-alias': 'vault.cluster.access.identity.aliases',
-      'edit-group-alias': 'vault.cluster.access.identity.aliases.show',
-    };
-    const key = model ? `${mode}-${model.identityType}` : 'merge-entity-alias';
-    return routes[key];
+    const identityType = model?.identityType;
+    const isAlias = model?.form?.identityFormType === 'alias';
+
+    if (mode === 'merge') {
+      return 'vault.cluster.access.identity';
+    }
+
+    if (mode === 'create') {
+      return isAlias ? 'vault.cluster.access.identity.aliases' : 'vault.cluster.access.identity';
+    }
+
+    if (mode === 'edit') {
+      return isAlias ? 'vault.cluster.access.identity.aliases.show' : 'vault.cluster.access.identity.show';
+    }
+
+    // Fallback route in unexpected modes.
+    return identityType ? 'vault.cluster.access.identity.show' : 'vault.cluster.access.identity';
+  }
+
+  get cancelModelId() {
+    const { model } = this.args;
+    const isAlias = model?.form?.identityFormType === 'alias';
+    if (isAlias) {
+      return model?.id || model?.canonicalId;
+    }
+    return model?.itemId || model?.id;
   }
 
   getMessage(model, isDelete = false) {
-    const mode = this.mode;
+    const mode = this.args.mode;
     const typeDisplay = humanize([model.identityType]);
-    const action = isDelete ? 'deleted' : 'saved';
+
+    if (isDelete) {
+      return `Successfully deleted ${typeDisplay}.`;
+    }
     if (mode === 'merge') {
       return 'Successfully merged entities';
     }
-    if (model.id) {
-      return `Successfully ${action} ${typeDisplay} ${model.id}.`;
+    if (model.form.identityFormType === 'alias') {
+      return `Successfully saved ${typeDisplay} alias.`;
     }
-    return `Successfully ${action} ${typeDisplay}.`;
+    const id = model.itemId || model.id;
+    if (id) {
+      return `Successfully saved ${typeDisplay} ${id}.`;
+    }
+    return `Successfully saved ${typeDisplay}.`;
   }
 
   save = task(
     waitFor(async () => {
-      const { model } = this.args;
-      const message = this.getMessage(model);
+      const { model, mode, onSave } = this.args;
+      const { data } = model.form.toJSON();
 
       try {
-        await model.save();
+        const response = await performSaveOperation({
+          api: this.api,
+          model,
+          mode,
+          data,
+        });
+
+        const message = this.getMessage(model);
+        this.flashMessages.success(message);
+
+        await onSave({
+          saveType: 'save',
+          model,
+          id: extractSavedId({ mode, data, response, model }),
+        });
       } catch (err) {
-        // err will display via model state
-        return;
+        const { message } = await this.api.parseError(err);
+        this.errorBanner = message;
       }
-      this.flashMessages.success(message);
-      await this.args.onSave({ saveType: 'save', model });
     })
   );
 
-  willDestroy() {
-    // components are torn down after store is disconnected and will cause an error if attempt to unload record
-    const noTeardown = this.store && !this.store.isDestroying;
-    const model = this.model;
-    if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
-      model.rollbackAttributes();
-    }
-    super.willDestroy(...arguments);
-  }
-
   @action
-  deleteItem(model) {
+  async deleteItem(model) {
     const message = this.getMessage(model, true);
     const flash = this.flashMessages;
-    model.destroyRecord().then(() => {
-      flash.success(message);
-      return this.args.onSave({ saveType: 'delete', model });
-    });
+
+    const formType = model.form.identityFormType;
+    const identityType = model.identityType;
+
+    if (formType === 'alias') {
+      const methodType = identityType === 'group' ? 'groupDeleteAliasById' : 'entityDeleteAliasById';
+      await this.api.identity[methodType](model.id);
+    } else {
+      const methodType = identityType === 'group' ? 'groupDeleteById' : 'entityDeleteById';
+      await this.api.identity[methodType](model.itemId);
+    }
+
+    flash.success(message);
+
+    return this.args.onSave({ saveType: 'delete', model });
   }
+
   @action
   onCreatePolicy(name) {
     this.policyForm = new PolicyForm({ name, enforcement_level: 'hard-mandatory' }, { isNew: true });

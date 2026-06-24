@@ -1,0 +1,4 @@
+```release-note:improvement
+transit (enterprise): Encryption/Decryption is now supported for managed keys for all
+supported managed key backends.
+```

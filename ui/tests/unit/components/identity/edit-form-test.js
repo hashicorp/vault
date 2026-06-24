@@ -11,56 +11,65 @@ module('Unit | Component | identity/edit-form', function (hooks) {
 
   const testCases = [
     {
-      identityType: 'entity',
+      label: 'entity',
+      model: { identityType: 'entity' },
       mode: 'create',
       expected: 'vault.cluster.access.identity',
     },
     {
-      identityType: 'entity',
+      label: 'entity',
+      model: { identityType: 'entity' },
       mode: 'edit',
       expected: 'vault.cluster.access.identity.show',
     },
     {
-      identityType: 'entity-merge',
+      label: 'merge',
+      model: { form: { identityFormType: 'group' } },
       mode: 'merge',
       expected: 'vault.cluster.access.identity',
     },
     {
-      identityType: 'entity-alias',
+      label: 'entity-alias',
+      model: { identityType: 'entity', form: { identityFormType: 'alias' } },
       mode: 'create',
       expected: 'vault.cluster.access.identity.aliases',
     },
     {
-      identityType: 'entity-alias',
+      label: 'entity-alias',
+      model: { identityType: 'entity', form: { identityFormType: 'alias' } },
       mode: 'edit',
       expected: 'vault.cluster.access.identity.aliases.show',
     },
     {
-      identityType: 'group',
+      label: 'group',
+      model: { identityType: 'group' },
       mode: 'create',
       expected: 'vault.cluster.access.identity',
     },
     {
-      identityType: 'group',
+      label: 'group',
+      model: { identityType: 'group' },
       mode: 'edit',
       expected: 'vault.cluster.access.identity.show',
     },
     {
-      identityType: 'group-alias',
+      label: 'group-alias',
+      model: { identityType: 'group', form: { identityFormType: 'alias' } },
       mode: 'create',
       expected: 'vault.cluster.access.identity.aliases',
     },
     {
-      identityType: 'group-alias',
+      label: 'group-alias',
+      model: { identityType: 'group', form: { identityFormType: 'alias' } },
       mode: 'edit',
       expected: 'vault.cluster.access.identity.aliases.show',
     },
   ];
   testCases.forEach(function (testCase) {
-    test(`it computes cancelLink properly: ${testCase.identityType} ${testCase.mode}`, function (assert) {
-      const { identityType, mode } = testCase;
+    test(`it computes cancelLink properly: ${testCase.label} ${testCase.mode}`, function (assert) {
+      const { mode, model } = testCase;
       const named = {
-        model: { identityType },
+        model,
         mode,
       };
       const componentManager = this.owner.lookup('component-manager:glimmer');

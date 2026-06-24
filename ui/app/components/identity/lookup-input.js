@@ -10,13 +10,11 @@ import { underscore } from 'vault/helpers/underscore';
 import AuthMethodResource from 'vault/resources/auth/method';
 
 export default Component.extend({
-  store: service(),
   flashMessages: service(),
   router: service(),
   api: service(),
 
   // Public API - either 'entity' or 'group'
-  // this will determine which adapter is used to make the lookup call
   type: 'entity',
 
   param: 'alias name',
@@ -36,12 +34,6 @@ export default Component.extend({
     });
   },
 
-  adapter() {
-    const type = this.type;
-    const store = this.store;
-    return store.adapterFor(`identity/${type}`);
-  },
-
   data() {
     const { param, paramValue, aliasMountAccessor } = this;
     const data = {};
@@ -56,19 +48,22 @@ export default Component.extend({
   lookup: task(function* () {
     const flash = this.flashMessages;
     const type = this.type;
-    const store = this.store;
     const { param, paramValue } = this;
     let response;
     try {
-      response = yield this.adapter().lookup(store, this.data());
+      if (type === 'entity') {
+        response = yield this.api.identity.entityLookUp(this.data());
+      } else {
+        response = yield this.api.identity.groupLookUp(this.data());
+      }
     } catch (err) {
       flash.danger(
         `We encountered an error attempting the ${type} lookup: ${err.message || err.errors.join('')}.`
       );
       return;
     }
-    if (response) {
-      return this.router.transitionTo('vault.cluster.access.identity.show', response.id, 'details');
+    if (response?.data?.id) {
+      return this.router.transitionTo('vault.cluster.access.identity.show', response.data.id, 'details');
     } else {
       flash.danger(`We were unable to find an identity ${type} with a "${param}" of "${paramValue}".`);
     }

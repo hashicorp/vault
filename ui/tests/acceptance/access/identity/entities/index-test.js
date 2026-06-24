@@ -97,6 +97,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
 
     await visit('/vault/access/identity/groups');
     await click(`${SELECTORS.listItem(groupName)} ${GENERAL.menuTrigger}`);
+
     assert
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for external groups with an alias');
@@ -146,7 +147,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     }));
     server.get('/identity/entity/id/test', () => ({ data: { name: 'foo' } }));
 
-    server.put('/identity/entity/id/test', () => new Response(200, {}, {}));
+    server.post('/identity/entity/id/test', () => new Response(200, {}, {}));
 
     const flashSpy = sinon.spy(this.owner.lookup('service:flashMessages'), 'success');
 
@@ -154,7 +155,6 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuTrigger}`);
     await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuItem('edit')}`);
     await click(GENERAL.submitButton);
-
     const message = `Successfully saved Entity test.`;
     assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
   });
@@ -169,7 +169,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     server.get('/identity/entity/id/test', () => ({ data: { name: 'foo' } }));
 
     const error = 'The entity could not be edited';
-    server.put('/identity/entity/id/test', () => new Response(500, {}, { errors: [error] }));
+    server.post('/identity/entity/id/test', () => new Response(500, {}, { errors: [error] }));
 
     await page.visit({ item_type: 'entities' });
     await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuTrigger}`);

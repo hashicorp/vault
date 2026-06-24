@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -183,6 +184,7 @@ type EncryptionOptions struct {
 	Context    []byte
 	Nonce      []byte
 	IV         []byte
+	Raw        bool // requests encryption with the algorithm primitive alone (e.g. no envelope)
 }
 
 type SigningResult struct {
@@ -1200,7 +1202,8 @@ func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, opts.Nonce, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, wrappingOpts...)
 		if err != nil {
 			return "", err
 		}
@@ -2313,7 +2316,8 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, opts.Nonce, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, wrappingOpts...)
 		if err != nil {
 			return "", err
 		}
@@ -2332,6 +2336,17 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 	encoded = p.getVersionPrefix(opts.KeyVersion) + encoded
 
 	return encoded, nil
+}
+
+func buildManagedKeyOpts(opts EncryptionOptions, aad []byte) []wrapping.Option {
+	wrappingOpts := []wrapping.Option{wrapping.WithoutEnvelope(true)}
+	if len(opts.IV) > 0 {
+		wrappingOpts = append(wrappingOpts, wrapping.WithIV(opts.IV))
+	}
+	if len(aad) > 0 {
+		wrappingOpts = append(wrappingOpts, wrapping.WithAad(aad))
+	}
+	return wrappingOpts
 }
 
 func (p *Policy) getSymmetricKeys(opts EncryptionOptions) ([]byte, []byte, error) {

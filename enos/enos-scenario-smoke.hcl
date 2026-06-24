@@ -45,7 +45,7 @@ scenario "smoke" {
     config_mode     = global.config_modes
     consul_edition  = global.consul_editions
     consul_version  = global.consul_versions
-    distro          = global.distros
+    distro          = global.distros_aws
     edition         = global.editions
     ip_version      = global.ip_versions
     seal            = global.seals
@@ -524,7 +524,7 @@ scenario "smoke" {
       leader_host           = step.get_vault_cluster_ips.leader_host
       leader_public_ip      = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token      = step.create_vault_cluster.root_token
-      test_package          = "./vault/external_tests/blackbox/verify"
+      test_package          = "./vault/external_tests/blackbox/isolated/verify"
       test_names            = ["TestVaultServerVersion"]
       vault_edition         = matrix.edition
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
@@ -644,6 +644,34 @@ scenario "smoke" {
     }
   }
 
+  step "verify_aws_secrets_engine_create" {
+    description = "Create and configure AWS secrets engine"
+    skip_step   = !var.verify_aws_secrets_engine
+    module      = module.vault_verify_aws_secrets_engine_create
+    depends_on = [
+      step.get_vault_cluster_ips,
+      step.vault_remove_node_and_verify,
+      step.run_verify_blackbox_tests
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_secrets_aws_config_root_write,
+      quality.vault_secrets_aws_role_write,
+    ]
+
+    variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_replication" {
     description = global.description.verify_replication_status
     module      = module.vault_run_blackbox_test
@@ -663,8 +691,8 @@ scenario "smoke" {
       leader_host       = step.get_vault_cluster_ips.leader_host
       leader_public_ip  = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token  = step.create_vault_cluster.root_token
-      test_package      = "./vault/external_tests/blackbox/verify"
-      test_names        = ["TestReplicationAvailability"]
+      test_package      = "./vault/external_tests/blackbox/isolated/verify"
+      test_names        = ["TestReplicationStatus"]
       vault_edition     = matrix.edition
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       ip_version        = matrix.ip_version
@@ -701,6 +729,33 @@ scenario "smoke" {
       vault_install_dir    = global.vault_install_dir[matrix.artifact_type]
       vault_root_token     = step.create_vault_cluster.root_token
       vault_audit_log_path = step.create_vault_cluster.audit_device_file_path
+    }
+  }
+
+  step "verify_aws_secrets_engine_read" {
+    description = "Verify AWS secrets engine credential generation"
+    skip_step   = !var.verify_aws_secrets_engine
+    module      = module.vault_verify_aws_secrets_engine_read
+    depends_on = [
+      step.verify_aws_secrets_engine_create,
+      step.verify_replication,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_secrets_aws_creds_read,
+    ]
+
+    variables {
+      create_state            = step.verify_aws_secrets_engine_create.state
+      hosts                   = step.get_vault_cluster_ips.follower_hosts
+      vault_addr              = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token        = step.create_vault_cluster.root_token
+      verify_aws_engine_creds = true
     }
   }
 
@@ -758,6 +813,29 @@ scenario "smoke" {
     }
   }
 
+  step "verify_aws_secrets_engine_delete" {
+    description = "Clean up AWS secrets engine resources"
+    skip_step   = !var.verify_aws_secrets_engine
+    module      = module.vault_verify_aws_secrets_engine_delete
+    depends_on = [
+      step.verify_aws_secrets_engine_create,
+      step.verify_aws_secrets_engine_read,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      create_state      = step.verify_aws_secrets_engine_create.state
+      hosts             = step.get_vault_cluster_ips.follower_hosts
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_run_blackbox_test
@@ -774,8 +852,8 @@ scenario "smoke" {
       leader_host      = step.get_vault_cluster_ips.leader_host
       leader_public_ip = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token = step.create_vault_cluster.root_token
-      test_package     = "./vault/external_tests/blackbox/verify"
-      test_names       = ["TestVaultUIAvailability"]
+      test_package     = "./vault/external_tests/blackbox/isolated/verify"
+      test_names       = ["TestUIAssets"]
       vault_edition    = matrix.edition
     }
   }
