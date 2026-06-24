@@ -257,8 +257,6 @@ require (
 )
 
 require (
-	code.dny.dev/ssrf v0.2.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.1.0 // indirect
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	// We're currently pulling v0.23.0 + a 32 bit fix: https://github.com/apache/thrift/commit/d2acd3c49e5832cb0179f72b111c4ad5bd89c4c5
 	// until a new version is release.
