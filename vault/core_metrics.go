@@ -875,6 +875,20 @@ type ManagedKeyCounts struct {
 	TransitKeys int `json:"transit_keys"`
 }
 
+// SecretEngineResourceCounts holds counts of secret engine resources for product
+// usage telemetry. "Resource" is a catch-all for countable items that aren't keys
+// or roles (tracked by ManagedKeyCounts and RoleCounts), e.g. Transform
+// transformations/templates/alphabets/stores and KMIP scopes/scope roles/CAs.
+type SecretEngineResourceCounts struct {
+	TransformTransformations int `json:"transform_transformations"`
+	TransformTemplates       int `json:"transform_templates"`
+	TransformAlphabets       int `json:"transform_alphabets"`
+	TransformStores          int `json:"transform_stores"`
+	KmipScopes               int `json:"kmip_scopes"`
+	KmipScopeRoles           int `json:"kmip_scope_roles"`
+	KmipCas                  int `json:"kmip_cas"`
+}
+
 // GetRoleCountsForCluster returns the total role counts across all mounts for a primary or secondary cluster
 // For use in tests only
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
@@ -898,6 +912,19 @@ func (c *Core) GetManagedKeyCountsForCluster() *ManagedKeyCounts {
 		return combineManagedKeyCounts(m.LocalManagedKeys, m.ReplicatedManagedKeys)
 	}
 	return m.LocalManagedKeys
+}
+
+// GetSecretEngineResourceCountsForCluster returns the total secret engine resource counts across all mounts for a primary or secondary cluster.
+// On performance secondaries, only local mounts are counted.
+func (c *Core) GetSecretEngineResourceCountsForCluster() *SecretEngineResourceCounts {
+	m, err := c.CountMetricsFromMounts(false)
+	if err != nil {
+		return nil
+	}
+	if c.isPrimary() {
+		return combineSecretEngineResourceCounts(m.LocalSecretEngineResourceCounts, m.ReplicatedSecretEngineResourceCounts)
+	}
+	return m.LocalSecretEngineResourceCounts
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts.

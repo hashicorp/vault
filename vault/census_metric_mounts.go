@@ -22,12 +22,16 @@ type MountMetrics struct {
 	ReplicatedRoleCounts *RoleCounts
 	// ReplicatedManagedKeys contains managed key counts from replicated mounts
 	ReplicatedManagedKeys *ManagedKeyCounts
+	// ReplicatedSecretEngineResourceCounts contains secret engine resource counts from replicated mounts
+	ReplicatedSecretEngineResourceCounts *SecretEngineResourceCounts
 	// ReplicatedKvMounts contains KV counts from replicated mounts
 	ReplicatedKvCounts int
 	// LocalRoleCounts contains role counts from local mounts
 	LocalRoleCounts *RoleCounts
 	// LocalManagedKeys contains managed key counts from local mounts
 	LocalManagedKeys *ManagedKeyCounts
+	// LocalSecretEngineResourceCounts contains secret engine resource counts from local mounts
+	LocalSecretEngineResourceCounts *SecretEngineResourceCounts
 	// LocalKvMounts contains KV counts from local mounts
 	LocalKvCounts int
 }
@@ -43,12 +47,14 @@ func (c *Core) CountMetricsFromMounts(officialOnly bool) (*MountMetrics, error) 
 	defer c.mountsLock.RUnlock()
 
 	metrics := &MountMetrics{
-		ReplicatedRoleCounts:  &RoleCounts{},
-		ReplicatedManagedKeys: &ManagedKeyCounts{},
-		ReplicatedKvCounts:    0,
-		LocalRoleCounts:       &RoleCounts{},
-		LocalManagedKeys:      &ManagedKeyCounts{},
-		LocalKvCounts:         0,
+		ReplicatedRoleCounts:                 &RoleCounts{},
+		ReplicatedManagedKeys:                &ManagedKeyCounts{},
+		ReplicatedSecretEngineResourceCounts: &SecretEngineResourceCounts{},
+		ReplicatedKvCounts:                   0,
+		LocalRoleCounts:                      &RoleCounts{},
+		LocalManagedKeys:                     &ManagedKeyCounts{},
+		LocalSecretEngineResourceCounts:      &SecretEngineResourceCounts{},
+		LocalKvCounts:                        0,
 	}
 
 	if c.mounts == nil {
@@ -66,19 +72,22 @@ func (c *Core) CountMetricsFromMounts(officialOnly bool) (*MountMetrics, error) 
 		// Determine which metrics buckets to update based on mount locality
 		var targetRoleCounts *RoleCounts
 		var targetManagedKeys *ManagedKeyCounts
+		var targetSecretEngineResourceCounts *SecretEngineResourceCounts
 		targetKvLocal := false
 
 		if entry.Local {
 			targetRoleCounts = metrics.LocalRoleCounts
 			targetManagedKeys = metrics.LocalManagedKeys
+			targetSecretEngineResourceCounts = metrics.LocalSecretEngineResourceCounts
 			targetKvLocal = true
 		} else {
 			targetRoleCounts = metrics.ReplicatedRoleCounts
 			targetManagedKeys = metrics.ReplicatedManagedKeys
+			targetSecretEngineResourceCounts = metrics.ReplicatedSecretEngineResourceCounts
 		}
 
 		// Collect role counts and managed key counts based on plugin type
-		c.collectMountMetrics(ctx, entry, targetRoleCounts, targetManagedKeys)
+		c.collectMountMetrics(ctx, entry, targetRoleCounts, targetManagedKeys, targetSecretEngineResourceCounts)
 
 		// If this is a KV mount, gather its secret count and add to the total
 		if kvMount := getKVMountMetadata(entry); kvMount != nil {
@@ -94,9 +103,9 @@ func (c *Core) CountMetricsFromMounts(officialOnly bool) (*MountMetrics, error) 
 	return metrics, nil
 }
 
-// collectMountMetrics collects role counts and managed key counts
+// collectMountMetrics collects role counts, managed key counts, and secret engine resource counts
 // for a specific mount entry based on its plugin type. It updates the provided target metrics in place.
-func (c *Core) collectMountMetrics(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts) {
+func (c *Core) collectMountMetrics(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts, targetSecretEngineResourceCounts *SecretEngineResourceCounts) {
 	apiList := func(entry *MountEntry, apiPath string) []string {
 		listRequest := &logical.Request{
 			Operation: logical.ListOperation,
@@ -216,6 +225,38 @@ func (c *Core) collectMountMetrics(ctx context.Context, entry *MountEntry, targe
 	case pluginconsts.SecretEngineTransform:
 		transformRoles := apiList(entry, "role")
 		targetRoleCounts.TransformRoles += len(transformRoles)
+
+		// Collect Transform secret engine resource counts
+		transformations := apiList(entry, "transformation")
+		targetSecretEngineResourceCounts.TransformTransformations += len(transformations)
+
+		templates := apiList(entry, "template")
+		targetSecretEngineResourceCounts.TransformTemplates += len(templates)
+
+		alphabets := apiList(entry, "alphabet")
+		targetSecretEngineResourceCounts.TransformAlphabets += len(alphabets)
+
+		stores := apiList(entry, "stores")
+		targetSecretEngineResourceCounts.TransformStores += len(stores)
+
+	case pluginconsts.SecretEngineKMIP:
+		// Collect KMIP secret engine resource counts
+		scopes := apiList(entry, "scope")
+		targetSecretEngineResourceCounts.KmipScopes += len(scopes)
+
+		// Count roles across all scopes
+		for _, scope := range scopes {
+			if scope == "" {
+				continue
+			}
+			scopeName := strings.TrimSuffix(scope, "/")
+			roles := apiList(entry, "scope/"+scopeName+"/role")
+			targetSecretEngineResourceCounts.KmipScopeRoles += len(roles)
+		}
+
+		// Count CAs
+		cas := apiList(entry, "ca")
+		targetSecretEngineResourceCounts.KmipCas += len(cas)
 
 	case pluginconsts.SecretEngineKeymgmt:
 		keyCountPerEntry := apiList(entry, "key")
