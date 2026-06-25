@@ -339,3 +339,40 @@ message PersonaIndexEntry {
   google.protobuf.Timestamp last_update_time = 9;
   repeated string merged_from_entity_ids = 10;
 }
+
+message TPM {
+  // id is the unique identifier for the TPM record.  It is
+  // automatically computed as the sha256 of tpm_ek_public_key.
+  // @inject_tag: sentinel:"-"
+  string id = 1;
+
+  // Name is a unique identifier of the TPM which is intended to
+  // be human-friendly. The default name might not be human friendly
+  // since it gets suffixed by a random value, but it can optionally
+  // be updated, unlike the ID field.
+  // @inject_tag: sentinel:"-"
+  string name = 2;
+
+  // namespace_id is the identifier of the namespace to which this
+  // TPM record belongs
+  // @inject_tag: sentinel:"-"
+  string namespace_id = 3;
+
+  // metadata represents the custom data tied to this TPM record
+  // @inject_tag: sentinel:"-"
+  map<string, string> metadata = 4;
+
+  // tpm_ek_public_key stores the PEM-encoded TPM Endorsement Key
+  // public key
+  // @inject_tag: sentinel:"-"
+  string tpm_ek_public_key = 5;
+
+  // a disabled TPM cannot generate certs or login
+  // @inject_tag: sentinel:"-"
+  bool disabled = 6;
+
+  // BucketKey is the path of the storage packer key into which this
+  // tpm is stored.
+  // @inject_tag: sentinel:"-"
+  string bucket_key = 7;
+}

@@ -112,6 +112,10 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 
 		i.startSCIMDeletingClientCleanup(ctx, isActive)
 
+		if err := i.loadTPMs(ctx); err != nil {
+			return fmt.Errorf("failed to load TPMs: %w", err)
+		}
+
 		return nil
 	}
 

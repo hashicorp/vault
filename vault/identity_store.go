@@ -34,6 +34,7 @@ import (
 const (
 	groupBucketsPrefix        = "packer/group/buckets/"
 	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
+	tpmBucketsPrefix          = "packer/tpm/buckets/"
 )
 
 var (
@@ -119,6 +120,13 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
+	tpmsPackerLogger := iStore.logger.Named("storagepacker").Named("tpms")
+	core.AddLogger(tpmsPackerLogger)
+	iStore.tpmPacker, err = storagepacker.NewStoragePacker(iStore.view, tpmsPackerLogger, tpmBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tpm packer: %w", err)
+	}
+
 	unauthenticatedPaths := []string{
 		"oidc/.well-known/*",
 		"oidc/+/.well-known/*",
@@ -183,6 +191,7 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaLoginEnforcementPaths(i),
 		mfaLoginEnterprisePaths(i),
 		scimPaths(i),
+		tpmPaths(i),
 	)
 }
 
@@ -707,6 +716,8 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		i.invalidateLocalAliasesBucket(ctx, key)
 	case strings.HasPrefix(key, scimClientStoragePrefix):
 		i.invalidateSCIMClient(ctx, key)
+	case strings.HasPrefix(key, tpmBucketsPrefix):
+		i.invalidateTPMBucket(ctx, key)
 	}
 }
 
