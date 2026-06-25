@@ -181,6 +181,11 @@ func (d dynamicSystemView) MlockEnabled() bool {
 	return d.core.enableMlock
 }
 
+// DenySlashInTemplatedPaths returns the configuration setting for denying slashes in templated policy paths.
+func (d dynamicSystemView) DenySlashInTemplatedPaths() bool {
+	return d.core.denySlashInTemplatedPolicyPaths
+}
+
 func (d dynamicSystemView) EntityInfo(entityID string) (*logical.Entity, error) {
 	// Requests from token created from the token backend will not have entity information.
 	// Return missing entity instead of error when requesting from MemDB.

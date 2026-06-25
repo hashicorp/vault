@@ -1044,6 +1044,119 @@ func (x *PersonaIndexEntry) GetMergedFromEntityIDs() []string {
 	return nil
 }
 
+type TPM struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the unique identifier for the TPM record.  It is
+	// automatically computed as the sha256 of tpm_ek_public_key.
+	// @inject_tag: sentinel:"-"
+	ID string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty" sentinel:"-"`
+	// Name is a unique identifier of the TPM which is intended to
+	// be human-friendly. The default name might not be human friendly
+	// since it gets suffixed by a random value, but it can optionally
+	// be updated, unlike the ID field.
+	// @inject_tag: sentinel:"-"
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty" sentinel:"-"`
+	// namespace_id is the identifier of the namespace to which this
+	// TPM record belongs
+	// @inject_tag: sentinel:"-"
+	NamespaceID string `protobuf:"bytes,3,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty" sentinel:"-"`
+	// metadata represents the custom data tied to this TPM record
+	// @inject_tag: sentinel:"-"
+	Metadata map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value" sentinel:"-"`
+	// tpm_ek_public_key stores the PEM-encoded TPM Endorsement Key
+	// public key
+	// @inject_tag: sentinel:"-"
+	TpmEkPublicKey string `protobuf:"bytes,5,opt,name=tpm_ek_public_key,json=tpmEkPublicKey,proto3" json:"tpm_ek_public_key,omitempty" sentinel:"-"`
+	// a disabled TPM cannot generate certs or login
+	// @inject_tag: sentinel:"-"
+	Disabled bool `protobuf:"varint,6,opt,name=disabled,proto3" json:"disabled,omitempty" sentinel:"-"`
+	// BucketKey is the path of the storage packer key into which this
+	// tpm is stored.
+	// @inject_tag: sentinel:"-"
+	BucketKey     string `protobuf:"bytes,7,opt,name=bucket_key,json=bucketKey,proto3" json:"bucket_key,omitempty" sentinel:"-"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TPM) Reset() {
+	*x = TPM{}
+	mi := &file_helper_identity_types_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TPM) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TPM) ProtoMessage() {}
+
+func (x *TPM) ProtoReflect() protoreflect.Message {
+	mi := &file_helper_identity_types_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TPM.ProtoReflect.Descriptor instead.
+func (*TPM) Descriptor() ([]byte, []int) {
+	return file_helper_identity_types_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *TPM) GetID() string {
+	if x != nil {
+		return x.ID
+	}
+	return ""
+}
+
+func (x *TPM) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TPM) GetNamespaceID() string {
+	if x != nil {
+		return x.NamespaceID
+	}
+	return ""
+}
+
+func (x *TPM) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+func (x *TPM) GetTpmEkPublicKey() string {
+	if x != nil {
+		return x.TpmEkPublicKey
+	}
+	return ""
+}
+
+func (x *TPM) GetDisabled() bool {
+	if x != nil {
+		return x.Disabled
+	}
+	return false
+}
+
+func (x *TPM) GetBucketKey() string {
+	if x != nil {
+		return x.BucketKey
+	}
+	return ""
+}
+
 var File_helper_identity_types_proto protoreflect.FileDescriptor
 
 var file_helper_identity_types_proto_rawDesc = string([]byte{
@@ -1280,11 +1393,29 @@ var file_helper_identity_types_proto_rawDesc = string([]byte{
 	0x1a, 0x3b, 0x0a, 0x0d, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x45, 0x6e, 0x74, 0x72,
 	0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03,
 	0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x42, 0x2c, 0x5a,
-	0x2a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x61, 0x73, 0x68,
-	0x69, 0x63, 0x6f, 0x72, 0x70, 0x2f, 0x76, 0x61, 0x75, 0x6c, 0x74, 0x2f, 0x68, 0x65, 0x6c, 0x70,
-	0x65, 0x72, 0x2f, 0x69, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x62, 0x06, 0x70, 0x72, 0x6f,
-	0x74, 0x6f, 0x33,
+	0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0xa8, 0x02,
+	0x0a, 0x03, 0x54, 0x50, 0x4d, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28,
+	0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x21, 0x0a, 0x0c, 0x6e, 0x61, 0x6d,
+	0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x5f, 0x69, 0x64, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52,
+	0x0b, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x49, 0x64, 0x12, 0x37, 0x0a, 0x08,
+	0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x18, 0x04, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1b,
+	0x2e, 0x69, 0x64, 0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x2e, 0x54, 0x50, 0x4d, 0x2e, 0x4d, 0x65,
+	0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x08, 0x6d, 0x65, 0x74,
+	0x61, 0x64, 0x61, 0x74, 0x61, 0x12, 0x29, 0x0a, 0x11, 0x74, 0x70, 0x6d, 0x5f, 0x65, 0x6b, 0x5f,
+	0x70, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x0e, 0x74, 0x70, 0x6d, 0x45, 0x6b, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x63, 0x4b, 0x65, 0x79,
+	0x12, 0x1a, 0x0a, 0x08, 0x64, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x18, 0x06, 0x20, 0x01,
+	0x28, 0x08, 0x52, 0x08, 0x64, 0x69, 0x73, 0x61, 0x62, 0x6c, 0x65, 0x64, 0x12, 0x1d, 0x0a, 0x0a,
+	0x62, 0x75, 0x63, 0x6b, 0x65, 0x74, 0x5f, 0x6b, 0x65, 0x79, 0x18, 0x07, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x09, 0x62, 0x75, 0x63, 0x6b, 0x65, 0x74, 0x4b, 0x65, 0x79, 0x1a, 0x3b, 0x0a, 0x0d, 0x4d,
+	0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03,
+	0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14,
+	0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76,
+	0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x42, 0x2c, 0x5a, 0x2a, 0x67, 0x69, 0x74, 0x68,
+	0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x68, 0x61, 0x73, 0x68, 0x69, 0x63, 0x6f, 0x72, 0x70,
+	0x2f, 0x76, 0x61, 0x75, 0x6c, 0x74, 0x2f, 0x68, 0x65, 0x6c, 0x70, 0x65, 0x72, 0x2f, 0x69, 0x64,
+	0x65, 0x6e, 0x74, 0x69, 0x74, 0x79, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (
@@ -1299,7 +1430,7 @@ func file_helper_identity_types_proto_rawDescGZIP() []byte {
 	return file_helper_identity_types_proto_rawDescData
 }
 
-var file_helper_identity_types_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
+var file_helper_identity_types_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_helper_identity_types_proto_goTypes = []any{
 	(*Group)(nil),                 // 0: identity.Group
 	(*LocalAliases)(nil),          // 1: identity.LocalAliases
@@ -1308,47 +1439,50 @@ var file_helper_identity_types_proto_goTypes = []any{
 	(*ScimClient)(nil),            // 4: identity.ScimClient
 	(*EntityStorageEntry)(nil),    // 5: identity.EntityStorageEntry
 	(*PersonaIndexEntry)(nil),     // 6: identity.PersonaIndexEntry
-	nil,                           // 7: identity.Group.MetadataEntry
-	nil,                           // 8: identity.Entity.MetadataEntry
-	nil,                           // 9: identity.Entity.MFASecretsEntry
-	nil,                           // 10: identity.Alias.MetadataEntry
-	nil,                           // 11: identity.Alias.CustomMetadataEntry
-	nil,                           // 12: identity.EntityStorageEntry.MetadataEntry
-	nil,                           // 13: identity.EntityStorageEntry.MFASecretsEntry
-	nil,                           // 14: identity.PersonaIndexEntry.MetadataEntry
-	(*timestamppb.Timestamp)(nil), // 15: google.protobuf.Timestamp
-	(*mfa.Secret)(nil),            // 16: mfa.Secret
+	(*TPM)(nil),                   // 7: identity.TPM
+	nil,                           // 8: identity.Group.MetadataEntry
+	nil,                           // 9: identity.Entity.MetadataEntry
+	nil,                           // 10: identity.Entity.MFASecretsEntry
+	nil,                           // 11: identity.Alias.MetadataEntry
+	nil,                           // 12: identity.Alias.CustomMetadataEntry
+	nil,                           // 13: identity.EntityStorageEntry.MetadataEntry
+	nil,                           // 14: identity.EntityStorageEntry.MFASecretsEntry
+	nil,                           // 15: identity.PersonaIndexEntry.MetadataEntry
+	nil,                           // 16: identity.TPM.MetadataEntry
+	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
+	(*mfa.Secret)(nil),            // 18: mfa.Secret
 }
 var file_helper_identity_types_proto_depIDxs = []int32{
-	7,  // 0: identity.Group.metadata:type_name -> identity.Group.MetadataEntry
-	15, // 1: identity.Group.creation_time:type_name -> google.protobuf.Timestamp
-	15, // 2: identity.Group.last_update_time:type_name -> google.protobuf.Timestamp
+	8,  // 0: identity.Group.metadata:type_name -> identity.Group.MetadataEntry
+	17, // 1: identity.Group.creation_time:type_name -> google.protobuf.Timestamp
+	17, // 2: identity.Group.last_update_time:type_name -> google.protobuf.Timestamp
 	3,  // 3: identity.Group.alias:type_name -> identity.Alias
 	3,  // 4: identity.LocalAliases.aliases:type_name -> identity.Alias
 	3,  // 5: identity.Entity.aliases:type_name -> identity.Alias
-	8,  // 6: identity.Entity.metadata:type_name -> identity.Entity.MetadataEntry
-	15, // 7: identity.Entity.creation_time:type_name -> google.protobuf.Timestamp
-	15, // 8: identity.Entity.last_update_time:type_name -> google.protobuf.Timestamp
-	9,  // 9: identity.Entity.mfa_secrets:type_name -> identity.Entity.MFASecretsEntry
-	10, // 10: identity.Alias.metadata:type_name -> identity.Alias.MetadataEntry
-	15, // 11: identity.Alias.creation_time:type_name -> google.protobuf.Timestamp
-	15, // 12: identity.Alias.last_update_time:type_name -> google.protobuf.Timestamp
-	11, // 13: identity.Alias.custom_metadata:type_name -> identity.Alias.CustomMetadataEntry
+	9,  // 6: identity.Entity.metadata:type_name -> identity.Entity.MetadataEntry
+	17, // 7: identity.Entity.creation_time:type_name -> google.protobuf.Timestamp
+	17, // 8: identity.Entity.last_update_time:type_name -> google.protobuf.Timestamp
+	10, // 9: identity.Entity.mfa_secrets:type_name -> identity.Entity.MFASecretsEntry
+	11, // 10: identity.Alias.metadata:type_name -> identity.Alias.MetadataEntry
+	17, // 11: identity.Alias.creation_time:type_name -> google.protobuf.Timestamp
+	17, // 12: identity.Alias.last_update_time:type_name -> google.protobuf.Timestamp
+	12, // 13: identity.Alias.custom_metadata:type_name -> identity.Alias.CustomMetadataEntry
 	6,  // 14: identity.EntityStorageEntry.personas:type_name -> identity.PersonaIndexEntry
-	12, // 15: identity.EntityStorageEntry.metadata:type_name -> identity.EntityStorageEntry.MetadataEntry
-	15, // 16: identity.EntityStorageEntry.creation_time:type_name -> google.protobuf.Timestamp
-	15, // 17: identity.EntityStorageEntry.last_update_time:type_name -> google.protobuf.Timestamp
-	13, // 18: identity.EntityStorageEntry.mfa_secrets:type_name -> identity.EntityStorageEntry.MFASecretsEntry
-	14, // 19: identity.PersonaIndexEntry.metadata:type_name -> identity.PersonaIndexEntry.MetadataEntry
-	15, // 20: identity.PersonaIndexEntry.creation_time:type_name -> google.protobuf.Timestamp
-	15, // 21: identity.PersonaIndexEntry.last_update_time:type_name -> google.protobuf.Timestamp
-	16, // 22: identity.Entity.MFASecretsEntry.value:type_name -> mfa.Secret
-	16, // 23: identity.EntityStorageEntry.MFASecretsEntry.value:type_name -> mfa.Secret
-	24, // [24:24] is the sub-list for method output_type
-	24, // [24:24] is the sub-list for method input_type
-	24, // [24:24] is the sub-list for extension type_name
-	24, // [24:24] is the sub-list for extension extendee
-	0,  // [0:24] is the sub-list for field type_name
+	13, // 15: identity.EntityStorageEntry.metadata:type_name -> identity.EntityStorageEntry.MetadataEntry
+	17, // 16: identity.EntityStorageEntry.creation_time:type_name -> google.protobuf.Timestamp
+	17, // 17: identity.EntityStorageEntry.last_update_time:type_name -> google.protobuf.Timestamp
+	14, // 18: identity.EntityStorageEntry.mfa_secrets:type_name -> identity.EntityStorageEntry.MFASecretsEntry
+	15, // 19: identity.PersonaIndexEntry.metadata:type_name -> identity.PersonaIndexEntry.MetadataEntry
+	17, // 20: identity.PersonaIndexEntry.creation_time:type_name -> google.protobuf.Timestamp
+	17, // 21: identity.PersonaIndexEntry.last_update_time:type_name -> google.protobuf.Timestamp
+	16, // 22: identity.TPM.metadata:type_name -> identity.TPM.MetadataEntry
+	18, // 23: identity.Entity.MFASecretsEntry.value:type_name -> mfa.Secret
+	18, // 24: identity.EntityStorageEntry.MFASecretsEntry.value:type_name -> mfa.Secret
+	25, // [25:25] is the sub-list for method output_type
+	25, // [25:25] is the sub-list for method input_type
+	25, // [25:25] is the sub-list for extension type_name
+	25, // [25:25] is the sub-list for extension extendee
+	0,  // [0:25] is the sub-list for field type_name
 }
 
 func init() { file_helper_identity_types_proto_init() }
@@ -1362,7 +1496,7 @@ func file_helper_identity_types_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_helper_identity_types_proto_rawDesc), len(file_helper_identity_types_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   15,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

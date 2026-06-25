@@ -124,7 +124,7 @@ func testPolicyStoreCRUD(t *testing.T, ps *PolicyStore, ns *namespace.Namespace)
 
 	// Set should work
 	ctx = namespace.ContextWithNamespace(context.Background(), ns)
-	policy, _ := ParseACLPolicy(ns, aclPolicy)
+	policy, _ := ParseACLPolicy(ns, aclPolicy, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 	err = ps.SetPolicy(ctx, policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -223,7 +223,7 @@ func testPolicyStorePredefined(t *testing.T, ps *PolicyStore, ns *namespace.Name
 	}
 
 	ctx = namespace.ContextWithNamespace(context.Background(), ns)
-	updatedDefaultCeiling, err := ParseACLPolicy(ns, aclPolicy)
+	updatedDefaultCeiling, err := ParseACLPolicy(ns, aclPolicy, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -306,13 +306,13 @@ func TestPolicyStore_ACL(t *testing.T) {
 
 func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) {
 	ctx := namespace.ContextWithNamespace(context.Background(), ns)
-	policy, _ := ParseACLPolicy(ns, aclPolicy)
+	policy, _ := ParseACLPolicy(ns, aclPolicy, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 	err := ps.SetPolicy(ctx, policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 	ctx = namespace.ContextWithNamespace(context.Background(), ns)
-	policy, _ = ParseACLPolicy(ns, aclPolicy2)
+	policy, _ = ParseACLPolicy(ns, aclPolicy2, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 	err = ps.SetPolicy(ctx, policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -374,7 +374,7 @@ func TestPolicyStore_PoliciesByNamespaces(t *testing.T) {
 	ctxRoot := namespace.RootContext(context.Background())
 	rootNs := namespace.RootNamespace
 
-	parsedPolicy, _ := ParseACLPolicy(rootNs, aclPolicy)
+	parsedPolicy, _ := ParseACLPolicy(rootNs, aclPolicy, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 
 	err := ps.SetPolicy(ctxRoot, parsedPolicy)
 	if err != nil {
@@ -506,7 +506,7 @@ path "foo" {
 }
 `
 	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-	policy, err := ParseACLPolicy(namespace.RootNamespace, dupAttrPolicy)
+	policy, err := ParseACLPolicy(namespace.RootNamespace, dupAttrPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	require.NoError(t, err)
 	// check that "list" and "read" get concatenated
 	require.Len(t, policy.Paths[len(policy.Paths)-1].Capabilities, 2)
@@ -597,7 +597,7 @@ path "foo" {
 
 			// First policy
 			policy := aclPolicy + tc.policyFragment
-			parsedPolicy, err := ParseACLPolicy(namespace.RootNamespace, policy)
+			parsedPolicy, err := ParseACLPolicy(namespace.RootNamespace, policy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 			require.NoError(t, err)
 
 			ctx := namespace.RootContext(context.Background())

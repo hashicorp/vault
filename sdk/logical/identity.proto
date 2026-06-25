@@ -102,3 +102,29 @@ message MFARequirement {
   string mfa_request_id = 1;
   map<string, MFAConstraintAny> mfa_constraints = 2;
 }
+
+message TPM {
+  // ID is the unique identifier for the TPM record.  It is
+  // automatically computed as the sha256 of tpm_ek_public_key.
+  string ID = 1;
+
+  // Name is a unique identifier of the TPM which is intended to
+  // be human-friendly. The default name might not be human friendly
+  // since it gets suffixed by a random value, but it can optionally
+  // be updated, unlike the ID field.
+  string name = 2;
+
+  // namespace_id is the identifier of the namespace to which this
+  // TPM record belongs
+  string namespace_id = 3;
+
+  // metadata represents the custom data tied to this TPM record
+  map<string, string> metadata = 4;
+
+  // tpm_ek_public_key stores the PEM-encoded TPM Endorsement Key
+  // public key
+  string tpm_ek_public_key = 5;
+
+  // a disabled TPM cannot generate certs or login
+  bool disabled = 6;
+}

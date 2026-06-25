@@ -31,6 +31,10 @@ type systemViewWrapper struct {
 
 var _ logical.ExtendedSystemView = (*systemViewWrapper)(nil)
 
+func (s *systemViewWrapper) TPMByID(ctx context.Context, id string) (*logical.TPM, error) {
+	panic("nope")
+}
+
 func (s *systemViewWrapper) RequestWellKnownRedirect(ctx context.Context, src, dest string) error {
 	panic("nope")
 }

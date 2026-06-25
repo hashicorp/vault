@@ -1599,6 +1599,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
 		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
 		coreConfig.EnableUnauthenticatedAccess = base.EnableUnauthenticatedAccess
+		coreConfig.DenySlashInTemplatedPolicyPaths = base.DenySlashInTemplatedPolicyPaths
 
 		TestApplyEntBaseConfig(coreConfig, base)
 	}
