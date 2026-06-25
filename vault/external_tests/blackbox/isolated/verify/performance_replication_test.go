@@ -68,8 +68,6 @@ func TestPerformanceReplication_Status(t *testing.T) {
 	})
 
 	t.Log("✓ Performance replication verification completed successfully")
-	// Deliberate failure for testing purposes
-	t.Fatal("Deliberately failing test before execution")
 }
 
 // verifyPrimaryReplicationStatus checks the primary cluster's replication status
