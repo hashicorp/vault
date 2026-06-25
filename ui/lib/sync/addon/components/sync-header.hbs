@@ -14,4 +14,11 @@
       <Hds::Badge @text="Standard feature" @color="highlight" @size="large" data-test-badge="Standard feature" />
     {{/if}}
   </:badges>
+  <:subtitle>
+    {{#if (has-block "subtitle")}}
+      {{yield to="subtitle"}}
+    {{else}}
+      {{@subtitle}}
+    {{/if}}
+  </:subtitle>
 </Page::Header>

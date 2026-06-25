@@ -32,7 +32,7 @@ export const PAGE = {
       sectionHeader: '[data-test-section-header]',
     },
     sync: {
-      mountSelect: '[data-test-sync-mount-select]',
+      mountSelect: GENERAL.superSelect('mount'),
       mountInput: '[data-test-sync-mount-input]',
       successMessage: '[data-test-sync-success-message]',
     },

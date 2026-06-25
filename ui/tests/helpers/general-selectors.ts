@@ -110,9 +110,9 @@ export const GENERAL = {
     addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
-  kvSuggestion: {
-    input: '[data-test-kv-suggestion-input]',
-    select: '[data-test-kv-suggestion-select]',
+  suggestion: {
+    input: (type: string) => `[data-test-suggestion-input="${type}"]`,
+    select: (type: string) => `[data-test-suggestion-select="${type}"]`,
   },
 
   /* ────── Search Select ────── */
