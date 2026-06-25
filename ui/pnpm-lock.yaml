@@ -35,7 +35,7 @@ importers:
         version: 3.0.0
       '@hashicorp/vault-client-typescript':
         specifier: github:hashicorp/vault-client-typescript
-        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6d9744e7c319f741b4957a6c41cb25dc3d09bf55
+        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/81242f95e871ff35515c859a8ba21e9dc95c311d
       ember-auto-import:
         specifier: 2.10.0
         version: 2.10.0(@glint/template@1.7.7)(webpack@5.107.2)
@@ -1542,8 +1542,8 @@ packages:
   '@hashicorp/flight-icons@3.14.0':
     resolution: {integrity: sha512-nyLDApaZsAHpAf2sRNwYX1MnJQU9UI3euiwE6wHPl2l/+Yt8wba1oXkmWL/Ptc4QgJxxnRUUhf66jGcB/AIOyQ==}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6d9744e7c319f741b4957a6c41cb25dc3d09bf55':
-    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6d9744e7c319f741b4957a6c41cb25dc3d09bf55}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/81242f95e871ff35515c859a8ba21e9dc95c311d':
+    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/81242f95e871ff35515c859a8ba21e9dc95c311d}
     version: 0.0.0
 
   '@humanwhocodes/config-array@0.13.0':
@@ -7183,8 +7183,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  semver@7.8.4:
-    resolution: {integrity: sha512-rUCObTnP32Q08R2uuIrt7r9PlEonuTmtuXYcW6s5kjdlj3xbnwe+21yXptAUYcMAABLkYYTtnmzb3w3EDZfueA==}
+  semver@7.8.5:
+    resolution: {integrity: sha512-Y7/KDsb8LjooZpwaqGyulO6DQlksgCncchHGk+sZIY4SBvUocMBEFH5Ur1fI4dV+Jvl0w6cjvucaIi40puRioA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -10590,7 +10590,7 @@ snapshots:
 
   '@hashicorp/flight-icons@3.14.0': {}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6d9744e7c319f741b4957a6c41cb25dc3d09bf55': {}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/81242f95e871ff35515c859a8ba21e9dc95c311d': {}
 
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
@@ -17811,7 +17811,7 @@ snapshots:
 
   semver@7.8.2: {}
 
-  semver@7.8.4: {}
+  semver@7.8.5: {}
 
   send@0.19.2:
     dependencies:
@@ -18775,7 +18775,7 @@ snapshots:
       espree: 9.6.1
       esquery: 1.7.0
       lodash: 4.18.1
-      semver: 7.8.4
+      semver: 7.8.5
     transitivePeerDependencies:
       - supports-color
 
