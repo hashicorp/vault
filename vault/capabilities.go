@@ -73,7 +73,7 @@ func (c *Core) CapabilitiesAndSubscribeEventTypes(ctx context.Context, token, pa
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
 		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy)
+		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			return nil, nil, err
 		}
