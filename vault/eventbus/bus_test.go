@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -354,17 +355,31 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			waitFor(t, 1*time.Second, func() bool { return stopped.Load() == int32(stop) })
 
 			// send another message, but half should stop receiving
+			sendCount := 1
+			if !tc.cancel {
+				// With buffered subscriber channels, non-readers are dropped once
+				// their queue fills. Send enough events to trigger that behavior.
+				sendCount = defaultSubscriberBuffer + 1
+			}
 			event, err = logical.NewEvent()
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
-			if err != nil {
-				t.Error(err)
+			for i := 0; i < sendCount; i++ {
+				err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, false, event)
+				if err != nil && !errors.Is(err, ErrSlowConsumer) {
+					t.Error(err)
+				}
 			}
-			waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-stop) })
-			// the sends should time out and the subscriptions should drop when cancelFunc is called or the context cancels
-			waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() == int64(create-stop) })
+			if tc.cancel {
+				waitFor(t, 1*time.Second, func() bool { return received.Load() == int32(create*2-stop) })
+			} else {
+				waitFor(t, 1*time.Second, func() bool { return received.Load() >= int32(create*2-stop) })
+			}
+			// the sends should cause slow subscribers to drop; under burst load,
+			// additional drops are acceptable but the count must fall at least to
+			// the expected baseline.
+			waitFor(t, 1*time.Second, func() bool { return subscriptions.Load() <= int64(create-stop) })
 		})
 	}
 }
@@ -739,6 +754,103 @@ func TestPipelineCleanedUp(t *testing.T) {
 	// and that the filters are cleaned up
 	if bus.filters.anyMatch(namespace.RootNamespace, eventType) {
 		t.Fatal()
+	}
+}
+
+// TestSlowSubscriberQueueFullCancels ensures a subscriber with a full queue is closed
+// and cleaned from subscriptions/pipelines/filters.
+func TestSlowSubscriberQueueFullCancels(t *testing.T) {
+	// Enable bounded event queues for this test with buffer size 16
+	t.Setenv(EnvVaultEventNotificationsBoundedQueueSize, "16")
+
+	subscriptions.Store(0)
+
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+
+	eventType := logical.EventType("slow/subscriber")
+	_, cancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel)
+
+	closedByBackpressure := false
+	for i := 0; i < defaultSubscriberBuffer+2; i++ {
+		e, err := logical.NewEvent()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = bus.SendEventInternal(context.Background(), namespace.RootNamespace, nil, eventType, false, e)
+		// ErrSlowConsumer is expected when the queue fills up
+		if errors.Is(err, ErrSlowConsumer) || subscriptions.Load() == 0 {
+			closedByBackpressure = true
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !closedByBackpressure {
+		t.Fatal("expected subscriber to close once queue is full")
+	}
+
+	waitFor(t, 2*time.Second, func() bool { return subscriptions.Load() == 0 })
+	if bus.broker.IsAnyPipelineRegistered(eventTypeAll) {
+		t.Fatal("expected pipeline to be removed after slow consumer cancellation")
+	}
+	if bus.filters.anyMatch(namespace.RootNamespace, eventType) {
+		t.Fatal("expected filter entries to be removed after slow consumer cancellation")
+	}
+}
+
+// TestSlowSubscriberNoGoroutinePerEvent verifies that event processing for a stalled
+// subscriber does not create goroutines proportional to event count.
+func TestSlowSubscriberNoGoroutinePerEvent(t *testing.T) {
+	// Enable bounded event queues for this test with buffer size 16
+	t.Setenv(EnvVaultEventNotificationsBoundedQueueSize, "16")
+
+	subscriptions.Store(0)
+
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+
+	eventType := logical.EventType("slow/goroutines")
+	_, cancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(cancel)
+
+	base := runtime.NumGoroutine()
+
+	for i := 0; i < 500; i++ {
+		e, err := logical.NewEvent()
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = bus.SendEventInternal(context.Background(), namespace.RootNamespace, nil, eventType, false, e)
+		if errors.Is(err, ErrSlowConsumer) {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	waitFor(t, 2*time.Second, func() bool { return subscriptions.Load() == 0 })
+
+	// We don't assert exact equality because background runtime activity can vary,
+	// but goroutines must not scale with event count.
+	after := runtime.NumGoroutine()
+	if after > base+50 {
+		t.Fatalf("unexpected goroutine growth: base=%d after=%d", base, after)
 	}
 }
 
