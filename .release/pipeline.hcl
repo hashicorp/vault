@@ -304,11 +304,15 @@ changed_files {
     }
   }
 
-  // The "ui" group matches the Web UI source
+  // The "ui" group matches files for the Web UI
   group "ui" {
     match {
       base_dir = [
         joinpath(".github", "actions", "build-ui"),
+        joinpath(".github", "actions", "setup-pnpm"),
+        joinpath(".github", "workflows", "test-run-enos-scenario-ui"),
+        joinpath(".github", "workflows", "test-ui"),
+        joinpath(".github", "workflows", "ui-client-update"),
         "ui",
       ]
     }

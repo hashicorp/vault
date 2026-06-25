@@ -49,8 +49,12 @@
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 /website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 
-/.github/actions/build-ui/ @hashicorp/vault-ui @hashicorp/vault-frontend
-/ui/                       @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/actions/build-ui/                  @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/actions/setup-pnpm/                @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/test-enos-scenarios-ui/  @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/test-ui/                 @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/ui-client-update/        @hashicorp/vault-ui @hashicorp/vault-frontend
+/ui/                                        @hashicorp/vault-ui @hashicorp/vault-frontend
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
 # so stewards of the backend code are added below for notification.
