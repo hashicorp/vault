@@ -135,6 +135,7 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 		a.MongoDBAtlasDynamicRoles + b.MongoDBAtlasDynamicRoles,
 		a.TerraformCloudDynamicRoles + b.TerraformCloudDynamicRoles,
 		a.OSLocalAccountRoles + b.OSLocalAccountRoles,
+		a.TransformRoles + b.TransformRoles,
 	}
 }
 

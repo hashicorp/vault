@@ -94,8 +94,8 @@ func (c *Core) CountMetricsFromMounts(officialOnly bool) (*MountMetrics, error) 
 	return metrics, nil
 }
 
-// collectMountMetrics collects role counts and managed key counts for a specific mount entry
-// based on its plugin type. It updates the provided target metrics in place.
+// collectMountMetrics collects role counts and managed key counts
+// for a specific mount entry based on its plugin type. It updates the provided target metrics in place.
 func (c *Core) collectMountMetrics(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts) {
 	apiList := func(entry *MountEntry, apiPath string) []string {
 		listRequest := &logical.Request{
@@ -212,6 +212,10 @@ func (c *Core) collectMountMetrics(ctx context.Context, entry *MountEntry, targe
 	case pluginconsts.SecretEngineTOTP:
 		keyCountPerEntry := apiList(entry, "keys")
 		targetManagedKeys.TotpKeys += len(keyCountPerEntry)
+
+	case pluginconsts.SecretEngineTransform:
+		transformRoles := apiList(entry, "role")
+		targetRoleCounts.TransformRoles += len(transformRoles)
 
 	case pluginconsts.SecretEngineKeymgmt:
 		keyCountPerEntry := apiList(entry, "key")

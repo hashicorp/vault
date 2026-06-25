@@ -1,0 +1,3 @@
+```release-note:improvement
+core/census: Add `vault.secret.engine.transform.role.count` product usage metric reporting the number of Transform secret engine roles.
+```

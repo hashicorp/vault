@@ -866,6 +866,7 @@ type RoleCounts struct {
 	MongoDBAtlasDynamicRoles   int `json:"mongodb_atlas_dynamic_roles"`
 	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
 	OSLocalAccountRoles        int `json:"os_local_account_static_roles"`
+	TransformRoles             int `json:"transform_roles"`
 }
 
 type ManagedKeyCounts struct {
