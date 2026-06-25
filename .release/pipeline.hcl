@@ -310,6 +310,7 @@ changed_files {
       base_dir = [
         joinpath(".github", "actions", "build-ui"),
         joinpath(".github", "actions", "setup-pnpm"),
+        joinpath(".github", "workflows", "gen-diff-spec"),
         joinpath(".github", "workflows", "test-run-enos-scenario-ui"),
         joinpath(".github", "workflows", "test-ui"),
         joinpath(".github", "workflows", "ui-client-update"),

@@ -51,6 +51,7 @@
 
 /.github/actions/build-ui/                  @hashicorp/vault-ui @hashicorp/vault-frontend
 /.github/actions/setup-pnpm/                @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/gen-diff-spec/           @hashicorp/vault-ui @hashicorp/vault-frontend
 /.github/workflows/test-enos-scenarios-ui/  @hashicorp/vault-ui @hashicorp/vault-frontend
 /.github/workflows/test-ui/                 @hashicorp/vault-ui @hashicorp/vault-frontend
 /.github/workflows/ui-client-update/        @hashicorp/vault-ui @hashicorp/vault-frontend
