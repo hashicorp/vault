@@ -98,7 +98,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
 		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy)
+		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(e.core.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			e.core.logger.Error("failed to parse the token's inline policy", "error", err)
 			return false

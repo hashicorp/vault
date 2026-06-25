@@ -22,6 +22,7 @@ var (
 	ErrNoGroupsAttachedToToken       = errors.New("string contains groups template directives but no groups were provided")
 	ErrTemplateValueNotFound         = errors.New("no value could be found for one of the template directives")
 	ErrTemplatedWildcard             = errors.New("globs and wildcards are not allowed in template result")
+	ErrTemplatedSlash                = errors.New("templated policy paths cannot contain '/' when denied via configuration")
 )
 
 const (
@@ -40,6 +41,11 @@ type PopulateStringInput struct {
 	NamespaceID       string
 	Mode              int       // processing mode, ACLTemplate or JSONTemplating
 	Now               time.Time // optional, defaults to current time
+
+	// DenySlashInTemplatedPaths controls whether "/" is denied in templated policy paths
+	// When true, "/" in template output will cause an error
+	// When false (default), "/" is allowed
+	DenySlashInTemplatedPaths bool
 
 	templateHandler templateHandlerFunc
 	groupIDs        []string
@@ -182,6 +188,10 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 				// Reject wildcards in the template output
 				if strings.ContainsAny(tmplStr, "*+") {
 					return false, "", ErrTemplatedWildcard
+				}
+				// Reject slashes in the template output if explicitly denied
+				if p.DenySlashInTemplatedPaths && strings.Contains(tmplStr, "/") {
+					return false, "", ErrTemplatedSlash
 				}
 				b.WriteString(tmplStr)
 				b.WriteString(splitPiece[1])
