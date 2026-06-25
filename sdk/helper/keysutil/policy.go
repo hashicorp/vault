@@ -2317,6 +2317,10 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 		}
 
 		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		if opts.Raw {
+			wrappingOpts = append(wrappingOpts, wrapping.WithoutEnvelope(true))
+		}
+
 		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, wrappingOpts...)
 		if err != nil {
 			return "", err
