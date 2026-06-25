@@ -76,6 +76,10 @@ type SystemView interface {
 	// plugins.
 	MlockEnabled() bool
 
+	// DenySlashInTemplatedPaths returns the configuration setting for denying
+	// slashes in templated policy paths.
+	DenySlashInTemplatedPaths() bool
+
 	// EntityInfo returns a subset of information related to the identity entity
 	// for the given entity id
 	EntityInfo(entityID string) (*Entity, error)
@@ -172,6 +176,7 @@ type StaticSystemView struct {
 	CachingDisabledVal           bool
 	Primary                      bool
 	EnableMlock                  bool
+	DenySlashInTemplatedPathsVal bool
 	LocalMountVal                bool
 	ReplicationStateVal          consts.ReplicationState
 	EntityVal                    *Entity
@@ -252,6 +257,10 @@ func (d StaticSystemView) ListVersionedPlugins(_ context.Context, _ consts.Plugi
 
 func (d StaticSystemView) MlockEnabled() bool {
 	return d.EnableMlock
+}
+
+func (d StaticSystemView) DenySlashInTemplatedPaths() bool {
+	return d.DenySlashInTemplatedPathsVal
 }
 
 func (d StaticSystemView) EntityInfo(entityID string) (*Entity, error) {

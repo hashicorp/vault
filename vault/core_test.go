@@ -3010,7 +3010,7 @@ path "secret/*" {
 `
 
 	ps := c.policyStore
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, secretWritingPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, secretWritingPolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}

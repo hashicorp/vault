@@ -4150,7 +4150,7 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 		case PolicyTypeACL:
 			var p *Policy
 			// TODO (HCL_DUP_KEYS_DEPRECATION): go back to ParseACLPolicy once the deprecation is done
-			p, duplicate, err = ParseACLPolicyCheckDuplicates(ns, policy.Raw)
+			p, duplicate, err = ParseACLPolicyCheckDuplicates(ns, policy.Raw, WithDenySlashInTemplatedPaths(b.Core.denySlashInTemplatedPolicyPaths))
 			if err != nil {
 				return handleError(err)
 			}

@@ -184,6 +184,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"remove_irrevocable_lease_after": json.Number("0"),
 				"allow_audit_log_prefixing":      false,
 				"enable_unauthenticated_access":  nil,
+				"deny_slash_in_templated_paths":  false,
 			}
 
 			if tc.expectedHAStorageOutput != nil {
