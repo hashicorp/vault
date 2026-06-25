@@ -279,8 +279,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await visit(`/vault`);
       await selectChoose(GENERAL.superSelect('secrets-engines'), backend);
       await selectChoose(GENERAL.superSelect('actions'), 'Find KV secrets');
-      await typeIn(GENERAL.kvSuggestion.input, `${root}/`);
-      await click(GENERAL.kvSuggestion.input);
+      await typeIn(GENERAL.suggestion.input('kv'), `${root}/`);
+      await click(GENERAL.suggestion.input('kv'));
       assert
         .dom(GENERAL.searchSelect.options)
         .hasText(`${subdirectory}/`)

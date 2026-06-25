@@ -183,6 +183,7 @@ export default class App extends Application {
         ],
         externalRoutes: {
           kvSecretOverview: 'vault.cluster.secrets.backend.kv.secret.index',
+          databaseStaticRoleOverview: 'vault.cluster.secrets.backend.show',
           clientCountOverview: 'vault.cluster.clients',
           // routes needed for Secrets sidebar component
           secrets: 'vault.cluster.secrets',

@@ -90,7 +90,8 @@
             <p class="has-left-margin-xs" data-test-loading>Loading options...</p>
           {{else if this.searchSelectParams.isKV}}
             {{! use special input to allow searching for KVv2 secrets inside a directory }}
-            <KvSuggestionInput
+            <SuggestionInput
+              @type="kv"
               @label="Secret Path"
               @value={{this.paramValue}}
               @mountPath={{this.selectedEngine.id}}

@@ -10,6 +10,8 @@ import type GhForm from 'vault/forms/sync/gh';
 import type VercelProjectForm from 'vault/forms/sync/vercel-project';
 import type { CredentialType, DestinationType } from 'sync/utils/constants';
 
+export type SecretType = 'kv' | 'database';
+
 export type ListDestination = {
   id: string;
   name: string;
@@ -19,12 +21,14 @@ export type ListDestination = {
 };
 
 export type AssociatedSecret = {
+  accessor: string;
   mount: string;
   secret_name: string;
   sync_status: string;
   updated_at: Date;
   destination_type: DestinationType;
   destination_name: string;
+  sub_key?: string;
 };
 
 export type AssociatedDestination = {
@@ -65,6 +69,7 @@ export type DestinationName =
 export type Destination = {
   name: string;
   type: DestinationType;
+  type_display_name?: string;
   connection_details: DestinationConnectionDetails;
   options: DestinationOptions;
   // only present if delete action has been initiated
