@@ -183,6 +183,7 @@ jobs:
       # The regular Go tests use an extra runner to execute the binary-dependent tests. We isolate
       # them there so that the other tests aren't slowed down waiting for a binary build.
       binary-tests: true
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
@@ -208,6 +209,7 @@ jobs:
       issues: read
       pull-requests: write
     with:
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
@@ -239,6 +241,7 @@ jobs:
       issues: read
       pull-requests: write
     with:
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       env-vars: |
         {
@@ -273,6 +276,7 @@ jobs:
       issues: read
       pull-requests: write
     with:
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       env-vars: |
         {
