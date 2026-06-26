@@ -331,6 +331,23 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/install-tools
+      - if: github.repository == 'hashicorp/vault-enterprise'
+        name: Configure Instana for test tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
+        run: |
+          # Export Instana environment variables for test execution
+          # These will be available to tests that import the observability package
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       - if: inputs.binary-tests && matrix.id == inputs.total-runners && needs.test-matrix.outputs.is-ent-branch == 'true'
         name: Build Vault HSM binary for tests
         env:
@@ -481,23 +498,19 @@ jobs:
               -parallel="$test_parallelism" \
               ${{ inputs.extra-flags }} \
       - if: github.repository == 'hashicorp/vault-enterprise' && (success() || failure())
-        name: Configure Instana for test tracing
+        name: Upload test results to Instana
         continue-on-error: true
-        env:
-          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
-          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
         run: |
-          # Export Instana environment variables for test execution
-          # These will be available to tests that import the observability package
-          # Note: Secrets are automatically masked in GitHub Actions logs
+          # Upload test results to Instana as spans for granular visibility
           if [ -n "${INSTANA_AGENT_KEY}" ]; then
-            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
-            echo "::add-mask::${INSTANA_AGENT_KEY}"
+            chmod +x scripts/upload-test-results-to-instana.sh
+            scripts/upload-test-results-to-instana.sh \
+              '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
+              '${{ inputs.name }}' \
+              '${{ matrix.id }}'
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
           fi
-          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
-            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
-          fi
-          echo "INSTANA_AGENT_HOST=localhost" >> "$GITHUB_ENV"
       - if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         name: Prepare datadog-ci
         continue-on-error: true
