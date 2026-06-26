@@ -69,14 +69,15 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
+	currentThirdPartyPluginCounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
+	if err != nil {
+		return 0, err
+	}
+
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
 	previousThirdPartyPluginCounts, err := c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth)
-	if err != nil {
-		return 0, err
-	}
-	currentThirdPartyPluginCounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -253,9 +254,9 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 		return nil, nil, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
-
+	// getRoleAndManagedKeyCountsInternal traverses mounts and
+	// may acquire other locks, so holding the billing storage lock here can create
+	// lock-order inversions.
 	local := localPathPrefix == billing.LocalPrefix
 	currentRoleCounts, currentManagedKeyCounts, err := c.getRoleAndManagedKeyCountsInternal(local, !local, true)
 	if err != nil {
@@ -269,6 +270,9 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 	if currentManagedKeyCounts == nil {
 		currentManagedKeyCounts = &ManagedKeyCounts{}
 	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	// get max role counts
 	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, localPathPrefix, currentMonth)
