@@ -1,0 +1,3 @@
+```release-note:bug
+core/managed-keys (enterprise): Allow slot numbers above 32 bits in PKCS#11 managed keys.
+```
