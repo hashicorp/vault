@@ -158,6 +158,7 @@ var (
 	// the always forward list
 	perfStandbyAlwaysForwardPaths = pathmanager.New()
 	alwaysRedirectPaths           = pathmanager.New()
+	perMethodAlwaysRedirectPaths  = map[string]*pathmanager.PathManager{}
 	websocketPaths                = pathmanager.New()
 
 	injectDataIntoTopRoutes = []string{
@@ -187,6 +188,10 @@ var (
 	websocketRawPaths = []string{
 		"sys/events/subscribe",
 	}
+	perMethodRedirectRawPaths = map[string][]string{
+		http.MethodPost: {"sys/storage/raft/snapshot-load"},
+		http.MethodPut:  {"sys/storage/raft/snapshot-load"},
+	}
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
@@ -214,10 +219,16 @@ func init() {
 		"sys/storage/raft/snapshot",
 		"sys/storage/raft/snapshot-force",
 		"!sys/storage/raft/snapshot-auto/config",
-		"sys/storage/raft/snapshot-load",
 		"!sys/storage/raft/snapshot-auto/snapshot-load",
+		"!sys/storage/raft/snapshot-load", // snapshot loading is handled in perMethodAlwaysRedirectPaths
 	})
 	websocketPaths.AddPaths(websocketRawPaths)
+	for method, paths := range perMethodRedirectRawPaths {
+		if _, ok := perMethodAlwaysRedirectPaths[method]; !ok {
+			perMethodAlwaysRedirectPaths[method] = pathmanager.New()
+		}
+		perMethodAlwaysRedirectPaths[method].AddPaths(paths)
+	}
 }
 
 type HandlerAnchor struct{}
@@ -1191,7 +1202,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				return
 			}
 			path := trimPath(ns, r.URL.Path)
-			if !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path) {
+			if !perfStandbyAlwaysForwardPaths.HasPath(path) && !redirectPath(r.Method, path) {
 				handler.ServeHTTP(w, r)
 				return
 			}
@@ -1244,7 +1255,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := trimPath(ns, r.URL.Path)
-	redirect := alwaysRedirectPaths.HasPath(path)
+	redirect := redirectPath(r.Method, path)
 	// websocket paths are special, because they can contain a namespace
 	// in front of them. This isn't an issue on perf standbys where the
 	// namespace manager will know all the namespaces, so we will have
@@ -1751,4 +1762,15 @@ func requiresSnapshot(r *http.Request) bool {
 		return query.Has(VaultSnapshotRecoverParam) || r.Header.Get(VaultSnapshotRecoverParam) != ""
 	}
 	return false
+}
+
+func redirectPath(method, path string) bool {
+	if alwaysRedirectPaths.HasPath(path) {
+		return true
+	}
+	methodPaths, ok := perMethodAlwaysRedirectPaths[method]
+	if !ok {
+		return false
+	}
+	return methodPaths.HasPath(path)
 }
