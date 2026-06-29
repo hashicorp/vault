@@ -1,0 +1,28 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! role_name is set by route params }}
+{{outlet}}
+
+<nav class="tabs" aria-label="external pki tabs">
+  <ul>
+    <li>
+      <LinkTo
+        @current-when={{matches-current-url "external.roles.role.details"}}
+        @route="external.roles.role.details"
+        @models={{array this.model.engine.id this.model.role_name}}
+        data-test-link-to="Details"
+      >Details</LinkTo>
+    </li>
+    <li>
+      <LinkTo
+        @current-when={{matches-current-url "external.roles.role.active-orders"}}
+        @route="external.roles.role.active-orders"
+        @models={{array this.model.engine.id this.model.role_name}}
+        data-test-link-to="Active orders"
+      >Active Orders</LinkTo>
+    </li>
+  </ul>
+</nav>
