@@ -3060,6 +3060,18 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return plainToken.Random, nil
 	}
 
+	// Performance primary service tokens are not valid on performance secondaries.
+	// SSCT does not encode token-origin cluster, so on performance secondary active
+	// nodes we should not require the token's encoded local_index to be satisfied by
+	// the secondary's local WAL before normal token lookup runs. Let normal token
+	// lookup/ACL evaluation return the expected 403.
+	//
+	// Keep perf standby behavior unchanged so missing local state can still use the
+	// existing 412/forwarding semantics.
+	if c.IsPerfSecondary() && !c.perfStandby && !isPerfStandby {
+		return plainToken.Random, nil
+	}
+
 	ep := int(plainToken.IndexEpoch)
 	if ep < c.tokenStore.GetSSCTokensGenerationCounter() {
 		return plainToken.Random, nil
