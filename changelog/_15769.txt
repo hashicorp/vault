@@ -1,0 +1,3 @@
+```release-note:bug
+Secrets Recovery (enterprise): Do not redirect to the active node for list requests to `sys/storage/raft/snapshot-load` or read/delete requests to `sys/storage/raft/snapshot-load/{id}`. If possible, handle these requests on the performance standby, otherwise forward the requests to the active node.
+```
