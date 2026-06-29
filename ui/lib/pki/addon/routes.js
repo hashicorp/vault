@@ -4,8 +4,10 @@
  */
 
 import buildRoutes from 'ember-engines/routes';
+import ENV from 'vault/config/environment';
 
 export default buildRoutes(function () {
+  // Internal PKI
   this.route('overview');
   this.route('roles', function () {
     this.route('index', { path: '/' });
@@ -58,4 +60,25 @@ export default buildRoutes(function () {
     this.route('create');
     this.route('edit');
   });
+
+  // Public/External PKI
+  if (ENV.environment !== 'production') {
+    this.route('external', function () {
+      this.route('configuration');
+      this.route('overview');
+      this.route('roles', function () {
+        this.route('role', { path: '/:role_name' }, function () {
+          this.route('details');
+          this.route('active-orders'); // Specific order details route to orders.order.details
+        });
+      });
+      this.route('orders', function () {
+        this.route('order', { path: '/:order_id' }, function () {
+          this.route('details');
+        });
+      });
+      this.route('dns-providers');
+      this.route('acme-accounts');
+    });
+  }
 });
