@@ -1,0 +1,21 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if this.renderTabs}}
+  <nav class="tabs" aria-label="external pki tabs">
+    <ul>
+      {{#each this.tabs as |tab|}}
+        <li>
+          <LinkTo
+            @current-when={{matches-current-url tab.route}}
+            @route={{tab.route}}
+            @model={{@backend.id}}
+            data-test-link-to={{tab.label}}
+          >{{tab.label}}</LinkTo>
+        </li>
+      {{/each}}
+    </ul>
+  </nav>
+{{/if}}

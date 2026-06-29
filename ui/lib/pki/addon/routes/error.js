@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
-export default class PkiRolesErrorRoute extends Route {
+export default class PkiErrorRoute extends Route {
   @service secretMountPath;
 
   setupController(controller) {
@@ -22,7 +22,6 @@ export default class PkiRolesErrorRoute extends Route {
       { label: 'Keys', route: 'keys.index', model: this.secretMountPath.currentPath },
       { label: 'Certificates', route: 'certificates.index', model: this.secretMountPath.currentPath },
       { label: 'Tidy', route: 'tidy.index', model: this.secretMountPath.currentPath },
-      { label: 'Configuration', route: 'configuration.index', model: this.secretMountPath.currentPath },
     ];
     controller.title = this.secretMountPath.currentPath;
   }
