@@ -389,6 +389,8 @@ func (c *serviceRegistration) NotifyConfigurationReload(conf *map[string]string)
 }
 
 func (c *serviceRegistration) checkDuration() time.Duration {
+	c.serviceLock.RLock()
+	defer c.serviceLock.RUnlock()
 	return durationMinusBuffer(c.checkTimeout, checkMinBuffer, checkJitterFactor)
 }
 
