@@ -25,6 +25,7 @@ interface SnippetOption {
 
 interface Args {
   customTabs?: SnippetOption[];
+  tfSnippet?: string;
   tfvpArgs?: TerraformResourceTemplateArgs;
   cliArgs?: CliTemplateArgs;
   apiArgs?: ApiTemplateArgs;
@@ -40,23 +41,24 @@ export default class CodeGeneratorAutomationSnippets extends Component<Args> {
 
   get snippetTabs() {
     const tabs = [];
-    if (this.args.tfvpArgs) {
+    const { tfSnippet, tfvpArgs, cliArgs, apiArgs } = this.args;
+    if (tfSnippet !== undefined || tfvpArgs) {
       tabs.push({
         key: 'terraform',
         label: 'Terraform Vault Provider',
-        snippet: terraformResourceTemplate(this.terraformOptions),
+        snippet: this.terraformSnippet,
         language: 'hcl',
       });
     }
-    if (this.args.cliArgs) {
+    if (cliArgs) {
       tabs.push({
         key: 'cli',
         label: 'CLI',
-        snippet: cliTemplate(this.args.cliArgs),
+        snippet: cliTemplate(cliArgs),
         language: 'shell',
       });
     }
-    if (this.args.apiArgs) {
+    if (apiArgs) {
       tabs.push({
         key: 'api',
         label: 'API',
@@ -66,14 +68,25 @@ export default class CodeGeneratorAutomationSnippets extends Component<Args> {
     return tabs;
   }
 
-  get terraformOptions() {
-    const { tfvpArgs } = this.args || {};
-    // only add namespace if we're not in root (when namespace is '')
-    if (tfvpArgs && !this.namespace.inRootNamespace) {
-      const { resourceArgs } = tfvpArgs;
-      return { ...tfvpArgs, resourceArgs: { namespace: `"${this.namespace.path}"`, ...resourceArgs } };
+  get terraformSnippet() {
+    const { tfSnippet, tfvpArgs } = this.args;
+    if (tfSnippet !== undefined) {
+      if (!this.namespace.inRootNamespace) {
+        const namespaceLine = `  namespace = "${this.namespace.path}"`;
+        return tfSnippet.replace(/^(resource "[^"]*" "[^"]*" \{)/, `$1\n${namespaceLine}`);
+      }
+      return tfSnippet;
     }
-    return tfvpArgs;
+    // Legacy support for tfvpArgs - used in the event tfSnippet is not provided.
+    if (tfvpArgs && !this.namespace.inRootNamespace) {
+      // only add namespace if we're not in root (when namespace is '')
+      const { resourceArgs } = tfvpArgs;
+      return terraformResourceTemplate({
+        ...tfvpArgs,
+        resourceArgs: { namespace: `"${this.namespace.path}"`, ...resourceArgs },
+      });
+    }
+    return terraformResourceTemplate(tfvpArgs);
   }
 
   get apiOptions() {
