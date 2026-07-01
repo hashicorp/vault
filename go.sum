@@ -885,8 +885,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.20.1 h1:3zd0ePevbasB
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.20.1/go.mod h1:EhxEtPv54rn6EERQtq1BfTj46kHCtJUw2HhLqHjFa+8=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1 h1:/T4WDPgXDiSjZXMW+mtASfOjbhOrfAbzUJofiBBAjBk=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1/go.mod h1:mwGPgmf8+K/b3ckAl9gBYHUNfOxFZcpgW5hzzLyhkFo=
-github.com/hashicorp/vault-plugin-database-redis v0.8.1 h1:Twa0pqxNIrr0vydC8ihfy6HRSoKYbs6PRYkYq0hRR54=
-github.com/hashicorp/vault-plugin-database-redis v0.8.1/go.mod h1:ca3FvMm2hW2CKYKYppi/L0E8HxJx5sO8d3URv2tW2To=
+github.com/hashicorp/vault-plugin-database-redis v0.8.2-0.20260701004721-0d78ae1f55d0 h1:jhAIWIenaDrOBVjaBMe0nub+n3XCrW7PN/YjNXkcgxk=
+github.com/hashicorp/vault-plugin-database-redis v0.8.2-0.20260701004721-0d78ae1f55d0/go.mod h1:Lk7HcgAJEo+LM7oqCTy9jYA3njhCEpNM0pfplLrD2/o=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.1 h1:NlqDIIllehnOxJxluuLCeNX1oBL4xngr5hlmrd7UOC8=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.1/go.mod h1:cTumDkl1k+M83I0KsGhRVNg/fGzevqQbFYGUzXG48fI=
 github.com/hashicorp/vault-plugin-database-snowflake v0.16.0 h1:gBUs6aFEsb1bnSf3Z7AtBdhA1BM4nHGT49fBANlv0F4=
@@ -1060,8 +1060,8 @@ github.com/mattn/go-isatty v0.0.22 h1:j8l17JJ9i6VGPUFUYoTUKPSgKe/83EYU2zBC7YNKMw
 github.com/mattn/go-isatty v0.0.22/go.mod h1:ZXfXG4SQHsB/w3ZeOYbR0PrPwLy+n6xiMrJlRFqopa4=
 github.com/mattn/go-runewidth v0.0.3/go.mod h1:LwmH8dsx7+W8Uxz3IHJYH5QSwggIsqBzpuz5H//U1FU=
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
-github.com/mediocregopher/radix/v4 v4.1.4 h1:Uze6DEbEAvL+VHXUEu/EDBTkUk5CLct5h3nVSGpc6Ts=
-github.com/mediocregopher/radix/v4 v4.1.4/go.mod h1:ajchozX/6ELmydxWeWM6xCFHVpZ4+67LXHOTOVR0nCE=
+github.com/mediocregopher/radix/v4 v4.1.5 h1:4tJp2WPovvb9pVAKCMiZa6DJZBLSUAPj+Fnf0wGuEFw=
+github.com/mediocregopher/radix/v4 v4.1.5/go.mod h1:ajchozX/6ELmydxWeWM6xCFHVpZ4+67LXHOTOVR0nCE=
 github.com/michaelklishin/rabbit-hole/v2 v2.12.0 h1:946p6jOYFcVJdtBBX8MwXvuBkpPjwm1Nm2Qg8oX+uFk=
 github.com/michaelklishin/rabbit-hole/v2 v2.12.0/go.mod h1:AN/3zyz7d++OHf+4WUo/LR0+Q5nlPHMaXasIsG/mPY0=
 github.com/microsoft/go-mssqldb v1.9.8 h1:d4IFMvF/o+HdpXUqbBfzHvn/NlFA75YGcfHUUvDFJEM=
