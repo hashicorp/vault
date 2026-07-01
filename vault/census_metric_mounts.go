@@ -36,9 +36,9 @@ type MountMetrics struct {
 	LocalKvCounts int
 }
 
-// CountMetricsFromMounts performs a single iteration through mount entries
+// CountMetricsSecretMounts performs a single iteration through mount entries
 // and collects all required metrics for both replicated and local mounts.
-func (c *Core) CountMetricsFromMounts(officialOnly bool) (*MountMetrics, error) {
+func (c *Core) CountMetricsSecretMounts(officialOnly bool) (*MountMetrics, error) {
 	if c.Sealed() {
 		return nil, fmt.Errorf("core is sealed, cannot access mount table")
 	}
@@ -87,7 +87,7 @@ func (c *Core) CountMetricsFromMounts(officialOnly bool) (*MountMetrics, error) 
 		}
 
 		// Collect role counts and managed key counts based on plugin type
-		c.collectMountMetrics(ctx, entry, targetRoleCounts, targetManagedKeys, targetSecretEngineResourceCounts)
+		c.collectMetricsForSecretMount(ctx, entry, targetRoleCounts, targetManagedKeys, targetSecretEngineResourceCounts)
 
 		// If this is a KV mount, gather its secret count and add to the total
 		if kvMount := getKVMountMetadata(entry); kvMount != nil {
@@ -103,9 +103,9 @@ func (c *Core) CountMetricsFromMounts(officialOnly bool) (*MountMetrics, error) 
 	return metrics, nil
 }
 
-// collectMountMetrics collects role counts, managed key counts, and secret engine resource counts
+// collectMetricsForSecretMount collects role counts, managed key counts, and secret engine resource counts
 // for a specific mount entry based on its plugin type. It updates the provided target metrics in place.
-func (c *Core) collectMountMetrics(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts, targetSecretEngineResourceCounts *SecretEngineResourceCounts) {
+func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts, targetSecretEngineResourceCounts *SecretEngineResourceCounts) {
 	apiList := func(entry *MountEntry, apiPath string) []string {
 		listRequest := &logical.Request{
 			Operation: logical.ListOperation,
@@ -325,7 +325,7 @@ func (c *Core) isOfficialPlugin(ctx context.Context, entry *MountEntry) bool {
 // GetRoleCounts returns the combined local and replicated role counts across all mounts
 // For use in tests only
 func (c *Core) GetRoleCounts() *RoleCounts {
-	m, err := c.CountMetricsFromMounts(false)
+	m, err := c.CountMetricsSecretMounts(false)
 	if err != nil {
 		return nil
 	}
@@ -335,7 +335,7 @@ func (c *Core) GetRoleCounts() *RoleCounts {
 // GetRoleAndManagedKeyCounts returns the local or replicated role and managed key counts depending on the mount type
 // For use in tests only
 func (c *Core) GetRoleAndManagedKeyCounts(mountType string) (*RoleCounts, *ManagedKeyCounts) {
-	m, err := c.CountMetricsFromMounts(true)
+	m, err := c.CountMetricsSecretMounts(true)
 	if err != nil {
 		return nil, nil
 	}
@@ -348,7 +348,7 @@ func (c *Core) GetRoleAndManagedKeyCounts(mountType string) (*RoleCounts, *Manag
 // GetKvCounts returns the local or replicated KV counts depending on the mount type
 // For use in tests only
 func (c *Core) GetKvCounts(mountType string) int {
-	m, err := c.CountMetricsFromMounts(true)
+	m, err := c.CountMetricsSecretMounts(true)
 	if err != nil {
 		return 0
 	}

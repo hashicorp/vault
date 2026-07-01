@@ -287,12 +287,12 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 	}
 
 	// If somehow the current counts is empty, we should try get the counts here
-	// before taking BillingStorageLock. CountMetricsFromMounts traverses mounts and
+	// before taking BillingStorageLock. CountMetricsSecretMounts traverses mounts and
 	// may acquire other locks, so holding the billing storage lock here can create
 	// lock-order inversions.
 	if currentRoleCounts == nil || currentManagedKeyCounts == nil {
 		c.logger.Debug("current role or managed key counts is empty, trying to get counts again")
-		metrics, err := c.CountMetricsFromMounts(true)
+		metrics, err := c.CountMetricsSecretMounts(true)
 		if err != nil {
 			c.logger.Error("error getting current role and managed key counts", "error", err)
 			return nil, nil, err
