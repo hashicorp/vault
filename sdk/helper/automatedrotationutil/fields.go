@@ -223,7 +223,7 @@ func (p *AutomatedRotationParams) HandleDeregisterRotationJob(ctx context.Contex
 
 // Use PopulateSetAutomatedRotationData instead, *unless* all these
 // fields are necessary to maintain backwards compatibility with the plugin's pre-existing response API.
-// PopulateAutomatedRotationData adds PluginIdentityTokenParams info into the given map.
+// PopulateAutomatedRotationData adds AutomatedRotationParams info into the given map.
 func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]interface{}) {
 	m["rotation_schedule"] = p.RotationSchedule
 	m["rotation_window"] = p.RotationWindow.Seconds()
@@ -232,7 +232,7 @@ func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]int
 	m["rotation_policy"] = p.RotationPolicy
 }
 
-// PopulateSetAutomatedRotationData adds PluginIdentityTokenParams info into the given map, based
+// PopulateSetAutomatedRotationData adds AutomatedRotationParams info into the given map, based
 // on which fields were set for rotation. Setting a rotation schedule will not return a rotation
 // period, and setting a rotation period will not return a rotation schedule or rotation window.
 func (p *AutomatedRotationParams) PopulateSetAutomatedRotationData(m map[string]interface{}) {
