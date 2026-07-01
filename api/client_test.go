@@ -901,6 +901,33 @@ func TestSetHeadersRaceSafe(t *testing.T) {
 	}
 }
 
+func TestClientSetHeader(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	client.AddHeader("X-Test", "first")
+	client.AddHeader("X-Test", "second")
+
+	client.SetHeader("X-Test", "replacement")
+
+	headers := client.Headers()
+	if !reflect.DeepEqual(headers.Values("X-Test"), []string{"replacement"}) {
+		t.Fatalf("expected [replacement], got %v", headers.Values("X-Test"))
+	}
+
+	client.SetHeader("X-New", "value")
+	if !reflect.DeepEqual(headers.Values("X-New"), []string(nil)) {
+		t.Fatalf("stale header copy unexpectedly changed: %v", headers.Values("X-New"))
+	}
+
+	headers = client.Headers()
+	if !reflect.DeepEqual(headers.Values("X-New"), []string{"value"}) {
+		t.Fatalf("expected [value], got %v", headers.Values("X-New"))
+	}
+}
+
 func TestMergeReplicationStates(t *testing.T) {
 	type testCase struct {
 		name     string

@@ -360,6 +360,17 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			clientToUse = wrapClient
 		}
 		for key, values := range header {
+			if existingValues := clientToUse.Headers().Values(key); len(existingValues) > 0 {
+				for i, value := range values {
+					if i == 0 {
+						clientToUse.SetHeader(key, value)
+						continue
+					}
+					clientToUse.AddHeader(key, value)
+				}
+				continue
+			}
+
 			for _, value := range values {
 				clientToUse.AddHeader(key, value)
 			}
