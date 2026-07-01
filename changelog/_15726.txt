@@ -1,0 +1,3 @@
+```release-note:improvement
+core/census: Add product usage metrics `vault.auth.method.cert.role.count`, `vault.auth.method.cert.crl.count`, `vault.auth.method.spiffe.role.count`, and `vault.auth.method.scep.role.count` reporting the number of Cert auth roles and CRLs, SPIFFE auth roles, and SCEP auth roles across all namespaces and mounts, and `vault.auth.method.spiffe_enabled` reporting whether the SPIFFE auth method is enabled.
+```
