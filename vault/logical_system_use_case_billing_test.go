@@ -571,7 +571,7 @@ func TestSystemBackend_BillingOverview_MetricTypeFormat(t *testing.T) {
 	// Update all metrics
 	currentMonth := time.Now()
 	// Collect metrics once before updating all max counts
-	metrics, err := c.CountMetricsFromMounts(true)
+	metrics, err := c.CountMetricsSecretMounts(true)
 	require.NoError(t, err)
 	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalKvCounts)
 	require.NoError(t, err)
