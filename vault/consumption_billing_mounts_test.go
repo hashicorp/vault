@@ -23,9 +23,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCountMetricsFromMounts_LocalReplicatedMounts tests that CountMetricsFromMounts correctly separates
+// TestCountMetricsSecretMounts_LocalReplicatedMounts tests that CountMetricsSecretMounts correctly separates
 // local and replicated mount metrics and returns the expected counts.
-func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
+func TestCountMetricsSecretMounts_LocalReplicatedMounts(t *testing.T) {
 	// Set up core with 2 role backends, 1 managed key backend (TOTP), and KV backend
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -92,7 +92,7 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 		}
 	}
 
-	metrics, err := core.CountMetricsFromMounts(true)
+	metrics, err := core.CountMetricsSecretMounts(true)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 
@@ -123,10 +123,10 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 	require.Equal(t, 10, metrics.LocalKvCounts)
 }
 
-// TestCountMetricsFromMounts_OfficialUnofficialMounts tests that CountMetricsFromMounts correctly
+// TestCountMetricsSecretMounts_OfficialUnofficialMounts tests that CountMetricsSecretMounts correctly
 // distinguishes between official and unofficial mounts and returns the expected counts depending
 // on if officialOnly is set.
-func TestCountMetricsFromMounts_OfficialUnofficialMounts(t *testing.T) {
+func TestCountMetricsSecretMounts_OfficialUnofficialMounts(t *testing.T) {
 	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
 	require.NoError(t, err)
 	coreConfig := &CoreConfig{
@@ -182,7 +182,7 @@ func TestCountMetricsFromMounts_OfficialUnofficialMounts(t *testing.T) {
 	addRoleToStorage(t, core, "kubernetes", "roles/", 5)
 
 	// Get official-only counts, should not include kubernetes
-	metrics, err := core.CountMetricsFromMounts(true)
+	metrics, err := core.CountMetricsSecretMounts(true)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 	require.Equal(t, 5, metrics.ReplicatedRoleCounts.AWSDynamicRoles)
@@ -190,7 +190,7 @@ func TestCountMetricsFromMounts_OfficialUnofficialMounts(t *testing.T) {
 	require.Equal(t, 0, metrics.ReplicatedRoleCounts.KubernetesDynamicRoles)
 
 	// Get counts including unofficial mounts
-	metrics, err = core.CountMetricsFromMounts(false)
+	metrics, err = core.CountMetricsSecretMounts(false)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 	require.Equal(t, 5, metrics.ReplicatedRoleCounts.AWSDynamicRoles)

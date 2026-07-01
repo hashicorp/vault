@@ -216,7 +216,7 @@ func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time
 		// Do nothing if we are a standby. All requests get forwarded anyway
 	} else {
 		// Collect all mount metrics in a single pass through the mount table
-		metrics, err := c.CountMetricsFromMounts(true)
+		metrics, err := c.CountMetricsSecretMounts(true)
 		if err != nil {
 			c.logger.Error("error collecting mount metrics", "error", err)
 			return err
