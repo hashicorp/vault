@@ -17,12 +17,14 @@ module('Integration | Component | code-generator/automation-snippets', function 
     this.tfvpArgs = undefined;
     this.apiArgs = undefined;
     this.customTabs = undefined;
+    this.tfSnippet = undefined;
 
     this.renderComponent = () => {
       return render(hbs`
         <CodeGenerator::AutomationSnippets
           @cliArgs={{this.cliArgs}}
           @tfvpArgs={{this.tfvpArgs}}
+          @tfSnippet={{this.tfSnippet}}
           @apiArgs={{this.apiArgs}}
           @customTabs={{this.customTabs}}
         />`);
@@ -62,6 +64,39 @@ module('Integration | Component | code-generator/automation-snippets', function 
     assert.dom(GENERAL.hdsTab('cli')).exists();
     assert.dom(GENERAL.hdsTab('api')).exists();
     assert.dom(GENERAL.fieldByAttr('terraform')).hasText(expectedTfvp);
+    assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
+    assert.dom(GENERAL.fieldByAttr('api')).hasText(expectedApi, 'it renders API snippet');
+  });
+
+  test('it renders snippets when tfSnippet is provided', async function (assert) {
+    this.tfSnippet =
+      'resource "vault_mount" "<local identifier>" {\n  path = "my-mount"\n  type = "kv-v2"\n}';
+    this.cliArgs = {
+      command: 'kv delete ',
+      content: '-mount=secret creds',
+    };
+    this.apiArgs = {
+      url: 'sys/mounts/{path}',
+      payload: { path: 'my-mount', type: 'kv-v2' },
+    };
+
+    await this.renderComponent();
+
+    const expectedTfSnippet = `resource "vault_mount" "<local identifier>" {
+ path = "my-mount"
+ type = "kv-v2"
+}`;
+    const expectedCli = 'vault kv delete -mount=secret creds';
+    const expectedApi = `curl \\
+  --header "X-Vault-Token: $VAULT_TOKEN" \\
+  --request POST \\
+  --data '{"path":"my-mount","type":"kv-v2"}' \\
+  $VAULT_ADDR/v1/sys/mounts/my-mount
+`;
+    assert.dom(GENERAL.hdsTab('terraform')).exists();
+    assert.dom(GENERAL.hdsTab('cli')).exists();
+    assert.dom(GENERAL.hdsTab('api')).exists();
+    assert.dom(GENERAL.fieldByAttr('terraform')).hasText(expectedTfSnippet);
     assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
     assert.dom(GENERAL.fieldByAttr('api')).hasText(expectedApi, 'it renders API snippet');
   });
@@ -144,7 +179,7 @@ module('Integration | Component | code-generator/automation-snippets', function 
     assert.dom(GENERAL.fieldByAttr('api')).hasText(expectedSnippet, 'it renders API snippet with namespace');
   });
 
-  test('it includes namespace in snippet for non-root namespaces', async function (assert) {
+  test('it includes namespace in snippet for non-root namespaces when tfvpArgs provided', async function (assert) {
     this.tfvpArgs = { resource: 'vault_mount', resourceArgs: { path: '"my-mount"', type: '"kv-v2"' } };
     const namespace = this.owner.lookup('service:namespace');
     namespace.path = 'admin';
@@ -157,6 +192,34 @@ module('Integration | Component | code-generator/automation-snippets', function 
     assert
       .dom(GENERAL.fieldByAttr('terraform'))
       .hasText(expectedSnippet, 'it renders snippet with namespace');
+  });
+
+  test('it includes namespace in snippet for non-root namespaces when tfSnippet provided', async function (assert) {
+    this.tfSnippet =
+      'resource "vault_mount" "<local identifier>" {\n  path = "my-mount"\n  type = "kv-v2"\n}';
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.path = 'admin';
+    await this.renderComponent();
+    const expectedSnippet = `resource "vault_mount" "<local identifier>" {
+ namespace = "admin"
+ path = "my-mount"
+ type = "kv-v2"
+}`;
+    assert
+      .dom(GENERAL.fieldByAttr('terraform'))
+      .hasText(expectedSnippet, 'it renders snippet with namespace');
+  });
+
+  test('tfSnippet takes precedence over tfvpArgs when both are provided', async function (assert) {
+    this.tfSnippet = 'resource "vault_policy" "example" {\n  name = "my-policy"\n}';
+    this.tfvpArgs = { resource: 'vault_mount', resourceArgs: { path: '"my-mount"' } };
+    await this.renderComponent();
+    assert
+      .dom(GENERAL.fieldByAttr('terraform'))
+      .hasText(
+        'resource "vault_policy" "example" { name = "my-policy" }',
+        'tfSnippet output is rendered, not tfvpArgs'
+      );
   });
 
   test('it renders custom tabs', async function (assert) {
