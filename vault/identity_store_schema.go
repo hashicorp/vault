@@ -34,6 +34,7 @@ func identityStoreSchema(lowerCaseName bool) *memdb.DBSchema {
 		oidcClientsTableSchema,
 		scimClientSchema,
 		tpmsTableSchema,
+		tpmgroupsTableSchema,
 	}
 
 	for _, schemaFunc := range schemas {

@@ -35,6 +35,10 @@ func (s *systemViewWrapper) TPMByID(ctx context.Context, id string) (*logical.TP
 	panic("nope")
 }
 
+func (s *systemViewWrapper) GroupsForTPM(ctx context.Context, id string) ([]*logical.TPMGroup, error) {
+	panic("nope")
+}
+
 func (s *systemViewWrapper) RequestWellKnownRedirect(ctx context.Context, src, dest string) error {
 	panic("nope")
 }
