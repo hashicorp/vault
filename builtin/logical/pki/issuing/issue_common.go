@@ -178,9 +178,24 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 						)
 						converted, err := p.ToASCII(v)
 						if err != nil {
+							// idna's StrictDomainName=true rejects underscores
+							// and other non-hostname characters. When the role
+							// opts out of hostname enforcement, accept the
+							// original SAN verbatim so documented
+							// enforce_hostnames=false actually relaxes DNS-SAN
+							// validation as the API docs promise (#31925).
+							if !role.EnforceHostnames {
+								dnsNames = append(dnsNames, v)
+								continue
+							}
 							return nil, nil, errutil.UserError{Err: err.Error()}
 						}
 						if wildHostnameRegex.MatchString(converted) {
+							dnsNames = append(dnsNames, converted)
+						} else if !role.EnforceHostnames {
+							// Accept the converted-but-non-hostname form when
+							// enforce_hostnames=false — again, the role has
+							// explicitly opted out of hostname validation.
 							dnsNames = append(dnsNames, converted)
 						} else {
 							return nil, nil, errutil.UserError{Err: fmt.Sprintf("subject alternate name %s is not a valid DNS name and cannot be included as a SAN", v)}
