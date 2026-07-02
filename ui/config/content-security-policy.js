@@ -17,7 +17,7 @@ module.exports = function (environment) {
 
   policy['connect-src'].push('https://eu.i.posthog.com');
 
-  if (environment === 'test') {
+  if (environment === 'test' || environment === 'development') {
     policy['style-src'].push("'unsafe-inline'");
   }
 

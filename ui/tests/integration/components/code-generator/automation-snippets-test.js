@@ -112,19 +112,28 @@ module('Integration | Component | code-generator/automation-snippets', function 
       payload: { path: 'my-mount', type: 'kv-v2' },
     };
     await this.renderComponent();
+    assert.dom(GENERAL.hdsTab('terraform')).hasAttribute('aria-selected', 'true');
     assert.dom(GENERAL.hdsTabPanel('terraform')).doesNotHaveAttribute('hidden');
+    assert.dom(GENERAL.hdsTab('cli')).hasAttribute('aria-selected', 'false');
     assert.dom(GENERAL.hdsTabPanel('cli')).hasAttribute('hidden');
+    assert.dom(GENERAL.hdsTab('api')).hasAttribute('aria-selected', 'false');
     assert.dom(GENERAL.hdsTabPanel('api')).hasAttribute('hidden');
 
     await click(GENERAL.hdsTab('cli'));
+    assert.dom(GENERAL.hdsTab('cli')).hasAttribute('aria-selected', 'true');
     assert.dom(GENERAL.hdsTabPanel('cli')).doesNotHaveAttribute('hidden');
     assert.dom(GENERAL.hdsTabPanel('terraform')).hasAttribute('hidden');
+    assert.dom(GENERAL.hdsTab('terraform')).hasAttribute('aria-selected', 'false');
     assert.dom(GENERAL.hdsTabPanel('api')).hasAttribute('hidden');
+    assert.dom(GENERAL.hdsTab('api')).hasAttribute('aria-selected', 'false');
 
     await click(GENERAL.hdsTab('api'));
+    assert.dom(GENERAL.hdsTab('api')).hasAttribute('aria-selected', 'true');
     assert.dom(GENERAL.hdsTabPanel('api')).doesNotHaveAttribute('hidden');
     assert.dom(GENERAL.hdsTabPanel('terraform')).hasAttribute('hidden');
+    assert.dom(GENERAL.hdsTab('terraform')).hasAttribute('aria-selected', 'false');
     assert.dom(GENERAL.hdsTabPanel('cli')).hasAttribute('hidden');
+    assert.dom(GENERAL.hdsTab('cli')).hasAttribute('aria-selected', 'false');
   });
 
   test('it does not render tabs when only one snippet arg exists', async function (assert) {
