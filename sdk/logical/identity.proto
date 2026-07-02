@@ -128,3 +128,18 @@ message TPM {
   // a disabled TPM cannot generate certs or login
   bool disabled = 6;
 }
+
+message TPMGroup {
+  // ID is the unique identifier for the group
+  string ID = 1;
+
+  // Name is the human-friendly unique identifier for the group
+  string name = 2;
+
+  // Metadata represents the custom data tied to this group
+  map<string, string> metadata = 3;
+
+  // NamespaceID is the identifier of the namespace to which this group
+  // belongs to.
+  string namespace_id = 4;
+}
