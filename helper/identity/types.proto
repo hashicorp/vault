@@ -376,3 +376,33 @@ message TPM {
   // @inject_tag: sentinel:"-"
   string bucket_key = 7;
 }
+
+message TPMGroup {
+  // ID is the unique identifier for this group
+  // @inject_tag: sentinel:"-"
+  string id = 1;
+
+  // Name is the unique name for this group
+  // @inject_tag: sentinel:"-"
+  string name = 2;
+
+  // Metadata represents the custom data tied with this group
+  // @inject_tag: sentinel:"-"
+  map<string, string> metadata = 3;
+
+  // NamespaceID is the identifier of the namespace to which this group
+  // belongs to. Do not return this value over the API when reading the
+  // group.
+  // @inject_tag: sentinel:"-"
+  string namespace_id = 4;
+
+  // MemberTpmIDs are the identifiers of entities which are members of this
+  // group
+  // @inject_tag: sentinel:"-"
+  repeated string member_tpm_ids = 5;
+
+  // BucketKey is the path of the storage packer key into which this
+  // tpmgroup is stored.
+  // @inject_tag: sentinel:"-"
+  string bucket_key = 6;
+}

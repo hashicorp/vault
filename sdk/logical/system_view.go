@@ -161,6 +161,10 @@ type ExtendedSystemView interface {
 	// for the given TPM ID.
 	TPMByID(ctx context.Context, id string) (*TPM, error)
 
+	// GroupsForTPM returns the TPM group membership information for the provided
+	// TPM ID.
+	GroupsForTPM(ctx context.Context, id string) ([]*TPMGroup, error)
+
 	// GetPinnedPluginVersion returns the pinned version for the given plugin, if any.
 	GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error)
 }
@@ -273,6 +277,10 @@ func (d StaticSystemView) GroupsForEntity(entityID string) ([]*Group, error) {
 
 func (d StaticSystemView) TPMByID(ctx context.Context, id string) (*TPM, error) {
 	return nil, errors.New("TPMByID is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) GroupsForTPM(ctx context.Context, id string) ([]*TPMGroup, error) {
+	return nil, errors.New("GroupsForTPM is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) HasFeature(feature license.Features) bool {
