@@ -22,6 +22,9 @@ const (
 	patternMountsAuthTune = "mounts/auth/(?P<path>.+?)/tune$"
 	patternMountsPath     = "mounts/(?P<path>.+?)"
 	patternMounts         = "mounts$"
+
+	// Secrets listing paths patterns
+	patternSecretsListRecursive = "secrets/list-recursive/?$"
 )
 
 var passwordPolicySchema = map[string]*framework.FieldSchema{
@@ -4954,6 +4957,49 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["well-known"][1]),
+		},
+	}
+}
+
+// listAllSecretsPaths returns the paths for recursive secret listing across all mounts.
+func (b *SystemBackend) listAllSecretsPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: patternSecretsListRecursive,
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "secrets",
+				OperationVerb:   "list",
+				OperationSuffix: "all",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"path": {
+					Type:        framework.TypeString,
+					Description: "Filter to a specific mount path (e.g., secret/).",
+				},
+				"pattern": {
+					Type:        framework.TypeString,
+					Description: "Glob pattern for key matching (e.g., *api*, config/*/db).",
+				},
+				"fuzzy": {
+					Type:        framework.TypeBool,
+					Description: "Enable fuzzy (substring, case-insensitive) matching.",
+					Default:     false,
+				},
+				"permissions": {
+					Type:        framework.TypeString,
+					Description: "Filter by capability (e.g., read, list, read,list).",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ListOperation: b.ListAllSecretsRecursive,
+				logical.ReadOperation: b.ListAllSecretsRecursive,
+			},
+
+			HelpSynopsis: strings.TrimSpace(sysHelp["secrets-list-recursive"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["secrets-list-recursive"][1]),
 		},
 	}
 }
