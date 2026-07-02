@@ -1,0 +1,3 @@
+```release-note:bug
+core/http: Fix parsing of client certificates from AWS ALB mTLS passthrough headers when using URL,DER decoders. The URL decoder now uses PathUnescape instead of QueryUnescape to correctly handle unescaped + characters in base64-encoded PEM certificates. Also fix error message when PEM decoding fails in DER decoder.
+```
