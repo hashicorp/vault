@@ -3,27 +3,6 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @icon="file-text" @title={{this.title}}>
-  <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </:breadcrumbs>
-</Page::Header>
-
-<nav class="tabs" aria-label="secret tabs">
-  <ul>
-    {{#each this.tabs as |oTab|}}
-      <LinkTo
-        {{! The current route is "vault.cluster.secrets.backend.pki.external.error" when the route request fails }}
-        {{! so the lookup helper returns the route based on the url so the appropriate tab shows as active. }}
-        @current-when={{matches-current-url oTab.route}}
-        @route={{oTab.route}}
-        @model={{this.title}}
-        data-test-tab={{oTab.label}}
-      >
-        {{oTab.label}}
-      </LinkTo>
-    {{/each}}
-  </ul>
-</nav>
+<ExternalPki::HeaderTabs @title={{this.engineId}} @backend={{hash id=this.engineId}} @breadcrumbs={{this.breadcrumbs}} />
 
 <Page::Error @error={{this.model}} @titleTag="h2" />

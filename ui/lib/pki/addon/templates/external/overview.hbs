@@ -3,10 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Page::Header @title={{this.model.id}}>
-  <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </:breadcrumbs>
-</Page::Header>
+{{#let (and this.model.canListAcmeConfig (not this.model.acmeAccounts.length)) as |isNotConfigured|}}
+  <ExternalPki::HeaderTabs
+    @backend={{this.model.engine}}
+    @isNotConfigured={{isNotConfigured}}
+    @breadcrumbs={{this.breadcrumbs}}
+  />
 
-{{outlet}}
+  <ExternalPki::Page::Overview @model={{this.model}} @isNotConfigured={{isNotConfigured}} />
+{{/let}}

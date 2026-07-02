@@ -3,11 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{! role_name is set by route params }}
-{{outlet}}
-
-<nav class="tabs" aria-label="external pki tabs">
-  <ul>
+<ExternalPki::HeaderTabs @title={{this.model.role_name}} @breadcrumbs={{this.breadcrumbs}}>
+  <:tabs>
     <li>
       <LinkTo
         @current-when={{matches-current-url "external.roles.role.details"}}
@@ -24,5 +21,7 @@
         data-test-link-to="Active orders"
       >Active Orders</LinkTo>
     </li>
-  </ul>
-</nav>
+  </:tabs>
+</ExternalPki::HeaderTabs>
+
+{{outlet}}

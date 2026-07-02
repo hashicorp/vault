@@ -4,8 +4,4 @@
 ~}}
 
 {{! order_id set by route params }}
-<Page::Header @title={{this.model.order_id}}>
-  <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </:breadcrumbs>
-</Page::Header>
+<ExternalPki::HeaderTabs @title={{this.model.order_id}} @breadcrumbs={{this.breadcrumbs}} />

@@ -36,7 +36,8 @@ export default class PkiExternalRolesRoleRoute extends Route {
       { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'external.overview', model: currentPath },
-      { label: 'Roles' },
+      { label: 'Roles', route: 'external.roles', model: currentPath },
+      { label: resolvedModel.role_name },
     ];
   }
 }
