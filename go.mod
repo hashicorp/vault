@@ -175,7 +175,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.26.2
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.17.1
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.18.0
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.14.2-0.20260701005213-840fff96b701
 	github.com/hashicorp/vault-testing-stepwise v0.3.3
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
@@ -462,7 +462,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.5.0 // indirect
 	github.com/hashicorp/go-slug v0.16.8 // indirect
-	github.com/hashicorp/go-tfe v1.101.0 // indirect
+	github.com/hashicorp/go-tfe v1.109.0 // indirect
 	github.com/hashicorp/jsonapi v1.4.3-0.20250220162346-81a76b606f3e // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
@@ -529,7 +529,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.2.8 // indirect
-	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
+	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
 	github.com/petermattis/goid v0.0.0-20250721140440-ea1c0173183e // indirect
