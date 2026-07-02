@@ -593,6 +593,79 @@ func (x *TPM) GetDisabled() bool {
 	return false
 }
 
+type TPMGroup struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ID is the unique identifier for the group
+	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
+	// Name is the human-friendly unique identifier for the group
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Metadata represents the custom data tied to this group
+	Metadata map[string]string `protobuf:"bytes,3,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// NamespaceID is the identifier of the namespace to which this group
+	// belongs to.
+	NamespaceID   string `protobuf:"bytes,4,opt,name=namespace_id,json=namespaceID,proto3" json:"namespace_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *TPMGroup) Reset() {
+	*x = TPMGroup{}
+	mi := &file_sdk_logical_identity_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *TPMGroup) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TPMGroup) ProtoMessage() {}
+
+func (x *TPMGroup) ProtoReflect() protoreflect.Message {
+	mi := &file_sdk_logical_identity_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TPMGroup.ProtoReflect.Descriptor instead.
+func (*TPMGroup) Descriptor() ([]byte, []int) {
+	return file_sdk_logical_identity_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *TPMGroup) GetID() string {
+	if x != nil {
+		return x.ID
+	}
+	return ""
+}
+
+func (x *TPMGroup) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *TPMGroup) GetMetadata() map[string]string {
+	if x != nil {
+		return x.Metadata
+	}
+	return nil
+}
+
+func (x *TPMGroup) GetNamespaceID() string {
+	if x != nil {
+		return x.NamespaceID
+	}
+	return ""
+}
+
 var File_sdk_logical_identity_proto protoreflect.FileDescriptor
 
 var file_sdk_logical_identity_proto_rawDesc = string([]byte{
@@ -704,10 +777,23 @@ var file_sdk_logical_identity_proto_rawDesc = string([]byte{
 	0x74, 0x61, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c,
 	0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a,
-	0x02, 0x38, 0x01, 0x42, 0x28, 0x5a, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
-	0x6d, 0x2f, 0x68, 0x61, 0x73, 0x68, 0x69, 0x63, 0x6f, 0x72, 0x70, 0x2f, 0x76, 0x61, 0x75, 0x6c,
-	0x74, 0x2f, 0x73, 0x64, 0x6b, 0x2f, 0x6c, 0x6f, 0x67, 0x69, 0x63, 0x61, 0x6c, 0x62, 0x06, 0x70,
-	0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x02, 0x38, 0x01, 0x22, 0xcb, 0x01, 0x0a, 0x08, 0x54, 0x50, 0x4d, 0x47, 0x72, 0x6f, 0x75, 0x70,
+	0x12, 0x0e, 0x0a, 0x02, 0x49, 0x44, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x49, 0x44,
+	0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04,
+	0x6e, 0x61, 0x6d, 0x65, 0x12, 0x3b, 0x0a, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61,
+	0x18, 0x03, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x6c, 0x6f, 0x67, 0x69, 0x63, 0x61, 0x6c,
+	0x2e, 0x54, 0x50, 0x4d, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x2e, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61,
+	0x74, 0x61, 0x45, 0x6e, 0x74, 0x72, 0x79, 0x52, 0x08, 0x6d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74,
+	0x61, 0x12, 0x21, 0x0a, 0x0c, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x5f, 0x69,
+	0x64, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61,
+	0x63, 0x65, 0x49, 0x64, 0x1a, 0x3b, 0x0a, 0x0d, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61,
+	0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38,
+	0x01, 0x42, 0x28, 0x5a, 0x26, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
+	0x68, 0x61, 0x73, 0x68, 0x69, 0x63, 0x6f, 0x72, 0x70, 0x2f, 0x76, 0x61, 0x75, 0x6c, 0x74, 0x2f,
+	0x73, 0x64, 0x6b, 0x2f, 0x6c, 0x6f, 0x67, 0x69, 0x63, 0x61, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 })
 
 var (
@@ -722,7 +808,7 @@ func file_sdk_logical_identity_proto_rawDescGZIP() []byte {
 	return file_sdk_logical_identity_proto_rawDescData
 }
 
-var file_sdk_logical_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_sdk_logical_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_sdk_logical_identity_proto_goTypes = []any{
 	(*Entity)(nil),           // 0: logical.Entity
 	(*Alias)(nil),            // 1: logical.Alias
@@ -731,28 +817,31 @@ var file_sdk_logical_identity_proto_goTypes = []any{
 	(*MFAConstraintAny)(nil), // 4: logical.MFAConstraintAny
 	(*MFARequirement)(nil),   // 5: logical.MFARequirement
 	(*TPM)(nil),              // 6: logical.TPM
-	nil,                      // 7: logical.Entity.MetadataEntry
-	nil,                      // 8: logical.Alias.MetadataEntry
-	nil,                      // 9: logical.Alias.CustomMetadataEntry
-	nil,                      // 10: logical.Group.MetadataEntry
-	nil,                      // 11: logical.MFARequirement.MFAConstraintsEntry
-	nil,                      // 12: logical.TPM.MetadataEntry
+	(*TPMGroup)(nil),         // 7: logical.TPMGroup
+	nil,                      // 8: logical.Entity.MetadataEntry
+	nil,                      // 9: logical.Alias.MetadataEntry
+	nil,                      // 10: logical.Alias.CustomMetadataEntry
+	nil,                      // 11: logical.Group.MetadataEntry
+	nil,                      // 12: logical.MFARequirement.MFAConstraintsEntry
+	nil,                      // 13: logical.TPM.MetadataEntry
+	nil,                      // 14: logical.TPMGroup.MetadataEntry
 }
 var file_sdk_logical_identity_proto_depIDxs = []int32{
 	1,  // 0: logical.Entity.aliases:type_name -> logical.Alias
-	7,  // 1: logical.Entity.metadata:type_name -> logical.Entity.MetadataEntry
-	8,  // 2: logical.Alias.metadata:type_name -> logical.Alias.MetadataEntry
-	9,  // 3: logical.Alias.custom_metadata:type_name -> logical.Alias.CustomMetadataEntry
-	10, // 4: logical.Group.metadata:type_name -> logical.Group.MetadataEntry
+	8,  // 1: logical.Entity.metadata:type_name -> logical.Entity.MetadataEntry
+	9,  // 2: logical.Alias.metadata:type_name -> logical.Alias.MetadataEntry
+	10, // 3: logical.Alias.custom_metadata:type_name -> logical.Alias.CustomMetadataEntry
+	11, // 4: logical.Group.metadata:type_name -> logical.Group.MetadataEntry
 	3,  // 5: logical.MFAConstraintAny.any:type_name -> logical.MFAMethodID
-	11, // 6: logical.MFARequirement.mfa_constraints:type_name -> logical.MFARequirement.MFAConstraintsEntry
-	12, // 7: logical.TPM.metadata:type_name -> logical.TPM.MetadataEntry
-	4,  // 8: logical.MFARequirement.MFAConstraintsEntry.value:type_name -> logical.MFAConstraintAny
-	9,  // [9:9] is the sub-list for method output_type
-	9,  // [9:9] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	12, // 6: logical.MFARequirement.mfa_constraints:type_name -> logical.MFARequirement.MFAConstraintsEntry
+	13, // 7: logical.TPM.metadata:type_name -> logical.TPM.MetadataEntry
+	14, // 8: logical.TPMGroup.metadata:type_name -> logical.TPMGroup.MetadataEntry
+	4,  // 9: logical.MFARequirement.MFAConstraintsEntry.value:type_name -> logical.MFAConstraintAny
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_sdk_logical_identity_proto_init() }
@@ -766,7 +855,7 @@ func file_sdk_logical_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_sdk_logical_identity_proto_rawDesc), len(file_sdk_logical_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

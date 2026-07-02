@@ -116,6 +116,10 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 			return fmt.Errorf("failed to load TPMs: %w", err)
 		}
 
+		if err := i.loadTPMGroups(ctx); err != nil {
+			return fmt.Errorf("failed to load TPMGroups: %w", err)
+		}
+
 		return nil
 	}
 

@@ -104,6 +104,10 @@ type IdentityStore struct {
 	// buckets
 	tpmPacker *storagepacker.StoragePacker
 
+	// tpmgroupPacker is used to pack multiple TPMGroup storage entries into 256
+	// buckets
+	tpmgroupPacker *storagepacker.StoragePacker
+
 	// disableLowerCaseNames indicates whether or not identity artifacts are
 	// operated case insensitively
 	disableLowerCasedNames bool

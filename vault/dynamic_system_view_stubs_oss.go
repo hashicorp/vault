@@ -21,3 +21,7 @@ func (d dynamicSystemView) DownloadExtractVerifyPlugin(_ context.Context, _ *plu
 func (d dynamicSystemView) TPMByID(ctx context.Context, id string) (*logical.TPM, error) {
 	return nil, fmt.Errorf("enterprise only feature")
 }
+
+func (d dynamicSystemView) GroupsForTPM(ctx context.Context, id string) ([]*logical.TPMGroup, error) {
+	return nil, fmt.Errorf("enterprise only feature")
+}
