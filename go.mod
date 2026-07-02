@@ -165,7 +165,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1
 	github.com/hashicorp/vault-plugin-database-redis v0.8.1
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.1
-	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.16.1-0.20260701004647-81b904334eef
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.25.0
@@ -529,7 +529,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.2.8 // indirect
-	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
+	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
 	github.com/petermattis/goid v0.0.0-20250721140440-ea1c0173183e // indirect
@@ -549,7 +549,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
-	github.com/snowflakedb/gosnowflake v1.19.0 // indirect
+	github.com/snowflakedb/gosnowflake v1.19.1 // indirect
 	github.com/softlayer/softlayer-go v1.2.1 // indirect
 	github.com/sony/gobreaker v1.0.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
