@@ -298,3 +298,12 @@ func WithRegion(region string) LoginOption {
 		return nil
 	}
 }
+
+// WithCredentials can be used to specify a custom set of credentials
+// from the source you choose.
+func WithCredentials(creds *credentials.Credentials) LoginOption {
+	return func(a *AWSAuth) error {
+		a.creds = creds
+		return nil
+	}
+}
