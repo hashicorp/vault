@@ -13,6 +13,8 @@ import (
 	"io"
 	"time"
 
+	"github.com/cloudflare/circl/sign/mldsa/mldsa65"
+	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -272,6 +274,10 @@ func getKeyTypeAndBitsFromPublicKeyForRole(pubKey crypto.PublicKey) (certutil.Pr
 		keyType = certutil.ECPrivateKey
 	case ed25519.PublicKey:
 		keyType = certutil.Ed25519PrivateKey
+	case *mldsa65.PublicKey:
+		keyType = certutil.MLDSA65PrivateKey
+	case *mldsa87.PublicKey:
+		keyType = certutil.MLDSA87PrivateKey
 	default:
 		return certutil.UnknownPrivateKey, 0, fmt.Errorf("unsupported public key: %#v", pubKey)
 	}
