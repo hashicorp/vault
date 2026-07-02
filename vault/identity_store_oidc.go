@@ -1168,6 +1168,8 @@ func (tok *idToken) generatePayload(logger hclog.Logger, templates ...string) ([
 // mergeJSONTemplates will merge each of the given JSON templates into the given
 // output map. It will simply merge the top-level keys of the unmarshalled JSON
 // templates into output, which means that any conflicting keys will be overwritten.
+// Claims with a null or empty string value are omitted, in line with the OIDC
+// specification.
 func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, templates ...string) error {
 	for _, template := range templates {
 		var parsed map[string]interface{}
@@ -1176,11 +1178,21 @@ func mergeJSONTemplates(logger hclog.Logger, output map[string]interface{}, temp
 		}
 
 		for k, v := range parsed {
-			if !strutil.StrListContains(reservedClaims, k) {
-				output[k] = v
-			} else {
+			if strutil.StrListContains(reservedClaims, k) {
 				logger.Warn("invalid top level OIDC template key", "template", template, "key", k)
+				continue
 			}
+
+			// Omit claims with a null or empty string value. Per the OIDC
+			// specification, a claim that is not returned SHOULD be omitted
+			// rather than included with a null or empty string value. Empty
+			// lists and objects are preserved, since an empty collection is a
+			// meaningful claim value.
+			if v == nil || v == "" {
+				continue
+			}
+
+			output[k] = v
 		}
 	}
 
