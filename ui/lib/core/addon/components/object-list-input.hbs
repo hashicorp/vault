@@ -11,7 +11,8 @@
         {{#let (find-by "key" inputKey @objectKeys) as |field|}}
           <div class="column">
             {{#if (eq index 0)}}
-              <h2 data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
+              {{! TODO! remove the class name here, it was added only for testing purposes, to avoid applying styles to it  }}
+              <h2 class="todo-remove" data-test-object-list-label={{inputKey}}>{{field.label}}</h2>
             {{/if}}
             {{#let (get rowValidations field.key) as |inputError|}}
               <Input
