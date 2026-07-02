@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/idna"
@@ -246,6 +247,12 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, req *logical.Reques
 func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
+	// Per-order lock to prevent concurrent finalize requests from
+	// double-issuing certificates for the same order. See GH-31987.
+	lock := locksutil.LockForKey(b.acmeOrderLocks, orderId)
+	lock.Lock()
+	defer lock.Unlock()
+
 	csr, err := parseCsrFromFinalize(data)
 	if err != nil {
 		return nil, err
@@ -276,6 +283,16 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 
 	if err = validateCsrNotUsingAccountKey(csr, uc); err != nil {
 		return nil, err
+	}
+
+	// Defense-in-depth against concurrent finalize: persist a
+	// "processing" status before issuing, so that even if another
+	// request somehow bypasses the per-order lock (e.g. across
+	// cluster nodes on different lock stripes), the status gate
+	// at the top of this handler will reject it.
+	order.Status = ACMEOrderProcessing
+	if err := b.GetAcmeState().SaveOrder(ac, order); err != nil {
+		return nil, fmt.Errorf("failed persisting processing status: %w", err)
 	}
 
 	var signedCertBundle *certutil.ParsedCertBundle

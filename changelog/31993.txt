@@ -1,0 +1,3 @@
+```release-note:bug
+pki: add per-order lock and intermediate processing status to ACME order finalize handler, preventing concurrent finalize requests from double-issuing certificates for the same order
+```
