@@ -50,6 +50,8 @@ const (
 	vaultPathLeaseRevoke         = "/v1/sys/leases/revoke"
 	vaultPathLeaseRevokeForce    = "/v1/sys/leases/revoke-force"
 	vaultPathLeaseRevokePrefix   = "/v1/sys/leases/revoke-prefix"
+	vaultPathLeaseRenew          = "/v1/sys/leases/renew"
+	vaultPathLeaseRenewLegacy    = "/v1/sys/renew"
 )
 
 var (
@@ -63,6 +65,15 @@ var (
 		strings.TrimPrefix(vaultPathLeaseRevoke, "/v1"),
 		strings.TrimPrefix(vaultPathLeaseRevokeForce, "/v1"),
 		strings.TrimPrefix(vaultPathLeaseRevokePrefix, "/v1"),
+	}
+	// renewalPaths are the lease- and token-renewal endpoints whose responses
+	// must never be cached; see isRenewalRequest. /sys/leases/renew also covers
+	// the /sys/leases/renew/:lease_id form, and likewise for the legacy alias.
+	renewalPaths = []string{
+		strings.TrimPrefix(vaultPathLeaseRenew, "/v1"),
+		strings.TrimPrefix(vaultPathLeaseRenewLegacy, "/v1"),
+		strings.TrimPrefix(vaultPathTokenRenew, "/v1"),
+		strings.TrimPrefix(vaultPathTokenRenewSelf, "/v1"),
 	}
 )
 
@@ -484,6 +495,18 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return resp, nil
 	}
 
+	// Renewal requests act on an already-issued lease or token; their response
+	// echoes the existing lease_id/auth, so the caching logic below would
+	// wrongly treat it as a new lease or token to cache and renew. A cached
+	// renewal response reports a fixed, non-decreasing TTL, which prevents a
+	// proxied client's lifetime watcher (e.g. consul-template) from observing
+	// the lease near its max_ttl and refreshing before it expires. Always proxy
+	// these through.
+	if isRenewalRequest(req.Request) {
+		c.logger.Debug("pass-through response; renewal request", "method", req.Request.Method, "path", req.Request.URL.Path)
+		return resp, nil
+	}
+
 	// There shouldn't be a situation where secret.MountType == "kv" and
 	// staticSecretCacheId == "", but just in case.
 	// We restrict this to GETs as those are all we want to cache.
@@ -849,6 +872,25 @@ func (c *LeaseCache) createCtxInfo(ctx context.Context) *cachememdb.ContextInfo 
 		c.l.RUnlock()
 	}
 	return cachememdb.NewContextInfo(ctx)
+}
+
+// isRenewalRequest reports whether req targets one of Vault's lease- or
+// token-renewal endpoints. Responses to these echo the existing lease's
+// lease_id or the existing token's auth, so the caching logic would otherwise
+// treat them as new leases/tokens to cache and renew; the cached, non-decreasing
+// TTL then masks the lease nearing its max_ttl from a proxied client's lifetime
+// watcher. These must always be proxied through verbatim.
+func isRenewalRequest(req *http.Request) bool {
+	// Mirror deriveNamespaceAndRevocationPath: strip the /v1 prefix and use a
+	// substring match, since the endpoint may be prefixed by a namespace and/or
+	// suffixed by a lease ID and there's no reliable way to split the two.
+	nonVersionedPath := strings.TrimPrefix(req.URL.Path, "/v1")
+	for _, p := range renewalPaths {
+		if strings.Contains(nonVersionedPath, p) {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *LeaseCache) startRenewing(ctx context.Context, index *cachememdb.Index, req *SendRequest, secret *api.Secret) {
