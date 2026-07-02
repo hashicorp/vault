@@ -167,7 +167,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.1
 	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.2-0.20260701011548-226bc425840d
 	github.com/hashicorp/vault-plugin-secrets-azure v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.24.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.24.0
@@ -529,7 +529,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.2.8 // indirect
-	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
+	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
 	github.com/petermattis/goid v0.0.0-20250721140440-ea1c0173183e // indirect
