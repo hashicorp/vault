@@ -267,19 +267,19 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details`);
       await click(PAGE.detail.versionDropdown);
       await click(`${PAGE.detail.version(1)} a`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app/first/details?version=1`,
         'goes to version 1'
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details/edit?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app/first/details/edit?version=1`,
         'Goes to new version page'
       );
       assert
@@ -296,14 +296,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Ffirst`,
+        `/vault/secrets-engines/${backend}/kv/app/first`,
         'goes to overview after save'
       );
 
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=3`,
+        `/vault/secrets-engines/${backend}/kv/app/first/details?version=3`,
         'goes to latest version 3'
       );
       await click(PAGE.infoRowToggleMasked('my-key'));
@@ -397,7 +397,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -490,7 +490,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
@@ -551,7 +551,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -644,7 +644,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
@@ -707,7 +707,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details`);
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created tooltip does not show');
       assert.dom(PAGE.infoRow).doesNotExist('secret data not shown');
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
@@ -729,7 +729,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Add new version
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details/edit?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
         .hasText(
@@ -819,19 +819,19 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details`);
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 2');
       await click(PAGE.detail.versionDropdown);
       await click(`${PAGE.detail.version(1)} a`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,
+        `/vault/secrets-engines/${backend}/kv/app/first/details?version=1`,
         'goes to version 1'
       );
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 1');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version timestamp not shown');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
-      await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details/edit?version=1`);
+      await visit(`/vault/secrets-engines/${backend}/kv/app/first/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
         .hasText(
