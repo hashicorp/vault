@@ -11,7 +11,7 @@ import type SecretMountPath from 'vault/services/secret-mount-path';
 import type { Breadcrumb } from 'vault/app-types';
 
 interface RouteController extends Controller {
-  title: string;
+  engineId: string;
   breadcrumbs: Array<Breadcrumb>;
 }
 
@@ -21,7 +21,7 @@ export default class PkiExternalErrorRoute extends Route {
   setupController(controller: RouteController, resolvedModel: unknown) {
     super.setupController(controller, resolvedModel);
     const { currentPath } = this.secretMountPath;
-    controller.title = currentPath;
+    controller.engineId = currentPath;
     controller.breadcrumbs = [
       { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },

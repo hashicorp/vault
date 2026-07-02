@@ -1,0 +1,18 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @isNotConfigured}}
+  <Hds::Text::Display @tag="p" @size="300" @weight="semibold" class="top-padding-32 has-bottom-padding-s">
+    Welcome to Public PKI
+  </Hds::Text::Display>
+
+  <Hds::Text::Body @tag="p">
+    To configure this secret engine to request public certificates in Vault:
+  </Hds::Text::Body>
+
+  <ExternalPki::ImplementationSelect @engineId={{@model.engine.id}} />
+{{else}}
+  {{! Render overview cards }}
+{{/if}}

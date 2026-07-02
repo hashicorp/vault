@@ -81,6 +81,7 @@ export const PATH_MAP = {
   pkiSignVerbatim: apiPath`${'backend'}/sign-verbatim/${'id'}`,
   pkiTidy: apiPath`${'backend'}/tidy`,
   pkiTidyStatus: apiPath`${'backend'}/tidy/status`,
+  pkiExternalCaListConfigAcmeAccount: apiPath`${'backend'}/config/acme-account`,
   policy: apiPath`sys/policies/${'policyType'}/${'id'}`,
   policies: apiPath`sys/policies`,
   sshCredentials: apiPath`${'backend'}/creds/${'id'}`,

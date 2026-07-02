@@ -1,0 +1,56 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container class="has-top-padding-l has-bottom-padding-s">
+  <Hds::Text::Display @tag="h1" @size="400">
+    Choose your implementation method
+  </Hds::Text::Display>
+
+  <Hds::Form::RadioCard::Group @name="implementation-method" @alignment="center" class="has-top-padding-l" as |G|>
+    {{#each this.methodOptions as |option|}}
+      <G.RadioCard
+        @alignment="left"
+        @checked={{eq option.label this.selectedMethod}}
+        {{on "change" (fn this.onChange option)}}
+        data-test-radio-card={{option.label}}
+        as |R|
+      >
+        <R.Icon @name={{option.icon}} />
+        <R.Label>{{option.label}}</R.Label>
+        {{#if (eq option.label @recommendedOption)}}
+          <R.Badge @color="highlight" @text="Recommended" />
+        {{/if}}
+        <R.Description>{{option.description}}</R.Description>
+      </G.RadioCard>
+    {{/each}}
+  </Hds::Form::RadioCard::Group>
+</Hds::Card::Container>
+
+<Hds::Card::Container class="has-top-padding-s has-bottom-padding-l">
+  <Hds::Text::Display @tag="p" @size="300" @weight="semibold" class="has-bottom-padding-m">
+    1. Configure an ACME account
+  </Hds::Text::Display>
+  <CodeGenerator::AutomationSnippets
+    @tfvpArgs={{this.acmeConfig.terraform}}
+    @cliArgs={{this.acmeConfig.cli}}
+    @apiArgs={{this.acmeConfig.api}}
+  />
+
+  <Hds::Text::Display @tag="p" @size="300" @weight="semibold" class="has-top-padding-l has-bottom-padding-m">
+    2. Create a role
+  </Hds::Text::Display>
+  <CodeGenerator::AutomationSnippets
+    @tfvpArgs={{this.roleConfig.terraform}}
+    @cliArgs={{this.roleConfig.cli}}
+    @apiArgs={{this.roleConfig.api}}
+  />
+</Hds::Card::Container>
+
+<Hds::Button
+  @text="View configuration documentation"
+  @icon="external-link"
+  @iconPosition="trailing"
+  @href={{doc-link "/vault/api-docs/secret/pki-external-ca"}}
+/>
