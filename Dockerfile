@@ -178,7 +178,7 @@ COPY ${LICENSE_SOURCE}/ /licenses/
 # Update our timezone database. Install shadow-utils for creating our vault user
 # and group. Install util-linux for su for exec when the container is run as root.
 # Add tar as tar as it is necessary for some of our testing.
-RUN microdnf update -y && \
+RUN microdnf update -y --nobest && \
   microdnf install -y tzdata shadow-utils util-linux tar && \
   rm -rf /var/cache/yum && \
   microdnf clean all
