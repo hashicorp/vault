@@ -19,7 +19,3 @@ func testAdjustUnderlyingStorage(tcc *TestClusterCore) {
 	tcc.UnderlyingStorage = tcc.physical
 }
 func TestApplyEntBaseConfig(coreConfig, base *CoreConfig) {}
-
-// Ent specific test config for licensing
-func (c *Core) testSetTestPubKeys(config CoreConfig)       {}
-func (c *Core) testSetTestIssuerOptions(config CoreConfig) {}
