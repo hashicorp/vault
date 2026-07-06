@@ -1,0 +1,112 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "TestScanner",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "CVE-2024-1234",
+              "name": "CVE-2024-1234",
+              "shortDescription": {
+                "text": "Critical vulnerability in component X"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CVE-2024-1234",
+                    "toolComponent": {
+                      "name": "CVE"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": "CVE-2024-5678",
+              "name": "CVE-2024-5678",
+              "shortDescription": {
+                "text": "High severity vulnerability in component Y"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CVE-2024-5678",
+                    "toolComponent": {
+                      "name": "CVE"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CVE-2024-1234",
+          "message": {
+            "text": "Critical vulnerability detected in file A"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/main.go"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CVE-2024-1234",
+          "message": {
+            "text": "Critical vulnerability detected in file B"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/handler.go"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CVE-2024-5678",
+          "message": {
+            "text": "High severity vulnerability detected"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/utils.go"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CVE-2024-5678",
+          "message": {
+            "text": "High severity vulnerability detected again"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/config.go"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
