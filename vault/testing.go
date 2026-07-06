@@ -1483,148 +1483,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		servers = append(servers, server)
 	}
 
-	// Create three cores with the same physical and different redirect/cluster
-	// addrs.
-	// N.B.: On OSX, instead of random ports, it assigns new ports to new
-	// listeners sequentially. Aside from being a bad idea in a security sense,
-	// it also broke tests that assumed it was OK to just use the port above
-	// the redirect addr. This has now been changed to 105 ports above, but if
-	// we ever do more than three nodes in a cluster it may need to be bumped.
-	// Note: it's 105 so that we don't conflict with a running Consul by
-	// default.
-	coreConfig := &CoreConfig{
-		LogicalBackends:    make(map[string]logical.Factory),
-		CredentialBackends: make(map[string]logical.Factory),
-		AuditBackends: map[string]audit.Factory{
-			audit.TypeFile:   audit.NewFileBackend,
-			audit.TypeSocket: audit.NewSocketBackend,
-			audit.TypeSyslog: audit.NewSyslogBackend,
-		},
-		RedirectAddr:    fmt.Sprintf(scheme+"://127.0.0.1:%d", listeners[0][0].Address.Port),
-		ClusterAddr:     scheme + "://127.0.0.1:0",
-		DisableMlock:    true,
-		EnableUI:        true,
-		EnableRaw:       true,
-		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
-	}
-
-	if base != nil {
-		coreConfig.ClusterHeartbeatInterval = base.ClusterHeartbeatInterval
-		coreConfig.DetectDeadlocks = TestDeadlockDetection
-		coreConfig.RawConfig = base.RawConfig
-		coreConfig.DisableCache = base.DisableCache
-		coreConfig.EnableUI = base.EnableUI
-		coreConfig.DefaultLeaseTTL = base.DefaultLeaseTTL
-		coreConfig.MaxLeaseTTL = base.MaxLeaseTTL
-		coreConfig.CacheSize = base.CacheSize
-		coreConfig.PluginDirectory = base.PluginDirectory
-		coreConfig.PluginTmpdir = base.PluginTmpdir
-		coreConfig.Seal = base.Seal
-		coreConfig.UnwrapSeal = base.UnwrapSeal
-		coreConfig.DevToken = base.DevToken
-		coreConfig.EnableRaw = base.EnableRaw
-		coreConfig.DisableSealWrap = base.DisableSealWrap
-		coreConfig.DisableCache = base.DisableCache
-		coreConfig.LicensingConfig = base.LicensingConfig
-		coreConfig.License = base.License
-		coreConfig.LicensePath = base.LicensePath
-		coreConfig.DisablePerformanceStandby = base.DisablePerformanceStandby
-		coreConfig.MetricsHelper = base.MetricsHelper
-		coreConfig.MetricSink = base.MetricSink
-		coreConfig.SecureRandomReader = base.SecureRandomReader
-		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
-		coreConfig.ClusterName = base.ClusterName
-		coreConfig.DisableAutopilot = base.DisableAutopilot
-		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
-		coreConfig.ServiceRegistration = base.ServiceRegistration
-		coreConfig.ImpreciseLeaseRoleTracking = base.ImpreciseLeaseRoleTracking
-		coreConfig.ReportingScanDirectory = base.ReportingScanDirectory
-
-		if base.BuiltinRegistry != nil {
-			coreConfig.BuiltinRegistry = base.BuiltinRegistry
-		}
-
-		if !coreConfig.DisableMlock {
-			base.DisableMlock = false
-		}
-
-		if base.Physical != nil {
-			coreConfig.Physical = base.Physical
-		}
-
-		if base.HAPhysical != nil {
-			coreConfig.HAPhysical = base.HAPhysical
-		}
-
-		// Used to set something non-working to test fallback
-		switch base.ClusterAddr {
-		case "empty":
-			coreConfig.ClusterAddr = ""
-		case "":
-		default:
-			coreConfig.ClusterAddr = base.ClusterAddr
-		}
-
-		if base.LogicalBackends != nil {
-			for k, v := range base.LogicalBackends {
-				coreConfig.LogicalBackends[k] = v
-			}
-		}
-		if base.CredentialBackends != nil {
-			for k, v := range base.CredentialBackends {
-				coreConfig.CredentialBackends[k] = v
-			}
-		}
-		if base.AuditBackends != nil {
-			for k, v := range base.AuditBackends {
-				coreConfig.AuditBackends[k] = v
-			}
-		}
-		if base.Logger != nil {
-			coreConfig.Logger = base.Logger
-		}
-
-		coreConfig.ClusterCipherSuites = base.ClusterCipherSuites
-		coreConfig.DisableCache = base.DisableCache
-		coreConfig.DevToken = base.DevToken
-		coreConfig.RecoveryMode = base.RecoveryMode
-		coreConfig.ActivityLogConfig = base.ActivityLogConfig
-		coreConfig.BillingConfig = base.BillingConfig
-		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
-		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
-		coreConfig.RollbackPeriod = base.RollbackPeriod
-		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
-		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
-		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
-		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
-		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
-		coreConfig.EnableUnauthenticatedAccess = base.EnableUnauthenticatedAccess
-		coreConfig.DenySlashInTemplatedPolicyPaths = base.DenySlashInTemplatedPolicyPaths
-
-		TestApplyEntBaseConfig(coreConfig, base)
-	}
-	if coreConfig.ClusterName == "" {
-		coreConfig.ClusterName = t.Name()
-	}
+	coreConfig := applyBaseConfig(base, scheme, listeners[0][0].Addr().String())
 
 	if coreConfig.ClusterName == "" {
 		coreConfig.ClusterName = t.Name()
-	}
-
-	if coreConfig.ClusterHeartbeatInterval == 0 {
-		// Set this lower so that state populates quickly to standby nodes
-		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
-	}
-
-	if coreConfig.PeriodicLeaderRefreshInterval == 0 {
-		// Set this lower so that perf standby nodes become stable more quickly
-		coreConfig.PeriodicLeaderRefreshInterval = 250 * time.Millisecond
-	}
-
-	if coreConfig.RawConfig == nil {
-		c := new(server.Config)
-		c.SharedConfig = &configutil.SharedConfig{LogFormat: logging.UnspecifiedFormat.String()}
-		coreConfig.RawConfig = c
 	}
 
 	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
@@ -1782,6 +1644,63 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	t.Cleanup(testCluster.Cleanup)
 
 	return &testCluster
+}
+
+func applyBaseConfig(base *CoreConfig, scheme, redirectAddr string) *CoreConfig {
+	var coreConfig CoreConfig
+	if base != nil {
+		coreConfig = *base
+	} else {
+		coreConfig.EnableUI = true
+		coreConfig.EnableRaw = true
+	}
+	coreConfig.DetectDeadlocks = TestDeadlockDetection
+	coreConfig.DisableMlock = true
+	coreConfig.RedirectAddr = fmt.Sprintf("%s://%s", scheme, redirectAddr)
+	coreConfig.ClusterAddr = scheme + "://127.0.0.1:0"
+	if base != nil && base.ClusterAddr == "empty" {
+		// Used to set something non-working to test fallback
+		coreConfig.ClusterAddr = ""
+	}
+
+	if base != nil {
+		TestApplyEntBaseConfig(&coreConfig, base)
+	}
+
+	if coreConfig.LogicalBackends == nil {
+		coreConfig.LogicalBackends = make(map[string]logical.Factory)
+	}
+	if coreConfig.CredentialBackends == nil {
+		coreConfig.CredentialBackends = make(map[string]logical.Factory)
+	}
+	if coreConfig.AuditBackends == nil {
+		coreConfig.AuditBackends = map[string]audit.Factory{
+			audit.TypeFile:   audit.NewFileBackend,
+			audit.TypeSocket: audit.NewSocketBackend,
+			audit.TypeSyslog: audit.NewSyslogBackend,
+		}
+	}
+	if coreConfig.BuiltinRegistry == nil {
+		coreConfig.BuiltinRegistry = corehelpers.NewMockBuiltinRegistry()
+	}
+
+	if coreConfig.ClusterHeartbeatInterval == 0 {
+		// Set this lower so that state populates quickly to standby nodes
+		coreConfig.ClusterHeartbeatInterval = 2 * time.Second
+	}
+
+	if coreConfig.PeriodicLeaderRefreshInterval == 0 {
+		// Set this lower so that perf standby nodes become stable more quickly
+		coreConfig.PeriodicLeaderRefreshInterval = 250 * time.Millisecond
+	}
+
+	if coreConfig.RawConfig == nil {
+		c := new(server.Config)
+		c.SharedConfig = &configutil.SharedConfig{LogFormat: logging.UnspecifiedFormat.String()}
+		coreConfig.RawConfig = c
+	}
+
+	return &coreConfig
 }
 
 // StopCore performs an orderly shutdown of a core.
@@ -2019,13 +1938,6 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 	if localConfig.Seal != nil {
 		localConfig.Seal.SetCore(c)
 	}
-
-	// Ent specific test config for licensing
-	// Set test public keys in the core for tests that call license reloads
-	c.testSetTestPubKeys(localConfig)
-
-	// Set test license issuer  options in the core for tests that call license reloads
-	c.testSetTestIssuerOptions(localConfig)
 
 	return cleanupFunc, c, localConfig, handler
 }
