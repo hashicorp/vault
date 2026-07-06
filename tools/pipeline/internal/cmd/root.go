@@ -53,6 +53,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(newGoCmd())
 	rootCmd.AddCommand(newHCPCmd())
 	rootCmd.AddCommand(newReleasesCmd())
+	rootCmd.AddCommand(newSlackCmd())
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
