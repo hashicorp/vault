@@ -73,9 +73,10 @@ export default buildRoutes(function () {
         });
       });
       this.route('orders', function () {
-        this.route('order', { path: '/:order_id' }, function () {
-          this.route('details');
-        });
+        this.route('order', { path: '/:order_id' });
+      });
+      this.route('certificates', function () {
+        this.route('certificate', { path: '/:serial_number' });
       });
       this.route('dns-providers');
       this.route('acme-accounts');

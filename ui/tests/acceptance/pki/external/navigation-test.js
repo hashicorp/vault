@@ -13,21 +13,24 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { stubCapabilitiesForPaths } from 'vault/tests/helpers/capabilities/stubs';
 
 const TABS = ['Overview', 'Roles', 'Recent orders', 'DNS providers', 'ACME accounts'];
 
-module('Acceptance | enterprise pki external navigation', function (hooks) {
+// This test asserts tab state navigation for each route in pki.external
+module('Acceptance | enterprise | pki | external | navigation', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     // Test setup
     const api = this.owner.lookup('service:api');
-    const capabilities = this.owner.lookup('service:capabilities');
+    this.capabilities = this.owner.lookup('service:capabilities');
     this.acmeListStub = sinon.stub(api.secrets, 'pkiExternalCaListConfigAcmeAccount');
-    this.capabilitiesStub = sinon.stub(capabilities, 'for');
+    this.dnsListStub = sinon.stub(api.secrets, 'pkiExternalCaListConfigDns');
+    this.rolesListStub = sinon.stub(api.secrets, 'pkiExternalCaListRole');
+    this.mountPath = `pki-external-ca-${uuidv4()}`;
     // Setup External PKI engine
     await login();
-    this.mountPath = `pki-external-ca-${uuidv4()}`;
     await runCmd(mountEngineCmd('pki-external-ca', this.mountPath));
     // assertion helpers
     this.engineURL = `vault/secrets-engines/${this.mountPath}/pki/external`;
@@ -40,9 +43,20 @@ module('Acceptance | enterprise pki external navigation', function (hooks) {
     };
   });
 
-  test('only "Overview" tab renders when no ACME accounts exist but user has permission to list', async function (assert) {
-    this.acmeListStub.rejects(getErrorResponse()); // Throws a 404
-    this.capabilitiesStub.returns({ canList: true });
+  test('only "Overview" tab renders when no resources exist but user has permission to list', async function (assert) {
+    // getErrorResponse() throws 404 by default
+    this.acmeListStub.rejects(getErrorResponse());
+    this.dnsListStub.rejects(getErrorResponse());
+    this.rolesListStub.rejects(getErrorResponse());
+    stubCapabilitiesForPaths(
+      this.capabilities,
+      {
+        pkiExternalConfigAcmeAccount: { canList: true, canRead: false },
+        pkiExternalConfigDns: { canList: true, canRead: false },
+        pkiExternalRole: { canList: true, canRead: false },
+      },
+      { backend: this.mountPath }
+    );
     await visit(this.engineURL); // navigate to index route to test it redirects to overview
     assert.strictEqual(
       currentURL(),
@@ -59,10 +73,88 @@ module('Acceptance | enterprise pki external navigation', function (hooks) {
     hidden.forEach((t) => assert.dom(GENERAL.linkTo(t)).doesNotExist());
   });
 
-  test('All tabs render when user does NOT have permission to list ACME accounts', async function (assert) {
+  test('only "Overview" tab renders when no resources exist but user has permission to read', async function (assert) {
+    // getErrorResponse() throws 404 by default
+    this.acmeListStub.rejects(getErrorResponse());
+    this.dnsListStub.rejects(getErrorResponse());
+    this.rolesListStub.rejects(getErrorResponse());
+    stubCapabilitiesForPaths(
+      this.capabilities,
+      {
+        pkiExternalConfigAcmeAccount: { canList: false, canRead: true },
+        pkiExternalConfigDns: { canList: false, canRead: true },
+        pkiExternalRole: { canList: false, canRead: true },
+      },
+      { backend: this.mountPath }
+    );
+    await visit(this.engineURL); // navigate to index route to test it redirects to overview
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/overview`,
+      'it navigates to overview'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'it redirects to overview route'
+    );
+    assert.dom(GENERAL.linkTo('Overview')).exists().hasClass('active');
+    const hidden = TABS.filter((t) => t !== 'Overview');
+    hidden.forEach((t) => assert.dom(GENERAL.linkTo(t)).doesNotExist());
+  });
+
+  test('All tabs render when user does NOT have permission to list or read ACME accounts', async function (assert) {
     const error = { errors: ['1 error occurred:\n\t* permission denied\n\n'] };
     this.acmeListStub.rejects(getErrorResponse(error, 403));
-    this.capabilitiesStub.returns({ canList: false });
+    stubCapabilitiesForPaths(
+      this.capabilities,
+      { pkiExternalConfigAcmeAccount: { canList: false, canRead: false } },
+      { backend: this.mountPath }
+    );
+    await visit(this.engineURL);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/overview`,
+      'it navigates to overview'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'it redirects to overview route'
+    );
+    this.assertTabState(assert, 'Overview');
+  });
+
+  test('All tabs render when user does NOT have permission to list or read DNS providers', async function (assert) {
+    const error = { errors: ['1 error occurred:\n\t* permission denied\n\n'] };
+    this.dnsListStub.rejects(getErrorResponse(error, 403));
+    stubCapabilitiesForPaths(
+      this.capabilities,
+      { pkiExternalConfigDns: { canList: false, canRead: false } },
+      { backend: this.mountPath }
+    );
+    await visit(this.engineURL);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/overview`,
+      'it navigates to overview'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'it redirects to overview route'
+    );
+    this.assertTabState(assert, 'Overview');
+  });
+
+  test('All tabs render when user does NOT have permission to list or read roles', async function (assert) {
+    const error = { errors: ['1 error occurred:\n\t* permission denied\n\n'] };
+    this.rolesListStub.rejects(getErrorResponse(error, 403));
+    stubCapabilitiesForPaths(
+      this.capabilities,
+      { pkiExternalRole: { canList: false, canRead: false } },
+      { backend: this.mountPath }
+    );
     await visit(this.engineURL);
     assert.strictEqual(
       currentURL(),
@@ -80,7 +172,11 @@ module('Acceptance | enterprise pki external navigation', function (hooks) {
   module('configured', function (hooks) {
     hooks.beforeEach(async function () {
       this.acmeListStub.resolves({ keys: ['my-acme-account'] });
-      this.capabilitiesStub.returns({ canList: true });
+      stubCapabilitiesForPaths(
+        this.capabilities,
+        { pkiExternalConfigAcmeAccount: { canList: true, canRead: false } },
+        { backend: this.mountPath }
+      );
       // assertion helpers
       this.baseCrumbs = `Vault Secrets engines ${this.mountPath}`;
     });
@@ -167,19 +263,16 @@ module('Acceptance | enterprise pki external navigation', function (hooks) {
       this.assertTabState(assert, 'Recent orders');
     });
 
-    test('it navigates to external order details', async function (assert) {
+    test('it navigates to external order', async function (assert) {
       const orderID = '123';
 
-      await visit(`${this.engineURL}/orders/${orderID}/details`);
+      await visit(`${this.engineURL}/orders/${orderID}`);
       assert.strictEqual(
         currentURL(),
-        `vault/secrets-engines/${this.mountPath}/pki/external/orders/${orderID}/details`,
-        'it navigates to order details'
+        `vault/secrets-engines/${this.mountPath}/pki/external/orders/${orderID}`,
+        'it navigates to order'
       );
-      assert.strictEqual(
-        currentRouteName(),
-        'vault.cluster.secrets.backend.pki.external.orders.order.details'
-      );
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.external.orders.order');
 
       assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(orderID);
       assert.dom(GENERAL.breadcrumb).exists({ count: 5 });

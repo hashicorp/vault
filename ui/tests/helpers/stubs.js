@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// Stubs for the capabilities service live in test/helpers/capabilities/ folder
+
 import { Response } from 'miragejs';
 
 export function capabilitiesStub(requestPath, capabilitiesArray) {

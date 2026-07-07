@@ -5,28 +5,37 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { ModelFrom } from 'vault/vault/route';
 
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type { Breadcrumb } from 'vault/app-types';
-import type { OrderRouteModel } from '../order';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
+export type CertificateRouteModel = ModelFrom<PkiExternalCertificatesCertificateRoute>;
 
-export default class PkiExternalOrdersOrderDetailsRoute extends Route {
+export default class PkiExternalCertificatesCertificateRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
-  setupController(controller: RouteController, resolvedModel: OrderRouteModel) {
+  async model({ serial_number }: { serial_number: string }) {
+    return {
+      engine: this.modelFor('application') as SecretsEngineResource,
+      serial_number,
+    };
+  }
+
+  setupController(controller: RouteController, resolvedModel: CertificateRouteModel) {
     super.setupController(controller, resolvedModel);
     const { currentPath } = this.secretMountPath;
     controller.breadcrumbs = [
       { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'external.overview', model: currentPath },
-      { label: 'Orders', route: 'external.orders', model: currentPath },
-      { label: resolvedModel.order_id },
+      // There is no "Certificates" index route
+      { label: resolvedModel.serial_number },
     ];
   }
 }
