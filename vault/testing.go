@@ -1090,26 +1090,25 @@ type TestListener struct {
 
 type TestClusterCore struct {
 	*Core
-	CoreConfig              *CoreConfig
-	Client                  *api.Client
-	Handler                 http.Handler
-	Address                 *net.TCPAddr
-	Listeners               []*TestListener
-	ReloadFuncs             *map[string][]reloadutil.ReloadFunc
-	ReloadFuncsLock         *sync.RWMutex
-	Server                  *http.Server
-	ServerCert              *x509.Certificate
-	ServerCertBytes         []byte
-	ServerCertPEM           []byte
-	ServerKey               *ecdsa.PrivateKey
-	ServerKeyPEM            []byte
-	tlsConfig               *tls.Config
-	UnderlyingStorage       physical.Backend
-	UnderlyingRawStorage    physical.Backend
-	UnderlyingHAStorage     physical.HABackend
-	Barrier                 SecurityBarrier
-	NodeID                  string
-	pkiCertificateCountData logical.CertCount
+	CoreConfig           *CoreConfig
+	Client               *api.Client
+	Handler              http.Handler
+	Address              *net.TCPAddr
+	Listeners            []*TestListener
+	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
+	ReloadFuncsLock      *sync.RWMutex
+	Server               *http.Server
+	ServerCert           *x509.Certificate
+	ServerCertBytes      []byte
+	ServerCertPEM        []byte
+	ServerKey            *ecdsa.PrivateKey
+	ServerKeyPEM         []byte
+	tlsConfig            *tls.Config
+	UnderlyingStorage    physical.Backend
+	UnderlyingRawStorage physical.Backend
+	UnderlyingHAStorage  physical.HABackend
+	Barrier              SecurityBarrier
+	NodeID               string
 }
 
 type PhysicalBackendBundle struct {
