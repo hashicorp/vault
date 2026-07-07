@@ -10,6 +10,7 @@ import { ModelFrom } from 'vault/vault/route';
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type { Breadcrumb } from 'vault/app-types';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export type OrderRouteModel = ModelFrom<PkiExternalOrdersOrderRoute>;
 
@@ -22,7 +23,9 @@ export default class PkiExternalOrdersOrderRoute extends Route {
 
   model() {
     const { order_id } = this.paramsFor('external.orders.order') as { order_id: string };
+
     return {
+      engine: this.modelFor('application') as SecretsEngineResource,
       order_id,
     };
   }
@@ -34,7 +37,8 @@ export default class PkiExternalOrdersOrderRoute extends Route {
       { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: currentPath, route: 'external.overview', model: currentPath },
-      { label: 'Orders' },
+      { label: 'Orders', route: 'external.orders', model: currentPath },
+      { label: resolvedModel.order_id },
     ];
   }
 }
