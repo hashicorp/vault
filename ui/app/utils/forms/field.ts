@@ -3,6 +3,21 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// see: https://helios.hashicorp.design/components/form/key-value-inputs?tab=code#input-types
+export interface KeyValueField {
+  name: string;
+  label?: string;
+  type?: 'text' | 'textarea' | 'select' | 'masked' | 'file';
+  placeholder?: string;
+  possibleValues?: unknown[];
+  // prepends a "Select one" placeholder option when type is "select"
+  noDefault?: boolean;
+  width?: string;
+  isRequired?: boolean;
+  isOptional?: boolean;
+  helpText?: string;
+}
+
 export interface FieldOptions {
   label?: string;
   subText?: string;
@@ -14,6 +29,17 @@ export interface FieldOptions {
   isSingleRow?: boolean;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
+  keyInputType?: string;
+  valueInputType?: string;
+  keyPossibleValues?: unknown[];
+  valuePossibleValues?: unknown[];
+  // fields rendered in each row for editType "keyValueInputs"
+  keyValueFields?: KeyValueField[];
+  isRequired?: boolean;
+  isOptional?: boolean;
+  maxRows?: number;
+  maxRowsText?: string;
+  addRowButtonText?: string;
   editDisabled?: boolean;
   sensitive?: boolean;
   noCopy?: boolean;

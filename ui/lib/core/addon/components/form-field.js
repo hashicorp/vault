@@ -29,7 +29,7 @@ import { get } from '@ember/object';
  *  label: "To do task", // custom label to be shown, otherwise attr.name will be displayed
  *  defaultValue: "", // default value to display if model value is not present
  *  fieldValue: "toDo", // used for value lookup on model over attr.name
- *  editType: "boolean", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
+ *  editType: "boolean", type of field to use. List of editTypes:boolean, file, json, keyValueInputs, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
  *  helpText: "This will be in a tooltip",
  *  readOnly: true
  *  },
@@ -70,6 +70,7 @@ export default class FormFieldComponent extends Component {
   @tracked codemirrorEditor;
   @tracked showToggleTextInput = false;
   @tracked toggleInputEnabled = false;
+  @tracked keyValueRows = [];
 
   radioValue = (item) => (isEmpty(item.value) ? item : item.value);
 
@@ -86,6 +87,9 @@ export default class FormFieldComponent extends Component {
     const modelValue = get(model, valuePath);
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
+    if (attr.options?.editType === 'keyValueInputs') {
+      this.keyValueRows = this.rowsFromValue(modelValue);
+    }
   }
 
   // ---------------------------------------------------------------
@@ -103,7 +107,7 @@ export default class FormFieldComponent extends Component {
     if (options?.possibleValues?.length > 0) {
       return true;
     } else {
-      if (options?.editType === 'dateTimeLocal') {
+      if (options?.editType === 'dateTimeLocal' || options?.editType === 'keyValueInputs') {
         return true;
       } else if (
         options?.editType === 'searchSelect' ||
@@ -234,6 +238,95 @@ export default class FormFieldComponent extends Component {
     // we want to read the original value instead of `event.target.value` so we have `false` (boolean) and not `"false"` (string)
     const valueToSet = this.radioValue(item);
     this.setAndBroadcast(valueToSet);
+  }
+  // supports both a flat `{ key: value }` object and an array of row objects, since `keyValueInputs`
+  // is used for both "object" attrs (see isKeyValueMap) and "array" attrs
+  rowsFromValue(value) {
+    if (Array.isArray(value)) {
+      // clone each row so editing it doesn't mutate the model's array in place before it's broadcast
+      return value.length ? value.map((row) => ({ ...row })) : [this.emptyKeyValueRow()];
+    }
+    if (value && typeof value === 'object') {
+      const rows = Object.entries(value).map(([key, val]) => ({ key, value: val }));
+      return rows.length ? rows : [this.emptyKeyValueRow()];
+    }
+    return [this.emptyKeyValueRow()];
+  }
+  // defaults to a simple key/value pair for backwards compatibility; see `KeyValueField` for the shape of `attr.options.keyValueFields`
+  get keyValueFields() {
+    const options = this.args.attr.options || {};
+    if (Array.isArray(options.keyValueFields) && options.keyValueFields.length) {
+      return options.keyValueFields;
+    }
+    return [
+      {
+        name: 'key',
+        label: 'Key',
+        type: options.keyInputType || 'text',
+        placeholder: options.keyPlaceholder || 'key',
+        possibleValues: options.keyPossibleValues || [],
+      },
+      {
+        name: 'value',
+        label: 'Value',
+        type: options.valueInputType || 'text',
+        placeholder: options.valuePlaceholder || 'value',
+        possibleValues: options.valuePossibleValues || [],
+      },
+    ];
+  }
+  // a flat `{ key: value }` object is only representable when there are exactly two fields, named `key` and `value`
+  get isKeyValueMap() {
+    const [first, second] = this.keyValueFields;
+    return (
+      this.args.attr.type === 'object' &&
+      this.keyValueFields.length === 2 &&
+      first.name === 'key' &&
+      second.name === 'value'
+    );
+  }
+  emptyKeyValueRow() {
+    return this.keyValueFields.reduce((row, field) => ({ ...row, [field.name]: '' }), {});
+  }
+  broadcastKeyValueRows() {
+    let value;
+    if (this.isKeyValueMap) {
+      value = this.keyValueRows.reduce((obj, row) => {
+        if (row.key || row.value) {
+          obj[row.key] = row.value;
+        }
+        return obj;
+      }, {});
+    } else {
+      value = this.keyValueRows.filter((row) => this.keyValueFields.some((field) => row[field.name]));
+    }
+    this.setAndBroadcast(value);
+  }
+  @action
+  addKeyValueRow() {
+    this.keyValueRows = [...this.keyValueRows, this.emptyKeyValueRow()];
+  }
+  @action
+  deleteKeyValueRow(rowData) {
+    this.keyValueRows = this.keyValueRows.filter((row) => row !== rowData);
+    if (!this.keyValueRows.length) {
+      this.keyValueRows = [this.emptyKeyValueRow()];
+    }
+    this.broadcastKeyValueRows();
+  }
+  @action
+  updateKeyValueRow(index, fieldName, event) {
+    const { value } = event.target;
+    this.keyValueRows[index][fieldName] = value;
+    this.keyValueRows = [...this.keyValueRows];
+    this.broadcastKeyValueRows();
+  }
+  @action
+  updateKeyValueRowFile(index, fieldName, event) {
+    const file = event.target.files?.[0] || '';
+    this.keyValueRows[index][fieldName] = file;
+    this.keyValueRows = [...this.keyValueRows];
+    this.broadcastKeyValueRows();
   }
   @action
   setAndBroadcastTtl(value) {
