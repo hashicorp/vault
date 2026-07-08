@@ -194,8 +194,8 @@ importers:
         specifier: ~1.3.8
         version: 1.3.8(date-fns@2.30.0)
       dompurify:
-        specifier: ~3.3.3
-        version: 3.3.3
+        specifier: ~3.4.0
+        version: 3.4.6
       ember-a11y-testing:
         specifier: ~7.1.3
         version: 7.1.3(@babel/core@7.26.10)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.7))(@glint/template@1.7.7)(qunit@2.24.3)(webpack@5.107.2)
@@ -3772,9 +3772,6 @@ packages:
 
   dom-element-descriptors@0.5.1:
     resolution: {integrity: sha512-DLayMRQ+yJaziF4JJX1FMjwjdr7wdTr1y9XvZ+NfHELfOMcYDnCHneAYXAS4FT1gLILh4V0juMZohhH1N5FsoQ==}
-
-  dompurify@3.3.3:
-    resolution: {integrity: sha512-Oj6pzI2+RqBfFG+qOaOLbFXLQ90ARpcGG6UePL82bJLtdsa6CYJD7nmiU8MW9nQNOtCHV3lZ/Bzq1X0QYbBZCA==}
 
   dompurify@3.4.6:
     resolution: {integrity: sha512-+7gzEI8trIIQkVCvQ3ucGtNfH3nOmDgVTzc62rAAOlMxLth78pwpPoZCPc7CyRzAQF89MqcfPdEWkDwnjgqktg==}
@@ -13315,10 +13312,6 @@ snapshots:
       esutils: 2.0.3
 
   dom-element-descriptors@0.5.1: {}
-
-  dompurify@3.3.3:
-    optionalDependencies:
-      '@types/trusted-types': 2.0.7
 
   dompurify@3.4.6:
     optionalDependencies:
