@@ -5,6 +5,7 @@ package http
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -45,7 +46,7 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 	requestId, err := uuid.GenerateUUID()
 	if err != nil {
-		respondError(w, http.StatusInternalServerError, nil)
+		respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err))
 		return
 	}
 
