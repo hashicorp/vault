@@ -905,13 +905,13 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}}
 
 	postStartFunc := func(containerID string, realIP string) error {
-		err := n.setupCert(realIP)
-		if err != nil {
+		// If we signal Vault before it installs its sighup handler, it'll die.
+		wg.Wait()
+
+		if err := n.setupCert(realIP); err != nil {
 			return err
 		}
 
-		// If we signal Vault before it installs its sighup handler, it'll die.
-		wg.Wait()
 		n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
 		return n.runner.RefreshFiles(ctx, containerID)
 	}
