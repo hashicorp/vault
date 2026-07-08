@@ -68,7 +68,7 @@
 /.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
 
 # Quality engineering
-/.github/  @hashicorp/team-vault-quality
+/.github/  @hashicorp/team-vault-quality @hashicorp/team-vault-engineering-productivity-team
 /enos/     @hashicorp/team-vault-quality
 
 # Copilot instructions - exceptions to the general .github/ rule
