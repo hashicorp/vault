@@ -19,7 +19,8 @@ func listCommitStatuses(
 	repo string,
 	ref string,
 ) ([]*libgithub.RepoStatus, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.String("commit-ref", ref),

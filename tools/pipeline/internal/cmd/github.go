@@ -35,7 +35,8 @@ func newGithubCmd() *cobra.Command {
 			if token, set := os.LookupEnv("GITHUB_TOKEN"); set {
 				githubCmdState.GithubV3 = githubCmdState.GithubV3.WithAuthToken(token)
 				githubCmdState.GithubV4 = githubv4.NewClient(
-					oauth2.NewClient(context.Background(),
+					oauth2.NewClient(
+						context.Background(),
 						oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 					),
 				)
