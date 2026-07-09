@@ -13,7 +13,7 @@ module('Unit | Utility | terraform-mappings/sys-policies-acl-name-mapping', func
       policy: 'path "secret/*" { capabilities = ["read"] }',
     };
     const tfResourceString = sysPoliciesAclNameMapping(secretReaderPayload);
-    const expectedString = `resource "vault_policy" "<local-id>" {\n  name = "my-policy"\n  policy = <<EOT\npath "secret/*" { capabilities = ["read"] }\nEOT\n}`;
+    const expectedString = `resource "vault_policy" "<local identifier>" {\n  name = "my-policy"\n  policy = <<EOT\npath "secret/*" { capabilities = ["read"] }\nEOT\n}`;
 
     assert.strictEqual(tfResourceString, expectedString);
   });

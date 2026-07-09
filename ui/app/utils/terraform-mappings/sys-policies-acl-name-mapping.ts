@@ -29,7 +29,7 @@ export interface SysPoliciesAclNamePayload {
 export const sysPoliciesAclNameMapping = (payload: SysPoliciesAclNamePayload): string => {
   return terraformResourceTemplate({
     resource: 'vault_policy',
-    localId: '<local-id>',
+    localId: '<local identifier>',
     resourceArgs: {
       name: `"${payload.name || '<policy name>'}"`,
       policy: formatEot(payload.policy),
