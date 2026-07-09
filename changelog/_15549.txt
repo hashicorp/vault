@@ -1,0 +1,3 @@
+```release-note:improvement
+events: Add `VAULT_EVENT_NOTIFICATIONS_BOUNDED_QUEUE_SIZE` environment variable to configure bounded event queues for event notification subscribers. Set to a positive integer (e.g., 16) to enable buffered channels of that size (maximum 1000). This prevents resource exhaustion in deployments with high subscriber counts, but comes at the cost of the potential for subscribers to miss events. Defaults to 0 (unbuffered) for backward compatibility.
+```
