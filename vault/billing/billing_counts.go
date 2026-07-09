@@ -27,6 +27,15 @@ const (
 	// MaxBillingRetentionMonths is the maximum allowed retention period (72 months = 6 years)
 	MaxBillingRetentionMonths = 72
 
+	// DefaultAttributionRetentionMonths is the default number of months of attribution data to retain.
+	DefaultAttributionRetentionMonths = 37
+
+	BillingWriteInterval = 10 * time.Minute
+	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
+	PluginCountsSendTimeout = 30 * time.Second
+	// pluginCountsStandbyTime is how long to wait before sending plugin counts from a perf standby
+	PluginCountsStandbyTime = 10 * time.Minute
+
 	BillingSubPath                          = "billing/"
 	BillingConfigPath                       = "config"
 	ReplicatedPrefix                        = "replicated/"
@@ -48,11 +57,7 @@ const (
 	OidcDurationAdjustedCountPrefix         = "oidcNormalizedTokenUnits/"
 	ExternalCaDurationAdjustedCountPrefix   = "externalCaNormalizedCertsIssued/"
 
-	BillingWriteInterval = 10 * time.Minute
-	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
-	PluginCountsSendTimeout = 30 * time.Second
-	// pluginCountsStandbyTime is how long to wait before sending plugin counts from a perf standby
-	PluginCountsStandbyTime = 10 * time.Minute
+	AttributionMaxPrefix = "attribution/maximum/"
 )
 
 var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
@@ -96,6 +101,10 @@ func GetMonthlyBillingMetricPath(localPrefix string, now time.Time, billingMetri
 
 func GetMonthlyBillingPath(localPrefix string, now time.Time) string {
 	return fmt.Sprintf(BillingMonthStorageFormat, localPrefix, now.Year(), int(now.Month()), "")
+}
+
+func GetAttributionMaxPath(localPathPrefix string, month time.Time, attributionMetricName string) string {
+	return GetMonthlyBillingMetricPath(localPathPrefix, month, AttributionMaxPrefix+attributionMetricName)
 }
 
 type DataProtectionCallCounts struct {
