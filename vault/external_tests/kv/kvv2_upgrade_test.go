@@ -37,10 +37,11 @@ func TestKVv2_UpgradePaths(t *testing.T) {
 			"kv": logicalKv.Factory,
 		},
 		EnableRaw: true,
-		Logger:    logger,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+		Logger:      logger,
 	})
 
 	core := cluster.Cores[0]
