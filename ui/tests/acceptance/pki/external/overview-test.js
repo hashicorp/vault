@@ -32,6 +32,11 @@ module('Acceptance | enterprise | pki | external | overview route', function (ho
     this.engineURL = `vault/secrets-engines/${this.mountPath}/pki/external/overview`;
   });
 
+  hooks.afterEach(async function () {
+    // cleanup after
+    await runCmd([`delete sys/mounts/${this.mountPath}`], false);
+  });
+
   test('it catches 404 errors', async function (assert) {
     this.acmeListStub.resolves({ keys: ['account-1', 'account-2'] });
     this.dnsListStub.rejects(getErrorResponse());

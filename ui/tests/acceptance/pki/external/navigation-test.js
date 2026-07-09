@@ -41,6 +41,11 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
     };
   });
 
+  hooks.afterEach(async function () {
+    // cleanup after
+    await runCmd([`delete sys/mounts/${this.mountPath}`], false);
+  });
+
   test('only "Overview" tab renders when no resources exist but user has permission to list everything', async function (assert) {
     // getErrorResponse() throws 404 by default
     this.acmeListStub.rejects(getErrorResponse());

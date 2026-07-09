@@ -31,23 +31,25 @@
 </Hds::Card::Container>
 
 <Hds::Card::Container class="has-top-padding-s has-bottom-padding-l">
-  <Hds::Text::Display @tag="p" @size="300" @weight="semibold" class="has-bottom-padding-m">
-    1. Configure an ACME account
-  </Hds::Text::Display>
-  <CodeGenerator::AutomationSnippets
-    @tfvpArgs={{this.acmeConfig.terraform}}
-    @cliArgs={{this.acmeConfig.cli}}
-    @apiArgs={{this.acmeConfig.api}}
-  />
-
-  <Hds::Text::Display @tag="p" @size="300" @weight="semibold" class="has-top-padding-l has-bottom-padding-m">
-    2. Create a role
-  </Hds::Text::Display>
-  <CodeGenerator::AutomationSnippets
-    @tfvpArgs={{this.roleConfig.terraform}}
-    @cliArgs={{this.roleConfig.cli}}
-    @apiArgs={{this.roleConfig.api}}
-  />
+  {{#each this.displaySteps as |step index|}}
+    <Hds::Text::Display
+      @tag="p"
+      @size="300"
+      @weight="semibold"
+      class="{{if (gt index 0) 'has-top-padding-l'}} has-bottom-padding-m"
+      data-test-text-display={{index}}
+    >
+      {{#if (gt this.displaySteps.length 1)}}
+        {{step.number}}.
+      {{/if}}
+      {{step.title}}
+    </Hds::Text::Display>
+    <CodeGenerator::AutomationSnippets
+      @tfvpArgs={{step.config.terraform}}
+      @cliArgs={{step.config.cli}}
+      @apiArgs={{step.config.api}}
+    />
+  {{/each}}
 </Hds::Card::Container>
 
 <Hds::Button
