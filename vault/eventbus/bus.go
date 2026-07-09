@@ -389,6 +389,21 @@ func (bus *EventBus) MakeClusterWideFilters() {
 	bus.filters.makeClusterWideFilters()
 }
 
+// GetClusterWideFilterAdditions returns the current cluster-wide filter
+// represented purely as additive changes. It is used by a secondary cluster's
+// active node to resync its full set of event subscription filters to the
+// primary.
+func (bus *EventBus) GetClusterWideFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(clusterWide)
+}
+
+// GetLocalFilterAdditions returns the current local filter represented
+// purely as additive changes. It is used by a performance standby node to
+// resync its full set of event subscription filters to the active node.
+func (bus *EventBus) GetLocalFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(bus.filters.self)
+}
+
 // ClearClusterWideFilter removes all entries from the current cluster-wide
 // filter.
 func (bus *EventBus) ClearClusterWideFilter() {

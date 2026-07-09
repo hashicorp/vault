@@ -435,7 +435,48 @@ const (
 	FilterChangeClear  = 2
 )
 
-// calculateChanges calculates a set of changes necessary to transform from into to.
+// appendPatternChanges is the shared helper that both getFilterAdditions and calculateChanges use
+// to turn a patternSet into FilterChange entries.
+// It appends a FilterChange with the given operation to "changes" for every pattern:subscriberID
+// pair in patterns.
+// It skips empty patterns.
+func appendPatternChanges(changes []FilterChange, op int, patterns patternSet) []FilterChange {
+	for p, subscriberIDs := range patterns {
+		if p.isEmpty() {
+			continue
+		}
+		for _, subscriberID := range subscriberIDs {
+			changes = append(changes, FilterChange{
+				Operation:         op,
+				NamespacePatterns: strings.Split(p.namespacePatterns, " "),
+				EventTypePattern:  p.eventTypePattern,
+				SubscriberID:      subscriberID,
+			})
+		}
+	}
+	return changes
+}
+
+// getFilterAdditions returns the current filter for the given cluster node as
+// add-only FilterChange operations.
+// Unlike calculateChanges, it does not first clear the filters, so re-sending getFilterAdditions can
+// only add filters and never remove any. It is primarily used to resync the full filter state after
+// reconnecting to a node which holds filters in-memory.
+func (f *Filters) getFilterAdditions(c clusterNodeID) []FilterChange {
+	f.lock.RLock()
+	defer f.lock.RUnlock()
+	filter := f.filters[c]
+	if filter == nil {
+		return nil
+	}
+	return appendPatternChanges(nil, FilterChangeAdd, filter.patterns)
+}
+
+// calculateChanges returns the FilterChange operations needed to transform the
+// "from" filter into the "to" filter.
+// A nil "to" clears the remote entirely.
+// A nil "from" clears the remote then adds every pattern in "to".
+// Otherwise, it emits adds for patterns only in "to" and removes for patterns only in "from".
 func calculateChanges(from *ClusterNodeFilter, to *ClusterNodeFilter) []FilterChange {
 	var changes []FilterChange
 	if to == nil {
@@ -446,45 +487,12 @@ func calculateChanges(from *ClusterNodeFilter, to *ClusterNodeFilter) []FilterCh
 		changes = append(changes, FilterChange{
 			Operation: FilterChangeClear,
 		})
-		for pattern, subscriberIDs := range to.patterns {
-			if !pattern.isEmpty() {
-				for _, subscriberID := range subscriberIDs {
-					changes = append(changes, FilterChange{
-						Operation:         FilterChangeAdd,
-						NamespacePatterns: strings.Split(pattern.namespacePatterns, " "),
-						EventTypePattern:  pattern.eventTypePattern,
-						SubscriberID:      subscriberID,
-					})
-				}
-			}
-		}
+		changes = appendPatternChanges(changes, FilterChangeAdd, to.patterns)
 	} else {
 		additions := to.patterns.Difference(from.patterns)
 		subtractions := from.patterns.Difference(to.patterns)
-		for add, subscriberIDs := range additions {
-			if !add.isEmpty() {
-				for _, subscriberID := range subscriberIDs {
-					changes = append(changes, FilterChange{
-						Operation:         FilterChangeAdd,
-						NamespacePatterns: strings.Split(add.namespacePatterns, " "),
-						EventTypePattern:  add.eventTypePattern,
-						SubscriberID:      subscriberID,
-					})
-				}
-			}
-		}
-		for sub, subscriberIDs := range subtractions {
-			if !sub.isEmpty() {
-				for _, subscriberID := range subscriberIDs {
-					changes = append(changes, FilterChange{
-						Operation:         FilterChangeRemove,
-						NamespacePatterns: strings.Split(sub.namespacePatterns, " "),
-						EventTypePattern:  sub.eventTypePattern,
-						SubscriberID:      subscriberID,
-					})
-				}
-			}
-		}
+		changes = appendPatternChanges(changes, FilterChangeAdd, additions)
+		changes = appendPatternChanges(changes, FilterChangeRemove, subtractions)
 	}
 	return changes
 }

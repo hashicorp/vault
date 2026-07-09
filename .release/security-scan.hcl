@@ -11,6 +11,10 @@ binary {
     suppress {
       vulnerabilities = [
         "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+        // GO-2026-5932 appears to be a false positive as it only relates to
+        // golang.org/x/crypto/openpgp, which is not in use in the project.
+        // https://pkg.go.dev/vuln/GO-2026-5932
+        "GO-2026-5932"
       ]
     }
   }
