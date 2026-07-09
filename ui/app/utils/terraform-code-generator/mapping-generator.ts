@@ -160,7 +160,7 @@ ${interfaceLines}
 export const ${mappingName} = (payload: ${interfaceName}): string => {
   return terraformResourceTemplate({
     resource: '${tfResource}',
-    localId: '<local-id>',
+    localId: '<local identifier>',
     resourceArgs: {
 ${argLines}
     },
@@ -237,7 +237,7 @@ ${interfaceLines}
 export const ${mappingName} = (payload: ${interfaceName}): string => {
   return terraformResourceTemplate({
     resource: '${tfResource}',
-    localId: '<local-id>',
+    localId: '<local identifier>',
     resourceArgs: {
 ${argLines}
     },
