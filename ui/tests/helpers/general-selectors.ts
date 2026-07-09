@@ -197,7 +197,7 @@ export const GENERAL = {
   licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
-  textDisplay: (attr: string) => `[data-test-text-display="${attr}"]`,
+  textDisplay: (attr?: string) => (attr ? `[data-test-text-display="${attr}"]` : '[data-test-text-display]'),
   textBody: (attr: string) => `[data-test-text-body="${attr}"]`,
   widget: (name: string) => `[data-test-widget="${name}"]`,
 };

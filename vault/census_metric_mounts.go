@@ -106,7 +106,9 @@ func (c *Core) CountMetricsSecretMounts(officialOnly bool) (*MountMetrics, error
 // collectMetricsForSecretMount collects role counts, managed key counts, and secret engine resource counts
 // for a specific mount entry based on its plugin type. It updates the provided target metrics in place.
 func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts, targetSecretEngineResourceCounts *SecretEngineResourceCounts) {
-	apiList := func(entry *MountEntry, apiPath string) []string {
+	// apiListWithKeyInfo lists keys for a mount's apiPath and also returns the key_info
+	// map, used when the caller needs per-key metadata (e.g. SSH key_type for CA vs OTP).
+	apiListWithKeyInfo := func(entry *MountEntry, apiPath string) ([]string, map[string]interface{}) {
 		listRequest := &logical.Request{
 			Operation: logical.ListOperation,
 			Path:      entry.namespace.Path + entry.Path + apiPath,
@@ -114,19 +116,26 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 
 		resp, err := c.router.Route(ctx, listRequest)
 		if err != nil || resp == nil || resp.Data == nil {
-			return nil
+			return nil, nil
+		}
+
+		var keyInfo map[string]interface{}
+		if rawKeyInfo, ok := resp.Data["key_info"]; ok {
+			if ki, ok := rawKeyInfo.(map[string]interface{}); ok {
+				keyInfo = ki
+			}
 		}
 
 		rawKeys, ok := resp.Data["keys"]
 		if !ok || rawKeys == nil {
-			return nil
+			return nil, keyInfo
 		}
 
 		// Type switch handles both the 'official' behavior and the 'generic' behavior
 		switch kt := rawKeys.(type) {
 		case []string:
 			// Existing plugins likely hit this path
-			return kt
+			return kt, keyInfo
 		case []interface{}:
 			// External/RPC plugins likely hit this path
 			keys := make([]string, 0, len(kt))
@@ -135,11 +144,17 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 					keys = append(keys, s)
 				}
 			}
-			return keys
+			return keys, keyInfo
 		default:
 			// If it's something totally weird, we still fail safely
-			return nil
+			return nil, keyInfo
 		}
+	}
+
+	// apiList returns just the listed keys, discarding key_info.
+	apiList := func(entry *MountEntry, apiPath string) []string {
+		keys, _ := apiListWithKeyInfo(entry, apiPath)
+		return keys
 	}
 
 	pluginName := getAdjustedPluginType(entry)
@@ -276,6 +291,25 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 			accountCount += len(accounts)
 		}
 		targetRoleCounts.OSLocalAccountRoles += accountCount
+
+	case pluginconsts.SecretEngineSpiffe:
+		spiffeRoles := apiList(entry, "role")
+		targetRoleCounts.SpiffeRoles += len(spiffeRoles)
+
+	case pluginconsts.SecretEngineSsh:
+		sshRoles, sshRoleInfo := apiListWithKeyInfo(entry, "roles")
+		for _, role := range sshRoles {
+			info, ok := sshRoleInfo[role].(map[string]interface{})
+			if !ok {
+				continue
+			}
+			switch info["key_type"] {
+			case "ca":
+				targetRoleCounts.SSHCARoles++
+			case "otp":
+				targetRoleCounts.SSHOTPRoles++
+			}
+		}
 	}
 }
 

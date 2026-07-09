@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"maps"
 	"math/big"
 	mathrand "math/rand"
 	"net"
@@ -767,6 +768,7 @@ type TestCluster struct {
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
 	cleanupOnce       sync.Once
+	sharedBundle      *PhysicalBackendBundle
 }
 
 func (c *TestCluster) SetRootToken(token string) {
@@ -1101,6 +1103,7 @@ type TestClusterCore struct {
 	Barrier              SecurityBarrier
 	NodeID               string
 	certGetter           *reloadutil.CertificateGetter
+	bundleMaker          func() *PhysicalBackendBundle
 }
 
 func (tcc *TestClusterCore) APIAddress() net.Addr {
@@ -1255,6 +1258,11 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		testCluster.Logger = opts.Logger
 	default:
 		testCluster.Logger = corehelpers.NewTestLogger(t)
+	}
+
+	loggers := make([]log.Logger, numCores)
+	for i := 0; i < numCores; i++ {
+		loggers[i] = testCluster.Logger.Named(fmt.Sprintf("core%d", i))
 	}
 
 	if opts.TempDir != "" {
@@ -1470,13 +1478,13 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.ClusterName = t.Name()
 	}
 
-	if coreConfig.Physical == nil && (opts == nil || opts.PhysicalFactory == nil) {
+	if coreConfig.Physical == nil && opts.PhysicalFactory == nil {
 		coreConfig.Physical, err = physInmem.NewInmem(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	if coreConfig.HAPhysical == nil && (opts == nil || opts.PhysicalFactory == nil) {
+	if coreConfig.HAPhysical == nil && opts.PhysicalFactory == nil {
 		haPhys, err := physInmem.NewInmemHA(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
@@ -1527,11 +1535,37 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		testCluster.Plugins = plugins
 	}
 
+	if opts.PhysicalFactory != nil {
+		for i := 0; i < numCores; i++ {
+			pfc := maps.Clone(opts.PhysicalFactoryConfig)
+			if pfc == nil {
+				pfc = make(map[string]interface{})
+			}
+			if opts.PerNodePhysicalFactoryConfig != nil {
+				for k, v := range opts.PerNodePhysicalFactoryConfig[i] {
+					pfc[k] = v
+				}
+			}
+			ret[i].bundleMaker = func() *PhysicalBackendBundle {
+				bundle := opts.PhysicalFactory(t, i, loggers[i], pfc)
+				if bundle != nil {
+					loggers[i].Info(fmt.Sprintf("created physical backend for core %d of type %T/%T", i, bundle.Backend, bundle.HABackend))
+					if bundle.HABackend == nil {
+						if ha, ok := bundle.Backend.(physical.HABackend); ok {
+							bundle.HABackend = ha
+						}
+					}
+				}
+				return bundle
+			}
+		}
+	}
+
 	// Create cores
 	testCluster.cleanupFuncs = []func(){}
 
 	for i, tcc := range ret {
-		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, ret[i].Listeners, testCluster.LicensePublicKey)
+		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, ret[i].Listeners, testCluster.LicensePublicKey, loggers[i], tcc.bundleMaker)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		tcc.Core = c
@@ -1718,7 +1752,8 @@ func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOp
 	}
 
 	// Create a new Core
-	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.LicensePublicKey)
+	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts,
+		tcc.Listeners, cluster.LicensePublicKey, tcc.CoreConfig.Logger, tcc.bundleMaker)
 	if coreHandler != nil {
 		tcc.Server.Handler = coreHandler
 	}
@@ -1746,7 +1781,10 @@ func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOp
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []net.Listener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
+func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreConfig,
+	opts *TestClusterOptions, listeners []net.Listener, pubKey ed25519.PublicKey,
+	logger log.Logger, bundleMaker func() *PhysicalBackendBundle,
+) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler
@@ -1775,55 +1813,27 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 		localConfig.UnwrapSeal = opts.UnwrapSealFunc()
 	}
 
-	if coreConfig.Logger == nil || (opts != nil && opts.Logger != nil) {
-		localConfig.Logger = testCluster.Logger.Named(fmt.Sprintf("core%d", idx))
-	}
-
+	localConfig.Logger = logger
 	if opts != nil && opts.EffectiveSDKVersionMap != nil {
 		localConfig.EffectiveSDKVersion = opts.EffectiveSDKVersionMap[idx]
 	}
 
-	if opts != nil && opts.PhysicalFactory != nil {
-		pfc := opts.PhysicalFactoryConfig
-		if pfc == nil {
-			pfc = make(map[string]interface{})
+	if bundleMaker != nil {
+		bundle := bundleMaker()
+		if idx == 0 && testCluster.sharedBundle == nil {
+			testCluster.sharedBundle = bundle
 		}
-		if opts.PerNodePhysicalFactoryConfig != nil {
-			for k, v := range opts.PerNodePhysicalFactoryConfig[idx] {
-				pfc[k] = v
-			}
+		if idx != 0 && bundle == nil {
+			localConfig.Logger.Info("reusing shared storage")
+			bundle = testCluster.sharedBundle
 		}
-		physBundle := opts.PhysicalFactory(t, idx, localConfig.Logger, pfc)
-		switch {
-		case physBundle == nil && coreConfig.Physical != nil:
-		case physBundle == nil && coreConfig.Physical == nil:
-			t.Fatal("PhysicalFactory produced no physical and none in CoreConfig")
-		case physBundle != nil:
-			// Storage backend setup
-			if physBundle.Backend != nil {
-				testCluster.Logger.Info("created physical backend", "instance", idx)
-				coreConfig.Physical = physBundle.Backend
-				localConfig.Physical = physBundle.Backend
-			}
-
-			// HA Backend setup
-			haBackend := physBundle.HABackend
-			if haBackend == nil {
-				if ha, ok := physBundle.Backend.(physical.HABackend); ok {
-					haBackend = ha
-				}
-			}
-			coreConfig.HAPhysical = haBackend
-			localConfig.HAPhysical = haBackend
-
-			// Cleanup setup
-			if physBundle.Cleanup != nil {
-				cleanupFunc = physBundle.Cleanup
-			}
-
-			if physBundle.MutateCoreConfig != nil {
-				physBundle.MutateCoreConfig(&localConfig)
-			}
+		localConfig.Physical = bundle.Backend
+		localConfig.HAPhysical = bundle.HABackend
+		if bundle.Cleanup != nil {
+			cleanupFunc = bundle.Cleanup
+		}
+		if bundle.MutateCoreConfig != nil {
+			bundle.MutateCoreConfig(&localConfig)
 		}
 	}
 

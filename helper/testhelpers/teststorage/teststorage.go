@@ -107,12 +107,9 @@ func MakeRaftBackend(t testing.TB, coreIdx int, logger hclog.Logger, extraConf m
 	if err != nil {
 		t.Fatal(err)
 	}
-	// t.Logf("raft dir: %s", raftDir)
 	cleanupFunc := func() {
 		os.RemoveAll(raftDir)
 	}
-
-	logger.Info("raft dir", "dir", raftDir)
 
 	backend, err := makeRaftBackend(logger, nodeID, raftDir, extraConf, bridge)
 	if err != nil {
@@ -140,6 +137,7 @@ func makeRaftBackend(logger hclog.Logger, nodeID, raftDir string, extraConf map[
 			conf[k] = val
 		}
 	}
+	logger.Info("raft dir", "dir", raftDir, "extraConf", extraConf)
 
 	backend, err := raft.NewRaftBackend(conf, logger.Named("raft"))
 	if err != nil {
@@ -156,16 +154,12 @@ func makeRaftBackend(logger hclog.Logger, nodeID, raftDir string, extraConf map[
 // and the physical.Backend provided in PhysicalBackendBundler as the storage
 // backend.
 func RaftHAFactory(f PhysicalBackendBundler) func(t testing.TB, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
+	var pbundle *vault.PhysicalBackendBundle
 	return func(t testing.TB, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
-		// Call the factory func to create the storage backend
-		physFactory := SharedPhysicalFactory(f)
-		bundle := physFactory(t, coreIdx, logger, nil)
-
-		// This can happen if a shared physical backend is called on a non-0th core.
-		if bundle == nil {
-			bundle = new(vault.PhysicalBackendBundle)
+		if pbundle == nil {
+			pbundle = f(t, logger)
 		}
-
+		// Call the factory func to create the storage backend
 		raftDir := makeRaftDir(t)
 		cleanupFunc := func() {
 			os.RemoveAll(raftDir)
@@ -180,6 +174,7 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.TB, coreIdx int, log
 			"autopilot_update_interval":    "100ms",
 		}
 
+		bundle := &vault.PhysicalBackendBundle{Backend: pbundle.Backend}
 		// Create and set the HA Backend
 		raftBackend, err := raft.NewRaftBackend(backendConf, logger)
 		if err != nil {
