@@ -9,12 +9,12 @@ import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface Args {
   backend: SecretsEngineResource;
-  isNotConfigured: boolean;
+  showConfigSnippets: boolean;
 }
 
 export default class ExternalPkiHeaderTabsComponent extends Component<Args> {
   get defaultTabs() {
-    return this.args.isNotConfigured
+    return this.args.showConfigSnippets
       ? [{ label: 'Overview', route: 'external.overview' }]
       : [
           { label: 'Overview', route: 'external.overview' },

@@ -18,85 +18,79 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Overvi
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
-    const perms = {
-      pkiExternalConfigAcmeAccount: {
-        canCreate: true,
-        canDelete: true,
-        canList: true,
-        canPatch: true,
-        canRead: true,
-        canSudo: true,
-        canUpdate: true,
-      },
-      pkiExternalConfigDns: {
-        canCreate: true,
-        canDelete: true,
-        canList: true,
-        canPatch: true,
-        canRead: true,
-        canSudo: true,
-        canUpdate: true,
-      },
-      pkiExternalRole: {
-        canCreate: true,
-        canDelete: true,
-        canList: true,
-        canPatch: true,
-        canRead: true,
-        canSudo: true,
-        canUpdate: true,
-      },
-      pkiExternalLookupOrders: {
-        canCreate: true,
-        canDelete: true,
-        canList: true,
-        canPatch: true,
-        canRead: true,
-        canSudo: true,
-        canUpdate: true,
-      },
+    const router = this.owner.lookup('service:router');
+    this.transitionToStub = sinon.stub(router, 'transitionTo');
+    this.setError = (status) => {
+      let message = '';
+      switch (status) {
+        case 404:
+          message = '';
+          break;
+        case 403:
+          message = '1 error occurred:\n\t* permission denied\n\n';
+          break;
+        case 500:
+          message = 'Internal server error';
+          break;
+        default:
+          // This is what is the route model returns when there is no error
+          return { message: '' };
+      }
+      return { status, message };
     };
-
-    this.setupModel = (permOverrides) => {
+    this.setupModel = (respOverrides = {}) => {
       return {
         engine: new SecretsEngineResource({
           accessor: 'pki-external-ca_e158c567',
           type: 'pki-external-ca',
           path: 'my-pki-external-ca/',
         }),
-        permissions: { ...perms, ...permOverrides },
-        acmeAccounts: { keys: [], errorMsg: '' },
-        dnsProviders: { keys: [], errorMsg: '' },
-        roles: { keys: [], errorMsg: '' },
+        acmeAccountsResp: { keys: [], error: this.setError(404) },
+        dnsProvidersResp: { keys: [], error: this.setError(404) },
+        rolesResp: { keys: [], error: this.setError(404) },
+        showConfigSnippets: undefined,
+        ...respOverrides,
       };
     };
-    this.isNotConfigured = undefined;
+
     this.renderComponent = () =>
       render(
-        hbs`<ExternalPki::Page::Overview @model={{this.model}} @isNotConfigured={{this.isNotConfigured}} />
+        hbs`<ExternalPki::Page::Overview @model={{this.model}} />
         `,
         { owner: this.engine }
       );
   });
 
-  test('it renders overview cards by default (when isNotConfigured=undefined)', async function (assert) {
-    this.model = this.setupModel();
+  test('it hides overview cards when user does not have permission', async function (assert) {
+    this.model = this.setupModel({
+      acmeAccountsResp: { keys: [], error: this.setError(403) },
+      dnsProvidersResp: { keys: [], error: this.setError(403) },
+      rolesResp: { keys: [], error: this.setError(403) },
+    });
     await this.renderComponent();
 
+    // Implementation select should not render
     assert.dom('h1').doesNotExist();
     assert.dom(GENERAL.radioCardByAttr()).doesNotExist();
     assert.dom(GENERAL.fieldByAttr('terraform')).doesNotExist();
     assert.dom(GENERAL.fieldByAttr('cli')).doesNotExist();
     assert.dom(GENERAL.fieldByAttr('api')).doesNotExist();
+
+    assert.dom(GENERAL.overviewCard.container('ACME accounts')).doesNotExist();
+    assert.dom(GENERAL.overviewCard.container('DNS providers')).doesNotExist();
+    assert.dom(GENERAL.overviewCard.container('Roles')).doesNotExist();
+
+    // Only order and cert lookups render
+    assert.dom(GENERAL.overviewCard.container('View certificate')).exists();
+    assert.dom(GENERAL.overviewCard.container('Orders')).exists();
   });
 
   module('is not configured', function (hooks) {
     hooks.beforeEach(function () {
-      this.isNotConfigured = true;
-      this.model = this.setupModel();
+      this.model = this.setupModel({ showConfigSnippets: true });
     });
 
-    test('it renders implementation select when isNotConfigured is true', async function (assert) {
+    test('it renders implementation select when showConfigSnippets is true', async function (assert) {
       await this.renderComponent();
 
       assert.dom('h1').hasText('Choose your implementation method');
@@ -200,83 +194,23 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Overvi
 
   module('is configured', function (hooks) {
     hooks.beforeEach(function () {
-      this.isNotConfigured = false;
-      const router = this.owner.lookup('service:router');
-      this.transitionToStub = sinon.stub(router, 'transitionTo');
+      this.model = this.setupModel({
+        acmeAccountsResp: { keys: ['account-1', 'account-2'], error: this.setError() },
+        dnsProvidersResp: { keys: [], error: this.setError(404) },
+        rolesResp: { keys: ['role-1', 'role-2', 'role-3'], error: this.setError() },
+        showConfigSnippets: false,
+      });
     });
 
-    test('it renders overview cards with zero counts', async function (assert) {
-      this.model = this.setupModel();
-      await this.renderComponent();
-
-      assert.dom('h1').doesNotExist('implementation select header does not render');
-      assert.dom(GENERAL.radioCardByAttr()).doesNotExist('radio cards do not render');
-
-      // Check lookup cards render
-      assert
-        .dom(GENERAL.overviewCard.container('View certificate'))
-        .exists()
-        .hasTextContaining('View certificate');
-      assert.dom(GENERAL.overviewCard.container('Orders')).exists().hasTextContaining('Orders');
-
-      // Check count cards
-      assert.dom(GENERAL.overviewCard.container('ACME accounts')).exists();
-      assert.dom(GENERAL.overviewCard.content('ACME accounts')).hasText('0');
-      assert.dom(GENERAL.overviewCard.container('DNS providers')).exists();
-      assert.dom(GENERAL.overviewCard.content('DNS providers')).hasText('0');
-      assert.dom(GENERAL.overviewCard.container('Roles')).exists();
-      assert.dom(GENERAL.overviewCard.content('Roles')).hasText('0');
-    });
-
-    test('it renders overview cards with non-zero counts', async function (assert) {
-      this.model = this.setupModel();
-      this.model.acmeAccounts = { keys: ['account-1', 'account-2'], errorMsg: null };
-      this.model.dnsProviders = { keys: ['provider-1'], errorMsg: null };
-      this.model.roles = { keys: ['role-1', 'role-2', 'role-3'], errorMsg: null };
+    test('it renders overview cards with zero and non-zero counts', async function (assert) {
       await this.renderComponent();
       assert.dom(GENERAL.overviewCard.content('ACME accounts')).hasText('2');
-      assert.dom(GENERAL.overviewCard.content('DNS providers')).hasText('1');
+      assert.dom(GENERAL.overviewCard.content('DNS providers')).hasText('0');
       assert.dom(GENERAL.overviewCard.content('Roles')).hasText('3');
     });
 
-    test('it hides count cards when no read or list permissions', async function (assert) {
-      this.model = this.setupModel({
-        pkiExternalConfigAcmeAccount: { canList: false, canRead: false },
-        pkiExternalConfigDns: { canList: false, canRead: false },
-        pkiExternalRole: { canList: false, canRead: false },
-      });
-      await this.renderComponent();
-      assert.dom(GENERAL.overviewCard.container('ACME accounts')).doesNotExist();
-      assert.dom(GENERAL.overviewCard.container('DNS providers')).doesNotExist();
-      assert.dom(GENERAL.overviewCard.container('Roles')).doesNotExist();
-    });
-
-    test('it renders count cards with read only permissions', async function (assert) {
-      this.model = this.setupModel({
-        pkiExternalConfigAcmeAccount: { canRead: true },
-        pkiExternalConfigDns: { canRead: true },
-        pkiExternalRole: { canRead: true },
-      });
-      await this.renderComponent();
-      assert.dom(GENERAL.overviewCard.container('ACME accounts')).exists();
-      assert.dom(GENERAL.overviewCard.container('DNS providers')).exists();
-      assert.dom(GENERAL.overviewCard.container('Roles')).exists();
-    });
-
-    test('it renders count cards with list only permissions', async function (assert) {
-      this.model = this.setupModel({
-        pkiExternalConfigAcmeAccount: { canList: true },
-        pkiExternalConfigDns: { canList: true },
-        pkiExternalRole: { canList: true },
-      });
-      await this.renderComponent();
-      assert.dom(GENERAL.overviewCard.container('ACME accounts')).exists();
-      assert.dom(GENERAL.overviewCard.container('DNS providers')).exists();
-      assert.dom(GENERAL.overviewCard.container('Roles')).exists();
-    });
-
     test('it hides only ACME accounts card', async function (assert) {
-      this.model = this.setupModel({ pkiExternalConfigAcmeAccount: { canList: false } });
+      this.model = this.setupModel({ acmeAccountsResp: { keys: [], error: this.setError(403) } });
       await this.renderComponent();
       assert.dom(GENERAL.overviewCard.container('ACME accounts')).doesNotExist();
       assert.dom(GENERAL.overviewCard.container('DNS providers')).exists();
@@ -284,7 +218,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Overvi
     });
 
     test('it hides only DNS providers card', async function (assert) {
-      this.model = this.setupModel({ pkiExternalConfigDns: { canList: false } });
+      this.model = this.setupModel({ dnsProvidersResp: { keys: [], error: this.setError(403) } });
       await this.renderComponent();
       assert.dom(GENERAL.overviewCard.container('ACME accounts')).exists();
       assert.dom(GENERAL.overviewCard.container('DNS providers')).doesNotExist();
@@ -292,32 +226,38 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Overvi
     });
 
     test('it hides only Roles card', async function (assert) {
-      this.model = this.setupModel({ pkiExternalRole: { canList: false } });
+      this.model = this.setupModel({ rolesResp: { keys: [], error: this.setError(403) } });
       await this.renderComponent();
       assert.dom(GENERAL.overviewCard.container('ACME accounts')).exists();
       assert.dom(GENERAL.overviewCard.container('DNS providers')).exists();
       assert.dom(GENERAL.overviewCard.container('Roles')).doesNotExist();
     });
 
-    test('it displays error message when count card has error', async function (assert) {
-      this.model = this.setupModel();
-      this.model.acmeAccounts.errorMsg = 'ACME accounts server error';
-      this.model.dnsProviders.errorMsg = 'DNS provider server error';
-
+    test('it displays error message for non-403 error', async function (assert) {
+      this.model = this.setupModel({
+        acmeAccountsResp: { keys: ['myaccount'], error: this.setError(500) },
+        dnsProvidersResp: { keys: ['mydns'], error: this.setError(500) },
+        rolesResp: { keys: ['myrole'], error: this.setError(500) },
+      });
       await this.renderComponent();
       assert
         .dom(`${GENERAL.overviewCard.container('ACME accounts')} ${GENERAL.messageError}`)
         .exists()
-        .hasText('Error ACME accounts server error');
+        .hasText('Error Internal server error');
+      assert.dom(GENERAL.overviewCard.content('ACME accounts')).doesNotExist();
       assert
         .dom(`${GENERAL.overviewCard.container('DNS providers')} ${GENERAL.messageError}`)
         .exists()
-        .hasText('Error DNS provider server error');
-      assert.dom(GENERAL.overviewCard.container('Roles')).hasTextContaining('0');
+        .hasText('Error Internal server error');
+      assert.dom(GENERAL.overviewCard.content('DNS providers')).doesNotExist();
+      assert
+        .dom(`${GENERAL.overviewCard.container('Roles')} ${GENERAL.messageError}`)
+        .exists()
+        .hasText('Error Internal server error');
+      assert.dom(GENERAL.overviewCard.content('Roles')).doesNotExist();
     });
 
     test('it transitions to look up certificate', async function (assert) {
-      this.model = this.setupModel();
       await this.renderComponent();
       await fillIn(`${GENERAL.overviewCard.container('View certificate')} input`, '03:e7:1f:');
       await click(GENERAL.button('Lookup certificate'));
@@ -332,7 +272,6 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Overvi
     });
 
     test('it transitions to look up order', async function (assert) {
-      this.model = this.setupModel();
       await this.renderComponent();
       await fillIn(`${GENERAL.overviewCard.container('Orders')} input`, '01936d8e-7c3');
       await click(GENERAL.button('Lookup order'));

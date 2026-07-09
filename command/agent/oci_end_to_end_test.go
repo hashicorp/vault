@@ -100,7 +100,7 @@ func TestOCIEndToEnd(t *testing.T) {
 		}
 	}()
 
-	vaultAddr := "http://" + cluster.Cores[0].Listeners[0].Addr().String()
+	vaultAddr := "http://" + cluster.Cores[0].APIAddress().String()
 
 	am, err := agentoci.NewOCIAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.oci"),

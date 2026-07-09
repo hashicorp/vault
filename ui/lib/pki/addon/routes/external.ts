@@ -12,15 +12,15 @@ import {
 } from '@hashicorp/vault-client-typescript';
 import { ModelFrom } from 'vault/vault/route';
 
-import type SecretMountPath from 'vault/services/secret-mount-path';
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
-import type ApiService from 'vault/services/api';
-import type CapabilitiesService from 'vault/services/capabilities';
-import type { Capabilities } from 'vault/vault/app-types';
+import type { ApiParsedError } from 'vault/vault/api';
 import type {
   PkiExternalCaListConfigDnsResponse,
   StandardListResponse,
 } from '@hashicorp/vault-client-typescript';
+import type ApiService from 'vault/services/api';
+import type CapabilitiesService from 'vault/services/capabilities';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export type ExternalRouteModel = ModelFrom<PkiExternalRoute>;
 
@@ -36,7 +36,7 @@ export default class PkiExternalRoute extends Route {
     'pkiExternalLookupOrders',
   ] as const;
 
-  async fetchPermissions(): Promise<Record<(typeof this.pathKeys)[number], Capabilities>> {
+  async fetchPermissions() {
     // Create key/value pair for each key in pathKeys with a value of its API path
     const pathsByKey = this.pathKeys.reduce(
       (obj, key) => {
@@ -46,95 +46,67 @@ export default class PkiExternalRoute extends Route {
       {} as Record<(typeof this.pathKeys)[number], string>
     );
 
-    // Make single API request for capabilities
-    const capabilities = await this.capabilities.fetch(Object.values(pathsByKey), {
+    // Request capabilities and cache for generate policy flyout
+    await this.capabilities.fetch(Object.values(pathsByKey), {
       routeForCache: 'vault.cluster.secrets.backend.pki.external.overview',
     });
-
-    // Map capabilities back to API path keys so each value is its Capabilities
-    return this.pathKeys.reduce(
-      (obj, key) => {
-        const apiPath = pathsByKey[key];
-        const perms = capabilities[apiPath];
-        if (perms) obj[key] = perms;
-        return obj;
-      },
-      {} as Record<(typeof this.pathKeys)[number], Capabilities>
-    );
   }
 
-  async fetchList(
-    listRequest: () => Promise<PkiExternalCaListConfigDnsResponse | StandardListResponse>,
-    perms?: Capabilities
-  ) {
-    let keys: string[] = [],
-      errorMsg = '';
+  async fetchList(listRequest: () => Promise<PkiExternalCaListConfigDnsResponse | StandardListResponse>) {
+    let keys: string[] = [];
+    let error: ApiParsedError = { message: '' };
 
-    // Only fetch list request if user has permission to avoid additional requests
-    if (perms?.canList || perms?.canRead) {
-      try {
-        const resp = await listRequest();
-        keys = resp.keys ?? [];
-      } catch (e) {
-        // Since this request is only made if a user has permission
-        // errors other than a 404 would be unusual, i.e. some sort of internal server issue.
-        // Catch just in case to render message in overview card
-        const { status, message } = await this.api.parseError(e);
-        if (status != 404) {
-          errorMsg = message;
-        }
+    try {
+      const resp = await listRequest();
+      keys = resp.keys ?? [];
+    } catch (e) {
+      // Catch error to render message in overview card
+      // Stored error will be re-thrown in relevant child routes
+      error = await this.api.parseError(e);
+      if (error.status === 404) {
+        // Clear the default message returned by parseError
+        // because a 404 is empty and that's expected/okay.
+        error.message = '';
       }
     }
-
-    return { keys, errorMsg };
+    return { keys, error };
   }
 
   async model() {
     const perms = await this.fetchPermissions();
     const { currentPath } = this.secretMountPath;
-    const [acmeAccounts, dnsProviders, roles] = await Promise.all([
-      this.fetchList(
-        () =>
-          this.api.secrets.pkiExternalCaListConfigAcmeAccount(
-            currentPath,
-            SecretsApiPkiExternalCaListConfigAcmeAccountListEnum.TRUE
-          ),
-        perms['pkiExternalConfigAcmeAccount']
+    const [acmeAccountsResp, dnsProvidersResp, rolesResp] = await Promise.all([
+      this.fetchList(() =>
+        this.api.secrets.pkiExternalCaListConfigAcmeAccount(
+          currentPath,
+          SecretsApiPkiExternalCaListConfigAcmeAccountListEnum.TRUE
+        )
       ),
-      this.fetchList(
-        () =>
-          this.api.secrets.pkiExternalCaListConfigDns(
-            currentPath,
-            SecretsApiPkiExternalCaListConfigDnsListEnum.TRUE
-          ),
-        perms['pkiExternalConfigDns']
+      this.fetchList(() =>
+        this.api.secrets.pkiExternalCaListConfigDns(
+          currentPath,
+          SecretsApiPkiExternalCaListConfigDnsListEnum.TRUE
+        )
       ),
-      this.fetchList(
-        () =>
-          this.api.secrets.pkiExternalCaListRole(currentPath, SecretsApiPkiExternalCaListRoleListEnum.TRUE),
-        perms['pkiExternalRole']
+      this.fetchList(() =>
+        this.api.secrets.pkiExternalCaListRole(currentPath, SecretsApiPkiExternalCaListRoleListEnum.TRUE)
       ),
     ]);
 
-    // If anything at all has been configured, we wan to display that
-    const nothingConfigured =
-      this.isNotConfigured(perms['pkiExternalConfigAcmeAccount'], acmeAccounts) &&
-      this.isNotConfigured(perms['pkiExternalConfigDns'], dnsProviders) &&
-      this.isNotConfigured(perms['pkiExternalRole'], roles);
+    // If a user has permission to request the resource, the request will return either a 404 or data
+    // Only show automation snippets if every endpoint returns a 404.
+    const showConfigSnippets =
+      acmeAccountsResp.error.status === 404 &&
+      dnsProvidersResp.error.status === 404 &&
+      rolesResp.error.status === 404;
 
     return {
       engine: this.modelFor('application') as SecretsEngineResource,
-      acmeAccounts,
-      dnsProviders,
-      roles,
+      acmeAccountsResp,
+      dnsProvidersResp,
+      rolesResp,
       permissions: perms,
-      isNotConfigured: nothingConfigured,
+      showConfigSnippets,
     };
-  }
-
-  isNotConfigured(perms: Capabilities, resp: { keys: string[]; errorMsg: string }) {
-    // Only show automation snippets if user has permission to request each resource
-    // AND nothing is configured AND there are no errors to display.
-    return (perms.canList || perms.canRead) && !resp.keys.length && resp.errorMsg === '';
   }
 }

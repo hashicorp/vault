@@ -1099,7 +1099,7 @@ func TestAgent_Template_VaultClientFromEnv(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDirRoot)
 
-	vaultAddr := "https://" + cluster.Cores[0].Listeners[0].Address.String()
+	vaultAddr := "https://" + cluster.Cores[0].APIAddress().String()
 	testCases := map[string]struct {
 		env map[string]string
 	}{
