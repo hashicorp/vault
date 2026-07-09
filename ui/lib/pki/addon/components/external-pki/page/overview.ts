@@ -8,12 +8,12 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
+import type { ApiParsedError } from 'vault/vault/api';
 import type { ExternalOverviewRouteModel } from 'pki/routes/external/overview';
 import type RouterService from '@ember/routing/router-service';
 
 interface Args {
   model: ExternalOverviewRouteModel;
-  isNotConfigured: boolean;
 }
 
 export default class ExternalPkiPageOverviewComponent extends Component<Args> {
@@ -22,41 +22,47 @@ export default class ExternalPkiPageOverviewComponent extends Component<Args> {
   @tracked serialNumber = '';
   @tracked orderId = '';
 
+  shouldRenderCard = (resp: { keys: string[]; error: ApiParsedError }) => {
+    // Render card if there is data, if the user has permission but the response was empty (404),
+    // or if the error message is for something other than 403.
+    const status = resp.error['status'];
+    return resp.keys.length || status === 404 || (status != 403 && resp.error['message']);
+  };
+
   get countCards() {
     const cards = [];
-    const { acmeAccounts, dnsProviders, roles, permissions } = this.args.model;
+    const { acmeAccountsResp, dnsProvidersResp, rolesResp } = this.args.model;
 
-    const { pkiExternalConfigAcmeAccount, pkiExternalConfigDns, pkiExternalRole } = permissions;
-    if (pkiExternalConfigAcmeAccount.canList || pkiExternalConfigAcmeAccount.canRead) {
+    if (this.shouldRenderCard(acmeAccountsResp)) {
       cards.push({
         title: 'ACME accounts',
         subtext: 'The total number of ACME accounts (External CAs) configured in this public PKI engine.',
         route: 'external.acme-accounts',
         linkText: 'View ACME accounts',
-        count: acmeAccounts.keys.length,
-        error: acmeAccounts.errorMsg,
+        count: acmeAccountsResp.keys.length,
+        error: acmeAccountsResp.error.message,
       });
     }
 
-    if (pkiExternalConfigDns.canList || pkiExternalConfigDns.canRead) {
+    if (this.shouldRenderCard(dnsProvidersResp)) {
       cards.push({
         title: 'DNS providers',
         subtext: 'The total number of DNS providers configured in this public PKI engine.',
         route: 'external.dns-providers',
         linkText: 'View DNS providers',
-        count: dnsProviders.keys.length,
-        error: dnsProviders.errorMsg,
+        count: dnsProvidersResp.keys.length,
+        error: dnsProvidersResp.error.message,
       });
     }
 
-    if (pkiExternalRole.canList || pkiExternalRole.canRead) {
+    if (this.shouldRenderCard(rolesResp)) {
       cards.push({
         title: 'Roles',
         subtext: 'The total number of roles configured in this public PKI engine.',
         route: 'external.roles',
         linkText: 'View roles',
-        count: roles.keys.length,
-        error: roles.errorMsg,
+        count: rolesResp.keys.length,
+        error: rolesResp.error.message,
       });
     }
 

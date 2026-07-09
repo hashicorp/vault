@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if @isNotConfigured}}
+{{#if @model.showConfigSnippets}}
   <Hds::Text::Display @tag="p" @size="300" @weight="semibold" class="top-padding-32 has-bottom-padding-s">
     Welcome to Public PKI
   </Hds::Text::Display>
@@ -12,7 +12,7 @@
     To configure this secret engine to request public certificates in Vault:
   </Hds::Text::Body>
 
-  <ExternalPki::ImplementationSelect @engineId={{@model.engine.id}} />
+  <ExternalPki::ImplementationSelect @engineId={{@model.engine.id}} @title="Choose your implementation method" />
 {{else}}
   <Hds::Layout::Flex class="has-top-padding-l" @gap="24" @wrap={{true}} as |LF|>
     <LF.Item @basis="500px">

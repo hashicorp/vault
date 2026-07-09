@@ -4,9 +4,11 @@
 }}
 
 <Hds::Card::Container class="has-top-padding-l has-bottom-padding-s">
-  <Hds::Text::Display @tag="h1" @size="400">
-    Choose your implementation method
-  </Hds::Text::Display>
+  {{#if @title}}
+    <Hds::Text::Display @tag="h1" @size="400">
+      {{@title}}
+    </Hds::Text::Display>
+  {{/if}}
 
   <Hds::Form::RadioCard::Group @name="implementation-method" @alignment="center" class="has-top-padding-l" as |G|>
     {{#each this.methodOptions as |option|}}
