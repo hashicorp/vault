@@ -193,7 +193,7 @@ export default class SecretsBackendConfigurationPluginSettingsRoute extends Rout
     return {
       backend,
       httpStatus: error.status,
-      ...error.response,
+      ...(error.response || {}),
     };
   }
 }
