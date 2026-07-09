@@ -10,6 +10,8 @@
  * derive automatically — the OpenAPI spec has no concept of Terraform resource
  * names. Add an entry here before running the generator for a new feature:
  *
- *   pnpm generate:terraform-mapping:openapi /sys/your/path/{name}
+ *   pnpm generate:terraform-mapping /sys/your/path/{name}
  */
-export const TERRAFORM_RESOURCE_MAP: Record<string, string> = {};
+export const TERRAFORM_RESOURCE_MAP: Record<string, string> = {
+  '/sys/policies/acl/{name}': 'vault_policy',
+};
