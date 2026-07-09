@@ -213,7 +213,7 @@
       "micromatch": "4.0.8",
       "rollup": "2.80.0",
       "@ember/test-waiters": "4.1.1",
-      "tmp": "0.2.6",
+      "tmp": "0.2.7",
       "ws": "8.21.0"
     }
   },

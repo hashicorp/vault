@@ -13,7 +13,7 @@ overrides:
   micromatch: 4.0.8
   rollup: 2.80.0
   '@ember/test-waiters': 4.1.1
-  tmp: 0.2.6
+  tmp: 0.2.7
   ws: 8.21.0
 
 importers:
@@ -7550,8 +7550,8 @@ packages:
   tippy.js@6.3.7:
     resolution: {integrity: sha512-E1d3oP2emgJ9dRQZdf3Kkn0qJgI6ZLpyS5z6ZkY1DF3kaQaBsGZsndEpHwx+eC+tYM41HaSNvNtLx8tU57FzTQ==}
 
-  tmp@0.2.6:
-    resolution: {integrity: sha512-5sJPdPjfI5Kx+qbrDesxkglRBxW//g7hCsqspEjwkewGvBMGIKMOTKzLt1hFVJzyadba3lDUN20O9qhvbQUSTA==}
+  tmp@0.2.7:
+    resolution: {integrity: sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==}
     engines: {node: '>=14.14'}
 
   tmpl@1.0.5:
@@ -12324,7 +12324,7 @@ snapshots:
       broccoli: 2.3.0
       fixturify: 0.3.4
       fs-tree-diff: 0.5.9
-      tmp: 0.2.6
+      tmp: 0.2.7
       walk-sync: 0.3.4
     transitivePeerDependencies:
       - supports-color
@@ -12362,7 +12362,7 @@ snapshots:
       resolve-path: 1.4.0
       rimraf: 2.7.1
       sane: 4.1.0
-      tmp: 0.2.6
+      tmp: 0.2.7
       tree-sync: 1.4.0
       underscore.string: 3.3.6
       watch-detector: 0.1.0
@@ -12391,7 +12391,7 @@ snapshots:
       resolve-path: 1.4.0
       rimraf: 3.0.2
       sane: 4.1.0
-      tmp: 0.2.6
+      tmp: 0.2.7
       tree-sync: 2.1.0
       underscore.string: 3.3.6
       watch-detector: 1.0.2
@@ -12475,7 +12475,7 @@ snapshots:
 
   can-symlink@1.0.0:
     dependencies:
-      tmp: 0.2.6
+      tmp: 0.2.7
 
   caniuse-lite@1.0.30001797: {}
 
@@ -14372,7 +14372,7 @@ snapshots:
       globby: 11.1.0
       ora: 5.4.1
       slash: 3.0.0
-      tmp: 0.2.6
+      tmp: 0.2.7
       workerpool: 6.5.1
     transitivePeerDependencies:
       - supports-color
@@ -14916,7 +14916,7 @@ snapshots:
     dependencies:
       chardet: 0.7.0
       iconv-lite: 0.4.24
-      tmp: 0.2.6
+      tmp: 0.2.7
 
   extract-stack@2.0.0: {}
 
@@ -15101,12 +15101,12 @@ snapshots:
   fixturify-project@1.10.0:
     dependencies:
       fixturify: 1.3.0
-      tmp: 0.2.6
+      tmp: 0.2.7
 
   fixturify-project@2.1.1:
     dependencies:
       fixturify: 2.1.1
-      tmp: 0.2.6
+      tmp: 0.2.7
       type-fest: 0.11.0
 
   fixturify@0.3.4:
@@ -18269,7 +18269,7 @@ snapshots:
     dependencies:
       '@popperjs/core': 2.11.8
 
-  tmp@0.2.6: {}
+  tmp@0.2.7: {}
 
   tmpl@1.0.5: {}
 
@@ -18627,7 +18627,7 @@ snapshots:
     dependencies:
       heimdalljs-logger: 0.1.10
       silent-error: 1.1.1
-      tmp: 0.2.6
+      tmp: 0.2.7
     transitivePeerDependencies:
       - supports-color
 
