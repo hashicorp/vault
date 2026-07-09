@@ -74,7 +74,8 @@ func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (
 		disallowdGroups = disallowdGroups.Add(changed.FileGroup(g))
 	}
 
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("disallowed-groups", disallowdGroups.String()),
 	)
 
@@ -95,7 +96,8 @@ func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (
 	}
 	if len(matchedFiles) > 0 {
 		res.MatchedFiles = matchedFiles
-		ctx = slogctx.Append(ctx,
+		ctx = slogctx.Append(
+			ctx,
 			slog.String("matched-groups", res.MatchedGroups.String()),
 		)
 		slog.Default().DebugContext(ctx, "found files matching disallowed groups")

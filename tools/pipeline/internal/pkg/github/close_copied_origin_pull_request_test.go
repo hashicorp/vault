@@ -25,7 +25,8 @@ func TestAcc_AssociatedIssues(t *testing.T) {
 	}
 
 	github := githubv4.NewClient(
-		oauth2.NewClient(context.Background(),
+		oauth2.NewClient(
+			context.Background(),
 			oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 		),
 	)
@@ -42,7 +43,8 @@ func TestAcc_AssociatedIssues(t *testing.T) {
 	require.Len(t, ai.Repository.PullRequest.ClosingIssuesReferences.Edges, 1)
 	require.True(t, ai.Repository.PullRequest.ClosingIssuesReferences.Edges[0].Node.Closed)
 	require.Equal(t, 31545, ai.Repository.PullRequest.ClosingIssuesReferences.Edges[0].Node.Number)
-	require.Equal(t,
+	require.Equal(
+		t,
 		"https://github.com/hashicorp/vault/issues/31545",
 		ai.Repository.PullRequest.ClosingIssuesReferences.Edges[0].Node.URL,
 	)

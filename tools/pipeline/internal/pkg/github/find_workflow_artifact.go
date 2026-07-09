@@ -107,7 +107,8 @@ func (r *FindWorkflowArtifactReq) Run(ctx context.Context, client *gh.Client) (*
 	// We attempt more than one commit because not all commits to either main
 	// or release branches are guaranteed to create build artifacts.
 
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", r.Owner),
 		slog.String("repo", r.Repo),
 		slog.String("repo", r.Branch),

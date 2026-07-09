@@ -109,7 +109,8 @@ func (r *ListBranchCheckStatusesReq) Run(ctx context.Context, client GraphQLClie
 		return nil, fmt.Errorf("validating request: %w", err)
 	}
 
-	slog.Default().DebugContext(ctx, "checking branch statuses",
+	slog.Default().DebugContext(
+		ctx, "checking branch statuses",
 		"owner", r.Owner,
 		"repo", r.Repo,
 		"branches", r.Branches,
@@ -235,7 +236,8 @@ func (r *ListBranchCheckStatusesReq) getBranchCheckResult(ctx context.Context, c
 				if queryAttempt < maxQueryRetries-1 {
 					// retry delay progression: 2s, 4s, 8s
 					retryDelay := time.Duration(1<<uint(queryAttempt)) * 2 * time.Second
-					slog.Default().DebugContext(ctx, "server error, retrying",
+					slog.Default().DebugContext(
+						ctx, "server error, retrying",
 						"branch", branch,
 						"retry-delay", retryDelay,
 						"attempt", queryAttempt+1,
@@ -246,7 +248,8 @@ func (r *ListBranchCheckStatusesReq) getBranchCheckResult(ctx context.Context, c
 					continue
 				}
 				// Exhausted retries for this query
-				slog.Default().DebugContext(ctx, "server error persists after retries",
+				slog.Default().DebugContext(
+					ctx, "server error persists after retries",
 					"branch", branch,
 					"retries", maxQueryRetries,
 					"error", err,
@@ -315,7 +318,8 @@ func (r *ListBranchCheckStatusesReq) getBranchCheckResult(ctx context.Context, c
 		case "PENDING":
 			// Not done yet, so wait and retry
 			remainingAttempts := maxRetries - requestAttempts - 1
-			slog.Default().DebugContext(ctx, "checks pending, retrying",
+			slog.Default().DebugContext(
+				ctx, "checks pending, retrying",
 				"branch", branch,
 				"commit", shortHash,
 				"retry-wait", r.RetryWait,
@@ -339,7 +343,8 @@ func (r *ListBranchCheckStatusesReq) getBranchCheckResult(ctx context.Context, c
 	}
 
 	// All retries have been exhausted, so we have a time-out failure
-	slog.Default().DebugContext(ctx, "checks timed out",
+	slog.Default().DebugContext(
+		ctx, "checks timed out",
 		"branch", branch,
 		"attempts", maxRetries,
 		"total-minutes", maxRetries*r.RetryWait,

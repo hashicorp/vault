@@ -13,6 +13,7 @@ func newSarifCmd() *cobra.Command {
 		Short: "Sarif commands",
 		Long:  "Commands for working with Static Analysis Results Interchange Format files",
 	}
+	sarifCmd.AddCommand(newSarifConvertZapCmd())
 	sarifCmd.AddCommand(newSarifCVEReportCmd())
 
 	return sarifCmd
