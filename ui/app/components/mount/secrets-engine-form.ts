@@ -384,7 +384,7 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
       this.onMountSuccess(type, path, useEngineRoute);
     } catch (error) {
       const { status, response, message } = yield this.api.parseError(error);
-      this.onMountError(status, response.errors, message);
+      this.onMountError(status, response?.errors, message);
     }
   }
 
