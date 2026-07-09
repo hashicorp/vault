@@ -867,6 +867,9 @@ type RoleCounts struct {
 	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
 	OSLocalAccountRoles        int `json:"os_local_account_static_roles"`
 	TransformRoles             int `json:"transform_roles"`
+	SSHOTPRoles                int `json:"ssh_otp_roles"`
+	SSHCARoles                 int `json:"ssh_ca_roles"`
+	SpiffeRoles                int `json:"spiffe_roles"`
 }
 
 type ManagedKeyCounts struct {

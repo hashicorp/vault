@@ -136,6 +136,9 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 		a.TerraformCloudDynamicRoles + b.TerraformCloudDynamicRoles,
 		a.OSLocalAccountRoles + b.OSLocalAccountRoles,
 		a.TransformRoles + b.TransformRoles,
+		a.SSHOTPRoles + b.SSHOTPRoles,
+		a.SSHCARoles + b.SSHCARoles,
+		a.SpiffeRoles + b.SpiffeRoles,
 	}
 }
 
