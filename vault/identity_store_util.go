@@ -1806,6 +1806,9 @@ func (i *IdentityStore) MemDBLocalAliasesByBucketKeyInTxn(txn *memdb.Txn, bucket
 	for item := iter.Next(); item != nil; item = iter.Next() {
 		alias := item.(*identity.Alias)
 		if alias.Local {
+			// The returned aliases are only compared (via proto.Equal, which is
+			// safe on shared protobuf messages) and referenced by ID, never
+			// mutated, so they do not need to be cloned.
 			aliases = append(aliases, alias)
 		}
 	}
