@@ -110,8 +110,7 @@ func TestCluster_ListenForRequests(t *testing.T) {
 	// Use this to have a valid config after sealing since ClusterTLSConfig returns nil
 	checkListenersFunc := func(expectFail bool) {
 		dialer := clusterListener.GetDialerFunc(context.Background(), consts.RequestForwardingALPN)
-		for i := range cores[0].Listeners {
-
+		for i := range addrs {
 			clnAddr := addrs[i]
 			netConn, err := dialer(clnAddr.String(), 0)
 			if err != nil {
@@ -199,17 +198,17 @@ func TestCluster_ForwardRequests(t *testing.T) {
 func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOptions) {
 	cluster := NewTestCluster(t, nil, clusterOpts)
 	cores := cluster.Cores
-	cores[0].Handler.(*http.ServeMux).HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
+	cores[0].Server.Handler.(*http.ServeMux).HandleFunc("/core1", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(201)
 		w.Write([]byte("core1"))
 	})
-	cores[1].Handler.(*http.ServeMux).HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
+	cores[1].Server.Handler.(*http.ServeMux).HandleFunc("/core2", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(202)
 		w.Write([]byte("core2"))
 	})
-	cores[2].Handler.(*http.ServeMux).HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
+	cores[2].Server.Handler.(*http.ServeMux).HandleFunc("/core3", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(203)
 		w.Write([]byte("core3"))

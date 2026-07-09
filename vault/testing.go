@@ -781,7 +781,7 @@ func (c *TestCluster) start(t testing.TB) {
 	for i, core := range c.Cores {
 		if core.Server != nil {
 			for _, ln := range core.Listeners {
-				c.Logger.Info("starting listener for test core", "core", i, "port", ln.Address.Port)
+				c.Logger.Info("starting listener for test core", "core", i, "addr", ln.Addr().String())
 				go core.Server.Serve(ln)
 			}
 		}
@@ -1080,18 +1080,12 @@ func SetReplicationFailureMode(core *TestClusterCore, mode uint32) {
 	atomic.StoreUint32(core.Core.replicationFailure, mode)
 }
 
-type TestListener struct {
-	net.Listener
-	Address *net.TCPAddr
-}
-
 type TestClusterCore struct {
 	*Core
 	CoreConfig           *CoreConfig
 	Client               *api.Client
-	Handler              http.Handler
 	Address              *net.TCPAddr
-	Listeners            []*TestListener
+	Listeners            []net.Listener
 	ReloadFuncs          *map[string][]reloadutil.ReloadFunc
 	ReloadFuncsLock      *sync.RWMutex
 	Server               *http.Server
@@ -1106,6 +1100,11 @@ type TestClusterCore struct {
 	UnderlyingHAStorage  physical.HABackend
 	Barrier              SecurityBarrier
 	NodeID               string
+	certGetter           *reloadutil.CertificateGetter
+}
+
+func (tcc *TestClusterCore) APIAddress() net.Addr {
+	return tcc.Listeners[0].Addr()
 }
 
 type PhysicalBackendBundle struct {
@@ -1212,14 +1211,6 @@ type TestPluginConfig struct {
 }
 
 var DefaultNumCores = 3
-
-type certInfo struct {
-	cert      *x509.Certificate
-	certPEM   []byte
-	certBytes []byte
-	key       *ecdsa.PrivateKey
-	keyPEM    []byte
-}
 
 // NewTestCluster creates a new test cluster based on the provided core config
 // and test cluster options.
@@ -1345,12 +1336,18 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		t.Fatal(err)
 	}
 
-	var certInfoSlice []*certInfo
+	var ret []*TestClusterCore
+	for i := 0; i < numCores; i++ {
+		tcc := &TestClusterCore{
+			NodeID: fmt.Sprintf("core-%d", i),
+		}
+		ret = append(ret, tcc)
+	}
 
 	//
 	// Certs generation
 	//
-	for i := 0; i < numCores; i++ {
+	for _, tcc := range ret {
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			t.Fatal(err)
@@ -1384,7 +1381,6 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 			Type:  "CERTIFICATE",
 			Bytes: certBytes,
 		}
-		certPEM := pem.EncodeToMemory(certPEMBlock)
 		marshaledKey, err := x509.MarshalECPrivateKey(key)
 		if err != nil {
 			t.Fatal(err)
@@ -1393,31 +1389,23 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 			Type:  "EC PRIVATE KEY",
 			Bytes: marshaledKey,
 		}
-		keyPEM := pem.EncodeToMemory(keyPEMBlock)
 
-		certInfoSlice = append(certInfoSlice, &certInfo{
-			cert:      cert,
-			certPEM:   certPEM,
-			certBytes: certBytes,
-			key:       key,
-			keyPEM:    keyPEM,
-		})
+		tcc.ServerCert = cert
+		tcc.ServerCertPEM = pem.EncodeToMemory(certPEMBlock)
+		tcc.ServerCertBytes = certBytes
+		tcc.ServerKey = key
+		tcc.ServerKeyPEM = pem.EncodeToMemory(keyPEMBlock)
 	}
 
 	scheme := "https"
 	if opts.DisableTLS {
 		scheme = "http"
 	}
+
 	//
 	// Listener setup
 	//
-	addresses := []*net.TCPAddr{}
-	listeners := [][]*TestListener{}
-	servers := []*http.Server{}
-	handlers := []http.Handler{}
-	tlsConfigs := []*tls.Config{}
-	certGetters := []*reloadutil.CertificateGetter{}
-	for i := 0; i < numCores; i++ {
+	for i, tcc := range ret {
 		addr := &net.TCPAddr{
 			IP:   baseAddr.IP,
 			Port: 0,
@@ -1430,25 +1418,26 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		if err != nil {
 			t.Fatal(err)
 		}
-		addresses = append(addresses, addr)
+		ret[i].Address = addr
 
-		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_cert.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
-		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_port_%d_key.pem", i+1, ln.Addr().(*net.TCPAddr).Port))
-		err = os.WriteFile(certFile, certInfoSlice[i].certPEM, 0o755)
+		certFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_cert.pem", i+1))
+		keyFile := filepath.Join(testCluster.TempDir, fmt.Sprintf("node%d_key.pem", i+1))
+		err = os.WriteFile(certFile, tcc.ServerCertPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = os.WriteFile(keyFile, certInfoSlice[i].keyPEM, 0o755)
+		err = os.WriteFile(keyFile, tcc.ServerKeyPEM, 0o755)
 		if err != nil {
 			t.Fatal(err)
 		}
-		tlsCert, err := tls.X509KeyPair(certInfoSlice[i].certPEM, certInfoSlice[i].keyPEM)
+		tlsCert, err := tls.X509KeyPair(tcc.ServerCertPEM, tcc.ServerKeyPEM)
 		if err != nil {
 			t.Fatal(err)
 		}
 		certGetter := reloadutil.NewCertificateGetter(certFile, keyFile, "")
-		certGetters = append(certGetters, certGetter)
 		certGetter.Reload()
+		ret[i].certGetter = certGetter
+
 		tlsConfig := &tls.Config{
 			Certificates:   []tls.Certificate{tlsCert},
 			RootCAs:        testCluster.RootCAs,
@@ -1461,28 +1450,21 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 			testCluster.ClientAuthRequired = true
 		}
-		tlsConfigs = append(tlsConfigs, tlsConfig)
-		lns := []*TestListener{
-			{
-				Address: ln.Addr().(*net.TCPAddr),
-			},
-		}
+		var tln net.Listener
 		if opts.DisableTLS {
-			lns[0].Listener = ln
+			tln = ln
 		} else {
-			lns[0].Listener = tls.NewListener(ln, tlsConfig)
+			tln = tls.NewListener(ln, tlsConfig)
 		}
-		listeners = append(listeners, lns)
-		var handler http.Handler = http.NewServeMux()
-		handlers = append(handlers, handler)
-		server := &http.Server{
-			Handler:  handler,
+		ret[i].Listeners = []net.Listener{tln}
+		ret[i].Server = &http.Server{
+			Handler:  http.NewServeMux(),
 			ErrorLog: testCluster.Logger.StandardLogger(nil),
 		}
-		servers = append(servers, server)
+		ret[i].tlsConfig = tlsConfig
 	}
 
-	coreConfig := applyBaseConfig(base, scheme, listeners[0][0].Addr().String())
+	coreConfig := applyBaseConfig(base, scheme, ret[0].Listeners[0].Addr().String())
 
 	if coreConfig.ClusterName == "" {
 		coreConfig.ClusterName = t.Name()
@@ -1547,58 +1529,30 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 
 	// Create cores
 	testCluster.cleanupFuncs = []func(){}
-	cores := []*Core{}
-	coreConfigs := []*CoreConfig{}
 
-	for i := 0; i < numCores; i++ {
-		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
+	for i, tcc := range ret {
+		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, ret[i].Listeners, testCluster.LicensePublicKey)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
-		cores = append(cores, c)
-		coreConfigs = append(coreConfigs, &localConfig)
-
-		if handler != nil {
-			handlers[i] = handler
-			servers[i].Handler = handlers[i]
-		}
-	}
-
-	// Clustering setup
-	for i := 0; i < numCores; i++ {
-		testCluster.setupClusterListener(t, i, cores[i], coreConfigs[i], opts, listeners[i], handlers[i])
-	}
-
-	// Create TestClusterCores
-	var ret []*TestClusterCore
-	for i := 0; i < numCores; i++ {
-		tcc := &TestClusterCore{
-			Core:                 cores[i],
-			CoreConfig:           coreConfigs[i],
-			ServerKey:            certInfoSlice[i].key,
-			ServerKeyPEM:         certInfoSlice[i].keyPEM,
-			ServerCert:           certInfoSlice[i].cert,
-			ServerCertBytes:      certInfoSlice[i].certBytes,
-			ServerCertPEM:        certInfoSlice[i].certPEM,
-			Address:              addresses[i],
-			Listeners:            listeners[i],
-			Handler:              handlers[i],
-			Server:               servers[i],
-			tlsConfig:            tlsConfigs[i],
-			Barrier:              cores[i].barrier,
-			NodeID:               fmt.Sprintf("core-%d", i),
-			UnderlyingRawStorage: coreConfigs[i].Physical,
-			UnderlyingHAStorage:  coreConfigs[i].HAPhysical,
-		}
-		tcc.ReloadFuncs = &cores[i].reloadFuncs
-		tcc.ReloadFuncsLock = &cores[i].reloadFuncsLock
-		tcc.ReloadFuncsLock.Lock()
-		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{certGetters[i].Reload}
-		tcc.ReloadFuncsLock.Unlock()
-
+		tcc.Core = c
+		tcc.Barrier = c.barrier
+		tcc.CoreConfig = &localConfig
+		tcc.UnderlyingRawStorage = localConfig.Physical
+		tcc.UnderlyingHAStorage = localConfig.HAPhysical
 		testAdjustUnderlyingStorage(tcc)
 
-		ret = append(ret, tcc)
+		tcc.ReloadFuncs = &c.reloadFuncs
+		tcc.ReloadFuncsLock = &c.reloadFuncsLock
+		tcc.ReloadFuncsLock.Lock()
+		(*tcc.ReloadFuncs)["listener|tcp"] = []reloadutil.ReloadFunc{tcc.certGetter.Reload}
+		tcc.ReloadFuncsLock.Unlock()
+
+		if handler != nil {
+			ret[i].Server.Handler = handler
+		}
+		setupClusterListener(t, i, tcc.Core, tcc.CoreConfig, opts, tcc.Listeners, tcc.Server.Handler)
 	}
+
 	testCluster.Cores = ret
 
 	// Initialize cores
@@ -1608,7 +1562,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 
 	// Assign clients
 	for i := 0; i < numCores; i++ {
-		testCluster.Cores[i].Client = testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
+		testCluster.Cores[i].Client = testCluster.getAPIClient(t, opts, ret[i].Listeners[0].Addr(), ret[i].tlsConfig)
 	}
 
 	// Extra Setup
@@ -1757,23 +1711,15 @@ func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOp
 	if err != nil {
 		t.Fatal(err)
 	}
-	tcc.Listeners = []*TestListener{
-		{
-			Listener: tls.NewListener(ln, tcc.tlsConfig),
-			Address:  ln.Addr().(*net.TCPAddr),
-		},
-	}
-
-	tcc.Handler = http.NewServeMux()
+	tcc.Listeners = []net.Listener{tls.NewListener(ln, tcc.tlsConfig)}
 	tcc.Server = &http.Server{
-		Handler:  tcc.Handler,
+		Handler:  http.NewServeMux(),
 		ErrorLog: cluster.Logger.StandardLogger(nil),
 	}
 
 	// Create a new Core
 	cleanup, newCore, localConfig, coreHandler := cluster.newCore(t, idx, tcc.CoreConfig, opts, tcc.Listeners, cluster.LicensePublicKey)
 	if coreHandler != nil {
-		tcc.Handler = coreHandler
 		tcc.Server.Handler = coreHandler
 	}
 
@@ -1782,25 +1728,25 @@ func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOp
 	tcc.CoreConfig = &localConfig
 	tcc.UnderlyingRawStorage = localConfig.Physical
 
-	cluster.setupClusterListener(
+	setupClusterListener(
 		t, idx, newCore, tcc.CoreConfig,
-		opts, tcc.Listeners, tcc.Handler)
+		opts, tcc.Listeners, tcc.Server.Handler)
 
-	tcc.Client = cluster.getAPIClient(t, opts, tcc.Listeners[0].Address.Port, tcc.tlsConfig)
+	tcc.Client = cluster.getAPIClient(t, opts, tcc.APIAddress(), tcc.tlsConfig)
 
 	testAdjustUnderlyingStorage(tcc)
 	testExtraTestCoreSetup(t, cluster.LicensePrivateKey, tcc)
 
 	// Start listeners
 	for _, ln := range tcc.Listeners {
-		tcc.Logger().Info("starting listener for core", "port", ln.Address.Port)
+		tcc.Logger().Info("starting listener for core", "addr", ln.Addr().String())
 		go tcc.Server.Serve(ln)
 	}
 
 	tcc.Logger().Info("restarted test core", "core", idx)
 }
 
-func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []*TestListener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
+func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreConfig, opts *TestClusterOptions, listeners []net.Listener, pubKey ed25519.PublicKey) (func(), *Core, CoreConfig, http.Handler) {
 	localConfig := *coreConfig
 	cleanupFunc := func() {}
 	var handler http.Handler
@@ -1819,7 +1765,7 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 	if opts != nil && opts.DisableTLS {
 		scheme = "http"
 	}
-	localConfig.RedirectAddr = fmt.Sprintf(scheme+"://127.0.0.1:%d", listeners[0].Address.Port)
+	localConfig.RedirectAddr = fmt.Sprintf(scheme+"://%s", listeners[0].Addr().String())
 
 	// if opts.SealFunc is provided, use that to generate a seal for the config instead
 	if opts != nil && opts.SealFunc != nil {
@@ -1941,19 +1887,20 @@ func (testCluster *TestCluster) newCore(t testing.TB, idx int, coreConfig *CoreC
 	return cleanupFunc, c, localConfig, handler
 }
 
-func (testCluster *TestCluster) setupClusterListener(
+func setupClusterListener(
 	t testing.TB, idx int, core *Core, coreConfig *CoreConfig,
-	opts *TestClusterOptions, listeners []*TestListener, handler http.Handler,
+	opts *TestClusterOptions, listeners []net.Listener, handler http.Handler,
 ) {
 	if coreConfig.ClusterAddr == "" {
 		return
 	}
 
-	clusterAddrGen := func(lns []*TestListener, port int) []*net.TCPAddr {
+	clusterAddrGen := func(lns []net.Listener, port int) []*net.TCPAddr {
 		ret := make([]*net.TCPAddr, len(lns))
 		for i, ln := range lns {
+			addr := ln.Addr().(*net.TCPAddr)
 			ret[i] = &net.TCPAddr{
-				IP:   ln.Address.IP,
+				IP:   addr.IP,
 				Port: port,
 			}
 		}
@@ -1982,7 +1929,7 @@ func (testCluster *TestCluster) setupClusterListener(
 func (tc *TestCluster) initCores(t testing.TB, opts *TestClusterOptions) {
 	leader := tc.Cores[0]
 
-	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, leader.Core, leader.Handler)
+	bKeys, rKeys, root := TestCoreInitClusterWrapperSetup(t, leader.Core, leader.Server.Handler)
 	barrierKeys, _ := copystructure.Copy(bKeys)
 	tc.BarrierKeys = barrierKeys.([][]byte)
 	recoveryKeys, _ := copystructure.Copy(rKeys)
@@ -2097,7 +2044,7 @@ func (tc *TestCluster) initCores(t testing.TB, opts *TestClusterOptions) {
 
 func (testCluster *TestCluster) getAPIClient(
 	t testing.TB, opts *TestClusterOptions,
-	port int, tlsConfig *tls.Config,
+	addr net.Addr, tlsConfig *tls.Config,
 ) *api.Client {
 	transport := cleanhttp.DefaultPooledTransport()
 	scheme := "http"
@@ -2119,7 +2066,7 @@ func (testCluster *TestCluster) getAPIClient(
 	if config.Error != nil {
 		t.Fatal(config.Error)
 	}
-	config.Address = fmt.Sprintf(scheme+"://127.0.0.1:%d", port)
+	config.Address = fmt.Sprintf(scheme+"://%s", addr.String())
 	config.HttpClient = client
 	config.MaxRetries = 0
 	apiClient, err := api.NewClient(config)
