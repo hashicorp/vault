@@ -12,4 +12,6 @@
  *
  *   pnpm generate:terraform-mapping /sys/your/path/{name}
  */
-export const TERRAFORM_RESOURCE_MAP: Record<string, string> = {};
+export const TERRAFORM_RESOURCE_MAP: Record<string, string> = {
+  '/sys/policies/acl/{name}': 'vault_policy',
+};

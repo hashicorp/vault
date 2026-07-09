@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { sysPoliciesAclNameMapping } from '../terraform-mappings/sys-policies-acl-name-mapping';
+
 // Types
 export interface TerraformBlock {
   type: 'resource' | 'variable';
@@ -25,8 +27,7 @@ export type TerraformDescriptor<T extends Record<string, unknown>> =
 
 // Registry
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const registry: Record<string, TerraformDescriptor<Record<string, any>>> = {};
+const registry: Record<string, TerraformDescriptor<Record<string, unknown>>> = {};
 
 /** Look up a descriptor by feature key. Returns undefined if not registered. */
 export const getTerraformDescriptor = (featureKey: string) => registry[featureKey];
@@ -54,4 +55,11 @@ export const renderTerraformBlocks = (blocks: TerraformBlock[]): string => {
 export const ref = (resourceType: string, localId: string, attribute?: string) => {
   const base = `${resourceType}.${localId}`;
   return attribute ? `${base}.${attribute}` : base;
+};
+
+/**  Registry */
+
+registry['policies/acl'] = {
+  multiBlock: false,
+  mapping: sysPoliciesAclNameMapping as unknown as (payload: Record<string, unknown>) => string,
 };
