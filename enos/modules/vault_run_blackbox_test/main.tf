@@ -1,4 +1,4 @@
-# Copyright IBM Corp. 2016, 2025
+# Copyright IBM Corp. 2016, 2026
 # SPDX-License-Identifier: BUSL-1.1
 
 terraform {
@@ -12,6 +12,18 @@ terraform {
 # Generate matrix.json for gotestsum from the test list
 locals {
   test_names = var.test_names != null ? var.test_names : []
+
+  # isolated/verify tests require EXPECTED_STATE, TIMEOUT_SECONDS, and RETRY_INTERVAL.
+  # When the test package includes isolated/verify and the caller hasn't already supplied
+  # these via test_env_vars, inject the module-level defaults automatically.
+  includes_verify_package = strcontains(var.test_package, "isolated/verify")
+  verify_environment = local.includes_verify_package ? {
+    for k, v in {
+      EXPECTED_STATE  = var.verify_expected_state
+      TIMEOUT_SECONDS = var.verify_timeout_seconds
+      RETRY_INTERVAL  = var.verify_retry_interval
+    } : k => v if !contains(keys(var.test_env_vars), k)
+  } : {}
 }
 
 resource "local_file" "test_matrix" {
@@ -49,9 +61,11 @@ resource "enos_local_exec" "run_blackbox_test" {
     var.vault_revision != null ? { VAULT_REVISION = var.vault_revision } : {},
     var.vault_build_date != null ? { VAULT_BUILD_DATE = var.vault_build_date } : {},
     var.vault_install_dir != null ? { VAULT_INSTALL_DIR = var.vault_install_dir } : {},
+    var.vault_ibm_license_edition != null ? { VAULT_IBM_LICENSE_EDITION = var.vault_ibm_license_edition } : {},
     local.ldap_environment,
     local.postgres_environment,
     local.mongodb_environment,
+    local.verify_environment,
     var.test_env_vars
   )
 }
