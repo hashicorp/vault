@@ -4,17 +4,25 @@
 package aws
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 )
@@ -32,7 +40,7 @@ type AWSAuth struct {
 	signatureType          string
 	region                 string
 	iamServerIDHeaderValue string
-	creds                  *credentials.Credentials
+	awsConfig              *awsv2.Config
 	nonce                  string
 }
 
@@ -95,44 +103,48 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 	loginData := make(map[string]interface{})
 	switch a.authType {
 	case ec2Type:
-		sess, err := session.NewSession()
-		if err != nil {
-			return nil, fmt.Errorf("error creating session to probe EC2 metadata: %w", err)
-		}
-		metadataSvc := ec2metadata.New(sess)
-		if !metadataSvc.Available() {
-			return nil, fmt.Errorf("metadata service not available")
+		metadataSvc := imds.New(imds.Options{})
+
+		getDynamicData := func(path string) (string, error) {
+			out, err := metadataSvc.GetDynamicData(ctx, &imds.GetDynamicDataInput{Path: path})
+			if err != nil {
+				return "", err
+			}
+			defer out.Content.Close()
+			data, err := io.ReadAll(out.Content)
+			if err != nil {
+				return "", err
+			}
+			return string(data), nil
 		}
 
 		if a.signatureType == pkcs7Type {
 			// fetch PKCS #7 signature
-			resp, err := metadataSvc.GetDynamicData("/instance-identity/pkcs7")
+			resp, err := getDynamicData("instance-identity/pkcs7")
 			if err != nil {
 				return nil, fmt.Errorf("unable to get PKCS 7 data from metadata service: %w", err)
 			}
-			pkcs7 := strings.TrimSpace(resp)
-			loginData["pkcs7"] = pkcs7
+			loginData["pkcs7"] = strings.TrimSpace(resp)
 		} else if a.signatureType == identityType {
 			// fetch signature from identity document
-			doc, err := metadataSvc.GetDynamicData("/instance-identity/document")
+			doc, err := getDynamicData("instance-identity/document")
 			if err != nil {
 				return nil, fmt.Errorf("error requesting instance identity doc: %w", err)
 			}
 			loginData["identity"] = base64.StdEncoding.EncodeToString([]byte(doc))
 
-			signature, err := metadataSvc.GetDynamicData("/instance-identity/signature")
+			signature, err := getDynamicData("instance-identity/signature")
 			if err != nil {
 				return nil, fmt.Errorf("error requesting signature: %w", err)
 			}
 			loginData["signature"] = signature
 		} else if a.signatureType == rsa2048Type {
 			// fetch RSA 2048 signature, which is also a PKCS#7 signature
-			resp, err := metadataSvc.GetDynamicData("/instance-identity/rsa2048")
+			resp, err := getDynamicData("instance-identity/rsa2048")
 			if err != nil {
 				return nil, fmt.Errorf("unable to get PKCS 7 data from metadata service: %w", err)
 			}
-			pkcs7 := strings.TrimSpace(resp)
-			loginData["pkcs7"] = pkcs7
+			loginData["pkcs7"] = strings.TrimSpace(resp)
 		} else {
 			return nil, fmt.Errorf("unknown signature type: %s", a.signatureType)
 		}
@@ -148,7 +160,7 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 		loginData["nonce"] = a.nonce
 	case iamType:
 		logger := hclog.Default()
-		if a.creds == nil {
+		if a.awsConfig == nil {
 			credsConfig := awsutil.CredentialsConfig{
 				AccessKey:    os.Getenv("AWS_ACCESS_KEY_ID"),
 				SecretKey:    os.Getenv("AWS_SECRET_ACCESS_KEY"),
@@ -165,23 +177,19 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 				credsConfig.Filename = credsFilePath
 			}
 
-			creds, err := credsConfig.GenerateCredentialChain(awsutil.WithSharedCredentials(hasCredsFile))
+			cfg, err := credsConfig.GenerateCredentialChain(ctx, awsutil.WithSharedCredentials(hasCredsFile))
 			if err != nil {
 				return nil, err
 			}
-			if creds == nil {
-				return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
-			}
 
-			_, err = creds.Get()
-			if err != nil {
+			if _, err := cfg.Credentials.Retrieve(ctx); err != nil {
 				return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %w", err)
 			}
 
-			a.creds = creds
+			a.awsConfig = cfg
 		}
 
-		data, err := awsutil.GenerateLoginData(a.creds, a.iamServerIDHeaderValue, a.region, logger)
+		data, err := GenerateLoginDataV2(ctx, a.awsConfig, a.iamServerIDHeaderValue, a.region, logger)
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate login data for AWS auth endpoint: %w", err)
 		}
@@ -297,4 +305,114 @@ func WithRegion(region string) LoginOption {
 		a.region = region
 		return nil
 	}
+}
+
+// iamServerIdHeader is the name of the header that the client signs and the
+// server validates so that a signed GetCallerIdentity request cannot be
+// replayed against an unintended Vault server.
+const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"
+
+// GenerateLoginDataV2 builds the login payload for the AWS IAM auth method using
+// the AWS SDK for Go v2. It signs a GetCallerIdentity STS request with the
+// credentials resolved from cfg and returns the base64-encoded request
+// components expected by the auth/aws login endpoint.
+//
+// This replaces the v1 awsutil.GenerateLoginData helper that was dropped during
+// the SDK v2 upgrade. It is kept local to this module so the public AWS auth
+// SDK does not depend on Vault's internal packages.
+//
+// NOTE: GenerateLoginDataV2, STSLoginEndpoint, and STSRegionalEndpoint are
+// intentionally duplicated in internal/awsutil/v2/generate_credentials.go, which
+// the server-side aws auth backend and login CLI use. This api module
+// (github.com/hashicorp/vault/api) cannot import that package -- it is a
+// separate module and Go's internal/ visibility rule forbids it -- so the two
+// copies must be kept in sync until the logic is upstreamed to a shared library.
+func GenerateLoginDataV2(ctx context.Context, cfg *awsv2.Config, headerValue, configuredRegion string, logger hclog.Logger) (map[string]interface{}, error) {
+	if cfg == nil {
+		return nil, fmt.Errorf("aws config must not be nil")
+	}
+	if cfg.Credentials == nil {
+		return nil, fmt.Errorf("aws config credentials must not be nil")
+	}
+	loginData := make(map[string]interface{})
+
+	region, err := awsutil.GetRegion(ctx, configuredRegion)
+	if err != nil {
+		logger.Warn(fmt.Sprintf("defaulting region to %q due to %s", awsutil.DefaultRegion, err.Error()))
+		region = awsutil.DefaultRegion
+	}
+
+	body := []byte("Action=GetCallerIdentity&Version=2011-06-15")
+
+	stsURL, err := STSLoginEndpoint(ctx, region)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, stsURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	if headerValue != "" {
+		req.Header.Set(iamServerIdHeader, headerValue)
+	}
+
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	payloadHash := sha256.Sum256(body)
+	signer := v4.NewSigner()
+	if err := signer.SignHTTP(ctx, creds, req, hex.EncodeToString(payloadHash[:]), "sts", region, time.Now()); err != nil {
+		return nil, fmt.Errorf("failed to sign STS request: %w", err)
+	}
+
+	headersJSON, err := json.Marshal(req.Header)
+	if err != nil {
+		return nil, err
+	}
+
+	loginData["iam_http_request_method"] = req.Method
+	loginData["iam_request_url"] = base64.StdEncoding.EncodeToString([]byte(req.URL.String()))
+	loginData["iam_request_headers"] = base64.StdEncoding.EncodeToString(headersJSON)
+	loginData["iam_request_body"] = base64.StdEncoding.EncodeToString(body)
+
+	return loginData, nil
+}
+
+// STSLoginEndpoint returns the STS endpoint URL whose host matches the region
+// the login request is signed for. The global endpoint is retained for the
+// default region; any other region resolves to a regional endpoint so the
+// signed Host matches the request region (this also handles non-default
+// partitions such as AWS China and GovCloud).
+func STSLoginEndpoint(ctx context.Context, region string) (string, error) {
+	if region == awsutil.DefaultRegion {
+		return "https://sts.amazonaws.com/", nil
+	}
+	regional, err := STSRegionalEndpoint(ctx, region)
+	if err != nil {
+		return "", err
+	}
+	// The SDK resolver may or may not return a trailing slash; trim it before
+	// re-appending so the endpoint never ends up with a double slash.
+	return strings.TrimRight(regional, "/") + "/", nil
+}
+
+// STSRegionalEndpoint resolves the regional STS endpoint URL for the given
+// region using the AWS SDK v2 endpoint resolver, accounting for non-default
+// partitions.
+func STSRegionalEndpoint(ctx context.Context, region string) (string, error) {
+	resolver := sts.NewDefaultEndpointResolverV2()
+	resolvedEndpoint, err := resolver.ResolveEndpoint(ctx, sts.EndpointParameters{
+		Region:            awsv2.String(region),
+		UseDualStack:      awsv2.Bool(false),
+		UseFIPS:           awsv2.Bool(false),
+		UseGlobalEndpoint: awsv2.Bool(false),
+	})
+	if err != nil {
+		return "", fmt.Errorf("unable to get regional STS endpoint for region: %v", region)
+	}
+	return resolvedEndpoint.URI.String(), nil
 }

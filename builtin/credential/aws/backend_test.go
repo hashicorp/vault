@@ -4,8 +4,11 @@
 package awsauth
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,9 +18,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	awsutilint "github.com/hashicorp/vault/internal/awsutil/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -1544,7 +1551,41 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 	}, nil
 }
 
-// This is an acceptance test.
+func generateCallerIdentityRequest(ctx context.Context, cfg awsv2.Config, headerValue string) (*http.Request, error) {
+	body := []byte("Action=GetCallerIdentity&Version=2011-06-15")
+
+	region := cfg.Region
+	if region == "" {
+		region = awsutil.DefaultRegion
+	}
+	stsURL, err := awsutilint.STSLoginEndpoint(ctx, region)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, stsURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+	if headerValue != "" {
+		req.Header.Set(iamServerIdHeader, headerValue)
+	}
+
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	payloadHash := sha256.Sum256(body)
+	signer := v4.NewSigner()
+	if err := signer.SignHTTP(ctx, creds, req, hex.EncodeToString(payloadHash[:]), "sts", region, time.Now()); err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 // If the test is NOT being run on an AWS EC2 instance in an instance profile,
 // it requires the following environment variables to be set:
 // TEST_AWS_ACCESS_KEY_ID
@@ -1596,16 +1637,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 
 		os.Setenv(envvar, testEnvVar)
 	}
-	awsSession, err := session.NewSession()
+	awsConfig, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-1"))
 	if err != nil {
-		fmt.Println("failed to create session,", err)
-		return
+		t.Fatalf("failed to load default AWS config: %v", err)
 	}
 
-	stsService := sts.New(awsSession)
-	stsInputParams := &sts.GetCallerIdentityInput{}
-
-	testIdentity, err := stsService.GetCallerIdentity(stsInputParams)
+	stsService := sts.NewFromConfig(awsConfig)
+	testIdentity, err := stsService.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
 		t.Fatalf("Received error retrieving identity: %s", err)
 	}
@@ -1716,9 +1754,11 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	// now, create the request without the signed header
-	stsRequestNoHeader, _ := stsService.GetCallerIdentityRequest(stsInputParams)
-	stsRequestNoHeader.Sign()
-	loginData, err := buildCallerIdentityLoginData(stsRequestNoHeader.HTTPRequest, testValidRoleName)
+	stsRequestNoHeader, err := generateCallerIdentityRequest(ctx, awsConfig, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginData, err := buildCallerIdentityLoginData(stsRequestNoHeader, testValidRoleName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1738,10 +1778,11 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// Not reusing stsRequestNoHeader because the process of signing the request
 	// and reading the body modifies the underlying request, so it's just cleaner
 	// to get new requests.
-	stsRequestInvalidHeader, _ := stsService.GetCallerIdentityRequest(stsInputParams)
-	stsRequestInvalidHeader.HTTPRequest.Header.Add(iamServerIdHeader, "InvalidValue")
-	stsRequestInvalidHeader.Sign()
-	loginData, err = buildCallerIdentityLoginData(stsRequestInvalidHeader.HTTPRequest, testValidRoleName)
+	stsRequestInvalidHeader, err := generateCallerIdentityRequest(ctx, awsConfig, "InvalidValue")
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginData, err = buildCallerIdentityLoginData(stsRequestInvalidHeader, testValidRoleName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1757,10 +1798,11 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 
 	// Now, valid request against invalid role
-	stsRequestValid, _ := stsService.GetCallerIdentityRequest(stsInputParams)
-	stsRequestValid.HTTPRequest.Header.Add(iamServerIdHeader, testVaultHeaderValue)
-	stsRequestValid.Sign()
-	loginData, err = buildCallerIdentityLoginData(stsRequestValid.HTTPRequest, testInvalidRoleName)
+	stsRequestValid, err := generateCallerIdentityRequest(ctx, awsConfig, testVaultHeaderValue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loginData, err = buildCallerIdentityLoginData(stsRequestValid, testInvalidRoleName)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1940,10 +1982,10 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 
 func TestGeneratePartitionToRegionMap(t *testing.T) {
 	m := generatePartitionToRegionMap()
-	if m["aws"].ID() != "us-east-1" {
-		t.Fatal("expected us-east-1 but received " + m["aws"].ID())
+	if m["aws"] != "us-east-1" {
+		t.Fatal("expected us-east-1 but received " + m["aws"])
 	}
-	if m["aws-us-gov"].ID() != "us-gov-west-1" {
-		t.Fatal("expected us-gov-west-1 but received " + m["aws-us-gov"].ID())
+	if m["aws-us-gov"] != "us-gov-west-1" {
+		t.Fatal("expected us-gov-west-1 but received " + m["aws-us-gov"])
 	}
 }
