@@ -9,29 +9,28 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// getRawClientConfig creates a aws-sdk-go config, which is used to create client
-// that can interact with AWS API. This builds credentials in the following
-// order of preference:
+const useServiceDefaultRetries = -1
+
+// getRawClientConfig creates an aws-sdk-go-v2 config used to create AWS clients.
+// This builds credentials in the following order of preference:
 //
 // * Static credentials from 'config/client'
 // * Environment variables
 // * Instance metadata role
-func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, region, clientType string) (*aws.Config, error) {
+func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, region, clientType string) (*awsv2.Config, error) {
 	credsConfig := &awsutil.CredentialsConfig{
 		Region: region,
 		Logger: b.Logger(),
@@ -43,74 +42,88 @@ func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, reg
 		return nil, err
 	}
 
-	endpoint := aws.String("")
-	var maxRetries int = aws.UseServiceDefaultRetries
+	var endpoint *string
 	if config != nil {
 		// Override the defaults with configured values.
 		switch {
 		case clientType == "ec2" && config.Endpoint != "":
-			endpoint = aws.String(config.Endpoint)
+			endpoint = awsv2.String(config.Endpoint)
 		case clientType == "iam" && config.IAMEndpoint != "":
-			endpoint = aws.String(config.IAMEndpoint)
+			endpoint = awsv2.String(config.IAMEndpoint)
 		case clientType == "sts":
 			if config.STSEndpoint != "" {
-				endpoint = aws.String(config.STSEndpoint)
+				endpoint = awsv2.String(config.STSEndpoint)
 			}
 			if config.STSRegion != "" {
 				region = config.STSRegion
+				credsConfig.Region = region // v2 reads region from credsConfig.Region, so copy the sts_region override here.
 			}
 		}
 
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
-		maxRetries = config.MaxRetries
-
-		if config.IdentityTokenAudience != "" {
-			ns, err := namespace.FromContext(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get namespace from context: %w", err)
-			}
-
-			fetcher := &PluginIdentityTokenFetcher{
-				sys:      b.System(),
-				logger:   b.Logger(),
-				ns:       ns,
-				audience: config.IdentityTokenAudience,
-				ttl:      config.IdentityTokenTTL,
-			}
-
-			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-			credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-auth-%s", sessionSuffix)
-			credsConfig.WebIdentityTokenFetcher = fetcher
-			credsConfig.RoleARN = config.RoleARN
+		if config.MaxRetries >= 0 {
+			credsConfig.MaxRetries = &config.MaxRetries
 		}
 	}
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
 
-	creds, err := credsConfig.GenerateCredentialChain()
+	// When no static credentials are configured, don't force the shared "default"
+	// profile. In SDK v2, setting the shared profile makes credential resolution
+	// short-circuit to that profile and skip the environment and IMDS/ECS
+	// providers; leaving it unset lets the default chain (env vars, shared config,
+	// IMDS/ECS) resolve naturally, matching the v1 SDK behavior.
+	var credChainOpts []awsutil.Option
+	if credsConfig.AccessKey == "" && credsConfig.SecretKey == "" {
+		credChainOpts = append(credChainOpts, awsutil.WithSharedCredentials(false))
+	}
+
+	awsConfig, err := credsConfig.GenerateCredentialChain(ctx, credChainOpts...)
 	if err != nil {
 		return nil, err
 	}
-	if creds == nil {
+	awsConfig.HTTPClient = credsConfig.HTTPClient
+	awsConfig.BaseEndpoint = endpoint
+
+	// SDK v2 removed WebIdentityTokenFetcher from CredentialsConfig. WIF logic now executes
+	// after GenerateCredentialChain to use the resolved *aws.Config for building the STS client.
+	if config != nil && config.IdentityTokenAudience != "" { // nil check guards against a nil-pointer dereference when reading IdentityTokenAudience.
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get namespace from context: %w", err)
+		}
+
+		fetcher := &PluginIdentityTokenFetcher{
+			sys:      b.System(),
+			logger:   b.Logger(),
+			ns:       ns,
+			audience: config.IdentityTokenAudience,
+			ttl:      config.IdentityTokenTTL,
+		}
+
+		sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+		credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-auth-%s", sessionSuffix)
+		credsConfig.RoleARN = config.RoleARN
+		stsClient := sts.NewFromConfig(*awsConfig)
+		provider := stscreds.NewWebIdentityRoleProvider(stsClient, credsConfig.RoleARN, fetcher, func(o *stscreds.WebIdentityRoleOptions) {
+			o.RoleSessionName = credsConfig.RoleSessionName
+		})
+		awsConfig.Credentials = awsv2.NewCredentialsCache(provider)
+	}
+
+	if awsConfig.Credentials == nil {
 		return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
 	}
 
-	// Create a config that can be used to make the API calls.
-	return &aws.Config{
-		Credentials: creds,
-		Region:      aws.String(region),
-		HTTPClient:  cleanhttp.DefaultClient(),
-		Endpoint:    endpoint,
-		MaxRetries:  aws.Int(maxRetries),
-	}, nil
+	return awsConfig, nil
 }
 
-// getClientConfig returns an aws-sdk-go config, with optionally assumed credentials
+// getClientConfig returns an aws-sdk-go-v2 config, with optionally assumed credentials.
 // It uses getRawClientConfig to obtain config for the runtime environment, and if
 // stsRole is a non-empty string, it will use AssumeRole to obtain a set of assumed
 // credentials. The credentials will expire after 15 minutes but will auto-refresh.
-func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, externalID, accountID, clientType string) (*aws.Config, error) {
+func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region, stsRole, externalID, accountID, clientType string) (*awsv2.Config, error) {
 	config, err := b.getRawClientConfig(ctx, s, region, clientType)
 	if err != nil {
 		return nil, err
@@ -120,45 +133,37 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 	}
 
 	stsConfig, err := b.getRawClientConfig(ctx, s, region, "sts")
-	if stsConfig == nil {
-		return nil, fmt.Errorf("could not configure STS client")
-	}
 	if err != nil {
 		return nil, err
 	}
+	if stsConfig == nil {
+		return nil, fmt.Errorf("could not configure STS client")
+	}
 	if stsRole != "" {
-		sess, err := session.NewSession(stsConfig)
-		if err != nil {
-			return nil, err
-		}
-		var assumedCredentials *credentials.Credentials
-		if externalID != "" {
-			assumedCredentials = stscreds.NewCredentials(sess, stsRole, func(p *stscreds.AssumeRoleProvider) { p.ExternalID = aws.String(externalID) })
-		} else {
-			assumedCredentials = stscreds.NewCredentials(sess, stsRole)
-		}
+		stsClient := sts.NewFromConfig(*stsConfig)
+		provider := stscreds.NewAssumeRoleProvider(stsClient, stsRole, func(o *stscreds.AssumeRoleOptions) {
+			if externalID != "" {
+				o.ExternalID = awsv2.String(externalID)
+			}
+		})
+		assumedCredentials := awsv2.NewCredentialsCache(provider)
 		// Test that we actually have permissions to assume the role
-		if _, err = assumedCredentials.Get(); err != nil {
+		if _, err = assumedCredentials.Retrieve(ctx); err != nil {
 			return nil, err
 		}
 		config.Credentials = assumedCredentials
 	} else {
 		if b.defaultAWSAccountID == "" {
-			sess, err := session.NewSession(stsConfig)
-			if err != nil {
-				return nil, err
-			}
-			client := sts.New(sess)
-			if client == nil {
-				return nil, fmt.Errorf("could not obtain sts client: %w", err)
-			}
-			inputParams := &sts.GetCallerIdentityInput{}
-			identity, err := client.GetCallerIdentityWithContext(ctx, inputParams)
+			client := sts.NewFromConfig(*stsConfig)
+			identity, err := client.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 			if err != nil {
 				return nil, fmt.Errorf("unable to fetch current caller: %w", err)
 			}
 			if identity == nil {
 				return nil, fmt.Errorf("got nil result from GetCallerIdentity")
+			}
+			if identity.Account == nil {
+				return nil, fmt.Errorf("got nil account from GetCallerIdentity")
 			}
 			b.defaultAWSAccountID = *identity.Account
 		}
@@ -175,7 +180,7 @@ func (b *backend) getClientConfig(ctx context.Context, s logical.Storage, region
 // the cached EC2 client objects will be flushed. Config mutex lock should be
 // acquired for write operation before calling this method.
 func (b *backend) flushCachedEC2Clients() {
-	b.EC2ClientsMap = make(map[clientKey]*ec2.EC2)
+	b.EC2ClientsMap = make(map[clientKey]*ec2.Client)
 }
 
 // flushCachedIAMClients deletes all the cached iam client objects from the
@@ -183,7 +188,7 @@ func (b *backend) flushCachedEC2Clients() {
 // the backend, all the cached IAM client objects will be flushed. Config mutex
 // lock should be acquired for write operation before calling this method.
 func (b *backend) flushCachedIAMClients() {
-	b.IAMClientsMap = make(map[clientKey]*iam.IAM)
+	b.IAMClientsMap = make(map[clientKey]*iam.Client)
 }
 
 // Gets an entry out of the user ID cache
@@ -224,7 +229,7 @@ func (b *backend) stsRoleForAccount(ctx context.Context, s logical.Storage, acco
 }
 
 // clientEC2 creates a client to interact with AWS EC2 API
-func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (*ec2.EC2, error) {
+func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, accountID string) (*ec2.Client, error) {
 	stsRole, stsExternalID, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
@@ -253,7 +258,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	// Create an AWS config object using a chain of providers
-	var awsConfig *aws.Config
+	var awsConfig *awsv2.Config
 	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, stsExternalID, accountID, "ec2")
 	if err != nil {
 		return nil, err
@@ -264,11 +269,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	// Create a new EC2 client object, cache it and return the same
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, err
-	}
-	client := ec2.New(sess)
+	client := ec2.NewFromConfig(*awsConfig)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain ec2 client")
 	}
@@ -278,7 +279,7 @@ func (b *backend) clientEC2(ctx context.Context, s logical.Storage, region, acco
 }
 
 // clientIAM creates a client to interact with AWS IAM API
-func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (*iam.IAM, error) {
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, accountID string) (*iam.Client, error) {
 	stsRole, stsExternalID, err := b.stsRoleForAccount(ctx, s, accountID)
 	if err != nil {
 		return nil, err
@@ -315,7 +316,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	// Create an AWS config object using a chain of providers
-	var awsConfig *aws.Config
+	var awsConfig *awsv2.Config
 	awsConfig, err = b.getClientConfig(ctx, s, region, stsRole, stsExternalID, accountID, "iam")
 	if err != nil {
 		return nil, err
@@ -326,11 +327,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, region, acco
 	}
 
 	// Create a new IAM client object, cache it and return the same
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, err
-	}
-	client := iam.New(sess)
+	client := iam.NewFromConfig(*awsConfig)
 	if client == nil {
 		return nil, fmt.Errorf("could not obtain iam client")
 	}
@@ -350,9 +347,12 @@ type PluginIdentityTokenFetcher struct {
 	ttl      time.Duration
 }
 
-var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
+var _ stscreds.IdentityTokenRetriever = (*PluginIdentityTokenFetcher)(nil)
 
-func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
+func (f PluginIdentityTokenFetcher) GetIdentityToken() ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
 	resp, err := f.sys.GenerateIdentityToken(nsCtx, &pluginutil.IdentityTokenRequest{
 		Audience: f.audience,
