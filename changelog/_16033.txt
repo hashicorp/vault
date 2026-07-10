@@ -1,0 +1,3 @@
+```release-note:bug
+events (enterprise): Fix a bug where events stopped being forwarded to performance secondaries after the active node restarted or had a change event (seal/unseal, etc).
+```
