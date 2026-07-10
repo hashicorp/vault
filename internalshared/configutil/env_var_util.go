@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/scalewaykms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2"
 )
 
@@ -63,6 +64,15 @@ var (
 		ocikms.EnvVaultOciKmsSealKeyId:              "key_id",
 		ocikms.EnvOciKmsWrapperManagementEndpoint:   "management_endpoint",
 		ocikms.EnvVaultOciKmsSealManagementEndpoint: "management_endpoint",
+	}
+
+	ScalewayKMSEnvVars = map[string]string{
+		scalewaykms.EnvScalewayRegion:            "region",
+		scalewaykms.EnvScalewayProjectId:         "project_id",
+		scalewaykms.EnvScalewayAccessKey:         "access_key",
+		scalewaykms.EnvScalewaySecretKey:         "secret_key",
+		scalewaykms.EnvVaultScalewayKmsSealKeyId: "key_id",
+		scalewaykms.EnvScalewayKmsWrapperKeyId:   "key_id",
 	}
 
 	TransitEnvVars = map[string]string{

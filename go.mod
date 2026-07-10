@@ -106,13 +106,14 @@ require (
 	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.23
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.24
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.10
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.5
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v4 v4.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.15
 	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.14
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.10
+	github.com/hashicorp/go-kms-wrapping/wrappers/scalewaykms/v2 v2.0.0
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.13
 	github.com/hashicorp/go-memdb v1.3.5
 	github.com/hashicorp/go-multierror v1.1.1
@@ -277,6 +278,7 @@ require (
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
 	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.1 // indirect
 	github.com/looplab/fsm v1.0.3 // indirect
+	github.com/scaleway/scaleway-sdk-go v1.0.0-beta.36 // indirect
 	github.com/softlayer/xmlrpc v0.0.0-20200409220501-5f089df7cb7e // indirect
 )
 
@@ -542,7 +544,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	github.com/segmentio/fasthash v1.0.3 // indirect
 	github.com/sergi/go-diff v1.3.2-0.20230802210424-5b0b94c5c0d3 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
