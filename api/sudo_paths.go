@@ -64,8 +64,9 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/activation-flags/oauth-resource-server/deactivate": regexp.MustCompile(`^/sys/activation-flags/oauth-resource-server/deactivate$`),
 
 	// OAuth resource server profile paths requiring sudo
-	"/sys/config/oauth-resource-server/{name}": regexp.MustCompile(`^/sys/config/oauth-resource-server/[^/]+$`),
-	"/sys/config/oauth-resource-server":        regexp.MustCompile(`^/sys/config/oauth-resource-server$`),
+	"/sys/config/oauth-resource-server/{name}":         regexp.MustCompile(`^/sys/config/oauth-resource-server/[^/]+$`),
+	"/sys/config/oauth-resource-server":                regexp.MustCompile(`^/sys/config/oauth-resource-server$`),
+	"/sys/config/oauth-resource-server/id/{config_id}": regexp.MustCompile(`^/sys/config/oauth-resource-server/id/[^/]+$`),
 }
 
 func SudoPaths() map[string]*regexp.Regexp {
