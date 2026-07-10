@@ -100,12 +100,18 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		return nil
 	}
 
+	healthCheckBackend := NewHealthCheckBackend(core, logger)
+	if err := healthCheckBackend.Setup(core.activeContext, config); err != nil {
+		return nil
+	}
+
 	b := &SystemBackend{
 		Core:                 core,
 		db:                   db,
 		logger:               logger,
 		mfaBackend:           NewPolicyMFABackend(core, logger),
 		syncBackend:          syncBackend,
+		healthCheckBackend:   healthCheckBackend,
 		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
@@ -309,6 +315,7 @@ type SystemBackend struct {
 	logger               log.Logger
 	mfaBackend           *PolicyMFABackend
 	syncBackend          *SecretsSyncBackend
+	healthCheckBackend   *HealthCheckBackend
 	idStoreBackend       *framework.Backend
 	raftChallengeLimiter *rate.Limiter
 	activationFlags      *activationflags.FeatureActivationFlags
