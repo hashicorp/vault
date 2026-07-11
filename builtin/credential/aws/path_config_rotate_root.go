@@ -7,14 +7,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -67,49 +65,41 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 	// Getting our client through the b.clientIAM method requires values retrieved through
 	// the user providing an ARN, which we don't have here, so let's just directly
 	// make what we need.
-	staticCreds := &credentials.StaticProvider{
-		Value: credentials.Value{
-			AccessKeyID:     clientConf.AccessKey,
-			SecretAccessKey: clientConf.SecretKey,
-		},
-	}
-	// By default, leave the iamEndpoint nil to tell AWS it's unset. However, if it is
-	// configured, populate the pointer.
-	var iamEndpoint *string
-	if clientConf.IAMEndpoint != "" {
-		iamEndpoint = aws.String(clientConf.IAMEndpoint)
-	}
+	accessKeyID := clientConf.AccessKey
+	secretAccessKey := clientConf.SecretKey
 
 	// Attempt to retrieve the region, error out if no region is provided.
-	region, err := awsutil.GetRegion("")
+	region, err := awsutil.GetRegion(ctx, "")
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving region: %w", err)
 	}
 
-	awsConfig := &aws.Config{
-		Credentials: credentials.NewCredentials(staticCreds),
-		Endpoint:    iamEndpoint,
+	// By default, leave the iamEndpoint nil to tell AWS it's unset. However, if it is
+	// configured, populate the pointer.
+	var iamEndpoint *string
+	if clientConf.IAMEndpoint != "" {
+		iamEndpoint = awsv2.String(clientConf.IAMEndpoint)
+	}
 
+	awsConfig := &awsv2.Config{
+		Credentials: awsv2.NewCredentialsCache(credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, "")),
 		// Generally speaking, GetRegion will use the Vault server's region. However, if this
 		// needs to be overridden, an easy way would be to set the AWS_DEFAULT_REGION on the Vault server
 		// to the desired region. If that's still insufficient for someone's use case, in the future we
 		// could add the ability to specify the region either on the client config or as part of the
 		// inbound rotation call.
-		Region: aws.String(region),
-
+		Region: region,
 		// Prevents races.
 		HTTPClient: cleanhttp.DefaultClient(),
 	}
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, err
-	}
-	iamClient := getIAMClient(sess)
+	awsConfig.BaseEndpoint = iamEndpoint
+
+	iamClient := getIAMClient(awsConfig)
 
 	// Get the current user's name since it's required to create an access key.
 	// Empty input means get the current user.
 	var getUserInput iam.GetUserInput
-	getUserRes, err := iamClient.GetUserWithContext(ctx, &getUserInput)
+	getUserRes, err := iamClient.GetUser(ctx, &getUserInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
@@ -127,7 +117,7 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 	createAccessKeyInput := iam.CreateAccessKeyInput{
 		UserName: getUserRes.User.UserName,
 	}
-	createAccessKeyRes, err := iamClient.CreateAccessKeyWithContext(ctx, &createAccessKeyInput)
+	createAccessKeyRes, err := iamClient.CreateAccessKey(ctx, &createAccessKeyInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
@@ -151,7 +141,7 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 			AccessKeyId: createAccessKeyRes.AccessKey.AccessKeyId,
 			UserName:    getUserRes.User.UserName,
 		}
-		if _, err := iamClient.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput); err != nil {
+		if _, err := iamClient.DeleteAccessKey(ctx, &deleteAccessKeyInput); err != nil {
 			// Include this error in the errs returned by this method.
 			errs = multierror.Append(errs, fmt.Errorf("error deleting newly created but unstored access key ID %s: %s", *createAccessKeyRes.AccessKey.AccessKeyId, err))
 		}
@@ -185,10 +175,10 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 
 	// Now to clean up the old key.
 	deleteAccessKeyInput := iam.DeleteAccessKeyInput{
-		AccessKeyId: aws.String(oldAccessKey),
+		AccessKeyId: awsv2.String(oldAccessKey),
 		UserName:    getUserRes.User.UserName,
 	}
-	if _, err = iamClient.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput); err != nil {
+	if _, err = iamClient.DeleteAccessKey(ctx, &deleteAccessKeyInput); err != nil {
 		errs = multierror.Append(errs, fmt.Errorf("error deleting old access key ID %s: %w", oldAccessKey, err))
 		return nil, errs
 	}
@@ -206,8 +196,11 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 // endpoint it's hitting. Per
 // https://aws.amazon.com/blogs/developer/mocking-out-then-aws-sdk-for-go-for-unit-testing/,
 // this is the recommended approach.
-var getIAMClient = func(sess *session.Session) iamiface.IAMAPI {
-	return iam.New(sess)
+//
+// It returns awsutil.IAMClient (the shared interface from go-secure-stdlib) so we
+// reuse that definition and its MockIAM test double rather than redefining our own.
+var getIAMClient = func(cfg *awsv2.Config) awsutil.IAMClient {
+	return iam.NewFromConfig(*cfg)
 }
 
 const pathConfigRotateRootHelpSyn = `

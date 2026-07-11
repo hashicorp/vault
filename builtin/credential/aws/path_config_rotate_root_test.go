@@ -7,41 +7,30 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type mockIAMClient awsutil.MockIAM
-
-func (m *mockIAMClient) GetUserWithContext(_ aws.Context, input *iam.GetUserInput, _ ...request.Option) (*iam.GetUserOutput, error) {
-	return (*awsutil.MockIAM)(m).GetUser(input)
-}
-
-func (m *mockIAMClient) CreateAccessKeyWithContext(_ aws.Context, input *iam.CreateAccessKeyInput, _ ...request.Option) (*iam.CreateAccessKeyOutput, error) {
-	return (*awsutil.MockIAM)(m).CreateAccessKey(input)
-}
-
-func (m *mockIAMClient) DeleteAccessKeyWithContext(_ aws.Context, input *iam.DeleteAccessKeyInput, _ ...request.Option) (*iam.DeleteAccessKeyOutput, error) {
-	return (*awsutil.MockIAM)(m).DeleteAccessKey(input)
-}
+type mockIAMClient = awsutil.MockIAM
 
 func TestPathConfigRotateRoot(t *testing.T) {
-	getIAMClient = func(sess *session.Session) iamiface.IAMAPI {
+	t.Setenv("AWS_REGION", "us-east-1")
+	t.Setenv("AWS_DEFAULT_REGION", "us-east-1")
+
+	getIAMClient = func(cfg *awsv2.Config) awsutil.IAMClient {
 		return &mockIAMClient{
 			CreateAccessKeyOutput: &iam.CreateAccessKeyOutput{
-				AccessKey: &iam.AccessKey{
-					AccessKeyId:     aws.String("fizz2"),
-					SecretAccessKey: aws.String("buzz2"),
+				AccessKey: &iamtypes.AccessKey{
+					AccessKeyId:     awsv2.String("fizz2"),
+					SecretAccessKey: awsv2.String("buzz2"),
 				},
 			},
 			GetUserOutput: &iam.GetUserOutput{
-				User: &iam.User{
-					UserName: aws.String("ellen"),
+				User: &iamtypes.User{
+					UserName: awsv2.String("ellen"),
 				},
 			},
 		}

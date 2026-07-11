@@ -21,10 +21,11 @@ import (
 
 // Session holds the test context and Vault client
 type Session struct {
-	t         *testing.T
-	NoCleanup bool
-	Client    *api.Client
-	Namespace string
+	t             *testing.T
+	NoCleanup     bool
+	SkipNamespace bool
+	Client        *api.Client
+	Namespace     string
 }
 
 func (s *Session) T() *testing.T {
@@ -36,6 +37,12 @@ type SessionOpts func(s *Session)
 func WithNoCleanup() SessionOpts {
 	return func(s *Session) {
 		s.NoCleanup = true
+	}
+}
+
+func WithoutNamespace() SessionOpts {
+	return func(s *Session) {
+		s.SkipNamespace = true
 	}
 }
 
@@ -91,6 +98,22 @@ func New(t *testing.T, opts ...SessionOpts) *Session {
 		}
 	}
 
+	session := &Session{
+		t:      t,
+		Client: privClient,
+	}
+
+	// Apply options first to check if namespace should be skipped
+	for opt := range slices.Values(opts) {
+		opt(session)
+	}
+
+	// Skip namespace creation if requested
+	if session.SkipNamespace {
+		t.Log("Skipping namespace creation, using root namespace")
+		return session
+	}
+
 	// Use timestamp to ensure uniqueness across test retries
 	nsName := fmt.Sprintf("bbsdk-%d-%s", time.Now().UnixNano(), randomString(8))
 	nsURLPath := fmt.Sprintf("sys/namespaces/%s", nsName)
@@ -130,15 +153,8 @@ func New(t *testing.T, opts ...SessionOpts) *Session {
 	sessionClient.SetToken(token)
 	sessionClient.SetNamespace(fullNSPath)
 
-	session := &Session{
-		t:         t,
-		Client:    sessionClient,
-		Namespace: nsName,
-	}
-
-	for opt := range slices.Values(opts) {
-		opt(session)
-	}
+	session.Client = sessionClient
+	session.Namespace = nsName
 
 	t.Cleanup(func() {
 		if session.NoCleanup {

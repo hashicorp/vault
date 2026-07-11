@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
@@ -87,7 +86,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 
 			"max_retries": {
 				Type:        framework.TypeInt,
-				Default:     aws.UseServiceDefaultRetries,
+				Default:     useServiceDefaultRetries,
 				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
 			},
 

@@ -135,10 +135,11 @@ var (
 		})...)
 
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
-			"activation-flags/oauth-resource-server/activate":                    {operations: []logical.Operation{logical.UpdateOperation}},
-			"activation-flags/oauth-resource-server/deactivate":                  {operations: []logical.Operation{logical.UpdateOperation}},
-			"config/oauth-resource-server/":                                      {operations: []logical.Operation{logical.ListOperation}},
-			"config/oauth-resource-server/" + framework.GenericNameRegex("name"): {parameters: []string{"name"}, operations: []logical.Operation{logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation}},
+			"activation-flags/oauth-resource-server/activate":                            {operations: []logical.Operation{logical.UpdateOperation}},
+			"activation-flags/oauth-resource-server/deactivate":                          {operations: []logical.Operation{logical.UpdateOperation}},
+			"config/oauth-resource-server/":                                              {operations: []logical.Operation{logical.ListOperation}},
+			"config/oauth-resource-server/" + framework.GenericNameRegex("name"):         {parameters: []string{"name"}, operations: []logical.Operation{logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation}},
+			"config/oauth-resource-server/id/" + framework.GenericNameRegex("config_id"): {parameters: []string{"config_id"}, operations: []logical.Operation{logical.ReadOperation}},
 		})...)
 
 		// reporting paths
