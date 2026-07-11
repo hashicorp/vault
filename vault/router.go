@@ -451,7 +451,7 @@ func (r *Router) MatchingStorageByAPIPath(ctx context.Context, path string) logi
 }
 
 func (r *Router) MatchingStorageByStoragePath(ctx context.Context, path string) logical.Storage {
-	return r.matchingStorage(ctx, path, false)
+	return r.matchingStorage(ctx, path, true)
 }
 
 func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool) logical.Storage {
