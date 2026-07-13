@@ -678,21 +678,6 @@ jobs:
             cat "$temp_file_name"
             echo EOFTABLE
           } | tee -a "$GITHUB_OUTPUT"
-      - if: |
-          needs.setup.outputs.workflow-trigger == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
-          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
-        name: Create or update a build status comment on the pull request
-        env:
-          ARTIFACTS: ${{ needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result || needs.artifacts-ce.result }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.event.repository.name }}
-          RUN_ID: ${{ github.run_id }}
-          TEST: ${{ needs.test.result }}
-          TEST_CONTAINERS: ${{ needs.test-containers.result }}
-          UI: ${{ needs.ui.result }}
-        run: ./.github/scripts/report-build-status.sh
       - name: Create test results comment
         if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
