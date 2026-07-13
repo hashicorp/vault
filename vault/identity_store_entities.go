@@ -303,9 +303,24 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		toEntity, err := i.MemDBEntityByID(toEntityID, true)
+		toEntity, err := i.MemDBEntityByIDInTxn(txn, toEntityID, true)
 		if err != nil {
 			return nil, err
+		}
+
+		// Merging SCIM-managed entities via the API is not allowed.
+		if toEntity != nil && toEntity.ScimClientID != "" {
+			return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM, cannot target to_entity %s", toEntity.ID), logical.ErrPermissionDenied
+		}
+		for _, fromEntityID := range fromEntityIDs {
+			fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, false)
+			if err != nil {
+				return nil, err
+			}
+			// non-existent fromEntity validation is handled in mergeEntity
+			if fromEntity != nil && fromEntity.ScimClientID != "" {
+				return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM, cannot target from_entity %s", fromEntity.ID), logical.ErrPermissionDenied
+			}
 		}
 
 		userErr, intErr, aliases := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, conflictingAliasIDsToKeep, force, false, false, true, false)
