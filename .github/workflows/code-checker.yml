@@ -16,23 +16,56 @@ jobs:
   setup:
     name: Setup
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
+    outputs:
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
+      workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: ./.github/actions/metadata
+        id: metadata
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
       - name: Ensure Go modules are cached
         uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
       - uses: ./.github/actions/install-tools
         name: Ensure Vault tools are cached
         with:
           no-restore: true # don't download them on a cache hit
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
 
   deprecations:
     name: Deprecated functions
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     needs: setup
-    if: github.base_ref == 'main'
+    if: |
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'quality_code')
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -49,7 +82,12 @@ jobs:
     name: Code checks
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     needs: setup
-    if: github.base_ref == 'main'
+    if: |
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'proto') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'quality_code')
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -71,6 +109,11 @@ jobs:
     name: Protobuf generate delta
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     needs: setup
+    if: |
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'proto')
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: ./.github/actions/set-up-go
@@ -85,6 +128,12 @@ jobs:
     name: Format
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     needs: setup
+    if: |
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'proto') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'quality_code')
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: ./.github/actions/set-up-go
@@ -102,6 +151,12 @@ jobs:
   semgrep:
     name: Semgrep
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    needs: setup
+    if: |
+      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'quality_code')
     container:
       image: returntocorp/semgrep@sha256:cfad18cfb6536aa48ad5a71017207a10320b4e17e3b2bd7b7de27b42dc9651e7 #v1.58
     steps:

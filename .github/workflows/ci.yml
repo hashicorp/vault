@@ -44,7 +44,6 @@ jobs:
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
-      run-ui-tests: ${{ steps.ui-should-run.outputs.run-ui-tests }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Make sure we check out correct ref based on PR labels and such
@@ -85,12 +84,6 @@ jobs:
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
-      # Run the UI tests if our UI has changed, or a 'ui' label is present, or our workflow trigger
-      # was triggered by a merge to main or releases/*.
-      - id: ui-should-run
-        name: Determine whether or not we should run UI tests
-        run: |
-          echo "run-ui-tests=${{ contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'ui') || steps.metadata.outputs.workflow-trigger == 'push' || contains(steps.metadata.outputs.labels, 'ui') }}" | tee -a "$GITHUB_OUTPUT"
 
   test-autopilot-upgrade:
     name: Run Autopilot upgrade tool
@@ -104,9 +97,9 @@ jobs:
     # If you'd like to run the autopilot tests for a specific git checkout or set of source versions,
     # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
     if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') &&
       needs.setup.outputs.is-ent-branch == 'true' &&
-      (github.base_ref == 'main' || github.ref == 'refs/heads/main')
+      (github.base_ref == 'main' || github.ref == 'refs/heads/main') &&
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_autopilot')
     needs: setup
     permissions:
       id-token: write
@@ -167,9 +160,11 @@ jobs:
   test-go:
     # Run Go tests if the vault app changed
     if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
     name: Run Go tests
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -197,8 +192,11 @@ jobs:
   test-go-testonly:
     # Run Go tests tagged with "testonly" if the vault app changed
     if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
     name: Run Go tests tagged with testonly
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -227,10 +225,13 @@ jobs:
     # drafts mode.
     if: |
       needs.setup.outputs.is-draft == 'false' &&
-        (
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
-        )
+      (
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
+      )
     name: Run Go tests with data race detection
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -262,11 +263,17 @@ jobs:
     # Run the Go tests with fips if the vault app changed, we're in the context vault enterprise
     # and our trigger is a merge to main or releases/* or if the 'fips' label is present on a PR.
     if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') &&
+      (
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
+      ) &&
       needs.setup.outputs.is-ent-branch == 'true' &&
-        (
-          needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips')
-        )
+      (
+        needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips')
+      )
     needs: setup
     uses: ./.github/workflows/test-go.yml
     permissions:
@@ -294,7 +301,11 @@ jobs:
   test-ui:
     name: Test UI
     needs: setup
-    if: needs.setup.outputs.run-ui-tests == 'true'
+    if: |
+      contains(needs.setup.outputs.labels, 'ui') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ui') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui')
     uses: ./.github/workflows/test-ui.yml
     permissions:
       actions: read

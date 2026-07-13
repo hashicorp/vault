@@ -13,16 +13,60 @@ on:
       - 'main'
       - 'release/**'
       - 'ce/**'
+  schedule:
+    - cron: '05 02 * * *'
+      timezone: "America/New_York"
 
 jobs:
+  setup:
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
+    outputs:
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
+      workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: ./.github/actions/metadata
+        id: metadata
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+
   scan:
+    needs: setup
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64","xlarge"]') }}
     # The first check ensures this doesn't run on community-contributed PRs, who won't have the
     # permissions to run this job.
     if: |
       ! github.event.pull_request.head.repo.fork &&
       github.actor != 'dependabot[bot]' &&
-      github.actor != 'hc-github-team-secure-vault-core'
+      github.actor != 'hc-github-team-secure-vault-core' &&
+      (
+        needs.setup.outputs.workflow-trigger == 'schedule' ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'security_scanner') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui_deps')
+      )
     permissions:
       actions: read
       contents: read
@@ -31,13 +75,13 @@ jobs:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
     - name: Set up Go
-      uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
         go-version: 'stable'
 
     - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
       with:
         python-version: 3.x
 

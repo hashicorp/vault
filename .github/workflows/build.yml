@@ -180,16 +180,24 @@ jobs:
           no-restore: true
 
   ce-code-checks:
-    # Checks that we want to run only on changes to ce/* branches that ought to pass but aren't
-    # required for the "completed-successfully" job to pass. This allows us to bubble up this
-    # information without gating merges, which can be useful if you have many PRs simultaneously
-    # modifying go.mod before CE PRs with the equivalent changes have been merged.
-    name: Check ce/* Pull Requests
+    # Ensure that we can build a community edition of Vault with the files on our pull request
+    # branch. If we're making a PR to a ce/* branch we also look for drift in the Go modules
+    # between the enterprise and CE branch. This is currently *not* required to pass as there
+    # might be races between multiple PRs to ce/*. This allows us to bubble up this information
+    # without gating merges, which can be useful if you have many PRs simultaneously modifying
+    # go.mod before CE PRs with the equivalent changes have been merged.
+    name: Check community edition files
     if: |
       needs.setup.outputs.is-ent-repo == 'true' &&
       needs.setup.outputs.workflow-trigger == 'pull_request' &&
       github.event.pull_request.draft == false &&
-      startsWith(github.event.pull_request.base.ref, 'ce/')
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain')
+        )
     runs-on:
       - self-hosted
       - ubuntu-22.04-x64
@@ -219,12 +227,22 @@ jobs:
         uses: ./.github/actions/set-up-pipeline
         with:
           github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        run: |
+          git config --global url."https://${{ steps.vault-secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+      - id: set-up-go
+        uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/install-tools
+      - if: "! startsWith(github.event.pull_request.base.ref, 'ce/')"
+        name: Ensure that the community edition still builds on enterprise branches
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: SKIP_GEN=1 make cedev
       # Ensure that our go.mod files have not drifted if we've changed the Go toolchain on a CE PR
-      - if: |
-          needs.setup.outputs.is-ent-repo == 'true' &&
-          needs.setup.outputs.workflow-trigger == 'pull_request' &&
-          startsWith(github.event.pull_request.base.ref, 'ce/') &&
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+      - if: startsWith(github.event.pull_request.base.ref, 'ce/')
         name: Check go.mod diff on pull requests against ce/* branches that changed the go toolchain
         id: go-mod-diff
         env:
@@ -284,7 +302,7 @@ jobs:
     #     a merge
     #   * The workflow was triggered by a pull request, the pull request is not a draft, and the UI
     #     or app changed.
-    #   * Our pipeline or test scenarios changed.
+    #   * Our app, UI, or test scenarios (which currently require building new artifacts) have changed
     if: |
       needs.setup.outputs.workflow-trigger == 'push' ||
       needs.setup.outputs.workflow-trigger == 'schedule' ||
@@ -293,11 +311,13 @@ jobs:
         needs.setup.outputs.workflow-trigger == 'pull_request' &&
         needs.setup.outputs.is-draft == 'false' &&
         (
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_enos') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui')
         )
       )
     needs: setup
@@ -325,18 +345,32 @@ jobs:
   #   # Trigger the setup workflow if any of the following conditions are true:
   #
   #   * The workflow was triggered by on schedule to test building all artifacts.
-  #   * The Go app was changed.
-  #   * Our pipeline or test scenarios changed.
   #   * The build/all label is present on a pull request or push.
+  #   * The Go toolchain was modified
+  #   * Go modules were modified
+  #   * The enos test scenarios were modified
+  #
+  #   NOTE: We are currently testing only triggering app and UI build and test
+  #   scenarios on push events only.
   artifacts-ce:
     if: |
       needs.setup.outputs.is-ent-branch != 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
-        contains(fromJSON(needs.setup.outputs.labels), 'build/all')
+        contains(fromJSON(needs.setup.outputs.labels), 'build/all') ||
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_enos')
+        ) ||
+        (
+          needs.setup.outputs.workflow-trigger == 'push' &&
+          (
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui')
+          )
+        )
       )
     needs:
       - setup
@@ -348,7 +382,7 @@ jobs:
       id-token: write
       issues: read
     with:
-      build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
+      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') }}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}
@@ -363,11 +397,21 @@ jobs:
     if: |
       needs.setup.outputs.is-ent-branch == 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
-        contains(fromJSON(needs.setup.outputs.labels), 'build/all')
+        contains(fromJSON(needs.setup.outputs.labels), 'build/all') ||
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_enos')
+        ) ||
+        (
+          needs.setup.outputs.workflow-trigger == 'push' &&
+          (
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui')
+          )
+        )
       )
     needs:
       - setup
@@ -379,7 +423,7 @@ jobs:
       id-token: write
       issues: read
     with:
-      build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
+      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') }}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}
@@ -390,48 +434,6 @@ jobs:
       web-ui-cache-key: ${{ needs.ui.outputs.cache-key }}
     secrets: inherit
 
-  # Setup HCP input parameters with proper validation
-  hcp-setup:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-      issues: read
-    outputs:
-      pull-request-number: ${{ steps.pr-logic.outputs.pull-request-number }}
-      branch-name: ${{ steps.branch-logic.outputs.branch-name }}
-    steps:
-      - id: pr-logic
-        name: Determine pull request number
-        run: |
-          echo "Analyzing PR context for event: ${{ github.event_name }}"
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            PR_NUM="${{ github.event.pull_request.number }}"
-            if [[ -n "$PR_NUM" && "$PR_NUM" != "null" ]]; then
-              echo "PR context detected, using number: $PR_NUM"
-            else
-              echo "PR context but no valid number found, using 0"
-              PR_NUM="0"
-            fi
-          else
-            PR_NUM="0"
-            echo "Non-PR context, using fallback value: $PR_NUM"
-          fi
-          echo "pull-request-number=$PR_NUM" >> "$GITHUB_OUTPUT"
-
-      - id: branch-logic
-        name: Determine branch name
-        run: |
-          echo "Analyzing branch context for event: ${{ github.event_name }}"
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            BRANCH="main"
-            echo "Schedule context, using branch: $BRANCH"
-          else
-            BRANCH=""
-            echo "Non-schedule context, using empty branch"
-          fi
-          echo "branch-name=$BRANCH" >> "$GITHUB_OUTPUT"
 
   hcp-image:
     # Logic: Run HCP image job if:
@@ -450,8 +452,9 @@ jobs:
       ( needs.setup.outputs.is-ent-branch != 'true' ) && false ||
       ( needs.setup.outputs.workflow-trigger == 'schedule' ) && true ||
       ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
-        ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') ||
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_cloud') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_cloud') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
         )
@@ -459,7 +462,6 @@ jobs:
     needs:
       - setup
       - artifacts-ent
-      - hcp-setup
     uses: ./.github/workflows/build-hcp-image.yml
     permissions:
       actions: read
@@ -467,8 +469,8 @@ jobs:
       id-token: write
       issues: read
     with:
-      pull-request: ${{ fromJSON(needs.hcp-setup.outputs.pull-request-number) }}
-      branch: ${{ needs.hcp-setup.outputs.branch-name }}
+      pull-request: ${{ github.event.pull-request.number || '0' }}
+      branch: ${{ github.event_name == 'schedule' && 'main' || '' }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
@@ -548,7 +550,7 @@ jobs:
         ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
           needs.artifacts-ent.result == 'success' &&
           needs.hcp-image.result == 'success' &&
-          ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') || contains(fromJSON(needs.setup.outputs.labels), 'hcp/test') )
+          ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_cloud') || contains(fromJSON(needs.setup.outputs.labels), 'hcp/test') )
         ) || (
           needs.setup.outputs.workflow-trigger == 'schedule' &&
           needs.artifacts-ent.result == 'success' &&
