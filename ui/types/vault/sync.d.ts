@@ -85,6 +85,8 @@ export type DestinationConnectionDetails = {
   external_id?: string;
   credential_type?: CredentialType; // Frontend field indicating ACCOUNT or WIF, not a part of API payload
   region?: string;
+  kms_key_id?: string;
+  regional_kms_keys?: Record<string, string>;
   // azure-kv
   key_vault_uri?: string;
   client_id?: string;

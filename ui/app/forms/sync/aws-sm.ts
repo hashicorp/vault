@@ -54,11 +54,39 @@ export default class AwsSmForm extends CreateDestinationForm<AwsSmFormData> {
       new FormFieldGroup('Destination details', [
         this.commonFields.name,
         new FormField('region', 'string', {
-          possibleValues: regions(),
-          noDefault: true,
-          subText:
-            'For AWS secrets manager, the name of the region must be supplied, something like “us-west-1.” If empty, Vault will use the AWS_REGION environment variable if configured.',
+          label: 'Primary region',
+          editType: 'keyValueInputs',
           editDisabled: true,
+          subText:
+            'For AWS secrets manager, the name of the region must be supplied, something like “us-west-1.” If empty, Vault will use the AWS_REGION environment variable if configured. Add KMS Key ID if you want to use encryption.',
+          keyValueFields: [
+            {
+              name: 'region',
+              label: 'Primary region',
+              type: 'select',
+              possibleValues: regions(),
+              noDefault: true,
+              valuePath: 'region',
+            },
+            {
+              name: 'kms_key_id',
+              label: 'KMS key ID',
+              type: 'text',
+              valuePath: 'kms_key_id',
+            },
+          ],
+        }),
+        new FormField('regional_kms_keys', 'object', {
+          editType: 'keyValueInputs',
+          label: 'Replica regions',
+          addRowButtonText: 'Add region',
+          editDisabled: true,
+          subText:
+            'Add replica regions for cross-region replication. Optionally provide a KMS key ARN for each region. If left empty, AWS uses the default aws/secretsmanager key in that region.',
+          keyValueFields: [
+            { name: 'key', label: 'Region', type: 'select', possibleValues: regions(), noDefault: true },
+            { name: 'value', label: 'KMS key ID', type: 'text', placeholder: 'KMS key ID' },
+          ],
         }),
         new FormField('role_arn', 'string', {
           label: 'Role ARN',
