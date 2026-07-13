@@ -56,6 +56,14 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       render(hbs` <Secrets::Page::Destinations::CreateAndEdit @form={{this.form}} @type={{this.type}} />`, {
         owner: this.engine,
       });
+
+    // expands every collapsed accordion (e.g. "Advanced configuration", "Replica regions and encryption")
+    // so their nested fields render in the DOM and can be interacted with
+    this.expandAccordions = async () => {
+      for (const button of document.querySelectorAll('[data-test-accordion] button')) {
+        await click(button);
+      }
+    };
   });
 
   test('create: it renders breadcrumbs and navigates back to create on cancel', async function (assert) {
@@ -510,7 +518,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
       // Fill in required fields
       await fillIn(GENERAL.inputByAttr('name'), name);
-      await fillIn(GENERAL.inputByAttr('region'), 'us-west-1');
+      await PAGE.form.fillInByAttr('region', 'us-west-1');
       await fillIn(GENERAL.inputByAttr('role_arn'), 'arn:aws:iam::123456789012:role/test-role');
       await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'test-audience');
 
@@ -610,10 +618,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Create Destination for ${name}`);
 
-        const accordion = document.querySelector(GENERAL.accordionButton('Advanced configuration'));
-        if (accordion) {
-          await click(GENERAL.accordionButton('Advanced configuration'));
-        }
+        await this.expandAccordions();
 
         for (const field of this.formFields) {
           assert.dom(GENERAL.fieldByAttr(field.name)).exists();
@@ -659,10 +664,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderComponent();
 
-        const accordion = document.querySelector(GENERAL.accordionButton('Advanced configuration'));
-        if (accordion) {
-          await click(GENERAL.accordionButton('Advanced configuration'));
-        }
+        await this.expandAccordions();
 
         for (const field of this.formFields) {
           await PAGE.form.fillInByAttr(field.name, `my-${field.name}`);
@@ -765,11 +767,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Edit ${this.form.name}`);
 
-        // Expand Advanced configuration accordion if it exists (contains granularity, custom_tags, etc.)
-        const accordion = document.querySelector(GENERAL.accordionButton('Advanced configuration'));
-        if (accordion) {
-          await click(GENERAL.accordionButton('Advanced configuration'));
-        }
+        await this.expandAccordions();
 
         for (const field of this.formFields) {
           if (editable.includes(field.name)) {
@@ -779,7 +777,11 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
             }
             await PAGE.form.fillInByAttr(field.name, `new-${field.name}-value`);
           } else {
-            assert.dom(GENERAL.inputByAttr(field.name)).isDisabled(`${field.name} is disabled`);
+            // keyValueInputs fields (e.g. region) disable their inner inputs, not the outer wrapper that data-test-input targets
+            const disabledSelector = field.options.keyValueFields
+              ? `[data-test-kv-field="${field.options.keyValueFields[0].name}-0"]`
+              : GENERAL.inputByAttr(field.name);
+            assert.dom(disabledSelector).isDisabled(`${field.name} is disabled`);
           }
         }
 

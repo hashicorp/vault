@@ -18,6 +18,7 @@ import { DEFAULT_IDENTITY_TOKEN_TTL } from 'vault/forms/sync/create-destination'
 import type { ValidationMap } from 'vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
+import type FormField from 'vault/utils/forms/field';
 import type ApiService from 'vault/services/api';
 import VersionService from 'vault/services/version';
 import {
@@ -149,6 +150,17 @@ export default class DestinationsCreateForm extends Component<Args> {
     const credentialGroups = ['WIF credentials', 'IAM credentials', 'Client secret', 'JSON credentials'];
 
     return CLOUD_DESTINATION_TYPES.includes(type as CloudDestinationType) && credentialGroups.includes(group);
+  };
+
+  // fields nested here render inside a collapsible accordion rather than as standalone inputs
+  additionalRegionFieldNames = ['regional_kms_keys'];
+
+  isAdditionalRegionField = (attr: FormField): boolean => {
+    return this.additionalRegionFieldNames.includes(attr.name);
+  };
+
+  filterAdditionalRegionFields = (fields: FormField[]) => {
+    return fields.filter((field) => this.isAdditionalRegionField(field));
   };
 
   diffCustomTags(payload: Record<string, unknown>) {

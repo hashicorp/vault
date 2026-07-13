@@ -96,6 +96,12 @@ export const PAGE = {
         case 'custom_tags':
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
+        case 'region':
+          // region is a keyValueInputs field pairing a region select with a kms_key_id text input
+          return fillIn('[data-test-kv-field="region-0"]', value);
+        case 'regional_kms_keys':
+          await fillIn('[data-test-kv-field="key-0"]', 'us-west-1');
+          return fillIn('[data-test-kv-field="value-0"]', value);
         case 'deployment_environments':
           await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#development`);
           await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#preview`);

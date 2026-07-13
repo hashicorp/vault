@@ -205,7 +205,7 @@
                 {{/if}}
                 {{#if (eq field.type "select")}}
                   <F.Select
-                    disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+                    disabled={{this.keyValueEditDisabled}}
                     {{on "change" (fn this.updateKeyValueRow R.rowIndex field.name)}}
                     data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
                   >
@@ -242,20 +242,20 @@
                   <F.Textarea
                     @value={{get R.rowData field.name}}
                     placeholder={{field.placeholder}}
-                    disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+                    disabled={{this.keyValueEditDisabled}}
                     {{on "input" (fn this.updateKeyValueRow R.rowIndex field.name)}}
                     data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
                   />
                 {{else if (eq field.type "masked")}}
                   <F.MaskedInput
                     @value={{get R.rowData field.name}}
-                    disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+                    disabled={{this.keyValueEditDisabled}}
                     {{on "input" (fn this.updateKeyValueRow R.rowIndex field.name)}}
                     data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
                   />
                 {{else if (eq field.type "file")}}
                   <F.FileInput
-                    disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+                    disabled={{this.keyValueEditDisabled}}
                     {{on "change" (fn this.updateKeyValueRowFile R.rowIndex field.name)}}
                     data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
                   />
@@ -263,32 +263,29 @@
                   <F.TextInput
                     @value={{get R.rowData field.name}}
                     placeholder={{field.placeholder}}
-                    disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+                    disabled={{this.keyValueEditDisabled}}
                     {{on "input" (fn this.updateKeyValueRow R.rowIndex field.name)}}
                     data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
                   />
                 {{/if}}
               </R.Field>
             {{/each}}
-            <R.DeleteRowButton
-              @onClick={{this.deleteKeyValueRow}}
-              disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-            />
+            {{#unless (or this.hasFieldValuePaths this.keyValueEditDisabled)}}
+              <R.DeleteRowButton @onClick={{this.deleteKeyValueRow}} />
+            {{/unless}}
           </:row>
           <:footer as |F|>
-            {{#if (and @attr.options.maxRows (not (lt this.keyValueRows.length @attr.options.maxRows)))}}
-              <F.Alert as |A|>
-                <A.Description>
-                  {{or @attr.options.maxRowsText "You have reached the maximum number of rows."}}
-                </A.Description>
-              </F.Alert>
-            {{else}}
-              <F.AddRowButton
-                @text={{@attr.options.addRowButtonText}}
-                @onClick={{this.addKeyValueRow}}
-                disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-              />
-            {{/if}}
+            {{#unless (or this.hasFieldValuePaths this.keyValueEditDisabled)}}
+              {{#if (and @attr.options.maxRows (not (lt this.keyValueRows.length @attr.options.maxRows)))}}
+                <F.Alert as |A|>
+                  <A.Description>
+                    {{or @attr.options.maxRowsText "You have reached the maximum number of rows."}}
+                  </A.Description>
+                </F.Alert>
+              {{else}}
+                <F.AddRowButton @text={{@attr.options.addRowButtonText}} @onClick={{this.addKeyValueRow}} />
+              {{/if}}
+            {{/unless}}
             {{#if this.validationError}}
               <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}

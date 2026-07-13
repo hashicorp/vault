@@ -19,7 +19,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'aws-color',
     category: 'cloud',
     maskedParams: ['access_key_id', 'secret_access_key', 'identity_token_audience', 'identity_token_key'],
-    readonlyParams: ['name', 'region'],
+    readonlyParams: ['name', 'region', 'regional_kms_keys'],
     defaultValues: {
       granularity: 'secret-path',
       credential_type: CredentialType.ACCOUNT,

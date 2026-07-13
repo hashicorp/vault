@@ -88,7 +88,9 @@ export default class FormFieldComponent extends Component {
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
     if (attr.options?.editType === 'keyValueInputs') {
-      this.keyValueRows = this.rowsFromValue(modelValue);
+      this.keyValueRows = this.hasFieldValuePaths
+        ? [this.rowFromFieldValuePaths()]
+        : this.rowsFromValue(modelValue);
     }
   }
 
@@ -285,6 +287,22 @@ export default class FormFieldComponent extends Component {
       second.name === 'value'
     );
   }
+  // true when a field binds directly to its own model attribute via `valuePath`, e.g. combining a
+  // "region" select and a "kms_key_id" text input into one fixed row with no add/delete controls
+  get hasFieldValuePaths() {
+    return this.keyValueFields.some((field) => field.valuePath);
+  }
+
+  get keyValueEditDisabled() {
+    return !!(this.args.attr.options?.editDisabled && !this.args.model.isNew);
+  }
+  rowFromFieldValuePaths() {
+    const { model } = this.args;
+    return this.keyValueFields.reduce((row, field) => {
+      row[field.name] = (field.valuePath && get(model, field.valuePath)) || '';
+      return row;
+    }, {});
+  }
   emptyKeyValueRow() {
     return this.keyValueFields.reduce((row, field) => ({ ...row, [field.name]: '' }), {});
   }
@@ -319,14 +337,24 @@ export default class FormFieldComponent extends Component {
     const { value } = event.target;
     this.keyValueRows[index][fieldName] = value;
     this.keyValueRows = [...this.keyValueRows];
-    this.broadcastKeyValueRows();
+    this.broadcastOrSetField(fieldName, value);
   }
   @action
   updateKeyValueRowFile(index, fieldName, event) {
     const file = event.target.files?.[0] || '';
     this.keyValueRows[index][fieldName] = file;
     this.keyValueRows = [...this.keyValueRows];
-    this.broadcastKeyValueRows();
+    this.broadcastOrSetField(fieldName, file);
+  }
+  // sets the field's own `valuePath` on the model if it has one, otherwise broadcasts the combined row(s)
+  broadcastOrSetField(fieldName, value) {
+    const field = this.keyValueFields.find((f) => f.name === fieldName);
+    if (field?.valuePath) {
+      this.args.model.set(field.valuePath, value);
+      this.onChange(field.valuePath, value);
+    } else {
+      this.broadcastKeyValueRows();
+    }
   }
   @action
   setAndBroadcastTtl(value) {

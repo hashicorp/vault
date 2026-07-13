@@ -52,12 +52,16 @@ export default class DestinationDetailsPage extends Component<Args> {
     const baseMap = {
       [DestinationType.AwsSm]: [
         'region',
+        'kms_key_id',
         'external_id',
         'credential_type',
         'role_arn',
         'access_key_id',
         'secret_access_key',
         'identity_token_ttl',
+        'granularity',
+        'secret_name_template',
+        'custom_tags',
       ],
       [DestinationType.AzureKv]: [
         'key_vault_uri',
@@ -104,6 +108,10 @@ export default class DestinationDetailsPage extends Component<Args> {
       'options.granularity_level',
       'options.secret_name_template',
     ];
+
+    if (type === DestinationType.AwsSm) {
+      fields.push('connection_details.regional_kms_keys');
+    }
 
     if (CLOUD_DESTINATION_TYPES.includes(type as CloudDestinationType)) {
       fields.push('options.custom_tags');
@@ -153,6 +161,8 @@ export default class DestinationDetailsPage extends Component<Args> {
       credentials: 'JSON credentials',
       team_id: 'Team ID',
       identity_token_ttl: 'Identity token time to live',
+      kms_key_id: 'KMS key ID',
+      regional_kms_keys: 'Replica regions and KMS keys',
     }[fieldName];
 
     return customLabel || toLabel([fieldName]);
@@ -161,6 +171,11 @@ export default class DestinationDetailsPage extends Component<Args> {
   isMasked = (field: string) => {
     const { maskedParams = [] } = findDestination(this.args.destination.type);
     return maskedParams.includes(this.fieldName(field));
+  };
+
+  // object values render as a labeled group of key/value rows instead of a single row
+  isKeyValueField = (value: unknown): boolean => {
+    return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date);
   };
 
   credentialValue = (value: string) => {
