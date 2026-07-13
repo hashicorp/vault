@@ -4957,3 +4957,40 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 		},
 	}
 }
+
+func (b *SystemBackend) releaseInfoPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "release-info$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "release-info",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReleaseInfoRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "read",
+					},
+					Summary:     "Fetch release information from GitHub",
+					Description: "Returns parsed release information including breaking changes, new behavior, and known issues for each version.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"versions": {
+									Type:        framework.TypeSlice,
+									Description: "Array of version information objects containing breaking changes, new behavior, known issues, and rollback steps",
+									Required:    true,
+								},
+							},
+						}},
+					},
+				},
+			},
+			HelpSynopsis:    "Fetch release information",
+			HelpDescription: "Retrieves and parses all .mdx summary table files from the web-unified-docs repository on GitHub, returning structured version information.",
+		},
+	}
+}
