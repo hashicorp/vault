@@ -405,9 +405,10 @@ changed_files {
     }
   }
 
-  // The "go_app_core" group tracks core Vault application code (excluding tests).
+  // The "go_app" group tracks core Vault application code (excluding tests).
+  // This is the primary group checked by CI workflows to trigger Go tests.
   // Triggers full build, test cycle, and integration tests.
-  group "go_app_core" {
+  group "go_app" {
     ignore {
       base_dir = [
         joinpath("tools", "pipeline"),
