@@ -6176,3 +6176,77 @@ func TestTokenStore_Collectors(t *testing.T) {
 	// Need to set up router for this to work, TODO
 	// ts.gaugeCollectorByMethod( ctx )
 }
+
+// TestTokenStore_DeniedParametersCaseFolding verifies that the full attack path
+// described in SECVULN-46289 is closed: a caller whose policy denies a value in
+// denied_parameters (e.g. "super-admin") cannot bypass the constraint by submitting
+// the same value in a different case (e.g. "Super-Admin") on auth/token/create.
+func TestTokenStore_DeniedParametersCaseFolding(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+	ts := core.tokenStore
+	ps := core.policyStore
+
+	// Policy grants sudo on auth/token/create but denies the value "super-admin"
+	// in the "policies" parameter.
+	const deniedParamPolicy = `
+name = "deny-super-admin"
+path "auth/token/create" {
+	capabilities = ["update", "create", "sudo"]
+	denied_parameters = {
+		"policies" = ["super-admin"]
+	}
+}
+`
+	policy, err := ParseACLPolicy(namespace.RootNamespace, deniedParamPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+	if err != nil {
+		t.Fatalf("failed to parse policy: %v", err)
+	}
+	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
+		t.Fatalf("failed to store policy: %v", err)
+	}
+
+	// Mint a caller token bound to that policy.
+	testMakeServiceTokenViaBackend(t, ts, root, "callertoken", "", []string{"deny-super-admin"})
+
+	// Helper to attempt token creation and return the response + error.
+	// Policies are passed as interface{} so we can exercise both the JSON-decoded
+	// list form ([]interface{}) and the single string form.
+	createToken := func(policies interface{}) (*logical.Response, error) {
+		req := &logical.Request{
+			Path:        "auth/token/create",
+			ClientToken: "callertoken",
+			Operation:   logical.UpdateOperation,
+			Data: map[string]interface{}{
+				"policies": policies,
+			},
+		}
+		return core.HandleRequest(namespace.RootContext(nil), req)
+	}
+
+	// Lower-case form "super-admin" must be denied (baseline behaviour).
+	resp, err := createToken([]interface{}{"super-admin"})
+	if !errors.Is(err, logical.ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied for lower-case denied value; got err=%v resp=%#v", err, resp)
+	}
+
+	// Mixed-case single string form "Super-Admin" must also be denied.
+	resp, err = createToken("Super-Admin")
+	if !errors.Is(err, logical.ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied for mixed-case denied value (string form); got err=%v resp=%#v", err, resp)
+	}
+
+	// Mixed-case list form "Super-Admin" must also be denied (the bug being fixed).
+	resp, err = createToken([]interface{}{"Super-Admin"})
+	if !errors.Is(err, logical.ErrPermissionDenied) {
+		t.Fatalf("expected ErrPermissionDenied for mixed-case denied value; got err=%v resp=%#v", err, resp)
+	}
+
+	// A completely different policy value must still be allowed.
+	resp, err = createToken([]interface{}{"default"})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("expected allowed for non-denied value; got err=%v resp=%#v", err, resp)
+	}
+	if resp == nil || resp.Auth == nil || resp.Auth.ClientToken == "" {
+		t.Fatalf("expected a valid token in response; got resp=%#v", resp)
+	}
+}
