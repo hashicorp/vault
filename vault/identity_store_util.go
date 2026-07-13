@@ -2816,43 +2816,6 @@ func (i *IdentityStore) MemDBGroupByID(groupID string, clone bool) (*identity.Gr
 	return i.MemDBGroupByIDInTxn(txn, groupID, clone)
 }
 
-func (i *IdentityStore) MemDBGroupsByScimClientIDInTxn(txn *memdb.Txn, scimClientID string) ([]*identity.Group, error) {
-	if scimClientID == "" {
-		return nil, fmt.Errorf("missing scim client ID")
-	}
-
-	if txn == nil {
-		return nil, fmt.Errorf("txn is nil")
-	}
-
-	groupsIter, err := txn.Get(groupsTable, "scim_client_id", scimClientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup groups using scim client ID: %w", err)
-	}
-
-	var groups []*identity.Group
-	for group := groupsIter.Next(); group != nil; group = groupsIter.Next() {
-		entry := group.(*identity.Group)
-		entry, err = entry.Clone()
-		if err != nil {
-			return nil, err
-		}
-		groups = append(groups, entry)
-	}
-
-	return groups, nil
-}
-
-func (i *IdentityStore) MemDBGroupsByScimClientID(scimClientID string) ([]*identity.Group, error) {
-	if scimClientID == "" {
-		return nil, fmt.Errorf("missing scim client ID")
-	}
-
-	txn := i.db.Txn(false)
-
-	return i.MemDBGroupsByScimClientIDInTxn(txn, scimClientID)
-}
-
 func (i *IdentityStore) MemDBGroupsByParentGroupIDInTxn(txn *memdb.Txn, memberGroupID string, clone bool) ([]*identity.Group, error) {
 	if memberGroupID == "" {
 		return nil, fmt.Errorf("missing member group ID")
