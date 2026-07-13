@@ -391,7 +391,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
 		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy)
+		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
 		}
@@ -3057,6 +3057,18 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	// Disregard SSCT on perf-standbys for non-raft storage
 	if c.perfStandby && c.getRaftBackend() == nil {
+		return plainToken.Random, nil
+	}
+
+	// Performance primary service tokens are not valid on performance secondaries.
+	// SSCT does not encode token-origin cluster, so on performance secondary active
+	// nodes we should not require the token's encoded local_index to be satisfied by
+	// the secondary's local WAL before normal token lookup runs. Let normal token
+	// lookup/ACL evaluation return the expected 403.
+	//
+	// Keep perf standby behavior unchanged so missing local state can still use the
+	// existing 412/forwarding semantics.
+	if c.IsPerfSecondary() && !c.perfStandby && !isPerfStandby {
 		return plainToken.Random, nil
 	}
 

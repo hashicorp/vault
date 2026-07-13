@@ -1,0 +1,34 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @icon="file-text" @title={{or @title @backend.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+
+  <:actions>
+    <CodeGenerator::Policy::Flyout />
+  </:actions>
+</Page::Header>
+
+<nav class="tabs" aria-label="external pki tabs">
+  <ul>
+    {{#if (has-block "tabs")}}
+      {{yield to="tabs"}}
+    {{else if @backend.id}}
+      {{! Default parent tabs }}
+      {{#each this.defaultTabs as |tab|}}
+        <li>
+          <LinkTo
+            @current-when={{matches-current-url tab.route}}
+            @route={{tab.route}}
+            @model={{@backend.id}}
+            data-test-link-to={{tab.label}}
+          >{{tab.label}}</LinkTo>
+        </li>
+      {{/each}}
+    {{/if}}
+  </ul>
+</nav>

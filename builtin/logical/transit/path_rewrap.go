@@ -219,6 +219,16 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
+		}
+
 		opts := keysutil.EncryptionOptions{
 			Context: item.DecodedContext,
 			Nonce:   item.DecodedNonce,
@@ -249,10 +259,21 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			warnAboutNonceUsage = true
 		}
 
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
+		}
+
 		opts = keysutil.EncryptionOptions{
 			KeyVersion: item.KeyVersion,
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, plaintext, factories...)

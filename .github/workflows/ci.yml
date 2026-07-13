@@ -24,7 +24,12 @@ concurrency:
 jobs:
   setup:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all # vault-auth
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     outputs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
@@ -41,7 +46,7 @@ jobs:
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
       run-ui-tests: ${{ steps.ui-should-run.outputs.run-ui-tests }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
         id: checkout
@@ -109,7 +114,7 @@ jobs:
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
     steps:
       - name: Check out the .release/versions.hcl file from Vault Enterprise repository
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
           sparse-checkout: |
@@ -168,10 +173,17 @@ jobs:
     name: Run Go tests
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
       # The regular Go tests use an extra runner to execute the binary-dependent tests. We isolate
       # them there so that the other tests aren't slowed down waiting for a binary build.
       binary-tests: true
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
@@ -190,7 +202,14 @@ jobs:
     name: Run Go tests tagged with testonly
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
@@ -215,7 +234,14 @@ jobs:
     name: Run Go tests with data race detection
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       env-vars: |
         {
@@ -243,7 +269,14 @@ jobs:
         )
     needs: setup
     uses: ./.github/workflows/test-go.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
+      changed-files: ${{ needs.setup.outputs.changed-files }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       env-vars: |
         {
@@ -263,6 +296,12 @@ jobs:
     needs: setup
     if: needs.setup.outputs.run-ui-tests == 'true'
     uses: ./.github/workflows/test-ui.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     with:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       runs-on: ${{ needs.setup.outputs.compute-build }}
@@ -282,9 +321,13 @@ jobs:
       - test-ui
     if: always()
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all # Ensure we have id-token:write access for vault-auth.
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Determine the overall status of our required test jobs.
       - name: Determine status
         id: status

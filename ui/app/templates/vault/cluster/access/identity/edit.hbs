@@ -3,13 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Edit {{titleize this.model.name}}">
+<Page::Header @title="Edit {{titleize this.model.form.data.name}}">
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" icon="vault" route="vault.cluster.dashboard")
         (hash label=(capitalize (pluralize (humanize this.model.identityType))) route="vault.cluster.access.identity.index")
-        (hash label=this.model.name)
+        (hash label=(humanize this.model.form.data.name))
       }}
     />
   </:breadcrumbs>

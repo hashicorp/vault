@@ -12,6 +12,21 @@ variable "artifactory_release" {
   default     = null
 }
 
+variable "retry_join_method" {
+  type        = string
+  description = <<-EOF
+    What method of retry_join_method to use. Must map to a go-discover provider type or "leader_api_addr".
+    If no var.leader_api_addr is given the first node in var.hosts will be used.
+  EOF
+
+  default = "aws"
+
+  validation {
+    condition     = contains(["aws", "leader_api_addr"], var.retry_join_method)
+    error_message = "The retry_join_method must match a go-discover provider type or be 'leader_api_addr'. No other retry_join_method types are supported."
+  }
+}
+
 variable "backend_cluster_name" {
   type        = string
   description = "The name of the backend cluster"
@@ -171,6 +186,12 @@ variable "ip_version" {
     condition     = contains([4, 6], var.ip_version)
     error_message = "The ip_version must be either 4 or 6"
   }
+}
+
+variable "leader_api_addr" {
+  type        = string
+  description = "An optional API address of the leader to use for leader_api_addr retry_join. If not set the first var.host address will be used"
+  default     = null
 }
 
 variable "license" {

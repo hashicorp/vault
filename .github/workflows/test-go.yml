@@ -84,6 +84,11 @@ on:
         required: false
         default: ${{ github.ref }}
         type: string
+      changed-files:
+        description: JSON payload containing changed file paths from setup workflow.
+        required: false
+        default: '{}'
+        type: string
     outputs:
       data-race-output:
         description: A textual output of any data race detector failures
@@ -96,7 +101,12 @@ env: ${{ fromJSON(inputs.env-vars) }}
 
 jobs:
   test-matrix:
-    permissions: write-all # vault-auth
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: write
     runs-on: ${{ fromJSON(inputs.runs-on-small) }}
     outputs:
       is-ent-branch: ${{ steps.global-metadata.outputs.is-ent-branch }}
@@ -105,7 +115,7 @@ jobs:
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/metadata
@@ -231,7 +241,9 @@ jobs:
     permissions:
       actions: read
       contents: read
-      id-token: write  # Note: this permission is explicitly required for Vault auth
+      id-token: write
+      issues: read
+      pull-requests: write
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -244,7 +256,7 @@ jobs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
       data-race-log-download-pattern: ${{ steps.metadata.outputs.data-race-log-download-pattern }}
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/set-up-go
@@ -324,6 +336,23 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/install-tools
+      - if: github.repository == 'hashicorp/vault-enterprise'
+        name: Configure Instana for test tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
+        run: |
+          # Export Instana environment variables for test execution
+          # These will be available to tests that import the observability package
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       - if: inputs.binary-tests && matrix.id == inputs.total-runners && needs.test-matrix.outputs.is-ent-branch == 'true'
         name: Build Vault HSM binary for tests
         env:
@@ -473,6 +502,20 @@ jobs:
               -timeout=${{ inputs.go-test-timeout }} \
               -parallel="$test_parallelism" \
               ${{ inputs.extra-flags }} \
+      - if: github.repository == 'hashicorp/vault-enterprise' && (success() || failure())
+        name: Upload test results to Instana
+        continue-on-error: true
+        run: |
+          # Upload test results to Instana as spans for granular visibility
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            chmod +x scripts/upload-test-results-to-instana.sh
+            scripts/upload-test-results-to-instana.sh \
+              '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
+              '${{ inputs.name }}' \
+              '${{ matrix.id }}'
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
+          fi
       - if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
         name: Prepare datadog-ci
         continue-on-error: true
@@ -640,6 +683,11 @@ jobs:
       - test-matrix
       - test-go
     runs-on: ${{ fromJSON(inputs.runs-on-small) }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     outputs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
@@ -712,6 +760,224 @@ jobs:
           ' shell {} \; > /dev/null 2>&1
 
           ls -lhR '${{ needs.test-matrix.outputs.go-test-dir }}'
+      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
+        name: Check out source for relevant test discovery
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
+      # Download test result artifacts from all matrix shards so relevant test results can be extracted.
+      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
+        name: Download Go test result artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}
+          path: pr-go-test-results
+          merge-multiple: true
+      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
+        name: Build relevant test target manifest
+        id: relevant-tests
+        continue-on-error: true
+        env:
+          CHANGED_FILES_JSON: ${{ inputs.changed-files }}
+          SUITE_NAME: ${{ inputs.name }}
+        run: ./.github/scripts/build-relevant-tests-manifest.sh
+      # Post or update a PR comment with the aggregated test results
+      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
+        name: Post test results to PR
+        continue-on-error: true
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        env:
+          RELEVANT_TESTS_MANIFEST: ${{ steps.relevant-tests.outputs.manifest }}
+          CHECKOUT_REF: ${{ inputs.checkout-ref }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const suiteName = '${{ inputs.name }}';
+            const overallResult = '${{ steps.status.outputs.result }}';
+            const dataRaceResult = '${{ steps.status.outputs.data-race-result }}';
+
+            function fileExists(filePath) {
+              try {
+                return fs.existsSync(filePath);
+              } catch {
+                return false;
+              }
+            }
+
+            let relevantManifest = [];
+            const manifestPath = process.env.RELEVANT_TESTS_MANIFEST;
+            if (manifestPath && fileExists(manifestPath)) {
+              try {
+                relevantManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+              } catch {
+                relevantManifest = [];
+              }
+            }
+
+            const relevantTestFileNames = new Set(relevantManifest.map(m => m.test_file));
+
+            // Build a map of test name -> {test_file, line} for link generation
+            const testLinkMap = new Map();
+            for (const entry of relevantManifest) {
+              for (const t of entry.tests || []) {
+                testLinkMap.set(`${entry.dir}::${t.name}`, { file: entry.test_file, line: t.line });
+              }
+            }
+
+            const treeId = context.sha;
+            const treeBase = `https://github.com/hashicorp/vault-enterprise/tree/${treeId}`;
+
+            const eventFiles = fileExists('pr-go-test-results')
+              ? fs.readdirSync('pr-go-test-results').filter(f => f.endsWith('.json')).sort()
+              : [];
+
+            // Keep final test status per package/test.
+            const statuses = new Map();
+            for (const file of eventFiles) {
+              const lines = fs.readFileSync(path.join('pr-go-test-results', file), 'utf8').split(/\r?\n/);
+              for (const line of lines) {
+                if (!line.trim()) continue;
+                let ev;
+                try {
+                  ev = JSON.parse(line);
+                } catch {
+                  continue;
+                }
+                if (!ev || !ev.Package || !ev.Test) continue;
+                if (!['pass', 'fail', 'skip'].includes(ev.Action)) continue;
+
+                const pkg = String(ev.Package);
+                const test = String(ev.Test);
+                const key = `${pkg}::${test}`;
+                const statusRank = ev.Action === 'fail' ? 3 : ev.Action === 'pass' ? 2 : 1;
+
+                const prev = statuses.get(key);
+                if (!prev || statusRank >= prev.rank) {
+                  statuses.set(key, {
+                    package: pkg,
+                    test,
+                    status: ev.Action,
+                    elapsed: typeof ev.Elapsed === 'number' ? ev.Elapsed : null,
+                    rank: statusRank,
+                  });
+                }
+              }
+            }
+
+            const relevantResults = [];
+            for (const value of statuses.values()) {
+              const pkg = value.package;
+              const test = value.test;
+              const isRelevant = relevantManifest.some(entry => {
+                if (!(entry.tests || []).some(t => t.name === test)) {
+                  return false;
+                }
+
+                if (entry.dir === '.' || entry.dir === '') {
+                  return true;
+                }
+
+                return pkg.endsWith(`/${entry.dir}`);
+              });
+
+              if (isRelevant) {
+                // Find the matching manifest entry to attach link info
+                const matchEntry = relevantManifest.find(entry =>
+                  (entry.tests || []).some(t => t.name === test) &&
+                  (entry.dir === '.' || entry.dir === '' || pkg.endsWith(`/${entry.dir}`))
+                );
+                const matchTest = matchEntry
+                  ? (matchEntry.tests || []).find(t => t.name === test)
+                  : null;
+                value.testFile = matchEntry ? matchEntry.test_file : null;
+                value.testLine = matchTest ? matchTest.line : null;
+                relevantResults.push(value);
+              }
+            }
+
+            relevantResults.sort((a, b) => {
+              if (a.status !== b.status) {
+                const order = { fail: 0, skip: 1, pass: 2 };
+                return order[a.status] - order[b.status];
+              }
+              if (a.package !== b.package) return a.package.localeCompare(b.package);
+              return a.test.localeCompare(b.test);
+            });
+
+            // Collect data race details from downloaded log files
+            let dataRaceDetails = '';
+            const raceDir = 'data-race-logs';
+            if (fs.existsSync(raceDir)) {
+              const files = fs.readdirSync(raceDir).filter(f => f.endsWith('.log'));
+              for (const file of files.sort()) {
+                dataRaceDetails += fs.readFileSync(path.join(raceDir, file), 'utf8');
+              }
+            }
+
+            const passed = overallResult === 'success' && dataRaceResult === 'success';
+            const statusIcon = passed ? ':white_check_mark:' : ':x:';
+            const statusText = passed ? 'All tests passed' : 'Some tests failed';
+
+            let body = `## Go Test Results — \`${suiteName}\`\n\n${statusIcon} **${statusText}**\n`;
+
+            if (relevantTestFileNames.size > 0) {
+              body += `\n### Relevant Test Files\n\n`;
+              for (const file of [...relevantTestFileNames].sort()) {
+                body += `- [\`${file}\`](${treeBase}/${file})\n`;
+              }
+            }
+
+            if (relevantResults.length > 0) {
+              body += `\n### Relevant Test Results\n\n`;
+              body += `| Status | Package | Test | Elapsed (s) |\n`;
+              body += `|--------|---------|------|-------------|\n`;
+              for (const row of relevantResults) {
+                const icon = row.status === 'pass' ? ':white_check_mark:' : row.status === 'fail' ? ':x:' : ':fast_forward:';
+                const elapsed = row.elapsed == null ? '-' : row.elapsed.toFixed(3);
+                const testLabel = (row.testFile && row.testLine)
+                  ? `[${row.test}](${treeBase}/${row.testFile}#L${row.testLine})`
+                  : row.test;
+                body += `| ${icon} ${row.status} | ${row.package} | ${testLabel} | ${elapsed} |\n`;
+              }
+            } else if (relevantTestFileNames.size > 0) {
+              body += `\nNo direct matching test events were found for the relevant test files in this run.\n`;
+            } else {
+              body += `\nNo directly relevant \`*_test.go\` files were inferred from changed Go files.\n`;
+            }
+
+            if (dataRaceDetails) {
+              body += `\n### Data Race Failures\n\n<details><summary>Show details</summary>\n\n\`\`\`\n${dataRaceDetails}\n\`\`\`\n</details>\n`;
+            }
+
+            // Use a hidden marker so we can update an existing comment rather than posting duplicates
+            const marker = `<!-- go-test-results-${suiteName} -->`;
+            body = `${marker}\n${body}`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
       # Determine our overall pass/fail with our Go test results
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status

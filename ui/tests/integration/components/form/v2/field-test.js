@@ -8,6 +8,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import { setupRenderingTest } from 'vault/tests/helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | form/v2/field', function (hooks) {
   setupRenderingTest(hooks);
@@ -184,6 +185,9 @@ module('Integration | Component | form/v2/field', function (hooks) {
 
     assert.dom('legend').includesText('Select size', 'renders legend');
     assert.dom('input[type="radio"]').exists({ count: 3 }, 'renders radio options');
+    assert.dom(GENERAL.formLabel('Small')).includesText('Small', 'renders first radio option label');
+    assert.dom(GENERAL.formLabel('Medium')).includesText('Medium', 'renders second radio option label');
+    assert.dom(GENERAL.formLabel('Large')).includesText('Large', 'renders third radio option label');
   });
 
   test('it renders radio cards', async function (assert) {

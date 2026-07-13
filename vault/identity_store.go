@@ -34,6 +34,8 @@ import (
 const (
 	groupBucketsPrefix        = "packer/group/buckets/"
 	localAliasesBucketsPrefix = "packer/local-aliases/buckets/"
+	tpmBucketsPrefix          = "packer/tpm/buckets/"
+	tpmgroupBucketsPrefix     = "packer/tpmgroup/buckets/"
 )
 
 var (
@@ -119,6 +121,20 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		return nil, fmt.Errorf("failed to create group packer: %w", err)
 	}
 
+	tpmsPackerLogger := iStore.logger.Named("storagepacker").Named("tpms")
+	core.AddLogger(tpmsPackerLogger)
+	iStore.tpmPacker, err = storagepacker.NewStoragePacker(iStore.view, tpmsPackerLogger, tpmBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tpm packer: %w", err)
+	}
+
+	tpmgroupsPackerLogger := iStore.logger.Named("storagepacker").Named("tpmgroups")
+	core.AddLogger(tpmgroupsPackerLogger)
+	iStore.tpmgroupPacker, err = storagepacker.NewStoragePacker(iStore.view, tpmgroupsPackerLogger, tpmgroupBucketsPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tpmgroup packer: %w", err)
+	}
+
 	unauthenticatedPaths := []string{
 		"oidc/.well-known/*",
 		"oidc/+/.well-known/*",
@@ -183,6 +199,8 @@ func (i *IdentityStore) paths() []*framework.Path {
 		mfaLoginEnforcementPaths(i),
 		mfaLoginEnterprisePaths(i),
 		scimPaths(i),
+		tpmPaths(i),
+		tpmgroupPaths(i),
 	)
 }
 
@@ -707,6 +725,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		i.invalidateLocalAliasesBucket(ctx, key)
 	case strings.HasPrefix(key, scimClientStoragePrefix):
 		i.invalidateSCIMClient(ctx, key)
+	case strings.HasPrefix(key, tpmBucketsPrefix):
+		i.invalidateTPMBucket(ctx, key)
+	case strings.HasPrefix(key, tpmgroupBucketsPrefix):
+		i.invalidateTPMGroupBucket(ctx, key)
 	}
 }
 
@@ -1045,6 +1067,41 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	// themselves.
 	entityLocalAliasesToRemove := map[*identity.Entity][]*identity.Alias{}
 
+	// entityCache holds a single cloned copy of each entity that this
+	// invalidation modifies, keyed by entity ID. We clone an entity only once we
+	// have determined that one of its local aliases changed or was removed (see
+	// below), so entities with no changes are never cloned. Cloning is required
+	// because we mutate the entity (UpsertAlias / alias removal) and the objects
+	// stored in MemDB are read concurrently by lock-free read transactions on
+	// performance standbys. Caching by ID ensures that aliases belonging to the
+	// same entity are batched onto the same clone, which the maps above rely on
+	// for correct grouping.
+	entityCache := map[string]*identity.Entity{}
+
+	// fetchEntityForLocalAlias returns a private, cloned copy of the entity
+	// associated with the provided local alias, reusing a previously cloned
+	// copy when one already exists for the same entity.
+	fetchEntityForLocalAlias := func(alias *identity.Alias) (*identity.Entity, error) {
+		if entity, ok := entityCache[alias.CanonicalID]; ok {
+			return entity, nil
+		}
+
+		entity := i.FetchEntityForLocalAliasInTxn(txn, alias)
+		if entity == nil {
+			// FetchEntityForLocalAliasInTxn already logs any error
+			return nil, nil
+		}
+
+		entity, err := entity.Clone()
+		if err != nil {
+			return nil, err
+		}
+
+		entityCache[alias.CanonicalID] = entity
+
+		return entity, nil
+	}
+
 	if bucket != nil {
 		// The storage entry for the local alias bucket exists, so we need to
 		// compare the local aliases in that bucket with those in MemDB and only
@@ -1066,50 +1123,60 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 			}
 
 			for _, bucketLocalAlias := range bucketLocalAliases.Aliases {
-				// Find the entity related to bucketLocalAlias in MemDB in order
-				// to track any local aliases modifications that must be made in
-				// this entity.
-				memDBEntity := i.FetchEntityForLocalAliasInTxn(txn, bucketLocalAlias)
-				if memDBEntity == nil {
-					// FetchEntityForLocalAliasInTxn already logs any error
-					return
-				}
-
 				// memDBLocalAlias starts off nil but gets set to the local
 				// alias from memDBLocalAliases whose ID matches the ID of
 				// bucketLocalAlias.
 				var memDBLocalAlias *identity.Alias
-				for i, localAlias := range memDBLocalAliases {
+				for idx, localAlias := range memDBLocalAliases {
 					if localAlias.ID == bucketLocalAlias.ID {
 						memDBLocalAlias = localAlias
 
 						// Remove this processed local alias from the
 						// memDBLocalAliases slice, so that all that
 						// will be left are unprocessed local aliases.
-						copy(memDBLocalAliases[i:], memDBLocalAliases[i+1:])
+						copy(memDBLocalAliases[idx:], memDBLocalAliases[idx+1:])
 						memDBLocalAliases = memDBLocalAliases[:len(memDBLocalAliases)-1]
 
 						break
 					}
 				}
 
-				// We've considered the use of github.com/google/go-cmp here,
-				// but opted for sticking with reflect.DeepEqual because go-cmp
-				// is intended for testing and is able to panic in some
-				// situations.
-				if memDBLocalAlias == nil || !reflect.DeepEqual(memDBLocalAlias, bucketLocalAlias) {
-					// The bucketLocalAlias is not in MemDB or it has changed in
-					// storage.
-					err = i.MemDBUpsertAliasInTxn(txn, bucketLocalAlias, false)
-					if err != nil {
-						i.logger.Error("failed to update local alias in MemDB", "alias_id", bucketLocalAlias.ID, "error", err)
-						return
-					}
-
-					// Add this local alias to the set of local aliases that
-					// need to be updated for memDBEntity.
-					entityLocalAliasesToUpsert[memDBEntity] = append(entityLocalAliasesToUpsert[memDBEntity], bucketLocalAlias)
+				// Compare with proto.Equal rather than reflect.DeepEqual.
+				// reflect.DeepEqual is both semantically wrong for protobuf
+				// messages and unsafe: it reads the messages' internal
+				// bookkeeping fields (state, sizeCache) with plain loads, which
+				// race with the concurrent readers that marshal these shared
+				// MemDB objects on performance standbys. proto.Equal compares
+				// only the message contents, so it is safe to run against the
+				// shared alias.
+				if memDBLocalAlias != nil && proto.Equal(memDBLocalAlias, bucketLocalAlias) {
+					// This local alias did not change in storage; nothing to do.
+					continue
 				}
+
+				// The bucketLocalAlias is not in MemDB or it has changed in
+				// storage, so its entity must be updated. Clone the entity now
+				// (only entities that actually change get cloned) so that we
+				// never mutate the shared MemDB copy.
+				memDBEntity, cloneErr := fetchEntityForLocalAlias(bucketLocalAlias)
+				if cloneErr != nil {
+					i.logger.Error("failed to clone entity for local alias", "entity_id", bucketLocalAlias.CanonicalID, "error", cloneErr)
+					return
+				}
+				if memDBEntity == nil {
+					// fetchEntityForLocalAlias already logs any fetch error
+					return
+				}
+
+				err = i.MemDBUpsertAliasInTxn(txn, bucketLocalAlias, false)
+				if err != nil {
+					i.logger.Error("failed to update local alias in MemDB", "alias_id", bucketLocalAlias.ID, "error", err)
+					return
+				}
+
+				// Add this local alias to the set of local aliases that
+				// need to be updated for memDBEntity.
+				entityLocalAliasesToUpsert[memDBEntity] = append(entityLocalAliasesToUpsert[memDBEntity], bucketLocalAlias)
 			}
 		}
 	}
@@ -1117,9 +1184,13 @@ func (i *IdentityStore) invalidateLocalAliasesBucket(ctx context.Context, key st
 	// Any local aliases still remaining in memDBLocalAliases do not exist in
 	// storage and should be removed from MemDB.
 	for _, memDBLocalAlias := range memDBLocalAliases {
-		memDBEntity := i.FetchEntityForLocalAliasInTxn(txn, memDBLocalAlias)
+		memDBEntity, fetchErr := fetchEntityForLocalAlias(memDBLocalAlias)
+		if fetchErr != nil {
+			i.logger.Error("failed to clone entity for local alias", "entity_id", memDBLocalAlias.CanonicalID, "error", fetchErr)
+			return
+		}
 		if memDBEntity == nil {
-			// FetchEntityForLocalAliasInTxn already logs any error
+			// fetchEntityForLocalAlias already logs any fetch error
 			return
 		}
 

@@ -441,3 +441,26 @@ func (b *backend) initializeRotationQueue() {
 func (b *backend) cleanup(ctx context.Context) {
 	b.cleanupEnt(ctx)
 }
+
+func (b *backend) GetManagedKeySystemView() (logical.ManagedKeySystemView, error) {
+	managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+	if !ok {
+		return nil, errors.New("unsupported system view")
+	}
+
+	return managedKeySystemView, nil
+}
+
+func (b *backend) GetManagedKeyFactory(ctx context.Context) (*ManagedKeyFactory, error) {
+	managedKeySystemView, err := b.GetManagedKeySystemView()
+	if err != nil {
+		return nil, err
+	}
+	return &ManagedKeyFactory{
+		managedKeyParams: keysutil.ManagedKeyParameters{
+			ManagedKeySystemView: managedKeySystemView,
+			BackendUUID:          b.backendUUID,
+			Context:              ctx,
+		},
+	}, nil
+}

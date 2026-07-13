@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.18
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.23
 	github.com/hashicorp/go-metrics v0.5.4
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-plugin v1.8.0

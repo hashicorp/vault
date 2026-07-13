@@ -284,7 +284,7 @@ func TestCore_Mount_kv_generic(t *testing.T) {
 func TestCore_Mount_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	c.mounts = &MountTable{
+	mounts := &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
 			{
@@ -310,6 +310,10 @@ func TestCore_Mount_Local(t *testing.T) {
 		},
 	}
 
+	c.mountsLock.Lock()
+	c.mounts = mounts
+	c.mountsLock.Unlock()
+
 	// Both should set up successfully
 	err := c.setupMounts(namespace.RootContext(nil))
 	if err != nil {
@@ -334,8 +338,11 @@ func TestCore_Mount_Local(t *testing.T) {
 		t.Fatalf("expected only cubbyhole entry in local mount table, got %#v", localMountsTable)
 	}
 
+	c.mountsLock.Lock()
 	c.mounts.Entries[1].Local = true
-	if err := c.persistMounts(context.Background(), c.mounts, nil); err != nil {
+	err = c.persistMounts(context.Background(), c.mounts, nil)
+	c.mountsLock.Unlock()
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -362,6 +369,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	if err := c.loadMounts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+	c.mountsLock.Lock()
 	compEntries := c.mounts.Entries[:0]
 	// Filter out required mounts
 	for _, v := range c.mounts.Entries {
@@ -370,6 +378,7 @@ func TestCore_Mount_Local(t *testing.T) {
 		}
 	}
 	c.mounts.Entries = compEntries
+	c.mountsLock.Unlock()
 
 	if diffs := deep.Equal(oldMounts, c.mounts); len(diffs) != 0 {
 		t.Fatalf("expected\n%#v\ngot\n%#v:\nDiffs: %v", oldMounts, c.mounts, diffs)
@@ -387,7 +396,7 @@ func TestCore_FindOps(t *testing.T) {
 	path1 := "kv1"
 	path2 := "kv2"
 
-	c.mounts = &MountTable{
+	mounts := &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
 			{
@@ -412,6 +421,10 @@ func TestCore_FindOps(t *testing.T) {
 			},
 		},
 	}
+
+	c.mountsLock.Lock()
+	c.mounts = mounts
+	c.mountsLock.Unlock()
 
 	// Both should set up successfully
 	if err := c.setupMounts(namespace.RootContext(nil)); err != nil {
@@ -1008,7 +1021,7 @@ func TestCore_MountInitialize(t *testing.T) {
 			return backend, nil
 		}
 
-		c.mounts = &MountTable{
+		mounts := &MountTable{
 			Type: mountTableType,
 			Entries: []*MountEntry{
 				{
@@ -1023,6 +1036,10 @@ func TestCore_MountInitialize(t *testing.T) {
 				},
 			},
 		}
+
+		c.mountsLock.Lock()
+		c.mounts = mounts
+		c.mountsLock.Unlock()
 
 		err := c.setupMounts(namespace.RootContext(nil))
 		if err != nil {

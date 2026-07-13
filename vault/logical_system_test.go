@@ -772,7 +772,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 
 	core, b, rootToken := testCoreSystemBackend(t)
 
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -981,7 +981,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1037,7 +1037,7 @@ func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -4828,7 +4828,7 @@ path "sys/*" {
   capabilities = ["update"]
 }`
 
-	pol, err := ParseACLPolicy(namespace.RootNamespace, rules)
+	pol, err := ParseACLPolicy(namespace.RootNamespace, rules, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	require.NoError(t, err)
 	require.NoError(t, core.policyStore.SetPolicy(ctx, pol))
 

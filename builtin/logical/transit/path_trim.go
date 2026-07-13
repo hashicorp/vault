@@ -100,7 +100,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 
 		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyTrim, b.keyPolicyObservationMetadata(p))
 
-		return b.formatKeyPolicy(p, nil)
+		return b.formatKeyPolicy(ctx, p, nil)
 	}
 }
 

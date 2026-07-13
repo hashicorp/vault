@@ -736,7 +736,7 @@ func Test_allPoliciesAllowOnly(t *testing.T) {
 path "secret/data/*" {
 	capabilities = ["read", "list"]
 }
-`)
+`, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	require.NoError(t, err)
 	allowPolicy.Name = "allow-only"
 	require.NoError(t, c.policyStore.SetPolicy(ctx, allowPolicy))
@@ -745,7 +745,7 @@ path "secret/data/*" {
 path "secret/data/*" {
 	capabilities = ["deny"]
 }
-`)
+`, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	require.NoError(t, err)
 	denyPolicy.Name = "deny-policy"
 	require.NoError(t, c.policyStore.SetPolicy(ctx, denyPolicy))
@@ -754,7 +754,7 @@ path "secret/data/*" {
 path "secret/data/*" {
 	capabilities = ["read", "sudo"]
 }
-`)
+`, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	require.NoError(t, err)
 	sudoPolicy.Name = "sudo-policy"
 	require.NoError(t, c.policyStore.SetPolicy(ctx, sudoPolicy))

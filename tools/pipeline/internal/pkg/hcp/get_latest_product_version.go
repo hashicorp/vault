@@ -145,7 +145,8 @@ func (r *GetLatestProductVersionReq) Run(ctx context.Context, client *Client) (*
 
 	res := &GetLatestProductVersionRes{}
 
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("availability", string(r.Availability)),
 		slog.String("availability-id", r.Availability.ID()),
 		slog.String("cloud", r.CloudProvider),

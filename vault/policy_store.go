@@ -167,7 +167,7 @@ path "identity/oidc/provider/+/authorize" {
 	// defaultCeilingPolicy is the default ceiling policy.
 	defaultCeilingPolicy = `
 # Allow an entity to inspect its own registration information
-path "agent-registry/registration/entity_id/{{identity.entity.id}}" {
+path "agent-registry/registration/entity-id/{{identity.entity.id}}" {
   capabilities = ["read"]
 }
 
@@ -667,7 +667,7 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	switch policyEntry.Type {
 	case PolicyTypeACL:
 		// Parse normally
-		p, duplicate, err := ParseACLPolicyCheckDuplicates(ns, policyEntry.Raw)
+		p, duplicate, err := ParseACLPolicyCheckDuplicates(ns, policyEntry.Raw, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse policy: %w", err)
 		}
@@ -978,7 +978,7 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 					groups = append(directGroups, inheritedGroups...)
 				}
 			}
-			p, duplicate, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
+			p, duplicate, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups, parseACLPolicyOptions{denySlashInTemplatedPaths: ps.core.denySlashInTemplatedPolicyPaths})
 			if err != nil {
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
 			}
@@ -1024,7 +1024,7 @@ func (ps *PolicyStore) loadACLPolicyInternal(ctx context.Context, policyName, po
 		}
 	}
 
-	policy, err = ParseACLPolicy(ns, policyText)
+	policy, err = ParseACLPolicy(ns, policyText, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 	if err != nil {
 		return fmt.Errorf("error parsing %s policy: %w", policyName, err)
 	}

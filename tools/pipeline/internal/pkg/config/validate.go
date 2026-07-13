@@ -39,7 +39,8 @@ func (v *ValidateReq) Run(ctx context.Context) (*ValidateRes, error) {
 	// Use the decoded config
 	if v.DecodeRes.Config != nil {
 		slog.Default().DebugContext(
-			slogctx.Append(ctx,
+			slogctx.Append(
+				ctx,
 				slog.String("path", v.DecodeRes.Path),
 			),
 			"validating configuration",

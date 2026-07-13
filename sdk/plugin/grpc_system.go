@@ -137,6 +137,11 @@ func (s *gRPCSystemViewClient) MlockEnabled() bool {
 	return reply.Enabled
 }
 
+func (s *gRPCSystemViewClient) DenySlashInTemplatedPaths() bool {
+	// Not implemented
+	return false
+}
+
 func (s *gRPCSystemViewClient) HasFeature(feature license.Features) bool {
 	// Not implemented
 	return false

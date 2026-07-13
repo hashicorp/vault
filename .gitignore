@@ -68,9 +68,11 @@ enos/**/support
 enos/**/kubeconfig
 enos/modules/**/plan.yml
 enos/sarif**.json
-.terraform
-.terraform.lock.hcl
-.tfstate.*
+**/.terraform/*
+**.terraform.lock.hcl
+**terraform.tfstate
+**.tfstate.*
+**.terraform.tfstate.lock.info
 
 .DS_Store
 .idea

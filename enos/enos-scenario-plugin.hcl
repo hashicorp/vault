@@ -43,7 +43,7 @@ scenario "plugin" {
     config_mode     = global.config_modes
     consul_edition  = global.consul_editions
     consul_version  = global.consul_versions
-    distro          = global.distros
+    distro          = global.distros_aws
     edition         = global.editions
     ip_version      = global.ip_versions
     seal            = global.seals
@@ -83,7 +83,8 @@ scenario "plugin" {
   providers = [
     provider.aws.default,
     provider.enos.ec2_user,
-    provider.enos.ubuntu
+    provider.enos.ubuntu,
+    provider.time.default,
   ]
 
   locals {
@@ -455,7 +456,7 @@ scenario "plugin" {
       leader_host           = step.get_vault_cluster_ips.leader_host
       leader_public_ip      = step.get_vault_cluster_ips.leader_public_ip
       vault_root_token      = step.create_vault_cluster.root_token
-      test_package          = "./vault/external_tests/blackbox/verify"
+      test_package          = "./vault/external_tests/blackbox/isolated/verify"
       test_names            = ["TestVaultServerVersion"]
       vault_edition         = matrix.edition
       vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
@@ -470,10 +471,10 @@ scenario "plugin" {
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
 
-    // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin tests
+    // For plugins, if package filter is provided, convert to plugin paths, otherwise run default plugin and system tests
     plugin_test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
-      for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/plugins/${pkg}/..."
-    ] : ["./vault/external_tests/blackbox/plugins/..."]
+      for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/isolated/plugins/${pkg}/..."
+    ] : ["./vault/external_tests/blackbox/isolated/plugins/..."]
   }
 
   // Run comprehensive plugin blackbox tests
@@ -503,6 +504,8 @@ scenario "plugin" {
       test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.plugin_test_packages)
       integration_host_state = step.set_up_plugin_services.state
       vault_edition          = matrix.edition
+      vault_product_version  = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision         = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
     }
   }
 

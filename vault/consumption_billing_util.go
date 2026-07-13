@@ -69,14 +69,15 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
+	currentThirdPartyPluginCounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
+	if err != nil {
+		return 0, err
+	}
+
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
 	previousThirdPartyPluginCounts, err := c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth)
-	if err != nil {
-		return 0, err
-	}
-	currentThirdPartyPluginCounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -134,6 +135,48 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 		a.MongoDBAtlasDynamicRoles + b.MongoDBAtlasDynamicRoles,
 		a.TerraformCloudDynamicRoles + b.TerraformCloudDynamicRoles,
 		a.OSLocalAccountRoles + b.OSLocalAccountRoles,
+		a.TransformRoles + b.TransformRoles,
+		a.SSHOTPRoles + b.SSHOTPRoles,
+		a.SSHCARoles + b.SSHCARoles,
+		a.SpiffeRoles + b.SpiffeRoles,
+	}
+}
+
+func combineManagedKeyCounts(a, b *ManagedKeyCounts) *ManagedKeyCounts {
+	if a == nil && b == nil {
+		return &ManagedKeyCounts{}
+	}
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	return &ManagedKeyCounts{
+		a.TotpKeys + b.TotpKeys,
+		a.KmseKeys + b.KmseKeys,
+		a.TransitKeys + b.TransitKeys,
+	}
+}
+
+func combineSecretEngineResourceCounts(a, b *SecretEngineResourceCounts) *SecretEngineResourceCounts {
+	if a == nil && b == nil {
+		return &SecretEngineResourceCounts{}
+	}
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	return &SecretEngineResourceCounts{
+		a.TransformTransformations + b.TransformTransformations,
+		a.TransformTemplates + b.TransformTemplates,
+		a.TransformAlphabets + b.TransformAlphabets,
+		a.TransformStores + b.TransformStores,
+		a.KmipScopes + b.KmipScopes,
+		a.KmipScopeRoles + b.KmipScopeRoles,
+		a.KmipCas + b.KmipCas,
 	}
 }
 
@@ -246,13 +289,13 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 		return nil, nil, ErrConsumptionBillingNotInitialized
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
-
 	// If somehow the current counts is empty, we should try get the counts here
+	// before taking BillingStorageLock. CountMetricsSecretMounts traverses mounts and
+	// may acquire other locks, so holding the billing storage lock here can create
+	// lock-order inversions.
 	if currentRoleCounts == nil || currentManagedKeyCounts == nil {
 		c.logger.Debug("current role or managed key counts is empty, trying to get counts again")
-		metrics, err := c.CountMetricsFromMounts(true)
+		metrics, err := c.CountMetricsSecretMounts(true)
 		if err != nil {
 			c.logger.Error("error getting current role and managed key counts", "error", err)
 			return nil, nil, err
@@ -265,6 +308,9 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 			currentManagedKeyCounts = metrics.ReplicatedManagedKeys
 		}
 	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	// get max role counts
 	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, localPathPrefix, currentMonth)

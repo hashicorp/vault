@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 scenario "smoke_sdk" {
@@ -42,7 +42,7 @@ scenario "smoke_sdk" {
     config_mode     = global.config_modes
     consul_edition  = global.consul_editions
     consul_version  = global.consul_versions
-    distro          = global.distros
+    distro          = global.distros_aws
     edition         = global.editions
     ip_version      = global.ip_versions
     seal            = global.seals
@@ -82,7 +82,8 @@ scenario "smoke_sdk" {
   providers = [
     provider.aws.default,
     provider.enos.ec2_user,
-    provider.enos.ubuntu
+    provider.enos.ubuntu,
+    provider.time.default,
   ]
 
   locals {
@@ -413,9 +414,9 @@ scenario "smoke_sdk" {
 
   locals {
     // Default test packages for smoke_sdk scenario
-    // TODO: "integration" has been removed from the default packages pending
-    // a restructure to handle tests that mutate the cluster via sys endpoints.
-    default_test_packages = ["core", "secrets", "replication", "raft"]
+    // Note: isolated/verify tests require special environment variables (EXPECTED_STATE, TIMEOUT_SECONDS, RETRY_INTERVAL)
+    // and should be run in dedicated scenarios, not smoke_sdk
+    default_test_packages = ["isolated/secrets", "isolated/auth", "scenario/raft"]
 
     // Determine if filter contains test names (starts with "Test") or package names
     is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
@@ -446,6 +447,9 @@ scenario "smoke_sdk" {
       test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.test_packages)
       integration_host_state = step.set_up_external_integration_target.state
       vault_edition          = matrix.edition
+      vault_product_version  = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision         = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date       = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
     }
   }
 

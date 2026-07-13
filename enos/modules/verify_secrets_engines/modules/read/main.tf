@@ -29,6 +29,12 @@ variable "ip_version" {
 
 }
 
+variable "integration_host_user" {
+  type        = string
+  description = "The username to use for accessing the integration host"
+  default     = "ubuntu"
+}
+
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"

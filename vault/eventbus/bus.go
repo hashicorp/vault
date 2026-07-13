@@ -8,7 +8,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -33,12 +35,28 @@ const (
 	// based on what each subscriber is interested in.
 	eventTypeAll            = "*"
 	defaultTimeout          = 60 * time.Second
+	defaultSubscriberBuffer = 16
+	maxSubscriberBuffer     = 1000
 	eventMetadataVaultIndex = "vault_index"
+
+	// EnvVaultEventNotificationsBoundedQueueSize is the environment variable to configure bounded event queues.
+	// Set to a positive integer to enable buffered subscriber channels of that size.
+	// Slow consumers will be dropped when their queue is full instead of blocking event processing.
+	// Set to 0 or leave unset for unbuffered channels (default, backward compatible).
+	// Values above 1000 will be capped at 1000 to prevent excessive memory usage.
+	//
+	// Recommended starting value: 16
+	// This provides enough buffer to handle reasonable event bursts while keeping memory usage low
+	// (~1.6-3KB per subscriber). Increase this value (e.g., 64-128) if you have high event rates
+	// and subscribers that need more time to process events. Decrease it (e.g., 8) if you want
+	// faster detection of slow subscribers or have memory constraints.
+	EnvVaultEventNotificationsBoundedQueueSize = "VAULT_EVENT_NOTIFICATIONS_BOUNDED_QUEUE_SIZE"
 )
 
 var (
-	ErrNotStarted = errors.New("event broker has not been started")
-	subscriptions atomic.Int64 // keeps track of event subscription count in all event buses
+	ErrNotStarted   = errors.New("event broker has not been started")
+	ErrSlowConsumer = errors.New("event subscriber is too slow")
+	subscriptions   atomic.Int64 // keeps track of event subscription count in all event buses
 
 	// these metadata fields will have the plugin mount path prepended to them
 	metadataPrependPathFields = []string{
@@ -58,6 +76,7 @@ type EventBus struct {
 	filters                    *Filters
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 	storageInfoGetter          StorageInfoGetter
+	subscriberBufferSize       int // cached buffer size from VAULT_BOUNDED_EVENT_QUEUE env var (0 = unbuffered)
 }
 
 // StorageInfoGetter is an interface used to access some storage-related core
@@ -75,9 +94,10 @@ type pluginEventBus struct {
 
 type asyncChanNode struct {
 	// TODO: add bounded deque buffer of *EventReceived
-	ctx    context.Context
-	ch     chan *eventlogger.Event
-	logger hclog.Logger
+	ctx        context.Context
+	ch         chan *eventlogger.Event
+	logger     hclog.Logger
+	bufferSize int // cached buffer size (0 = unbuffered, >0 = buffered)
 
 	// used to close the connection
 	closeOnce      sync.Once
@@ -242,6 +262,7 @@ func NewEventBus(localNodeID string, logger hclog.Logger, c StorageInfoGetter) (
 		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
 		filters:                    NewFilters(localNodeID),
 		storageInfoGetter:          c,
+		subscriberBufferSize:       getSubscriberBufferSize(),
 	}, nil
 }
 
@@ -304,7 +325,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
-	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
+	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, bus.subscriberBufferSize, func() {
 		if clusterNode == nil {
 			// use filterNodeID as the "subscription id" when removing a
 			// subscriber pattern
@@ -366,6 +387,21 @@ func (bus *EventBus) ApplyClusterWideFilterChanges(changes []FilterChange) {
 // filters for all cluster nodes.
 func (bus *EventBus) MakeClusterWideFilters() {
 	bus.filters.makeClusterWideFilters()
+}
+
+// GetClusterWideFilterAdditions returns the current cluster-wide filter
+// represented purely as additive changes. It is used by a secondary cluster's
+// active node to resync its full set of event subscription filters to the
+// primary.
+func (bus *EventBus) GetClusterWideFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(clusterWide)
+}
+
+// GetLocalFilterAdditions returns the current local filter represented
+// purely as additive changes. It is used by a performance standby node to
+// resync its full set of event subscription filters to the active node.
+func (bus *EventBus) GetLocalFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(bus.filters.self)
 }
 
 // ClearClusterWideFilter removes all entries from the current cluster-wide
@@ -493,11 +529,31 @@ func newFilterNode(namespacePatterns []string, pattern string, bexprFilter strin
 	}, nil
 }
 
-func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker, removeFilter func()) *asyncChanNode {
+// getSubscriberBufferSize reads the VAULT_EVENT_NOTIFICATIONS_BOUNDED_QUEUE_SIZE environment variable
+// and returns the buffer size for subscriber channels. Returns 0 for unbuffered (default).
+// Values above maxSubscriberBuffer (1000) are capped to prevent excessive memory usage.
+func getSubscriberBufferSize() int {
+	if v := os.Getenv(EnvVaultEventNotificationsBoundedQueueSize); v != "" {
+		size, err := strconv.Atoi(v)
+		if err != nil || size < 0 {
+			// If parsing fails or negative, default to 0 (unbuffered)
+			return 0
+		}
+		// Cap at maximum to prevent excessive memory usage
+		if size > maxSubscriberBuffer {
+			return maxSubscriberBuffer
+		}
+		return size
+	}
+	return 0
+}
+
+func newAsyncNode(ctx context.Context, logger hclog.Logger, broker *eventlogger.Broker, bufferSize int, removeFilter func()) *asyncChanNode {
 	return &asyncChanNode{
 		ctx:            ctx,
-		ch:             make(chan *eventlogger.Event),
+		ch:             make(chan *eventlogger.Event, bufferSize),
 		logger:         logger,
+		bufferSize:     bufferSize,
 		removeFilter:   removeFilter,
 		removePipeline: broker.RemovePipelineAndNodes,
 	}
@@ -522,8 +578,41 @@ func (node *asyncChanNode) Close(ctx context.Context) {
 	})
 }
 
+// getEventID safely extracts the event ID from an eventlogger.Event, returning "unknown" if extraction fails.
+func getEventID(e *eventlogger.Event) string {
+	if e == nil || e.Payload == nil {
+		return "unknown"
+	}
+	eventReceived, ok := e.Payload.(*logical.EventReceived)
+	if !ok || eventReceived == nil || eventReceived.Event == nil {
+		return "unknown"
+	}
+	return eventReceived.Event.Id
+}
+
 func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	// sends to the channel async in another goroutine
+	if node.bufferSize > 0 {
+		// Bounded queues: synchronous send with immediate slow consumer detection
+		select {
+		case node.ch <- e:
+			return e, nil
+		case <-ctx.Done():
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				node.logger.Info("Subscriber took too long to process event, closing", "id", getEventID(e))
+				node.Close(ctx)
+				return nil, ErrSlowConsumer
+			}
+			return e, nil
+		case <-node.ctx.Done():
+			return e, nil
+		default:
+			node.logger.Info("Subscriber queue is full, closing", "id", getEventID(e))
+			node.Close(ctx)
+			return nil, ErrSlowConsumer
+		}
+	}
+
+	// Standard behavior: async send with goroutine per event
 	go func() {
 		var timeout bool
 		select {
@@ -534,7 +623,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 			timeout = errors.Is(node.ctx.Err(), context.DeadlineExceeded)
 		}
 		if timeout {
-			node.logger.Info("Subscriber took too long to process event, closing", "ID", e.Payload.(*logical.EventReceived).Event.Id)
+			node.logger.Info("Subscriber took too long to process event, closing", "id", getEventID(e))
 			node.Close(ctx)
 		}
 	}()

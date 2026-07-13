@@ -13,7 +13,7 @@ locals {
   # Database-specific configurations
   database_configs = {
     postgres = {
-      image_template = "docker.io/postgres:${var.db_version}"
+      image_template = "docker.mirror.hashicorp.services/library/postgres:${var.db_version}"
       env_vars = {
         POSTGRES_USER     = var.username
         POSTGRES_PASSWORD = var.password
@@ -21,7 +21,7 @@ locals {
       }
     }
     mongodb = {
-      image_template = "docker.io/mongo:${var.db_version}"
+      image_template = "docker.mirror.hashicorp.services/library/mongo:${var.db_version}"
       env_vars = {
         MONGO_INITDB_ROOT_USERNAME = var.username
         MONGO_INITDB_ROOT_PASSWORD = var.password
@@ -30,7 +30,7 @@ locals {
       args = "--bind_ip_all"
     }
     mysql = {
-      image_template = "docker.io/mysql:${var.db_version}"
+      image_template = "docker.mirror.hashicorp.services/library/mysql:${var.db_version}"
       env_vars = {
         MYSQL_ROOT_PASSWORD = var.password
         MYSQL_USER          = var.username

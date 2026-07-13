@@ -175,6 +175,9 @@ changed_files {
         joinpath("scripts", "testing"),
         joinpath("specs"),
         joinpath(".release", "ibm-pao"),
+        // Internal developer tooling that must not sync to CE
+        ".agents",
+        joinpath("ui", ".agents"),
       ]
     }
 
@@ -301,10 +304,18 @@ changed_files {
     }
   }
 
-  // The "ui" group matches the Web UI source
+  // The "ui" group matches files for the Web UI
   group "ui" {
     match {
-      base_dir = ["ui"]
+      base_dir = [
+        joinpath(".github", "actions", "build-ui"),
+        joinpath(".github", "actions", "setup-pnpm"),
+        joinpath(".github", "workflows", "gen-diff-spec"),
+        joinpath(".github", "workflows", "test-run-enos-scenario-ui"),
+        joinpath(".github", "workflows", "test-ui"),
+        joinpath(".github", "workflows", "ui-client-update"),
+        "ui",
+      ]
     }
   }
 

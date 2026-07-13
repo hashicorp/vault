@@ -110,9 +110,9 @@ export const GENERAL = {
     addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
-  kvSuggestion: {
-    input: '[data-test-kv-suggestion-input]',
-    select: '[data-test-kv-suggestion-select]',
+  suggestion: {
+    input: (type: string) => `[data-test-suggestion-input="${type}"]`,
+    select: (type: string) => `[data-test-suggestion-select="${type}"]`,
   },
 
   /* ────── Search Select ────── */
@@ -197,7 +197,7 @@ export const GENERAL = {
   licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
-  textDisplay: (attr: string) => `[data-test-text-display="${attr}"]`,
+  textDisplay: (attr?: string) => (attr ? `[data-test-text-display="${attr}"]` : '[data-test-text-display]'),
   textBody: (attr: string) => `[data-test-text-body="${attr}"]`,
   widget: (name: string) => `[data-test-widget="${name}"]`,
 };

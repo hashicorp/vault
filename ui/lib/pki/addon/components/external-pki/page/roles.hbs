@@ -1,0 +1,51 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @model.roles.length}}
+  <Hds::Layout::Flex class="has-top-margin-s bottom-margin-8">
+    <Hds::Form::TextInput::Field
+      @width="300px"
+      @type="search"
+      placeholder="Filter by name"
+      aria-label="Search"
+      data-test-input-search="Filter by name"
+      {{on "input" this.handleSearch}}
+    />
+
+    <Hds::Button
+      class="margin-left-auto"
+      @color="tertiary"
+      @icon="reload"
+      @iconPosition="trailing"
+      @text="Refresh"
+      {{on "click" this.refresh}}
+      data-test-button="Refresh"
+    />
+  </Hds::Layout::Flex>
+
+  {{#if this.rolesList}}
+    <ListTable @columns={{this.tableColumns}} @data={{this.rolesList}}>
+      <:customTableItem as |role|>
+        <Hds::Link::Inline
+          @route="external.roles.role.details"
+          @models={{array @model.engine.id role.name}}
+          @color="secondary"
+          class="has-text-weight-semibold"
+          data-test-link-to={{role.name}}
+        >{{role.name}}</Hds::Link::Inline>
+      </:customTableItem>
+    </ListTable>
+  {{else}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No roles matching: {{this.searchInput}}" @titleTag="h2" data-test-empty-state-title />
+    </Hds::ApplicationState>
+  {{/if}}
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No roles exist yet" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="Configure a role using Terraform or the API/CLI." />
+  </Hds::ApplicationState>
+  <ExternalPki::ImplementationSelect @engineId={{@model.engine.id}} @steps={{array this.roleConfig}} />
+{{/if}}

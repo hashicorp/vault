@@ -4,12 +4,14 @@
 package awsauth
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/api"
+	awsutilint "github.com/hashicorp/vault/internal/awsutil/v2"
 )
 
 type CLIHandler struct{}
@@ -41,7 +43,20 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 	hlogger := hclog.Default()
 	hlogger.SetLevel(level)
 
-	creds, err := awsutil.RetrieveCreds(m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"], hlogger)
+	ctx := context.Background()
+
+	// When no static credentials are supplied on the command line, don't force
+	// the shared "default" profile. In SDK v2, setting the shared profile makes
+	// credential resolution short-circuit to that profile and skip the
+	// environment and IMDS/ECS providers; leaving it unset lets the default
+	// chain (env vars, shared config, IMDS/ECS) resolve naturally, matching the
+	// v1 SDK behavior.
+	var credOpts []awsutil.Option
+	if m["aws_access_key_id"] == "" && m["aws_secret_access_key"] == "" {
+		credOpts = append(credOpts, awsutil.WithSharedCredentials(false))
+	}
+
+	creds, err := awsutil.RetrieveCreds(ctx, m["aws_access_key_id"], m["aws_secret_access_key"], m["aws_security_token"], hlogger, credOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +72,7 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 		region = ""
 	}
 
-	loginData, err := awsutil.GenerateLoginData(creds, headerValue, region, hlogger)
+	loginData, err := awsutilint.GenerateLoginDataV2(ctx, creds, headerValue, region, hlogger)
 	if err != nil {
 		return nil, err
 	}

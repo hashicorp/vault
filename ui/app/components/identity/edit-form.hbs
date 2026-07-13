@@ -20,30 +20,56 @@
 <form {{action (perform this.save) on="submit"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode={{@mode}} @noun={{lowercase (humanize @model.identityType)}} />
-    <MessageError @model={{@model}} />
+    <MessageError @errorMessage={{this.errorBanner}} />
     {{#if (eq @mode "merge")}}
       <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
         <A.Title>Warning</A.Title>
         <A.Description>Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to.</A.Description>
       </Hds::Alert>
     {{/if}}
-    {{#each @model.fields as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>
-        <div class="form-section">
-          <SearchSelect
-            @id="policies"
-            @label="Policies"
-            @labelClass="title is-4"
-            @options={{this.policies}}
-            @inputValue={{@model.policies}}
-            @onChange={{fn (mut @model.policies)}}
-            @onCreate={{this.onCreatePolicy}}
-            @fallbackComponent="string-list"
-            @disallowNewItems={{not @model.canCreatePolicies}}
-          />
-        </div>
-      </FormField>
-    {{/each}}
+    <FormFieldGroups @model={{@model.form}} @groupName="formFieldGroups" as |field|>
+      {{#if (eq field.name "policies")}}
+        <SearchSelect
+          @id="policies"
+          @label="Policies"
+          @labelClass="title is-4 has-bottom-margin-s"
+          @options={{this.policies}}
+          @inputValue={{@model.form.data.policies}}
+          @onChange={{fn (mut @model.form.data.policies)}}
+          @onCreate={{this.onCreatePolicy}}
+          @fallbackComponent="string-list"
+          @disallowNewItems={{not @model.canCreatePolicies}}
+        />
+      {{else if (and (eq field.name "member_group_ids") (not-eq @model.form.data.type "external"))}}
+        <SearchSelect
+          @id="member_group_ids"
+          @label="Member group IDs"
+          @labelClass="title is-4 has-bottom-margin-s"
+          @placeholder="Search"
+          @options={{@model.groups}}
+          @inputValue={{@model.form.data.member_group_ids}}
+          @shouldRenderName={{true}}
+          @onChange={{fn (mut @model.form.data.member_group_ids)}}
+          @fallbackComponent="string-list"
+          @nameKey="name"
+          data-test-search-select="member_group_ids"
+        />
+      {{else if (and (eq field.name "member_entity_ids") (not-eq @model.form.data.type "external"))}}
+        <SearchSelect
+          @id="entities"
+          @label="Member entity IDs"
+          @labelClass="title is-4 has-bottom-margin-s"
+          @placeholder="Search"
+          @options={{@model.entities}}
+          @inputValue={{@model.form.data.member_entity_ids}}
+          @shouldRenderName={{true}}
+          @onChange={{fn (mut @model.form.data.member_entity_ids)}}
+          @fallbackComponent="string-list"
+          @nameKey="name"
+          data-test-search-select="entities"
+        />
+      {{/if}}
+    </FormFieldGroups>
   </div>
 
   <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
@@ -63,7 +89,7 @@
             @text="Cancel"
             @color="secondary"
             @route={{this.cancelLink}}
-            @models={{array @model.id "details"}}
+            @models={{array this.cancelModelId "details"}}
             data-test-cancel-link
           />
         {{/if}}

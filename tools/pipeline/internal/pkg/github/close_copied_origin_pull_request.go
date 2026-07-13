@@ -97,7 +97,8 @@ func (r *CloseCopiedOriginPullRequestReq) Run(
 	githubV3 *libgithub.Client,
 	githubV4 *githubv4.Client,
 ) (*CloseCopiedOriginPullRequestRes, error) {
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("owner", r.Owner),
 		slog.String("repo", r.Repo),
 		slog.Uint64("pull-number", uint64(r.PullNumber)),
@@ -162,7 +163,8 @@ func (r *CloseCopiedOriginPullRequestReq) Run(
 	if err != nil {
 		return res, err
 	}
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("origin-owner", originOwner),
 		slog.String("origin-repo", originRepo),
 		slog.Uint64("origin-pull-number", uint64(originNumber)),
@@ -205,7 +207,8 @@ func (r *CloseCopiedOriginPullRequestReq) Run(
 		closingIssueRefEqual,
 	) {
 		if issue.Closed {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("repository", issue.Repository.NameWithOwner),
 				slog.Int("number", issue.Number),
 			), "associated issue is already closed")
@@ -215,7 +218,8 @@ func (r *CloseCopiedOriginPullRequestReq) Run(
 		nwo := issue.Repository.NameWithOwner
 		parts := strings.SplitN(nwo, "/", 2)
 		if len(parts) != 2 {
-			return res, fmt.Errorf("could not determine repo and owner from associated issue %d, got: %s",
+			return res, fmt.Errorf(
+				"could not determine repo and owner from associated issue %d, got: %s",
 				issue.Number,
 				nwo,
 			)

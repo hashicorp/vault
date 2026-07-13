@@ -6,10 +6,12 @@ package vault
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -117,10 +119,14 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 // n-BillingRetentionMonths ago (keeping BillingRetentionMonths of data), and also resets all in memory billing metrics when the start of the month is reached.
 func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.logger.Info("handling start of month operations", "currentMonth", currentMonth)
-	// We only delete data older than BillingRetentionMonths on the active node
+	// We only delete data older than retention months on the active node
 	if standby, _ := c.Standby(); !standby && !c.PerfStandby() {
 		if err := c.deleteExpiredBillingMetrics(ctx, currentMonth); err != nil {
 			c.logger.Error("error deleting expired billing metrics", "error", err)
+		}
+
+		if err := c.deleteExpiredAttributionData(ctx, currentMonth); err != nil {
+			c.logger.Error("error deleting expired attribution data")
 		}
 	}
 	if err := c.resetInMemoryBillingMetrics(); err != nil {
@@ -140,42 +146,75 @@ func (c *Core) deleteExpiredBillingMetrics(ctx context.Context, currentMonth tim
 
 	// Delete data from retentionMonths ago (keeping current month + previous (retentionMonths - 1) months = retentionMonths total)
 	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths, 0)
-	// Delete billing metrics from both replicated and local prefixes
+
+	// attributionOnly=false: delete root billing data, skipping attribution/
+	return c.deleteExpiredDataAtPath(ctx, monthToDelete, false)
+}
+
+// deleteExpiredAttributionData deletes attribution data older than the default retention period.
+func (c *Core) deleteExpiredAttributionData(ctx context.Context, currentMonth time.Time) error {
+	// Delete attribution data from billing.DefaultAttributionRetentionMonths ago
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.DefaultAttributionRetentionMonths, 0)
+
+	// attributionOnly=true: delete only the attribution/ subtree
+	return c.deleteExpiredDataAtPath(ctx, monthToDelete, true)
+}
+
+// deleteExpiredDataAtPath is a helper function that deletes billing data at a specific path.
+// When attributionOnly is true, only the "attribution/maximum/" subtree is deleted (used for
+// attribution retention). When false, the entire monthly billing path is deleted except for
+// "attribution/maximum/", which has its own separate retention policy.
+func (c *Core) deleteExpiredDataAtPath(ctx context.Context, monthToDelete time.Time, attributionOnly bool) error {
+	// Delete data from both replicated and local prefixes
 	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 		// If we are not the primary, then do not delete replicate metrics
 		if !c.isPrimary() && pathPrefix == billing.ReplicatedPrefix {
 			continue
 		}
-		billingPath := billing.GetMonthlyBillingPath(pathPrefix, monthToDelete)
+
+		basePath := billing.GetMonthlyBillingPath(pathPrefix, monthToDelete)
+		if attributionOnly {
+			basePath += billing.AttributionMaxPrefix
+		}
 		view, ok := c.GetBillingSubView()
 		if !ok {
 			return ErrCouldNotGetBillingSubView
 		}
-		metricPaths, err := view.List(ctx, billingPath)
+
+		segments, err := view.List(ctx, basePath)
 		if err != nil {
+			// If path doesn't exist (common for attribution), that's fine - nothing to delete
+			if err == logical.ErrNotFound {
+				continue
+			}
 			return err
 		}
-		for _, segment := range metricPaths {
-			fullPath := billingPath + segment
+
+		for _, segment := range segments {
+			// Skip attribution directory when deleting billing metrics (it has its own retention policy)
+			if !attributionOnly && strings.Contains(segment, billing.AttributionMaxPrefix) {
+				continue
+			}
+
+			fullPath := basePath + segment
 			// If the segment ends with / - recursively delete its contents
-			// For example: ssh/normalized-certs-issued, ssh/credential-count
 			if len(segment) > 0 && segment[len(segment)-1] == '/' {
 				subPaths, err := view.List(ctx, fullPath)
 				if err != nil {
-					c.logger.Error("error listing path for deletion", "error", err, "path", fullPath)
+					c.logger.Error("error listing path for deletion", "path", fullPath)
 					continue
 				}
 				for _, subSegment := range subPaths {
 					err = view.Delete(ctx, fullPath+subSegment)
 					if err != nil {
-						c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", fullPath+subSegment)
+						c.logger.Error("error deleting data", "path", fullPath+subSegment)
 					}
 				}
 			} else {
-				// full path, delete it directly
+				// It's a file, delete it directly
 				err = view.Delete(ctx, fullPath)
 				if err != nil {
-					c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", fullPath)
+					c.logger.Error("error deleting data", "path", fullPath)
 				}
 			}
 		}
@@ -216,7 +255,7 @@ func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time
 		// Do nothing if we are a standby. All requests get forwarded anyway
 	} else {
 		// Collect all mount metrics in a single pass through the mount table
-		metrics, err := c.CountMetricsFromMounts(true)
+		metrics, err := c.CountMetricsSecretMounts(true)
 		if err != nil {
 			c.logger.Error("error collecting mount metrics", "error", err)
 			return err

@@ -29,3 +29,13 @@ func TestGetMonthlyBillingPath(t *testing.T) {
 	want := "replicated/2026/01/"
 	require.Equal(t, got, want)
 }
+
+// TestGetAttributionPath verifies the GetAttributionPath function
+// returns the correct attribution path for the given product area and month
+func TestGetAttributionPath(t *testing.T) {
+	ts := time.Date(2026, time.January, 15, 12, 0, 0, 0, time.UTC)
+
+	got := GetAttributionMaxPath(ReplicatedPrefix, ts, RoleHWMCountsHWM)
+	want := "replicated/2026/01/attribution/maximum/maxRoleCounts/"
+	require.Equal(t, got, want)
+}

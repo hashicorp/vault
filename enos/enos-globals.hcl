@@ -18,7 +18,8 @@ globals {
   config_modes    = ["env", "file"]
   consul_editions = ["ce", "ent"]
   consul_versions = ["1.18.2", "1.19.2", "1.20.6", "1.21.1"]
-  distros         = ["amzn", "rhel", "sles", "ubuntu"]
+  distros_aws     = ["amzn", "rhel", "sles", "ubuntu"]
+  distros_fyre    = ["centos", "rhel", "rocky", "sles", "ubuntu"]
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
     // NOTE: These versions must always match the output of enos_host_info.target_distro. They are
@@ -28,10 +29,25 @@ globals {
       "2"    = ["nc", "openldap-clients"]
       "2023" = ["nc", "openldap-clients"]
     }
+    centos = {
+      "9"  = ["nc", "openldap-clients"]
+      "10" = ["nc", "openldap-clients"]
+    }
     rhel = {
       "8.10" = ["nc", "openldap-clients"]
+      "9.6"  = ["nc", "openldap-clients"]
       "9.7"  = ["nc", "openldap-clients"]
+      "9.8"  = ["nc", "openldap-clients"]
+      "10.0" = ["nc", "openldap-clients"]
       "10.1" = ["nc", "openldap-clients"]
+      "10.2" = ["nc", "openldap-clients"]
+    }
+    rocky = {
+      "8.10" = ["nc", "openldap-clients"]
+      "9.7"  = ["nc", "openldap-clients"]
+      "9.8"  = ["nc", "openldap-clients"]
+      "10.1" = ["nc", "openldap-clients"]
+      "10.2" = ["nc", "openldap-clients"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
@@ -48,16 +64,73 @@ globals {
   }
   distro_version = {
     amzn   = var.distro_version_amzn
+    centos = var.distro_version_centos
     rhel   = var.distro_version_rhel
+    rocky  = var.distro_version_rhel
     sles   = var.distro_version_sles
     ubuntu = var.distro_version_ubuntu
+  }
+  # NOTE: These were generated from fyre_os_info for SVL on 6/9/25. They're a
+  # moving target so it's likely they'll need to be updated in the future.
+  # Make sure distro_packages is updated for any changes that are made here.
+  distro_versions_fyre = {
+    amd64 = {
+      centos = ["10", "9"]
+      rhel   = ["10.1", "10.0", "9.6", "8.10"]
+      rocky  = ["10.1", "9.7", "8.10"]
+      sles   = ["16.0", "15.7"]
+      ubuntu = ["26.04", "24.04", "22.04"]
+    }
+    ppc64le = {
+      centos = ["10", "9"]
+      rhel   = ["10.2", "10.0", "9.8", "9.6", "8.10"]
+      rocky  = ["10.2", "10.1", "9.7", "9.8"]
+      sles   = ["16.0", "15.7"]
+      ubuntu = ["26.04", "24.04", "22.04"]
+    }
+    s390x = {
+      centos = []
+      rhel   = ["10.0", "8.10", "9.6"]
+      rocky  = []
+      sles   = ["16.0", "15.7"]
+      ubuntu = ["24.04", "22.04"]
+    }
+  }
+  # The default versions we each architecture/distro combo. We currently use
+  # the latest as that's how things are ordered up above. When we start running
+  # these scenarios we'll use the distro_versions_fyre as sample attributes to
+  # distribute over all versions.
+  distro_version_fyre = {
+    amd64 = {
+      centos = global.distro_versions_fyre["amd64"]["centos"][0]
+      rhel   = global.distro_versions_fyre["amd64"]["rhel"][0]
+      rocky  = global.distro_versions_fyre["amd64"]["rocky"][0]
+      sles   = global.distro_versions_fyre["amd64"]["sles"][0]
+      ubuntu = global.distro_versions_fyre["amd64"]["ubuntu"][0]
+    }
+    ppc64le = {
+      centos = global.distro_versions_fyre["ppc64le"]["centos"][0]
+      rhel   = global.distro_versions_fyre["ppc64le"]["rhel"][0]
+      rocky  = global.distro_versions_fyre["ppc64le"]["rocky"][0]
+      sles   = global.distro_versions_fyre["ppc64le"]["sles"][0]
+      ubuntu = global.distro_versions_fyre["ppc64le"]["ubuntu"][0]
+    }
+    s390x = {
+      centos = null
+      rhel   = global.distro_versions_fyre["s390x"]["rhel"][0]
+      rocky  = null
+      sles   = global.distro_versions_fyre["s390x"]["sles"][0]
+      ubuntu = global.distro_versions_fyre["s390x"]["ubuntu"][0]
+    }
   }
   editions            = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
   enterprise_editions = [for e in global.editions : e if e != "ce"]
   ip_versions         = ["4", "6"]
   package_manager = {
     "amzn"   = "yum"
+    "centos" = "yum"
     "rhel"   = "yum"
+    "rocky"  = "yum"
     "sles"   = "zypper"
     "ubuntu" = "apt"
   }

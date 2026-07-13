@@ -10,10 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -78,19 +77,19 @@ type backend struct {
 	// This avoids the overhead of creating a client object for every login request.
 	// When the credentials are modified or deleted, all the cached client objects
 	// will be flushed. The empty STS role signifies the master account
-	EC2ClientsMap map[clientKey]*ec2.EC2
+	EC2ClientsMap map[clientKey]*ec2.Client
 
 	// Map to hold the IAM client objects indexed by a composite key of Account
 	// ID, region, and STS role.
 	// This avoids the overhead of creating a client object for every login request.
 	// When the credentials are modified or deleted, all the cached client objects
 	// will be flushed. The empty STS role signifies the master account
-	IAMClientsMap map[clientKey]*iam.IAM
+	IAMClientsMap map[clientKey]*iam.Client
 
 	// Map to associate a partition to a random region in that partition. Users of
 	// this don't care what region in the partition they use, but there is some client
 	// cache efficiency gain if we keep the mapping stable, hence caching a single copy.
-	partitionToRegionMap map[string]*endpoints.Region
+	partitionToRegionMap map[string]string
 
 	// Map of AWS unique IDs to the full ARN corresponding to that unique ID
 	// This avoids the overhead of an AWS API hit for every login request
@@ -142,8 +141,8 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
 		tidyCooldownPeriod:     time.Hour,
-		EC2ClientsMap:          make(map[clientKey]*ec2.EC2),
-		IAMClientsMap:          make(map[clientKey]*iam.IAM),
+		EC2ClientsMap:          make(map[clientKey]*ec2.Client),
+		IAMClientsMap:          make(map[clientKey]*iam.Client),
 		iamUserIdToArnCache:    cache.New(7*24*time.Hour, 24*time.Hour),
 		tidyDenyListCASGuard:   new(uint32),
 		tidyAccessListCASGuard: new(uint32),
@@ -333,17 +332,17 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 	// proper partition from the arbitrary region we passed in to look up the endpoint.
 	// Sigh
 	region := b.partitionToRegionMap[entity.Partition]
-	if region == nil {
+	if region == "" {
 		return "", fmt.Errorf("unable to resolve partition %q to a region", entity.Partition)
 	}
-	iamClient, err := b.clientIAM(ctx, s, region.ID(), entity.AccountNumber)
+	iamClient, err := b.clientIAM(ctx, s, region, entity.AccountNumber)
 	if err != nil {
 		return "", awsutil.AppendAWSError(err)
 	}
 
 	switch entity.Type {
 	case "user":
-		userInfo, err := iamClient.GetUserWithContext(ctx, &iam.GetUserInput{UserName: &entity.FriendlyName})
+		userInfo, err := iamClient.GetUser(ctx, &iam.GetUserInput{UserName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -352,7 +351,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 		}
 		return *userInfo.User.UserId, nil
 	case "role":
-		roleInfo, err := iamClient.GetRoleWithContext(ctx, &iam.GetRoleInput{RoleName: &entity.FriendlyName})
+		roleInfo, err := iamClient.GetRole(ctx, &iam.GetRoleInput{RoleName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -361,7 +360,7 @@ func (b *backend) resolveArnToRealUniqueId(ctx context.Context, s logical.Storag
 		}
 		return *roleInfo.Role.RoleId, nil
 	case "instance-profile":
-		profileInfo, err := iamClient.GetInstanceProfileWithContext(ctx, &iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
+		profileInfo, err := iamClient.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{InstanceProfileName: &entity.FriendlyName})
 		if err != nil {
 			return "", awsutil.AppendAWSError(err)
 		}
@@ -406,35 +405,18 @@ func (b *backend) genDeprecatedPath(path *framework.Path) *framework.Path {
 
 // Adapted from https://docs.aws.amazon.com/sdk-for-go/api/aws/endpoints/
 // the "Enumerating Regions and Endpoint Metadata" section
-func generatePartitionToRegionMap() map[string]*endpoints.Region {
-	partitionToRegion := make(map[string]*endpoints.Region)
-
-	resolver := endpoints.DefaultResolver()
-	partitions := resolver.(endpoints.EnumPartitions).Partitions()
-
-	for _, p := range partitions {
-		// For most partitions, it's fine to choose a single region randomly.
-		// However, there are a few exceptions:
-		//
-		//   For "aws", choose "us-east-1" because it is always enabled (and
-		//   enabled for STS) by default.
-		//
-		//   For "aws-us-gov", choose "us-gov-west-1" because it is the only
-		//   valid region for IAM operations.
-		//   ref: https://github.com/aws/aws-sdk-go/blob/v1.34.25/aws/endpoints/defaults.go#L8176-L8194
-		for _, r := range p.Regions() {
-			if p.ID() == "aws" && r.ID() != "us-east-1" {
-				continue
-			}
-			if p.ID() == "aws-us-gov" && r.ID() != "us-gov-west-1" {
-				continue
-			}
-			partitionToRegion[p.ID()] = &r
-			break
-		}
+func generatePartitionToRegionMap() map[string]string {
+	// Stable, known-good region per partition for IAM lookups, matching the old v1 resolver behavior.
+	// If AWS adds a partition, add it here using the v1 partitions.json and verify the region against
+	// v1 behavior (see TestGeneratePartitionToRegionMap): https://github.com/aws/aws-sdk-go-v2/blob/main/internal/endpoints/awsrulesfn/partitions.json
+	return map[string]string{
+		"aws":        "us-east-1",
+		"aws-us-gov": "us-gov-west-1",
+		"aws-cn":     "cn-north-1",
+		"aws-iso":    "us-iso-east-1",
+		"aws-iso-b":  "us-isob-east-1",
+		"aws-iso-e":  "eu-isoe-west-1",
 	}
-
-	return partitionToRegion
 }
 
 const backendHelp = `

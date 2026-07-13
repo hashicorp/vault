@@ -20,7 +20,8 @@ func getWorkflow(
 	repo string,
 	name string,
 ) (*gh.Workflow, error) {
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.String("name", name),
@@ -66,7 +67,8 @@ func getWorkflowRuns(
 		var runsForStatus []*WorkflowRun
 		for {
 			opts.Status = status
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("owner", owner),
 				slog.String("repo", repo),
 				slog.Int64("workflow-id", id),
@@ -84,7 +86,8 @@ func getWorkflowRuns(
 
 			if res.NextPage == 0 {
 				if len(runsForStatus) > 0 {
-					slog.Default().DebugContext(slogctx.Append(ctx,
+					slog.Default().DebugContext(slogctx.Append(
+						ctx,
 						slog.String("owner", owner),
 						slog.String("repo", repo),
 						slog.Int64("workflow-id", id),
@@ -92,7 +95,8 @@ func getWorkflowRuns(
 						slog.Int("count", len(runsForStatus)),
 					), "found github actions workflow runs")
 				} else {
-					slog.Default().DebugContext(slogctx.Append(ctx,
+					slog.Default().DebugContext(slogctx.Append(
+						ctx,
 						slog.String("owner", owner),
 						slog.String("repo", repo),
 						slog.Int64("workflow-id", id),
@@ -118,7 +122,8 @@ func getWorkflowRunArtifacts(
 	repo string,
 	id int64,
 ) (gh.ArtifactList, error) {
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int64("run-id", id),
@@ -129,14 +134,16 @@ func getWorkflowRunArtifacts(
 
 	defer func() {
 		if count := artifacts.GetTotalCount(); count > 0 {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("owner", owner),
 				slog.String("repo", repo),
 				slog.Int64("run-id", id),
 				slog.Int64("count", count),
 			), "found workflow run artifacts")
 		} else {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("owner", owner),
 				slog.String("repo", repo),
 				slog.Int64("run-id", id),

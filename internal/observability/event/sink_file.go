@@ -15,6 +15,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 )
 
 // defaultFileMode is the default file permissions (read/write for everyone).
@@ -28,7 +29,8 @@ var _ eventlogger.Node = (*FileSink)(nil)
 // FileSink is a sink node which handles writing events to file.
 type FileSink struct {
 	file           *os.File
-	fileLock       sync.RWMutex
+	writePermit    *permitpool.Pool
+	permitInitOnce sync.Once
 	fileMode       os.FileMode
 	path           string
 	requiredFormat string
@@ -67,7 +69,6 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 
 	sink := &FileSink{
 		file:           nil,
-		fileLock:       sync.RWMutex{},
 		fileMode:       mode,
 		requiredFormat: format,
 		path:           p,
@@ -82,6 +83,21 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	}
 
 	return sink, nil
+}
+
+func (s *FileSink) initPermitPool() {
+	s.permitInitOnce.Do(func() {
+		s.writePermit = permitpool.New(1)
+	})
+}
+
+func (s *FileSink) acquirePermit(ctx context.Context) error {
+	s.initPermitPool()
+	return s.writePermit.Acquire(ctx)
+}
+
+func (s *FileSink) releasePermit() {
+	s.writePermit.Release()
 }
 
 // Process handles writing the event to the file sink.
@@ -131,8 +147,10 @@ func (s *FileSink) Reopen() error {
 		return nil
 	}
 
-	s.fileLock.Lock()
-	defer s.fileLock.Unlock()
+	if err := s.acquirePermit(context.Background()); err != nil {
+		return err
+	}
+	defer s.releasePermit()
 
 	if s.file == nil {
 		return s.open()
@@ -192,10 +210,11 @@ func (s *FileSink) open() error {
 // NOTE: We attempt to acquire a lock on the file in order to write, but will
 // yield if the context is 'done'.
 func (s *FileSink) log(ctx context.Context, data []byte) error {
-	// Wait for the lock, but ensure we check for a cancelled context as soon as
-	// we have it, as there's no point in continuing if we're cancelled.
-	s.fileLock.Lock()
-	defer s.fileLock.Unlock()
+	if err := s.acquirePermit(ctx); err != nil {
+		return err
+	}
+	defer s.releasePermit()
+
 	select {
 	case <-ctx.Done():
 		return ctx.Err()

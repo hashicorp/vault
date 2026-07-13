@@ -580,8 +580,8 @@ CHECK:
 			for parameter, value := range req.Data {
 				// Check if parameter has been explicitly denied
 				if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
-					// If the value exists in denied values slice, deny
-					if valueInDeniedParameterList(value, valueSlice, useLegacyMatching) {
+					normalizedValue := normalizePolicyParameterValue(parameter, value)
+					if valueInDeniedParameterList(normalizedValue, valueSlice, useLegacyMatching) {
 						return
 					}
 				}
@@ -607,9 +607,8 @@ CHECK:
 				return
 			}
 
-			// If the value doesn't exist in the allowed values slice,
-			// deny
-			if ok && !valueInAllowedParameterList(value, valueSlice, useLegacyMatching) {
+			normalizedValue := normalizePolicyParameterValue(parameter, value)
+			if ok && !valueInAllowedParameterList(normalizedValue, valueSlice, useLegacyMatching) {
 				return
 			}
 		}
@@ -1005,6 +1004,42 @@ func (c *Core) performPolicyChecksSinglePath(ctx context.Context, acl *ACL, te *
 
 	c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 	return ret
+}
+
+// normalizePolicyParameterValue returns a lowercased copy of value when
+// parameter is one that Vault canonicalises to lowercase internally before
+// storing or enforcing policy names. Without this normalisation a caller can
+// bypass a denied_parameters (or allowed_parameters) constraint by submitting
+// a mixed-case variant.
+func normalizePolicyParameterValue(parameter string, value interface{}) interface{} {
+	switch strings.ToLower(parameter) {
+	case "policies", "token_policies":
+		// fall through to normalisation below
+	default:
+		return value
+	}
+	switch v := value.(type) {
+	case string:
+		return strings.ToLower(v)
+	case []string:
+		lowered := make([]interface{}, len(v))
+		for i, s := range v {
+			lowered[i] = strings.ToLower(s)
+		}
+		return lowered
+	case []interface{}:
+		lowered := make([]interface{}, len(v))
+		for i, el := range v {
+			if s, ok := el.(string); ok {
+				lowered[i] = strings.ToLower(s)
+			} else {
+				lowered[i] = el
+			}
+		}
+		return lowered
+	default:
+		return value
+	}
 }
 
 func valueInAllowedParameterList(v interface{}, list []interface{}, useLegacyMatching bool) bool {

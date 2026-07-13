@@ -13,6 +13,7 @@ import (
 
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/builtin/logical/totp"
+	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
@@ -22,9 +23,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestCountMetricsFromMounts_LocalReplicatedMounts tests that CountMetricsFromMounts correctly separates
+// TestCountMetricsSecretMounts_LocalReplicatedMounts tests that CountMetricsSecretMounts correctly separates
 // local and replicated mount metrics and returns the expected counts.
-func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
+func TestCountMetricsSecretMounts_LocalReplicatedMounts(t *testing.T) {
 	// Set up core with 2 role backends, 1 managed key backend (TOTP), and KV backend
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -32,6 +33,7 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 			pluginconsts.SecretEngineDatabase: roleLogicalBackends[pluginconsts.SecretEngineDatabase],
 			pluginconsts.SecretEngineKV:       logicalKv.Factory,
 			pluginconsts.SecretEngineTOTP:     totp.Factory,
+			pluginconsts.SecretEngineTransit:  logicalTransit.Factory,
 		},
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
@@ -51,6 +53,8 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 		{pluginconsts.SecretEngineDatabase, "local-db", "static-role/", true, 10},
 		{pluginconsts.SecretEngineTOTP, "totp", "my-key-%d", false, 10},
 		{pluginconsts.SecretEngineTOTP, "local-totp", "my-key-%d", true, 10},
+		{pluginconsts.SecretEngineTransit, "transit", "my-key-%d", false, 10},
+		{pluginconsts.SecretEngineTransit, "local-transit", "my-key-%d", true, 10},
 		{"kv-v1", "kv", "secret-%d", false, 10},
 		{"kv-v2", "local-kv", "secret-%d", true, 10},
 	}
@@ -75,6 +79,11 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 				keyName := fmt.Sprintf(mount.keyName, i)
 				addTotpKeyToStorage(t, ctx, core, mount.path, root, keyName)
 			}
+		case pluginconsts.SecretEngineTransit:
+			for i := 0; i < mount.numKeys; i++ {
+				keyName := fmt.Sprintf(mount.keyName, i)
+				addTransitKeyToStorage(t, ctx, core, mount.path, root, keyName)
+			}
 		case "kv-v1", "kv-v2":
 			for i := 0; i < mount.numKeys; i++ {
 				secretName := fmt.Sprintf(mount.keyName, i)
@@ -83,7 +92,7 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 		}
 	}
 
-	metrics, err := core.CountMetricsFromMounts(true)
+	metrics, err := core.CountMetricsSecretMounts(true)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 
@@ -97,10 +106,12 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 		DatabaseStaticRoles: 10,
 	}
 	expectedReplicatedManagedKeys := &ManagedKeyCounts{
-		TotpKeys: 10,
+		TotpKeys:    10,
+		TransitKeys: 10,
 	}
 	expectedLocalManagedKeys := &ManagedKeyCounts{
-		TotpKeys: 10,
+		TotpKeys:    10,
+		TransitKeys: 10,
 	}
 
 	// Verify counts
@@ -112,10 +123,10 @@ func TestCountMetricsFromMounts_LocalReplicatedMounts(t *testing.T) {
 	require.Equal(t, 10, metrics.LocalKvCounts)
 }
 
-// TestCountMetricsFromMounts_OfficialUnofficialMounts tests that CountMetricsFromMounts correctly
+// TestCountMetricsSecretMounts_OfficialUnofficialMounts tests that CountMetricsSecretMounts correctly
 // distinguishes between official and unofficial mounts and returns the expected counts depending
 // on if officialOnly is set.
-func TestCountMetricsFromMounts_OfficialUnofficialMounts(t *testing.T) {
+func TestCountMetricsSecretMounts_OfficialUnofficialMounts(t *testing.T) {
 	pluginDir, err := filepath.EvalSymlinks(t.TempDir())
 	require.NoError(t, err)
 	coreConfig := &CoreConfig{
@@ -171,7 +182,7 @@ func TestCountMetricsFromMounts_OfficialUnofficialMounts(t *testing.T) {
 	addRoleToStorage(t, core, "kubernetes", "roles/", 5)
 
 	// Get official-only counts, should not include kubernetes
-	metrics, err := core.CountMetricsFromMounts(true)
+	metrics, err := core.CountMetricsSecretMounts(true)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 	require.Equal(t, 5, metrics.ReplicatedRoleCounts.AWSDynamicRoles)
@@ -179,7 +190,7 @@ func TestCountMetricsFromMounts_OfficialUnofficialMounts(t *testing.T) {
 	require.Equal(t, 0, metrics.ReplicatedRoleCounts.KubernetesDynamicRoles)
 
 	// Get counts including unofficial mounts
-	metrics, err = core.CountMetricsFromMounts(false)
+	metrics, err = core.CountMetricsSecretMounts(false)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 	require.Equal(t, 5, metrics.ReplicatedRoleCounts.AWSDynamicRoles)

@@ -194,7 +194,7 @@ module('Integration | Component | dashboard/widgets/quick-actions', function (ho
     );
     await selectChoose(GENERAL.superSelect('secrets-engines'), 'kv-v2-test');
     await selectChoose(GENERAL.superSelect('actions'), 'Find KV secrets');
-    assert.dom(GENERAL.kvSuggestion.input).exists('Shows option to search fo KVv2 secret');
+    assert.dom(GENERAL.suggestion.input('kv')).exists('Shows option to search for KVv2 secret');
     assert.dom(GENERAL.button('Read secrets')).exists({ count: 1 });
   });
 

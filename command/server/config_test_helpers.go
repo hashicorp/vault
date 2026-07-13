@@ -960,6 +960,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"remove_irrevocable_lease_after": (30 * 24 * time.Hour) / time.Second,
 		"allow_audit_log_prefixing":      false,
 		"enable_unauthenticated_access":  []string(nil),
+		"deny_slash_in_templated_paths":  false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})

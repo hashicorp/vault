@@ -65,7 +65,7 @@ resource "enos_remote_exec" "setup_openldap" {
   scripts = [abspath("${path.module}/scripts/start-container.sh")]
 
   environment = {
-    CONTAINER_IMAGE = "docker.io/osixia/openldap:${local.ldap_server.version}"
+    CONTAINER_IMAGE = "docker.mirror.hashicorp.services/osixia/openldap:${local.ldap_server.version}"
     CONTAINER_NAME  = "openldap"
     CONTAINER_PORTS = "${local.ldap_server.port},${local.ldap_server.secure_port}"
     CONTAINER_ENVS  = "LDAP_ORGANISATION=${local.ldap_server.org},LDAP_DOMAIN=${local.ldap_server.domain},LDAP_ADMIN_PASSWORD=${local.ldap_server.admin_pw}"
@@ -122,7 +122,7 @@ resource "enos_remote_exec" "create_kmip" {
   scripts = [abspath("${path.module}/scripts/start-container.sh")]
 
   environment = {
-    CONTAINER_IMAGE   = "docker.io/percona/percona-server:8.0"
+    CONTAINER_IMAGE   = "docker.mirror.hashicorp.services/library/mysql:8.0"
     CONTAINER_NAME    = "kmip"
     CONTAINER_VOLUMES = "/tmp/kmip_temp:/TEMP_DIR"
     CONTAINER_ENVS    = "KMIP_ADDR=${local.test_server_address},MYSQL_ROOT_PASSWORD=testpassword"

@@ -568,12 +568,22 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 			i.lock.Lock()
 			defer i.lock.Unlock()
 
+			ns, err := namespace.FromContext(ctx)
+			if err != nil {
+				return err
+			}
+
 			// Create a MemDB transaction to delete entities from the inmem database
 			// without altering storage. Batch deletion on storage bucket items is
 			// performed directly through entityPacker.
 			txn := i.db.Txn(true)
 			defer txn.Abort()
 
+			// Storage buckets are shared across namespaces and keyed only by entity
+			// ID, so deleting a caller-supplied ID that belongs to another namespace
+			// would destroy that entity's storage. Restrict deletion to entities in
+			// the request's namespace and hand only those IDs to the packer.
+			idsToDelete := make([]string, 0, len(entityIDs))
 			for _, entityID := range entityIDs {
 				// Fetch the entity using its ID
 				entity, err := i.MemDBEntityByIDInTxn(txn, entityID, true)
@@ -583,15 +593,19 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 				if entity == nil {
 					continue
 				}
+				if entity.NamespaceID != ns.ID {
+					continue
+				}
 
 				err = i.handleEntityDeleteCommon(ctx, txn, entity, false)
 				if err != nil {
 					return err
 				}
+				idsToDelete = append(idsToDelete, entityID)
 			}
 
 			// Write all updates for this bucket.
-			err := i.entityPacker.DeleteMultipleItems(ctx, i.logger, entityIDs)
+			err = i.entityPacker.DeleteMultipleItems(ctx, i.logger, idsToDelete)
 			if err != nil {
 				return err
 			}
@@ -732,15 +746,20 @@ func (i *IdentityStore) handlePathEntityListCommon(ctx context.Context, req *log
 			keys = append(keys, entity.Name)
 		}
 		entityInfoEntry := map[string]interface{}{
-			"name": entity.Name,
+			"name":             entity.Name,
+			"creation_time":    ptypes.TimestampString(entity.CreationTime),
+			"last_update_time": ptypes.TimestampString(entity.LastUpdateTime),
+			"disabled":         entity.Disabled,
 		}
 		if len(entity.Aliases) > 0 {
 			aliasList := make([]interface{}, 0, len(entity.Aliases))
 			for _, alias := range entity.Aliases {
 				entry := map[string]interface{}{
-					"id":             alias.ID,
-					"name":           alias.Name,
-					"mount_accessor": alias.MountAccessor,
+					"id":               alias.ID,
+					"name":             alias.Name,
+					"mount_accessor":   alias.MountAccessor,
+					"creation_time":    ptypes.TimestampString(alias.CreationTime),
+					"last_update_time": ptypes.TimestampString(alias.LastUpdateTime),
 				}
 
 				mi, ok := mountAccessorMap[alias.MountAccessor]

@@ -1579,7 +1579,7 @@ func TestRaftCluster_Removed_ReAdd(t *testing.T) {
 	require.NoError(t, err)
 	require.Eventually(t, follower.Sealed, 10*time.Second, 250*time.Millisecond)
 
-	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.Address.String()}
+	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.APIAddress().String()}
 	_, err = follower.Client.Sys().RaftJoin(joinReq)
 	require.Error(t, err)
 }

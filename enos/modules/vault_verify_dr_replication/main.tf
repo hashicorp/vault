@@ -47,6 +47,18 @@ variable "vault_install_dir" {
   description = "The directory where the Vault binary will be installed"
 }
 
+variable "primary_root_token" {
+  type        = string
+  description = "The root token for the primary cluster"
+  default     = ""
+}
+
+variable "secondary_root_token" {
+  type        = string
+  description = "The root token for the secondary cluster"
+  default     = ""
+}
+
 variable "wrapping_token" {
   type        = string
   description = "The wrapping token created on primary cluster"
@@ -54,45 +66,55 @@ variable "wrapping_token" {
 }
 
 locals {
-  primary_leader_addr          = var.ip_version == 6 ? var.primary_leader_host.ipv6 : var.primary_leader_host.private_ip
-  secondary_leader_addr        = var.ip_version == 6 ? var.secondary_leader_host.ipv6 : var.secondary_leader_host.private_ip
-  primary_replication_status   = jsondecode(enos_remote_exec.verify_replication_status_on_primary.stdout)
-  secondary_replication_status = jsondecode(enos_remote_exec.verify_replication_status_on_secondary.stdout)
+  primary_leader_addr   = var.ip_version == 6 ? var.primary_leader_host.ipv6 : var.primary_leader_host.private_ip
+  secondary_leader_addr = var.ip_version == 6 ? var.secondary_leader_host.ipv6 : var.secondary_leader_host.private_ip
+
+  # Extract JSON output from test stdout
+  # The test prints JSON to stdout, which we need to extract and parse
+  primary_json_output = try(
+    regex("(?s)\\{.*\"mode\".*\\}", module.verify_replication_status_on_primary.test_result)[0],
+    "{}"
+  )
+  secondary_json_output = try(
+    regex("(?s)\\{.*\"mode\".*\\}", module.verify_replication_status_on_secondary.test_result)[0],
+    "{}"
+  )
+
+  primary_replication_status   = jsondecode(local.primary_json_output)
+  secondary_replication_status = jsondecode(local.secondary_json_output)
 }
 
-resource "enos_remote_exec" "verify_replication_status_on_primary" {
-  environment = {
-    IP_VERSION            = var.ip_version
-    PRIMARY_LEADER_ADDR   = local.primary_leader_addr
-    SECONDARY_LEADER_ADDR = local.secondary_leader_addr
-    VAULT_ADDR            = var.vault_addr
-    VAULT_INSTALL_DIR     = var.vault_install_dir
-  }
+module "verify_replication_status_on_primary" {
+  source = "../vault_run_blackbox_test"
 
-  scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
+  leader_host       = var.primary_leader_host
+  leader_public_ip  = var.primary_leader_host.public_ip
+  vault_root_token  = var.primary_root_token
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
+  test_package      = "./vault/external_tests/blackbox/isolated/verify"
+  test_names        = ["TestDRReplicationStatusOutput"]
+  vault_edition     = "ent" # DR replication is enterprise-only
 
-  transport = {
-    ssh = {
-      host = var.primary_leader_host.public_ip
-    }
+  test_env_vars = {
+    PRIMARY_LEADER_ADDR = local.primary_leader_addr
   }
 }
 
-resource "enos_remote_exec" "verify_replication_status_on_secondary" {
-  environment = {
-    IP_VERSION            = var.ip_version
-    PRIMARY_LEADER_ADDR   = local.primary_leader_addr
-    SECONDARY_LEADER_ADDR = local.secondary_leader_addr
-    VAULT_ADDR            = var.vault_addr
-    VAULT_INSTALL_DIR     = var.vault_install_dir
-  }
+module "verify_replication_status_on_secondary" {
+  source = "../vault_run_blackbox_test"
 
-  scripts = [abspath("${path.module}/scripts/verify-replication-status.sh")]
+  leader_host       = var.secondary_leader_host
+  leader_public_ip  = var.secondary_leader_host.public_ip
+  vault_root_token  = var.secondary_root_token
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
+  test_package      = "./vault/external_tests/blackbox/isolated/verify"
+  test_names        = ["TestDRReplicationStatusOutput"]
+  vault_edition     = "ent" # DR replication is enterprise-only
 
-  transport = {
-    ssh = {
-      host = var.secondary_leader_host.public_ip
-    }
+  test_env_vars = {
+    PRIMARY_LEADER_ADDR = local.primary_leader_addr
   }
 }
 
@@ -101,7 +123,7 @@ output "primary_replication_status" {
 }
 
 output "known_primary_cluster_addrs" {
-  value = local.secondary_replication_status.data.known_primary_cluster_addrs
+  value = try(local.secondary_replication_status.known_primary_cluster_addrs, [])
 }
 
 output "secondary_replication_status" {
@@ -109,9 +131,9 @@ output "secondary_replication_status" {
 }
 
 output "primary_replication_data_secondaries" {
-  value = local.primary_replication_status.data.secondaries
+  value = try(local.primary_replication_status.secondaries, [])
 }
 
 output "secondary_replication_data_primaries" {
-  value = local.secondary_replication_status.data.primaries
+  value = try(local.secondary_replication_status.primaries, [])
 }

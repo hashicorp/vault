@@ -6,9 +6,12 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { paginate } from 'core/utils/paginate-list';
+import { fetchIdentityItemsWithCapabilities } from 'vault/utils/identity-helpers';
 
 export default class IdentityIndexRoute extends Route {
-  @service pagination;
+  @service api;
+  @service capabilities;
 
   queryParams = {
     page: {
@@ -19,28 +22,32 @@ export default class IdentityIndexRoute extends Route {
     },
   };
 
-  model(params) {
-    const itemType = this.modelFor('vault.cluster.access.identity');
-    const modelType = `identity/${itemType}`;
-    return this.pagination
-      .lazyPaginatedQuery(modelType, {
-        responsePath: 'data.keys',
-        page: params.page,
-        pageFilter: params.pageFilter,
-        sortBy: 'name',
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
+  async model(params) {
+    const { pageFilter, page } = params;
+    const identityType = this.modelFor('vault.cluster.access.identity');
+
+    try {
+      const itemsWithCapabilities = await fetchIdentityItemsWithCapabilities({
+        identityType,
+        api: this.api,
+        capabilities: this.capabilities,
       });
+
+      return paginate(itemsWithCapabilities, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
+      }
+      throw error;
+    }
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
+
     const { pageFilter } = this.paramsFor(this.routeName);
+
     controller.setProperties({
       filter: pageFilter || '',
       page: resolvedModel?.meta?.currentPage || 1,
@@ -56,17 +63,7 @@ export default class IdentityIndexRoute extends Route {
   }
 
   @action
-  willTransition(transition) {
-    window.scrollTo(0, 0);
-    if (transition.targetName !== this.routeName) {
-      this.pagination.clearDataset();
-    }
-    return true;
-  }
-
-  @action
   reload() {
-    this.pagination.clearDataset();
     this.refresh();
   }
 }

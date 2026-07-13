@@ -50,6 +50,10 @@ output "keys_base64_secondary" {
   value = try(module.start_vault.keys_base64_secondary, null)
 }
 
+output "leader_api_addr" {
+  value = module.start_vault.leader_api_addr
+}
+
 output "listener_port" {
   description = "The Vault cluster TCP listener port"
   value       = module.start_vault.listener_port

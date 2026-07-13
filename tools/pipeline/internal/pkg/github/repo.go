@@ -51,7 +51,8 @@ func initializeExistingRepo(
 	baseOrigin string,
 	baseRef string,
 ) error {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("repo-dir", repoDir),
 		slog.String("base-origin", baseOrigin),
 		slog.String("base-ref", baseRef),
@@ -125,7 +126,8 @@ func initializeNewRepo(
 	baseRef string,
 ) error {
 	cloneURL := fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.String("base-origin", baseOrigin),

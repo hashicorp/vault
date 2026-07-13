@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kv (enterprise): Support reading and recovering KVv2 secrets from a loaded snapshot, including in-place recover and copy-from-path within the same mount and namespace.
+```

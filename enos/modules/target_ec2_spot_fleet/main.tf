@@ -9,6 +9,10 @@ terraform {
       source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.14.0"
+    }
   }
 }
 
@@ -163,6 +167,9 @@ resource "random_string" "unique_id" {
   special = false
 }
 
+resource "time_static" "create_time" {
+}
+
 // ec2:RequestSpotFleet only allows up to 4 InstanceRequirements overrides so we can only ever
 // request a fleet across 4 or fewer subnets if we want to bid with InstanceRequirements instead of
 // weighted instance types.
@@ -192,6 +199,9 @@ resource "aws_iam_role" "target" {
 resource "aws_iam_instance_profile" "target" {
   name = "${local.name_prefix}-target-profile"
   role = aws_iam_role.target.name
+  tags = {
+    CreateTime = time_static.create_time.rfc3339
+  }
 }
 
 resource "aws_iam_role_policy" "target" {

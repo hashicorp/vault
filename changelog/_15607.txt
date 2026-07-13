@@ -1,0 +1,4 @@
+```release-note:breaking-change
+containers: The following packages have been removed from UBI based container
+images: gnupg, openssl, procps.
+```

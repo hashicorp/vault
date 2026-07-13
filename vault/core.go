@@ -33,7 +33,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v4"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/mlock"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -739,6 +739,9 @@ type Core struct {
 	// disableSSCTokens is used to disable server side consistent token creation/usage
 	disableSSCTokens bool
 
+	// denySlashInTemplatedPolicyPaths controls whether "/" is denied in templated policy paths
+	denySlashInTemplatedPolicyPaths bool
+
 	// versionHistory is a map of vault versions to VaultVersion. The
 	// VaultVersion.TimestampInstalled when the version will denote when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
@@ -1006,6 +1009,11 @@ type CoreConfig struct {
 	// These aren't the actual paths to endpoints, but rather specific values that
 	// identify groups of endpoints, e.g. "rekey" refers to the sys/rekey/* endpoints.
 	EnableUnauthenticatedAccess []string
+
+	// DenySlashInTemplatedPolicyPaths controls whether "/" is denied in templated policy paths
+	// When true, "/" in template output will cause an error
+	// When false (default), "/" is allowed
+	DenySlashInTemplatedPolicyPaths bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1130,70 +1138,71 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		logger:               conf.Logger.Named("core"),
 		logLevel:             conf.LogLevel,
 
-		defaultLeaseTTL:                conf.DefaultLeaseTTL,
-		maxLeaseTTL:                    conf.MaxLeaseTTL,
-		removeIrrevocableLeaseAfter:    conf.RemoveIrrevocableLeaseAfter,
-		sentinelTraceDisabled:          conf.DisableSentinelTrace,
-		cachingDisabled:                conf.DisableCache,
-		clusterName:                    conf.ClusterName,
-		clusterNetworkLayer:            conf.ClusterNetworkLayer,
-		clusterPeerClusterAddrsCache:   cache.New(3*clusterHeartbeatInterval, time.Second),
-		enableMlock:                    !conf.DisableMlock,
-		rawEnabled:                     conf.EnableRaw,
-		introspectionEnabled:           conf.EnableIntrospection,
-		shutdownDoneCh:                 new(atomic.Value),
-		replicationState:               new(uint32),
-		localClusterPrivateKey:         new(atomic.Value),
-		localClusterCert:               new(atomic.Value),
-		localClusterParsedCert:         new(atomic.Value),
-		activeNodeReplicationState:     new(uint32),
-		keepHALockOnStepDown:           new(uint32),
-		replicationFailure:             new(uint32),
-		disablePerfStandby:             true,
-		activeContextCancelFunc:        new(atomic.Value),
-		allLoggers:                     conf.AllLoggers,
-		builtinRegistry:                conf.BuiltinRegistry,
-		neverBecomeActive:              new(uint32),
-		clusterLeaderParams:            new(atomic.Value),
-		metricsHelper:                  conf.MetricsHelper,
-		metricSink:                     conf.MetricSink,
-		secureRandomReader:             conf.SecureRandomReader,
-		rawConfig:                      new(atomic.Value),
-		recoveryMode:                   conf.RecoveryMode,
-		postUnsealStarted:              new(uint32),
-		raftInfo:                       new(atomic.Value),
-		raftJoinDoneCh:                 make(chan struct{}),
-		raftJoinRetryLimiter:           make(chan struct{}, raftMaxConcurrentRetryJoins),
-		clusterHeartbeatInterval:       clusterHeartbeatInterval,
-		activityLogConfig:              conf.ActivityLogConfig,
-		billingConfig:                  conf.BillingConfig,
-		keyRotateGracePeriod:           new(int64),
-		numExpirationWorkers:           conf.NumExpirationWorkers,
-		raftFollowerStates:             raft.NewFollowerStates(),
-		disableAutopilot:               conf.DisableAutopilot,
-		allowAuditLogPrefixing:         conf.AllowAuditLogPrefixing,
-		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
-		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
-		mountMigrationTracker:          &sync.Map{},
-		disableSSCTokens:               conf.DisableSSCTokens,
-		effectiveSDKVersion:            effectiveSDKVersion,
-		userFailedLoginInfo:            make(map[FailedLoginUser]*FailedLoginInfo),
-		experiments:                    conf.Experiments,
-		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
-		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
-		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
-		numRollbackWorkers:             conf.NumRollbackWorkers,
-		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
-		WellKnownRedirects:             NewWellKnownRedirects(),
-		detectDeadlocks:                detectDeadlocks,
-		echoDuration:                   uberAtomic.NewDuration(0),
-		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
-		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
-		rpcLastSuccessfulHeartbeat:     new(atomic.Value),
-		reportingScanDirectory:         conf.ReportingScanDirectory,
-		enableUnauthRekey:              new(atomic.Bool),
-		enableUnauthGenerateRoot:       new(atomic.Bool),
-		enableUnauthDROperationToken:   new(atomic.Bool),
+		defaultLeaseTTL:                 conf.DefaultLeaseTTL,
+		maxLeaseTTL:                     conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:     conf.RemoveIrrevocableLeaseAfter,
+		sentinelTraceDisabled:           conf.DisableSentinelTrace,
+		cachingDisabled:                 conf.DisableCache,
+		clusterName:                     conf.ClusterName,
+		clusterNetworkLayer:             conf.ClusterNetworkLayer,
+		clusterPeerClusterAddrsCache:    cache.New(3*clusterHeartbeatInterval, time.Second),
+		enableMlock:                     !conf.DisableMlock,
+		rawEnabled:                      conf.EnableRaw,
+		introspectionEnabled:            conf.EnableIntrospection,
+		shutdownDoneCh:                  new(atomic.Value),
+		replicationState:                new(uint32),
+		localClusterPrivateKey:          new(atomic.Value),
+		localClusterCert:                new(atomic.Value),
+		localClusterParsedCert:          new(atomic.Value),
+		activeNodeReplicationState:      new(uint32),
+		keepHALockOnStepDown:            new(uint32),
+		replicationFailure:              new(uint32),
+		disablePerfStandby:              true,
+		activeContextCancelFunc:         new(atomic.Value),
+		allLoggers:                      conf.AllLoggers,
+		builtinRegistry:                 conf.BuiltinRegistry,
+		neverBecomeActive:               new(uint32),
+		clusterLeaderParams:             new(atomic.Value),
+		metricsHelper:                   conf.MetricsHelper,
+		metricSink:                      conf.MetricSink,
+		secureRandomReader:              conf.SecureRandomReader,
+		rawConfig:                       new(atomic.Value),
+		recoveryMode:                    conf.RecoveryMode,
+		postUnsealStarted:               new(uint32),
+		raftInfo:                        new(atomic.Value),
+		raftJoinDoneCh:                  make(chan struct{}),
+		raftJoinRetryLimiter:            make(chan struct{}, raftMaxConcurrentRetryJoins),
+		clusterHeartbeatInterval:        clusterHeartbeatInterval,
+		activityLogConfig:               conf.ActivityLogConfig,
+		billingConfig:                   conf.BillingConfig,
+		keyRotateGracePeriod:            new(int64),
+		numExpirationWorkers:            conf.NumExpirationWorkers,
+		raftFollowerStates:              raft.NewFollowerStates(),
+		disableAutopilot:                conf.DisableAutopilot,
+		allowAuditLogPrefixing:          conf.AllowAuditLogPrefixing,
+		enableResponseHeaderHostname:    conf.EnableResponseHeaderHostname,
+		enableResponseHeaderRaftNodeID:  conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:           &sync.Map{},
+		disableSSCTokens:                conf.DisableSSCTokens,
+		effectiveSDKVersion:             effectiveSDKVersion,
+		userFailedLoginInfo:             make(map[FailedLoginUser]*FailedLoginInfo),
+		experiments:                     conf.Experiments,
+		pendingRemovalMountsAllowed:     conf.PendingRemovalMountsAllowed,
+		expirationRevokeRetryBase:       conf.ExpirationRevokeRetryBase,
+		rollbackMountPathMetrics:        conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
+		numRollbackWorkers:              conf.NumRollbackWorkers,
+		impreciseLeaseRoleTracking:      conf.ImpreciseLeaseRoleTracking,
+		WellKnownRedirects:              NewWellKnownRedirects(),
+		detectDeadlocks:                 detectDeadlocks,
+		echoDuration:                    uberAtomic.NewDuration(0),
+		activeNodeClockSkewMillis:       uberAtomic.NewInt64(0),
+		periodicLeaderRefreshInterval:   conf.PeriodicLeaderRefreshInterval,
+		rpcLastSuccessfulHeartbeat:      new(atomic.Value),
+		reportingScanDirectory:          conf.ReportingScanDirectory,
+		enableUnauthRekey:               new(atomic.Bool),
+		enableUnauthGenerateRoot:        new(atomic.Bool),
+		enableUnauthDROperationToken:    new(atomic.Bool),
+		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
 	}
 
 	c.certCountManager = cert_count.InitCertificateCountManager(c.logger)

@@ -9,6 +9,10 @@ terraform {
       source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.14.0"
+    }
   }
 }
 
@@ -120,6 +124,9 @@ resource "random_string" "unique_id" {
   special = false
 }
 
+resource "time_static" "create_time" {
+}
+
 resource "aws_iam_role" "target_instance_role" {
   name               = "${local.name_prefix}-instance-role"
   assume_role_policy = data.aws_iam_policy_document.target_instance_role.json
@@ -128,6 +135,9 @@ resource "aws_iam_role" "target_instance_role" {
 resource "aws_iam_instance_profile" "target" {
   name = "${local.name_prefix}-instance-profile"
   role = aws_iam_role.target_instance_role.name
+  tags = {
+    CreateTime = time_static.create_time.rfc3339
+  }
 }
 
 resource "aws_iam_role_policy" "target" {

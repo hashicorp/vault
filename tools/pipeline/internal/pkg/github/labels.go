@@ -38,7 +38,8 @@ func addLabelsToIssue(
 		return nil
 	}
 
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("labels", strings.Join(labels, ", ")),
 		slog.Int("issue-number", number),
 	)

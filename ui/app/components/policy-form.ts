@@ -16,6 +16,7 @@ import {
   PolicyTypes,
 } from 'core/utils/code-generators/policy';
 import { validate } from 'vault/utils/forms/validate';
+import { sysPoliciesAclNameMapping } from 'vault/utils/terraform-mappings/sys-policies-acl-name-mapping';
 
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import type { HTMLElementEvent } from 'vault/forms';
@@ -114,6 +115,13 @@ export default class PolicyFormComponent extends Component<Args> {
   get visualEditorSupported() {
     const { form, isCompact } = this.args;
     return form.isNew && form.policyType === PolicyTypes.ACL && !isCompact;
+  }
+
+  get terraformSnippet(): string | null {
+    if (!this.visualEditorSupported) return null;
+    const name = this.args.form.data.name;
+    const policy = this.formattedStanzas;
+    return sysPoliciesAclNameMapping({ name, policy });
   }
 
   @action

@@ -9,6 +9,8 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPolicyTemplating(t *testing.T) {
@@ -212,4 +214,122 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	}
 	client.SetToken(clientToken)
 	runTests(false)
+}
+
+// TestPolicyTemplating_DenySlashInTemplatedPaths exercises the
+// deny_slash_in_templated_path config option
+func TestPolicyTemplating_DenySlashInTemplatedPaths(t *testing.T) {
+	tests := []struct {
+		name                string
+		denySlashEnabled    bool
+		customMetadataValue string
+		expectAccessDenied  bool
+	}{
+		{
+			name:                "deny_slash_enabled_with_slashes_in_metadata",
+			denySlashEnabled:    true,
+			customMetadataValue: "path/with/slashes",
+			expectAccessDenied:  true,
+		},
+		{
+			name:                "deny_slash_disabled_with_slashes_in_metadata",
+			denySlashEnabled:    false,
+			customMetadataValue: "path/with/slashes",
+			expectAccessDenied:  false,
+		},
+		{
+			name:                "deny_slash_enabled_without_slashes_in_metadata",
+			denySlashEnabled:    true,
+			customMetadataValue: "pathwithoutslashes",
+			expectAccessDenied:  false,
+		},
+		{
+			name:                "deny_slash_disabled_without_slashes_in_metadata",
+			denySlashEnabled:    false,
+			customMetadataValue: "pathwithoutslashes",
+			expectAccessDenied:  false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+				DenySlashInTemplatedPolicyPaths: tc.denySlashEnabled,
+			})
+			client := cluster.Cores[0].Client
+
+			// Create entity
+			resp, err := client.Logical().Write("identity/entity", map[string]interface{}{
+				"name": "test_entity",
+			})
+			require.NoError(t, err)
+			entityID := resp.Data["id"].(string)
+
+			// Enable userpass auth
+			err = client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+				Type: "userpass",
+			})
+			require.NoError(t, err)
+
+			auths, err := client.Sys().ListAuth()
+			require.NoError(t, err)
+			userpassAccessor := auths["userpass/"].Accessor
+
+			// Create an alias with custom metadata containing the test value
+			resp, err = client.Logical().Write("identity/entity-alias", map[string]interface{}{
+				"name":            "testuser",
+				"mount_accessor":  userpassAccessor,
+				"canonical_id":    entityID,
+				"custom_metadata": map[string]string{"test_path": tc.customMetadataValue},
+			})
+			require.NoError(t, err)
+
+			// Add a user to userpass backend
+			_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
+				"password": "testpassword",
+			})
+			require.NoError(t, err)
+
+			// Create a policy that uses the alias custom metadata in the path
+			policy := fmt.Sprintf(`
+path "secret/{{identity.entity.aliases.%s.custom_metadata.test_path}}/*" {
+	capabilities = ["read", "create", "update"]
+}
+`, userpassAccessor)
+
+			err = client.Sys().PutPolicy("testPolicy", policy)
+			require.NoError(t, err)
+
+			// Update entity to use the policy
+			_, err = client.Logical().Write("identity/entity/id/"+entityID, map[string]interface{}{
+				"policies": []string{"testPolicy"},
+			})
+			require.NoError(t, err)
+
+			// Authenticate as the user
+			secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
+				"password": "testpassword",
+			})
+			require.NoError(t, err)
+			clientToken := secret.Auth.ClientToken
+
+			// Try to access a path using the templated custom metadata value
+			client.SetToken(clientToken)
+
+			testPath := fmt.Sprintf("secret/%s/data", tc.customMetadataValue)
+			_, err = client.Logical().Write(testPath, map[string]interface{}{"key": "value"})
+
+			if tc.expectAccessDenied {
+				if err == nil {
+					t.Fatalf("expected access denied when deny_slash=%v and custom_metadata=%q, but got success",
+						tc.denySlashEnabled, tc.customMetadataValue)
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected success when deny_slash=%v and custom_metadata=%q, but got error: %v",
+						tc.denySlashEnabled, tc.customMetadataValue, err)
+				}
+			}
+		})
+	}
 }

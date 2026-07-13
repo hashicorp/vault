@@ -11,6 +11,10 @@ binary {
     suppress {
       vulnerabilities = [
         "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+        // GO-2026-5932 appears to be a false positive as it only relates to
+        // golang.org/x/crypto/openpgp, which is not in use in the project.
+        // https://pkg.go.dev/vuln/GO-2026-5932
+        "GO-2026-5932"
       ]
     }
   }
@@ -28,6 +32,15 @@ container {
     suppress {
       vulnerabilities = [
         "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+        // This appears to be a false positive. Busybox >= 1.34 is unaffected
+        // https://security.alpinelinux.org/vuln/CVE-2021-42376
+        // For some reason the OSV entry for fixed is 0 when it should be 1.34:
+        // https://osv.dev/vulnerability/ALPINE-CVE-2021-42376
+        "ALPINE-CVE-2021-42376", "CVE-2021-42374",
+        // GO-2026-5932 appears to be a false positive as it only relates to
+        // golang.org/x/crypto/openpgp, which is not in use in the project.
+        // https://pkg.go.dev/vuln/GO-2026-5932
+        "GO-2026-5932"
       ]
 
       // The OSV scanner will trip on several packages that are included in the

@@ -1919,7 +1919,7 @@ func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 }
 
 func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl string, key crypto.Signer) *acme.Client {
-	coreAddr := cluster.Cores[0].Listeners[0].Address
+	coreAddr := cluster.Cores[0].APIAddress()
 	tlsConfig := cluster.Cores[0].TLSConfig()
 
 	transport := cleanhttp.DefaultPooledTransport()
