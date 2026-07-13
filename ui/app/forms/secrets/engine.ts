@@ -176,7 +176,7 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
         new FormField('options.version', 'number', {
           label: 'Version',
           helpText:
-            'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
+            'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine that allows for the storage of static key/value pairs. Version 2 added more features, including data versioning, TTLs, and check-and-set.',
           possibleValues: [2, 1],
         })
       );
