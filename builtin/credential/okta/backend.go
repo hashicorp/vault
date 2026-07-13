@@ -56,8 +56,9 @@ func Backend() *backend {
 			pathVerify(&b),
 		},
 
-		AuthRenew:   b.pathLoginRenew,
-		BackendType: logical.TypeCredential,
+		AuthRenew:      b.pathLoginRenew,
+		BackendType:    logical.TypeCredential,
+		InitializeFunc: b.initialize,
 	}
 	b.verifyCache = cache.New(5*time.Minute, time.Minute)
 
@@ -67,6 +68,22 @@ func Backend() *backend {
 type backend struct {
 	*framework.Backend
 	verifyCache *cache.Cache
+}
+
+// initialize warns at mount load if the backend is configured without an Okta
+// API token: logins still succeed, but group membership is silently skipped,
+// so group-mapped policies never apply — a state that is otherwise invisible
+// (the token is write-only and config can predate the process, e.g. via
+// snapshot restore).
+func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
+	cfg, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return err
+	}
+	if cfg != nil && cfg.Token == "" {
+		b.Logger().Warn("no Okta API token configured; group membership will not be queried during login, only locally-defined user and group policies will apply")
+	}
+	return nil
 }
 
 func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp, nonce, preferredProvider string) ([]string, *logical.Response, []string, error) {
@@ -328,6 +345,8 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 			errString := fmt.Sprintf(
 				"no Okta groups found; only policies from locally-defined groups available")
 			oktaResponse.AddWarning(errString)
+		} else if b.Logger().IsDebug() {
+			b.Logger().Debug("no Okta API token configured; skipping group membership lookup, only locally-defined group policies will apply", "user", username)
 		}
 		allGroups = append(allGroups, oktaGroups...)
 	}
