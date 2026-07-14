@@ -64,7 +64,8 @@ on:
       - release/**
       - ce/**
   schedule:
-    - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
+    - cron: "05 02 * * *" # * is a special character in YAML so you have to quote this string
+      timezone: "America/New_York"
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}-build
@@ -214,10 +215,24 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        run: |
+          git config --global url."https://${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
       - id: set-up-pipeline
         uses: ./.github/actions/set-up-pipeline
         with:
           github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - id: set-up-go
+        uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/install-tools
+      - if: "! startsWith(github.event.pull_request.base.ref, 'ce/')"
+        name: Ensure that the community edition still builds on enterprise branches
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: SKIP_GEN=1 make cedev
       # Ensure that our go.mod files have not drifted if we've changed the Go toolchain on a CE PR
       - if: |
           needs.setup.outputs.is-ent-repo == 'true' &&
@@ -466,8 +481,8 @@ jobs:
       id-token: write
       issues: read
     with:
-      pull-request: ${{ fromJSON(needs.hcp-setup.outputs.pull-request-number) }}
-      branch: ${{ needs.hcp-setup.outputs.branch-name }}
+      pull-request: ${{ github.event.pull_request.number || '0' }}
+      branch: ${{ github.event_name == 'schedule' && 'main' || '' }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
@@ -677,21 +692,6 @@ jobs:
             cat "$temp_file_name"
             echo EOFTABLE
           } | tee -a "$GITHUB_OUTPUT"
-      - if: |
-          needs.setup.outputs.workflow-trigger == 'pull_request' &&
-          github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
-          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
-        name: Create or update a build status comment on the pull request
-        env:
-          ARTIFACTS: ${{ needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result || needs.artifacts-ce.result }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.event.repository.name }}
-          RUN_ID: ${{ github.run_id }}
-          TEST: ${{ needs.test.result }}
-          TEST_CONTAINERS: ${{ needs.test-containers.result }}
-          UI: ${{ needs.ui.result }}
-        run: ./.github/scripts/report-build-status.sh
       - name: Create test results comment
         if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
