@@ -163,7 +163,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.16.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.20.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1
-	github.com/hashicorp/vault-plugin-database-redis v0.8.1
+	github.com/hashicorp/vault-plugin-database-redis v0.8.2-0.20260701004721-0d78ae1f55d0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.1
 	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
@@ -499,7 +499,7 @@ require (
 	github.com/linode/linodego v1.68.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
-	github.com/mediocregopher/radix/v4 v4.1.4 // indirect
+	github.com/mediocregopher/radix/v4 v4.1.5 // indirect
 	github.com/microsoft/kiota-abstractions-go v1.9.4 // indirect
 	github.com/microsoft/kiota-authentication-azure-go v1.3.1 // indirect
 	github.com/microsoft/kiota-http-go v1.5.5 // indirect
