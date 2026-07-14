@@ -17,4 +17,4 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: "Run actionlint"
         run: |
-          docker run --rm -v "$(pwd):/repo" --workdir /repo docker.mirror.hashicorp.services/rhysd/actionlint@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9 -color -verbose
+          docker run --rm -v "$(pwd):/repo" --workdir /repo docker.mirror.hashicorp.services/rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667 -color -verbose
