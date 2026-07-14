@@ -77,6 +77,24 @@ jobs:
           sed -i "s/ACCOUNT_NUM/${{ steps.aws-configure.outputs.aws-account-id }}/g" aws-nuke.yml
           sed -i "s/TIME_LIMIT/${{ inputs.time_limit || '2h' }}/g" aws-nuke.yml
           sed -i "s/REGION/${{ matrix.region }}/g" aws-nuke.yml
+      - if: "(github.event.schedule == '05 3,5 * * 6' || inputs.exclude_iam == false) && matrix.region == 'global'"
+        # Even though InstanceProfiles have a CreateDate field, at the time of writing aws-nuke
+        # does not expose that field to filtering. As such, our config specifically looks at
+        # a CreateTime tag on the profile when considering it for delete. While our scenarios
+        # ought to add this tag automatically for us, we'll ensure they're always added to known
+        # profiles before we run the nuke.
+        name: Tag instance profiles
+        run: |
+          aws iam list-instance-profiles --output json | jq -r '.InstanceProfiles[] | "\(.InstanceProfileName)|\(.CreateDate)"' | while IFS='|' read -r profile_name create_date; do
+            # Allow errors here as instance profiles can come and go while we're running this.
+            existing_tags=$(aws iam get-instance-profile --instance-profile-name "$profile_name" --output json | jq -r '.InstanceProfile.Tags // [] | map(select(.Key == "CreateTime")) | length')
+            if [ "$existing_tags" -eq 0 ]; then
+              echo "Adding CreateTime tag to $profile_name with value $create_date"
+              aws iam tag-instance-profile --instance-profile-name "$profile_name" --tags Key=CreateTime,Value="$create_date"
+            else
+              echo "Skipping $profile_name - CreateTime tag already exists"
+            fi
+          done
       # We don't care if cleanup succeeds or fails, because dependencies be dependenceies,
       # we'll fail on actually actionable things in the quota steep afterwards.
       - name: Clean up abandoned resources
