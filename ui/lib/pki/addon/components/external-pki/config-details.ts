@@ -20,8 +20,13 @@ export default class ExternalPkiConfigDetailsComponent extends Component<Args> {
 
     return (
       {
+        acme_account_name: 'ACME account name',
         assume_role_arn: 'IAM role ARN to assume',
+        csr_generate_key_type: 'CSR key generation type',
+        csr_identifier_population: 'CSR identifier population',
         directory_url: 'Directory URL',
+        dns_provider_type: 'DNS provider type',
+        dns_provider_name: 'DNS provider name',
         key_type: 'Active key type',
         nameserver: 'DNS server address',
         trusted_ca: 'Trusted CA',

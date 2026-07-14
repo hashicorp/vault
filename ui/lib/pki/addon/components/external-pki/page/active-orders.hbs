@@ -1,0 +1,59 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @model.activeOrders.length}}
+  <Hds::Layout::Flex class="has-top-margin-s bottom-margin-8">
+    <Hds::Form::TextInput::Field
+      @width="300px"
+      @type="search"
+      placeholder="Filter by order ID"
+      aria-label="Filter by order I-D"
+      data-test-input-search="Filter by order ID"
+      {{on "input" this.handleSearch}}
+    />
+
+    <Hds::Button
+      class="margin-left-auto"
+      @color="tertiary"
+      @icon="reload"
+      @iconPosition="trailing"
+      @text="Refresh"
+      {{on "click" this.refresh}}
+      data-test-button="Refresh"
+    />
+  </Hds::Layout::Flex>
+
+  {{#if this.ordersList}}
+    <ListTable @columns={{this.tableColumns}} @data={{this.ordersList}}>
+      <:customTableItem as |order|>
+        <Hds::Link::Inline
+          @route="external.orders.order"
+          @models={{array @model.engine.id order.order_id}}
+          @color="secondary"
+          class="has-text-weight-semibold"
+          data-test-link-to={{order.order_id}}
+        >{{order.order_id}}</Hds::Link::Inline>
+      </:customTableItem>
+    </ListTable>
+  {{else}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No orders matching ID: {{this.searchInput}}" @titleTag="h2" data-test-empty-state-title />
+    </Hds::ApplicationState>
+  {{/if}}
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No active orders" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="Active orders will appear here once created." data-test-empty-state-message />
+    <A.Footer as |F|>
+      <F.LinkStandalone
+        @icon="docs-link"
+        @text="API docs: Create a new order"
+        @href={{doc-link "/vault/api-docs/secret/pki-external-ca#create-new-order"}}
+        @iconPosition="trailing"
+        data-test-link-to="API docs: Create a new order"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
+{{/if}}

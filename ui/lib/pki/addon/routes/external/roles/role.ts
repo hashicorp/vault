@@ -7,10 +7,10 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/vault/route';
 
+import type { Breadcrumb } from 'vault/app-types';
+import type { ExternalRouteModel } from 'pki/routes/external';
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type { Breadcrumb } from 'vault/app-types';
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export type RoleRouteModel = ModelFrom<PkiExternalRolesRoleRoute>;
 
@@ -21,10 +21,10 @@ interface RouteController extends Controller {
 export default class PkiExternalRolesRoleRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
-  model() {
-    const { role_name } = this.paramsFor('external.roles.role') as { role_name: string };
+  async model({ role_name }: { role_name: string }) {
+    const { engine } = this.modelFor('external') as ExternalRouteModel;
     return {
-      engine: this.modelFor('application') as SecretsEngineResource,
+      engine,
       role_name,
     };
   }
