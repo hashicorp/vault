@@ -223,14 +223,14 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        run: |
+          git config --global url."https://${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
       - id: set-up-pipeline
         uses: ./.github/actions/set-up-pipeline
         with:
           github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-      - id: setup-git-private
-        name: Setup Git configuration (private)
-        run: |
-          git config --global url."https://${{ steps.vault-secrets.outputs.github-token }}@github.com".insteadOf https://github.com
       - id: set-up-go
         uses: ./.github/actions/set-up-go
         with:
