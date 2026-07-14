@@ -14,7 +14,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
-module('Acceptance | enterprise | pki | external | roles route', function (hooks) {
+module('Acceptance | enterprise | pki | external | roles | index route', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
