@@ -22,6 +22,10 @@ on:
       time_limit:
         type: string
         description: 'The time limit for resources to live. Default: 2h'
+      exclude_iam:
+        type: boolean
+        description: 'Exclude nuking IAM resources as that can interrupt running scenarios!'
+        default: true
 
 jobs:
   setup:
@@ -87,7 +91,7 @@ jobs:
             -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
             -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
             -e AWS_SESSION_TOKEN="$AWS_SESSION_TOKEN" \
-              ghcr.io/ekristen/aws-nuke:v3.65.0 run ${{ github.event.schedule != '05 3,5 * * 6' && '--exclude IAMUserPolicy --exclude IAMRolePolicy --exclude IAMUserPolicyAttachment --exclude IAMRolePolicyAttachment' }} \
+              ghcr.io/ekristen/aws-nuke:v3.65.0 run ${{ !(github.event.schedule == '05 3,5 * * 6' || inputs.exclude_iam == false) && '--exclude IAMUserPolicy --exclude IAMRolePolicy --exclude IAMUserPolicyAttachment --exclude IAMRolePolicyAttachment' }} \
                 -c aws-nuke.yml \
                 -q \
                 --no-dry-run \
