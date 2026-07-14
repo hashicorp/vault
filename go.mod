@@ -60,10 +60,10 @@ require (
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/aws/aws-sdk-go v1.55.8
-	github.com/aws/aws-sdk-go-v2 v1.41.6
-	github.com/aws/aws-sdk-go-v2/config v1.32.16
+	github.com/aws/aws-sdk-go-v2 v1.42.0
+	github.com/aws/aws-sdk-go-v2/config v1.32.18
 	github.com/aws/aws-sdk-go-v2/service/iam v1.53.6
-	github.com/aws/aws-sdk-go-v2/service/sts v1.42.0
+	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
@@ -164,7 +164,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.20.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1
 	github.com/hashicorp/vault-plugin-database-redis v0.8.1
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.1
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.2-0.20260701011734-0cc3ef6f7e88
 	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
@@ -255,27 +255,28 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.9 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.15 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.22 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.17 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.23 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.6.4 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.15 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.22 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.22 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.29 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.29 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.24 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.200.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.53.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/elasticache v1.54.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.14 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.22 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.23 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.22 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kms v1.50.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.0.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.16 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.20 // indirect
-	github.com/aws/smithy-go v1.25.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.36.0 // indirect
+	github.com/aws/smithy-go v1.27.1 // indirect
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
-	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.1 // indirect
+	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.2 // indirect
 	github.com/looplab/fsm v1.0.3 // indirect
 	github.com/softlayer/xmlrpc v0.0.0-20200409220501-5f089df7cb7e // indirect
 )
