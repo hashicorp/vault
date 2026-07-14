@@ -247,7 +247,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	}
 	defer p.Unlock()
 
-	resp, err := b.formatKeyPolicy(ctx, p, nil)
+	resp, err := b.formatKeyPolicy(p, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -297,7 +297,7 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 
 	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyRead, b.keyPolicyObservationMetadata(p))
-	return b.formatKeyPolicy(ctx, p, context)
+	return b.formatKeyPolicy(p, context)
 }
 
 func (b *backend) keyPolicyObservationMetadata(p *keysutil.Policy) map[string]interface{} {
@@ -341,7 +341,7 @@ func (b *backend) keyPolicyObservationMetadata(p *keysutil.Policy) map[string]in
 	return metadata
 }
 
-func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, context []byte) (*logical.Response, error) {
+func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.Response, error) {
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -415,12 +415,6 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_MANAGED_KEY:
-		retKeys, err := getFormattedManagedKeyPublicKey(ctx, b, p)
-		if err != nil {
-			return nil, err
-		}
-		resp.Data["keys"] = retKeys
 	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
