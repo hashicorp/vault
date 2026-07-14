@@ -6,6 +6,7 @@ package s3
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,13 +18,12 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -39,7 +39,7 @@ type S3Backend struct {
 	bucket     string
 	path       string
 	kmsKeyId   string
-	client     *s3.S3
+	client     *s3.Client
 	logger     log.Logger
 	permitPool *permitpool.Pool
 }
@@ -74,16 +74,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 	}
-	region := os.Getenv("AWS_REGION")
-	if region == "" {
-		region = os.Getenv("AWS_DEFAULT_REGION")
-		if region == "" {
-			region = conf["region"]
-			if region == "" {
-				region = "us-east-1"
-			}
-		}
-	}
+	region := resolveS3Region(conf)
 	s3ForcePathStyleStr, ok := conf["s3_force_path_style"]
 	if !ok {
 		s3ForcePathStyleStr = "false"
@@ -101,36 +92,38 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		return nil, fmt.Errorf("invalid boolean set for disable_ssl: %q", disableSSLStr)
 	}
 
-	credsConfig := &awsutil.CredentialsConfig{
-		AccessKey:    accessKey,
-		SecretKey:    secretKey,
-		SessionToken: sessionToken,
-		Logger:       logger,
-	}
-	creds, err := credsConfig.GenerateCredentialChain()
-	if err != nil {
-		return nil, err
-	}
-
 	pooledTransport := cleanhttp.DefaultPooledTransport()
 	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
 
-	sess, err := session.NewSession(&aws.Config{
-		Credentials: creds,
-		HTTPClient: &http.Client{
-			Transport: pooledTransport,
-		},
-		Endpoint:         aws.String(endpoint),
-		Region:           aws.String(region),
-		S3ForcePathStyle: aws.Bool(s3ForcePathStyleBool),
-		DisableSSL:       aws.Bool(disableSSLBool),
-	})
+	cfg, err := buildS3CredentialChain(accessKey, secretKey, sessionToken, region, logger, &http.Client{Transport: pooledTransport})
 	if err != nil {
 		return nil, err
 	}
-	s3conn := s3.New(sess)
 
-	_, err = s3conn.ListObjects(&s3.ListObjectsInput{Bucket: &bucket})
+	// Build the endpoint URL. disable_ssl only makes sense alongside a
+	// custom endpoint (e.g. MinIO); real AWS S3 requires HTTPS.
+	endpointURL := endpoint
+	if disableSSLBool {
+		if endpoint == "" {
+			logger.Warn("disable_ssl is set without a custom endpoint; ignoring because real AWS S3 requires HTTPS")
+		} else if strings.HasPrefix(endpoint, "https://") {
+			// Endpoint scheme is https:// but disable_ssl is true; switch to http://.
+			endpointURL = "http://" + strings.TrimPrefix(endpoint, "https://")
+		} else if !strings.HasPrefix(endpoint, "http://") {
+			endpointURL = "http://" + endpoint
+		}
+	} else if endpoint != "" && !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+		endpointURL = "https://" + endpoint
+	}
+
+	s3conn := s3.NewFromConfig(*cfg, func(o *s3.Options) {
+		if endpointURL != "" {
+			o.BaseEndpoint = aws.String(endpointURL)
+		}
+		o.UsePathStyle = s3ForcePathStyleBool
+	})
+
+	_, err = s3conn.ListObjectsV2(context.Background(), &s3.ListObjectsV2Input{Bucket: &bucket})
 	if err != nil {
 		return nil, fmt.Errorf("unable to access bucket %q in region %q: %w", bucket, region, err)
 	}
@@ -182,11 +175,11 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	}
 
 	if s.kmsKeyId != "" {
-		putObjectInput.ServerSideEncryption = aws.String("aws:kms")
+		putObjectInput.ServerSideEncryption = types.ServerSideEncryptionAwsKms
 		putObjectInput.SSEKMSKeyId = aws.String(s.kmsKeyId)
 	}
 
-	_, err := s.client.PutObjectWithContext(ctx, putObjectInput)
+	_, err := s.client.PutObject(ctx, putObjectInput)
 	if err != nil {
 		return err
 	}
@@ -206,21 +199,19 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 	// Setup key
 	key = path.Join(s.path, key)
 
-	resp, err := s.client.GetObjectWithContext(ctx, &s3.GetObjectInput{
+	resp, err := s.client.GetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
-	if awsErr, ok := err.(awserr.RequestFailure); ok {
-		// Return nil on 404s, error on anything else
-		if awsErr.StatusCode() == 404 {
+	if err != nil {
+		var noSuchKey *types.NoSuchKey
+		if errors.As(err, &noSuchKey) {
+			// Return nil on 404s
 			return nil, nil
 		}
-		return nil, err
-	}
-	if err != nil {
 		return nil, err
 	}
 	if resp == nil {
@@ -261,7 +252,7 @@ func (s *S3Backend) Delete(ctx context.Context, key string) error {
 	// Setup key
 	key = path.Join(s.path, key)
 
-	_, err := s.client.DeleteObjectWithContext(ctx, &s3.DeleteObjectInput{
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(key),
 	})
@@ -298,37 +289,57 @@ func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 
 	keys := []string{}
 
-	err := s.client.ListObjectsV2PagesWithContext(ctx, params,
-		func(page *s3.ListObjectsV2Output, lastPage bool) bool {
-			if page != nil {
-				// Add truncated 'folder' paths
-				for _, commonPrefix := range page.CommonPrefixes {
-					// Avoid panic
-					if commonPrefix == nil {
-						continue
-					}
-
-					commonPrefix := strings.TrimPrefix(*commonPrefix.Prefix, prefix)
-					keys = append(keys, commonPrefix)
-				}
-				// Add objects only from the current 'folder'
-				for _, key := range page.Contents {
-					// Avoid panic
-					if key == nil {
-						continue
-					}
-
-					key := strings.TrimPrefix(*key.Key, prefix)
-					keys = append(keys, key)
-				}
-			}
-			return true
-		})
-	if err != nil {
-		return nil, err
+	paginator := s3.NewListObjectsV2Paginator(s.client, params)
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
+		// Add truncated 'folder' paths
+		for _, commonPrefix := range page.CommonPrefixes {
+			keys = append(keys, strings.TrimPrefix(aws.ToString(commonPrefix.Prefix), prefix))
+		}
+		// Add objects only from the current 'folder'
+		for _, obj := range page.Contents {
+			keys = append(keys, strings.TrimPrefix(aws.ToString(obj.Key), prefix))
+		}
 	}
 
 	sort.Strings(keys)
 
 	return keys, nil
+}
+
+// resolveS3Region returns the AWS region for the S3 backend following the documented
+// priority order from configuration/storage/s3.mdx:
+// AWS_REGION env var → AWS_DEFAULT_REGION env var → region conf key → "us-east-1".
+func resolveS3Region(conf map[string]string) string {
+	if r := os.Getenv("AWS_REGION"); r != "" {
+		return r
+	}
+	if r := os.Getenv("AWS_DEFAULT_REGION"); r != "" {
+		return r
+	}
+	if r := conf["region"]; r != "" {
+		return r
+	}
+	return "us-east-1"
+}
+
+// buildS3CredentialChain constructs the AWS credential chain for the S3 backend.
+// It mirrors the credential resolution order documented at configuration/storage/s3.mdx:
+// static config → environment variables → credential files → instance role.
+// WithSharedCredentials(false) prevents awsutil from injecting an empty credentials-file
+// path that would cause LoadDefaultConfig to fail when a [default] profile exists in
+// ~/.aws/config alongside explicit static keys.
+func buildS3CredentialChain(accessKey, secretKey, sessionToken, region string, logger log.Logger, httpClient *http.Client) (*aws.Config, error) {
+	credsConfig := &awsutil.CredentialsConfig{
+		AccessKey:    accessKey,
+		SecretKey:    secretKey,
+		SessionToken: sessionToken,
+		Logger:       logger,
+		Region:       region,
+		HTTPClient:   httpClient,
+	}
+	return credsConfig.GenerateCredentialChain(context.Background(), awsutil.WithSharedCredentials(false))
 }
