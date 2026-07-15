@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	instana "github.com/instana/go-sensor"
@@ -18,9 +21,18 @@ import (
 	otlog "github.com/opentracing/opentracing-go/log"
 )
 
-const vaultTestServiceName = "vault-tests"
+const (
+	vaultTestServiceName  = "vault-tests"
+	vaultBuildServiceName = "vault-ci-builds"
+)
 
-var globalSensor *instana.Sensor
+var (
+	testSensorOnce sync.Once
+	testSensor     atomic.Pointer[instana.Sensor]
+
+	buildSensorOnce sync.Once
+	buildSensor     atomic.Pointer[instana.Sensor]
+)
 
 // TestEvent represents a single test event from gotestsum JSON output.
 type TestEvent struct {
@@ -32,14 +44,41 @@ type TestEvent struct {
 	Output  string    `json:"Output"`
 }
 
-func init() {
+// getTestSensor lazily initializes the Instana sensor used for test-result spans.
+func getTestSensor() *instana.Sensor {
+	testSensorOnce.Do(func() {
+		testSensor.Store(newSensor(vaultTestServiceName))
+	})
+	return testSensor.Load()
+}
+
+// getBuildSensor lazily initializes the Instana sensor used for build-metric spans.
+// It's kept separate from the test sensor so build stage timings don't pollute the
+// test results service in the Instana dashboard.
+func getBuildSensor() *instana.Sensor {
+	buildSensorOnce.Do(func() {
+		buildSensor.Store(newSensor(vaultBuildServiceName))
+	})
+	return buildSensor.Load()
+}
+
+// newSensor creates an Instana sensor for the given service name, or nil if
+// INSTANA_AGENT_KEY isn't set.
+//
+// NOTE: the underlying go-sensor library initializes its agent connection as a
+// package-level singleton the first time a sensor is created in a process, so
+// only one of getTestSensor/getBuildSensor should actually be exercised per
+// process. In practice this holds because test-result and build-metric uploads
+// run as separate `go run` invocations (tools/instana-uploader and
+// tools/build-metric-uploader respectively).
+func newSensor(serviceName string) *instana.Sensor {
 	agentKey := os.Getenv("INSTANA_AGENT_KEY")
 	if agentKey == "" {
 		fmt.Fprintln(os.Stderr, "[Instana] INSTANA_AGENT_KEY not set, skipping initialization")
-		return
+		return nil
 	}
 
-	globalSensor = instana.NewSensor(vaultTestServiceName)
+	sensor := instana.NewSensor(serviceName)
 
 	// NewSensor automatically switches to direct backend communication when
 	// INSTANA_ENDPOINT_URL is set; otherwise it uses the local agent.
@@ -51,11 +90,36 @@ func init() {
 		fmt.Fprintf(os.Stderr, "[Instana] Using local agent mode at %s:%s\n", agentHost, agentPort)
 	}
 
-	fmt.Fprintf(os.Stderr, "[Instana] Sensor initialized with service name: %s\n", vaultTestServiceName)
+	fmt.Fprintf(os.Stderr, "[Instana] Sensor initialized with service name: %s\n", serviceName)
+	return sensor
+}
+
+// setGitTags tags a span with git/CI metadata from the GitHub Actions
+// environment. GITHUB_HEAD_REF is the PR source branch; falls back to
+// GITHUB_REF_NAME for direct pushes. All tags are omitted outside GitHub
+// Actions, where these env vars are unset.
+func setGitTags(span opentracing.Span) {
+	if branch := os.Getenv("GITHUB_HEAD_REF"); branch != "" {
+		span.SetTag("git.branch", branch)
+	} else if branch := os.Getenv("GITHUB_REF_NAME"); branch != "" {
+		span.SetTag("git.branch", branch)
+	}
+	if sha := os.Getenv("GITHUB_SHA"); sha != "" {
+		span.SetTag("git.sha", sha)
+	}
+	if runID := os.Getenv("GITHUB_RUN_ID"); runID != "" {
+		span.SetTag("git.run_id", runID)
+		serverURL := os.Getenv("GITHUB_SERVER_URL")
+		repo := os.Getenv("GITHUB_REPOSITORY")
+		if serverURL != "" && repo != "" {
+			span.SetTag("git.ci_url", serverURL+"/"+repo+"/actions/runs/"+runID)
+		}
+	}
 }
 
 func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string) error {
-	if globalSensor == nil {
+	sensor := getTestSensor()
+	if sensor == nil {
 		fmt.Fprintln(os.Stderr, "[Instana] sensor is nil, skipping span creation")
 		return nil
 	}
@@ -90,7 +154,7 @@ func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string)
 
 			// Use the test name as the operation name so the Instana trace list and
 			// service endpoint table show actual test names instead of a generic label.
-			span := globalSensor.Tracer().StartSpan(
+			span := sensor.Tracer().StartSpan(
 				event.Test,
 				opentracing.StartTime(startEvent.Time),
 				opentracing.Tag{Key: "span.kind", Value: "entry"},
@@ -102,25 +166,7 @@ func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string)
 			span.SetTag("test.duration", event.Elapsed)
 			span.SetTag("workflow", workflowName)
 			span.SetTag("matrix.id", matrixID)
-
-			// GITHUB_HEAD_REF is the PR source branch; falls back to GITHUB_REF_NAME
-			// for direct pushes. Empty outside GitHub Actions.
-			if branch := os.Getenv("GITHUB_HEAD_REF"); branch != "" {
-				span.SetTag("git.branch", branch)
-			} else if branch := os.Getenv("GITHUB_REF_NAME"); branch != "" {
-				span.SetTag("git.branch", branch)
-			}
-			if sha := os.Getenv("GITHUB_SHA"); sha != "" {
-				span.SetTag("git.sha", sha)
-			}
-			if runID := os.Getenv("GITHUB_RUN_ID"); runID != "" {
-				span.SetTag("git.run_id", runID)
-				serverURL := os.Getenv("GITHUB_SERVER_URL")
-				repo := os.Getenv("GITHUB_REPOSITORY")
-				if serverURL != "" && repo != "" {
-					span.SetTag("git.ci_url", serverURL+"/"+repo+"/actions/runs/"+runID)
-				}
-			}
+			setGitTags(span)
 
 			// ext.Error drives "Erroneous calls" in the Instana dashboard;
 			// LogFields with otlog.Error separately increments "Error logs".
@@ -155,10 +201,61 @@ func CreateSpansFromFile(filePath, workflowName, matrixID string) error {
 	return CreateSpansFromTestResults(file, workflowName, matrixID)
 }
 
-func FlushSpans(ctx context.Context) error {
-	if globalSensor == nil {
+// SendBuildMetric creates and sends a span to Instana representing the duration of a
+// build stage. duration is the elapsed time in seconds.
+func SendBuildMetric(stageName, duration, jobName string) error {
+	sensor := getBuildSensor()
+	if sensor == nil {
+		fmt.Fprintln(os.Stderr, "[Instana] sensor is nil, skipping build metric")
 		return nil
 	}
 
-	return globalSensor.Flush(ctx)
+	durationSeconds, err := strconv.ParseFloat(duration, 64)
+	if err != nil {
+		return fmt.Errorf("failed to parse duration %q: %w", duration, err)
+	}
+
+	fmt.Fprintf(os.Stderr, "[Instana] Sending build metric (stage: %s, job: %s, duration: %.2fs)\n", stageName, jobName, durationSeconds)
+
+	finishTime := time.Now()
+	startTime := finishTime.Add(-time.Duration(durationSeconds * float64(time.Second)))
+
+	// Use the stage name as the operation name so the Instana trace list and
+	// service endpoint table show actual build stage names instead of a generic label.
+	span := sensor.Tracer().StartSpan(
+		stageName,
+		opentracing.StartTime(startTime),
+		opentracing.Tag{Key: "span.kind", Value: "entry"},
+	)
+
+	span.SetTag("build.stage", stageName)
+	span.SetTag("build.job", jobName)
+	span.SetTag("build.duration", durationSeconds)
+	setGitTags(span)
+
+	span.FinishWithOptions(opentracing.FinishOptions{
+		FinishTime: finishTime,
+	})
+
+	return nil
+}
+
+// FlushSpans flushes whichever sensor(s) were actually initialized in this
+// process via getTestSensor/getBuildSensor. It reads the sensors directly
+// (rather than through the getters) so it never force-initializes a sensor
+// that was never actually used to create spans.
+func FlushSpans(ctx context.Context) error {
+	if sensor := testSensor.Load(); sensor != nil {
+		if err := sensor.Flush(ctx); err != nil {
+			return err
+		}
+	}
+
+	if sensor := buildSensor.Load(); sensor != nil {
+		if err := sensor.Flush(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
