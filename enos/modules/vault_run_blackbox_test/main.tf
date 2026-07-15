@@ -54,6 +54,7 @@ resource "enos_local_exec" "run_blackbox_test" {
       VAULT_TEST_PACKAGE = var.test_package
       VAULT_TEST_MATRIX  = length(local.test_names) > 0 ? local_file.test_matrix.filename : ""
       VAULT_EDITION      = var.vault_edition
+      VAULT_ADDR_DEBUG   = "vault_addr_var=${var.vault_addr != null ? var.vault_addr : "null"}, leader_public_ip=${var.leader_public_ip}, computed=${var.vault_addr != null ? var.vault_addr : (contains(split("", var.leader_public_ip), ":") ? "http://[${var.leader_public_ip}]:8200" : "http://${var.leader_public_ip}:8200")}"
       # PATH and Go-related environment variables are inherited from the calling process
     },
     var.vault_namespace != null ? { VAULT_NAMESPACE = var.vault_namespace } : {},
