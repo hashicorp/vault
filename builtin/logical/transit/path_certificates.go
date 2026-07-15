@@ -133,18 +133,7 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	var getCsrRequest keysutil.CsrRequestGetter
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		factory, err := b.GetManagedKeyFactory(ctx)
-		if err != nil {
-			return nil, err
-		}
-		getCsrRequest = p.GetCsrRequestFromManagedKey(factory.GetManagedKeyParameters())
-	} else {
-		getCsrRequest = p.GetCsrRequestFromKey
-	}
-
-	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate, getCsrRequest)
+	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
 		prefixedErr := fmt.Errorf("could not create the csr: %w", err)
 		switch err.(type) {
@@ -205,18 +194,7 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	var validateKeyMatch keysutil.LeafCertKeyMatchValidator
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		factory, err := b.GetManagedKeyFactory(ctx)
-		if err != nil {
-			return nil, err
-		}
-		validateKeyMatch = p.GetLeafCertKeyMatchValidatorFromManagedKey(factory.GetManagedKeyParameters())
-	} else {
-		validateKeyMatch = p.GetLeafCertKeyMatchValidator()
-	}
-
-	err = p.ValidateAndPersistCertificateChain(ctx, keyVersion, certChain, validateKeyMatch, req.Storage)
+	err = p.ValidateAndPersistCertificateChain(ctx, keyVersion, certChain, req.Storage)
 	if err != nil {
 		prefixedErr := fmt.Errorf("failed to persist certificate chain: %w", err)
 		switch err.(type) {
