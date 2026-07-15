@@ -1,3 +1,6 @@
+//go:build isolated
+// +build isolated
+
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
@@ -46,6 +49,23 @@ func TestAutopilotUpgradeStatus(t *testing.T) {
 	defer cancel()
 
 	session := blackbox.New(t, blackbox.WithoutNamespace())
+
+	// Debug: Log connection details
+	t.Logf("DEBUG: VAULT_ADDR from env: %s", os.Getenv("VAULT_ADDR"))
+	t.Logf("DEBUG: Client address: %s", session.Client.Address())
+	t.Logf("DEBUG: VAULT_TOKEN set: %v", os.Getenv("VAULT_TOKEN") != "")
+	t.Logf("DEBUG: VAULT_NAMESPACE from env: %s", os.Getenv("VAULT_NAMESPACE"))
+
+	// Debug: Verify token is valid before attempting autopilot API call
+	t.Logf("DEBUG: Attempting to verify token validity...")
+	tokenLookup, err := session.Client.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatalf("FATAL: Token lookup failed - token is invalid or expired: %v", err)
+	}
+	t.Logf("DEBUG: Token is valid. Policies: %v, TTL: %v, Renewable: %v",
+		tokenLookup.Data["policies"],
+		tokenLookup.Data["ttl"],
+		tokenLookup.Data["renewable"])
 
 	ticker := time.NewTicker(retryInterval)
 	defer ticker.Stop()
@@ -115,6 +135,23 @@ func TestAutopilotUpgradeStatusOutput(t *testing.T) {
 	defer cancel()
 
 	session := blackbox.New(t, blackbox.WithoutNamespace())
+
+	// Debug: Log connection details
+	t.Logf("DEBUG: VAULT_ADDR from env: %s", os.Getenv("VAULT_ADDR"))
+	t.Logf("DEBUG: Client address: %s", session.Client.Address())
+	t.Logf("DEBUG: VAULT_TOKEN set: %v", os.Getenv("VAULT_TOKEN") != "")
+	t.Logf("DEBUG: VAULT_NAMESPACE from env: %s", os.Getenv("VAULT_NAMESPACE"))
+
+	// Debug: Verify token is valid before attempting autopilot API call
+	t.Logf("DEBUG: Attempting to verify token validity...")
+	tokenLookup, err := session.Client.Auth().Token().LookupSelf()
+	if err != nil {
+		t.Fatalf("FATAL: Token lookup failed - token is invalid or expired: %v", err)
+	}
+	t.Logf("DEBUG: Token is valid. Policies: %v, TTL: %v, Renewable: %v",
+		tokenLookup.Data["policies"],
+		tokenLookup.Data["ttl"],
+		tokenLookup.Data["renewable"])
 
 	ticker := time.NewTicker(retryInterval)
 	defer ticker.Stop()

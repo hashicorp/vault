@@ -76,6 +76,12 @@ echo "JUnit results will be written to: $junit_output"
 echo "Running tests..."
 echo "Vault environment variables:"
 env | grep VAULT | sed 's/VAULT_TOKEN=.*/VAULT_TOKEN=***REDACTED***/'
+echo ""
+echo "=== VAULT_ADDR Configuration Debug ==="
+echo "VAULT_ADDR_DEBUG: ${VAULT_ADDR_DEBUG:-not set}"
+echo "Final VAULT_ADDR: ${VAULT_ADDR}"
+echo "======================================"
+echo ""
 
 # For HTTP Vault addresses, inherited TLS CA settings can point to stale temp files.
 # TODO: Investigate why TLS CA env vars persist for HTTP Vault connections and remove this workaround after fixing root cause.
