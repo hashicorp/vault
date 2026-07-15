@@ -242,11 +242,14 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           sha256sum "./enos/support/private_key.pem"
           du -h "./enos/support/private_key.pem"
+          scenario_safe_name=$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')
+          # Artifact names are truncated to ensure prefix + variable + suffix ≤ 235 chars (GitHub limit: 255, minus compression suffix buffer)
           {
-            echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
-            echo "test_results_artifact_name=test-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
-            echo "junit_results_artifact_name=junit-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
-            echo "failure_summary_artifact_name=failure-summary-enos_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g').md"
+            echo "debug_data_artifact_name=enos-debug-data_${scenario_safe_name:0:219}"
+            echo "test_results_artifact_name=test-results_${scenario_safe_name:0:222}"
+            echo "junit_results_artifact_name=junit-results_${scenario_safe_name:0:221}"
+            echo "failure_summary_artifact_name=failure-summary-enos_${scenario_safe_name:0:211}.md"
+            echo "aws_resources_artifact_name=aws-resources_${scenario_safe_name:0:221}"
           } | tee -a "$GITHUB_OUTPUT"
 
       - if: contains(inputs.sample-name, 'build')
