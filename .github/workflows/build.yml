@@ -110,6 +110,9 @@ jobs:
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
+      - name: Record build stage start time
+        id: build-metric-start
+        run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
@@ -139,6 +142,23 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Instana credentials live as plain GitHub secrets (same as test-go.yml), not in Vault.
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        name: Configure Instana for build tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
+        run: |
+          # Export Instana environment variables for build metric upload
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       # Determine the changed files
       - uses: ./.github/actions/changed-files
         id: changed-files
@@ -178,6 +198,19 @@ jobs:
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
+      - if: always() && steps.metadata.outputs.is-ent-repo == 'true'
+        name: Upload build metric to Instana
+        continue-on-error: true
+        env:
+          START_TIME: ${{ steps.build-metric-start.outputs.start-time }}
+        run: |
+          if [ -n "${INSTANA_AGENT_KEY:-}" ]; then
+            chmod +x scripts/upload-build-metrics-to-instana.sh
+            duration=$(( $(date +%s) - ${START_TIME:-$(date +%s)} ))
+            scripts/upload-build-metrics-to-instana.sh "setup" "$duration" "setup"
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
+          fi
 
   ce-code-checks:
     # Ensure that we can build a community edition of Vault with the files on our pull request
@@ -209,6 +242,9 @@ jobs:
     needs:
       - setup
     steps:
+      - name: Record build stage start time
+        id: build-metric-start
+        run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Get the elevated github token
       - id: vault-auth
@@ -223,14 +259,30 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
-      - id: setup-git-private
-        name: Setup Git configuration (private)
+      # Instana credentials live as plain GitHub secrets (same as test-go.yml), not in Vault.
+      - name: Configure Instana for build tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
         run: |
-          git config --global url."https://${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
+          # Export Instana environment variables for build metric upload
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       - id: set-up-pipeline
         uses: ./.github/actions/set-up-pipeline
         with:
           github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        run: |
+          git config --global url."https://${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
       - id: set-up-go
         uses: ./.github/actions/set-up-go
         with:
@@ -289,6 +341,19 @@ jobs:
                 -p tools/pipeline/go.mod \
                 -p sdk/go.mod \
                 --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        name: Upload build metric to Instana
+        continue-on-error: true
+        env:
+          START_TIME: ${{ steps.build-metric-start.outputs.start-time }}
+        run: |
+          if [ -n "${INSTANA_AGENT_KEY:-}" ]; then
+            chmod +x scripts/upload-build-metrics-to-instana.sh
+            duration=$(( $(date +%s) - ${START_TIME:-$(date +%s)} ))
+            scripts/upload-build-metrics-to-instana.sh "ce-code-checks" "$duration" "ce-code-checks"
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
+          fi
 
   ui:
     # The Web UI workflow is a prerequisite workflow for building our artifacts. If the application
@@ -603,6 +668,9 @@ jobs:
       - test-containers
       - test-hcp-image
     steps:
+      - name: Record build stage start time
+        id: build-metric-start
+        run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - id: disallow-merge-on-ce
         if: |
@@ -644,6 +712,23 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/slack feed-vault-ci-official-webhook-url | slack-webhook-url;
+      # Instana credentials live as plain GitHub secrets (same as test-go.yml), not in Vault.
+      - if: needs.setup.outputs.is-ent-repo == 'true'
+        name: Configure Instana for build tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
+        run: |
+          # Export Instana environment variables for build metric upload
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       - id: slackbot-webhook-url
         run:
           echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
@@ -747,6 +832,26 @@ jobs:
       - if: needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result == 'success'
         id: generate-pao-metadata
         uses: hashicorp-forge/actions-pao-tool/collect@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
+      # This job has no other reason to need a Go toolchain, but the Instana upload
+      # step below shells out to `go run`. setup already primed the shared module
+      # cache, so this should be a cache hit rather than a fresh download.
+      - if: always() && needs.setup.outputs.is-ent-repo == 'true'
+        uses: ./.github/actions/set-up-go
+        name: Ensure Go is available for Instana upload
+        continue-on-error: true
+      - if: always() && needs.setup.outputs.is-ent-repo == 'true'
+        name: Upload build metric to Instana
+        continue-on-error: true
+        env:
+          START_TIME: ${{ steps.build-metric-start.outputs.start-time }}
+        run: |
+          if [ -n "${INSTANA_AGENT_KEY:-}" ]; then
+            chmod +x scripts/upload-build-metrics-to-instana.sh
+            duration=$(( $(date +%s) - ${START_TIME:-$(date +%s)} ))
+            scripts/upload-build-metrics-to-instana.sh "completed-successfully" "$duration" "completed-successfully"
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
+          fi
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status
         run: |
