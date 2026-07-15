@@ -278,17 +278,18 @@ jobs:
           go_test_dir_absolute="$(pwd)/${go_test_dir}"                                  # /home/runner/work/vault/vault/test-results/go-test
           go_test_log_dir="${go_test_dir}/logs"                                         # test-results/go-test/logs
           go_test_log_dir_absolute="${go_test_dir_absolute}/logs"                       # /home/runner/work/vault/vault/test-results/go-test/logs
-          go_test_log_archive_name="test-logs-${name}.tar"                              # test-logs-testonly-main-1.tar
-          go_test_results_upload_key="${test_results_dir}-${name}"                      # test-results/go-test-testonly-main-1
+          # Artifact names are truncated to ensure prefix + variable + suffix ≤ 235 chars (GitHub limit: 255, minus compression suffix buffer)
+          go_test_log_archive_name="test-logs-${name:0:221}.tar"                              # test-logs-testonly-main-1.tar
+          go_test_results_upload_key="${test_results_dir}-${name:0:213}"                      # test-results/go-test-testonly-main-1
           go_test_results_download_pattern="${test_results_dir}-${{ inputs.name }}-*"   # test-results/go-test-testonly-main-*
           gotestsum_results_prefix="results"                                            # results
-          gotestsum_junitfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.xml    # test-results/go-test/results-testonly-main-1.xml
-          gotestsum_jsonfile=${go_test_dir}/${gotestsum_results_prefix}-${name}.json    # test-results/go-test/results-testonly-main-1.json
-          gotestsum_timing_events=failure-summary-${name}.json                          # failure-summary-testonly-main-1.json
-          failure_summary_file_name="failure-summary-${name}.md"                        # failure-summary-testonly-main-1.md
+          gotestsum_junitfile="${go_test_dir}/${gotestsum_results_prefix}-${name:0:201}.xml"    # test-results/go-test/results-testonly-main-1.xml
+          gotestsum_jsonfile="${go_test_dir}/${gotestsum_results_prefix}-${name:0:200}.json"    # test-results/go-test/results-testonly-main-1.json
+          gotestsum_timing_events="failure-summary-${name:0:214}.json"                          # failure-summary-testonly-main-1.json
+          failure_summary_file_name="failure-summary-${name:0:216}.md"                        # failure-summary-testonly-main-1.md
           data_race_log_file="data-race.log"                                            # data-race.log
           data_race_log_download_pattern="data-race-${{ inputs.name }}*.log"            # data-race-testonly-main-*.log
-          data_race_log_upload_key="data-race-${name}.log"                              # data-race-testonly-main-1.log
+          data_race_log_upload_key="data-race-${name:0:221}.log"                              # data-race-testonly-main-1.log
           {
             echo "name=${name}"
             echo "failure-summary-file-name=${failure_summary_file_name}"
