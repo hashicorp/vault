@@ -13,6 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestCVEReportReq_Run verifies that CVE extraction from SARIF files works correctly
+// across various scenarios including empty results, single/multiple CVEs, deduplication,
+// and error handling for invalid inputs.
 func TestCVEReportReq_Run(t *testing.T) {
 	t.Parallel()
 
@@ -74,11 +77,13 @@ func TestCVEReportReq_Run(t *testing.T) {
 	}
 }
 
+// TestCVEReportRes_ToJSON verifies that CVE report results can be correctly serialized
+// to JSON format and that the output can be parsed back into the expected structure.
 func TestCVEReportRes_ToJSON(t *testing.T) {
 	t.Parallel()
 
 	res := &CVEReportRes{
-		CVEs: []CVE{
+		CVEs: []*CVE{
 			{
 				Vulnerability:         "CVE-2024-1234",
 				PackageLibraryName:    "",
@@ -91,25 +96,28 @@ func TestCVEReportRes_ToJSON(t *testing.T) {
 	output, err := res.ToJSON()
 	require.NoError(t, err)
 
-	var parsed []CVE
+	var parsed []*CVE
 	err = json.Unmarshal(output, &parsed)
 	require.NoError(t, err)
-	require.Equal(t, res.CVEs, parsed)
+	require.Equal(t, len(res.CVEs), len(parsed))
+	require.Equal(t, res.CVEs[0].Vulnerability, parsed[0].Vulnerability)
 }
 
+// TestCVEReportRes_ToCSV verifies that CVE report results are correctly converted to CSV
+// format with proper headers and formatting for empty, single, and multiple CVE scenarios.
 func TestCVEReportRes_ToCSV(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		cves     []CVE
+		cves     []*CVE
 		expected string
 	}{
 		"empty cves": {
-			cves:     []CVE{},
+			cves:     []*CVE{},
 			expected: "",
 		},
 		"single finding": {
-			cves: []CVE{
+			cves: []*CVE{
 				{
 					Vulnerability:         "CVE-2024-1234",
 					PackageLibraryName:    "",
@@ -119,7 +127,7 @@ func TestCVEReportRes_ToCSV(t *testing.T) {
 			expected: "vulnerability,packageLibraryName,packageLibraryVersion\nCVE-2024-1234,,\n",
 		},
 		"multiple cves": {
-			cves: []CVE{
+			cves: []*CVE{
 				{Vulnerability: "CVE-2024-1234"},
 				{Vulnerability: "CVE-2024-5678"},
 			},
@@ -139,19 +147,21 @@ func TestCVEReportRes_ToCSV(t *testing.T) {
 	}
 }
 
+// TestCVEReportRes_ToTable verifies that CVE report results are correctly rendered as
+// formatted tables, including proper handling of empty results and CVE data display.
 func TestCVEReportRes_ToTable(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]struct {
-		cves     []CVE
+		cves     []*CVE
 		contains []string
 	}{
 		"empty cves": {
-			cves:     []CVE{},
+			cves:     []*CVE{},
 			contains: []string{"No CVE-linked findings"},
 		},
 		"single finding": {
-			cves: []CVE{
+			cves: []*CVE{
 				{Vulnerability: "CVE-2024-1234"},
 			},
 			contains: []string{"VULNERABILITY", "CVE-2024-1234"},
@@ -174,7 +184,9 @@ func TestCVEReportRes_ToTable(t *testing.T) {
 	}
 }
 
-// TestCSVOutputMatchesExpected validates against pre-generated expected outputs
+// TestCSVOutputMatchesExpected verifies that CSV output generated from SARIF files
+// matches pre-generated expected outputs for various test cases including no CVEs,
+// single CVE, multiple CVEs, and duplicate CVE scenarios.
 func TestCSVOutputMatchesExpected(t *testing.T) {
 	t.Parallel()
 

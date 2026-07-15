@@ -426,7 +426,8 @@ func hasDiffMatching(t *testing.T, diff ModDiff, dir Directive, matches []string
 
 	require.NotNil(t, diff)
 	diffs := getDiffsForDirective(dir, diff)
-	require.True(t, len(diffs) > 0, "expected %s matching %v, got diff:\n%s",
+	require.True(
+		t, len(diffs) > 0, "expected %s matching %v, got diff:\n%s",
 		dir,
 		matches,
 		printModDiff(diff),
@@ -436,7 +437,8 @@ func hasDiffMatching(t *testing.T, diff ModDiff, dir Directive, matches []string
 			return
 		}
 	}
-	t.Fatalf("expected %s diff matching %v, got diff:\n%s",
+	t.Fatalf(
+		"expected %s diff matching %v, got diff:\n%s",
 		dir,
 		matches,
 		printModDiff(diff),
@@ -453,7 +455,8 @@ func noDiffMatching(t *testing.T, diff ModDiff, dir Directive, matches []string)
 	}
 	for _, df := range diffs {
 		if unifiedTextMatches(df, matches) {
-			t.Fatalf("expected no %s diff matching %v, got diff:\n%s",
+			t.Fatalf(
+				"expected no %s diff matching %v, got diff:\n%s",
 				dir,
 				matches,
 				printModDiff(diff),

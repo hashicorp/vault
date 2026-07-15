@@ -24,7 +24,7 @@ type CVEReportReq struct {
 // CVEReportRes is the response for generating a CVE report
 type CVEReportRes struct {
 	OutputPath string // Output file path
-	CVEs       []CVE  // Found CVEs in the report
+	CVEs       []*CVE // Found CVEs in the report
 }
 
 // CVE represents a CVE-linked finding in a SARIF report
@@ -37,9 +37,13 @@ type CVE struct {
 	URI                   string `json:"uri,omitempty"`
 }
 
+type ruleInfo struct {
+	name   string
+	hasCVE bool
+}
+
 // Run executes the CVE report generation
 func (r *CVEReportReq) Run(ctx context.Context) (*CVEReportRes, error) {
-	// Parse SARIF file using go-sarif library
 	report, err := gosarif.Open(r.SarifPath)
 	if err != nil {
 		return nil, fmt.Errorf("opening SARIF file: %w", err)
@@ -47,7 +51,7 @@ func (r *CVEReportReq) Run(ctx context.Context) (*CVEReportRes, error) {
 
 	return &CVEReportRes{
 		OutputPath: r.OutputPath,
-		CVEs:       r.extractCVEs(report),
+		CVEs:       sarifCVEs(report),
 	}, nil
 }
 
@@ -133,7 +137,7 @@ func (r *CVEReportRes) ToTable(err error) (table.Writer, error) {
 	return t, nil
 }
 
-func (r *CVEReportReq) extractCVEs(report *gosarif.Report) []CVE {
+func sarifCVEs(report *gosarif.Report) []*CVE {
 	// Build rule map with CVE status
 	ruleMap := make(map[string]*ruleInfo)
 
@@ -177,7 +181,7 @@ func (r *CVEReportReq) extractCVEs(report *gosarif.Report) []CVE {
 		}
 	}
 
-	cves := []CVE{}
+	cves := []*CVE{}
 	seen := make(map[string]bool)
 
 	for _, run := range report.Runs {
@@ -202,7 +206,7 @@ func (r *CVEReportReq) extractCVEs(report *gosarif.Report) []CVE {
 			}
 			seen[vulnName] = true
 
-			cve := CVE{
+			cve := &CVE{
 				Vulnerability:         vulnName,
 				PackageLibraryName:    "", // For now we leave this blank but it's there for the CSV interface
 				PackageLibraryVersion: "", // For now we leave this blank but it's there for the CSV interface
@@ -229,9 +233,4 @@ func (r *CVEReportReq) extractCVEs(report *gosarif.Report) []CVE {
 	}
 
 	return cves
-}
-
-type ruleInfo struct {
-	name   string
-	hasCVE bool
 }
