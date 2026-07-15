@@ -63,6 +63,10 @@ Router.map(function () {
         this.route('tool', { path: '/:selected_action' });
         this.mount('open-api-explorer', { path: '/api-explorer' });
       });
+      this.route('support', function () {
+        this.route('upgrade', { path: '/' });
+        this.route('upgrade-info', { path: '/upgrade/issues' });
+      });
       this.route('access', function () {
         this.route('reset-password');
         this.route('methods', { path: '/' });

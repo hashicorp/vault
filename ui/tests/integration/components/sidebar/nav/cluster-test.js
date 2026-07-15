@@ -83,6 +83,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Secrets',
       'Access control',
       'Operational tools',
+      'Support',
       'Resilience and recovery',
       'Reporting',
       'Raft storage',
