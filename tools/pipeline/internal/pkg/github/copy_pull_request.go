@@ -57,7 +57,8 @@ func (r *CopyPullRequestReq) Run(
 		SkippedCommits: []*libgithub.RepositoryCommit{},
 	}
 
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("from-owner", r.FromOwner),
 		slog.String("from-repo", r.FromRepo),
 		slog.String("from-origin", r.FromOrigin),
@@ -233,7 +234,8 @@ func (r *CopyPullRequestReq) Run(
 
 		parents := strings.TrimSpace(string(cherryPickRes.Stdout))
 		if len(strings.Split(parents, " ")) > 1 {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("sha", commit.GetSHA()),
 				slog.String("parents", parents),
 			), "skipping merge commit")

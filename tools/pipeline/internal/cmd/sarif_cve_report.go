@@ -61,7 +61,7 @@ func runSarifCVEReportCmd(cmd *cobra.Command, args []string) error {
 		output, err = res.ToJSON()
 	case "csv":
 		output, err = res.ToCSV()
-	case "table", "markdown":
+	default:
 		var t table.Writer
 		t, err = res.ToTable(nil)
 		if err == nil {
@@ -71,8 +71,6 @@ func runSarifCVEReportCmd(cmd *cobra.Command, args []string) error {
 				output = []byte(t.Render())
 			}
 		}
-	default:
-		return fmt.Errorf("unsupported format: %s", rootCfg.format)
 	}
 
 	if err != nil {
