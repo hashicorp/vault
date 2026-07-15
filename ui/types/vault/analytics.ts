@@ -8,7 +8,7 @@ export interface AnalyticsProvider {
   identify: (identifier: string, traits: Record<string, string>) => void;
   start: (config: Record<string, string | boolean>) => void;
   trackPageView: (routeName: string, metadata: Record<string, string>) => void;
-  trackEvent: (eventName: string, metadata: Record<string, string>) => void;
+  trackEvent: (eventName: string, metadata: Record<string, unknown>) => void;
 }
 
 export interface AnalyticsConfig extends Record<string, string | boolean> {

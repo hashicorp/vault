@@ -68,6 +68,14 @@ module.exports = function (environment) {
         api_host: 'https://eu.i.posthog.com',
       };
     }
+
+    if (process.env.ENABLE_SEGMENT && process.env.SEGMENT_WRITE_KEY) {
+      ENV.APP.ANALYTICS_CONFIG = {
+        provider: 'segment',
+        enabled: true,
+        write_key: process.env.SEGMENT_WRITE_KEY,
+      };
+    }
   }
 
   if (environment === 'test') {

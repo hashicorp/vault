@@ -220,6 +220,7 @@
     "@hashicorp/design-system-components": "4.24.1",
     "@hashicorp/design-system-tokens": "3.0.0",
     "@hashicorp/vault-client-typescript": "github:hashicorp/vault-client-typescript",
+    "@segment/analytics-next": "^1.84.0",
     "ember-auto-import": "2.10.0",
     "handlebars": "4.7.9",
     "js-yaml": "^5.2.1",
