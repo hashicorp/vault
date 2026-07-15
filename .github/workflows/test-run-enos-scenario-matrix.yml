@@ -270,8 +270,13 @@ jobs:
         run: |
           echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
 
+      # As many scenarios run in parallel and many PRs run in parallel, absolute
+      # delta counting between resources is hard to glean a useful signal from.
+      # Therefore, we only capture AWS resources when debugging to avoid the
+      # 1-1.5 minute penalty that it often imposes.
       - name: Capture AWS Resource Counts Before Test
         id: capture-aws-before
+        if: runner.debug == '1'
         continue-on-error: true
         run: |
           chmod +x ./.github/scripts/capture-aws-resources.sh
@@ -297,7 +302,7 @@ jobs:
 
       - name: Capture AWS Resource Counts After Test
         id: capture-aws-after
-        if: always()
+        if: always() && runner.debug == '1'
         continue-on-error: true
         run: |
           chmod +x ./.github/scripts/capture-aws-resources.sh
@@ -309,7 +314,7 @@ jobs:
 
       - name: Show AWS Resource Differences
         id: show-resource-diff
-        if: always()
+        if: always() && runner.debug == '1'
         continue-on-error: true
         run: |
           echo "=== AWS Resource Count Differences ==="
@@ -323,7 +328,7 @@ jobs:
           fi
 
       - name: Upload AWS Resource Snapshots
-        if: always()
+        if: always() && runner.debug == '1'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: aws-resources_${{ matrix.scenario.id.filter }}
