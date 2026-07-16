@@ -162,16 +162,16 @@ export default class DestinationsCreateForm extends Component<Args> {
     return CLOUD_DESTINATION_TYPES.includes(type as CloudDestinationType) && credentialGroups.includes(group);
   };
 
-  isRegionalKmsKeysField = (attr: FormField): boolean => attr.name === 'regional_kms_keys';
+  isReplicaRegionsField = (attr: FormField): boolean => attr.name === 'replica_regions';
 
-  regionalKmsKeysFields = (fields: FormField[]): FormField[] =>
-    fields.filter((field) => field.name === 'regional_kms_keys');
+  replicaRegionsFields = (fields: FormField[]): FormField[] =>
+    fields.filter((field) => field.name === 'replica_regions');
 
   // maps the gcp-sm "Encryption method" radio value to the name of the single field that should render below it
   encryptionFieldNameByType: Record<string, string> = {
-    [GcpEncryptionType.GOOGLE_MANAGED]: 'regional_kms_keys',
+    [GcpEncryptionType.GOOGLE_MANAGED]: 'replica_regions',
     [GcpEncryptionType.GLOBAL_KMS]: 'kms_key_id',
-    [GcpEncryptionType.REGIONAL_KMS]: 'regional_kms_keys',
+    [GcpEncryptionType.REGIONAL_KMS]: 'replica_regions',
   };
 
   get visibleEncryptionFieldName() {
@@ -185,7 +185,7 @@ export default class DestinationsCreateForm extends Component<Args> {
   onEncryptionTypeChange() {
     const data = this.args.form.data as unknown as Record<string, unknown>;
     delete data['kms_key_id'];
-    delete data['regional_kms_keys'];
+    delete data['replica_regions'];
     this.modelValidations = null;
     this.invalidFormMessage = '';
   }

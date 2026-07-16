@@ -76,7 +76,7 @@ export default class AwsSmForm extends CreateDestinationForm<AwsSmFormData> {
             },
           ],
         }),
-        new FormField('regional_kms_keys', 'object', {
+        new FormField('replica_regions', 'object', {
           editType: 'keyValueInputs',
           label: 'Replica regions',
           addRowButtonText: 'Add region',

@@ -99,15 +99,15 @@ export const PAGE = {
           return fillIn('[data-test-kv-value="0"]', value);
         case 'region':
           // region is a keyValueInputs field pairing a region select with a kms_key_id text input
-          return fillIn('[data-test-kv-field="region-0"]', value);
+          return fillIn(GENERAL.kvFieldByAttr('region'), value);
         case 'encryption_type':
-          // selecting regional-kms renders regional_kms_keys with both a region and a KMS key input
+          // selecting regional-kms renders replica_regions with both a region and a KMS key input
           return await click(GENERAL.radioByAttr(GcpEncryptionType.REGIONAL_KMS));
-        case 'regional_kms_keys': {
+        case 'replica_regions': {
           // AWS and GCP region selects use different value formats (us-west-1 vs us-west1)
           const region = type === DestinationType.GcpSm ? 'us-west1' : 'us-west-1';
-          await fillIn('[data-test-kv-field="key-0"]', region);
-          return fillIn('[data-test-kv-field="value-0"]', value);
+          await fillIn(GENERAL.kvFieldByAttr('key'), region);
+          return fillIn(GENERAL.kvFieldByAttr('value'), value);
         }
         case 'deployment_environments':
           await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#development`);
