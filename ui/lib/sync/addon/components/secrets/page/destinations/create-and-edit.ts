@@ -19,6 +19,7 @@ import type { ValidationMap } from 'vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type FormField from 'vault/utils/forms/field';
+import type FormFieldGroup from 'vault/utils/forms/field-group';
 import type ApiService from 'vault/services/api';
 import VersionService from 'vault/services/version';
 import {
@@ -27,6 +28,7 @@ import {
   CLOUD_DESTINATION_TYPES,
   WIF_CREDENTIAL_FIELDS,
   ACCOUNT_CREDENTIAL_FIELDS,
+  GcpEncryptionType,
   type CloudDestinationType,
 } from 'sync/utils/constants';
 import type { DestinationForm, DestinationRoleTypeOption } from 'vault/sync';
@@ -128,6 +130,14 @@ export default class DestinationsCreateForm extends Component<Args> {
         };
   }
 
+  groupName(fieldGroup: FormFieldGroup): string {
+    return Object.keys(fieldGroup)[0] ?? '';
+  }
+
+  groupFields(fieldGroup: FormFieldGroup): FormField[] {
+    return Object.values(fieldGroup)[0] ?? [];
+  }
+
   groupSubtext(group: string, isNew: boolean) {
     const dynamicText = isNew
       ? 'used to authenticate with the destination'
@@ -152,16 +162,33 @@ export default class DestinationsCreateForm extends Component<Args> {
     return CLOUD_DESTINATION_TYPES.includes(type as CloudDestinationType) && credentialGroups.includes(group);
   };
 
-  // fields nested here render inside a collapsible accordion rather than as standalone inputs
-  additionalRegionFieldNames = ['regional_kms_keys'];
+  isRegionalKmsKeysField = (attr: FormField): boolean => attr.name === 'regional_kms_keys';
 
-  isAdditionalRegionField = (attr: FormField): boolean => {
-    return this.additionalRegionFieldNames.includes(attr.name);
+  regionalKmsKeysFields = (fields: FormField[]): FormField[] =>
+    fields.filter((field) => field.name === 'regional_kms_keys');
+
+  // maps the gcp-sm "Encryption method" radio value to the name of the single field that should render below it
+  encryptionFieldNameByType: Record<string, string> = {
+    [GcpEncryptionType.GOOGLE_MANAGED]: 'regional_kms_keys',
+    [GcpEncryptionType.GLOBAL_KMS]: 'kms_key_id',
+    [GcpEncryptionType.REGIONAL_KMS]: 'regional_kms_keys',
   };
 
-  filterAdditionalRegionFields = (fields: FormField[]) => {
-    return fields.filter((field) => this.isAdditionalRegionField(field));
-  };
+  get visibleEncryptionFieldName() {
+    const encryptionType = (this.args.form.data as unknown as Record<string, unknown>)['encryption_type'] as
+      | GcpEncryptionType
+      | undefined;
+    return encryptionType ? this.encryptionFieldNameByType[encryptionType] : undefined;
+  }
+
+  @action
+  onEncryptionTypeChange() {
+    const data = this.args.form.data as unknown as Record<string, unknown>;
+    delete data['kms_key_id'];
+    delete data['regional_kms_keys'];
+    this.modelValidations = null;
+    this.invalidFormMessage = '';
+  }
 
   diffCustomTags(payload: Record<string, unknown>) {
     // if tags were removed we need to add them to the payload

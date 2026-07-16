@@ -5,6 +5,7 @@
 
 import { click, fillIn } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { DestinationType, GcpEncryptionType } from 'sync/utils/constants';
 
 export const PAGE = {
   ...GENERAL,
@@ -85,7 +86,7 @@ export const PAGE = {
     enableInput: (attr) => `[data-test-enable-field="${attr}"] [data-test-icon="edit"]`, // TODO duplicated in general-selectors as this component became more widely used
     fieldGroupHeader: (group) => `[data-test-destination-header="${group}"]`,
     fieldGroupSubtext: (group) => `[data-test-destination-subText="${group}"]`,
-    fillInByAttr: async (attr, value) => {
+    fillInByAttr: async (attr, value, type) => {
       // for handling more complex form input elements by attr name
       switch (attr) {
         case 'granularity':
@@ -99,9 +100,15 @@ export const PAGE = {
         case 'region':
           // region is a keyValueInputs field pairing a region select with a kms_key_id text input
           return fillIn('[data-test-kv-field="region-0"]', value);
-        case 'regional_kms_keys':
-          await fillIn('[data-test-kv-field="key-0"]', 'us-west-1');
+        case 'encryption_type':
+          // selecting regional-kms renders regional_kms_keys with both a region and a KMS key input
+          return await click(GENERAL.radioByAttr(GcpEncryptionType.REGIONAL_KMS));
+        case 'regional_kms_keys': {
+          // AWS and GCP region selects use different value formats (us-west-1 vs us-west1)
+          const region = type === DestinationType.GcpSm ? 'us-west1' : 'us-west-1';
+          await fillIn('[data-test-kv-field="key-0"]', region);
           return fillIn('[data-test-kv-field="value-0"]', value);
+        }
         case 'deployment_environments':
           await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#development`);
           await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#preview`);

@@ -74,6 +74,7 @@ export default class DestinationDetailsPage extends Component<Args> {
       ],
       [DestinationType.GcpSm]: [
         'project_id',
+        'kms_key_id',
         'credential_type',
         'credentials',
         'service_account_email',
@@ -109,7 +110,7 @@ export default class DestinationDetailsPage extends Component<Args> {
       'options.secret_name_template',
     ];
 
-    if (type === DestinationType.AwsSm) {
+    if (type === DestinationType.AwsSm || type === DestinationType.GcpSm) {
       fields.push('connection_details.regional_kms_keys');
     }
 
@@ -128,17 +129,24 @@ export default class DestinationDetailsPage extends Component<Args> {
       return this.getCredentialType(destination);
     }
 
+    let value: unknown;
     if (field.startsWith('connection_details.')) {
       const connectionDetails = destination.connection_details;
-      return connectionDetails?.[fieldName as keyof DestinationConnectionDetails];
-    }
-
-    if (field.startsWith('options.')) {
+      value = connectionDetails?.[fieldName as keyof DestinationConnectionDetails];
+    } else if (field.startsWith('options.')) {
       const options = destination.options;
-      return options?.[fieldName as keyof DestinationOptions];
+      value = options?.[fieldName as keyof DestinationOptions];
+    } else {
+      value = destination[fieldName as keyof Destination];
     }
 
-    return destination[fieldName as keyof Destination];
+    // google-managed encryption only stores selected regions (empty KMS key values), so render as a
+    // simple comma separated list rather than the key/value row grouping used when KMS keys are also set
+    if (fieldName === 'regional_kms_keys' && this.isGcpRegionsOnly) {
+      return Object.keys(value as Record<string, string>).join(', ');
+    }
+
+    return value;
   };
 
   // remove connection_details or options from the field name
@@ -148,6 +156,11 @@ export default class DestinationDetailsPage extends Component<Args> {
 
   fieldLabel = (field: string) => {
     const fieldName = this.fieldName(field);
+
+    if (fieldName === 'regional_kms_keys' && this.args.destination.type === DestinationType.GcpSm) {
+      return this.isGcpRegionsOnly ? 'Replica regions' : 'Replica regions and KMS keys';
+    }
+
     // some fields have a specific label that cannot be converted from key name
     const customLabel = {
       granularity_level: 'Secret sync granularity',
@@ -177,6 +190,21 @@ export default class DestinationDetailsPage extends Component<Args> {
   isKeyValueField = (value: unknown): boolean => {
     return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date);
   };
+
+  // true when a regional_kms_keys object only has region keys selected with no KMS key values populated
+  private isRegionsOnly(value: unknown): boolean {
+    if (!value || typeof value !== 'object') return false;
+    const entries = Object.entries(value as Record<string, string>);
+    return entries.length > 0 && entries.every(([, kmsKey]) => !kmsKey);
+  }
+
+  private get isGcpRegionsOnly(): boolean {
+    const { destination } = this.args;
+    return (
+      destination.type === DestinationType.GcpSm &&
+      this.isRegionsOnly(destination.connection_details?.regional_kms_keys)
+    );
+  }
 
   credentialValue = (value: string) => {
     // if this value is empty, a destination uses globally set environment variables

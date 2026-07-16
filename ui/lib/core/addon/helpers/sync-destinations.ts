@@ -70,7 +70,9 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'gcp-color',
     category: 'cloud',
     maskedParams: ['credentials', 'identity_token_audience', 'identity_token_key'],
-    readonlyParams: ['name'],
+    // encryption_type, kms_key_id, and regional_kms_keys editing is disabled in the
+    // form, so exclude them from edit payloads
+    readonlyParams: ['name', 'encryption_type', 'kms_key_id', 'regional_kms_keys'],
     defaultValues: {
       granularity: 'secret-path',
       credential_type: CredentialType.ACCOUNT,

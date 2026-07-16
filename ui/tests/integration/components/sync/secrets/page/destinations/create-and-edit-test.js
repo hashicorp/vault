@@ -16,7 +16,12 @@ import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { syncDestinations, findDestination } from 'vault/helpers/sync-destinations';
 import formResolver from 'vault/forms/sync/resolver';
-import { DestinationType, CLOUD_DESTINATION_TYPES, CredentialType } from 'sync/utils/constants';
+import {
+  DestinationType,
+  CLOUD_DESTINATION_TYPES,
+  CredentialType,
+  GcpEncryptionType,
+} from 'sync/utils/constants';
 
 const SYNC_DESTINATIONS = syncDestinations();
 module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndEdit', function (hooks) {
@@ -49,6 +54,19 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         const values = Object.values(group)[0] || [];
         return [...arr, ...values];
       }, []);
+
+      if (type === DestinationType.GcpSm) {
+        // kms_key_id and regional_kms_keys are mutually exclusive for GCP
+        // only the field matching the current encryption_type renders
+        const visibleFieldName =
+          this.form.data.encryption_type === GcpEncryptionType.GLOBAL_KMS
+            ? 'kms_key_id'
+            : 'regional_kms_keys';
+        this.formFields = this.formFields.filter((field) => {
+          const isEncryptionField = field.name === 'kms_key_id' || field.name === 'regional_kms_keys';
+          return !isEncryptionField || field.name === visibleFieldName;
+        });
+      }
       this.type = type;
     };
 
@@ -667,7 +685,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         await this.expandAccordions();
 
         for (const field of this.formFields) {
-          await PAGE.form.fillInByAttr(field.name, `my-${field.name}`);
+          await PAGE.form.fillInByAttr(field.name, `my-${field.name}`, type);
         }
         await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
@@ -775,12 +793,18 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
               // Enable inputs with sensitive values
               await click(PAGE.form.enableInput(field.name));
             }
-            await PAGE.form.fillInByAttr(field.name, `new-${field.name}-value`);
+            await PAGE.form.fillInByAttr(field.name, `new-${field.name}-value`, type);
           } else {
-            // keyValueInputs fields (e.g. region) disable their inner inputs, not the outer wrapper that data-test-input targets
-            const disabledSelector = field.options.keyValueFields
-              ? `[data-test-kv-field="${field.options.keyValueFields[0].name}-0"]`
-              : GENERAL.inputByAttr(field.name);
+            let disabledSelector;
+            if (field.options.keyValueFields) {
+              // keyValueInputs fields (e.g. region) disable their inner inputs, not the outer wrapper that data-test-input targets
+              disabledSelector = `[data-test-kv-field="${field.options.keyValueFields[0].name}-0"]`;
+            } else if (field.options.editType === 'radio') {
+              // radio fields (e.g. gcp-sm's encryption_type) disable each individual radio input
+              disabledSelector = GENERAL.radioByAttr(field.options.possibleValues[0].value);
+            } else {
+              disabledSelector = GENERAL.inputByAttr(field.name);
+            }
             assert.dom(disabledSelector).isDisabled(`${field.name} is disabled`);
           }
         }
