@@ -241,8 +241,7 @@ export default class FormFieldComponent extends Component {
     const valueToSet = this.radioValue(item);
     this.setAndBroadcast(valueToSet);
   }
-  // supports both a flat `{ key: value }` object and an array of row objects, since `keyValueInputs`
-  // is used for both "object" attrs (see isKeyValueMap) and "array" attrs
+  // supports either a flat `{ key: value }` object (see isKeyValueMap) or an array of row objects
   rowsFromValue(value) {
     if (Array.isArray(value)) {
       // clone each row so editing it doesn't mutate the model's array in place before it's broadcast
@@ -287,6 +286,11 @@ export default class FormFieldComponent extends Component {
       second.name === 'value'
     );
   }
+  // a flat `{ key: "" }` object (keys only, no meaningful value) is representable when there is a single field named `key`
+  get isKeyOnlyMap() {
+    const [first] = this.keyValueFields;
+    return this.args.attr.type === 'object' && this.keyValueFields.length === 1 && first.name === 'key';
+  }
   // true when a field binds directly to its own model attribute via `valuePath`, e.g. combining a
   // "region" select and a "kms_key_id" text input into one fixed row with no add/delete controls
   get hasFieldValuePaths() {
@@ -308,10 +312,11 @@ export default class FormFieldComponent extends Component {
   }
   broadcastKeyValueRows() {
     let value;
-    if (this.isKeyValueMap) {
+    if (this.isKeyValueMap || this.isKeyOnlyMap) {
+      // isKeyOnlyMap rows never have a `value` property, so it's always treated as an empty string
       value = this.keyValueRows.reduce((obj, row) => {
         if (row.key || row.value) {
-          obj[row.key] = row.value;
+          obj[row.key] = row.value || '';
         }
         return obj;
       }, {});

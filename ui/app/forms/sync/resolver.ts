@@ -8,7 +8,7 @@ import AzureKvForm from './azure-kv';
 import GcpSmForm from './gcp-sm';
 import GhForm from './gh';
 import VercelProjectForm from './vercel-project';
-import { DestinationType, CredentialType } from 'sync/utils/constants';
+import { DestinationType, CredentialType, GcpEncryptionType } from 'sync/utils/constants';
 
 import type { DestinationConnectionDetails } from 'vault/sync';
 import type { FormOptions } from '../form';
@@ -97,6 +97,29 @@ export default function destinationFormResolver(type: DestinationType, data = {}
           return true;
         },
         message: 'Service account email is required.',
+      },
+    ],
+    kms_key_id: [
+      {
+        validator({ kms_key_id, encryption_type }: DestinationConnectionDetails) {
+          if (type === DestinationType.GcpSm && encryption_type === GcpEncryptionType.GLOBAL_KMS) {
+            return !!kms_key_id;
+          }
+          return true;
+        },
+        message: 'KMS key ID is required.',
+      },
+    ],
+    regional_kms_keys: [
+      {
+        validator({ regional_kms_keys, encryption_type }: DestinationConnectionDetails) {
+          if (type === DestinationType.GcpSm && encryption_type === GcpEncryptionType.REGIONAL_KMS) {
+            const rows = Object.entries(regional_kms_keys || {});
+            return rows.length > 0 && rows.every(([region, kmsKey]) => !!region && !!kmsKey);
+          }
+          return true;
+        },
+        message: 'Each replica region requires a corresponding KMS key ID.',
       },
     ],
   };

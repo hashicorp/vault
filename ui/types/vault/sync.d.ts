@@ -8,7 +8,7 @@ import type AzureKvForm from 'vault/forms/sync/azure-kv';
 import type GcpSmForm from 'vault/forms/sync/gcp-sm';
 import type GhForm from 'vault/forms/sync/gh';
 import type VercelProjectForm from 'vault/forms/sync/vercel-project';
-import type { CredentialType, DestinationType } from 'sync/utils/constants';
+import type { CredentialType, DestinationType, GcpEncryptionType } from 'sync/utils/constants';
 
 export type SecretType = 'kv' | 'database';
 
@@ -97,6 +97,8 @@ export type DestinationConnectionDetails = {
   credentials?: string;
   service_account_email?: string;
   project_id?: string;
+  encryption_type?: GcpEncryptionType; // Frontend field indicating which encryption sub-field to show, not a part of API payload
+  // kms_key_id and regional_kms_keys (declared above, under aws-sm) are reused as-is for gcp-sm
   // gh
   access_token?: string;
   repository_owner?: string;
