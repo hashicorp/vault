@@ -86,7 +86,7 @@ export type DestinationConnectionDetails = {
   credential_type?: CredentialType; // Frontend field indicating ACCOUNT or WIF, not a part of API payload
   region?: string;
   kms_key_id?: string;
-  regional_kms_keys?: Record<string, string>;
+  replica_regions?: Record<string, string>;
   // azure-kv
   key_vault_uri?: string;
   client_id?: string;
@@ -98,7 +98,7 @@ export type DestinationConnectionDetails = {
   service_account_email?: string;
   project_id?: string;
   encryption_type?: GcpEncryptionType; // Frontend field indicating which encryption sub-field to show, not a part of API payload
-  // kms_key_id and regional_kms_keys (declared above, under aws-sm) are reused as-is for gcp-sm
+  // kms_key_id and replica_regions (declared above, under aws-sm) are reused as-is for gcp-sm
   // gh
   access_token?: string;
   repository_owner?: string;

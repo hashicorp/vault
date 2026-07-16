@@ -111,7 +111,7 @@ export default class DestinationDetailsPage extends Component<Args> {
     ];
 
     if (type === DestinationType.AwsSm || type === DestinationType.GcpSm) {
-      fields.push('connection_details.regional_kms_keys');
+      fields.push('connection_details.replica_regions');
     }
 
     if (CLOUD_DESTINATION_TYPES.includes(type as CloudDestinationType)) {
@@ -146,6 +146,12 @@ export default class DestinationDetailsPage extends Component<Args> {
       return Object.keys(value as Record<string, string>).join(', ');
     }
 
+    // google-managed encryption only stores selected regions (empty KMS key values), so render as a
+    // simple comma separated list rather than the key/value row grouping used when KMS keys are also set
+    if (fieldName === 'replica_regions' && this.isGcpRegionsOnly) {
+      return Object.keys(value as Record<string, string>).join(', ');
+    }
+
     return value;
   };
 
@@ -157,7 +163,7 @@ export default class DestinationDetailsPage extends Component<Args> {
   fieldLabel = (field: string) => {
     const fieldName = this.fieldName(field);
 
-    if (fieldName === 'regional_kms_keys' && this.args.destination.type === DestinationType.GcpSm) {
+    if (fieldName === 'replica_regions' && this.args.destination.type === DestinationType.GcpSm) {
       return this.isGcpRegionsOnly ? 'Replica regions' : 'Replica regions and KMS keys';
     }
 
@@ -175,7 +181,7 @@ export default class DestinationDetailsPage extends Component<Args> {
       team_id: 'Team ID',
       identity_token_ttl: 'Identity token time to live',
       kms_key_id: 'KMS key ID',
-      regional_kms_keys: 'Replica regions and KMS keys',
+      replica_regions: 'Replica regions and KMS keys',
     }[fieldName];
 
     return customLabel || toLabel([fieldName]);
@@ -191,7 +197,7 @@ export default class DestinationDetailsPage extends Component<Args> {
     return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date);
   };
 
-  // true when a regional_kms_keys object only has region keys selected with no KMS key values populated
+  // true when a replica_regions object only has region keys selected with no KMS key values populated
   private isRegionsOnly(value: unknown): boolean {
     if (!value || typeof value !== 'object') return false;
     const entries = Object.entries(value as Record<string, string>);
@@ -202,7 +208,7 @@ export default class DestinationDetailsPage extends Component<Args> {
     const { destination } = this.args;
     return (
       destination.type === DestinationType.GcpSm &&
-      this.isRegionsOnly(destination.connection_details?.regional_kms_keys)
+      this.isRegionsOnly(destination.connection_details?.replica_regions)
     );
   }
 

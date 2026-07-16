@@ -110,11 +110,11 @@ export default function destinationFormResolver(type: DestinationType, data = {}
         message: 'KMS key ID is required.',
       },
     ],
-    regional_kms_keys: [
+    replica_regions: [
       {
-        validator({ regional_kms_keys, encryption_type }: DestinationConnectionDetails) {
+        validator({ replica_regions, encryption_type }: DestinationConnectionDetails) {
           if (type === DestinationType.GcpSm && encryption_type === GcpEncryptionType.REGIONAL_KMS) {
-            const rows = Object.entries(regional_kms_keys || {});
+            const rows = Object.entries(replica_regions || {});
             return rows.length > 0 && rows.every(([region, kmsKey]) => !!region && !!kmsKey);
           }
           return true;

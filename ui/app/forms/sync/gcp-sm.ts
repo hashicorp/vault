@@ -18,7 +18,7 @@ type GcpSmFormData = SystemWriteSyncDestinationsGcpSmNameRequest & {
   credential_type: CredentialType;
   encryption_type: GcpEncryptionType;
   kms_key_id?: string;
-  regional_kms_keys?: Record<string, string>;
+  replica_regions?: Record<string, string>;
 };
 
 export default class GcpSmForm extends CreateDestinationForm<GcpSmFormData> {
@@ -30,12 +30,12 @@ export default class GcpSmForm extends CreateDestinationForm<GcpSmFormData> {
   constructor(data: Partial<GcpSmFormData> = {}, options: FormOptions = {}, validations?: Validations) {
     super(data, options, validations);
     // the API doesn't return the encryption method, so we derive it from which field is populated.
-    // regional_kms_keys is used by both google-managed-encryption (regions only) and regional-kms (regions + keys),
+    // replica_regions is used by both google-managed-encryption (regions only) and regional-kms (regions + keys),
     // so a populated KMS key value is what distinguishes the selected radio option on Edit page.
     if (!this.data.encryption_type) {
       if (this.data.kms_key_id) {
         this.data.encryption_type = GcpEncryptionType.GLOBAL_KMS;
-      } else if (Object.values(this.data.regional_kms_keys ?? {}).some((value) => !!value)) {
+      } else if (Object.values(this.data.replica_regions ?? {}).some((value) => !!value)) {
         this.data.encryption_type = GcpEncryptionType.REGIONAL_KMS;
       } else {
         this.data.encryption_type = GcpEncryptionType.GOOGLE_MANAGED;
@@ -99,7 +99,7 @@ export default class GcpSmForm extends CreateDestinationForm<GcpSmFormData> {
         subText:
           'Enter the full Cloud KMS key resource name to encrypt secrets with automatic replication. The key must be in the global location.',
       }),
-      new FormField('regional_kms_keys', 'object', {
+      new FormField('replica_regions', 'object', {
         label: isRegionalKms ? 'Replica regions and KMS keys' : 'Replica regions',
         editType: 'keyValueInputs',
         editDisabled: true,

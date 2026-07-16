@@ -1203,6 +1203,45 @@ module('Integration | Component | form field', function (hooks) {
     assert.strictEqual(model.get('region'), 'us-east-1', 'the "region" attribute is unaffected');
   });
 
+  test('it renders: editType=keyValueInputs - a single "key" keyValueField broadcasts a flat object with empty string values', async function (assert) {
+    const keyValueFields = [
+      {
+        name: 'key',
+        label: 'Region',
+        type: 'select',
+        noDefault: true,
+        possibleValues: ['us-west1', 'us-east1'],
+      },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'object', { editType: 'keyValueInputs', keyValueFields })
+    );
+
+    assert.dom('[data-test-kv-field="value-0"]').doesNotExist('does not render a value input');
+
+    await fillIn('select[data-test-kv-field="key-0"]', 'us-west1');
+
+    assert.deepEqual(
+      model.get('myfield'),
+      { 'us-west1': '' },
+      'broadcasts a flat object with an empty string value since there is no "value" field'
+    );
+    assert.true(
+      spy.calledWith('myfield', { 'us-west1': '' }),
+      'onChange is called with the flat object with empty string value'
+    );
+
+    await click('.hds-form-key-value-inputs__add-row-button');
+    await fillIn('select[data-test-kv-field="key-1"]', 'us-east1');
+
+    assert.deepEqual(
+      model.get('myfield'),
+      { 'us-west1': '', 'us-east1': '' },
+      'broadcasts multiple keys as an object of empty string values'
+    );
+  });
+
   // ––––– editType === 'password' –––––
 
   test('it renders: editType=password / type=string - as Hds::Form::TextInput [@type=password]', async function (assert) {
