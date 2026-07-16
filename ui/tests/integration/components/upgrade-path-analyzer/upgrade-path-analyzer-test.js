@@ -123,4 +123,22 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       .hasText('0', 'Rollback steps count is correct');
     assert.dom(GENERAL.linkTo('Rollback steps')).exists('Rollback steps view link exists');
   });
+
+  test('it displays the Upgrade steps section with download button', async function (assert) {
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+    await click(GENERAL.button('Analyze'));
+
+    assert.dom(GENERAL.cardContainer('upgrade-steps')).exists('Upgrade steps card is rendered');
+    assert.dom('[data-test-upgrade-steps-title]').hasText('Upgrade steps', 'Upgrade steps title is correct');
+    assert.dom(`${GENERAL.cardContainer('upgrade-steps')} .hds-alert`).exists('Upgrade alert is rendered');
+    assert
+      .dom(`${GENERAL.cardContainer('upgrade-steps')} .hds-alert__title`)
+      .hasText(
+        'Single instance: upgrade the current Vault instance after creating a backup',
+        'Upgrade alert title is shown'
+      );
+    assert.dom(GENERAL.button('Download steps')).exists('Download steps button is rendered');
+  });
 });

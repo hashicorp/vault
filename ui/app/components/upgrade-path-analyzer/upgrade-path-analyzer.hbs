@@ -164,4 +164,57 @@
       </Hds::Layout::Flex>
     </Hds::Card::Container>
   </Hds::Layout::Grid>
+
+  <Hds::Card::Container
+    @level="mid"
+    @hasBorder={{true}}
+    class="has-padding-24 top-margin-32 bottom-margin-32"
+    data-test-card-container="upgrade-steps"
+  >
+    <Hds::Layout::Flex @direction="column" @gap="16">
+      <Hds::Layout::Flex @align="center" @justify="space-between" @gap="16">
+        <Hds::Text::Display @tag="h2" @weight="semibold" data-test-upgrade-steps-title>
+          Upgrade steps
+        </Hds::Text::Display>
+
+        <DownloadButton
+          @text="Download steps"
+          @data={{this.upgradeStepsDownloadText}}
+          @filename="vault-upgrade-steps"
+          @color="tertiary"
+          @iconPosition="leading"
+          data-test-button="Download steps"
+        />
+
+      </Hds::Layout::Flex>
+
+      <Hds::Alert @type="inline" @color="highlight" @icon="info" data-test-upgrade-alert as |A|>
+        <A.Title>{{this.upgradeGuidanceMessage}}</A.Title>
+      </Hds::Alert>
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Upgrade order:</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeOrder as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">{{step}}</Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Detailed upgrade steps</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeSteps as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">
+              {{step}}
+            </Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+    </Hds::Layout::Flex>
+  </Hds::Card::Container>
 {{/if}}
