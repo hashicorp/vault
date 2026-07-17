@@ -84,7 +84,11 @@ module('Acceptance | enterprise | pki | external | roles | role | active-orders 
     assert.true(this.activeOrdersListStub.calledOnce, 'active orders list called once');
     assert.dom('h1').hasText(this.roleName, 'role name is displayed');
     assert.dom(GENERAL.emptyStateTitle).exists().hasText('No active orders');
-    assert.dom(GENERAL.emptyStateMessage).hasText('Active orders will appear here once created.');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(
+        'In progress orders will appear here once created. Lookup a specific order by its ID or navigate to Recent orders to view recently created and completed orders. Lookup order'
+      );
     assert.dom(GENERAL.linkTo('API docs: Create a new order')).exists();
   });
 
