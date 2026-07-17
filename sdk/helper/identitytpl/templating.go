@@ -21,11 +21,16 @@ var (
 	ErrNoEntityAttachedToToken       = errors.New("string contains entity template directives but no entity was provided")
 	ErrNoGroupsAttachedToToken       = errors.New("string contains groups template directives but no groups were provided")
 	ErrTemplateValueNotFound         = errors.New("no value could be found for one of the template directives")
+	ErrTemplatedWildcard             = errors.New("globs and wildcards are not allowed in template result")
+	ErrTemplatedSlash                = errors.New("templated policy paths cannot contain '/' when denied via configuration")
 )
 
 const (
 	ACLTemplating = iota // must be the first value for backwards compatibility
 	JSONTemplating
+
+	// QuotedTemplating is like ACLTemplating, but quotes are escaped (for example `a "` becomes `a \"`)
+	QuotedTemplating
 )
 
 type PopulateStringInput struct {
@@ -36,6 +41,11 @@ type PopulateStringInput struct {
 	NamespaceID       string
 	Mode              int       // processing mode, ACLTemplate or JSONTemplating
 	Now               time.Time // optional, defaults to current time
+
+	// DenySlashInTemplatedPaths controls whether "/" is denied in templated policy paths
+	// When true, "/" in template output will cause an error
+	// When false (default), "/" is allowed
+	DenySlashInTemplatedPaths bool
 
 	templateHandler templateHandlerFunc
 	groupIDs        []string
@@ -52,25 +62,42 @@ type templateHandlerFunc func(interface{}, ...string) (string, error)
 // aclTemplateHandler processes known parameter data types when operating
 // in ACL mode.
 func aclTemplateHandler(v interface{}, keys ...string) (string, error) {
+	return simpleTemplateHandler(v, keys, func(s string) string {
+		return s
+	})
+}
+
+func simpleTemplateHandler(v interface{}, keys []string, quoteFunc func(s string) string) (string, error) {
 	switch t := v.(type) {
 	case string:
 		if t == "" {
 			return "", ErrTemplateValueNotFound
 		}
-		return t, nil
+		return quoteFunc(t), nil
 	case []string:
 		return "", ErrTemplateValueNotFound
 	case map[string]string:
 		if len(keys) > 0 {
 			val, ok := t[keys[0]]
 			if ok {
-				return val, nil
+				return quoteFunc(val), nil
 			}
 		}
 		return "", ErrTemplateValueNotFound
 	}
 
 	return "", fmt.Errorf("unknown type: %T", v)
+}
+
+// quotedTemplateHandler uses strconv.Quote to quote values
+func quotedTemplateHandler(v interface{}, keys ...string) (string, error) {
+	return simpleTemplateHandler(v, keys, func(s string) string {
+		escaped := strconv.Quote(s)
+		if len(escaped) < 2 {
+			return escaped
+		}
+		return escaped[1 : len(escaped)-1]
+	})
 }
 
 // jsonTemplateHandler processes known parameter data types when operating
@@ -119,6 +146,8 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 		p.templateHandler = aclTemplateHandler
 	case JSONTemplating:
 		p.templateHandler = jsonTemplateHandler
+	case QuotedTemplating:
+		p.templateHandler = quotedTemplateHandler
 	default:
 		return false, "", fmt.Errorf("unknown mode %q", p.Mode)
 	}
@@ -155,6 +184,14 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 				tmplStr, err := performTemplating(strings.TrimSpace(splitPiece[0]), &p)
 				if err != nil {
 					return false, "", err
+				}
+				// Reject wildcards in the template output
+				if strings.ContainsAny(tmplStr, "*+") {
+					return false, "", ErrTemplatedWildcard
+				}
+				// Reject slashes in the template output if explicitly denied
+				if p.DenySlashInTemplatedPaths && strings.Contains(tmplStr, "/") {
+					return false, "", ErrTemplatedSlash
 				}
 				b.WriteString(tmplStr)
 				b.WriteString(splitPiece[1])
@@ -230,7 +267,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 				}
 			}
 			if alias == nil {
-				if p.Mode == ACLTemplating {
+				if p.Mode == ACLTemplating || p.Mode == QuotedTemplating {
 					return "", errors.New("alias not found")
 				}
 

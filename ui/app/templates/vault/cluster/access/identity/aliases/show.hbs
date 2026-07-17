@@ -7,6 +7,7 @@
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
+        (hash label="Vault" icon="vault" route="vault.cluster.dashboard")
         (hash
           label=(capitalize (pluralize (humanize this.model.identityType))) route="vault.cluster.access.identity.aliases"
         )
@@ -19,7 +20,7 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs sub-nav" aria-label="navigation for managing identity alias">
     <ul>
-      {{#each (tabs-for-identity-show this.model.identityType) as |tab|}}
+      {{#each (tabs-for-identity-show this.model.identityType "alias") as |tab|}}
         <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}}>
           {{capitalize tab}}
         </LinkTo>

@@ -18,21 +18,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	awsClient "github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/endpoints"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
+	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	iRegexp "github.com/hashicorp/go-secure-stdlib/regexp"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pkcs7"
+	awsutilint "github.com/hashicorp/vault/internal/awsutil/v2"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -296,7 +295,8 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 
 	endpoint := "https://sts.amazonaws.com"
 
-	maxRetries := awsClient.DefaultRetryerMaxNumRetries
+	const iamLoginMaxRetries = 3
+	maxRetries := iamLoginMaxRetries
 	if config != nil {
 		if config.IAMServerIdHeaderValue != "" {
 			err = validateVaultHeaderValue(method, headers, parsedUrl, config.IAMServerIdHeaderValue)
@@ -327,7 +327,7 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 				return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
 			}
 
-			url, err := stsRegionalEndpoint(clientSpecifiedRegion)
+			url, err := awsutilint.STSRegionalEndpoint(ctx, clientSpecifiedRegion)
 			if err != nil {
 				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 			}
@@ -365,7 +365,7 @@ func (b *backend) pathLoginResolveRoleIam(ctx context.Context, req *logical.Requ
 
 // instanceIamRoleARN fetches the IAM role ARN associated with the given
 // instance profile name
-func (b *backend) instanceIamRoleARN(ctx context.Context, iamClient *iam.IAM, instanceProfileName string) (string, error) {
+func (b *backend) instanceIamRoleARN(ctx context.Context, iamClient *iam.Client, instanceProfileName string) (string, error) {
 	if iamClient == nil {
 		return "", fmt.Errorf("nil iamClient")
 	}
@@ -373,8 +373,8 @@ func (b *backend) instanceIamRoleARN(ctx context.Context, iamClient *iam.IAM, in
 		return "", fmt.Errorf("missing instance profile name")
 	}
 
-	profile, err := iamClient.GetInstanceProfileWithContext(ctx, &iam.GetInstanceProfileInput{
-		InstanceProfileName: aws.String(instanceProfileName),
+	profile, err := iamClient.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+		InstanceProfileName: awsv2.String(instanceProfileName),
 	})
 	if err != nil {
 		return "", awsutil.AppendAWSError(err)
@@ -400,17 +400,15 @@ func (b *backend) instanceIamRoleARN(ctx context.Context, iamClient *iam.IAM, in
 
 // validateInstance queries the status of the EC2 instance using AWS EC2 API
 // and checks if the instance is running and is healthy
-func (b *backend) validateInstance(ctx context.Context, s logical.Storage, instanceID, region, accountID string) (*ec2.Instance, error) {
+func (b *backend) validateInstance(ctx context.Context, s logical.Storage, instanceID, region, accountID string) (*ec2types.Instance, error) {
 	// Create an EC2 client to pull the instance information
 	ec2Client, err := b.clientEC2(ctx, s, region, accountID)
 	if err != nil {
 		return nil, err
 	}
 
-	status, err := ec2Client.DescribeInstancesWithContext(ctx, &ec2.DescribeInstancesInput{
-		InstanceIds: []*string{
-			aws.String(instanceID),
-		},
+	status, err := ec2Client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
+		InstanceIds: []string{instanceID},
 	})
 	if err != nil {
 		errW := fmt.Errorf("error fetching description for instance ID %q: %w", instanceID, err)
@@ -425,16 +423,17 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 	if len(status.Reservations[0].Instances) == 0 {
 		return nil, fmt.Errorf("no instance details found in reservations")
 	}
-	if *status.Reservations[0].Instances[0].InstanceId != instanceID {
+	instance := status.Reservations[0].Instances[0]
+	if awsv2.ToString(instance.InstanceId) != instanceID {
 		return nil, fmt.Errorf("expected instance ID not matching the instance ID in the instance description")
 	}
-	if status.Reservations[0].Instances[0].State == nil {
+	if instance.State == nil {
 		return nil, fmt.Errorf("instance state in instance description is nil")
 	}
-	if *status.Reservations[0].Instances[0].State.Name != "running" {
+	if instance.State.Name != ec2types.InstanceStateNameRunning {
 		return nil, fmt.Errorf("instance is not in 'running' state")
 	}
-	return status.Reservations[0].Instances[0], nil
+	return &instance, nil
 }
 
 // validateMetadata matches the given client nonce and pending time with the
@@ -619,7 +618,7 @@ func (b *backend) pathLoginUpdate(ctx context.Context, req *logical.Request, dat
 // The second error return value indicates whether there's an error in even
 // trying to validate those requirements
 func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
-	s logical.Storage, instance *ec2.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (error, error,
+	s logical.Storage, instance *ec2types.Instance, roleEntry *awsRoleEntry, roleName string, identityDoc *identityDocument) (error, error,
 ) {
 	switch {
 	case instance == nil:
@@ -631,8 +630,8 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 	}
 
 	// Verify that the instance ID matches one of the ones set by the role
-	if len(roleEntry.BoundEc2InstanceIDs) > 0 && !strutil.StrListContains(roleEntry.BoundEc2InstanceIDs, *instance.InstanceId) {
-		return fmt.Errorf("instance ID %q does not belong to the role %q", *instance.InstanceId, roleName), nil
+	if len(roleEntry.BoundEc2InstanceIDs) > 0 && !strutil.StrListContains(roleEntry.BoundEc2InstanceIDs, awsv2.ToString(instance.InstanceId)) {
+		return fmt.Errorf("instance ID %q does not belong to the role %q", awsv2.ToString(instance.InstanceId), roleName), nil
 	}
 
 	// Verify that the AccountID of the instance trying to login matches the
@@ -654,8 +653,8 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		if instance.ImageId == nil {
 			return nil, fmt.Errorf("AMI ID in the instance description is nil")
 		}
-		if !strutil.StrListContains(roleEntry.BoundAmiIDs, *instance.ImageId) {
-			return fmt.Errorf("AMI ID %q does not belong to role %q", *instance.ImageId, roleName), nil
+		if !strutil.StrListContains(roleEntry.BoundAmiIDs, awsv2.ToString(instance.ImageId)) {
+			return fmt.Errorf("AMI ID %q does not belong to role %q", awsv2.ToString(instance.ImageId), roleName), nil
 		}
 	}
 
@@ -1061,7 +1060,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 // handleRoleTagLogin is used to fetch the role tag of the instance and
 // verifies it to be correct.  Then the policies for the login request will be
 // set off of the role tag, if certain criteria satisfies.
-func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2.Instance) (*roleTagLoginResponse, error) {
+func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, roleName string, roleEntry *awsRoleEntry, instance *ec2types.Instance) (*roleTagLoginResponse, error) {
 	if roleEntry == nil {
 		return nil, fmt.Errorf("nil role entry")
 	}
@@ -1105,7 +1104,7 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 	}
 
 	// If instance_id was set on the role tag, check if the same instance is attempting to login
-	if rTag.InstanceID != "" && rTag.InstanceID != *instance.InstanceId {
+	if rTag.InstanceID != "" && rTag.InstanceID != awsv2.ToString(instance.InstanceId) {
 		return nil, fmt.Errorf("role tag is being used by an unauthorized instance")
 	}
 
@@ -1883,11 +1882,11 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 	// Not assuming path is reliable for any entity types
 
 	region := b.partitionToRegionMap[e.Partition]
-	if region == nil {
+	if region == "" {
 		return "", fmt.Errorf("unable to resolve partition %q to a region", e.Partition)
 	}
 
-	client, err := b.clientIAM(ctx, s, region.ID(), e.AccountNumber)
+	client, err := b.clientIAM(ctx, s, region, e.AccountNumber)
 	if err != nil {
 		return "", fmt.Errorf("error creating IAM client: %w", err)
 	}
@@ -1895,9 +1894,9 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 	switch e.Type {
 	case "user":
 		input := iam.GetUserInput{
-			UserName: aws.String(e.FriendlyName),
+			UserName: awsv2.String(e.FriendlyName),
 		}
-		resp, err := client.GetUserWithContext(ctx, &input)
+		resp, err := client.GetUser(ctx, &input)
 		if err != nil {
 			return "", fmt.Errorf("error fetching user %q: %w", e.FriendlyName, err)
 		}
@@ -1909,14 +1908,14 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 		fallthrough
 	case "role":
 		input := iam.GetRoleInput{
-			RoleName: aws.String(e.FriendlyName),
+			RoleName: awsv2.String(e.FriendlyName),
 		}
-		resp, err := client.GetRoleWithContext(ctx, &input)
+		resp, err := client.GetRole(ctx, &input)
 		if err != nil {
 			return "", fmt.Errorf("error fetching role %q: %w", e.FriendlyName, err)
 		}
 		if resp == nil {
-			return "", fmt.Errorf("nil response form GetRole")
+			return "", fmt.Errorf("nil response from GetRole")
 		}
 		return *(resp.Role.Arn), nil
 	default:
@@ -1964,18 +1963,6 @@ func awsRegionFromHeader(authorizationHeader string) (string, error) {
 	}
 
 	return "", fmt.Errorf("invalid header format")
-}
-
-func stsRegionalEndpoint(region string) (string, error) {
-	stsService := sts.EndpointsID
-	resolver := endpoints.DefaultResolver()
-	resolvedEndpoint, err := resolver.EndpointFor(stsService, region,
-		endpoints.STSRegionalEndpointOption,
-		endpoints.StrictMatchingOption)
-	if err != nil {
-		return "", fmt.Errorf("unable to get regional STS endpoint for region: %v", region)
-	}
-	return resolvedEndpoint.URL, nil
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"

@@ -62,14 +62,68 @@ variable "backend_log_level" {
   default     = "trace"
 }
 
+variable "blackbox_test_filter" {
+  type        = list(string)
+  description = "Override list of specific blackbox test packages (e.g., ['core', 'secrets']) or test names (e.g., ['TestUnsealedStatus']). Empty list uses scenario defaults. Package names are converted to directory paths automatically."
+  default     = []
+}
+
+variable "fyre_expiration" {
+  type        = string
+  description = "The Fyre VM expiration time in hours"
+  default     = null
+}
+
+variable "fyre_quota_type" {
+  type        = string
+  description = "The Fyre quota type to use when provisioning VMs. quick_burn is not available for z"
+  default     = "product_group" // or "quick_burn",
+}
+
+variable "fyre_quick_burn_ttl" {
+  type        = string
+  description = "If using the quick_burn quota, the time to live in hours"
+  default     = "12"
+}
+
+variable "fyre_product_group_id" {
+  type        = number
+  description = "The Fyre product group ID used to provision test VMs"
+  default     = null
+}
+
+variable "fyre_public_key_path" {
+  type        = string
+  description = "Path to the RFC 4716 formatted public key used for SSH access to Fyre VMs"
+  default     = "./support/ssh_key.pub"
+}
+
+variable "fyre_private_key_path" {
+  type        = string
+  description = "Path to the private key corresponding to fyre_vm_public_key_path"
+  default     = "./support/ssh_key"
+}
+
 variable "distro_version_amzn" {
   description = "The version of Amazon Linux 2 to use"
   type        = string
   default     = "2023" // or "2", though pkcs11 has not been tested with 2
 }
 
+variable "distro_version_centos" {
+  description = "The version of CentOS Stream to use"
+  type        = string
+  default     = "10" // or "9"
+}
+
 variable "distro_version_rhel" {
   description = "The version of RedHat Enterprise Linux to use"
+  type        = string
+  default     = "10.1" // or "8.10", "9.7"
+}
+
+variable "distro_version_rocky" {
+  description = "The version of Rocky Enterprise Linux to use"
   type        = string
   default     = "10.1" // or "8.10", "9.7"
 }
@@ -83,7 +137,7 @@ variable "distro_version_sles" {
 variable "distro_version_ubuntu" {
   description = "The version of Ubuntu Linux to use"
   type        = string
-  default     = "24.04" // or "22.04"
+  default     = "24.04" // or "22.04" or "24.04"
 }
 
 variable "project_name" {
@@ -157,6 +211,18 @@ variable "vault_license_path" {
   default     = null
 }
 
+variable "vault_ibm_license_path" {
+  description = "The path to a valid IBM PAO license. This is only required when testing a license update during the upgrade scenario"
+  type        = string
+  default     = null
+}
+
+variable "vault_ibm_license_edition" {
+  description = "The edition to select when using an IBM PAO license. This should match the edition of a valid Vault entitlement in the license located at var.vault_ibm_license_path."
+  type        = string
+  default     = null
+}
+
 variable "vault_local_build_tags" {
   description = "The build tags to pass to the Go compiler for builder:local variants"
   type        = list(string)
@@ -190,7 +256,7 @@ variable "vault_revision" {
 variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
   type        = string
-  default     = "1.13.13"
+  default     = "1.16.31"
 }
 
 variable "verify_aws_secrets_engine" {
@@ -202,17 +268,17 @@ variable "verify_aws_secrets_engine" {
 variable "verify_kmip_secrets_engine" {
   description = "If true we'll verify KMIP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_ldap_secrets_engine" {
   description = "If true we'll verify LDAP secrets engines behavior"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "verify_log_secrets" {
   description = "If true and var.vault_enable_audit_devices is true we'll verify that the audit log does not contain unencrypted secrets. Requires var.vault_radar_license_path to be set to a valid license file."
   type        = bool
-  default     = false
+  default     = false // Only because it requires a Vault Radar license
 }

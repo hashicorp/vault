@@ -142,4 +142,56 @@ module('Integration | Util | code-generators/policy', function (hooks) {
     assert.true(secondPreview.includes('"read", "list"'), 'new preview includes both capabilities');
     assert.strictEqual(secondPreview, expected, 'new preview reflects updates');
   });
+
+  test('PolicyStanza: invalidPath returns error message when path is empty', function (assert) {
+    const stanza = new PolicyStanza();
+    assert.strictEqual(stanza.invalidPath, 'Path cannot be empty.', 'returns error for empty path');
+  });
+
+  test('PolicyStanza: invalidPath returns error message when path is only whitespace', function (assert) {
+    const stanza = new PolicyStanza({ path: '   ' });
+    assert.strictEqual(stanza.invalidPath, 'Path cannot be empty.', 'returns error for whitespace path');
+  });
+
+  test('PolicyStanza: invalidPath returns empty string when path is valid', function (assert) {
+    const stanza = new PolicyStanza({ path: 'secret/data/*' });
+    assert.strictEqual(stanza.invalidPath, '', 'returns empty string for valid path');
+  });
+
+  test('PolicyStanza: invalidCapabilities returns error message when no capabilities are selected', function (assert) {
+    const stanza = new PolicyStanza();
+    assert.strictEqual(
+      stanza.invalidCapabilities,
+      'Rule must have at least one capability.',
+      'returns error when no capabilities selected'
+    );
+  });
+
+  test('PolicyStanza: invalidCapabilities returns empty string when at least one capability is selected', function (assert) {
+    const stanza = new PolicyStanza();
+    stanza.capabilities.add('read');
+    assert.strictEqual(stanza.invalidCapabilities, '', 'returns empty string when capability is selected');
+  });
+
+  test('PolicyStanza: isValid returns false when path and capabilities are both empty', function (assert) {
+    const stanza = new PolicyStanza();
+    assert.false(stanza.isValid, 'invalid when path and capabilities are empty');
+  });
+
+  test('PolicyStanza: isValid returns false when path is empty but capabilities are set', function (assert) {
+    const stanza = new PolicyStanza();
+    stanza.capabilities.add('read');
+    assert.false(stanza.isValid, 'invalid when path is empty');
+  });
+
+  test('PolicyStanza: isValid returns false when path is set but capabilities are empty', function (assert) {
+    const stanza = new PolicyStanza({ path: 'secret/data/*' });
+    assert.false(stanza.isValid, 'invalid when no capabilities selected');
+  });
+
+  test('PolicyStanza: isValid returns true when path and capabilities are both set', function (assert) {
+    const stanza = new PolicyStanza({ path: 'secret/data/*' });
+    stanza.capabilities.add('read');
+    assert.true(stanza.isValid, 'valid when path and capabilities are set');
+  });
 });

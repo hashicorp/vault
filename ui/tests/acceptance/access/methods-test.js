@@ -13,7 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
-import localStorage from 'vault/lib/local-storage';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const { searchSelect } = GENERAL;
 
@@ -25,7 +25,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
     this.uid = uuidv4();
     await login();
     // dismiss wizard
-    localStorage.setItem('dismissed-wizards', ['auth-methods']);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
   });
 
   test('it navigates to auth method', async function (assert) {

@@ -5,7 +5,7 @@
 
 import { isSameMonthUTC, parseAPITimestamp } from 'core/utils/date-formatters';
 import { isWithinInterval } from 'date-fns';
-import { ROOT_NAMESPACE } from 'vault/services/namespace';
+import { ROOT_NAMESPACE } from 'vault/utils/constants/namespace';
 
 import type { VersionHistory } from 'vault/client-counts';
 import type {

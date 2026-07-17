@@ -20,8 +20,12 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
     // path validation is already defined on the MountForm class
     // add validation for kv max versions
     this.validations['kv_config.max_versions'] = [
-      { type: 'number', message: 'Maximum versions must be a number.' },
+      { type: 'number', options: { min: 0 }, message: 'Maximum versions must be a non-negative number.' },
       { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
+      {
+        validator: (data: SecretsEngineFormData) => !data?.kv_config?.max_versions?.toString().includes('.'),
+        message: 'Maximum versions must be a whole number.',
+      },
     ];
     // add validation for plugin_version when mounting external plugins
     this.validations['config.plugin_version'] = [
@@ -172,7 +176,7 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
         new FormField('options.version', 'number', {
           label: 'Version',
           helpText:
-            'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
+            'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine that allows for the storage of static key/value pairs. Version 2 added more features, including data versioning, TTLs, and check-and-set.',
           possibleValues: [2, 1],
         })
       );

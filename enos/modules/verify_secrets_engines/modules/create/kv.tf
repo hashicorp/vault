@@ -61,8 +61,20 @@ resource "enos_remote_exec" "policy_write_kv_writer" {
   environment = {
     POLICY_NAME       = local.kv_write_policy_name
     POLICY_CONFIG     = <<-EOF
-      path "${local.kv_mount}/*" {
+      path "${local.kv_mount}/data/*" {
         capabilities = ["create", "update", "read", "delete", "list"]
+      }
+      path "${local.kv_mount}/metadata/*" {
+        capabilities = ["read", "list", "delete"]
+      }
+      path "${local.kv_mount}/delete/*" {
+        capabilities = ["update"]
+      }
+      path "${local.kv_mount}/undelete/*" {
+        capabilities = ["update"]
+      }
+      path "${local.kv_mount}/destroy/*" {
+        capabilities = ["update"]
       }
     EOF
     VAULT_ADDR        = var.vault_addr
@@ -107,7 +119,8 @@ resource "enos_remote_exec" "kv_put_secret_test" {
   depends_on = [
     enos_remote_exec.secrets_enable_kv_secret,
     enos_remote_exec.policy_write_kv_writer,
-    enos_remote_exec.identity_group_kv_writers
+    enos_remote_exec.identity_group_kv_writers,
+    enos_remote_exec.auth_login_testuser
   ]
   for_each = var.hosts
 

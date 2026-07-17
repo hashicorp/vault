@@ -154,7 +154,7 @@ module('Acceptance | clients | counts', function (hooks) {
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
       assert
-        .dom(GENERAL.hdsPageHeaderSubtitle)
+        .dom(GENERAL.hdsPageHeaderDescription)
         .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
@@ -166,7 +166,7 @@ module('Acceptance | clients | counts', function (hooks) {
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
       assert
-        .dom(GENERAL.hdsPageHeaderSubtitle)
+        .dom(GENERAL.hdsPageHeaderDescription)
         .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
 
@@ -181,7 +181,7 @@ module('Acceptance | clients | counts', function (hooks) {
       await click(CLIENT_COUNT.dateRange.edit);
       await click(CLIENT_COUNT.dateRange.dropdownOption(1));
       assert
-        .dom(GENERAL.hdsPageHeaderSubtitle)
+        .dom(GENERAL.hdsPageHeaderDescription)
         .hasTextContaining(`Dashboard last updated: ${format(STATIC_NOW, 'MMM d yyyy')}`);
       // Save URL with query params before clicking refresh
       const url = currentURL();
@@ -193,7 +193,7 @@ module('Acceptance | clients | counts', function (hooks) {
       assert.true(this.refreshSpy.calledOnce, 'router.refresh() is called once');
       assert.strictEqual(currentURL(), url, 'url is the same after clicking refresh');
       assert
-        .dom(GENERAL.hdsPageHeaderSubtitle)
+        .dom(GENERAL.hdsPageHeaderDescription)
         .hasTextContaining(`Dashboard last updated: ${format(fakeUpdatedNow, 'MMM d yyyy')}`);
     });
   });

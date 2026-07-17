@@ -15,16 +15,15 @@
       <div class="field" data-test-keymgmt-dist-key>
         <SearchSelect
           @id="key"
-          @models={{array "keymgmt/key"}}
+          @options={{this.keyOptions}}
           @onChange={{this.handleKeySelect}}
           @passObject={{true}}
           @inputValue={{this.formData.key}}
           @subText="Type to use the name of an existing key that you’d like to add to this provider, or to create one."
           @wildcardLabel="key"
           @label="Key name"
-          @fallbackComponent="string-list"
+          @fallbackComponent={{unless this.canListKeys "string-list"}}
           @selectLimit="1"
-          @backend={{@backend}}
           @disallowNewItems={{false}}
         >
           {{#if (and this.validMatchError.key (not this.isNewKey))}}
@@ -94,15 +93,14 @@
       <div class="field">
         <SearchSelect
           @id="provider"
-          @models={{array "keymgmt/provider"}}
+          @options={{this.providerOptions}}
           @onChange={{this.handleProvider}}
           @passObject={{false}}
           @inputValue={{this.formData.provider}}
           @subText="Select a provider in Vault. If it doesn’t exist yet, you’ll need to add it first."
           @label="Provider"
-          @fallbackComponent="input-search"
+          @fallbackComponent={{unless this.canListProviders "input-search"}}
           @selectLimit="1"
-          @backend={{@backend}}
           @disallowNewItems={{true}}
           data-test-keymgmt-dist-provider
         >

@@ -6,7 +6,6 @@ package transit
 import (
 	"context"
 	"encoding/base64"
-	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -190,9 +189,6 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	successesInBatch := false
@@ -221,18 +217,13 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
-			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-			if !ok {
-				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
 			}
 
-			factories = append(factories, ManagedKeyFactory{
-				managedKeyParams: keysutil.ManagedKeyParameters{
-					ManagedKeySystemView: managedKeySystemView,
-					BackendUUID:          b.backendUUID,
-					Context:              ctx,
-				},
-			})
+			factories = append(factories, factory)
 		}
 
 		opts := keysutil.EncryptionOptions{

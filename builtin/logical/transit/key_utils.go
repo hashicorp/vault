@@ -23,9 +23,6 @@ func (b *backend) getReadLockedPolicy(ctx context.Context, s logical.Storage, na
 	if p == nil {
 		return nil, fmt.Errorf("%w: key %s not found", logical.ErrInvalidRequest, name)
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	return p, nil
 }
 

@@ -22,12 +22,6 @@ func TestFeatureFlags(t *testing.T) {
 		HandlerFunc:             vaulthttp.Handler,
 		RequestResponseCallback: schema.ResponseValidatingCallback(t),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	// Wait for core to start
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
 	// Create a raw http connection copying the configuration

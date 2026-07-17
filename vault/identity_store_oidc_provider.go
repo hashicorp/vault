@@ -2157,12 +2157,26 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
 
+	// Track OIDC token generated for billing
+	// Store duration (seconds), normalize later during storage flush
+	if i.billingCounter != nil {
+		i.billingCounter.IncrementOidcTokenCount(getMaxTokenTTL(client.AccessTokenTTL, client.IDTokenTTL).Seconds())
+	}
+
 	return tokenResponse(map[string]interface{}{
 		"token_type":   "Bearer",
 		"access_token": accessToken.ID,
 		"id_token":     signedIDToken,
 		"expires_in":   int64(accessTokenExpiry.Sub(accessTokenIssuedAt).Seconds()),
 	}, "", "")
+}
+
+// getMaxTokenTTL returns the maximum of the given access token and ID token
+func getMaxTokenTTL(accessTokenTTL, idTokenTTL time.Duration) time.Duration {
+	if accessTokenTTL > idTokenTTL {
+		return accessTokenTTL
+	}
+	return idTokenTTL
 }
 
 // tokenResponse returns the OIDC Token Response. An error response is

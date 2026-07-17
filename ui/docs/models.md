@@ -1,8 +1,5 @@
 # Models
 
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
 - [Models](#models)
   - [Intro](#intro)
   - [Model patterns overview](#model-patterns-overview)
@@ -16,8 +13,6 @@
     - [Models hydrated by OpenAPI](#models-hydrated-by-openapi)
   - [Using Decorators](#using-decorators)
     - [@withFormFields()](#withformfields)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Intro
 

@@ -47,9 +47,6 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 
 	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
 
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	core := cluster.Cores[0].Core
 
 	TestWaitActive(t, core)
@@ -181,9 +178,6 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 
 	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
 
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	core := cluster.Cores[0].Core
 	TestWaitActive(t, core)
 
@@ -295,9 +289,6 @@ func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
 	}
 
 	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
-
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	core := cluster.Cores[0].Core
 	TestWaitActive(t, core)

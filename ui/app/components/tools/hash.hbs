@@ -3,14 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Hash data">
+<Page::Header
+  @title="Hash data"
+  @description="Generate secure cryptographic hashes of input data to verify integrity without storing the raw data."
+>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
 </Page::Header>
 
 {{#if this.sum}}
-  <div class="box is-sideless is-fullwidth is-marginless">
+  <div class="box is-fullwidth is-marginless">
     <div class="field">
       <label for="sum" class="is-input">Sum</label>
       <Hds::Copy::Snippet
@@ -26,7 +29,7 @@
   </div>
 {{else}}
   <form {{on "submit" this.handleSubmit}}>
-    <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="box is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field">
         <label for="hash-input" class="is-label">

@@ -15,40 +15,181 @@
 // files that have ever existed in the history of a branch, you can use the
 // `--branch <branch>` flag.
 changed_files {
-  // The "app" group is the "vault" Go application.
-  group "app" {
-    ignore {
-      base_dir = [
-        // There's no reason to consider the pipeline tool as part of the app
-        joinpath("tools", "pipeline"),
-      ]
-    }
+  // ----------------------------------------------------------------------------
+  // Automation
+  // ----------------------------------------------------------------------------
 
+  // The "automation_ce" group tracks CE (Community Edition) automation workflows.
+  group "automation_ce" {
     match {
-      // Match all Go source code files
-      extension = [".go"]
-    }
-
-    match {
-      // Match go.mod or go.sum
+      base_dir = [joinpath(".github", "workflows")]
       base_name = [
-        "go.mod",
-        "go.sum",
+        "add-hashicorp-contributed-label.yml",
+        "backport-automation-ent.yml",
+        "copy-external-contributor-pull-request-ce.yml",
+        "copy-external-contributor-pull-request-ent.yml",
+        "oss.yml",
+        "remove-labels.yml",
+        "sync-ce-branches-from-ent.yml",
       ]
     }
   }
 
-  // The "autopilot" group is for application code that is specific to autopilot.
-  // This group is used to run some specific autopilot tests when the code changes.
-  group "autopilot" {
+  // The "automation_github" graup tracks all Github actions automation.
+  group "automation_github" {
     match {
-      // Match go files that contain "raft_autopilot" in the path name
-      extension = [".go"]
-      contains  = ["raft_autopilot"]
+      base_dir = [
+        joinpath(".github", "workflows"),
+        joinpath(".github", "actions"),
+        joinpath(".github", "scripts"),
+      ]
     }
   }
 
-  // The "changelog" group is our change log
+  // The "automation_pr" group tracks pull request validation and automation
+  // workflows.
+  group "automation_pr" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "approval-gate.yml",
+        "changelog-checker.yml",
+        "milestone-checker.yml",
+      ]
+    }
+  }
+
+  // The "automation_plugins" group tracks plugin update automation.
+  group "automation_plugins" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "plugin-update-check.yml",
+        "plugin-update.yml",
+      ]
+    }
+  }
+
+  // The "automation_ui" group tracks UI-related automation workflows.
+  group "automation_ui" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "gen-diff-spec.yml",
+        "ui-client-update.yml",
+      ]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Build
+  // ----------------------------------------------------------------------------
+
+  // The "build_vault" group tracks Vault binary build workflows and configuration.
+  group "build_vault" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "build.yml",
+        "build-artifacts-ce.yml",
+        "build-artifacts-ent.yml",
+      ]
+    }
+
+    match {
+      base_dir = [
+        ".build",
+        joinpath(".github", "actions", "containerize"),
+        joinpath(".github", "actions", "build-vault"),
+        joinpath(".github", "actions", "set-up-go"),
+      ]
+    }
+
+    match {
+      base_name = [
+        "ci-helper.sh",
+        "Dockerfile",
+        "Dockerfile-ent",
+        "Dockerfile-ent-hsm",
+        "Makefile",
+      ]
+    }
+  }
+
+  // The "build_cloud" group tracks HCP/Cloud image building and testing.
+  group "build_cloud" {
+    match {
+      file = [
+        joinpath(".github", "workflows", "build-hcp-image.yml"),
+        joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
+        joinpath("enos", "enos-scenario-cloud-ent.hcl"),
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath("enos", "modules", "cloud_docker_vault_cluster"),
+        joinpath("enos", "modules", "hcp"),
+        joinpath("tools", "pipeline", "internal", "pkg", "hcp"),
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath("tools", "pipeline", "internal", "cmd"),
+      ]
+      contains = ["hcp"]
+    }
+  }
+
+  // The "build_tfe" group tracks Terraform Enterprise S390x build workflows.
+  group "build_tfe" {
+    match {
+      base_dir  = [joinpath(".github", "workflows")]
+      base_name = ["build-tfe-s390x-artifact-ent.yml"]
+    }
+  }
+
+  group "build_ui" {
+    match {
+      base_dir = [
+        joinpath(".github", "actions", "build-ui"),
+        joinpath(".github", "actions", "set-up-pnpm"),
+        joinpath("ui", "package.json"),
+      ]
+    }
+
+    match {
+      base_name = [
+        "ci-helper.sh",
+        "Makefile",
+      ]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Configuration
+  // ----------------------------------------------------------------------------
+
+  // The "config" group tracks build and pipeline configuration files.
+  group "config" {
+    match {
+      base_name = [
+        "Makefile",
+        "CODEOWNERS",
+      ]
+    }
+
+    match {
+      base_dir = [".release"]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Documentation
+  // ----------------------------------------------------------------------------
+
+  // The "changelog" group tracks our changelogs
   group "changelog" {
     match {
       base_dir = ["changelog"]
@@ -59,7 +200,22 @@ changed_files {
     }
   }
 
-  // The "community" group is for files that exist specifically for either CE
+  // The "docs" group tracks our README and static website documentation
+  group "docs" {
+    match {
+      base_name = ["README.md"]
+    }
+
+    match {
+      base_dir = ["website"]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Editions
+  // ----------------------------------------------------------------------------
+
+  // The "community" group tracks files that exist specifically for either CE
   // builds or to document CE behavior.
   group "community" {
     match {
@@ -90,27 +246,11 @@ changed_files {
     }
   }
 
-  // The "docs" group is our README and static website assets.
-  group "docs" {
-    match {
-      base_name = ["README.md"]
-    }
-
-    match {
-      base_dir = ["website"]
-    }
-  }
-
-  // The "enos" group matches everything in the "enos" directory.
-  group "enos" {
-    match {
-      base_dir = ["enos"]
-    }
-  }
-
-  // The "enterprise" group is arguably the most important grouping configuration
-  // in this repository. Among other things, this is how we enforce that no
-  // enterprise files make it into CE branches or repositories.
+  // The "enterprise" group tracks our files that ought to exist in only in the
+  // enterprise endition. It is arguably the most important grouping
+  // configuration in this repository. Among other things, this is how we
+  // enforce that no enterprise files make it into CE branches or repositories
+  // with out automated tooling.
   group "enterprise" {
     // Ignore some files that would otherwise match our filters but exist in
     // some fashion on enterprise branches for reasons we cannot control.
@@ -119,6 +259,7 @@ changed_files {
         # These exist on CE branches to please Github Actions.
         joinpath(".github", "workflows", "build-artifacts-ent.yml"),
         joinpath(".github", "workflows", "backport-automation-ent.yml"),
+        joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
       ]
     }
 
@@ -127,7 +268,6 @@ changed_files {
       base_dir = [
         "website",
         joinpath(".release", "docker"),
-        joinpath("enos", "modules"),
         joinpath("scripts", "docker"),
       ]
     }
@@ -147,6 +287,26 @@ changed_files {
       ]
     }
 
+    // Ignore some enos modules related to HSM
+    ignore {
+      base_dir = [
+        # The next matcher looks for HSM but we can ignore the softhsm modules
+        joinpath("enos", "modules", "softhsm_install"),
+        joinpath("enos", "modules", "softhsm_create_vault_keys"),
+        joinpath("enos", "modules", "softhsm_init"),
+        joinpath("enos", "modules", "softhsm_distribute_vault_keys"),
+        # Some filename have ent in them
+        joinpath("enos", "modules", "verify_secrets_engines"),
+      ]
+    }
+
+    // Make sure our zap scanner is always ent only
+    match {
+      base_dir = [
+        joinpath("enos", "modules", "zap_scan_ent")
+      ]
+    }
+
     // Match whole directories that are enterprise only
     match {
       base_dir = [
@@ -155,6 +315,9 @@ changed_files {
         joinpath("scripts", "testing"),
         joinpath("specs"),
         joinpath(".release", "ibm-pao"),
+        // Internal developer tooling that must not sync to CE
+        ".agents",
+        joinpath("ui", ".agents"),
       ]
     }
 
@@ -198,50 +361,99 @@ changed_files {
     }
   }
 
-  // The "github" group matches the .github directory
-  group "github" {
-    match {
-      base_dir = [".github"]
-    }
-  }
+  // ----------------------------------------------------------------------------
+  // Go
+  // ----------------------------------------------------------------------------
 
-  // The "gotoolchain" group matches changes to the Go toolchain used to build
-  // the application
-  group "gotoolchain" {
-    match {
-      base_name = [
-        ".go-version",
-        "go.mod",
-        "go.sum",
+  // The "go_tests" group isolates Go test file changes from application code.
+  // This allows workflows to skip building when only tests change.
+  group "go_tests" {
+    ignore {
+      base_dir = [
+        joinpath("tools", "pipeline"),
       ]
     }
+
+    match {
+      extension = [".go"]
+      contains  = ["_test.go"]
+    }
   }
 
-  // The "pipeline" group matches directories where we house code and
-  // configuration used in the CI/CD pipeline
-  group "pipeline" {
-    match {
+  // The "go_modules" group tracks Go module dependency changes.
+  // Triggers dependency security scans and full test suite.
+  group "go_modules" {
+    ignore {
       base_dir = [
-        ".build",
-        joinpath(".github", "workflows"),
-        joinpath(".github", "actions"),
-        joinpath(".github", "scripts"),
-        ".hooks",
-        ".release",
-        "scripts",
         joinpath("tools", "pipeline"),
       ]
     }
 
     match {
       base_name = [
-        "Dockerfile",
-        "Makefile",
+        "go.mod",
+        "go.sum",
       ]
     }
   }
 
-  // The "proto" group matches protobuf files and configuration.
+  // The "go_toolchain" group tracks Go compiler/toolchain version changes.
+  // Triggers full rebuild with new toolchain.
+  group "go_toolchain" {
+    match {
+      base_name = [".go-version"]
+    }
+  }
+
+  // The "go_app" group tracks core Vault application code (excluding tests).
+  // This is the primary group checked by CI workflows to trigger Go tests.
+  // Triggers full build, test cycle, and integration tests.
+  group "go_app" {
+    ignore {
+      base_dir = [
+        joinpath("tools", "pipeline"),
+      ]
+    }
+
+    ignore {
+      extension = [".go"]
+      contains  = ["_test.go"]
+    }
+
+    match {
+      extension = [".go"]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Helpers
+  // ----------------------------------------------------------------------------
+
+  // The "actions_helpers" group tracks reusable setup/helper actions.
+  group "actions_helpers" {
+    match {
+      base_dir = [
+        joinpath(".github", "actions", "changed-files"),
+        joinpath(".github", "actions", "checkout"),
+        joinpath(".github", "actions", "create-dynamic-config"),
+        joinpath(".github", "actions", "install-tools"),
+        joinpath(".github", "actions", "metadata"),
+        joinpath(".github", "actions", "set-up-go"),
+        joinpath(".github", "actions", "set-up-pipeline"),
+      ]
+    }
+  }
+
+  // The "pipeline" group tracks the pipeline utility.
+  group "pipeline" {
+    match {
+      base_dir = [
+        joinpath("tools", "pipeline"),
+      ]
+    }
+  }
+
+  // The "proto" tracks our protobuf files and configuration.
   group "proto" {
     match {
       extension = [".proto"]
@@ -252,10 +464,256 @@ changed_files {
     }
   }
 
-  // The "ui" group matches the Web UI source
+  // ----------------------------------------------------------------------------
+  // Infrastructure
+  // ----------------------------------------------------------------------------
+
+  // The "infra" group tracks CI infrastructure management workflows.
+  group "infra" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "test-ci-bootstrap.yml",
+        "test-ci-cleanup.yml",
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath("enos", "ci"),
+      ]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Quality
+  // ----------------------------------------------------------------------------
+
+  // The "quality_code" group tracks code quality and linting workflows.
+  group "quality_code" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "code-checker.yml",
+        "copywrite.yml",
+        "do-not-merge-checker.yml",
+      ]
+    }
+  }
+
+  // The "quality_actions" group tracks GitHub Actions linting.
+  group "quality_actions" {
+    match {
+      base_dir = [
+        joinpath(".github", "workflows"),
+        joinpath(".github", "actions"),
+      ]
+    }
+
+    match {
+      base_dir  = [".github"]
+      base_name = ["actionlint.yml"]
+    }
+  }
+
+
+  // ----------------------------------------------------------------------------
+  // Releases
+  // ----------------------------------------------------------------------------
+
+  // The "release_automation" group tracks release process automation workflows.
+  group "release_automation" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "cancel-stale-release-runs-ent.yml",
+        "changelog-curation-ent.yml",
+        "check-go-version-ent.yml",
+        "cicd-pipeline-checker-ent.yml",
+        "collect-artifact-shas.yml",
+        "generate-changelog-ent.yml",
+        "missing-release-tags-check.yml",
+        "open-pr-checker-ent.yml",
+        "release-branch-go-ver-check-ent.yml",
+        "release-build-ent.yml",
+        "release-candidate-branch-cutting-ent.yml",
+        "release-procedure-ent.yml",
+        "release-version-checker-ent.yml",
+        "trigger-promotion.yml",
+        "validate-inputs-ent.yml",
+        "validate-inputs.yml",
+        "workflow-status-checker.yml",
+      ]
+    }
+  }
+
+  // The "release_testing" group tracks release artifact testing workflows.
+  group "release_testing" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "enos-release-testing-ent.yml",
+        "enos-release-testing-oss.yml",
+      ]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Security
+  // ----------------------------------------------------------------------------
+
+  // The "security_scanner" group tracks general security scanning workflows.
+  group "security_scanner" {
+    match {
+      base_dir  = [joinpath(".github", "workflows")]
+      base_name = ["security-scan.yml"]
+    }
+  }
+
+  // The "security_zap" group tracks OWASP ZAP security scanning.
+  group "security_zap" {
+    match {
+      contains = [
+        "security-scan-zap",
+        "zap_scan",
+      ]
+    }
+  }
+
+  // The "security_mend" group tracks Mend (formerly WhiteSource) security scanning.
+  group "security_mend" {
+    match {
+      base_dir  = [joinpath(".github", "workflows")]
+      base_name = ["mend-pr-scan.yml"]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Testing
+  // ----------------------------------------------------------------------------
+
+  // The "test_autopilot" group tracks Autopilot code and testing workflows.
+  group "test_autopilot" {
+    match {
+      extension = [".go"]
+      contains  = ["raft_autopilot"]
+    }
+
+    match {
+      base_dir  = [joinpath(".github", "actions")]
+      base_name = ["run-apupgrade-tests.yml"]
+    }
+
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "run-apupgrade-tests-ent.yml",
+        "vault-autopilot-test-ent.yml",
+        "vault-replication-test-ent.yml",
+      ]
+    }
+  }
+  // The "test_ci" group tracks core CI and Go testing workflows.
+  group "test_ci" {
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "ci.yml",
+        "test-go.yml",
+        "nightly-tests-ent.yml",
+        "test-acc-dockeronly-nightly.yml",
+        "test-run-acc-tests-for-path.yml",
+      ]
+    }
+  }
+
+  // The "test_cloud" group tracks HCP/Cloud testing.
+  group "test_cloud" {
+    match {
+      file = [
+        joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
+        joinpath("enos", "enos-scenario-cloud-ent.hcl"),
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath("enos", "modules", "cloud_docker_vault_cluster"),
+        joinpath("enos", "modules", "hcp"),
+        joinpath("tools", "pipeline", "internal", "pkg", "hcp"),
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath("tools", "pipeline", "internal", "cmd"),
+      ]
+      contains = ["hcp"]
+    }
+  }
+
+  // The "test_enos" group tracks Enos scenarios, modules, and testing workflows.
+  group "test_enos" {
+    ignore {
+      base_dir = [
+        joinpath("enos", "ci"),
+      ]
+    }
+
+    match {
+      base_dir = [
+        joinpath(".github", "actions", "run-enos-scenario"),
+        joinpath(".github", "actions", "run-enos-scenario"),
+        joinpath("vault", "external_tests", "blackbox"),
+        joinpath("sdk", "helper", "testcluster", "blackbox"),
+        "enos",
+      ]
+    }
+
+    match {
+      base_dir = [joinpath(".github", "workflows")]
+      base_name = [
+        "enos-lint.yml",
+        "test-enos-scenario-cloud.yml",
+        "test-enos-scenario-containers.yml",
+        "test-enos-scenario-matrix.yml",
+        "test-enos-scenario-ui.yml",
+        "test-run-enos-scenario-cloud.yml",
+        "test-run-enos-scenario-containers.yml",
+        "test-run-enos-scenario-matrix.yml",
+        "test-run-enos-scenario.yml",
+      ]
+    }
+  }
+
+  // The "test_ui" group tracks UI testing workflows
+  group "test_ui" {
+    match {
+      base_dir = [
+        joinpath(".github", "workflows", "test-run-enos-scenario-ui"),
+        joinpath(".github", "workflows", "test-ui"),
+      ]
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Web UI
+  // ----------------------------------------------------------------------------
+
   group "ui" {
     match {
-      base_dir = ["ui"]
+      base_dir = [
+        "ui",
+      ]
+    }
+  }
+
+  group "ui_deps" {
+    match {
+      file = [
+        joinpath("ui", "package-lock.json"),
+        joinpath("ui", "pnpm-lock.yaml"),
+      ]
     }
   }
 }

@@ -49,20 +49,26 @@
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 /website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 
-/ui/  @hashicorp/vault-ui
+/.github/actions/build-ui/                  @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/actions/set-up-pnpm/               @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/gen-diff-spec/           @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/test-enos-scenarios-ui/  @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/test-ui/                 @hashicorp/vault-ui @hashicorp/vault-frontend
+/.github/workflows/ui-client-update/        @hashicorp/vault-ui @hashicorp/vault-frontend
+/ui/                                        @hashicorp/vault-ui @hashicorp/vault-frontend
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
 # so stewards of the backend code are added below for notification.
-/ui/app/components/auth/form/oidc-jwt.ts @hashicorp/vault-ui @hashicorp/vault-ecosystem
-/ui/app/components/auth/form/saml.ts     @hashicorp/vault-ui @hashicorp/vault-ecosystem
-/ui/app/routes/vault/cluster/oidc-*.js   @hashicorp/vault-ui @hashicorp/vault-ecosystem
+/ui/app/components/auth/form/oidc-jwt.ts @hashicorp/vault-ui @hashicorp/vault-frontend @hashicorp/vault-ecosystem
+/ui/app/components/auth/form/saml.ts     @hashicorp/vault-ui @hashicorp/vault-frontend @hashicorp/vault-ecosystem
+/ui/app/routes/vault/cluster/oidc-*.js   @hashicorp/vault-ui @hashicorp/vault-frontend @hashicorp/vault-ecosystem
 
 # Release config; service account is required for automation tooling.
 /.release/                     @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
 /.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
 
 # Quality engineering
-/.github/  @hashicorp/team-vault-quality
+/.github/  @hashicorp/team-vault-quality @hashicorp/team-vault-engineering-productivity-team
 /enos/     @hashicorp/team-vault-quality
 
 # Copilot instructions - exceptions to the general .github/ rule

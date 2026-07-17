@@ -5,7 +5,7 @@
 
 import { click, fillIn, render } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { module, test } from 'qunit';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -26,6 +26,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
     this.store = this.owner.lookup('service:store');
+    this.api = this.owner.lookup('service:api');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.server.post('/sys/auth/foo', noopStub());
     this.onMountSuccess = sinon.spy();
@@ -121,12 +122,56 @@ module('Integration | Component | mount backend form', function (hooks) {
         'Renders correct flash message'
       );
     });
+
+    test('it should render identity_token_key field for WIF engine type', async function (assert) {
+      const keyListStub = sinon.stub(this.api.identity, 'oidcListKeys').resolves({ keys: ['foo'] });
+      const keyWriteStub = sinon.stub(this.api.identity, 'oidcWriteKey').resolves();
+      const authEnableStub = sinon.stub(this.api.sys, 'authEnableMethod').resolves();
+
+      await render(
+        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+      );
+      await mountBackend('aws');
+      assert.true(keyListStub.calledOnce, 'calls the API to list OIDC keys when WIF engine is selected');
+
+      await click(GENERAL.button('Method Options'));
+      assert
+        .dom(GENERAL.fieldByAttr('config.identity_token_key'))
+        .exists('renders identity_token_key field for WIF engine type');
+      await click(GENERAL.searchSelect.trigger('oidc-key'));
+      assert
+        .dom(GENERAL.searchSelect.option())
+        .hasText('foo', 'renders options from API in identity_token_key search select');
+
+      await fillIn(GENERAL.searchSelect.searchInput, 'bar');
+      await click(GENERAL.searchSelect.option());
+      await click('[data-test-oidc-key-save]');
+      assert.true(
+        keyWriteStub.calledWith('bar'),
+        'calls API to write new OIDC key when a new key is created from the identity_token_key field'
+      );
+
+      await click(GENERAL.submitButton);
+      const enginePayload = authEnableStub.lastCall.args[1];
+      assert.strictEqual(
+        enginePayload.config.identity_token_key,
+        'bar',
+        'sends selected identity_token_key in payload when mounting a WIF engine'
+      );
+    });
   });
 
   module('Plugin Version Selection Integration (Community)', function (hooks) {
     hooks.beforeEach(function () {
       // Get version service for mocking in individual tests
       this.version = this.owner.lookup('service:version');
+      this.router = this.owner.lookup('service:router');
+
+      sinon.stub(this.router, 'transitionTo').callsFake(() => {
+        return {
+          followRedirects: sinon.stub().resolves(),
+        };
+      });
 
       // Mock plugin pins API endpoint
       this.server.get('/sys/plugins/pins', () => {
@@ -174,7 +219,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         render(hbs`
           <Mount::SecretsEngineForm
             @model={{this.model}}
-            @onMountSuccess={{this.onMountSuccess}}
           />
         `);
 
@@ -308,7 +352,7 @@ module('Integration | Component | mount backend form', function (hooks) {
             'plugin_version is not included in payload when default is selected'
           );
           assert.strictEqual(payload.type, 'kv', 'correct engine type is sent');
-          return {};
+          return [204, { 'Content-Type': 'application/json' }];
         });
 
         await this.renderComponent();
@@ -327,7 +371,7 @@ module('Integration | Component | mount backend form', function (hooks) {
             Object.prototype.hasOwnProperty.call(payload.config, 'plugin_version');
           assert.notOk(hasPluginVersion, 'plugin_version is not included for builtin selection');
           assert.strictEqual(payload.type, 'kv', 'type remains builtin type for builtin plugins');
-          return {};
+          return [204, { 'Content-Type': 'application/json' }];
         });
 
         await this.renderComponent();
@@ -350,7 +394,7 @@ module('Integration | Component | mount backend form', function (hooks) {
             'vault-plugin-secrets-kv',
             'type is external plugin name for external plugins'
           );
-          return {};
+          return [204, { 'Content-Type': 'application/json' }];
         });
 
         await this.renderComponent();

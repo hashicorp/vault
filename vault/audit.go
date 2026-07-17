@@ -132,7 +132,11 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 
 		if c.pluginDirectory != "" {
 			// Validate that the audit log file is not in the plugin directory
-			auditDir := filepath.Dir(entry.Options["file_path"])
+			auditPath := entry.Options["file_path"]
+			if auditPath == "" {
+				auditPath = entry.Options["path"]
+			}
+			auditDir := filepath.Dir(auditPath)
 			auditDir, err = filepath.Abs(auditDir)
 			if err != nil {
 				return fmt.Errorf("error getting absolute path of audit dir for audit validation: %w", err)

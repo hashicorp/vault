@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -41,7 +41,7 @@ module('Integration | Component | list-table', function (hooks) {
             @onSelectionChange={{this.onSelectionChange}}
           >
             <:customTableItem as |itemData|>
-              <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />            
+              <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />
             </:customTableItem>
 
             <:popupMenu as |rowData|>
@@ -175,6 +175,79 @@ module('Integration | Component | list-table', function (hooks) {
     assert
       .dom(`${GENERAL.tableData(0, 'visit_length')} .hds-badge-count`)
       .hasText('5', 'custom table item renders yielded badge');
+  });
+
+  test('customTableItem yields row data, column definition, and resolved value for multiple custom columns', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', customTableItem: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    this.data = [
+      { island: 'Maldives', visit_length: 5, trip_date: '2025-06-22T00:00:00.000Z', status: 'confirmed' },
+      { island: 'Bora Bora', visit_length: 7, trip_date: '2025-03-15T00:00:00.000Z', status: 'pending' },
+    ];
+
+    await render(hbs`
+      <ListTable @columns={{this.columns}} @data={{this.data}}>
+        <:customTableItem as |row column value|>
+          {{#if (eq column.key "island")}}
+            <Hds::Link::Inline
+              @route="components"
+              @color="secondary"
+              class="has-text-weight-semibold"
+              data-test-link-to={{row.island}}
+            >{{row.island}}</Hds::Link::Inline>
+          {{/if}}
+          {{#if (eq column.key "visit_length")}}
+            <Hds::Badge @text={{value}} @type="outlined" data-test-badge={{value}} />
+          {{/if}}
+        </:customTableItem>
+      </ListTable>
+    `);
+    assert
+      .dom(`${GENERAL.tableData(0, 'island')} ${GENERAL.linkTo('Maldives')}`)
+      .exists()
+      .hasText('Maldives', 'island renders as custom link using row data');
+    assert
+      .dom(`${GENERAL.tableData(0, 'visit_length')} ${GENERAL.badge('5')}`)
+      .exists()
+      .hasText('5', 'visit_length renders as custom badge using resolved value');
+    assert.dom(`${GENERAL.tableData(1, 'island')} ${GENERAL.linkTo('Bora Bora')}`).hasText('Bora Bora');
+    assert.dom(`${GENERAL.tableData(1, 'visit_length')} ${GENERAL.badge('7')}`).hasText('7');
+    assert
+      .dom(GENERAL.tableData(0, 'trip_date'))
+      .hasText('2025-06-22T00:00:00.000Z', 'non-custom column renders value directly');
+  });
+
+  test('it shows first page data and correct metadata when navigated page exceeds new data bounds', async function (assert) {
+    const moreData = [
+      { island: 'Tahiti', visit_length: 12, trip_date: '2025-05-10T00:00:00.000Z' },
+      { island: 'Barbados', visit_length: 6, trip_date: '2025-08-25T00:00:00.000Z' },
+      { island: 'Cyprus', visit_length: 9, trip_date: '2026-03-12T00:00:00.000Z' },
+      { island: 'Jamaica', visit_length: 7, trip_date: '2025-11-05T00:00:00.000Z' },
+    ];
+    this.data = [...MOCK_DATA, ...moreData];
+    await this.renderComponent();
+
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText(`6–10 of ${this.data.length}`, 'navigated to page 2');
+
+    // Replace data with fewer items than current page offset such that page 2 no longer exists
+    this.set('data', [
+      { island: 'Palawan', visit_length: 9, trip_date: '2025-11-14T00:00:00.000Z' },
+      { island: 'Mykonos', visit_length: 3, trip_date: '2026-02-28T00:00:00.000Z' },
+    ]);
+
+    await waitFor(GENERAL.paginationInfo);
+    assert
+      .dom(GENERAL.paginationInfo)
+      .hasText(
+        `1–2 of ${this.data.length}`,
+        'falls back to page 1 when current page exceeds new data bounds'
+      );
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Palawan', 'first page data is shown after fallback');
   });
 
   test('it resets pagination when data changes', async function (assert) {

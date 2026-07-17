@@ -65,6 +65,7 @@ const (
 	// SecretEngineDatabase is the entry type for all databases, i.e. this is the combined
 	// database type for every database.
 	SecretEngineDatabase = "database"
+	SecretEngineOS       = "vault-plugin-secrets-os"
 )
 
 // These DB consts match the type returned from database plugin's Type() method.

@@ -37,7 +37,7 @@ jobs:
     outputs:
       ui-go-binary-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
@@ -52,7 +52,7 @@ jobs:
       - if: inputs.is-ent-repo == 'true'
         id: secrets
         name: Fetch secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -70,7 +70,7 @@ jobs:
           make prep dev
       - name: Upload Vault Binary for UI Tests
         id: upload
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           path: ./bin/vault
           name: vault-ui-test-binary
@@ -85,18 +85,18 @@ jobs:
     outputs:
       ui-js-bundle-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
       - name: Build Ember Test Bundle
         working-directory: ./ui
         run: pnpm build:jsondiffpatch && pnpm exec ember build --environment=test --output-path=dist
       - name: Upload Ember Test Bundle
         id: upload
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           path: ./ui/dist
           name: vault-ui-test-bundle
@@ -114,7 +114,7 @@ jobs:
       matrix:
         ci-index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
@@ -125,7 +125,7 @@ jobs:
       - if: inputs.is-ent-repo == 'true'
         id: secrets
         name: Fetch secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -135,18 +135,18 @@ jobs:
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
             kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
       - name: Install Chrome
-        uses: browser-actions/setup-chrome@4f8e94349a351df0f048634f25fec36c3c91eded # v2.1.1
+        uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
         with:
           chrome-version: stable
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
       - name: Download Ember Test Bundle
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: ./ui/dist
           artifact-ids: ${{ needs.test-ui-build-js.outputs.ui-js-bundle-artifact-id }}
       - name: Download Vault Binary
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # v8.0.0
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           path: ./bin
           artifact-ids: ${{ needs.test-ui-build-go.outputs.ui-go-binary-artifact-id }}
@@ -175,7 +175,7 @@ jobs:
             --parallel="$PARALLEL_COUNT" \
             --path=dist
       - if: always() && strategy.job-index != 0
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-ui-${{ strategy.job-index }}
           path: ui/test-results
@@ -206,7 +206,7 @@ jobs:
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" 'ui/test-results/qunit/results.xml'
       - if: always() && strategy.job-index != 0
-        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
+        uses: test-summary/action@37b508cfee6d4d080eedd00b5bb240a6a784a6a5 # v2.6
         with:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"

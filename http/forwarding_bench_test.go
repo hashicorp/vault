@@ -35,16 +35,14 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		HandlerFunc: Handler,
 		Logger:      logging.NewVaultLoggerWithWriter(ioutil.Discard, log.Error),
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
 
 	// make it easy to get access to the active
 	core := cores[0].Core
 	vault.TestWaitActive(b, core)
 
-	handler := cores[0].Handler
-	host := fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[0].Listeners[0].Address.Port)
+	handler := cores[0].Server.Handler
+	host := fmt.Sprintf("https://%s/v1/transit/", cores[0].APIAddress().String())
 
 	transport := &http.Transport{
 		TLSClientConfig: cores[0].TLSConfig(),
@@ -57,7 +55,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		Transport: transport,
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/mounts/transit", cores[0].Listeners[0].Address.Port),
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://%s/v1/sys/mounts/transit", cores[0].APIAddress().String()),
 		bytes.NewBufferString("{\"type\": \"transit\"}"))
 	if err != nil {
 		b.Fatal(err)

@@ -4,47 +4,66 @@
  */
 
 import Route from '@ember/routing/route';
-import ListRoute from 'core/mixins/list-route';
 import { service } from '@ember/service';
+import { action } from '@ember/object';
+import { paginate } from 'core/utils/paginate-list';
+import { fetchIdentityItemsWithCapabilities } from 'vault/utils/identity-helpers';
 
-export default Route.extend(ListRoute, {
-  pagination: service(),
+export default class IdentityIndexRoute extends Route {
+  @service api;
+  @service capabilities;
 
-  model(params) {
-    const itemType = this.modelFor('vault.cluster.access.identity');
-    const modelType = `identity/${itemType}`;
-    return this.pagination
-      .lazyPaginatedQuery(modelType, {
-        responsePath: 'data.keys',
-        page: params.page,
-        pageFilter: params.pageFilter,
-        sortBy: 'name',
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+    pageFilter: {
+      refreshModel: true,
+    },
+  };
+
+  async model(params) {
+    const { pageFilter, page } = params;
+    const identityType = this.modelFor('vault.cluster.access.identity');
+
+    try {
+      const itemsWithCapabilities = await fetchIdentityItemsWithCapabilities({
+        identityType,
+        api: this.api,
+        capabilities: this.capabilities,
       });
-  },
 
-  setupController(controller) {
-    this._super(...arguments);
-    controller.set('identityType', this.modelFor('vault.cluster.access.identity'));
-  },
-
-  actions: {
-    willTransition(transition) {
-      window.scrollTo(0, 0);
-      if (transition.targetName !== this.routeName) {
-        this.pagination.clearDataset();
+      return paginate(itemsWithCapabilities, { page, filter: pageFilter });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return [];
       }
-      return true;
-    },
-    reload() {
-      this.pagination.clearDataset();
-      this.refresh();
-    },
-  },
-});
+      throw error;
+    }
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+
+    const { pageFilter } = this.paramsFor(this.routeName);
+
+    controller.setProperties({
+      filter: pageFilter || '',
+      page: resolvedModel?.meta?.currentPage || 1,
+      identityType: this.modelFor('vault.cluster.access.identity'),
+    });
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('pageFilter', null);
+      controller.set('filter', null);
+    }
+  }
+
+  @action
+  reload() {
+    this.refresh();
+  }
+}

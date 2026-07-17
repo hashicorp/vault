@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -357,7 +356,7 @@ func (b *backend) pathEncryptExistenceCheck(ctx context.Context, req *logical.Re
 	if err != nil {
 		return false, err
 	}
-	if p != nil && b.System().CachingDisabled() {
+	if p != nil {
 		p.Unlock()
 	}
 
@@ -521,9 +520,6 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	// Process batch request items. If encryption of any request
@@ -567,18 +563,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
-			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-			if !ok {
-				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
 			}
 
-			factories = append(factories, ManagedKeyFactory{
-				managedKeyParams: keysutil.ManagedKeyParameters{
-					ManagedKeySystemView: managedKeySystemView,
-					BackendUUID:          b.backendUUID,
-					Context:              ctx,
-				},
-			})
+			factories = append(factories, factory)
 		}
 
 		opts := keysutil.EncryptionOptions{
@@ -586,6 +577,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
 			IV:         item.DecodedIV,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, item.Plaintext, factories...)

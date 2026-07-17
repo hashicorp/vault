@@ -1,0 +1,33 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div ...attributes data-test-vault-reporting-counter={{@title}} class="ssu-counter" aria-label="{{@title}} {{this.count}}">
+  <div class="ssu-counter__title-row">
+    <Hds::Text::Body @weight="semibold" @size="200" @color="primary">
+      {{@title}}
+      {{#if @tooltipMessage}}
+        <Hds::TooltipButton
+          data-test-vault-reporting-counter-tooltip-button
+          class="ssu-counter__title-row__tooltip"
+          @text={{@tooltipMessage}}
+          aria-label="More information about {{@title}}"
+          @isInline={{true}}
+        >
+          <Hds::Icon @name="help" @isInline={{true}} />
+        </Hds::TooltipButton>
+      {{/if}}
+    </Hds::Text::Body>
+  </div>
+
+  <Hds::Text::Body>
+    {{#if this.link}}
+      <Hds::Link::Inline @route={{this.link}} @color="secondary" class="ssu-counter__link" target="_self">
+        {{this.count}}
+      </Hds::Link::Inline>
+    {{else}}
+      {{this.count}}
+    {{/if}}
+  </Hds::Text::Body>
+</div>

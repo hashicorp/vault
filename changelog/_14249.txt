@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki (enterprise): Include root CA in chain for CIEPS endpoints when root is the direct issuer, unless `remove_roots_from_chain` is true.
+```

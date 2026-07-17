@@ -57,7 +57,7 @@ export default class MessagesRoute extends Route {
       });
       const messages = paginate(data, {
         page,
-        pageSize: 2,
+        pageSize: 10,
         filter: pageFilter,
         filterKey: 'title',
       });

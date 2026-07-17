@@ -36,29 +36,34 @@ export default Component.extend(FocusOnInsertMixin, {
   get breadcrumbs() {
     const baseCrumbs = [
       {
+        label: 'Vault',
+        icon: 'vault',
+        route: 'vault.cluster.dashboard',
+      },
+      {
         label: 'Secrets',
         route: 'vault.cluster.secrets',
       },
       {
-        label: this.key.backend,
+        label: this.form.data.backend,
         route: 'vault.cluster.secrets.backend.list-root',
-        model: this.key.backend,
+        model: this.form.data.backend,
       },
     ];
     if (this.mode === 'show') {
       return [
         ...baseCrumbs,
         {
-          label: this.key.id,
+          label: this.form.data.id,
         },
       ];
     } else if (this.mode === 'edit') {
       return [
         ...baseCrumbs,
         {
-          label: this.key.id,
+          label: this.form.data.id,
           route: 'vault.cluster.secrets.backend.show',
-          models: [this.key.backend, this.key.id],
+          models: [this.form.data.backend, this.form.data.id],
           query: { tab: 'details' },
         },
         { label: 'Edit' },
@@ -82,7 +87,7 @@ export default Component.extend(FocusOnInsertMixin, {
   get subtitle() {
     if (this.mode === 'create' || this.mode === 'edit') return '';
 
-    return this.key?.id;
+    return this.form.data.id;
   },
 
   waitForKeyUp: task(function* () {

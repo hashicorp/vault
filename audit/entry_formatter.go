@@ -253,6 +253,42 @@ func clone[V any](s V) (V, error) {
 	return s2.(V), err
 }
 
+// mergeEnterpriseTokenMetadata injects enterprise token fields from a logical.Request
+// into the audit auth's Metadata map.
+func mergeEnterpriseTokenMetadata(a *auth, req *logical.Request) error {
+	if a == nil || req == nil {
+		return nil
+	}
+
+	if req.JwtUniqueId == "" &&
+		req.JwtIssuer == "" &&
+		req.JwtTransactionClaim == "" &&
+		len(req.JwtAudienceClaim) == 0 &&
+		len(req.JwtAuthorizationDetails) == 0 {
+		return nil
+	}
+
+	if a.Metadata == nil {
+		a.Metadata = make(map[string]any)
+	}
+	if req.JwtUniqueId != "" {
+		a.Metadata["jwt_unique_id"] = req.JwtUniqueId
+	}
+	if req.JwtIssuer != "" {
+		a.Metadata["jwt_issuer"] = req.JwtIssuer
+	}
+	if req.JwtTransactionClaim != "" {
+		a.Metadata["jwt_transaction_claim"] = req.JwtTransactionClaim
+	}
+	if len(req.JwtAudienceClaim) > 0 {
+		a.Metadata["jwt_audience_claim"] = req.JwtAudienceClaim
+	}
+	if len(req.JwtAuthorizationDetails) > 0 {
+		a.Metadata["jwt_authorization_details"] = req.JwtAuthorizationDetails
+	}
+	return nil
+}
+
 // newAuth takes a logical.Auth and the number of remaining client token uses
 // (which should be supplied from the logical.Request's client token), and creates
 // an audit auth.
@@ -279,6 +315,18 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 	metadata, err := clone(input.Metadata)
 	if err != nil {
 		return nil, fmt.Errorf("unable to clone logical auth: metadata: %w", err)
+	}
+
+	if input.ActorEntityID != "" || input.ActorEntityName != "" {
+		if metadata == nil {
+			metadata = make(map[string]string)
+		}
+		if input.ActorEntityID != "" {
+			metadata["actor_entity_id"] = input.ActorEntityID
+		}
+		if input.ActorEntityName != "" {
+			metadata["actor_entity_name"] = input.ActorEntityName
+		}
 	}
 
 	policies, err := clone(input.Policies)
@@ -313,6 +361,13 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 		tokenIssueTime = input.IssueTime.Format(time.RFC3339)
 	}
 
+	var metadataForAudit map[string]any
+	if metadata != nil {
+		metadataForAudit = make(map[string]any)
+		for k, v := range metadata {
+			metadataForAudit[k] = v
+		}
+	}
 	return &auth{
 		Accessor:                  input.Accessor,
 		ClientToken:               input.ClientToken,
@@ -321,7 +376,7 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 		EntityID:                  input.EntityID,
 		ExternalNamespacePolicies: extNSPolicies,
 		IdentityPolicies:          identityPolicies,
-		Metadata:                  metadata,
+		Metadata:                  metadataForAudit,
 		NoDefaultPolicy:           input.NoDefaultPolicy,
 		NumUses:                   input.NumUses,
 		Policies:                  policies,
@@ -535,6 +590,10 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *Event) (*entry, err
 		return nil, fmt.Errorf("cannot convert auth: %w", err)
 	}
 
+	if err := mergeEnterpriseTokenMetadata(auth, data.Request); err != nil {
+		return nil, err
+	}
+
 	req, err := newRequest(data.Request, ns)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert request: %w", err)
@@ -546,6 +605,12 @@ func (f *entryFormatter) createEntry(ctx context.Context, a *Event) (*entry, err
 		resp, err = newResponse(data.Response, data.Request, shouldElide)
 		if err != nil {
 			return nil, fmt.Errorf("cannot convert response: %w", err)
+		}
+
+		if resp != nil && resp.Auth != nil {
+			if err := mergeEnterpriseTokenMetadata(resp.Auth, data.Request); err != nil {
+				return nil, err
+			}
 		}
 
 		// If the plugin's response contained any additional audit request fields,

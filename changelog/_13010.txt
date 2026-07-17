@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add ACME configuration fields challenge_permitted_ip_ranges and challenge_excluded_ip_ranges configuration to control which IP addresses are allowed or disallowed for challenge validation.
+```

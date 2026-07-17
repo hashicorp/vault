@@ -29,6 +29,12 @@ variable "ip_version" {
 
 }
 
+variable "integration_host_user" {
+  type        = string
+  description = "The username to use for accessing the integration host"
+  default     = "ubuntu"
+}
+
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"
@@ -52,8 +58,7 @@ variable "vault_root_token" {
 
 variable "vault_audit_log_path" {
   type        = string
-  description = "The file path for the audit device"
-  default     = null
+  description = "The file path for the audit device (passed from vault_cluster module)"
 }
 
 variable "aws_enabled" {

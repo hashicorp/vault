@@ -8,6 +8,7 @@
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label="OIDC provider: Assignments" route="vault.cluster.access.oidc.assignments")
         (hash label="Details" route="vault.cluster.access.oidc.assignments.assignment.details" model=this.model.name)
         (hash label="Edit Assignment")
       }}
@@ -16,7 +17,9 @@
 </Page::Header>
 
 <Oidc::AssignmentForm
-  @model={{this.model}}
-  @onCancel={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
-  @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.name}}
+  @form={{this.model.form}}
+  @entities={{this.model.entities}}
+  @groups={{this.model.groups}}
+  @onCancel={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.form.data.name}}
+  @onSave={{transition-to "vault.cluster.access.oidc.assignments.assignment.details" this.model.form.data.name}}
 />

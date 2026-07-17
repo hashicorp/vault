@@ -18,11 +18,11 @@ export default Controller.extend({
         .adapterFor('cluster')
         .seal()
         .then(() => {
+          this.router.transitionTo('vault.cluster.unseal');
           this.store.peekAll('cluster')[0].reload();
           this.auth.deleteCurrentToken();
           // Reset version so it doesn't show on footer
           this.version.version = null;
-          return this.router.transitionTo('vault.cluster.unseal');
         });
     },
   },

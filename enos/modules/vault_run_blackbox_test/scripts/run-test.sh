@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright IBM Corp. 2016, 2025
+# Copyright IBM Corp. 2016, 2026
 # SPDX-License-Identifier: BUSL-1.1
 
 set -euo pipefail
@@ -13,18 +13,35 @@ fail() {
 [[ -z "${VAULT_TOKEN}" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "${VAULT_ADDR}" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "${VAULT_TEST_PACKAGE}" ]] && fail "VAULT_TEST_PACKAGE env variable has not been set"
+[[ -z "${VAULT_EDITION}" ]] && fail "VAULT_EDITION env variable has not been set"
 
 # Check required dependencies
 echo "Checking required dependencies..."
 
 # Check if Go is installed
 if ! command -v go &> /dev/null; then
-    fail "Go is not installed or not in PATH. Please install Go to run tests."
+    echo "ERROR: Go is not installed or not found in PATH."
+    echo ""
+    echo "To resolve this issue:"
+    echo "  • On a developer machine: Install Go from https://golang.org/dl/"
+    echo "  • In CI: Ensure the setup-go action is configured properly"
+    echo "  • If Go is installed elsewhere, add it to your PATH environment variable"
+    echo ""
+    fail "Go is required to run blackbox tests."
 fi
+
+echo "Go version: $(go version)"
 
 # Check if gotestsum is installed (required)
 if ! command -v gotestsum &> /dev/null; then
-    fail "gotestsum is not installed or not in PATH. Please install gotestsum: go install gotest.tools/gotestsum@latest"
+    echo "ERROR: gotestsum is not installed or not found in PATH."
+    echo ""
+    echo "To resolve this issue:"
+    echo "  • Run 'make tools' to install required development tools"
+    echo "  • Ensure GOPATH/bin is in your PATH environment variable"
+    echo "  • Or manually install: go install gotest.tools/gotestsum@v1.13.0"
+    echo ""
+    fail "gotestsum is required to run blackbox tests."
 fi
 
 # Check if jq is available (needed for parsing test matrix)
@@ -59,19 +76,130 @@ echo "JUnit results will be written to: $junit_output"
 echo "Running tests..."
 echo "Vault environment variables:"
 env | grep VAULT | sed 's/VAULT_TOKEN=.*/VAULT_TOKEN=***REDACTED***/'
+echo ""
+echo "=== VAULT_ADDR Configuration Debug ==="
+echo "VAULT_ADDR_DEBUG: ${VAULT_ADDR_DEBUG:-not set}"
+echo "Final VAULT_ADDR: ${VAULT_ADDR}"
+echo "======================================"
+echo ""
+
+# For HTTP Vault addresses, inherited TLS CA settings can point to stale temp files.
+# TODO: Investigate why TLS CA env vars persist for HTTP Vault connections and remove this workaround after fixing root cause.
+if [[ "${VAULT_ADDR}" == http://* ]]; then
+    unset VAULT_CACERT VAULT_CAPATH
+fi
+
+# Determine base tags based on edition
+case $VAULT_EDITION in
+    ent.hsm.fips1403)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_3"
+        ;;
+    ent.hsm.fips1402)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_2"
+        ;;
+    ent.hsm)
+        base_tags="ent,enterprise,cgo,hsm,venthsm"
+        ;;
+    ent.fips1403)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_3"
+        ;;
+    ent.fips1402)
+        base_tags="ent,enterprise,cgo,hsm,fips,fips_140_2"
+        ;;
+    ent)
+        base_tags="ent,enterprise"
+        ;;
+    ce)
+        base_tags=""
+        ;;
+    *)
+        fail "unknown VAULT_EDITION: $VAULT_EDITION"
+        ;;
+esac
+
+# Add build tags based on test package paths (handle multiple categories)
+category_tags=""
+if [[ "$VAULT_TEST_PACKAGE" == *"/isolated/"* ]]; then
+    # Skip isolated tests on CE - they require namespaces which are enterprise-only
+    if [[ "$VAULT_EDITION" == "ce" ]]; then
+        echo "Skipping isolated tests on CE edition (requires enterprise features like namespaces)"
+        exit 0
+  fi
+    category_tags="isolated"
+fi
+if [[ "$VAULT_TEST_PACKAGE" == *"/scenario/"* ]]; then
+    category_tags="${category_tags:+${category_tags},}scenario"
+fi
+if [[ "$VAULT_TEST_PACKAGE" == *"/system/"* ]]; then
+    category_tags="${category_tags:+${category_tags},}system"
+fi
+
+# Combine tags
+if [[ -n "$base_tags" && -n "$category_tags" ]]; then
+    tags="-tags=${base_tags},${category_tags}"
+elif [[ -n "$base_tags" ]]; then
+    tags="-tags=${base_tags}"
+elif [[ -n "$category_tags" ]]; then
+    tags="-tags=${category_tags}"
+else
+    tags=""
+fi
 
 # Build gotestsum command based on whether we have specific tests
+# Convert VAULT_TEST_PACKAGE to array to handle multiple package paths properly
+VAULT_TEST_PACKAGE=$(printf "%s" "$VAULT_TEST_PACKAGE")
+IFS=' ' read -r -a packages <<< "$VAULT_TEST_PACKAGE"
+
+# Calculate test timeout based on number of tests
+# Default: 25 seconds per test, with minimum of 5 minutes, fallback to 60 minutes
+if [ -z "${VAULT_TEST_TIMEOUT:-}" ]; then
+  echo "Calculating test timeout based on test count..."
+
+  # Count test functions in the packages
+  test_count=0
+  for pkg in "${packages[@]}"; do
+    # Convert package path to file system path and count Test functions
+    pkg_path="${pkg#./}"
+    if [ -d "$pkg_path" ]; then
+      # Count functions starting with "func Test" in all _test.go files
+      count=$(find "$pkg_path" -name "*_test.go" -type f -exec grep -h "^func Test" {} \; 2> /dev/null | wc -l)
+      test_count=$((test_count + count))
+    fi
+  done
+
+  if [ "$test_count" -gt 0 ]; then
+    # Calculate timeout: 25 seconds per test, converted to minutes
+    timeout_seconds=$((test_count * 25))
+    timeout_minutes=$((timeout_seconds / 60))
+
+    # Set minimum timeout of 5 minutes
+    if [ "$timeout_minutes" -lt 5 ]; then
+      timeout_minutes=5
+    fi
+
+    test_timeout="${timeout_minutes}m"
+    echo "Found $test_count tests, calculated timeout: $test_timeout (${timeout_seconds}s total)"
+  else
+    # Fallback if we can't count tests - use 60 minutes default
+    test_timeout="60m"
+    echo "Could not count tests, using default timeout: $test_timeout"
+  fi
+else
+    test_timeout="$VAULT_TEST_TIMEOUT"
+    echo "Using provided VAULT_TEST_TIMEOUT: $test_timeout"
+fi
+
 set -x # Show commands being executed
 set +e # Temporarily disable exit on error
 if [ -n "$VAULT_TEST_MATRIX" ] && [ -f "$VAULT_TEST_MATRIX" ]; then
     echo "Using test matrix from: $VAULT_TEST_MATRIX"
     # Extract test names from matrix and create regex pattern
-    test_pattern=$(jq -r '.include[].test' "$VAULT_TEST_MATRIX" | paste -sd '|' -)
+    test_pattern=$(jq -r '[.include[].test] | join("|")' "$VAULT_TEST_MATRIX")
     echo "Running specific tests: $test_pattern"
-    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 -run="$test_pattern" "$VAULT_TEST_PACKAGE"
+    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -timeout="$test_timeout" -count=1 "${tags}" -run="$test_pattern" "${packages[@]}"
 else
     echo "Running all tests in package"
-    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -count=1 "$VAULT_TEST_PACKAGE"
+    gotestsum --junitfile="$junit_output" --format=standard-verbose --jsonfile="$json_output" -- -timeout="$test_timeout" -count=1 "${tags}" "${packages[@]}"
 fi
 test_exit_code=$?
 set -e # Re-enable exit on error

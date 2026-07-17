@@ -66,10 +66,7 @@ func TestOCIEndToEnd(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 	client := cluster.Cores[0].Client
 
 	// Setup Vault
@@ -103,7 +100,7 @@ func TestOCIEndToEnd(t *testing.T) {
 		}
 	}()
 
-	vaultAddr := "http://" + cluster.Cores[0].Listeners[0].Addr().String()
+	vaultAddr := "http://" + cluster.Cores[0].APIAddress().String()
 
 	am, err := agentoci.NewOCIAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.oci"),

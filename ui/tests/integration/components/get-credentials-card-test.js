@@ -4,8 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
-import Service from '@ember/service';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { selectChoose } from 'ember-power-select/test-support';
@@ -14,31 +13,16 @@ import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const storeService = Service.extend({
-  query(modelType) {
-    return new Promise((resolve, reject) => {
-      switch (modelType) {
-        case 'database/role':
-          resolve([{ id: 'my-role', backend: 'database' }]);
-          break;
-        default:
-          reject({ httpStatus: 404 });
-          break;
-      }
-      reject({ httpStatus: 404 });
-    });
-  },
-});
-
 module('Integration | Component | get-credentials-card', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
     this.router = this.owner.lookup('service:router');
     this.router.transitionTo = sinon.stub();
+    this.dbListStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'databaseListRoles')
+      .resolves({ keys: ['my-role'] });
 
-    this.owner.unregister('service:store');
-    this.owner.register('service:store', storeService);
     this.set('title', 'Get Credentials');
     this.set('searchLabel', 'Role to use');
     setRunOptions({
@@ -56,7 +40,9 @@ module('Integration | Component | get-credentials-card', function (hooks) {
 
   test('it shows a disabled button when no item is selected', async function (assert) {
     assert.expect(2);
-    await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
+    await render(
+      hbs`<GetCredentialsCard @title={{this.title}} @backend="database"  @searchLabel={{this.searchLabel}} @placeholder="Search for a role..." @models={{this.models}} />`
+    );
     assert.dom(GENERAL.button('Get credentials')).isDisabled();
     assert.dom(GENERAL.button('Get credentials')).hasText('Get credentials', 'Button has default text');
   });

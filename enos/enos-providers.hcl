@@ -5,6 +5,9 @@ provider "aws" "default" {
   region = var.aws_region
 }
 
+provider "docker" "default" {
+}
+
 // This default SSH user is used in RHEL, Amazon Linux, SUSE, and Leap distros
 provider "enos" "ec2_user" {
   transport = {
@@ -25,8 +28,30 @@ provider "enos" "ubuntu" {
   }
 }
 
+provider "enos" "fyre_root" {
+  transport = {
+    ssh = {
+      user             = "root"
+      private_key_path = abspath(var.fyre_private_key_path)
+    }
+  }
+}
+
+provider "fyre" "rtp" {
+  product_group_id = var.fyre_product_group_id
+  site             = "rtp"
+}
+
+provider "fyre" "svl" {
+  product_group_id = var.fyre_product_group_id
+  site             = "svl"
+}
+
 provider "hcp" "default" {
 }
 
-provider "docker" "default" {
+provider "local" "default" {
+}
+
+provider "time" "default" {
 }

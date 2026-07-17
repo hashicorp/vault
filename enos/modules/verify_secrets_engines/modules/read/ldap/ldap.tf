@@ -41,11 +41,6 @@ variable "vault_root_token" {
   default     = null
 }
 
-variable "vault_audit_log_path" {
-  type        = string
-  description = "The file path for the audit device, if enabled"
-}
-
 variable "credential_ttl_buffer" {
   description = "Buffer (seconds) to wait after LDAP credential TTL expiry"
   type        = number
@@ -94,10 +89,16 @@ variable "enable_auth_verification" {
   default     = true
 }
 
+
 variable "enable_dynamic_role_verification" {
   type        = bool
   description = "Enable LDAP secrets engine dynamic role"
   default     = true
+}
+
+variable "vault_audit_log_path" {
+  type        = string
+  description = "The file path for the audit device"
 }
 
 variable "enable_password_policy_verification" {
@@ -114,6 +115,10 @@ variable "enable_static_role_verification" {
   type        = bool
   description = "Enable LDAP secrets engine static role verification"
   default     = true
+}
+
+locals {
+  lease_checks_count = try(var.create_state.ldap.data.checkout_custom.lease_id, "") != "" ? 1 : 0
 }
 
 resource "enos_remote_exec" "ldap_verify_auth" {
@@ -228,7 +233,8 @@ resource "enos_remote_exec" "ldap_verify_dynamic_credentials_suite" {
   count = var.enable_dynamic_credentials_verification ? 1 : 0
 
   depends_on = [
-    enos_remote_exec.ldap_verify_secrets
+    enos_remote_exec.ldap_verify_secrets,
+    enos_remote_exec.ldap_verify_rotation
   ]
 
   environment = {
@@ -384,13 +390,15 @@ resource "enos_remote_exec" "ldap_verify_audit_trail" {
 # Renew Check-out Lease
 # Test Case #10: Renew Check-out Lease - Renew the lease for a checked-out account
 resource "enos_remote_exec" "ldap_library_checkout_lease_renew" {
+  count = local.lease_checks_count
+
   depends_on = [
     enos_remote_exec.ldap_verify_secrets,
   ]
 
   environment = {
     # LEASE_ID will be provided via create_state.ldap from the create module after checkout
-    LEASE_ID          = try(var.create_state.ldap.data.checkout_custom.lease_id, "")
+    LEASE_ID          = var.create_state.ldap.data.checkout_custom.lease_id
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
@@ -441,6 +449,265 @@ resource "enos_remote_exec" "verify_dynamic_role" {
   }
 }
 
+
+# Self Check-in (Automatic on Revoke)
+# Test Case #12: Self Check-in (Automatic on Revoke) - Return account when lease expires (revoke)
+resource "enos_remote_exec" "ldap_library_checkout_lease_revoke" {
+  count = local.lease_checks_count
+
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+  ]
+
+  environment = {
+    # LEASE_ID will be provided via create_state.ldap from the create module after checkout
+    LEASE_ID          = var.create_state.ldap.data.checkout_custom.lease_id
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap-lease-revoke.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Check Library Status
+# Test Case #14: Check Library Status - See which accounts are available/checked-out
+resource "enos_remote_exec" "ldap_library_status_read" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+  ]
+
+  environment = {
+    REQPATH           = "${var.create_state.ldap.ldap_mount}/library/test-set/status"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/read.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# View Check-out Details
+# Test Case #15: View Check-out Details - Track which accounts are available/checked out
+resource "enos_remote_exec" "ldap_library_checkout_details" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+  ]
+
+  environment = {
+    REQPATH           = "${var.create_state.ldap.ldap_mount}/library/test-set/status"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/read.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Check-in Specific Accounts
+# Test Case #11: Check-in Specific Accounts - Explicitly check in accounts by name
+resource "enos_remote_exec" "ldap_library_checkin_specific" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+    enos_remote_exec.ldap_library_checkout_details,
+  ]
+
+  environment = {
+    MOUNT             = var.create_state.ldap.ldap_mount
+    SET_NAME          = "test-set"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap-library-checkin-specific.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Force Check-in (Admin)
+# Test Case #13: Force Check-in (Admin) - Admin force check-in using /manage/ endpoint
+resource "enos_remote_exec" "ldap_library_force_checkin" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+    enos_remote_exec.ldap_library_checkout_details,
+    enos_remote_exec.ldap_library_checkin_specific,
+  ]
+
+  environment = {
+    MOUNT             = var.create_state.ldap.ldap_mount
+    SET_NAME          = "test-set"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap-library-force-checkin.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Password Rotation on Check-in
+# Test Case #16: Password Rotation on Check-in - Verify password is rotated when account is checked back in
+resource "enos_remote_exec" "ldap_library_password_rotation" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+    enos_remote_exec.ldap_library_checkout_details,
+    enos_remote_exec.ldap_library_checkin_specific,
+    enos_remote_exec.ldap_library_force_checkin,
+  ]
+
+  environment = {
+    MOUNT             = var.create_state.ldap.ldap_mount
+    SET_NAME          = "test-set"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap-library-password-rotation.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Password Retrieval on Check-out
+# Test Case #17: Password Retrieval on Check-out - Verify password is returned when account is checked out
+resource "enos_remote_exec" "ldap_library_password_checkout" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+    enos_remote_exec.ldap_library_checkout_details,
+    enos_remote_exec.ldap_library_password_rotation,
+    enos_remote_exec.ldap_library_checkin_specific,
+    enos_remote_exec.ldap_library_force_checkin,
+  ]
+
+  environment = {
+    MOUNT             = var.create_state.ldap.ldap_mount
+    SET_NAME          = "test-set"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap-library-password-checkout.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Audit Trail for All Operations
+# Test Case #18: Audit Trail for All Operations - Verify Vault Core logs LDAP operations
+resource "enos_remote_exec" "ldap_library_verify_audit_trail" {
+  count = var.vault_audit_log_path != null ? 1 : 0
+
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+    enos_remote_exec.ldap_library_checkout_details,
+    enos_remote_exec.ldap_library_password_rotation,
+    enos_remote_exec.ldap_library_checkout_lease_renew,
+    enos_remote_exec.ldap_library_checkout_lease_revoke,
+  ]
+
+  environment = {
+    MOUNT          = var.create_state.ldap.ldap_mount
+    AUDIT_LOG_PATH = var.vault_audit_log_path
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap/verify-audit-trail.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# Optional Check-In Enforcement
+# Test Case #19: Optional Check-In Enforcement - Configure whether check-in is required
+resource "enos_remote_exec" "ldap_library_enforcement_config" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+  ]
+
+  environment = {
+    MOUNT                        = var.create_state.ldap.ldap_mount
+    SET_NAME                     = "test-set-enforcement"
+    SERVICE_ACCOUNT_NAMES        = "alice,carol"
+    TTL                          = "10h"
+    MAX_TTL                      = "20h"
+    DISABLE_CHECK_IN_ENFORCEMENT = "true"
+    VAULT_ADDR                   = var.vault_addr
+    VAULT_INSTALL_DIR            = var.vault_install_dir
+    VAULT_TOKEN                  = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap-library-enforcement-config.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
+
+# TTL Configuration
+# Test Case #20: TTL Configuration - Configure TTL per library
+resource "enos_remote_exec" "ldap_library_ttl_config" {
+  depends_on = [
+    enos_remote_exec.ldap_verify_secrets,
+  ]
+
+  environment = {
+    MOUNT             = var.create_state.ldap.ldap_mount
+    SET_NAME          = "test-set"
+    TTL               = "1h"
+    MAX_TTL           = "2h"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_INSTALL_DIR = var.vault_install_dir
+    VAULT_TOKEN       = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/../../../scripts/ldap-library-ttl-config.sh")]
+
+  transport = {
+    ssh = {
+      host = var.hosts[0].public_ip
+    }
+  }
+}
 
 # Verify Static role
 resource "enos_remote_exec" "ldap_static_roles" {

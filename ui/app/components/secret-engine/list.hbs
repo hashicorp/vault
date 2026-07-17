@@ -3,27 +3,28 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header
-  @title="Secrets engines"
-  @subtitle="Secrets engines available in the {{this.namespace.currentNamespace}} namespace of the {{this.version.clusterName}} cluster."
-  @icon="key"
->
+<Page::Header @title="Secrets engines" @icon="key">
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
+  <:description>
+    View and manage your configured secrets engines in the current cluster, ranging from key value store (kv) to dynamic
+    database credentials and more.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/secret-engines"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
   <:actions>
-    {{#unless this.showWizard}}
-      {{#if this.hasOnlyDefaultEngines}}
-        <Hds::Button
-          @color="secondary"
-          @icon="bulb"
-          @text="New to Secret engines?"
-          {{on "click" this.showIntroPage}}
-          data-test-button="intro"
-        />
-      {{/if}}
-      <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
-    {{/unless}}
+    {{#if this.showIntroButton}}
+      <Hds::Button
+        @color="secondary"
+        @icon="bulb"
+        @text="New to Secret engines?"
+        {{on "click" this.showIntroPage}}
+        data-test-button="intro"
+      />
+    {{/if}}
+    <Hds::Button @text="Enable new engine" @icon="plus" @route="vault.cluster.secrets.enable" data-test-enable-engine />
   </:actions>
 </Page::Header>
 
@@ -32,9 +33,11 @@
     @isIntroModal={{this.shouldRenderIntroModal}}
     @onRefresh={{this.refreshSecretEngineList}}
   />
-{{else}}
+{{/if}}
+
+{{#if this.showContent}}
   {{! Filters section }}
-  <Hds::SegmentedGroup class="has-top-margin-m" as |SG|>
+  <Hds::SegmentedGroup class="top-margin-12" as |SG|>
     <SG.TextInput
       @width="300px"
       @type="search"
@@ -153,6 +156,8 @@
       </:popupMenu>
     </ListTable>
   {{else}}
-    <EmptyState @title="No Secrets engines found" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No Secrets engines found" @titleTag="h2" data-test-empty-state-title />
+    </Hds::ApplicationState>
   {{/if}}
 {{/if}}

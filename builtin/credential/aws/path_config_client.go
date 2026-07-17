@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
@@ -87,7 +86,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 
 			"max_retries": {
 				Type:        framework.TypeInt,
-				Default:     aws.UseServiceDefaultRetries,
+				Default:     useServiceDefaultRetries,
 				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
 			},
 
@@ -368,12 +367,24 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		configEntry.RoleARN = data.Get("role_arn").(string)
 	}
 
+	// Checking if identity_token_ttl is actually changed, no need to flush the cache if it is not
+	previousIdentityParams := configEntry.PluginIdentityTokenParams
 	if err := configEntry.ParsePluginIdentityTokenFields(data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	if !previousIdentityParams.Equals(configEntry.PluginIdentityTokenParams) {
+		changedCreds = true
+	}
+
+	// Checking if any for the rotation parameters has been modified, if yes, we set "changedOtherConfig" to true
+	previousRotationParams := configEntry.AutomatedRotationParams
 	if err := configEntry.ParseAutomatedRotationFields(data); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	if !previousRotationParams.Equals(configEntry.AutomatedRotationParams) {
+		changedOtherConfig = true
 	}
 
 	// handle mutual exclusivity

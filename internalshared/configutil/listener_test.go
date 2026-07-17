@@ -232,6 +232,8 @@ func TestListener_parseRequestSettings(t *testing.T) {
 		expectedCustomMaxJSONArrayElementCount int64
 		rawCustomMaxJSONToken                  any
 		expectedCustomMaxJSONToken             int64
+		rawCustomMaxTokenHeaderSize            any
+		expectedCustomMaxTokenHeaderSize       int64
 		isErrorExpected                        bool
 		errorMessage                           string
 	}{
@@ -323,6 +325,23 @@ func TestListener_parseRequestSettings(t *testing.T) {
 			expectedCustomMaxJSONToken: 500000,
 			isErrorExpected:            false,
 		},
+		"max-token-header-size-bad": {
+			rawCustomMaxTokenHeaderSize: "badvalue",
+			isErrorExpected:             true,
+			errorMessage:                "error parsing max_token_header_size",
+		},
+		// -1 is valid: it disables the token header size limit entirely,
+		// following the same convention as max_request_size = -1.
+		"max-token-header-size-disable": {
+			rawCustomMaxTokenHeaderSize:      "-1",
+			expectedCustomMaxTokenHeaderSize: -1,
+			isErrorExpected:                  false,
+		},
+		"max-token-header-size-good": {
+			rawCustomMaxTokenHeaderSize:      "4096",
+			expectedCustomMaxTokenHeaderSize: 4096,
+			isErrorExpected:                  false,
+		},
 	}
 
 	for name, tc := range tests {
@@ -341,6 +360,7 @@ func TestListener_parseRequestSettings(t *testing.T) {
 				CustomMaxJSONObjectEntryCountRaw:  tc.rawCustomMaxJSONObjectEntryCount,
 				CustomMaxJSONArrayElementCountRaw: tc.rawCustomMaxJSONArrayElementCount,
 				CustomMaxJSONTokenRaw:             tc.rawCustomMaxJSONToken,
+				CustomMaxTokenHeaderSizeRaw:       tc.rawCustomMaxTokenHeaderSize,
 			}
 
 			err := l.parseRequestSettings()
@@ -357,6 +377,7 @@ func TestListener_parseRequestSettings(t *testing.T) {
 				require.Equal(t, tc.expectedCustomMaxJSONObjectEntryCount, l.CustomMaxJSONObjectEntryCount)
 				require.Equal(t, tc.expectedCustomMaxJSONArrayElementCount, l.CustomMaxJSONArrayElementCount)
 				require.Equal(t, tc.expectedCustomMaxJSONToken, l.CustomMaxJSONToken)
+				require.Equal(t, tc.expectedCustomMaxTokenHeaderSize, l.CustomMaxTokenHeaderSize)
 				require.Equal(t, tc.expectedRequireRequestHeader, l.RequireRequestHeader)
 				require.Equal(t, tc.expectedDisableRequestLimiter, l.DisableRequestLimiter)
 				require.Equal(t, tc.expectedDuration, l.MaxRequestDuration)
@@ -367,6 +388,7 @@ func TestListener_parseRequestSettings(t *testing.T) {
 				require.Nil(t, l.CustomMaxJSONObjectEntryCountRaw)
 				require.Nil(t, l.CustomMaxJSONArrayElementCountRaw)
 				require.Nil(t, l.CustomMaxJSONTokenRaw)
+				require.Nil(t, l.CustomMaxTokenHeaderSizeRaw)
 				require.Nil(t, l.MaxRequestDurationRaw)
 				require.Nil(t, l.RequireRequestHeaderRaw)
 				require.Nil(t, l.DisableRequestLimiterRaw)

@@ -25,13 +25,15 @@
           <div class="has-text-grey">
             {{item.id}}
           </div>
-          <Hds::Badge @text={{item.mountType}} class="has-right-margin-8" />
+          {{#if item.mount_type}}
+            <Hds::Badge @text={{item.mount_type}} class="has-right-margin-8" />
+          {{/if}}
           <span class="has-text-grey is-size-8">
             {{item.mountAccessor}}
           </span>
         </div>
         <div class="column has-text-right">
-          <Identity::PopupAlias @item={{item}} @onSuccess={{action "onDelete"}} />
+          <Identity::PopupAlias @item={{item}} @identityType={{this.identityType}} />
         </div>
       </div>
     </LinkedBlock>
@@ -47,7 +49,7 @@
   />
 
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @title="No {{this.identityType}} aliases yet" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message

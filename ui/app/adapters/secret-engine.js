@@ -99,19 +99,4 @@ export default ApplicationAdapter.extend({
       return this.ajax(`/v1/${path}/${apiPath}`, options.isDelete ? 'DELETE' : 'POST', { data });
     }
   },
-
-  saveZeroAddressConfig(store, type, snapshot) {
-    const path = encodePath(snapshot.id);
-    const roles = store
-      .peekAll('role-ssh')
-      .filter((role) => role.zeroAddress)
-      .map((role) => role.id)
-      .join(',');
-    const url = `/v1/${path}/config/zeroaddress`;
-    const data = { roles };
-    if (roles === '') {
-      return this.ajax(url, 'DELETE');
-    }
-    return this.ajax(url, 'POST', { data });
-  },
 });

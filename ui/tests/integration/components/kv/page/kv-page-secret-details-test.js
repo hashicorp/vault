@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -97,16 +97,47 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
     await click(GENERAL.button('toggle-masked'));
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
-    await click(GENERAL.toggleInput('json'));
+    await click(GENERAL.button('json'));
     assert.dom(GENERAL.codeBlock('secret-data')).hasText(
       `Version data {
   "foo": "bar"
 }`,
-      'json editor renders secret data'
+      'json view renders secret data'
     );
     assert
       .dom(PAGE.detail.versionTimestamp)
       .includesText(`Version ${this.secret.version} created`, 'renders version and time created');
+  });
+
+  test('it toggles between UI, JSON, and YAML views', async function (assert) {
+    assert.expect(11);
+
+    await this.renderComponent();
+    // starts in the UI/table view
+    assert.dom(PAGE.infoRowValue('foo')).exists('starts in UI view');
+    assert.dom(GENERAL.button('ui')).hasClass('hds-button--color-primary', 'UI toggle is selected');
+    assert.dom(GENERAL.codeBlock('secret-data')).doesNotExist('code block is hidden in UI view');
+
+    // UI -> JSON
+    await click(GENERAL.button('json'));
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText(`Version data {\n  "foo": "bar"\n}`, 'json view renders secret data');
+    assert.dom(GENERAL.button('json')).hasClass('hds-button--color-primary', 'JSON toggle is selected');
+    assert.dom(PAGE.infoRowValue('foo')).doesNotExist('key/value table is hidden in JSON view');
+
+    // JSON -> YAML (cross-format switch)
+    await click(GENERAL.button('yaml'));
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText('Version data foo: bar', 'yaml view renders secret data');
+    assert.dom(GENERAL.button('yaml')).hasClass('hds-button--color-primary', 'YAML toggle is selected');
+
+    // YAML -> UI (returns to table)
+    await click(GENERAL.button('ui'));
+    assert.dom(PAGE.infoRowValue('foo')).exists('returns to UI view');
+    assert.dom(GENERAL.button('ui')).hasClass('hds-button--color-primary', 'UI toggle is selected again');
+    assert.dom(GENERAL.codeBlock('secret-data')).doesNotExist('code block is hidden after returning to UI');
   });
 
   test('it renders hds codeblock view when secret is complex', async function (assert) {
@@ -114,9 +145,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     this.secret.secretData = this.secretDataNested;
     await this.renderComponent();
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom(GENERAL.toggleInput('json')).isChecked();
-    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
-    assert.dom(GENERAL.codeBlock('secret-data')).exists('hds codeBlock exists');
+    assert.dom(GENERAL.button('json')).exists('json view toggle renders');
+    assert.dom(GENERAL.button('yaml')).exists('yaml view toggle renders');
+    assert.dom(GENERAL.codeBlock('secret-data')).exists('defaults to hds codeBlock when secret is advanced');
   });
 
   test('it renders deleted empty state', async function (assert) {

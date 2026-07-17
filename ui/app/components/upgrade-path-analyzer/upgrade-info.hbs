@@ -1,0 +1,80 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Page::Header @title="Issues">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Link::Standalone @text="CLI & API quick reference" @href={{doc-link "/vault/docs"}} @icon="external-link" />
+  </:actions>
+  <:description>
+    These are all the known issues, breaking changes, and new behaviors released with the selected version as well as steps
+    to safely roll back.
+  </:description>
+</Page::Header>
+
+<Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} class="top-margin-32" as |T|>
+  {{#each this.tabs as |tab|}}
+    <T.Tab data-test-tab={{tab.text}}>
+      <Hds::Icon @name={{tab.icon}} />
+      {{tab.text}}
+      {{#if tab.count}}
+        <Hds::BadgeCount @size="small" @text={{tab.count}} data-test-badge={{tab.text}} />
+      {{/if}}
+    </T.Tab>
+  {{/each}}
+
+  {{#each this.panels as |panel|}}
+    <T.Panel data-test-panel>
+      {{#each panel as |listItem index|}}
+        <Hds::Layout::Flex
+          @direction="column"
+          @gap="12"
+          @justify="space-between"
+          class="top-padding-20 bottom-padding-20"
+          data-test-panel-item
+          as |LF|
+        >
+          <LF.Item>
+            <Hds::Layout::Flex @gap="8">
+              {{#each listItem.badges as |badge|}}
+                <Hds::Badge @text={{badge.text}} @color={{badge.color}} data-test-badge />
+              {{/each}}
+            </Hds::Layout::Flex>
+          </LF.Item>
+
+          <LF.Item>
+            <Hds::Layout::Flex @justify="space-between">
+              <Hds::Text::Display @size="200" @tag="h2" @weight="semibold" data-test-panel-item-title>
+                {{listItem.title}}
+              </Hds::Text::Display>
+
+              <Hds::Link::Standalone
+                @icon="external-link"
+                @iconPosition="trailing"
+                @text="View details"
+                @href={{listItem.link}}
+                data-test-link-to="Item details"
+              />
+            </Hds::Layout::Flex>
+
+            <Hds::Text::Body @tag="p" data-test-panel-item-description>
+              {{listItem.description}}
+            </Hds::Text::Body>
+          </LF.Item>
+        </Hds::Layout::Flex>
+
+        {{#if (not-eq index (sub panel.length 1))}}
+          <Hds::Separator @spacing="0" />
+        {{/if}}
+      {{/each}}
+    </T.Panel>
+  {{/each}}
+
+  {{! separate panel for Rollback steps - does not follow the same format as the others so we will separate it here }}
+  <T.Panel>
+    Rollbacks steps
+  </T.Panel>
+</Hds::Tabs>

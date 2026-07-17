@@ -9,6 +9,12 @@
       @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="License")}}
     />
   </:breadcrumbs>
+  <:description>
+    View your Vault Enterprise license ID, status, expiration date, and feature entitlements.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/license"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
 </Page::Header>
 
 <section class="box is-sideless is-marginless is-shadowless is-fullwidth">

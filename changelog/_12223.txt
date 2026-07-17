@@ -1,0 +1,4 @@
+```release-note:bug
+ldap auth (enterprise): Fix root password rotation for Active Directory by implementing UTF-16LE encoding and schema-specific handling. Adds new 'schema' config field (defaults to 'openldap' for backward compatibility).
+```
+

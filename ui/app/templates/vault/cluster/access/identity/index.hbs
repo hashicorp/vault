@@ -37,46 +37,43 @@
               @icon="more-horizontal"
               @text="Identity management options"
               @hasChevron={{false}}
-              {{on "click" (action "reloadRecord" item)}}
               data-test-popup-menu-trigger
             />
             <dd.Interactive
               @route="vault.cluster.access.identity.show"
               @models={{array item.id "details"}}
             >Details</dd.Interactive>
-            {{#if (or item.isReloading item.updatePath.isPending item.aliasPath.isPending)}}
-              <dd.Generic class="has-text-center">
-                <LoadingDropdownOption />
-              </dd.Generic>
-            {{else}}
-              {{#if item.canAddAlias}}
-                {{! entities can always add aliases, internal groups cannot have any and external groups can only have one }}
-                {{#if (or (eq this.identityType "entity") (and (eq item.type "external") (not item.alias)))}}
-                  <dd.Interactive
-                    data-test-popup-menu="create alias"
-                    @route="vault.cluster.access.identity.aliases.add"
-                    @models={{array (pluralize this.identityType) item.id}}
-                  >Create alias</dd.Interactive>
-                {{/if}}
+            {{#if item.canAddAlias}}
+              {{! entities can always add aliases, internal groups cannot have any and external groups can only have one }}
+              {{#if (or (eq this.identityType "entity") (eq item.type "external"))}}
+                <dd.Interactive
+                  data-test-popup-menu="create alias"
+                  @route="vault.cluster.access.identity.aliases.add"
+                  @models={{array (pluralize this.identityType) item.id}}
+                >Create alias</dd.Interactive>
               {{/if}}
-              {{#if item.canEdit}}
-                <dd.Interactive @route="vault.cluster.access.identity.edit" @model={{item.id}}>Edit</dd.Interactive>
-                {{#if item.disabled}}
-                  <dd.Interactive {{on "click" (action "toggleDisabled" item)}}>Enable</dd.Interactive>
-                {{else if (eq this.identityType "entity")}}
-                  <dd.Interactive
-                    @color="critical"
-                    {{on "click" (fn (mut this.entityToDisable) item)}}
-                  >Disable</dd.Interactive>
-                {{/if}}
-              {{/if}}
-              {{#if item.canDelete}}
+            {{/if}}
+            {{#if item.canEdit}}
+              <dd.Interactive
+                data-test-popup-menu="edit"
+                @route="vault.cluster.access.identity.edit"
+                @model={{item.id}}
+              >Edit</dd.Interactive>
+              {{#if item.disabled}}
+                <dd.Interactive {{on "click" (action "toggleDisabled" item)}}>Enable</dd.Interactive>
+              {{else if (eq this.identityType "entity")}}
                 <dd.Interactive
                   @color="critical"
-                  {{on "click" (fn (mut this.itemToDelete) item)}}
-                  data-test-popup-menu="delete"
-                >Delete</dd.Interactive>
+                  {{on "click" (fn (mut this.entityToDisable) item)}}
+                >Disable</dd.Interactive>
               {{/if}}
+            {{/if}}
+            {{#if item.canDelete}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.itemToDelete) item)}}
+                data-test-popup-menu="delete"
+              >Delete</dd.Interactive>
             {{/if}}
           </Hds::Dropdown>
         </div>
@@ -96,7 +93,7 @@
   />
 
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @title="No {{pluralize this.identityType}} yet" @titleTag="h2" />
     <A.Body
       data-test-empty-state-message

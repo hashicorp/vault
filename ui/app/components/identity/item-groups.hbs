@@ -3,13 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @model.groupIds}}
-  {{#each @model.directGroupIds as |gid|}}
+{{#if
+  (or (not (is-empty @model.group_ids)) (not (is-empty @model.direct_group_ids)) (not (is-empty @model.inherited_group_ids)))
+}}
+  {{#each @model.direct_group_ids as |gid|}}
     <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="list-item-row">
       <Icon @name="folder" class="has-text-grey-light" />{{gid}}
     </LinkTo>
   {{/each}}
-  {{#each @model.inheritedGroupIds as |gid|}}
+  {{#each @model.inherited_group_ids as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid "details"}} class="list-item-row">
       <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="has-text-black">
         <Icon @name="folder" class="has-text-grey-light" />{{gid}}
@@ -18,7 +20,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @title="{{@model.name}} is not a member of any groups." @titleTag="h2" />
   </Hds::ApplicationState>
 {{/if}}

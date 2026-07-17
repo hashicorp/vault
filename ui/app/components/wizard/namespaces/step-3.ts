@@ -5,10 +5,11 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { SecurityPolicy } from './step-1';
 import type NamespaceService from 'vault/services/namespace';
+import type SnippetService from 'vault/services/snippet';
+import { CreationMethod } from 'vault/utils/constants/snippet';
 import {
   generateApiSnippet,
   generateCliSnippet,
@@ -25,12 +26,6 @@ interface Args {
   updateWizardState: (key: string, value: unknown) => void;
 }
 
-export enum CreationMethod {
-  TERRAFORM = 'Terraform automation',
-  APICLI = 'API/CLI',
-  UI = 'Vault UI workflow',
-}
-
 interface CreationMethodChoice {
   icon: string;
   label: CreationMethod;
@@ -40,15 +35,14 @@ interface CreationMethodChoice {
 
 export default class WizardNamespacesStep3 extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
-  @tracked creationMethodChoice: CreationMethod;
-  @tracked selectedTabIdx = 0;
+  @service declare readonly snippet: SnippetService;
 
   methods = CreationMethod;
   policy = SecurityPolicy;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    this.creationMethodChoice = this.args.wizardState.creationMethod || CreationMethod.TERRAFORM;
+    this.snippet.reset(this.args.wizardState.creationMethod || CreationMethod.TERRAFORM);
   }
 
   creationMethodOptions: CreationMethodChoice[] = [
@@ -73,6 +67,14 @@ export default class WizardNamespacesStep3 extends Component<Args> {
     },
   ];
 
+  get creationMethodChoice() {
+    return this.snippet.creationMethodChoice;
+  }
+
+  get selectedTabIdx() {
+    return this.snippet.selectedTabIdx;
+  }
+
   get tfSnippet() {
     const { namespacePaths } = this.args.wizardState;
     return generateTerraformSnippet(namespacePaths, this.namespace.path);
@@ -96,28 +98,20 @@ export default class WizardNamespacesStep3 extends Component<Args> {
 
   @action
   onChange(choice: CreationMethodChoice) {
-    this.creationMethodChoice = choice.label;
+    this.snippet.setCreationMethod(choice.label, this.tfSnippet, this.customTabs);
     this.args.updateWizardState('creationMethod', choice.label);
-    // Update the code snippet whenever the creation method changes
-    this.updateCodeSnippet();
+    this.args.updateWizardState('codeSnippet', this.snippet.codeSnippet);
   }
 
   @action
   onTabChange(idx: number) {
-    this.selectedTabIdx = idx;
-
-    // Update the code snippet whenever the tab changes
-    this.updateCodeSnippet();
+    this.snippet.setSelectedTab(idx, this.tfSnippet, this.customTabs);
+    this.args.updateWizardState('codeSnippet', this.snippet.codeSnippet);
   }
 
-  // Update the wizard state with the current code snippet
   @action
   updateCodeSnippet() {
-    if (this.creationMethodChoice === CreationMethod.TERRAFORM) {
-      this.args.updateWizardState('codeSnippet', this.tfSnippet);
-    } else if (this.creationMethodChoice === CreationMethod.APICLI) {
-      const snippet = this.customTabs[this.selectedTabIdx]?.snippet;
-      this.args.updateWizardState('codeSnippet', snippet);
-    }
+    this.snippet.persistSnippet(this.tfSnippet, this.customTabs);
+    this.args.updateWizardState('codeSnippet', this.snippet.codeSnippet);
   }
 }

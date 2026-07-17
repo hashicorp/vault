@@ -39,6 +39,10 @@ import (
 const (
 	RaftInitialChallengeLimit = 20 // allow an initial burst to 20
 	RaftChallengesPerSecond   = 5  // equating to an average 200ms min time
+	// Keep retry-join workers to a fixed bound so unauthenticated retry joins
+	// cannot grow goroutines without limit. 20 allows bounded parallel progress
+	// while capping memory/CPU impact from repeated requests.
+	raftMaxConcurrentRetryJoins = 20
 
 	// undoLogMonitorInterval is how often the leader checks to see
 	// if all the cluster members it knows about are new enough to support
@@ -1022,6 +1026,8 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 		return nil, err
 	}
 
+	// We compare here the local seal configuration to that of the leader we are trying to join,
+	// thus there is no need to call ValidateSealGenerationInfo.
 	if !CompatibleSealTypes(sealConfig.Type, c.seal.BarrierSealConfigType().String()) {
 		return nil, fmt.Errorf("incompatible seal types between raft leader (%s) and follower (%s)", sealConfig.Type, c.seal.BarrierSealConfigType())
 	}
@@ -1245,7 +1251,15 @@ func (c *Core) JoinRaftCluster(ctx context.Context, leaderInfos []*raft.LeaderJo
 
 	switch retryFailures {
 	case true:
+		select {
+		case c.raftJoinRetryLimiter <- struct{}{}:
+		default:
+			return false, errors.New("too many concurrent raft retry joins in progress")
+		}
 		go func() {
+			defer func() {
+				<-c.raftJoinRetryLimiter
+			}()
 			for {
 				select {
 				case <-ctx.Done():

@@ -86,6 +86,10 @@ func IndexStateFromContext(ctx context.Context) *WALState {
 	return s
 }
 
+// AuthorizationDetail stores one enterprise token authorization detail object.
+// The "type" field is required.
+type AuthorizationDetail map[string]any
+
 // Request is a struct that stores the parameters and context of a request
 // being made to Vault. It is used to abstract the details of the higher level
 // request protocol from the handlers.
@@ -137,6 +141,26 @@ type Request struct {
 	// hashed.
 	ClientToken string `json:"client_token" structs:"client_token" mapstructure:"client_token" sentinel:""`
 
+	// JwtUniqueId stores the unique id of JWTs used as part of OAuth authorization to Vault.
+	JwtUniqueId string `json:"jwt_unique_id" structs:"jwt_unique_id" mapstructure:"jwt_unique_id" sentinel:""`
+
+	// JwtIssuer stores the issuer of JWTs used as part of OAuth authorization to Vault.
+	JwtIssuer string `json:"jwt_issuer,omitempty" structs:"jwt_issuer" mapstructure:"jwt_issuer"`
+
+	// JwtTransactionClaim stores the transaction claim of JWTs used as part of OAuth authorization to Vault.
+	JwtTransactionClaim string `json:"jwt_transaction_claim,omitempty" structs:"jwt_transaction_claim" mapstructure:"jwt_transaction_claim"`
+
+	// JwtAudienceClaim stores token audience values of JWTs used as part of OAuth authorization to Vault.
+	JwtAudienceClaim []string `json:"jwt_audience_claim,omitempty" structs:"jwt_audience_claim" mapstructure:"jwt_audience_claim"`
+
+	// JwtAuthorizationDetails stores authorization details forr JWTs used as part of OAuth authorization to Vault.
+	JwtAuthorizationDetails []AuthorizationDetail `json:"jwt_authorization_details,omitempty" structs:"jwt_authorization_details" mapstructure:"jwt_authorization_details"`
+
+	// JwtAuthorizationDetailsClaimPresent indicates whether the inbound
+	// JWT included an authorization_details claim at all. This lets
+	// callers distinguish "claim missing" from "claim present but empty".
+	JwtAuthorizationDetailsClaimPresent bool `json:"jwt_authorization_details_claim_present,omitempty" structs:"jwt_authorization_details_claim_present" mapstructure:"jwt_authorization_details_claim_present"`
+
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
 	ClientTokenAccessor string `json:"client_token_accessor" structs:"client_token_accessor" mapstructure:"client_token_accessor" sentinel:""`
@@ -186,6 +210,12 @@ type Request struct {
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
 	EntityID string `json:"entity_id" structs:"entity_id" mapstructure:"entity_id" sentinel:""`
+
+	// ActorEntityID is the entity ID of the actor in a request.
+	ActorEntityID string `json:"actor_entity_id" structs:"actor_entity_id" mapstructure:"actor_entity_id" sentinel:""`
+
+	// ActorEntityName is the name of the actor entity in a request.
+	ActorEntityName string `json:"actor_entity_name" structs:"actor_entity_name" mapstructure:"actor_entity_name" sentinel:""`
 
 	// PolicyOverride indicates that the requestor wishes to override
 	// soft-mandatory Sentinel policies
@@ -257,8 +287,11 @@ type Request struct {
 	// client token.
 	ClientID string `json:"client_id" structs:"client_id" mapstructure:"client_id" sentinel:""`
 
-	// InboundSSCToken is the token that arrives on an inbound request, supplied
-	// by the vault user.
+	// InboundSSCToken stores the original token value as supplied by the caller
+	// on the inbound request (header/body), before token decoding or
+	// normalization (for example SSCT decoding or enterprise token normalization
+	// to internal IDs). This allows response/forwarding paths to preserve the
+	// caller-visible token representation when needed.
 	InboundSSCToken string
 
 	// When a request has been forwarded, contains information of the host the request was forwarded 'from'

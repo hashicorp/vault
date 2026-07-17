@@ -897,13 +897,7 @@ func TestHandler_Parse_Form(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	c := cleanhttp.DefaultClient()
 	c.Transport = &http.Transport{
@@ -967,8 +961,6 @@ func TestHandler_MaxRequestSize(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 	_, err := client.KVv2("secret").Put(context.Background(), "foo", map[string]interface{}{
@@ -1203,8 +1195,6 @@ func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
 					},
 				},
 			})
-			cluster.Start()
-			defer cluster.Cleanup()
 
 			client := cluster.Cores[0].Client
 			client.SetToken(cluster.RootToken)
@@ -1243,25 +1233,4 @@ func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
 			require.NotNil(t, resp)
 		})
 	}
-}
-
-// TestAutoSnapshotLoadForwarded tests that a request to load from a cloud
-// snapshot is forwarded to the active node, rather than being redirected
-func TestAutoSnapshotLoadForwarded(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
-		NumCores:    2,
-		HandlerFunc: Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[1].Client
-	client.SetToken(cluster.RootToken)
-
-	_, err := client.Logical().Write("sys/storage/raft/snapshot-auto/snapshot-load/cfg1", nil)
-	// the request will fail, but all that we care about is that the error
-	// doesn't indicate a redirect
-	require.Error(t, err)
-	require.NotContains(t, err.Error(), "redirects not allowed in these tests")
 }

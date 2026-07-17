@@ -48,7 +48,6 @@ const (
 // an initial setup of Vault.
 func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 	cluster := setupOIDCTestCluster(t, 2)
-	defer cluster.Cleanup()
 	active := cluster.Cores[0].Client
 	standby := cluster.Cores[1].Client
 
@@ -271,7 +270,6 @@ func TestOIDC_Auth_Code_Flow_Default_Resources(t *testing.T) {
 // a client secret and authenticates to the token endpoint.
 func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 	cluster := setupOIDCTestCluster(t, 2)
-	defer cluster.Cleanup()
 	active := cluster.Cores[0].Client
 	standby := cluster.Cores[1].Client
 
@@ -621,7 +619,6 @@ func TestOIDC_Auth_Code_Flow_Confidential_CAP_Client(t *testing.T) {
 // and always uses proof key for code exchange (PKCE).
 func TestOIDC_Auth_Code_Flow_Public_CAP_Client(t *testing.T) {
 	cluster := setupOIDCTestCluster(t, 2)
-	defer cluster.Cleanup()
 	active := cluster.Cores[0].Client
 	standby := cluster.Cores[1].Client
 
@@ -963,8 +960,6 @@ func setupOIDCTestCluster(t *testing.T, numCores int) *vault.TestCluster {
 		HandlerFunc: vaulthttp.Handler,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, clusterOptions)
-	cluster.Start()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 	return cluster
 }

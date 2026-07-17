@@ -7,7 +7,11 @@
   <Page::Header @title="Create a Namespace">
     <:breadcrumbs>
       <Page::Breadcrumbs
-        @breadcrumbs={{array (hash label="Namespaces" route="vault.cluster.access.namespaces.index") (hash label="Create")}}
+        @breadcrumbs={{array
+          (hash label="Vault" icon="vault" route="vault.cluster.dashboard")
+          (hash label="Namespaces" route="vault.cluster.access.namespaces.index")
+          (hash label="Create a Namespace")
+        }}
       />
     </:breadcrumbs>
   </Page::Header>

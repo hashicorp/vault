@@ -8,18 +8,18 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 
 export default class OidcProviderDetailsController extends Controller {
+  @service api;
   @service router;
   @service flashMessages;
 
   @action
   async delete() {
     try {
-      await this.model.destroyRecord();
+      await this.api.identity.oidcDeleteProvider(this.model.provider.name);
       this.flashMessages.success('Provider deleted successfully');
       this.router.transitionTo('vault.cluster.access.oidc.providers');
     } catch (error) {
-      this.model.rollbackAttributes();
-      const message = error.errors ? error.errors.join('. ') : error.message;
+      const { message } = await this.api.parseError(error);
       this.flashMessages.danger(message);
     }
   }

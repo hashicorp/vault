@@ -20,7 +20,7 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2"
-	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v4"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"

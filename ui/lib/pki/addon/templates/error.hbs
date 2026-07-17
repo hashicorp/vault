@@ -7,6 +7,10 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
+
+  <:actions>
+    <ManageDropdown @model={{this.title}} @configRoute="configuration" />
+  </:actions>
 </Page::Header>
 
 <nav class="tabs" aria-label="secret tabs">

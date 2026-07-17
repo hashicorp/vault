@@ -94,13 +94,23 @@
   </div>
 {{else}}
   {{#if @filterValue}}
-    <EmptyState @title="There are no scopes matching &quot;{{@filterValue}}&quot;" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        @title="There are no scopes matching &quot;{{@filterValue}}&quot;"
+        @titleTag="h2"
+        data-test-empty-state-title
+      />
+    </Hds::ApplicationState>
   {{else}}
-    <EmptyState
-      @title="KMIP Secrets Engine"
-      @message="First, let's create a scope that our roles and credentials will belong to. A client can only access objects within their role's scope."
-    >
-      <Hds::Link::Standalone @icon="plus" @text="Create a scope" @route="scopes.create" />
-    </EmptyState>
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="KMIP Secrets Engine" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="First, let's create a scope that our roles and credentials will belong to. A client can only access objects within their role's scope."
+        data-test-empty-state-message
+      />
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone @icon="plus" @text="Create a scope" @route="scopes.create" />
+      </A.Footer>
+    </Hds::ApplicationState>
   {{/if}}
 {{/if}}

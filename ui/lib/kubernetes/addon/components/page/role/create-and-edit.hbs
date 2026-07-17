@@ -121,11 +121,13 @@
     {{/if}}
   </form>
 {{else}}
-  <EmptyState
-    class="is-shadowless"
-    @title="Choose an option above"
-    @message="To configure a Vault role, choose what should be generated in Kubernetes by Vault."
-  />
+  <Hds::ApplicationState class="bottom-padding-32 is-marginless" as |A|>
+    <A.Header @title="Choose an option above" @titleTag="h2" data-test-empty-state-title />
+    <A.Body
+      @text="To configure a Vault role, choose what should be generated in Kubernetes by Vault."
+      data-test-empty-state-message
+    />
+  </Hds::ApplicationState>
 {{/if}}
 
 <hr class="is-marginless has-background-gray-200" />

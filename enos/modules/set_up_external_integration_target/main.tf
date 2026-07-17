@@ -11,8 +11,10 @@ terraform {
 
 locals {
   test_server_address = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
+  ldap_base_dn        = join(",", formatlist("dc=%s", split(".", var.ldap_domain)))
   ldap_server = {
-    domain      = "enos.com"
+    domain      = var.ldap_domain
+    base_dn     = local.ldap_base_dn
     org         = "hashicorp"
     admin_pw    = "password1"
     version     = var.ldap_version
@@ -27,14 +29,24 @@ locals {
     port = var.ports.mysql.port
     host = var.hosts[0]
   }
+  # Database configurations are now pulled from var.database_configs
+  database_servers = {
+    for db_name, db_config in var.database_configs : db_name => merge(db_config, {
+      host = var.hosts[0]
+    })
+  }
 }
 
 # Outputs
 output "state" {
-  value = {
-    ldap = local.ldap_server
-    kmip = local.kmip_client
-  }
+  value = merge(
+    {
+      ldap = local.ldap_server
+      kmip = local.kmip_client
+    },
+    # Add database servers dynamically
+    { for db_name, db_server in local.database_servers : db_name => db_server }
+  )
 }
 
 # We run install_packages before we install Vault because for some combinations of
@@ -53,10 +65,43 @@ resource "enos_remote_exec" "setup_openldap" {
   scripts = [abspath("${path.module}/scripts/start-container.sh")]
 
   environment = {
-    CONTAINER_IMAGE = "docker.io/osixia/openldap:${local.ldap_server.version}"
+    CONTAINER_IMAGE = "docker.mirror.hashicorp.services/osixia/openldap:${local.ldap_server.version}"
     CONTAINER_NAME  = "openldap"
     CONTAINER_PORTS = "${local.ldap_server.port},${local.ldap_server.secure_port}"
     CONTAINER_ENVS  = "LDAP_ORGANISATION=${local.ldap_server.org},LDAP_DOMAIN=${local.ldap_server.domain},LDAP_ADMIN_PASSWORD=${local.ldap_server.admin_pw}"
+  }
+
+  transport = {
+    ssh = {
+      host = local.ldap_server.host.public_ip
+    }
+  }
+}
+
+// Wait for the base DN to be available before we populate it
+module "wait_for_ldap_base_dn" {
+  depends_on = [enos_remote_exec.setup_openldap]
+  source     = "../ldap_wait_for_search"
+
+  hosts         = var.hosts
+  ldap_base_dn  = local.ldap_base_dn
+  ldap_bind_dn  = "cn=admin,${local.ldap_base_dn}"
+  ldap_host     = local.ldap_server.host
+  ldap_password = local.ldap_server.admin_pw
+  ldap_port     = local.ldap_server.port
+}
+
+# Populate LDAP server with required users and organizational units
+resource "enos_remote_exec" "populate_ldap" {
+  depends_on = [module.wait_for_ldap_base_dn]
+
+  scripts = [abspath("${path.module}/scripts/populate-ldap.sh")]
+
+  environment = {
+    LDAP_SERVER   = local.ldap_server.host.private_ip
+    LDAP_PORT     = local.ldap_server.port
+    LDAP_ADMIN_PW = local.ldap_server.admin_pw
+    LDAP_BASE_DN  = local.ldap_server.base_dn
   }
 
   transport = {
@@ -77,7 +122,7 @@ resource "enos_remote_exec" "create_kmip" {
   scripts = [abspath("${path.module}/scripts/start-container.sh")]
 
   environment = {
-    CONTAINER_IMAGE   = "docker.io/percona/percona-server:8.0"
+    CONTAINER_IMAGE   = "docker.mirror.hashicorp.services/library/mysql:8.0"
     CONTAINER_NAME    = "kmip"
     CONTAINER_VOLUMES = "/tmp/kmip_temp:/TEMP_DIR"
     CONTAINER_ENVS    = "KMIP_ADDR=${local.test_server_address},MYSQL_ROOT_PASSWORD=testpassword"
@@ -89,4 +134,20 @@ resource "enos_remote_exec" "create_kmip" {
       host = local.kmip_client.host.public_ip
     }
   }
+}
+
+# Creating Database Servers using generic database_container module
+module "database_servers" {
+  for_each = var.database_configs
+  source   = "../database_container"
+
+  database_type      = each.key
+  db_version         = each.value.version
+  username           = each.value.username
+  password           = each.value.password
+  database           = each.value.database
+  port               = each.value.port
+  host               = var.hosts[0]
+  instance_name      = "default"
+  depends_on_modules = [module.install_packages]
 }

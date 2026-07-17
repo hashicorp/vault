@@ -44,7 +44,7 @@
 // distro_version_sles = "16.0" // or "15.7"
 
 // distro_version_ubuntu is the version of ubuntu to use for "distro:ubuntu" variants
-// distro_version_ubuntu = "22.04" // or "24.04"
+// distro_version_ubuntu = "22.04" // or "26.04"
 
 // tags are a map of tags that will be applied to infrastructure resources that
 // support tagging.
@@ -113,3 +113,6 @@
 // vault_revision is the git sha of Vault artifact we are testing. Some validations will expect the vault
 // binary and cluster to report this revision.
 // vault_revision = "df733361af26f8bb29b63704168bbc5ab8d083de"
+
+// vault_radar_license_path is the path to a valid Vault Radar path.
+// vault_radar_license_path = "./support/vault-radar.hclic"

@@ -85,6 +85,7 @@ export const GENERAL = {
   inputGroupByAttr: (attr: string) => `[data-test-input-group="${attr}"]`,
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   labelById: (id: string) => `label[id="${id}"]`,
+  labelFor: (name: string) => `label[for="${name}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   maskedInput: '[data-test-masked-input]',
   radioByAttr: (attr: string) => (attr ? `[data-test-radio="${attr}"]` : '[data-test-radio]'),
@@ -95,6 +96,7 @@ export const GENERAL = {
   textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
   superSelect: (name: string) => `[data-test-super-select="${name}"]`,
+  formLabel: (name: string) => `[data-test-form-label="${name}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,
@@ -108,9 +110,11 @@ export const GENERAL = {
     addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
-  kvSuggestion: {
-    input: '[data-test-kv-suggestion-input]',
-    select: '[data-test-kv-suggestion-select]',
+  // the FormField "keyValueInputs" editType (Hds::Form::KeyValueInputs), distinct from kvObjectEditor above
+  kvFieldByAttr: (attr: string, idx = 0) => `[data-test-kv-field="${attr}-${idx}"]`,
+  suggestion: {
+    input: (type: string) => `[data-test-suggestion-input="${type}"]`,
+    select: (type: string) => `[data-test-suggestion-select="${type}"]`,
   },
 
   /* ────── Search Select ────── */
@@ -141,6 +145,7 @@ export const GENERAL = {
   emptyStateSubtitle: '[data-test-empty-state-subtitle]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
+  emptyState: (attr: string) => `[data-test-empty-state="${attr}"]`,
   flashMessage: '[data-test-flash-message]',
   latestFlashContent: '[data-test-flash-message]:last-of-type [data-test-flash-message-body]',
   inlineAlert: '[data-test-inline-alert]',
@@ -148,8 +153,8 @@ export const GENERAL = {
   inlineError: '[data-test-inline-error-message]',
   messageError: '[data-test-message-error]',
   messageDescription: '[data-test-message-error-description]',
-  validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
-  validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
+  validationErrorByAttr: (attr: string) => `[data-test-validation-error="${attr}"]`,
+  validationWarningByAttr: (attr: string) => `[data-test-validation-warning="${attr}"]`,
 
   pageError: {
     error: '[data-test-page-error]',
@@ -194,5 +199,7 @@ export const GENERAL = {
   licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
   tooltipText: '.hds-tooltip-container',
-  textDisplay: (attr: string) => `[data-test-text-display="${attr}"]`,
+  textDisplay: (attr?: string) => (attr ? `[data-test-text-display="${attr}"]` : '[data-test-text-display]'),
+  textBody: (attr: string) => `[data-test-text-body="${attr}"]`,
+  widget: (name: string) => `[data-test-widget="${name}"]`,
 };

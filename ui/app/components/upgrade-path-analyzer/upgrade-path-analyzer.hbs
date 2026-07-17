@@ -1,0 +1,220 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Page::Header @icon="dashboard" @title="Upgrade path analyzer">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Link::Standalone @text="CLI & API quick reference" @href={{doc-link "/vault/docs"}} @icon="external-link" />
+  </:actions>
+  <:description>
+    Select a target version to analyze the upgrade path from your current running cluster.
+  </:description>
+</Page::Header>
+
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-padding-24 top-margin-32 bottom-margin-32"
+  data-test-card-container="version-selection"
+>
+  <Hds::Layout::Flex @align="center" @gap="16" @justify="space-between" as |LF|>
+    <Hds::Form::Select::Field disabled name="current-version" data-test-select={{this.currentVersion}} as |F|>
+      <F.Label>Current version</F.Label>
+      <F.Options>
+        <option value={{this.currentVersion}} selected>{{this.currentVersion}}</option>
+      </F.Options>
+    </Hds::Form::Select::Field>
+
+    <LF.Item>
+      <Hds::Icon @name="arrow-right" @size="24" />
+    </LF.Item>
+
+    <Hds::Form::Select::Field name="target-version" {{on "change" this.onVersionSelect}} as |F|>
+      <F.Label>Target version</F.Label>
+      {{! TODO - Hardcoded options until backend endpoint is added }}
+      <F.Options>
+        {{#each this.targetVersions as |version|}}
+          <option value={{version}}>{{version}}</option>
+        {{/each}}
+      </F.Options>
+    </Hds::Form::Select::Field>
+
+    <Hds::Button
+      @icon="arrow-up-circle"
+      @text="Analyze"
+      class="align-self-end"
+      data-test-button="Analyze"
+      {{on "click" this.onAnalyzeClick}}
+    />
+  </Hds::Layout::Flex>
+</Hds::Card::Container>
+
+{{#if this.upgradeInfo}}
+  {{! Known Issues Card }}
+
+  <Hds::Layout::Grid @columnMinWidth="50%" @gap="16">
+    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-12" data-test-card-container="Known issues">
+      <Hds::Layout::Flex @direction="column" @gap="12" as |LF|>
+        <LF.Item>
+          <Hds::Layout::Flex @align="center" @gap="8">
+            <Hds::Icon @name="shield-alert" @size="24" />
+            <Hds::Text::Display @tag="h2" @weight="semibold" data-test-card-title>Known issues</Hds::Text::Display>
+            <Hds::BadgeCount @text={{this.issueCount}} @type="inverted" data-test-badge />
+          </Hds::Layout::Flex>
+
+          <Hds::Text::Body @tag="p" data-test-card-description>
+            These are all the known issues documented with the version selected.
+          </Hds::Text::Body>
+        </LF.Item>
+
+        <Hds::Link::Standalone
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          @text="View"
+          @route="vault.cluster.support.upgrade-info"
+          @query={{hash tab="0"}}
+          data-test-link-to="Known issues"
+        />
+      </Hds::Layout::Flex>
+    </Hds::Card::Container>
+
+    {{! Breaking Changes Card }}
+    <Hds::Card::Container
+      @level="mid"
+      @hasBorder={{true}}
+      class="has-padding-12"
+      data-test-card-container="Breaking changes"
+    >
+      <Hds::Layout::Flex @direction="column" @gap="12" as |LF|>
+        <LF.Item>
+          <Hds::Layout::Flex @align="center" @gap="8">
+            <Hds::Icon @name="alert-triangle" @size="24" />
+            <Hds::Text::Display @tag="h2" @weight="semibold" data-test-card-title>Breaking changes</Hds::Text::Display>
+            <Hds::BadgeCount @text={{this.breakingChangesCount}} @type="inverted" data-test-badge />
+          </Hds::Layout::Flex>
+
+          <Hds::Text::Body @tag="p" data-test-card-description>
+            These are functional changes from one version to the other.
+          </Hds::Text::Body>
+        </LF.Item>
+
+        <Hds::Link::Standalone
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          @text="View"
+          @route="vault.cluster.support.upgrade-info"
+          @query={{hash tab="1"}}
+          data-test-link-to="Breaking changes"
+        />
+      </Hds::Layout::Flex>
+    </Hds::Card::Container>
+
+    {{! New Behavior Card }}
+    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-12" data-test-card-container="New behavior">
+      <Hds::Layout::Flex @direction="column" @gap="12" as |LF|>
+        <LF.Item>
+          <Hds::Layout::Flex @align="center" @gap="8">
+            <Hds::Icon @name="info" @size="24" />
+            <Hds::Text::Display @tag="h2" @weight="semibold" data-test-card-title>New behavior</Hds::Text::Display>
+            <Hds::BadgeCount @text={{this.newBehaviorCount}} @type="inverted" data-test-badge />
+          </Hds::Layout::Flex>
+
+          <Hds::Text::Body @tag="p" data-test-card-description>
+            New behavior introduced and released in the version selected.
+          </Hds::Text::Body>
+        </LF.Item>
+
+        <Hds::Link::Standalone
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          @text="View"
+          @route="vault.cluster.support.upgrade-info"
+          @query={{hash tab="2"}}
+          data-test-link-to="New behavior"
+        />
+      </Hds::Layout::Flex>
+    </Hds::Card::Container>
+
+    {{! Rollback Steps Card }}
+    <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-12" data-test-card-container="Rollback steps">
+      <Hds::Layout::Flex @direction="column" @gap="12" as |LF|>
+        <LF.Item>
+          <Hds::Layout::Flex @align="center" @gap="8">
+            <Hds::Icon @name="rewind" @size="24" />
+            <Hds::Text::Display @tag="h2" @weight="semibold" data-test-card-title>Rollback steps</Hds::Text::Display>
+            <Hds::BadgeCount @text="0" @type="inverted" data-test-badge />
+          </Hds::Layout::Flex>
+
+          <Hds::Text::Body @tag="p" data-test-card-description>
+            Follow these steps to safely rollback.
+          </Hds::Text::Body>
+        </LF.Item>
+
+        <Hds::Link::Standalone
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          @text="View"
+          @route="vault.cluster.support.upgrade-info"
+          @query={{hash tab="3"}}
+          data-test-link-to="Rollback steps"
+        />
+      </Hds::Layout::Flex>
+    </Hds::Card::Container>
+  </Hds::Layout::Grid>
+
+  <Hds::Card::Container
+    @level="mid"
+    @hasBorder={{true}}
+    class="has-padding-24 top-margin-32 bottom-margin-32"
+    data-test-card-container="upgrade-steps"
+  >
+    <Hds::Layout::Flex @direction="column" @gap="16">
+      <Hds::Layout::Flex @align="center" @justify="space-between" @gap="16">
+        <Hds::Text::Display @tag="h2" @weight="semibold" data-test-upgrade-steps-title>
+          Upgrade steps
+        </Hds::Text::Display>
+
+        <DownloadButton
+          @text="Download steps"
+          @data={{this.upgradeStepsDownloadText}}
+          @filename="vault-upgrade-steps"
+          @color="tertiary"
+          @iconPosition="leading"
+          data-test-button="Download steps"
+        />
+
+      </Hds::Layout::Flex>
+
+      <Hds::Alert @type="inline" @color="highlight" @icon="info" data-test-upgrade-alert as |A|>
+        <A.Title>{{this.upgradeGuidanceMessage}}</A.Title>
+      </Hds::Alert>
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Upgrade order:</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeOrder as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">{{step}}</Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Detailed upgrade steps</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeSteps as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">
+              {{step}}
+            </Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+    </Hds::Layout::Flex>
+  </Hds::Card::Container>
+{{/if}}

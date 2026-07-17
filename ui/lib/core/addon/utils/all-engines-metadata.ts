@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import ENV from 'vault/config/environment';
+
 /**
  * Metadata configuration for secret and auth engines, including enterprise.
  *
@@ -68,6 +70,10 @@ export function isAddonEngine(type: string, version: number) {
 //  all mounts enabled in Vault. Some types are internal Vault APIs, not user-mountable secrets engines,
 //  and should be filtered in some scenarios, such as listing secrets engines.
 export const INTERNAL_ENGINE_TYPES = ['system', 'identity', 'agent_registry'];
+
+// These engines rely on a specific version being set (eg. "kv version 1" or "kv version 2") via options parameter when being mounted in Vault.
+// If the engine to be mounted isn't specified here, we ignore the 'options' field.
+export const VERSIONED_ENGINE_TYPES = ['vault-plugin-secrets-kv', 'kv', 'generic'];
 
 export const ALL_ENGINES: EngineDisplayData[] = [
   {
@@ -240,7 +246,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   },
   {
     pluginCategory: 'generic',
-    displayName: 'PKI Certificates',
+    displayName: 'Private PKI',
     isConfigurable: true,
     engineRoute: 'pki.overview',
     configRoute: 'pki.configuration',
@@ -248,6 +254,21 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     mountCategory: ['secret'],
     type: 'pki',
   },
+  ...(ENV.environment !== 'production'
+    ? [
+        {
+          pluginCategory: 'generic',
+          displayName: 'Public PKI',
+          isConfigurable: true,
+          engineRoute: 'pki.external.overview',
+          configRoute: 'pki.external.configuration',
+          glyph: 'certificate',
+          mountCategory: ['secret'],
+          requiresEnterprise: true,
+          type: 'pki-external-ca',
+        },
+      ]
+    : []),
   {
     pluginCategory: 'infra',
     displayName: 'RADIUS',

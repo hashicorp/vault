@@ -26,8 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const testFormatJSONReqBasicStrFmt = `
-{
+const testFormatJSONReqBasicStrFmt = `{
   "time": "2015-08-05T13:45:46Z",
   "type": "request",
   "auth": {
@@ -39,6 +38,43 @@ const testFormatJSONReqBasicStrFmt = `
     ],
     "no_default_policy": true,
     "metadata": null,
+    "entity_id": "foobarentity",
+    "token_type": "service",
+    "token_ttl": 14400,
+    "token_issue_time": "2020-05-28T13:40:18-05:00"
+  },
+  "request": {
+    "operation": "update",
+    "path": "/foo",
+    "data": null,
+    "wrap_ttl": 60,
+    "remote_address": "127.0.0.1",
+    "headers": {
+      "foo": [
+        "bar"
+      ]
+    }
+  },
+  "error": "this is an error"
+}
+`
+
+const testFormatJSONEnterpriseTokenStrFmt = `{
+  "time": "2015-08-05T13:45:46Z",
+  "type": "request",
+  "auth": {
+    "client_token": "%s",
+    "accessor": "bar",
+    "display_name": "testtoken",
+    "policies": [
+      "root"
+    ],
+    "no_default_policy": true,
+    "metadata": {
+      "actor_entity_id": "actor-entity-789",
+      "actor_entity_name": "actor-service",
+      "jwt_unique_id": "test-token-123"
+    },
     "entity_id": "foobarentity",
     "token_type": "service",
     "token_ttl": 14400,
@@ -495,6 +531,463 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	})
 }
 
+// TestEntryFormatter_ActorAuth ensures that actor entity fields and EnterpriseToken*
+// fields are correctly mapped into auth metadata from logical.Auth and logical.Request.
+func TestEntryFormatter_ActorAuth(t *testing.T) {
+	t.Parallel()
+
+	authTests := map[string]struct {
+		Input                   *logical.Auth
+		ExpectedActorEntityID   string
+		ExpectedActorEntityName string
+	}{
+		"actor-fields-present": {
+			Input: &logical.Auth{
+				EntityID:        "subject-123",
+				DisplayName:     "subject-user",
+				ActorEntityID:   "actor-456",
+				ActorEntityName: "actor-service",
+				TokenType:       logical.TokenTypeDefault,
+			},
+			ExpectedActorEntityID:   "actor-456",
+			ExpectedActorEntityName: "actor-service",
+		},
+		"actor-fields-absent": {
+			Input: &logical.Auth{
+				EntityID:    "subject-123",
+				DisplayName: "subject-user",
+				TokenType:   logical.TokenTypeDefault,
+			},
+		},
+	}
+
+	for name, tc := range authTests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			result, err := newAuth(tc.Input, 0)
+			require.NoError(t, err)
+			require.NotNil(t, result)
+			if tc.ExpectedActorEntityID != "" {
+				got, ok := result.Metadata["actor_entity_id"]
+				require.True(t, ok, "actor_entity_id should be present in auth metadata")
+				require.Equal(t, tc.ExpectedActorEntityID, got)
+			} else {
+				_, ok := result.Metadata["actor_entity_id"]
+				require.False(t, ok, "actor_entity_id should be absent in auth metadata")
+			}
+			if tc.ExpectedActorEntityName != "" {
+				got, ok := result.Metadata["actor_entity_name"]
+				require.True(t, ok, "actor_entity_name should be present in auth metadata")
+				require.Equal(t, tc.ExpectedActorEntityName, got)
+			} else {
+				_, ok := result.Metadata["actor_entity_name"]
+				require.False(t, ok, "actor_entity_name should be absent in auth metadata")
+			}
+		})
+	}
+}
+
+// TestMergeEnterpriseTokenMetadata verifies enterprise token claims are copied into auth metadata.
+func TestMergeEnterpriseTokenMetadata(t *testing.T) {
+	t.Parallel()
+
+	requestTests := map[string]struct {
+		Input               *logical.Request
+		ExpectedMetadata    string
+		ExpectedIssuer      string
+		ExpectedTransaction string
+	}{
+		"metadata-present": {
+			Input:            &logical.Request{ID: "req-1", JwtUniqueId: "token-abc"},
+			ExpectedMetadata: "token-abc",
+		},
+		"metadata-absent": {
+			Input:            &logical.Request{ID: "req-2"},
+			ExpectedMetadata: "",
+		},
+		"issuer-present": {
+			Input: &logical.Request{
+				ID:          "req-3",
+				JwtUniqueId: "token-xyz",
+				JwtIssuer:   "https://issuer.example.com",
+			},
+			ExpectedMetadata: "token-xyz",
+			ExpectedIssuer:   "https://issuer.example.com",
+		},
+		"transaction-present": {
+			Input: &logical.Request{
+				ID:                  "req-4",
+				JwtUniqueId:         "token-txn",
+				JwtTransactionClaim: "txn-123",
+			},
+			ExpectedMetadata:    "token-txn",
+			ExpectedTransaction: "txn-123",
+		},
+	}
+
+	for name, tc := range requestTests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			a := &auth{}
+			err := mergeEnterpriseTokenMetadata(a, tc.Input)
+			require.NoError(t, err)
+			if tc.ExpectedMetadata == "" && tc.ExpectedIssuer == "" && tc.ExpectedTransaction == "" {
+				require.Nil(t, a.Metadata)
+			}
+
+			assertMetadataField := func(key, want string) {
+				t.Helper()
+				got, ok := a.Metadata[key]
+				if want == "" {
+					require.False(t, ok, "%s should be absent in auth metadata", key)
+					return
+				}
+				require.True(t, ok, "%s should be present in auth metadata", key)
+				require.Equal(t, want, got)
+			}
+
+			assertMetadataField("jwt_unique_id", tc.ExpectedMetadata)
+			assertMetadataField("jwt_issuer", tc.ExpectedIssuer)
+			assertMetadataField("jwt_transaction_claim", tc.ExpectedTransaction)
+		})
+	}
+}
+
+// TestEntryFormatter_Process_JSON_EnterpriseToken verifies that enterprise token fields
+// (actor_entity_id, actor_entity_name, jwt_unique_id, jwt_issuer,
+// jwt_transaction_claim,
+// jwt_audience, jwt_authorization_details) are correctly
+// serialized into auth.metadata in the JSON audit output, and absent when not set.
+func TestEntryFormatter_Process_JSON_EnterpriseToken(t *testing.T) {
+	t.Parallel()
+
+	staticSalt := newStaticSalt(t)
+
+	authzDetails := []logical.AuthorizationDetail{
+		{"type": "payment_initiation", "currency": "USD"},
+	}
+
+	cases := map[string]struct {
+		Auth                     *logical.Auth
+		Req                      *logical.Request
+		WantActorEntityID        any
+		WantActorEntityName      any
+		WantMetadata             string
+		WantIssuer               string
+		WantTransaction          string
+		WantAudience             any
+		WantAuthorizationDetails any
+	}{
+		"enterprise-token-with-actor-and-authorization-details": {
+			Auth: &logical.Auth{
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				EntityID:        "subject-entity-123",
+				ActorEntityID:   "actor-entity-456",
+				ActorEntityName: "actor-service",
+				Policies:        []string{"default"},
+				TokenType:       logical.TokenTypeDefault,
+			},
+			Req: &logical.Request{
+				Operation:               logical.ReadOperation,
+				Path:                    "/cubbyhole/test",
+				JwtUniqueId:             "test-token-abc",
+				JwtIssuer:               "https://issuer.example.com",
+				JwtTransactionClaim:     "txn-actor-1",
+				JwtAudienceClaim:        []string{"vault"},
+				JwtAuthorizationDetails: authzDetails,
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+			},
+			WantActorEntityID:        "actor-entity-456",
+			WantActorEntityName:      "actor-service",
+			WantMetadata:             "test-token-abc",
+			WantIssuer:               "https://issuer.example.com",
+			WantTransaction:          "txn-actor-1",
+			WantAudience:             []interface{}{"vault"},
+			WantAuthorizationDetails: []interface{}{map[string]interface{}{"currency": "USD", "type": "payment_initiation"}},
+		},
+		"enterprise-token-base-fields-only": {
+			Auth: &logical.Auth{
+				ClientToken: "foo",
+				Accessor:    "bar",
+				DisplayName: "testtoken",
+				EntityID:    "subject-entity-123",
+				Policies:    []string{"default"},
+				TokenType:   logical.TokenTypeDefault,
+			},
+			Req: &logical.Request{
+				Operation:           logical.ReadOperation,
+				Path:                "/cubbyhole/test",
+				JwtUniqueId:         "test-token-xyz",
+				JwtIssuer:           "https://issuer.example.com",
+				JwtTransactionClaim: "txn-base-1",
+				JwtAudienceClaim:    []string{"vault"},
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+			},
+			WantMetadata:        "test-token-xyz",
+			WantIssuer:          "https://issuer.example.com",
+			WantTransaction:     "txn-base-1",
+			WantAudience:        []interface{}{"vault"},
+			WantActorEntityName: nil,
+			WantActorEntityID:   nil,
+		},
+	}
+
+	for name, tc := range cases {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg, err := newFormatterConfig(&testHeaderFormatter{}, map[string]string{
+				"hmac_accessor": "false",
+			})
+			require.NoError(t, err)
+			formatter, err := newEntryFormatter("test", cfg, staticSalt, hclog.NewNullLogger())
+			require.NoError(t, err)
+
+			in := &logical.LogInput{
+				Auth:    tc.Auth,
+				Request: tc.Req,
+			}
+
+			auditEvent, err := newEvent(RequestType)
+			require.NoError(t, err)
+			auditEvent.Data = in
+
+			e := &eventlogger.Event{
+				Type:      event.AuditType.AsEventType(),
+				CreatedAt: time.Now(),
+				Formatted: make(map[string][]byte),
+				Payload:   auditEvent,
+			}
+
+			e2, err := formatter.Process(nshelper.RootContext(nil), e)
+			require.NoError(t, err)
+
+			jsonBytes, ok := e2.Format(jsonFormat.String())
+			require.True(t, ok)
+			require.Positive(t, len(jsonBytes))
+
+			var result entry
+			require.NoError(t, json.Unmarshal(jsonBytes, &result))
+
+			require.NotNil(t, result.Auth)
+			require.Equal(t, tc.WantActorEntityID, result.Auth.Metadata["actor_entity_id"])
+			require.Equal(t, tc.WantActorEntityName, result.Auth.Metadata["actor_entity_name"])
+
+			require.NotNil(t, result.Request)
+			require.Equal(t, tc.WantMetadata, result.Auth.Metadata["jwt_unique_id"])
+			require.Equal(t, tc.WantIssuer, result.Auth.Metadata["jwt_issuer"])
+			require.Equal(t, tc.WantTransaction, result.Auth.Metadata["jwt_transaction_claim"])
+			require.Equal(t, tc.WantAudience, result.Auth.Metadata["jwt_audience_claim"])
+			require.Equal(t, tc.WantAuthorizationDetails, result.Auth.Metadata["jwt_authorization_details"])
+		})
+	}
+}
+
+// TestEntryFormatter_Process_Response_EnterpriseToken verifies that enterprise token
+// fields are injected into both the top-level auth.metadata AND the response auth.metadata.
+func TestEntryFormatter_Process_Response_EnterpriseToken(t *testing.T) {
+	t.Parallel()
+
+	staticSalt := newStaticSalt(t)
+
+	cfg, err := newFormatterConfig(&testHeaderFormatter{}, map[string]string{
+		"hmac_accessor": "false",
+	})
+	require.NoError(t, err)
+	formatter, err := newEntryFormatter("test", cfg, staticSalt, hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			DisplayName:     "testtoken",
+			EntityID:        "subject-entity-123",
+			ActorEntityID:   "actor-entity-456",
+			ActorEntityName: "actor-service",
+			Policies:        []string{"default"},
+			TokenType:       logical.TokenTypeDefault,
+		},
+		Request: &logical.Request{
+			Operation:           logical.ReadOperation,
+			Path:                "/secret/data/test",
+			JwtUniqueId:         "resp-token-abc",
+			JwtIssuer:           "https://issuer.example.com",
+			JwtTransactionClaim: "txn-response-1",
+			JwtAudienceClaim:    []string{"vault", "api"},
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+		},
+		Response: &logical.Response{
+			Auth: &logical.Auth{
+				ClientToken: "foo",
+				Accessor:    "bar",
+				EntityID:    "subject-entity-123",
+				Policies:    []string{"default"},
+				TokenType:   logical.TokenTypeDefault,
+			},
+			Data: map[string]interface{}{
+				"value": "secret",
+			},
+		},
+	}
+
+	auditEvent, err := newEvent(ResponseType)
+	require.NoError(t, err)
+	auditEvent.Data = in
+
+	e := &eventlogger.Event{
+		Type:      event.AuditType.AsEventType(),
+		CreatedAt: time.Now(),
+		Formatted: make(map[string][]byte),
+		Payload:   auditEvent,
+	}
+
+	e2, err := formatter.Process(nshelper.RootContext(nil), e)
+	require.NoError(t, err)
+
+	jsonBytes, ok := e2.Format(jsonFormat.String())
+	require.True(t, ok)
+
+	var result entry
+	require.NoError(t, json.Unmarshal(jsonBytes, &result))
+
+	// Top-level auth must have enterprise token fields in metadata
+	require.NotNil(t, result.Auth)
+	require.Equal(t, "actor-entity-456", result.Auth.Metadata["actor_entity_id"])
+	require.Equal(t, "actor-service", result.Auth.Metadata["actor_entity_name"])
+	require.Equal(t, "resp-token-abc", result.Auth.Metadata["jwt_unique_id"])
+	require.Equal(t, "https://issuer.example.com", result.Auth.Metadata["jwt_issuer"])
+	require.Equal(t, "txn-response-1", result.Auth.Metadata["jwt_transaction_claim"])
+	require.Equal(t, []interface{}{"vault", "api"}, result.Auth.Metadata["jwt_audience_claim"])
+
+	// Response auth must also have enterprise token fields in metadata
+	require.NotNil(t, result.Response)
+	require.NotNil(t, result.Response.Auth)
+	require.Equal(t, "resp-token-abc", result.Response.Auth.Metadata["jwt_unique_id"])
+	require.Equal(t, "https://issuer.example.com", result.Response.Auth.Metadata["jwt_issuer"])
+	require.Equal(t, "txn-response-1", result.Response.Auth.Metadata["jwt_transaction_claim"])
+	require.Equal(t, []interface{}{"vault", "api"}, result.Response.Auth.Metadata["jwt_audience_claim"])
+}
+
+// TestEntryFormatter_EnterpriseTokenFieldsNotOnRequestOrAuthTopLevel verifies that
+// enterprise token fields do NOT appear as top-level JSON keys on the request or auth
+// structs — they must only be in auth.metadata.
+func TestEntryFormatter_EnterpriseTokenFieldsNotOnRequestOrAuthTopLevel(t *testing.T) {
+	t.Parallel()
+
+	staticSalt := newStaticSalt(t)
+
+	cfg, err := newFormatterConfig(&testHeaderFormatter{}, map[string]string{
+		"hmac_accessor": "false",
+	})
+	require.NoError(t, err)
+	formatter, err := newEntryFormatter("test", cfg, staticSalt, hclog.NewNullLogger())
+	require.NoError(t, err)
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			DisplayName:     "testtoken",
+			EntityID:        "foobarentity",
+			ActorEntityID:   "actor-entity-789",
+			ActorEntityName: "actor-service",
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation:               logical.ReadOperation,
+			Path:                    "/secret/data/test",
+			JwtUniqueId:             "test-token-123",
+			JwtIssuer:               "https://issuer.example.com",
+			JwtTransactionClaim:     "txn-top-level-1",
+			JwtAudienceClaim:        []string{"vault"},
+			JwtAuthorizationDetails: []logical.AuthorizationDetail{{"type": "access"}},
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+		},
+	}
+
+	auditEvent, err := newEvent(RequestType)
+	require.NoError(t, err)
+	auditEvent.Data = in
+
+	e := &eventlogger.Event{
+		Type:      event.AuditType.AsEventType(),
+		CreatedAt: time.Now(),
+		Formatted: make(map[string][]byte),
+		Payload:   auditEvent,
+	}
+
+	e2, err := formatter.Process(nshelper.RootContext(nil), e)
+	require.NoError(t, err)
+
+	jsonBytes, ok := e2.Format(jsonFormat.String())
+	require.True(t, ok)
+
+	var raw map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(jsonBytes, &raw))
+
+	// Auth top-level must NOT have actor_entity_id or actor_entity_name
+	var authMap map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(raw["auth"], &authMap))
+	_, hasActorEntityID := authMap["actor_entity_id"]
+	_, hasActorEntityName := authMap["actor_entity_name"]
+	require.False(t, hasActorEntityID, "actor_entity_id must not be a top-level auth field")
+	require.False(t, hasActorEntityName, "actor_entity_name must not be a top-level auth field")
+
+	// Request top-level must NOT have any enterprise_token_* fields
+	var reqMap map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(raw["request"], &reqMap))
+	for key := range reqMap {
+		require.False(t, strings.HasPrefix(key, "enterprise_token_"),
+			"request must not have top-level enterprise_token_ field: %s", key)
+	}
+
+	// But auth.metadata MUST have them
+	var metadataMap map[string]any
+	require.NoError(t, json.Unmarshal(authMap["metadata"], &metadataMap))
+	entityID, ok := metadataMap["actor_entity_id"]
+	require.True(t, ok)
+	require.Equal(t, "actor-entity-789", entityID)
+
+	entityName, ok := metadataMap["actor_entity_name"]
+	require.True(t, ok)
+	require.Equal(t, "actor-service", entityName)
+
+	tokenMetadata, ok := metadataMap["jwt_unique_id"]
+	require.True(t, ok)
+	require.Equal(t, "test-token-123", tokenMetadata)
+
+	tokenIssuer, ok := metadataMap["jwt_issuer"]
+	require.True(t, ok)
+	require.Equal(t, "https://issuer.example.com", tokenIssuer)
+
+	tokenTransaction, ok := metadataMap["jwt_transaction_claim"]
+	require.True(t, ok)
+	require.Equal(t, "txn-top-level-1", tokenTransaction)
+
+	tokenAudience, ok := metadataMap["jwt_audience_claim"]
+	require.True(t, ok)
+	require.Equal(t, []interface{}{"vault"}, tokenAudience)
+
+	tokenAuthzDetails, ok := metadataMap["jwt_authorization_details"]
+	require.True(t, ok)
+	require.Equal(t, tokenAuthzDetails, []interface{}{map[string]interface{}{"type": "access"}})
+}
+
 // TestEntryFormatter_Process_Request exercises entryFormatter process an event
 // with varying inputs.
 func TestEntryFormatter_Process_Request(t *testing.T) {
@@ -788,6 +1281,40 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 			"@cee: ",
 			expectedResultStr,
 		},
+		"auth, request with enterprise token": {
+			&logical.Auth{
+				ClientToken:     "foo",
+				Accessor:        "bar",
+				DisplayName:     "testtoken",
+				EntityID:        "foobarentity",
+				ActorEntityID:   "actor-entity-789",
+				ActorEntityName: "actor-service",
+				NoDefaultPolicy: true,
+				Policies:        []string{"root"},
+				TokenType:       logical.TokenTypeService,
+				LeaseOptions: logical.LeaseOptions{
+					TTL:       time.Hour * 4,
+					IssueTime: issueTime,
+				},
+			},
+			&logical.Request{
+				Operation:   logical.UpdateOperation,
+				Path:        "/foo",
+				JwtUniqueId: "test-token-123",
+				Connection: &logical.Connection{
+					RemoteAddr: "127.0.0.1",
+				},
+				WrapInfo: &logical.RequestWrapInfo{
+					TTL: 60 * time.Second,
+				},
+				Headers: map[string][]string{
+					"foo": {"bar"},
+				},
+			},
+			errors.New("this is an error"),
+			"",
+			fmt.Sprintf(testFormatJSONEnterpriseTokenStrFmt, ss.salt.GetIdentifiedHMAC("foo")),
+		},
 	}
 
 	for name, tc := range cases {
@@ -831,7 +1358,7 @@ func TestEntryFormatter_Process_JSON(t *testing.T) {
 
 		expectedJSON := new(entry)
 
-		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedJSON); err != nil {
+		if err := jsonutil.DecodeJSON([]byte(tc.ExpectedStr), &expectedJSON); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
 		expectedJSON.Request.Namespace = &namespace{ID: "root"}
@@ -1190,7 +1717,73 @@ func TestEntryFormatter_Process_NoMutation(t *testing.T) {
 	require.NotEqual(t, e2, e)
 }
 
-// TestEntryFormatter_Process_Panic tries to send data into the entryFormatter
+// TestEntryFormatter_Process_NoMutation_WithEnterpriseToken verifies that
+// formatting an event carrying enterprise token fields does not mutate the
+// original logical.Request. The EnterpriseToken* fields must be identical on
+// the input after Process returns.
+func TestEntryFormatter_Process_NoMutation_WithEnterpriseToken(t *testing.T) {
+	t.Parallel()
+
+	cfg, err := newFormatterConfig(&testHeaderFormatter{}, nil)
+	require.NoError(t, err)
+	staticSalt := newStaticSalt(t)
+	formatter, err := newEntryFormatter("no-mutation-ent-token", cfg, staticSalt, hclog.NewNullLogger())
+	require.NoError(t, err)
+	require.NotNil(t, formatter)
+
+	authzDetails := []logical.AuthorizationDetail{
+		{
+			"type":            "vault:path_access",
+			"path_constraint": "secret/data/users/alice",
+			"action":          "read",
+		},
+	}
+
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "subject-entity-123",
+			ActorEntityID:   "actor-entity-456",
+			ActorEntityName: "actor-service",
+			DisplayName:     "testtoken",
+			Policies:        []string{"default"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation:               logical.ReadOperation,
+			Path:                    "/cubbyhole/test",
+			JwtUniqueId:             "test-token-abc",
+			JwtIssuer:               "https://issuer.example.com",
+			JwtAudienceClaim:        []string{"vault", "api"},
+			JwtAuthorizationDetails: authzDetails,
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+		},
+	}
+
+	// Snapshot the enterprise token field values before processing.
+	wantMetadata := in.Request.JwtUniqueId
+	wantIssuer := in.Request.JwtIssuer
+	wantAudience := append([]string(nil), in.Request.JwtAudienceClaim...)
+
+	e := fakeEvent(t, RequestType, in)
+
+	e2, err := formatter.Process(nshelper.RootContext(nil), e)
+	require.NoError(t, err)
+	require.NotNil(t, e2)
+
+	// The event pointer must differ — no in-place mutation.
+	require.NotEqual(t, e2, e)
+
+	// The original request's enterprise token fields must be unchanged.
+	require.Equal(t, wantMetadata, in.Request.JwtUniqueId)
+	require.Equal(t, wantIssuer, in.Request.JwtIssuer)
+	require.Equal(t, wantAudience, in.Request.JwtAudienceClaim)
+	require.Equal(t, authzDetails, in.Request.JwtAuthorizationDetails)
+}
+
 // which will currently cause a panic when a response is formatted due to the
 // underlying hashing that is done with reflectwalk.
 func TestEntryFormatter_Process_Panic(t *testing.T) {

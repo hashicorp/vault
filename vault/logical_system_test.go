@@ -772,7 +772,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 
 	core, b, rootToken := testCoreSystemBackend(t)
 
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -981,7 +981,7 @@ func testCapabilities(t *testing.T, endpoint string) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -1037,7 +1037,7 @@ func TestSystemBackend_CapabilitiesAccessor_BC(t *testing.T) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
 	}
 
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, capabilitiesPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	err = core.policyStore.SetPolicy(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2722,8 +2722,8 @@ func TestSystemBackend_policyList(t *testing.T) {
 	)
 
 	exp := map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"default", "default-ceiling", "root"},
+		"policies": []string{"default", "default-ceiling", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -2801,8 +2801,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "foo", "root"},
-		"policies": []string{"default", "foo", "root"},
+		"keys":     []string{"default", "default-ceiling", "foo", "root"},
+		"policies": []string{"default", "default-ceiling", "foo", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -2844,8 +2844,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 
 	exp = map[string]interface{}{
-		"keys":     []string{"default", "root"},
-		"policies": []string{"default", "root"},
+		"keys":     []string{"default", "default-ceiling", "root"},
+		"policies": []string{"default", "default-ceiling", "root"},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -4828,7 +4828,7 @@ path "sys/*" {
   capabilities = ["update"]
 }`
 
-	pol, err := ParseACLPolicy(namespace.RootNamespace, rules)
+	pol, err := ParseACLPolicy(namespace.RootNamespace, rules, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
 	require.NoError(t, err)
 	require.NoError(t, core.policyStore.SetPolicy(ctx, pol))
 
@@ -7383,9 +7383,6 @@ func TestPathInternalUICustomMessagesCommon(t *testing.T) {
 func TestGetLeaderStatus_RedactionSettings(t *testing.T) {
 	testCluster := NewTestCluster(t, nil, nil)
 
-	testCluster.Start()
-	defer testCluster.Cleanup()
-
 	testCore := testCluster.Cores[0]
 
 	// Check with no redaction settings
@@ -7421,9 +7418,6 @@ func TestGetSealStatus_RedactionSettings(t *testing.T) {
 	testCluster := NewTestCluster(t, &CoreConfig{
 		ClusterName: "secret-cluster-name",
 	}, nil)
-
-	testCluster.Start()
-	defer testCluster.Cleanup()
 
 	testCore := testCluster.Cores[0]
 

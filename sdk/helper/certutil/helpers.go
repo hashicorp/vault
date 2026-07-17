@@ -106,7 +106,7 @@ var KeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 15})
 // id-ce-extKeyUsage OBJECT IDENTIFIER ::= { id-ce 37 }
 var ExtendedKeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 37})
 
-// OID for Freshest (aka Delta) CRL from RFC 5280: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.15
+// OID for Freshest CRL (aka Delta CRL Distribution Point) from RFC 5280: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.15
 var FreshestCrlOid = asn1.ObjectIdentifier([]int{2, 5, 29, 46})
 
 // GetHexFormatted returns the byte buffer formatted in hex with
@@ -2032,7 +2032,7 @@ func ParseCertificateToFields(certificate x509.Certificate) (map[string]interfac
 		"province":                  makeCommaSeparatedString(certificate.Subject.Province),
 		"street_address":            makeCommaSeparatedString(certificate.Subject.StreetAddress),
 		"postal_code":               makeCommaSeparatedString(certificate.Subject.PostalCode),
-		"serial_number":             certificate.Subject.SerialNumber,
+		"serial_number":             SerialFromCert(&certificate),
 		"ttl":                       (certificate.NotAfter.Sub(certificate.NotBefore)).String(),
 		"max_path_length":           certificate.MaxPathLen,
 		"permitted_dns_domains":     strings.Join(certificate.PermittedDNSDomains, ","),
@@ -2219,6 +2219,7 @@ type distributionPointName struct {
 	RelativeName pkix.RDNSequence `asn1:"optional,tag:1"`
 }
 
+// Delta CRL Distribution Point is the same thing as Freshest CRL
 func CreateDeltaCRLExtension(deltaUrls []string) (pkix.Extension, error) {
 	if deltaUrls == nil || len(deltaUrls) == 0 {
 		return pkix.Extension{}, fmt.Errorf("since no delta crl distribution points were provided, the extension returned is empty")
@@ -2302,4 +2303,12 @@ func AddDeltaCRLExtension(data *CreationBundle, certTemplate *x509.Certificate) 
 		certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, extension)
 	}
 	return nil
+}
+
+func SerialFromCert(cert *x509.Certificate) string {
+	return SerialFromBigInt(cert.SerialNumber)
+}
+
+func SerialFromBigInt(serial *big.Int) string {
+	return strings.TrimSpace(GetHexFormatted(serial.Bytes(), ":"))
 }

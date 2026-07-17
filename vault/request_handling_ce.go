@@ -1,0 +1,56 @@
+// Copyright IBM Corp. 2016, 2025
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build !enterprise
+
+package vault
+
+import (
+	"context"
+	"errors"
+
+	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/sdk/logical"
+)
+
+type OAuthResourceServerConfigProfile struct{}
+
+func (c *Core) validateOAuthJwtAndFetchEntity(ctx context.Context, tokenString string) (bool, map[string]interface{}, *identity.Entity, *identity.Entity, *OAuthResourceServerConfigProfile, error) {
+	return false, nil, nil, nil, nil, errors.New("not implemented")
+}
+
+func (c *Core) createAndStoreOAuthJwtTokenEntry(ctx context.Context, req *logical.Request, allClaims map[string]interface{}, entity *identity.Entity, actorEntity *identity.Entity, chosenProfile *OAuthResourceServerConfigProfile) error {
+	return nil
+}
+
+func getJwtUniqueId(_ map[string]interface{}) string {
+	return ""
+}
+
+func getJwtIssuer(_ map[string]interface{}) string {
+	return ""
+}
+
+func getJwtTransaction(_ map[string]interface{}) string {
+	return ""
+}
+
+func getJwtAudience(_ map[string]interface{}) []string {
+	return nil
+}
+
+func getJwtAuthorizationDetails(_ map[string]interface{}) []logical.AuthorizationDetail {
+	return nil
+}
+
+func (c *Core) materializeOAuthJwtForUsage(_ context.Context, req *logical.Request, _ *logical.Auth, _ bool) (*logical.Request, error) {
+	return req, nil
+}
+
+func (c *Core) performDelegationTokenChecks(_ context.Context, _ *ACL, _ *identity.Entity, _ map[string][]string) (*ACL, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (c *Core) fetchCeilingPolicies(ctx context.Context, entity *identity.Entity) (map[string][]string, error) {
+	return nil, errors.New("not implemented")
+}

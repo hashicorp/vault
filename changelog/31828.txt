@@ -1,0 +1,3 @@
+```release-note:improvement
+pki: Reject obviously unsafe validation targets during ACME HTTP-01 and TLS-ALPN-01 challenge verification
+```

@@ -6,6 +6,8 @@ package http
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -21,13 +23,16 @@ import (
 	"net/textproto"
 	"net/url"
 	"os"
+	"path"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -94,6 +99,12 @@ const (
 	// to pass the snapshot ID
 	VaultSnapshotRecoverHeader = "X-Vault-Recover-Snapshot-Id"
 
+	// DefaultMaxTokenHeaderSize is the default maximum size in bytes for an
+	// authentication token passed in the X-Vault-Token and Authorization: Bearer
+	// headers. This is to prevent a denial of service attack via unbounded
+	// header values. Can be overridden per listener.
+	DefaultMaxTokenHeaderSize = 8 * 1024 // 8 KB
+
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	// This limit is designed to prevent stack exhaustion attacks from deeply
 	// nested JSON payloads, which could otherwise lead to a denial-of-service
@@ -149,6 +160,7 @@ var (
 	// the always forward list
 	perfStandbyAlwaysForwardPaths = pathmanager.New()
 	alwaysRedirectPaths           = pathmanager.New()
+	perMethodAlwaysRedirectPaths  = map[string]*pathmanager.PathManager{}
 	websocketPaths                = pathmanager.New()
 
 	injectDataIntoTopRoutes = []string{
@@ -178,18 +190,47 @@ var (
 	websocketRawPaths = []string{
 		"sys/events/subscribe",
 	}
+	perMethodRedirectRawPaths = map[string][]string{
+		http.MethodPost: {"sys/storage/raft/snapshot-load"},
+		http.MethodPut:  {"sys/storage/raft/snapshot-load"},
+	}
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
+
+// TokenHeaderMaxBytes returns the http.Server.MaxHeaderBytes value for the
+// given listener configuration. A negative CustomMaxTokenHeaderSize disables
+// the limit; zero falls back to DefaultMaxTokenHeaderSize.
+func TokenHeaderMaxBytes(lnConfig *configutil.Listener) int {
+	if lnConfig == nil {
+		return DefaultMaxTokenHeaderSize
+	}
+	switch {
+	case lnConfig.CustomMaxTokenHeaderSize < 0:
+		// Limit explicitly disabled; leave http.Server.MaxHeaderBytes unset so
+		// the stdlib default (1 MB) applies.
+		return 0
+	case lnConfig.CustomMaxTokenHeaderSize > 0:
+		return int(lnConfig.CustomMaxTokenHeaderSize)
+	default:
+		return DefaultMaxTokenHeaderSize
+	}
+}
 
 func init() {
 	alwaysRedirectPaths.AddPaths([]string{
 		"sys/storage/raft/snapshot",
 		"sys/storage/raft/snapshot-force",
 		"!sys/storage/raft/snapshot-auto/config",
-		"sys/storage/raft/snapshot-load",
 		"!sys/storage/raft/snapshot-auto/snapshot-load",
+		"!sys/storage/raft/snapshot-load", // snapshot loading is handled in perMethodAlwaysRedirectPaths
 	})
 	websocketPaths.AddPaths(websocketRawPaths)
+	for method, paths := range perMethodRedirectRawPaths {
+		if _, ok := perMethodAlwaysRedirectPaths[method]; !ok {
+			perMethodAlwaysRedirectPaths[method] = pathmanager.New()
+		}
+		perMethodAlwaysRedirectPaths[method].AddPaths(paths)
+	}
 }
 
 type HandlerAnchor struct{}
@@ -208,9 +249,52 @@ func (h HandlerFunc) Handler(props *vault.HandlerProperties) http.Handler {
 
 var _ vault.HandlerHandler = HandlerFunc(func(props *vault.HandlerProperties) http.Handler { return nil })
 
+type handlerSettings struct {
+	unauthRekey            bool
+	unauthGenerateRoot     bool
+	unauthDROperationToken bool
+}
+
+func getHandlerSettings(core *vault.Core) handlerSettings {
+	return handlerSettings{
+		unauthRekey:            core.GetEnableUnauthRekey(),
+		unauthGenerateRoot:     core.GetEnableUnauthGenerateRoot(),
+		unauthDROperationToken: core.GetEnableUnauthDROperationToken(),
+	}
+}
+
 // handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
 func handler(props *vault.HandlerProperties) http.Handler {
+	var l sync.RWMutex
+	settings := getHandlerSettings(props.Core)
+	hws := handlerWithSettings(props, settings)
+
+	return http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
+		newSettings := getHandlerSettings(props.Core)
+
+		l.RLock()
+		changed := settings != newSettings
+		// Create a local copy so that we don't have to hold the lock while
+		// running the handler
+		myhws := hws
+		l.RUnlock()
+
+		if changed {
+			l.Lock()
+			if settings != newSettings {
+				settings = newSettings
+				hws = handlerWithSettings(props, settings)
+				myhws = hws
+			}
+			l.Unlock()
+		}
+
+		myhws.ServeHTTP(writer, req)
+	})
+}
+
+func handlerWithSettings(props *vault.HandlerProperties, settings handlerSettings) http.Handler {
 	core := props.Core
 
 	// Create the muxer to handle the actual endpoints
@@ -246,16 +330,27 @@ func handler(props *vault.HandlerProperties) http.Handler {
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
 		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core, chrootNamespace))
-		mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
-			handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
-		mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
-			handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
-		mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
-		mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
-		mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
-		mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
-		mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-		mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+
+		// Register generate-root endpoints as unauthenticated handlers only if unauthGenerateRoot is true.
+		// When false, these endpoints will be handled by the sys backend as authenticated endpoints.
+		if settings.unauthGenerateRoot {
+			mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
+				handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
+			mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
+				handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
+		}
+
+		// Register rekey endpoints as unauthenticated handlers only if unauthRekey is true.
+		// When false (the default), these endpoints will be handled by the sys backend as authenticated endpoints.
+		if settings.unauthRekey {
+			mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+			mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+			mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
+			mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+			mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+			mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+		}
+
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
@@ -302,7 +397,9 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		} else {
 			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core, chrootNamespace))
 		}
-		entAdditionalRoutes(mux, core)
+		if settings.unauthDROperationToken {
+			entDROperationRoutes(mux, core)
+		}
 	}
 
 	// Build up a chain of wrapping handlers.
@@ -313,6 +410,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	wrappedHandler = rateLimitQuotaWrapping(wrappedHandler, core)
 	wrappedHandler = entWrapGenericHandler(core, wrappedHandler, props)
 	wrappedHandler = wrapMaxRequestSizeHandler(wrappedHandler, props)
+	wrappedHandler = wrapTokenHeaderSizeHandler(wrappedHandler, props)
 	wrappedHandler = priority.WrapRequestPriorityHandler(wrappedHandler)
 
 	// Add an extra wrapping handler if the DisablePrintableCheck listener
@@ -375,10 +473,7 @@ func (w *copyResponseWriter) WriteHeader(code int) {
 
 func handleAuditNonLogical(core *vault.Core, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origBody := new(bytes.Buffer)
-		reader := io.NopCloser(io.TeeReader(r.Body, origBody))
-		r.Body = reader
-		req, _, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
+		req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 		if err != nil || status != 0 {
 			respondError(w, status, err)
 			return
@@ -427,6 +522,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 	var hf func(w http.ResponseWriter, r *http.Request)
 	hf = func(w http.ResponseWriter, r *http.Request) {
+		// Generate CSP nonce once for this request
+		cspNonce, err := generateCSPNonce()
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate CSP nonce: %w", err))
+			return
+		}
+
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
 		var customHeaders map[string][]*logical.CustomHeader
@@ -437,17 +539,19 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				customHeaders = listenerCustomHeaders.StatusCodeHeaderMap
 			}
 		}
+
 		// saving start time for the in-flight requests
 		inFlightReqStartTime := time.Now()
 
-		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders)
+		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders, cspNonce)
 
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
 		nw.Header().Set("Cache-Control", "no-store")
 
-		// Start with the request context
+		// Start with the request context and store the CSP nonce
 		ctx := r.Context()
+		ctx = context.WithValue(ctx, cspNonceContextKey{}, cspNonce)
 		var cancelFunc context.CancelFunc
 		// Add our timeout, but not for the monitor or events endpoints, as they are streaming
 		// Request URL path for sys/monitor looks like /v1/sys/monitor
@@ -476,7 +580,36 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		// Extract the namespace from the header before we modify it
 		ns := r.Header.Get(consts.NamespaceHeaderName)
+
+		originalPath := r.URL.Path
+		// cleanPath is copied directly from net/http/server.go
+		// it returns the canonical path for p, eliminating . and .. elements.
+		cleanPath := func(p string) string {
+			if p == "" {
+				return "/"
+			}
+			if p[0] != '/' {
+				p = "/" + p
+			}
+			np := path.Clean(p)
+			// path.Clean removes trailing slash except for root;
+			// put the trailing slash back if necessary.
+			if p[len(p)-1] == '/' && np != "/" {
+				// Fast path for common case of p being the string we want:
+				if len(p) == len(np)+1 && strings.HasPrefix(p, np) {
+					np = p
+				} else {
+					np += "/"
+				}
+			}
+			return np
+		}
+		cleanedPath := cleanPath(originalPath)
 		switch {
+		case originalPath != cleanedPath:
+			http.Redirect(w, r, r.URL.Path, http.StatusTemporaryRedirect)
+			cancelFunc()
+			return
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
 			// Setting the namespace in the header to be included in the error message
 			newR, status, err := adjustRequest(core, props.ListenerConfig, r)
@@ -675,64 +808,97 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 		// There should be only 1 instance of the header, but looping allows for more flexibility
 		clientCertHeaders, clientCertHeadersOK := r.Header[textproto.CanonicalMIMEHeaderKey(clientCertHeader)]
 		if clientCertHeadersOK && len(clientCertHeaders) > 0 {
+			actions := strings.Split(clientCertHeaderDecoders, ",")
 			var client_certs []*x509.Certificate
 			for _, header := range clientCertHeaders {
-				// Multiple certs should be comma delimetered
+				// Multiple certs should be comma-delimited
 				vals := strings.Split(header, ",")
 				for _, v := range vals {
-					actions := strings.Split(clientCertHeaderDecoders, ",")
-					for _, action := range actions {
-						switch action {
-						case "URL":
-							decoded, err := url.QueryUnescape(v)
-							if err != nil {
-								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
-								return
-							}
-							v = decoded
-						case "BASE64":
-							// Support RFC 9440/8941 Structured Headers byte sequence values (":MIIC...==:").
-							// If the value is wrapped in leading/trailing colons, unwrap before decoding.
-							base64Value := v
-							if len(v) >= 2 && v[0] == ':' && v[len(v)-1] == ':' {
-								base64Value = v[1 : len(v)-1]
-							}
-
-							decoded, err := base64.StdEncoding.DecodeString(base64Value)
-							if err != nil {
-								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
-								return
-							}
-							v = string(decoded[:])
-						case "DER":
-							decoded, _ := pem.Decode([]byte(v))
-							if decoded == nil {
-								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to convert the client certificate to DER format: %w", err))
-								return
-							}
-							v = string(decoded.Bytes[:])
-						default:
-							respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %s", action))
-							return
-						}
-					}
-
-					cert, err := x509.ParseCertificate([]byte(v))
+					cert, err := decodeAndParse(v, actions)
 					if err != nil {
-						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse the client certificate: %w", err))
+						respondError(w, http.StatusBadRequest, err)
 						return
 					}
 					client_certs = append(client_certs, cert)
 				}
 			}
 			if r.TLS == nil {
-				respondError(w, http.StatusBadRequest, fmt.Errorf("Server must use TLS for certificate authentication"))
+				r.TLS = &tls.ConnectionState{
+					PeerCertificates: client_certs,
+				}
 			} else {
 				r.TLS.PeerCertificates = append(client_certs, r.TLS.PeerCertificates...)
 			}
 		}
 		h.ServeHTTP(w, r)
 	})
+}
+
+func decodeAndParse(v string, actions []string) (*x509.Certificate, error) {
+	decoded, decodeErr := decodeHeader(v, actions, url.PathUnescape)
+	cert, parseErr := x509.ParseCertificate([]byte(decoded))
+
+	if cert != nil {
+		return cert, nil
+	}
+
+	if strutil.StrListContains(actions, "URL") {
+		decoded, decodeErr = decodeHeader(v, actions, url.QueryUnescape)
+		cert, parseErr = x509.ParseCertificate([]byte(decoded))
+	}
+	if decodeErr != nil {
+		return nil, decodeErr
+	}
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse the client certificate: %w", parseErr)
+	}
+	return cert, nil
+}
+
+var errDecodeDer = fmt.Errorf("failed to convert the client certificate to DER format")
+
+func decodeHeader(v string, actions []string, urlUnescaper func(string) (string, error)) (string, error) {
+	for _, action := range actions {
+		switch action {
+		case "URL":
+			decoded, err := urlUnescaper(v)
+			if err != nil {
+				return "", fmt.Errorf("failed to url unescape the client certificate: %w", err)
+			}
+			v = decoded
+		case "BASE64":
+			// Support RFC 9440/8941 Structured Headers byte sequence values (":MIIC...==:").
+			// If the value is wrapped in leading/trailing colons, unwrap before decoding.
+			base64Value := v
+			if len(v) >= 2 && v[0] == ':' && v[len(v)-1] == ':' {
+				base64Value = v[1 : len(v)-1]
+			}
+
+			decoded, err := base64.StdEncoding.DecodeString(base64Value)
+			if err != nil {
+				return "", fmt.Errorf("failed to base64 decode the client certificate: %w", err)
+			}
+			v = string(decoded[:])
+		case "DER":
+			decoded, _ := pem.Decode([]byte(v))
+			if decoded == nil {
+				return "", errDecodeDer
+			}
+			v = string(decoded.Bytes[:])
+		default:
+			return "", fmt.Errorf("unknown decode option specified: %s", action)
+		}
+	}
+	return v, nil
+}
+
+// generateCSPNonce generates a cryptographically secure random nonce for CSP
+func generateCSPNonce() (string, error) {
+	nonceBytes := make([]byte, 16)
+	if _, err := rand.Read(nonceBytes); err != nil {
+		return "", fmt.Errorf("failed to generate CSP nonce: %w", err)
+	}
+	return base64.StdEncoding.EncodeToString(nonceBytes), nil
 }
 
 func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
@@ -745,8 +911,22 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 			return
 		}
 
+		// Retrieve CSP nonce from request context (generated in wrapGenericHandler)
+		nonce, ok := req.Context().Value(cspNonceContextKey{}).(string)
+		if !ok || nonce == "" {
+			// Fallback: generate a new nonce if not found in context
+			nonce, err = generateCSPNonce()
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+		}
+
 		for k := range userHeaders {
 			v := userHeaders.Get(k)
+			if k == "Content-Security-Policy" {
+				v = logical.MergeNonceIntoCSP(v, nonce, "style-src")
+			}
 			header.Set(k, v)
 		}
 
@@ -754,14 +934,72 @@ func handleUIHeaders(core *vault.Core, h http.Handler) http.Handler {
 	})
 }
 
+// cspNonceContextKey is used to store the CSP nonce in the request context
+type cspNonceContextKey struct{}
+
 func handleUI(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		// The fileserver handler strips trailing slashes and does a redirect.
 		// We don't want the redirect to happen so we preemptively trim the slash
 		// here.
 		req.URL.Path = strings.TrimSuffix(req.URL.Path, "/")
+
+		// For relevant HTML requests, wrap the response writer to inject the nonce
+		hasExtension := strings.Contains(req.URL.Path, ".")
+		if !hasExtension {
+			nonce, ok := req.Context().Value(cspNonceContextKey{}).(string)
+			if ok && nonce != "" {
+				nrw := &nonceResponseWriter{
+					ResponseWriter: w,
+					nonce:          nonce,
+				}
+				h.ServeHTTP(nrw, req)
+				// Flush the buffered content after the handler completes
+				nrw.flush()
+				return
+			}
+		}
+
 		h.ServeHTTP(w, req)
 	})
+}
+
+// nonceResponseWriter wraps http.ResponseWriter to inject CSP nonce into HTML
+type nonceResponseWriter struct {
+	http.ResponseWriter
+	nonce       string
+	wroteHeader bool
+	buf         bytes.Buffer
+}
+
+func (nrw *nonceResponseWriter) Write(b []byte) (int, error) {
+	if !nrw.wroteHeader {
+		nrw.WriteHeader(http.StatusOK)
+	}
+
+	// Buffer the content
+	nrw.buf.Write(b)
+	return len(b), nil
+}
+
+func (nrw *nonceResponseWriter) WriteHeader(statusCode int) {
+	if nrw.wroteHeader {
+		return
+	}
+	nrw.wroteHeader = true
+	nrw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func (nrw *nonceResponseWriter) flush() {
+	// Inject nonce into buffered content
+	htmlContent := nrw.buf.String()
+	if htmlContent != "" && nrw.nonce != "" {
+		nonceMetaTag := fmt.Sprintf(`<meta name="csp-nonce" content="%s">`, nrw.nonce)
+		htmlContent = strings.Replace(htmlContent, "<head>", "<head>\n    "+nonceMetaTag, 1)
+	}
+
+	// Write the modified content
+	nrw.ResponseWriter.Write([]byte(htmlContent))
 }
 
 func handleUIStub() http.Handler {
@@ -990,7 +1228,7 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				return
 			}
 			path := trimPath(ns, r.URL.Path)
-			if !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path) {
+			if !perfStandbyAlwaysForwardPaths.HasPath(path) && !redirectPath(r.Method, path) {
 				handler.ServeHTTP(w, r)
 				return
 			}
@@ -1043,7 +1281,7 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	path := trimPath(ns, r.URL.Path)
-	redirect := alwaysRedirectPaths.HasPath(path)
+	redirect := redirectPath(r.Method, path)
 	// websocket paths are special, because they can contain a namespace
 	// in front of them. This isn't an issue on perf standbys where the
 	// namespace manager will know all the namespaces, so we will have
@@ -1456,6 +1694,23 @@ func respondErrorCommon(w http.ResponseWriter, req *logical.Request, resp *logic
 			respondErrorAndData(w, statusCode, data, newErr)
 			return true
 		}
+		if body := resp.Data[logical.HTTPRawBodyError]; body != nil {
+			if code := resp.Data[logical.HTTPStatusCode]; code != nil {
+				if i, ok := code.(int); ok {
+					// Defensively ignore non-int status codes
+					statusCode = i
+				}
+			}
+			switch v := body.(type) {
+			case string:
+				logical.RespondWithBody(w, statusCode, v)
+			case []byte:
+				logical.RespondWithBody(w, statusCode, string(v))
+			default:
+				respondError(w, http.StatusInternalServerError, fmt.Errorf("unable to decode body: %w", newErr))
+			}
+			return true
+		}
 	}
 	respondError(w, statusCode, newErr)
 	return true
@@ -1533,4 +1788,15 @@ func requiresSnapshot(r *http.Request) bool {
 		return query.Has(VaultSnapshotRecoverParam) || r.Header.Get(VaultSnapshotRecoverParam) != ""
 	}
 	return false
+}
+
+func redirectPath(method, path string) bool {
+	if alwaysRedirectPaths.HasPath(path) {
+		return true
+	}
+	methodPaths, ok := perMethodAlwaysRedirectPaths[method]
+	if !ok {
+		return false
+	}
+	return methodPaths.HasPath(path)
 }

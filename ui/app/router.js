@@ -63,6 +63,10 @@ Router.map(function () {
         this.route('tool', { path: '/:selected_action' });
         this.mount('open-api-explorer', { path: '/api-explorer' });
       });
+      this.route('support', function () {
+        this.route('upgrade', { path: '/' });
+        this.route('upgrade-info', { path: '/upgrade/issues' });
+      });
       this.route('access', function () {
         this.route('reset-password');
         this.route('methods', { path: '/' });
@@ -168,6 +172,7 @@ Router.map(function () {
         });
       });
       this.route('secrets-redirect', { path: '/secrets' }); // legacy redirect
+      this.route('secrets-redirect-with-path', { path: '/secrets/*path' }); // legacy redirect with wildcard to capture full path
       this.route('secrets', { path: '/secrets-engines' }, function () {
         this.route('enable', function () {
           this.route('create', { path: '/:mount_type' });
@@ -218,6 +223,9 @@ Router.map(function () {
       this.route('policy', { path: '/policy/:type' }, function () {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
+      });
+      this.route('billing', function () {
+        this.route('overview');
       });
       this.route('resilience-recovery');
       this.route('replication-dr-promote', function () {

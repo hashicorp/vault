@@ -68,7 +68,7 @@ export default class KvSecretPatch extends Component {
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.index');
     } catch (error) {
       const { message, response } = yield this.api.parseError(error);
-      if (response.isControlGroupError) {
+      if (response?.isControlGroupError) {
         this.controlGroup.saveTokenFromError(response);
         this.controlGroupError = this.controlGroup.logFromError(response);
         return;

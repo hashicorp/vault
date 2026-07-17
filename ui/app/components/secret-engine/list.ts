@@ -10,14 +10,12 @@ import { tracked } from '@glimmer/tracking';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
-import { WIZARD_ID } from '../wizard/secret-engines/secret-engines-wizard';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type RouterService from '@ember/routing/router-service';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type NamespaceService from 'vault/services/namespace';
-import type VersionService from 'vault/services/version';
 import type WizardService from 'vault/services/wizard';
 
 /**
@@ -38,9 +36,7 @@ interface Args {
 export default class SecretEngineList extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly namespace: NamespaceService;
   @service declare readonly router: RouterService;
-  @service declare readonly version: VersionService;
   @service declare readonly wizard: WizardService;
 
   @tracked engineTypeFilters: Array<string> = [];
@@ -52,7 +48,8 @@ export default class SecretEngineList extends Component<Args> {
   @tracked versionSearchText = '';
 
   @tracked shouldRenderIntroModal = false;
-  wizardId = WIZARD_ID;
+
+  wizardId = WIZARD_ID_MAP.secretEngines;
 
   tableColumns = [
     {
@@ -65,23 +62,23 @@ export default class SecretEngineList extends Component<Args> {
     {
       key: 'accessor',
       label: 'Accessor',
-      width: '175px',
+      width: '205px',
     },
     {
       key: 'description',
       label: 'Description',
-      width: '300px',
+      width: '320px',
     },
     {
       key: 'running_plugin_version',
       label: 'Version',
       isSortable: true,
-      width: '170px',
+      width: '175px',
     },
     {
       key: 'popupMenu',
       label: 'Action',
-      width: '75px',
+      width: '80px',
     },
   ];
 
@@ -194,8 +191,19 @@ export default class SecretEngineList extends Component<Args> {
   // While not ideal, we can check whether there are other engines than the default cubbyhole/ engine
   // to determine whether we should show the intro page
   get hasOnlyDefaultEngines() {
-    const listedEngines = this.sortedDisplayableBackends;
+    // use displayableBackends to check against unfiltered results to avoid flashing intro page when a filter has no results
+    const listedEngines = this.displayableBackends;
     return !listedEngines.length || (listedEngines.length === 1 && listedEngines[0]?.path === 'cubbyhole/');
+  }
+
+  get showContent() {
+    // Show when the 1) wizard is not shown OR 2) wizard intro modal is shown
+    // This ensures the wizard intro modal is shown on top of the list view and the background content is not blank behind the modal
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
+  }
+
+  get showIntroButton() {
+    return this.showContent && this.hasOnlyDefaultEngines;
   }
 
   get showWizard() {

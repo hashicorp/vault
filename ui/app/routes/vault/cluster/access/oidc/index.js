@@ -5,20 +5,21 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { IdentityApiOidcListClientsListEnum } from '@hashicorp/vault-client-typescript';
 
 export default class OidcConfigureRoute extends Route {
-  @service store;
+  @service api;
   @service router;
 
-  beforeModel() {
-    return this.store
-      .query('oidc/client', {})
-      .then(() => {
+  async beforeModel() {
+    try {
+      const { keys } = await this.api.identity.oidcListClients(IdentityApiOidcListClientsListEnum.TRUE);
+      if (keys?.length) {
         // transition to client list view if clients have been created
         this.router.transitionTo('vault.cluster.access.oidc.clients');
-      })
-      .catch(() => {
-        // adapter throws error for 404 - swallow and remain on index route to show call to action
-      });
+      }
+    } catch (e) {
+      // swallow error and remain on index route to show call to action
+    }
   }
 }

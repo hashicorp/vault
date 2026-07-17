@@ -9,6 +9,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render, settled, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | shamir/form', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,19 +22,19 @@ module('Integration | Component | shamir/form', function (hooks) {
     await render(hbs`
       <Shamir::Form @onSubmit={{this.submitSpy}} @progress={{0}} @threshold={{3}} />
     `);
-    assert.dom(SHAMIR_FORM.submitButton).hasText('Submit', 'Submit button has default text');
-    await click(SHAMIR_FORM.submitButton);
+    assert.dom(GENERAL.submitButton).hasText('Submit', 'Submit button has default text');
+    await click(GENERAL.submitButton);
     assert.dom(SHAMIR_FORM.progress).doesNotExist('Hides progress bar if none made');
     assert.ok(this.submitSpy.notCalled, 'onSubmit was not called');
-    await typeIn(SHAMIR_FORM.input, 'this-is-the-key');
-    assert.dom(SHAMIR_FORM.input).hasValue('this-is-the-key', 'input value set');
+    await typeIn(GENERAL.inputByAttr('shamir-key'), 'this-is-the-key');
+    assert.dom(GENERAL.inputByAttr('shamir-key')).hasValue('this-is-the-key', 'input value set');
     assert.dom(SHAMIR_FORM.inputLabel).hasText('Shamir key portion', 'label has default text');
-    await click(SHAMIR_FORM.submitButton);
+    await click(GENERAL.submitButton);
     assert.ok(
       this.submitSpy.calledOnceWith({ key: 'this-is-the-key' }),
       'onSubmit called with correct params'
     );
-    assert.dom(SHAMIR_FORM.input).hasValue('', 'key value reset after submit');
+    assert.dom(GENERAL.inputByAttr('shamir-key')).hasValue('', 'key value reset after submit');
 
     await render(hbs`
     <Shamir::Form @onSubmit={{this.submitSpy}} @progress={{0}} @threshold={{3}} @alwaysShowProgress={{true}} @buttonText="Do the thing" @inputLabel="Unseal key">
@@ -42,7 +43,7 @@ module('Integration | Component | shamir/form', function (hooks) {
     `);
 
     assert.dom('[data-test-block-content]').hasText('Hello', 'renders block content');
-    assert.dom(SHAMIR_FORM.submitButton).hasText('Do the thing', 'uses passed button text');
+    assert.dom(GENERAL.submitButton).hasText('Do the thing', 'uses passed button text');
     assert.dom(SHAMIR_FORM.inputLabel).hasText('Unseal key', 'uses passed inputLabel');
     assert.dom(SHAMIR_FORM.otpInfo).doesNotExist('no OTP info shown');
     assert
@@ -77,10 +78,10 @@ module('Integration | Component | shamir/form', function (hooks) {
         @errors={{this.errors}}
       />
     `);
-    assert.dom(SHAMIR_FORM.error).exists({ count: 2 }, 'renders errors');
+    assert.dom(GENERAL.messageError).exists({ count: 2 }, 'renders errors');
 
     this.set('errors', []);
     await settled();
-    assert.dom(SHAMIR_FORM.error).doesNotExist('errors cleared');
+    assert.dom(GENERAL.messageError).doesNotExist('errors cleared');
   });
 });

@@ -65,6 +65,7 @@ on:
       - ce/**
   schedule:
     - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
+      timezone: "America/New_York"
 
 concurrency:
   group: ${{ github.head_ref || github.run_id }}-build
@@ -83,8 +84,13 @@ jobs:
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
-    permissions: write-all # vault-auth
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
@@ -104,12 +110,15 @@ jobs:
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Record build stage start time
+        id: build-metric-start
+        run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
         id: checkout
       # Get the vault version metadata
-      - uses: hashicorp/actions-set-product-version@2ec1b51402b3070bccf7ca95306afbd039e574ff # v2.0.1
+      - uses: hashicorp/actions-set-product-version@d9be602dfa87e201c79a3937c038f19391c9a430 # v2.0.2
         id: set-product-version
         with:
           checkout: false # don't override the reference we've checked out
@@ -126,13 +135,30 @@ jobs:
       - if: steps.metadata.outputs.is-ent-repo == 'true'
         id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Instana credentials live as plain GitHub secrets (same as test-go.yml), not in Vault.
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        name: Configure Instana for build tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
+        run: |
+          # Export Instana environment variables for build metric upload
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       # Determine the changed files
       - uses: ./.github/actions/changed-files
         id: changed-files
@@ -172,49 +198,103 @@ jobs:
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
+      - if: always() && steps.metadata.outputs.is-ent-repo == 'true'
+        name: Upload build metric to Instana
+        continue-on-error: true
+        env:
+          START_TIME: ${{ steps.build-metric-start.outputs.start-time }}
+        run: |
+          if [ -n "${INSTANA_AGENT_KEY:-}" ]; then
+            chmod +x scripts/upload-build-metrics-to-instana.sh
+            duration=$(( $(date +%s) - ${START_TIME:-$(date +%s)} ))
+            scripts/upload-build-metrics-to-instana.sh "setup" "$duration" "setup"
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
+          fi
 
   ce-code-checks:
-    # Checks that we want to run only on changes to ce/* branches that ought to pass but aren't
-    # required for the "completed-successfully" job to pass. This allows us to bubble up this
-    # information without gating merges, which can be useful if you have many PRs simultaneously
-    # modifying go.mod before CE PRs with the equivalent changes have been merged.
-    name: Check ce/* Pull Requests
+    # Ensure that we can build a community edition of Vault with the files on our pull request
+    # branch. If we're making a PR to a ce/* branch we also look for drift in the Go modules
+    # between the enterprise and CE branch. This is currently *not* required to pass as there
+    # might be races between multiple PRs to ce/*. This allows us to bubble up this information
+    # without gating merges, which can be useful if you have many PRs simultaneously modifying
+    # go.mod before CE PRs with the equivalent changes have been merged.
+    name: Check community edition files
     if: |
       needs.setup.outputs.is-ent-repo == 'true' &&
       needs.setup.outputs.workflow-trigger == 'pull_request' &&
       github.event.pull_request.draft == false &&
-      startsWith(github.event.pull_request.base.ref, 'ce/')
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain')
+        )
     runs-on:
       - self-hosted
-      - ubuntu-latest-x64
-    permissions: write-all # vault-auth
+      - ubuntu-22.04-x64
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     needs:
       - setup
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Record build stage start time
+        id: build-metric-start
+        run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       # Get the elevated github token
       - id: vault-auth
         name: Vault Authenticate
         run: vault-auth
       - id: vault-secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Instana credentials live as plain GitHub secrets (same as test-go.yml), not in Vault.
+      - name: Configure Instana for build tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
+        run: |
+          # Export Instana environment variables for build metric upload
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       - id: set-up-pipeline
         uses: ./.github/actions/set-up-pipeline
         with:
           github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        run: |
+          git config --global url."https://${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
+      - id: set-up-go
+        uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/install-tools
+      - if: "! startsWith(github.event.pull_request.base.ref, 'ce/')"
+        name: Ensure that the community edition still builds on enterprise branches
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: SKIP_GEN=1 make cedev
       # Ensure that our go.mod files have not drifted if we've changed the Go toolchain on a CE PR
-      - if: |
-          needs.setup.outputs.is-ent-repo == 'true' &&
-          needs.setup.outputs.workflow-trigger == 'pull_request' &&
-          startsWith(github.event.pull_request.base.ref, 'ce/') &&
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+      - if: startsWith(github.event.pull_request.base.ref, 'ce/')
         name: Check go.mod diff on pull requests against ce/* branches that changed the go toolchain
         id: go-mod-diff
         env:
@@ -261,6 +341,19 @@ jobs:
                 -p tools/pipeline/go.mod \
                 -p sdk/go.mod \
                 --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
+      - if: always()
+        name: Upload build metric to Instana
+        continue-on-error: true
+        env:
+          START_TIME: ${{ steps.build-metric-start.outputs.start-time }}
+        run: |
+          if [ -n "${INSTANA_AGENT_KEY:-}" ]; then
+            chmod +x scripts/upload-build-metrics-to-instana.sh
+            duration=$(( $(date +%s) - ${START_TIME:-$(date +%s)} ))
+            scripts/upload-build-metrics-to-instana.sh "ce-code-checks" "$duration" "ce-code-checks"
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
+          fi
 
   ui:
     # The Web UI workflow is a prerequisite workflow for building our artifacts. If the application
@@ -274,7 +367,7 @@ jobs:
     #     a merge
     #   * The workflow was triggered by a pull request, the pull request is not a draft, and the UI
     #     or app changed.
-    #   * Our pipeline or test scenarios changed.
+    #   * Our app, UI, or test scenarios (which currently require building new artifacts) have changed
     if: |
       needs.setup.outputs.workflow-trigger == 'push' ||
       needs.setup.outputs.workflow-trigger == 'schedule' ||
@@ -283,50 +376,30 @@ jobs:
         needs.setup.outputs.workflow-trigger == 'pull_request' &&
         needs.setup.outputs.is-draft == 'false' &&
         (
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
-          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_enos') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui')
         )
       )
     needs: setup
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-build-ui) }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     outputs:
-      cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
+      cache-key: ${{ steps.build-ui.outputs.cache-key }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
-      - name: Get UI hash
-        id: ui-hash
-        run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
-      - name: Set up UI asset cache
-        id: cache-ui-assets
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
-        with:
-          enableCrossOsArchive: true
-          lookup-only: true
-          path: http/web_ui
-          # Only restore the UI asset cache if we haven't modified anything in the ui directory.
-          # Never do a partial restore of the web_ui if we don't get a cache hit.
-          key: ui-${{ steps.ui-hash.outputs.ui-hash }}
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Install PNPM
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
-        with:
-          run_install: false
-          package_json_file: './ui/package.json'
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Set up node and pnpm
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
-        with:
-          node-version-file: ui/package.json
-          cache: pnpm
-          cache-dependency-path: ui/pnpm-lock.yaml
-      - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
-        name: Build UI
-        run: make ci-build-ui
+      - uses: ./.github/actions/build-ui
+        id: build-ui
 
   # Artifacts is where we'll build the various Vault binaries and package them into their respective
   # Zip bundles, RPM and Deb packages, and container images. After we've packaged them we upload
@@ -337,25 +410,44 @@ jobs:
   #   # Trigger the setup workflow if any of the following conditions are true:
   #
   #   * The workflow was triggered by on schedule to test building all artifacts.
-  #   * The Go app was changed.
-  #   * Our pipeline or test scenarios changed.
   #   * The build/all label is present on a pull request or push.
+  #   * The Go toolchain was modified
+  #   * Go modules were modified
+  #   * The enos test scenarios were modified
+  #
+  #   NOTE: We are currently testing only triggering app and UI build and test
+  #   scenarios on push events only.
   artifacts-ce:
     if: |
       needs.setup.outputs.is-ent-branch != 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
-        contains(fromJSON(needs.setup.outputs.labels), 'build/all')
+        contains(fromJSON(needs.setup.outputs.labels), 'build/all') ||
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_enos')
+        ) ||
+        (
+          needs.setup.outputs.workflow-trigger == 'push' &&
+          (
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui')
+          )
+        )
       )
     needs:
       - setup
       - ui # Don't build and test artifacts unless the UI build was triggered.
     uses: ./.github/workflows/build-artifacts-ce.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
-      build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
+      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') }}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}
@@ -370,18 +462,33 @@ jobs:
     if: |
       needs.setup.outputs.is-ent-branch == 'true' && (
         needs.setup.outputs.workflow-trigger == 'schedule' ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
-        contains(fromJSON(needs.setup.outputs.labels), 'build/all')
+        contains(fromJSON(needs.setup.outputs.labels), 'build/all') ||
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_vault') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_enos')
+        ) ||
+        (
+          needs.setup.outputs.workflow-trigger == 'push' &&
+          (
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui')
+          )
+        )
       )
     needs:
       - setup
       - ui # Don't build and test artifacts unless the UI build was triggered.
     uses: ./.github/workflows/build-artifacts-ent.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
-      build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
+      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') }}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}
@@ -392,23 +499,43 @@ jobs:
       web-ui-cache-key: ${{ needs.ui.outputs.cache-key }}
     secrets: inherit
 
+
   hcp-image:
+    # Logic: Run HCP image job if:
+    #   if needs.setup.outputs.is-ent-branch != 'true' then
+    #     false
+    #   elseif needs.setup.outputs.workflow-trigger == 'schedule' then
+    #     true
+    #   elseif needs.setup.outputs.workflow-trigger == 'pull_request' and (
+    #       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'hcp') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') or
+    #       contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
+    #     ) then
+    #     true
+    #   end
     if: |
-      needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'schedule' ||
+      ( needs.setup.outputs.is-ent-branch != 'true' ) && false ||
+      ( needs.setup.outputs.workflow-trigger == 'schedule' ) && true ||
       ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
         (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'build_cloud') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_cloud') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/build-image') ||
           contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
         )
-      )
+      ) && true
     needs:
       - setup
       - artifacts-ent
     uses: ./.github/workflows/build-hcp-image.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
-      pull-request: ${{ needs.setup.outputs.workflow-trigger == 'pull_request' && github.event.pull_request.number || '' }}
-      branch: ${{ needs.setup.outputs.workflow-trigger == 'schedule' && 'main' || '' }}
+      pull-request: ${{ github.event.pull-request.number || '0' }}
+      branch: ${{ github.event_name == 'schedule' && 'main' || '' }}
       create-aws-image: true
       create-azure-image: false
       hcp-environment: int
@@ -427,13 +554,18 @@ jobs:
       - artifacts-ce
       - artifacts-ent
     uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     strategy:
       fail-fast: false
       matrix:
         include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-packages) || fromJSON(needs.artifacts-ce.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
-      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-latest-x64"]' }}
+      runs-on: ${{ needs.setup.outputs.compute-build }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
@@ -456,6 +588,12 @@ jobs:
       - artifacts-ce
       - artifacts-ent
     uses: ./.github/workflows/test-run-enos-scenario-containers.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     strategy:
       fail-fast: false
       matrix:
@@ -473,22 +611,27 @@ jobs:
     # Test our custom HCP image if our image build was successful and we've
     # been configured with the correct label.
     if: |
-      needs.setup.outputs.is-ent-branch == 'true' &&
-      needs.setup.outputs.workflow-trigger == 'schedule' ||
-      ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
-        needs.artifacts-ent.result == 'success' &&
-        needs.hcp-image.result == 'success' &&
-        contains(fromJSON(needs.setup.outputs.labels), 'hcp/test')
-      ) ||
-      ( needs.setup.outputs.workflow-trigger == 'schedule' &&
-        needs.artifacts-ent.result == 'success' &&
-        needs.hcp-image.result == 'success'
+      needs.setup.outputs.is-ent-branch == 'true' && (
+        ( needs.setup.outputs.workflow-trigger == 'pull_request' &&
+          needs.artifacts-ent.result == 'success' &&
+          needs.hcp-image.result == 'success' &&
+          ( contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_cloud') || contains(fromJSON(needs.setup.outputs.labels), 'hcp/test') )
+        ) || (
+          needs.setup.outputs.workflow-trigger == 'schedule' &&
+          needs.artifacts-ent.result == 'success' &&
+          needs.hcp-image.result == 'success'
+        )
       )
     needs:
       - setup
       - artifacts-ent
       - hcp-image
     uses: ./.github/workflows/test-run-enos-scenario-cloud.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     with:
       hcp-environment: int
       product-version: ${{ fromJSON(needs.hcp-image.outputs.image).product_version }}
@@ -508,8 +651,13 @@ jobs:
         github.event_name == 'schedule' ||
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
       )
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
-    permissions: write-all # Ensure we have id-token:write access for vault-auth.
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: write
+      pull-requests: write
     needs:
       - setup
       - ui
@@ -520,7 +668,10 @@ jobs:
       - test-containers
       - test-hcp-image
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Record build stage start time
+        id: build-metric-start
+        run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - id: disallow-merge-on-ce
         if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
@@ -554,37 +705,86 @@ jobs:
       - if: needs.setup.outputs.is-ent-repo == 'true'
         id: secrets
         name: Fetch Vault Secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/slack feed-vault-ci-official-webhook-url | slack-webhook-url;
+      # Instana credentials live as plain GitHub secrets (same as test-go.yml), not in Vault.
+      - if: needs.setup.outputs.is-ent-repo == 'true'
+        name: Configure Instana for build tracing
+        continue-on-error: true
+        env:
+          INSTANA_AGENT_KEY: ${{ secrets.INSTANA_AGENT_KEY }}
+          INSTANA_ENDPOINT_URL: ${{ secrets.INSTANA_ENDPOINT_URL }}
+        run: |
+          # Export Instana environment variables for build metric upload
+          # Note: Secrets are automatically masked in GitHub Actions logs
+          if [ -n "${INSTANA_AGENT_KEY}" ]; then
+            echo "INSTANA_AGENT_KEY=${INSTANA_AGENT_KEY}" >> "$GITHUB_ENV"
+            echo "::add-mask::${INSTANA_AGENT_KEY}"
+          fi
+          if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
+            echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
+          fi
       - id: slackbot-webhook-url
         run:
           echo "slackbot-webhook-url=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.FEED_VAULT_CI_OFFICIAL_WEBHOOK_URL || steps.secrets.outputs.slackbot-webhook-url }}" >> "$GITHUB_OUTPUT"
-      - if: |
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        name: Download failure summaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: failure-summary-*.md
+          path: failure-summaries
+          merge-multiple: true
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        id: prepare-failure-summary
+        name: Prepare failure summary
+        run: |
+          # Sort all of the summary table rows and push them to a temp file.
+          temp_file_name=temp-$(date +%s)
+          find failure-summaries -name '*.md' -type f -exec cat {} \; 2>/dev/null | sort >> "$temp_file_name" || true
+
+          # If there are test failures, present them in a format of a GitHub Markdown table.
+          if [ -s "$temp_file_name" ]; then
+            # Here we create the headings for the summary table
+            {
+              echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
+              echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
+              cat "$temp_file_name"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ "${{ steps.status.outputs.result }}" == 'success' ]; then
+              echo "### All required tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          {
+            echo 'table-test-results<<EOFTABLE'
+            cat "$temp_file_name"
+            echo EOFTABLE
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Create test results comment
+        if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
-          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
-        name: Create or update a build status comment on the pull request
+          (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') &&
+          needs.setup.outputs.is-fork == 'false'
         env:
-          ARTIFACTS: ${{ needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result || needs.artifacts-ce.result }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.event.repository.name }}
           RUN_ID: ${{ github.run_id }}
-          TEST: ${{ needs.test.result }}
-          TEST_CONTAINERS: ${{ needs.test-containers.result }}
-          UI: ${{ needs.ui.result }}
-        run: ./.github/scripts/report-build-status.sh
+          REPO: ${{ github.event.repository.name }}
+          RESULT: ${{ steps.status.outputs.result }}
+          TABLE_DATA: ${{ steps.prepare-failure-summary.outputs.table-test-results }}
+        run: ./.github/scripts/report-ci-status.sh
       - name: Notify build failures in Slack
         if: |
           always() &&
           steps.status.outputs.result != 'success' &&
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-        uses: slackapi/slack-github-action@91efab103c0de0a537f72a35f6b8cda0ee76bf0a # v2.1.1
+        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
         with:
           errors: true # exit with an error if the payload is invalid
           retries: rapid # retry if we're being rated limited
@@ -616,14 +816,14 @@ jobs:
                     emoji: true
                   url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
-      - uses: hashicorp/actions-generate-metadata@f1d852525201cb7bbbf031dd2e985fb4c22307fc # v1.1.3
+      - uses: hashicorp/actions-generate-metadata@a43468dfb100445f2c2aa52cdc3d57b2c982a0f3 # v1.1.4
         # create build metadata if we successfully created artifacts
         if: needs.artifacts-ent.result == 'success' || needs.artifacts-ce.result == 'success'
         id: generate-metadata-file
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json
@@ -631,7 +831,27 @@ jobs:
           if-no-files-found: error
       - if: needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result == 'success'
         id: generate-pao-metadata
-        uses: hashicorp-forge/actions-pao-tool/collect@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+        uses: hashicorp-forge/actions-pao-tool/collect@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
+      # This job has no other reason to need a Go toolchain, but the Instana upload
+      # step below shells out to `go run`. setup already primed the shared module
+      # cache, so this should be a cache hit rather than a fresh download.
+      - if: always() && needs.setup.outputs.is-ent-repo == 'true'
+        uses: ./.github/actions/set-up-go
+        name: Ensure Go is available for Instana upload
+        continue-on-error: true
+      - if: always() && needs.setup.outputs.is-ent-repo == 'true'
+        name: Upload build metric to Instana
+        continue-on-error: true
+        env:
+          START_TIME: ${{ steps.build-metric-start.outputs.start-time }}
+        run: |
+          if [ -n "${INSTANA_AGENT_KEY:-}" ]; then
+            chmod +x scripts/upload-build-metrics-to-instana.sh
+            duration=$(( $(date +%s) - ${START_TIME:-$(date +%s)} ))
+            scripts/upload-build-metrics-to-instana.sh "completed-successfully" "$duration" "completed-successfully"
+          else
+            echo "INSTANA_AGENT_KEY not set, skipping Instana upload"
+          fi
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status
         run: |

@@ -1,0 +1,3 @@
+```release-note:bug
+secrets-sync: Fixes Custom Tags field in Details view to display keys with empty value
+```

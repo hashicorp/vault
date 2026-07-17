@@ -8,6 +8,7 @@ import Form from 'vault/forms/form';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import FormField from 'vault/utils/forms/field';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
+import { VERSIONED_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
 
 import type { Validations } from 'vault/app-types';
 import type { SecretsEngineFormData } from 'vault/secrets/engine';
@@ -184,7 +185,7 @@ export default class MountForm<T extends SecretsEngineFormData | AuthMethodFormD
     }
 
     // options are only relevant for kv/generic engines
-    if (!['kv', 'generic'].includes(this.type)) {
+    if (!VERSIONED_ENGINE_TYPES.includes(this.type)) {
       delete data.options;
     }
 

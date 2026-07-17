@@ -1,0 +1,96 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @model.showConfigSnippets}}
+  <Hds::Text::Display @tag="p" @size="300" @weight="semibold" class="top-padding-32 has-bottom-padding-s">
+    Welcome to Public PKI
+  </Hds::Text::Display>
+
+  <Hds::Text::Body @tag="p">
+    To configure this secret engine to request public certificates in Vault:
+  </Hds::Text::Body>
+
+  <ExternalPki::ImplementationSelect @engineId={{@model.engine.id}} @title="Choose your implementation method" />
+{{else}}
+  <Hds::Layout::Flex class="has-top-padding-l" @gap="24" @wrap={{true}} as |LF|>
+    <LF.Item @basis="500px">
+      <OverviewCard @cardTitle="View certificate" @subText="Quickly lookup a certificate by providing its serial number.">
+        <:content>
+          <Hds::Layout::Flex @gap="8" class="has-top-padding-m" as |LF|>
+            <LF.Item @grow={{1}}>
+              <InputSearch @placeholder="33:a3:..." @onChange={{fn (mut this.serialNumber)}} @changeEvent="input" />
+            </LF.Item>
+            <LF.Item>
+              <Hds::Button
+                @text="Lookup certificate"
+                @color="secondary"
+                {{on "click" this.lookupCertificate}}
+                data-test-button="Lookup certificate"
+              />
+            </LF.Item>
+          </Hds::Layout::Flex>
+        </:content>
+      </OverviewCard>
+    </LF.Item>
+
+    <LF.Item @basis="500px">
+      <OverviewCard @cardTitle="Orders" @subText="Quickly lookup a certificate order by providing its order ID.">
+        <:content>
+          <Hds::Layout::Flex @gap="8" class="has-top-padding-m" as |LF|>
+            <LF.Item @grow={{1}}>
+              <InputSearch
+                @id="orderId"
+                @placeholder="01936d8e-7c3..."
+                @onChange={{fn (mut this.orderId)}}
+                @changeEvent="input"
+              />
+            </LF.Item>
+            <LF.Item>
+              <Hds::Button
+                @text="Lookup order"
+                @color="secondary"
+                {{on "click" this.lookupOrder}}
+                data-test-button="Lookup order"
+              />
+            </LF.Item>
+          </Hds::Layout::Flex>
+        </:content>
+      </OverviewCard>
+    </LF.Item>
+    {{! Cards only render if user has permission to list, so "0" only renders when there are actually no items }}
+    {{#each this.countCards as |card|}}
+      <LF.Item @basis="500px">
+        <OverviewCard @cardTitle={{card.title}} @subText={{card.subtext}}>
+          <:action>
+            <Hds::Link::Standalone
+              @text={{card.linkText}}
+              @route={{card.route}}
+              @model={{@model.engine.id}}
+              @icon="chevron-right"
+              @iconPosition="trailing"
+            />
+          </:action>
+          <:content>
+            {{! Since these cards only render if a user has permissions and 404 errors are caught
+          any other error would be unusual, i.e. some sort of internal server issue }}
+            {{#if card.error}}
+              <MessageError @errorMessage={{card.error}} />
+            {{else}}
+              <Hds::Text::Display
+                data-test-overview-card-content={{card.title}}
+                @tag="p"
+                @size="400"
+                @weight="medium"
+                class="has-top-margin-m"
+              >
+                {{format-number card.count}}
+              </Hds::Text::Display>
+            {{/if}}
+          </:content>
+        </OverviewCard>
+      </LF.Item>
+    {{/each}}
+  </Hds::Layout::Flex>
+{{/if}}

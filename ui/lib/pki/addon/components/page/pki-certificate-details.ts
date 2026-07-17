@@ -50,6 +50,7 @@ export default class PkiCertificateDetailsComponent extends Component<Args> {
   constructor(owner: Owner, args: Args) {
     super(owner, args);
     this.parsedCertificate = parseCertificate(this.args.certData.certificate || '');
+    this.didRevoke = Boolean(this.args.certData.revocation_time);
   }
 
   get displayFields() {
@@ -63,10 +64,14 @@ export default class PkiCertificateDetailsComponent extends Component<Args> {
       'private_key_type',
     ];
     // insert revocation_time after common_name if revoked
-    if (this.args.certData.revocation_time || this.didRevoke) {
+    if (this.didRevoke) {
       fields.splice(2, 0, 'revocation_time');
     }
     return fields;
+  }
+
+  get showRevoke() {
+    return this.args.canRevoke && !this.didRevoke;
   }
 
   isCertificate = (field: string) => ['certificate', 'issuing_ca', 'ca_chain', 'private_key'].includes(field);

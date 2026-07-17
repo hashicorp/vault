@@ -15,7 +15,6 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"strconv"
 	"sync"
 	"testing"
 
@@ -95,11 +94,10 @@ func TestTransit_ImportNSSEd25519Key(t *testing.T) {
 	generateKeys(t)
 	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	rawPKCS8, err := base64.StdEncoding.DecodeString(nssFormattedEd25519Key)
@@ -133,11 +131,10 @@ func TestTransit_ImportRSAPSS(t *testing.T) {
 	generateKeys(t)
 	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	rawPKCS8, err := base64.StdEncoding.DecodeString(rsaPSSFormattedKey)
@@ -205,11 +202,10 @@ func TestTransit_Import(t *testing.T) {
 	)
 
 	// Retrieve public wrapping key
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	t.Run(
@@ -555,11 +551,10 @@ func TestTransit_ImportVersion(t *testing.T) {
 	)
 
 	// Retrieve public wrapping key
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	t.Run(
@@ -726,11 +721,10 @@ func TestTransit_ImportVersionWithPublicKeys(t *testing.T) {
 	b, s, obsRecorder := createBackendWithObservationRecorder(t)
 
 	// Retrieve public wrapping key
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	// Import a public key then import private should give us one key

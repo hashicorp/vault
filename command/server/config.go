@@ -56,6 +56,8 @@ type Config struct {
 
 	Experiments []string `hcl:"experiments"`
 
+	EnableUnauthenticatedAccess []string `hcl:"enable_unauthenticated_access"`
+
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
 	DisableCacheRaw          interface{} `hcl:"disable_cache"`
@@ -132,6 +134,8 @@ type Config struct {
 	PostUnsealTraceDir    string `hcl:"post_unseal_trace_directory"`
 
 	ReportingScanDirectory string `hcl:"reporting_scan_directory"`
+
+	DenySlashInTemplatedPaths bool `hcl:"deny_slash_in_templated_paths"`
 }
 
 const (
@@ -519,6 +523,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
 
 	result.Experiments = mergeExperiments(c.Experiments, c2.Experiments)
+
+	result.EnableUnauthenticatedAccess = c.EnableUnauthenticatedAccess
+	if len(c2.EnableUnauthenticatedAccess) > 0 {
+		result.EnableUnauthenticatedAccess = c2.EnableUnauthenticatedAccess
+	}
+
+	result.DenySlashInTemplatedPaths = c.DenySlashInTemplatedPaths
+	if c2.DenySlashInTemplatedPaths {
+		result.DenySlashInTemplatedPaths = c2.DenySlashInTemplatedPaths
+	}
 
 	return result
 }
@@ -1415,12 +1429,16 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"log_requests_level": c.LogRequestsLevel,
 		"experiments":        c.Experiments,
 
+		"enable_unauthenticated_access": c.EnableUnauthenticatedAccess,
+
 		"detect_deadlocks": c.DetectDeadlocks,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 
 		"enable_post_unseal_trace":    c.EnablePostUnsealTrace,
 		"post_unseal_trace_directory": c.PostUnsealTraceDir,
+
+		"deny_slash_in_templated_paths": c.DenySlashInTemplatedPaths,
 	}
 	for k, v := range sharedResult {
 		result[k] = v

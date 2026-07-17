@@ -15,10 +15,4 @@ export default Controller.extend(ListController, {
       };
     };
   },
-
-  actions: {
-    onDelete() {
-      this.send('reload');
-    },
-  },
 });

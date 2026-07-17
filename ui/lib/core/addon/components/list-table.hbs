@@ -7,8 +7,9 @@
   @model={{this.paginatedTableData}}
   @columns={{@columns}}
   @isSelectable={{if @selectionKeyField true false}}
-  class="has-bottom-margin-s"
+  @hasResizableColumns={{true}}
   @onSelectionChange={{@onSelectionChange}}
+  class="has-bottom-margin-s"
   {{did-update this.resetPagination @data}}
 >
   <:body as |B|>
@@ -26,14 +27,16 @@
           </B.Td>
         {{else}}
           <B.Td data-test-table-data={{column.key}} class="is-inline text-overflow-ellipsis">
-            {{#if column.customTableItem}}
-              {{yield B.data to="customTableItem"}}
-            {{else}}
-              {{#let (get B.data column.key) as |value|}}
+            {{#let (get B.data column.key) as |value|}}
+              {{#if column.customTableItem}}
+                {{! Pass row data and column definition so consumers can render custom content for multiple columns }}
+                {{! Consumers can compute the value from B.data, but pass the resolved value for convenience }}
+                {{yield B.data column value to="customTableItem"}}
+              {{else}}
                 {{! stringify value if it is an array or object, otherwise render directly }}
                 {{if (this.isObject value) (stringify value) value}}
-              {{/let}}
-            {{/if}}
+              {{/if}}
+            {{/let}}
           </B.Td>
         {{/if}}
       {{/each}}

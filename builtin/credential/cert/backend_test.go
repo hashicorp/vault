@@ -271,11 +271,9 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
 	var err error
@@ -419,7 +417,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// This function is a copy-pasta from the NewTestCluster, with the
 	// modification to reconfigure the TLS on the api client with the leaf
 	// certificate generated above.
-	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
+	getAPIClient := func(addr net.Addr, tlsConfig *tls.Config) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig.Clone()
 		if err := http2.ConfigureTransport(transport); err != nil {
@@ -436,7 +434,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 		if config.Error != nil {
 			t.Fatal(config.Error)
 		}
-		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+		config.Address = fmt.Sprintf("https://%s", addr.String())
 		config.HttpClient = client
 
 		// Set the above issued certificates as the client certificates
@@ -454,7 +452,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
+	newClient := getAPIClient(cores[0].APIAddress(), cores[0].TLSConfig())
 
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
@@ -587,11 +585,9 @@ func TestBackend_MetadataBasedACLPolicy(t *testing.T) {
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
 	// Enable the cert auth method
@@ -655,7 +651,7 @@ path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
 	// This function is a copy-paste from the NewTestCluster, with the
 	// modification to reconfigure the TLS on the api client with a
 	// specific client certificate.
-	getAPIClient := func(port int, tlsConfig *tls.Config) *api.Client {
+	getAPIClient := func(addr net.Addr, tlsConfig *tls.Config) *api.Client {
 		transport := cleanhttp.DefaultPooledTransport()
 		transport.TLSClientConfig = tlsConfig.Clone()
 		if err := http2.ConfigureTransport(transport); err != nil {
@@ -672,7 +668,7 @@ path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
 		if config.Error != nil {
 			t.Fatal(config.Error)
 		}
-		config.Address = fmt.Sprintf("https://127.0.0.1:%d", port)
+		config.Address = fmt.Sprintf("https://%s", addr.String())
 		config.HttpClient = client
 
 		// Set the client certificates
@@ -690,7 +686,7 @@ path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
+	newClient := getAPIClient(cores[0].APIAddress(), cores[0].TLSConfig())
 
 	var secret *api.Secret
 

@@ -11,6 +11,16 @@ binary {
     suppress {
       vulnerabilities = [
         "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+        // GO-2026-5932 appears to be a false positive as it only relates to
+        // golang.org/x/crypto/openpgp, which is not in use in the project.
+        // https://pkg.go.dev/vuln/GO-2026-5932
+        "GO-2026-5932",
+        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
+        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
+        // those versions
+        // https://pkg.go.dev/vuln/GO-2026-5856
+        // https://pkg.go.dev/vuln/GO-2026-4970
+        "GO-2026-5856", "GO-2026-4970",
       ]
     }
   }
@@ -27,10 +37,22 @@ container {
   triage {
     suppress {
       vulnerabilities = [
-        // We can't do anything about these two CVEs until a new Alpine container with busybox 1.38 is available.
-        "CVE-2025-46394",
-        "CVE-2024-58251",
         "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+        // This appears to be a false positive. Busybox >= 1.34 is unaffected
+        // https://security.alpinelinux.org/vuln/CVE-2021-42376
+        // For some reason the OSV entry for fixed is 0 when it should be 1.34:
+        // https://osv.dev/vulnerability/ALPINE-CVE-2021-42376
+        "ALPINE-CVE-2021-42376", "CVE-2021-42374",
+        // GO-2026-5932 appears to be a false positive as it only relates to
+        // golang.org/x/crypto/openpgp, which is not in use in the project.
+        // https://pkg.go.dev/vuln/GO-2026-5932
+        "GO-2026-5932",
+        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
+        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
+        // those versions
+        // https://pkg.go.dev/vuln/GO-2026-5856
+        // https://pkg.go.dev/vuln/GO-2026-4970
+        "GO-2026-5856", "GO-2026-4970",
       ]
 
       // The OSV scanner will trip on several packages that are included in the

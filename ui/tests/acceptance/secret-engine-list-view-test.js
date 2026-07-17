@@ -13,10 +13,12 @@ import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engin
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
-import localStorage from 'vault/lib/local-storage';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   const createSecret = async (path, key, value, enginePath) => {
     await click(SES.createSecretLink);
@@ -31,7 +33,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     this.uid = uuidv4();
     await login();
     // dismiss wizard
-    localStorage.setItem('dismissed-wizards', ['secret-engines']);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
   });
 
   // the new API service camelizes response keys, so this tests is to assert that does NOT happen when we re-implement it
@@ -59,7 +61,11 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await click(GENERAL.cardContainer('nomad'));
     await click(GENERAL.submitButton);
 
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.configuration.general-settings',
+      'navigates to the configuration page'
+    );
     // cleanup
     await runCmd(deleteEngineCmd('nomad'));
   });
@@ -175,6 +181,28 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(deleteEngineCmd(enginePath1));
   });
 
+  test('it can navigate to the enablement page from the intro', async function (assert) {
+    // stub the mount response to meet the empty state criteria for showing the intro page
+    this.server.get('/sys/internal/ui/mounts', () => ({
+      data: {
+        secret: {
+          'cubbyhole/': {
+            type: 'cubbyhole',
+            local: true,
+            path: 'cubbyhole/',
+          },
+        },
+      },
+    }));
+    await visit(`/vault/secrets-engines`);
+    await click(GENERAL.button('intro'));
+    await click(GENERAL.button('enable'));
+
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/enable`, 'It navigates to the enablement page');
+    assert.dom('[data-test-guided-setup]').doesNotExist('The guided setup is not shown');
+    assert.dom('[data-test-intro]').doesNotExist('The intro is not shown');
+  });
+
   module('enterprise | namespaces', function (hooks) {
     hooks.beforeEach(async function () {
       await login();
@@ -182,7 +210,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       await runCmd([`write sys/namespaces/${this.namespace} -force`]);
       await loginNs(this.namespace); // log into namespace with root token
       // dismiss wizard
-      localStorage.setItem('dismissed-wizards', ['secret-engines']);
+      this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
     });
 
     // Ember route models won't refresh within a namespace when this.router.transitionTo() is called

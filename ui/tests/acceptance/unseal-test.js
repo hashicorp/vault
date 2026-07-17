@@ -56,7 +56,7 @@ module('Acceptance | unseal', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/settings/seal');
 
     // seal
-    await click('[data-test-seal]');
+    await click(GENERAL.button('Seal'));
     await click(GENERAL.confirmButton);
 
     await pollCluster(this.owner);
@@ -65,9 +65,9 @@ module('Acceptance | unseal', function (hooks) {
 
     // unseal
     for (const key of unsealKeys) {
-      await fillIn('[data-test-shamir-key-input]', key);
+      await fillIn(GENERAL.inputByAttr('shamir-key'), key);
 
-      await click('button[type="submit"]');
+      await click(GENERAL.submitButton);
 
       await pollCluster(this.owner);
       await settled();

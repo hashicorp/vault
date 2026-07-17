@@ -34,7 +34,9 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -86,17 +88,17 @@ const (
 	ParameterSet_ML_DSA_65          = "65"
 	ParameterSet_ML_DSA_87          = "87"
 	ParameterSet_SLH_DSA_SHA2_128S  = "slh-dsa-sha2-128s"
-	ParameterSet_SLH_DSA_SHAKE_128S = "slh-dsa-shake-128s"
+	ParameterSet_SLH_DSA_SHAKE_128S = "slh-dsa-shake128s"
 	ParameterSet_SLH_DSA_SHA2_128F  = "slh-dsa-sha2-128f"
-	ParameterSet_SLH_DSA_SHAKE_128F = "slh-dsa-shake-128f"
+	ParameterSet_SLH_DSA_SHAKE_128F = "slh-dsa-shake128f"
 	ParameterSet_SLH_DSA_SHA2_192S  = "slh-dsa-sha2-192s"
-	ParameterSet_SLH_DSA_SHAKE_192S = "slh-dsa-shake-192s"
+	ParameterSet_SLH_DSA_SHAKE_192S = "slh-dsa-shake192s"
 	ParameterSet_SLH_DSA_SHA2_192F  = "slh-dsa-sha2-192f"
-	ParameterSet_SLH_DSA_SHAKE_192F = "slh-dsa-shake-192f"
+	ParameterSet_SLH_DSA_SHAKE_192F = "slh-dsa-shake192f"
 	ParameterSet_SLH_DSA_SHA2_256S  = "slh-dsa-sha2-256s"
-	ParameterSet_SLH_DSA_SHAKE_256S = "slh-dsa-shake-256s"
+	ParameterSet_SLH_DSA_SHAKE_256S = "slh-dsa-shake256s"
 	ParameterSet_SLH_DSA_SHA2_256F  = "slh-dsa-sha2-256f"
-	ParameterSet_SLH_DSA_SHAKE_256F = "slh-dsa-shake-256f"
+	ParameterSet_SLH_DSA_SHAKE_256F = "slh-dsa-shake256f"
 )
 
 const (
@@ -182,6 +184,7 @@ type EncryptionOptions struct {
 	Context    []byte
 	Nonce      []byte
 	IV         []byte
+	Raw        bool // requests encryption with the algorithm primitive alone (e.g. no envelope)
 }
 
 type SigningResult struct {
@@ -1199,7 +1202,8 @@ func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, opts.Nonce, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, wrappingOpts...)
 		if err != nil {
 			return "", err
 		}
@@ -1662,6 +1666,25 @@ func (p *Policy) verifyEd25519WithPublicKey(input []byte, sigBytes []byte, pub e
 	return true, nil
 }
 
+// When x509.ParsePKCS8PrivateKey fails it suggests alternative parser functions (e.g.,
+// "failed to parse private key (use ParsePKCS1PrivateKey instead for this key format)"
+// Instead, return an error that clearly states private keys must be PKCS#8.
+func formatPKCS8ParsingError(key []byte, err error) error {
+	if err == nil {
+		return nil
+	}
+	const message = "error parsing asymmetric key: private key must be encoded as PKCS#8"
+	_, format, _ := certutil.ParseDERKey(key)
+	switch format {
+	case certutil.ECBlock:
+		return fmt.Errorf("%s; detected key format: EC PRIVATE KEY (SEC1)\n - original error: %w", message, err)
+	case certutil.PKCS1Block:
+		return fmt.Errorf("%s; detected key format: RSA PRIVATE KEY (PKCS#1)\n - original error: %w", message, err)
+	default:
+		return fmt.Errorf("%s: %w", message, err)
+	}
+}
+
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
 	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader)
 }
@@ -1720,7 +1743,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 					var edErr error
 					parsedKey, edErr = ParsePKCS8Ed25519PrivateKey(key)
 					if edErr != nil {
-						return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %v", edErr, err)
+						return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %w", edErr, err)
 					}
 
 					// Parsing as Ed25519-in-PKCS8-ECPrivateKey succeeded!
@@ -1733,7 +1756,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 
 					// Parsing as RSA-PSS in PKCS8 succeeded!
 				} else {
-					return fmt.Errorf("error parsing asymmetric key: %s", err)
+					return formatPKCS8ParsingError(key, err)
 				}
 			}
 		} else {
@@ -2293,7 +2316,12 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, opts.Nonce, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		if opts.Raw {
+			wrappingOpts = append(wrappingOpts, wrapping.WithoutEnvelope(true))
+		}
+
+		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, wrappingOpts...)
 		if err != nil {
 			return "", err
 		}
@@ -2312,6 +2340,17 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 	encoded = p.getVersionPrefix(opts.KeyVersion) + encoded
 
 	return encoded, nil
+}
+
+func buildManagedKeyOpts(opts EncryptionOptions, aad []byte) []wrapping.Option {
+	wrappingOpts := []wrapping.Option{wrapping.WithoutEnvelope(true)}
+	if len(opts.IV) > 0 {
+		wrappingOpts = append(wrappingOpts, wrapping.WithIV(opts.IV))
+	}
+	if len(aad) > 0 {
+		wrappingOpts = append(wrappingOpts, wrapping.WithAad(aad))
+	}
+	return wrappingOpts
 }
 
 func (p *Policy) getSymmetricKeys(opts EncryptionOptions) ([]byte, []byte, error) {
@@ -2408,7 +2447,7 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 			var edErr error
 			parsedPrivateKey, edErr = ParsePKCS8Ed25519PrivateKey(key)
 			if edErr != nil {
-				return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %v", edErr, err)
+				return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %w", edErr, err)
 			}
 
 			// Parsing as Ed25519-in-PKCS8-ECPrivateKey succeeded!
@@ -2421,7 +2460,7 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 
 			// Parsing as RSA-PSS in PKCS8 succeeded!
 		} else {
-			return fmt.Errorf("error parsing asymmetric key: %s", err)
+			return formatPKCS8ParsingError(key, err)
 		}
 	}
 

@@ -66,9 +66,13 @@ Vagrantfile
 enos-local.vars.hcl
 enos/**/support
 enos/**/kubeconfig
-.terraform
-.terraform.lock.hcl
-.tfstate.*
+enos/modules/**/plan.yml
+enos/sarif**.json
+**/.terraform/*
+**.terraform.lock.hcl
+**terraform.tfstate
+**.tfstate.*
+**.terraform.tfstate.lock.info
 
 .DS_Store
 .idea
@@ -150,3 +154,4 @@ scratch
 
 # bob
 .bob/notes
+.bob/*.md

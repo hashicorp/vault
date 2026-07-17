@@ -62,14 +62,16 @@ const getOperationDetails = (spec, operationId) => {
     // the parameters and the request body. These are in different places
     // in the spec so we need to address them separately.
     const params = [];
-    for (const param of pathItem.parameters) {
-      if (param.deprecated) continue;
-      params.push({
-        name: param.name,
-        description: param.description,
-        required: param.required,
-        type: param.schema.type,
-      });
+    if (Array.isArray(pathItem.parameters)) {
+      for (const param of pathItem.parameters) {
+        if (param.deprecated) continue;
+        params.push({
+          name: param.name,
+          description: param.description,
+          required: param.required,
+          type: param.schema.type,
+        });
+      }
     }
 
     const properties = {};
@@ -82,6 +84,7 @@ const getOperationDetails = (spec, operationId) => {
       operationId: post.operationId,
       tag: post.tags?.[0],
       description: pathItem.description || post.summary || '',
+      pathUrl,
       parameters: params,
       requestBody: [schemaName, properties],
     };
@@ -146,6 +149,7 @@ export const prepFormConfig = (spec, methodName) => {
 
   return {
     name: methodName,
+    path: operation.pathUrl,
     description: operation.description,
     payload: buildPayloadFromOperation(operation),
     sections: buildSectionsFromOperation(operation),
@@ -176,6 +180,7 @@ export const generateConfigContent = (config) => {
      */
     const ${config.name}Config: FormConfig<${config.requestType},unknown> = {
       name: '${config.name}',
+      path: '${config.path}',
       description: '${config.description}',
       submit: async (api: ApiService, payload: ${config.requestType}) => {
         return await api.${config.apiClass}.${config.name}Raw(payload);

@@ -11,6 +11,9 @@ import { tracked } from '@glimmer/tracking';
 import { filterEnginesByMountCategory } from 'core/utils/all-engines-metadata';
 import { task } from 'ember-concurrency';
 import { MOUNT_CATEGORIES } from 'vault/utils/plugin-catalog-helpers';
+import { ALL_ENGINES } from 'core/utils/all-engines-metadata';
+import { IdentityApiOidcListKeysListEnum } from '@hashicorp/vault-client-typescript';
+import OidcKeyForm from 'vault/forms/oidc/key';
 
 import type { ApiError } from '@ember-data/adapter/error';
 import type Store from '@ember-data/store';
@@ -54,8 +57,9 @@ export default class MountBackendForm extends Component<Args> {
   // validation related properties
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormAlert: string | null = null;
-
   @tracked errorMessage: string | string[] = '';
+  @tracked oidcKeys: { id: string }[] = [];
+  @tracked oidcKeyForm: OidcKeyForm | null = null;
 
   get mountForm(): AuthMethodForm {
     return this.args.mountModel;
@@ -126,6 +130,22 @@ export default class MountBackendForm extends Component<Args> {
     }
   }
 
+  async fetchOidcKeys(type: string) {
+    // an additional form field for identity_token_key is displayed for WIF engines
+    // fetch oidc keys to populate the search select component
+    this.oidcKeys = [];
+    const isWIF = !!ALL_ENGINES.find((engine) => engine.type === type && engine.isWIF);
+    if (isWIF) {
+      try {
+        const { keys } = await this.api.identity.oidcListKeys(IdentityApiOidcListKeysListEnum.TRUE);
+        // SearchSelect requires options to be objects
+        this.oidcKeys = keys?.map((key) => ({ id: key })) || [];
+      } catch (e) {
+        // swallow fetch error and fallback component will be used
+      }
+    }
+  }
+
   @task
   @waitFor
   *mountBackend(event: Event) {
@@ -147,7 +167,7 @@ export default class MountBackendForm extends Component<Args> {
       this.args.onMountSuccess(type, path, false);
     } catch (error) {
       const { status, response, message } = yield this.api.parseError(error);
-      this.onMountError(status, response.errors, message);
+      this.onMountError(status, response?.errors, message);
     }
   }
 
@@ -160,6 +180,7 @@ export default class MountBackendForm extends Component<Args> {
   @action
   setMountType(value: string) {
     this.mountForm.type = value;
+    this.fetchOidcKeys(value);
     this.checkPathChange(value);
   }
 
@@ -168,5 +189,10 @@ export default class MountBackendForm extends Component<Args> {
     // if array, it's coming from the search-select component, otherwise it hit the fallback component and will come in as a string.
     const { config } = this.mountForm.data;
     config.identity_token_key = Array.isArray(value) ? value[0] : value;
+  }
+
+  @action
+  onCreateOidcKey(name: string) {
+    this.oidcKeyForm = new OidcKeyForm({ name }, { isNew: true });
   }
 }

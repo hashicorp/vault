@@ -22,7 +22,8 @@ func createPullRequestComment(
 	pullNumber int,
 	body string,
 ) (*libgithub.IssueComment, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -51,7 +52,8 @@ func getPullRequest(
 	repo string,
 	pullNumber int,
 ) (*libgithub.PullRequest, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -74,7 +76,8 @@ func closePullRequest(
 	repo string,
 	pullNumber int,
 ) error {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -96,7 +99,8 @@ func listPullRequestCommits(
 	repo string,
 	pullNumber int,
 ) ([]*libgithub.RepositoryCommit, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -128,7 +132,8 @@ func listPullRequestReviews(
 	repo string,
 	pullNumber int,
 ) ([]*libgithub.PullRequestReview, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),
@@ -162,7 +167,8 @@ func listPullRequestClosingIssues(
 	repo string,
 	pullNumber int,
 ) ([]*ClosingIssueRef, error) {
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("pull-number", pullNumber),

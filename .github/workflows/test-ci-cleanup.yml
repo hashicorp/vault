@@ -3,18 +3,39 @@ name: test-ci-cleanup
 on:
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron:  '05 02 * * *'
+    # Our normal sweeper that runs during business hours.
+    - cron:  '05 */6 * * 1-5'
+      timezone: "America/New_York"
+      # There are various IAM resources that are difficult to create aws-nuke
+      # filters for. In many instances aws-nuke may destroy them because there
+      # is no way to determine age, either by the resource state or via tag,
+      # so it's impossible to filter them out. (e.g. removing IAM profiles from
+      # a brand new instance). Orphaned IAM resources are more rare than others
+      # so we only purge them on weekends when it is much less likely to
+      # interfere with running CI.
+      # NOTE: If you modify this you _must_ modify the aws-nuke runner step
+      # with the equivalent schedule.
+    - cron: '05 3,5 * * 6'
+      timezone: "America/New_York"
+  workflow_dispatch:
+    inputs:
+      time_limit:
+        type: string
+        description: 'The time limit for resources to live. Default: 2h'
+      exclude_iam:
+        type: boolean
+        description: 'Exclude nuking IAM resources as that can interrupt running scenarios!'
+        default: true
 
 jobs:
   setup:
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
-    permissions: write-all
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     outputs:
       regions: ${{steps.setup.outputs.regions}}
     steps:
       - name: Configure AWS credentials
         id: aws-configure
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
@@ -29,65 +50,80 @@ jobs:
 
   aws-nuke:
     needs: setup
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
-    container:
-      image: ghcr.io/ekristen/aws-nuke:v3.51.0 # https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
-      options:
-         --user root
-         -t
-      env:
-        AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-        TIME_LIMIT: "72h"
-    timeout-minutes: 120
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64","large"]') }}
+    strategy:
+      matrix:
+        region: ${{ fromJSON(needs.setup.outputs.regions) }}
+        include:
+          - region: global
+
+    timeout-minutes: 180
     steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Configure AWS credentials
         id: aws-configure
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
-          role-duration-seconds: 3600
+          role-duration-seconds: 10800
           mask-aws-account-id: false
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Configure
         run: |
           cp enos/ci/aws-nuke.yml .
           sed -i "s/ACCOUNT_NUM/${{ steps.aws-configure.outputs.aws-account-id }}/g" aws-nuke.yml
-          sed -i "s/TIME_LIMIT/${TIME_LIMIT}/g" aws-nuke.yml
+          sed -i "s/TIME_LIMIT/${{ inputs.time_limit || '2h' }}/g" aws-nuke.yml
+          sed -i "s/REGION/${{ matrix.region }}/g" aws-nuke.yml
+      - if: "(github.event.schedule == '05 3,5 * * 6' || inputs.exclude_iam == false) && matrix.region == 'global'"
+        # Even though InstanceProfiles have a CreateDate field, at the time of writing aws-nuke
+        # does not expose that field to filtering. As such, our config specifically looks at
+        # a CreateTime tag on the profile when considering it for delete. While our scenarios
+        # ought to add this tag automatically for us, we'll ensure they're always added to known
+        # profiles before we run the nuke.
+        name: Tag instance profiles
+        run: |
+          aws iam list-instance-profiles --output json | jq -r '.InstanceProfiles[] | "\(.InstanceProfileName)|\(.CreateDate)"' | while IFS='|' read -r profile_name create_date; do
+            # Allow errors here as instance profiles can come and go while we're running this.
+            existing_tags=$(aws iam get-instance-profile --instance-profile-name "$profile_name" --output json | jq -r '.InstanceProfile.Tags // [] | map(select(.Key == "CreateTime")) | length')
+            if [ "$existing_tags" -eq 0 ]; then
+              echo "Adding CreateTime tag to $profile_name with value $create_date"
+              aws iam tag-instance-profile --instance-profile-name "$profile_name" --tags Key=CreateTime,Value="$create_date"
+            else
+              echo "Skipping $profile_name - CreateTime tag already exists"
+            fi
+          done
       # We don't care if cleanup succeeds or fails, because dependencies be dependenceies,
       # we'll fail on actually actionable things in the quota steep afterwards.
       - name: Clean up abandoned resources
-        # Filter STDERR because it's super noisy about things we don't have access to
-        # Remove --no-dry-run to do dry run
+        # Only purge IAM roles and policies during our weekend sweeps to avoid
+        # interfering with active CI runs.
         run: |
-          aws-nuke run -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log | grep -v "level=error" || true
-
-  check-quotas:
-    needs: [ setup, aws-nuke ]
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
-    container:
-      image: jantman/awslimitchecker
-      env:
-        AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID_CI_09042025 }}
-        AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
-    strategy:
-      matrix:
-        region: ${{ fromJSON(needs.setup.outputs.regions) }}
-    steps:
-      - name: Configure AWS credentials
-        id: aws-configure
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
-          aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
-          role-skip-session-tagging: true
-          role-duration-seconds: 3600
-      # Currently just checking VPC limits across all region, can add more checks here in future
-      - name: Check AWS Quotas
-        run: awslimitchecker -S "VPC" -r ${{matrix.region}}
+          docker run \
+            -t \
+            --rm \
+            -v "$(pwd):/repo" \
+            --workdir /repo \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            -e AWS_SESSION_TOKEN="$AWS_SESSION_TOKEN" \
+              ghcr.io/ekristen/aws-nuke:v3.65.0 run ${{ !(github.event.schedule == '05 3,5 * * 6' || inputs.exclude_iam == false) && '--exclude IAMUserPolicy --exclude IAMRolePolicy --exclude IAMUserPolicyAttachment --exclude IAMRolePolicyAttachment' }} \
+                -c aws-nuke.yml \
+                -q \
+                --no-dry-run \
+                --no-prompt \
+                --max-wait-retries 5 2>/tmp/aws-nuke-error.log | grep -v "level=error" || true
+      - name: Run VPC limit checker
+        if: matrix.region != 'global'
+        continue-on-error: true # for now, until we sort out the mirror
+        run: |
+          docker run \
+            --rm \
+            -v "$(pwd):/repo" \
+            --workdir /repo \
+            -e AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID" \
+            -e AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY" \
+            -e AWS_SESSION_TOKEN="$AWS_SESSION_TOKEN" \
+              docker.mirror.hashicorp.services/jantman/awslimitchecker@sha256:ac3301f5c4410eac99aa5191823199ea06857fb64cc616fd0c583037461b3896 -S "VPC" -r ${{matrix.region}}

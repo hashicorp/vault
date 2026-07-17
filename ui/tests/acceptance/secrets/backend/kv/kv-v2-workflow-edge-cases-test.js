@@ -279,8 +279,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       await visit(`/vault`);
       await selectChoose(GENERAL.superSelect('secrets-engines'), backend);
       await selectChoose(GENERAL.superSelect('actions'), 'Find KV secrets');
-      await typeIn(GENERAL.kvSuggestion.input, `${root}/`);
-      await click(GENERAL.kvSuggestion.input);
+      await typeIn(GENERAL.suggestion.input('kv'), `${root}/`);
+      await click(GENERAL.suggestion.input('kv'));
       assert
         .dom(GENERAL.searchSelect.options)
         .hasText(`${subdirectory}/`)
@@ -402,8 +402,10 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // Details view
     await click(PAGE.secretTab('Secret'));
-    assert.dom(GENERAL.toggleInput('json')).isNotDisabled('JSON toggle is not disabled');
-    assert.dom(GENERAL.toggleInput('json')).isChecked("JSON toggle is checked 'on'");
+    assert.dom(GENERAL.button('json')).exists('JSON view toggle renders on details view');
+    assert.dom(GENERAL.button('yaml')).exists('YAML view toggle renders on details view');
+
+    assert.dom(GENERAL.button('json')).hasClass('hds-button--color-primary');
 
     assert
       .dom(GENERAL.codeBlock('secret-data'))
@@ -574,11 +576,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks) {
   setupApplicationTest(hooks);
 
-  const navToEngine = async (backend) => {
-    await click(GENERAL.navLink('Secrets'));
-    return await click(GENERAL.linkTo(`${backend}/`));
-  };
-
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
     ['delete', 'destroy', 'undelete'].forEach((toolbar) => {
       if (expected.includes(toolbar)) {
@@ -637,7 +634,9 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-create-secret';
-      await navToEngine(backend);
+
+      await click(GENERAL.navLink('Secrets'));
+      await click(GENERAL.linkTo(`${backend}/`));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/list?namespace=${ns}`,
@@ -690,8 +689,8 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       const ns = this.namespace;
       const secret = 'my-delete-secret';
       await writeVersionedSecret(backend, secret, 'foo', 'bar', 2, ns);
-      await navToEngine(backend);
-
+      await click(GENERAL.navLink('Secrets engines'));
+      await click(GENERAL.linkTo(`${backend}/`));
       await click(PAGE.list.item(secret));
       assert.strictEqual(
         currentURL(),

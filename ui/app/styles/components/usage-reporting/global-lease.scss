@@ -1,0 +1,44 @@
+/**
+ * Copyright IBM Corp. 2025, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.ssu-global-lease {
+  padding: 16px;
+}
+
+.ssu-global-lease__progress-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ssu-global-lease__progress-wrapper [data-carbon-chart] {
+  flex: 1;
+  min-width: 0;
+}
+
+// Override parent .container styles that affect SVG rect.container
+.ssu-global-lease__progress-wrapper .cds--cc--meter rect.container {
+  width: 100% !important;
+}
+
+.ssu-global-lease__progress-wrapper [data-carbon-chart] .layout-child.spacer,
+.ssu-global-lease__progress-wrapper [data-carbon-chart] .layout-child.meter-title {
+  display: none;
+}
+
+.ssu-global-lease__alert {
+  margin-bottom: 8px;
+}
+
+.ssu-global-lease__percentage-text {
+  margin-top: 16px;
+  margin-bottom: 8px;
+  display: block;
+  margin-left: auto;
+}
+
+.ssu-global-lease__percentage-status {
+  flex-shrink: 0;
+}

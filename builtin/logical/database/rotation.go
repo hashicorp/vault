@@ -29,6 +29,8 @@ const (
 	staticWALKey = "staticRotationKey"
 )
 
+var staticUpdateUserTimeout = 10 * time.Second
+
 // populateQueue loads the priority queue with existing static accounts. This
 // occurs at initialization, after any WAL entries of failed or interrupted
 // rotations have been processed. It lists the roles from storage and searches
@@ -538,7 +540,27 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		b.Logger().Debug("writing WAL", "role", input.RoleName, "WAL ID", output.WALID)
 	}
 
-	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
+	timeoutCtx, cancel := context.WithTimeout(ctx, staticUpdateUserTimeout)
+	defer cancel()
+	updateUserTimeoutErr := errors.New("timeout exceeded during UpdateUser")
+
+	done := make(chan error, 1)
+
+	go func() {
+		_, e := dbi.database.UpdateUser(timeoutCtx, updateReq, false)
+		done <- e
+	}()
+
+	select {
+	case err = <-done:
+	case <-timeoutCtx.Done():
+		if ctx.Err() != nil {
+			err = ctx.Err()
+		} else {
+			err = updateUserTimeoutErr
+		}
+	}
+
 	if err != nil {
 		b.CloseIfShutdown(dbi, err)
 		if usedCredentialFromPreviousRotation {
@@ -547,11 +569,11 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 				b.Logger().Warn("failed to delete WAL", "error", err, "WAL ID", output.WALID)
 			}
 
-			// Generate a new WAL entry and credential for next attempt
 			output.WALID = ""
 		}
 		return output, fmt.Errorf("error setting credentials: %w", err)
 	}
+
 	modified = true
 
 	// static user password successfully updated in external system

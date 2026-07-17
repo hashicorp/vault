@@ -7,6 +7,7 @@
   <:breadcrumbs>
     <Page::Breadcrumbs
       @breadcrumbs={{array
+        (hash label="Vault" icon="vault" route="vault.cluster.dashboard")
         (hash label=(capitalize (pluralize this.model.identityType)) route="vault.cluster.access.identity.index")
         (hash label=this.model.name)
       }}
@@ -32,7 +33,7 @@
 <Toolbar>
   <ToolbarActions>
     {{! template-lint-disable simple-unless }}
-    {{#unless (or (and (eq this.model.identityType "group") (eq this.model.type "internal")) this.model.alias)}}
+    {{#unless (or (and (eq this.model.identityType "group") (eq this.model.type "internal")) this.model.alias.id)}}
       <ToolbarLink
         @route="vault.cluster.access.identity.aliases.add"
         @models={{array (pluralize this.model.identityType) this.model.id}}

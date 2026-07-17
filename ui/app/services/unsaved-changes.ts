@@ -13,6 +13,11 @@ import type Transition from '@ember/routing/transition';
 import type RouterService from '@ember/routing/router-service';
 import FlagsService from 'vault/services/flags';
 
+type TransitionInfo = {
+  routeName?: string;
+  params?: Record<string, unknown>;
+};
+
 // this service tracks the unsaved changes modal state.
 export default class UnsavedChangesService extends Service {
   @service declare readonly router: RouterService;
@@ -42,10 +47,10 @@ export default class UnsavedChangesService extends Service {
     return this.changedFields.length > 0;
   }
 
-  get transitionInfo() {
+  get transitionInfo(): TransitionInfo {
     return {
       routeName: this.intendedTransition?.to?.name,
-      params: this.intendedTransition?.to?.params,
+      params: this.intendedTransition?.to?.params as Record<string, unknown> | undefined,
     };
   }
 

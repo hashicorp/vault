@@ -100,21 +100,31 @@ type IdentityStore struct {
 	// buckets
 	groupPacker *storagepacker.StoragePacker
 
+	// tpmPacker is used to pack multiple TPM storage entries into 256
+	// buckets
+	tpmPacker *storagepacker.StoragePacker
+
+	// tpmgroupPacker is used to pack multiple TPMGroup storage entries into 256
+	// buckets
+	tpmgroupPacker *storagepacker.StoragePacker
+
 	// disableLowerCaseNames indicates whether or not identity artifacts are
 	// operated case insensitively
 	disableLowerCasedNames bool
 
-	router        *Router
-	redirectAddr  string
-	localNode     LocalNode
-	namespacer    Namespacer
-	metrics       metricsutil.Metrics
-	totpPersister TOTPPersister
-	groupUpdater  GroupUpdater
-	tokenStorer   TokenStorer
-	entityCreator EntityCreator
-	mountLister   MountLister
-	mfaBackend    *LoginMFABackend
+	router                          *Router
+	redirectAddr                    string
+	localNode                       LocalNode
+	namespacer                      Namespacer
+	metrics                         metricsutil.Metrics
+	totpPersister                   TOTPPersister
+	groupUpdater                    GroupUpdater
+	tokenStorer                     TokenStorer
+	entityCreator                   EntityCreator
+	mountLister                     MountLister
+	syntheticAliasAccessorValidator SyntheticAliasAccessorValidator
+	mfaBackend                      *LoginMFABackend
+	billingCounter                  BillingCounter
 
 	// aliasLocks is used to protect modifications to alias entries based on the uniqueness factor
 	// which is name + accessor
@@ -122,9 +132,9 @@ type IdentityStore struct {
 
 	conflictResolver ConflictResolver
 
-	// renameDuplicates holds the Core reference to feature activation flags, so
-	// we can set and query enablement of the deduplication feature.
-	renameDuplicates       activationflags.ActivationManager
+	// activationManager holds the Core reference to feature activation flags, so
+	// we can set and query enablement of the scim and deduplication feature.
+	activationManager      activationflags.ActivationManager
 	activationErrorHandler Sealer
 
 	// activateDeduplicationDone is a channel used for synchronization in testing
@@ -132,6 +142,12 @@ type IdentityStore struct {
 
 	// scimEnabled is used to indicate if SCIM paths are enabled and if SCIM operations can be performed.
 	scimEnabled bool
+
+	// scimCleanupCtx is the context shared by all SCIM client cleanup goroutines.
+	// It is derived from the active context and cancelled on seal/standby.
+	scimCleanupCtx context.Context
+	// scimCleanupCancel cancels all background SCIM client cleanup goroutines.
+	scimCleanupCancel context.CancelFunc
 }
 
 type groupDiff struct {
@@ -150,6 +166,12 @@ type LocalNode interface {
 }
 
 var _ LocalNode = &Core{}
+
+type BillingCounter interface {
+	IncrementOidcTokenCount(validitySeconds float64)
+}
+
+var _ BillingCounter = &Core{}
 
 type Namespacer interface {
 	NamespaceByID(context.Context, string) (*namespace.Namespace, error)
@@ -189,6 +211,13 @@ type MountLister interface {
 }
 
 var _ MountLister = &Core{}
+
+type SyntheticAliasAccessorValidator interface {
+	validateSyntheticAliasAccessor(context.Context, string) (bool, error)
+	generateSyntheticAliasAccessor(context.Context, string) (string, error)
+}
+
+var _ SyntheticAliasAccessorValidator = &Core{}
 
 type Sealer interface {
 	Shutdown() error

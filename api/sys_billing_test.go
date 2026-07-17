@@ -33,7 +33,7 @@ func TestSys_BillingOverview(t *testing.T) {
 	currentMonth := resp.Months[0]
 	require.Equal(t, "2026-01", currentMonth.Month)
 	require.Equal(t, "2026-01-14T10:49:00Z", currentMonth.UpdatedAt)
-	require.Len(t, currentMonth.UsageMetrics, 8, "should have all 8 metrics")
+	require.Len(t, currentMonth.UsageMetrics, 9, "should have all 9 metrics")
 
 	// Create a map to verify all expected metrics are present
 	metricsMap := make(map[string]UsageMetric)
@@ -51,6 +51,7 @@ func TestSys_BillingOverview(t *testing.T) {
 		"data_protection_calls",
 		"pki_units",
 		"managed_keys",
+		"ssh_units",
 	}
 
 	for _, metricName := range expectedMetrics {
@@ -86,6 +87,10 @@ func TestSys_BillingOverview(t *testing.T) {
 	require.Equal(t, "external_plugins", externalPluginsMetric.MetricName)
 	require.NotNil(t, externalPluginsMetric.MetricData)
 	require.Contains(t, externalPluginsMetric.MetricData, "total")
+
+	sshMetric := metricsMap["ssh_units"]
+	require.Contains(t, sshMetric.MetricData, "total")
+	require.Contains(t, sshMetric.MetricData, "metric_details")
 }
 
 func mockVaultBillingHandler(w http.ResponseWriter, _ *http.Request) {
@@ -138,7 +143,7 @@ const billingOverviewResponse = `{
           {
             "metric_name": "auto_rotated_roles",
             "metric_data": {
-              "total": 10,
+              "total": 15,
               "metric_details": [
                 {
                   "type": "aws_static",
@@ -146,6 +151,10 @@ const billingOverviewResponse = `{
                 },
                 {
                   "type": "azure_static",
+                  "count": 5
+                },
+                {
+                  "type": "os_local_account_static",
                   "count": 5
                 }
               ]
@@ -175,6 +184,10 @@ const billingOverviewResponse = `{
                 {
                   "type": "transform",
                   "count": 50
+                },
+                {
+                  "type": "gcpkms",
+                  "count": 50
                 }
               ]
             }
@@ -194,11 +207,27 @@ const billingOverviewResponse = `{
                   "type": "totp",
                   "count": 5
                 },
-				{
-				  "type": "kmse",
-				  "count": 5
-				}
+                {
+                  "type": "kmse",
+                  "count": 5
+                }
               ]
+            }
+          },
+          {
+            "metric_name": "ssh_units",
+            "metric_data": {
+              "total": 8.4,
+              "metric_details": [
+                {
+                  "type": "otp_units",
+                  "count": 5
+                },
+				{
+				  "type": "certificate_units",
+				  "count": 3.4
+				}
+			  ]
             }
           }
         ]
@@ -216,6 +245,49 @@ const billingOverviewResponse = `{
         ]
       }
     ]
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}`
+
+// TestSys_BillingConfig tests the GetBillingConfig and SetBillingConfig API client methods
+func TestSys_BillingConfig(t *testing.T) {
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultBillingConfigHandler))
+	defer mockVaultServer.Close()
+
+	// Create API client pointing to mock server
+	cfg := DefaultConfig()
+	cfg.Address = mockVaultServer.URL
+	client, err := NewClient(cfg)
+	require.NoError(t, err)
+
+	// Test GetBillingConfig
+	resp, err := client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, 37, resp.RetentionMonths)
+
+	// Test SetBillingConfig
+	err = client.Sys().SetBillingConfig(48)
+	require.NoError(t, err)
+}
+
+func mockVaultBillingConfigHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet {
+		_, _ = w.Write([]byte(billingConfigResponse))
+	} else if r.Method == http.MethodPost {
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+const billingConfigResponse = `{
+  "request_id": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "retention_months": 37
   },
   "wrap_info": null,
   "warnings": null,

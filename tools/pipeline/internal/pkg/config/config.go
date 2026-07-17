@@ -93,7 +93,8 @@ func Load(ctx context.Context, path string) (*Config, error) {
 	default:
 	}
 
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("path", path),
 	)
 

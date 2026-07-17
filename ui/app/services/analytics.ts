@@ -12,6 +12,11 @@ import {
   PROVIDER_NAME as PostHogProviderName,
 } from 'vault/utils/analytics-providers/posthog';
 
+import {
+  SegmentProvider,
+  PROVIDER_NAME as SegmentProviderName,
+} from 'vault/utils/analytics-providers/segment';
+
 import type { AnalyticsConfig, AnalyticsProvider } from 'vault/vault/analytics';
 import type RouterService from '@ember/routing/router-service';
 
@@ -61,6 +66,10 @@ export default class AnalyticsService extends Service {
           break;
         case PostHogProviderName:
           this.provider = new PostHogProvider();
+          break;
+        case SegmentProviderName:
+          this.provider = new SegmentProvider();
+          break;
       }
 
       // only start things once we've confirmed we want to
@@ -78,7 +87,7 @@ export default class AnalyticsService extends Service {
     this.log('$pageview', routeName, metadata);
   };
 
-  trackEvent = (eventName: string, metadata: Record<string, string>) => {
+  trackEvent = (eventName: string, metadata: Record<string, unknown>) => {
     this.provider.trackEvent(eventName, metadata);
 
     this.log('custom event', eventName, metadata);

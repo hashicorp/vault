@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"maps"
 	"math/big"
 	mathrand "math/rand"
@@ -33,9 +32,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/volume"
-	docker "github.com/docker/docker/client"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -45,6 +41,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/tlsutil"
+	"github.com/moby/moby/api/types/container"
+	docker "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
@@ -82,6 +80,7 @@ type DockerCluster struct {
 	storage      testcluster.ClusterStorage
 	disableMlock bool
 	disableTLS   bool
+	cleanupOnce  sync.Once
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -119,6 +118,9 @@ func (dc *DockerCluster) GetRecoveryKeys() [][]byte {
 }
 
 func (dc *DockerCluster) GetBarrierOrRecoveryKeys() [][]byte {
+	if r := dc.GetRecoveryKeys(); len(r) > 0 {
+		return r
+	}
 	return dc.GetBarrierKeys()
 }
 
@@ -144,7 +146,9 @@ func (dc *DockerCluster) GetCACertPEMFile() string {
 }
 
 func (dc *DockerCluster) Cleanup() {
-	dc.cleanup()
+	dc.cleanupOnce.Do(func() {
+		dc.cleanup()
+	})
 }
 
 func (dc *DockerCluster) cleanup() error {
@@ -172,16 +176,23 @@ func (n *DockerClusterNode) Name() string {
 	return n.Cluster.ClusterName + "-" + n.NodeID
 }
 
-func (dc *DockerCluster) setupNode0(ctx context.Context) error {
+func (dc *DockerCluster) setupNode0(ctx context.Context, hasSealConfig bool) error {
 	client := dc.ClusterNodes[0].client
 
 	var resp *api.InitResponse
 	var err error
+	req := &api.InitRequest{
+		SecretShares:    3,
+		SecretThreshold: 3,
+	}
+	if hasSealConfig {
+		req = &api.InitRequest{
+			RecoveryShares:    3,
+			RecoveryThreshold: 3,
+		}
+	}
 	for ctx.Err() == nil {
-		resp, err = client.Sys().Init(&api.InitRequest{
-			SecretShares:    3,
-			SecretThreshold: 3,
-		})
+		resp, err = client.Sys().Init(req)
 		if err == nil && resp != nil {
 			break
 		}
@@ -214,7 +225,9 @@ func (dc *DockerCluster) setupNode0(ctx context.Context) error {
 	client.SetToken(dc.rootToken)
 	dc.ClusterNodes[0].client = client
 
-	err = testcluster.UnsealNode(ctx, dc, 0)
+	if !hasSealConfig {
+		err = testcluster.UnsealNode(ctx, dc, 0)
+	}
 	if err != nil {
 		return err
 	}
@@ -226,6 +239,9 @@ func (dc *DockerCluster) setupNode0(ctx context.Context) error {
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
 
 	status, err := client.Sys().SealStatusWithContext(ctx)
 	if err != nil {
@@ -407,12 +423,16 @@ func (n *DockerClusterNode) setupCert(ip string) error {
 }
 
 func NewTestDockerCluster(t *testing.T, opts *DockerClusterOptions) *DockerCluster {
+	t.Helper()
+
 	dc, err := NewTestDockerClusterWithErr(t, opts)
 	require.NoError(t, err)
 	return dc
 }
 
 func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*DockerCluster, error) {
+	t.Helper()
+
 	if opts == nil {
 		opts = &DockerClusterOptions{DisableMlock: true}
 	}
@@ -420,7 +440,7 @@ func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*Doc
 		opts.ClusterName = strings.ReplaceAll(t.Name(), "/", "-")
 	}
 	if opts.Logger == nil {
-		opts.Logger = logging.NewVaultLogger(log.Trace).Named(t.Name())
+		opts.Logger = logging.NewVaultLogger(log.Trace).Named(opts.ClusterName)
 	}
 	if opts.NetworkName == "" {
 		opts.NetworkName = os.Getenv("TEST_DOCKER_NETWORK_NAME")
@@ -432,6 +452,8 @@ func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*Doc
 	dc, err := NewDockerCluster(ctx, opts)
 	if err == nil {
 		dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
+		// Register cleanup with t.Cleanup so it's automatically called when the test ends
+		t.Cleanup(dc.Cleanup)
 	}
 	return dc, err
 }
@@ -461,6 +483,9 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 		storage:      opts.Storage,
 		disableMlock: opts.DisableMlock,
 		disableTLS:   opts.DisableTLS,
+		barrierKeys:  opts.BarrierKeys,
+		recoveryKeys: opts.RecoveryKeys,
+		rootToken:    opts.RootToken,
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -486,7 +511,7 @@ type DockerClusterNode struct {
 	tlsConfig            *tls.Config
 	WorkDir              string
 	Cluster              *DockerCluster
-	Container            *types.ContainerJSON
+	Container            *container.InspectResponse
 	DockerAPI            *docker.Client
 	runner               *dockhelper.Runner
 	Logger               log.Logger
@@ -616,7 +641,9 @@ func (n *DockerClusterNode) Cleanup() {
 
 // Stop kills the container of the node
 func (n *DockerClusterNode) Stop() {
+	n.Logger.Trace("stopping node")
 	n.cleanupContainer()
+	n.Logger.Trace("node stopped")
 }
 
 func (n *DockerClusterNode) cleanup() error {
@@ -649,17 +676,7 @@ func (n *DockerClusterNode) createTLSDisabledListenerConfig() map[string]interfa
 	}}
 }
 
-func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
-	if n.DataVolumeName == "" {
-		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
-		if err != nil {
-			return err
-		}
-		n.DataVolumeName = vol.Name
-		n.cleanupVolume = func() {
-			_ = n.DockerAPI.VolumeRemove(ctx, vol.Name, false)
-		}
-	}
+func (n *DockerClusterNode) writeConfig(opts *DockerClusterOptions) ([]string, error) {
 	vaultCfg := map[string]interface{}{}
 	var listenerConfig []map[string]interface{}
 
@@ -692,7 +709,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 				for _, suite := range config.TLSCipherSuites {
 					name, err := tlsutil.GetCipherName(suite)
 					if err != nil {
-						return fmt.Errorf("bad TLSCipherSuite %d on listener %d: %w", suite, i, err)
+						return nil, fmt.Errorf("bad TLSCipherSuite %d on listener %d: %w", suite, i, err)
 					}
 					suites = append(suites, name)
 				}
@@ -701,7 +718,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			listenerConfig = append(listenerConfig, cfg)
 			portStr := fmt.Sprintf("%d/tcp", config.Port)
 			if strutil.StrListContains(ports, portStr) {
-				return fmt.Errorf("duplicate port %d specified", config.Port)
+				return nil, fmt.Errorf("duplicate port %d specified", config.Port)
 			}
 			ports = append(ports, portStr)
 		}
@@ -729,10 +746,43 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		storageOpts = opts.Storage.Opts()
 	}
 
-	if opts != nil && opts.VaultNodeConfig != nil {
+	if opts.VaultNodeConfig != nil {
 		for k, v := range opts.VaultNodeConfig.StorageOptions {
 			if _, ok := storageOpts[k].(string); !ok {
 				storageOpts[k] = v
+			}
+		}
+		if len(opts.VaultNodeConfig.Seal) > 0 {
+			var seals []map[string]any
+			for _, seal := range opts.VaultNodeConfig.Seal {
+				seals = append(seals, map[string]any{
+					seal.Type: seal.Config,
+				})
+			}
+			vaultCfg["seal"] = seals
+		}
+		if len(opts.VaultNodeConfig.KMSLibrary) > 0 {
+			libs := []map[string][]map[string]any{}
+			for _, kmsl := range opts.VaultNodeConfig.KMSLibrary {
+				libs = append(libs, map[string][]map[string]any{
+					kmsl.Type: {
+						{
+							"name":    kmsl.Name,
+							"library": kmsl.Library,
+						},
+					},
+				})
+			}
+			vaultCfg["kms_library"] = libs
+		}
+		if opts.VaultNodeConfig.Entropy != nil {
+			vaultCfg["entropy"] = []map[string]map[string]any{
+				{
+					"seal": map[string]any{
+						"seal_name": opts.VaultNodeConfig.Entropy.SealName,
+						"mode":      "augmentation",
+					},
+				},
 			}
 		}
 	}
@@ -753,43 +803,66 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 
 	vaultCfg["administrative_namespace_path"] = opts.AdministrativeNamespacePath
 
-	systemJSON, err := json.Marshal(vaultCfg)
-	if err != nil {
-		return err
-	}
-	err = os.WriteFile(filepath.Join(n.WorkDir, "system.json"), systemJSON, 0o644)
-	if err != nil {
-		return err
-	}
-
 	if opts.VaultNodeConfig != nil {
 		localCfg := *opts.VaultNodeConfig
 		if opts.VaultNodeConfig.LicensePath != "" {
 			b, err := os.ReadFile(opts.VaultNodeConfig.LicensePath)
 			if err != nil || len(b) == 0 {
-				return fmt.Errorf("unable to read LicensePath at %q: %w", opts.VaultNodeConfig.LicensePath, err)
+				return nil, fmt.Errorf("unable to read LicensePath at %q: %w", opts.VaultNodeConfig.LicensePath, err)
 			}
 			localCfg.LicensePath = "/vault/config/license"
 			dest := filepath.Join(n.WorkDir, "license")
 			err = os.WriteFile(dest, b, 0o644)
 			if err != nil {
-				return fmt.Errorf("error writing license to %q: %w", dest, err)
+				return nil, fmt.Errorf("error writing license to %q: %w", dest, err)
 			}
+		}
+		localJSON, err := json.Marshal(localCfg)
+		if err != nil {
+			return nil, err
+		}
+		var conf map[string]interface{}
+		if err := json.Unmarshal(localJSON, &conf); err != nil {
+			return nil, err
+		}
+		for k, v := range conf {
+			vaultCfg[k] = v
+		}
+	}
 
-		}
-		userJSON, err := json.Marshal(localCfg)
+	configJSON, err := json.Marshal(vaultCfg)
+	if err != nil {
+		return nil, err
+	}
+	err = os.WriteFile(filepath.Join(n.WorkDir, "config.json"), configJSON, 0o644)
+	if err != nil {
+		return nil, err
+	}
+	n.Logger.Trace("node config", "config.json", string(configJSON))
+	return ports, nil
+}
+
+func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
+	if n.DataVolumeName == "" {
+		vol, err := n.DockerAPI.VolumeCreate(ctx, docker.VolumeCreateOptions{})
 		if err != nil {
 			return err
 		}
-		err = os.WriteFile(filepath.Join(n.WorkDir, "user.json"), userJSON, 0o644)
-		if err != nil {
-			return err
+		n.DataVolumeName = vol.Volume.Name
+		n.Logger.Trace("created volume", "name", n.DataVolumeName)
+		n.cleanupVolume = func() {
+			n.Logger.Trace("cleanup volume", "name", n.DataVolumeName)
+			_, _ = n.DockerAPI.VolumeRemove(ctx, vol.Volume.Name, docker.VolumeRemoveOptions{})
 		}
+	}
+	ports, err := n.writeConfig(opts)
+	if err != nil {
+		return err
 	}
 
 	if !opts.DisableTLS {
 		// Create a temporary cert so vault will start up
-		err = n.setupCert("127.0.0.1")
+		err := n.setupCert("127.0.0.1")
 		if err != nil {
 			return err
 		}
@@ -807,7 +880,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	wg.Add(1)
 	var seenLogs uberAtomic.Bool
 	logConsumer := func(s string) {
-		if seenLogs.CAS(false, true) {
+		if seenLogs.CompareAndSwap(false, true) {
 			wg.Done()
 		}
 		n.Logger.Trace(s)
@@ -818,7 +891,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	lastTS := ""
 	logStdout := &LogConsumerWriter{logConsumer}
 	logStderr := &LogConsumerWriter{func(s string) {
-		if seenLogs.CAS(false, true) {
+		if seenLogs.CompareAndSwap(false, true) {
 			wg.Done()
 		}
 		d := json.NewDecoder(strings.NewReader(s))
@@ -832,30 +905,26 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}}
 
 	postStartFunc := func(containerID string, realIP string) error {
-		err := n.setupCert(realIP)
-		if err != nil {
+		// If we signal Vault before it installs its sighup handler, it'll die.
+		wg.Wait()
+
+		if err := n.setupCert(realIP); err != nil {
 			return err
 		}
 
-		// If we signal Vault before it installs its sighup handler, it'll die.
-		wg.Wait()
 		n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
 		return n.runner.RefreshFiles(ctx, containerID)
 	}
 
 	if opts.DisableTLS {
 		postStartFunc = func(containerID string, realIP string) error {
-			// If we signal Vault before it installs its sighup handler, it'll die.
-			wg.Wait()
-			n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
-			return n.runner.RefreshFiles(ctx, containerID)
+			return nil
 		}
 	}
 
 	envs := []string{
 		// For now we're using disable_mlock, because this is for testing
 		// anyway, and because it prevents us using external plugins.
-		"SKIP_SETCAP=true",
 		"VAULT_LOG_FORMAT=json",
 		"VAULT_LICENSE=" + opts.VaultLicense,
 		"VAULT_DISABLE_MLOCK=" + strconv.FormatBool(opts.DisableMlock),
@@ -880,7 +949,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		PreDelete:         true,
 		DoNotAutoRemove:   true,
 		PostStart:         postStartFunc,
-		Capabilities:      []string{"NET_ADMIN"},
+		Capabilities:      []string{"NET_ADMIN", "IPC_LOCK", "SETFCAP"},
 		OmitLogTimestamps: true,
 		VolumeNameToMountPoint: map[string]string{
 			n.DataVolumeName: "/vault/file",
@@ -897,6 +966,11 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			_, err = c.Sys().SealStatus()
 			return err
 		}
+	}
+
+	protocol := "https"
+	if opts.DisableTLS {
+		protocol = "http"
 	}
 	svc, _, err := r.StartNewService(ctx, false, false, func(ctx context.Context, host string, port int) (dockhelper.ServiceConfig, error) {
 		config, err := n.apiConfig()
@@ -924,7 +998,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	netName := opts.NetworkName
 	if netName == "" {
 		if len(svc.Container.NetworkSettings.Networks) > 1 {
-			return fmt.Errorf("Set d.RunOptions.NetworkName instead for container with multiple networks: %v", svc.Container.NetworkSettings.Networks)
+			return fmt.Errorf("set d.RunOptions.NetworkName instead for container with multiple networks: %v", svc.Container.NetworkSettings.Networks)
 		}
 		for netName = range svc.Container.NetworkSettings.Networks {
 			// Networks above is a map; we just need to find the first and
@@ -933,7 +1007,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 	}
 	n.ContainerNetworkName = netName
-	n.ContainerIPAddress = svc.Container.NetworkSettings.Networks[netName].IPAddress
+	n.ContainerIPAddress = svc.Container.NetworkSettings.Networks[netName].IPAddress.String()
 	n.RealAPIAddr = protocol + "://" + n.ContainerIPAddress + ":8200"
 	n.cleanupContainer = svc.Cleanup
 
@@ -967,7 +1041,8 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 }
 
 func (n *DockerClusterNode) Pause(ctx context.Context) error {
-	return n.DockerAPI.ContainerPause(ctx, n.Container.ID)
+	_, err := n.DockerAPI.ContainerPause(ctx, n.Container.ID, docker.ContainerPauseOptions{})
+	return err
 }
 
 func (n *DockerClusterNode) Restart(ctx context.Context) error {
@@ -977,20 +1052,23 @@ func (n *DockerClusterNode) Restart(ctx context.Context) error {
 		return err
 	}
 
-	resp, err := n.DockerAPI.ContainerInspect(ctx, n.Container.ID)
+	resp, err := n.DockerAPI.ContainerInspect(ctx, n.Container.ID, docker.ContainerInspectOptions{})
 	if err != nil {
 		return fmt.Errorf("error inspecting container after restart: %s", err)
 	}
 
 	var port int
-	if len(resp.NetworkSettings.Ports) > 0 {
-		for key, binding := range resp.NetworkSettings.Ports {
+	if len(resp.Container.NetworkSettings.Ports) > 0 {
+		for key, binding := range resp.Container.NetworkSettings.Ports {
 			if len(binding) < 1 {
 				continue
 			}
 
-			if key == "8200/tcp" {
+			if key.String() == "8200/tcp" {
 				port, err = strconv.Atoi(binding[0].HostPort)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -1012,6 +1090,27 @@ func (n *DockerClusterNode) Restart(ctx context.Context) error {
 	}
 	client.SetToken(n.Cluster.rootToken)
 	n.client = client
+
+	return nil
+}
+
+func (n *DockerClusterNode) Signal(ctx context.Context, signal string) error {
+	_, err := n.DockerAPI.ContainerKill(ctx, n.Container.ID, docker.ContainerKillOptions{
+		Signal: signal,
+	})
+	return err
+}
+
+func (n *DockerClusterNode) UpdateConfig(ctx context.Context, opts *DockerClusterOptions) error {
+	_, err := n.writeConfig(opts)
+	if err != nil {
+		return err
+	}
+
+	// Copy the updated config to the container
+	if err := dockhelper.CopyToContainer(ctx, n.DockerAPI, n.Container.ID, n.WorkDir, "/vault/config"); err != nil {
+		return fmt.Errorf("failed to copy config to container: %w", err)
+	}
 
 	return nil
 }
@@ -1041,7 +1140,7 @@ func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Dura
 			// Its handle must be unique, so we base it on targetIP
 			fmt.Sprintf("tc filter add dev eth0 parent 1:0 protocol ip pref 55 handle ::%x u32 match ip dst %s flowid 2:1", lastOctet, targetIP),
 		}, "; "),
-	})
+	}, dockhelper.RunCmdUser("root"))
 	if err != nil {
 		return err
 	}
@@ -1064,7 +1163,7 @@ func (n *DockerClusterNode) PartitionFromCluster(ctx context.Context) error {
 	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
 		"/bin/sh",
 		"-xec", strings.Join([]string{
-			fmt.Sprintf("echo partitioning container from network"),
+			"echo partitioning container from network",
 			"apk add iproute2",
 			"apk add iptables",
 			// Get the gateway address for the bridge so we can allow host to
@@ -1080,7 +1179,7 @@ func (n *DockerClusterNode) PartitionFromCluster(ctx context.Context) error {
 			"iptables -I INPUT -i eth0 ! -s \"$GW\" -j DROP",
 			"iptables -I OUTPUT -o eth0 ! -d \"$GW\" -j DROP",
 		}, "; "),
-	})
+	}, dockhelper.RunCmdUser("root"))
 	if err != nil {
 		return err
 	}
@@ -1099,7 +1198,7 @@ func (n *DockerClusterNode) UnpartitionFromCluster(ctx context.Context) error {
 	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
 		"/bin/sh",
 		"-xec", strings.Join([]string{
-			fmt.Sprintf("echo un-partitioning container from network"),
+			"echo un-partitioning container from network",
 			// Get the gateway address for the bridge so we can allow host to
 			// container traffic still.
 			"GW=$(ip r | grep default | grep eth0 | cut -f 3 -d' ')",
@@ -1108,7 +1207,7 @@ func (n *DockerClusterNode) UnpartitionFromCluster(ctx context.Context) error {
 			"iptables -D INPUT -i eth0 ! -s \"$GW\" -j DROP | true",
 			"iptables -D OUTPUT -o eth0 ! -d \"$GW\" -j DROP | true",
 		}, "; "),
-	})
+	}, dockhelper.RunCmdUser("root"))
 	if err != nil {
 		return err
 	}
@@ -1186,7 +1285,7 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		}
 		dc.tmpDir = opts.TmpDir
 	} else {
-		tempDir, err := ioutil.TempDir("", "vault-test-cluster-")
+		tempDir, err := os.MkdirTemp("", "vault-test-cluster-")
 		if err != nil {
 			return err
 		}
@@ -1227,15 +1326,32 @@ func (dc *DockerCluster) setupDockerCluster(ctx context.Context, opts *DockerClu
 		if opts.SkipInit {
 			continue
 		}
+		hasSealConfig := opts.VaultNodeConfig != nil && len(opts.VaultNodeConfig.Seal) > 0
 		if i == 0 {
-			if err := dc.setupNode0(ctx); err != nil {
+			if err := dc.setupNode0(ctx, hasSealConfig); err != nil {
 				return err
 			}
 		} else {
-			if err := dc.joinNode(ctx, i, 0); err != nil {
+			if err := dc.joinNode(ctx, i, 0, hasSealConfig); err != nil {
 				return err
 			}
 		}
+	}
+
+	if opts.SkipInit && !opts.SkipUnsealWaitActiveNode {
+		if len(opts.VaultNodeConfig.Seal) == 0 {
+			if err := testcluster.UnsealAllNodes(ctx, dc); err != nil {
+				return err
+			}
+		}
+		if _, err := testcluster.WaitForActiveNode(ctx, dc); err != nil {
+			return err
+		}
+		status, err := dc.ClusterNodes[0].APIClient().Sys().SealStatusWithContext(ctx)
+		if err != nil {
+			return err
+		}
+		dc.ID = status.ClusterID
 	}
 
 	return nil
@@ -1250,7 +1366,7 @@ func (dc *DockerCluster) AddNode(ctx context.Context, opts *DockerClusterOptions
 		return err
 	}
 
-	return dc.joinNode(ctx, len(dc.ClusterNodes)-1, leaderIdx)
+	return dc.joinNode(ctx, len(dc.ClusterNodes)-1, leaderIdx, len(opts.VaultNodeConfig.Seal) > 0)
 }
 
 const MaxContainerNameLen = 63
@@ -1340,7 +1456,7 @@ func copyDirContents(to string, from string) error {
 	return nil
 }
 
-func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int, leaderIdx int) error {
+func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int, leaderIdx int, autoseal bool) error {
 	if dc.storage != nil && dc.storage.Type() != "raft" {
 		// Storage is not raft so nothing to do but unseal.
 		return testcluster.UnsealNode(ctx, dc, nodeIdx)
@@ -1371,6 +1487,9 @@ func (dc *DockerCluster) joinNode(ctx context.Context, nodeIdx int, leaderIdx in
 		return fmt.Errorf("failed to join cluster: %w", err)
 	}
 
+	if autoseal {
+		return nil
+	}
 	return testcluster.UnsealNode(ctx, dc, nodeIdx)
 }
 

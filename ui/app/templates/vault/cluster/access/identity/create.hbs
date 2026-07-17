@@ -17,4 +17,4 @@
   </:breadcrumbs>
 </Page::Header>
 
-<Identity::EditForm @model={{this.model}} @onSave={{action "navAfterSave"}} />
+<Identity::EditForm @mode="create" @model={{this.model}} @onSave={{action "navAfterSave"}} />

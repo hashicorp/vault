@@ -12,7 +12,7 @@ import { resolve } from 'rsvp';
 import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import { addToArray } from 'vault/helpers/add-to-array';
-import { assert } from '@ember/debug';
+import { assert, debug } from '@ember/debug';
 /**
  * @module SearchSelect
  * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
@@ -22,6 +22,7 @@ import { assert } from '@ember/debug';
  *
  // * component functionality
  * @param {function} onChange - The onchange action for this form field. ** SEE EXAMPLE ** mfa-login-enforcement-form.js (onMethodChange) for example when selecting models from a hasMany relationship
+ * @param {function} [onCreate] - Callback when user clicks the create new action in the dropdown. Receives the search term as an argument so the parent can determine how to handle creation (ex: open a modal with a form pre-filled with the search term as the name)
  * @param {array} [inputValue] - Array of strings corresponding to the input's initial value, e.g. an array of model ids that on edit will appear as selected items below the input
  * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
  * @param {boolean} [shouldRenderName=false] - By default an item's id renders in the dropdown, `true` displays the name with its id in smaller text beside it *NOTE: the boolean flips automatically with 'identity' models or if this.idKey !== 'id'
@@ -34,7 +35,6 @@ import { assert } from '@ember/debug';
 // * query params for dropdown items
  * @param {Array} models - An array of model types to fetch from the API.
  * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
- * @param {object} [queryObject] - object passed as query options to this.store.query(). NOTE: will override @backend
 
  // * template only/display args
  * @param {string} id - The name of the form field
@@ -58,7 +58,7 @@ import { assert } from '@ember/debug';
  */
 
 export default class SearchSelect extends Component {
-  @service store;
+  @service api;
   @tracked shouldUseFallback = false;
   @tracked selectedOptions = []; // array of selected options (initially set by @inputValue)
   @tracked dropdownOptions = []; // options that will render in dropdown, updates as selections are added/discarded
@@ -70,6 +70,11 @@ export default class SearchSelect extends Component {
       'one of @id, @label, or @ariaLabel must be passed to search-select component',
       this.args.id || this.args.label || this.args.ariaLabel
     );
+    if (this.args.models) {
+      debug(
+        'DEVELOPER NOTICE: @models is deprecated as part of the Ember Data migration. Please use @options and pass array of items to render.'
+      );
+    }
   }
 
   get hidePowerSelect() {
@@ -140,6 +145,8 @@ export default class SearchSelect extends Component {
       this.selectedOptions = this.args.parentManageSelected;
     }
 
+    // this if condition can be removed once model support has been fully deprecated
+    // for the remaining usages we will use the api service to maintain fetch functionality
     if (!this.args.models) {
       if (Array.isArray(this.args.options)) {
         const { options } = this.args;
@@ -148,27 +155,30 @@ export default class SearchSelect extends Component {
           ? options
           : [...this.addSearchText(options)];
 
-        if (!this.args.parentManageSelected) {
-          //  set selectedOptions and remove matches from dropdown list
+        // preserve full selected objects when parent manages them, but still remove matches from dropdown
+        if (this.args.parentManageSelected) {
+          const selectedIds = this.args.parentManageSelected.map((opt) => opt[this.idKey]);
+          selectedIds.forEach((id) => {
+            const matchingOption = this.dropdownOptions.find((opt) => opt[this.idKey] === id);
+            if (matchingOption) {
+              this.dropdownOptions = removeFromArray(this.dropdownOptions, matchingOption);
+            }
+          });
+        } else {
           this.selectedOptions = this.args.inputValue
             ? this.formatInputAndUpdateDropdown(this.args.inputValue)
             : [];
         }
       }
+      this.shouldUseFallback =
+        this.args.fallbackComponent && !this.args.options?.length && this.args.disallowNewItems;
       return;
     }
 
     for (const modelType of this.args.models) {
       try {
-        let queryParams = {};
-        if (this.args.backend) {
-          queryParams = { backend: this.args.backend };
-        }
-        if (this.args.queryObject) {
-          queryParams = this.args.queryObject;
-        }
-        // fetch options from the store
-        const options = yield this.store.query(modelType, queryParams);
+        // fetch options from api
+        const options = yield this.fetchWithApiClient(modelType, this.args.backend);
 
         // store both select + unselected options in tracked property used by wildcard filter
         this.allOptions = [...this.allOptions, ...options.map((option) => option.id)];
@@ -176,16 +186,17 @@ export default class SearchSelect extends Component {
         // add to dropdown options
         this.dropdownOptions = [...this.dropdownOptions, ...this.addSearchText(options)];
       } catch (err) {
-        if (err.httpStatus === 404) {
+        const { status, response } = yield this.api.parseError(err);
+        if (status === 404) {
           // continue to query other models even if one 404s
           // and so selectedOptions will be set after for loop
           continue;
         }
-        if (err.httpStatus === 403) {
+        if (status === 403) {
           this.shouldUseFallback = true;
           return;
         }
-        throw err;
+        throw response;
       }
     }
 
@@ -193,6 +204,45 @@ export default class SearchSelect extends Component {
     this.selectedOptions = this.args.inputValue
       ? this.formatInputAndUpdateDropdown(this.args.inputValue)
       : [];
+  }
+
+  /**
+   * Temporary method to maintain backwards compatibility with original Ember Data model query functionality
+   * The @models argument is deprecated and the remaining usages need to be converted to fetch options from the route and pass them via the @options arg
+   */
+  async fetchWithApiClient(modelType, backend) {
+    const apiServicePath = {
+      transform: 'secrets.transformListTransformations',
+      'transform/alphabet': 'secrets.transformListAlphabets',
+      'transform/template': 'secrets.transformListTemplates',
+      'transform/role': 'secrets.transformListRoles',
+      'database/connection': 'secrets.databaseListConnections',
+      'database/role': 'secrets.databaseListRoles',
+      'identity/group': 'identity.groupListByName',
+      'identity/entity': 'identity.entityListByName',
+      'mfa-method': 'sys.systemListMfaMethod',
+      'keymgmt/key': 'secrets.keyManagementListKeys',
+      'keymgmt/provider': 'secrets.keyManagementListKmsProviders',
+      'policy/acl': 'sys.policiesListAclPolicies',
+      'policy/rgp': 'sys.systemListPoliciesRgp',
+    }[modelType];
+    // if model is not recognized in map log error to console, return empty array and use fallback component if it exists
+    if (!apiServicePath) {
+      debug(
+        `DEVELOPER NOTICE: Unrecognized model type "${modelType}" passed to search-select component. Please use @options instead to pass an array of options to render`
+      );
+      if (this.args.fallbackComponent) {
+        this.shouldUseFallback = true;
+      }
+      return [];
+    }
+    const args = backend ? [backend, true] : [true];
+    const [api, method] = apiServicePath.split('.');
+    const response = await this.api[api][method](...args);
+    if (response.key_info) {
+      return this.api.keyInfoToArray(response);
+    }
+    return response.keys.map((key) => ({ id: key, name: key }));
   }
 
   @action
@@ -293,6 +343,7 @@ export default class SearchSelect extends Component {
     if (selection && selection.__isSuggestion__) {
       const name = selection.__value__;
       this.selectedOptions = addToArray(this.selectedOptions, { name, id: name, new: true });
+      this.args.onCreate?.(name);
     } else {
       this.selectedOptions = addToArray(this.selectedOptions, selection);
       this.dropdownOptions = removeFromArray(this.dropdownOptions, selection);

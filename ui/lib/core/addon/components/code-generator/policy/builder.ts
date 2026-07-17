@@ -5,11 +5,10 @@
 
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
-import { formatStanzas, PolicyStanza } from 'core/utils/code-generators/policy';
+import { PolicyStanza } from 'core/utils/code-generators/policy';
 import { assert } from '@ember/debug';
 
 export interface PolicyData {
-  policy: string;
   stanzas: PolicyStanza[];
 }
 interface Args {
@@ -45,6 +44,6 @@ export default class CodeGeneratorPolicyBuilder extends Component<Args> {
   @action
   updateStanzas(stanzas?: PolicyStanza[]) {
     const updated = stanzas ?? this.args.stanzas;
-    this.args.onPolicyChange({ policy: formatStanzas(updated), stanzas: updated });
+    this.args.onPolicyChange({ stanzas: updated });
   }
 }

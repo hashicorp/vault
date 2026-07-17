@@ -35,7 +35,7 @@ on:
 jobs:
   enos-run-vault-interactive-test:
     name:  Enos run Vault interactive test
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64", "large"]') }}
     permissions: write-all
     timeout-minutes: 120
     env:
@@ -52,7 +52,7 @@ jobs:
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
       VAULT_METADATA: ent
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Set product version and revision
         # If the Vault version and revision are not provided as workflow inputs, incase of
         # testing local artifact, the environment variables ENOS_VAR_vault_product_version
@@ -64,26 +64,23 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      # Install additional tools like gotestsum that are required for Enos scenarios
+      - uses: ./.github/actions/install-tools
       - name: Configure Git
         run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
       - name: Set up node
-        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version-file: './ui/package.json'
           cache: pnpm
           cache-dependency-path: ui/pnpm-lock.yaml
 
       - name: Install PNPM
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         with:
           package_json_file: './ui/package.json'
-      - uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4.0.0
-        with:
-          # the Terraform wrapper will break Terraform execution in Enos because
-          # it changes the output to text when we expect it to be JSON.
-          terraform_wrapper: false
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6.0.0
+        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
@@ -91,9 +88,6 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
-      - uses: hashicorp/action-setup-enos@17b90fcf9591275b468a94aefb9dc6a93017de8a # v1.50
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Prepare scenario dependencies
         id: scenario-deps
         run: |
@@ -106,29 +100,30 @@ jobs:
         id: license
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic
       - name: Run Enos scenario
-        id: run
-        run: enos scenario run --timeout 60m0s --chdir ./enos ${{ inputs.scenario }}
+        id: run-scenario
+        uses: ./.github/actions/run-enos-scenario
+        with:
+          scenario-filter: ${{ inputs.scenario }}
+          working-directory: ./enos
+          timeout: 60m0s
+          retry-timeout: 60m0s
+          destroy-timeout: 60m0s
+          show-state-on-retry: ${{ github.repository == 'hashicorp/vault-enterprise' && 'true' || 'false' }}
+          destroy-extra-args: --grpc-listen http://localhost
+          debug-data-path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
+          debug-data-retention-days: '1'
       - name: Collect logs when scenario fails
         id: collect_logs
         if: ${{ always() }}
         run: |
           bash -x ./scripts/gha_enos_logs.sh "${{ steps.scenario-deps.outputs.logsdir }}" "${{ inputs.scenario }}" "${{ inputs.distro }}" "${{ inputs.artifact-type }}" 2>/dev/null
           find "${{ steps.scenario-deps.outputs.logsdir }}" -maxdepth 0 -empty -exec rmdir {} \;
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ always() }}
         with:
           name: enos-scenario-logs
           path: ${{ steps.scenario-deps.outputs.logsdir }}
           retention-days: 1
-      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        if: ${{ always() }}
-        with:
-          name: enos-debug-data-logs
-          path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
-          retention-days: 1
-      - name: Ensure scenario has been destroyed
-        if: ${{ always() }}
-        run: enos scenario destroy --timeout 60m0s --grpc-listen http://localhost --chdir ./enos ${{ inputs.scenario }}
       - name: Clean up Enos runtime directories
         if: ${{ always() }}
         run: |

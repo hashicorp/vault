@@ -69,7 +69,7 @@ runs:
       shell: bash
       run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
     - name: Restore UI from cache
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
       with:
         # Restore the UI asset from the UI build workflow. Never use a partial restore key.
         enableCrossOsArchive: true
@@ -115,9 +115,9 @@ runs:
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.vault-edition != 'ce'
       id: build-vault-select-license
-      uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      uses: hashicorp-forge/actions-pao-tool/select-license@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
       with:
-        arch: ${{ matrix.goarch }}
+        arch: ${{ inputs.goarch }}
     - if: inputs.cgo-enabled == '0'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:
@@ -133,7 +133,7 @@ runs:
       shell: bash
       run: make ci-build
     - if: inputs.cgo-enabled == '1'
-      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
       with:
         driver-opts: network=host # So we can run our own little registry
     - if: inputs.cgo-enabled == '1'
@@ -143,7 +143,7 @@ runs:
       if: inputs.cgo-enabled == '1'
       id: build-push-action-attempt-1
       continue-on-error: true # we will retry this if it fails
-      uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       env:
         DOCKER_BUILD_SUMMARY: false
       with:
@@ -165,7 +165,7 @@ runs:
       id: build-push-action-attempt-2
       continue-on-error: false
       if: inputs.cgo-enabled == '1' && steps.build-push-action-attempt-1.outcome != 'success'
-      uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
       env:
         DOCKER_BUILD_SUMMARY: false
       with:
@@ -218,12 +218,16 @@ runs:
         BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
       shell: bash
       run: make ci-bundle
-    - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.metadata.outputs.artifact-basename }}.zip
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
+      env:
+        # Use our elevated token instead of the workflow token so that our
+        # download of nfpm is less likely to fail.
+        GH_TOKEN: ${{ inputs.github-token }}
       uses: hashicorp/actions-packaging-linux@33f7d23b14f24e6a7b7d9948cb7f5caca2045ee3
       with:
         name: ${{ inputs.package-name }}
@@ -250,13 +254,13 @@ runs:
           echo "deb-files=$(basename out/*.deb)"
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.package-files.outputs.rpm-files }}
         path: out/${{ steps.package-files.outputs.rpm-files }}
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.package-files.outputs.deb-files }}
         path: out/${{ steps.package-files.outputs.deb-files }}

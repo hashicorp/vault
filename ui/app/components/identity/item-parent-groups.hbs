@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @model.parentGroupIds.length}}
-  {{#each @model.parentGroupIds as |gid|}}
+{{#if (not (is-empty @model.parent_group_ids))}}
+  {{#each @model.parent_group_ids as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
       <div class="columns is-mobile">
         <div class="column is-10">
@@ -22,7 +22,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @title="This group has no parent groups yet" @titleTag="h2" />
   </Hds::ApplicationState>
 {{/if}}

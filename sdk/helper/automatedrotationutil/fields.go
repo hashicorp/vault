@@ -4,11 +4,14 @@
 package automatedrotationutil
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/rotation"
 )
 
@@ -97,13 +100,156 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 	return nil
 }
 
-// PopulateAutomatedRotationData adds PluginIdentityTokenParams info into the given map.
+type RotationJobOperationResponse struct {
+	OperationPerformed string
+	Logger             hclog.Logger
+	RotationInfo       *rotation.RotationInfo
+}
+
+type (
+	RegisterErrorHandler   func(error) error
+	DeregisterErrorHandler func(error) error
+)
+
+type ErrorHandlers struct {
+	RegisterErrorHandler   RegisterErrorHandler
+	DeregisterErrorHandler DeregisterErrorHandler
+}
+
+// HandleRotationJob is a helper method for registering or deregistering rotation jobs.
+// This wraps the two individual reegister and deregister methods and determines which to call based
+// on the request parameters provided.
+// Returns a formatted error based on the operation that failed.
+// Use this method unless there is a specific need to handle the individual operations independently
+// or in a nonstandard way.
+func (p *AutomatedRotationParams) HandleRotationJob(ctx context.Context, b *framework.Backend, fieldData *framework.FieldData, req *logical.Request) (RotationJobOperationResponse, error) {
+	return p.HandleRotationJobWithErrorHandlers(ctx, b, fieldData, req, &ErrorHandlers{})
+}
+
+// HandleRotationJobWithErrorHandlers is the same as HandleRotationJob but allows callers to provide custom error handlers for errors returned from either the register or deregister operations.
+func (p *AutomatedRotationParams) HandleRotationJobWithErrorHandlers(ctx context.Context, b *framework.Backend, fieldData *framework.FieldData, req *logical.Request, errorHandlers *ErrorHandlers) (RotationJobOperationResponse, error) {
+	resp := RotationJobOperationResponse{
+		Logger: b.Logger(),
+	}
+
+	if err := p.ParseAutomatedRotationFields(fieldData); err != nil {
+		return resp, err
+	}
+
+	if p.ShouldDeregisterRotationJob() {
+		resp.OperationPerformed = rotation.PerformedDeregistration
+		if err := p.HandleDeregisterRotationJob(ctx, b, req); err != nil {
+			if errorHandlers.DeregisterErrorHandler != nil {
+				err = errorHandlers.DeregisterErrorHandler(err)
+			}
+			return resp, fmt.Errorf("failed to deregister rotation job: %w", err)
+		}
+	} else if p.ShouldRegisterRotationJob() {
+		resp.OperationPerformed = rotation.PerformedRegistration
+		registerResp, err := p.HandleRegisterRotationJob(ctx, b, req)
+		if err != nil {
+			if errorHandlers.RegisterErrorHandler != nil {
+				err = errorHandlers.RegisterErrorHandler(err)
+			}
+			return resp, fmt.Errorf("failed to register rotation job: %w", err)
+		}
+		resp.RotationInfo = registerResp
+	}
+
+	return resp, nil
+}
+
+// HandleStorageErrorAfterRotationJob is a helper method to log and wrap errors from storage operations
+// and should only be used after performing rotation job operations.
+// The caller is responsible for determining when it is appropriate to call this method.
+func (r *RotationJobOperationResponse) HandleStorageErrorAfterRotationJob(req *logical.Request, err error) error {
+	if err != nil {
+		if r.OperationPerformed != "" {
+			// Write to storage failed but a rotation job operation succeeded beforehand, return this as an error.
+			msg := "write to storage failed but the rotation operation still succeeded; this may cause next_vault_rotation and last_vault_rotation values to be out-of-sync with the actual rotation schedule"
+			r.Logger.Error(msg,
+				"operation", r.OperationPerformed, "mount", req.MountPoint, "path", req.Path, "error", err.Error())
+			return fmt.Errorf("%s; operation=%s, mount=%s, path=%s, error=%s", msg, r.OperationPerformed, req.MountPoint, req.Path, err)
+		} else {
+			// There was no rotation operation performed, so just return the storage error.
+			return err
+		}
+	}
+
+	return nil
+}
+
+// HandleRegisterRotationJob is a helper method to register rotation jobs from a plugin.
+// Use HandleRotationJob or HandleRotationJobWithErrorHandlers instead when possible.
+// Returns the raw system error.
+// Callers are responsible for validating when to register a RotationJob.
+// Callers are responsible for performing cleanup or storage rollbacks if necessary.
+func (p *AutomatedRotationParams) HandleRegisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) (*rotation.RotationInfo, error) {
+	registerReq := &rotation.RotationJobConfigureRequest{
+		MountPoint:       req.MountPoint,
+		ReqPath:          req.Path,
+		RotationSchedule: p.RotationSchedule,
+		RotationWindow:   p.RotationWindow,
+		RotationPeriod:   p.RotationPeriod,
+	}
+
+	b.Logger().Debug("Registering rotation job", "mount", req.MountPoint, "path", req.Path)
+	resp, err := b.System().RegisterRotationJobWithResponse(ctx, registerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// HandleDeregisterRotationJob is a helper method to deregister rotation jobs from a plugin.
+// Use HandleRotationJob or HandleRotationJobWithErrorHandlers instead when possible.
+// Returns the raw system error.
+// Callers are responsible for validating when to deregister a RotationJob.
+// Callers are responsible for performing cleanup or storage rollbacks if necessary.
+func (p *AutomatedRotationParams) HandleDeregisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) error {
+	deregisterReq := &rotation.RotationJobDeregisterRequest{
+		MountPoint: req.MountPoint,
+		ReqPath:    req.Path,
+	}
+
+	b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint, "path", req.Path)
+	if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Use PopulateSetAutomatedRotationData instead, *unless* all these
+// fields are necessary to maintain backwards compatibility with the plugin's pre-existing response API.
+// PopulateAutomatedRotationData adds AutomatedRotationParams info into the given map.
 func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]interface{}) {
 	m["rotation_schedule"] = p.RotationSchedule
 	m["rotation_window"] = p.RotationWindow.Seconds()
 	m["rotation_period"] = p.RotationPeriod.Seconds()
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
 	m["rotation_policy"] = p.RotationPolicy
+}
+
+// PopulateSetAutomatedRotationData adds AutomatedRotationParams info into the given map, based
+// on which fields were set for rotation. Setting a rotation schedule will not return a rotation
+// period, and setting a rotation period will not return a rotation schedule or rotation window.
+func (p *AutomatedRotationParams) PopulateSetAutomatedRotationData(m map[string]interface{}) {
+	// Always set these even if they are zero values, to avoid confusion.
+	m["disable_automated_rotation"] = p.DisableAutomatedRotation
+	m["rotation_policy"] = p.RotationPolicy
+
+	// Set both of these if a schedule is set.
+	if p.RotationSchedule != "" {
+		m["rotation_schedule"] = p.RotationSchedule
+		m["rotation_window"] = p.RotationWindow.Seconds()
+	}
+
+	// Set this if a period is set.
+	if p.RotationPeriod != 0 {
+		m["rotation_period"] = p.RotationPeriod.Seconds()
+	}
 }
 
 // PopulateRotationInfo adds RotationInfoResponseParams info into the given map.
@@ -227,4 +373,10 @@ func AddAutomatedRotationFieldsWithGroup(m map[string]*framework.FieldSchema, gr
 // future utils that define fields should include a group parameter
 func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 	AddAutomatedRotationFieldsWithGroup(m, "default")
+}
+
+// Equals returns true if the automated rotation parameters match the other instance.
+// Useful for detecting configuration changes after parsing new field data.
+func (p *AutomatedRotationParams) Equals(other AutomatedRotationParams) bool {
+	return *p == other
 }

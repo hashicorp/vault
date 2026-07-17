@@ -26,90 +26,201 @@ import (
 
 var tokenLength string = fmt.Sprintf("%d", vault.TokenLength+vault.TokenPrefixLength)
 
-func TestSysGenerateRootAttempt_Status(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-	TestServerAuth(t, addr, token)
-
-	resp, err := http.Get(addr + "/v1/sys/generate-root/attempt")
-	if err != nil {
-		t.Fatalf("err: %s", err)
+// TestSysGenerateRoot_Status verifies the initial output of sys/generate-root/attempt,
+// prior to actually starting a root token generation.
+func TestSysGenerateRoot_Status(t *testing.T) {
+	testCases := []struct {
+		name                     string
+		enableUnauthGenerateRoot bool
+		useToken                 bool
+		expectError              bool
+	}{
+		{
+			name:                     "default-unauthenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 false,
+			expectError:              false,
+		},
+		{
+			name:                     "default-authenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 true,
+			expectError:              false,
+		},
+		{
+			name:                     "auth-required-without-token",
+			enableUnauthGenerateRoot: false,
+			useToken:                 false,
+			expectError:              true,
+		},
+		{
+			name:                     "auth-required-with-token",
+			enableUnauthGenerateRoot: false,
+			useToken:                 true,
+			expectError:              false,
+		},
 	}
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"started":            false,
-		"progress":           json.Number("0"),
-		"required":           json.Number("3"),
-		"complete":           false,
-		"encoded_token":      "",
-		"encoded_root_token": "",
-		"pgp_fingerprint":    "",
-		"nonce":              "",
-		"otp_length":         json.Number(tokenLength),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	expected["otp"] = actual["otp"]
-	if diff := deep.Equal(actual, expected); diff != nil {
-		t.Fatal(diff)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := &vault.CoreConfig{}
+			if tc.enableUnauthGenerateRoot {
+				conf.EnableUnauthenticatedAccess = []string{"generate-root"}
+			}
+			cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
+				HandlerFunc: Handler,
+				NumCores:    1,
+			})
+			cl := cluster.Cores[0].Client
+
+			if tc.useToken {
+				cl.SetToken(cluster.RootToken)
+			} else {
+				cl.SetToken("")
+			}
+
+			resp, err := cl.Logical().Read("sys/generate-root/attempt")
+
+			if tc.expectError {
+				if err == nil {
+					t.Fatal("expected error but got none")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
+
+			actual := resp.Data
+			expected := map[string]interface{}{
+				"started":            false,
+				"progress":           json.Number("0"),
+				"required":           json.Number("3"),
+				"complete":           false,
+				"nonce":              "",
+				"otp":                "",
+				"otp_length":         json.Number("28"),
+				"pgp_fingerprint":    "",
+				"encoded_token":      "",
+				"encoded_root_token": "",
+			}
+
+			if !reflect.DeepEqual(actual, expected) {
+				t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+			}
+		})
 	}
 }
 
 func TestSysGenerateRootAttempt_Setup_OTP(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-	TestServerAuth(t, addr, token)
+	testCases := []struct {
+		name                     string
+		enableUnauthGenerateRoot bool
+		useToken                 bool
+		expectError              bool
+	}{
+		{
+			name:                     "unauthenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 false,
+			expectError:              false,
+		},
+		{
+			name:                     "authenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 true,
+			expectError:              false,
+		},
+		{
+			name:                     "auth-required",
+			enableUnauthGenerateRoot: false,
+			useToken:                 true,
+			expectError:              false,
+		},
+		{
+			name:                     "auth-required-no-token",
+			enableUnauthGenerateRoot: false,
+			useToken:                 false,
+			expectError:              true,
+		},
+	}
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", nil)
-	testResponseStatus(t, resp, 200)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := &vault.CoreConfig{}
+			if tc.enableUnauthGenerateRoot {
+				conf.EnableUnauthenticatedAccess = []string{"generate-root"}
+			}
+			cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
+				DisableTLS:  true,
+				HandlerFunc: Handler,
+				NumCores:    1,
+			})
+			cl := cluster.Cores[0].Client
 
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"started":            true,
-		"progress":           json.Number("0"),
-		"required":           json.Number("3"),
-		"complete":           false,
-		"encoded_token":      "",
-		"encoded_root_token": "",
-		"pgp_fingerprint":    "",
-		"otp_length":         json.Number(tokenLength),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if actual["nonce"].(string) == "" {
-		t.Fatalf("nonce was empty")
-	}
-	expected["nonce"] = actual["nonce"]
-	expected["otp"] = actual["otp"]
-	if diff := deep.Equal(actual, expected); diff != nil {
-		t.Fatal(diff)
-	}
+			reqToken := ""
+			if tc.useToken {
+				reqToken = cl.Token()
+			}
+			addr := cl.Address()
 
-	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/attempt")
+			resp := testHttpPut(t, reqToken, addr+"/v1/sys/generate-root/attempt", nil)
 
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"started":            true,
-		"progress":           json.Number("0"),
-		"required":           json.Number("3"),
-		"complete":           false,
-		"encoded_token":      "",
-		"encoded_root_token": "",
-		"pgp_fingerprint":    "",
-		"otp":                "",
-		"otp_length":         json.Number(tokenLength),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if actual["nonce"].(string) == "" {
-		t.Fatalf("nonce was empty")
-	}
-	expected["nonce"] = actual["nonce"]
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+			if tc.expectError {
+				testResponseStatus(t, resp, http.StatusForbidden)
+				return
+			}
+			testResponseStatus(t, resp, http.StatusOK)
+
+			var actual map[string]interface{}
+			testResponseBody(t, resp, &actual)
+
+			expected := map[string]interface{}{
+				"started":            true,
+				"progress":           json.Number("0"),
+				"required":           json.Number("3"),
+				"complete":           false,
+				"encoded_token":      "",
+				"encoded_root_token": "",
+				"pgp_fingerprint":    "",
+				"otp_length":         json.Number(tokenLength),
+			}
+
+			if actual["nonce"].(string) == "" {
+				t.Fatalf("nonce was empty")
+			}
+			expected["nonce"] = actual["nonce"]
+			expected["otp"] = actual["otp"]
+
+			if diff := deep.Equal(actual, expected); diff != nil {
+				t.Fatal(diff)
+			}
+
+			resp = testHttpGet(t, reqToken, addr+"/v1/sys/generate-root/attempt")
+
+			actual = map[string]interface{}{}
+			expected = map[string]interface{}{
+				"started":            true,
+				"progress":           json.Number("0"),
+				"required":           json.Number("3"),
+				"complete":           false,
+				"encoded_token":      "",
+				"encoded_root_token": "",
+				"pgp_fingerprint":    "",
+				"otp":                "",
+				"otp_length":         json.Number(tokenLength),
+			}
+			testResponseStatus(t, resp, http.StatusOK)
+			testResponseBody(t, resp, &actual)
+			if actual["nonce"].(string) == "" {
+				t.Fatalf("nonce was empty")
+			}
+			expected["nonce"] = actual["nonce"]
+			if !reflect.DeepEqual(actual, expected) {
+				t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+			}
+		})
 	}
 }
 
@@ -122,7 +233,7 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
-	testResponseStatus(t, resp, 200)
+	testResponseStatus(t, resp, http.StatusOK)
 
 	resp = testHttpGet(t, token, addr+"/v1/sys/generate-root/attempt")
 
@@ -138,7 +249,7 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 		"otp":                "",
 		"otp_length":         json.Number(tokenLength),
 	}
-	testResponseStatus(t, resp, 200)
+	testResponseStatus(t, resp, http.StatusOK)
 	testResponseBody(t, resp, &actual)
 	if actual["nonce"].(string) == "" {
 		t.Fatalf("nonce was empty")
@@ -146,64 +257,6 @@ func TestSysGenerateRootAttempt_Setup_PGP(t *testing.T) {
 	expected["nonce"] = actual["nonce"]
 	if diff := deep.Equal(actual, expected); diff != nil {
 		t.Fatal(diff)
-	}
-}
-
-func TestSysGenerateRootAttempt_Cancel(t *testing.T) {
-	core, _, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-	TestServerAuth(t, addr, token)
-
-	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", nil)
-
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"started":            true,
-		"progress":           json.Number("0"),
-		"required":           json.Number("3"),
-		"complete":           false,
-		"encoded_token":      "",
-		"encoded_root_token": "",
-		"pgp_fingerprint":    "",
-		"otp_length":         json.Number(tokenLength),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if actual["nonce"].(string) == "" {
-		t.Fatalf("nonce was empty")
-	}
-	expected["nonce"] = actual["nonce"]
-	expected["otp"] = actual["otp"]
-	if diff := deep.Equal(actual, expected); diff != nil {
-		t.Fatal(diff)
-	}
-
-	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
-	testResponseStatus(t, resp, 204)
-
-	resp, err := http.Get(addr + "/v1/sys/generate-root/attempt")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"started":            false,
-		"progress":           json.Number("0"),
-		"required":           json.Number("3"),
-		"complete":           false,
-		"encoded_token":      "",
-		"encoded_root_token": "",
-		"pgp_fingerprint":    "",
-		"nonce":              "",
-		"otp":                "",
-		"otp_length":         json.Number(tokenLength),
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
 	}
 }
 
@@ -270,7 +323,7 @@ func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", nil)
-	testResponseStatus(t, resp, 200)
+	testResponseStatus(t, resp, http.StatusOK)
 
 	resp = testHttpDelete(t, token, addr+"/v1/sys/generate-root/attempt")
 	testResponseStatus(t, resp, 204)
@@ -279,199 +332,295 @@ func TestSysGenerateRoot_ReAttemptUpdate(t *testing.T) {
 		"pgp_key": pgpkeys.TestPubKey1,
 	})
 
-	testResponseStatus(t, resp, 200)
+	testResponseStatus(t, resp, http.StatusOK)
 }
 
 func TestSysGenerateRoot_Update_OTP(t *testing.T) {
-	var records *[][]byte
-	ln, addr, token, keys := testServerWithAudit(t, &records)
-	defer ln.Close()
+	testCases := []struct {
+		name                     string
+		enableUnauthGenerateRoot bool
+		useToken                 bool
+		expectError              bool
+	}{
+		{
+			name:                     "unauthenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 false,
+			expectError:              false,
+		},
+		{
+			name:                     "authenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 true,
+			expectError:              false,
+		},
+		{
+			name:                     "auth-required",
+			enableUnauthGenerateRoot: false,
+			useToken:                 true,
+			expectError:              false,
+		},
+		{
+			name:                     "auth-required-no-token",
+			enableUnauthGenerateRoot: false,
+			useToken:                 false,
+			expectError:              true,
+		},
+	}
 
-	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{})
-	var rootGenerationStatus map[string]interface{}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &rootGenerationStatus)
-	otp := rootGenerationStatus["otp"].(string)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := &vault.CoreConfig{}
+			if tc.enableUnauthGenerateRoot {
+				conf.EnableUnauthenticatedAccess = []string{"generate-root"}
+			}
+			cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
+				DisableTLS:  true,
+				HandlerFunc: Handler,
+				NumCores:    1,
+			})
+			cl := cluster.Cores[0].Client
+			reqToken := ""
+			if tc.useToken {
+				reqToken = cl.Token()
+			}
+			addr := cl.Address()
 
-	var actual map[string]interface{}
-	var expected map[string]interface{}
-	for i, key := range keys {
-		resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
-			"nonce": rootGenerationStatus["nonce"].(string),
-			"key":   hex.EncodeToString(key),
+			resp := testHttpPut(t, reqToken, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{})
+			var rootGenerationStatus map[string]interface{}
+			if tc.expectError {
+				testResponseStatus(t, resp, http.StatusForbidden)
+				return
+			}
+			testResponseStatus(t, resp, http.StatusOK)
+			testResponseBody(t, resp, &rootGenerationStatus)
+			otp := rootGenerationStatus["otp"].(string)
+
+			var actual map[string]interface{}
+			var expected map[string]interface{}
+			for i, key := range cluster.BarrierKeys {
+				resp = testHttpPut(t, reqToken, addr+"/v1/sys/generate-root/update", map[string]interface{}{
+					"nonce": rootGenerationStatus["nonce"].(string),
+					"key":   hex.EncodeToString(key),
+				})
+
+				actual = map[string]interface{}{}
+				expected = map[string]interface{}{
+					"complete":        false,
+					"nonce":           rootGenerationStatus["nonce"].(string),
+					"progress":        json.Number(fmt.Sprintf("%d", i+1)),
+					"required":        json.Number(fmt.Sprintf("%d", len(cluster.BarrierKeys))),
+					"started":         true,
+					"pgp_fingerprint": "",
+					"otp":             "",
+					"otp_length":      json.Number("0"),
+				}
+				if i+1 == len(cluster.BarrierKeys) {
+					expected["complete"] = true
+				}
+				testResponseStatus(t, resp, http.StatusOK)
+				testResponseBody(t, resp, &actual)
+			}
+
+			if actual["encoded_token"] == nil || actual["encoded_token"] == "" {
+				t.Fatalf("no encoded token found in response")
+			}
+			if actual["encoded_root_token"] == nil || actual["encoded_root-token"] == "" {
+				t.Fatalf("no encoded root token found in response")
+			}
+			expected["encoded_token"] = actual["encoded_token"]
+			expected["encoded_root_token"] = actual["encoded_root_token"]
+			expected["encoded_token"] = actual["encoded_token"]
+
+			if !reflect.DeepEqual(actual, expected) {
+				t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+			}
+
+			tokenBytes, err := base64.RawStdEncoding.DecodeString(expected["encoded_token"].(string))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
+			if err != nil {
+				t.Fatal(err)
+			}
+			newRootToken := string(tokenBytes)
+
+			actual = map[string]interface{}{}
+			expected = map[string]interface{}{
+				"id":               newRootToken,
+				"display_name":     "root",
+				"meta":             interface{}(nil),
+				"num_uses":         json.Number("0"),
+				"policies":         []interface{}{"root"},
+				"orphan":           true,
+				"creation_ttl":     json.Number("0"),
+				"ttl":              json.Number("0"),
+				"path":             "auth/token/root",
+				"explicit_max_ttl": json.Number("0"),
+				"expire_time":      nil,
+				"entity_id":        "",
+				"type":             "service",
+			}
+
+			resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
+			testResponseStatus(t, resp, http.StatusOK)
+			testResponseBody(t, resp, &actual)
+
+			expected["creation_time"] = actual["data"].(map[string]interface{})["creation_time"]
+			expected["accessor"] = actual["data"].(map[string]interface{})["accessor"]
+
+			if !reflect.DeepEqual(actual["data"], expected) {
+				t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual["data"])
+			}
 		})
-
-		actual = map[string]interface{}{}
-		expected = map[string]interface{}{
-			"complete":        false,
-			"nonce":           rootGenerationStatus["nonce"].(string),
-			"progress":        json.Number(fmt.Sprintf("%d", i+1)),
-			"required":        json.Number(fmt.Sprintf("%d", len(keys))),
-			"started":         true,
-			"pgp_fingerprint": "",
-			"otp":             "",
-			"otp_length":      json.Number("0"),
-		}
-		if i+1 == len(keys) {
-			expected["complete"] = true
-		}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
-	}
-
-	if actual["encoded_token"] == nil || actual["encoded_token"] == "" {
-		t.Fatalf("no encoded token found in response")
-	}
-	if actual["encoded_root_token"] == nil || actual["encoded_root-token"] == "" {
-		t.Fatalf("no encoded root token found in response")
-	}
-	expected["encoded_token"] = actual["encoded_token"]
-	expected["encoded_root_token"] = actual["encoded_root_token"]
-	expected["encoded_token"] = actual["encoded_token"]
-
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
-	}
-
-	tokenBytes, err := base64.RawStdEncoding.DecodeString(expected["encoded_token"].(string))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tokenBytes, err = xor.XORBytes(tokenBytes, []byte(otp))
-	if err != nil {
-		t.Fatal(err)
-	}
-	newRootToken := string(tokenBytes)
-
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"id":               newRootToken,
-		"display_name":     "root",
-		"meta":             interface{}(nil),
-		"num_uses":         json.Number("0"),
-		"policies":         []interface{}{"root"},
-		"orphan":           true,
-		"creation_ttl":     json.Number("0"),
-		"ttl":              json.Number("0"),
-		"path":             "auth/token/root",
-		"explicit_max_ttl": json.Number("0"),
-		"expire_time":      nil,
-		"entity_id":        "",
-		"type":             "service",
-	}
-
-	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-
-	expected["creation_time"] = actual["data"].(map[string]interface{})["creation_time"]
-	expected["accessor"] = actual["data"].(map[string]interface{})["accessor"]
-
-	if !reflect.DeepEqual(actual["data"], expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual["data"])
-	}
-
-	for _, r := range *records {
-		t.Log(string(r))
 	}
 }
 
 func TestSysGenerateRoot_Update_PGP(t *testing.T) {
-	core, keys, token := vault.TestCoreUnsealed(t)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-	TestServerAuth(t, addr, token)
-
-	resp := testHttpPut(t, token, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
-		"pgp_key": pgpkeys.TestPubKey1,
-	})
-	testResponseStatus(t, resp, 200)
-
-	// We need to get the nonce first before we update
-	resp, err := http.Get(addr + "/v1/sys/generate-root/attempt")
-	if err != nil {
-		t.Fatalf("err: %s", err)
+	testCases := []struct {
+		name                     string
+		enableUnauthGenerateRoot bool
+		useToken                 bool
+		expectError              bool
+	}{
+		{
+			name:                     "unauthenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 false,
+			expectError:              false,
+		},
+		{
+			name:                     "authenticated",
+			enableUnauthGenerateRoot: true,
+			useToken:                 true,
+			expectError:              false,
+		},
+		{
+			name:                     "auth-required",
+			enableUnauthGenerateRoot: false,
+			useToken:                 true,
+			expectError:              false,
+		},
+		{
+			name:                     "auth-required-no-token",
+			enableUnauthGenerateRoot: false,
+			useToken:                 false,
+			expectError:              true,
+		},
 	}
-	var rootGenerationStatus map[string]interface{}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &rootGenerationStatus)
 
-	var actual map[string]interface{}
-	var expected map[string]interface{}
-	for i, key := range keys {
-		resp = testHttpPut(t, token, addr+"/v1/sys/generate-root/update", map[string]interface{}{
-			"nonce": rootGenerationStatus["nonce"].(string),
-			"key":   hex.EncodeToString(key),
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			conf := &vault.CoreConfig{}
+			if tc.enableUnauthGenerateRoot {
+				conf.EnableUnauthenticatedAccess = []string{"generate-root"}
+			}
+			cluster := vault.NewTestCluster(t, conf, &vault.TestClusterOptions{
+				DisableTLS:  true,
+				HandlerFunc: Handler,
+				NumCores:    1,
+			})
+			cl := cluster.Cores[0].Client
+			reqToken := ""
+			if tc.useToken {
+				reqToken = cl.Token()
+			}
+			addr := cl.Address()
+
+			resp := testHttpPut(t, reqToken, addr+"/v1/sys/generate-root/attempt", map[string]interface{}{
+				"pgp_key": pgpkeys.TestPubKey1,
+			})
+			if tc.expectError {
+				testResponseStatus(t, resp, http.StatusForbidden)
+				return
+			}
+			testResponseStatus(t, resp, http.StatusOK)
+
+			// We need to get the nonce first before we update
+			resp = testHttpGet(t, reqToken, addr+"/v1/sys/generate-root/attempt")
+			var rootGenerationStatus map[string]interface{}
+			testResponseStatus(t, resp, http.StatusOK)
+			testResponseBody(t, resp, &rootGenerationStatus)
+
+			var actual map[string]interface{}
+			var expected map[string]interface{}
+			for i, key := range cluster.BarrierKeys {
+				resp = testHttpPut(t, reqToken, addr+"/v1/sys/generate-root/update", map[string]interface{}{
+					"nonce": rootGenerationStatus["nonce"].(string),
+					"key":   hex.EncodeToString(key),
+				})
+
+				actual = map[string]interface{}{}
+				expected = map[string]interface{}{
+					"complete":        false,
+					"nonce":           rootGenerationStatus["nonce"].(string),
+					"progress":        json.Number(fmt.Sprintf("%d", i+1)),
+					"required":        json.Number(fmt.Sprintf("%d", len(cluster.BarrierKeys))),
+					"started":         true,
+					"pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
+					"otp":             "",
+					"otp_length":      json.Number("0"),
+				}
+				if i+1 == len(cluster.BarrierKeys) {
+					expected["complete"] = true
+				}
+				testResponseStatus(t, resp, http.StatusOK)
+				testResponseBody(t, resp, &actual)
+			}
+
+			if actual["encoded_token"] == nil || actual["encoded_token"] == "" {
+				t.Fatalf("no encoded token found in response")
+			}
+			if actual["encoded_root_token"] == nil || actual["encoded_root-token"] == "" {
+				t.Fatalf("no encoded root token found in response")
+			}
+			expected["encoded_token"] = actual["encoded_token"]
+			expected["encoded_root_token"] = actual["encoded_root_token"]
+			expected["encoded_token"] = actual["encoded_token"]
+
+			if !reflect.DeepEqual(actual, expected) {
+				t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
+			}
+
+			decodedTokenBuf, err := pgpkeys.DecryptBytes(actual["encoded_token"].(string), pgpkeys.TestPrivKey1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if decodedTokenBuf == nil {
+				t.Fatal("decoded root token buffer is nil")
+			}
+
+			newRootToken := decodedTokenBuf.String()
+
+			actual = map[string]interface{}{}
+			expected = map[string]interface{}{
+				"id":               newRootToken,
+				"display_name":     "root",
+				"meta":             interface{}(nil),
+				"num_uses":         json.Number("0"),
+				"policies":         []interface{}{"root"},
+				"orphan":           true,
+				"creation_ttl":     json.Number("0"),
+				"ttl":              json.Number("0"),
+				"path":             "auth/token/root",
+				"explicit_max_ttl": json.Number("0"),
+				"expire_time":      nil,
+				"entity_id":        "",
+				"type":             "service",
+			}
+
+			resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
+			testResponseStatus(t, resp, http.StatusOK)
+			testResponseBody(t, resp, &actual)
+
+			expected["creation_time"] = actual["data"].(map[string]interface{})["creation_time"]
+			expected["accessor"] = actual["data"].(map[string]interface{})["accessor"]
+
+			if diff := deep.Equal(actual["data"], expected); diff != nil {
+				t.Fatal(diff)
+			}
 		})
-
-		actual = map[string]interface{}{}
-		expected = map[string]interface{}{
-			"complete":        false,
-			"nonce":           rootGenerationStatus["nonce"].(string),
-			"progress":        json.Number(fmt.Sprintf("%d", i+1)),
-			"required":        json.Number(fmt.Sprintf("%d", len(keys))),
-			"started":         true,
-			"pgp_fingerprint": "816938b8a29146fbe245dd29e7cbaf8e011db793",
-			"otp":             "",
-			"otp_length":      json.Number("0"),
-		}
-		if i+1 == len(keys) {
-			expected["complete"] = true
-		}
-		testResponseStatus(t, resp, 200)
-		testResponseBody(t, resp, &actual)
-	}
-
-	if actual["encoded_token"] == nil || actual["encoded_token"] == "" {
-		t.Fatalf("no encoded token found in response")
-	}
-	if actual["encoded_root_token"] == nil || actual["encoded_root-token"] == "" {
-		t.Fatalf("no encoded root token found in response")
-	}
-	expected["encoded_token"] = actual["encoded_token"]
-	expected["encoded_root_token"] = actual["encoded_root_token"]
-	expected["encoded_token"] = actual["encoded_token"]
-
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("\nexpected: %#v\nactual: %#v", expected, actual)
-	}
-
-	decodedTokenBuf, err := pgpkeys.DecryptBytes(actual["encoded_token"].(string), pgpkeys.TestPrivKey1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if decodedTokenBuf == nil {
-		t.Fatal("decoded root token buffer is nil")
-	}
-
-	newRootToken := decodedTokenBuf.String()
-
-	actual = map[string]interface{}{}
-	expected = map[string]interface{}{
-		"id":               newRootToken,
-		"display_name":     "root",
-		"meta":             interface{}(nil),
-		"num_uses":         json.Number("0"),
-		"policies":         []interface{}{"root"},
-		"orphan":           true,
-		"creation_ttl":     json.Number("0"),
-		"ttl":              json.Number("0"),
-		"path":             "auth/token/root",
-		"explicit_max_ttl": json.Number("0"),
-		"expire_time":      nil,
-		"entity_id":        "",
-		"type":             "service",
-	}
-
-	resp = testHttpGet(t, newRootToken, addr+"/v1/auth/token/lookup-self")
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-
-	expected["creation_time"] = actual["data"].(map[string]interface{})["creation_time"]
-	expected["accessor"] = actual["data"].(map[string]interface{})["accessor"]
-
-	if diff := deep.Equal(actual["data"], expected); diff != nil {
-		t.Fatal(diff)
 	}
 }

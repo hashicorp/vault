@@ -1,0 +1,21 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#let @formComponent as |Form|}}
+  <Form.Section>
+    {{#if @section.title}}
+      <Form.SectionHeader>
+        <Form.SectionHeaderTitle @tag="h2">{{@section.title}}</Form.SectionHeaderTitle>
+        {{#if @section.description}}
+          <Form.SectionHeaderDescription>
+            {{@section.description}}
+          </Form.SectionHeaderDescription>
+        {{/if}}
+      </Form.SectionHeader>
+    {{/if}}
+
+    {{yield}}
+  </Form.Section>
+{{/let}}

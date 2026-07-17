@@ -17,6 +17,8 @@ import (
 	autopilot "github.com/hashicorp/raft-autopilot"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	sealhelper "github.com/hashicorp/vault/helper/testhelpers/seal"
+	"github.com/hashicorp/vault/helper/testhelpers/testimages"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/docker"
 	rafttest "github.com/hashicorp/vault/vault/external_tests/raft"
@@ -27,36 +29,42 @@ import (
 // uses docker containers for the vault nodes.
 func TestRaft_Configuration_Docker(t *testing.T) {
 	t.Parallel()
-	binary := os.Getenv("VAULT_BINARY")
-	if binary == "" {
-		t.Skip("only running docker test when $VAULT_BINARY present")
-	}
-	opts := &docker.DockerClusterOptions{
-		ImageRepo:    "hashicorp/vault",
-		DisableMlock: true,
-		// We're replacing the binary anyway, so we're not too particular about
-		// the docker image version tag.
-		ImageTag:    "latest",
-		VaultBinary: binary,
-		ClusterOptions: testcluster.ClusterOptions{
-			VaultNodeConfig: &testcluster.VaultNodeConfig{
-				LogLevel: "TRACE",
-				// If you want the test to run faster locally, you could
-				// uncomment this performance_multiplier change.
-				//StorageOptions: map[string]string{
-				//	"performance_multiplier": "1",
-				//},
-			},
-		},
-	}
-	cluster := docker.NewTestDockerCluster(t, opts)
-	defer cluster.Cleanup()
-	rafttest.Raft_Configuration_Test(t, cluster)
+	repo, tag := testimages.GetImageRepoAndTag(t, false)
 
-	if err := cluster.AddNode(context.TODO(), opts); err != nil {
-		t.Fatal(err)
+	transit := sealhelper.NewTransitDockerSealServer(t)
+
+	for _, tc := range []struct {
+		name  string
+		seals []testcluster.VaultNodeSealConfig
+	}{
+		{"shamir", nil},
+		{"autoseal", []testcluster.VaultNodeSealConfig{transit.Seal("test", 1)}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			binary := os.Getenv("VAULT_BINARY")
+			if binary == "" {
+				t.Skip("only running docker test when $VAULT_BINARY present")
+			}
+			opts := &docker.DockerClusterOptions{
+				DisableMlock: true,
+				ImageRepo:    repo,
+				ImageTag:     tag,
+				ClusterOptions: testcluster.ClusterOptions{
+					VaultNodeConfig: &testcluster.VaultNodeConfig{
+						Seal:     tc.seals,
+						LogLevel: "TRACE",
+					},
+				},
+			}
+			cluster := docker.NewTestDockerCluster(t, opts)
+			rafttest.Raft_Configuration_Test(t, cluster)
+
+			if err := cluster.AddNode(context.Background(), opts); err != nil {
+				t.Fatal(err)
+			}
+			rafttest.Raft_Configuration_Test(t, cluster)
+		})
 	}
-	rafttest.Raft_Configuration_Test(t, cluster)
 }
 
 // removeRaftNode removes a node from the raft configuration using the leader client
@@ -134,17 +142,11 @@ func stabilize(t *testing.T, client *api.Client) {
 // nodes that use raft-wal (and vice-versa)
 // Having a cluster of mixed nodes, some using raft-boltdb and some using raft-wal, is not a problem.
 func TestDocker_LogStore_Boltdb_To_Raftwal_And_Back(t *testing.T) {
-	binary := os.Getenv("VAULT_BINARY")
-	if binary == "" {
-		t.Skip("only running docker test when $VAULT_BINARY present")
-	}
+	repo, tag := testimages.GetImageRepoAndTag(t, false)
 	opts := &docker.DockerClusterOptions{
-		ImageRepo:    "hashicorp/vault",
 		DisableMlock: true,
-		// We're replacing the binary anyway, so we're not too particular about
-		// the docker image version tag.
-		ImageTag:    "latest",
-		VaultBinary: binary,
+		ImageRepo:    repo,
+		ImageTag:     tag,
 		ClusterOptions: testcluster.ClusterOptions{
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",
@@ -329,17 +331,11 @@ func TestDocker_LogStore_Boltdb_To_Raftwal_And_Back(t *testing.T) {
 // by performing a snapshot restore from one cluster to another, and checking no data loss
 func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
 	t.Parallel()
-	binary := os.Getenv("VAULT_BINARY")
-	if binary == "" {
-		t.Skip("only running docker test when $VAULT_BINARY present")
-	}
+	repo, tag := testimages.GetImageRepoAndTag(t, false)
 	opts := &docker.DockerClusterOptions{
-		ImageRepo:    "hashicorp/vault",
 		DisableMlock: true,
-		// We're replacing the binary anyway, so we're not too particular about
-		// the docker image version tag.
-		ImageTag:    "latest",
-		VaultBinary: binary,
+		ImageRepo:    repo,
+		ImageTag:     tag,
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores: 1,
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
@@ -405,6 +401,7 @@ func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
 
 	// caching the old cluster's barrier keys
 	oldBarrierKeys := cluster.GetBarrierKeys()
+	oldRootToken := cluster.GetRootToken()
 	// clean up the old cluster as there is no further use to it
 	cluster.Cleanup()
 
@@ -432,6 +429,7 @@ func TestRaft_LogStore_Migration_Snapshot(t *testing.T) {
 	testcluster.WaitForActiveNode(ctx, newCluster)
 
 	// generate a root token as the unseal keys have changed
+	newCluster.SetRootToken(oldRootToken)
 	rootToken, err := testcluster.GenerateRoot(newCluster, testcluster.GenerateRootRegular)
 	if err != nil {
 		t.Fatal(err)

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -455,6 +456,55 @@ func testACLPolicyMerge(t *testing.T, ns *namespace.Namespace) {
 	}
 }
 
+// TestACL_SubscribeEventTypesMerge verifies that subscribe_event_types are preserved
+// when merged with another policy stanza for the same path that omits them.
+func TestACL_SubscribeEventTypesMerge(t *testing.T) {
+	t.Run("root-ns", func(t *testing.T) {
+		t.Parallel()
+
+		withSubscribe, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+			path "secret/foo" {
+				capabilities = ["read", "subscribe"]
+				subscribe_event_types = ["abc", "def"]
+			}
+		`))
+		require.NoError(t, err)
+
+		withoutSubscribeEventTypes, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+			path "secret/foo" {
+				capabilities = ["read", "update"]
+			}
+		`))
+		require.NoError(t, err)
+
+		testCases := []struct {
+			name     string
+			policies []*Policy
+		}{
+			{
+				name:     "subscribe policy first",
+				policies: []*Policy{withSubscribe, withoutSubscribeEventTypes},
+			},
+			{
+				name:     "subscribe policy second",
+				policies: []*Policy{withoutSubscribeEventTypes, withSubscribe},
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				ctx := namespace.RootContext(context.Background())
+				acl, err := NewACL(ctx, tc.policies)
+				require.NoError(t, err)
+
+				caps, eventTypes := acl.CapabilitiesAndSubscribeEventTypes(ctx, "secret/foo")
+				require.Contains(t, caps, SubscribeCapability)
+				require.ElementsMatch(t, []string{"abc", "def"}, eventTypes)
+			})
+		}
+	})
+}
+
 func TestACL_AllowOperation(t *testing.T) {
 	t.Run("root-ns", func(t *testing.T) {
 		t.Parallel()
@@ -729,6 +779,146 @@ path "foo/bar/+/ba*" { capabilities = ["update"] }
 		if authResults.Allowed {
 			t.Fatalf("bad: case %d %#v: %v", i, pt, authResults.Allowed)
 		}
+	}
+}
+
+// TestACL_ListTrailingSlashDeny exercises the SECVULN-45175 fix: a
+// trailing-slash LIST request must respect more-specific DENY policies even
+// when a broader ALLOW rule is also reachable via the trimmed form of the path.
+// It also guards the VAULT-3825 regression: a segment-wildcard rule without a
+// trailing slash must continue to grant LIST on trailing-slash paths.
+func TestACL_ListTrailingSlashDeny(t *testing.T) {
+	t.Parallel()
+
+	ns := namespace.RootNamespace
+	ctx := namespace.ContextWithNamespace(context.Background(), ns)
+
+	type tc struct {
+		name     string
+		policies []string
+		path     string
+		wantList bool
+	}
+
+	cases := []tc{
+		// CVE core case: a more-specific prefix deny must not be bypassed by
+		// the trimmed-path lookup reaching only the broader allow.
+		{
+			name: "prefix-deny-more-specific-than-prefix-allow",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: false,
+		},
+		// Inverse: more-specific allow must win over broader deny.
+		{
+			name: "prefix-allow-more-specific-than-prefix-deny",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["deny"] }`,
+				`path "kv1/private/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: true,
+		},
+		// VAULT-3825 regression: a segment-wildcard policy written without a
+		// trailing slash ("kv1/+") must still grant LIST on trailing-slash paths
+		// ("kv1/private/") — that was the original intent of the slash-stripping
+		// logic.
+		{
+			name: "segwc-allow-no-slash-grants-list-on-slash-path",
+			policies: []string{
+				`path "kv1/+" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: true,
+		},
+		// CRITICAL regression guard: a segment-wildcard deny "kv1/+" must still
+		// fire on "kv1/private/" even when a broader prefix allow "kv1/*" exists.
+		// If the segwc deny is silently dropped the fix is incomplete.
+		{
+			name: "segwc-deny-preserved-over-prefix-allow",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+				`path "kv1/+" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private/",
+			wantList: false,
+		},
+		// The LIST trailing-slash branch only fires when the path ends in "/";
+		// requests without one must use the normal (non-trailing-slash) code path.
+		{
+			name: "no-trailing-slash-allow-unchanged",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/private",
+			wantList: true,
+		},
+		// "kv1/private/*" (stored as prefix key "kv1/private/") does NOT match
+		// the query "kv1/private" (no slash) because LongestPrefix requires the
+		// query to start with the key, and "kv1/private" does not start with
+		// "kv1/private/".  The broader allow "kv1/*" wins; this is correct.
+		{
+			name: "no-trailing-slash-no-deny-correct-semantics",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/private",
+			wantList: true,
+		},
+		// The deny on kv1/private/* must not affect the sibling kv1/public/*.
+		{
+			name: "sibling-path-not-affected-by-specific-deny",
+			policies: []string{
+				`path "kv1/*"         { capabilities = ["list"] }`,
+				`path "kv1/private/*" { capabilities = ["deny"] }`,
+			},
+			path:     "kv1/public/",
+			wantList: true,
+		},
+		// Baseline: a plain prefix allow, no deny at all.
+		{
+			name: "allow-only-prefix-slash-path",
+			policies: []string{
+				`path "kv1/*" { capabilities = ["list"] }`,
+			},
+			path:     "kv1/anything/",
+			wantList: true,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var policies []*Policy
+			for i, pstr := range tc.policies {
+				p, err := ParseACLPolicy(ns, pstr)
+				if err != nil {
+					t.Fatalf("policy %d parse error: %v", i, err)
+				}
+				policies = append(policies, p)
+			}
+
+			acl, err := NewACL(ctx, policies)
+			if err != nil {
+				t.Fatalf("NewACL error: %v", err)
+			}
+
+			req := &logical.Request{
+				Operation: logical.ListOperation,
+				Path:      tc.path,
+			}
+			result := acl.AllowOperation(ctx, req, false)
+			if result.Allowed != tc.wantList {
+				t.Errorf("AllowOperation(%q, LIST).Allowed = %v, want %v",
+					tc.path, result.Allowed, tc.wantList)
+			}
+		})
 	}
 }
 
@@ -1415,7 +1605,7 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				},
 				"case_sensitive_value_matching": {
 					parameters: `{"allowedParam": "ALLOWEDVALUE"}`,
-					allowed:    false,
+					allowed:    false, // non-policies params remain case-sensitive
 				},
 			},
 		},
@@ -1465,7 +1655,103 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				},
 				"case_sensitive_value_matching": {
 					parameters: `{"deniedParam": "DENIEDVALUE"}`,
+					allowed:    true, // non-policies params remain case-sensitive
+				},
+				"mixed_case_value_does_not_match_denied": {
+					parameters: `{"deniedParam": "DeniedValue"}`,
+					allowed:    true, // non-policies params remain case-sensitive
+				},
+			},
+		},
+		"token_policies_denied_parameters_case_folding": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"token_policies" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				// String form — works in both legacy and new slice matching.
+				"exact_lowercase_string_is_denied": {
+					parameters: `{"token_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"mixed_case_string_is_also_denied": {
+					parameters: `{"token_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"all_caps_string_is_also_denied": {
+					parameters: `{"token_policies": "SUPER-ADMIN"}`,
+					allowed:    false,
+				},
+				"non_denied_string_value_is_allowed": {
+					parameters: `{"token_policies": "default"}`,
 					allowed:    true,
+				},
+				// List form — only meaningful with new slice matching; legacy mode
+				// compares the whole slice value and would never match a string entry.
+				"exact_lowercase_list_is_denied": {
+					parameters:           `{"token_policies": ["super-admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"mixed_case_list_is_also_denied": {
+					parameters:           `{"token_policies": ["Super-Admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"all_caps_list_is_also_denied": {
+					parameters:           `{"token_policies": ["SUPER-ADMIN"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"non_denied_list_value_is_allowed": {
+					parameters:           `{"token_policies": ["default"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"token_policies_allowed_parameters_case_folding": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"token_policies" = ["read-only"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				// String form — works in both legacy and new slice matching.
+				"exact_lowercase_string_is_allowed": {
+					parameters: `{"token_policies": "read-only"}`,
+					allowed:    true,
+				},
+				"mixed_case_string_is_also_allowed": {
+					parameters: `{"token_policies": "Read-Only"}`,
+					allowed:    true,
+				},
+				"non_allowed_string_value_is_denied": {
+					parameters: `{"token_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				// List form — only meaningful with new slice matching.
+				"exact_lowercase_list_is_allowed": {
+					parameters:           `{"token_policies": ["read-only"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"mixed_case_list_is_also_allowed": {
+					parameters:           `{"token_policies": ["Read-Only"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"non_allowed_list_value_is_denied": {
+					parameters:           `{"token_policies": ["super-admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
 				},
 			},
 		},

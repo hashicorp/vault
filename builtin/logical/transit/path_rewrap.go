@@ -196,9 +196,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	warnAboutNonceUsage := false
@@ -220,6 +217,16 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
+		}
+
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
 		}
 
 		opts := keysutil.EncryptionOptions{
@@ -252,10 +259,21 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			warnAboutNonceUsage = true
 		}
 
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
+		}
+
 		opts = keysutil.EncryptionOptions{
 			KeyVersion: item.KeyVersion,
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, plaintext, factories...)

@@ -273,41 +273,43 @@ message Alias {
 }
 
 // ScimClient defines the stored configuration for a single SCIM client.
-// This configuration links a client's identity within Vault to its specific
-// role and capabilities within the SCIM server.
+// This configuration links a client's identity within Vault to its
+// capabilities within the SCIM server.
 message ScimClient {
   // ClientId is a unique identifier for this specific SCIM
   // client configuration.
   // @inject_tag: sentinel:"-"
   string client_id = 1;
 
-  // ClientRole defines the client's function and authoritative power.
-  // It must be either "IGA" (authoritative) or "IdP" (standard).
-  // @inject_tag: sentinel:"-"
-  string client_role = 2;
-
   // AccessGrantPrincipal is the Vault Entity ID that represents the SCIM
   // client application itself. This is the principal that will be granted the
   // necessary permissions to perform SCIM operations.
   // @inject_tag: sentinel:"-"
-  string access_grant_principal = 3;
+  string access_grant_principal = 2;
 
   // AliasMountAccessor is an optional field that specifies the mount accessor
-  // of an auth method where login aliases should be created for provisioned users.
-  // This is typically used for clients with the 'IdP' role.
+  // of an auth method where login aliases should be created for provisioned
+  // users. When set, the SCIM client will create both a Vault entity and an
+  // alias on the specified auth mount for each provisioned user. When empty,
+  // only entities are created.
   // @inject_tag: sentinel:"-"
-  string alias_mount_accessor = 4;
+  string alias_mount_accessor = 3;
 
-  // ClientName is an user defined identifier for this specific SCIM
+  // ClientName is a user-defined identifier for this specific SCIM
   // client configuration. (e.g., 'Okta-Prod', 'SailPoint-Dev').
   // @inject_tag: sentinel:"-"
-  string client_name = 5;
+  string client_name = 4;
 
   // NamespaceID is the identifier of the namespace to which this entity
   // belongs to. Do not return this value over the API when reading the
   // entity.
   // @inject_tag: sentinel:"-"
-  string namespace_id = 6;
+  string namespace_id = 5;
+
+  // Deleting indicates that the SCIM client is in the process of being deleted.
+  // This allows cascading cleanup to be eventually handled even if there are failures during the deletion process.
+  // @inject_tag: sentinel:"-"
+  bool deleting = 6;
 }
 
 // Deprecated. Retained for backwards compatibility.
@@ -336,4 +338,71 @@ message PersonaIndexEntry {
   google.protobuf.Timestamp creation_time = 8;
   google.protobuf.Timestamp last_update_time = 9;
   repeated string merged_from_entity_ids = 10;
+}
+
+message TPM {
+  // id is the unique identifier for the TPM record.  It is
+  // automatically computed as the sha256 of tpm_ek_public_key.
+  // @inject_tag: sentinel:"-"
+  string id = 1;
+
+  // Name is a unique identifier of the TPM which is intended to
+  // be human-friendly. The default name might not be human friendly
+  // since it gets suffixed by a random value, but it can optionally
+  // be updated, unlike the ID field.
+  // @inject_tag: sentinel:"-"
+  string name = 2;
+
+  // namespace_id is the identifier of the namespace to which this
+  // TPM record belongs
+  // @inject_tag: sentinel:"-"
+  string namespace_id = 3;
+
+  // metadata represents the custom data tied to this TPM record
+  // @inject_tag: sentinel:"-"
+  map<string, string> metadata = 4;
+
+  // tpm_ek_public_key stores the PEM-encoded TPM Endorsement Key
+  // public key
+  // @inject_tag: sentinel:"-"
+  string tpm_ek_public_key = 5;
+
+  // a disabled TPM cannot generate certs or login
+  // @inject_tag: sentinel:"-"
+  bool disabled = 6;
+
+  // BucketKey is the path of the storage packer key into which this
+  // tpm is stored.
+  // @inject_tag: sentinel:"-"
+  string bucket_key = 7;
+}
+
+message TPMGroup {
+  // ID is the unique identifier for this group
+  // @inject_tag: sentinel:"-"
+  string id = 1;
+
+  // Name is the unique name for this group
+  // @inject_tag: sentinel:"-"
+  string name = 2;
+
+  // Metadata represents the custom data tied with this group
+  // @inject_tag: sentinel:"-"
+  map<string, string> metadata = 3;
+
+  // NamespaceID is the identifier of the namespace to which this group
+  // belongs to. Do not return this value over the API when reading the
+  // group.
+  // @inject_tag: sentinel:"-"
+  string namespace_id = 4;
+
+  // MemberTpmIDs are the identifiers of entities which are members of this
+  // group
+  // @inject_tag: sentinel:"-"
+  repeated string member_tpm_ids = 5;
+
+  // BucketKey is the path of the storage packer key into which this
+  // tpmgroup is stored.
+  // @inject_tag: sentinel:"-"
+  string bucket_key = 6;
 }

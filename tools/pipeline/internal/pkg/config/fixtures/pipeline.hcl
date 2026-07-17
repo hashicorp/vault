@@ -118,6 +118,9 @@ changed_files {
         joinpath("scripts", "testing"),
         joinpath("specs"),
         joinpath(".release", "ibm-pao"),
+        // Internal developer tooling that must not sync to CE
+        ".agents",
+        joinpath("ui", ".agents"),
       ]
     }
 

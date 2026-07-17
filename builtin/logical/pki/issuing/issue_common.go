@@ -624,6 +624,7 @@ func ValidateNames(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo,
 			}
 		}
 
+		// Deprecated: AllowTokenDisplayName is retained for backward compatibility but has not been writeable since v0.4.0
 		if role.AllowTokenDisplayName {
 			if name == entityInfo.DisplayName {
 				continue
@@ -1005,6 +1006,12 @@ func GetCertificateNotAfter(b logical.SystemView, role *RoleEntry, input CertNot
 		notAfter, err = time.Parse(time.RFC3339, notAfterAlt)
 		if err != nil {
 			return notAfter, warnings, errutil.UserError{Err: err.Error()}
+		}
+
+		requestedTTL := time.Until(notAfter)
+		if role.MaxTTL > 0 && requestedTTL > maxTTL {
+			warnings = append(warnings, fmt.Sprintf("not_after %q results in a lifetime %q which is longer than permitted maxTTL %q, so maxTTL is being used", notAfterAlt, requestedTTL, maxTTL))
+			notAfter = time.Now().Add(maxTTL)
 		}
 	} else {
 		notAfter = time.Now().Add(ttl)
