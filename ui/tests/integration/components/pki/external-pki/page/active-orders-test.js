@@ -20,6 +20,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Active
       engine: { id: 'pki-external-ca' },
       activeOrders: [],
     };
+    this.router = this.owner.lookup('service:router');
     this.renderComponent = () =>
       render(hbs`<ExternalPki::Page::ActiveOrders @model={{this.model}} />`, { owner: this.engine });
   });
@@ -27,7 +28,11 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Active
   test('it renders empty state when no active orders', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.emptyStateTitle).exists().hasText('No active orders');
-    assert.dom(GENERAL.emptyStateMessage).hasText('Active orders will appear here once created.');
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(
+        'In progress orders will appear here once created. Lookup a specific order by its ID or navigate to Recent orders to view recently created and completed orders. Lookup order'
+      );
     assert.dom(GENERAL.linkTo('API docs: Create a new order')).exists();
     assert.dom(GENERAL.inputSearch('Filter by order ID')).doesNotExist();
     assert.dom(GENERAL.button('Refresh')).doesNotExist();
@@ -77,10 +82,26 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Active
     assert.dom(GENERAL.emptyStateTitle).exists().hasText('No orders matching ID: nope');
   });
 
+  test('it navigates to order when lookup by ID button is clicked', async function (assert) {
+    this.model.activeOrders = [];
+    const transitionStub = sinon.stub(this.router, 'transitionTo');
+    await this.renderComponent();
+    await fillIn(GENERAL.inputSearch('orderId'), 'test-order-123');
+    await click(GENERAL.button('Lookup order'));
+    assert.true(transitionStub.calledOnce, 'transitionTo was called once');
+    assert.true(
+      transitionStub.calledWith(
+        'vault.cluster.secrets.backend.pki.external.orders.order',
+        'pki-external-ca',
+        'test-order-123'
+      ),
+      'transitionTo was called with correct arguments'
+    );
+  });
+
   test('it calls refresh when refresh button is clicked', async function (assert) {
     this.model.activeOrders = ['order-123', 'order-456'];
-    const router = this.owner.lookup('service:router');
-    const refreshStub = sinon.stub(router, 'refresh');
+    const refreshStub = sinon.stub(this.router, 'refresh');
     await this.renderComponent();
     await click(GENERAL.button('Refresh'));
     assert.true(refreshStub.calledOnce, 'refresh was called once');

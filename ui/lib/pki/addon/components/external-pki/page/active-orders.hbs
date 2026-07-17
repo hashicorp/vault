@@ -25,8 +25,8 @@
     />
   </Hds::Layout::Flex>
 
-  {{#if this.ordersList}}
-    <ListTable @columns={{this.tableColumns}} @data={{this.ordersList}}>
+  {{#if this.filteredOrders}}
+    <ListTable @columns={{this.tableColumns}} @data={{this.filteredOrders}}>
       <:customTableItem as |order|>
         <Hds::Link::Inline
           @route="external.orders.order"
@@ -39,13 +39,35 @@
     </ListTable>
   {{else}}
     <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
-      <A.Header @title="No orders matching ID: {{this.searchInput}}" @titleTag="h2" data-test-empty-state-title />
+      <A.Header @title="No orders matching ID: {{this.orderFilter}}" @titleTag="h2" data-test-empty-state-title />
     </Hds::ApplicationState>
   {{/if}}
 {{else}}
-  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+  <Hds::ApplicationState class="top-padding-32" as |A|>
     <A.Header @title="No active orders" @titleTag="h2" data-test-empty-state-title />
-    <A.Body @text="Active orders will appear here once created." data-test-empty-state-message />
+    <A.Body data-test-empty-state-message>
+      In progress orders will appear here once created. Lookup a specific order by its ID or navigate to
+      <Hds::Link::Inline @route="external.orders">Recent orders</Hds::Link::Inline>
+      to view recently created and completed orders.
+      <Hds::Layout::Flex @gap="8" class="has-top-padding-m" as |LF|>
+        <LF.Item @grow={{1}}>
+          <InputSearch
+            @placeholder="01936d8e-7c3..."
+            @onChange={{fn (mut this.orderIdLookup)}}
+            @changeEvent="input"
+            @id="orderId"
+          />
+        </LF.Item>
+        <LF.Item>
+          <Hds::Button
+            @text="Lookup order"
+            @color="secondary"
+            {{on "click" this.lookupOrder}}
+            data-test-button="Lookup order"
+          />
+        </LF.Item>
+      </Hds::Layout::Flex>
+    </A.Body>
     <A.Footer as |F|>
       <F.LinkStandalone
         @icon="docs-link"

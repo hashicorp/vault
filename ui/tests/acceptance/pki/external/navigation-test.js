@@ -26,6 +26,7 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
     this.acmeListStub = sinon.stub(api.secrets, 'pkiExternalCaListConfigAcmeAccount');
     this.dnsListStub = sinon.stub(api.secrets, 'pkiExternalCaListConfigDns');
     this.rolesListStub = sinon.stub(api.secrets, 'pkiExternalCaListRole');
+    this.recentOrdersListStub = sinon.stub(api.secrets, 'pkiExternalCaListLookupOrdersRecent');
     this.mountPath = `pki-external-ca-${uuidv4()}`;
     // Setup External PKI engine
     await login();
@@ -123,6 +124,7 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
       this.acmeListStub.resolves({ keys: ['my-acme-account'] });
       this.rolesListStub.rejects(getErrorResponse());
       this.dnsListStub.rejects(getErrorResponse());
+      this.recentOrdersListStub.rejects(getErrorResponse());
       // assertion helpers
       this.baseCrumbs = `Vault Secrets engines ${this.mountPath}`;
     });

@@ -19,7 +19,8 @@ interface Args {
 export default class ExternalPkiPageActiveOrdersComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
 
-  @tracked searchInput = '';
+  @tracked orderFilter = '';
+  @tracked orderIdLookup = '';
 
   tableColumns = [
     {
@@ -30,14 +31,23 @@ export default class ExternalPkiPageActiveOrdersComponent extends Component<Args
     },
   ];
 
-  get ordersList() {
-    const filteredOrders = this.args.model.activeOrders.filter((id) => id.includes(this.searchInput));
+  get filteredOrders() {
+    const filteredOrders = this.args.model.activeOrders.filter((id) => id.includes(this.orderFilter));
     return filteredOrders?.map((o) => ({ order_id: o }));
   }
 
   @action
   handleSearch(e: HTMLElementEvent<HTMLInputElement>) {
-    this.searchInput = e.target.value;
+    this.orderFilter = e.target.value;
+  }
+
+  @action
+  lookupOrder() {
+    this.router.transitionTo(
+      'vault.cluster.secrets.backend.pki.external.orders.order',
+      this.args.model.engine.id,
+      this.orderIdLookup
+    );
   }
 
   @action

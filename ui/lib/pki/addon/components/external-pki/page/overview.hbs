@@ -40,7 +40,12 @@
         <:content>
           <Hds::Layout::Flex @gap="8" class="has-top-padding-m" as |LF|>
             <LF.Item @grow={{1}}>
-              <InputSearch @placeholder="01936d8e-7c3..." @onChange={{fn (mut this.orderId)}} @changeEvent="input" />
+              <InputSearch
+                @id="orderId"
+                @placeholder="01936d8e-7c3..."
+                @onChange={{fn (mut this.orderId)}}
+                @changeEvent="input"
+              />
             </LF.Item>
             <LF.Item>
               <Hds::Button
