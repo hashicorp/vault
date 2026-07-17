@@ -39,6 +39,7 @@ module('Integration | Component | list-table', function (hooks) {
             @data={{this.data}}
             @selectionKeyField={{this.selectionKeyField}}
             @onSelectionChange={{this.onSelectionChange}}
+            @hasResizableColumns={{this.hasResizableColumns}}
           >
             <:customTableItem as |itemData|>
               <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />
@@ -79,6 +80,39 @@ module('Integration | Component | list-table', function (hooks) {
     ];
     await this.renderComponent();
     assert.dom(GENERAL.menuTrigger).doesNotExist();
+  });
+
+  test('columns are resizable by default', async function (assert) {
+    this.hasResizableColumns = undefined;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 2 }, 'it renders resize sliders by default');
+  });
+
+  test('columns are resizable when @hasResizableColumns is true', async function (assert) {
+    this.hasResizableColumns = true;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 2 });
+  });
+
+  test('columns are not resizable when @hasResizableColumns is explicitly false', async function (assert) {
+    this.hasResizableColumns = false;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').doesNotExist('resize sliders do not exist');
   });
 
   test('it stringifies object and array values for non-custom columns', async function (assert) {
