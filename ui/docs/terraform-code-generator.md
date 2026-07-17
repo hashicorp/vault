@@ -14,6 +14,7 @@ You only need to run this when adding Terraform snippet support to a new feature
   - [Interactive mode - manual fallback](#interactive-mode---manual-fallback)
 - [Output](#output)
 - [After generating](#after-generating)
+- [Multi-block mappings](#multi-block-mappings)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -101,6 +102,69 @@ The file contains:
 2. **Resolve `// TODO` items** — `object` and `array` fields need manual implementation
 3. **Verify field names** against the [Terraform provider docs](https://registry.terraform.io/providers/hashicorp/vault/latest/docs)
 4. **Register the mapping** — copy the commented registry snippet from the bottom of the generated file into `app/utils/terraform-registry.ts`
+
+---
+
+## Multi-block mappings
+
+The generator script always produces a `multiBlock: false` scaffold — it operates on a single API path and a single Terraform resource, so it has no visibility into cross-resource dependencies.
+
+Some features require multiple Terraform resources that reference each other (e.g. creating a mount and then configuring it). These mappings must be written by hand. The script is not useful for this case.
+
+A multi-block mapping returns `TerraformBlock[]` instead of a `string`, and uses `ref()` to wire resources together:
+
+```ts
+import { terraformResourceTemplate } from 'core/utils/code-generators/terraform';
+import { ref } from 'vault/utils/terraform-code-generator/terraform-registry';
+import type { TerraformBlock } from 'vault/utils/terraform-code-generator/terraform-registry';
+
+export interface SecretKvPayload {
+  path: string;
+  maxVersions?: number;
+}
+
+export const secretKvMapping = (payload: SecretKvPayload): TerraformBlock[] => {
+  const mountId = 'kv_mount';
+
+  const mount = terraformResourceTemplate({
+    resource: 'vault_mount',
+    localId: mountId,
+    resourceArgs: {
+      path: `"${payload.path}"`,
+      type: '"kv"',
+    },
+  });
+
+  const config = terraformResourceTemplate({
+    resource: 'vault_kv_secret_backend_v2',
+    localId: 'kv_config',
+    resourceArgs: {
+      mount: ref('vault_mount', mountId, 'path'), // → vault_mount.kv_mount.path
+      max_versions: payload.maxVersions,
+    },
+  });
+
+  return [
+    { type: 'resource', content: mount },
+    { type: 'resource', content: config },
+  ];
+};
+```
+
+Register it in `terraform-registry.ts` with `multiBlock: true`:
+
+```ts
+registry['secrets/kv'] = {
+  multiBlock: true,
+  mapping: secretKvMapping as unknown as (payload: Record<string, unknown>) => TerraformBlock[],
+};
+```
+
+Key differences from a single-block mapping:
+- Returns `TerraformBlock[]` instead of `string`
+- Uses `ref()` to express cross-resource dependencies
+- `localId` values should be meaningful strings, not the `'<local identifier>'` placeholder
+- `renderTerraformBlocks` in the registry joins the blocks into a single HCL string for display
 
 ---
 
