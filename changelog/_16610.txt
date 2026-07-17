@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: Fixed goroutine leak occurring when Encryption and Decryption functions time out.
+```
