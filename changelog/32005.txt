@@ -1,0 +1,3 @@
+```release-note:bug
+docker: fix entrypoint failure on non-root runtimes by guarding mlock and setcap operations
+```
