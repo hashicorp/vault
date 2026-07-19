@@ -223,7 +223,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	}
 
 	if !persistNeeded {
-		resp, err := b.formatKeyPolicy(ctx, p, nil)
+		resp, err := b.formatKeyPolicy(p, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +244,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 
-	resp, err = b.formatKeyPolicy(ctx, p, nil)
+	resp, err = b.formatKeyPolicy(p, nil)
 	if err != nil {
 		return nil, err
 	}

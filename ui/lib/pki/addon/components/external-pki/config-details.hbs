@@ -1,0 +1,16 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each-in @config as |configParam configValue|}}
+  {{#unless (includes configParam this.excludedFields)}}
+    {{#if (eq configParam "trusted_ca")}}
+      <InfoTableRow @label={{this.label configParam}}>
+        <EncodedDataCard @data={{configValue}} />
+      </InfoTableRow>
+    {{else}}
+      <InfoTableRow @label={{this.label configParam}} @value={{configValue}} @formatTtl={{eq configParam "ttl"}} />
+    {{/if}}
+  {{/unless}}
+{{/each-in}}

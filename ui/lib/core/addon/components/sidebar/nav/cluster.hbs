@@ -35,6 +35,14 @@
       data-test-sidebar-nav-link="Operational tools"
     />
   {{/if}}
+  {{#if this.version.isEnterprise}}
+    <Nav.Link
+      @route="vault.cluster.support.upgrade"
+      @text="Support"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Support"
+    />
+  {{/if}}
   {{#if
     (or
       (and this.isRootNamespace (has-permission "status" routeParams="raft"))

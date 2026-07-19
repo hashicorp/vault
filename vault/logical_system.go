@@ -49,6 +49,7 @@ import (
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internal/releaseinfo"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -269,6 +270,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.releaseInfoPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.activationFlagsPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.useCaseConsumptionBillingPaths()...)
 
@@ -6863,6 +6865,20 @@ func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
 			},
 		}, nil
 	}
+}
+
+// handleReleaseInfoRead handles the "/sys/release-info" endpoint to fetch release information from GitHub
+func (b *SystemBackend) handleReleaseInfoRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	versions, err := releaseinfo.FetchReleaseInformationWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch release information: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"versions": versions,
+		},
+	}, nil
 }
 
 func sanitizePath(path string) string {

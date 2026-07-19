@@ -38,3 +38,31 @@ function update_or_create_comment {
       -f body="$BODY"
   fi
 }
+
+function delete_comment_if_exists {
+  REPO=$1
+  PR_NUMBER=$2
+  SEARCH_KEY=$3
+
+  # Look for an existing GH bot comment matching the search key, mirroring the
+  # lookup logic in update_or_create_comment. Limit to the first match so that
+  # multiple matching comments can't produce a multi-line id and an invalid
+  # API path.
+  comment_id=$(gh api \
+                 -H "Accept: application/vnd.github+json" \
+                 -H "X-GitHub-Api-Version: 2022-11-28" \
+                 --paginate \
+                 /repos/hashicorp/"$REPO"/issues/"$PR_NUMBER"/comments |
+                 jq -r --arg SEARCH_KEY "$SEARCH_KEY" 'first(.[] | select (.body | startswith($SEARCH_KEY)) | .id) // empty' |
+                 head -n 1)
+
+  # If no matching comment exists, there's nothing to do.
+  if [[ "$comment_id" != "" ]]; then
+    gh api \
+      --method DELETE \
+      -H "Accept: application/vnd.github+json" \
+      -H "X-GitHub-Api-Version: 2022-11-28" \
+      /repos/hashicorp/"$REPO"/issues/comments/"$comment_id"
+  fi
+}
+

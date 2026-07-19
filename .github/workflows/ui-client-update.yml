@@ -8,7 +8,7 @@ jobs:
   update-client-dependency:
     # we only want to bump the version in enterprise which will get backported to ce
     if: github.repository == 'hashicorp/vault-enterprise'
-    runs-on: [self-hosted, ubuntu-latest-x64]
+    runs-on: [self-hosted, ubuntu-22.04-x64]
     permissions:
       id-token: write # vault-auth
       contents: read
@@ -34,7 +34,7 @@ jobs:
             kv/data/github/hashicorp/vault-enterprise/github-token vault-client-typescript | PRIVATE_REPO_GITHUB_TOKEN;
 
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
 
       - name: Bump vault-client-typescript version
         working-directory: ./ui

@@ -4961,45 +4961,39 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 	}
 }
 
-// listAllSecretsPaths returns the paths for recursive secret listing across all mounts.
-func (b *SystemBackend) listAllSecretsPaths() []*framework.Path {
+func (b *SystemBackend) releaseInfoPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: patternSecretsListRecursive,
+			Pattern: "release-info$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "secrets",
-				OperationVerb:   "list",
-				OperationSuffix: "all",
+				OperationPrefix: "release-info",
 			},
 
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: "Filter to a specific mount path (e.g., secret/).",
-				},
-				"pattern": {
-					Type:        framework.TypeString,
-					Description: "Glob pattern for key matching (e.g., *api*, config/*/db).",
-				},
-				"fuzzy": {
-					Type:        framework.TypeBool,
-					Description: "Enable fuzzy (substring, case-insensitive) matching.",
-					Default:     false,
-				},
-				"permissions": {
-					Type:        framework.TypeString,
-					Description: "Filter by capability (e.g., read, list, read,list).",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReleaseInfoRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "read",
+					},
+					Summary:     "Fetch release information from GitHub",
+					Description: "Returns parsed release information including breaking changes, new behavior, and known issues for each version.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"versions": {
+									Type:        framework.TypeSlice,
+									Description: "Array of version information objects containing breaking changes, new behavior, known issues, and rollback steps",
+									Required:    true,
+								},
+							},
+						}},
+					},
 				},
 			},
-
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ListOperation: b.ListAllSecretsRecursive,
-				logical.ReadOperation: b.ListAllSecretsRecursive,
-			},
-
-			HelpSynopsis: strings.TrimSpace(sysHelp["secrets-list-recursive"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["secrets-list-recursive"][1]),
+			HelpSynopsis:    "Fetch release information",
+			HelpDescription: "Retrieves and parses all .mdx summary table files from the web-unified-docs repository on GitHub, returning structured version information.",
 		},
 	}
 }

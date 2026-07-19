@@ -110,6 +110,8 @@ export const GENERAL = {
     addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
+  // the FormField "keyValueInputs" editType (Hds::Form::KeyValueInputs), distinct from kvObjectEditor above
+  kvFieldByAttr: (attr: string, idx = 0) => `[data-test-kv-field="${attr}-${idx}"]`,
   suggestion: {
     input: (type: string) => `[data-test-suggestion-input="${type}"]`,
     select: (type: string) => `[data-test-suggestion-select="${type}"]`,

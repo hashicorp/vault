@@ -39,6 +39,7 @@ module('Integration | Component | list-table', function (hooks) {
             @data={{this.data}}
             @selectionKeyField={{this.selectionKeyField}}
             @onSelectionChange={{this.onSelectionChange}}
+            @hasResizableColumns={{this.hasResizableColumns}}
           >
             <:customTableItem as |itemData|>
               <Hds::BadgeCount @text={{itemData.visit_length}} @type="outlined" />
@@ -79,6 +80,39 @@ module('Integration | Component | list-table', function (hooks) {
     ];
     await this.renderComponent();
     assert.dom(GENERAL.menuTrigger).doesNotExist();
+  });
+
+  test('columns are resizable by default', async function (assert) {
+    this.hasResizableColumns = undefined;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 2 }, 'it renders resize sliders by default');
+  });
+
+  test('columns are resizable when @hasResizableColumns is true', async function (assert) {
+    this.hasResizableColumns = true;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 2 });
+  });
+
+  test('columns are not resizable when @hasResizableColumns is explicitly false', async function (assert) {
+    this.hasResizableColumns = false;
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').doesNotExist('resize sliders do not exist');
   });
 
   test('it stringifies object and array values for non-custom columns', async function (assert) {
@@ -175,6 +209,49 @@ module('Integration | Component | list-table', function (hooks) {
     assert
       .dom(`${GENERAL.tableData(0, 'visit_length')} .hds-badge-count`)
       .hasText('5', 'custom table item renders yielded badge');
+  });
+
+  test('customTableItem yields row data, column definition, and resolved value for multiple custom columns', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', customTableItem: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'trip_date', label: 'Date trip starts' },
+    ];
+    this.data = [
+      { island: 'Maldives', visit_length: 5, trip_date: '2025-06-22T00:00:00.000Z', status: 'confirmed' },
+      { island: 'Bora Bora', visit_length: 7, trip_date: '2025-03-15T00:00:00.000Z', status: 'pending' },
+    ];
+
+    await render(hbs`
+      <ListTable @columns={{this.columns}} @data={{this.data}}>
+        <:customTableItem as |row column value|>
+          {{#if (eq column.key "island")}}
+            <Hds::Link::Inline
+              @route="components"
+              @color="secondary"
+              class="has-text-weight-semibold"
+              data-test-link-to={{row.island}}
+            >{{row.island}}</Hds::Link::Inline>
+          {{/if}}
+          {{#if (eq column.key "visit_length")}}
+            <Hds::Badge @text={{value}} @type="outlined" data-test-badge={{value}} />
+          {{/if}}
+        </:customTableItem>
+      </ListTable>
+    `);
+    assert
+      .dom(`${GENERAL.tableData(0, 'island')} ${GENERAL.linkTo('Maldives')}`)
+      .exists()
+      .hasText('Maldives', 'island renders as custom link using row data');
+    assert
+      .dom(`${GENERAL.tableData(0, 'visit_length')} ${GENERAL.badge('5')}`)
+      .exists()
+      .hasText('5', 'visit_length renders as custom badge using resolved value');
+    assert.dom(`${GENERAL.tableData(1, 'island')} ${GENERAL.linkTo('Bora Bora')}`).hasText('Bora Bora');
+    assert.dom(`${GENERAL.tableData(1, 'visit_length')} ${GENERAL.badge('7')}`).hasText('7');
+    assert
+      .dom(GENERAL.tableData(0, 'trip_date'))
+      .hasText('2025-06-22T00:00:00.000Z', 'non-custom column renders value directly');
   });
 
   test('it shows first page data and correct metadata when navigated page exceeds new data bounds', async function (assert) {

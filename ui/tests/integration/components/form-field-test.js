@@ -1062,7 +1062,7 @@ module('Integration | Component | form field', function (hooks) {
     );
   });
 
-  test('it renders: editType=keyValueInputs - editDisabled disables inputs and buttons', async function (assert) {
+  test('it renders: editType=keyValueInputs - editDisabled disables inputs and hides add/delete row buttons', async function (assert) {
     await setup.call(
       this,
       createAttr('myfield', 'object', {
@@ -1073,8 +1073,8 @@ module('Integration | Component | form field', function (hooks) {
     );
     assert.dom('input[data-test-kv-field="key-0"]').isDisabled('key input is disabled');
     assert.dom('input[data-test-kv-field="value-0"]').isDisabled('value input is disabled');
-    assert.dom('.hds-form-key-value-inputs__add-row-button').isDisabled('add row button is disabled');
-    assert.dom('.hds-form-key-value-inputs__delete-row-button').isDisabled('delete row button is disabled');
+    assert.dom('.hds-form-key-value-inputs__add-row-button').doesNotExist('add row button is hidden');
+    assert.dom('.hds-form-key-value-inputs__delete-row-button').doesNotExist('delete row button is hidden');
   });
 
   test('it renders: editType=keyValueInputs - custom keyValueFields with select, textarea, masked and file inputs', async function (assert) {
@@ -1156,6 +1156,90 @@ module('Integration | Component | form field', function (hooks) {
       .dom(GENERAL.validationWarningByAttr('myfield'))
       .exists('Validation warning renders')
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
+  test('it renders: editType=keyValueInputs - fields with independent valuePaths render one fixed row with no add/delete buttons', async function (assert) {
+    const keyValueFields = [
+      {
+        name: 'region',
+        label: 'Primary Region',
+        type: 'select',
+        possibleValues: ['us-east-1', 'us-west-2'],
+        noDefault: true,
+        valuePath: 'region',
+      },
+      { name: 'kms_key_id', label: 'KMS Key ID', type: 'text', valuePath: 'kms_key_id' },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('region', 'string', {
+        editType: 'keyValueInputs',
+        keyValueFields,
+        defaultValue: 'us-east-1',
+      })
+    );
+
+    assert.strictEqual(findAll('[data-test-kv-field^="region-"]').length, 1, 'renders exactly one row');
+    assert
+      .dom('select[data-test-kv-field="region-0"]')
+      .hasValue('us-east-1', 'renders the primary region value');
+    assert
+      .dom('.hds-form-key-value-inputs__add-row-button')
+      .doesNotExist('does not render an add row button');
+    assert
+      .dom('.hds-form-key-value-inputs__delete-row-button')
+      .doesNotExist('does not render a delete row button');
+
+    await fillIn('input[data-test-kv-field="kms_key_id-0"]', 'arn:aws:kms:us-east-1:123:key/abc');
+    assert.strictEqual(
+      model.get('kms_key_id'),
+      'arn:aws:kms:us-east-1:123:key/abc',
+      'sets the value on its own model attribute, not on "region"'
+    );
+    assert.true(
+      spy.calledWith('kms_key_id', 'arn:aws:kms:us-east-1:123:key/abc'),
+      'onChange is called with the field-specific valuePath'
+    );
+    assert.strictEqual(model.get('region'), 'us-east-1', 'the "region" attribute is unaffected');
+  });
+
+  test('it renders: editType=keyValueInputs - a single "key" keyValueField broadcasts a flat object with empty string values', async function (assert) {
+    const keyValueFields = [
+      {
+        name: 'key',
+        label: 'Region',
+        type: 'select',
+        noDefault: true,
+        possibleValues: ['us-west1', 'us-east1'],
+      },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'object', { editType: 'keyValueInputs', keyValueFields })
+    );
+
+    assert.dom('[data-test-kv-field="value-0"]').doesNotExist('does not render a value input');
+
+    await fillIn('select[data-test-kv-field="key-0"]', 'us-west1');
+
+    assert.deepEqual(
+      model.get('myfield'),
+      { 'us-west1': '' },
+      'broadcasts a flat object with an empty string value since there is no "value" field'
+    );
+    assert.true(
+      spy.calledWith('myfield', { 'us-west1': '' }),
+      'onChange is called with the flat object with empty string value'
+    );
+
+    await click('.hds-form-key-value-inputs__add-row-button');
+    await fillIn('select[data-test-kv-field="key-1"]', 'us-east1');
+
+    assert.deepEqual(
+      model.get('myfield'),
+      { 'us-west1': '', 'us-east1': '' },
+      'broadcasts multiple keys as an object of empty string values'
+    );
   });
 
   // ––––– editType === 'password' –––––

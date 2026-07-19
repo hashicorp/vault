@@ -10,7 +10,6 @@ import (
 	"maps"
 	"math/rand"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -34,8 +33,6 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-var ErrSCIMBadRequest = errors.New("unsupported filter operator")
 
 var (
 	errCycleDetectedPrefix = "cyclic relationship detected for member group ID"
@@ -671,7 +668,8 @@ LOOP:
 					// operator via delete or merge.
 					integrityCheck, err := checkEntityIntegrity(entity)
 					if err != nil {
-						i.logger.Warn("identity entity integrity check failed; attempting to repair",
+						i.logger.Warn(
+							"identity entity integrity check failed; attempting to repair",
 							"entity_id", entity.ID,
 							"has_nil_aliases", integrityCheck.hasNilAliases,
 							"dangling_aliases", integrityCheck.danglingAliases,
@@ -687,7 +685,8 @@ LOOP:
 						}
 
 						if !(i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) || i.localNode.HAState() == consts.PerfStandby) {
-							i.logger.Warn("persisting repaired identity entity",
+							i.logger.Warn(
+								"persisting repaired identity entity",
 								"name", entity.Name,
 								"id", entity.ID,
 								"namespace_id", entity.NamespaceID,
@@ -981,7 +980,8 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			// ConflictResolver implementation, the behavior here is a bit nuanced.
 			// Rather than introduce a behavior change, we handle this case directly
 			// as before by merging.
-			i.logger.Warn("alias is already tied to a different entity; these entities are being merged",
+			i.logger.Warn(
+				"alias is already tied to a different entity; these entities are being merged",
 				"alias_id", alias.ID,
 				"other_entity_id", aliasByFactors.CanonicalID,
 				"entity_aliases", entity.Aliases,
@@ -1971,78 +1971,6 @@ func (i *IdentityStore) MemDBDeleteEntityByID(entityID string) error {
 	return nil
 }
 
-func (i *IdentityStore) MemDBEntitiesByScimClientIDWithFilter(ctx context.Context, scimClientID string, maxResultSet int, filterName string, filterValue string) ([]*identity.Entity, error) {
-	if scimClientID == "" {
-		return nil, nil
-	}
-
-	txn := i.db.Txn(false)
-	defer txn.Abort()
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// 1. Optimized Index Lookup
-	// If the filter targets a specific unique index, we use O(1) lookup.
-	var useIndex bool
-	var indexName string
-
-	// filterName will always be/need to be lowercased
-	switch filterName {
-	case "username":
-		indexName = "name"
-		useIndex = true
-	case "externalid":
-		indexName = "external_id"
-		useIndex = true
-	}
-
-	if useIndex {
-		// Perform the direct lookup
-		raw, err := txn.First(entitiesTable, indexName, ns.ID, filterValue)
-		if err != nil {
-			return nil, fmt.Errorf("database error looking up filter %s: %w", filterName, err)
-		}
-		if raw == nil {
-			return []*identity.Entity{}, nil
-		}
-
-		entity := raw.(*identity.Entity)
-
-		// Security Check: Verify Ownership
-		if entity.ScimClientID != scimClientID {
-			return []*identity.Entity{}, nil
-		}
-
-		cloned, err := entity.Clone()
-		if err != nil {
-			return nil, err
-		}
-		return []*identity.Entity{cloned}, nil
-	}
-
-	// 2. Fallback: Iterative Scan
-	return i.MemDBEntitiesByScimClientIDInTxn(ctx, txn, scimClientID, maxResultSet, filterName, filterValue)
-}
-
-func (i *IdentityStore) MemDBEntitiesByScimClientID(ctx context.Context, scimClientID string, maxResultSet int) ([]*identity.Entity, error) {
-	if scimClientID == "" {
-		return nil, nil
-	}
-
-	txn := i.db.Txn(false)
-	defer txn.Abort()
-
-	entities, err := i.MemDBEntitiesByScimClientIDInTxn(ctx, txn, scimClientID, maxResultSet, "", "")
-	if err != nil {
-		return nil, err
-	}
-
-	return entities, nil
-}
-
 // MemDBEntitiesByScimClientIDInTxn retrieves a fully sorted list of all entities
 // belonging to a specific SCIM client.
 //
@@ -2053,77 +1981,6 @@ func (i *IdentityStore) MemDBEntitiesByScimClientID(ctx context.Context, scimCli
 //
 // This function returns the entire sorted list; the caller is responsible for
 // any subsequent pagination.
-func (i *IdentityStore) MemDBEntitiesByScimClientIDInTxn(ctx context.Context, txn *memdb.Txn, scimClientID string, maxResultSet int, filterName string, filterValue string) ([]*identity.Entity, error) {
-	if txn == nil {
-		return nil, fmt.Errorf("nil txn")
-	}
-	if scimClientID == "" {
-		return nil, fmt.Errorf("empty scim client id key")
-	}
-
-	ns, err := namespace.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	entitiesIter, err := txn.Get(entitiesTable, "scim_client_id_prefix", ns.ID, scimClientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup entities using scim client id: %w", err)
-	}
-
-	var entities []*identity.Entity
-	limit := maxResultSet
-	noLimit := limit <= 0
-
-	for item := entitiesIter.Next(); item != nil; item = entitiesIter.Next() {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-		}
-
-		entityRaw, ok := item.(*identity.Entity)
-		if !ok {
-			return nil, fmt.Errorf("failed to declare the type of fetched entity")
-		}
-
-		if filterName != "" {
-			match := false
-			switch filterName {
-			case "active":
-				wantActive, err := strconv.ParseBool(filterValue)
-				if err != nil {
-					return nil, fmt.Errorf("invalid filter value for 'active': %s (expected true/false)", filterValue)
-				}
-
-				isActuallyActive := !entityRaw.Disabled
-				if isActuallyActive == wantActive {
-					match = true
-				}
-			default:
-				// According to RFC 7644, if we don't support the filter, we must reject the request
-				// rather than returning unfiltered results (which leaks data or kills performance).
-				return nil, ErrSCIMBadRequest
-			}
-
-			if !match {
-				continue
-			}
-		}
-
-		if !noLimit && len(entities) >= limit {
-			return nil, fmt.Errorf("query returned more than the server's limit of %d results. Please use more specific filters", limit)
-		}
-
-		entity, err := entityRaw.Clone()
-		if err != nil {
-			return nil, err
-		}
-		entities = append(entities, entity)
-	}
-
-	return entities, nil
-}
 
 // FetchEntityForLocalAliasInTxn fetches the entity associated with the provided
 // local identity.Alias. MemDB will first be searched for the entity. If it is
@@ -2886,43 +2743,6 @@ func (i *IdentityStore) MemDBGroupByID(groupID string, clone bool) (*identity.Gr
 	txn := i.db.Txn(false)
 
 	return i.MemDBGroupByIDInTxn(txn, groupID, clone)
-}
-
-func (i *IdentityStore) MemDBGroupsByScimClientIDInTxn(txn *memdb.Txn, scimClientID string) ([]*identity.Group, error) {
-	if scimClientID == "" {
-		return nil, fmt.Errorf("missing scim client ID")
-	}
-
-	if txn == nil {
-		return nil, fmt.Errorf("txn is nil")
-	}
-
-	groupsIter, err := txn.Get(groupsTable, "scim_client_id", scimClientID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to lookup groups using scim client ID: %w", err)
-	}
-
-	var groups []*identity.Group
-	for group := groupsIter.Next(); group != nil; group = groupsIter.Next() {
-		entry := group.(*identity.Group)
-		entry, err = entry.Clone()
-		if err != nil {
-			return nil, err
-		}
-		groups = append(groups, entry)
-	}
-
-	return groups, nil
-}
-
-func (i *IdentityStore) MemDBGroupsByScimClientID(scimClientID string) ([]*identity.Group, error) {
-	if scimClientID == "" {
-		return nil, fmt.Errorf("missing scim client ID")
-	}
-
-	txn := i.db.Txn(false)
-
-	return i.MemDBGroupsByScimClientIDInTxn(txn, scimClientID)
 }
 
 func (i *IdentityStore) MemDBGroupsByParentGroupIDInTxn(txn *memdb.Txn, memberGroupID string, clone bool) ([]*identity.Group, error) {
