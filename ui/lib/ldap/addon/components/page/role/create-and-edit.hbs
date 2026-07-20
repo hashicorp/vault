@@ -8,7 +8,7 @@
   </:breadcrumbs>
 </Page::Header>
 
-<hr class="is-marginless has-background-gray-200" />
+<Hds::Separator @spacing="0" />
 
 <form {{on "submit" (perform this.save)}} class="has-top-margin-m">
   <MessageError @errorMessage={{this.error}} />
@@ -35,7 +35,7 @@
   {{#each this.fields as |field|}}
     {{! display section heading ahead of ldif fields }}
     {{#if (eq field "creation_ldif")}}
-      <hr class="has-background-gray-200" />
+      <Hds::Separator />
       <h2 class="title is-4 has-top-margin-xl">LDIF Statements</h2>
     {{/if}}
     <FormField
@@ -45,7 +45,7 @@
     />
   {{/each}}
 
-  <hr class="has-background-gray-200 has-top-margin-l" />
+  <Hds::Separator class="has-top-margin-l" />
 
   <div class="has-top-margin-l has-bottom-margin-l is-flex">
     <Hds::Button
