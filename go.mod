@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.26.3
+go 1.26.4
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -177,7 +177,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.26.3-0.20260626165612-824fb96aa7a8
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.17.1
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.18.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1
 	github.com/hashicorp/vault-testing-stepwise v0.3.3
 	github.com/hashicorp/vault/api v1.23.0
@@ -203,8 +203,8 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/mitchellh/reflectwalk v1.0.2
-	github.com/moby/moby/api v1.54.0
-	github.com/moby/moby/client v0.3.0
+	github.com/moby/moby/api v1.54.2
+	github.com/moby/moby/client v0.4.1
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.2.0
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
@@ -238,15 +238,15 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.0
 	go.opentelemetry.io/otel/trace v1.43.0
 	go.uber.org/atomic v1.11.0
-	golang.org/x/crypto v0.52.0
+	golang.org/x/crypto v0.54.0
 	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
-	golang.org/x/net v0.55.0
+	golang.org/x/net v0.56.0
 	golang.org/x/oauth2 v0.36.0
-	golang.org/x/sync v0.20.0
-	golang.org/x/sys v0.45.0
-	golang.org/x/term v0.43.0
-	golang.org/x/text v0.37.0
-	golang.org/x/tools v0.44.0
+	golang.org/x/sync v0.22.0
+	golang.org/x/sys v0.47.0
+	golang.org/x/term v0.45.0
+	golang.org/x/text v0.40.0
+	golang.org/x/tools v0.47.0
 	google.golang.org/api v0.279.0
 	google.golang.org/grpc v1.81.0
 	google.golang.org/protobuf v1.36.11
@@ -319,7 +319,7 @@ require (
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/telemetry v0.0.0-20260409153401-be6f6cb8b1fa // indirect
+	golang.org/x/telemetry v0.0.0-20260625142307-59b4966ccb57 // indirect
 	k8s.io/apimachinery v0.35.3 // indirect
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 )
@@ -407,7 +407,7 @@ require (
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v27.4.1+incompatible // indirect
-	github.com/docker/go-connections v0.6.0 // indirect
+	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
@@ -587,7 +587,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.43.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
-	golang.org/x/mod v0.35.0 // indirect
+	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/time v0.15.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect

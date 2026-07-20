@@ -128,8 +128,10 @@ func TestStoreAndGetMaxRoleCounts(t *testing.T) {
 			require.Equal(t, tc.roleCounts.GCPImpersonatedAccounts, retrievedCounts.GCPImpersonatedAccounts)
 			require.Equal(t, tc.roleCounts.OpenLDAPDynamicRoles, retrievedCounts.OpenLDAPDynamicRoles)
 			require.Equal(t, tc.roleCounts.OpenLDAPStaticRoles, retrievedCounts.OpenLDAPStaticRoles)
+			require.Equal(t, tc.roleCounts.OpenLDAPLibrarySets, retrievedCounts.OpenLDAPLibrarySets)
 			require.Equal(t, tc.roleCounts.LDAPDynamicRoles, retrievedCounts.LDAPDynamicRoles)
 			require.Equal(t, tc.roleCounts.LDAPStaticRoles, retrievedCounts.LDAPStaticRoles)
+			require.Equal(t, tc.roleCounts.LDAPLibrarySets, retrievedCounts.LDAPLibrarySets)
 			require.Equal(t, tc.roleCounts.DatabaseDynamicRoles, retrievedCounts.DatabaseDynamicRoles)
 			require.Equal(t, tc.roleCounts.DatabaseStaticRoles, retrievedCounts.DatabaseStaticRoles)
 			require.Equal(t, tc.roleCounts.GCPRolesets, retrievedCounts.GCPRolesets)
@@ -222,6 +224,11 @@ func TestHWMRoleCounts(t *testing.T) {
 			key:          "static-role/",
 			numberOfKeys: 5,
 		},
+		"LDAP Library Sets": {
+			mount:        pluginconsts.SecretEngineLDAP,
+			key:          "library/",
+			numberOfKeys: 5,
+		},
 		"OpenLDAP Dynamic Roles": {
 			mount:        pluginconsts.SecretEngineOpenLDAP,
 			key:          "role/",
@@ -230,6 +237,11 @@ func TestHWMRoleCounts(t *testing.T) {
 		"OpenLDAP Static Roles": {
 			mount:        pluginconsts.SecretEngineOpenLDAP,
 			key:          "static-role/",
+			numberOfKeys: 5,
+		},
+		"OpenLDAP Library Sets": {
+			mount:        pluginconsts.SecretEngineOpenLDAP,
+			key:          "library/",
 			numberOfKeys: 5,
 		},
 		"Alicloud Dynamic Roles": {
@@ -1087,9 +1099,14 @@ func addRoleToStorage(t *testing.T, core *Core, mount string, key string, number
 	for i := 0; i < numberOfKeys; i++ {
 		roleKey := fmt.Sprintf("%srole-%d", key, i)
 		// Create a role with a unique key
+		value := []byte("foo")
+		// LDAP & OpenLDAP return count of 0 with invalid JSON
+		if mount == pluginconsts.SecretEngineLDAP || mount == pluginconsts.SecretEngineOpenLDAP {
+			value = []byte("{}")
+		}
 		err := storageView.Put(context.Background(), &logical.StorageEntry{
 			Key:   roleKey,
-			Value: []byte("foo"),
+			Value: value,
 		})
 		require.NoError(t, err)
 	}

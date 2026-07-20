@@ -157,6 +157,37 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 		return keys
 	}
 
+	// apiReadCount calls the given GET endpoint on a mount and returns the integer value
+	// of the "count" key in the response, or 0 on any failure.
+	apiReadCount := func(entry *MountEntry, apiPath string) int {
+		readRequest := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      entry.namespace.Path + entry.Path + apiPath,
+		}
+		resp, err := c.router.Route(ctx, readRequest)
+		if err != nil || resp == nil || resp.Data == nil {
+			return 0
+		}
+		rawCount, ok := resp.Data["count"]
+		if !ok || rawCount == nil {
+			return 0
+		}
+		switch v := rawCount.(type) {
+		case int:
+			return v
+		case int64:
+			return int(v)
+		case uint:
+			return int(v)
+		case uint64:
+			return int(v)
+		case float64:
+			return int(v)
+		default:
+			return 0
+		}
+	}
+
 	pluginName := getAdjustedPluginType(entry)
 	if pluginName == "" {
 		return
@@ -194,12 +225,16 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 		targetRoleCounts.LDAPDynamicRoles += len(dynamicRoles)
 		staticRoles := apiList(entry, "static-role")
 		targetRoleCounts.LDAPStaticRoles += len(staticRoles)
+		librarySets := apiReadCount(entry, "library-count")
+		targetRoleCounts.LDAPLibrarySets += librarySets
 
 	case pluginconsts.SecretEngineOpenLDAP:
 		dynamicRoles := apiList(entry, "role")
 		targetRoleCounts.OpenLDAPDynamicRoles += len(dynamicRoles)
 		staticRoles := apiList(entry, "static-role")
 		targetRoleCounts.OpenLDAPStaticRoles += len(staticRoles)
+		librarySets := apiReadCount(entry, "library-count")
+		targetRoleCounts.OpenLDAPLibrarySets += librarySets
 
 	case pluginconsts.SecretEngineAlicloud:
 		dynamicRoles := apiList(entry, "role")

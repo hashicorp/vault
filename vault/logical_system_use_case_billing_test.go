@@ -1314,16 +1314,16 @@ func TestSystemBackend_BillingOverview_AllMetricTypesPresent(t *testing.T) {
 	require.Equal(t, "kv", staticSecretsDetails[0]["type"])
 	require.Equal(t, 0, staticSecretsDetails[0]["count"])
 
-	// Verify dynamic_roles has all 13 types
+	// Verify dynamic_roles has all 15 types
 	dynamicRolesMetric, exists := metricsMap["dynamic_roles"]
 	require.True(t, exists, "dynamic_roles metric should be present")
 	dynamicRolesData := dynamicRolesMetric["metric_data"].(map[string]interface{})
 	dynamicRolesDetails := dynamicRolesData["metric_details"].([]map[string]interface{})
-	require.Len(t, dynamicRolesDetails, 13, "dynamic_roles should have 13 types")
+	require.Len(t, dynamicRolesDetails, 15, "dynamic_roles should have 15 types")
 
 	expectedDynamicTypes := []string{
 		"aws_dynamic", "azure_dynamic", "database_dynamic", "gcp_dynamic",
-		"ldap_dynamic", "openldap_dynamic", "alicloud_dynamic", "rabbitmq_dynamic",
+		"ldap_dynamic", "ldap_library", "openldap_dynamic", "openldap_library", "alicloud_dynamic", "rabbitmq_dynamic",
 		"consul_dynamic", "nomad_dynamic", "kubernetes_dynamic", "mongodbatlas_dynamic",
 		"terraform_dynamic",
 	}

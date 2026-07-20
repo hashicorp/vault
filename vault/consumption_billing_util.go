@@ -125,8 +125,10 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 		a.GCPImpersonatedAccounts + b.GCPImpersonatedAccounts,
 		a.LDAPDynamicRoles + b.LDAPDynamicRoles,
 		a.LDAPStaticRoles + b.LDAPStaticRoles,
+		a.LDAPLibrarySets + b.LDAPLibrarySets,
 		a.OpenLDAPDynamicRoles + b.OpenLDAPDynamicRoles,
 		a.OpenLDAPStaticRoles + b.OpenLDAPStaticRoles,
+		a.OpenLDAPLibrarySets + b.OpenLDAPLibrarySets,
 		a.AlicloudDynamicRoles + b.AlicloudDynamicRoles,
 		a.RabbitMQDynamicRoles + b.RabbitMQDynamicRoles,
 		a.ConsulDynamicRoles + b.ConsulDynamicRoles,
@@ -352,8 +354,10 @@ func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleC
 	maxRoleCounts.DatabaseDynamicRoles = c.compareCounts(currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles, "Database Dynamic Roles")
 	maxRoleCounts.OpenLDAPStaticRoles = c.compareCounts(currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles, "OpenLDAP Static Roles")
 	maxRoleCounts.OpenLDAPDynamicRoles = c.compareCounts(currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles, "OpenLDAP Dynamic Roles")
+	maxRoleCounts.OpenLDAPLibrarySets = c.compareCounts(currentRoleCounts.OpenLDAPLibrarySets, maxRoleCounts.OpenLDAPLibrarySets, "OpenLDAP Library Sets")
 	maxRoleCounts.LDAPDynamicRoles = c.compareCounts(currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles, "LDAP Dynamic Roles")
 	maxRoleCounts.LDAPStaticRoles = c.compareCounts(currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles, "LDAP Static Roles")
+	maxRoleCounts.LDAPLibrarySets = c.compareCounts(currentRoleCounts.LDAPLibrarySets, maxRoleCounts.LDAPLibrarySets, "LDAP Library Sets")
 	maxRoleCounts.DatabaseStaticRoles = c.compareCounts(currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles, "Database Static Roles")
 	maxRoleCounts.GCPImpersonatedAccounts = c.compareCounts(currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts, "GCPImpersonated Accounts")
 	maxRoleCounts.GCPStaticAccounts = c.compareCounts(currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts, "GCP Static Accounts")

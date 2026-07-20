@@ -856,8 +856,10 @@ type RoleCounts struct {
 	GCPImpersonatedAccounts    int `json:"gcp_impersonated_accounts"`
 	LDAPDynamicRoles           int `json:"ldap_dynamic_roles"`
 	LDAPStaticRoles            int `json:"ldap_static_roles"`
+	LDAPLibrarySets            int `json:"ldap_library_sets"`
 	OpenLDAPDynamicRoles       int `json:"openldap_dynamic_roles"`
 	OpenLDAPStaticRoles        int `json:"openldap_static_roles"`
+	OpenLDAPLibrarySets        int `json:"openldap_library_sets"`
 	AlicloudDynamicRoles       int `json:"alicloud_dynamic_roles"`
 	RabbitMQDynamicRoles       int `json:"rabbitmq_dynamic_roles"`
 	ConsulDynamicRoles         int `json:"consul_dynamic_roles"`

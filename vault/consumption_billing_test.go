@@ -65,6 +65,10 @@ var secretEngineBackends = map[string]struct {
 		mount: pluginconsts.SecretEngineLDAP,
 		key:   "static-role/",
 	},
+	"LDAP Library Sets": {
+		mount: pluginconsts.SecretEngineLDAP,
+		key:   "library/",
+	},
 	"OpenLDAP Dynamic Roles": {
 		mount: pluginconsts.SecretEngineOpenLDAP,
 		key:   "role/",
@@ -72,6 +76,10 @@ var secretEngineBackends = map[string]struct {
 	"OpenLDAP Static Roles": {
 		mount: pluginconsts.SecretEngineOpenLDAP,
 		key:   "static-role/",
+	},
+	"OpenLDAP Library Sets": {
+		mount: pluginconsts.SecretEngineOpenLDAP,
+		key:   "library/",
 	},
 	"Alicloud Dynamic Roles": {
 		mount: pluginconsts.SecretEngineAlicloud,
