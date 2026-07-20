@@ -1,0 +1,41 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container @hasBorder={{@hasBorder}} ...attributes>
+  <Hds::Text::Display @weight="semibold" @size="300" @tag="h2" class="bottom-margin-8">
+    Order challenge information
+  </Hds::Text::Display>
+
+  {{#if (has-block "orderDetails")}}
+    {{yield to="orderDetails"}}
+  {{/if}}
+
+  {{#if this.tableData}}
+    <Hds::AdvancedTable @columns={{this.tableColumns}} @model={{this.tableData}}>
+      <:body as |B|>
+        <B.Tr data-test-table-row={{B.rowIndex}}>
+          <B.Th data-test-table-data="identifier">{{B.data.identifier}}</B.Th>
+          <B.Td data-test-table-data="challenge_status">
+            {{#let (map-status-badge B.data.challenge_status) as |badge|}}
+              <Hds::Badge @text={{badge.text}} @color={{badge.color}} data-test-badge="challenge_status" />
+            {{/let}}
+          </B.Td>
+          <B.Td data-test-table-data="challenge_type">
+            {{B.data.challenge_type}}
+          </B.Td>
+          <B.Td data-test-table-data="expires">
+            <Hds::Text::Code class="white-space-nowrap" @tag="p">
+              {{this.formatDate B.data.expires}}
+            </Hds::Text::Code>
+          </B.Td>
+        </B.Tr>
+      </:body>
+    </Hds::AdvancedTable>
+  {{else}}
+    <Hds::ApplicationState as |A|>
+      <A.Header @title="No order challenges to display" @titleTag="h2" data-test-empty-state-title />
+    </Hds::ApplicationState>
+  {{/if}}
+</Hds::Card::Container>

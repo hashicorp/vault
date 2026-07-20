@@ -32,7 +32,10 @@ export default class ExternalPkiPageActiveOrdersComponent extends Component<Args
   ];
 
   get filteredOrders() {
-    const filteredOrders = this.args.model.activeOrders.filter((id) => id.includes(this.orderFilter));
+    // Order IDs ARE case sensitive, but for filtering purposes we don't need to be that strict
+    const filteredOrders = this.args.model.activeOrders.filter((id) =>
+      id.includes(this.orderFilter.toLowerCase())
+    );
     return filteredOrders?.map((o) => ({ order_id: o }));
   }
 

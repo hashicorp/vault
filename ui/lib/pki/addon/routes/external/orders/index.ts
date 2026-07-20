@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 import { SecretsApiPkiExternalCaListLookupOrdersRecentListEnum } from '@hashicorp/vault-client-typescript';
 
 import type { Breadcrumb } from 'vault/app-types';
-import type { OrderStatusName } from 'pki/helpers/map-order-status';
+import type { OrderStatusName } from 'pki/helpers/map-status-badge';
 import type ApiService from 'vault/services/api';
 import type Controller from '@ember/controller';
 import type RouterService from '@ember/routing/router-service';
