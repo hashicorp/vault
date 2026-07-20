@@ -49,7 +49,13 @@
     </Hds::AppHeader>
   </Frame.Header>
   <Frame.Sidebar data-test-sidebar-nav>
-    <Hds::AppSideNav @isResponsive={{true}} @hasA11yRefocus={{true}} @a11yRefocusSkipTo="app-main-content">
+    <Hds::AppSideNav
+      @isResponsive={{true}}
+      @isCollapsible={{true}}
+      @hasA11yRefocus={{true}}
+      @a11yRefocusSkipTo="app-main-content"
+      data-test-sidebar
+    >
       {{! this block is where the Hds::AppSideNav::Portal components render into }}
       <Hds::AppSideNav::Portal::Target />
     </Hds::AppSideNav>
