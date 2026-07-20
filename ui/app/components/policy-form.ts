@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { debounce } from '@ember/runloop';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import trimRight from 'vault/utils/trim-right';
@@ -79,6 +80,7 @@ export default class PolicyFormComponent extends Component<Args> {
   @tracked showTemplateModal = false;
   @tracked stanzas: PolicyStanza[] = [new PolicyStanza()];
   @tracked validationErrors: ValidationMap | null = null;
+  @tracked debouncedPolicy: string = this.args.form.data.policy ?? '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -108,7 +110,7 @@ export default class PolicyFormComponent extends Component<Args> {
 
   get snippetArgs() {
     const policyName = this.args.form.data.name || '<policy name>';
-    const policy = this.formattedStanzas;
+    const policy = this.visualEditorSupported ? this.formattedStanzas : this.debouncedPolicy;
     return policySnippetArgs(policyName, policy);
   }
 
@@ -241,5 +243,10 @@ export default class PolicyFormComponent extends Component<Args> {
   @action
   setPolicy(policy: string) {
     this.args.form.data.policy = policy;
+    debounce(this, this.syncDebouncedPolicy, policy, 500);
+  }
+
+  private syncDebouncedPolicy(policy: string) {
+    this.debouncedPolicy = policy;
   }
 }
