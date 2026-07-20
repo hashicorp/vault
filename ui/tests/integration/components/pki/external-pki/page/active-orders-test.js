@@ -65,6 +65,10 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Active
     assert.dom(GENERAL.linkTo('order-456')).exists().hasText('order-456');
     assert.dom(GENERAL.linkTo('order-789')).exists().hasText('order-789');
     assert.dom(GENERAL.pagination).hasTextContaining('1–3 of 3');
+    // Filter by ORDER-1
+    await fillIn(GENERAL.inputSearch('Filter by order ID'), 'ORDER-1');
+    assert.dom(GENERAL.listItem()).exists({ count: 1 }, 'display 1 matching orders');
+    assert.dom(GENERAL.linkTo('order-123')).hasText('order-123', 'filter is case INsensitive');
     // Clear search input
     await fillIn(GENERAL.inputSearch('Filter by order ID'), '');
     assert.dom(GENERAL.listItem()).exists({ count: 4 }, 'shows all orders again');

@@ -182,7 +182,7 @@
         >{{value}}</Hds::Link::Inline>
       {{/if}}
       {{#if (eq column.key "order_status")}}
-        {{#let (map-order-status value) as |state|}}
+        {{#let (map-status-badge value) as |state|}}
           <Hds::Badge @text={{state.text}} @color={{state.color}} data-test-badge="order_status" />
         {{/let}}
       {{/if}}

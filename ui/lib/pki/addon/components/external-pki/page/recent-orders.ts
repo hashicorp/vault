@@ -11,7 +11,7 @@ import { cached } from '@glimmer/tracking';
 import { debounce } from '@ember/runloop';
 import { duration } from 'core/helpers/format-duration';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import mapOrderStatus from 'pki/helpers/map-order-status';
+import mapStatusBadge from 'pki/helpers/map-status-badge';
 
 import type { OrdersIndexRouteParams, RecentOrderListItem } from 'pki/routes/external/orders/index';
 import type RouterService from '@ember/routing/router-service';
@@ -110,7 +110,7 @@ export default class ExternalPkiPageRecentOrdersComponent extends Component<Args
     const statuses = new Set<string>();
     this.args.model.recentOrders.forEach((order) => {
       if (order.order_status) {
-        const mappedState = mapOrderStatus(order.order_status);
+        const mappedState = mapStatusBadge(order.order_status);
         statuses.add(mappedState.text);
       }
     });
@@ -138,7 +138,7 @@ export default class ExternalPkiPageRecentOrdersComponent extends Component<Args
         return false;
       }
       // Filter by status
-      if (this.statusFilter && mapOrderStatus(order.order_status).text !== this.statusFilter) {
+      if (this.statusFilter && mapStatusBadge(order.order_status).text !== this.statusFilter) {
         return false;
       }
       return true;
