@@ -1,0 +1,4 @@
+```release-note:improvement
+consumption-billing: Add billing tracking for LDAP and OpenLDAP service account
+library sets as part of both HWM role metrics and running-count product usage metric.
+```
