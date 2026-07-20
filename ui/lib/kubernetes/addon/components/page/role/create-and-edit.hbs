@@ -31,7 +31,7 @@
   <h2 class="title is-4">
     Role options
   </h2>
-  <hr class="is-marginless has-background-gray-200" />
+  <Hds::Separator @spacing="0" />
 </div>
 
 {{#if @form.generationPreference}}
@@ -73,7 +73,7 @@
                 @onChange={{fn (mut (get @form.data field.key))}}
               />
             </div>
-            <hr />
+            <Hds::Separator @spacing="0" />
           {{/each}}
         </div>
       {{/if}}
@@ -130,7 +130,7 @@
   </Hds::ApplicationState>
 {{/if}}
 
-<hr class="is-marginless has-background-gray-200" />
+<Hds::Separator @spacing="0" />
 
 <div class="has-top-margin-l has-bottom-margin-s">
   <Hds::Button
