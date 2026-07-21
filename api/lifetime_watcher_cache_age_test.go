@@ -83,9 +83,9 @@ func testWatchCachedLease(t *testing.T, server *httptest.Server) *LifetimeWatche
 // and reports that the secret must be re-read, rather than renewing forever.
 //
 // A caching proxy reports how stale its response is in the HTTP Age header, but
-// the lease_duration in the body still reads from issuance. The watcher ignores
-// Age, so the remaining lifetime it computes never falls and the threshold at
-// which it gives up is never reached.
+// the lease_duration in the body still reads from issuance. A watcher that
+// ignored Age would compute a remaining lifetime that never falls, so the
+// threshold at which it gives up would never be reached.
 //
 // See https://github.com/hashicorp/vault/issues/19227.
 func TestLifetimeWatcher_SignalsReReadOfAgedLease(t *testing.T) {
@@ -137,5 +137,43 @@ func TestLifetimeWatcher_DoesNotRenewExpiredLease(t *testing.T) {
 			t.Fatalf("renewed %s after the lease expired (renewal at %s, only %s of life left on arrival)",
 				at-remaining, at, remaining)
 		}
+	}
+}
+
+func TestRemainingLease(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name          string
+		leaseDuration time.Duration
+		age           time.Duration
+		want          time.Duration
+	}{
+		{
+			name:          "uncached response is unaffected",
+			leaseDuration: 30 * time.Second,
+			age:           0,
+			want:          30 * time.Second,
+		},
+		{
+			name:          "cached response discounts time spent in cache",
+			leaseDuration: 30 * time.Second,
+			age:           25 * time.Second,
+			want:          5 * time.Second,
+		},
+		{
+			name:          "age beyond the lease duration clamps to zero",
+			leaseDuration: 30 * time.Second,
+			age:           45 * time.Second,
+			want:          0,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			require.Equal(t, tc.want, remainingLease(tc.leaseDuration, tc.age))
+		})
 	}
 }
