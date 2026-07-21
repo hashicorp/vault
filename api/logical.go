@@ -157,7 +157,7 @@ func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secr
 		return nil, err
 	}
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, values url.Values, extraHeaders http.Header) (*Response, error) {
@@ -374,7 +374,7 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 		return nil, err
 	}
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *Logical) writeRaw(ctx context.Context, request *Request) (*Response, error) {

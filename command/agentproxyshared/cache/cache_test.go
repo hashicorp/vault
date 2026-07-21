@@ -969,6 +969,15 @@ func TestCache_Caching_LeaseResponse(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		// Only the cached response was held by the cache, so only it reports an
+		// age; the secret the two carry is otherwise identical. The age itself
+		// is reported in whole seconds, so it rounds to zero on a fast enough
+		// hit and cannot be asserted on here.
+		if proxiedResp.Age != 0 {
+			t.Fatalf("expected proxied response to report no age, got %s", proxiedResp.Age)
+		}
+		cachedResp.Age = 0
+
 		if diff := deep.Equal(proxiedResp, cachedResp); diff != nil {
 			t.Fatal(diff)
 		}
