@@ -17,9 +17,7 @@ import (
 // all certificate counting.
 const envVaultDisableCertCount = "VAULT_DISABLE_CERT_COUNT"
 
-// consumerJobInterval is the interval the CertificateCountManager uses
-// for StartConsumerJob. It is a variable so that unit tests can override it.
-var consumerJobInterval = 1 * time.Minute
+const consumerJobIntervalDefault = 1 * time.Minute
 
 // CertificateCountConsumer is a callback for consumers of the certificate counts.
 type CertificateCountConsumer func(logical.CertCount)
@@ -47,6 +45,7 @@ type certCountManager struct {
 
 	reportTimerStop     chan struct{}
 	reportTimerStopLock sync.Mutex
+	consumerJobInterval time.Duration
 
 	logger hclog.Logger
 }
@@ -56,19 +55,24 @@ var _ CertificateCountManager = (*certCountManager)(nil)
 // InitCertificateCountManager creates a new CertificateCountManager, or a null
 // implementation if certificate counting is disabled via the presence of the
 // VAULT_DISABLE_CERT_COUNT environment variable (with any value).
-func InitCertificateCountManager(logger hclog.Logger) CertificateCountManager {
+func InitCertificateCountManager(logger hclog.Logger, consumerJobInterval time.Duration) CertificateCountManager {
 	if os.Getenv(envVaultDisableCertCount) != "" {
 		logger.Warn("certificate counting disabled via environment variable")
 		return newNullCertificateCountManager()
 	}
-	return newCertificateCountManager(logger)
+	return newCertificateCountManager(logger, consumerJobInterval)
 }
 
-func newCertificateCountManager(logger hclog.Logger) CertificateCountManager {
+func newCertificateCountManager(logger hclog.Logger, consumerJobInterval time.Duration) CertificateCountManager {
+	if consumerJobInterval == 0 {
+		consumerJobInterval = consumerJobIntervalDefault
+	}
+
 	ret := &certCountManager{
-		count:           logical.CertCount{},
-		reportTimerStop: nil,
-		logger:          logger,
+		count:               logical.CertCount{},
+		reportTimerStop:     nil,
+		consumerJobInterval: consumerJobInterval,
+		logger:              logger,
 	}
 	return ret
 }
@@ -84,7 +88,7 @@ func (m *certCountManager) StartConsumerJob(consumer CertificateCountConsumer) {
 }
 
 func (m *certCountManager) reportLoop(stop chan struct{}, consumer CertificateCountConsumer) {
-	reportTicker := time.NewTicker(consumerJobInterval)
+	reportTicker := time.NewTicker(m.consumerJobInterval)
 	defer reportTicker.Stop()
 
 	for {
