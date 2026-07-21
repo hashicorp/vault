@@ -19,7 +19,6 @@ CHANGES:
 * auth/cf: Update plugin to [v0.23.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.23.1)
 * core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
 * core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
-* secrets/azure: Update plugin to [v0.26.5+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.26.5+ent)
 
 FEATURES:
 
@@ -30,6 +29,7 @@ requests to Vault, without needing a Vault token.
 
 IMPROVEMENTS:
 
+* secrets/azure: For dynamic apps, Vault now creates the app and its client secret with a single MS Graph API request, significantly reducing temporary errors caused by Azure eventual consistency
 * consumption-billing: Add a new `sys/billing/config` endpoint to allow configuration of billing data retention (min 13 months, max 6 years).
 * core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
 * identity/scim (enterprise): Update PATCH operations on scim/v2/Users to allow multiple modifications in the same patch call, support for patch operations on user metadata and name in addition to active status, and allow specifying `path` value in patch operations
@@ -416,10 +416,10 @@ CHANGES:
 * auth/cf: Update plugin to [v0.22.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.22.1)
 * core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
 * core: Vault will now redirect non-canonicalized paths (containing `/./`, `/../`, or `//`) to a cleaned path, instead of rejecting these requests
-* secrets/azure: Update plugin to [v0.25.4+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.25.4+ent)
 
 IMPROVEMENTS:
 
+* secrets/azure: For dynamic apps, Vault now creates the app and its client secret with a single MS Graph API request, significantly reducing temporary errors caused by Azure eventual consistency
 * core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
 * ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
 
@@ -938,6 +938,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
+* secrets/azure: For dynamic apps, Vault now creates the app and its client secret with a single MS Graph API request, significantly reducing temporary errors caused by Azure eventual consistency
 * core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
 * ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview and Vault usage dashboard.
 
@@ -1543,6 +1544,7 @@ CHANGES:
 
 IMPROVEMENTS:
 
+* secrets/azure: For dynamic apps, Vault now creates the app and its client secret with a single MS Graph API request, significantly reducing temporary errors caused by Azure eventual consistency
 * core (Enterprise): Make deadlock detection in sealwrap configurable by adding "sealwrap" to existing configuration detect_deadlocks.
 * ui (enterprise): Migrate charts from Lineal to Carbon Charts in the Client usage overview dashboard.
 
