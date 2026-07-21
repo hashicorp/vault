@@ -221,20 +221,14 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 		targetRoleCounts.GCPImpersonatedAccounts += len(impersonatedAccounts)
 
 	case pluginconsts.SecretEngineLDAP:
-		dynamicRoles := apiList(entry, "role")
-		targetRoleCounts.LDAPDynamicRoles += len(dynamicRoles)
-		staticRoles := apiList(entry, "static-role")
-		targetRoleCounts.LDAPStaticRoles += len(staticRoles)
-		librarySets := apiReadCount(entry, "library-count")
-		targetRoleCounts.LDAPLibrarySets += librarySets
+		targetRoleCounts.LDAPDynamicRoles += apiReadCount(entry, "role-count")
+		targetRoleCounts.LDAPStaticRoles += apiReadCount(entry, "static-role-count")
+		targetRoleCounts.LDAPLibrarySets += apiReadCount(entry, "library-count")
 
 	case pluginconsts.SecretEngineOpenLDAP:
-		dynamicRoles := apiList(entry, "role")
-		targetRoleCounts.OpenLDAPDynamicRoles += len(dynamicRoles)
-		staticRoles := apiList(entry, "static-role")
-		targetRoleCounts.OpenLDAPStaticRoles += len(staticRoles)
-		librarySets := apiReadCount(entry, "library-count")
-		targetRoleCounts.OpenLDAPLibrarySets += librarySets
+		targetRoleCounts.OpenLDAPDynamicRoles += apiReadCount(entry, "role-count")
+		targetRoleCounts.OpenLDAPStaticRoles += apiReadCount(entry, "static-role-count")
+		targetRoleCounts.OpenLDAPLibrarySets += apiReadCount(entry, "library-count")
 
 	case pluginconsts.SecretEngineAlicloud:
 		dynamicRoles := apiList(entry, "role")
