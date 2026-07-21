@@ -36,7 +36,7 @@ importers:
         version: 3.0.0
       '@hashicorp/vault-client-typescript':
         specifier: github:hashicorp/vault-client-typescript
-        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/b47363d8fd9732de8b5294a58fc70b3300db8b7e
+        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/18d2b23a16a1c579b1633b6c94d042274aa632cd
       '@segment/analytics-next':
         specifier: ^1.84.0
         version: 1.84.0
@@ -1708,8 +1708,8 @@ packages:
   '@hashicorp/flight-icons@3.14.0':
     resolution: {integrity: sha512-nyLDApaZsAHpAf2sRNwYX1MnJQU9UI3euiwE6wHPl2l/+Yt8wba1oXkmWL/Ptc4QgJxxnRUUhf66jGcB/AIOyQ==}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/b47363d8fd9732de8b5294a58fc70b3300db8b7e':
-    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/b47363d8fd9732de8b5294a58fc70b3300db8b7e}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/18d2b23a16a1c579b1633b6c94d042274aa632cd':
+    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/18d2b23a16a1c579b1633b6c94d042274aa632cd}
     version: 0.0.0
 
   '@humanwhocodes/config-array@0.13.0':
@@ -10910,7 +10910,7 @@ snapshots:
 
   '@hashicorp/flight-icons@3.14.0': {}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/b47363d8fd9732de8b5294a58fc70b3300db8b7e': {}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/18d2b23a16a1c579b1633b6c94d042274aa632cd': {}
 
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
