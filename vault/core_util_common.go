@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/cert_count"
 )
 
 type DiagnoseCheckLicenseGeneration struct {
@@ -82,6 +83,12 @@ func (c *Core) setupHeaderHMACKey(ctx context.Context, isPerfStandby bool) error
 }
 
 func (c *Core) GetCertificateCounter() logical.CertificateCounter {
+	return c.certCountManager
+}
+
+// GetCertCountManager returns the underlying CertificateCountManager, available
+// to tests outside the vault package that need to inspect raw counts.
+func (c *Core) GetCertCountManager() cert_count.CertificateCountManager {
 	return c.certCountManager
 }
 

@@ -802,6 +802,8 @@ type Core struct {
 	// billing purposes.
 	certCountManager cert_count.CertificateCountManager
 
+	certCountConsumerJobInterval time.Duration
+
 	agentRegistry *AgentRegistry
 }
 
@@ -960,6 +962,8 @@ type CoreConfig struct {
 
 	// BillingConfig contains override values for billing
 	BillingConfig billing.BillingConfig
+
+	CertCountConsumerJobInterval time.Duration
 
 	// number of workers to use for lease revocation in the expiration manager
 	NumExpirationWorkers int
@@ -1203,9 +1207,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		enableUnauthGenerateRoot:        new(atomic.Bool),
 		enableUnauthDROperationToken:    new(atomic.Bool),
 		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
+		certCountConsumerJobInterval:    conf.CertCountConsumerJobInterval,
 	}
 
-	c.certCountManager = cert_count.InitCertificateCountManager(c.logger)
+	c.certCountManager = cert_count.InitCertificateCountManager(c.logger, c.certCountConsumerJobInterval)
 
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)

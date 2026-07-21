@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -15,14 +16,35 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestStoreAndGetAttributionData verifies the round-trip of storeAttributionDataLocked
-// and getStoredAttributionDataLocked, and the public GetStoredAttributionData wrapper.
-// It also verifies that a second store overwrites the previous entry (no implicit merge —
-// callers are responsible for merging before storing).
-func TestStoreAndGetAttributionData(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	ctx := context.Background()
+// TestToFloat64 verifies that toFloat64 correctly handles all value types that
+// can appear in a round-tripped MountAttribution.Count / MetricTypeAttribution.Count.
+func TestToFloat64(t *testing.T) {
+	// Native float64 — set by in-memory code paths.
+	require.Equal(t, 3.14, toFloat64(float64(3.14)))
+	require.Equal(t, 0.0, toFloat64(float64(0)))
 
+	// nil — should return 0 safely.
+	require.Equal(t, 0.0, toFloat64(nil))
+
+	// json.Number — returned by jsonutil.DecodeJSON for stored numeric values.
+	// Verify it is correctly unwrapped via the Float64() interface.
+	require.InDelta(t, 2.5, toFloat64(json.Number("2.5")), 0.0001, "Float64()-capable type should be unwrapped")
+
+	// Integer types are coerced to float64.
+	require.Equal(t, 5.0, toFloat64(int(5)), "int should coerce to float64")
+
+	// Unsupported types return 0.
+	require.Equal(t, 0.0, toFloat64("3.14"), "string should return 0")
+}
+
+// TestStoreAndGetAttributionData verifies the round-trip of storeAttributionDataLocked
+// and getStoredAttributionDataLocked, and that a second store overwrites the previous
+// entry (no implicit merge — callers are responsible for merging before storing).
+func TestStoreAndGetAttributionData(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	view := &logical.InmemStorage{}
 	now := time.Now().UTC()
 	month := timeutil.StartOfMonth(now)
 	lastUpdated := time.Date(2026, 5, 14, 18, 7, 23, 0, time.UTC)
@@ -52,12 +74,10 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 		},
 	}
 
-	// Store via the locked helper (lock is not held in tests since there's no contention)
-	err := core.storeAttributionDataLocked(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM, data)
+	err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, month, billing.KvHWMCountsHWM, data)
 	require.NoError(t, err)
 
-	// Retrieve via the locked helper
-	got, err := core.getStoredAttributionDataLocked(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
+	got, err := getStoredAttributionDataLocked(ctx, view, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
 	require.NoError(t, err)
 	require.NotNil(t, got)
 
@@ -89,10 +109,10 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 			"kv_bbb": {Count: 12, MountAccessor: "kv_bbb", MountPath: "new/", MountType: "kv"},
 		},
 	}
-	err = core.storeAttributionDataLocked(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM, overwrite)
+	err = storeAttributionDataLocked(ctx, view, billing.LocalPrefix, month, billing.KvHWMCountsHWM, overwrite)
 	require.NoError(t, err)
 
-	got, err = core.getStoredAttributionDataLocked(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
+	got, err = getStoredAttributionDataLocked(ctx, view, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
 	require.NoError(t, err)
 	require.NotNil(t, got)
 	require.Equal(t, "12", fmt.Sprintf("%v", got.Count))
@@ -101,106 +121,4 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	require.False(t, hasOld, "old mounts should be gone after overwrite")
 	_, hasNew := got.Mounts["kv_bbb"]
 	require.True(t, hasNew, "new mount should be present after overwrite")
-}
-
-// TestDeleteExpiredAttributionData verifies that deleteExpiredAttributionData removes
-// attribution data older than DefaultAttributionRetentionMonths while preserving
-// newer data and leaving regular billing metrics untouched.
-func TestDeleteExpiredAttributionData(t *testing.T) {
-	coreConfig := &CoreConfig{
-		LogicalBackends: roleLogicalBackends,
-	}
-	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
-	ctx := context.Background()
-
-	now := time.Now().UTC()
-	currentMonth := timeutil.StartOfMonth(now)
-	oldestRetainedMonth := currentMonth.AddDate(0, -(billing.DefaultAttributionRetentionMonths - 1), 0)
-	monthToDelete := currentMonth.AddDate(0, -billing.DefaultAttributionRetentionMonths, 0)
-
-	attrData := &logical.MetricTypeAttribution{
-		Count:       7,
-		LastUpdated: time.Now().UTC(),
-		Mounts: map[string]logical.MountAttribution{
-			"kv_test": {Count: 7, MountAccessor: "kv_test", MountPath: "secret/", MountType: "kv"},
-		},
-	}
-
-	// Store attribution data for all three months under both prefixes
-	for _, month := range []time.Time{monthToDelete, oldestRetainedMonth, currentMonth} {
-		for _, prefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
-			err := core.storeAttributionDataLocked(ctx, prefix, month, billing.KvHWMCountsHWM, attrData)
-			require.NoError(t, err)
-		}
-
-		// Also store regular billing metrics alongside to verify they are not deleted
-		core.storeMaxKvCountsLocked(ctx, 20, billing.LocalPrefix, month)
-	}
-
-	// Verify all attribution data exists before deletion
-	view, ok := core.GetBillingSubView()
-	require.True(t, ok)
-	for _, month := range []time.Time{monthToDelete, oldestRetainedMonth, currentMonth} {
-		attrPath := billing.GetAttributionMaxPath(billing.LocalPrefix, month, billing.KvHWMCountsHWM)
-		entry, err := view.Get(ctx, attrPath)
-		require.NoError(t, err)
-		require.NotNil(t, entry, "attribution should exist for month %s before deletion", month.Format("2006-01"))
-	}
-
-	// Call deleteExpiredAttributionData
-	err := core.deleteExpiredAttributionData(ctx, currentMonth)
-	require.NoError(t, err)
-
-	// Month to delete: attribution should be gone
-	for _, prefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
-		attrPath := billing.GetAttributionMaxPath(prefix, monthToDelete, billing.KvHWMCountsHWM)
-		entry, err := view.Get(ctx, attrPath)
-		require.NoError(t, err)
-		require.Nil(t, entry, "attribution for %s should be deleted", monthToDelete.Format("2006-01"))
-	}
-
-	// Oldest retained month: attribution should still exist
-	for _, prefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
-		attrPath := billing.GetAttributionMaxPath(prefix, oldestRetainedMonth, billing.KvHWMCountsHWM)
-		entry, err := view.Get(ctx, attrPath)
-		require.NoError(t, err)
-		require.NotNil(t, entry, "attribution for %s should be kept", oldestRetainedMonth.Format("2006-01"))
-	}
-
-	// Current month: attribution should still exist
-	for _, prefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
-		attrPath := billing.GetAttributionMaxPath(prefix, currentMonth, billing.KvHWMCountsHWM)
-		entry, err := view.Get(ctx, attrPath)
-		require.NoError(t, err)
-		require.NotNil(t, entry, "attribution for current month should be kept")
-	}
-
-	// Regular billing metrics for the deleted month should be untouched by deleteExpiredAttributionData
-	kvCounts, err := core.GetStoredHWMKvCounts(ctx, billing.LocalPrefix, monthToDelete)
-	require.NoError(t, err)
-	require.Equal(t, 20, kvCounts, "regular billing metrics should not be affected by attribution deletion")
-
-	// Now verify the inverse: deleteExpiredBillingMetrics must not delete attribution data.
-	// The attribution data for monthToDelete is still present (deleteExpiredAttributionData only
-	// deletes at DefaultAttributionRetentionMonths boundary, not DefaultBillingRetentionMonths).
-	// Store regular billing metrics for the billing-retention boundary month and re-run the
-	// billing deletion to confirm attribution survives.
-	billingMonthToDelete := currentMonth.AddDate(0, -billing.DefaultBillingRetentionMonths, 0)
-	core.storeMaxKvCountsLocked(ctx, 99, billing.LocalPrefix, billingMonthToDelete)
-	err = core.storeAttributionDataLocked(ctx, billing.LocalPrefix, billingMonthToDelete, billing.KvHWMCountsHWM, attrData)
-	require.NoError(t, err)
-
-	err = core.deleteExpiredBillingMetrics(ctx, currentMonth)
-	require.NoError(t, err)
-
-	// Regular billing metric at the billing boundary should be deleted
-	billingKvCounts, err := core.GetStoredHWMKvCounts(ctx, billing.LocalPrefix, billingMonthToDelete)
-	require.NoError(t, err)
-	require.Equal(t, 0, billingKvCounts, "regular billing metric at billing boundary should be deleted")
-
-	// Attribution at the billing boundary should still be present (independent retention)
-	billingAttrPath := billing.GetAttributionMaxPath(billing.LocalPrefix, billingMonthToDelete, billing.KvHWMCountsHWM)
-	billingAttrEntry, err := view.Get(ctx, billingAttrPath)
-	require.NoError(t, err)
-	require.NotNil(t, billingAttrEntry, "attribution data should NOT be deleted by deleteExpiredBillingMetrics")
 }

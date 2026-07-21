@@ -121,11 +121,11 @@ func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.logger.Info("handling start of month operations", "currentMonth", currentMonth)
 	// We only delete data older than retention months on the active node
 	if standby, _ := c.Standby(); !standby && !c.PerfStandby() {
-		if err := c.deleteExpiredBillingMetrics(ctx, currentMonth); err != nil {
+		if err := c.DeleteExpiredBillingMetrics(ctx, currentMonth); err != nil {
 			c.logger.Error("error deleting expired billing metrics", "error", err)
 		}
 
-		if err := c.deleteExpiredAttributionData(ctx, currentMonth); err != nil {
+		if err := c.DeleteExpiredAttributionData(ctx, currentMonth); err != nil {
 			c.logger.Error("error deleting expired attribution data")
 		}
 	}
@@ -136,7 +136,7 @@ func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Time{})
 }
 
-func (c *Core) deleteExpiredBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+func (c *Core) DeleteExpiredBillingMetrics(ctx context.Context, currentMonth time.Time) error {
 	// Get the configured retention period
 	retentionMonths, err := c.GetBillingRetentionMonths(ctx)
 	if err != nil {
@@ -151,8 +151,8 @@ func (c *Core) deleteExpiredBillingMetrics(ctx context.Context, currentMonth tim
 	return c.deleteExpiredDataAtPath(ctx, monthToDelete, false)
 }
 
-// deleteExpiredAttributionData deletes attribution data older than the default retention period.
-func (c *Core) deleteExpiredAttributionData(ctx context.Context, currentMonth time.Time) error {
+// DeleteExpiredAttributionData deletes attribution data older than the default retention period.
+func (c *Core) DeleteExpiredAttributionData(ctx context.Context, currentMonth time.Time) error {
 	// Delete attribution data from billing.DefaultAttributionRetentionMonths ago
 	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.DefaultAttributionRetentionMonths, 0)
 

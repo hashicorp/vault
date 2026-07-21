@@ -9,8 +9,7 @@ type CertificateCountSystemView interface {
 
 type nullCertificateCounter struct{}
 
-func (n *nullCertificateCounter) AddCount(_ CertCount) {
-}
+func (n *nullCertificateCounter) AddCount(_ CertCount) {}
 
 func (n *nullCertificateCounter) Increment() CertCountIncrementer {
 	return NewCertCountIncrementer(n)
