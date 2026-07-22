@@ -14,7 +14,11 @@ maintainer can apply the `pr/no-changelog` label.
 The changelog check for pull requests targeting `main` accepts either a valid
 fragment or the `pr/no-changelog` label. Since the fragment's filename uses the
 pull request number, you can open the pull request first and add the fragment
-in a follow-up commit.
+in a follow-up commit. Public `hashicorp/vault` pull requests use
+`changelog/<PR number>.txt` without a leading underscore. Underscore-prefixed
+fragments use the Vault Enterprise branch convention. Although these files
+appear in this directory, do not copy that prefix for a public Vault pull
+request.
 
 During the release process, the fragments are collected into the root
 `CHANGELOG.md` and pull request links are added automatically. Do not edit

@@ -4,7 +4,8 @@ What does this PR do?
 ### Changelog
 
 - [ ] I added a changelog fragment for a user-facing change, or explained in
-      the description why this pull request does not need one. See the
+      the description why this pull request does not need one so a maintainer
+      can apply the `pr/no-changelog` label. See the
       [changelog guidance](https://github.com/hashicorp/vault/blob/main/CONTRIBUTING.md#changelog-entries).
 
 ### TODO only if you're a HashiCorp employee

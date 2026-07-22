@@ -96,10 +96,14 @@ explain why in the pull request description so a maintainer can apply the
 `pr/no-changelog` label. The changelog check requires either that label or a
 valid fragment.
 
-Please include a file within your PR named `changelog/<PR number>.txt`. If you
-do not have a pull request number yet, open the pull request first and add the
-correctly named fragment in a follow-up commit. There are many examples and
-additional guidance in [changelog](changelog/), but the general format is
+For pull requests to the public `hashicorp/vault` repository, include a file
+named `changelog/<PR number>.txt` without a leading underscore. Files named
+`changelog/_<PR number>.txt` use the Vault Enterprise branch convention.
+Although these files appear in this directory, do not copy that prefix for a
+public Vault pull request. If you do not have a pull request number yet, open
+the pull request first and add the correctly named fragment in a follow-up
+commit. There are many examples and additional guidance in
+[changelog](changelog/), but the general format is
 
 ````
 ```release-note:CATEGORY
