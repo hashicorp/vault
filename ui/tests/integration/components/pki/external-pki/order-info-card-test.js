@@ -15,22 +15,31 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
-    this.order = undefined;
-    this.hasBorder = undefined;
+    this.orderId = 'test-order-123';
+    this.engineId = 'pki-external';
+    this.certificate = { details: undefined };
+    this.order = { details: undefined };
+
     this.renderComponent = () =>
-      render(hbs`<ExternalPki::OrderInfoCard @order={{this.order}} @hasBorder={{this.hasBorder}} />`, {
-        owner: this.engine,
-      });
+      render(
+        hbs`<ExternalPki::OrderInfoCard
+          @order={{this.order}}
+          @certificate={{this.certificate}}
+          @orderId={{this.orderId}}
+          @engineId={{this.engineId}}
+        />`,
+        { owner: this.engine }
+      );
   });
 
-  test('it renders empty state when no order provided', async function (assert) {
+  test('it renders empty state when no challenges provided', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.emptyStateTitle).hasText('No order challenges to display');
     assert.dom(GENERAL.tableRow()).doesNotExist('no table rows rendered without order data');
   });
 
   test('it renders empty state when order has no challenges', async function (assert) {
-    this.order = { challenges: null };
+    this.order = { details: { challenges: null } };
     await this.renderComponent();
     assert.dom(GENERAL.emptyStateTitle).hasText('No order challenges to display');
     assert.dom(GENERAL.tableRow()).doesNotExist('no table rows rendered without order data');
@@ -38,15 +47,17 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
 
   test('it renders table with single identifier and single challenge', async function (assert) {
     this.order = {
-      challenges: {
-        'example.com': [
-          {
-            challenge_status: 'pending',
-            challenge_type: 'dns-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
+      details: {
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'pending',
+              challenge_type: 'dns-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
       },
     };
 
@@ -77,21 +88,23 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
 
   test('it renders table with single identifier and multiple challenges', async function (assert) {
     this.order = {
-      challenges: {
-        'example.com': [
-          {
-            challenge_status: 'valid',
-            challenge_type: 'dns-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-          {
-            challenge_status: 'pending',
-            challenge_type: 'http-01',
-            expires: '2026-07-25T21:34:36Z',
-            requires_manual_fulfillment: 'true',
-          },
-        ],
+      details: {
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'valid',
+              challenge_type: 'dns-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+            {
+              challenge_status: 'pending',
+              challenge_type: 'http-01',
+              expires: '2026-07-25T21:34:36Z',
+              requires_manual_fulfillment: 'true',
+            },
+          ],
+        },
       },
     };
 
@@ -120,23 +133,25 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
 
   test('it renders table with multiple identifiers', async function (assert) {
     this.order = {
-      challenges: {
-        'example.com': [
-          {
-            challenge_status: 'valid',
-            challenge_type: 'dns-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
-        'test.example.com': [
-          {
-            challenge_status: 'pending',
-            challenge_type: 'http-01',
-            expires: '2026-07-25T21:34:36Z',
-            requires_manual_fulfillment: 'true',
-          },
-        ],
+      details: {
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'valid',
+              challenge_type: 'dns-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+          'test.example.com': [
+            {
+              challenge_status: 'pending',
+              challenge_type: 'http-01',
+              expires: '2026-07-25T21:34:36Z',
+              requires_manual_fulfillment: 'true',
+            },
+          ],
+        },
       },
     };
 
@@ -148,21 +163,23 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
 
   test('it shows valid status when multiple challenges are valid', async function (assert) {
     this.order = {
-      challenges: {
-        'example.com': [
-          {
-            challenge_status: 'valid',
-            challenge_type: 'dns-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-          {
-            challenge_status: 'valid',
-            challenge_type: 'http-01',
-            expires: '2026-07-25T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
+      details: {
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'valid',
+              challenge_type: 'dns-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+            {
+              challenge_status: 'valid',
+              challenge_type: 'http-01',
+              expires: '2026-07-25T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
       },
     };
 
@@ -176,21 +193,23 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
 
   test('it shows pending status when no challenges are valid', async function (assert) {
     this.order = {
-      challenges: {
-        'example.com': [
-          {
-            challenge_status: 'pending',
-            challenge_type: 'dns-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-          {
-            challenge_status: 'invalid',
-            challenge_type: 'http-01',
-            expires: '2026-07-25T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
+      details: {
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'pending',
+              challenge_type: 'dns-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+            {
+              challenge_status: 'invalid',
+              challenge_type: 'http-01',
+              expires: '2026-07-25T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
       },
     };
 
@@ -206,31 +225,33 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
 
   test('it formats challenge types to uppercase', async function (assert) {
     this.order = {
-      challenges: {
-        'example.com': [
-          {
-            challenge_status: 'valid',
-            challenge_type: 'dns-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
-        'test.com': [
-          {
-            challenge_status: 'valid',
-            challenge_type: 'http-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
-        'another.com': [
-          {
-            challenge_status: 'valid',
-            challenge_type: 'tls-alpn-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
+      details: {
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'valid',
+              challenge_type: 'dns-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+          'test.com': [
+            {
+              challenge_status: 'valid',
+              challenge_type: 'http-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+          'another.com': [
+            {
+              challenge_status: 'valid',
+              challenge_type: 'tls-alpn-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
       },
     };
 
@@ -243,31 +264,43 @@ module('Integration | Component | ExternalPki::OrderInfoCard', function (hooks) 
       .hasText('TLS-ALPN-01', 'tls-alpn-01 formatted to TLS-ALPN-01');
   });
 
-  test('it yields orderDetails block when provided', async function (assert) {
+  test('it renders order ID and creation date when certificate details are present', async function (assert) {
     this.order = {
-      challenges: {
-        'example.com': [
-          {
-            challenge_status: 'valid',
-            challenge_type: 'dns-01',
-            expires: '2026-07-24T21:34:36Z',
-            requires_manual_fulfillment: 'false',
-          },
-        ],
+      details: {
+        creation_date: '2026-07-20T10:00:00Z',
+        role_name: 'myrole',
+        challenges: {},
+      },
+    };
+    this.certificate = {
+      details: {
+        serial_number: 'ab:cd:ef',
+        certificate: '-----BEGIN CERTIFICATE-----\nMIIC...\n-----END CERTIFICATE-----',
       },
     };
 
-    await render(
-      hbs`
-      <ExternalPki::OrderInfoCard @order={{this.order}}>
-        <:orderDetails>
-          <div data-test-custom-details>Custom order details</div>
-        </:orderDetails>
-      </ExternalPki::OrderInfoCard>
-    `,
-      { owner: this.engine }
-    );
+    await this.renderComponent();
 
-    assert.dom('[data-test-custom-details]').hasText('Custom order details', 'yields orderDetails block');
+    assert
+      .dom('[data-test-row-value="Order ID"]')
+      .exists('renders Order ID copy snippet when certificate is present');
+    assert
+      .dom('[data-test-row-value="Order created"]')
+      .exists('renders Order created date when certificate is present');
+  });
+
+  test('it does not render order ID and creation date without certificate details', async function (assert) {
+    this.order = {
+      details: {
+        creation_date: '2026-07-20T10:00:00Z',
+        challenges: {},
+      },
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom('[data-test-order-card-details]')
+      .doesNotExist('order card details section not shown without certificate');
   });
 });

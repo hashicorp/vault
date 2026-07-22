@@ -18,7 +18,7 @@ export type OrderStatusName =
   | 'expired'
   | 'error';
 
-// Challenge statues originate from RFC 8555:
+// Challenge statuses originate from RFC 8555:
 // https://datatracker.ietf.org/doc/html/rfc8555#section-7.1.6
 export type ChallengeStatusName = 'valid' | 'pending' | 'processing' | 'invalid';
 

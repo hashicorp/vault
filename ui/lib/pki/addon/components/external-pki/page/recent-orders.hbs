@@ -188,7 +188,7 @@
       {{/if}}
       {{#if (includes column.key (array "creation_date" "last_update"))}}
         <Hds::Text::Code @tag="p">
-          {{this.formatDate value}}
+          {{format-date-utc value}}
         </Hds::Text::Code>
       {{/if}}
     </:customTableItem>
