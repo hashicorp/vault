@@ -135,6 +135,7 @@ type NewUserRequest struct {
 type UsernameMetadata struct {
 	DisplayName string
 	RoleName    string
+	Reason      string
 }
 
 // NewUserResponse returns any information Vault needs to know after creating a new user.
