@@ -1,6 +1,12 @@
 ### Description
 What does this PR do?
 
+### Changelog
+
+- [ ] I added a changelog fragment for a user-facing change, or explained in
+      the description why this pull request does not need one. See the
+      [changelog guidance](https://github.com/hashicorp/vault/blob/main/CONTRIBUTING.md#changelog-entries).
+
 ### TODO only if you're a HashiCorp employee
 - [ ] **Backport Labels:** If this fix needs to be backported, use the appropriate `backport/` label that matches the desired release branch.
     - [ ] **LTS**: If this fixes a critical security vulnerability or [severity 1](https://www.hashicorp.com/customer-success/enterprise-support) bug, it will also need to be backported to the current [LTS versions](https://developer.hashicorp.com/vault/docs/enterprise/lts#why-is-there-a-risk-to-updating-to-a-non-lts-vault-enterprise-version) of Vault. To ensure this, use **all** available enterprise labels.

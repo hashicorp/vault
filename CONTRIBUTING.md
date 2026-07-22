@@ -86,9 +86,20 @@ in this document.  If it doesn't we'll mark the PR incomplete and ask you to fol
 up on the missing requirements.
 
 ### Changelog Entries
-Please include a file within your PR named `changelog/#.txt`, where `#` is your
-pull request ID.  There are many examples under [changelog](changelog/), but
-the general format is
+
+Vault uses the files under [changelog](changelog/) as fragments when building
+release notes and the root `CHANGELOG.md`. Add a fragment when a change affects
+users or operators, such as a bug fix, behavior change, deprecation, feature,
+or notable improvement. Test-only, CI-only, and repository-documentation
+changes generally do not need one. If your change does not need a fragment,
+explain why in the pull request description so a maintainer can apply the
+`pr/no-changelog` label. The changelog check requires either that label or a
+valid fragment.
+
+Please include a file within your PR named `changelog/<PR number>.txt`. If you
+do not have a pull request number yet, open the pull request first and add the
+correctly named fragment in a follow-up commit. There are many examples and
+additional guidance in [changelog](changelog/), but the general format is
 
 ````
 ```release-note:CATEGORY
@@ -96,17 +107,18 @@ COMPONENT: summary of change
 ```
 ````
 
-CATEGORY is one of `security`, `change`, `feature`, `improvement`, or `bug`.
-Your PR is almost certain to be one of `bug` or `improvement`, but don't
-worry too much about getting it exactly right, we'll tell you if a change is 
-needed.
+CATEGORY is one of `security`, `change`, `deprecation`, `feature`,
+`improvement`, or `bug`. Your PR is almost certain to be one of `bug` or
+`improvement`, but don't worry too much about getting it exactly right, we'll
+tell you if a change is needed.
 
 To determine the relevant component, consult [CHANGELOG](CHANGELOG.md) and pick
 whichever one you see that seems the closest match.
 
 You do not need to include the link at the end of the summary that appears in
-CHANGELOG.md, those are generated automatically by the changelog-building 
-process.
+`CHANGELOG.md`; the changelog-building process generates those links and
+collects the fragments automatically. Do not edit `CHANGELOG.md` directly for
+an individual pull request.
 
 ### Vault UI
 
