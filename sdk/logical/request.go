@@ -514,10 +514,11 @@ const (
 	RecoverOperation                  = "recover"
 
 	// The operations below are called globally, the path is less relevant.
-	RevokeOperation   Operation = "revoke"
-	RenewOperation              = "renew"
-	RollbackOperation           = "rollback"
-	RotationOperation           = "rotate"
+	RevokeOperation      Operation = "revoke"
+	RenewOperation                 = "renew"
+	RollbackOperation              = "rollback"
+	RotationOperation              = "rotate"
+	HealthCheckOperation           = "health-check"
 )
 
 type MFACreds map[string][]string
