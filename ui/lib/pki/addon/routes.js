@@ -69,10 +69,15 @@ export default buildRoutes(function () {
       this.route('roles', function () {
         this.route('role', { path: '/:role_name' }, function () {
           this.route('details');
-          this.route('active-orders'); // Specific order details route to orders.order.details
+          this.route('active-orders');
+          // Some users may just have permissions to a particular role.
+          // This route uses API requests that are role path-based for order lookups
+          // e.g. `GET :mount/role/:role_name/order/:order_id/status`
+          this.route('order', { path: '/:order_id' });
         });
       });
       this.route('orders', function () {
+        // Lookup by JUST order ID (not via role)
         this.route('order', { path: '/:order_id' });
       });
       this.route('certificates', function () {

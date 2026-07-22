@@ -3,14 +3,44 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+{{#if this.errorMessage}}
+  <MessageError @errorMessage={{this.errorMessage}} />
+{{/if}}
+
 {{#each-in @config as |configParam configValue|}}
-  {{#unless (includes configParam this.excludedFields)}}
-    {{#if (eq configParam "trusted_ca")}}
+  {{#if (and configValue (not (includes configParam this.excludedFields)))}}
+    {{#if (this.renderEncodedDataCard configParam)}}
       <InfoTableRow @label={{this.label configParam}}>
         <EncodedDataCard @data={{configValue}} />
       </InfoTableRow>
+    {{else if (this.isDate configParam)}}
+      <InfoTableRow @label={{this.label configParam}}>
+        {{! Display local time in tooltip over UTC timestamp to ease date comparison }}
+        <Hds::TooltipButton @text={{date-format configValue "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}>
+          {{format-date-utc configValue}}
+        </Hds::TooltipButton>
+      </InfoTableRow>
+    {{else if (eq configParam "order_status")}}
+      <InfoTableRow @label={{this.label configParam}}>
+        {{#let (map-status-badge configValue) as |state|}}
+          <Hds::Badge @text={{state.text}} @color={{state.color}} data-test-badge="order_status" />
+        {{/let}}
+      </InfoTableRow>
+    {{else if (and (eq configParam "role_name") @engineId)}}
+      <InfoTableRow @label={{this.label configParam}}>
+        <Hds::Link::Inline
+          @route="external.roles.role.details"
+          @models={{array @engineId configValue}}
+          data-test-link-to={{configValue}}
+        >{{configValue}}</Hds::Link::Inline>
+      </InfoTableRow>
     {{else}}
-      <InfoTableRow @label={{this.label configParam}} @value={{configValue}} @formatTtl={{eq configParam "ttl"}} />
+      <InfoTableRow
+        @label={{this.label configParam}}
+        @value={{configValue}}
+        @formatTtl={{eq configParam "ttl"}}
+        @addCopyButton={{this.renderCopyButton configParam}}
+      />
     {{/if}}
-  {{/unless}}
+  {{/if}}
 {{/each-in}}
