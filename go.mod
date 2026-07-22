@@ -42,8 +42,8 @@ require (
 	cloud.google.com/go/monitoring v1.26.0
 	cloud.google.com/go/spanner v1.89.0
 	cloud.google.com/go/storage v1.62.0
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.1
-	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.22.0
+	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.14.0
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/Azure/go-autorest/autorest v0.11.30
 	github.com/Azure/go-autorest/autorest/adal v0.9.24
@@ -171,7 +171,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
-	github.com/hashicorp/vault-plugin-secrets-azure v0.25.0
+	github.com/hashicorp/vault-plugin-secrets-azure v0.25.1-0.20260701004220-d4318adfedf8
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.24.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.24.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1
@@ -357,7 +357,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.2 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/DataDog/datadog-go v3.2.0+incompatible // indirect
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.6.0 // indirect
@@ -503,13 +503,13 @@ require (
 	github.com/mediocregopher/radix/v4 v4.1.4 // indirect
 	github.com/microsoft/kiota-abstractions-go v1.9.4 // indirect
 	github.com/microsoft/kiota-authentication-azure-go v1.3.1 // indirect
-	github.com/microsoft/kiota-http-go v1.5.5 // indirect
+	github.com/microsoft/kiota-http-go v1.5.6 // indirect
 	github.com/microsoft/kiota-serialization-form-go v1.1.3 // indirect
 	github.com/microsoft/kiota-serialization-json-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-multipart-go v1.1.2 // indirect
 	github.com/microsoft/kiota-serialization-text-go v1.1.3 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go v1.97.0 // indirect
-	github.com/microsoftgraph/msgraph-sdk-go-core v1.4.0 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go v1.99.0 // indirect
+	github.com/microsoftgraph/msgraph-sdk-go-core v1.4.1 // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/mitchellh/hashstructure v1.1.0 // indirect
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
