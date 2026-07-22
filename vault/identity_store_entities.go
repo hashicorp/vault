@@ -101,7 +101,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleEntityUpdateCommon(),
+					Callback: i.handleEntityNameUpdateCommon(),
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
@@ -135,7 +135,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleEntityUpdateCommon(),
+					Callback: i.handleEntityIDUpdateCommon(),
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
@@ -303,9 +303,24 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		toEntity, err := i.MemDBEntityByID(toEntityID, true)
+		toEntity, err := i.MemDBEntityByIDInTxn(txn, toEntityID, true)
 		if err != nil {
 			return nil, err
+		}
+
+		// Merging SCIM-managed entities via the API is not allowed.
+		if toEntity != nil && toEntity.ScimClientID != "" {
+			return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM, cannot target to_entity %s", toEntity.ID), logical.ErrPermissionDenied
+		}
+		for _, fromEntityID := range fromEntityIDs {
+			fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, false)
+			if err != nil {
+				return nil, err
+			}
+			// non-existent fromEntity validation is handled in mergeEntity
+			if fromEntity != nil && fromEntity.ScimClientID != "" {
+				return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM, cannot target from_entity %s", fromEntity.ID), logical.ErrPermissionDenied
+			}
 		}
 
 		userErr, intErr, aliases := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, conflictingAliasIDsToKeep, force, false, false, true, false)
@@ -334,8 +349,25 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		i.lock.Lock()
 		defer i.lock.Unlock()
-
 		return i.EntityUpdateCommon(ctx, d)
+	}
+}
+
+// handleEntityNameUpdateCommon is used to update an entity via the name path.
+func (i *IdentityStore) handleEntityNameUpdateCommon() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+		return i.EntityNameUpdateCommon(ctx, d)
+	}
+}
+
+// handleEntityIDUpdateCommon is used to update an entity via the id path.
+func (i *IdentityStore) handleEntityIDUpdateCommon() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+		return i.EntityIDUpdateCommon(ctx, d)
 	}
 }
 

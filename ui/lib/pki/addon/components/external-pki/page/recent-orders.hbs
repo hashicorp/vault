@@ -1,0 +1,223 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @model.recentOrders.length}}
+  <Hds::Text::Body class="has-top-margin-s">List of orders created in the last
+    {{this.timeQuery.formatted}}. You can lookup an archived order by its ID from the
+    <Hds::Link::Inline @route="external.overview">
+      Overview tab.
+    </Hds::Link::Inline>
+  </Hds::Text::Body>
+{{/if}}
+
+<Hds::Layout::Flex class="has-top-margin-l">
+  <Hds::SegmentedGroup as |SG|>
+    <SG.TextInput
+      @width="300px"
+      @type="search"
+      id="order filter"
+      @value={{this.orderIdSearch}}
+      placeholder={{if @model.recentOrders.length "Filter by order ID" "No orders to filter"}}
+      aria-label={{if @model.recentOrders.length "Filter by order ID" "No orders to filter"}}
+      data-test-input-search="Filter by order ID"
+      {{on "input" (fn this.handleSearch "orderIdSearch")}}
+      disabled={{not @model.recentOrders.length}}
+    />
+
+    {{! Role Name Dropdown }}
+    <SG.Dropdown @isFullWidth={{true}} @onClose={{fn (mut this.roleNameSearch) ""}} @width="250px" as |D|>
+      <D.ToggleButton
+        @color="secondary"
+        @text="Role"
+        disabled={{not @model.recentOrders.length}}
+        data-test-dropdown="Role"
+      />
+      <D.Header>
+        <Hds::Form::TextInput::Base
+          type="search"
+          placeholder="Search"
+          id="roleNameSearch"
+          autocomplete="off"
+          @value={{this.roleNameSearch}}
+          data-test-input-search="roleNameSearch"
+          {{on "input" (fn this.handleSearch "roleNameSearch")}}
+        />
+      </D.Header>
+      <D.Separator />
+      {{#each this.filteredRoleNames as |roleName|}}
+        <D.Checkmark
+          {{on "click" (fn this.dropdownClick "roleFilter" roleName D.close)}}
+          @selected={{eq roleName this.roleFilter}}
+          data-test-popup-menu={{roleName}}
+        >
+          {{roleName}}
+        </D.Checkmark>
+      {{else}}
+        <D.Description
+          class="has-top-padding-xs"
+          @text={{if this.roleNameSearch "No matching role names" "No role names to filter"}}
+        />
+      {{/each}}
+    </SG.Dropdown>
+
+    {{! Status Dropdown }}
+    <SG.Dropdown @isFullWidth={{true}} @width="250px" as |D|>
+      <D.ToggleButton
+        @color="secondary"
+        @text="Status"
+        disabled={{not @model.recentOrders.length}}
+        data-test-dropdown="Status"
+      />
+      {{#each this.statusOptions as |statusOption|}}
+        <D.Checkmark
+          {{on "click" (fn this.dropdownClick "statusFilter" statusOption D.close)}}
+          @selected={{eq statusOption this.statusFilter}}
+          data-test-popup-menu={{statusOption}}
+        >
+          {{statusOption}}
+        </D.Checkmark>
+      {{else}}
+        <D.Description class="has-top-padding-xs" @text="No statuses to filter" />
+      {{/each}}
+    </SG.Dropdown>
+
+    {{! Time Period Dropdown }}
+    <SG.Dropdown @width="250px" as |D|>
+      <D.ToggleButton
+        @color="secondary"
+        @text="Created in last: {{this.timeQuery.formatted}}"
+        data-test-dropdown="Created in last"
+      />
+      {{#each this.timeQueryOptions as |option|}}
+        <D.Checkmark
+          @route="external.orders"
+          @query={{hash within=option.value}}
+          @selected={{eq option.value this.timeQuery.raw}}
+          {{on "click" D.close}}
+          data-test-popup-menu={{option.label}}
+        >
+          {{option.label}}
+        </D.Checkmark>
+      {{/each}}
+    </SG.Dropdown>
+  </Hds::SegmentedGroup>
+
+  <Hds::Button
+    class="margin-left-auto"
+    @color="tertiary"
+    @icon="reload"
+    @iconPosition="trailing"
+    @text="Refresh"
+    {{on "click" this.refresh}}
+    data-test-button="Refresh"
+  />
+</Hds::Layout::Flex>
+
+{{#if @model.recentOrders.length}}
+  <Hds::Layout::Flex
+    class="has-top-padding-m has-bottom-padding-s"
+    @gap="8"
+    @align="center"
+    data-test-filter-tag-container
+    as |LF|
+  >
+    <Hds::Text::Body @color="faint">Filters applied:</Hds::Text::Body>
+    {{#if this.filterCount}}
+      {{#if this.roleFilter}}
+        <LF.Item>
+          <Hds::Tag
+            @text={{this.roleFilter}}
+            @onDismiss={{fn this.clearFilter "roleFilter"}}
+            data-test-filter-tag="roleFilter {{this.roleFilter}}"
+          />
+        </LF.Item>
+      {{/if}}
+
+      {{#if this.statusFilter}}
+        <LF.Item>
+          <Hds::Tag
+            @text={{this.statusFilter}}
+            @onDismiss={{fn this.clearFilter "statusFilter"}}
+            data-test-filter-tag="status {{this.statusFilter}}"
+          />
+        </LF.Item>
+      {{/if}}
+
+      {{#if (gt this.filterCount 1)}}
+        <Hds::Button
+          @icon="x-circle"
+          @text="Clear filters"
+          @color="tertiary"
+          {{on "click" (fn this.clearFilter "")}}
+          data-test-button="Clear filters"
+        />
+      {{/if}}
+    {{else}}
+      <Hds::Text::Body @color="faint">None</Hds::Text::Body>
+    {{/if}}
+  </Hds::Layout::Flex>
+{{/if}}
+
+{{#if this.filteredOrders.length}}
+  <ListTable @columns={{this.tableColumns}} @data={{this.filteredOrders}}>
+    <:customTableItem as |row column value|>
+      {{#if (eq column.key "order_id")}}
+        <Hds::Link::Inline
+          @route="external.orders.order"
+          @models={{array @model.engine.id value}}
+          @color="secondary"
+          class="has-text-weight-semibold"
+          data-test-link-to={{value}}
+        >{{value}}</Hds::Link::Inline>
+      {{/if}}
+      {{#if (eq column.key "role_name")}}
+        <Hds::Link::Inline
+          @route="external.roles.role"
+          @models={{array @model.engine.id value}}
+          @color="secondary"
+          class="has-text-weight-semibold"
+          data-test-link-to={{value}}
+        >{{value}}</Hds::Link::Inline>
+      {{/if}}
+      {{#if (eq column.key "order_status")}}
+        {{#let (map-status-badge value) as |state|}}
+          <Hds::Badge @text={{state.text}} @color={{state.color}} data-test-badge="order_status" />
+        {{/let}}
+      {{/if}}
+      {{#if (includes column.key (array "creation_date" "last_update"))}}
+        <Hds::Text::Code @tag="p">
+          {{this.formatDate value}}
+        </Hds::Text::Code>
+      {{/if}}
+    </:customTableItem>
+  </ListTable>
+{{else}}
+  <Hds::ApplicationState class="has-top-padding-l" as |A|>
+    <A.Header @title={{this.emptyState.title}} @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text={{this.emptyState.message}} data-test-empty-state-message />
+    {{#if this.emptyState.yieldAction}}
+      <A.Body data-test-empty-state-actions>
+        <Hds::Layout::Flex @gap="8" class="has-top-padding-m" as |LF|>
+          <LF.Item @grow={{1}}>
+            <InputSearch
+              @placeholder="01936d8e-7c3..."
+              @onChange={{fn (mut this.orderIdLookup)}}
+              @changeEvent="input"
+              @id="orderId"
+            />
+          </LF.Item>
+          <LF.Item>
+            <Hds::Button
+              @text="Lookup order"
+              @color="secondary"
+              {{on "click" this.lookupOrder}}
+              data-test-button="Lookup order"
+            />
+          </LF.Item>
+        </Hds::Layout::Flex>
+      </A.Body>
+    {{/if}}
+  </Hds::ApplicationState>
+{{/if}}

@@ -19,7 +19,7 @@
     {{/each}}
 
     {{#if this.supportsUserLockoutConfig}}
-      <hr class="has-top-margin-xl has-bottom-margin-l has-background-gray-200" />
+      <Hds::Separator class="has-top-margin-xl has-bottom-margin-l" />
       <Hds::Text::Display @tag="h2" @size="400" @weight="bold" data-test-user-lockout-section>User lockout configuration</Hds::Text::Display>
       <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-bottom-margin-m">
         Specifies the user lockout settings for this auth mount.

@@ -4,8 +4,12 @@
 package logical
 
 import (
+	"crypto/x509"
 	"math"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func Test_durationAdjustedCertificateCount(t *testing.T) {
@@ -219,4 +223,220 @@ func Benchmark_durationAdjustedCertificateCount_Various(b *testing.B) {
 	}
 }
 
-// Made with Bob
+// makeCert creates a test certificate with the given validity.
+func makeCert(t *testing.T, validity time.Duration) *x509.Certificate {
+	t.Helper()
+
+	// AddIssuedCertificate only uses NotBefore/NotAfter, so a minimal x509.Certificate is sufficient.
+	notBefore := time.Now()
+	return &x509.Certificate{
+		NotBefore: notBefore,
+		NotAfter:  notBefore.Add(validity),
+	}
+}
+
+// TestWithMountInfo_PKI verifies that WithMountInfo followed by AddIssuedCertificate
+// populates PkiMountAttributions with the correct count (duration-adjusted units) and
+// metadata, while leaving SshCertMountAttributions and SshOtpMountAttributions empty.
+func TestWithMountInfo_PKI(t *testing.T) {
+	recording := &TestCertificateCounter{}
+
+	mount := MountAttribution{
+		MountAccessor:    "pki_abc123",
+		MountPath:        "pki/",
+		MountType:        "pki",
+		NamespaceID:      "root",
+		NamespacePath:    "",
+		BackendAwareUUID: "pki-backend-uuid-001",
+	}
+
+	// 730 h = 1 standard duration = 1.0000 billing unit
+	cert := makeCert(t, 730*time.Hour)
+	NewCertCountIncrementer(recording).WithMountInfo(mount).AddIssuedCertificate(true, cert)
+
+	require.Equal(t, uint64(1), recording.Record.IssuedCerts)
+	require.Equal(t, uint64(1), recording.Record.StoredCerts)
+	require.InDelta(t, 1.0, recording.Record.PkiDurationAdjustedCerts, 0.0001)
+
+	require.Len(t, recording.Record.PkiMountAttributions, 1)
+	attr := recording.Record.PkiMountAttributions[mount.MountAccessor]
+	require.Equal(t, mount.MountAccessor, attr.MountAccessor)
+	require.Equal(t, mount.MountPath, attr.MountPath)
+	require.Equal(t, mount.MountType, attr.MountType)
+	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
+	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.InDelta(t, 1.0, attr.Count.(float64), 0.0001, "per-mount count should equal billing units")
+
+	require.Empty(t, recording.Record.SshCertMountAttributions)
+	require.Empty(t, recording.Record.SshOtpMountAttributions)
+}
+
+// TestWithMountInfo_SSH verifies that WithMountInfo followed by AddSSHCertificate
+// populates SshCertMountAttributions.
+func TestWithMountInfo_SSH(t *testing.T) {
+	recording := &TestCertificateCounter{}
+
+	mount := MountAttribution{
+		MountAccessor:    "ssh_xyz789",
+		MountPath:        "ssh/",
+		MountType:        "ssh",
+		NamespaceID:      "ns1",
+		NamespacePath:    "ns1/",
+		BackendAwareUUID: "ssh-backend-uuid-001",
+	}
+
+	// 730 h = 1.0 billing unit
+	NewCertCountIncrementer(recording).WithMountInfo(mount).AddSSHCertificate(730 * time.Hour)
+
+	require.InDelta(t, 1.0, recording.Record.SSHIssuedCerts, 0.0001)
+	require.Len(t, recording.Record.SshCertMountAttributions, 1)
+	attr := recording.Record.SshCertMountAttributions[mount.MountAccessor]
+	require.Equal(t, mount.MountAccessor, attr.MountAccessor)
+	require.Equal(t, mount.MountPath, attr.MountPath)
+	require.Equal(t, mount.MountType, attr.MountType)
+	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
+	require.Equal(t, mount.NamespacePath, attr.NamespacePath)
+	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.InDelta(t, 1.0, attr.Count.(float64), 0.0001)
+
+	require.Empty(t, recording.Record.PkiMountAttributions)
+	require.Empty(t, recording.Record.SshOtpMountAttributions)
+}
+
+// TestWithMountInfo_SSHOTP verifies that WithMountInfo followed by AddSSHOTP
+// populates SshOtpMountAttributions with the fixed OTP unit value.
+func TestWithMountInfo_SSHOTP(t *testing.T) {
+	recording := &TestCertificateCounter{}
+
+	mount := MountAttribution{
+		MountAccessor:    "ssh_otp_001",
+		MountPath:        "ssh/",
+		MountType:        "ssh",
+		NamespaceID:      "root",
+		BackendAwareUUID: "ssh-backend-uuid-002",
+	}
+
+	NewCertCountIncrementer(recording).WithMountInfo(mount).AddSSHOTP()
+
+	require.InDelta(t, 0.0014, recording.Record.SSHIssuedOTPs, 0.00001)
+	require.Len(t, recording.Record.SshOtpMountAttributions, 1)
+	attr := recording.Record.SshOtpMountAttributions[mount.MountAccessor]
+	require.Equal(t, mount.MountAccessor, attr.MountAccessor)
+	require.Equal(t, mount.MountPath, attr.MountPath)
+	require.Equal(t, mount.MountType, attr.MountType)
+	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
+	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.InDelta(t, 0.0014, attr.Count.(float64), 0.00001)
+
+	require.Empty(t, recording.Record.PkiMountAttributions)
+	require.Empty(t, recording.Record.SshCertMountAttributions)
+}
+
+// TestWithMountInfo_EmptyAccessorSkipped verifies that when MountAccessor is empty
+// no attribution entry is recorded (guards against a blank map key), and that
+// mountInfo is consumed so a subsequent Add* on the same incrementer also has no attribution.
+func TestWithMountInfo_EmptyAccessorSkipped(t *testing.T) {
+	recording := &TestCertificateCounter{}
+
+	emptyMount := MountAttribution{
+		MountAccessor: "", // intentionally blank
+		MountPath:     "pki/",
+		MountType:     "pki",
+	}
+
+	cert := makeCert(t, 730*time.Hour)
+	inc := NewCertCountIncrementer(recording)
+
+	// First call: WithMountInfo(empty) then Add — must not produce attribution.
+	inc.WithMountInfo(emptyMount).AddIssuedCertificate(false, cert)
+	require.Equal(t, uint64(1), recording.Record.IssuedCerts)
+	require.Empty(t, recording.Record.PkiMountAttributions, "blank accessor must not produce attribution entry")
+
+	// Reset recorder and call Add again on the same incrementer without WithMountInfo.
+	// mountInfo should have been consumed (set to nil) by the first call.
+	recording.Record = CertCount{}
+	inc.AddIssuedCertificate(false, cert)
+	require.Equal(t, uint64(1), recording.Record.IssuedCerts)
+	require.Empty(t, recording.Record.PkiMountAttributions, "stale mountInfo must not leak into a subsequent Add call")
+}
+
+// TestWithMountInfo_NotCalledNoAttribution verifies that omitting WithMountInfo
+// produces no attribution maps, maintaining backward compatibility.
+func TestWithMountInfo_NotCalledNoAttribution(t *testing.T) {
+	recording := &TestCertificateCounter{}
+
+	cert := makeCert(t, 730*time.Hour)
+	NewCertCountIncrementer(recording).AddIssuedCertificate(true, cert)
+
+	require.Equal(t, uint64(1), recording.Record.IssuedCerts)
+	require.Empty(t, recording.Record.PkiMountAttributions)
+	require.Empty(t, recording.Record.SshCertMountAttributions)
+	require.Empty(t, recording.Record.SshOtpMountAttributions)
+}
+
+// TestCertCount_Add_MergesAttributions verifies that CertCount.Add correctly
+// accumulates per-mount counts across multiple Add calls for all three metric types.
+func TestCertCount_Add_MergesAttributions(t *testing.T) {
+	a := CertCount{
+		PkiDurationAdjustedCerts: 1.0,
+		SSHIssuedCerts:           0.5,
+		SSHIssuedOTPs:            0.0014,
+		PkiMountAttributions: map[string]MountAttribution{
+			"pki_aaa": {MountAccessor: "pki_aaa", Count: 1.0},
+		},
+		SshCertMountAttributions: map[string]MountAttribution{
+			"ssh_aaa": {MountAccessor: "ssh_aaa", Count: 0.5},
+		},
+		SshOtpMountAttributions: map[string]MountAttribution{
+			"otp_aaa": {MountAccessor: "otp_aaa", Count: 0.0014},
+		},
+	}
+	b := CertCount{
+		PkiDurationAdjustedCerts: 2.0,
+		SSHIssuedCerts:           1.0,
+		SSHIssuedOTPs:            0.0014,
+		PkiMountAttributions: map[string]MountAttribution{
+			"pki_aaa": {MountAccessor: "pki_aaa", Count: 2.0}, // same mount — should sum
+			"pki_bbb": {MountAccessor: "pki_bbb", Count: 2.0}, // new mount — should be added
+		},
+		SshCertMountAttributions: map[string]MountAttribution{
+			"ssh_aaa": {MountAccessor: "ssh_aaa", Count: 1.0}, // accumulate
+		},
+		SshOtpMountAttributions: map[string]MountAttribution{
+			"otp_bbb": {MountAccessor: "otp_bbb", Count: 0.0014}, // new
+		},
+	}
+
+	a.Add(b)
+
+	// PKI
+	require.InDelta(t, 3.0, a.PkiDurationAdjustedCerts, 0.0001)
+	require.Len(t, a.PkiMountAttributions, 2)
+	require.InDelta(t, 3.0, a.PkiMountAttributions["pki_aaa"].Count.(float64), 0.0001, "same-mount PKI counts should accumulate")
+	require.InDelta(t, 2.0, a.PkiMountAttributions["pki_bbb"].Count.(float64), 0.0001, "new PKI mount should be present")
+
+	// SSH cert
+	require.InDelta(t, 1.5, a.SSHIssuedCerts, 0.0001)
+	require.Len(t, a.SshCertMountAttributions, 1)
+	require.InDelta(t, 1.5, a.SshCertMountAttributions["ssh_aaa"].Count.(float64), 0.0001, "same-mount SSH counts should accumulate")
+
+	// SSH OTP
+	require.InDelta(t, 0.0028, a.SSHIssuedOTPs, 0.00001)
+	require.Len(t, a.SshOtpMountAttributions, 2)
+	require.InDelta(t, 0.0014, a.SshOtpMountAttributions["otp_aaa"].Count.(float64), 0.00001)
+	require.InDelta(t, 0.0014, a.SshOtpMountAttributions["otp_bbb"].Count.(float64), 0.00001)
+}
+
+// TestCertCount_IsZero_WithAttributions verifies that IsZero returns false
+// when only attribution maps are populated.
+func TestCertCount_IsZero_WithAttributions(t *testing.T) {
+	c := CertCount{
+		PkiMountAttributions: map[string]MountAttribution{
+			"pki_aaa": {MountAccessor: "pki_aaa", Count: 1.0},
+		},
+	}
+	require.False(t, c.IsZero(), "CertCount with only attribution should not be zero")
+
+	empty := CertCount{}
+	require.True(t, empty.IsZero())
+}

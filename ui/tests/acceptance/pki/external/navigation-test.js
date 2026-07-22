@@ -26,6 +26,7 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
     this.acmeListStub = sinon.stub(api.secrets, 'pkiExternalCaListConfigAcmeAccount');
     this.dnsListStub = sinon.stub(api.secrets, 'pkiExternalCaListConfigDns');
     this.rolesListStub = sinon.stub(api.secrets, 'pkiExternalCaListRole');
+    this.recentOrdersListStub = sinon.stub(api.secrets, 'pkiExternalCaListLookupOrdersRecent');
     this.mountPath = `pki-external-ca-${uuidv4()}`;
     // Setup External PKI engine
     await login();
@@ -123,6 +124,7 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
       this.acmeListStub.resolves({ keys: ['my-acme-account'] });
       this.rolesListStub.rejects(getErrorResponse());
       this.dnsListStub.rejects(getErrorResponse());
+      this.recentOrdersListStub.rejects(getErrorResponse());
       // assertion helpers
       this.baseCrumbs = `Vault Secrets engines ${this.mountPath}`;
     });
@@ -158,41 +160,6 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
       assert.dom(GENERAL.breadcrumb).exists({ count: 4 });
       assert.dom(GENERAL.breadcrumbs).hasText(`${this.baseCrumbs} Roles`);
       this.assertTabState(assert, 'Roles');
-    });
-
-    test('it navigates to external role details and active orders', async function (assert) {
-      const roleName = 'myrole';
-      await visit(`${this.engineURL}/roles/${roleName}/details`);
-      assert.strictEqual(
-        currentURL(),
-        `vault/secrets-engines/${this.mountPath}/pki/external/roles/${roleName}/details`,
-        'it navigates to role details'
-      );
-      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.external.roles.role.details');
-      assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(roleName);
-      assert.dom(GENERAL.breadcrumb).exists({ count: 5 });
-      assert.dom(GENERAL.breadcrumbs).hasText(`${this.baseCrumbs} Roles ${roleName}`);
-      TABS.forEach((t) => assert.dom(GENERAL.linkTo(t)).doesNotExist());
-      assert.dom(GENERAL.linkTo('Details')).exists().hasClass('active');
-      assert.dom(GENERAL.linkTo('Active orders')).exists().doesNotHaveClass('active');
-
-      // Navigate to a role's active orders
-      await visit(`${this.engineURL}/roles/${roleName}/active-orders`);
-      assert.strictEqual(
-        currentURL(),
-        `vault/secrets-engines/${this.mountPath}/pki/external/roles/${roleName}/active-orders`,
-        'it navigates to role active-orders'
-      );
-      assert.strictEqual(
-        currentRouteName(),
-        'vault.cluster.secrets.backend.pki.external.roles.role.active-orders'
-      );
-      assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(roleName);
-      assert.dom(GENERAL.breadcrumb).exists({ count: 5 });
-      assert.dom(GENERAL.breadcrumbs).hasText(`${this.baseCrumbs} Roles ${roleName}`);
-      TABS.forEach((t) => assert.dom(GENERAL.linkTo(t)).doesNotExist());
-      assert.dom(GENERAL.linkTo('Details')).exists().doesNotHaveClass('active');
-      assert.dom(GENERAL.linkTo('Active orders')).exists().hasClass('active');
     });
 
     test('it navigates to external orders', async function (assert) {

@@ -21,6 +21,7 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/ssh/managed_key"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -129,7 +130,8 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return nil, nil, errors.New("error marshaling signed certificate")
 	}
 
-	b.sshCertificateCounter.Increment().AddSSHCertificate(ttl)
+	mountInfo := sshMountAttribution(ctx, req, b.backendUUID)
+	b.sshCertificateCounter.Increment().WithMountInfo(mountInfo).AddSSHCertificate(ttl)
 
 	response := &logical.Response{
 		Data: map[string]interface{}{
@@ -606,4 +608,23 @@ func (b *backend) getCASigner(ctx context.Context, s logical.Storage) (ssh.Signe
 	}
 
 	return signer, nil
+}
+
+// sshMountAttribution builds a MountAttribution from the current request context.
+// The Count field is left as nil/zero — it is filled in by AddSSHCertificate or AddSSHOTP.
+func sshMountAttribution(ctx context.Context, req *logical.Request, backendUUID string) logical.MountAttribution {
+	attr := logical.MountAttribution{
+		NamespaceID: namespace.RootNamespaceID,
+	}
+	if req != nil {
+		attr.MountAccessor = req.MountAccessor
+		attr.MountPath = req.MountPoint
+		attr.MountType = req.MountType
+		attr.BackendAwareUUID = backendUUID
+	}
+	if ns, err := namespace.FromContext(ctx); err == nil {
+		attr.NamespaceID = ns.ID
+		attr.NamespacePath = ns.Path
+	}
+	return attr
 }

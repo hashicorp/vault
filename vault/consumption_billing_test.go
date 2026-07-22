@@ -65,6 +65,10 @@ var secretEngineBackends = map[string]struct {
 		mount: pluginconsts.SecretEngineLDAP,
 		key:   "static-role/",
 	},
+	"LDAP Library Sets": {
+		mount: pluginconsts.SecretEngineLDAP,
+		key:   "library/",
+	},
 	"OpenLDAP Dynamic Roles": {
 		mount: pluginconsts.SecretEngineOpenLDAP,
 		key:   "role/",
@@ -72,6 +76,10 @@ var secretEngineBackends = map[string]struct {
 	"OpenLDAP Static Roles": {
 		mount: pluginconsts.SecretEngineOpenLDAP,
 		key:   "static-role/",
+	},
+	"OpenLDAP Library Sets": {
+		mount: pluginconsts.SecretEngineOpenLDAP,
+		key:   "library/",
 	},
 	"Alicloud Dynamic Roles": {
 		mount: pluginconsts.SecretEngineAlicloud,
@@ -235,7 +243,7 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 }
 
-// TestDeleteExpiredBillingMetrics specifically tests the deleteExpiredBillingMetrics method
+// TestDeleteExpiredBillingMetrics specifically tests the DeleteExpiredBillingMetrics method
 // to ensure it correctly deletes data from billing.DefaultBillingRetentionMonths ago while keeping
 // data from (billing.DefaultBillingRetentionMonths - 1) months ago.
 func TestDeleteExpiredBillingMetrics(t *testing.T) {
@@ -304,8 +312,8 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		require.False(t, timestamp.IsZero(), "timestamp for month %s should exist before deletion", month.Format("2006-01"))
 	}
 
-	// Call deleteExpiredBillingMetrics directly
-	err := core.deleteExpiredBillingMetrics(context.Background(), currentMonth)
+	// Call DeleteExpiredBillingMetrics directly
+	err := core.DeleteExpiredBillingMetrics(context.Background(), currentMonth)
 	require.NoError(t, err)
 
 	// Verify deletion results
@@ -478,7 +486,7 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 }
 
-// TestDeleteExpiredBillingMetrics_CustomRetention tests that deleteExpiredBillingMetrics
+// TestDeleteExpiredBillingMetrics_CustomRetention tests that DeleteExpiredBillingMetrics
 // respects custom retention configuration. It verifies that when a custom retention period
 // is set (e.g., 13 months), data is deleted according to that configuration rather than
 // the default 37 months.
@@ -544,8 +552,8 @@ func TestDeleteExpiredBillingMetrics_CustomRetention(t *testing.T) {
 		require.Greater(t, len(paths), 0, "oldest retained month should have data")
 	}
 
-	// Call deleteExpiredBillingMetrics - it should use the custom retention
-	err = core.deleteExpiredBillingMetrics(context.Background(), currentMonth)
+	// Call DeleteExpiredBillingMetrics - it should use the custom retention
+	err = core.DeleteExpiredBillingMetrics(context.Background(), currentMonth)
 	require.NoError(t, err)
 
 	// Verify deletion results with custom retention

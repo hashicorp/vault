@@ -1,0 +1,240 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+export enum Editions {
+  'All' = 'All',
+  'Ent' = 'Enterprise',
+  'CE' = 'CE',
+}
+
+export const UPGRADE_INFO = [
+  {
+    version: '1.21',
+    breaking_changes: [
+      {
+        edition: Editions.All,
+        recommendations: true,
+        introduced: '1.21.0',
+        change: 'Item-by-item list comparison for allowed_parameters and denied_parameters',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#allowed-parameters-list',
+      },
+    ],
+    new_behavior: [
+      {
+        edition: Editions.Ent,
+        recommendations: true,
+        introduced: '1.21.0',
+        change: 'Rotation manager schedule strings in UTC',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#rotation-manager-utc',
+      },
+    ],
+    known_issues: [
+      {
+        found: '1.21.0',
+        fixed: 'No',
+        workaround: 'Yes',
+        edition: Editions.Ent,
+        issue: 'Missed events with multiple event clients',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#missed-events',
+      },
+      {
+        found: '1.21.0',
+        fixed: '1.21.1',
+        workaround: 'Yes',
+        edition: Editions.Ent,
+        issue: 'Azure static roles fail to parse metadata as a map',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#azure-static-roles',
+      },
+      {
+        found: '1.21.0',
+        fixed: '1.21.1',
+        workaround: 'Yes',
+        edition: Editions.All,
+        issue: 'GUI KV v2 metadata list request fails for some policies',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#gui-kvv2-metadata-policy',
+      },
+      {
+        found: '1.21.0',
+        fixed: '1.21.1',
+        workaround: 'Yes',
+        edition: Editions.Ent,
+        issue: 'GUI KV v2 listing secrets fails in namespaces',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.21.x/updates/important-changes#gui-kvv2-list-namespaces',
+      },
+    ],
+    rollback_steps: [],
+  },
+  {
+    version: `1.20`,
+    breaking_changes: [
+      {
+        edition: Editions.All,
+        recommendations: true,
+        introduced: '1.20.0',
+        change: 'disable_mlock required for integrated storage',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#disable_mlock-config',
+      },
+      {
+        edition: Editions.All,
+        recommendations: true,
+        introduced: '1.20.0',
+        change: 'Rekey cancellations use a nonce',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce',
+      },
+      {
+        edition: Editions.All,
+        recommendations: false,
+        introduced: '1.20.0',
+        change: 'Azure authentication requires bound group or service principal ID',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes##azure-auth',
+      },
+      {
+        edition: Editions.All,
+        recommendations: true,
+        introduced: '1.20.1',
+        change: 'CVE-2025-6000: File audit devices cannot use executable file permissions',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#cve-2025-6000',
+      },
+      {
+        edition: Editions.CE,
+        recommendations: true,
+        introduced: '1.20.4',
+        change: 'Go mod tidy command fails on the community edition',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#go-mod-tidy',
+      },
+    ],
+    new_behavior: [
+      {
+        edition: Editions.All,
+        recommendations: true,
+        introduced: '1.20.0',
+        change: 'Key pair authentication for Snowflake DB secrets engine',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#snowflake-keypair-auth',
+      },
+      {
+        edition: Editions.All,
+        recommendations: true,
+        introduced: '1.20.0',
+        change: 'Audience warning for Kubernetes authentication roles',
+        link: 'https://developer.hashicorp.com/vault/docs/updates/change-tracker#k8-audience-warning',
+      },
+      {
+        edition: Editions.All,
+        recommendations: false,
+        introduced: '1.20.3',
+        change: 'JSON Payload Limits',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#json-limits',
+      },
+      {
+        edition: Editions.All,
+        recommendations: true,
+        introduced: '1.20.5',
+        change: 'Rotation manager schedule strings in UTC',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#rotation-manager-utc',
+      },
+    ],
+    known_issues: [
+      {
+        found: '1.20.0',
+        fixed: 'No',
+        workaround: 'Yes',
+        edition: Editions.Ent,
+        issue: 'Duplicate unseal/seal wrap HSM keys',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#hsm-keys',
+      },
+      {
+        found: '1.20.0',
+        fixed: '1.20.3',
+        workaround: 'No',
+        edition: Editions.All,
+        issue: 'AWS auto join fails on startup',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#aws-auto-join',
+      },
+      {
+        found: '1.20.0',
+        fixed: '1.20.1',
+        workaround: 'Yes',
+        edition: Editions.Ent,
+        issue: 'Secondary cluster reload overwrites development cluster setting',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#development-cluster-reload',
+      },
+      {
+        found: '1.20.0',
+        fixed: '1.20.1',
+        workaround: 'Yes',
+        edition: Editions.All,
+        issue: 'UI login fails for auth mounts with underscores and unauthenticated listing',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#ui-login-underscore',
+      },
+      {
+        found: '1.20.0',
+        fixed: '1.20.1',
+        workaround: 'Yes',
+        edition: Editions.All,
+        issue: 'GUI navigation error for KV v2 secret paths containing underscores',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#ui-kvv2-underscore-secrets',
+      },
+      {
+        found: '1.18.4',
+        fixed: 'No',
+        workaround: 'Yes',
+        edition: Editions.All,
+        issue: 'Failing credential refresh for Snowflake DB secrets engine key pair authentication',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#snowflake-keypair-refresh',
+      },
+      {
+        found: '1.20.0',
+        fixed: '1.20.1',
+        workaround: 'Yes',
+        edition: Editions.All,
+        issue: 'Duplicate LDAP password rotations on standby node check-in',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#ldap-checkin',
+      },
+      {
+        found: '1.20.0',
+        fixed: 'No',
+        workaround: 'No',
+        edition: Editions.All,
+        issue: 'Writing configuration to local auth mount (ldap, aws, gcp, azure) ignores local flag',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#local-auth-known-issue',
+      },
+      {
+        found: '1.20.0',
+        fixed: 'No',
+        workaround: 'Yes',
+        edition: Editions.Ent,
+        issue: 'Missed events with multiple event clients',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#missed-events',
+      },
+      {
+        found: '1.20.0',
+        fixed: '1.20.5',
+        workaround: 'No',
+        edition: Editions.Ent,
+        issue: 'Full seal rewraps occur on DR/PR failover with multi-seal enabled',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.20.x/updates/important-changes#multi-seal-rewrap',
+      },
+      {
+        found: '1.19.0',
+        fixed: '1.20.14',
+        workaround: 'Upgrade',
+        edition: Editions.Ent,
+        issue: 'Rotation manager job creation will fail, spawning large number of goroutines',
+        link: 'https://developer.hashicorp.com/vault/docs/v1.19.x/updates/important-changes#rotation-manager-goroutines',
+      },
+      {
+        found: '1.20.0',
+        fixed: '1.20.5',
+        workaround: 'Upgrade',
+        edition: Editions.Ent,
+        issue: 'Rotation strings may change timezone interpretation across restarts',
+        link: 'https://developer.hashicorp.com/vault/docs/1.20.x/updates/important-changes#rotation-drift',
+      },
+    ],
+    rollback_steps: [],
+  },
+];
+
+// Made with Bob

@@ -17,9 +17,9 @@
 </Page::Header>
 
 <div class="has-bottom-margin-xl">
-  <Hds::Layout::Flex @wrap={{true}} @gap="32" as |LF|>
+  <Hds::Layout::Flex @wrap={{true}} @gap="48" as |LF|>
     {{#if @version.isEnterprise}}
-      <LF.Item @basis="58%" @grow={{true}} @shrink={{true}}>
+      <LF.Item @basis="calc(66.67% - 24px)" @grow={{true}} @shrink={{true}}>
         <Dashboard::Widgets::SecretsEngines @secretsEngines={{@secretsEngines}} />
         {{#if
           (and (has-permission "status" routeParams="replication") (not (is-empty-value @replication)) @isRootNamespace)
@@ -37,7 +37,7 @@
         {{/if}}
       </LF.Item>
 
-      <LF.Item @basis="38%" @grow={{true}} @shrink={{true}}>
+      <LF.Item @basis="calc(33.33% - 24px)" @grow={{true}} @shrink={{true}}>
         <Dashboard::Widgets::QuickActions @secretsEngines={{@secretsEngines}} />
         {{#if (and (has-permission "clients" routeParams="activity") this.shouldShowClientCount)}}
           <Dashboard::Widgets::ClientCount class="has-top-margin-xl" />
@@ -46,13 +46,13 @@
         <Dashboard::Widgets::LearnMore @isEnterprise={{@version.isEnterprise}} class="has-top-margin-xl" />
       </LF.Item>
     {{else}}
-      <LF.Item @basis="58%" @grow={{true}} @shrink={{true}}>
+      <LF.Item @basis="calc(66.67% - 24px)" @grow={{true}} @shrink={{true}}>
         <Dashboard::Widgets::SecretsEngines @secretsEngines={{@secretsEngines}} />
         {{#if @vaultConfiguration}}
           <Dashboard::Widgets::ClusterConfiguration @vaultConfiguration={{@vaultConfiguration}} />
         {{/if}}
       </LF.Item>
-      <LF.Item @basis="38%" @grow={{true}} @shrink={{true}}>
+      <LF.Item @basis="calc(33.33% - 24px)" @grow={{true}} @shrink={{true}}>
         <Dashboard::Widgets::QuickActions @secretsEngines={{@secretsEngines}} />
         <Dashboard::Widgets::LearnMore @isEnterprise={{@version.isEnterprise}} class="has-top-margin-xl" />
       </LF.Item>

@@ -1,0 +1,107 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each @model.acmeAccounts as |acmeAccount index|}}
+  <Hds::Card::Container
+    @hasBorder={{true}}
+    class="has-top-margin-l has-padding-l"
+    data-test-card-container={{acmeAccount.name}}
+  >
+    <Hds::Layout::Flex @justify="space-between" @align="center">
+      <Hds::Text::Display @tag="p" @size="300" @weight="semibold" data-test-text-display>
+        {{acmeAccount.name}}
+      </Hds::Text::Display>
+      {{#if (this.hasKeyHistory acmeAccount)}}
+        <Hds::Button
+          @icon="history"
+          @text="View key history"
+          @color="tertiary"
+          @iconPosition="trailing"
+          {{on "click" (fn this.openFlyout acmeAccount)}}
+          data-test-button="View key history {{index}}"
+        />
+      {{/if}}
+    </Hds::Layout::Flex>
+
+    <Hds::Separator @spacing="0" class="has-top-margin-xxs bottom-margin-16" />
+
+    <ExternalPki::ConfigDetails @config={{this.formatConfigDetails acmeAccount}} />
+  </Hds::Card::Container>
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No ACME accounts exist yet" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="Configure an ACME account using Terraform or the API/CLI." />
+  </Hds::ApplicationState>
+
+  <ExternalPki::ImplementationSelect @engineId={{@model.engine.id}} @steps={{array this.acmeConfig}} />
+{{/each}}
+
+{{#if this.showFlyout}}
+  <Hds::Flyout id="key-history-flyout" @onClose={{this.closeFlyout}} as |M|>
+    <M.Header @icon="history">
+      {{this.flyoutAcct.name}}
+      key history
+    </M.Header>
+
+    <M.Body>
+      <Hds::Text::Display @size="300" @tag="p" @weight="semibold" class="bottom-margin-16">Active key</Hds::Text::Display>
+      <Hds::Layout::Flex @direction="column" @gap="16" class="has-bottom-padding-l" as |LF|>
+        <Hds::Layout::Flex as |LF|>
+          <LF.Item>
+            <Hds::Text::Body @tag="p" @weight="semibold">Key type</Hds::Text::Body>
+            <Hds::Text::Body @tag="p" data-test-row-value="Key type">{{this.flyoutActiveKey.key_type}}</Hds::Text::Body>
+          </LF.Item>
+          <LF.Item class="margin-left-auto has-right-margin-l">
+            <Hds::Text::Body @tag="p" @weight="semibold">Key version</Hds::Text::Body>
+            <Hds::Text::Body
+              @tag="p"
+              data-test-row-value="Key version"
+            >{{this.flyoutActiveKey.key_version}}</Hds::Text::Body>
+          </LF.Item>
+        </Hds::Layout::Flex>
+
+        <LF.Item>
+          <Hds::Text::Body @tag="p" @weight="semibold">Creation date</Hds::Text::Body>
+          <Hds::Text::Body @tag="p" data-test-row-value="Creation date">
+            {{date-format this.flyoutActiveKey.key_creation_date "MMM d, yyyy hh:mm aaa" withTimeZone=true}}
+            <Hds::TooltipButton
+              @text={{this.flyoutActiveKey.key_creation_date}}
+              aria-label="Active key creation date I-S-O timestamp"
+            >
+              <Hds::Icon @name="info" />
+            </Hds::TooltipButton>
+          </Hds::Text::Body>
+        </LF.Item>
+      </Hds::Layout::Flex>
+
+      <Hds::Text::Display @size="300" @tag="p" @weight="semibold" class="bottom-margin-16">Inactive keys</Hds::Text::Display>
+
+      <Hds::Table @columns={{this.accountKeysColumns}} @model={{this.inactiveKeysTable}}>
+        <:body as |B|>
+          <B.Tr data-test-table-row={{B.rowIndex}}>
+            {{#each this.accountKeysColumns as |column|}}
+              {{#let (get B.data column.key) as |value|}}
+                <B.Td data-test-table-data={{column.key}}>
+                  {{#if (eq column.key "key_creation_date")}}
+                    {{date-format value "MMM d, yyyy hh:mm aaa" withTimeZone=true}}
+                    <Hds::TooltipButton
+                      @text={{value}}
+                      aria-label="Creation date timestamp for key version {{B.data.key_version}}"
+                    >
+                      <Hds::Icon @name="info" />
+                    </Hds::TooltipButton>
+                  {{else}}
+                    {{! stringify value if it is an array or object, otherwise render directly }}
+                    {{if (this.isObject value) (stringify value) value}}
+                  {{/if}}
+                </B.Td>
+              {{/let}}
+            {{/each}}
+          </B.Tr>
+        </:body>
+      </Hds::Table>
+    </M.Body>
+  </Hds::Flyout>
+{{/if}}

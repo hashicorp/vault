@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/billing"
 	"github.com/hashicorp/vault/vault/cert_count"
 )
 
@@ -300,15 +301,15 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 		}
 
 		b.Core.certCountManager.StartConsumerJob(func(increment logical.CertCount) {
-			b.Core.consumeCertCounts(increment)
+			b.Core.ConsumeCertCounts(increment)
 		})
 		return nil
 	}
 }
 
-// consumeCertCounts updates the certificate counts in storage if we are
+// ConsumeCertCounts updates the certificate counts in storage if we are
 // running on the active node; otherwise it forwards them to the active node.
-func (c *Core) consumeCertCounts(inc logical.CertCount) {
+func (c *Core) ConsumeCertCounts(inc logical.CertCount) {
 	haState := c.HAStateWithLock()
 	if inc.IsZero() {
 		return
@@ -323,43 +324,109 @@ func (c *Core) consumeCertCounts(inc logical.CertCount) {
 			unconsumed = logical.CertCount{}
 		}
 	case consts.Active:
-		c.logger.Info("storing certificate counts", "pkiIssuedCerts", inc.IssuedCerts, "pkiStoredCerts", inc.StoredCerts)
-		err := cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc)
-		if err != nil {
-			c.logger.Error("error storing certificate counts", "error", err)
-		} else {
-			unconsumed.IssuedCerts = 0
-			unconsumed.StoredCerts = 0
-		}
-
-		c.logger.Info("storing duration adjusted count", "pkiDurationAdjustedCount", inc.PkiDurationAdjustedCerts)
-		err = c.UpdatePkiDurationAdjustedCount(c.activeContext, inc.PkiDurationAdjustedCerts, time.Now())
-		if err != nil {
-			c.logger.Error("error storing duration adjusted certificate counts", "error", err)
-		} else {
-			unconsumed.PkiDurationAdjustedCerts = 0
-		}
-
-		c.logger.Info("storing SSH counts", "sshDurationAdjustedCount", inc.SSHIssuedCerts, "sshOTPCount", inc.SSHIssuedOTPs)
-		_, err = c.UpdateStoredSSHDurationAdjustedCertCount(c.activeContext, time.Now(), inc.SSHIssuedCerts)
-		if err != nil {
-			c.logger.Error("error storing SSH duration adjusted certificate count", "error", err)
-		} else {
-			unconsumed.SSHIssuedCerts = 0
-		}
-
-		_, err = c.UpdateStoredSSHOTPCount(c.activeContext, time.Now(), inc.SSHIssuedOTPs)
-		if err != nil {
-			c.logger.Error("error storing SSH OTP count", "error", err)
-		} else {
-			unconsumed.SSHIssuedOTPs = 0
-		}
-
+		unconsumed = c.consumeCertCountsOnActive(inc)
 	default:
 		c.logger.Error("Unexpected HA state when consuming certificate counts", "ha_state", haState)
 	}
 	// Add any unconsumed counts to the in-memory count so they can be included in the next increment
 	c.certCountManager.AddCount(unconsumed)
+}
+
+// consumeCertCountsOnActive stores all cert-count fields for which this call is
+// the authoritative writer (active node). It returns a CertCount containing
+// only the fields that could not be stored, so the caller can re-queue them.
+func (c *Core) consumeCertCountsOnActive(inc logical.CertCount) logical.CertCount {
+	// Capture a single timestamp for all writes in this drain cycle so that
+	// every metric flushed in the same call shares the same LastUpdated.
+	now := time.Now()
+
+	// storeAttribution writes per-mount attribution for one metric type and
+	// clears the corresponding field on unconsumed on success.
+	storeAttribution := func(
+		flushedDelta float64,
+		attributions map[string]logical.MountAttribution,
+		metric string,
+		logKey string,
+		clearFn func(),
+	) {
+		// No attributions to store – mark as consumed unconditionally.
+		if len(attributions) == 0 {
+			clearFn()
+			return
+		}
+		// If the flushedDelta is zero, this means the count has been written but the
+		// attributions failed to store previously. Calculate the correct delta to use
+		// for storing the remaining attributions.
+		attrDelta := flushedDelta
+		if attrDelta == 0 {
+			for _, a := range attributions {
+				attrDelta += toFloat64(a.Count)
+			}
+		}
+		if attrDelta <= 0 {
+			// Nothing positive to store; clear so it is not re-queued.
+			clearFn()
+			return
+		}
+		c.logger.Debug("storing "+logKey+" attribution", "mountCount", len(attributions))
+		if attrErr := c.StoreCertAttribution(c.activeContext, metric, attrDelta, attributions, now); attrErr != nil {
+			c.logger.Error("error storing "+logKey+" attribution data", "error", attrErr)
+			return
+		}
+		clearFn()
+	}
+
+	unconsumed := inc
+
+	c.logger.Debug("storing certificate counts", "pkiIssuedCerts", inc.IssuedCerts, "pkiStoredCerts", inc.StoredCerts)
+	if err := cert_count.IncrementStoredCounts(c.activeContext, c.barrier, inc); err != nil {
+		c.logger.Error("error storing certificate counts", "error", err)
+	} else {
+		unconsumed.IssuedCerts = 0
+		unconsumed.StoredCerts = 0
+	}
+
+	// For each metric: write the count when there is a new delta, then store
+	// attribution only if the count write succeeded (or there was no delta to
+	// write). Skipping the count write when delta==0 lets a previous
+	// attribution-write failure be retried without touching an unchanged count.
+	// Each metric is handled independently so a failure on one does not prevent
+	// the others from being flushed.
+	if inc.PkiDurationAdjustedCerts != 0 {
+		c.logger.Debug("storing duration adjusted count", "pkiDurationAdjustedCount", inc.PkiDurationAdjustedCerts)
+		if err := c.UpdatePkiDurationAdjustedCount(c.activeContext, inc.PkiDurationAdjustedCerts, now); err != nil {
+			c.logger.Error("error storing duration adjusted certificate counts", "error", err)
+		} else {
+			unconsumed.PkiDurationAdjustedCerts = 0
+			storeAttribution(inc.PkiDurationAdjustedCerts, inc.PkiMountAttributions, billing.PkiDurationAdjustedCountPrefix, "PKI mount/namespace", func() { unconsumed.PkiMountAttributions = nil })
+		}
+	} else {
+		storeAttribution(inc.PkiDurationAdjustedCerts, inc.PkiMountAttributions, billing.PkiDurationAdjustedCountPrefix, "PKI mount/namespace", func() { unconsumed.PkiMountAttributions = nil })
+	}
+
+	if inc.SSHIssuedCerts != 0 {
+		if _, err := c.UpdateStoredSSHDurationAdjustedCertCount(c.activeContext, now, inc.SSHIssuedCerts); err != nil {
+			c.logger.Error("error storing SSH duration adjusted certificate count", "error", err)
+		} else {
+			unconsumed.SSHIssuedCerts = 0
+			storeAttribution(inc.SSHIssuedCerts, inc.SshCertMountAttributions, billing.SSHCertificateMetric, "SSH certificate mount/namespace", func() { unconsumed.SshCertMountAttributions = nil })
+		}
+	} else {
+		storeAttribution(inc.SSHIssuedCerts, inc.SshCertMountAttributions, billing.SSHCertificateMetric, "SSH certificate mount/namespace", func() { unconsumed.SshCertMountAttributions = nil })
+	}
+
+	if inc.SSHIssuedOTPs != 0 {
+		if _, err := c.UpdateStoredSSHOTPCount(c.activeContext, now, inc.SSHIssuedOTPs); err != nil {
+			c.logger.Error("error storing SSH OTP count", "error", err)
+		} else {
+			unconsumed.SSHIssuedOTPs = 0
+			storeAttribution(inc.SSHIssuedOTPs, inc.SshOtpMountAttributions, billing.SSHOTPMetric, "SSH OTP mount/namespace", func() { unconsumed.SshOtpMountAttributions = nil })
+		}
+	} else {
+		storeAttribution(inc.SSHIssuedOTPs, inc.SshOtpMountAttributions, billing.SSHOTPMetric, "SSH OTP mount/namespace", func() { unconsumed.SshOtpMountAttributions = nil })
+	}
+
+	return unconsumed
 }
 
 // Contains the config for a global plugin reload

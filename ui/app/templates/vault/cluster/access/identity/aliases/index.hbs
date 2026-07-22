@@ -25,7 +25,9 @@
           <div class="has-text-grey">
             {{item.id}}
           </div>
-          <Hds::Badge @text={{item.mount_type}} class="has-right-margin-8" />
+          {{#if item.mount_type}}
+            <Hds::Badge @text={{item.mount_type}} class="has-right-margin-8" />
+          {{/if}}
           <span class="has-text-grey is-size-8">
             {{item.mountAccessor}}
           </span>

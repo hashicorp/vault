@@ -16,6 +16,9 @@ export interface KeyValueField {
   isRequired?: boolean;
   isOptional?: boolean;
   helpText?: string;
+  // binds this field directly to its own model attribute instead of the parent attr's combined value
+  // (see `hasFieldValuePaths` in form-field.js)
+  valuePath?: string;
 }
 
 export interface FieldOptions {

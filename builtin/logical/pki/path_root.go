@@ -350,7 +350,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
-	b.pkiCertificateCounter.Increment().AddIssuedCertificate(true, parsedBundle.Certificate)
+	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID)
+	b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(true, parsedBundle.Certificate)
 
 	// Build a fresh CRL
 	warnings, err = b.CrlBuilder().Rebuild(sc, true)
@@ -535,7 +536,8 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
-	b.pkiCertificateCounter.Increment().AddIssuedCertificate(true, parsedBundle.Certificate)
+	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID)
+	b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(true, parsedBundle.Certificate)
 
 	if warnAboutTruncate &&
 		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {

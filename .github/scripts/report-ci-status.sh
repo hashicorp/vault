@@ -73,6 +73,12 @@ ${other_td}"
   esac
   
   update_or_create_comment "$REPO" "$PR_NUMBER" "CI Results - Go Tests:" "$OTHER_BODY"
+elif [ "$RESULT" == "success" ]; then
+  # Only prune on a successful run where the Go tests now pass. On a failing run
+  # the absence of table data can mean the failure happened before any summary was
+  # produced (e.g. build/lint/cancelled/timed-out), so we must not delete the
+  # failure comment and misrepresent a still-failing run.
+  delete_comment_if_exists "$REPO" "$PR_NUMBER" "CI Results - Go Tests:"
 fi
 
 # Create separate comment for enos failures
@@ -92,13 +98,8 @@ ${enos_td}"
   esac
   
   update_or_create_comment "$REPO" "$PR_NUMBER" "CI Results - Enos Tests:" "$ENOS_BODY"
-fi
-
-# If no failures at all, create a single success comment
-if [ -z "$OTHER_DATA" ] && [ -z "$ENOS_DATA" ]; then
-  if [ "$RESULT" == "success" ]; then
-    SUCCESS_BODY="CI Results:
-All Go tests succeeded! :white_check_mark:"
-    update_or_create_comment "$REPO" "$PR_NUMBER" "CI Results:" "$SUCCESS_BODY"
-  fi
+elif [ "$RESULT" == "success" ]; then
+  # Only prune on a successful run where the Enos tests now pass. See the Go
+  # Tests block above for why we must not delete on a failing run.
+  delete_comment_if_exists "$REPO" "$PR_NUMBER" "CI Results - Enos Tests:"
 fi
