@@ -30,6 +30,7 @@
     "generate:form-config": "node --no-warnings scripts/generate-form-config.js",
     "generate:terraform-mapping": "tsx scripts/generate-terraform-mapping.js",
     "start": "VAULT_ADDR=http://127.0.0.1:8200; pnpm build:jsondiffpatch && ember server --proxy=$VAULT_ADDR",
+    "start:dev": "VAULT_BRANCH=$(git rev-parse --abbrev-ref HEAD) VAULT_COMMIT=$(git rev-parse --short HEAD) ember server --proxy=${VAULT_ADDR:-http://127.0.0.1:8200}",
     "start2": "pnpm build:jsondiffpatch && ember server --proxy=http://127.0.0.1:8202 --port=4202",
     "start:chroot": "ember server --proxy=http://127.0.0.1:8300 --port=4300",
     "lint": "concurrently --kill-others-on-fail -P -c \"auto\" -n lint:js,lint:hbs,lint:types \"pnpm:lint:js:quiet\" \"pnpm:lint:hbs:quiet\" \"pnpm:lint:types\"",

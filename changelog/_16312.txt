@@ -1,0 +1,3 @@
+```release-note:feature
+**User Preference Settings**: Added a User Preferences page (`/vault/<cluster>/user-preferences`) accessible from the account menu. Includes a Data & Privacy section with a telemetry consent toggle that persists per-browser in localStorage.
+```

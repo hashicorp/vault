@@ -897,7 +897,7 @@ type SecretEngineResourceCounts struct {
 // GetRoleCountsForCluster returns the total role counts across all mounts for a primary or secondary cluster
 // For use in tests only
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
-	m, err := c.CountMetricsSecretMounts(false)
+	m, err := c.CountMetricsSecretMounts(false, false)
 	if err != nil {
 		return nil
 	}
@@ -909,7 +909,7 @@ func (c *Core) GetRoleCountsForCluster() *RoleCounts {
 
 // GetManagedKeyCountsForCluster returns the total managed key counts across all mounts
 func (c *Core) GetManagedKeyCountsForCluster() *ManagedKeyCounts {
-	m, err := c.CountMetricsSecretMounts(false)
+	m, err := c.CountMetricsSecretMounts(false, false)
 	if err != nil {
 		return nil
 	}
@@ -922,7 +922,7 @@ func (c *Core) GetManagedKeyCountsForCluster() *ManagedKeyCounts {
 // GetSecretEngineResourceCountsForCluster returns the total secret engine resource counts across all mounts for a primary or secondary cluster.
 // On performance secondaries, only local mounts are counted.
 func (c *Core) GetSecretEngineResourceCountsForCluster() *SecretEngineResourceCounts {
-	m, err := c.CountMetricsSecretMounts(false)
+	m, err := c.CountMetricsSecretMounts(false, false)
 	if err != nil {
 		return nil
 	}

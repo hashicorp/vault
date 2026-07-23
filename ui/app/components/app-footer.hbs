@@ -4,17 +4,6 @@
 }}
 
 <Hds::AppFooter class="has-margin-top-auto" data-test-app-footer as |AF|>
-  <AF.ExtraBefore>
-    {{#if this.isDevelopment}}
-      <div class="env-banner">
-        <div class="level-item notification">
-          <Icon @name="git-branch" /><Icon @name="pencil-tool" />
-          Local development
-          <Icon @name="pencil-tool" /><Icon @name="git-branch" />
-        </div>
-      </div>
-    {{/if}}
-  </AF.ExtraBefore>
   <AF.Link @href={{changelog-url-for this.version.version}} data-test-footer-version>
     Vault
     {{this.version.version}}
@@ -28,16 +17,4 @@
     Documentation
   </AF.Link>
   <AF.LegalLinks />
-  <AF.ExtraAfter>
-    {{#if this.isDevelopment}}
-      <Hds::Button
-        target="_blank"
-        @text="Contributing docs"
-        @isIconOnly={{true}}
-        @icon="gift"
-        @color="tertiary"
-        @route="docs"
-      />
-    {{/if}}
-  </AF.ExtraAfter>
 </Hds::AppFooter>

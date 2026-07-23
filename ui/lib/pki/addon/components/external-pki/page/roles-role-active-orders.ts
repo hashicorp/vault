@@ -16,7 +16,7 @@ interface Args {
   model: RoleActiveOrdersRouteModel;
 }
 
-export default class ExternalPkiPageActiveOrdersComponent extends Component<Args> {
+export default class ExternalPkiPageRolesRoleActiveOrdersComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
 
   @tracked orderFilter = '';

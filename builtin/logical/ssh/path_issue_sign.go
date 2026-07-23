@@ -13,7 +13,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"io"
 	"regexp"
 	"strconv"
 	"strings"
@@ -506,16 +505,30 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 
 	now := time.Now()
 
-	sshAlgorithmSigner, ok := b.Signer.(ssh.AlgorithmSigner)
-	if !ok {
-		return nil, fmt.Errorf("failed to generate signed SSH key: signer is not an AlgorithmSigner")
+	algo := b.Role.AlgorithmSigner
+	if algo == DefaultAlgorithmSigner {
+		if b.Signer.PublicKey().Type() == ssh.KeyAlgoRSA {
+			algo = ssh.KeyAlgoRSASHA256
+		} else {
+			algo = ""
+		}
+	}
+
+	authority := b.Signer
+	if algo != "" {
+		sshAlgorithmSigner, ok := b.Signer.(ssh.AlgorithmSigner)
+		if !ok {
+			return nil, fmt.Errorf("failed to generate signed SSH key: signer is not an AlgorithmSigner")
+		}
+
+		algorithmRestrictedSigner, err := ssh.NewSignerWithAlgorithms(sshAlgorithmSigner, []string{algo})
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate signed SSH key: failed to restrict signer algorithm: %w", err)
+		}
+		authority = algorithmRestrictedSigner
 	}
 
 	// prepare certificate for signing
-	nonce := make([]byte, 32)
-	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce: %w", err)
-	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),
 		Key:             b.PublicKey,
@@ -528,30 +541,11 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 			CriticalOptions: b.CriticalOptions,
 			Extensions:      b.Extensions,
 		},
-		Nonce:        nonce,
-		SignatureKey: sshAlgorithmSigner.PublicKey(),
 	}
 
-	// get bytes to sign; this is based on Certificate.bytesForSigning() from the go ssh lib
-	out := certificate.Marshal()
-	// Drop trailing signature length.
-	certificateBytes := out[:len(out)-4]
-
-	algo := b.Role.AlgorithmSigner
-
-	// Handle the new default algorithm selection process correctly.
-	if algo == DefaultAlgorithmSigner && sshAlgorithmSigner.PublicKey().Type() == ssh.KeyAlgoRSA {
-		algo = ssh.SigAlgoRSASHA2256
-	} else if algo == DefaultAlgorithmSigner {
-		algo = ""
-	}
-
-	sig, err := sshAlgorithmSigner.SignWithAlgorithm(rand.Reader, certificateBytes, algo)
-	if err != nil {
+	if err := certificate.SignCert(rand.Reader, authority); err != nil {
 		return nil, fmt.Errorf("failed to generate signed SSH key: sign error: %w", err)
 	}
-
-	certificate.Signature = sig
 
 	return certificate, nil
 }
