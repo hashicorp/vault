@@ -69,7 +69,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		return 0, ErrConsumptionBillingNotInitialized
 	}
 
-	currentThirdPartyPluginCounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
+	currentThirdPartyPluginMounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -81,11 +81,46 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 	if err != nil {
 		return 0, err
 	}
-	maxCount := c.compareCounts(previousThirdPartyPluginCounts, len(currentThirdPartyPluginCounts), "Third-Party Plugins")
+	maxCount, hwmUpdated := c.compareCounts(previousThirdPartyPluginCounts, len(currentThirdPartyPluginMounts), "Third-Party Plugins")
 	err = c.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth, maxCount)
 	if err != nil {
 		return 0, err
 	}
+
+	// Collect and store attribution if HWM was updated
+	if hwmUpdated && len(currentThirdPartyPluginMounts) > 0 {
+		attribution := make(MountAttributionMap)
+		for _, entry := range currentThirdPartyPluginMounts {
+			if entry != nil {
+				// Each deduplicated plugin counts as 1
+				attribution[entry.Accessor] = logical.MountAttribution{
+					Count:            1,
+					MountAccessor:    entry.Accessor,
+					MountPath:        entry.Path,
+					MountType:        entry.Type,
+					NamespaceID:      entry.NamespaceID,
+					NamespacePath:    entry.namespace.Path,
+					BackendAwareUUID: entry.BackendAwareUUID,
+				}
+			}
+		}
+
+		attributionData := &logical.MetricTypeAttribution{
+			Count:       maxCount,
+			Mounts:      attribution,
+			LastUpdated: currentMonth,
+		}
+
+		if view, ok := c.GetBillingSubView(); ok {
+			if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.ThirdPartyPluginsPrefix, attributionData); err != nil {
+				c.logger.Error("error storing third-party plugin attribution data", "error", err)
+				// Don't fail the entire operation if attribution storage fails
+			}
+		} else {
+			c.logger.Error("failed to get billing subview to update third-party plugin attribution data")
+		}
+	}
+
 	return maxCount, nil
 }
 
@@ -232,8 +267,8 @@ func (c *Core) GetStoredHWMKvCounts(ctx context.Context, localPathPrefix string,
 }
 
 // UpdateMaxKvCounts updates the HWM kv counts for the given month by comparing the current counts passed in with the stored count,
-// and returns the updated stored value.
-func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentKvCounts int) (int, error) {
+// and returns the updated stored value. If a new HWM is reached, it also updates the stored attribution data.
+func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentKvCounts int, attributions MountAttributionMap) (int, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
@@ -251,18 +286,40 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 		c.logger.Error("error getting stored max kv counts", "error", err)
 		return 0, err
 	}
+
+	// Check if HWM has been updated
+	hwmUpdated := false
 	if maxKvCounts == 0 {
 		maxKvCounts = currentKvCounts
-	}
-	if currentKvCounts > maxKvCounts {
+		hwmUpdated = true
+	} else if currentKvCounts > maxKvCounts {
 		c.logger.Info("updating max kv counts", "currentKvCounts", currentKvCounts, "maxKvCounts", maxKvCounts)
 		maxKvCounts = currentKvCounts
+		hwmUpdated = true
 	}
 	err = c.storeMaxKvCountsLocked(ctx, maxKvCounts, localPathPrefix, currentMonth)
 	if err != nil {
 		c.logger.Error("error storing max kv counts", "error", err)
 		return 0, err
 	}
+
+	// If HWM updated, store current attribution data
+	if hwmUpdated && len(attributions) > 0 {
+		attributionData := &logical.MetricTypeAttribution{
+			Count:       maxKvCounts,
+			Mounts:      attributions,
+			LastUpdated: currentMonth,
+		}
+		if view, ok := c.GetBillingSubView(); ok {
+			if err := storeAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, billing.KvHWMCountsHWM, attributionData); err != nil {
+				c.logger.Error("error storing KV attribution data", "error", err)
+				// Don't fail the entire operation if attribution storage fails
+			}
+		} else {
+			c.logger.Error("failed to get billing subview to update KV attribution data")
+		}
+	}
+
 	return maxKvCounts, nil
 }
 
@@ -281,8 +338,8 @@ func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *Role
 }
 
 // UpdateMaxRoleAndManagedKeyCounts updates the HWM role and managed key counts for the given month by comparing the current counts
-// passed in with the stored counts.
-func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentRoleCounts *RoleCounts, currentManagedKeyCounts *ManagedKeyCounts) (*RoleCounts, *ManagedKeyCounts, error) {
+// passed in with the stored counts. If a new HWM is reached, it also updates the stored attribution data.
+func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentRoleCounts *RoleCounts, currentManagedKeyCounts *ManagedKeyCounts, roleAttribution, managedKeyAttribution map[string]MountAttributionMap) (*RoleCounts, *ManagedKeyCounts, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
@@ -291,13 +348,13 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 		return nil, nil, ErrConsumptionBillingNotInitialized
 	}
 
-	// If somehow the current counts is empty, we should try get the counts here
+	// If somehow the current counts is empty, we should try get the counts (and attributions) here
 	// before taking BillingStorageLock. CountMetricsSecretMounts traverses mounts and
 	// may acquire other locks, so holding the billing storage lock here can create
 	// lock-order inversions.
 	if currentRoleCounts == nil || currentManagedKeyCounts == nil {
 		c.logger.Debug("current role or managed key counts is empty, trying to get counts again")
-		metrics, err := c.CountMetricsSecretMounts(true)
+		metrics, err := c.CountMetricsSecretMounts(true, true)
 		if err != nil {
 			c.logger.Error("error getting current role and managed key counts", "error", err)
 			return nil, nil, err
@@ -305,32 +362,38 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 		if localPathPrefix == billing.LocalPrefix {
 			currentRoleCounts = metrics.LocalRoleCounts
 			currentManagedKeyCounts = metrics.LocalManagedKeys
+			roleAttribution = metrics.LocalRoleAttribution
+			managedKeyAttribution = metrics.LocalManagedKeyAttribution
 		} else {
 			currentRoleCounts = metrics.ReplicatedRoleCounts
 			currentManagedKeyCounts = metrics.ReplicatedManagedKeys
+			roleAttribution = metrics.ReplicatedRoleAttribution
+			managedKeyAttribution = metrics.ReplicatedManagedKeyAttribution
 		}
 	}
 
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	// get max role counts
-	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, localPathPrefix, currentMonth)
+	// get max role counts - this also stores updated attribution data if HWM is updated
+	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, roleAttribution, localPathPrefix, currentMonth)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	maxManagedKeyCounts := &ManagedKeyCounts{}
 
-	// get max totp key counts
-	maxTotpKeyCounts, err := c.updateMaxTotpKeyCounts(ctx, currentManagedKeyCounts.TotpKeys, localPathPrefix, currentMonth)
+	// get max totp key counts - this also stores updated attribution data if HWM is updated
+	totpAttribution := managedKeyAttribution[billing.TotpKeys]
+	maxTotpKeyCounts, err := c.updateMaxTotpKeyCounts(ctx, currentManagedKeyCounts.TotpKeys, totpAttribution, localPathPrefix, currentMonth)
 	if err != nil {
 		return nil, nil, err
 	}
 	maxManagedKeyCounts.TotpKeys = maxTotpKeyCounts
 
-	// get max kmse key counts
-	maxKmseKeyCounts, err := c.updateMaxKmseKeyCounts(ctx, currentManagedKeyCounts.KmseKeys, localPathPrefix, currentMonth)
+	// get max kmse key counts - this also stores updated attribution data if HWM is updated
+	kmseAttribution := managedKeyAttribution[billing.KmseKeys]
+	maxKmseKeyCounts, err := c.updateMaxKmseKeyCounts(ctx, currentManagedKeyCounts.KmseKeys, kmseAttribution, localPathPrefix, currentMonth)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -338,7 +401,7 @@ func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPr
 	return maxRoleCounts, maxManagedKeyCounts, nil
 }
 
-func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleCounts, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
+func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleCounts, attribution map[string]MountAttributionMap, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
 	maxRoleCounts, err := c.getStoredRoleCountsLocked(ctx, localPathPrefix, currentMonth)
 	if maxRoleCounts == nil {
 		maxRoleCounts = &RoleCounts{}
@@ -346,29 +409,52 @@ func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleC
 	if currentRoleCounts == nil {
 		currentRoleCounts = &RoleCounts{}
 	}
-	maxRoleCounts.AWSDynamicRoles = c.compareCounts(currentRoleCounts.AWSDynamicRoles, maxRoleCounts.AWSDynamicRoles, "AWS Dynamic Roles")
-	maxRoleCounts.AzureDynamicRoles = c.compareCounts(currentRoleCounts.AzureDynamicRoles, maxRoleCounts.AzureDynamicRoles, "Azure Dynamic Roles")
-	maxRoleCounts.AzureStaticRoles = c.compareCounts(currentRoleCounts.AzureStaticRoles, maxRoleCounts.AzureStaticRoles, "Azure Static Roles")
-	maxRoleCounts.GCPRolesets = c.compareCounts(currentRoleCounts.GCPRolesets, maxRoleCounts.GCPRolesets, "GCP Rolesets")
-	maxRoleCounts.AWSStaticRoles = c.compareCounts(currentRoleCounts.AWSStaticRoles, maxRoleCounts.AWSStaticRoles, "AWS Static Roles")
-	maxRoleCounts.DatabaseDynamicRoles = c.compareCounts(currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles, "Database Dynamic Roles")
-	maxRoleCounts.OpenLDAPStaticRoles = c.compareCounts(currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles, "OpenLDAP Static Roles")
-	maxRoleCounts.OpenLDAPDynamicRoles = c.compareCounts(currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles, "OpenLDAP Dynamic Roles")
-	maxRoleCounts.OpenLDAPLibrarySets = c.compareCounts(currentRoleCounts.OpenLDAPLibrarySets, maxRoleCounts.OpenLDAPLibrarySets, "OpenLDAP Library Sets")
-	maxRoleCounts.LDAPDynamicRoles = c.compareCounts(currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles, "LDAP Dynamic Roles")
-	maxRoleCounts.LDAPStaticRoles = c.compareCounts(currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles, "LDAP Static Roles")
-	maxRoleCounts.LDAPLibrarySets = c.compareCounts(currentRoleCounts.LDAPLibrarySets, maxRoleCounts.LDAPLibrarySets, "LDAP Library Sets")
-	maxRoleCounts.DatabaseStaticRoles = c.compareCounts(currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles, "Database Static Roles")
-	maxRoleCounts.GCPImpersonatedAccounts = c.compareCounts(currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts, "GCPImpersonated Accounts")
-	maxRoleCounts.GCPStaticAccounts = c.compareCounts(currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts, "GCP Static Accounts")
-	maxRoleCounts.AlicloudDynamicRoles = c.compareCounts(currentRoleCounts.AlicloudDynamicRoles, maxRoleCounts.AlicloudDynamicRoles, "Alicloud Dynamic Roles")
-	maxRoleCounts.RabbitMQDynamicRoles = c.compareCounts(currentRoleCounts.RabbitMQDynamicRoles, maxRoleCounts.RabbitMQDynamicRoles, "RabbitMQ Dynamic Roles")
-	maxRoleCounts.ConsulDynamicRoles = c.compareCounts(currentRoleCounts.ConsulDynamicRoles, maxRoleCounts.ConsulDynamicRoles, "Consul Dynamic Roles")
-	maxRoleCounts.NomadDynamicRoles = c.compareCounts(currentRoleCounts.NomadDynamicRoles, maxRoleCounts.NomadDynamicRoles, "Nomad Dynamic Roles")
-	maxRoleCounts.KubernetesDynamicRoles = c.compareCounts(currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles, "Kubernetes Dynamic Roles")
-	maxRoleCounts.MongoDBAtlasDynamicRoles = c.compareCounts(currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles, "MongoDB Atlas Dynamic Roles")
-	maxRoleCounts.TerraformCloudDynamicRoles = c.compareCounts(currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles, "Terraform Cloud Dynamic Roles")
-	maxRoleCounts.OSLocalAccountRoles = c.compareCounts(currentRoleCounts.OSLocalAccountRoles, maxRoleCounts.OSLocalAccountRoles, "OS Local Account Static Roles")
+
+	// Helper function to update count and store attribution if HWM updated
+	storeRoleTypeAttribution := func(roleType string, currentCount, maxCount int) (int, error) {
+		newMax, updated := c.compareCounts(currentCount, maxCount, roleType)
+		if updated && len(attribution[roleType]) > 0 {
+			attributionData := &logical.MetricTypeAttribution{
+				Count:       newMax,
+				Mounts:      attribution[roleType],
+				LastUpdated: currentMonth,
+			}
+			// Store each role subtype separately but keep them all under the "maxRoleCounts/" parent
+			if view, ok := c.GetBillingSubView(); ok {
+				if err := storeAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, billing.RoleHWMCountsHWM+roleType, attributionData); err != nil {
+					c.logger.Error("error storing role attribution data", "roleType", roleType, "error", err)
+					// Don't fail the entire operation if attribution storage fails
+				}
+			} else {
+				c.logger.Error("failed to get billing subview to update role attribution data")
+			}
+		}
+		return newMax, nil
+	}
+
+	maxRoleCounts.AWSDynamicRoles, _ = storeRoleTypeAttribution(billing.AWSDynamicRoles, currentRoleCounts.AWSDynamicRoles, maxRoleCounts.AWSDynamicRoles)
+	maxRoleCounts.AWSStaticRoles, _ = storeRoleTypeAttribution(billing.AWSStaticRoles, currentRoleCounts.AWSStaticRoles, maxRoleCounts.AWSStaticRoles)
+	maxRoleCounts.AzureDynamicRoles, _ = storeRoleTypeAttribution(billing.AzureDynamicRoles, currentRoleCounts.AzureDynamicRoles, maxRoleCounts.AzureDynamicRoles)
+	maxRoleCounts.AzureStaticRoles, _ = storeRoleTypeAttribution(billing.AzureStaticRoles, currentRoleCounts.AzureStaticRoles, maxRoleCounts.AzureStaticRoles)
+	maxRoleCounts.GCPRolesets, _ = storeRoleTypeAttribution(billing.GCPRolesets, currentRoleCounts.GCPRolesets, maxRoleCounts.GCPRolesets)
+	maxRoleCounts.GCPStaticAccounts, _ = storeRoleTypeAttribution(billing.GCPStaticAccounts, currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts)
+	maxRoleCounts.GCPImpersonatedAccounts, _ = storeRoleTypeAttribution(billing.GCPImpersonatedAccounts, currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts)
+	maxRoleCounts.DatabaseDynamicRoles, _ = storeRoleTypeAttribution(billing.DatabaseDynamicRoles, currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles)
+	maxRoleCounts.DatabaseStaticRoles, _ = storeRoleTypeAttribution(billing.DatabaseStaticRoles, currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles)
+	maxRoleCounts.OpenLDAPStaticRoles, _ = storeRoleTypeAttribution(billing.OpenLDAPStaticRoles, currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles)
+	maxRoleCounts.OpenLDAPDynamicRoles, _ = storeRoleTypeAttribution(billing.OpenLDAPDynamicRoles, currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles)
+	maxRoleCounts.OpenLDAPLibrarySets, _ = storeRoleTypeAttribution(billing.OpenLDAPLibrarySets, currentRoleCounts.OpenLDAPLibrarySets, maxRoleCounts.OpenLDAPLibrarySets)
+	maxRoleCounts.LDAPDynamicRoles, _ = storeRoleTypeAttribution(billing.LDAPDynamicRoles, currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles)
+	maxRoleCounts.LDAPStaticRoles, _ = storeRoleTypeAttribution(billing.LDAPStaticRoles, currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles)
+	maxRoleCounts.LDAPLibrarySets, _ = storeRoleTypeAttribution(billing.LDAPLibrarySets, currentRoleCounts.LDAPLibrarySets, maxRoleCounts.LDAPLibrarySets)
+	maxRoleCounts.AlicloudDynamicRoles, _ = storeRoleTypeAttribution(billing.AlicloudDynamicRoles, currentRoleCounts.AlicloudDynamicRoles, maxRoleCounts.AlicloudDynamicRoles)
+	maxRoleCounts.RabbitMQDynamicRoles, _ = storeRoleTypeAttribution(billing.RabbitMQDynamicRoles, currentRoleCounts.RabbitMQDynamicRoles, maxRoleCounts.RabbitMQDynamicRoles)
+	maxRoleCounts.ConsulDynamicRoles, _ = storeRoleTypeAttribution(billing.ConsulDynamicRoles, currentRoleCounts.ConsulDynamicRoles, maxRoleCounts.ConsulDynamicRoles)
+	maxRoleCounts.NomadDynamicRoles, _ = storeRoleTypeAttribution(billing.NomadDynamicRoles, currentRoleCounts.NomadDynamicRoles, maxRoleCounts.NomadDynamicRoles)
+	maxRoleCounts.KubernetesDynamicRoles, _ = storeRoleTypeAttribution(billing.KubernetesDynamicRoles, currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles)
+	maxRoleCounts.MongoDBAtlasDynamicRoles, _ = storeRoleTypeAttribution(billing.MongoDBAtlasDynamicRoles, currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles)
+	maxRoleCounts.TerraformCloudDynamicRoles, _ = storeRoleTypeAttribution(billing.TerraformCloudDynamicRoles, currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles)
+	maxRoleCounts.OSLocalAccountRoles, _ = storeRoleTypeAttribution(billing.OSLocalAccountRoles, currentRoleCounts.OSLocalAccountRoles, maxRoleCounts.OSLocalAccountRoles)
 
 	err = c.storeMaxRoleCountsLocked(ctx, maxRoleCounts, localPathPrefix, currentMonth)
 	if err != nil {
@@ -412,32 +498,57 @@ func (c *Core) getStoredRoleCountsLocked(ctx context.Context, localPathPrefix st
 	return maxRoleCounts, nil
 }
 
-func (c *Core) compareCounts(current, previous int, metricName string) int {
+// compareCounts compares the current to the previous count, returns the larger number and if a new max has been reached
+func (c *Core) compareCounts(current, previous int, metricName string) (int, bool) {
 	if previous > current {
-		return previous
+		return previous, false
 	}
-	c.logger.Debug("updating max counts", "metricName", metricName, "previous", previous, "current", current)
-	return current
+	if current > previous {
+		c.logger.Debug("updating max counts", "metricName", metricName, "previous", previous, "current", current)
+		return current, true
+	}
+	return current, false
 }
 
-func (c *Core) updateMaxTotpKeyCounts(ctx context.Context, currentKeyCounts int, localPathPrefix string, currentMonth time.Time) (int, error) {
+func (c *Core) updateMaxTotpKeyCounts(ctx context.Context, currentKeyCounts int, attribution MountAttributionMap, localPathPrefix string, currentMonth time.Time) (int, error) {
 	maxKeyCounts, err := c.getStoredTotpKeyCountsLocked(ctx, localPathPrefix, currentMonth)
 	if err != nil {
 		c.logger.Error("error getting stored max totp key counts", "error", err)
 		return 0, err
 	}
+
+	hwmUpdated := false
 	if maxKeyCounts == 0 {
 		maxKeyCounts = currentKeyCounts
-	}
-
-	if currentKeyCounts > maxKeyCounts {
+		hwmUpdated = true
+	} else if currentKeyCounts > maxKeyCounts {
 		c.logger.Debug("updating max totp counts", "totalTotpKeyCounts", currentKeyCounts, "maxTotpKeyCounts", maxKeyCounts)
 		maxKeyCounts = currentKeyCounts
+		hwmUpdated = true
 	}
 
 	err = c.storeMaxTotpKeyCountsLocked(ctx, maxKeyCounts, localPathPrefix, currentMonth)
 	if err != nil {
 		return 0, err
+	}
+
+	// Store attribution if HWM was updated
+	if hwmUpdated && len(attribution) > 0 {
+		// Use the actual HWM count as the total, not sum of mounts
+		attributionData := &logical.MetricTypeAttribution{
+			Count:       maxKeyCounts,
+			Mounts:      attribution,
+			LastUpdated: currentMonth,
+		}
+
+		if view, ok := c.GetBillingSubView(); ok {
+			if err := storeAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, billing.TotpHWMCountsHWM, attributionData); err != nil {
+				c.logger.Error("error storing totp attribution data", "error", err)
+				// Don't fail the entire operation if attribution storage fails
+			}
+		} else {
+			c.logger.Error("failed to get billing subview to update totp attribution data")
+		}
 	}
 
 	return maxKeyCounts, nil

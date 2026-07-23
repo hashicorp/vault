@@ -364,8 +364,8 @@ func TestSystemBackend_BillingOverview_WithMetrics(t *testing.T) {
 	require.NotNil(t, kvResp)
 
 	currentMonth := time.Now()
-	kvCounts := c.GetKvCounts(billing.LocalPrefix)
-	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, kvCounts)
+	kvCounts, kvAttribution := c.GetKvCountsAndAttribution(billing.LocalPrefix)
+	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, kvCounts, kvAttribution)
 	require.NoError(t, err)
 
 	req = logical.TestRequest(t, logical.ReadOperation, "billing/overview")
@@ -571,12 +571,12 @@ func TestSystemBackend_BillingOverview_MetricTypeFormat(t *testing.T) {
 	// Update all metrics
 	currentMonth := time.Now()
 	// Collect metrics once before updating all max counts
-	metrics, err := c.CountMetricsSecretMounts(true)
+	metrics, err := c.CountMetricsSecretMounts(true, false)
 	require.NoError(t, err)
-	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalKvCounts)
+	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalKvCounts, metrics.LocalKvAttribution)
 	require.NoError(t, err)
 
-	_, _, err = c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalRoleCounts, metrics.LocalManagedKeys)
+	_, _, err = c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalRoleCounts, metrics.LocalManagedKeys, metrics.LocalRoleAttribution, metrics.LocalManagedKeyAttribution)
 	require.NoError(t, err)
 
 	_, err = c.UpdateTransitCallCounts(ctx, currentMonth)
@@ -1084,8 +1084,8 @@ func TestSystemBackend_BillingOverview_MultipleMetricTypes(t *testing.T) {
 	_, err = c.HandleRequest(ctx, kvReq)
 	require.NoError(t, err)
 
-	kvCounts := c.GetKvCounts(billing.LocalPrefix)
-	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, kvCounts)
+	kvCounts, kvAttribution := c.GetKvCountsAndAttribution(billing.LocalPrefix)
+	_, err = c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, kvCounts, kvAttribution)
 	require.NoError(t, err)
 
 	// Make request to billing overview
