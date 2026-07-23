@@ -22,6 +22,8 @@ declare const config: {
     LOG_VIEW_LOOKUPS?: boolean;
     rootElement?: string;
     autoboot?: boolean;
+    VAULT_BRANCH?: string | null;
+    VAULT_COMMIT?: string | null;
   };
 };
 

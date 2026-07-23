@@ -1,0 +1,16 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+{{#if this.isDevelopment}}
+  <Hds::Alert @type="inline" @color="highlight" @icon="git-branch" class="env-banner" as |A|>
+    {{#if this.hasBranchAndCommit}}
+      <A.Title>{{this.vaultCommit}}</A.Title>
+      <A.Description>
+        {{this.vaultBranch}}
+      </A.Description>
+    {{else}}
+      <A.Title>Development Environment</A.Title>
+    {{/if}}
+  </Hds::Alert>
+{{/if}}

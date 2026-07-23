@@ -55,10 +55,15 @@
       @hasA11yRefocus={{true}}
       @a11yRefocusSkipTo="app-main-content"
       data-test-sidebar
+      class="vault-sidebar-nav-body"
     >
       {{! this block is where the Hds::AppSideNav::Portal components render into }}
-      <Hds::AppSideNav::Portal::Target />
+      <Hds::AppSideNav::Portal::Target data-test-portal />
+
+      <EnvBanner />
+
     </Hds::AppSideNav>
+
   </Frame.Sidebar>
   <Frame.Main id="app-main-content" class={{if this.console.isOpen "main--console-open"}}>
     {{! outlet for app content }}

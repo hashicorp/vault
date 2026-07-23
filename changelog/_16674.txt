@@ -1,0 +1,3 @@
+```release-note:bug
+audit: Fix a regression from CVE-2025-6000 that broke enabling audit devices on Windows when a plugin directory was configured. 
+```

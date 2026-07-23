@@ -26,3 +26,12 @@
     color: hsl(0, 0%, 4%);
   }
 }
+
+// Allows for sibling components of the AppSideNav::Portal::Target to be
+// anchored to the bottom of the AppSideNav.
+// Setting the margin-top to auto on the sibling component will push it
+// to the bottom of the AppSideNav. See .env-banner class for reference.
+.vault-sidebar-nav-body .hds-app-side-nav__wrapper-body {
+  display: flex;
+  flex-direction: column;
+}
