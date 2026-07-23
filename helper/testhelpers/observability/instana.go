@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -128,6 +129,7 @@ func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string)
 
 	decoder := json.NewDecoder(reader)
 	testStarts := make(map[string]TestEvent)
+	testOutputs := make(map[string]*strings.Builder)
 	spanCount := 0
 
 	for {
@@ -138,8 +140,19 @@ func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string)
 			return fmt.Errorf("failed to decode test event: %w", err)
 		}
 
-		if event.Action == "run" && event.Test != "" {
-			testStarts[event.Package+"/"+event.Test] = event
+		if event.Test != "" {
+			testKey := event.Package + "/" + event.Test
+
+			if event.Action == "run" {
+				testStarts[testKey] = event
+			}
+
+			if event.Action == "output" && event.Output != "" {
+				if _, ok := testOutputs[testKey]; !ok {
+					testOutputs[testKey] = &strings.Builder{}
+				}
+				testOutputs[testKey].WriteString(event.Output)
+			}
 		}
 
 		if (event.Action == "pass" || event.Action == "fail") && event.Test != "" {
@@ -160,6 +173,12 @@ func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string)
 				opentracing.Tag{Key: "span.kind", Value: "entry"},
 			)
 
+			replacer := strings.NewReplacer("_", "*_")
+			// needed so we can link test results by name from Granfana to Instana
+			// Instana needs the escaped test name in the link to list test results
+			escapedTestName := replacer.Replace(event.Test)
+			span.SetTag("test.name.escaped", escapedTestName)
+
 			span.SetTag("test.name", event.Test)
 			span.SetTag("test.package", event.Package)
 			span.SetTag("test.status", event.Action)
@@ -171,10 +190,26 @@ func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string)
 			// ext.Error drives "Erroneous calls" in the Instana dashboard;
 			// LogFields with otlog.Error separately increments "Error logs".
 			if event.Action == "fail" {
+				// Set error tag using both ext.Error and manual tag for compatibility
 				ext.Error.Set(span, true)
+				span.SetTag("error", true)
+
+				output := event.Output
+				if builder, ok := testOutputs[testKey]; ok {
+					output = builder.String()
+				}
+
+				// Capture the test output as the error message for long-term visibility in Instana.
+				// This preserves failure details even after GitHub reruns or old runs are deleted.
+				errorMsg := output
+				if errorMsg == "" {
+					errorMsg = fmt.Sprintf("test %s failed", event.Test)
+				}
+
 				span.LogFields(
 					otlog.String("event", "error"),
-					otlog.Error(fmt.Errorf("test %s failed", event.Test)),
+					otlog.Error(fmt.Errorf("%s", errorMsg)),
+					otlog.String("test.output", output),
 				)
 			}
 
@@ -183,6 +218,7 @@ func CreateSpansFromTestResults(reader io.Reader, workflowName, matrixID string)
 			})
 
 			delete(testStarts, testKey)
+			delete(testOutputs, testKey)
 			spanCount++
 		}
 	}
