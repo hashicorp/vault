@@ -1,0 +1,64 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<section data-test-data-privacy-section>
+  <Hds::Text::Display @tag="h2" @size="300" class="has-bottom-margin-s">Data &amp; privacy</Hds::Text::Display>
+
+  <Hds::Card::Container
+    @hasBorder={{true}}
+    class="has-padding-l"
+    data-test-card-container="share-usage-metrics"
+    ...attributes
+  >
+    <Hds::Form::Toggle::Field
+      @id="telemetry-consent"
+      class="has-bottom-margin-s"
+      checked={{this.telemetryConsent}}
+      {{on "change" this.updateConsent}}
+      data-test-toggle-input="telemetry-consent"
+      as |F|
+    >
+      <F.Label>Share usage metrics</F.Label>
+      <F.HelperText>
+        Help us improve Vault by sending anonymous usage data — which features you use, navigation patterns, and UI
+        interactions. No secret values, credentials, or personally identifying information are ever included.
+      </F.HelperText>
+    </Hds::Form::Toggle::Field>
+
+    <Hds::Layout::Flex @gap="24" class="has-top-margin-m" as |LF|>
+      <LF.Item @tag="ul" @grow={{true}} data-test-data-privacy-included>
+        {{#each this.included as |item|}}
+          <li class="is-flex-center has-bottom-margin-xs">
+            <Hds::Icon @name="check" @color="success" @isInline={{true}} />
+            <Hds::Text::Body @tag="span" @size="200" class="has-left-margin-xs">{{item}}</Hds::Text::Body>
+          </li>
+        {{/each}}
+      </LF.Item>
+
+      <LF.Item @tag="ul" @grow={{true}} data-test-data-privacy-excluded>
+        {{#each this.excluded as |item|}}
+          <li class="is-flex-center has-bottom-margin-xs">
+            <Hds::Icon @name="minus" @color="critical" @isInline={{true}} />
+            <Hds::Text::Body
+              @tag="span"
+              @size="200"
+              @color="faint"
+              class="has-left-margin-xs line-through"
+            >{{item}}</Hds::Text::Body>
+          </li>
+        {{/each}}
+      </LF.Item>
+    </Hds::Layout::Flex>
+
+    <Hds::Separator />
+
+    <Hds::Text::Body @tag="p" @size="100" @color="faint" data-test-data-privacy-footer>
+      This preference is stored in this browser only. See our
+      <Hds::Link::Inline @isHrefExternal={{true}} @href="https://www.hashicorp.com/privacy">
+        Privacy Policy
+      </Hds::Link::Inline>
+      for more information.
+    </Hds::Text::Body>
+  </Hds::Card::Container>
+</section>
