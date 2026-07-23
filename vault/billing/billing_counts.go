@@ -58,6 +58,34 @@ const (
 	ExternalCaDurationAdjustedCountPrefix   = "externalCaNormalizedCertsIssued/"
 
 	AttributionMaxPrefix = "attribution/maximum/"
+
+	// Role and managed key sub-types for storing attribution data of consumption billing metrics
+	AWSDynamicRoles            = "aws_dynamic"
+	AWSStaticRoles             = "aws_static"
+	AzureDynamicRoles          = "azure_dynamic"
+	AzureStaticRoles           = "azure_static"
+	DatabaseDynamicRoles       = "database_dynamic"
+	DatabaseStaticRoles        = "database_static"
+	GCPRolesets                = "gcp_dynamic"
+	GCPStaticAccounts          = "gcp_static"
+	GCPImpersonatedAccounts    = "gcp_impersonated"
+	LDAPDynamicRoles           = "ldap_dynamic"
+	LDAPStaticRoles            = "ldap_static"
+	LDAPLibrarySets            = "ldap_library_sets"
+	OpenLDAPDynamicRoles       = "openldap_dynamic"
+	OpenLDAPLibrarySets        = "openldap_library_sets"
+	OpenLDAPStaticRoles        = "openldap_static"
+	AlicloudDynamicRoles       = "alicloud_dynamic"
+	RabbitMQDynamicRoles       = "rabbitmq_dynamic"
+	ConsulDynamicRoles         = "consul_dynamic"
+	NomadDynamicRoles          = "nomad_dynamic"
+	KubernetesDynamicRoles     = "kubernetes_dynamic"
+	MongoDBAtlasDynamicRoles   = "mongodb_atlas_dynamic"
+	TerraformCloudDynamicRoles = "terraformcloud_dynamic"
+	OSLocalAccountRoles        = "os_local_account_static"
+
+	TotpKeys = "totp"
+	KmseKeys = "kmse"
 )
 
 var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
