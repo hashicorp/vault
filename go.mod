@@ -240,7 +240,7 @@ require (
 	golang.org/x/text v0.38.0
 	golang.org/x/tools v0.45.0
 	google.golang.org/api v0.279.0
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
@@ -582,7 +582,7 @@ require (
 	golang.org/x/time v0.15.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260406210006-6f92a3bedf2d // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260414002931-afd174a4e478 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260511170946-3700d4141b60 // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
