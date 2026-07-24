@@ -45,7 +45,7 @@ export default function mapStatusBadge(status: OrderStatusName | ChallengeStatus
     case 'revoked':
       return { text: 'Revoked', color: 'critical' };
     case 'completed':
-      return { text: 'Issued', color: 'success' };
+      return { text: 'Completed', color: 'success' };
     case 'valid':
       return { text: 'Valid', color: 'success' };
     default:

@@ -1,0 +1,31 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<ExternalPki::HeaderTabs
+  @title="View order"
+  @breadcrumbs={{@breadcrumbs}}
+  @responseTimestamp={{@model.responseTimestamp}}
+  @backend={{@model.engine}}
+>
+  <:refreshButton>
+    <Hds::Button
+      class="margin-left-auto"
+      @color="tertiary"
+      @icon="reload"
+      @iconPosition="trailing"
+      @isInline={{true}}
+      @text="Refresh"
+      {{on "click" this.refresh}}
+      data-test-button="Refresh"
+    />
+  </:refreshButton>
+</ExternalPki::HeaderTabs>
+
+<ExternalPki::OrderCertDetails
+  @order={{@model.order}}
+  @certificate={{@model.certificate}}
+  @orderId={{@model.order_id}}
+  @engineId={{@model.engine.id}}
+/>

@@ -188,6 +188,9 @@ module('Integration | Component | pki | external-pki | ExternalPki::ConfigDetail
     this.config = {
       creation_date: isoDate,
       last_update: isoDate,
+      last_updated: isoDate,
+      last_updated_date: isoDate,
+      last_update_date: isoDate,
       next_work_date: isoDate,
       expires: isoDate,
       not_after: isoDate,
@@ -200,6 +203,15 @@ module('Integration | Component | pki | external-pki | ExternalPki::ConfigDetail
       .dom(GENERAL.infoRowValue('Creation date'))
       .hasText(expectedDate, 'creation_date is formatted as UTC');
     assert.dom(GENERAL.infoRowValue('Last update')).hasText(expectedDate, 'last_update is formatted as UTC');
+    assert
+      .dom(GENERAL.infoRowValue('Last updated'))
+      .hasText(expectedDate, 'last_updated is formatted as UTC');
+    assert
+      .dom(GENERAL.infoRowValue('Last updated date'))
+      .hasText(expectedDate, 'last_updated_date is formatted as UTC');
+    assert
+      .dom(GENERAL.infoRowValue('Last update date'))
+      .hasText(expectedDate, 'last_update_date is formatted as UTC');
     assert
       .dom(GENERAL.infoRowValue('Next work date'))
       .hasText(expectedDate, 'next_work_date is formatted as UTC');
