@@ -71,36 +71,52 @@ fi
 
 # If we are running Vault, make sure it executes as the proper user.
 if [ "$1" = 'vault' ]; then
-    if [ -z "$SKIP_CHOWN" ]; then
-        # If the config dir is bind mounted then chown it
-        if [ "$(stat -c %u /vault/config)" != "$(id -u vault)" ]; then
-            chown -R vault:vault /vault/config || echo "Could not chown /vault/config (may not have appropriate permissions)"
+    # When the container starts as a non-root user (e.g. USER vault in Dockerfile),
+    # we cannot chown or setcap.  Honor the explicit opt-out flags and also
+    # skip setcap when the runtime doesn't grant IPC_LOCK (e.g. AWS ECS Fargate).
+    if [ "$(id -u)" != '0' ]; then
+        if [ -n "$SKIP_CHOWN" ]; then
+            echo "Container is running as non-root user, ignoring SKIP_CHOWN" >&2
+        fi
+        if [ -n "$SKIP_SETCAP" ]; then
+            echo "Container is running as non-root user, ignoring SKIP_SETCAP" >&2
         fi
 
-        # If the logs dir is bind mounted then chown it
-        if [ "$(stat -c %u /vault/logs)" != "$(id -u vault)" ]; then
-            chown -R vault:vault /vault/logs
+        # If mlock is disabled via config or env, nothing else to do.
+        # Otherwise warn that memory won't be locked.
+        if [ -z "$VAULT_DISABLE_MLOCK" ] && [ -z "$disable_mlock" ]; then
+            : # Vault will try mlock; on restricted runtimes it may fail later
+        fi
+    else
+        if [ -z "$SKIP_CHOWN" ]; then
+            # If the config dir is bind mounted then chown it
+            if [ "$(stat -c %u /vault/config)" != "$(id -u vault)" ]; then
+                chown -R vault:vault /vault/config || echo "Could not chown /vault/config (may not have appropriate permissions)"
+            fi
+
+            # If the logs dir is bind mounted then chown it
+            if [ "$(stat -c %u /vault/logs)" != "$(id -u vault)" ]; then
+                chown -R vault:vault /vault/logs
+            fi
+
+            # If the file dir is bind mounted then chown it
+            if [ "$(stat -c %u /vault/file)" != "$(id -u vault)" ]; then
+                chown -R vault:vault /vault/file
+            fi
         fi
 
-        # If the file dir is bind mounted then chown it
-        if [ "$(stat -c %u /vault/file)" != "$(id -u vault)" ]; then
-            chown -R vault:vault /vault/file
+        if [ -z "$SKIP_SETCAP" ]; then
+            # Allow mlock to avoid swapping Vault memory to disk
+            setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
+
+            # In the case vault has been started in a container without IPC_LOCK privileges
+            if ! vault -version 1>/dev/null 2>/dev/null; then
+                >&2 echo "Couldn't start vault with IPC_LOCK. Disabling IPC_LOCK, please use --cap-add IPC_LOCK"
+                setcap cap_ipc_lock=-ep $(readlink -f $(which vault))
+            fi
         fi
-    fi
 
-    if [ -z "$SKIP_SETCAP" ]; then
-        # Allow mlock to avoid swapping Vault memory to disk
-        setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
-
-        # In the case vault has been started in a container without IPC_LOCK privileges
-        if ! vault -version 1>/dev/null 2>/dev/null; then
-            >&2 echo "Couldn't start vault with IPC_LOCK. Disabling IPC_LOCK, please use --cap-add IPC_LOCK"
-            setcap cap_ipc_lock=-ep $(readlink -f $(which vault))
-        fi
-    fi
-
-    if [ "$(id -u)" = '0' ]; then
-      set -- su-exec vault "$@"
+        set -- su-exec vault "$@"
     fi
 fi
 
