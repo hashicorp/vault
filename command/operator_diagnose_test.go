@@ -628,6 +628,18 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 			},
 		},
 		{
+			"diagnose_telemetry_ok_dogstatsd",
+			[]string{
+				"-config", "./server/test-fixtures/diagnose_ok_dogstatsd_telemetry.hcl",
+			},
+			[]*diagnose.Result{
+				{
+					Name:   "Check Telemetry",
+					Status: diagnose.OkStatus,
+				},
+			},
+		},
+		{
 			"diagnose_telemetry_partial_stackdriver",
 			[]string{
 				"-config", "./server/test-fixtures/diagnose_bad_telemetry3.hcl",
