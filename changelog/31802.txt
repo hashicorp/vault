@@ -1,0 +1,3 @@
+```release-note:bug                                                                                           
+  agent/sink/file: close temp file descriptor on chown error to prevent fd leak                                       
+  ```
