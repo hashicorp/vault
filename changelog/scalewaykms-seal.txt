@@ -1,0 +1,3 @@
+```release-note:feature
+core/seal: Add Scaleway Key Manager (`scalewaykms`) auto-unseal seal type.
+```
