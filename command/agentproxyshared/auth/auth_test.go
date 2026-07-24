@@ -530,3 +530,140 @@ func createMockToken(t *testing.T) string {
 	// The mock server will validate this token when lookup-self is called
 	return "test-token-123"
 }
+
+// headerReturningAuthMethod is an auth method that returns a header from its
+// Authenticate implementation. It is used to verify that the returned header is
+// not added to the client multiple times across re-authentications.
+type headerReturningAuthMethod struct {
+	headerKey  string
+	newCredsCh chan struct{}
+}
+
+func (m *headerReturningAuthMethod) Authenticate(_ context.Context, _ *api.Client) (string, http.Header, map[string]interface{}, error) {
+	header := http.Header{}
+	header.Set(m.headerKey, "custom-value")
+	return "auth/approle/login", header, map[string]interface{}{
+		"role_id":   "test-role-id",
+		"secret_id": "test-secret-id",
+	}, nil
+}
+
+func (m *headerReturningAuthMethod) NewCreds() chan struct{} {
+	return m.newCredsCh
+}
+
+func (m *headerReturningAuthMethod) CredSuccess() {}
+
+func (m *headerReturningAuthMethod) Shutdown() {}
+
+// TestAuthHandler_HeaderNotDuplicatedOnReauth verifies that a header returned by
+// an auth method's Authenticate implementation is sent exactly once per login,
+// even after the auth handler re-authenticates multiple times.
+//
+// This reproduces a bug where the header loop in AuthHandler.Run calls AddHeader
+// on the (reused) client on every iteration of the auth loop. Because AddHeader
+// appends rather than replaces, the header accumulates across re-authentications,
+// so each subsequent login request carries an additional copy of the header.
+func TestAuthHandler_HeaderNotDuplicatedOnReauth(t *testing.T) {
+	const customHeaderKey = "X-Custom-Auth-Header"
+
+	var mu sync.Mutex
+	// headerValueCounts records, per login request, how many values were sent
+	// for the custom header.
+	var headerValueCounts []int
+	loginCh := make(chan struct{}, 10)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.HasSuffix(r.URL.Path, "/v1/auth/approle/login") {
+			http.Error(w, "endpoint not implemented in mock", http.StatusNotFound)
+			return
+		}
+
+		mu.Lock()
+		headerValueCounts = append(headerValueCounts, len(r.Header.Values(customHeaderKey)))
+		mu.Unlock()
+
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"auth": map[string]interface{}{
+				"client_token":   "test-token-123",
+				"policies":       []string{"default"},
+				"lease_duration": 3600,
+				"renewable":      true,
+			},
+		})
+		loginCh <- struct{}{}
+	}))
+	defer server.Close()
+
+	config := api.DefaultConfig()
+	config.Address = server.URL
+	client, err := api.NewClient(config)
+	require.NoError(t, err)
+
+	newCredsCh := make(chan struct{})
+	am := &headerReturningAuthMethod{
+		headerKey:  customHeaderKey,
+		newCredsCh: newCredsCh,
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	ah := NewAuthHandler(&AuthHandlerConfig{
+		Logger:                       logging.NewVaultLogger(hclog.Trace).Named("auth.handler"),
+		Client:                       client,
+		EnableReauthOnNewCredentials: true,
+	})
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- ah.Run(ctx, am)
+	}()
+
+	// Drain tokens so the auth handler doesn't block writing to OutputCh.
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ah.OutputCh:
+			}
+		}
+	}()
+
+	const numAuths = 3
+	for i := 0; i < numAuths; i++ {
+		select {
+		case <-loginCh:
+		case <-time.After(10 * time.Second):
+			t.Fatalf("timeout waiting for login #%d", i+1)
+		}
+
+		// Trigger a re-authentication for every login except the last.
+		if i < numAuths-1 {
+			select {
+			case newCredsCh <- struct{}{}:
+			case <-time.After(10 * time.Second):
+				t.Fatalf("timeout triggering re-auth after login #%d", i+1)
+			}
+		}
+	}
+
+	cancelFunc()
+	select {
+	case <-errCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for auth handler to stop")
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+
+	require.GreaterOrEqual(t, len(headerValueCounts), numAuths)
+	for i, count := range headerValueCounts {
+		require.Equalf(t, 1, count,
+			"login #%d sent the custom header %d time(s); expected exactly 1 (header should not accumulate across re-authentications)",
+			i+1, count)
+	}
+}

@@ -1125,6 +1125,14 @@ func (c *Client) AddHeader(key, value string) {
 	c.headers.Add(key, value)
 }
 
+// SetHeader allows a single header key/value pair to be set
+// in a race-safe fashion.
+func (c *Client) SetHeader(key, value string) {
+	c.modifyLock.Lock()
+	defer c.modifyLock.Unlock()
+	c.headers.Set(key, value)
+}
+
 // SetHeaders clears all previous headers and uses only the given
 // ones going forward.
 func (c *Client) SetHeaders(headers http.Header) {
