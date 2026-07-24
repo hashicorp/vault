@@ -1,7 +1,7 @@
 //go:build isolated
 // +build isolated
 
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package verify
