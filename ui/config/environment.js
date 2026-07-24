@@ -53,6 +53,8 @@ module.exports = function (environment) {
     ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
+    ENV.APP.VAULT_BRANCH = process.env.VAULT_BRANCH || null;
+    ENV.APP.VAULT_COMMIT = process.env.VAULT_COMMIT || null;
     if (process.env.MIRAGE_DEV_HANDLER !== undefined) {
       ENV['ember-cli-mirage'] = {
         enabled: true,
