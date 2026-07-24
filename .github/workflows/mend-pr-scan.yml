@@ -30,7 +30,7 @@ jobs:
           vault-jwt-github-audience: ${{ vars.CI_VAULT_AUD }}
           generate-scan-report: "true"
           npm-include-dev-dependencies: "true"
-          scan-timeout-minutes: "30"
+          scan-timeout-minutes: "25"
           psirt-id: "PSIRT_PRD0014264"
 
       - name: Upload Scan Artifacts
