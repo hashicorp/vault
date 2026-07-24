@@ -316,6 +316,7 @@ changed_files {
         joinpath("specs"),
         joinpath(".release", "ibm-pao"),
         // Internal developer tooling that must not sync to CE
+        ".bob",
         ".agents",
         joinpath("ui", ".agents"),
       ]
@@ -325,6 +326,7 @@ changed_files {
       base_name = [
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
+        "AGENTS.md",
       ]
     }
 
