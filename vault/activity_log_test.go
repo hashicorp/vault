@@ -18,9 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"

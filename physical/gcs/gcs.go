@@ -16,8 +16,8 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	metrics "github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/helper/useragent"
