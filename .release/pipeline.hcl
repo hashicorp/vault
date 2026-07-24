@@ -260,6 +260,8 @@ changed_files {
         joinpath(".github", "workflows", "build-artifacts-ent.yml"),
         joinpath(".github", "workflows", "backport-automation-ent.yml"),
         joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
+        # This was accidentally merged and synced before we had bob classified as ent only
+        joinpath(".release", "enos-test-automation.md"),
       ]
     }
 
