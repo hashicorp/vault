@@ -325,6 +325,7 @@ IMPROVEMENTS:
 
 BUG FIXES:
 
+* api: fix response body leak in sys/* methods when rawRequestWithContext returns a non-nil response alongside an error ([#31901](https://github.com/hashicorp/vault/pull/31901))
 * activity (enterprise): sys/internal/counters/activity outputs the correct mount type when called from a non root namespace
 * agent/pkiexternalca: Fix token distribution to PKI system and HTTP-01 challenge server shutdown preventing certificate acquisition and retries
 * agent: Fix Vault Agent discarding cached tokens on transient server errors instead of retrying
