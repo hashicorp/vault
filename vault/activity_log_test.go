@@ -5026,6 +5026,7 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 	testCases := []struct {
 		name               string
 		requestedStartTime time.Time
+		requestedEndTime   time.Time
 	}{
 		{
 			name:               "start time is the start of the current month",
@@ -5039,6 +5040,18 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 			name:               "start time is the end of the current month",
 			requestedStartTime: endOfMonth,
 		},
+		{
+			name:             "end time is the start of the current month",
+			requestedEndTime: startOfMonth,
+		},
+		{
+			name:             "end time is the middle of the current month",
+			requestedEndTime: middleOfMonth,
+		},
+		{
+			name:             "end time is the end of the current month",
+			requestedEndTime: endOfMonth,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -5048,9 +5061,21 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 				headers: http.Header{},
 			}
 
-			// Test different start times but keep the end time at the end of the current month
-			// Start time of any timestamp within the current month should result in the same output from the export API
-			if err := a.writeExport(ctx, rw, "json", tc.requestedStartTime, endOfMonth); err != nil {
+			// Use requested start/end times if provided, otherwise default to start/end of month.
+			// Start/end time of any timestamp within the current month should result in the same output from the export API
+			var startTime, endTime time.Time
+			if !tc.requestedStartTime.IsZero() {
+				startTime = tc.requestedStartTime
+			} else {
+				startTime = startOfMonth
+			}
+			if !tc.requestedEndTime.IsZero() {
+				endTime = tc.requestedEndTime
+			} else {
+				endTime = endOfMonth
+			}
+
+			if err := a.writeExport(ctx, rw, "json", startTime, endTime); err != nil {
 				t.Fatal(err)
 			}
 

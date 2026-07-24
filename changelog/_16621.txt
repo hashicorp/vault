@@ -1,0 +1,3 @@
+```release-note:bug
+export API: Normalize the end_time parameter in the activity export API to the end of the month to match the behavior stated in the documentation.
+```
