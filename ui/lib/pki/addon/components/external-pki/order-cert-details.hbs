@@ -1,0 +1,115 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @order.error}}
+  <Hds::Alert @type="inline" data-test-message-error as |A|>
+    <A.Title>Order status is unavailable</A.Title>
+    <A.Description>
+      {{#if (and @order.error.path (eq @order.error.status 403))}}
+        You do not have "read" permissions for the path:
+        <Hds::Text::Code class="code-in-text">{{@order.error.path}}</Hds::Text::Code>
+      {{else if (not-eq @order.error.status 404)}}
+        {{! 404s are empty and so api.parseError() returns an irrelevant default message}}
+        {{@order.error.message}}
+      {{/if}}
+    </A.Description>
+  </Hds::Alert>
+{{/if}}
+
+{{#if @certificate.error}}
+  <Hds::Alert @type="inline" data-test-message-error as |A|>
+    <A.Title>Certificate data is unavailable</A.Title>
+    <A.Description>
+      {{#if (and @certificate.error.path (eq @certificate.error.status 403))}}
+        You do not have "read" permissions for the path:
+        <Hds::Text::Code class="code-in-text">{{@certificate.error.path}}</Hds::Text::Code>
+      {{else if (not-eq @certificate.error.status 404)}}
+        {{! 404s are empty and so api.parseError() returns an irrelevant default message}}
+        {{@certificate.error.message}}
+      {{/if}}
+    </A.Description>
+  </Hds::Alert>
+{{/if}}
+
+{{#if this.orderConfigDisplay}}
+  <ExternalPki::ConfigDetails @config={{this.orderConfigDisplay}} @engineId={{@engineId}} />
+{{/if}}
+
+{{#if @certificate.details}}
+  <Hds::Card::Container
+    @hasBorder={{true}}
+    class="has-top-margin-l has-padding-l"
+    data-test-card-container="Certificate details"
+  >
+    <Hds::Text::Display @weight="semibold" @size="300" @tag="h2" class="bottom-margin-8">
+      Certificate details
+    </Hds::Text::Display>
+    <ExternalPki::ConfigDetails @config={{@certificate.details}} @engineId={{@engineId}} />
+  </Hds::Card::Container>
+{{/if}}
+
+{{#if this.tableData}}
+  <Hds::Card::Container
+    @hasBorder={{this.orderCompleted}}
+    class="has-top-margin-l {{if this.orderCompleted 'has-padding-l'}}"
+    data-test-card-container="Order information"
+  >
+    <Hds::Text::Display @weight="semibold" @size="300" @tag="h3" class="bottom-margin-8">
+      {{#if this.orderCompleted}}
+        Order information
+      {{else}}
+        Order challenge information
+      {{/if}}
+    </Hds::Text::Display>
+
+    {{#if this.orderCompleted}}
+      <Hds::Layout::Flex class="has-top-padding-m has-bottom-padding-m" @gap="48" data-test-order-card-details as |LF|>
+        <LF.Item>
+          <Hds::Text::Body @tag="p" @weight="semibold">Order ID</Hds::Text::Body>
+          <Hds::Copy::Snippet
+            @textToCopy={{@orderId}}
+            @color="secondary"
+            @onError={{fn
+              (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+            }}
+            data-test-row-value="Order ID"
+          />
+        </LF.Item>
+        <LF.Item>
+          <Hds::Text::Body @tag="p" @weight="semibold">Order created</Hds::Text::Body>
+          <Hds::Text::Body @tag="p" data-test-row-value="Order created">
+            {{! Display local time in tooltip over UTC timestamp to ease date comparison }}
+            <Hds::TooltipButton
+              @text={{date-format @order.details.creation_date "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}
+            >
+              {{format-date-utc @order.details.creation_date}}
+            </Hds::TooltipButton>
+          </Hds::Text::Body>
+        </LF.Item>
+      </Hds::Layout::Flex>
+    {{/if}}
+
+    <Hds::AdvancedTable @columns={{this.tableColumns}} @model={{this.tableData}}>
+      <:body as |B|>
+        <B.Tr data-test-table-row={{B.rowIndex}}>
+          <B.Th data-test-table-data="identifier">{{B.data.identifier}}</B.Th>
+          <B.Td data-test-table-data="challenge_status">
+            {{#let (map-status-badge B.data.challenge_status) as |badge|}}
+              <Hds::Badge @text={{badge.text}} @color={{badge.color}} data-test-badge="challenge_status" />
+            {{/let}}
+          </B.Td>
+          <B.Td data-test-table-data="challenge_type">
+            {{B.data.challenge_type}}
+          </B.Td>
+          <B.Td data-test-table-data="expires">
+            <Hds::Text::Code class="white-space-nowrap" @tag="p">
+              {{format-date-utc B.data.expires}}
+            </Hds::Text::Code>
+          </B.Td>
+        </B.Tr>
+      </:body>
+    </Hds::AdvancedTable>
+  </Hds::Card::Container>
+{{/if}}

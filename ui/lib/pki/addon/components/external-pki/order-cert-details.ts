@@ -5,14 +5,7 @@
 
 import Component from '@glimmer/component';
 import { cached } from '@glimmer/tracking';
-
-import type {
-  PkiExternalCaReadLookupCertResponse,
-  PkiExternalCaReadLookupOrderResponse,
-  PkiExternalCaReadRoleOrderFetchCertResponse,
-  PkiExternalCaReadRoleOrderStatusResponse,
-} from '@hashicorp/vault-client-typescript';
-import type { ApiParsedError } from 'vault/vault/api';
+import { OrdersOrderRouteModel } from 'pki/routes/external/orders/order';
 
 interface Challenge {
   challenge_status: string;
@@ -37,19 +30,13 @@ interface IdentifierRow {
 }
 
 interface Args {
-  order: {
-    details: PkiExternalCaReadLookupOrderResponse | PkiExternalCaReadRoleOrderStatusResponse | undefined;
-    error?: ApiParsedError;
-  };
-  certificate: {
-    details: PkiExternalCaReadLookupCertResponse | PkiExternalCaReadRoleOrderFetchCertResponse | undefined;
-    error?: ApiParsedError;
-  };
+  order: OrdersOrderRouteModel['order'];
+  certificate: OrdersOrderRouteModel['certificate'];
   orderId: string;
   engineId: string;
 }
 
-export default class ExternalPkiOrderInfoCardComponent extends Component<Args> {
+export default class ExternalPkiOrderCertDetailsComponent extends Component<Args> {
   tableColumns = [
     { key: 'identifier', label: 'Identifier', isExpandable: true },
     { key: 'challenge_status', label: 'Status' },
@@ -57,20 +44,39 @@ export default class ExternalPkiOrderInfoCardComponent extends Component<Args> {
     { key: 'expires', label: 'Expires' },
   ];
 
-  get hasCertificate() {
-    return !!this.args.certificate.details;
+  get orderCompleted() {
+    // Only true if user has permission to read the order status AND it's completed
+    return this.args.order?.details?.order_status === 'completed';
   }
 
   @cached
-  get configDisplay() {
-    const { certificate, order, orderId } = this.args;
-    // If we have a certificate then the order has completed. Only show limited order info to prioritize cert details.
-    if (certificate.details) {
-      const { order_status, last_update, role_name } = order.details || {};
-      return { order_status, last_update, role_name, ...certificate.details };
+  get orderConfigDisplay() {
+    const { order, orderId: order_id } = this.args;
+    if (!order.details) return null;
+
+    const { details } = order;
+    // Rename last_update so it's clear the time corresponds to the order, not certificate
+    const { order_status, last_update: last_order_update, role_name } = details;
+    switch (order_status) {
+      case 'completed':
+        // Completed orders: cert display is priority, so only show summary order fields here.
+        return { order_status, last_order_update, role_name };
+      case 'expired':
+      case 'error':
+        // Expired or failed orders: cert is not fetchable, show relevant fields so the user understands why.
+        return {
+          order_id,
+          order_status,
+          last_order_update,
+          creation_date: details.creation_date,
+          expires: details.expires,
+          role_name,
+          last_error: details.last_error,
+        };
+      default:
+        // All remaining statuses (pending, processing, etc.): show everything.
+        return { order_id, ...details };
     }
-    // Otherwise show all of the order information.
-    return { order_id: orderId, ...order.details };
   }
 
   @cached

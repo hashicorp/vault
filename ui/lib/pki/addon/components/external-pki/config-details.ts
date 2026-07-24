@@ -69,5 +69,7 @@ export default class ExternalPkiConfigDetailsComponent extends Component<Args> {
     ['ca_chain', 'certificate', 'private_key', 'trusted_ca'].includes(field);
 
   isDate = (field: string) =>
-    ['creation_date', 'expires', 'last_update', 'next_work_date', 'not_after', 'not_before'].includes(field);
+    field.includes('_date') ||
+    field.includes('_update') ||
+    ['expires', 'not_after', 'not_before'].includes(field);
 }
