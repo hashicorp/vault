@@ -21,6 +21,7 @@ module(
       this.model = {
         engine: { id: 'pki-external-ca' },
         activeOrders: [],
+        role_name: 'myrole',
       };
       this.router = this.owner.lookup('service:router');
       this.renderComponent = () =>
@@ -97,14 +98,15 @@ module(
       await fillIn(GENERAL.inputSearch('orderId'), 'test-order-123');
       await click(GENERAL.button('Lookup order'));
       assert.true(transitionStub.calledOnce, 'transitionTo was called once');
-      assert.true(
-        transitionStub.calledWith(
-          'vault.cluster.secrets.backend.pki.external.orders.order',
-          'pki-external-ca',
-          'test-order-123'
-        ),
-        'transitionTo was called with correct arguments'
+      const [route, mount, role, orderId] = transitionStub.lastCall.args;
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.pki.external.roles.role.order',
+        'transitionTo called with route'
       );
+      assert.strictEqual(mount, 'pki-external-ca', 'transitionTo called with mount');
+      assert.strictEqual(role, 'myrole', 'transitionTo called with role');
+      assert.strictEqual(orderId, 'test-order-123', 'transitionTo called with orderId');
     });
 
     test('it calls refresh when refresh button is clicked', async function (assert) {
@@ -113,8 +115,10 @@ module(
       await this.renderComponent();
       await click(GENERAL.button('Refresh'));
       assert.true(refreshStub.calledOnce, 'refresh was called once');
-      assert.true(
-        refreshStub.calledWith('vault.cluster.secrets.backend.pki.external.roles.role.active-orders'),
+      const [route] = refreshStub.lastCall.args;
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.pki.external.roles.role.active-orders',
         'refresh was called with correct route'
       );
     });

@@ -3,25 +3,32 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<ExternalPki::HeaderTabs @title={{this.model.role_name}} @breadcrumbs={{this.breadcrumbs}}>
-  <:tabs>
-    <li>
-      <LinkTo
-        @current-when={{matches-current-url "external.roles.role.details"}}
-        @route="external.roles.role.details"
-        @models={{array this.model.engine.id this.model.role_name}}
-        data-test-link-to="Details"
-      >Details</LinkTo>
-    </li>
-    <li>
-      <LinkTo
-        @current-when={{matches-current-url "external.roles.role.active-orders"}}
-        @route="external.roles.role.active-orders"
-        @models={{array this.model.engine.id this.model.role_name}}
-        data-test-link-to="Active orders"
-      >Active Orders</LinkTo>
-    </li>
-  </:tabs>
-</ExternalPki::HeaderTabs>
+{{#let (matches-current-url "external.roles.role.order") as |isOrderRoute|}}
+  <ExternalPki::HeaderTabs
+    @title={{if isOrderRoute "View order" this.model.role_name}}
+    @breadcrumbs={{this.generateCrumbs isOrderRoute this.model.role_name}}
+  >
+    <:tabs>
+      {{#unless isOrderRoute}}
+        <li>
+          <LinkTo
+            @current-when={{matches-current-url "external.roles.role.details"}}
+            @route="external.roles.role.details"
+            @models={{array this.model.engine.id this.model.role_name}}
+            data-test-link-to="Details"
+          >Details</LinkTo>
+        </li>
+        <li>
+          <LinkTo
+            @current-when={{matches-current-url "external.roles.role.active-orders"}}
+            @route="external.roles.role.active-orders"
+            @models={{array this.model.engine.id this.model.role_name}}
+            data-test-link-to="Active orders"
+          >Active Orders</LinkTo>
+        </li>
+      {{/unless}}
+    </:tabs>
+  </ExternalPki::HeaderTabs>
+{{/let}}
 
 {{outlet}}

@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/vault/route';
 import timestamp from 'core/utils/timestamp';
+import { fetchRoleOrderCert } from 'pki/utils/pki-external-fetch-order';
 
 import type { Breadcrumb } from 'vault/app-types';
 import type ApiService from 'vault/services/api';
@@ -27,20 +28,6 @@ export default class PkiExternalOrdersOrderRoute extends Route {
   @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
 
-  async fetchRoleOrderCert(roleName: string, orderId: string) {
-    let details, error;
-    try {
-      details = await this.api.secrets.pkiExternalCaReadRoleOrderFetchCert(
-        roleName,
-        orderId,
-        this.secretMountPath.currentPath
-      );
-    } catch (e) {
-      error = await this.api.parseError(e);
-    }
-    return { details, error };
-  }
-
   async model({ order_id }: { order_id: string }) {
     // Any error throws and is handled by Ember's route error handling.
     const details = await this.api.secrets.pkiExternalCaReadLookupOrder(
@@ -51,7 +38,12 @@ export default class PkiExternalOrdersOrderRoute extends Route {
     let certificate;
     // Only fetch the cert if the order has completed and we have a role name to make the request.
     if (details?.role_name && details?.order_status === 'completed') {
-      certificate = await this.fetchRoleOrderCert(details.role_name, order_id);
+      certificate = await fetchRoleOrderCert(
+        this.api,
+        details.role_name,
+        order_id,
+        this.secretMountPath.currentPath
+      );
     }
 
     return {

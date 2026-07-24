@@ -21,6 +21,7 @@ module('Acceptance | enterprise | pki | external | roles | role | active-orders 
     // Test setup
     const api = this.owner.lookup('service:api');
     this.activeOrdersListStub = sinon.stub(api.secrets, 'pkiExternalCaListRoleActiveOrders');
+    this.orderStatusStub = sinon.stub(api.secrets, 'pkiExternalCaReadRoleOrderStatus');
     this.mountPath = `pki-external-ca-${uuidv4()}`;
     this.roleName = 'test-role';
 
@@ -130,6 +131,7 @@ module('Acceptance | enterprise | pki | external | roles | role | active-orders 
     this.activeOrdersListStub.resolves({
       keys: ['order-abc123'],
     });
+    this.orderStatusStub.resolves({ order_status: 'completed' });
     await visit(this.activeOrdersURL);
     await click(GENERAL.linkTo('order-abc123'));
     assert.strictEqual(
