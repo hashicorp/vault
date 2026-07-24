@@ -519,7 +519,34 @@ func (c *Config) ReadEnvironment() error {
 		}
 
 		transport := c.HttpClient.Transport.(*http.Transport)
-		transport.Proxy = http.ProxyURL(u)
+		transport.Proxy = func(r *http.Request) (*url.URL, error) {
+			host := r.URL.Hostname()
+			if noProxy := os.Getenv("NO_PROXY"); noProxy != "" {
+				for _, entry := range strings.Split(noProxy, ",") {
+					entry = strings.TrimSpace(entry)
+					if entry == "" {
+						continue
+					}
+					// Handle CIDR notation
+					if strings.Contains(entry, "/") {
+						ip := net.ParseIP(host)
+						if ip == nil {
+							continue
+						}
+						_, cidr, err := net.ParseCIDR(entry)
+						if err != nil {
+							continue
+						}
+						if cidr.Contains(ip) {
+							return nil, nil
+						}
+					} else if entry == host || strings.HasSuffix(host, "."+entry) {
+						return nil, nil
+					}
+				}
+			}
+			return u, nil
+		}
 	}
 
 	return nil
