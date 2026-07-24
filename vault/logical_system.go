@@ -34,6 +34,7 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	glob "github.com/ryanuber/go-glob"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/activationflags"
@@ -262,6 +263,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.inFlightRequestPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.listAllSecretsPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
@@ -1973,6 +1975,150 @@ func (b *SystemBackend) handleMountTable(ctx context.Context, req *logical.Reque
 
 	return resp, nil
 }
+
+// ListAllSecretsRecursive lists all secrets recursively across all secret engine mounts
+func (b *SystemBackend) ListAllSecretsRecursive(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// Get query parameters
+	filterPath := data.Get("path").(string)
+	pattern := data.Get("pattern").(string)
+	fuzzy := data.Get("fuzzy").(bool)
+	permissions := data.Get("permissions").(string)
+
+	b.Core.logger.Info("ListAllSecretsRecursive called", "req_path", req.Path, "req_op", req.Operation, "filterPath", filterPath, "pattern", pattern, "fuzzy", fuzzy, "permissions", permissions)
+
+	// Get all mounts
+	mounts, err := b.Core.ListMounts()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get ACL for permission checking
+	acl, err := b.Core.policyStore.ACL(ctx, nil, nil)
+	if err != nil {
+		// If ACL construction fails, create a default ACL
+		acl, err = b.Core.policyStore.ACL(ctx, nil, map[string][]string{
+			"root": {"root"},
+		})
+		if err != nil {
+			acl = &ACL{}
+		}
+	}
+
+	var allKeys []string
+	keyInfo := make(map[string]interface{})
+
+	for _, mount := range mounts {
+		// Skip local mounts (cubbyhole, etc.) and system mount
+		if mount.Local || mount.Type == "system" {
+			continue
+		}
+
+		// Filter by path if specified
+		if filterPath != "" && !strings.HasPrefix(mount.Path, filterPath) {
+			continue
+		}
+
+		// Get the storage view for this mount
+		storage := b.Core.router.MatchingStorageByStoragePath(ctx, mount.Path)
+		if storage == nil {
+			continue
+		}
+
+		collectedKeys, _ := logical.CollectKeysWithPrefix(ctx, storage, "")
+		// Check if permissions filter is set and build the set
+		var permSet []string
+		if permissions != "" {
+			permSet = strutil.ParseStringSlice(permissions, ",")
+		}
+
+		for _, key := range collectedKeys {
+			// Skip directory entries (keys ending with /)
+			if strings.HasSuffix(key, "/") {
+				continue
+			}
+
+			// Build full path including mount
+			fullKey := mount.Path + key
+
+			// Check permission if filter is set
+			if len(permSet) > 0 {
+				caps := acl.Capabilities(ctx, fullKey)
+				hasPerm := false
+				for _, cap := range caps {
+					if strutil.StrListContains(permSet, cap) {
+						hasPerm = true
+						break
+					}
+				}
+				// If no capabilities returned, only "deny", or only "root", allow all
+				// ("deny" means no specific rule, "root" means all caps apply)
+				if !hasPerm && (len(caps) == 0 || (len(caps) == 1 && (caps[0] == "deny" || caps[0] == "root"))) {
+					hasPerm = true
+				}
+				if !hasPerm {
+					b.Core.logger.Info("ListAllSecretsRecursive: filtering key (no perm)", "mount", mount.Path, "key", key, "fullKey", fullKey, "caps", caps, "permSet", permSet)
+					continue
+				}
+			}
+
+			// Apply pattern matching
+			filtered := shouldFilterKey(key, pattern, fuzzy)
+			if filtered {
+				continue
+			}
+
+			allKeys = append(allKeys, fullKey)
+			ns := mount.Namespace()
+			nsPath := ""
+			if ns != nil {
+				nsPath = ns.Path
+			}
+			keyInfo[fullKey] = map[string]interface{}{
+				"mount":      mount.Path,
+				"type":       mount.Type,
+				"accessor":   mount.Accessor,
+				"namespace":  nsPath,
+				"seal_wrap":  mount.SealWrap,
+				"external":   mount.ExternalEntropyAccess,
+			}
+		}
+	}
+
+	resp := logical.ListResponseWithInfo(allKeys, keyInfo)
+	b.Core.logger.Info("ListAllSecretsRecursive returning", "numKeys", len(allKeys), "keys", allKeys, "keyInfoLen", len(keyInfo), "respData", resp.Data, "mountPath", filterPath)
+	return resp, nil
+}
+
+// shouldFilterKey determines if a key should be kept based on pattern and fuzzy matching.
+// Returns true if the key should be filtered OUT (kept = false).
+func shouldFilterKey(key, pattern string, fuzzy bool) bool {
+	// If no pattern, keep all
+	if pattern == "" {
+		return false
+	}
+
+	// Exact match
+	if pattern == key {
+		return false
+	}
+
+	// If fuzzy mode, do case-insensitive substring matching
+	if fuzzy {
+		fuzzyPattern := strings.ToLower(pattern)
+		fuzzyPattern = strings.TrimPrefix(fuzzyPattern, "*")
+		fuzzyPattern = strings.TrimSuffix(fuzzyPattern, "*")
+		matched := strings.Contains(strings.ToLower(key), fuzzyPattern)
+		return !matched
+	}
+
+	// Glob pattern matching
+	// Use glob.Glob(pattern, key) with pattern first so wildcards are in the pattern
+	// not treated as literal characters in the key.
+	matched := glob.Glob(pattern, key)
+	b := !matched
+	return b
+}
+
 
 // handleMount is used to mount a new path
 // Vault Enterprise replaces handleMount with entHandlerMount
@@ -7805,5 +7951,28 @@ This path responds to the following HTTP methods.
 	"pki-certificate-count": {
 		"Count of PKI certificates issued and stored by PKI backends on this cluster",
 		"Count of PKI certificates issued and stored by PKI backends on this cluster",
+	},
+
+	"secrets-list-recursive": {
+		"List all secrets recursively across all secret engine mounts with optional pattern matching and permission filtering.",
+		`
+This path responds to the following HTTP methods.
+
+    LIST /
+        Lists all secrets recursively across all secret engine mounts.
+
+    GET /
+        Lists all secrets recursively across all secret engine mounts.
+
+Query parameters:
+    path (optional)       Filter to a specific mount path (e.g., secret/)
+    pattern (optional)    Glob pattern for key matching (e.g., *api*, config/*/db)
+    fuzzy (optional)      Enable fuzzy (substring, case-insensitive) matching
+    permissions (optional) Filter by capability (e.g., read, list, read,list)
+
+Returns a JSON object with:
+    keys    Array of secret keys found across all mounts
+    key_info Map of key metadata (mount path, engine type, accessor)
+		`,
 	},
 }

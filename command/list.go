@@ -4,6 +4,7 @@
 package command
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,12 @@ var (
 
 type ListCommand struct {
 	*BaseCommand
+	flagRecursive   bool
+	flagFuzzy       bool
+	flagPattern     string
+	flagPermissions string
+	flagAllMounts   bool
+	flagRecursiveMode string // "cli" for CLI recursive, "api" for API ListRecursive
 }
 
 func (c *ListCommand) Synopsis() string {
@@ -40,6 +47,20 @@ Usage: vault list [options] PATH
   For a full list of examples and paths, please see the documentation that
   corresponds to the secret engine in use. Not all engines support listing.
 
+  New options for recursive listing across all mounts:
+
+      $ vault list --all-mounts --fuzzy api
+          Fuzzy search all mounts for keys containing "api"
+
+      $ vault list --all-mounts --pattern "*db*" secret/
+          Glob pattern search across secret mount
+
+      $ vault list --recursive secret/
+          Recursively list all keys under secret/
+
+      $ vault list --all-mounts --permissions=read
+          Only show keys with read permission
+
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
@@ -47,6 +68,45 @@ Usage: vault list [options] PATH
 
 func (c *ListCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed | FlagSetSnapshot)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:       "all-mounts",
+		Target:     &c.flagAllMounts,
+		Usage:      "List secrets across all secret engine mounts, not just the specified path",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:       "fuzzy",
+		Target:     &c.flagFuzzy,
+		Usage:      "Enable fuzzy (substring, case-insensitive) pattern matching",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   "pattern",
+		Target: &c.flagPattern,
+		Usage:  "Glob pattern for key matching (e.g., *api*, config/*/db)",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   "permissions",
+		Target: &c.flagPermissions,
+		Usage:  "Filter by capability (e.g., read, list, read,list)",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:   "recursive",
+		Target: &c.flagRecursive,
+		Usage:  "Recursively list all keys under the path across all mounts",
+	})
+
+	f.StringVar(&StringVar{
+		Name:   "recursive-mode",
+		Target: &c.flagRecursiveMode,
+		Usage:  "Recursive listing mode: 'api' uses the new list-recursive endpoint, 'cli' walks locally",
+	})
+
 	return set
 }
 
@@ -84,9 +144,25 @@ func (c *ListCommand) Run(args []string) int {
 
 	path := sanitizePath(args[0])
 	var secret *api.Secret
-	if c.flagSnapshotID != "" {
+
+	// Determine if we should use the new list-recursive API
+	useRecursive := c.flagRecursive || c.flagAllMounts || c.flagFuzzy || c.flagPattern != "" || c.flagPermissions != ""
+
+	if useRecursive {
+		// Use the new ListRecursive API
+		input := &api.ListRecursiveInput{
+			Path:        path,
+			Pattern:     c.flagPattern,
+			Fuzzy:       c.flagFuzzy,
+			Permissions: c.flagPermissions,
+			AllMounts:   c.flagAllMounts,
+		}
+		secret, err = client.Logical().ListRecursive(context.Background(), input)
+	} else if c.flagSnapshotID != "" {
+		// Use snapshot-based listing
 		secret, err = client.Logical().ListFromSnapshot(path, c.flagSnapshotID)
 	} else {
+		// Use standard listing
 		secret, err = client.Logical().List(path)
 	}
 	if err != nil {
