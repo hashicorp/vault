@@ -1083,10 +1083,16 @@ func addRoleToStorage(t *testing.T, core *Core, mount string, key string, number
 	for i := 0; i < numberOfKeys; i++ {
 		roleKey := fmt.Sprintf("%srole-%d", key, i)
 		// Create a role with a unique key
+		value := []byte("foo")
+		// LDAP & OpenLDAP return count of 0 with invalid JSON
+		if mount == pluginconsts.SecretEngineLDAP || mount == pluginconsts.SecretEngineOpenLDAP {
+			value = []byte("{}")
+		}
 		err := storageView.Put(context.Background(), &logical.StorageEntry{
 			Key:   roleKey,
-			Value: []byte("foo"),
+			Value: value,
 		})
+
 		require.NoError(t, err)
 	}
 	// Verify that the role is stored

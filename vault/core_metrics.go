@@ -920,6 +920,37 @@ func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeRepl
 		}
 	}
 
+	// apiReadCount calls the given GET endpoint on a mount and returns the integer value
+	// of the "count" key in the response, or 0 on any failure.
+	apiReadCount := func(entry *MountEntry, apiPath string) int {
+		readRequest := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      entry.namespace.Path + entry.Path + apiPath,
+		}
+		resp, err := c.router.Route(ctx, readRequest)
+		if err != nil || resp == nil || resp.Data == nil {
+			return 0
+		}
+		rawCount, ok := resp.Data["count"]
+		if !ok || rawCount == nil {
+			return 0
+		}
+		switch v := rawCount.(type) {
+		case int:
+			return v
+		case int64:
+			return int(v)
+		case uint:
+			return int(v)
+		case uint64:
+			return int(v)
+		case float64:
+			return int(v)
+		default:
+			return 0
+		}
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -979,16 +1010,12 @@ func (c *Core) getRoleAndManagedKeyCountsInternal(includeLocal bool, includeRepl
 			roles.GCPImpersonatedAccounts += len(impersonatedAccounts)
 
 		case pluginconsts.SecretEngineLDAP:
-			dynamicRoles := apiList(entry, "role")
-			roles.LDAPDynamicRoles += len(dynamicRoles)
-			staticRoles := apiList(entry, "static-role")
-			roles.LDAPStaticRoles += len(staticRoles)
+			roles.LDAPDynamicRoles += apiReadCount(entry, "role-count")
+			roles.LDAPStaticRoles += apiReadCount(entry, "static-role-count")
 
 		case pluginconsts.SecretEngineOpenLDAP:
-			dynamicRoles := apiList(entry, "role")
-			roles.OpenLDAPDynamicRoles += len(dynamicRoles)
-			staticRoles := apiList(entry, "static-role")
-			roles.OpenLDAPStaticRoles += len(staticRoles)
+			roles.OpenLDAPDynamicRoles += apiReadCount(entry, "role-count")
+			roles.OpenLDAPStaticRoles += apiReadCount(entry, "static-role-count")
 
 		case pluginconsts.SecretEngineAlicloud:
 			dynamicRoles := apiList(entry, "role")
