@@ -1,0 +1,3 @@
+```release-note:bug
+api: Account for the HTTP Age header when calculating a lease's remaining lifetime, so that leases read or renewed through a caching proxy such as Vault Agent are renewed before they expire.
+```
