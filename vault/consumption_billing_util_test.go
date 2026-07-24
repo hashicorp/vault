@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 	"github.com/stretchr/testify/require"
@@ -953,6 +954,67 @@ func TestSSHCertCounts(t *testing.T) {
 	require.NoError(t, err)
 	expectedSum += expectedCertUnit * 3
 	require.Equal(t, expectedSum, storedCounts)
+}
+
+// TestSSHBillingCounts_ValueBeginningWithCanaryDigit is a regression test for
+// https://github.com/hashicorp/vault/issues/32013. The SSH cert and OTP counts
+// must round-trip through storage even when the stored number's decimal
+// representation begins with the digit '4', which is the LZ4 compression canary
+// byte (0x34). Previously the read path treated the leading '4' as a
+// compression canary and failed with "lz4: bad magic number".
+func TestSSHBillingCounts_ValueBeginningWithCanaryDigit(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+	month := time.Now()
+
+	// Values whose decimal representation begins with '4'.
+	const certCount = 4.1096
+	const otpCount = 42.0
+
+	_, err := core.UpdateStoredSSHDurationAdjustedCertCount(ctx, month, certCount)
+	require.NoError(t, err)
+	gotCert, err := core.GetStoredSSHDurationAdjustedCertCount(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, certCount, gotCert)
+
+	_, err = core.UpdateStoredSSHOTPCount(ctx, month, otpCount)
+	require.NoError(t, err)
+	gotOTP, err := core.GetStoredSSHOTPCount(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, otpCount, gotOTP)
+}
+
+// TestSSHBillingCounts_ReadsLegacyJSONFormat verifies that SSH counts written
+// by earlier versions of Vault as JSON (via jsonutil.EncodeJSON, which appends a
+// trailing newline) are still readable. This includes values beginning with the
+// digit '4', which the previous reader could not decode at all
+// (https://github.com/hashicorp/vault/issues/32013).
+func TestSSHBillingCounts_ReadsLegacyJSONFormat(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+	month := time.Now()
+
+	view, ok := core.GetBillingSubView()
+	require.True(t, ok)
+
+	// 4.1096 begins with the LZ4 canary digit and was previously unreadable.
+	certBytes, err := jsonutil.EncodeJSON(4.1096)
+	require.NoError(t, err)
+	otpBytes, err := jsonutil.EncodeJSON(0.0658)
+	require.NoError(t, err)
+
+	certPath := billing.GetMonthlyBillingMetricPath(billing.LocalPrefix, month, billing.SSHCertificateMetric)
+	otpPath := billing.GetMonthlyBillingMetricPath(billing.LocalPrefix, month, billing.SSHOTPMetric)
+	require.NoError(t, view.Put(ctx, &logical.StorageEntry{Key: certPath, Value: certBytes}))
+	require.NoError(t, view.Put(ctx, &logical.StorageEntry{Key: otpPath, Value: otpBytes}))
+
+	gotCert, err := core.GetStoredSSHDurationAdjustedCertCount(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, 4.1096, gotCert)
+
+	gotOTP, err := core.GetStoredSSHOTPCount(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, 0.0658, gotOTP)
 }
 
 // TestSSHOTPCounts tests that we correctly store and track the SSH OTP counts
