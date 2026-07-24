@@ -47,8 +47,9 @@ export default class ExternalPkiPageRolesRoleActiveOrdersComponent extends Compo
   @action
   lookupOrder() {
     this.router.transitionTo(
-      'vault.cluster.secrets.backend.pki.external.orders.order',
+      'vault.cluster.secrets.backend.pki.external.roles.role.order',
       this.args.model.engine.id,
+      this.args.model.role_name,
       this.orderIdLookup
     );
   }
