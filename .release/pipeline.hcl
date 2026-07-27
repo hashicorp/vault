@@ -260,6 +260,8 @@ changed_files {
         joinpath(".github", "workflows", "build-artifacts-ent.yml"),
         joinpath(".github", "workflows", "backport-automation-ent.yml"),
         joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
+        # This was accidentally merged and synced before we had bob classified as ent only
+        joinpath(".bob", "enos-test-automation.md"),
       ]
     }
 
@@ -316,6 +318,7 @@ changed_files {
         joinpath("specs"),
         joinpath(".release", "ibm-pao"),
         // Internal developer tooling that must not sync to CE
+        ".bob",
         ".agents",
         joinpath("ui", ".agents"),
       ]
@@ -325,6 +328,7 @@ changed_files {
       base_name = [
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
+        "AGENTS.md",
       ]
     }
 
