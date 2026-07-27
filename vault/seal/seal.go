@@ -417,10 +417,14 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 	for _, sealWrapper := range enabledWrappersByPriority {
 		go func(sealWrapper *SealWrapper) {
 			ciphertext, err := a.tryEncrypt(encryptCtx, sealWrapper, plaintext, options...)
-			resultCh <- &result{
+			select {
+			case resultCh <- &result{
 				name:       sealWrapper.Name,
 				ciphertext: ciphertext,
 				err:        err,
+			}:
+			case <-encryptCtx.Done():
+			case <-ctx.Done():
 			}
 		}(sealWrapper)
 	}
@@ -591,11 +595,14 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 	}()
 
 	reportResult := func(name string, plaintext []byte, oldKey bool, err error) {
-		resultCh <- &result{
+		select {
+		case resultCh <- &result{
 			name:   name,
 			pt:     plaintext,
 			oldKey: oldKey,
 			err:    err,
+		}:
+		case <-ctx.Done():
 		}
 		resultWg.Done()
 	}
