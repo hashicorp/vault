@@ -43,22 +43,44 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
-resource "enos_remote_exec" "smoke-verify-autopilot" {
-  for_each = var.hosts
+locals {
+  leader_host = [for key, host in var.hosts : host if host.public_ip != ""][0]
+}
 
-  environment = {
-    VAULT_ADDR                      = var.vault_addr
-    VAULT_INSTALL_DIR               = var.vault_install_dir,
-    VAULT_TOKEN                     = var.vault_root_token,
-    VAULT_AUTOPILOT_UPGRADE_STATUS  = var.vault_autopilot_upgrade_status,
-    VAULT_AUTOPILOT_UPGRADE_VERSION = var.vault_autopilot_upgrade_version,
+module "verify_autopilot_status" {
+  source = "../vault_run_blackbox_test"
+
+  test_package = "github.com/hashicorp/vault/vault/external_tests/blackbox/isolated/verify"
+  test_names   = ["TestAutopilotUpgradeStatus"]
+
+  vault_addr       = var.vault_addr
+  vault_root_token = var.vault_root_token
+  vault_edition    = "ent"
+
+  leader_host      = local.leader_host
+  leader_public_ip = local.leader_host.public_ip
+
+  test_env_vars = {
+    VAULT_AUTOPILOT_UPGRADE_STATUS  = var.vault_autopilot_upgrade_status
+    VAULT_AUTOPILOT_UPGRADE_VERSION = var.vault_autopilot_upgrade_version
   }
+}
 
-  scripts = [abspath("${path.module}/scripts/smoke-verify-autopilot.sh")]
+module "verify_autopilot_status_output" {
+  source = "../vault_run_blackbox_test"
 
-  transport = {
-    ssh = {
-      host = each.value.public_ip
-    }
+  test_package = "github.com/hashicorp/vault/vault/external_tests/blackbox/isolated/verify"
+  test_names   = ["TestAutopilotUpgradeStatusOutput"]
+
+  vault_addr       = var.vault_addr
+  vault_root_token = var.vault_root_token
+  vault_edition    = "ent"
+
+  leader_host      = local.leader_host
+  leader_public_ip = local.leader_host.public_ip
+
+  test_env_vars = {
+    VAULT_AUTOPILOT_UPGRADE_STATUS  = var.vault_autopilot_upgrade_status
+    VAULT_AUTOPILOT_UPGRADE_VERSION = var.vault_autopilot_upgrade_version
   }
 }
