@@ -10,7 +10,6 @@ import { tracked } from '@glimmer/tracking';
 import { cached } from '@glimmer/tracking';
 import { debounce } from '@ember/runloop';
 import { duration } from 'core/helpers/format-duration';
-import { parseAPITimestamp } from 'core/utils/date-formatters';
 import mapStatusBadge from 'pki/helpers/map-status-badge';
 
 import type { OrdersIndexRouteParams, RecentOrderListItem } from 'pki/routes/external/orders/index';
@@ -209,7 +208,4 @@ export default class ExternalPkiPageRecentOrdersComponent extends Component<Args
   refresh() {
     this.router.refresh('vault.cluster.secrets.backend.pki.external.orders');
   }
-
-  // TEMPLATE HELPERS
-  formatDate = (isoString: string) => parseAPITimestamp(isoString, "MM/dd/yyyy, HH:mm 'UTC'");
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -331,4 +332,238 @@ func TestConsumeCertCounts_StoresAttribution(t *testing.T) {
 	require.NotNil(t, otpAttr)
 	require.Len(t, otpAttr.Mounts, 1)
 	require.Contains(t, otpAttr.Mounts, "otp_consume")
+}
+
+// TestUpdateMaxKvCounts_StoresAttributionOnHWMUpdate verifies that UpdateMaxKvCounts stores
+// attribution data when a new HWM is reached, and does not store attribution when the
+// current count is below the stored maximum.
+func TestUpdateMaxKvCounts_StoresAttributionOnHWMUpdate(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	ctx := context.Background()
+	month := timeutil.StartOfMonth(time.Now().UTC())
+
+	attribution := vault.MountAttributionMap{
+		"kv_abc123": logical.MountAttribution{
+			Count:         5,
+			MountAccessor: "kv_abc123",
+			MountPath:     "secret/",
+			MountType:     "kv",
+			NamespaceID:   "root",
+		},
+	}
+
+	// First call: no previous HWM — should set HWM and store attribution.
+	max, err := core.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, month, 5, attribution)
+	require.NoError(t, err)
+	require.Equal(t, 5, max)
+
+	stored, err := core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "kv_abc123", stored.Mounts["kv_abc123"].MountAccessor)
+
+	// Second call with lower count — HWM must remain at 5 and attribution must not change.
+	lowerAttribution := vault.MountAttributionMap{
+		"kv_lower": logical.MountAttribution{
+			Count:         3,
+			MountAccessor: "kv_lower",
+			MountPath:     "lower/",
+			MountType:     "kv",
+			NamespaceID:   "root",
+		},
+	}
+	max, err = core.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, month, 3, lowerAttribution)
+	require.NoError(t, err)
+	require.Equal(t, 5, max, "HWM must not decrease")
+
+	stored, err = core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "kv_abc123", stored.Mounts["kv_abc123"].MountAccessor)
+
+	// Third call with higher count — should update HWM and replace attribution.
+	higherAttribution := vault.MountAttributionMap{
+		"kv_higher": logical.MountAttribution{
+			Count:         9,
+			MountAccessor: "kv_higher",
+			MountPath:     "higher/",
+			MountType:     "kv",
+			NamespaceID:   "root",
+		},
+	}
+	max, err = core.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, month, 9, higherAttribution)
+	require.NoError(t, err)
+	require.Equal(t, 9, max, "HWM must increase to new maximum")
+
+	stored, err = core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "kv_higher", stored.Mounts["kv_higher"].MountAccessor)
+}
+
+// TestUpdateMaxKvCounts_NoAttributionWhenEmpty verifies that when attribution is nil or empty,
+// UpdateMaxKvCounts sets the HWM correctly but does not store any attribution data.
+func TestUpdateMaxKvCounts_NoAttributionWhenEmpty(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	ctx := context.Background()
+	month := timeutil.StartOfMonth(time.Now().UTC())
+
+	max, err := core.UpdateMaxKvCounts(ctx, billing.LocalPrefix, month, 7, nil)
+	require.NoError(t, err)
+	require.Equal(t, 7, max)
+
+	// Attribution entry should be absent (empty attributions → nothing stored)
+	stored, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Empty(t, stored.Mounts, "no attribution should be stored when input attributions are empty")
+}
+
+// TestUpdateMaxRoleAndManagedKeyCounts_StoresRoleAttributionPerType verifies that when a new HWM
+// is reached for a role type, the attribution is stored under the correct per-type key, and no
+// attribution is stored when the HWM is not reached.
+func TestUpdateMaxRoleAndManagedKeyCounts_StoresRoleAttributionPerType(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	ctx := context.Background()
+	month := timeutil.StartOfMonth(time.Now().UTC())
+
+	awsEntry := logical.MountAttribution{
+		Count:         5,
+		MountAccessor: "aws_aaa",
+		MountPath:     "aws/",
+		MountType:     pluginconsts.SecretEngineAWS,
+		NamespaceID:   "root",
+	}
+	roleAttribution := map[string]vault.MountAttributionMap{
+		billing.AWSDynamicRoles: {"aws_aaa": awsEntry},
+	}
+
+	roleCounts := &vault.RoleCounts{AWSDynamicRoles: 5}
+	managedKeyCounts := &vault.ManagedKeyCounts{}
+	managedKeyAttribution := map[string]vault.MountAttributionMap{}
+
+	_, _, err := core.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, month, roleCounts, managedKeyCounts, roleAttribution, managedKeyAttribution)
+	require.NoError(t, err)
+
+	// HWM updated - attribution stored under correct role type
+	stored, err := core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.RoleHWMCountsHWM+billing.AWSDynamicRoles)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "aws_aaa", stored.Mounts["aws_aaa"].MountAccessor)
+	// Count is stored as JSON and deserialised as json.Number; compare via string to avoid type mismatch.
+	require.Equal(t, "5", fmt.Sprintf("%v", stored.Mounts["aws_aaa"].Count))
+
+	// Now pass a lower count with different attribution
+	lowerAttribution := map[string]vault.MountAttributionMap{
+		billing.AWSDynamicRoles: {
+			"aws_bbb": logical.MountAttribution{Count: 3, MountAccessor: "aws_bbb", MountPath: "aws/", MountType: pluginconsts.SecretEngineAWS, NamespaceID: "root"},
+		},
+	}
+	lowerCounts := &vault.RoleCounts{AWSDynamicRoles: 3}
+	_, _, err = core.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, month, lowerCounts, managedKeyCounts, lowerAttribution, managedKeyAttribution)
+	require.NoError(t, err)
+
+	// HWM not reached, attribution in storage should remain same as before
+	stored, err = core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.RoleHWMCountsHWM+billing.AWSDynamicRoles)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "aws_aaa", stored.Mounts["aws_aaa"].MountAccessor)
+	// Count is stored as JSON and deserialised as json.Number; compare via string to avoid type mismatch.
+	require.Equal(t, "5", fmt.Sprintf("%v", stored.Mounts["aws_aaa"].Count))
+
+	// A role type that did not reach a new HWM should have no attribution stored
+	storedDB, err := core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.RoleHWMCountsHWM+billing.DatabaseDynamicRoles)
+	require.NoError(t, err)
+	require.Empty(t, storedDB.Mounts, "no attribution should be stored for role types at zero")
+}
+
+// TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM verifies that UpdateMaxRoleAndManagedKeyCounts
+// stores attribution data when a new HWM is reached, and does not store attribution when the
+// current count is below the stored maximum.
+func TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	ctx := context.Background()
+	month := timeutil.StartOfMonth(time.Now().UTC())
+
+	totpEntry := logical.MountAttribution{
+		Count:         4,
+		MountAccessor: "totp_t1",
+		MountPath:     "totp/",
+		MountType:     pluginconsts.SecretEngineTOTP,
+		NamespaceID:   "root",
+	}
+	managedKeyAttribution := map[string]vault.MountAttributionMap{
+		billing.TotpKeys: {"totp_t1": totpEntry},
+	}
+	roleCounts := &vault.RoleCounts{}
+	roleAttribution := map[string]vault.MountAttributionMap{}
+
+	managedKeyCounts := &vault.ManagedKeyCounts{TotpKeys: 4}
+	_, _, err := core.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, month, roleCounts, managedKeyCounts, roleAttribution, managedKeyAttribution)
+	require.NoError(t, err)
+
+	// HWM updated - attribution should be stored for TOTP
+	stored, err := core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.TotpHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "totp_t1", stored.Mounts["totp_t1"].MountAccessor)
+	// Count is stored as JSON and deserialised as json.Number; compare via string to avoid type mismatch.
+	require.Equal(t, "4", fmt.Sprintf("%v", stored.Mounts["totp_t1"].Count))
+
+	// Second call with higher count: hwmUpdated is true and attribution must be stored.
+	higherAttribution := map[string]vault.MountAttributionMap{
+		billing.TotpKeys: {
+			"totp_t2": logical.MountAttribution{
+				Count:         7,
+				MountAccessor: "totp_t2",
+				MountPath:     "totp2/",
+				MountType:     pluginconsts.SecretEngineTOTP,
+				NamespaceID:   "root",
+			},
+		},
+	}
+	higherManagedKeyCounts := &vault.ManagedKeyCounts{TotpKeys: 7}
+	_, _, err = core.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, month, roleCounts, higherManagedKeyCounts, roleAttribution, higherAttribution)
+	require.NoError(t, err)
+
+	stored, err = core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.TotpHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "totp_t2", stored.Mounts["totp_t2"].MountAccessor)
+
+	// Third call with a lower count — HWM stays at 7 and attribution must not change.
+	lowerAttribution := map[string]vault.MountAttributionMap{
+		billing.TotpKeys: {
+			"totp_t3": logical.MountAttribution{
+				Count:         5,
+				MountAccessor: "totp_t3",
+				MountPath:     "totp3/",
+				MountType:     pluginconsts.SecretEngineTOTP,
+				NamespaceID:   "root",
+			},
+		},
+	}
+	lowerManagedKeyCounts := &vault.ManagedKeyCounts{TotpKeys: 5}
+	_, _, err = core.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, month, roleCounts, lowerManagedKeyCounts, roleAttribution, lowerAttribution)
+	require.NoError(t, err)
+
+	stored, err = core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.TotpHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	require.Equal(t, "totp_t2", stored.Mounts["totp_t2"].MountAccessor)
 }

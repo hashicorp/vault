@@ -34,11 +34,29 @@ type MountMetrics struct {
 	LocalSecretEngineResourceCounts *SecretEngineResourceCounts
 	// LocalKvMounts contains KV counts from local mounts
 	LocalKvCounts int
+
+	// Attribution fields
+	//
+	// ReplicatedKvAttribution contains attribution data for replicated mounts with KV secrets
+	ReplicatedKvAttribution MountAttributionMap
+	// ReplicatedRoleAttribution contains a mapping from role type to attribution data for replicated mounts with those roles
+	ReplicatedRoleAttribution map[string]MountAttributionMap
+	// ReplicatedManagedKeyAttribution contains a mapping from managed key type to attribution data for replicated mounts with those keys
+	ReplicatedManagedKeyAttribution map[string]MountAttributionMap
+	// LocalKvAttribution contains attribution data for local mounts with KV secrets
+	LocalKvAttribution MountAttributionMap
+	// LocalRoleAttribution contains a mapping from role type to attribution data for local mounts with those roles
+	LocalRoleAttribution map[string]MountAttributionMap
+	// LocalManagedKeyAttribution contains a mapping from managed key type to attribution data for local mounts with those keys
+	LocalManagedKeyAttribution map[string]MountAttributionMap
 }
+
+// MountAttributionMap is a map from mount_accessor to mount metadata for attribution
+type MountAttributionMap map[string]logical.MountAttribution
 
 // CountMetricsSecretMounts performs a single iteration through mount entries
 // and collects all required metrics for both replicated and local mounts.
-func (c *Core) CountMetricsSecretMounts(officialOnly bool) (*MountMetrics, error) {
+func (c *Core) CountMetricsSecretMounts(officialOnly bool, collectAttribution bool) (*MountMetrics, error) {
 	if c.Sealed() {
 		return nil, fmt.Errorf("core is sealed, cannot access mount table")
 	}
@@ -55,6 +73,12 @@ func (c *Core) CountMetricsSecretMounts(officialOnly bool) (*MountMetrics, error
 		LocalManagedKeys:                     &ManagedKeyCounts{},
 		LocalSecretEngineResourceCounts:      &SecretEngineResourceCounts{},
 		LocalKvCounts:                        0,
+		ReplicatedKvAttribution:              make(MountAttributionMap),
+		ReplicatedRoleAttribution:            make(map[string]MountAttributionMap),
+		ReplicatedManagedKeyAttribution:      make(map[string]MountAttributionMap),
+		LocalKvAttribution:                   make(MountAttributionMap),
+		LocalRoleAttribution:                 make(map[string]MountAttributionMap),
+		LocalManagedKeyAttribution:           make(map[string]MountAttributionMap),
 	}
 
 	if c.mounts == nil {
@@ -73,29 +97,54 @@ func (c *Core) CountMetricsSecretMounts(officialOnly bool) (*MountMetrics, error
 		var targetRoleCounts *RoleCounts
 		var targetManagedKeys *ManagedKeyCounts
 		var targetSecretEngineResourceCounts *SecretEngineResourceCounts
+		var targetRoleAttribution map[string]MountAttributionMap
+		var targetManagedKeyAttribution map[string]MountAttributionMap
+		var targetKvAttribution MountAttributionMap
 		targetKvLocal := false
 
 		if entry.Local {
 			targetRoleCounts = metrics.LocalRoleCounts
 			targetManagedKeys = metrics.LocalManagedKeys
 			targetSecretEngineResourceCounts = metrics.LocalSecretEngineResourceCounts
+			targetRoleAttribution = metrics.LocalRoleAttribution
+			targetManagedKeyAttribution = metrics.LocalManagedKeyAttribution
+			targetKvAttribution = metrics.LocalKvAttribution
 			targetKvLocal = true
 		} else {
 			targetRoleCounts = metrics.ReplicatedRoleCounts
 			targetManagedKeys = metrics.ReplicatedManagedKeys
 			targetSecretEngineResourceCounts = metrics.ReplicatedSecretEngineResourceCounts
+			targetRoleAttribution = metrics.ReplicatedRoleAttribution
+			targetManagedKeyAttribution = metrics.ReplicatedManagedKeyAttribution
+			targetKvAttribution = metrics.ReplicatedKvAttribution
 		}
 
-		// Collect role counts and managed key counts based on plugin type
-		c.collectMetricsForSecretMount(ctx, entry, targetRoleCounts, targetManagedKeys, targetSecretEngineResourceCounts)
+		// Collect metrics counts and attributions based on plugin type
+		c.collectMetricsForSecretMount(ctx, entry, targetRoleCounts, targetManagedKeys, targetSecretEngineResourceCounts,
+			targetRoleAttribution, targetManagedKeyAttribution, collectAttribution)
 
-		// If this is a KV mount, gather its secret count and add to the total
+		// If this is a KV mount, gather its secret count and mount attribution
 		if kvMount := getKVMountMetadata(entry); kvMount != nil {
 			c.walkKvMountSecrets(ctx, kvMount)
 			if targetKvLocal {
 				metrics.LocalKvCounts += kvMount.NumSecrets
 			} else {
 				metrics.ReplicatedKvCounts += kvMount.NumSecrets
+			}
+
+			// Collect KV attribution if requested and mount has secrets
+			if collectAttribution && kvMount.NumSecrets > 0 {
+				attribution := logical.MountAttribution{
+					Count:            kvMount.NumSecrets,
+					MountAccessor:    kvMount.MountAccessor,
+					MountPath:        kvMount.MountPoint,
+					MountType:        entry.Type,
+					NamespaceID:      kvMount.Namespace.ID,
+					NamespacePath:    kvMount.Namespace.Path,
+					BackendAwareUUID: entry.BackendAwareUUID,
+				}
+				// Use mount accessor as the map key
+				targetKvAttribution[kvMount.MountAccessor] = attribution
 			}
 		}
 	}
@@ -105,7 +154,7 @@ func (c *Core) CountMetricsSecretMounts(officialOnly bool) (*MountMetrics, error
 
 // collectMetricsForSecretMount collects role counts, managed key counts, and secret engine resource counts
 // for a specific mount entry based on its plugin type. It updates the provided target metrics in place.
-func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts, targetSecretEngineResourceCounts *SecretEngineResourceCounts) {
+func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEntry, targetRoleCounts *RoleCounts, targetManagedKeys *ManagedKeyCounts, targetSecretEngineResourceCounts *SecretEngineResourceCounts, targetRoleAttribution, targetManagedKeyAttribution map[string]MountAttributionMap, collectAttribution bool) {
 	// apiListWithKeyInfo lists keys for a mount's apiPath and also returns the key_info
 	// map, used when the caller needs per-key metadata (e.g. SSH key_type for CA vs OTP).
 	apiListWithKeyInfo := func(entry *MountEntry, apiPath string) ([]string, map[string]interface{}) {
@@ -188,6 +237,27 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 		}
 	}
 
+	// Helper to add role attribution by type
+	addRoleAttribution := func(roleType string, count int) {
+		if collectAttribution && count > 0 {
+			attribution := logical.MountAttribution{
+				Count:            count,
+				MountAccessor:    entry.Accessor,
+				MountPath:        entry.Path,
+				MountType:        entry.Type,
+				NamespaceID:      entry.NamespaceID,
+				NamespacePath:    entry.namespace.Path,
+				BackendAwareUUID: entry.BackendAwareUUID,
+			}
+			// Initialize the inner map if it doesn't exist
+			if targetRoleAttribution[roleType] == nil {
+				targetRoleAttribution[roleType] = make(MountAttributionMap)
+			}
+			// Use mount accessor as the key
+			targetRoleAttribution[roleType][entry.Accessor] = attribution
+		}
+	}
+
 	pluginName := getAdjustedPluginType(entry)
 	if pluginName == "" {
 		return
@@ -197,67 +267,96 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 	case pluginconsts.SecretEngineAWS:
 		dynamicRoles := apiList(entry, "roles")
 		targetRoleCounts.AWSDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.AWSDynamicRoles, len(dynamicRoles))
 		staticRoles := apiList(entry, "static-roles")
 		targetRoleCounts.AWSStaticRoles += len(staticRoles)
+		addRoleAttribution(billing.AWSStaticRoles, len(staticRoles))
 
 	case pluginconsts.SecretEngineAzure:
 		dynamicRoles := apiList(entry, "roles")
 		targetRoleCounts.AzureDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.AzureDynamicRoles, len(dynamicRoles))
 		staticRoles := apiList(entry, "static-roles")
 		targetRoleCounts.AzureStaticRoles += len(staticRoles)
+		addRoleAttribution(billing.AzureStaticRoles, len(staticRoles))
 
 	case pluginconsts.SecretEngineDatabase:
 		dynamicRoles := apiList(entry, "roles")
 		targetRoleCounts.DatabaseDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.DatabaseDynamicRoles, len(dynamicRoles))
 		staticRoles := apiList(entry, "static-roles")
 		targetRoleCounts.DatabaseStaticRoles += len(staticRoles)
+		addRoleAttribution(billing.DatabaseStaticRoles, len(staticRoles))
 
 	case pluginconsts.SecretEngineGCP:
 		rolesets := apiList(entry, "rolesets")
 		targetRoleCounts.GCPRolesets += len(rolesets)
+		addRoleAttribution(billing.GCPRolesets, len(rolesets))
 		staticAccounts := apiList(entry, "static-accounts")
 		targetRoleCounts.GCPStaticAccounts += len(staticAccounts)
+		addRoleAttribution(billing.GCPStaticAccounts, len(staticAccounts))
 		impersonatedAccounts := apiList(entry, "impersonated-accounts")
 		targetRoleCounts.GCPImpersonatedAccounts += len(impersonatedAccounts)
+		addRoleAttribution(billing.GCPImpersonatedAccounts, len(impersonatedAccounts))
 
 	case pluginconsts.SecretEngineLDAP:
-		targetRoleCounts.LDAPDynamicRoles += apiReadCount(entry, "role-count")
-		targetRoleCounts.LDAPStaticRoles += apiReadCount(entry, "static-role-count")
-		targetRoleCounts.LDAPLibrarySets += apiReadCount(entry, "library-count")
+		dynamicRoles := apiReadCount(entry, "role-count")
+		targetRoleCounts.LDAPDynamicRoles += dynamicRoles
+		addRoleAttribution(billing.LDAPDynamicRoles, dynamicRoles)
+		staticRoles := apiReadCount(entry, "static-role-count")
+		targetRoleCounts.LDAPStaticRoles += staticRoles
+		addRoleAttribution(billing.LDAPStaticRoles, staticRoles)
+		librarySets := apiReadCount(entry, "library-count")
+		targetRoleCounts.LDAPLibrarySets += librarySets
+		addRoleAttribution(billing.LDAPLibrarySets, librarySets)
 
 	case pluginconsts.SecretEngineOpenLDAP:
-		targetRoleCounts.OpenLDAPDynamicRoles += apiReadCount(entry, "role-count")
-		targetRoleCounts.OpenLDAPStaticRoles += apiReadCount(entry, "static-role-count")
-		targetRoleCounts.OpenLDAPLibrarySets += apiReadCount(entry, "library-count")
+		dynamicRoles := apiReadCount(entry, "role-count")
+		targetRoleCounts.OpenLDAPDynamicRoles += dynamicRoles
+		addRoleAttribution(billing.OpenLDAPDynamicRoles, dynamicRoles)
+		staticRoles := apiReadCount(entry, "static-role-count")
+		targetRoleCounts.OpenLDAPStaticRoles += staticRoles
+		addRoleAttribution(billing.OpenLDAPStaticRoles, staticRoles)
+		librarySets := apiReadCount(entry, "library-count")
+		targetRoleCounts.OpenLDAPLibrarySets += librarySets
+		addRoleAttribution(billing.OpenLDAPLibrarySets, librarySets)
 
 	case pluginconsts.SecretEngineAlicloud:
 		dynamicRoles := apiList(entry, "role")
 		targetRoleCounts.AlicloudDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.AlicloudDynamicRoles, len(dynamicRoles))
 
 	case pluginconsts.SecretEngineRabbitMQ:
 		dynamicRoles := apiList(entry, "roles")
 		targetRoleCounts.RabbitMQDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.RabbitMQDynamicRoles, len(dynamicRoles))
 
 	case pluginconsts.SecretEngineConsul:
 		dynamicRoles := apiList(entry, "roles")
 		targetRoleCounts.ConsulDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.ConsulDynamicRoles, len(dynamicRoles))
 
 	case pluginconsts.SecretEngineNomad:
 		dynamicRoles := apiList(entry, "role")
 		targetRoleCounts.NomadDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.NomadDynamicRoles, len(dynamicRoles))
 
 	case pluginconsts.SecretEngineKubernetes:
 		dynamicRoles := apiList(entry, "roles")
 		targetRoleCounts.KubernetesDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.KubernetesDynamicRoles, len(dynamicRoles))
 
 	case pluginconsts.SecretEngineMongoDBAtlas:
 		dynamicRoles := apiList(entry, "roles")
 		targetRoleCounts.MongoDBAtlasDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.MongoDBAtlasDynamicRoles, len(dynamicRoles))
 
 	case pluginconsts.SecretEngineTerraform:
 		dynamicRoles := apiList(entry, "role")
 		targetRoleCounts.TerraformCloudDynamicRoles += len(dynamicRoles)
+		addRoleAttribution(billing.TerraformCloudDynamicRoles, len(dynamicRoles))
 
+	// Transit secret engine not billed by resource counts so skip attribution collection here
 	case pluginconsts.SecretEngineTransit:
 		transitKeys := apiList(entry, "keys")
 		targetManagedKeys.TransitKeys += len(transitKeys)
@@ -265,7 +364,25 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 	case pluginconsts.SecretEngineTOTP:
 		keyCountPerEntry := apiList(entry, "keys")
 		targetManagedKeys.TotpKeys += len(keyCountPerEntry)
+		if collectAttribution && len(keyCountPerEntry) > 0 {
+			attribution := logical.MountAttribution{
+				Count:            len(keyCountPerEntry),
+				MountAccessor:    entry.Accessor,
+				MountPath:        entry.Path,
+				MountType:        entry.Type,
+				NamespaceID:      entry.NamespaceID,
+				NamespacePath:    entry.namespace.Path,
+				BackendAwareUUID: entry.BackendAwareUUID,
+			}
+			// Initialize the inner map if it doesn't exist
+			if targetManagedKeyAttribution[billing.TotpKeys] == nil {
+				targetManagedKeyAttribution[billing.TotpKeys] = make(MountAttributionMap)
+			}
+			// Use mount accessor as the key
+			targetManagedKeyAttribution[billing.TotpKeys][entry.Accessor] = attribution
+		}
 
+	// Transform secret engine not billed by resource counts so skip attribution collection here
 	case pluginconsts.SecretEngineTransform:
 		transformRoles := apiList(entry, "role")
 		targetRoleCounts.TransformRoles += len(transformRoles)
@@ -283,6 +400,7 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 		stores := apiList(entry, "stores")
 		targetSecretEngineResourceCounts.TransformStores += len(stores)
 
+	// KMIP secret engine not billed by resource counts so skip attribution collection here
 	case pluginconsts.SecretEngineKMIP:
 		// Collect KMIP secret engine resource counts
 		scopes := apiList(entry, "scope")
@@ -305,6 +423,23 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 	case pluginconsts.SecretEngineKeymgmt:
 		keyCountPerEntry := apiList(entry, "key")
 		targetManagedKeys.KmseKeys += len(keyCountPerEntry)
+		if collectAttribution && len(keyCountPerEntry) > 0 {
+			attribution := logical.MountAttribution{
+				Count:            len(keyCountPerEntry),
+				MountAccessor:    entry.Accessor,
+				MountPath:        entry.Path,
+				MountType:        entry.Type,
+				NamespaceID:      entry.NamespaceID,
+				NamespacePath:    entry.namespace.Path,
+				BackendAwareUUID: entry.BackendAwareUUID,
+			}
+			// Initialize the inner map if it doesn't exist
+			if targetManagedKeyAttribution[billing.KmseKeys] == nil {
+				targetManagedKeyAttribution[billing.KmseKeys] = make(MountAttributionMap)
+			}
+			// Use mount accessor as the key
+			targetManagedKeyAttribution[billing.KmseKeys][entry.Accessor] = attribution
+		}
 
 	case pluginconsts.SecretEngineOS:
 		// OS plugin stores all accounts within each host entry
@@ -320,11 +455,14 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 			accountCount += len(accounts)
 		}
 		targetRoleCounts.OSLocalAccountRoles += accountCount
+		addRoleAttribution(billing.OSLocalAccountRoles, accountCount)
 
+	// SPIFFE secret engine not billed by resource counts so skip attribution collection here
 	case pluginconsts.SecretEngineSpiffe:
 		spiffeRoles := apiList(entry, "role")
 		targetRoleCounts.SpiffeRoles += len(spiffeRoles)
 
+	// SSH secret engine not billed by resource counts so skip attribution collection here
 	case pluginconsts.SecretEngineSsh:
 		sshRoles, sshRoleInfo := apiListWithKeyInfo(entry, "roles")
 		for _, role := range sshRoles {
@@ -388,35 +526,35 @@ func (c *Core) isOfficialPlugin(ctx context.Context, entry *MountEntry) bool {
 // GetRoleCounts returns the combined local and replicated role counts across all mounts
 // For use in tests only
 func (c *Core) GetRoleCounts() *RoleCounts {
-	m, err := c.CountMetricsSecretMounts(false)
+	m, err := c.CountMetricsSecretMounts(false, false)
 	if err != nil {
 		return nil
 	}
 	return combineRoleCounts(m.LocalRoleCounts, m.ReplicatedRoleCounts)
 }
 
-// GetRoleAndManagedKeyCounts returns the local or replicated role and managed key counts depending on the mount type
+// GetRoleAndManagedKeyCounts returns the local or replicated role and managed key counts and attribution depending on the mount type
 // For use in tests only
-func (c *Core) GetRoleAndManagedKeyCounts(mountType string) (*RoleCounts, *ManagedKeyCounts) {
-	m, err := c.CountMetricsSecretMounts(true)
+func (c *Core) GetRoleAndManagedKeyCountsAndAttribution(mountType string) (*RoleCounts, *ManagedKeyCounts, map[string]MountAttributionMap, map[string]MountAttributionMap) {
+	m, err := c.CountMetricsSecretMounts(true, true)
 	if err != nil {
-		return nil, nil
+		return nil, nil, nil, nil
 	}
 	if mountType == billing.LocalPrefix {
-		return m.LocalRoleCounts, m.LocalManagedKeys
+		return m.LocalRoleCounts, m.LocalManagedKeys, m.LocalRoleAttribution, m.LocalManagedKeyAttribution
 	}
-	return m.ReplicatedRoleCounts, m.ReplicatedManagedKeys
+	return m.ReplicatedRoleCounts, m.ReplicatedManagedKeys, m.ReplicatedRoleAttribution, m.ReplicatedManagedKeyAttribution
 }
 
-// GetKvCounts returns the local or replicated KV counts depending on the mount type
+// GetKvCounts returns the local or replicated KV counts and attribution depending on the mount type
 // For use in tests only
-func (c *Core) GetKvCounts(mountType string) int {
-	m, err := c.CountMetricsSecretMounts(true)
+func (c *Core) GetKvCountsAndAttribution(mountType string) (int, MountAttributionMap) {
+	m, err := c.CountMetricsSecretMounts(true, true)
 	if err != nil {
-		return 0
+		return 0, nil
 	}
 	if mountType == billing.LocalPrefix {
-		return m.LocalKvCounts
+		return m.LocalKvCounts, m.LocalKvAttribution
 	}
-	return m.ReplicatedKvCounts
+	return m.ReplicatedKvCounts, m.ReplicatedKvAttribution
 }

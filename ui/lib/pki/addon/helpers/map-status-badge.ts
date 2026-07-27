@@ -18,7 +18,7 @@ export type OrderStatusName =
   | 'expired'
   | 'error';
 
-// Challenge statues originate from RFC 8555:
+// Challenge statuses originate from RFC 8555:
 // https://datatracker.ietf.org/doc/html/rfc8555#section-7.1.6
 export type ChallengeStatusName = 'valid' | 'pending' | 'processing' | 'invalid';
 
@@ -45,7 +45,7 @@ export default function mapStatusBadge(status: OrderStatusName | ChallengeStatus
     case 'revoked':
       return { text: 'Revoked', color: 'critical' };
     case 'completed':
-      return { text: 'Issued', color: 'success' };
+      return { text: 'Completed', color: 'success' };
     case 'valid':
       return { text: 'Valid', color: 'success' };
     default:

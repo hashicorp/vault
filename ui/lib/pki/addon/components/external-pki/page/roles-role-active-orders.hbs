@@ -29,8 +29,8 @@
     <ListTable @columns={{this.tableColumns}} @data={{this.filteredOrders}}>
       <:customTableItem as |order|>
         <Hds::Link::Inline
-          @route="external.orders.order"
-          @models={{array @model.engine.id order.order_id}}
+          @route="external.roles.role.order"
+          @models={{array @model.engine.id @model.role_name order.order_id}}
           @color="secondary"
           class="has-text-weight-semibold"
           data-test-link-to={{order.order_id}}

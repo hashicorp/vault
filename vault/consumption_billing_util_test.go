@@ -293,8 +293,8 @@ func TestHWMRoleCounts(t *testing.T) {
 	firstCounts := core.GetRoleCounts()
 	verifyExpectedRoleCounts(t, firstCounts, 5)
 
-	roles, keys := core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
-	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
+	roles, keys, roleAttribution, keyAttribution := core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -310,8 +310,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 2)
 	}
 
-	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
+	roles, keys, roleAttribution, keyAttribution = core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -327,8 +327,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 8)
 	}
 
-	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
+	roles, keys, roleAttribution, keyAttribution = core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -344,8 +344,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 5)
 	}
 
-	roles, keys = core.GetRoleAndManagedKeyCounts(billing.ReplicatedPrefix)
-	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys)
+	roles, keys, roleAttribution, keyAttribution = core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)

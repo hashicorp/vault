@@ -14,10 +14,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-kms-wrapping/v2/aead"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/internalshared/configutil"
 )
 

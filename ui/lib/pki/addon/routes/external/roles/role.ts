@@ -15,7 +15,7 @@ import type SecretMountPath from 'vault/services/secret-mount-path';
 export type RoleRouteModel = ModelFrom<PkiExternalRolesRoleRoute>;
 
 interface RouteController extends Controller {
-  breadcrumbs: Array<Breadcrumb>;
+  generateCrumbs: (isOrderRoute: boolean, path: string, roleName: string) => Array<Breadcrumb>;
 }
 
 export default class PkiExternalRolesRoleRoute extends Route {
@@ -29,15 +29,30 @@ export default class PkiExternalRolesRoleRoute extends Route {
     };
   }
 
-  setupController(controller: RouteController, resolvedModel: RoleRouteModel) {
-    super.setupController(controller, resolvedModel);
-    const { currentPath } = this.secretMountPath;
-    controller.breadcrumbs = [
+  // Breadcrumbs and tabs are rendered in the parent template so they remain visible even when a
+  // child route throws an error. The "roles.role.order" child route needs to render different breadcrumbs
+  // so the template calls this function with the current route state (via matches-current-url).
+  // This also avoids us having to duplicate HeaderTabs in each child or using controllerFor to reach across routes.
+  generateCrumbs = (isOrderRoute: boolean, roleName: string): Array<Breadcrumb> => {
+    const path = this.secretMountPath.currentPath;
+    const base: Array<Breadcrumb> = [
       { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },
-      { label: currentPath, route: 'external.overview', model: currentPath },
-      { label: 'Roles', route: 'external.roles', model: currentPath },
-      { label: resolvedModel.role_name },
+      { label: path, route: 'external.overview', model: path },
+      { label: 'Roles', route: 'external.roles', model: path },
     ];
+    if (isOrderRoute) {
+      return [
+        ...base,
+        { label: roleName, route: 'external.roles.role', models: [path, roleName] },
+        { label: 'View order' },
+      ];
+    }
+    return [...base, { label: roleName }];
+  };
+
+  setupController(controller: RouteController, resolvedModel: RoleRouteModel) {
+    super.setupController(controller, resolvedModel);
+    controller.generateCrumbs = this.generateCrumbs;
   }
 }

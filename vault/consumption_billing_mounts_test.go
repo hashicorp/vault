@@ -92,7 +92,7 @@ func TestCountMetricsSecretMounts_LocalReplicatedMounts(t *testing.T) {
 		}
 	}
 
-	metrics, err := core.CountMetricsSecretMounts(true)
+	metrics, err := core.CountMetricsSecretMounts(true, false)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 
@@ -182,7 +182,7 @@ func TestCountMetricsSecretMounts_OfficialUnofficialMounts(t *testing.T) {
 	addRoleToStorage(t, core, "kubernetes", "roles/", 5)
 
 	// Get official-only counts, should not include kubernetes
-	metrics, err := core.CountMetricsSecretMounts(true)
+	metrics, err := core.CountMetricsSecretMounts(true, false)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 	require.Equal(t, 5, metrics.ReplicatedRoleCounts.AWSDynamicRoles)
@@ -190,7 +190,7 @@ func TestCountMetricsSecretMounts_OfficialUnofficialMounts(t *testing.T) {
 	require.Equal(t, 0, metrics.ReplicatedRoleCounts.KubernetesDynamicRoles)
 
 	// Get counts including unofficial mounts
-	metrics, err = core.CountMetricsSecretMounts(false)
+	metrics, err = core.CountMetricsSecretMounts(false, false)
 	require.NoError(t, err)
 	require.NotNil(t, metrics)
 	require.Equal(t, 5, metrics.ReplicatedRoleCounts.AWSDynamicRoles)

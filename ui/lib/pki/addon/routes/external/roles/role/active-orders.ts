@@ -39,6 +39,7 @@ export default class PkiExternalRolesRoleActiveOrdersRoute extends Route {
     return {
       engine,
       activeOrders,
+      role_name,
     };
   }
 }

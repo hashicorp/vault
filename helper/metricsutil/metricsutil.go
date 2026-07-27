@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/expfmt"

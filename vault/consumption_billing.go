@@ -254,8 +254,8 @@ func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time
 	} else if c.standby {
 		// Do nothing if we are a standby. All requests get forwarded anyway
 	} else {
-		// Collect all mount metrics in a single pass through the mount table
-		metrics, err := c.CountMetricsSecretMounts(true)
+		// Collect all mount metrics and attribution data in a single pass through the mount table
+		metrics, err := c.CountMetricsSecretMounts(true, true)
 		if err != nil {
 			c.logger.Error("error collecting mount metrics", "error", err)
 			return err
@@ -288,8 +288,8 @@ func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time)
 }
 
 func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time, metrics *MountMetrics) error {
-	// Update role and managed key counts using pre-collected billing metric counts
-	_, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedRoleCounts, metrics.ReplicatedManagedKeys)
+	// Update role and managed key counts using pre-collected billing metric counts and attribution
+	_, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedRoleCounts, metrics.ReplicatedManagedKeys, metrics.ReplicatedRoleAttribution, metrics.ReplicatedManagedKeyAttribution)
 	if err != nil {
 		c.logger.Error("error updating replicated max role and managed key counts", "error", err)
 		// We won't return an error. Instead we will log the errors and attempt to continue
@@ -297,8 +297,8 @@ func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time
 		c.logger.Info("updated replicated hwm role and managed key counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
 	}
 
-	// Update KV counts using pre-collected KV mounts
-	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedKvCounts); err != nil {
+	// Update KV counts and attribution using pre-collected KV mounts
+	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedKvCounts, metrics.ReplicatedKvAttribution); err != nil {
 		// We won't return an error. Instead we will log the errors and attempt to continue
 		c.logger.Error("error updating replicated max kv counts", "error", err)
 	} else {
@@ -308,15 +308,15 @@ func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time
 }
 
 func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time, metrics *MountMetrics) error {
-	// Update role and managed key counts using pre-collected billing metric counts
-	if _, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalRoleCounts, metrics.LocalManagedKeys); err != nil {
+	// Update role and managed key counts using pre-collected billing metric counts and attribution
+	if _, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalRoleCounts, metrics.LocalManagedKeys, metrics.LocalRoleAttribution, metrics.LocalManagedKeyAttribution); err != nil {
 		c.logger.Error("error updating local max role and managed key counts", "error", err)
 	} else {
 		c.logger.Info("updated local max role and managed key counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
 
-	// Update KV counts using pre-collected KV mounts
-	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalKvCounts); err != nil {
+	// Update KV counts and attribution using pre-collected KV mounts
+	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalKvCounts, metrics.LocalKvAttribution); err != nil {
 		c.logger.Error("error updating local max kv counts", "error", err)
 	} else {
 		c.logger.Info("updated local max kv counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 )
 
 func isLabelPresent(toFind Label, ls []Label) bool {

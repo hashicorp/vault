@@ -27,6 +27,12 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
     this.dnsListStub = sinon.stub(api.secrets, 'pkiExternalCaListConfigDns');
     this.rolesListStub = sinon.stub(api.secrets, 'pkiExternalCaListRole');
     this.recentOrdersListStub = sinon.stub(api.secrets, 'pkiExternalCaListLookupOrdersRecent');
+    this.orderReadStub = sinon.stub(api.secrets, 'pkiExternalCaReadLookupOrder').resolves({
+      order_status: 'completed',
+      role_name: 'pebble-july-3',
+      serial_number: '29:41:75:1e:20:b0:40:e0',
+    });
+
     this.mountPath = `pki-external-ca-${uuidv4()}`;
     // Setup External PKI engine
     await login();
@@ -177,22 +183,18 @@ module('Acceptance | enterprise | pki | external | navigation', function (hooks)
     });
 
     test('it navigates to external order', async function (assert) {
-      const orderID = '123';
-
-      await visit(`${this.engineURL}/orders/${orderID}`);
+      await visit(`${this.engineURL}/orders/123`);
       assert.strictEqual(
         currentURL(),
-        `vault/secrets-engines/${this.mountPath}/pki/external/orders/${orderID}`,
+        `vault/secrets-engines/${this.mountPath}/pki/external/orders/123`,
         'it navigates to order'
       );
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.external.orders.order');
 
-      assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(orderID);
+      assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText('View order');
       assert.dom(GENERAL.breadcrumb).exists({ count: 5 });
-      assert.dom(GENERAL.breadcrumbs).hasText(`${this.baseCrumbs} Orders ${orderID}`);
-      TABS.forEach((t) => {
-        assert.dom(GENERAL.linkTo(t)).doesNotExist();
-      });
+      assert.dom(GENERAL.breadcrumbs).hasText(`${this.baseCrumbs} Recent orders 123`);
+      this.assertTabState(assert, 'Recent orders');
     });
 
     test('it navigates to external DNS providers', async function (assert) {
