@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 )
@@ -1082,8 +1081,7 @@ func (c *Core) getStoredSSHDurationAdjustedCertCountLocked(ctx context.Context, 
 		return 0, err
 	}
 
-	var certCount float64
-	err = se.DecodeJSON(&certCount)
+	certCount, err := strconv.ParseFloat(string(se.Value), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current SSH duration adjusted cert count: %w", err)
 	}
@@ -1117,14 +1115,9 @@ func (c *Core) UpdateStoredSSHDurationAdjustedCertCount(ctx context.Context, cur
 func (c *Core) storeSSHDurationAdjustedCertCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, certCount float64) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHCertificateMetric)
 
-	countBytes, err := jsonutil.EncodeJSON(certCount)
-	if err != nil {
-		return err
-	}
-
 	entry := &logical.StorageEntry{
 		Key:   billingPath,
-		Value: countBytes,
+		Value: []byte(strconv.FormatFloat(certCount, 'f', 4, 64)),
 	}
 
 	view, ok := c.GetBillingSubView()
@@ -1165,8 +1158,7 @@ func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix s
 		return 0, err
 	}
 
-	var otpCount float64
-	err = se.DecodeJSON(&otpCount)
+	otpCount, err := strconv.ParseFloat(string(se.Value), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current OTP cert count: %w", err)
 	}
@@ -1200,14 +1192,9 @@ func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Ti
 func (c *Core) storeSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, otpCount float64) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
 
-	countBytes, err := jsonutil.EncodeJSON(otpCount)
-	if err != nil {
-		return err
-	}
-
 	entry := &logical.StorageEntry{
 		Key:   billingPath,
-		Value: countBytes,
+		Value: []byte(strconv.FormatFloat(otpCount, 'f', 4, 64)),
 	}
 
 	view, ok := c.GetBillingSubView()
