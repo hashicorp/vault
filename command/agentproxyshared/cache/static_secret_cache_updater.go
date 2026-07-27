@@ -600,10 +600,20 @@ func (updater *StaticSecretCacheUpdater) openWebSocketConnection(ctx context.Con
 	query.Set("namespaces", "*")
 	webSocketURL.RawQuery = query.Encode()
 
-	updater.client.AddHeader(api.AuthHeaderName, updater.client.Token())
-	updater.client.AddHeader(api.NamespaceHeaderName, updater.client.Namespace())
+	// Copy existing headers to preserve non-auth values.
+	// Use Set, not AddHeader: AddHeader appends, so repeated reconnects would
+	// accumulate duplicate X-Vault-Token entries. Vault reads only the first
+	// value, causing a rotated token to be silently ignored.
+	wsHeaders := updater.client.Headers()
+	if wsHeaders == nil {
+		// Headers() returns nil on a fresh client; allocate before Set.
+		wsHeaders = make(http.Header)
+	}
+	wsHeaders.Set(api.AuthHeaderName, updater.client.Token())
+	wsHeaders.Set(api.NamespaceHeaderName, updater.client.Namespace())
+	updater.client.SetHeaders(wsHeaders)
 
-	// Populate these now to avoid recreating them in the upcoming for loop.
+	// Snapshot headers and URL once; both are reused across the redirect-follow loop.
 	headers := updater.client.Headers()
 	wsURL := webSocketURL.String()
 	httpClient := updater.client.CloneConfig().HttpClient
