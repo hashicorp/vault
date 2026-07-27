@@ -113,7 +113,7 @@ jobs:
       - name: Record build stage start time
         id: build-metric-start
         run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
         id: checkout
@@ -245,7 +245,7 @@ jobs:
       - name: Record build stage start time
         id: build-metric-start
         run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Get the elevated github token
       - id: vault-auth
         name: Vault Authenticate
@@ -395,7 +395,7 @@ jobs:
     outputs:
       cache-key: ${{ steps.build-ui.outputs.cache-key }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
       - uses: ./.github/actions/build-ui
@@ -671,7 +671,7 @@ jobs:
       - name: Record build stage start time
         id: build-metric-start
         run: echo "start-time=$(date +%s)" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: disallow-merge-on-ce
         if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
@@ -784,7 +784,7 @@ jobs:
           always() &&
           steps.status.outputs.result != 'success' &&
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-        uses: slackapi/slack-github-action@45a88b9581bfab2566dc881e2cd66d334e621e2c # v3.0.3
+        uses: slackapi/slack-github-action@dcb1066f776dd043e64d0e8ba94ca15cc7e1875d # v4.0.0
         with:
           errors: true # exit with an error if the payload is invalid
           retries: rapid # retry if we're being rated limited
