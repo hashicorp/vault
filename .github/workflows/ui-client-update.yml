@@ -34,7 +34,7 @@ jobs:
             kv/data/github/hashicorp/vault-enterprise/github-token vault-client-typescript | PRIVATE_REPO_GITHUB_TOKEN;
 
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
 
       - name: Bump vault-client-typescript version
         working-directory: ./ui

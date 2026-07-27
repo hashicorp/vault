@@ -154,3 +154,4 @@ scratch
 
 # bob
 .bob/notes
+.bob/*.md
