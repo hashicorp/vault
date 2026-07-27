@@ -7664,6 +7664,10 @@ This path responds to the following HTTP methods.
 		"Enabled feature flags. Internal API; its location, inputs, and outputs may change.",
 		"",
 	},
+	"internal-ui-settings": {
+		"UI-related settings for the current cluster, such as whether UI telemetry is enabled. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
 	"internal-ui-mounts": {
 		"Information about mounts returned according to their tuned visibility. Internal API; its location, inputs, and outputs may change.",
 		"",
