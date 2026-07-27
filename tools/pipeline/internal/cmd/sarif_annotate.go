@@ -5,7 +5,9 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
 
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/sarif"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -68,9 +70,48 @@ func runSarifAnnotateCmd(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("annotating SARIF file: %w", err)
 	}
 
+	// Handle writing to our output files
 	var output []byte
+	if res.OutputPath != "" || annotateReq.Write {
+		output, err = res.ToJSON()
+		if err != nil {
+			return err
+		}
+
+		writeFile := func(path string) error {
+			mode := fs.FileMode(0o644)
+			apath, err := filepath.Abs(path)
+			if err == nil {
+				stat, err := os.Stat(apath)
+				if err == nil {
+					mode = stat.Mode()
+				}
+			}
+
+			return os.WriteFile(path, output, mode)
+		}
+
+		if res.OutputPath != "" {
+			err = writeFile(res.OutputPath)
+			if err != nil {
+				return fmt.Errorf("writing to output path: %w", err)
+			}
+		}
+
+		if annotateReq.Write {
+			err = writeFile(annotateReq.SarifPath)
+			if err != nil {
+				return fmt.Errorf("writing to origin sarif: %w", err)
+			}
+		}
+	}
+
 	switch rootCfg.format {
 	case "json":
+		if len(output) > 0 {
+			// We already parsed our output as JSON for our outpath or in-place annotation
+			break
+		}
 		output, err = res.ToJSON()
 	default:
 		var t table.Writer
@@ -83,18 +124,10 @@ func runSarifAnnotateCmd(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
-
 	if err != nil {
-		return fmt.Errorf("formatting output: %w", err)
+		return err
 	}
-
-	// Write output
-	if res.OutputPath != "" {
-		err = os.WriteFile(res.OutputPath, output, 0o644)
-	} else {
-		_, err = os.Stdout.Write(output)
-	}
-
+	_, err = os.Stdout.Write(output)
 	if err != nil {
 		return fmt.Errorf("writing output: %w", err)
 	}
