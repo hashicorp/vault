@@ -1062,7 +1062,7 @@ scenario "autopilot" {
       Verify that the default max lease count is 300,000 when the upgraded nodes are running
       Vault >= 1.16.0.
     EOF
-    module      = module.vault_verify_default_lcq
+    module      = module.vault_run_blackbox_test
     depends_on = [
       step.create_vault_cluster_upgrade_targets,
       step.remove_old_nodes,
@@ -1077,10 +1077,17 @@ scenario "autopilot" {
     }
 
     variables {
-      hosts                              = step.upgrade_vault_cluster_with_autopilot.hosts
-      vault_addr                         = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_root_token                   = step.create_vault_cluster.root_token
-      vault_autopilot_default_max_leases = local.vault_autopilot_default_max_leases
+      leader_host           = step.get_updated_vault_cluster_ips.leader_host
+      leader_public_ip      = step.get_updated_vault_cluster_ips.leader_public_ip
+      vault_root_token      = step.create_vault_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/isolated/verify"
+      test_names            = ["TestDefaultLCQ"]
+      vault_edition         = matrix.edition
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_install_dir     = local.vault_install_dir
+      verify_default_lcq    = local.vault_autopilot_default_max_leases
     }
   }
 

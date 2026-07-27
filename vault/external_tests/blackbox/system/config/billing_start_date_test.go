@@ -7,134 +7,141 @@
 package config
 
 import (
-	"encoding/json"
+	"fmt"
+	"os"
+	"regexp"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/testcluster/blackbox"
 	"github.com/stretchr/testify/require"
 )
 
-// TestBillingStartDate verifies that the billing start date has successfully
-// rolled over to the latest billing year if needed.
+// customBuildRe matches VAULT_VERSION values that contain a git short SHA
+// suffix (e.g. "v1.21.0-beta1+ent-2cf0b2f"), which identifies a custom build
+// produced by the test-hcp-image workflow. Release versions never have this
+// suffix (e.g. "v1.21.0+ent" or "v1.21.0-beta1+ent").
+var customBuildRe = regexp.MustCompile(`-[0-9a-f]{7,}$`)
+
+func isCustomBuildVersion() bool {
+	return customBuildRe.MatchString(os.Getenv("VAULT_VERSION"))
+}
+
+// readBillingStartTimestamp reads sys/internal/counters/config from the root
+// namespace and returns the billing_start_timestamp value.
+func readBillingStartTimestamp(v *blackbox.Session) (time.Time, error) {
+	secret, err := v.WithRootNamespace(func() (*api.Secret, error) {
+		return v.Client.Logical().Read("sys/internal/counters/config")
+	})
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to read sys/internal/counters/config: %w", err)
+	}
+	if secret == nil {
+		return time.Time{}, fmt.Errorf("nil response from sys/internal/counters/config")
+	}
+
+	billingStartStr, ok := secret.Data["billing_start_timestamp"].(string)
+	if !ok {
+		return time.Time{}, fmt.Errorf("billing_start_timestamp missing or not a string in response")
+	}
+
+	billingStart, err := time.Parse(time.RFC3339, billingStartStr)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse billing_start_timestamp %q as RFC3339: %w", billingStartStr, err)
+	}
+
+	return billingStart, nil
+}
+
+// checkBillingStartInCurrentYear verifies that the billing start date is
+// within the current billing year (not older than 1 year and not in the future).
+// This mirrors the verify_date_is_in_current_year logic in verify-billing-start.sh.
+func checkBillingStartInCurrentYear(billingStart time.Time) error {
+	oneYearAgo := time.Now().AddDate(-1, 0, 0)
+	if billingStart.Before(oneYearAgo) {
+		return fmt.Errorf("billing start date %s is not in the current billing year (more than 1 year old, cutoff: %s)",
+			billingStart.Format(time.RFC3339),
+			oneYearAgo.Format(time.RFC3339))
+	}
+	if billingStart.After(time.Now()) {
+		return fmt.Errorf("billing start date %s is in the future",
+			billingStart.Format(time.RFC3339))
+	}
+	return nil
+}
+
+// TestBillingStartDate verifies that the billing start date is within the
+// current billing year.
 //
-// This test replicates the behavior of the enos module:
-// enos/modules/vault_verify_billing_start_date/
+// WHERE THIS RUNS:
+//   - Scenario: cloud-ent (enos/enos-scenario-cloud-ent.hcl) — regular CI runs
+//     against a published HCP Vault version (dev/int/prod environments).
+//   - The cloud-ent scenario includes "system/config" in blackbox_test_packages_default.
 //
-// The test validates that:
-// 1. The billing start timestamp exists in sys/internal/counters/config
-// 2. The timestamp is within the last 12 months (current billing year)
-// 3. The timestamp is not in the future
-//
-// This is used in the upgrade scenario to ensure billing dates properly
-// roll over after cluster upgrades.
+// SKIPPED WHEN:
+//   - VAULT_VERSION contains a hex SHA suffix (e.g. "v1.21.0-beta1+ent-2cf0b2f"),
+//     which indicates a custom build image from the test-hcp-image workflow.
+//     Billing start date validation is not meaningful for ephemeral custom builds.
 func TestBillingStartDate(t *testing.T) {
-	t.Skip("TODO: fix 403 on sys/internal/counters/config — needs root-namespace client")
+	if isCustomBuildVersion() {
+		t.Skipf("skipping: VAULT_VERSION=%q is a custom build (test-hcp-image workflow); billing date validation is only meaningful for released versions", os.Getenv("VAULT_VERSION"))
+	}
+	// Check version and edition before blackbox.New to avoid namespace creation on unsupported builds.
+	blackbox.SkipIfEdition(t, "ce")
+	blackbox.SkipIfVersionBelow(t, "2.0.0")
 	t.Parallel()
 	v := blackbox.New(t)
 
-	// Verify cluster is healthy and unsealed
 	v.AssertUnsealedAny()
 
-	// Read the billing configuration
-	secret, err := v.Client.Logical().Read("sys/internal/counters/config")
-	require.NoError(t, err, "failed to read sys/internal/counters/config")
-	require.NotNil(t, secret, "expected response from sys/internal/counters/config")
-	require.NotNil(t, secret.Data, "expected data in response")
+	// sys/internal/counters/config must be read from the root namespace.
+	// The enos verify-billing-start.sh script sets no VAULT_NAMESPACE (root).
+	billingStart, err := readBillingStartTimestamp(v)
+	require.NoError(t, err)
 
-	// Extract billing_start_timestamp
-	billingStartRaw, ok := secret.Data["billing_start_timestamp"]
-	require.True(t, ok, "billing_start_timestamp not found in response")
-
-	// Parse the timestamp
-	var billingStart time.Time
-	switch v := billingStartRaw.(type) {
-	case string:
-		var parseErr error
-		billingStart, parseErr = time.Parse(time.RFC3339, v)
-		require.NoError(t, parseErr, "failed to parse billing_start_timestamp as RFC3339 string")
-	case time.Time:
-		billingStart = v
-	default:
-		// Try unmarshaling through JSON as fallback
-		bytes, marshalErr := json.Marshal(secret.Data)
-		require.NoError(t, marshalErr, "failed to marshal response data")
-
-		var configResp struct {
-			BillingStartTimestamp time.Time `json:"billing_start_timestamp"`
-		}
-		unmarshalErr := json.Unmarshal(bytes, &configResp)
-		require.NoError(t, unmarshalErr, "failed to unmarshal response data")
-		billingStart = configResp.BillingStartTimestamp
-	}
-
-	// Calculate one year ago from now (this is the cutoff for the current billing year)
-	oneYearAgo := time.Now().AddDate(-1, 0, 0)
-
-	// Verify the billing start date is within the current billing year
-	// (not more than 1 year old)
-	require.False(t, billingStart.Before(oneYearAgo),
-		"billing start date %s is not in the current billing year (more than 1 year old, cutoff: %s)",
-		billingStart.Format(time.RFC3339),
-		oneYearAgo.Format(time.RFC3339))
-
-	// Verify the billing start date is not in the future
-	require.False(t, billingStart.After(time.Now()),
-		"billing start date %s is in the future",
-		billingStart.Format(time.RFC3339))
+	require.NoError(t, checkBillingStartInCurrentYear(billingStart),
+		"billing start date validation failed")
 
 	t.Logf("✓ Billing start date %s is within the current billing year", billingStart.Format(time.RFC3339))
 }
 
-// TestBillingStartDateRollover verifies that the billing start date is within
-// the current billing year, confirming that automatic rollover has occurred if needed.
+// TestBillingStartDateRollover verifies that the billing start date has rolled
+// over to the current billing year after a cluster upgrade. This test mirrors
+// the enos vault_verify_billing_start_date module which retries the check up
+// to 10 times (with 30s between retries) to allow time for automatic rollover
+// to complete after an upgrade.
 //
-// Note: This test verifies the current state of a running cluster. The actual
-// rollover behavior happens during cluster startup. In the upgrade scenario,
-// this verification is done via the shell script module vault_verify_billing_start_date
-// which has version-specific skip conditions (<=1.16.6 or 1.17.0-1.17.2).
+// WHERE THIS RUNS:
+//   - Scenario: cloud-ent (enos/enos-scenario-cloud-ent.hcl) — regular CI runs only.
+//   - Same as TestBillingStartDate — included via "system/config" default package.
 //
-// This blackbox test runs in the cloud-ent scenario without version restrictions,
-// as cloud environments always run supported versions.
+// SKIPPED WHEN:
+//   - VAULT_VERSION contains a hex SHA suffix — same custom build skip as TestBillingStartDate.
 func TestBillingStartDateRollover(t *testing.T) {
-	t.Skip("TODO: fix 403 on sys/internal/counters/config — needs root-namespace client")
+	if isCustomBuildVersion() {
+		t.Skipf("skipping: VAULT_VERSION=%q is a custom build (test-hcp-image workflow); billing date validation is only meaningful for released versions", os.Getenv("VAULT_VERSION"))
+	}
+	// Check version and edition before blackbox.New to avoid namespace creation on unsupported builds.
+	blackbox.SkipIfEdition(t, "ce")
+	blackbox.SkipIfVersionBelow(t, "2.0.0")
 	t.Parallel()
 	v := blackbox.New(t)
 
-	// Verify cluster is healthy and unsealed
 	v.AssertUnsealedAny()
 
-	// Read the billing configuration
-	secret, err := v.Client.Logical().Read("sys/internal/counters/config")
-	require.NoError(t, err, "failed to read sys/internal/counters/config")
-	require.NotNil(t, secret, "expected response from sys/internal/counters/config")
-
-	// Extract and validate billing_start_timestamp
-	billingStartRaw, ok := secret.Data["billing_start_timestamp"]
-	require.True(t, ok, "billing_start_timestamp not found in response")
-
-	// Parse the timestamp
-	var billingStart time.Time
-	switch v := billingStartRaw.(type) {
-	case string:
-		billingStart, err = time.Parse(time.RFC3339, v)
-		require.NoError(t, err, "failed to parse billing_start_timestamp")
-	default:
-		bytes, _ := json.Marshal(secret.Data)
-		var configResp struct {
-			BillingStartTimestamp time.Time `json:"billing_start_timestamp"`
+	// Retry for up to 5 minutes (matching the enos module's retry 10 × 30s logic)
+	// to allow billing start date rollover to complete after a cluster upgrade.
+	v.EventuallyWithTimeout(func() error {
+		billingStart, err := readBillingStartTimestamp(v)
+		if err != nil {
+			return err
 		}
-		json.Unmarshal(bytes, &configResp)
-		billingStart = configResp.BillingStartTimestamp
-	}
+		return checkBillingStartInCurrentYear(billingStart)
+	}, 5*time.Minute)
 
-	// Verify the billing start date is within the current billing year
-	oneYearAgo := time.Now().AddDate(-1, 0, 0)
-	require.False(t, billingStart.Before(oneYearAgo),
-		"billing start date %s should be within the current billing year (cutoff: %s)",
-		billingStart.Format(time.RFC3339),
-		oneYearAgo.Format(time.RFC3339))
-
-	t.Logf("✓ Billing start date %s is within the current billing year",
-		billingStart.Format(time.RFC3339))
+	// Log final value after rollover confirmed.
+	billingStart, err := readBillingStartTimestamp(v)
+	require.NoError(t, err)
+	t.Logf("✓ Billing start date %s is within the current billing year", billingStart.Format(time.RFC3339))
 }
