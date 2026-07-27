@@ -487,7 +487,9 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 	databaseCount := 0
 	gcpCount := 0
 	ldapCount := 0
+	ldapLibraryCount := 0
 	openldapCount := 0
+	openldapLibraryCount := 0
 	alicloudCount := 0
 	rabbitmqCount := 0
 	consulCount := 0
@@ -502,7 +504,9 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 		databaseCount = counts.DatabaseDynamicRoles
 		gcpCount = counts.GCPRolesets
 		ldapCount = counts.LDAPDynamicRoles
+		ldapLibraryCount = counts.LDAPLibrarySets
 		openldapCount = counts.OpenLDAPDynamicRoles
+		openldapLibraryCount = counts.OpenLDAPLibrarySets
 		alicloudCount = counts.AlicloudDynamicRoles
 		rabbitmqCount = counts.RabbitMQDynamicRoles
 		consulCount = counts.ConsulDynamicRoles
@@ -511,8 +515,8 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 		mongodbatlasCount = counts.MongoDBAtlasDynamicRoles
 		terraformCount = counts.TerraformCloudDynamicRoles
 
-		total = awsCount + azureCount + databaseCount + gcpCount + ldapCount +
-			openldapCount + alicloudCount + rabbitmqCount + consulCount +
+		total = awsCount + azureCount + databaseCount + gcpCount + ldapCount + ldapLibraryCount +
+			openldapCount + openldapLibraryCount + alicloudCount + rabbitmqCount + consulCount +
 			nomadCount + kubernetesCount + mongodbatlasCount + terraformCount
 	}
 
@@ -522,7 +526,9 @@ func buildDynamicRolesMetric(counts *RoleCounts) map[string]interface{} {
 		{"type": "database_dynamic", "count": databaseCount},
 		{"type": "gcp_dynamic", "count": gcpCount},
 		{"type": "ldap_dynamic", "count": ldapCount},
+		{"type": "ldap_library", "count": ldapLibraryCount},
 		{"type": "openldap_dynamic", "count": openldapCount},
+		{"type": "openldap_library", "count": openldapLibraryCount},
 		{"type": "alicloud_dynamic", "count": alicloudCount},
 		{"type": "rabbitmq_dynamic", "count": rabbitmqCount},
 		{"type": "consul_dynamic", "count": consulCount},

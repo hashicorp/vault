@@ -114,6 +114,15 @@ type Backend struct {
 	// to communicate with a plugin on when to rotate a credential
 	RotateCredential func(context.Context, *logical.Request) error
 
+	// HealthCheck is the optional callback invoked by the HealthCheckBackend to
+	// validate connectivity and authentication against the plugin's configured
+	// external system. Plugins that do not set this field are treated as
+	// health-check unsupported and the operation returns a 501 Not Implemented.
+	//
+	// The callback receives the full logical.Request to access storage and read
+	// the plugin's configuration. The path being checked is available in req.Path.
+	HealthCheck func(context.Context, *logical.Request) (*logical.HealthCheckExecutionResult, error)
+
 	// ActivationFunc is the callback function used by ActivationFlags to
 	// communicate with a plugin to activate a feature.
 	ActivationFunc func(context.Context, *logical.Request, string) error
@@ -236,6 +245,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return b.handleRollback(ctx, req)
 	case logical.RotationOperation:
 		return b.handleRotation(ctx, req)
+	case logical.HealthCheckOperation:
+		return b.handleHealthCheck(ctx, req)
 	}
 
 	// If the path is empty and it is a help operation, handle that.
@@ -725,6 +736,23 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 		}
 	}
 	return resp, merr.ErrorOrNil()
+}
+
+// handleHealthCheck invokes the HealthCheck func set on the backend.
+// Returns a 501 Not Implemented coded error when the plugin has not implemented
+// the callback.
+func (b *Backend) handleHealthCheck(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	if b.HealthCheck == nil {
+		return nil, logical.CodedError(http.StatusNotImplemented, "health check not supported by this plugin")
+	}
+
+	// Pass the full request to provide storage access and path information
+	healthCheckResponse, err := b.HealthCheck(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return healthCheckResponse.ToLogicalResponse(), nil
 }
 
 // handleRotation invokes the RotateCredential func set on the backend.

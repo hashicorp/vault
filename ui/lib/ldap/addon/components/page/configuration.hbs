@@ -41,7 +41,7 @@
   {{/each}}
 
   <h2 class="title is-4 has-top-margin-xl">TLS Connection</h2>
-  <hr class="is-marginless" />
+  <Hds::Separator @spacing="0" />
 
   {{#each this.connectionFields as |field|}}
     <InfoTableRow @label={{this.label field}} @value={{get @model.config field}} @alwaysRender={{true}} />

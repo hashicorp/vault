@@ -1,0 +1,31 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! Header and tabs are rendered by the parent role.hbs template }}
+
+<Hds::Layout::Flex class="has-top-margin-s bottom-margin-8" @align="center">
+  <Hds::Text::Body @tag="p" @size="200" data-test-text-body="Last refreshed">
+    Last refreshed:
+    {{date-format @model.responseTimestamp "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}
+  </Hds::Text::Body>
+
+  <Hds::Button
+    class="margin-left-auto"
+    @color="tertiary"
+    @icon="reload"
+    @iconPosition="trailing"
+    @isInline={{true}}
+    @text="Refresh"
+    {{on "click" this.refresh}}
+    data-test-button="Refresh"
+  />
+</Hds::Layout::Flex>
+
+<ExternalPki::OrderCertDetails
+  @order={{@model.order}}
+  @certificate={{@model.certificate}}
+  @orderId={{@model.order_id}}
+  @engineId={{@model.engine.id}}
+/>

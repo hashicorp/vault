@@ -219,7 +219,14 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Recent
 
     test('it filters by status and maps API statuses', async function (assert) {
       await this.renderComponent();
-      const expectedMappedStatuses = { Pending: 8, Failed: 1, Expired: 1, Revoked: 1, Issued: 1, Unknown: 1 };
+      const expectedMappedStatuses = {
+        Pending: 8,
+        Failed: 1,
+        Expired: 1,
+        Revoked: 1,
+        Completed: 1,
+        Unknown: 1,
+      };
       await click(GENERAL.dropdownToggle('Status'));
       assert.dom('[data-test-popup-menu]').exists({ count: 6 });
       // Close menu again because loop below re-opens
@@ -412,7 +419,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Recent
 
       // Apply status filter
       await click(GENERAL.dropdownToggle('Status'));
-      await click(GENERAL.menuItem('Issued'));
+      await click(GENERAL.menuItem('Completed'));
       assert.dom(GENERAL.listItem()).exists({ count: 1 }, 'only one order matches both filters');
       assert.dom(GENERAL.linkTo('order-789')).exists();
       assert.dom(SELECTORS.filterTag).exists({ count: 2 });
@@ -432,7 +439,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Recent
       await click(GENERAL.menuItem('web-server'));
       assert.dom(GENERAL.button('Clear filters')).doesNotExist('not shown with only one filter');
       await click(GENERAL.dropdownToggle('Status'));
-      await click(GENERAL.menuItem('Issued'));
+      await click(GENERAL.menuItem('Completed'));
       assert.dom(GENERAL.button('Clear filters')).exists('shown with multiple filters');
     });
 
@@ -441,7 +448,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Recent
       await click(GENERAL.dropdownToggle('Role'));
       await click(GENERAL.menuItem('web-server'));
       await click(GENERAL.dropdownToggle('Status'));
-      await click(GENERAL.menuItem('Issued'));
+      await click(GENERAL.menuItem('Completed'));
       assert.dom(SELECTORS.filterTag).exists({ count: 2 });
       assert.dom(GENERAL.listItem()).exists({ count: 1 });
       await click(GENERAL.button('Clear filters'));

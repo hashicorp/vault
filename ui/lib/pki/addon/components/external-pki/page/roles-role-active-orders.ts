@@ -16,7 +16,7 @@ interface Args {
   model: RoleActiveOrdersRouteModel;
 }
 
-export default class ExternalPkiPageActiveOrdersComponent extends Component<Args> {
+export default class ExternalPkiPageRolesRoleActiveOrdersComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
 
   @tracked orderFilter = '';
@@ -32,7 +32,10 @@ export default class ExternalPkiPageActiveOrdersComponent extends Component<Args
   ];
 
   get filteredOrders() {
-    const filteredOrders = this.args.model.activeOrders.filter((id) => id.includes(this.orderFilter));
+    // Order IDs ARE case sensitive, but for filtering purposes we don't need to be that strict
+    const filteredOrders = this.args.model.activeOrders.filter((id) =>
+      id.includes(this.orderFilter.toLowerCase())
+    );
     return filteredOrders?.map((o) => ({ order_id: o }));
   }
 
@@ -44,8 +47,9 @@ export default class ExternalPkiPageActiveOrdersComponent extends Component<Args
   @action
   lookupOrder() {
     this.router.transitionTo(
-      'vault.cluster.secrets.backend.pki.external.orders.order',
+      'vault.cluster.secrets.backend.pki.external.roles.role.order',
       this.args.model.engine.id,
+      this.args.model.role_name,
       this.orderIdLookup
     );
   }

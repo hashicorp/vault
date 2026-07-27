@@ -182,13 +182,13 @@
         >{{value}}</Hds::Link::Inline>
       {{/if}}
       {{#if (eq column.key "order_status")}}
-        {{#let (map-order-status value) as |state|}}
+        {{#let (map-status-badge value) as |state|}}
           <Hds::Badge @text={{state.text}} @color={{state.color}} data-test-badge="order_status" />
         {{/let}}
       {{/if}}
       {{#if (includes column.key (array "creation_date" "last_update"))}}
         <Hds::Text::Code @tag="p">
-          {{this.formatDate value}}
+          {{format-date-utc value}}
         </Hds::Text::Code>
       {{/if}}
     </:customTableItem>

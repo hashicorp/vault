@@ -50,8 +50,7 @@ func createTestCertificate(t *testing.T, validity time.Duration) *x509.Certifica
 // TestCertificateCountManager_IncrementAndConsume tests the behaviour of
 // CertificateCountManager.
 func TestCertificateCountManager_IncrementAndConsume(t *testing.T) {
-	manager := newCertificateCountManager(hclog.NewNullLogger())
-	consumerJobInterval = 10 * time.Millisecond
+	manager := newCertificateCountManager(hclog.NewNullLogger(), 10*time.Millisecond)
 
 	firstConsumerTotalCount := &atomic.Uint64{}
 	manager.StartConsumerJob(func(inc logical.CertCount) {

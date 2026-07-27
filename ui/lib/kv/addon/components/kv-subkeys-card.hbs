@@ -54,12 +54,12 @@
         <Hds::Text::Display @tag="p" @size="200" @weight="semibold" @color="faint" class="has-bottom-margin-s">
           Keys
         </Hds::Text::Display>
-        <hr class="has-background-gray-100 is-marginless" />
+        <Hds::Separator @spacing="0" />
         {{#each-in @subkeys as |key|}}
           <Hds::Text::Display @tag="p" @size="200" @weight="semibold" class="has-top-bottom-margin-12">
             {{key}}
           </Hds::Text::Display>
-          <hr class="has-background-gray-100 is-marginless" />
+          <Hds::Separator @spacing="0" />
         {{/each-in}}
       {{/if}}
     </div>

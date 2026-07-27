@@ -599,6 +599,91 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 	}
 }
 
+func TestBackend_handleHealthCheck(t *testing.T) {
+	t.Parallel()
+
+	t.Run("health check callback dispatch", func(t *testing.T) {
+		t.Parallel()
+
+		callbackErr := fmt.Errorf("health check failed to run")
+
+		tests := []struct {
+			name        string
+			healthCheck func(context.Context, *logical.Request) (*logical.HealthCheckExecutionResult, error)
+			wantErr     func(t *testing.T, err error)
+			wantResp    func(t *testing.T, resp *logical.Response)
+		}{
+			{
+				name: "callback implemented returns checks",
+				healthCheck: func(context.Context, *logical.Request) (*logical.HealthCheckExecutionResult, error) {
+					return &logical.HealthCheckExecutionResult{
+						HealthChecks: []logical.HealthCheck{
+							{Type: "connection", Healthy: true, Reason: "connected", DurationMs: 5},
+						},
+					}, nil
+				},
+				wantResp: func(t *testing.T, resp *logical.Response) {
+					require.NotNil(t, resp)
+					checks, ok := resp.Data["health_checks"].([]map[string]interface{})
+					require.True(t, ok, "expected health_checks slice, got %T", resp.Data["health_checks"])
+					require.Len(t, checks, 1)
+					require.Equal(t, "connection", checks[0]["type"])
+					require.Equal(t, true, checks[0]["healthy"])
+				},
+			},
+			{
+				name:        "callback not implemented returns 501 coded error",
+				healthCheck: nil,
+				wantErr: func(t *testing.T, err error) {
+					var codedErr logical.HTTPCodedError
+					require.ErrorAs(t, err, &codedErr)
+					require.Equal(t, http.StatusNotImplemented, codedErr.Code())
+				},
+			},
+			{
+				name: "callback error is propagated",
+				healthCheck: func(context.Context, *logical.Request) (*logical.HealthCheckExecutionResult, error) {
+					return nil, callbackErr
+				},
+				wantErr: func(t *testing.T, err error) {
+					require.ErrorIs(t, err, callbackErr)
+				},
+			},
+			{
+				name: "callback returns nil result without error",
+				healthCheck: func(context.Context, *logical.Request) (*logical.HealthCheckExecutionResult, error) {
+					return nil, nil
+				},
+				wantResp: func(t *testing.T, resp *logical.Response) {
+					require.Nil(t, resp)
+				},
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				b := &Backend{HealthCheck: tc.healthCheck}
+
+				resp, err := b.HandleRequest(context.Background(), &logical.Request{
+					Operation: logical.HealthCheckOperation,
+					Path:      "config",
+				})
+
+				if tc.wantErr != nil {
+					tc.wantErr(t, err)
+					require.Nil(t, resp)
+					return
+				}
+
+				require.NoError(t, err)
+				tc.wantResp(t, resp)
+			})
+		}
+	})
+}
+
 func TestBackendHandleRequest_urlPriority(t *testing.T) {
 	callback := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
 		return &logical.Response{

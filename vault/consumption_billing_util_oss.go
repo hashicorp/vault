@@ -21,7 +21,7 @@ func (c *Core) perfStandbyPluginCountsWorker(ctx context.Context) {
 }
 
 // updateMaxKmseKeyCounts is a no-op on OSS
-func (c *Core) updateMaxKmseKeyCounts(ctx context.Context, currentKeyCounts int, localPathPrefix string, currentMonth time.Time) (int, error) {
+func (c *Core) updateMaxKmseKeyCounts(ctx context.Context, currentKeyCounts int, attribution MountAttributionMap, localPathPrefix string, currentMonth time.Time) (int, error) {
 	return 0, nil
 }
 

@@ -493,7 +493,8 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	b.pkiCertificateCounter.Increment().AddIssuedCertificate(!role.NoStore, parsedBundle.Certificate)
+	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID)
+	b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(!role.NoStore, parsedBundle.Certificate)
 
 	if useCSR {
 		if role.UseCSRCommonName && data.Get("common_name").(string) != "" {
