@@ -572,8 +572,8 @@ scenario "autopilot" {
     ]
 
     variables {
-      hosts                           = step.create_vault_cluster.hosts
-      vault_addr                      = step.create_vault_cluster.api_addr_localhost
+      hosts                           = step.upgrade_vault_cluster_with_autopilot.hosts
+      vault_addr                      = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "await-server-removal"
       vault_install_dir               = local.vault_install_dir
@@ -892,7 +892,7 @@ scenario "autopilot" {
       vault_autopilot_upgrade_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
       vault_autopilot_upgrade_status  = "idle"
       vault_install_dir               = local.vault_install_dir
-      vault_root_token                = step.create_vault_cluster.root_token
+      vault_root_token                = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
