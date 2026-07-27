@@ -1,0 +1,3 @@
+```release-note:bug
+Proxy: Fixed a bug where the Vault token header accumulated duplicate values across WebSocket reconnects in the static secret cache updater.
+```
