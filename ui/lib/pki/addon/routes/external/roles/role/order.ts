@@ -16,9 +16,10 @@ import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export type RoleOrderRouteModel = ModelFrom<PkiExternalRolesRoleOrderRoute>;
 
-// This route renders the same display component (ExternalPki::OrderCertDetails) as PkiExternalOrdersOrderRoute
-// but this order status request is within the context of a role.
-// Likely visible to users who only have permissions namespaced to a particular role.
+// Users get here by looking up an order from within a role (via active orders or the role order lookup)
+// Performs GET /role/:name/order/:order_id/status for order details, scoped to a specific role.
+// Likely accessible to users whose permissions are limited to a particular role.
+// Renders <ExternalPki::OrderCertDetails> (same as PkiExternalCertificatesCertificateRoute and PkiExternalOrdersOrderRoute).
 export default class PkiExternalRolesRoleOrderRoute extends Route {
   @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;

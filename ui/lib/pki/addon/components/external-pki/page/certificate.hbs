@@ -19,8 +19,8 @@
 </ExternalPki::HeaderTabs>
 
 <ExternalPki::OrderCertDetails
-  @order={{@model.order}}
-  @certificate={{@model.certificate}}
-  @orderId={{@model.order_id}}
+  @order={{this.orderParams}}
+  @certificate={{this.certParams}}
+  @orderId={{@model.certLookup.order_id}}
   @engineId={{@model.engine.id}}
 />

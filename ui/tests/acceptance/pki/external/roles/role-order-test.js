@@ -35,7 +35,7 @@ module('Acceptance | enterprise | pki | external | roles | role | order route', 
     await runCmd([`delete sys/mounts/${this.mountPath}`], false);
   });
 
-  test('it renders correct breadcrumbs with role name as a link and "View order" as the leaf', async function (assert) {
+  test('it renders breadcrumbs and header without tabs for role order', async function (assert) {
     this.orderStatusStub.resolves({ order_status: 'completed' });
 
     await visit(this.orderURL);
@@ -47,6 +47,9 @@ module('Acceptance | enterprise | pki | external | roles | role | order route', 
     assert
       .dom(GENERAL.breadcrumbs)
       .hasText(`Vault Secrets engines ${this.mountPath} Roles ${this.roleName} View order`);
+    ['Overview', 'Roles', 'Recent orders', 'DNS providers', 'ACME accounts'].forEach((t) => {
+      assert.dom(GENERAL.linkTo(t)).doesNotExist(`${t} tab does not render`);
+    });
   });
 
   test('role name breadcrumb is a link back to the role', async function (assert) {
