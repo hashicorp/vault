@@ -155,6 +155,44 @@ func TestOpenWebSocketConnection(t *testing.T) {
 	}
 }
 
+// TestOpenWebSocketConnection_NoTokenHeaderAccumulation verifies that repeated
+// calls to openWebSocketConnection (as occur on reconnect) do not accumulate
+// duplicate X-Vault-Token header values on the shared client. Before the fix,
+// AddHeader was used instead of Set, which appended a new entry on every call.
+// Vault reads only the first value via http.Header.Get, so any token rotation
+// during a reconnect loop would be silently ignored.
+func TestOpenWebSocketConnection_NoTokenHeaderAccumulation(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	updater := testNewStaticSecretCacheUpdater(t, client)
+	updater.tokenSink.WriteToken(client.Token())
+
+	// Call openWebSocketConnection several times to simulate reconnect cycles.
+	// On enterprise the dial succeeds; on CE it returns an error but still
+	// mutates the client headers, which is what we are testing here.
+	for i := 0; i < 3; i++ {
+		conn, err := updater.openWebSocketConnection(context.Background())
+		if conn != nil {
+			conn.Close(websocket.StatusNormalClosure, "")
+		}
+		// We only care about the header state, not whether the dial succeeded.
+		_ = err
+	}
+
+	// Regardless of enterprise/CE, the client's X-Vault-Token header must
+	// contain exactly one value after repeated calls.
+	tokenValues := updater.client.Headers().Values(api.AuthHeaderName)
+	require.Lenf(t, tokenValues, 1,
+		"expected exactly 1 X-Vault-Token header value, got %d: %v",
+		len(tokenValues), tokenValues)
+
+	// The single value must be the current token, not a stale one.
+	require.Equal(t, client.Token(), tokenValues[0])
+}
+
 // TestOpenWebSocketConnection_BadPolicyToken tests attempting to open a websocket
 // connection to the events system using a token that has incorrect policy access
 // will not trigger auto auth
