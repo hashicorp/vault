@@ -135,7 +135,8 @@ type Config struct {
 
 	ReportingScanDirectory string `hcl:"reporting_scan_directory"`
 
-	DenySlashInTemplatedPaths bool `hcl:"deny_slash_in_templated_paths"`
+	DenySlashInTemplatedPaths bool        `hcl:"deny_slash_in_templated_paths"`
+	UISettings                *UISettings `hcl:"-"`
 }
 
 const (
@@ -152,6 +153,9 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	}
 	for _, l := range c.Listeners {
 		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	if c.UISettings != nil {
+		results = append(results, c.UISettings.Validate(sourceFilePath)...)
 	}
 	results = append(results, entValidateConfig(c, sourceFilePath)...)
 	return results
@@ -261,6 +265,28 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
+// UISettings holds configuration for the Vault UI, parsed from the
+// `ui_settings` stanza. It is available in both CE and Enterprise builds and is
+// surfaced to the UI via the sys/internal/ui/settings endpoint.
+type UISettings struct {
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+
+	// UITelemetry gates whether the UI may collect anonymous usage analytics.
+	UITelemetry bool `hcl:"-"`
+	// UITelemetrySet distinguishes an explicit `ui_telemetry = false` from the
+	// field being unset, so that merging multiple config files does not let an
+	// unset value clobber a previously-configured one.
+	UITelemetrySet bool `hcl:"-"`
+	// UITelemetryRaw holds the unparsed HCL value; it is normalized into
+	// UITelemetry/UITelemetrySet during parsing and then cleared.
+	UITelemetryRaw interface{} `hcl:"ui_telemetry"`
+}
+
+// Validate checks for any unused keys in the UISettings configuration.
+func (uiSettings *UISettings) Validate(sourceFilePath string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(uiSettings.UnusedKeys, sourceFilePath)
+}
+
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
 	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -365,6 +391,18 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.EnableIntrospectionEndpoint = c.EnableIntrospectionEndpoint
 	if c2.EnableIntrospectionEndpoint {
 		result.EnableIntrospectionEndpoint = c2.EnableIntrospectionEndpoint
+	}
+
+	result.UISettings = c.UISettings
+	if c2.UISettings != nil {
+		if result.UISettings == nil {
+			result.UISettings = c2.UISettings
+		} else if c2.UISettings.UITelemetrySet {
+			mergedUISettings := *result.UISettings
+			mergedUISettings.UITelemetry = c2.UISettings.UITelemetry
+			mergedUISettings.UITelemetrySet = true
+			result.UISettings = &mergedUISettings
+		}
 	}
 
 	result.APIAddr = c.APIAddr
@@ -864,6 +902,13 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
 			return nil, duplicate, fmt.Errorf("error parsing 'service_registration': %w", err)
+		}
+	}
+
+	if o := list.Filter("ui_settings"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "ui_settings")
+		if err := parseUISettings(result, o, "ui_settings"); err != nil {
+			return nil, duplicate, fmt.Errorf("error parsing 'ui_settings': %w", err)
 		}
 	}
 
@@ -1370,6 +1415,29 @@ func parseServiceRegistration(result *Config, list *ast.ObjectList, name string)
 	return nil
 }
 
+func parseUISettings(result *Config, list *ast.ObjectList, name string) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one %q block is permitted", name)
+	}
+
+	var uiSettings UISettings
+	if err := hcl.DecodeObject(&uiSettings, list.Items[0].Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("%s:", name))
+	}
+	if uiSettings.UITelemetryRaw != nil {
+		enabled, err := parseutil.ParseBool(uiSettings.UITelemetryRaw)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("%s.ui_telemetry:", name))
+		}
+		uiSettings.UITelemetry = enabled
+		uiSettings.UITelemetrySet = true
+		uiSettings.UITelemetryRaw = nil
+	}
+
+	result.UISettings = &uiSettings
+	return nil
+}
+
 // Sanitized returns a copy of the config with all values that are considered
 // sensitive stripped. It also strips all `*Raw` values that are mainly
 // used for parsing.
@@ -1501,6 +1569,14 @@ func (c *Config) Sanitized() map[string]interface{} {
 		result["service_registration"] = sanitizedServiceRegistration
 	}
 
+	// Sanitize ui_settings stanza. These values are non-sensitive, so they are
+	// surfaced as-is to aid operators in confirming their configuration.
+	if c.UISettings != nil {
+		result["ui_settings"] = map[string]interface{}{
+			"ui_telemetry": c.UISettings.UITelemetry,
+		}
+	}
+
 	entConfigResult := c.entConfig.Sanitized()
 	for k, v := range entConfigResult {
 		result[k] = v
@@ -1521,6 +1597,9 @@ func (c *Config) Prune() {
 	if c.Telemetry != nil {
 		c.Telemetry.FoundKeys = nil
 		c.Telemetry.UnusedKeys = nil
+	}
+	if c.UISettings != nil {
+		c.UISettings.UnusedKeys = nil
 	}
 }
 

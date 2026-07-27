@@ -169,7 +169,116 @@ func Test_ObservationSystemConfigMergeFromNoObservations(t *testing.T) {
 	require.Equal(t, true, merged.EnableUI)
 }
 
-// TestDuplicateKeyValidationHcl checks that the server command displays a warning when the HCL config file contains duplicate keys.
+// Test_UISettingsParsing checks that the ui_settings stanza is parsed correctly,
+// normalizing ui_telemetry into UITelemetry/UITelemetrySet. An absent stanza leaves
+// UISettings nil, and an empty stanza leaves telemetry unset so that a later config
+// file merging in an explicit value is not treated as an override of a real choice.
+func Test_UISettingsParsing(t *testing.T) {
+	tests := []struct {
+		name        string
+		hcl         string
+		wantNil     bool
+		wantEnabled bool
+		wantSet     bool
+	}{
+		{
+			name:    "no stanza",
+			hcl:     `disable_cache = true`,
+			wantNil: true,
+		},
+		{name: "explicit true", hcl: "ui_settings { ui_telemetry = true }", wantEnabled: true, wantSet: true},
+		{name: "explicit false", hcl: "ui_settings { ui_telemetry = false }", wantEnabled: false, wantSet: true},
+		{name: "empty stanza leaves telemetry unset", hcl: "ui_settings { }", wantEnabled: false, wantSet: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			config, err := ParseConfig(tc.hcl, "")
+			require.NoError(t, err)
+			if tc.wantNil {
+				require.Nil(t, config.UISettings)
+				return
+			}
+			require.NotNil(t, config.UISettings)
+			require.Equal(t, tc.wantEnabled, config.UISettings.UITelemetry)
+			require.Equal(t, tc.wantSet, config.UISettings.UITelemetrySet)
+		})
+	}
+}
+
+// Test_UISettingsValidate checks that unknown keys inside the ui_settings stanza are
+// surfaced as warnings by Config.Validate, so a misspelled key is reported rather than
+// silently ignored.
+func Test_UISettingsValidate(t *testing.T) {
+	config, err := ParseConfig("ui_settings { ui_telemetry = true }", "")
+	require.NoError(t, err)
+	require.Empty(t, config.Validate(""), "known keys should not produce warnings")
+
+	config, err = ParseConfig("ui_settings { ui_telemeeeetry = true }", "")
+	require.NoError(t, err)
+	results := config.Validate("")
+	require.NotEmpty(t, results, "a misspelled/unknown key should produce a warning")
+	require.Contains(t, results[0].String(), "ui_telemeeeetry")
+}
+
+// Test_UISettingsSanitized checks that the ui_settings stanza is surfaced by
+// Config.Sanitized (and therefore sys/config/state/sanitized) only when it is actually
+// configured, so operators can confirm whether the stanza was loaded.
+func Test_UISettingsSanitized(t *testing.T) {
+	configured, err := ParseConfig(`ui_settings { ui_telemetry = true }`, "")
+	require.NoError(t, err)
+	sanitized := configured.Sanitized()
+	require.Contains(t, sanitized, "ui_settings")
+	require.Equal(t, map[string]interface{}{"ui_telemetry": true}, sanitized["ui_settings"])
+
+	absent, err := ParseConfig(`disable_cache = true`, "")
+	require.NoError(t, err)
+	require.NotContains(t, absent.Sanitized(), "ui_settings")
+}
+
+// Test_UISettingsMerge checks that merging two configs respects UITelemetrySet, so an
+// explicitly set value overrides an earlier one while an unset value never clobbers a
+// previously configured one.
+func Test_UISettingsMerge(t *testing.T) {
+	mustParse := func(hcl string) *Config {
+		config, err := ParseConfig(hcl, "")
+		require.NoError(t, err)
+		return config
+	}
+
+	enabledTrue := `ui_settings { ui_telemetry = true }`
+	enabledFalse := `ui_settings { ui_telemetry = false }`
+	empty := `ui_settings {}`
+	noStanza := `disable_cache = true`
+
+	t.Run("second explicit value overrides first", func(t *testing.T) {
+		merged := mustParse(enabledTrue).Merge(mustParse(enabledFalse))
+		require.NotNil(t, merged.UISettings)
+		require.False(t, merged.UISettings.UITelemetry)
+		require.True(t, merged.UISettings.UITelemetrySet)
+	})
+
+	t.Run("unset second does not clobber first", func(t *testing.T) {
+		merged := mustParse(enabledTrue).Merge(mustParse(empty))
+		require.NotNil(t, merged.UISettings)
+		require.True(t, merged.UISettings.UITelemetry)
+		require.True(t, merged.UISettings.UITelemetrySet)
+	})
+
+	t.Run("nil first takes second", func(t *testing.T) {
+		merged := mustParse(noStanza).Merge(mustParse(enabledTrue))
+		require.NotNil(t, merged.UISettings)
+		require.True(t, merged.UISettings.UITelemetry)
+		require.True(t, merged.UISettings.UITelemetrySet)
+	})
+
+	t.Run("nil second keeps first", func(t *testing.T) {
+		merged := mustParse(enabledTrue).Merge(mustParse(noStanza))
+		require.NotNil(t, merged.UISettings)
+		require.True(t, merged.UISettings.UITelemetry)
+	})
+}
+
+// TestDuplicateKeyValidationHcl checks that loading an HCL config file with duplicate keys returns an error.
 func TestDuplicateKeyValidationHcl(t *testing.T) {
 	testDuplicateKeyValidationHcl(t)
 }

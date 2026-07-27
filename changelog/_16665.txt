@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add a `ui_settings` configuration stanza with a `ui_telemetry` option, surfaced to the UI via the `sys/internal/ui/settings` endpoint, that gates anonymous UI usage telemetry.
+```
