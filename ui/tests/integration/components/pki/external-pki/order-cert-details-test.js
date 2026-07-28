@@ -34,6 +34,13 @@ module('Integration | Component | ExternalPki::OrderCertDetails', function (hook
 
   // Rendering order challenges table
 
+  test('it renders when no order provided', async function (assert) {
+    this.order = undefined;
+    await this.renderComponent();
+    assert.dom(GENERAL.tableRow()).doesNotExist('no table rows rendered without order data');
+    assert.dom(GENERAL.cardContainer('Order information')).doesNotExist();
+  });
+
   test('it renders empty state when no challenges provided', async function (assert) {
     this.order = { details: { challenges: null } };
     await this.renderComponent();

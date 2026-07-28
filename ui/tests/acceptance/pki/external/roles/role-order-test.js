@@ -61,7 +61,7 @@ module('Acceptance | enterprise | pki | external | roles | role | order route', 
   test('tabs are hidden on the order route', async function (assert) {
     this.orderStatusStub.resolves({ order_status: 'completed' });
     await visit(this.orderURL);
-    assert.dom(GENERAL.linkTo('Details')).doesNotExist('Details tab is hidden');
+    assert.dom(GENERAL.linkTo('Overview')).doesNotExist('Overview tab is hidden');
     assert.dom(GENERAL.linkTo('Active orders')).doesNotExist('Active orders tab is hidden');
   });
 

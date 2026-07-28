@@ -1,0 +1,141 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<OverviewCard
+  @cardTitle="Retrieve cached certificate"
+  @subText="Retrieve the most recently issued (cached) certificate for this role."
+>
+  <:content>
+    <Hds::Form {{on "submit" this.onSubmit}} as |FORM|>
+      <FORM.Section>
+        {{#if @errorMessage}}
+          <MessageError @errorMessage={{@errorMessage}} />
+        {{/if}}
+      </FORM.Section>
+
+      <FORM.Section>
+        <Hds::Form::TextInput::Field
+          @value={{this.identifiers}}
+          @isInvalid={{if (this.validationError "identifiers") true false}}
+          name="identifiers"
+          {{on "input" this.handleInput}}
+          autocomplete="off"
+          data-test-input="identifiers"
+          as |F|
+        >
+          <F.Label>Identifiers</F.Label>
+          <F.HelperText>Comma-separated list of domain names to include in the certificate.</F.HelperText>
+          {{#if (this.validationError "identifiers")}}
+            <F.Error data-test-validation-error="identifiers">
+              {{this.validationError "identifiers"}}
+            </F.Error>
+          {{/if}}
+        </Hds::Form::TextInput::Field>
+      </FORM.Section>
+
+      <FORM.Section>
+        <Hds::Form::Field @layout="vertical" as |F|>
+          <F.Label>Minimum validity</F.Label>
+          <F.HelperText>
+            {{! The radio buttons just change the way the minimum validity is submitted
+            (as a duration vs as a percentage) and are not actually submitted form inputs }}
+            <Hds::Form::Radio::Group @layout="horizontal" @extraAriaDescribedBy="min-validity-hint" as |G|>
+              <G.HelperText>
+                The minimum duration or percentage remaining of the certificate.
+              </G.HelperText>
+              <G.RadioField
+                @id="duration"
+                @value="duration"
+                checked={{eq this.validityType "duration"}}
+                {{on "change" this.handleRadioSelect}}
+                data-test-radio="duration"
+                as |RF|
+              >
+                <RF.Label class="has-font-weight-normal">Duration</RF.Label>
+              </G.RadioField>
+
+              <G.RadioField
+                @id="percentage"
+                @value="percentage"
+                checked={{eq this.validityType "percentage"}}
+                {{on "change" this.handleRadioSelect}}
+                data-test-radio="percentage"
+                as |RF|
+              >
+                <RF.Label class="has-font-weight-normal">Percentage (1-100)</RF.Label>
+              </G.RadioField>
+            </Hds::Form::Radio::Group>
+          </F.HelperText>
+          <F.Control>
+            <Hds::SegmentedGroup as |SG|>
+              <SG.TextInput
+                id={{F.id}}
+                aria-describedby={{F.ariaDescribedBy}}
+                name="minValidityValue"
+                @value={{this.minValidityValue}}
+                @isInvalid={{if (this.validationError "minValidityValue") true false}}
+                {{on "input" this.handleInput}}
+                autocomplete="off"
+                data-test-input="minValidityValue"
+              />
+              {{#if (eq this.validityType "duration")}}
+                <SG.Select
+                  @width="100px"
+                  name="durationUnit"
+                  {{on "input" this.handleInput}}
+                  @isInvalid={{if (this.validationError "minValidityValue") true false}}
+                  aria-label="duration unit"
+                  data-test-select="unit"
+                  as |S|
+                >
+                  <S.Options>
+                    {{#each this.unitOptions as |unit|}}
+                      <option value={{unit.value}} selected={{eq unit.value this.durationUnit}}>{{unit.label}}</option>
+                    {{/each}}
+                  </S.Options>
+                </SG.Select>
+              {{else}}
+                <SG.TextInput
+                  @value="%"
+                  @width="75px"
+                  aria-label="percentage sign"
+                  @isInvalid={{if (this.validationError "minValidityValue") true false}}
+                  disabled
+                  data-test-input="percentage"
+                />
+              {{/if}}
+            </Hds::SegmentedGroup>
+
+          </F.Control>
+          {{#if (this.validationError "minValidityValue")}}
+            <F.Error data-test-validation-error="minValidityValue">
+              {{this.validationError "minValidityValue"}}
+            </F.Error>
+          {{/if}}
+        </Hds::Form::Field>
+
+        {{! Additional screen-reader assist text }}
+        <span id="min-validity-hint" class="sr-only">
+          Select to enter the minimum validity as a number of seconds or as a percentage between 1 and 100 in the field
+          below.
+        </span>
+
+      </FORM.Section>
+
+      <FORM.Footer as |FF|>
+        <FF.ButtonSet>
+          <Hds::Button
+            @text="Get certificate"
+            @icon={{if this.save.isRunning "loading"}}
+            type="submit"
+            disabled={{this.save.isRunning}}
+            data-test-submit
+          />
+        </FF.ButtonSet>
+      </FORM.Footer>
+
+    </Hds::Form>
+  </:content>
+</OverviewCard>

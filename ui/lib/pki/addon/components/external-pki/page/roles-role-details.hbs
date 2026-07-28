@@ -3,4 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<ExternalPki::ConfigDetails @config={{@model.role}} />
+{{#if this.fetchedCert}}
+  <ExternalPki::OrderCertDetails @certificate={{hash details=this.fetchedCert}} />
+{{else}}
+  <Hds::Layout::Flex class="padding-top-24" @gap="24" @wrap={{true}} as |LF|>
+    <LF.Item @basis="500px">
+      <ExternalPki::FetchCachedCert @errorMessage={{this.errorMessage}} @onSubmit={{this.fetchCertificate}} />
+    </LF.Item>
+  </Hds::Layout::Flex>
+  <ExternalPki::ConfigDetails @config={{@model.role}} />
+{{/if}}
