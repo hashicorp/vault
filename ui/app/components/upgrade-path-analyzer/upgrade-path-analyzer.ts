@@ -61,8 +61,7 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
 
   async fetchReleaseInfo() {
     try {
-      // TODO: will update to this.api.sys.releaseInfoRead() once redundant suffix is addressed
-      const { versions } = await this.api.sys.releaseInfoReadRead();
+      const { versions } = await this.api.sys.releaseInfoReadReleaseInfo();
       if (versions) {
         this.generalUpgradeInfoResp = versions as UpgradeInfo[];
       }
