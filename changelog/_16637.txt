@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit (enterprise): Add managed key support to CSR sign and set certificate chain endpoints.
+```
