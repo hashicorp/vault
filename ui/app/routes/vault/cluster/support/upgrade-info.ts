@@ -13,7 +13,8 @@ import type VersionService from 'vault/services/version';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  upgradeInfo: unknown[] | null;
+  upgradeInfo: unknown | null;
+  targetVersion: string | null;
 }
 
 type ParentModel = ModelFrom<VaultClusterSupportUpgradeRoute>;
@@ -39,6 +40,7 @@ export default class VaultClusterSupportUpgradeInfoRoute extends Route {
     super.setupController(controller, {});
     const parentModel = this.modelFor('vault.cluster.support.upgrade') as ParentModel;
     controller.upgradeInfo = parentModel?.upgradeInfo ?? null;
+    controller.targetVersion = (parentModel as { targetVersion?: string })?.targetVersion ?? null;
     controller.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'Support', route: 'vault.cluster.support.upgrade' },
