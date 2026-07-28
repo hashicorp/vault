@@ -10,6 +10,7 @@ import { ModelFrom } from 'vault/vault/route';
 import type { RoleRouteModel } from '../role';
 import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export type RoleDetailsRouteModel = ModelFrom<PkiExternalRolesRoleDetailsRoute>;
 
@@ -20,6 +21,6 @@ export default class PkiExternalRolesRoleDetailsRoute extends Route {
   async model() {
     const { role_name } = this.modelFor('external.roles.role') as RoleRouteModel;
     const role = await this.api.secrets.pkiExternalCaReadRole(role_name, this.secretMountPath.currentPath);
-    return { role };
+    return { engine: this.modelFor('application') as SecretsEngineResource, role };
   }
 }

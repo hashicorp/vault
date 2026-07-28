@@ -41,7 +41,7 @@ module('Acceptance | enterprise | pki | external | roles | role | details route'
     assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(this.roleName);
     assert.dom(GENERAL.breadcrumb).exists({ count: 5 });
     assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath} Roles ${this.roleName}`);
-    assert.dom(GENERAL.linkTo('Details')).exists().hasClass('active');
+    assert.dom(GENERAL.linkTo('Overview')).exists().hasClass('active');
     assert.dom(GENERAL.linkTo('Active orders')).exists().doesNotHaveClass('active');
     // Navigate to a active orders
     await click(GENERAL.linkTo('Active orders'));
@@ -49,7 +49,7 @@ module('Acceptance | enterprise | pki | external | roles | role | details route'
       currentRouteName(),
       'vault.cluster.secrets.backend.pki.external.roles.role.active-orders'
     );
-    assert.dom(GENERAL.linkTo('Details')).exists().doesNotHaveClass('active');
+    assert.dom(GENERAL.linkTo('Overview')).exists().doesNotHaveClass('active');
     assert.dom(GENERAL.linkTo('Active orders')).exists().hasClass('active');
   });
 

@@ -43,11 +43,11 @@ module('Acceptance | enterprise | pki | external | roles | role | active-orders 
     assert.dom(GENERAL.breadcrumb).exists({ count: 5 });
     assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath} Roles ${this.roleName}`);
     assert.dom(GENERAL.linkTo('Active orders')).exists().hasClass('active');
-    assert.dom(GENERAL.linkTo('Details')).exists().doesNotHaveClass('active');
+    assert.dom(GENERAL.linkTo('Overview')).exists().doesNotHaveClass('active');
 
     // Navigate to a role details
-    await click(GENERAL.linkTo('Details'));
-    assert.dom(GENERAL.linkTo('Details')).exists().hasClass('active');
+    await click(GENERAL.linkTo('Overview'));
+    assert.dom(GENERAL.linkTo('Overview')).exists().hasClass('active');
     assert.dom(GENERAL.linkTo('Active orders')).exists().doesNotHaveClass('active');
   });
 
