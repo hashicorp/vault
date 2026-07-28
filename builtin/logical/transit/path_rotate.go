@@ -90,7 +90,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
-	resp, err := b.formatKeyPolicy(p, nil)
+	resp, err := b.formatKeyPolicy(ctx, p, nil)
 	if err != nil {
 		b.Logger().Error("failed to rotate key on user request", "name", name, "error", err.Error())
 		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyRotateFail, keyMetadata)
