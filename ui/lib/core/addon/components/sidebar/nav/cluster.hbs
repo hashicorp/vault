@@ -35,7 +35,7 @@
       data-test-sidebar-nav-link="Operational tools"
     />
   {{/if}}
-  {{#if this.version.isEnterprise}}
+  {{#if (and this.version.isEnterprise (not this.flags.isHvdManaged))}}
     <Nav.Link
       @route="vault.cluster.support.upgrade"
       @text="Support"

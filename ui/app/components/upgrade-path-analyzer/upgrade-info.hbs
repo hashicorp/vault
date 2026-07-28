@@ -7,9 +7,19 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    <Hds::Link::Standalone @text="CLI & API quick reference" @href={{doc-link "/vault/docs"}} @icon="external-link" />
+    <DownloadButton
+      @text="Download"
+      @data={{this.fullDownloadText}}
+      @filename="vault-upgrade-info"
+      @color="secondary"
+      @iconPosition="leading"
+      data-test-button="Download"
+    />
   </:actions>
   <:description>
+    {{#if @targetVersion}}
+      <strong>Target version: {{@targetVersion}}.</strong>
+    {{/if}}
     These are all the known issues, breaking changes, and new behaviors released with the selected version as well as steps
     to safely roll back.
   </:description>
@@ -87,6 +97,50 @@
 
   {{! separate panel for Rollback steps - does not follow the same format as the others so we will separate it here }}
   <T.Panel>
-    Rollbacks steps
+    <Hds::Layout::Flex @direction="column" @gap="16" class="padding-top-24">
+      <Hds::Layout::Flex @align="center" @justify="space-between" @gap="16">
+        <Hds::Text::Display @tag="h2" @weight="semibold" data-test-upgrade-steps-title>
+          Rollback steps
+        </Hds::Text::Display>
+
+        <DownloadButton
+          @text="Download steps"
+          @data={{this.rollbackStepsDownloadText}}
+          @filename="vault-rollback-steps"
+          @color="tertiary"
+          @iconPosition="leading"
+          data-test-button="Download steps"
+        />
+
+      </Hds::Layout::Flex>
+
+      {{#if this.upgradeInfo.rollbackGuidanceMessage}}
+        <Hds::Alert @type="inline" @color="highlight" @icon="info" data-test-inline-alert as |A|>
+          <A.Title>{{this.upgradeInfo.rollbackGuidanceMessage}}</A.Title>
+        </Hds::Alert>
+      {{/if}}
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Rollback order:</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeInfo.rollbackOrder as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">{{step}}</Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Detailed rollback steps</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeInfo.rollback_steps as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">{{step}}</Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+    </Hds::Layout::Flex>
   </T.Panel>
 </Hds::Tabs>

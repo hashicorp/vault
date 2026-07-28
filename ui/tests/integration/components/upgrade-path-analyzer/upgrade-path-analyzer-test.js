@@ -29,6 +29,11 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
     this.version.version = '1.19.5';
     this.onSetUpgradeInfo = () => {};
     this.server.get('/sys/release-info', () => ({ data: { versions: UPGRADE_INFO } }));
+    // Stub returns one version per minor — the last patch of each line.
+    // filteredTargetVersions will drop <= 1.19.5, leaving 1.20.1, 1.21.7, 2.0.1.
+    this.server.get('/sys/vault-versions', () => ({
+      data: { versions: ['1.18.0', '1.19.5', '1.20.1', '1.21.7', '2.0.1'] },
+    }));
   });
 
   test('it renders', async function (assert) {
@@ -54,7 +59,8 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
     await render(
       hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
     );
-    await fillIn(GENERAL.selectByAttr('target version'), '1.20.0');
+
+    await fillIn(GENERAL.selectByAttr('target version'), '1.20.1');
     await click(GENERAL.button('Analyze'));
     await waitFor(GENERAL.cardContainer('Known issues'));
 
@@ -69,7 +75,7 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       );
     assert
       .dom(`${GENERAL.cardContainer('Known issues')} ${GENERAL.badge()}`)
-      .hasText('10', 'Known issues count is correct');
+      .hasText('6', 'Known issues count is correct');
     assert.dom(GENERAL.linkTo('Known issues')).exists('Known issues view link exists');
 
     assert
@@ -80,7 +86,7 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       .hasText('These are functional changes from one version to the other.', 'Card description is correct');
     assert
       .dom(`${GENERAL.cardContainer('Breaking changes')} ${GENERAL.badge()}`)
-      .hasText('3', 'Breaking changes count is correct');
+      .hasText('4', 'Breaking changes count is correct');
     assert.dom(GENERAL.linkTo('Breaking changes')).exists('Breaking changes view link exists');
 
     assert
@@ -105,7 +111,7 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       .hasText('Follow these steps to safely rollback.', 'Card description is correct');
     assert
       .dom(`${GENERAL.cardContainer('Rollback steps')} ${GENERAL.badge()}`)
-      .hasText('0', 'Rollback steps count is correct');
+      .hasText('8', 'Rollback steps count is correct');
     assert.dom(GENERAL.linkTo('Rollback steps')).exists('Rollback steps view link exists');
   });
 
@@ -113,11 +119,10 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
     await render(
       hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
     );
-    await fillIn(GENERAL.selectByAttr('target version'), '1.20.0');
+    await fillIn(GENERAL.selectByAttr('target version'), '1.20.1');
     await click(GENERAL.button('Analyze'));
     await waitFor(GENERAL.cardContainer('Known issues'));
 
-    assert.dom(GENERAL.cardContainer('upgrade-steps')).exists('Upgrade steps card is rendered');
     assert.dom('[data-test-upgrade-steps-title]').hasText('Upgrade steps', 'Upgrade steps title is correct');
     assert
       .dom(GENERAL.inlineAlert)
@@ -163,13 +168,13 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       await render(
         hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
       );
-      await fillIn(GENERAL.selectByAttr('target version'), '1.20.0');
+      await fillIn(GENERAL.selectByAttr('target version'), '1.20.1');
       await click(GENERAL.button('Analyze'));
       await waitFor(GENERAL.cardContainer('Known issues'));
 
       assert
         .dom(`${GENERAL.cardContainer('Known issues')} ${GENERAL.badge()}`)
-        .hasText('10', '10 known issues still unresolved at 1.20.0 (none fixed by 1.20.0 yet)');
+        .hasText('6', '6 known issues still unresolved at 1.20.1 (4 fixed by 1.20.1 are excluded)');
     });
 
     test('it excludes items found before the currentVersion', async function (assert) {
@@ -178,36 +183,34 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       await render(
         hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
       );
-      await fillIn(GENERAL.selectByAttr('target version'), '1.20.0');
+      await fillIn(GENERAL.selectByAttr('target version'), '1.20.1');
       await click(GENERAL.button('Analyze'));
       await waitFor(GENERAL.cardContainer('Known issues'));
 
       assert
         .dom(`${GENERAL.cardContainer('Known issues')} ${GENERAL.badge()}`)
-        .hasText('10', 'Items with found version <= currentVersion (1.18.4, 1.19.0) are excluded');
+        .hasText('6', 'Items with found version <= currentVersion (1.18.4, 1.19.0) are excluded');
     });
 
     test('it passes the correctly filtered info to the onSetUpgradeInfo callback', async function (assert) {
-      assert.expect(3);
+      assert.expect(2);
       this.onSetUpgradeInfo = (info) => {
-        const [entry] = info;
-        assert.strictEqual(info.length, 1, 'Callback receives a single aggregated entry');
         assert.strictEqual(
-          entry.breaking_changes.length,
-          3,
-          '3 breaking changes introduced in (1.19.5, 1.20.0]'
+          info.breaking_changes.length,
+          4,
+          '4 breaking changes introduced in (1.19.5, 1.20.1]'
         );
         assert.strictEqual(
-          entry.known_issues.length,
-          10,
-          '10 known issues found in range and unresolved at 1.20.0'
+          info.known_issues.length,
+          6,
+          '6 known issues found in range and unresolved at 1.20.1'
         );
       };
 
       await render(
         hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
       );
-      await fillIn(GENERAL.selectByAttr('target version'), '1.20.0');
+      await fillIn(GENERAL.selectByAttr('target version'), '1.20.1');
       await click(GENERAL.button('Analyze'));
       await waitFor(GENERAL.cardContainer('Known issues'));
     });

@@ -7,30 +7,34 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
+import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
+import { DisplayedInfo } from 'vault/components/upgrade-path-analyzer/upgrade-path-analyzer';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  setUpgradeInfo: (info: unknown[]) => void;
+  setUpgradeInfo: (info: DisplayedInfo) => void;
 }
 
 interface UpgradeModel {
-  upgradeInfo: unknown[] | null;
+  upgradeInfo: unknown | null;
+  targetVersion: string | null;
 }
 
 export default class VaultClusterSupportUpgradeRoute extends Route {
+  @service declare readonly flags: FlagsService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
 
   beforeModel() {
-    if (this.version.isCommunity) {
+    if (this.version.isCommunity || this.flags.isHvdManaged) {
       this.router.transitionTo('vault.cluster.dashboard');
     }
   }
 
   model(): UpgradeModel {
-    return { upgradeInfo: null };
+    return { upgradeInfo: null, targetVersion: null };
   }
 
   setupController(controller: RouteController, resolvedModel: UpgradeModel) {
@@ -46,8 +50,9 @@ export default class VaultClusterSupportUpgradeRoute extends Route {
   }
 
   @action
-  setUpgradeInfo(info: unknown[]) {
+  setUpgradeInfo(info: { targetVersion: string } & Record<string, unknown>) {
     const model = this.modelFor(this.routeName) as UpgradeModel;
     model.upgradeInfo = info;
+    model.targetVersion = info.targetVersion ?? null;
   }
 }
