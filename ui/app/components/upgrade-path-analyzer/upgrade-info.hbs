@@ -26,9 +26,10 @@
     </T.Tab>
   {{/each}}
 
-  {{#each this.panels as |panel|}}
+  {{! Known issues, Breaking changes, New behavior panels share the same item layout }}
+  {{#each this.panels as |_panel panelIndex|}}
     <T.Panel data-test-panel>
-      {{#each panel as |listItem index|}}
+      {{#each (this.paginatedItems panelIndex) as |listItem|}}
         <Hds::Layout::Flex
           @direction="column"
           @gap="12"
@@ -66,10 +67,21 @@
           </LF.Item>
         </Hds::Layout::Flex>
 
-        {{#if (not-eq index (sub panel.length 1))}}
-          <Hds::Separator @spacing="0" />
-        {{/if}}
+        <Hds::Separator @spacing="0" />
       {{/each}}
+
+      {{#let (this.paginatedItems panelIndex) as |items|}}
+        {{#if items.meta}}
+          <Hds::Pagination::Numbered
+            @currentPage={{items.meta.currentPage}}
+            @currentPageSize={{items.meta.pageSize}}
+            @onPageChange={{this.onPageChange}}
+            @showSizeSelector={{false}}
+            @totalItems={{items.meta.filteredTotal}}
+            data-test-pagination
+          />
+        {{/if}}
+      {{/let}}
     </T.Panel>
   {{/each}}
 
