@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { UPGRADE_INFO } from 'vault/constants/upgrade-info';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -48,5 +48,14 @@ module('Integration | Component | UpgradePathAnalyzer::UpgradeInfo', function (h
       .hasText('Missed events with multiple event clients');
     assert.dom('[data-test-panel-item] [data-test-panel-item-description]').hasText('Found in 1.21.0');
     assert.dom(`[data-test-panel-item] ${GENERAL.linkTo('Item details')}`).exists();
+  });
+
+  test('it paginates the panels', async function (assert) {
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradeInfo @breadcrumbs={{this.breadcrumbs}} @upgradeInfo={{this.upgradeInfo}}/>`
+    );
+    assert.dom(GENERAL.paginationInfo).hasText('1–10 of 16');
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.paginationInfo).hasText('11–16 of 16');
   });
 });

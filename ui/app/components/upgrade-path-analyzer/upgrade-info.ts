@@ -4,10 +4,12 @@
  */
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import type RouterService from '@ember/routing/router-service';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type { HTMLElementEvent } from 'vault/forms';
+import { paginate } from 'core/utils/paginate-list';
 
 // TODO: improve typing
 interface KnownIssue {
@@ -35,22 +37,25 @@ interface NewBehavior {
   link: string;
 }
 
-interface VersionInfo {
+export interface UpgradeInfo {
   version: string;
   known_issues?: KnownIssue[];
   breaking_changes?: BreakingChange[];
   new_behavior?: NewBehavior[];
-  rollback_steps?: string[];
 }
 
 interface UpgradeInfoArgs {
   breadcrumbs: Array<Breadcrumb>;
-  upgradeInfo?: VersionInfo[];
+  upgradeInfo?: UpgradeInfo[];
   tab?: string;
 }
 
+const PAGE_SIZE = 10;
+
 export default class UpgradeInfoComponent extends Component<UpgradeInfoArgs> {
   @service declare readonly router: RouterService;
+
+  @tracked currentPage = 1;
 
   get selectedTabIndex() {
     const index = parseInt(this.args.tab ?? '', 10);
@@ -59,7 +64,13 @@ export default class UpgradeInfoComponent extends Component<UpgradeInfoArgs> {
 
   @action
   onClickTab(_event: HTMLElementEvent<HTMLInputElement>, index: number) {
+    this.currentPage = 1;
     this.router.replaceWith({ queryParams: { tab: String(index) } });
+  }
+
+  @action
+  onPageChange(page: number) {
+    this.currentPage = page;
   }
 
   private formatKnownIssues(issues: KnownIssue[]) {
@@ -101,12 +112,13 @@ export default class UpgradeInfoComponent extends Component<UpgradeInfoArgs> {
     }));
   }
 
-  get panels() {
-    // TODO: this is flattening upgradeInfo as it is currently in the format of
-    // [{version: '1.21', known_issues: []..}, {version: '1.20', known_issues: []..}]
-    // since we're directly pulling from the test data
-    // the shape may change once we wire up the endpoint and we could flatten it or format it before it gets here
+  @action
+  paginatedItems(panelIndex: number) {
+    const panel = this.panels[panelIndex] ?? [];
+    return paginate(panel, { page: this.currentPage, pageSize: PAGE_SIZE });
+  }
 
+  get panels() {
     const knownIssues = this.upgradeInfo?.flatMap((item) => item.known_issues ?? []) ?? [];
     const breakingChanges = this.upgradeInfo?.flatMap((item) => item.breaking_changes ?? []) ?? [];
     const newBehavior = this.upgradeInfo?.flatMap((item) => item.new_behavior ?? []) ?? [];

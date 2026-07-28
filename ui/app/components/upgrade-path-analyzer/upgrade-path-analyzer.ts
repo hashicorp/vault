@@ -7,18 +7,15 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { compareVersions } from 'vault/utils/version-utils';
 
-//TODO: Move data later once endpoint is available
-//Note: data can't be pulled from tests directory
-import { UPGRADE_INFO } from 'vault/constants/upgrade-info';
-
-import type { HTMLElementEvent } from 'vault/forms';
-import type VersionService from 'vault/services/version';
-import type RouterService from '@ember/routing/router-service';
-import type CurrentClusterService from 'vault/services/current-cluster';
+import type ApiService from 'vault/services/api';
 import type ClusterModel from 'vault/models/cluster';
-
-type UpgradeInfoItem = (typeof UPGRADE_INFO)[number];
+import type CurrentClusterService from 'vault/services/current-cluster';
+import type { HTMLElementEvent } from 'vault/forms';
+import type RouterService from '@ember/routing/router-service';
+import type { UpgradeInfo } from './upgrade-info';
+import type VersionService from 'vault/services/version';
 
 interface ReplicationSecondary {
   node_id?: string;
@@ -41,23 +38,44 @@ enum Scenarios {
 }
 
 interface UpgradePathAnalyzerArgs {
-  onSetUpgradeInfo: (info: UpgradeInfoItem[]) => void;
+  onSetUpgradeInfo: (info: DisplayedInfo[]) => void;
 }
 
+type DisplayedInfo = Omit<UpgradeInfo, 'version'>;
+
 export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerArgs> {
-  @service declare readonly version: VersionService;
+  @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
   @service declare readonly currentCluster: CurrentClusterService;
+  @service declare readonly version: VersionService;
 
   @tracked selectedVersion: string | null = null;
-  @tracked upgradeInfo: UpgradeInfoItem[] | null = null;
+  @tracked upgradeInfo: DisplayedInfo[] | null = null;
+  @tracked generalUpgradeInfoResp: UpgradeInfo[] | null = null;
+  @tracked isLoading = false;
 
-  get currentVersion() {
-    return this.version.version;
+  constructor(owner: unknown, args: UpgradePathAnalyzerArgs) {
+    super(owner, args);
+    this.fetchReleaseInfo();
+  }
+
+  async fetchReleaseInfo() {
+    try {
+      // TODO: will update to this.api.sys.releaseInfoRead() once redundant suffix is addressed
+      const { versions } = await this.api.sys.releaseInfoReadRead();
+      if (versions) {
+        this.generalUpgradeInfoResp = versions as UpgradeInfo[];
+      }
+    } catch (e) {
+      console.error('Failed to fetch release info:', e);
+    }
   }
 
   get targetVersions() {
-    return ['1.20.0', '1.20.1'];
+    return ['1.19.0', '1.19.1', '1.19.5', '1.20.0', '1.20.1', '1.20.6', '1.21.7', '2.0.1'];
+  }
+  get currentVersion() {
+    return this.version.version as unknown as string;
   }
 
   get breakingChangesCount(): number {
@@ -219,15 +237,57 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
   }
 
   @action
-  onVersionSelect(event: HTMLElementEvent<HTMLInputElement>) {
-    const { value } = event.target;
-    this.selectedVersion = value;
+  async onAnalyzeClick() {
+    if (this.generalUpgradeInfoResp && this.selectedVersion) {
+      this.isLoading = true;
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      this.upgradeInfo = this.filterReleaseInfo(
+        this.generalUpgradeInfoResp,
+        this.currentVersion,
+        this.selectedVersion
+      );
+      this.args.onSetUpgradeInfo(this.upgradeInfo);
+      this.isLoading = false;
+    }
   }
 
   @action
-  onAnalyzeClick() {
-    this.upgradeInfo = UPGRADE_INFO;
-    this.args.onSetUpgradeInfo(this.upgradeInfo);
+  onVersionSelect(event: HTMLElementEvent<HTMLInputElement>) {
+    const { value } = event.target;
+    this.selectedVersion = value;
+    this.upgradeInfo = null;
+  }
+
+  /**
+   * Filter the release info response according to the current and selected versions.
+   *
+   * - Filters breaking_changes to only include those introduced between currentVersion
+   *   (exclusive) and targetVersion (inclusive).
+   * - Filters new_behavior to only include those introduced between currentVersion
+   *   (exclusive) and targetVersion (inclusive).
+   * - Filters known_issues to only include those:
+   *   - Found between currentVersion (exclusive) and targetVersion (inclusive)
+   *   - AND not yet fixed by targetVersion (fixed === 'No' OR fixed version > targetVersion)
+   *
+   * Returns a single aggregated entry so that the existing flatMap consumers work unchanged.
+   */
+  filterReleaseInfo(releaseInfo: UpgradeInfo[], current: string, target: string): DisplayedInfo[] {
+    const inRange = (v: string) => compareVersions(v, current) > 0 && compareVersions(v, target) <= 0;
+    const notFixedByTarget = (fixed: string) => fixed === 'No' || compareVersions(fixed, target) > 0;
+
+    const breaking_changes = releaseInfo
+      .flatMap((e) => e.breaking_changes ?? [])
+      .filter((item) => inRange(item.introduced));
+
+    const new_behavior = releaseInfo
+      .flatMap((e) => e.new_behavior ?? [])
+      .filter((item) => inRange(item.introduced));
+
+    const known_issues = releaseInfo
+      .flatMap((e) => e.known_issues ?? [])
+      .filter((item) => inRange(item.found) && notFixedByTarget(item.fixed));
+
+    return [{ breaking_changes, new_behavior, known_issues }];
   }
 
   private isPrimaryMode(mode: string): boolean {

@@ -32,10 +32,15 @@
       <Hds::Icon @name="arrow-right" @size="24" />
     </LF.Item>
 
-    <Hds::Form::Select::Field name="target-version" {{on "change" this.onVersionSelect}} as |F|>
+    <Hds::Form::Select::Field
+      name="target-version"
+      {{on "change" this.onVersionSelect}}
+      data-test-select="target version"
+      as |F|
+    >
       <F.Label>Target version</F.Label>
-      {{! TODO - Hardcoded options until backend endpoint is added }}
       <F.Options>
+        <option value="" selected disabled>Select a target version</option>
         {{#each this.targetVersions as |version|}}
           <option value={{version}}>{{version}}</option>
         {{/each}}
@@ -188,7 +193,7 @@
 
       </Hds::Layout::Flex>
 
-      <Hds::Alert @type="inline" @color="highlight" @icon="info" data-test-upgrade-alert as |A|>
+      <Hds::Alert @type="inline" @color="highlight" @icon="info" data-test-inline-alert as |A|>
         <A.Title>{{this.upgradeGuidanceMessage}}</A.Title>
       </Hds::Alert>
 
@@ -217,4 +222,10 @@
       </Hds::Layout::Flex>
     </Hds::Layout::Flex>
   </Hds::Card::Container>
+{{else}}
+  {{#if this.isLoading}}
+    <Hds::Layout::Flex @justify="center" @align="center" class="is-medium-height">
+      <VaultLogoSpinner />
+    </Hds::Layout::Flex>
+  {{/if}}
 {{/if}}
