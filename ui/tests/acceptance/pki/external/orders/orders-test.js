@@ -13,6 +13,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { assertTabState, EXTERNAL_TABS } from 'vault/tests/helpers/pki/assertion-helpers';
 
 module('Acceptance | enterprise | pki | external | orders route', function (hooks) {
   setupApplicationTest(hooks);
@@ -35,13 +36,20 @@ module('Acceptance | enterprise | pki | external | orders route', function (hook
     await runCmd([`delete sys/mounts/${this.mountPath}`], false);
   });
 
-  test('it renders breadcrumbs for recent orders', async function (assert) {
+  test('it navigates to recent orders', async function (assert) {
     this.recentOrdersListStub.resolves({
       keys: [],
       key_info: {},
     });
 
     await visit(this.ordersURL);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/orders`,
+      'it navigates to orders'
+    );
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.external.orders.index');
+    assertTabState(assert, 'Recent orders', EXTERNAL_TABS);
 
     assert.dom(GENERAL.breadcrumb).exists({ count: 4 });
     assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath} Recent orders`);
@@ -133,6 +141,13 @@ module('Acceptance | enterprise | pki | external | orders route', function (hook
       'redirects to external error route'
     );
     assert.dom(GENERAL.pageError.title(403)).exists().hasText('ERROR 403 Not authorized');
+
+    await click(GENERAL.linkTo('Back'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'Back link navigates to engine overview route'
+    );
   });
 
   test('it handles 500 internal server error', async function (assert) {

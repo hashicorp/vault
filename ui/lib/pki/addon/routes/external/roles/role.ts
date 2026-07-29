@@ -6,9 +6,11 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/vault/route';
+import { SecretsApiPkiExternalCaListRoleActiveOrdersListEnum } from '@hashicorp/vault-client-typescript';
 
 import type { Breadcrumb } from 'vault/app-types';
 import type { ExternalRouteModel } from 'pki/routes/external';
+import type ApiService from 'vault/services/api';
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 
@@ -19,13 +21,37 @@ interface RouteController extends Controller {
 }
 
 export default class PkiExternalRolesRoleRoute extends Route {
+  @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
+
+  async fetchActiveOrders(roleName: string) {
+    let list: string[] = [];
+    let error;
+    try {
+      const resp = await this.api.secrets.pkiExternalCaListRoleActiveOrders(
+        roleName,
+        this.secretMountPath.currentPath,
+        SecretsApiPkiExternalCaListRoleActiveOrdersListEnum.TRUE
+      );
+      list = resp.keys ?? [];
+    } catch (e) {
+      // Catch all errors, the active-orders route will throw if necessary
+      error = await this.api.parseError(e);
+    }
+
+    return { list, error };
+  }
 
   async model({ role_name }: { role_name: string }) {
     const { engine } = this.modelFor('external') as ExternalRouteModel;
+    const role = await this.api.secrets.pkiExternalCaReadRole(role_name, this.secretMountPath.currentPath);
+    const activeOrders = await this.fetchActiveOrders(role_name);
+
     return {
       engine,
       role_name,
+      role,
+      activeOrders,
     };
   }
 

@@ -6,13 +6,14 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { currentRouteName, currentURL, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, visit } from '@ember/test-helpers';
 import sinon from 'sinon';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { assertTabState, EXTERNAL_TABS } from 'vault/tests/helpers/pki/assertion-helpers';
 
 module('Acceptance | enterprise | pki | external | roles | index route', function (hooks) {
   setupApplicationTest(hooks);
@@ -35,7 +36,7 @@ module('Acceptance | enterprise | pki | external | roles | index route', functio
     await runCmd([`delete sys/mounts/${this.mountPath}`], false);
   });
 
-  test('it uses parent route data and does not re-fetch', async function (assert) {
+  test('it navigates to roles index', async function (assert) {
     this.rolesListStub.resolves({ keys: ['role-1', 'role-2', 'role-3'] });
     await visit(this.rolesURL);
     assert.strictEqual(currentURL(), this.rolesURL, 'it has expected URL');
@@ -44,7 +45,12 @@ module('Acceptance | enterprise | pki | external | roles | index route', functio
       'vault.cluster.secrets.backend.pki.external.roles.index',
       'navigated to roles route'
     );
-    assert.true(this.rolesListStub.calledOnce, 'roles list called once in parent route');
+    assert.true(
+      this.rolesListStub.calledOnce,
+      'roles list only called once in parent route (does not re-fetch)'
+    );
+    assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath} Roles`);
+    assertTabState(assert, 'Roles', EXTERNAL_TABS);
 
     // Verify roles are displayed
     assert.dom(GENERAL.listItem()).exists({ count: 3 }, 'displays all roles');
@@ -75,6 +81,14 @@ module('Acceptance | enterprise | pki | external | roles | index route', functio
       'it redirects to error route'
     );
     assert.dom(GENERAL.pageError.title(403)).exists().hasText('ERROR 403 Not authorized');
+    assertTabState(assert, 'Roles', EXTERNAL_TABS);
+
+    await click(GENERAL.linkTo('Back'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'Back link navigates to engine overview route'
+    );
   });
 
   test('it displays 500 internal server error', async function (assert) {

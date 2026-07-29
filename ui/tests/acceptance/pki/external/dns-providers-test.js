@@ -6,13 +6,14 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { currentRouteName, currentURL, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, visit } from '@ember/test-helpers';
 import sinon from 'sinon';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { assertTabState, EXTERNAL_TABS } from 'vault/tests/helpers/pki/assertion-helpers';
 
 module('Acceptance | enterprise | pki | external | dns-providers route', function (hooks) {
   setupApplicationTest(hooks);
@@ -37,6 +38,25 @@ module('Acceptance | enterprise | pki | external | dns-providers route', functio
   hooks.afterEach(async function () {
     // cleanup after
     await runCmd([`delete sys/mounts/${this.mountPath}`], false);
+  });
+
+  test('it navigates to dns-providers route', async function (assert) {
+    this.dnsProvidersListStub.rejects(getErrorResponse()); // Throws 404
+    await visit(this.dnsProvidersURL);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/dns-providers`,
+      'it navigates to dns-providers'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.dns-providers',
+      'navigated to dns-providers route'
+    );
+    assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(this.mountPath);
+    assert.dom(GENERAL.breadcrumb).exists({ count: 4 });
+    assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath} DNS providers`);
+    assertTabState(assert, 'DNS providers', EXTERNAL_TABS);
   });
 
   test('it fetches DNS provider details for each provider type', async function (assert) {
@@ -84,11 +104,7 @@ module('Acceptance | enterprise | pki | external | dns-providers route', functio
     });
 
     await visit(this.dnsProvidersURL);
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.secrets.backend.pki.external.dns-providers',
-      'navigated to dns-providers route'
-    );
+
     assert.true(this.dnsProvidersListStub.calledOnce, 'providers list called once in parent route');
     assert.true(this.awsRoute53ReadStub.calledOnce, 'AWS Route53 read called once');
     assert.true(this.azureReadStub.calledOnce, 'Azure read called once');
@@ -126,6 +142,14 @@ module('Acceptance | enterprise | pki | external | dns-providers route', functio
       'it redirects to error route'
     );
     assert.dom(GENERAL.pageError.title(403)).exists().hasText('ERROR 403 Not authorized');
+    assertTabState(assert, 'DNS providers', EXTERNAL_TABS);
+
+    await click(GENERAL.linkTo('Back'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'Back link navigates to engine overview route'
+    );
   });
 
   test('it displays 500 internal server error', async function (assert) {

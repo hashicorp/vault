@@ -5,4 +5,21 @@
 
 <ExternalPki::HeaderTabs @title={{this.engineId}} @backend={{hash id=this.engineId}} @breadcrumbs={{this.breadcrumbs}} />
 
-<Page::Error @error={{this.model}} @titleTag="h2" />
+<Page::Error @error={{this.model}} @titleTag="h2">
+  <:customFooter as |AppState|>
+    <AppState.Footer as |F|>
+      {{! If navigating to the roles list route errored, go back to Overview }}
+      {{#if (matches-current-url "vault.cluster.secrets.backend.pki.external.roles.index" isExactMatch=true)}}
+        <F.LinkStandalone @icon="arrow-left" @text="Back" @route="external.overview" data-test-link-to="Back" />
+      {{else}}
+        <F.LinkStandalone
+          @icon="arrow-left"
+          @text={{if (matches-current-url "external.roles.role") "Roles" "Overview"}}
+          {{! If navigating to a particular role errored, go back to the roles list }}
+          @route={{if (matches-current-url "external.roles.role") "external.roles" "external.overview"}}
+          data-test-link-to="Back"
+        />
+      {{/if}}
+    </AppState.Footer>
+  </:customFooter>
+</Page::Error>

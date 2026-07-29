@@ -3,6 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+<Hds::Text::Body class="has-top-margin-s">
+  Orders currently in progress for this role appear here. Orders that have reached a terminal status, such as
+  <strong>Completed</strong>
+  or
+  <strong>Expired</strong>, are not shown. To view recently created orders regardless of status, go to
+  <Hds::Link::Inline @route="external.orders">Recent orders</Hds::Link::Inline>.
+</Hds::Text::Body>
+
 {{#if @model.activeOrders.length}}
   <Hds::Layout::Flex class="has-top-margin-s bottom-margin-8">
     <Hds::Form::TextInput::Field
@@ -46,9 +54,7 @@
   <Hds::ApplicationState class="top-padding-32" as |A|>
     <A.Header @title="No active orders" @titleTag="h2" data-test-empty-state-title />
     <A.Body data-test-empty-state-message>
-      In progress orders will appear here once created. Lookup a specific order by its ID or navigate to
-      <Hds::Link::Inline @route="external.orders">Recent orders</Hds::Link::Inline>
-      to view recently created and completed orders.
+      Lookup a specific order by its ID below.
       <Hds::Layout::Flex @gap="8" class="has-top-padding-m" as |LF|>
         <LF.Item @grow={{1}}>
           <InputSearch
@@ -69,6 +75,12 @@
       </Hds::Layout::Flex>
     </A.Body>
     <A.Footer as |F|>
+      <F.LinkStandalone
+        @icon="arrow-left"
+        @text="Get cached certificate"
+        @route="external.roles.role.overview"
+        data-test-link-to="Get cached certificate"
+      />
       <F.LinkStandalone
         @icon="docs-link"
         @text="API docs: Create a new order"

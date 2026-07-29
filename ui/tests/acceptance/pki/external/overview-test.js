@@ -6,13 +6,14 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { visit } from '@ember/test-helpers';
+import { currentRouteName, currentURL, visit } from '@ember/test-helpers';
 import sinon from 'sinon';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { assertTabState, EXTERNAL_TABS } from 'vault/tests/helpers/pki/assertion-helpers';
 
 // Tests logic in the pki.external.ts route because the overview route inherits the model from its parent route
 module('Acceptance | enterprise | pki | external | overview route', function (hooks) {
@@ -35,6 +36,45 @@ module('Acceptance | enterprise | pki | external | overview route', function (ho
   hooks.afterEach(async function () {
     // cleanup after
     await runCmd([`delete sys/mounts/${this.mountPath}`], false);
+  });
+
+  test('it navigates to external overview', async function (assert) {
+    await visit(`vault/secrets-engines/${this.mountPath}/pki/external`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/overview`,
+      'it redirects from the index route to overview'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'navigating to pki.external.index redirects to overview'
+    );
+    assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(this.mountPath);
+    assert.dom(GENERAL.breadcrumb).exists({ count: 3 });
+    assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath}`);
+    assertTabState(assert, 'Overview', EXTERNAL_TABS);
+  });
+
+  test('only "Overview" tab renders when no resources exist but user has permission to list everything', async function (assert) {
+    // getErrorResponse() throws 404 by default
+    this.acmeListStub.rejects(getErrorResponse());
+    this.dnsListStub.rejects(getErrorResponse());
+    this.rolesListStub.rejects(getErrorResponse());
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/external/overview`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/overview`,
+      'it navigates to url'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'it navigates to route'
+    );
+    assert.dom(GENERAL.linkTo('Overview')).exists().hasClass('active');
+    const hidden = EXTERNAL_TABS.filter((t) => t !== 'Overview');
+    hidden.forEach((t) => assert.dom(GENERAL.linkTo(t)).doesNotExist());
   });
 
   test('it catches 404 errors', async function (assert) {
