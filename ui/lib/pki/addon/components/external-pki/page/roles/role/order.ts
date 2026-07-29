@@ -7,12 +7,13 @@ import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 
-import type RouterService from '@ember/routing/router-service';
+import type { Breadcrumb } from 'vault/vault/app-types';
 import type { RoleOrderRouteModel } from 'pki/routes/external/roles/role/order';
+import type RouterService from '@ember/routing/router-service';
 
 interface Args {
   model: RoleOrderRouteModel;
-  breadcrumbs: unknown[];
+  breadcrumbs: Breadcrumb[];
 }
 
 export default class ExternalPkiPageRolesRoleOrderComponent extends Component<Args> {

@@ -29,7 +29,7 @@
     {{else if (and (eq configParam "role_name") @engineId)}}
       <InfoTableRow @label={{this.label configParam}}>
         <Hds::Link::Inline
-          @route="external.roles.role.details"
+          @route="external.roles.role.overview"
           @models={{array @engineId configValue}}
           data-test-link-to={{configValue}}
         >{{configValue}}</Hds::Link::Inline>

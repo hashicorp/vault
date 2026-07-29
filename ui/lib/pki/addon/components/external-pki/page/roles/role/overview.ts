@@ -9,14 +9,14 @@ import { tracked } from '@glimmer/tracking';
 import Component from '@glimmer/component';
 
 import type { HTTPQuery, PkiExternalCaReadRoleCachedResponse } from '@hashicorp/vault-client-typescript';
-import type { RoleDetailsRouteModel } from 'pki/routes/external/roles/role/details';
+import type { RoleOverviewRouteModel } from 'pki/routes/external/roles/role/overview';
 import type ApiService from 'vault/services/api';
 
 interface Args {
-  model: RoleDetailsRouteModel;
+  model: RoleOverviewRouteModel;
 }
 
-export default class ExternalPkiPageRolesRoleDetailsComponent extends Component<Args> {
+export default class ExternalPkiPageRolesRoleOverviewComponent extends Component<Args> {
   @service declare readonly api: ApiService;
 
   @tracked errorMessage = '';
