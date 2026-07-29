@@ -6,6 +6,7 @@ package gonotestcore
 import (
 	"go/ast"
 	"regexp"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
@@ -85,6 +86,10 @@ func run(pass *analysis.Pass) (interface{}, error) {
 		}
 
 		if isBanned(name) {
+			// Check if there's an ignore comment for this call
+			if hasIgnoreComment(pass, call) {
+				return
+			}
 			pass.Reportf(call.Pos(), message, name)
 		}
 	})
@@ -113,4 +118,30 @@ func isBanned(name string) bool {
 		return true
 	}
 	return testCoreFamily.MatchString(name)
+}
+
+// hasIgnoreComment checks if there's an ignore comment on the same line or the line before the call
+func hasIgnoreComment(pass *analysis.Pass, call *ast.CallExpr) bool {
+	file := pass.Fset.File(call.Pos())
+	if file == nil {
+		return false
+	}
+
+	callLine := file.Line(call.Pos())
+
+	// Check all comment groups in the file
+	for _, f := range pass.Files {
+		for _, cg := range f.Comments {
+			for _, c := range cg.List {
+				commentLine := file.Line(c.Pos())
+				// Check if comment is on the same line or the line before the call
+				if (commentLine == callLine || commentLine == callLine-1) &&
+					strings.Contains(c.Text, "ignore-vault-test-core-usage") {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }

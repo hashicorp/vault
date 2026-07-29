@@ -502,6 +502,8 @@ func (i *IdentityStore) handleAliasCreate(ctx context.Context, canonicalID, name
 	}, nil
 }
 
+// handleAliasUpdate updates an alias with the provided fields. Returns (nil, nil) when no changes
+// are needed, which is the correct idempotent behavior for this operation.
 func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name, mountAccessor, externalID, issuer string, alias *identity.Alias, customMetadata map[string]string) (*logical.Response, error) {
 	// Fast return if nothing to be updated
 	if name == alias.Name &&
