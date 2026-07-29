@@ -16,6 +16,10 @@ jobs:
     # If there  a `pr/no-changelog` label we ignore this check
     if: "!contains(github.event.pull_request.labels.*.name, 'pr/no-changelog')"
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
