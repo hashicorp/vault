@@ -114,6 +114,14 @@ type LeaseCache struct {
 	// capabilityManager is used when static secrets are enabled to
 	// manage the capabilities of cached tokens.
 	capabilityManager *StaticSecretCapabilityManager
+
+	// autoAuthTokenLock guards autoAuthToken.
+	autoAuthTokenLock sync.Mutex
+
+	// autoAuthToken is the most recent token handed to RegisterAutoAuthToken.
+	// It is tracked so that the context of the one it replaces can be
+	// cancelled when auto-auth re-authenticates.
+	autoAuthToken string
 }
 
 // LeaseCacheConfig is the configuration for initializing a new
@@ -1761,6 +1769,18 @@ func deriveNamespaceAndRevocationPath(req *SendRequest) (string, string) {
 // primarily used to register the auto-auth token and should only be called
 // within a sink's WriteToken func.
 func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
+	if token == "" {
+		return nil
+	}
+
+	// Receiving a different token means auto-auth has re-authenticated. Cancel
+	// the context of the token being replaced before anything else, including
+	// the "already cached" short-circuit below: after a restart with a
+	// persistent cache, restoreTokens has already put the previous token back
+	// into the cache, so that short-circuit is exactly the path on which the
+	// current token needs to be recorded.
+	c.cancelPreviousAutoAuthToken(token)
+
 	// Get the token from the cache
 	oldIndex, err := c.db.Get(cachememdb.IndexNameToken, token)
 	if err != nil && err != cachememdb.ErrCacheItemNotFound {
@@ -1816,6 +1836,54 @@ func (c *LeaseCache) RegisterAutoAuthToken(token string) error {
 	}
 
 	return nil
+}
+
+// cancelPreviousAutoAuthToken records newToken as the current auto-auth token
+// and cancels the context of the one it replaces, if any. Because every lease
+// obtained with a token derives its renewal context from that token's context,
+// cancelling it stops those lease renewals and lets startRenewing evict them.
+//
+// Without this, re-authentication leaves the previous token's lease watchers
+// running against a token Vault has already expired. Each one retries
+// sys/leases/renew until it gives up on its own, which can take minutes and
+// generate a large volume of requests that can only ever be denied.
+//
+// Note that this cancels on any token change, not only on expiry. Auto-auth
+// also re-authenticates when the auth method reports new credentials, in which
+// case the previous token may still be valid; its leases are then dropped from
+// the cache and re-fetched on next use rather than kept renewed.
+func (c *LeaseCache) cancelPreviousAutoAuthToken(newToken string) {
+	c.autoAuthTokenLock.Lock()
+	defer c.autoAuthTokenLock.Unlock()
+
+	previous := c.autoAuthToken
+	c.autoAuthToken = newToken
+
+	switch {
+	case previous == "":
+		// Nothing registered yet, so there is nothing to cancel. Reached on
+		// first login, and on the first registration after a restore.
+		return
+	case previous == newToken:
+		return
+	}
+
+	index, err := c.db.Get(cachememdb.IndexNameToken, previous)
+	if errors.Is(err, cachememdb.ErrCacheItemNotFound) {
+		c.logger.Trace("previous auto-auth token is no longer cached; nothing to cancel")
+		return
+	}
+	if err != nil {
+		c.logger.Error("failed to look up previous auto-auth token in the cache", "error", err)
+		return
+	}
+
+	if index.RenewCtxInfo == nil || index.RenewCtxInfo.CancelFunc == nil {
+		return
+	}
+
+	c.logger.Debug("canceling context of the previous auto-auth token and the leases derived from it")
+	index.RenewCtxInfo.CancelFunc()
 }
 
 type cacheClearInput struct {
