@@ -12,9 +12,9 @@ import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
-export type RoleDetailsRouteModel = ModelFrom<PkiExternalRolesRoleDetailsRoute>;
+export type RoleOverviewRouteModel = ModelFrom<PkiExternalRolesRoleOverviewRoute>;
 
-export default class PkiExternalRolesRoleDetailsRoute extends Route {
+export default class PkiExternalRolesRoleOverviewRoute extends Route {
   @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
 

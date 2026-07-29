@@ -29,7 +29,7 @@
     <ListTable @columns={{this.tableColumns}} @data={{this.rolesList}}>
       <:customTableItem as |role|>
         <Hds::Link::Inline
-          @route="external.roles.role.details"
+          @route="external.roles.role.overview"
           @models={{array @model.engine.id role.name}}
           @color="secondary"
           class="has-text-weight-semibold"

@@ -41,9 +41,10 @@
           <F.HelperText>
             {{! The radio buttons just change the way the minimum validity is submitted
             (as a duration vs as a percentage) and are not actually submitted form inputs }}
-            <Hds::Form::Radio::Group @layout="horizontal" @extraAriaDescribedBy="min-validity-hint" as |G|>
+            <Hds::Form::Radio::Group @layout="horizontal" as |G|>
               <G.HelperText>
-                The minimum duration or percentage remaining of the certificate.
+                Specify the minimum amount of certificate validity that must remain, either as a duration or as a percentage
+                of the certificate's total lifetime.
               </G.HelperText>
               <G.RadioField
                 @id="duration"
@@ -115,13 +116,6 @@
             </F.Error>
           {{/if}}
         </Hds::Form::Field>
-
-        {{! Additional screen-reader assist text }}
-        <span id="min-validity-hint" class="sr-only">
-          Select to enter the minimum validity as a number of seconds or as a percentage between 1 and 100 in the field
-          below.
-        </span>
-
       </FORM.Section>
 
       <FORM.Footer as |FF|>

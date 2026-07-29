@@ -7,7 +7,7 @@ import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import { SetupSteps } from '../implementation-select';
+import { SetupSteps } from 'pki/utils/constants';
 
 import type { RolesIndexRouteModel } from 'pki/routes/external/roles';
 import type RouterService from '@ember/routing/router-service';

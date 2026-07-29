@@ -6,7 +6,7 @@
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { SetupSteps } from '../implementation-select';
+import { SetupSteps } from 'pki/utils/constants';
 
 import type { AcmeAccountsRouteModel } from 'pki/routes/external/acme-accounts';
 import type { PkiExternalCaReadConfigAcmeAccountResponse } from '@hashicorp/vault-client-typescript';

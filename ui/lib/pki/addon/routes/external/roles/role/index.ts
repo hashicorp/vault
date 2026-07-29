@@ -16,7 +16,7 @@ export default class PkiExternalRolesRoleIndexRoute extends Route {
 
   redirect(model: RoleRouteModel) {
     this.router.transitionTo(
-      'vault.cluster.secrets.backend.pki.external.roles.role.details',
+      'vault.cluster.secrets.backend.pki.external.roles.role.overview',
       this.secretMountPath.currentPath,
       model.role_name
     );

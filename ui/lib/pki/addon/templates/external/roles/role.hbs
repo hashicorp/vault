@@ -12,8 +12,8 @@
       {{#unless isOrderRoute}}
         <li>
           <LinkTo
-            @current-when={{matches-current-url "external.roles.role.details"}}
-            @route="external.roles.role.details"
+            @current-when={{matches-current-url "external.roles.role.overview"}}
+            @route="external.roles.role.overview"
             @models={{array this.model.engine.id this.model.role_name}}
             data-test-link-to="Overview"
           >Overview</LinkTo>
