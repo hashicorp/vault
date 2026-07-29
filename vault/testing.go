@@ -339,6 +339,7 @@ func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.L
 
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
+// ignore-vault-test-core-usage
 func TestCoreInit(t testing.TB, core *Core) ([][]byte, string) {
 	t.Helper()
 	secretShares, _, root := TestCoreInitClusterWrapperSetup(t, core, nil)
@@ -384,6 +385,7 @@ func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core, handler http.Hand
 	return result.SecretShares, result.RecoveryShares, innerToken
 }
 
+// ignore-vault-test-core-usage
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
@@ -507,9 +509,9 @@ func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][
 		t.Fatalf("err: %s", err)
 	}
 
-	keys, token := TestCoreInit(t, core)
+	keys, token := TestCoreInit(t, core) // ignore-vault-test-core-usage
 	for _, key := range keys {
-		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil {
+		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil { // ignore-vault-test-core-usage
 			t.Fatalf("unseal err: %s", err)
 		}
 	}

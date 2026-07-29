@@ -21,6 +21,7 @@ func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
 	conf := &CoreConfig{
 		DisableCache: disableCache,
 	}
+	// ignore-vault-test-core-usage
 	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	ps := core.policyStore
 
@@ -497,7 +498,7 @@ func TestPolicyStore_DuplicateAttributes(t *testing.T) {
 			Output: logOut,
 		}),
 	}
-	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+	core, _, _ := TestCoreUnsealedWithConfig(t, conf) // ignore-vault-test-core-usage
 	ps := core.policyStore
 	dupAttrPolicy := aclPolicy + `
 path "foo" {
@@ -592,6 +593,7 @@ path "foo" {
 					Output: logOut,
 				}),
 			}
+			// ignore-vault-test-core-usage
 			core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 			ps := core.policyStore
 
