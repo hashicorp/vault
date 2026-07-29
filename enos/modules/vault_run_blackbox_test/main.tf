@@ -135,4 +135,10 @@ locals {
     tonumber(regex("TEST_EXIT_CODE=(.+)", enos_local_exec.run_blackbox_test.stdout)[0]),
     null
   )
+  # The script emits BLACKBOX_TEST_CMD=<base64> so the multi-line command
+  # can survive regex extraction. base64decode() restores the pretty string.
+  blackbox_test_cmd = try(
+    base64decode(regex("BLACKBOX_TEST_CMD=(.+)", enos_local_exec.run_blackbox_test.stdout)[0]),
+    ""
+  )
 }
