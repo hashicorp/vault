@@ -28,7 +28,7 @@ module('Acceptance | enterprise | pki | external | roles | role | details route'
     await login();
     await runCmd(mountEngineCmd('pki-external-ca', this.mountPath));
     // assertion helpers
-    this.roleDetailsURL = `/vault/secrets-engines/${this.mountPath}/pki/external/roles/${this.roleName}/details`;
+    this.roleDetailsURL = `/vault/secrets-engines/${this.mountPath}/pki/external/roles/${this.roleName}/overview`;
   });
 
   hooks.afterEach(async function () {
@@ -66,7 +66,7 @@ module('Acceptance | enterprise | pki | external | roles | role | details route'
     assert.strictEqual(currentURL(), this.roleDetailsURL, 'it has expected URL');
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.pki.external.roles.role.details',
+      'vault.cluster.secrets.backend.pki.external.roles.role.overview',
       'navigated to role details route'
     );
     assert.true(this.roleReadStub.calledOnce, 'role read called once');

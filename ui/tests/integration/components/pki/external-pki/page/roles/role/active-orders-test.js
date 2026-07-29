@@ -12,7 +12,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
 module(
-  'Integration | Component | pki | external-pki | ExternalPki::Page::RolesRoleActiveOrders',
+  'Integration | Component | pki | external-pki | ExternalPki::Page::Roles::Role::ActiveOrders',
   function (hooks) {
     setupRenderingTest(hooks);
     setupEngine(hooks, 'pki');
@@ -25,7 +25,7 @@ module(
       };
       this.router = this.owner.lookup('service:router');
       this.renderComponent = () =>
-        render(hbs`<ExternalPki::Page::RolesRoleActiveOrders @model={{this.model}} />`, {
+        render(hbs`<ExternalPki::Page::Roles::Role::ActiveOrders @model={{this.model}} />`, {
           owner: this.engine,
         });
     });

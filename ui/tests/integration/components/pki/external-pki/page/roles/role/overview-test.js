@@ -18,7 +18,7 @@ const CERT_RESPONSE = {
 };
 
 module(
-  'Integration | Component | pki | external-pki | ExternalPki::Page::RolesRoleDetails',
+  'Integration | Component | pki | external-pki | ExternalPki::Page::Roles::Role::Overview',
   function (hooks) {
     setupRenderingTest(hooks);
     setupEngine(hooks, 'pki');
@@ -41,7 +41,9 @@ module(
       this.addQueryParamsStub = sinon.stub(api, 'addQueryParams');
 
       this.renderComponent = () =>
-        render(hbs`<ExternalPki::Page::RolesRoleDetails @model={{this.model}} />`, { owner: this.engine });
+        render(hbs`<ExternalPki::Page::Roles::Role::Overview @model={{this.model}} />`, {
+          owner: this.engine,
+        });
     });
 
     test('it renders role details', async function (assert) {
