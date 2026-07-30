@@ -34,7 +34,7 @@ module(
 
     test('it renders the last refreshed timestamp', async function (assert) {
       await this.renderComponent();
-      assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed: July 14, 2026');
+      assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 14, 2026');
     });
 
     test('it calls router.refresh with the role order route when Refresh button is clicked', async function (assert) {

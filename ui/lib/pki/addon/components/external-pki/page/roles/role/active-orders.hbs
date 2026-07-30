@@ -33,6 +33,11 @@
     />
   </Hds::Layout::Flex>
 
+  <Hds::Text::Body @tag="p" @size="200" @color="faint" class="margin-left-auto" data-test-text-body="Last refreshed">
+    Last refreshed
+    {{date-format @model.responseTimestamp "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}
+  </Hds::Text::Body>
+
   {{#if this.filteredOrders}}
     <ListTable @columns={{this.tableColumns}} @data={{this.filteredOrders}}>
       <:customTableItem as |order|>

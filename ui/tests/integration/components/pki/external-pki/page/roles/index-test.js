@@ -26,16 +26,23 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Roles'
           path: 'my-pki-external-ca/',
         }),
         roles,
+        responseTimestamp: new Date('2026-07-14T21:00:00Z'),
       };
     };
 
     this.renderComponent = () =>
-      render(hbs`<ExternalPki::Page::Roles @model={{this.model}} />`, { owner: this.engine });
+      render(
+        hbs`<ExternalPki::Page::Roles @model={{this.model}} @breadcrumbs={{array (hash label="Roles")}} />`,
+        { owner: this.engine }
+      );
   });
 
   test('it renders empty state when no roles exist', async function (assert) {
     this.model = this.setupModel([]);
     await this.renderComponent();
+    assert
+      .dom(GENERAL.textBody('Last refreshed'))
+      .doesNotExist('timestamp does not render when empty state shows');
     assert.dom(GENERAL.emptyStateTitle).hasText('No roles exist yet');
     // Implementation select should be visible
     assert.dom(GENERAL.radioCardByAttr(CreationMethod.TERRAFORM)).exists();
@@ -62,13 +69,10 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Roles'
 
     test('it renders list of roles', async function (assert) {
       await this.renderComponent();
-
-      // Empty state should not be visible
+      assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 14, 2026');
       assert.dom(GENERAL.emptyStateTitle).doesNotExist();
-      // Search and refresh should be visible
       assert.dom(GENERAL.inputSearch('Filter by name')).exists();
       assert.dom(GENERAL.button('Refresh')).exists();
-      // Table should render with all roles
       assert.dom(GENERAL.listItem()).exists({ count: 7 });
       this.roles.forEach((r) => {
         assert.dom(GENERAL.linkTo(r)).hasText(r, `table renders link for role: ${r}`);

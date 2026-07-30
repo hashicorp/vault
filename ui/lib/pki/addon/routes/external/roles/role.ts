@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/vault/route';
 import { SecretsApiPkiExternalCaListRoleActiveOrdersListEnum } from '@hashicorp/vault-client-typescript';
+import timestamp from 'core/utils/timestamp';
 
 import type { Breadcrumb } from 'vault/app-types';
 import type { ExternalRouteModel } from 'pki/routes/external';
@@ -52,6 +53,7 @@ export default class PkiExternalRolesRoleRoute extends Route {
       role_name,
       role,
       activeOrders,
+      responseTimestamp: timestamp.now(),
     };
   }
 
