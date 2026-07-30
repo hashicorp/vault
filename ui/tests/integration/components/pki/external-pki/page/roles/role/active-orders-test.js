@@ -33,11 +33,8 @@ module(
     test('it renders empty state when no active orders', async function (assert) {
       await this.renderComponent();
       assert.dom(GENERAL.emptyStateTitle).exists().hasText('No active orders');
-      assert
-        .dom(GENERAL.emptyStateMessage)
-        .hasText(
-          'In progress orders will appear here once created. Lookup a specific order by its ID or navigate to Recent orders to view recently created and completed orders. Lookup order'
-        );
+      assert.dom(GENERAL.emptyStateMessage).hasText('Lookup a specific order by its ID below. Lookup order');
+      assert.dom(GENERAL.linkTo('Get cached certificate')).exists();
       assert.dom(GENERAL.linkTo('API docs: Create a new order')).exists();
       assert.dom(GENERAL.inputSearch('Filter by order ID')).doesNotExist();
       assert.dom(GENERAL.button('Refresh')).doesNotExist();

@@ -13,12 +13,21 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { EXTERNAL_TABS } from 'vault/tests/helpers/pki/assertion-helpers';
 
 module('Acceptance | enterprise | pki | external | roles | role | order route', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     const api = this.owner.lookup('service:api');
+    this.roleReadStub = sinon.stub(api.secrets, 'pkiExternalCaReadRole');
+    this.roleReadStub.resolves({
+      name: this.roleName,
+      acme_account_name: 'production-account',
+      dns_provider_name: 'aws-route53-prod',
+      allowed_domains: ['example.com', '*.example.com'],
+      allow_subdomains: true,
+    });
     this.orderStatusStub = sinon.stub(api.secrets, 'pkiExternalCaReadRoleOrderStatus');
     this.fetchCertStub = sinon.stub(api.secrets, 'pkiExternalCaReadRoleOrderFetchCert');
     this.mountPath = `pki-external-ca-${uuidv4()}`;
@@ -47,20 +56,11 @@ module('Acceptance | enterprise | pki | external | roles | role | order route', 
     assert
       .dom(GENERAL.breadcrumbs)
       .hasText(`Vault Secrets engines ${this.mountPath} Roles ${this.roleName} View order`);
-    ['Overview', 'Roles', 'Recent orders', 'DNS providers', 'ACME accounts'].forEach((t) => {
+    // Main engine tabs
+    EXTERNAL_TABS.forEach((t) => {
       assert.dom(GENERAL.linkTo(t)).doesNotExist(`${t} tab does not render`);
     });
-  });
-
-  test('role name breadcrumb is a link back to the role', async function (assert) {
-    this.orderStatusStub.resolves({ order_status: 'completed' });
-    await visit(this.orderURL);
-    assert.dom(GENERAL.breadcrumbLink(this.roleName)).exists();
-  });
-
-  test('tabs are hidden on the order route', async function (assert) {
-    this.orderStatusStub.resolves({ order_status: 'completed' });
-    await visit(this.orderURL);
+    // Role tabs (rendered in role.hbs template)
     assert.dom(GENERAL.linkTo('Overview')).doesNotExist('Overview tab is hidden');
     assert.dom(GENERAL.linkTo('Active orders')).doesNotExist('Active orders tab is hidden');
   });
@@ -162,5 +162,13 @@ module('Acceptance | enterprise | pki | external | roles | role | order route', 
     assert.true(this.orderStatusStub.calledOnce, 'order status called once');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('View order', 'parent header is still rendered');
     assert.dom(GENERAL.breadcrumb).exists({ count: 6 }, 'parent breadcrumbs are still rendered');
+  });
+
+  test('it redirects to parent error route if role read 403s', async function (assert) {
+    const error = { errors: ['1 error occurred:\n\t* permission denied\n\n'] };
+    this.roleReadStub.rejects(getErrorResponse(error, 403));
+    await visit(this.orderURL);
+
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.external.error');
   });
 });

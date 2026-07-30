@@ -3,14 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-{{#if @model.recentOrders.length}}
-  <Hds::Text::Body class="has-top-margin-s">List of orders created in the last
-    {{this.timeQuery.formatted}}. You can lookup an archived order by its ID from the
-    <Hds::Link::Inline @route="external.overview">
-      Overview tab.
-    </Hds::Link::Inline>
-  </Hds::Text::Body>
-{{/if}}
+<Hds::Text::Body class="has-top-margin-s">
+  Recent orders are available here for up to one week (168 hours) after creation. Expired or invalid orders are removed every
+  24 hours.
+  {{! The empty state renders a lookup input so no need to be redundant }}
+  {{#if @model.recentOrders.length}}
+    Archived orders can be retrieved by ID from the
+    <Hds::Link::Inline @route="external.overview">Overview page</Hds::Link::Inline>.
+  {{/if}}
+</Hds::Text::Body>
 
 <Hds::Layout::Flex class="has-top-margin-l">
   <Hds::SegmentedGroup as |SG|>

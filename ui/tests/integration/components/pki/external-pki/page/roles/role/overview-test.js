@@ -58,6 +58,10 @@ module(
         .exists('fetch form is shown before a cert is fetched');
     });
 
+    // -----------------------
+    // FETCH CERTIFICATE CARD
+    // -----------------------
+
     test('it does not render the cert details view before a successful fetch', async function (assert) {
       await this.renderComponent();
 
@@ -132,10 +136,6 @@ module(
       assert.propEqual(payload, expected, 'callback has expected payload');
     });
 
-    // ---------------------------------------------------------------------------
-    // Error handling — API failure surfaces an error on the form
-    // ---------------------------------------------------------------------------
-
     test('it shows an error message when the API call fails', async function (assert) {
       const error = getErrorResponse({ errors: ['permission denied'] }, 403);
       this.fetchStub.rejects(error);
@@ -151,6 +151,53 @@ module(
         .exists('form is still shown after a failed fetch');
       assert.dom(GENERAL.messageError).exists().containsText('Error permission denied');
       assert.dom(GENERAL.cardContainer('Certificate details')).doesNotExist();
+    });
+
+    // -------------------------
+    // Overview cards
+    // -------------------------
+
+    test('it renders active orders card when no orders exist', async function (assert) {
+      this.model.activeOrders = { list: [], error: { status: 404 } };
+      await this.renderComponent();
+      assert
+        .dom(GENERAL.overviewCard.container('Active orders'))
+        .hasText(
+          'Active orders Active orders The total number of active, or in progress, orders for this role. Orders that have reached a terminal status, such as Completed or Expired are not included. 0'
+        );
+    });
+
+    test('it renders active orders card when active orders exist', async function (assert) {
+      this.model.activeOrders = { list: ['019faf78-0d52-71e8-abfa-71bc5de7cc9a'] };
+      await this.renderComponent();
+      assert
+        .dom(GENERAL.overviewCard.container('Active orders'))
+        .hasText(
+          'Active orders Active orders The total number of active, or in progress, orders for this role. Orders that have reached a terminal status, such as Completed or Expired are not included. 1'
+        );
+    });
+
+    test('it hides active orders card for non-404 errors', async function (assert) {
+      this.model.activeOrders = { list: [], error: { status: 403 } };
+      await this.renderComponent();
+      assert.dom(GENERAL.overviewCard.container('Active orders')).doesNotExist();
+    });
+
+    test('it looks up an order', async function (assert) {
+      const transitionToStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+      await this.renderComponent();
+      await fillIn(`${GENERAL.overviewCard.container('Orders')} input`, '01936d8e-7c3');
+      await click(GENERAL.button('Lookup order'));
+      const [route, engineId, role, orderId] = transitionToStub.lastCall.args;
+      this.model.activeOrders = { list: ['019faf78-0d52-71e8-abfa-71bc5de7cc9a'] };
+      assert.strictEqual(
+        route,
+        'vault.cluster.secrets.backend.pki.external.roles.role.order',
+        'it calls transition with expected route'
+      );
+      assert.strictEqual(engineId, 'pki-external-ca', 'it calls transition with expected engine ID');
+      assert.strictEqual(role, 'my-role', 'it calls transition with expected role name');
+      assert.strictEqual(orderId, '01936d8e-7c3', 'it calls transition with inputted order ID');
     });
   }
 );
