@@ -84,6 +84,12 @@ variable "vault_install_dir" {
   description = "The directory where the vault binary is installed"
 }
 
+variable "expected_node_count" {
+  type        = number
+  description = "The expected number of nodes in the cluster after nodes are added back"
+  default     = null
+}
+
 
 module "choose_follower_to_remove" {
   source    = "../choose_follower_host"
