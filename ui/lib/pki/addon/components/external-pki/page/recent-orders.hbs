@@ -3,6 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+<ExternalPki::HeaderTabs @backend={{@model.engine}} @breadcrumbs={{@breadcrumbs}} />
+
 <Hds::Text::Body class="has-top-margin-s">
   Recent orders are available here for up to one week (168 hours) after creation. Expired or invalid orders are removed every
   24 hours.
@@ -158,6 +160,11 @@
     {{else}}
       <Hds::Text::Body @color="faint">None</Hds::Text::Body>
     {{/if}}
+
+    <Hds::Text::Body @tag="p" @size="200" @color="faint" class="margin-left-auto" data-test-text-body="Last refreshed">
+      Last refreshed
+      {{date-format @model.responseTimestamp "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}
+    </Hds::Text::Body>
   </Hds::Layout::Flex>
 {{/if}}
 

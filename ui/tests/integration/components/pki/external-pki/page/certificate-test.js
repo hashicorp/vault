@@ -44,7 +44,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Certif
 
   test('it renders the last refreshed timestamp', async function (assert) {
     await this.renderComponent();
-    assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed: July 14, 2026');
+    assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 14, 2026');
   });
 
   test('it calls router.refresh with the certificate route when Refresh button is clicked', async function (assert) {

@@ -3,6 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
+<ExternalPki::HeaderTabs @backend={{@model.engine}} @breadcrumbs={{@breadcrumbs}} />
+
 {{#if @model.roles.length}}
   <Hds::Layout::Flex class="has-top-margin-s bottom-margin-8">
     <Hds::Form::TextInput::Field
@@ -24,6 +26,11 @@
       data-test-button="Refresh"
     />
   </Hds::Layout::Flex>
+
+  <Hds::Text::Body @tag="p" @size="200" @color="faint" class="margin-left-auto" data-test-text-body="Last refreshed">
+    Last refreshed
+    {{date-format @model.responseTimestamp "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}
+  </Hds::Text::Body>
 
   {{#if this.rolesList}}
     <ListTable @columns={{this.tableColumns}} @data={{this.rolesList}}>

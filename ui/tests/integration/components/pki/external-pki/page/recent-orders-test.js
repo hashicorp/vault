@@ -20,15 +20,25 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Recent
 
   hooks.beforeEach(function () {
     this.router = this.owner.lookup('service:router');
-    this.model = { engine: { id: 'pki-external-ca' }, query: { within: '24h' } };
+    this.model = {
+      engine: { id: 'pki-external-ca' },
+      query: { within: '24h' },
+      responseTimestamp: new Date('2026-07-14T21:00:00Z'),
+    };
 
     this.renderComponent = () =>
-      render(hbs`<ExternalPki::Page::RecentOrders @model={{this.model}} />`, { owner: this.engine });
+      render(
+        hbs`<ExternalPki::Page::RecentOrders @model={{this.model}} @breadcrumbs={{array (hash label="Recent orders")}} />`,
+        { owner: this.engine }
+      );
   });
 
   test('it renders empty state when no recent orders', async function (assert) {
     this.model.recentOrders = [];
     await this.renderComponent();
+    assert
+      .dom(GENERAL.textBody('Last refreshed'))
+      .doesNotExist('timestamp does not render when empty state shows');
     // Filter toolbar state
     assert
       .dom(GENERAL.inputSearch('Filter by order ID'))
@@ -85,6 +95,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Recent
     await this.renderComponent();
     await fillIn(GENERAL.inputSearch('Filter by order ID'), '789');
     assert.dom(GENERAL.emptyStateTitle).hasText('No recent orders matching: 789');
+    assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 14, 2026');
     // Clear order ID, select dropdown filters to test their empty state
     await fillIn(GENERAL.inputSearch('Filter by order ID'), '');
     await click(GENERAL.dropdownToggle('Role'));
@@ -184,6 +195,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Recent
 
     test('it renders list of recent orders', async function (assert) {
       await this.renderComponent();
+      assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 14, 2026');
       assert
         .dom(GENERAL.inputSearch('Filter by order ID'))
         .exists()

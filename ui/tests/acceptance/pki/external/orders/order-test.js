@@ -102,7 +102,7 @@ module('Acceptance | enterprise | pki | external | orders | order route', functi
     );
     assert.true(this.orderReadStub.calledOnce, 'order read called once');
     assert.dom('h1').hasText('View order', 'page title is displayed');
-    assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed: July 20, 2026');
+    assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 20, 2026');
   });
 
   test('it does not fetch certificate when order status is not "completed"', async function (assert) {

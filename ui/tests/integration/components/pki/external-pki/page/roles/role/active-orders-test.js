@@ -22,6 +22,7 @@ module(
         engine: { id: 'pki-external-ca' },
         activeOrders: [],
         role_name: 'myrole',
+        responseTimestamp: new Date('2026-07-14T21:00:00Z'),
       };
       this.router = this.owner.lookup('service:router');
       this.renderComponent = () =>
@@ -32,6 +33,9 @@ module(
 
     test('it renders empty state when no active orders', async function (assert) {
       await this.renderComponent();
+      assert
+        .dom(GENERAL.textBody('Last refreshed'))
+        .doesNotExist('timestamp does not render when empty state shows');
       assert.dom(GENERAL.emptyStateTitle).exists().hasText('No active orders');
       assert.dom(GENERAL.emptyStateMessage).hasText('Lookup a specific order by its ID below. Lookup order');
       assert.dom(GENERAL.linkTo('Get cached certificate')).exists();
@@ -44,6 +48,7 @@ module(
       this.model.activeOrders = ['order-123', 'order-456', 'order-789'];
 
       await this.renderComponent();
+      assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 14, 2026');
       assert.dom(GENERAL.inputSearch('Filter by order ID')).exists('search input is rendered');
       assert.dom(GENERAL.button('Refresh')).exists();
       assert.dom(GENERAL.listItem()).exists({ count: 3 }, 'displays all orders');
