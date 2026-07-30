@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 scenario "upgrade" {
@@ -93,7 +93,8 @@ scenario "upgrade" {
   providers = [
     provider.aws.default,
     provider.enos.ec2_user,
-    provider.enos.ubuntu
+    provider.enos.ubuntu,
+    provider.time.default,
   ]
 
   locals {
@@ -976,7 +977,7 @@ scenario "upgrade" {
   step "verify_billing_start_date" {
     description = global.description.verify_billing_start_date
     skip_step   = semverconstraint(var.vault_product_version, "<=1.16.6-0 || >=1.17.0-0 <=1.17.2-0")
-    module      = module.vault_verify_billing_start_date
+    module      = module.vault_run_blackbox_test
     depends_on = [
       step.get_updated_vault_cluster_ips,
       step.verify_vault_unsealed,
@@ -992,10 +993,15 @@ scenario "upgrade" {
     ]
 
     variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
+      leader_host           = step.get_updated_vault_cluster_ips.leader_host
+      leader_public_ip      = step.get_updated_vault_cluster_ips.leader_public_ip
+      vault_root_token      = step.create_vault_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/system/config"
+      test_names            = ["TestBillingStartDate", "TestBillingStartDateRollover"]
+      vault_edition         = matrix.edition
+      vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
+      ip_version            = matrix.ip_version
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
     }
   }
 

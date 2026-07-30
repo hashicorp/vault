@@ -13,10 +13,19 @@ binary {
         // GO-2022-0635 is valid. We will remove this when the ongoing migration
         // to github.com/aws/aws-sdk-go/v2 has been completed.
         "GO-2022-0635",
+
         // GO-2026-5932 appears to be a false positive as it only relates to
         // golang.org/x/crypto/openpgp, which is not in use in the project.
         // https://pkg.go.dev/vuln/GO-2026-5932
         "GO-2026-5932",
+
+        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
+        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
+        // those versions.
+        // https://pkg.go.dev/vuln/GO-2026-5856
+        // https://pkg.go.dev/vuln/GO-2026-4970
+        "GO-2026-5856", "GO-2026-4970",
+
         // GO-2026-5298 appears to be a false positive as the associated
         // Github Security Advisory shows that v0.6.1 contains the fix.
         // The issue has been reported but the advisory has not been updated
@@ -44,10 +53,19 @@ container {
         // GO-2022-0635 is valid. We will remove this when the ongoing migration
         // to github.com/aws/aws-sdk-go/v2 has been completed.
         "GO-2022-0635",
+
         // GO-2026-5932 appears to be a false positive as it only relates to
         // golang.org/x/crypto/openpgp, which is not in use in the project.
         // https://pkg.go.dev/vuln/GO-2026-5932
         "GO-2026-5932",
+
+        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
+        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
+        // those versions
+        // https://pkg.go.dev/vuln/GO-2026-5856
+        // https://pkg.go.dev/vuln/GO-2026-4970
+        "GO-2026-5856", "GO-2026-4970",
+
         // GO-2026-5298 appears to be a false positive as the associated
         // Github Security Advisory shows that v0.6.1 contains the fix.
         // The issue has been reported but the advisory has not been updated
