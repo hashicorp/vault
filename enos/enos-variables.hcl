@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_token" {
@@ -221,6 +221,12 @@ variable "vault_ibm_license_edition" {
   description = "The edition to select when using an IBM PAO license. This should match the edition of a valid Vault entitlement in the license located at var.vault_ibm_license_path."
   type        = string
   default     = null
+}
+
+variable "vault_verify_default_lcq" {
+  description = "Expected max_leases value for TestDefaultLCQ. Empty string causes the test to skip (initial version < 1.16.0). Used by smoke-sdk and autopilot scenarios."
+  type        = string
+  default     = ""
 }
 
 variable "vault_local_build_tags" {

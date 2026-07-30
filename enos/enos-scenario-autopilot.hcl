@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 scenario "autopilot" {
@@ -89,7 +89,8 @@ scenario "autopilot" {
   providers = [
     provider.aws.default,
     provider.enos.ec2_user,
-    provider.enos.ubuntu
+    provider.enos.ubuntu,
+    provider.time.default,
   ]
 
   locals {
@@ -604,9 +605,9 @@ scenario "autopilot" {
       hosts             = step.upgrade_vault_cluster_with_autopilot.hosts
       ip_version        = matrix.ip_version
       timeout           = 120 // seconds
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
@@ -634,9 +635,9 @@ scenario "autopilot" {
     variables {
       hosts             = step.upgrade_vault_cluster_with_autopilot.hosts
       ip_version        = matrix.ip_version
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
@@ -670,7 +671,7 @@ scenario "autopilot" {
       vault_addr           = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_edition        = matrix.edition
       vault_install_dir    = local.vault_install_dir
-      vault_root_token     = step.create_vault_cluster.root_token
+      vault_root_token     = step.upgrade_vault_cluster_with_autopilot.root_token
       vault_audit_log_path = step.create_vault_cluster.audit_device_file_path
     }
   }
@@ -699,7 +700,7 @@ scenario "autopilot" {
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
@@ -727,7 +728,7 @@ scenario "autopilot" {
       audit_log_file_path = step.create_vault_cluster.audit_device_file_path
       leader_host         = step.get_updated_vault_cluster_ips.leader_host
       vault_addr          = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_root_token    = step.create_vault_cluster.root_token
+      vault_root_token    = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
@@ -751,9 +752,9 @@ scenario "autopilot" {
       create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       leader_host       = step.get_updated_vault_cluster_ips.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
@@ -776,7 +777,7 @@ scenario "autopilot" {
       leader_host       = step.get_updated_vault_cluster_ips.leader_host
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
@@ -808,7 +809,7 @@ scenario "autopilot" {
       vault_addr              = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_cluster_addr_port = step.upgrade_vault_cluster_with_autopilot.cluster_port
       vault_install_dir       = local.vault_install_dir
-      vault_root_token        = step.create_vault_cluster.root_token
+      vault_root_token        = step.upgrade_vault_cluster_with_autopilot.root_token
     }
   }
 
@@ -842,8 +843,8 @@ scenario "autopilot" {
       listener_port     = step.create_vault_cluster.listener_port
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_leader_host = step.get_updated_vault_cluster_ips.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      vault_root_token  = step.upgrade_vault_cluster_with_autopilot.root_token
       vault_seal_type   = matrix.seal
       vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
     }
@@ -1061,7 +1062,7 @@ scenario "autopilot" {
       Verify that the default max lease count is 300,000 when the upgraded nodes are running
       Vault >= 1.16.0.
     EOF
-    module      = module.vault_verify_default_lcq
+    module      = module.vault_run_blackbox_test
     depends_on = [
       step.create_vault_cluster_upgrade_targets,
       step.remove_old_nodes,
@@ -1076,10 +1077,17 @@ scenario "autopilot" {
     }
 
     variables {
-      hosts                              = step.upgrade_vault_cluster_with_autopilot.hosts
-      vault_addr                         = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_root_token                   = step.create_vault_cluster.root_token
-      vault_autopilot_default_max_leases = local.vault_autopilot_default_max_leases
+      leader_host           = step.get_updated_vault_cluster_ips.leader_host
+      leader_public_ip      = step.get_updated_vault_cluster_ips.leader_public_ip
+      vault_root_token      = step.create_vault_cluster.root_token
+      test_package          = "./vault/external_tests/blackbox/isolated/verify"
+      test_names            = ["TestDefaultLCQ"]
+      vault_edition         = matrix.edition
+      vault_product_version = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision        = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date      = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
+      vault_install_dir     = local.vault_install_dir
+      verify_default_lcq    = local.vault_autopilot_default_max_leases
     }
   }
 

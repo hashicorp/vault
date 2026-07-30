@@ -36,6 +36,7 @@ locals {
       EXPECTED_STATE  = var.verify_expected_state
       TIMEOUT_SECONDS = var.verify_timeout_seconds
       RETRY_INTERVAL  = var.verify_retry_interval
+      DEFAULT_LCQ     = var.verify_default_lcq
     } : k => v if !contains(keys(var.test_env_vars), k)
   } : {}
 }
@@ -141,5 +142,11 @@ locals {
   test_exit_code = try(
     tonumber(regex("TEST_EXIT_CODE=(.+)", enos_local_exec.run_blackbox_test.stdout)[0]),
     null
+  )
+  # The script emits BLACKBOX_TEST_CMD=<base64> so the multi-line command
+  # can survive regex extraction. base64decode() restores the pretty string.
+  blackbox_test_cmd = try(
+    base64decode(regex("BLACKBOX_TEST_CMD=(.+)", enos_local_exec.run_blackbox_test.stdout)[0]),
+    ""
   )
 }
