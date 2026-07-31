@@ -4,6 +4,8 @@
  */
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+
+import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
@@ -20,11 +22,12 @@ interface RouteController extends Controller {
 type ParentModel = ModelFrom<VaultClusterSupportUpgradeRoute>;
 
 export default class VaultClusterSupportUpgradeInfoRoute extends Route {
+  @service declare readonly flags: FlagsService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
 
   beforeModel() {
-    if (this.version.isCommunity) {
+    if (this.version.isCommunity || this.flags.isHvdManaged) {
       this.router.transitionTo('vault.cluster.dashboard');
       return;
     }

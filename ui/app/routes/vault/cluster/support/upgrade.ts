@@ -5,12 +5,13 @@
 import Route from '@ember/routing/route';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import { DisplayedInfo } from 'vault/components/upgrade-path-analyzer/upgrade-path-analyzer';
+
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
 import type VersionService from 'vault/services/version';
-import { DisplayedInfo } from 'vault/components/upgrade-path-analyzer/upgrade-path-analyzer';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
