@@ -47,6 +47,7 @@ jobs:
     permissions:
       id-token: write # vault-auth
       contents: read
+      pull-requests: read
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
       is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
@@ -70,6 +71,10 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
         with:
           github-token: ${{ github.repository == 'hashicorp/vault' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
@@ -86,6 +91,37 @@ jobs:
             echo "failed to do sample observation: $sample" 2>&1
             exit 1
           fi
+
+          # Auto-detect changed enos scenario files and ensure those scenarios
+          # are always included in the run. Parses the changed-files input for
+          # any enos/enos-scenario-*.hcl paths, extracts the scenario name
+          # (e.g. enos/enos-scenario-plugin.hcl -> plugin), then runs a targeted
+          # sample observe --include <name> for each — identical to the random
+          # sample mechanism, so enos picks a valid variant automatically.
+          changed_files='${{ steps.changed-files.outputs.changed-files }}'
+          changed_scenario_names=$(echo "${changed_files}" \
+            | jq -r '.files[]
+                | select(test("enos/enos-scenario-[^/]+\\.hcl$"))
+                | gsub("enos/enos-scenario-(?P<n>[^/]+)\\.hcl$"; "\(.n)")' \
+            | sort -u)
+
+          if [[ -n "${changed_scenario_names}" ]]; then
+            echo "Detected changed enos scenario files — adding targeted observations:"
+            while IFS= read -r scenario_name; do
+              echo "  + ${scenario_name}"
+              if targeted=$(enos scenario sample observe "${{ inputs.sample-name }}" \
+                  --chdir ./enos \
+                  --include "${scenario_name}" \
+                  --min 1 --max 1 \
+                  --seed "${sample_seed}" \
+                  --format json | jq -c ".observation.elements"); then
+                sample=$(echo "${sample} ${targeted}" | jq -sc 'add | unique_by(.scenario.id.filter)')
+              else
+                echo "warning: failed to observe changed scenario '${scenario_name}' (may not be in this sample): ${targeted}" 2>&1
+              fi
+            done <<< "${changed_scenario_names}"
+          fi
+
           if [[ "${{ inputs.vault-edition }}" == "ce" ]]; then
             vault_version="${{ inputs.vault-version }}"
           else
@@ -334,7 +370,7 @@ jobs:
         if: always() && runner.debug == '1'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: aws-resources_${{ matrix.scenario.id.filter }}
+          name: ${{ steps.prepare_scenario.outputs.aws_resources_artifact_name }}
           path: |
             enos-aws-resource-before.txt
             enos-aws-resource-after.txt
