@@ -4,6 +4,7 @@
 package ldaputil
 
 import (
+	"io"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -94,6 +95,29 @@ func TestSIDBytesToString(t *testing.T) {
 			t.Errorf("Failed to convert %#v: %s != %s", test, res, answer)
 		}
 	}
+}
+
+// TestSIDBytesToStringErrorFormatting confirms that a failure to convert a SID
+// produces a usable error. These messages previously embedded the errwrap
+// placeholder "{{err}}" in a format string passed to fmt.Errorf, which has no
+// verb to consume the error argument, so the rendered message contained both
+// the literal placeholder and Go's "%!(EXTRA ...)" marker and did not wrap the
+// underlying error.
+//
+// go vet does not catch the original form, because fmt.Sprintf makes the format
+// string non-constant and printf analysis is skipped.
+func TestSIDBytesToStringErrorFormatting(t *testing.T) {
+	// Truncated: too short to read the Revision field.
+	_, err := sidBytesToString([]byte{})
+	require.Error(t, err)
+
+	assert.NotContains(t, err.Error(), "{{err}}",
+		"errwrap placeholder leaked into the rendered message")
+	assert.NotContains(t, err.Error(), "%!(EXTRA",
+		"error argument was not consumed by a format verb")
+
+	assert.ErrorIs(t, err, io.EOF,
+		"underlying error should be wrapped with %w so errors.Is can reach it")
 }
 
 func TestClient_renderUserSearchFilter(t *testing.T) {
