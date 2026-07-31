@@ -4,11 +4,20 @@
 package pki
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/go-jose/go-jose/v3"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -272,4 +281,223 @@ func buildTestRole(t *testing.T, config map[string]interface{}) *issuing.RoleEnt
 	require.NoError(t, err, "failed loading stored role")
 
 	return role
+}
+
+// acmeFinalizeTestEnv holds a PKI backend with a usable issuer plus a ready
+// ACME order, so a test can drive acmeFinalizeOrderHandler directly. It exists
+// to exercise the per-order locking and processing-state handling added for
+// GH-31987.
+type acmeFinalizeTestEnv struct {
+	b       *backend
+	storage logical.Storage
+	issuer  *issuing.IssuerEntry
+	role    *issuing.RoleEntry
+	baseUrl *url.URL
+	uc      *jwsCtx
+	account *acmeAccount
+	orderId string
+	csrB64  string
+}
+
+// setupACMEFinalizeTest builds a backend with a real root issuer and persists a
+// ready order for the given DNS identifier, along with a CSR that matches it.
+func setupACMEFinalizeTest(t *testing.T, identifier string) *acmeFinalizeTestEnv {
+	t.Helper()
+
+	b, s := CreateBackendWithStorage(t)
+
+	_, err := CBWrite(b, s, "config/cluster", map[string]interface{}{
+		"path": "https://localhost:8200/v1/pki",
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "config/acme", map[string]interface{}{"enabled": true})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root.example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err, "failed generating root issuer")
+
+	sc := b.makeStorageContext(ctx, s)
+	issuer, err := getAcmeIssuer(sc, "")
+	require.NoError(t, err, "failed resolving default acme issuer")
+
+	accountId := genUuid()
+	orderId := genUuid()
+
+	accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	order := &acmeOrder{
+		OrderId:          orderId,
+		AccountId:        accountId,
+		Status:           ACMEOrderReady,
+		Expires:          time.Now().Add(time.Hour),
+		Identifiers:      _buildACMEIdentifiers(identifier),
+		AuthorizationIds: []string{genUuid()},
+	}
+	require.NoError(t, b.GetAcmeState().SaveOrder(&acmeContext{sc: sc}, order))
+
+	baseUrl, err := url.Parse("https://localhost:8200/v1/pki/acme/")
+	require.NoError(t, err)
+
+	// The CSR is signed with a key distinct from the account key (so
+	// validateCsrNotUsingAccountKey passes) and carries the order's DNS
+	// identifier (so validateCsrMatchesOrder passes).
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{
+		DNSNames: []string{identifier},
+	}, csrKey)
+	require.NoError(t, err)
+
+	return &acmeFinalizeTestEnv{
+		b:       b,
+		storage: s,
+		issuer:  issuer,
+		role:    issuing.SignVerbatimRole(),
+		baseUrl: baseUrl,
+		uc:      &jwsCtx{Kid: accountId, Key: jose.JSONWebKey{Key: accountKey}},
+		account: &acmeAccount{KeyId: accountId, Status: AccountStatusValid},
+		orderId: orderId,
+		csrB64:  base64.RawURLEncoding.EncodeToString(csrDER),
+	}
+}
+
+// runFinalize invokes the finalize handler with a fresh storage context, the
+// way a real request would. It is safe to call concurrently because the only
+// shared state is the backend storage and the per-order lock pool.
+func (e *acmeFinalizeTestEnv) runFinalize() (*logical.Response, error) {
+	sc := e.b.makeStorageContext(ctx, e.storage)
+	ac := &acmeContext{
+		baseUrl:     e.baseUrl,
+		sc:          sc,
+		acmeState:   e.b.GetAcmeState(),
+		runtimeOpts: acmeWrapperOpts{},
+	}
+	ac.Issuer = e.issuer
+	ac.Role = e.role
+
+	fields := &framework.FieldData{
+		Raw:    map[string]interface{}{"order_id": e.orderId},
+		Schema: map[string]*framework.FieldSchema{"order_id": {Type: framework.TypeString}},
+	}
+	data := map[string]interface{}{"csr": e.csrB64}
+
+	return e.b.acmeFinalizeOrderHandler(ac, &logical.Request{Storage: e.storage}, fields, e.uc, data, e.account)
+}
+
+func (e *acmeFinalizeTestEnv) loadOrder(t *testing.T) *acmeOrder {
+	t.Helper()
+	order, err := e.b.GetAcmeState().LoadOrder(&acmeContext{sc: e.b.makeStorageContext(ctx, e.storage)}, e.uc, e.orderId)
+	require.NoError(t, err)
+	return order
+}
+
+func (e *acmeFinalizeTestEnv) countStoredCerts(t *testing.T) int {
+	t.Helper()
+	serials, err := e.storage.List(ctx, issuing.PathCerts)
+	require.NoError(t, err)
+	return len(serials)
+}
+
+// TestACMEFinalizeOrder_ConcurrentRequestsIssueSingleCert fires several finalize
+// requests for the same order at once. Without the per-order lock, more than one
+// would pass the readiness gate and issue its own certificate, leaving every
+// certificate but the last one orphaned from the order. With the fix, exactly
+// one request issues a certificate and the rest are rejected. See GH-31987.
+func TestACMEFinalizeOrder_ConcurrentRequestsIssueSingleCert(t *testing.T) {
+	t.Parallel()
+
+	env := setupACMEFinalizeTest(t, "test.example.com")
+	certsBefore := env.countStoredCerts(t)
+
+	const workers = 8
+	var wg sync.WaitGroup
+	results := make([]error, workers)
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			_, results[idx] = env.runFinalize()
+		}(i)
+	}
+	wg.Wait()
+
+	successes := 0
+	for _, err := range results {
+		if err == nil {
+			successes++
+			continue
+		}
+		require.ErrorIs(t, err, ErrOrderNotReady, "a losing finalize must be rejected by the readiness gate")
+	}
+	require.Equal(t, 1, successes, "exactly one finalize must succeed, got errors: %v", results)
+
+	// Only one certificate may have been issued for the order.
+	require.Equal(t, certsBefore+1, env.countStoredCerts(t),
+		"concurrent finalize must not issue more than one certificate")
+
+	order := env.loadOrder(t)
+	require.Equal(t, ACMEOrderValid, order.Status)
+	require.NotEmpty(t, order.CertificateSerialNumber)
+
+	stored, err := env.storage.Get(ctx, issuing.PathCerts+order.CertificateSerialNumber)
+	require.NoError(t, err)
+	require.NotNil(t, stored, "the order's serial must reference a stored certificate, not an orphan")
+}
+
+// TestACMEFinalizeOrder_FailedIssuanceLeavesOrderRetryable checks that a
+// finalize which fails during issuance does not alter the stored order, so the
+// client can simply retry. The handler must not leave behind a half-finished
+// certificate or any state that strands the order.
+func TestACMEFinalizeOrder_FailedIssuanceLeavesOrderRetryable(t *testing.T) {
+	t.Parallel()
+
+	env := setupACMEFinalizeTest(t, "test.example.com")
+	certsBefore := env.countStoredCerts(t)
+
+	// A role that does not permit the order's identifier makes signCert reject
+	// the CSR, so issuance fails partway through finalize.
+	env.role = buildTestRole(t, map[string]interface{}{
+		"allowed_domains":    []string{"unrelated.example.com"},
+		"allow_bare_domains": true,
+		"allow_subdomains":   false,
+	})
+
+	_, err := env.runFinalize()
+	require.Error(t, err, "issuance with a non-matching role must fail")
+
+	order := env.loadOrder(t)
+	require.Equal(t, ACMEOrderReady, order.Status, "a failed issuance must leave the order finalizable")
+	require.Empty(t, order.CertificateSerialNumber)
+	require.Equal(t, certsBefore, env.countStoredCerts(t), "a failed issuance must not leave a certificate behind")
+
+	// Retrying with a permissive role now succeeds, proving the order was not
+	// stranded by the failed attempt.
+	env.role = issuing.SignVerbatimRole()
+	resp, err := env.runFinalize()
+	require.NoError(t, err, "retry after a transient issuance failure must succeed")
+	require.NotNil(t, resp)
+
+	final := env.loadOrder(t)
+	require.Equal(t, ACMEOrderValid, final.Status)
+	require.NotEmpty(t, final.CertificateSerialNumber)
+	require.Equal(t, certsBefore+1, env.countStoredCerts(t))
+}
+
+// TestACMEFinalizeOrder_OrderLockIsStablePerOrder confirms the striped lock pool
+// is wired up and returns a stable lock per order id.
+func TestACMEFinalizeOrder_OrderLockIsStablePerOrder(t *testing.T) {
+	t.Parallel()
+
+	b, _ := CreateBackendWithStorage(t)
+	state := b.GetAcmeState()
+
+	require.NotNil(t, state.orderLocks)
+	require.Same(t, state.orderLockFor("order-abc"), state.orderLockFor("order-abc"),
+		"the same order id must always map to the same lock")
 }

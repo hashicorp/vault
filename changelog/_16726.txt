@@ -1,0 +1,2 @@
+```release-note:feature
+**Upgrade Path Analyzer**: Lets operators select a target Vault Enterprise version and receive a tailored upgrade plan including breaking changes, new behavior, known issues, ordered upgrade steps, and rollback steps.

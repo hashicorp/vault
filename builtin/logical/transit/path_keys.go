@@ -8,6 +8,7 @@ import (
 	"crypto/elliptic"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -417,10 +418,18 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 
 	case keysutil.KeyType_MANAGED_KEY:
 		retKeys, err := getFormattedManagedKeyPublicKey(ctx, b, p)
-		if err != nil {
+		switch {
+		case err == nil:
+			resp.Data["keys"] = retKeys
+		case errors.Is(err, errNotAsymmetricManagedKey):
+			symKeys := map[string]int64{}
+			for k, v := range p.Keys {
+				symKeys[k] = v.DeprecatedCreationTime
+			}
+			resp.Data["keys"] = symKeys
+		default:
 			return nil, err
 		}
-		resp.Data["keys"] = retKeys
 	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {

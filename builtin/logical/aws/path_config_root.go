@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
@@ -67,8 +66,11 @@ func pathConfigRoot(b *backend) *framework.Path {
 				Description: "Fallback regions if sts_region is unreachable",
 			},
 			"max_retries": {
-				Type:        framework.TypeInt,
-				Default:     aws.UseServiceDefaultRetries,
+				Type: framework.TypeInt,
+				// -1 preserves the historical aws-sdk-go v1 "use service default"
+				// semantics; the v2 SDK applies its own default when max_retries
+				// is not configured.
+				Default:     -1,
 				Description: "Maximum number of retries for recoverable exceptions of AWS APIs",
 			},
 			"username_template": {

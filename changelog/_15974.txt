@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/s3: Migrate S3 physical storage backend and autosnapshot tests from AWS SDK v1 to AWS SDK v2.
+```

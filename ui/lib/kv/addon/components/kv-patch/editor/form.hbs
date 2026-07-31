@@ -59,9 +59,9 @@
     @valueWarning={{this.newValueWarning}}
   />
 
-  <hr class="has-background-gray-200" />
+  <Hds::Separator />
   <KvPatch::SubkeysReveal @subkeys={{@subkeys}} />
-  <hr class="has-background-gray-200" />
+  <Hds::Separator />
 
   <Hds::ButtonSet>
     <Hds::Button @text="Save" type="submit" @icon={{if @isSaving "loading"}} disabled={{@isSaving}} data-test-kv-save />

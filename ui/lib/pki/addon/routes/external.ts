@@ -53,12 +53,16 @@ export default class PkiExternalRoute extends Route {
   }
 
   async fetchList(listRequest: () => Promise<PkiExternalCaListConfigDnsResponse | StandardListResponse>) {
-    let keys: string[] = [];
-    let error: ApiParsedError = { message: '' };
+    let keys: string[] = [],
+      key_info = {},
+      error: ApiParsedError = { message: '' };
 
     try {
       const resp = await listRequest();
       keys = resp.keys ?? [];
+      if ('key_info' in resp && resp.key_info) {
+        key_info = resp.key_info;
+      }
     } catch (e) {
       // Catch error to render message in overview card
       // Stored error will be re-thrown in relevant child routes
@@ -69,7 +73,7 @@ export default class PkiExternalRoute extends Route {
         error.message = '';
       }
     }
-    return { keys, error };
+    return { keys, key_info, error };
   }
 
   async model() {

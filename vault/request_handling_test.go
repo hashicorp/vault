@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/credential/approle"
@@ -722,99 +722,6 @@ func TestRequestHandling_fetchACLTokenEntryAndEntity_NilRequest(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, ErrInternalError, err)
-}
-
-// Test_allPoliciesAllowOnly tests a helper function that checks if all policies in
-// a given set have only "allow" capabilities, and not "deny" or "sudo"
-func Test_allPoliciesAllowOnly(t *testing.T) {
-	t.Parallel()
-
-	c, _, _ := TestCoreUnsealed(t)
-	ctx := namespace.RootContext(context.Background())
-
-	allowPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
-path "secret/data/*" {
-	capabilities = ["read", "list"]
-}
-`, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
-	require.NoError(t, err)
-	allowPolicy.Name = "allow-only"
-	require.NoError(t, c.policyStore.SetPolicy(ctx, allowPolicy))
-
-	denyPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
-path "secret/data/*" {
-	capabilities = ["deny"]
-}
-`, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
-	require.NoError(t, err)
-	denyPolicy.Name = "deny-policy"
-	require.NoError(t, c.policyStore.SetPolicy(ctx, denyPolicy))
-
-	sudoPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
-path "secret/data/*" {
-	capabilities = ["read", "sudo"]
-}
-`, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
-	require.NoError(t, err)
-	sudoPolicy.Name = "sudo-policy"
-	require.NoError(t, c.policyStore.SetPolicy(ctx, sudoPolicy))
-
-	tests := map[string]struct {
-		policyNamesByNamespace map[string][]string
-		expected               bool
-		wantErr                string
-	}{
-		"all allow only": {
-			policyNamesByNamespace: map[string][]string{
-				namespace.RootNamespaceID: {"allow-only"},
-			},
-			expected: true,
-		},
-		"deny policy": {
-			policyNamesByNamespace: map[string][]string{
-				namespace.RootNamespaceID: {"deny-policy"},
-			},
-			expected: false,
-		},
-		"sudo policy": {
-			policyNamesByNamespace: map[string][]string{
-				namespace.RootNamespaceID: {"sudo-policy"},
-			},
-			expected: false,
-		},
-		"root policy": {
-			policyNamesByNamespace: map[string][]string{
-				namespace.RootNamespaceID: {"root"},
-			},
-			expected: false,
-		},
-		"missing policy": {
-			policyNamesByNamespace: map[string][]string{
-				namespace.RootNamespaceID: {"missing-policy"},
-			},
-			expected: false,
-			wantErr:  "policy \"missing-policy\" not found",
-		},
-		"missing namespace": {
-			policyNamesByNamespace: map[string][]string{
-				"missing-namespace": {"allow-only"},
-			},
-			expected: false,
-			wantErr:  namespace.ErrNoNamespace.Error(),
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			actual, err := c.allPoliciesAllowOnly(ctx, tc.policyNamesByNamespace)
-			if tc.wantErr != "" {
-				require.ErrorContains(t, err, tc.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-			require.Equal(t, tc.expected, actual)
-		})
-	}
 }
 
 // TestAuth_AuthorizationDetails_CopiedFromRequest verifies that logical.Auth.AuthorizationDetails

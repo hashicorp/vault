@@ -154,7 +154,7 @@ export class PostHogProvider implements AnalyticsProvider {
     }
   }
 
-  trackEvent(eventName: string, metadata: Record<string, string> = {}) {
+  trackEvent(eventName: string, metadata: Record<string, unknown> = {}) {
     // use licenseId as a grouping for this cluster
     if (this.licenseId) {
       this.client.capture(eventName, {

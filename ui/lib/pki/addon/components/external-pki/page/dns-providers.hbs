@@ -1,0 +1,25 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#each @model.dnsProviders as |provider|}}
+  <Hds::Card::Container
+    @hasBorder={{true}}
+    class="has-top-margin-l has-padding-l"
+    data-test-card-container={{provider.name}}
+  >
+    <Hds::Text::Display @tag="p" @size="300" @weight="semibold" data-test-text-display>
+      {{provider.name}}
+    </Hds::Text::Display>
+
+    <Hds::Separator @spacing="0" class="has-top-margin-xxs bottom-margin-16" />
+
+    <ExternalPki::ConfigDetails @config={{provider}} />
+  </Hds::Card::Container>
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No DNS providers exist yet" @titleTag="h2" data-test-empty-state-title />
+    <A.Body @text="Configure a DNS provider using Terraform or the API/CLI." />
+  </Hds::ApplicationState>
+{{/each}}

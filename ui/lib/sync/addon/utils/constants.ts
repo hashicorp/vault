@@ -8,6 +8,12 @@ export enum CredentialType {
   WIF = 'wif',
 }
 
+export enum GcpEncryptionType {
+  GOOGLE_MANAGED = 'google-managed',
+  GLOBAL_KMS = 'global-kms',
+  REGIONAL_KMS = 'regional-kms',
+}
+
 export enum DestinationType {
   AwsSm = 'aws-sm',
   AzureKv = 'azure-kv',

@@ -53,7 +53,7 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.vault-revision }}
       - if: inputs.vault-edition != 'ce'
@@ -113,7 +113,7 @@ jobs:
       id-token: write # vault-auth
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.vault-revision }}
       - if: needs.metadata.outputs.is-ent-repo == 'true'
@@ -219,7 +219,7 @@ jobs:
       - uses: ./.github/actions/install-tools
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           aws-access-key-id: ${{ steps.secrets.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ steps.secrets.outputs.aws-secret-access-key }}
@@ -242,11 +242,14 @@ jobs:
           chmod 600 "./enos/support/private_key.pem"
           sha256sum "./enos/support/private_key.pem"
           du -h "./enos/support/private_key.pem"
+          scenario_safe_name=$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')
+          # Artifact names are truncated to ensure prefix + variable + suffix ≤ 235 chars (GitHub limit: 255, minus compression suffix buffer)
           {
-            echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
-            echo "test_results_artifact_name=test-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
-            echo "junit_results_artifact_name=junit-results_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
-            echo "failure_summary_artifact_name=failure-summary-enos_$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g').md"
+            echo "debug_data_artifact_name=enos-debug-data_${scenario_safe_name:0:219}"
+            echo "test_results_artifact_name=test-results_${scenario_safe_name:0:222}"
+            echo "junit_results_artifact_name=junit-results_${scenario_safe_name:0:221}"
+            echo "failure_summary_artifact_name=failure-summary-enos_${scenario_safe_name:0:211}.md"
+            echo "aws_resources_artifact_name=aws-resources_${scenario_safe_name:0:221}"
           } | tee -a "$GITHUB_OUTPUT"
 
       - if: contains(inputs.sample-name, 'build')
@@ -270,8 +273,13 @@ jobs:
         run: |
           echo "${{ steps.secrets.outputs.radar-license }}" > ./enos/support/vault-radar.hclic || true
 
+      # As many scenarios run in parallel and many PRs run in parallel, absolute
+      # delta counting between resources is hard to glean a useful signal from.
+      # Therefore, we only capture AWS resources when debugging to avoid the
+      # 1-1.5 minute penalty that it often imposes.
       - name: Capture AWS Resource Counts Before Test
         id: capture-aws-before
+        if: runner.debug == '1'
         continue-on-error: true
         run: |
           chmod +x ./.github/scripts/capture-aws-resources.sh
@@ -297,7 +305,7 @@ jobs:
 
       - name: Capture AWS Resource Counts After Test
         id: capture-aws-after
-        if: always()
+        if: always() && runner.debug == '1'
         continue-on-error: true
         run: |
           chmod +x ./.github/scripts/capture-aws-resources.sh
@@ -309,7 +317,7 @@ jobs:
 
       - name: Show AWS Resource Differences
         id: show-resource-diff
-        if: always()
+        if: always() && runner.debug == '1'
         continue-on-error: true
         run: |
           echo "=== AWS Resource Count Differences ==="
@@ -323,7 +331,7 @@ jobs:
           fi
 
       - name: Upload AWS Resource Snapshots
-        if: always()
+        if: always() && runner.debug == '1'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: aws-resources_${{ matrix.scenario.id.filter }}
@@ -334,43 +342,17 @@ jobs:
           if-no-files-found: ignore
         continue-on-error: true
 
-      - name: Upload Test Results
+      - name: Prepare Test Results and Failure Summaries
         if: always()
-        id: upload_test_results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ steps.prepare_scenario.outputs.test_results_artifact_name }}
-          path: /tmp/vault_test_results_*.json
-          retention-days: 7
-          if-no-files-found: ignore
-        continue-on-error: true
-
-      - name: Upload JUnit Test Results
-        if: always()
-        id: upload_junit_results
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ steps.prepare_scenario.outputs.junit_results_artifact_name }}
-          path: /tmp/vault_test_results_*.xml
-          retention-days: 7
-          if-no-files-found: ignore
-        continue-on-error: true
-
-      - name: Check for test results
-        if: always()
-        id: check_test_results
+        id: prepare_test_summary
         continue-on-error: true
         run: |
-          if find /tmp -maxdepth 1 -name 'vault_test_results_*.json' -type f -print -quit 2>/dev/null | grep -q .; then
-            echo "has_results=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_results=false" >> "$GITHUB_OUTPUT"
+          if ! find /tmp -maxdepth 1 -name 'vault_test_results_*.json' -type f -print -quit 2>/dev/null | grep -q .; then
+            echo "failure_summary_created=false" | tee -a "$GITHUB_OUTPUT"
+            echo "::warning::No test results found in /tmp/vault_test_results_*.json"
+            exit 0
           fi
 
-      - name: Prepare Test Results Summary
-        if: always() && steps.check_test_results.outputs.has_results == 'true'
-        continue-on-error: true
-        run: |
           # Find the most recent JSON test results file
           json_file=$(find /tmp -maxdepth 1 -name 'vault_test_results_*.json' -type f -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)
 
@@ -387,6 +369,9 @@ jobs:
             total_tests=$(jq -r 'select(.Action == "pass" or .Action == "fail") | select(.Test != null)' "$json_file" | jq -s 'length')
             passed_tests=$(jq -r 'select(.Action == "pass") | select(.Test != null)' "$json_file" | jq -s 'length')
             failed_tests=$(jq -r 'select(.Action == "fail") | select(.Test != null)' "$json_file" | jq -s 'length')
+
+            # Output for use in tarball creation
+            echo "failure_summary_created=true" | tee -a "$GITHUB_OUTPUT"
 
             # Create step summary for this specific scenario
             {
@@ -406,19 +391,66 @@ jobs:
                 cat "${failure_summary_file}"
                 echo ""
               fi
-
-              echo "📊 Full test results available in artifacts: \`${{ steps.prepare_scenario.outputs.test_results_artifact_name }}\`"
-            } >> "$GITHUB_STEP_SUMMARY"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
           else
-            echo "⚠️ No test results found in /tmp/vault_test_results_*.json" >> "$GITHUB_STEP_SUMMARY"
+            echo "failure_summary_created=false" | tee -a "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload Failure Summary
-        if: always() && steps.check_test_results.outputs.has_results == 'true'
+      - name: Create test results tarball
+        if: always()
+        id: create_test_results_tarball
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/test-artifacts/test_results
+          mkdir -p /tmp/test-artifacts/junit_results
+          mkdir -p /tmp/test-artifacts/failure_summary
+
+          if ls /tmp/vault_test_results_*.json 1> /dev/null 2>&1; then
+            cp /tmp/vault_test_results_*.json /tmp/test-artifacts/test_results/
+          fi
+
+          if ls /tmp/vault_test_results_*.xml 1> /dev/null 2>&1; then
+            cp /tmp/vault_test_results_*.xml /tmp/test-artifacts/junit_results/
+          fi
+
+          failure_summary_file="${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}"
+          if [ "${{ steps.prepare_test_summary.outputs.failure_summary_created }}" == "true" ] && [ -f "$failure_summary_file" ]; then
+            cp "$failure_summary_file" /tmp/test-artifacts/failure_summary/
+          fi
+
+          if [ -n "$(ls -A /tmp/test-artifacts/test_results 2>/dev/null)" ] || \
+             [ -n "$(ls -A /tmp/test-artifacts/junit_results 2>/dev/null)" ] || \
+             [ -n "$(ls -A /tmp/test-artifacts/failure_summary 2>/dev/null)" ]; then
+            scenario_safe_name=$(echo "${{ matrix.scenario.id.filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')
+            # Truncate to 215 chars to leave room for .tar.gz suffix and buffer
+            tarball_name="test-results_${scenario_safe_name:0:215}.tar.gz"
+
+            if tar -czf "/tmp/${tarball_name}" -C /tmp/test-artifacts .; then
+              {
+                echo "tarball_created=true"
+                echo "tarball_name=${tarball_name}"
+                echo "tarball_path=/tmp/${tarball_name}"
+              } | tee -a "$GITHUB_OUTPUT"
+
+              # Add artifact reference to step summary
+              echo "" | tee -a "$GITHUB_STEP_SUMMARY"
+              echo "Full test results available in artifact: \`${tarball_name}\`" | tee -a "$GITHUB_STEP_SUMMARY"
+            else
+              echo "::error::Failed to create tarball"
+              echo "tarball_created=false" | tee -a "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "tarball_created=false" | tee -a "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload test results tarball
+        if: always() && steps.create_test_results_tarball.outputs.tarball_created == 'true'
+        id: upload_test_results_tarball
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
-          path: ${{ steps.prepare_scenario.outputs.failure_summary_artifact_name }}
+          name: ${{ steps.create_test_results_tarball.outputs.tarball_name }}
+          path: ${{ steps.create_test_results_tarball.outputs.tarball_path }}
+          retention-days: 7
           if-no-files-found: ignore
         continue-on-error: true
 

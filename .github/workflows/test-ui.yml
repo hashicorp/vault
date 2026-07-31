@@ -37,7 +37,7 @@ jobs:
     outputs:
       ui-go-binary-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
@@ -85,12 +85,12 @@ jobs:
     outputs:
       ui-js-bundle-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
       - name: Build Ember Test Bundle
         working-directory: ./ui
         run: pnpm build:jsondiffpatch && pnpm exec ember build --environment=test --output-path=dist
@@ -114,7 +114,7 @@ jobs:
       matrix:
         ci-index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
@@ -139,7 +139,7 @@ jobs:
         with:
           chrome-version: stable
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
       - name: Download Ember Test Bundle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

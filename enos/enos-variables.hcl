@@ -223,6 +223,12 @@ variable "vault_ibm_license_edition" {
   default     = null
 }
 
+variable "vault_verify_default_lcq" {
+  description = "Expected max_leases value for TestDefaultLCQ. Empty string causes the test to skip (initial version < 1.16.0). Used by smoke-sdk and autopilot scenarios."
+  type        = string
+  default     = ""
+}
+
 variable "vault_local_build_tags" {
   description = "The build tags to pass to the Go compiler for builder:local variants"
   type        = list(string)

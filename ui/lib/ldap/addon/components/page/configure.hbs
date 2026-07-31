@@ -30,7 +30,7 @@
     <MessageError @errorMessage={{this.error}} />
 
     <h2 class="title is-4">Schema Options</h2>
-    <hr class="has-background-gray-200" />
+    <Hds::Separator />
 
     {{#if @model.form.data.schema}}
       <div class="has-top-margin-l">
@@ -44,7 +44,7 @@
     {{/if}}
   </div>
 
-  <hr class="has-background-gray-200 has-top-margin-l" />
+  <Hds::Separator class="has-top-margin-l" />
 
   <div class="has-top-margin-l has-bottom-margin-l is-flex">
     <Hds::Button

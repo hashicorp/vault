@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -51,7 +51,7 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 }
 
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, _, _ := TestCoreUnsealedBackend(t, backend)
+	c, _, _ := TestCoreUnsealedBackend(t, backend) // ignore-vault-test-core-usage
 	return c, c.expiration
 }
 
@@ -699,7 +699,7 @@ func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
-	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
+	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend) // ignore-vault-test-core-usage
 	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
@@ -768,7 +768,7 @@ func BenchmarkExpiration_Create_Leases(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	c, _, _ := TestCoreUnsealedBackend(b, inm)
+	c, _, _ := TestCoreUnsealedBackend(b, inm) // ignore-vault-test-core-usage
 	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")

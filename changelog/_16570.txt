@@ -1,0 +1,5 @@
+```release-note:improvement
+identity/scim: POST /Users for a client with alias_mount_accessor now adopts a
+pre-existing entity when the userName matches an existing login alias on the
+target mount, instead of failing with a conflict.
+```

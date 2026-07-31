@@ -11,31 +11,38 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// identityTokenFetchTimeout bounds how long GetIdentityToken waits on the plugin
+// identity token service, since the stscreds.IdentityTokenRetriever interface
+// provides no context to carry a caller deadline.
+const identityTokenFetchTimeout = 30 * time.Second
+
 // getRootIAMConfig creates an *aws.Config for Vault to connect to IAM.
 func (b *backend) getRootIAMConfig(ctx context.Context, s logical.Storage, logger hclog.Logger) (*aws.Config, error) {
-	credsConfig := &awsutil.CredentialsConfig{}
+	credsConfig := &awsutil.CredentialsConfig{
+		HTTPClient: cleanhttp.DefaultClient(),
+		Logger:     logger,
+	}
 	var endpoint string
-	var maxRetries int = aws.UseServiceDefaultRetries
 
 	entry, err := s.Get(ctx, "config/root")
 	if err != nil {
 		return nil, err
 	}
+
+	var config rootConfig
 	if entry != nil {
-		var config rootConfig
 		if err := entry.DecodeJSON(&config); err != nil {
 			return nil, fmt.Errorf("error reading root configuration: %w", err)
 		}
@@ -43,53 +50,71 @@ func (b *backend) getRootIAMConfig(ctx context.Context, s logical.Storage, logge
 		credsConfig.AccessKey = config.AccessKey
 		credsConfig.SecretKey = config.SecretKey
 		credsConfig.Region = config.Region
-		maxRetries = config.MaxRetries
-
-		if config.IAMEndpoint != "" {
-			endpoint = *aws.String(config.IAMEndpoint)
+		if config.MaxRetries >= 0 {
+			credsConfig.MaxRetries = aws.Int(config.MaxRetries)
 		}
 
-		if config.IdentityTokenAudience != "" {
-			ns, err := namespace.FromContext(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get namespace from context: %w", err)
-			}
-
-			fetcher := &PluginIdentityTokenFetcher{
-				sys:      b.System(),
-				logger:   b.Logger(),
-				ns:       ns,
-				audience: config.IdentityTokenAudience,
-				ttl:      config.IdentityTokenTTL,
-			}
-
-			sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-			credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-secrets-%s", sessionSuffix)
-			credsConfig.WebIdentityTokenFetcher = fetcher
-			credsConfig.RoleARN = config.RoleARN
+		if config.IAMEndpoint != "" {
+			endpoint = config.IAMEndpoint
 		}
 	}
 
+	// Apply the region fallback once for all paths (WIF and non-WIF).
 	if credsConfig.Region == "" {
 		credsConfig.Region = getFallbackRegion()
 	}
 
-	credsConfig.HTTPClient = cleanhttp.DefaultClient()
+	if entry != nil && config.IdentityTokenAudience != "" {
+		ns, err := namespace.FromContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get namespace from context: %w", err)
+		}
 
-	credsConfig.Logger = logger
+		fetcher := &PluginIdentityTokenFetcher{
+			sys:      b.System(),
+			logger:   b.Logger(),
+			ns:       ns,
+			audience: config.IdentityTokenAudience,
+			ttl:      config.IdentityTokenTTL,
+		}
 
-	creds, err := credsConfig.GenerateCredentialChain()
+		sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+
+		// Build a base config so we can construct the STS client used
+		// by WebIdentityRoleProvider.
+		baseCfg, err := credsConfig.GenerateCredentialChain(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if endpoint != "" {
+			baseCfg.BaseEndpoint = aws.String(endpoint)
+		}
+
+		// Wire the fetcher as a live token retriever so credentials refresh automatically.
+		attachWebIdentityProvider(baseCfg, config.RoleARN, sessionSuffix, fetcher)
+		return baseCfg, nil
+	}
+
+	// When no static credentials are configured, disable forcing the shared
+	// "default" profile. Forcing it makes the v2 SDK short-circuit to the shared
+	// profile and skip the environment credential provider (and IMDS/ECS);
+	// disabling it lets the default chain (env vars, shared config, IMDS/ECS)
+	// resolve naturally, matching the v1 SDK behavior.
+	iamOpts := make([]awsutil.Option, 0)
+	if credsConfig.AccessKey == "" && credsConfig.SecretKey == "" {
+		iamOpts = append(iamOpts, awsutil.WithSharedCredentials(false))
+	}
+
+	awsConfig, err := credsConfig.GenerateCredentialChain(ctx, iamOpts...)
 	if err != nil {
 		return nil, err
 	}
 
-	return &aws.Config{
-		Credentials: creds,
-		Region:      aws.String(credsConfig.Region),
-		Endpoint:    &endpoint,
-		HTTPClient:  cleanhttp.DefaultClient(),
-		MaxRetries:  aws.Int(maxRetries),
-	}, nil
+	if endpoint != "" {
+		awsConfig.BaseEndpoint = aws.String(endpoint)
+	}
+
+	return awsConfig, nil
 }
 
 // Return a slice of *aws.Config, based on descending configuration priority. STS endpoints are the only place this is used.
@@ -97,8 +122,6 @@ func (b *backend) getRootIAMConfig(ctx context.Context, s logical.Storage, logge
 func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logger hclog.Logger) ([]*aws.Config, error) {
 	// set fallback region (we can overwrite later)
 	fallbackRegion := getFallbackRegion()
-
-	maxRetries := aws.UseServiceDefaultRetries
 
 	entry, err := s.Get(ctx, "config/root")
 	if err != nil {
@@ -113,16 +136,15 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 			Logger:     logger,
 			Region:     fallbackRegion,
 		}
-		creds, err := ccfg.GenerateCredentialChain()
+		// No config means no static credentials; disable forcing the shared
+		// "default" profile so the v2 SDK does not short-circuit to it and skip the
+		// env var / IMDS/ECS providers. This lets the default chain resolve
+		// naturally, matching the v1 SDK behavior.
+		awsConfig, err := ccfg.GenerateCredentialChain(ctx, awsutil.WithSharedCredentials(false))
 		if err != nil {
 			return nil, err
 		}
-		configs = append(configs, &aws.Config{
-			Credentials: creds,
-			Region:      aws.String(fallbackRegion),
-			Endpoint:    aws.String(""),
-			MaxRetries:  aws.Int(maxRetries),
-		})
+		configs = append(configs, awsConfig)
 
 		return configs, nil
 	}
@@ -140,12 +162,14 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 	credsConfig.SecretKey = config.SecretKey
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
 	credsConfig.Logger = logger
+	if config.MaxRetries >= 0 {
+		credsConfig.MaxRetries = aws.Int(config.MaxRetries)
+	}
 
 	if config.Region != "" {
 		regions = append(regions, config.Region)
 	}
 
-	maxRetries = config.MaxRetries
 	if config.STSEndpoint != "" {
 		endpoints = append(endpoints, config.STSEndpoint)
 		if config.STSRegion != "" {
@@ -162,6 +186,11 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 		}
 	}
 
+	// wifFetcher and wifSessionSuffix are set when WIF is configured and used
+	// inside the per-config loop to attach a live-refresh WebIdentityRoleProvider.
+	var wifFetcher *PluginIdentityTokenFetcher
+	var wifSessionSuffix string
+
 	opts := make([]awsutil.Option, 0)
 	if config.IdentityTokenAudience != "" {
 		ns, err := namespace.FromContext(ctx)
@@ -169,22 +198,28 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 			return nil, fmt.Errorf("failed to get namespace from context: %w", err)
 		}
 
-		fetcher := &PluginIdentityTokenFetcher{
+		wifFetcher = &PluginIdentityTokenFetcher{
 			sys:      b.System(),
 			logger:   b.Logger(),
 			ns:       ns,
 			audience: config.IdentityTokenAudience,
 			ttl:      config.IdentityTokenTTL,
 		}
+		wifSessionSuffix = strconv.FormatInt(time.Now().UnixNano(), 10)
 
-		sessionSuffix := strconv.FormatInt(time.Now().UnixNano(), 10)
-		credsConfig.RoleSessionName = fmt.Sprintf("vault-aws-secrets-%s", sessionSuffix)
-		credsConfig.WebIdentityTokenFetcher = fetcher
-		credsConfig.RoleARN = config.RoleARN
+		// explicitly disable shared credential providers when using a web identity
+		// token, enabling WIF usage in environments that may use AWS Profiles for
+		// other use-cases
+		opts = append(opts, awsutil.WithSharedCredentials(false))
+	}
 
-		// explicitly disable environment and shared credential providers when using Web Identity Token Fetcher
-		// enables WIF usage in environments that may use AWS Profiles or environment variables for other use-cases
-		opts = append(opts, awsutil.WithEnvironmentCredentials(false), awsutil.WithSharedCredentials(false))
+	// When no static credentials are configured (and not using WIF), disable
+	// forcing the shared "default" profile. Forcing it makes the v2 SDK
+	// short-circuit to the shared profile and skip the environment credential
+	// provider (and IMDS/ECS); disabling it lets the default chain (env vars,
+	// shared config, IMDS/ECS) resolve naturally, matching the v1 SDK.
+	if config.IdentityTokenAudience == "" && config.AccessKey == "" && config.SecretKey == "" {
+		opts = append(opts, awsutil.WithSharedCredentials(false))
 	}
 
 	// at this point, in the IAM case,
@@ -217,23 +252,42 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 		} else {
 			credsConfig.Region = fallbackRegion
 		}
-		creds, err := credsConfig.GenerateCredentialChain(opts...)
+		awsConfig, err := credsConfig.GenerateCredentialChain(ctx, opts...)
 		if err != nil {
 			return nil, err
 		}
-		configs = append(configs, &aws.Config{
-			Credentials: creds,
-			Region:      aws.String(credsConfig.Region),
-			Endpoint:    aws.String(endpoints[i]),
-			MaxRetries:  aws.Int(maxRetries),
-			HTTPClient:  cleanhttp.DefaultClient(),
-		})
+		if endpoints[i] != "" {
+			awsConfig.BaseEndpoint = aws.String(endpoints[i])
+		}
+
+		// Wire the fetcher as a live token retriever so credentials refresh automatically.
+		if wifFetcher != nil {
+			attachWebIdentityProvider(awsConfig, config.RoleARN, wifSessionSuffix, wifFetcher)
+		}
+
+		configs = append(configs, awsConfig)
 	}
 
 	return configs, nil
 }
 
-func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (*iam.IAM, error) {
+// attachWebIdentityProvider wires a live-refresh WebIdentityRoleProvider onto cfg so
+// that STS credentials are automatically renewed using the plugin identity token
+// fetcher. It is shared by the IAM and STS root config paths to avoid duplication.
+func attachWebIdentityProvider(cfg *aws.Config, roleARN, sessionSuffix string, fetcher *PluginIdentityTokenFetcher) {
+	stsClient := sts.NewFromConfig(*cfg)
+	provider := stscreds.NewWebIdentityRoleProvider(
+		stsClient,
+		roleARN,
+		fetcher,
+		func(o *stscreds.WebIdentityRoleOptions) {
+			o.RoleSessionName = fmt.Sprintf("vault-aws-secrets-%s", sessionSuffix)
+		},
+	)
+	cfg.Credentials = aws.NewCredentialsCache(provider)
+}
+
+func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
 	var awsConfig *aws.Config
 	var err error
 
@@ -249,42 +303,31 @@ func (b *backend) nonCachedClientIAM(ctx context.Context, s logical.Storage, log
 		}
 	}
 
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, err
-	}
-	client := iam.New(sess)
-	if client == nil {
-		return nil, fmt.Errorf("could not obtain IAM client")
-	}
-	return client, nil
+	// iam.NewFromConfig always returns a non-nil client, so there is no error
+	// case to handle here.
+	return iam.NewFromConfig(*awsConfig), nil
 }
 
-func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, logger hclog.Logger) (*sts.STS, error) {
-	awsConfig, err := b.getRootSTSConfigs(ctx, s, logger)
+func (b *backend) nonCachedClientSTS(ctx context.Context, s logical.Storage, logger hclog.Logger) (stsAPI, error) {
+	awsConfigs, err := b.getRootSTSConfigs(ctx, s, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	var client *sts.STS
-
-	for _, cfg := range awsConfig {
-		sess, err := session.NewSession(cfg)
-		if err != nil {
-			return nil, err
-		}
-		client = sts.New(sess)
-		if client == nil {
-			return nil, fmt.Errorf("could not obtain sts client")
-		}
+	for _, cfg := range awsConfigs {
+		client := sts.NewFromConfig(*cfg)
 
 		// ping the client - we only care about errors
-		_, err = client.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+		_, err = client.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
 		if err == nil {
 			return client, nil
-		} else {
-			b.Logger().Debug("couldn't connect with config trying next", "failed endpoint", *cfg.Endpoint, "failed region", *cfg.Region)
 		}
+
+		endpoint := ""
+		if cfg.BaseEndpoint != nil {
+			endpoint = *cfg.BaseEndpoint
+		}
+		b.Logger().Debug("couldn't connect with config trying next", "failed endpoint", endpoint, "failed region", cfg.Region)
 	}
 
 	return nil, fmt.Errorf("could not obtain sts client")
@@ -325,9 +368,7 @@ type PluginIdentityTokenFetcher struct {
 	ttl      time.Duration
 }
 
-var _ stscreds.TokenFetcher = (*PluginIdentityTokenFetcher)(nil)
-
-func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) {
+func (f PluginIdentityTokenFetcher) FetchToken(ctx context.Context) ([]byte, error) {
 	nsCtx := namespace.ContextWithNamespace(ctx, f.ns)
 	resp, err := f.sys.GenerateIdentityToken(nsCtx, &pluginutil.IdentityTokenRequest{
 		Audience: f.audience,
@@ -344,4 +385,13 @@ func (f PluginIdentityTokenFetcher) FetchToken(ctx aws.Context) ([]byte, error) 
 	}
 
 	return []byte(resp.Token.Token()), nil
+}
+
+// GetIdentityToken implements stscreds.IdentityTokenRetriever for use with stscreds.NewWebIdentityRoleProvider.
+// The interface provides no context, so a bounded timeout is applied to avoid
+// blocking indefinitely if the plugin identity token service is unresponsive.
+func (f PluginIdentityTokenFetcher) GetIdentityToken() ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), identityTokenFetchTimeout)
+	defer cancel()
+	return f.FetchToken(ctx)
 }

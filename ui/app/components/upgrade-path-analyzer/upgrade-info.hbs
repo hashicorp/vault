@@ -1,0 +1,146 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Page::Header @title="Issues">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:actions>
+    <DownloadButton
+      @text="Download"
+      @data={{this.fullDownloadText}}
+      @filename="vault-upgrade-info"
+      @color="secondary"
+      @iconPosition="leading"
+      data-test-button="Download"
+    />
+  </:actions>
+  <:description>
+    {{#if @targetVersion}}
+      <strong>Target version: {{@targetVersion}}.</strong>
+    {{/if}}
+    These are all the known issues, breaking changes, and new behaviors released with the selected version as well as steps
+    to safely roll back.
+  </:description>
+</Page::Header>
+
+<Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} class="top-margin-32" as |T|>
+  {{#each this.tabs as |tab|}}
+    <T.Tab data-test-tab={{tab.text}}>
+      <Hds::Icon @name={{tab.icon}} />
+      {{tab.text}}
+      {{#if tab.count}}
+        <Hds::BadgeCount @size="small" @text={{tab.count}} data-test-badge={{tab.text}} />
+      {{/if}}
+    </T.Tab>
+  {{/each}}
+
+  {{! Known issues, Breaking changes, New behavior panels share the same item layout }}
+  {{#each this.panels as |_panel panelIndex|}}
+    <T.Panel data-test-panel>
+      {{#each (this.paginatedItems panelIndex) as |listItem|}}
+        <Hds::Layout::Flex
+          @direction="column"
+          @gap="12"
+          @justify="space-between"
+          class="top-padding-20 bottom-padding-20"
+          data-test-panel-item
+          as |LF|
+        >
+          <LF.Item>
+            <Hds::Layout::Flex @gap="8">
+              {{#each listItem.badges as |badge|}}
+                <Hds::Badge @text={{badge.text}} @color={{badge.color}} data-test-badge />
+              {{/each}}
+            </Hds::Layout::Flex>
+          </LF.Item>
+
+          <LF.Item>
+            <Hds::Layout::Flex @justify="space-between">
+              <Hds::Text::Display @size="200" @tag="h2" @weight="semibold" data-test-panel-item-title>
+                {{listItem.title}}
+              </Hds::Text::Display>
+
+              <Hds::Link::Standalone
+                @icon="external-link"
+                @iconPosition="trailing"
+                @text="View details"
+                @href={{listItem.link}}
+                data-test-link-to="Item details"
+              />
+            </Hds::Layout::Flex>
+
+            <Hds::Text::Body @tag="p" data-test-panel-item-description>
+              {{listItem.description}}
+            </Hds::Text::Body>
+          </LF.Item>
+        </Hds::Layout::Flex>
+
+        <Hds::Separator @spacing="0" />
+      {{/each}}
+
+      {{#let (this.paginatedItems panelIndex) as |items|}}
+        {{#if items.meta}}
+          <Hds::Pagination::Numbered
+            @currentPage={{items.meta.currentPage}}
+            @currentPageSize={{items.meta.pageSize}}
+            @onPageChange={{this.onPageChange}}
+            @showSizeSelector={{false}}
+            @totalItems={{items.meta.filteredTotal}}
+            data-test-pagination
+          />
+        {{/if}}
+      {{/let}}
+    </T.Panel>
+  {{/each}}
+
+  {{! separate panel for Rollback steps - does not follow the same format as the others so we will separate it here }}
+  <T.Panel>
+    <Hds::Layout::Flex @direction="column" @gap="16" class="padding-top-24">
+      <Hds::Layout::Flex @align="center" @justify="space-between" @gap="16">
+        <Hds::Text::Display @tag="h2" @weight="semibold" data-test-upgrade-steps-title>
+          Rollback steps
+        </Hds::Text::Display>
+
+        <DownloadButton
+          @text="Download steps"
+          @data={{this.rollbackStepsDownloadText}}
+          @filename="vault-rollback-steps"
+          @color="tertiary"
+          @iconPosition="leading"
+          data-test-button="Download steps"
+        />
+
+      </Hds::Layout::Flex>
+
+      {{#if this.upgradeInfo.rollbackGuidanceMessage}}
+        <Hds::Alert @type="inline" @color="highlight" @icon="info" data-test-inline-alert as |A|>
+          <A.Title>{{this.upgradeInfo.rollbackGuidanceMessage}}</A.Title>
+        </Hds::Alert>
+      {{/if}}
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Rollback order:</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeInfo.rollbackOrder as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">{{step}}</Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+
+      <Hds::Text::Body @tag="p" @weight="semibold">Detailed rollback steps</Hds::Text::Body>
+      <Hds::Separator @spacing="0" />
+      <Hds::Layout::Flex @direction="column" @gap="8">
+        {{#each this.upgradeInfo.rollback_steps as |step index|}}
+          <Hds::Layout::Flex @align="start" @gap="8">
+            <Hds::Text::Body @tag="span">{{inc index}}.</Hds::Text::Body>
+            <Hds::Text::Body @tag="span">{{step}}</Hds::Text::Body>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+    </Hds::Layout::Flex>
+  </T.Panel>
+</Hds::Tabs>

@@ -63,10 +63,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::VersionDiff', 
 
     this.api = this.owner.lookup('service:api');
     this.queryParamsStub = sinon.stub(this.api, 'addQueryParams');
-    this.fetchStub = sinon.stub(this.api.secrets, 'kvV2Read').callsFake((path, backend, initOverride) => {
-      initOverride();
-      return Promise.resolve({});
-    });
+    this.fetchStub = sinon
+      .stub(this.api.secrets, 'kvV2Read')
+      .callsFake((path, backend, snapshot_id, initOverride) => {
+        initOverride();
+        return Promise.resolve({});
+      });
   });
 
   test('it renders empty states when current version is deleted or destroyed', async function (assert) {

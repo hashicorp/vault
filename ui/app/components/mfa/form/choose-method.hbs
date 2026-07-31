@@ -27,11 +27,11 @@
 
       {{#if (and this.nonSelfEnrollMethods this.singleConstraint.hasSelfEnrollMethods)}}
         <Hds::Layout::Flex @gap="16" @justify="center" @align="center">
-          <hr class="has-background-gray-300 is-flex-1" />
+          <Hds::Separator class="is-flex-1" />
           <Hds::Text::Body @color="faint">
             Or
           </Hds::Text::Body>
-          <hr class="has-background-gray-300 is-flex-1" />
+          <Hds::Separator class="is-flex-1" />
         </Hds::Layout::Flex>
       {{/if}}
 
@@ -52,7 +52,7 @@
       if they want to verify with a self-enroll method or another method for each one }}
       {{#each this.selfEnrollConstraints as |constraint index|}}
         {{#if index}}
-          <hr class="has-background-gray-300" />
+          <Hds::Separator />
         {{/if}}
         <Mfa::Form::MfaField @fieldType="select" @constraint={{constraint}} @index={{index}} @onSelect={{@onSelect}} />
       {{/each}}

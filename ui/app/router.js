@@ -44,6 +44,7 @@ Router.map(function () {
         this.route('edit');
       });
       this.route('usage-reporting');
+      this.route('user-preferences');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
@@ -62,6 +63,10 @@ Router.map(function () {
       this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
         this.mount('open-api-explorer', { path: '/api-explorer' });
+      });
+      this.route('support', function () {
+        this.route('upgrade', { path: '/' });
+        this.route('upgrade-info', { path: '/upgrade/issues' });
       });
       this.route('access', function () {
         this.route('reset-password');

@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -29,7 +29,7 @@ import (
 // TestRotation verifies that the rotation code and priority queue correctly selects and rotates credentials
 // for static secrets.
 func TestRotation(t *testing.T) {
-	bgCTX := context.Background()
+	bgCTX := t.Context()
 
 	type credToInsert struct {
 		config staticRoleEntry // role configuration from a normal createRole request
@@ -119,7 +119,7 @@ func TestRotation(t *testing.T) {
 			config.ObservationRecorder = or
 
 			b := Backend(config)
-			require.NoError(t, b.Setup(context.Background(), config))
+			require.NoError(t, b.Setup(t.Context(), config))
 			expirations := make([]*time.Time, len(c.creds))
 			// insert all our creds
 			for i, cred := range c.creds {
@@ -129,19 +129,19 @@ func TestRotation(t *testing.T) {
 				miam, err := awsutil.NewMockIAM(
 					// blank list for existing user
 					awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-						AccessKeyMetadata: []*iam.AccessKeyMetadata{
+						AccessKeyMetadata: []iamtypes.AccessKeyMetadata{
 							{},
 						},
 					}),
 					// initial key to store
 					awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-						AccessKey: &iam.AccessKey{
+						AccessKey: &iamtypes.AccessKey{
 							AccessKeyId:     aws.String(ak),
 							SecretAccessKey: aws.String(oldSecret),
 						},
 					}),
 					awsutil.WithGetUserOutput(&iam.GetUserOutput{
-						User: &iam.User{
+						User: &iamtypes.User{
 							UserId:   aws.String(cred.config.ID),
 							UserName: aws.String(cred.config.Username),
 						},
@@ -152,9 +152,9 @@ func TestRotation(t *testing.T) {
 				}
 
 				// Used to override the IAM client creation to return the mocked client
-				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
 					if entry.Username == cred.config.Username && entry.ID == cred.config.ID {
-						return miam, nil
+						return awsutilMockIAM{client: miam}, nil
 					}
 					return nil, fmt.Errorf("unexpected IAM client creation for user %q", entry.Username)
 				}
@@ -180,7 +180,7 @@ func TestRotation(t *testing.T) {
 			miam, err := awsutil.NewMockIAM(
 				// old key
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{
 						{
 							AccessKeyId: aws.String(ak),
 						},
@@ -188,13 +188,13 @@ func TestRotation(t *testing.T) {
 				}),
 				// new key
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String(ak),
 						SecretAccessKey: aws.String(newSecret),
 					},
 				}),
 				awsutil.WithGetUserOutput(&iam.GetUserOutput{
-					User: &iam.User{
+					User: &iamtypes.User{
 						UserId:   aws.String("unique-id"),
 						UserName: aws.String("jane-doe"),
 					},
@@ -205,8 +205,8 @@ func TestRotation(t *testing.T) {
 			}
 
 			// Set the IAM mock client to be used in the rotation
-			b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
-				return miam, nil
+			b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
+				return awsutilMockIAM{client: miam}, nil
 			}
 
 			req := &logical.Request{
@@ -245,13 +245,13 @@ func TestRotation(t *testing.T) {
 }
 
 type fakeIAM struct {
-	iamiface.IAMAPI
+	awsutilMockIAM
 	delReqs []*iam.DeleteAccessKeyInput
 }
 
-func (f *fakeIAM) DeleteAccessKey(r *iam.DeleteAccessKeyInput) (*iam.DeleteAccessKeyOutput, error) {
+func (f *fakeIAM) DeleteAccessKey(ctx context.Context, r *iam.DeleteAccessKeyInput, optFns ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error) {
 	f.delReqs = append(f.delReqs, r)
-	return f.IAMAPI.DeleteAccessKey(r)
+	return f.awsutilMockIAM.DeleteAccessKey(ctx, r, optFns...)
 }
 
 // TestCreateCredential verifies that credential creation firstly only deletes credentials if it needs to (i.e., two
@@ -270,18 +270,18 @@ func TestCreateCredential(t *testing.T) {
 			id:       "unique-id",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{},
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{},
 				}),
 				// delete should _not_ be called
 				awsutil.WithDeleteAccessKeyError(errors.New("should not have been called")),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String("key"),
 						SecretAccessKey: aws.String("itsasecret"),
 					},
 				}),
 				awsutil.WithGetUserOutput(&iam.GetUserOutput{
-					User: &iam.User{
+					User: &iamtypes.User{
 						UserId:   aws.String("unique-id"),
 						UserName: aws.String("jane-doe"),
 					},
@@ -294,20 +294,20 @@ func TestCreateCredential(t *testing.T) {
 			id:       "unique-id",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{
 						{AccessKeyId: aws.String("foo"), CreateDate: aws.Time(time.Now())},
 					},
 				}),
 				// delete should _not_ be called
 				awsutil.WithDeleteAccessKeyError(errors.New("should not have been called")),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String("key"),
 						SecretAccessKey: aws.String("itsasecret"),
 					},
 				}),
 				awsutil.WithGetUserOutput(&iam.GetUserOutput{
-					User: &iam.User{
+					User: &iamtypes.User{
 						UserId:   aws.String("unique-id"),
 						UserName: aws.String("jane-doe"),
 					},
@@ -321,19 +321,19 @@ func TestCreateCredential(t *testing.T) {
 			deletedKey: "foo",
 			opts: []awsutil.MockIAMOption{
 				awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-					AccessKeyMetadata: []*iam.AccessKeyMetadata{
+					AccessKeyMetadata: []iamtypes.AccessKeyMetadata{
 						{AccessKeyId: aws.String("foo"), CreateDate: aws.Time(time.Time{})},
 						{AccessKeyId: aws.String("bar"), CreateDate: aws.Time(time.Now())},
 					},
 				}),
 				awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-					AccessKey: &iam.AccessKey{
+					AccessKey: &iamtypes.AccessKey{
 						AccessKeyId:     aws.String("key"),
 						SecretAccessKey: aws.String("itsasecret"),
 					},
 				}),
 				awsutil.WithGetUserOutput(&iam.GetUserOutput{
-					User: &iam.User{
+					User: &iamtypes.User{
 						UserId:   aws.String("unique-id"),
 						UserName: aws.String("jane-doe"),
 					},
@@ -354,16 +354,16 @@ func TestCreateCredential(t *testing.T) {
 				t.Fatal(err)
 			}
 			fiam := &fakeIAM{
-				IAMAPI: miam,
+				awsutilMockIAM: awsutilMockIAM{client: miam},
 			}
 
 			b := Backend(config)
 
-			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+			b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
 				return fiam, nil
 			}
 
-			_, err = b.createCredential(context.Background(), config.StorageView, staticRoleEntry{Username: c.username, ID: c.id}, true)
+			_, err = b.createCredential(t.Context(), config.StorageView, staticRoleEntry{Username: c.username, ID: c.id}, true)
 			if err != nil {
 				t.Fatalf("got an error we didn't expect: %q", err)
 			}
@@ -383,7 +383,7 @@ func TestCreateCredential(t *testing.T) {
 
 // TestRequeueOnError verifies that in the case of an error, the entry will still be in the queue for later rotation
 func TestRequeueOnError(t *testing.T) {
-	bgCTX := context.Background()
+	bgCTX := t.Context()
 
 	cred := staticRoleEntry{
 		Name:           "test",
@@ -402,19 +402,19 @@ func TestRequeueOnError(t *testing.T) {
 	// go through the process of adding a key
 	miam, err := awsutil.NewMockIAM(
 		awsutil.WithListAccessKeysOutput(&iam.ListAccessKeysOutput{
-			AccessKeyMetadata: []*iam.AccessKeyMetadata{
+			AccessKeyMetadata: []iamtypes.AccessKeyMetadata{
 				{},
 			},
 		}),
 		// initial key to store
 		awsutil.WithCreateAccessKeyOutput(&iam.CreateAccessKeyOutput{
-			AccessKey: &iam.AccessKey{
+			AccessKey: &iamtypes.AccessKey{
 				AccessKeyId:     aws.String(ak),
 				SecretAccessKey: aws.String(oldSecret),
 			},
 		}),
 		awsutil.WithGetUserOutput(&iam.GetUserOutput{
-			User: &iam.User{
+			User: &iamtypes.User{
 				UserId:   aws.String(cred.ID),
 				UserName: aws.String(cred.Username),
 			},
@@ -425,8 +425,8 @@ func TestRequeueOnError(t *testing.T) {
 	}
 
 	// Used to override the IAM real client creation to return the mocked client
-	b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
-		return miam, nil
+	b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
+		return awsutilMockIAM{client: miam}, nil
 	}
 
 	_, err = b.createCredential(bgCTX, config.StorageView, cred, true)
@@ -452,8 +452,8 @@ func TestRequeueOnError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("couldn't initialize the mock iam: %s", err)
 	}
-	b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
-		return miam, nil
+	b.nonCachedClientIAMFunc = func(ctx context.Context, s logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
+		return awsutilMockIAM{client: miam}, nil
 	}
 
 	// now rotate, but it will fail
@@ -476,20 +476,20 @@ func TestRequeueOnError(t *testing.T) {
 }
 
 type mockIAM struct {
-	iamiface.IAMAPI
+	iamAPI
 	// mapping username -> number of times CreateAccessKey has been queried
 	// for this user
 	newKeys map[string]int
 	l       sync.Mutex
 }
 
-func (m *mockIAM) GetUser(input *iam.GetUserInput) (*iam.GetUserOutput, error) {
-	return &iam.GetUserOutput{User: &iam.User{UserId: aws.String(""), UserName: input.UserName}}, nil
+func (m *mockIAM) GetUser(_ context.Context, input *iam.GetUserInput, _ ...func(*iam.Options)) (*iam.GetUserOutput, error) {
+	return &iam.GetUserOutput{User: &iamtypes.User{UserId: aws.String(""), UserName: input.UserName}}, nil
 }
 
-func (m *mockIAM) ListAccessKeys(input *iam.ListAccessKeysInput) (*iam.ListAccessKeysOutput, error) {
+func (m *mockIAM) ListAccessKeys(_ context.Context, input *iam.ListAccessKeysInput, _ ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error) {
 	return &iam.ListAccessKeysOutput{
-		AccessKeyMetadata: []*iam.AccessKeyMetadata{
+		AccessKeyMetadata: []iamtypes.AccessKeyMetadata{
 			{
 				AccessKeyId: aws.String(fmt.Sprintf("%s-key", *input.UserName)),
 			},
@@ -497,13 +497,13 @@ func (m *mockIAM) ListAccessKeys(input *iam.ListAccessKeysInput) (*iam.ListAcces
 	}, nil
 }
 
-func (m *mockIAM) CreateAccessKey(input *iam.CreateAccessKeyInput) (*iam.CreateAccessKeyOutput, error) {
+func (m *mockIAM) CreateAccessKey(_ context.Context, input *iam.CreateAccessKeyInput, _ ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error) {
 	m.l.Lock()
 	defer m.l.Unlock()
 	m.newKeys[*input.UserName]++
 	count := m.newKeys[*input.UserName]
 	return &iam.CreateAccessKeyOutput{
-		AccessKey: &iam.AccessKey{
+		AccessKey: &iamtypes.AccessKey{
 			AccessKeyId:     aws.String(fmt.Sprintf("%s-key", *input.UserName)),
 			SecretAccessKey: aws.String(fmt.Sprintf("%s-%d", *input.UserName, count)),
 		},
@@ -529,7 +529,7 @@ func Test_RotationQueueInitialized(t *testing.T) {
 				b.minAllowableRotationPeriod = 1 * time.Second
 
 				// Used to override the IAM real client creation to return the mocked client
-				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+				b.nonCachedClientIAMFunc = func(ctx context.Context, storage logical.Storage, logger hclog.Logger, entry *staticRoleEntry) (iamAPI, error) {
 					return mockClient, nil
 				}
 

@@ -101,7 +101,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleEntityUpdateCommon(),
+					Callback: i.handleEntityNameUpdateCommon(),
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
@@ -135,7 +135,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleEntityUpdateCommon(),
+					Callback: i.handleEntityIDUpdateCommon(),
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
@@ -349,8 +349,25 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		i.lock.Lock()
 		defer i.lock.Unlock()
-
 		return i.EntityUpdateCommon(ctx, d)
+	}
+}
+
+// handleEntityNameUpdateCommon is used to update an entity via the name path.
+func (i *IdentityStore) handleEntityNameUpdateCommon() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+		return i.EntityNameUpdateCommon(ctx, d)
+	}
+}
+
+// handleEntityIDUpdateCommon is used to update an entity via the id path.
+func (i *IdentityStore) handleEntityIDUpdateCommon() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+		return i.EntityIDUpdateCommon(ctx, d)
 	}
 }
 

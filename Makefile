@@ -2,8 +2,8 @@
 # Be sure to place this BEFORE `include` directives, if any.
 THIS_FILE := $(lastword $(MAKEFILE_LIST))
 
-MAIN_PACKAGES=$$($(GO_CMD) list ./... | grep -v vendor/ )
-SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list ./... | grep -v vendor/ )
+MAIN_PACKAGES=$$($(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
+SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
 API_PACKAGES=$$(cd $(CURDIR)/api && $(GO_CMD) list ./... | grep -v vendor/ )
 ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES)
 TEST=$$(echo $(ALL_PACKAGES) | grep -v integ/ )
@@ -120,7 +120,7 @@ cover:
 # vet runs the Go source code static analysis tool `vet` to find
 # any common errors.
 vet:
-	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
+	@$(GO_CMD) list -tags enterprise -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| grep -v '.*github.com/hashicorp/vault$$' \
 		| xargs $(GO_CMD) vet ; if [ $$? -eq 1 ]; then \
 			echo ""; \
@@ -154,7 +154,7 @@ ci-vet-codechecker: tools-internal check-tools-external
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint: check-tools-external
-	@$(GO_CMD) list -f '{{.Dir}}' ./... | grep -v /vendor/ \
+	@$(GO_CMD) list -tags enterprise -f '{{.Dir}}' ./... | grep -v /vendor/ \
 		| xargs golangci-lint run; if [ $$? -eq 1 ]; then \
 			echo ""; \
 			echo "Lint found suspicious constructs. Please check the reported constructs"; \

@@ -76,6 +76,12 @@ echo "JUnit results will be written to: $junit_output"
 echo "Running tests..."
 echo "Vault environment variables:"
 env | grep VAULT | sed 's/VAULT_TOKEN=.*/VAULT_TOKEN=***REDACTED***/'
+echo ""
+echo "=== VAULT_ADDR Configuration Debug ==="
+echo "VAULT_ADDR_DEBUG: ${VAULT_ADDR_DEBUG:-not set}"
+echo "Final VAULT_ADDR: ${VAULT_ADDR}"
+echo "======================================"
+echo ""
 
 # For HTTP Vault addresses, inherited TLS CA settings can point to stale temp files.
 # TODO: Investigate why TLS CA env vars persist for HTTP Vault connections and remove this workaround after fixing root cause.
@@ -223,6 +229,7 @@ else
 fi
 
 # Also output human-readable results to stdout
+echo ""
 echo "=== TEST EXECUTION SUMMARY ==="
 if [ $test_exit_code -eq 0 ]; then
     echo "✅ Tests PASSED"
@@ -231,6 +238,7 @@ else
 fi
 
 # Parse JSON results and create a summary
+echo ""
 echo "=== DETAILED RESULTS ==="
 if [ -f "$json_output" ] && [ -s "$json_output" ]; then
     if command -v jq &> /dev/null; then
@@ -265,6 +273,53 @@ fi
 if [ -f "$json_output" ] && [ -s "$json_output" ]; then
     echo "JSON_RESULTS_FILE=$json_output"
 fi
+
+# Print the equivalent standalone go test command so it can be copied and run outside of Enos.
+# Each env var is printed on its own line with a trailing backslash so the whole block
+# can be selected and pasted directly into a terminal.
+#
+# Env vars included:
+#   - All VAULT_* except enos-internal plumbing (VAULT_TEST_*, VAULT_ADDR_DEBUG)
+#   - Integration vars (LDAP_*, PG*, POSTGRES_*, MONGO_*)
+#   - Verify-test scalars (EXPECTED_STATE, TIMEOUT_SECONDS, RETRY_INTERVAL, DEFAULT_LCQ)
+
+# Collect relevant env vars, one per line, redacting secrets
+mapfile -t env_lines < <(env \
+    | grep -E '^(VAULT_|LDAP_|PG|POSTGRES_|MONGO_|EXPECTED_STATE=|TIMEOUT_SECONDS=|RETRY_INTERVAL=|DEFAULT_LCQ=)' \
+    | grep -v -E '^(VAULT_TEST_|VAULT_ADDR_DEBUG=)' \
+    | sed 's/^\(VAULT_TOKEN=\).*/\1***/' \
+    | sed 's/^\(VAULT_LICENSE=\).*/\1***/' \
+    | sed 's/^\(VAULT_LICENSE_IBM=\).*/\1***/' \
+    | sort)
+
+# Reconstruct the -run filter from the matrix if one was used
+run_filter=""
+if [ -n "${VAULT_TEST_MATRIX:-}" ] && [ -f "${VAULT_TEST_MATRIX}" ]; then
+    run_filter="-run=\"$(jq -r '[.include[].test] | join("|")' "$VAULT_TEST_MATRIX")\""
+fi
+
+# Building Blackbox Test Command. Build the pretty multi-line command string
+cmd_lines=()
+for line in "${env_lines[@]}"; do
+    cmd_lines+=("  ${line} \\")
+done
+cmd_lines+=("  go test -count=1 -timeout=${test_timeout} \\")
+[[ -n "${tags}" ]]       && cmd_lines+=("    ${tags} \\")
+[[ -n "${run_filter}" ]] && cmd_lines+=("    ${run_filter} \\")
+# Last line: package with no trailing backslash
+cmd_lines+=("    ${VAULT_TEST_PACKAGE}")
+
+# Join into a single display string
+pretty_cmd="$(printf '%s\n' "${cmd_lines[@]}")"
+
+echo ""
+echo "=== BLACKBOX TEST COMMAND ==="
+echo "${pretty_cmd}"
+echo "============================="
+
+# Emit a single-line base64-encoded marker so Terraform can capture the command
+# via regex() and expose it as an `enos scenario output` value.
+echo "BLACKBOX_TEST_CMD=$(echo "${pretty_cmd}" | base64 -w 0)"
 
 popd > /dev/null
 

@@ -530,3 +530,174 @@ func createMockToken(t *testing.T) string {
 	// The mock server will validate this token when lookup-self is called
 	return "test-token-123"
 }
+
+// headerTrackingAuthMethod is a mock auth method that returns a distinct
+// header value on each Authenticate call, simulating Kerberos SPNEGO where
+// a fresh ticket is generated per re-auth.
+type headerTrackingAuthMethod struct {
+	mu         sync.Mutex
+	callCount  int
+	headerKey  string
+	authCalled chan struct{}
+}
+
+func (m *headerTrackingAuthMethod) Authenticate(_ context.Context, _ *api.Client) (string, http.Header, map[string]interface{}, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.callCount++
+	// Each call returns a unique header value, like a fresh Kerberos ticket.
+	h := make(http.Header)
+	h.Set(m.headerKey, fmt.Sprintf("token-cycle-%d", m.callCount))
+	m.authCalled <- struct{}{}
+	return "auth/approle/login", h, map[string]interface{}{
+		"role_id":   "test-role-id",
+		"secret_id": "test-secret-id",
+	}, nil
+}
+
+func (m *headerTrackingAuthMethod) NewCreds() chan struct{} { return nil }
+func (m *headerTrackingAuthMethod) CredSuccess()            {}
+func (m *headerTrackingAuthMethod) Shutdown()               {}
+
+func (m *headerTrackingAuthMethod) CallCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.callCount
+}
+
+// mockVaultServerWithHeaderCapture extends mockVaultServer to capture the
+// header values received on each login request.
+type mockVaultServerWithHeaderCapture struct {
+	mockVaultServer
+	capturedHeaders []string
+	headerKey       string
+	loginCalled     chan struct{}
+}
+
+func newMockVaultServerWithHeaderCapture(headerKey string) *mockVaultServerWithHeaderCapture {
+	m := &mockVaultServerWithHeaderCapture{
+		mockVaultServer: mockVaultServer{
+			lookupSelfSuccess: make(chan struct{}, 10),
+		},
+		headerKey:   headerKey,
+		loginCalled: make(chan struct{}, 10),
+	}
+	m.server = httptest.NewServer(http.HandlerFunc(m.captureHandler))
+	return m
+}
+
+func (m *mockVaultServerWithHeaderCapture) captureHandler(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case strings.HasSuffix(r.URL.Path, "/v1/auth/approle/login"):
+		m.mu.Lock()
+		// Capture all values for the tracked header key.
+		m.capturedHeaders = append(m.capturedHeaders, r.Header[m.headerKey]...)
+		m.mu.Unlock()
+		// Return a very short, non-renewable lease so the LifetimeWatcher
+		// fires DoneCh quickly and triggers the next re-auth cycle.
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"auth": map[string]interface{}{
+				"client_token":   "new-token-456",
+				"policies":       []string{"default"},
+				"lease_duration": 1,
+				"renewable":      false,
+			},
+		})
+		m.loginCalled <- struct{}{}
+	default:
+		m.mockVaultServer.handler(w, r)
+	}
+}
+
+func (m *mockVaultServerWithHeaderCapture) CapturedHeaders() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	result := make([]string, len(m.capturedHeaders))
+	copy(result, m.capturedHeaders)
+	return result
+}
+
+// TestAuthHandler_HeaderNotAccumulatedAcrossReauthCycles is a regression test
+// for the Kerberos auto-auth bug where AddHeader was called on every re-auth
+// cycle, causing duplicate Authorization: Negotiate headers to accumulate on
+// the shared client. Vault reads only the first value via http.Header.Get, so
+// stale SPNEGO tickets were silently sent after the first renewal, breaking
+// Kerberos authentication.
+//
+// This test verifies that after multiple re-auth cycles:
+//  1. The server receives exactly one value per header key per request.
+//  2. The value received is the fresh one from the current Authenticate call,
+//     not a stale one from a previous cycle.
+func TestAuthHandler_HeaderNotAccumulatedAcrossReauthCycles(t *testing.T) {
+	t.Parallel()
+
+	const headerKey = "Authorization"
+	const cycles = 3
+
+	mockServer := newMockVaultServerWithHeaderCapture(headerKey)
+	defer mockServer.Close()
+
+	config := api.DefaultConfig()
+	config.Address = mockServer.URL()
+	client, err := api.NewClient(config)
+	require.NoError(t, err)
+
+	mockAuth := &headerTrackingAuthMethod{
+		headerKey:  headerKey,
+		authCalled: make(chan struct{}, cycles+1),
+	}
+
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	ah := NewAuthHandler(&AuthHandlerConfig{
+		Logger:     logging.NewVaultLogger(hclog.Debug).Named("auth.handler"),
+		Client:     client,
+		MinBackoff: 10 * time.Millisecond,
+		MaxBackoff: 50 * time.Millisecond,
+	})
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- ah.Run(ctx, mockAuth)
+	}()
+
+	// Drain OutputCh so the auth handler is never blocked waiting for a
+	// consumer. Without this the channel fills after cycle 1 and the handler
+	// deadlocks on the second OutputCh send.
+	go func() {
+		for range ah.OutputCh {
+		}
+	}()
+
+	// Wait for the desired number of re-auth cycles.
+	timeout := time.After(15 * time.Second)
+	for i := 0; i < cycles; i++ {
+		select {
+		case <-mockServer.loginCalled:
+		case <-timeout:
+			t.Fatalf("timed out waiting for re-auth cycle %d", i+1)
+		}
+	}
+
+	cancelFunc()
+	select {
+	case <-errCh:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for auth handler to stop")
+	}
+
+	captured := mockServer.CapturedHeaders()
+	require.GreaterOrEqual(t, len(captured), cycles,
+		"expected at least %d captured header values, got %d", cycles, len(captured))
+
+	// Each login request must have received exactly one header value (not
+	// an ever-growing list of accumulated stale values), and each value
+	// must match the fresh token generated for that specific cycle.
+	for i, val := range captured {
+		expected := fmt.Sprintf("token-cycle-%d", i+1)
+		require.Equalf(t, expected, val,
+			"cycle %d: expected header value %q, got %q — stale header may have been sent", i+1, expected, val)
+	}
+}

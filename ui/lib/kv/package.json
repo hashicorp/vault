@@ -12,7 +12,8 @@
     "@ember/test-waiters": "*",
     "ember-inflector": "*",
     "ember-template-lint": "*",
-    "ember-cli-typescript": "*"
+    "ember-cli-typescript": "*",
+    "js-yaml": "^5.2.1"
   },
   "ember-addon": {
     "paths": [

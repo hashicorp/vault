@@ -5,6 +5,7 @@
 
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import { SetupSteps } from 'pki/utils/constants';
 import { tracked } from 'tracked-built-ins';
 import { CreationMethod } from 'vault/utils/constants/snippet';
 
@@ -12,11 +13,6 @@ import { CreationMethod } from 'vault/utils/constants/snippet';
  * @module ExternalPkiImplementationSelect
  * The `ExternalPkiImplementationSelect` is used to display the external overview route
  */
-
-export enum SetupSteps {
-  ACME_CONFIG = 'acme-config',
-  ROLE_CONFIG = 'role-config',
-}
 
 interface Args {
   engineId: string;

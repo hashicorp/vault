@@ -83,6 +83,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Secrets',
       'Access control',
       'Operational tools',
+      'Support',
       'Resilience and recovery',
       'Reporting',
       'Raft storage',
@@ -216,5 +217,14 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
 
     assert.dom(GENERAL.navLink('Secrets Recovery')).doesNotExist();
+  });
+
+  test('it should hide Support nav link in HVD managed clusters', async function (assert) {
+    const features = allFeatures().filter((feat) => feat !== 'PKI-only Secrets');
+    stubFeaturesAndPermissions(this.owner, true, true, features);
+    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    await renderComponent();
+
+    assert.dom(GENERAL.navLink('Support')).doesNotExist('Support link is hidden for HVD managed clusters');
   });
 });
