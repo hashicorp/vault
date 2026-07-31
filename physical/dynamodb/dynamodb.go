@@ -53,6 +53,11 @@ const (
 	// that is used when none is configured explicitly.
 	DefaultDynamoDBBillingMode = "PROVISIONED"
 
+	// DefaultDynamoDBClientTimeout is the default client timeout
+	// that is used when none is configured.
+	// It defaults to 0s to preserve previous behavior.
+	DefaultDynamoDBClientTimeout = 0 * time.Second
+
 	// DynamoDBEmptyPath is the string that is used instead of
 	// empty strings when stored in DynamoDB.
 	DynamoDBEmptyPath = " "
@@ -220,6 +225,27 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	}
 	allowUpdates := dynamodbAllowUpdates != ""
 
+	dynamodbClientTimeoutString := os.Getenv("AWS_DYNAMODB_CLIENT_TIMEOUT")
+	if dynamodbClientTimeoutString == "" {
+		dynamodbClientTimeoutString = conf["dynamodb_client_timeout"]
+	}
+
+	dynamodbClientTimeout := DefaultDynamoDBClientTimeout
+	if dynamodbClientTimeoutString != "" {
+		duration, err := time.ParseDuration(dynamodbClientTimeoutString)
+		if err != nil {
+			return nil, fmt.Errorf("invalid client timeout duration %q: %w", dynamodbClientTimeoutString, err)
+		}
+		dynamodbClientTimeout = duration
+	}
+
+	if dynamodbClientTimeout < 0 {
+		return nil, fmt.Errorf("invalid client timeout duration %q: must be >= 0s", dynamodbClientTimeoutString)
+	}
+	if dynamodbClientTimeout == 0 {
+		logger.Warn("DynamoDB HTTP client timeout is 0s, requests may block indefinitely")
+	}
+
 	credsConfig := &awsutil.CredentialsConfig{
 		AccessKey:    conf["access_key"],
 		SecretKey:    conf["secret_key"],
@@ -239,6 +265,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		WithRegion(region).
 		WithEndpoint(endpoint).
 		WithHTTPClient(&http.Client{
+			Timeout:   dynamodbClientTimeout,
 			Transport: pooledTransport,
 		}).
 		WithMaxRetries(dynamodbMaxRetry)
