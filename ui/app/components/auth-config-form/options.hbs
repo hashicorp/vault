@@ -11,10 +11,10 @@
     {{#each @form.tuneFields as |field|}}
       <FormField data-test-field @attr={{field}} @model={{@form}} />
       {{#if (and (eq field.name "config.listing_visibility") this.directLoginLink)}}
-        <div class="has-top-margin-negative-s has-bottom-margin-l is-flex-center">
+        <Hds::Layout::Flex @align="center" @gap="8" class="has-top-margin-negative-s has-bottom-margin-l">
           <Hds::Text::Body @tag="p" @color="faint">UI login link:</Hds::Text::Body>
           <Hds::Copy::Snippet @textToCopy={{this.directLoginLink}} />
-        </div>
+        </Hds::Layout::Flex>
       {{/if}}
     {{/each}}
 

@@ -9,7 +9,7 @@
   </:breadcrumbs>
 </Page::Header>
 
-<div class="is-flex-row has-top-margin-s box is-fullwidth has-only-top-shadow">
+<Hds::Layout::Flex @direction="row" class="has-top-margin-s box is-fullwidth has-only-top-shadow">
   <div class="has-right-margin-m" data-test-pki-cross-sign-steps>
     <h2 class="title is-5">Cross-signing</h2>
     <p class="has-text-grey">
@@ -31,6 +31,6 @@
   <div class="has-left-margin-m">
     <img data-test-pki-cross-sign-img src={{img-path "~/pki-cross-sign.png"}} alt="cross signing issuers diagram" />
   </div>
-</div>
+</Hds::Layout::Flex>
 
 <PkiIssuerCrossSign @parentIssuer={{this.model}} />

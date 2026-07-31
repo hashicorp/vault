@@ -3,7 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<ExternalPki::HeaderTabs @title={{this.engineId}} @backend={{hash id=this.engineId}} @breadcrumbs={{this.breadcrumbs}} />
+<ExternalPki::HeaderTabs
+  @title={{this.engineId}}
+  @backend={{hash id=this.engineId}}
+  @roleName={{this.roleName}}
+  @breadcrumbs={{this.breadcrumbs}}
+/>
 
 <Page::Error @error={{this.model}} @titleTag="h2">
   <:customFooter as |AppState|>

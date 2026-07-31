@@ -23,17 +23,17 @@ export default class ExternalPkiPageCertificateComponent extends Component<Args>
   }
 
   get orderParams() {
-    const { order_status, role_name, identifiers } = this.args.model.certLookup;
+    const { order_status, role_name, identifiers } = this.args.model?.certLookup || {};
     return { details: { order_status, role_name, identifiers } };
   }
 
   get certParams() {
     // If the request to fetch the actual certificate failed, but the serial number lookup succeeded
     // return the cert validity dates returned by the API
-    if (this.args.model.certificate?.error && !this.args.model.certificate.details) {
-      const { not_before, not_after } = this.args.model.certLookup;
+    if (this.args.model?.certificate?.error && !this.args.model?.certificate?.details) {
+      const { not_before, not_after } = this.args.model?.certLookup || {};
       return { details: { not_before, not_after }, error: this.args.model.certificate?.error };
     }
-    return this.args.model.certificate;
+    return this.args.model?.certificate;
   }
 }

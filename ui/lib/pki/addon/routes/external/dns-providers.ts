@@ -7,11 +7,11 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/vault/route';
 
+import type { Breadcrumb } from 'vault/app-types';
+import type { ExternalRouteModel } from '../external';
+import type ApiService from 'vault/services/api';
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type { Breadcrumb } from 'vault/app-types';
-import type ApiService from 'vault/services/api';
-import type { ExternalRouteModel } from '../external';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;

@@ -9,7 +9,10 @@
   </:breadcrumbs>
 
   <:actions>
-    <CodeGenerator::Policy::Flyout />
+    <CodeGenerator::Policy::Flyout @policyPaths={{this.policyPaths}} />
+    {{#if @backend}}
+      <ManageDropdown @model={{@backend}} @configRoute="external.configuration" />
+    {{/if}}
   </:actions>
 </Page::Header>
 
