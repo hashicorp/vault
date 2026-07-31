@@ -44,6 +44,13 @@ const (
 
 	VaultDisableUserLockout = "VAULT_DISABLE_USER_LOCKOUT"
 
+	// VaultDisableConsumptionBilling is the environment variable that disables
+	// the periodic consumption billing metrics worker. When set to a non-empty
+	// value, the worker that walks the entire KV store every 10 minutes is
+	// not registered during post-unseal, preventing the memory and performance
+	// impact of the periodic KV store enumeration on large installations.
+	VaultDisableConsumptionBilling = "VAULT_DISABLE_CONSUMPTION_BILLING"
+
 	PerformanceReplicationPathTarget = "performance"
 
 	DRReplicationPathTarget = "dr"
