@@ -84,10 +84,14 @@
     </div>
     {{#if (and this.primaryUiUrl this.knownPrimaryClusterAddrs)}}
       <div class="grid-item-top-right">
-        <ExternalLink @href={{concat this.primaryUiUrl "/ui/"}} class="toolbar-link" data-test-primary-link>
-          View primary cluster
-          <Icon @name="chevron-right" />
-        </ExternalLink>
+        <Hds::Link::Standalone
+          @href={{concat this.primaryUiUrl "/ui/"}}
+          @isHrefExternal={{true}}
+          @icon="chevron-right"
+          @iconPosition="trailing"
+          @text="View primary cluster"
+          data-test-primary-link
+        />
       </div>
     {{/if}}
     <div class="grid-item-second-row">
