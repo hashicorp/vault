@@ -60,11 +60,14 @@
               <p>
                 {{field.description}}
                 See
-                <ExternalLink @href="https://kubernetes.io/docs/concepts/overview/working-with-objects/{{field.type}}/">
+                <Hds::Link::Inline
+                  @href="https://kubernetes.io/docs/concepts/overview/working-with-objects/{{field.type}}/"
+                  @isHrefExternal={{true}}
+                >
                   Kubernetes
                   {{singularize field.type}}
                   documentation here
-                </ExternalLink>.
+                </Hds::Link::Inline>.
               </p>
               <KvObjectEditor
                 class="has-top-margin-m"
