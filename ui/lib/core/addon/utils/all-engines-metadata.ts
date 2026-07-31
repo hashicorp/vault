@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ENV from 'vault/config/environment';
-
 /**
  * Metadata configuration for secret and auth engines, including enterprise.
  *
@@ -254,19 +252,15 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     mountCategory: ['secret'],
     type: 'pki',
   },
-  ...(ENV.environment !== 'production'
-    ? [
-        {
-          pluginCategory: 'generic',
-          displayName: 'Public PKI',
-          engineRoute: 'pki.external.overview',
-          glyph: 'certificate',
-          mountCategory: ['secret'],
-          requiresEnterprise: true,
-          type: 'pki-external-ca',
-        },
-      ]
-    : []),
+  {
+    pluginCategory: 'generic',
+    displayName: 'Public PKI',
+    engineRoute: 'pki.external.overview',
+    glyph: 'certificate',
+    mountCategory: ['secret'],
+    requiresEnterprise: true,
+    type: 'pki-external-ca',
+  },
   {
     pluginCategory: 'infra',
     displayName: 'RADIUS',
