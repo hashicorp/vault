@@ -5,6 +5,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,18 +16,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/ec2"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
@@ -54,17 +52,17 @@ const allowAllButDescribeAzs = `{
 }`
 
 type mockIAMClient struct {
-	iamiface.IAMAPI
+	iamAPI
 }
 
-func (m *mockIAMClient) CreateUserWithContext(_ aws.Context, input *iam.CreateUserInput, _ ...request.Option) (*iam.CreateUserOutput, error) {
-	return nil, awserr.New("Throttling", "", nil)
+func (m *mockIAMClient) CreateUser(_ context.Context, input *iam.CreateUserInput, _ ...func(*iam.Options)) (*iam.CreateUserOutput, error) {
+	return nil, &smithy.GenericAPIError{Code: "Throttling", Message: ""}
 }
 
 func getBackend(t *testing.T) logical.Backend {
 	cfg := logical.TestBackendConfig()
-	cfg.System = &testSystemView{}
-	be, _ := Factory(context.Background(), cfg)
+	cfg.System = &testSystemView{StaticSystemView: *logical.TestSystemView()}
+	be, _ := Factory(t.Context(), cfg)
 	return be
 }
 
@@ -103,7 +101,7 @@ func TestAcceptanceBackend_IamUserWithPermissionsBoundary(t *testing.T) {
 
 func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	t.Parallel()
-	awsAccountID, err := getAccountID()
+	awsAccountID, err := getAccountID(t.Context())
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
@@ -169,7 +167,7 @@ func TestBackend_throttled(t *testing.T) {
 	config.StorageView = &logical.InmemStorage{}
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -184,7 +182,7 @@ func TestBackend_throttled(t *testing.T) {
 		Data:      connData,
 	}
 
-	resp, err := b.HandleRequest(context.Background(), confReq)
+	resp, err := b.HandleRequest(t.Context(), confReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("failed to write configuration: resp:%#v err:%s", resp, err)
 	}
@@ -199,12 +197,12 @@ func TestBackend_throttled(t *testing.T) {
 		Storage:   config.StorageView,
 	}
 
-	credResp, err := b.HandleRequest(context.Background(), credReq)
+	credResp, err := b.HandleRequest(t.Context(), credReq)
 	if err == nil {
 		t.Fatalf("failed to trigger expected throttling error condition: resp:%#v", credResp)
 	}
 	rErr := credResp.Error()
-	expected := "Error creating IAM user: Throttling: "
+	expected := "Error creating IAM user: api error Throttling: "
 	if rErr.Error() != expected {
 		t.Fatalf("error message did not match, expected (%s), got (%s)", expected, rErr.Error())
 	}
@@ -249,19 +247,18 @@ func hasAWSCredentials() bool {
 	return creds.HasKeys()
 }
 
-func getAccountID() (string, error) {
-	awsConfig := &aws.Config{
-		Region:     aws.String("us-east-1"),
-		HTTPClient: cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+func getAccountID(ctx context.Context) (string, error) {
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
 	if err != nil {
 		return "", err
 	}
-	svc := sts.New(sess)
+	svc := sts.NewFromConfig(cfg)
 
 	params := &sts.GetCallerIdentityInput{}
-	res, err := svc.GetCallerIdentity(params)
+	res, err := svc.GetCallerIdentity(ctx, params)
 	if err != nil {
 		return "", err
 	}
@@ -274,6 +271,8 @@ func getAccountID() (string, error) {
 
 func createRole(t *testing.T, roleName, awsAccountID string, policyARNs, extraTrustPolicies []string) {
 	t.Helper()
+
+	ctx := t.Context()
 
 	trustPolicyStmts := append([]string{
 		fmt.Sprintf(`
@@ -298,15 +297,14 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs, extraTr
 }
 `, strings.Join(trustPolicyStmts, ","))
 
-	awsConfig := &aws.Config{
-		Region:     aws.String("us-east-1"),
-		HTTPClient: cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := iam.New(sess)
+	svc := iam.NewFromConfig(awsConfig)
 
 	params := &iam.CreateRoleInput{
 		AssumeRolePolicyDocument: aws.String(testRoleAssumePolicy),
@@ -315,7 +313,7 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs, extraTr
 	}
 
 	log.Printf("[INFO] AWS CreateRole: %s", roleName)
-	output, err := svc.CreateRole(params)
+	output, err := svc.CreateRole(ctx, params)
 	if err != nil {
 		t.Fatalf("AWS CreateRole failed: %v", err)
 	}
@@ -325,7 +323,7 @@ func createRole(t *testing.T, roleName, awsAccountID string, policyARNs, extraTr
 			PolicyArn: aws.String(policyARN),
 			RoleName:  output.Role.RoleName,
 		}
-		_, err = svc.AttachRolePolicy(attachment)
+		_, err = svc.AttachRolePolicy(ctx, attachment)
 		if err != nil {
 			t.Fatalf("AWS AttachRolePolicy failed: %v", err)
 		}
@@ -362,20 +360,20 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 	validity := time.Duration(2 * time.Hour)
 	expiry := time.Now().Add(validity)
 	timebombPolicy := fmt.Sprintf(timebombPolicyTemplate, expiry.Format(time.RFC3339))
-	awsConfig := &aws.Config{
-		Region:     aws.String("us-east-1"),
-		HTTPClient: cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := t.Context()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := iam.New(sess)
+	svc := iam.NewFromConfig(awsConfig)
 	createUserInput := &iam.CreateUserInput{
 		UserName: aws.String(userName),
 	}
 	log.Printf("[INFO] AWS CreateUser: %s", userName)
-	if _, err := svc.CreateUser(createUserInput); err != nil {
+	if _, err := svc.CreateUser(ctx, createUserInput); err != nil {
 		t.Fatalf("AWS CreateUser failed: %v", err)
 	}
 
@@ -384,7 +382,7 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 		PolicyName:     aws.String("SelfDestructionTimebomb"),
 		UserName:       aws.String(userName),
 	}
-	_, err = svc.PutUserPolicy(putPolicyInput)
+	_, err = svc.PutUserPolicy(ctx, putPolicyInput)
 	if err != nil {
 		t.Fatalf("AWS PutUserPolicy failed: %v", err)
 	}
@@ -393,7 +391,7 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
 		UserName:  aws.String(userName),
 	}
-	_, err = svc.AttachUserPolicy(attachUserPolicyInput)
+	_, err = svc.AttachUserPolicy(ctx, attachUserPolicyInput)
 	if err != nil {
 		t.Fatalf("AWS AttachUserPolicy failed, %v", err)
 	}
@@ -401,7 +399,7 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 	createAccessKeyInput := &iam.CreateAccessKeyInput{
 		UserName: aws.String(userName),
 	}
-	createAccessKeyOutput, err := svc.CreateAccessKey(createAccessKeyInput)
+	createAccessKeyOutput, err := svc.CreateAccessKey(ctx, createAccessKeyInput)
 	if err != nil {
 		t.Fatalf("AWS CreateAccessKey failed: %v", err)
 	}
@@ -416,20 +414,20 @@ func createUser(t *testing.T, userName string, accessKey *awsAccessKey) {
 
 // Create an IAM Group and add an inline policy and managed policies if specified
 func createGroup(t *testing.T, groupName string, inlinePolicy string, managedPolicies []string) {
-	awsConfig := &aws.Config{
-		Region:     aws.String("us-east-1"),
-		HTTPClient: cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := t.Context()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	svc := iam.New(sess)
+	svc := iam.NewFromConfig(awsConfig)
 	createGroupInput := &iam.CreateGroupInput{
 		GroupName: aws.String(groupName),
 	}
 	log.Printf("[INFO] AWS CreateGroup: %s", groupName)
-	if _, err := svc.CreateGroup(createGroupInput); err != nil {
+	if _, err := svc.CreateGroup(ctx, createGroupInput); err != nil {
 		t.Fatalf("AWS CreateGroup failed: %v", err)
 	}
 
@@ -439,7 +437,7 @@ func createGroup(t *testing.T, groupName string, inlinePolicy string, managedPol
 			PolicyName:     aws.String("InlinePolicy"),
 			GroupName:      aws.String(groupName),
 		}
-		_, err = svc.PutGroupPolicy(putPolicyInput)
+		_, err = svc.PutGroupPolicy(ctx, putPolicyInput)
 		if err != nil {
 			t.Fatalf("AWS PutGroupPolicy failed: %v", err)
 		}
@@ -450,7 +448,7 @@ func createGroup(t *testing.T, groupName string, inlinePolicy string, managedPol
 			PolicyArn: aws.String(mp),
 			GroupName: aws.String(groupName),
 		}
-		_, err = svc.AttachGroupPolicy(attachGroupPolicyInput)
+		_, err = svc.AttachGroupPolicy(ctx, attachGroupPolicyInput)
 		if err != nil {
 			t.Fatalf("AWS AttachGroupPolicy failed, %v", err)
 		}
@@ -458,33 +456,34 @@ func createGroup(t *testing.T, groupName string, inlinePolicy string, managedPol
 }
 
 func deleteTestRole(roleName string) error {
-	awsConfig := &aws.Config{
-		Region:     aws.String("us-east-1"),
-		HTTPClient: cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	awsConfig, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
 	if err != nil {
 		return err
 	}
-	svc := iam.New(sess)
+	svc := iam.NewFromConfig(awsConfig)
 	listAttachmentsInput := &iam.ListAttachedRolePoliciesInput{
 		RoleName: aws.String(roleName),
 	}
-	detacher := func(result *iam.ListAttachedRolePoliciesOutput, lastPage bool) bool {
+	paginator := iam.NewListAttachedRolePoliciesPaginator(svc, listAttachmentsInput)
+	for paginator.HasMorePages() {
+		result, err := paginator.NextPage(context.Background())
+		if err != nil {
+			log.Printf("[WARN] AWS ListAttachedRolePolicies failed: %v", err)
+			break
+		}
 		for _, policy := range result.AttachedPolicies {
 			detachInput := &iam.DetachRolePolicyInput{
 				PolicyArn: policy.PolicyArn,
 				RoleName:  aws.String(roleName), // Required
 			}
-			_, err := svc.DetachRolePolicy(detachInput)
+			_, err := svc.DetachRolePolicy(context.Background(), detachInput)
 			if err != nil {
 				log.Printf("[WARN] AWS DetachRolePolicy failed for policy %s: %v", *policy.PolicyArn, err)
 			}
 		}
-		return true
-	}
-	if err := svc.ListAttachedRolePoliciesPages(listAttachmentsInput, detacher); err != nil {
-		log.Printf("[WARN] AWS DetachRolePolicy failed: %v", err)
 	}
 
 	params := &iam.DeleteRoleInput{
@@ -492,7 +491,7 @@ func deleteTestRole(roleName string) error {
 	}
 
 	log.Printf("[INFO] AWS DeleteRole: %s", roleName)
-	_, err = svc.DeleteRole(params)
+	_, err = svc.DeleteRole(context.Background(), params)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteRole failed: %v", err)
 		return err
@@ -501,20 +500,19 @@ func deleteTestRole(roleName string) error {
 }
 
 func deleteTestUser(accessKey *awsAccessKey, userName string) error {
-	awsConfig := &aws.Config{
-		Region:     aws.String("us-east-1"),
-		HTTPClient: cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	awsConfig, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
 	if err != nil {
 		return err
 	}
-	svc := iam.New(sess)
+	svc := iam.NewFromConfig(awsConfig)
 	userDetachment := &iam.DetachUserPolicyInput{
 		PolicyArn: aws.String("arn:aws:iam::aws:policy/AdministratorAccess"),
 		UserName:  aws.String(userName),
 	}
-	if _, err := svc.DetachUserPolicy(userDetachment); err != nil {
+	if _, err := svc.DetachUserPolicy(context.Background(), userDetachment); err != nil {
 		log.Printf("[WARN] AWS DetachUserPolicy failed: %v", err)
 		return err
 	}
@@ -523,7 +521,7 @@ func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 		AccessKeyId: aws.String(accessKey.AccessKeyID),
 		UserName:    aws.String(userName),
 	}
-	_, err = svc.DeleteAccessKey(deleteAccessKeyInput)
+	_, err = svc.DeleteAccessKey(context.Background(), deleteAccessKeyInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteAccessKey failed: %v", err)
 		return err
@@ -533,7 +531,7 @@ func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 		PolicyName: aws.String("SelfDestructionTimebomb"),
 		UserName:   aws.String(userName),
 	}
-	_, err = svc.DeleteUserPolicy(deleteTestUserPolicyInput)
+	_, err = svc.DeleteUserPolicy(context.Background(), deleteTestUserPolicyInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteUserPolicy failed: %v", err)
 		return err
@@ -542,7 +540,7 @@ func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 		UserName: aws.String(userName),
 	}
 	log.Printf("[INFO] AWS DeleteUser: %s", userName)
-	_, err = svc.DeleteUser(deleteTestUserInput)
+	_, err = svc.DeleteUser(context.Background(), deleteTestUserInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteUser failed: %v", err)
 		return err
@@ -552,21 +550,20 @@ func deleteTestUser(accessKey *awsAccessKey, userName string) error {
 }
 
 func deleteTestGroup(groupName string) error {
-	awsConfig := &aws.Config{
-		Region:     aws.String("us-east-1"),
-		HTTPClient: cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	awsConfig, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+	)
 	if err != nil {
 		return err
 	}
-	svc := iam.New(sess)
+	svc := iam.NewFromConfig(awsConfig)
 
 	// Detach any managed group policies
 	getGroupsInput := &iam.ListAttachedGroupPoliciesInput{
 		GroupName: aws.String(groupName),
 	}
-	getGroupsOutput, err := svc.ListAttachedGroupPolicies(getGroupsInput)
+	getGroupsOutput, err := svc.ListAttachedGroupPolicies(context.Background(), getGroupsInput)
 	if err != nil {
 		log.Printf("[WARN] AWS ListAttachedGroupPolicies failed: %v", err)
 		return err
@@ -576,7 +573,7 @@ func deleteTestGroup(groupName string) error {
 			GroupName: aws.String(groupName),
 			PolicyArn: g.PolicyArn,
 		}
-		if _, err := svc.DetachGroupPolicy(detachGroupInput); err != nil {
+		if _, err := svc.DetachGroupPolicy(context.Background(), detachGroupInput); err != nil {
 			log.Printf("[WARN] AWS DetachGroupPolicy failed: %v", err)
 			return err
 		}
@@ -586,7 +583,7 @@ func deleteTestGroup(groupName string) error {
 	listGroupPoliciesInput := &iam.ListGroupPoliciesInput{
 		GroupName: aws.String(groupName),
 	}
-	listGroupPoliciesOutput, err := svc.ListGroupPolicies(listGroupPoliciesInput)
+	listGroupPoliciesOutput, err := svc.ListGroupPolicies(context.Background(), listGroupPoliciesInput)
 	if err != nil {
 		log.Printf("[WARN] AWS ListGroupPolicies failed: %v", err)
 		return err
@@ -594,9 +591,9 @@ func deleteTestGroup(groupName string) error {
 	for _, g := range listGroupPoliciesOutput.PolicyNames {
 		deleteGroupPolicyInput := &iam.DeleteGroupPolicyInput{
 			GroupName:  aws.String(groupName),
-			PolicyName: g,
+			PolicyName: aws.String(g),
 		}
-		if _, err := svc.DeleteGroupPolicy(deleteGroupPolicyInput); err != nil {
+		if _, err := svc.DeleteGroupPolicy(context.Background(), deleteGroupPolicyInput); err != nil {
 			log.Printf("[WARN] AWS DeleteGroupPolicy failed: %v", err)
 			return err
 		}
@@ -607,7 +604,7 @@ func deleteTestGroup(groupName string) error {
 		GroupName: aws.String(groupName),
 	}
 	log.Printf("[INFO] AWS DeleteGroup: %s", groupName)
-	_, err = svc.DeleteGroup(deleteTestGroupInput)
+	_, err = svc.DeleteGroup(context.Background(), deleteTestGroupInput)
 	if err != nil {
 		log.Printf("[WARN] AWS DeleteGroup failed: %v", err)
 		return err
@@ -657,31 +654,35 @@ func testAccStepRotateRoot(oldAccessKey *awsAccessKey) logicaltest.TestStep {
 			if newAccessKeyID == oldAccessKey.AccessKeyID {
 				return fmt.Errorf("rotate-root didn't rotate access key")
 			}
-			awsConfig := &aws.Config{
-				Region:      aws.String("us-east-1"),
-				HTTPClient:  cleanhttp.DefaultClient(),
-				Credentials: credentials.NewStaticCredentials(oldAccessKey.AccessKeyID, oldAccessKey.SecretAccessKey, ""),
-			}
-			// sigh....
+			ctx := context.Background()
+			// Save the old key ID before updating the struct so we can verify
+			// the old key was deleted after rotation.
+			oldKeyID := oldAccessKey.AccessKeyID
 			oldAccessKey.AccessKeyID = newAccessKeyID
 			log.Println("[WARN] Sleeping for 10 seconds waiting for AWS...")
 			time.Sleep(10 * time.Second)
-			sess, err := session.NewSession(awsConfig)
+			awsConfig, err := config.LoadDefaultConfig(ctx,
+				config.WithRegion("us-east-1"),
+				config.WithHTTPClient(cleanhttp.DefaultClient()),
+				config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(oldKeyID, oldAccessKey.SecretAccessKey, "")),
+			)
 			if err != nil {
 				return err
 			}
-			svc := sts.New(sess)
+			svc := sts.NewFromConfig(awsConfig)
 			params := &sts.GetCallerIdentityInput{}
-			if _, err := svc.GetCallerIdentity(params); err == nil {
+			if _, err := svc.GetCallerIdentity(ctx, params); err == nil {
 				return fmt.Errorf("bad: old credentials succeeded after rotate")
-			}
-			if aerr, ok := err.(awserr.Error); ok {
-				if aerr.Code() != "InvalidClientTokenId" {
-					return fmt.Errorf("Unknown error returned from AWS: %#v", aerr)
+			} else {
+				var apiErr smithy.APIError
+				if errors.As(err, &apiErr) {
+					if apiErr.ErrorCode() != "InvalidClientTokenId" {
+						return fmt.Errorf("Unknown error returned from AWS: %#v", apiErr)
+					}
+					return nil
 				}
-				return nil
+				return err
 			}
-			return err
 		},
 	}
 }
@@ -738,45 +739,44 @@ func testAccStepReadSTSResponse(name string, maximumTTL time.Duration) logicalte
 }
 
 func describeInstancesTest(accessKey, secretKey, token string) error {
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
-	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := context.Background()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, token)),
+	)
 	if err != nil {
 		return err
 	}
-	client := ec2.New(sess)
+	client := ec2.NewFromConfig(awsConfig)
 	log.Printf("[WARN] Verifying that the generated credentials work with ec2:DescribeInstances...")
 	return retryUntilSuccess(func() error {
-		_, err := client.DescribeInstances(&ec2.DescribeInstancesInput{})
+		_, err := client.DescribeInstances(ctx, &ec2.DescribeInstancesInput{})
 		return err
 	})
 }
 
 func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
-	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := context.Background()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, token)),
+	)
 	if err != nil {
 		return err
 	}
-	client := ec2.New(sess)
+	client := ec2.NewFromConfig(awsConfig)
 	log.Printf("[WARN] Verifying that the generated credentials don't work with ec2:DescribeAvailabilityZones...")
 	return retryUntilSuccess(func() error {
-		_, err := client.DescribeAvailabilityZones(&ec2.DescribeAvailabilityZonesInput{})
+		_, err := client.DescribeAvailabilityZones(ctx, &ec2.DescribeAvailabilityZonesInput{})
 		// Need to make sure AWS authenticates the generated credentials but does not authorize the operation
 		if err == nil {
 			return fmt.Errorf("operation succeeded when expected failure")
 		}
-		if aerr, ok := err.(awserr.Error); ok {
-			if aerr.Code() == "UnauthorizedOperation" {
+		var apiErr smithy.APIError
+		if errors.As(err, &apiErr) {
+			if apiErr.ErrorCode() == "UnauthorizedOperation" {
 				return nil
 			}
 		}
@@ -785,19 +785,18 @@ func describeAzsTestUnauthorized(accessKey, secretKey, token string) error {
 }
 
 func assertCreatedIAMUser(accessKey, secretKey, token string) error {
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
-	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := context.Background()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, token)),
+	)
 	if err != nil {
 		return err
 	}
-	client := iam.New(sess)
+	client := iam.NewFromConfig(awsConfig)
 	log.Printf("[WARN] Checking if IAM User is created properly...")
-	userOutput, err := client.GetUser(&iam.GetUserInput{})
+	userOutput, err := client.GetUser(ctx, &iam.GetUserInput{})
 	if err != nil {
 		return err
 	}
@@ -810,58 +809,55 @@ func assertCreatedIAMUser(accessKey, secretKey, token string) error {
 }
 
 func listIamUsersTest(accessKey, secretKey, token string) error {
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
-	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := context.Background()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, token)),
+	)
 	if err != nil {
 		return err
 	}
-	client := iam.New(sess)
+	client := iam.NewFromConfig(awsConfig)
 	log.Printf("[WARN] Verifying that the generated credentials work with iam:ListUsers...")
 	return retryUntilSuccess(func() error {
-		_, err := client.ListUsers(&iam.ListUsersInput{})
+		_, err := client.ListUsers(ctx, &iam.ListUsersInput{})
 		return err
 	})
 }
 
 func listDynamoTablesTest(accessKey, secretKey, token string) error {
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
-	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := context.Background()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, token)),
+	)
 	if err != nil {
 		return err
 	}
-	client := dynamodb.New(sess)
+	client := dynamodb.NewFromConfig(awsConfig)
 	log.Printf("[WARN] Verifying that the generated credentials work with dynamodb:ListTables...")
 	return retryUntilSuccess(func() error {
-		_, err := client.ListTables(&dynamodb.ListTablesInput{})
+		_, err := client.ListTables(ctx, &dynamodb.ListTablesInput{})
 		return err
 	})
 }
 
 func listS3BucketsTest(accessKey, secretKey, token string) error {
-	creds := credentials.NewStaticCredentials(accessKey, secretKey, token)
-	awsConfig := &aws.Config{
-		Credentials: creds,
-		Region:      aws.String("us-east-1"),
-		HTTPClient:  cleanhttp.DefaultClient(),
-	}
-	sess, err := session.NewSession(awsConfig)
+	ctx := context.Background()
+	awsConfig, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion("us-east-1"),
+		config.WithHTTPClient(cleanhttp.DefaultClient()),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKey, secretKey, token)),
+	)
 	if err != nil {
 		return err
 	}
-	client := s3.New(sess)
+	client := s3.NewFromConfig(awsConfig)
 	log.Printf("[WARN] Verifying that the generated credentials work with s3:ListBuckets...")
 	return retryUntilSuccess(func() error {
-		_, err := client.ListBuckets(&s3.ListBucketsInput{})
+		_, err := client.ListBuckets(ctx, &s3.ListBucketsInput{})
 		return err
 	})
 }
@@ -1064,6 +1060,8 @@ func TestAcceptanceBackend_iamUserManagedInlinePoliciesGroups(t *testing.T) {
 		"iam_groups":               []string{groupName},
 		"iam_tags":                 map[string]string(nil),
 		"mfa_serial_number":        "",
+		"session_tags":             map[string]string(nil),
+		"external_id":              "",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1109,6 +1107,8 @@ func TestAcceptanceBackend_iamUserGroups(t *testing.T) {
 		"iam_groups":               []string{group1Name, group2Name},
 		"iam_tags":                 map[string]string(nil),
 		"mfa_serial_number":        "",
+		"session_tags":             map[string]string(nil),
+		"external_id":              "",
 	}
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1139,7 +1139,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
 
-	awsAccountID, err := getAccountID()
+	awsAccountID, err := getAccountID(t.Context())
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
@@ -1175,7 +1175,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
 
-	awsAccountID, err := getAccountID()
+	awsAccountID, err := getAccountID(t.Context())
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
@@ -1211,7 +1211,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 	roleName := generateUniqueRoleName(t.Name())
 	groupName := generateUniqueGroupName(t.Name())
 
-	awsAccountID, err := getAccountID()
+	awsAccountID, err := getAccountID(t.Context())
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
@@ -1253,7 +1253,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 func TestAcceptanceBackend_AssumedRoleWithSessionTags(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
-	awsAccountID, err := getAccountID()
+	awsAccountID, err := getAccountID(t.Context())
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
@@ -1470,7 +1470,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	t.Parallel()
 	roleName := generateUniqueRoleName(t.Name())
 	minAwsAssumeRoleDuration := 900
-	awsAccountID, err := getAccountID()
+	awsAccountID, err := getAccountID(t.Context())
 	if err != nil {
 		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
@@ -1885,3 +1885,148 @@ type awsAccessKey struct {
 }
 
 type credentialTestFunc func(string, string, string) error
+
+// TestAcceptanceBackend_MaxRetriesZero verifies that max_retries=0 is applied to the
+// AWS SDK config rather than silently ignored. Before the SDK v2 migration fix, the
+// condition was `> 0`, meaning 0 was treated as "unset" and the SDK applied its default
+// retry count. The fix uses `>= 0` so 0 is passed through as an explicit zero.
+//
+// Required env vars: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY (or any credentials
+// resolvable by the default AWS credential chain), AWS_DEFAULT_REGION.
+func TestAcceptanceBackend_MaxRetriesZero(t *testing.T) {
+	t.Parallel()
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck:       func() { testAccPreCheck(t) },
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "config/root",
+				Data: map[string]interface{}{
+					"region":      os.Getenv("AWS_DEFAULT_REGION"),
+					"max_retries": 0,
+				},
+			},
+			{
+				Operation: logical.ReadOperation,
+				Path:      "config/root",
+				Check: func(resp *logical.Response) error {
+					if resp == nil {
+						return fmt.Errorf("expected response but got nil")
+					}
+					v, ok := resp.Data["max_retries"]
+					if !ok {
+						return fmt.Errorf("max_retries not present in response")
+					}
+					if v.(int) != 0 {
+						return fmt.Errorf("expected max_retries=0, got %v", v)
+					}
+					return nil
+				},
+			},
+		},
+	})
+}
+
+// TestAcceptanceBackend_WIF_IAMCredentials verifies that the AWS secrets engine
+// can assume a role via Workload Identity Federation and issue valid IAM user
+// credentials. This exercises the live-refresh token path in getRootIAMConfig
+// fixed during the SDK v2 migration.
+//
+// Required env vars:
+//   - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY — base credentials with sts:AssumeRoleWithWebIdentity
+//   - AWS_DEFAULT_REGION
+//   - AWS_WIF_ROLE_ARN — ARN of the IAM role to assume via WIF
+//   - AWS_WIF_TOKEN_AUDIENCE — audience claim expected on the identity token
+func TestAcceptanceBackend_WIF_IAMCredentials(t *testing.T) {
+	t.Parallel()
+
+	roleARN := os.Getenv("AWS_WIF_ROLE_ARN")
+	audience := os.Getenv("AWS_WIF_TOKEN_AUDIENCE")
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			if roleARN == "" {
+				t.Skip("AWS_WIF_ROLE_ARN not set, skipping WIF acceptance test")
+			}
+			if audience == "" {
+				t.Skip("AWS_WIF_TOKEN_AUDIENCE not set, skipping WIF acceptance test")
+			}
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "config/root",
+				Data: map[string]interface{}{
+					"region":                  os.Getenv("AWS_DEFAULT_REGION"),
+					"role_arn":                roleARN,
+					"identity_token_audience": audience,
+					"identity_token_ttl":      3600,
+				},
+			},
+			testAccStepWritePolicy(t, "wif-test", testDynamoPolicy),
+			testAccStepRead(t, "creds", "wif-test", []credentialTestFunc{listDynamoTablesTest}),
+		},
+	})
+}
+
+// TestAcceptanceBackend_WIF_STSCredentials verifies that the AWS secrets engine
+// can assume a role via Workload Identity Federation and issue valid STS credentials.
+// This exercises the live-refresh token path in getRootSTSConfigs fixed during the
+// SDK v2 migration.
+//
+// Required env vars:
+//   - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY — base credentials with sts:AssumeRoleWithWebIdentity
+//   - AWS_DEFAULT_REGION
+//   - AWS_WIF_ROLE_ARN — ARN of the IAM role to assume via WIF
+//   - AWS_WIF_TOKEN_AUDIENCE — audience claim expected on the identity token
+//   - AWS_WIF_ASSUME_ROLE_ARN — ARN of the role to assume for the sts/ credential type
+func TestAcceptanceBackend_WIF_STSCredentials(t *testing.T) {
+	t.Parallel()
+
+	roleARN := os.Getenv("AWS_WIF_ROLE_ARN")
+	audience := os.Getenv("AWS_WIF_TOKEN_AUDIENCE")
+	assumeRoleARN := os.Getenv("AWS_WIF_ASSUME_ROLE_ARN")
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		AcceptanceTest: true,
+		PreCheck: func() {
+			testAccPreCheck(t)
+			if roleARN == "" {
+				t.Skip("AWS_WIF_ROLE_ARN not set, skipping WIF acceptance test")
+			}
+			if audience == "" {
+				t.Skip("AWS_WIF_TOKEN_AUDIENCE not set, skipping WIF acceptance test")
+			}
+			if assumeRoleARN == "" {
+				t.Skip("AWS_WIF_ASSUME_ROLE_ARN not set, skipping WIF STS acceptance test")
+			}
+		},
+		LogicalBackend: getBackend(t),
+		Steps: []logicaltest.TestStep{
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "config/root",
+				Data: map[string]interface{}{
+					"region":                  os.Getenv("AWS_DEFAULT_REGION"),
+					"role_arn":                roleARN,
+					"identity_token_audience": audience,
+					"identity_token_ttl":      3600,
+				},
+			},
+			{
+				Operation: logical.UpdateOperation,
+				Path:      "roles/wif-sts-test",
+				Data: map[string]interface{}{
+					"credential_type": assumedRoleCred,
+					"role_arns":       []string{assumeRoleARN},
+				},
+			},
+			testAccStepRead(t, "sts", "wif-sts-test", []credentialTestFunc{describeInstancesTest}),
+		},
+	})
+}
