@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/scalewaykms/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -62,6 +63,27 @@ func Test_getEnvConfig(t *testing.T) {
 			},
 			map[string]string{"VAULT_OCIKMS_SEAL_KEY_ID": "test_key_id", "VAULT_OCIKMS_CRYPTO_ENDPOINT": "test_crypto_endpoint", "VAULT_OCIKMS_MANAGEMENT_ENDPOINT": "test_management_endpoint"},
 			map[string]string{"key_id": "test_key_id", "crypto_endpoint": "test_crypto_endpoint", "management_endpoint": "test_management_endpoint"},
+		},
+		{
+			"Scaleway KMS wrapper",
+			&KMS{
+				Type:     "scalewaykms",
+				Priority: 1,
+			},
+			map[string]string{
+				scalewaykms.EnvScalewayRegion:            "fr-par",
+				scalewaykms.EnvScalewayProjectId:         "test-project-id",
+				scalewaykms.EnvScalewayAccessKey:         "test-access-key",
+				scalewaykms.EnvScalewaySecretKey:         "test-secret-key",
+				scalewaykms.EnvVaultScalewayKmsSealKeyId: "test-key-id",
+			},
+			map[string]string{
+				"region":     "fr-par",
+				"project_id": "test-project-id",
+				"access_key": "test-access-key",
+				"secret_key": "test-secret-key",
+				"key_id":     "test-key-id",
+			},
 		},
 		{
 			"Transit wrapper",
@@ -243,6 +265,36 @@ seal "ocikms" {
 				"auth_type_api_key":   "true",
 			},
 		},
+		"scalewaykms ipv4": {
+			config: `
+seal "scalewaykms" {
+  region           = "fr-par"
+  key_id           = "11111111-1111-1111-1111-111111111111"
+  project_id       = "22222222-2222-2222-2222-222222222222"
+  credentials_file = "/etc/vault.d/scaleway-credentials.yaml"
+}`,
+			expected: map[string]string{
+				"region":           "fr-par",
+				"key_id":           "11111111-1111-1111-1111-111111111111",
+				"project_id":       "22222222-2222-2222-2222-222222222222",
+				"credentials_file": "/etc/vault.d/scaleway-credentials.yaml",
+			},
+		},
+		"scalewaykms ipv6": {
+			config: `
+seal "scalewaykms" {
+  region     = "fr-par"
+  key_id     = "11111111-1111-1111-1111-111111111111"
+  project_id = "22222222-2222-2222-2222-222222222222"
+  api_url    = "https://[2001:db8:0:0:0:0:2:1]:5984/api"
+}`,
+			expected: map[string]string{
+				"region":     "fr-par",
+				"key_id":     "11111111-1111-1111-1111-111111111111",
+				"project_id": "22222222-2222-2222-2222-222222222222",
+				"api_url":    "https://[2001:db8::2:1]:5984/api",
+			},
+		},
 		"transit ipv4": {
 			config: `
 seal "transit" {
@@ -396,6 +448,26 @@ func TestMergeKMSEnvConfigAddrConformance(t *testing.T) {
 				"crypto_endpoint":     "https://[2001:db8::2:1]/afnxza26aag4s-crypto",
 				"management_endpoint": "https://[2001:db8::2:1]/afnxza26aag4s-management",
 				"auth_type_api_key":   "true",
+			},
+		},
+		"scalewaykms": {
+			sealType: "scalewaykms",
+			kmsConfig: map[string]string{
+				"region":           "fr-par",
+				"key_id":           "11111111-1111-1111-1111-111111111111",
+				"project_id":       "22222222-2222-2222-2222-222222222222",
+				"credentials_file": "/etc/vault.d/scaleway-credentials.yaml",
+				"api_url":          "https://api.scaleway.com",
+			},
+			envVars: map[string]string{
+				scalewaykms.EnvScalewayRegion: "nl-ams",
+			},
+			expected: map[string]string{
+				"region":           "nl-ams",
+				"key_id":           "11111111-1111-1111-1111-111111111111",
+				"project_id":       "22222222-2222-2222-2222-222222222222",
+				"credentials_file": "/etc/vault.d/scaleway-credentials.yaml",
+				"api_url":          "https://api.scaleway.com",
 			},
 		},
 		"transit addr not in config": {

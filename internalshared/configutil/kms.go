@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/scalewaykms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -233,6 +234,7 @@ var kmsSealAddressKeys = map[string][]string{
 	wrapping.WrapperTypeGcpCkms.String():       {},
 	wrapping.WrapperTypeOciKms.String():        {"key_id", "crypto_endpoint", "management_endpoint"},
 	wrapping.WrapperTypePkcs11.String():        {},
+	wrapping.WrapperTypeScalewayKms.String():   {"api_url"},
 	wrapping.WrapperTypeTransit.String():       {"address"},
 }
 
@@ -312,6 +314,8 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 			opts = append(opts, wrapping.WithKeyId(keyId))
 		}
 		wrapper, kmsInfo, err = GetOCIKMSKMSFunc(configKMS, opts...)
+	case wrapping.WrapperTypeScalewayKms:
+		wrapper, kmsInfo, err = GetScalewayKMSFunc(configKMS, opts...)
 	case wrapping.WrapperTypeTransit:
 		wrapper, kmsInfo, err = GetTransitKMSFunc(configKMS, opts...)
 
@@ -446,6 +450,26 @@ func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[
 	return wrapper, info, nil
 }
 
+func GetScalewayKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
+	wrapper := scalewaykms.NewWrapper()
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, scalewaykms.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
+	if err != nil {
+		return nil, nil, err
+	}
+	info := make(map[string]string)
+	if wrapperInfo != nil {
+		info["Scaleway KMS Region"] = wrapperInfo.Metadata["region"]
+		info["Scaleway KMS KeyID"] = wrapperInfo.Metadata["key_id"]
+		if projectId, ok := wrapperInfo.Metadata["project_id"]; ok && projectId != "" {
+			info["Scaleway KMS Project ID"] = projectId
+		}
+		if apiUrl, ok := wrapperInfo.Metadata["api_url"]; ok {
+			info["Scaleway KMS API URL"] = apiUrl
+		}
+	}
+	return wrapper, info, nil
+}
+
 var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := transit.NewWrapper()
 	var prefix string
@@ -496,6 +520,8 @@ func getEnvConfig(kms *KMS) map[string]string {
 		wrapperEnvVars = GCPCKMSEnvVars
 	case wrapping.WrapperTypeOciKms:
 		wrapperEnvVars = OCIKMSEnvVars
+	case wrapping.WrapperTypeScalewayKms:
+		wrapperEnvVars = ScalewayKMSEnvVars
 	case wrapping.WrapperTypeTransit:
 		wrapperEnvVars = TransitEnvVars
 	default:
