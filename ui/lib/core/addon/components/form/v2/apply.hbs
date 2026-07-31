@@ -49,23 +49,21 @@
         @hasCopyButton={{true}}
         data-test-field="terraform"
       />
-      <div class="is-flex-end has-top-margin-l has-bottom-margin-s">
-        <div>
-          <DownloadButton
-            @color="secondary"
-            @filename="vault-resources"
-            @data={{this.tfSnippet}}
-            @extension="tf"
-            @stringify={{true}}
-            @text="Export as tf file"
-          />
-        </div>
-      </div>
+      <Hds::Layout::Flex @justify="end" class="has-top-margin-l has-bottom-margin-s">
+        <DownloadButton
+          @color="secondary"
+          @filename="vault-resources"
+          @data={{this.tfSnippet}}
+          @extension="tf"
+          @stringify={{true}}
+          @text="Export as tf file"
+        />
+      </Hds::Layout::Flex>
     {{/if}}
   </Hds::Card::Container>
 {{/unless}}
 
-<div class="is-flex-center is-flex-between">
+<Hds::Layout::Flex @justify="space-between" @align="center">
   <Hds::Button @text="Back" @color="tertiary" @icon="chevron-left" {{on "click" @onBack}} />
   <div>
     <Hds::Button @text="Done & exit" @color="secondary" {{on "click" @onDone}} />
@@ -73,4 +71,4 @@
       <Hds::Button @text="Apply changes" @color="primary" {{on "click" @onApply}} />
     {{/if}}
   </div>
-</div>
+</Hds::Layout::Flex>
