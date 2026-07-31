@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"os"
 	pkgPath "path"
@@ -18,16 +17,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/aws/smithy-go"
 	"github.com/cenkalti/backoff/v4"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	metrics "github.com/hashicorp/go-metrics/compat"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -76,6 +75,10 @@ const (
 	// DynamoDBWatchRetryInterval is the amount of time to wait
 	// if a watch fails before trying again.
 	DynamoDBWatchRetryInterval = 5 * time.Second
+
+	// DynamoDBTableCreationTimeout is the maximum time to wait for a newly
+	// created DynamoDB table to become ACTIVE.
+	DynamoDBTableCreationTimeout = 5 * time.Minute
 )
 
 // Verify DynamoDBBackend satisfies the correct interfaces
@@ -90,7 +93,7 @@ var (
 // as DynamoDB has locking capabilities.
 type DynamoDBBackend struct {
 	table      string
-	client     *dynamodb.DynamoDB
+	client     *dynamodb.Client
 	logger     log.Logger
 	haEnabled  bool
 	permitPool *PermitPoolWithMetrics
@@ -205,13 +208,15 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if dynamodbMaxRetryString == "" {
 		dynamodbMaxRetryString = conf["dynamodb_max_retries"]
 	}
-	dynamodbMaxRetry := aws.UseServiceDefaultRetries
+	// A nil max retries pointer instructs the SDK to use its default retry
+	// behavior, matching the prior aws.UseServiceDefaultRetries semantics.
+	var dynamodbMaxRetry *int
 	if dynamodbMaxRetryString != "" {
-		var err error
-		dynamodbMaxRetry, err = strconv.Atoi(dynamodbMaxRetryString)
+		maxRetry, err := strconv.Atoi(dynamodbMaxRetryString)
 		if err != nil {
 			return nil, fmt.Errorf("invalid max retry: %q", dynamodbMaxRetryString)
 		}
+		dynamodbMaxRetry = &maxRetry
 	}
 
 	dynamodbAllowUpdates := os.Getenv("AWS_DYNAMODB_ALLOW_UPDATES")
@@ -220,37 +225,47 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	}
 	allowUpdates := dynamodbAllowUpdates != ""
 
+	pooledTransport := cleanhttp.DefaultPooledTransport()
+	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
+
 	credsConfig := &awsutil.CredentialsConfig{
 		AccessKey:    conf["access_key"],
 		SecretKey:    conf["secret_key"],
 		SessionToken: conf["session_token"],
-		Logger:       logger,
-	}
-	creds, err := credsConfig.GenerateCredentialChain()
-	if err != nil {
-		return nil, err
-	}
-
-	pooledTransport := cleanhttp.DefaultPooledTransport()
-	pooledTransport.MaxIdleConnsPerHost = consts.ExpirationRestoreWorkerCount
-
-	awsConf := aws.NewConfig().
-		WithCredentials(creds).
-		WithRegion(region).
-		WithEndpoint(endpoint).
-		WithHTTPClient(&http.Client{
+		Region:       region,
+		MaxRetries:   dynamodbMaxRetry,
+		HTTPClient: &http.Client{
 			Transport: pooledTransport,
-		}).
-		WithMaxRetries(dynamodbMaxRetry)
-
-	awsSession, err := session.NewSession(awsConf)
-	if err != nil {
-		return nil, fmt.Errorf("Could not establish AWS session: %w", err)
+		},
+		Logger: logger,
 	}
 
-	client := dynamodb.New(awsSession)
+	ctx := context.Background()
 
-	if err := ensureTableExists(client, table, readCapacity, writeCapacity, billingMode, allowUpdates); err != nil {
+	// awsutil evaluates the shared-credentials option from the arguments passed
+	// to GenerateCredentialChain (not the CredentialsConfig struct), and it
+	// defaults to true. When no static credentials are configured, forcing the
+	// shared "default" profile makes SDK v2 credential resolution short-circuit
+	// to that profile (with an empty credentials-file path) and skip the
+	// environment and IMDS/ECS providers. Disabling it here lets the default
+	// chain (env vars, shared config, IMDS/ECS) resolve naturally, matching the
+	// v1 SDK behavior.
+	var chainOptions []awsutil.Option
+	if credsConfig.AccessKey == "" && credsConfig.SecretKey == "" {
+		chainOptions = append(chainOptions, awsutil.WithSharedCredentials(false))
+	}
+	awsConf, err := credsConfig.GenerateCredentialChain(ctx, chainOptions...)
+	if err != nil {
+		return nil, fmt.Errorf("Could not establish AWS configuration: %w", err)
+	}
+
+	client := dynamodb.NewFromConfig(*awsConf, func(o *dynamodb.Options) {
+		if endpoint != "" {
+			o.BaseEndpoint = aws.String(endpoint)
+		}
+	})
+
+	if err := ensureTableExists(ctx, client, table, readCapacity, writeCapacity, billingMode, allowUpdates); err != nil {
 		return nil, err
 	}
 
@@ -290,12 +305,12 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 		Key:   recordKeyForVaultKey(entry.Key),
 		Value: entry.Value,
 	}
-	item, err := dynamodbattribute.MarshalMap(record)
+	item, err := attributevalue.MarshalMap(record)
 	if err != nil {
 		return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 	}
-	requests := []*dynamodb.WriteRequest{{
-		PutRequest: &dynamodb.PutRequest{
+	requests := []types.WriteRequest{{
+		PutRequest: &types.PutRequest{
 			Item: item,
 		},
 	}}
@@ -305,12 +320,12 @@ func (d *DynamoDBBackend) Put(ctx context.Context, entry *physical.Entry) error 
 			Path: recordPathForVaultKey(prefix),
 			Key:  fmt.Sprintf("%s/", recordKeyForVaultKey(prefix)),
 		}
-		item, err := dynamodbattribute.MarshalMap(record)
+		item, err := attributevalue.MarshalMap(record)
 		if err != nil {
 			return fmt.Errorf("could not convert prefix record to DynamoDB item: %w", err)
 		}
-		requests = append(requests, &dynamodb.WriteRequest{
-			PutRequest: &dynamodb.PutRequest{
+		requests = append(requests, types.WriteRequest{
+			PutRequest: &types.PutRequest{
 				Item: item,
 			},
 		})
@@ -328,12 +343,12 @@ func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry,
 	}
 	defer d.permitPool.Release()
 
-	resp, err := d.client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
+	resp, err := d.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName:      aws.String(d.table),
 		ConsistentRead: aws.Bool(true),
-		Key: map[string]*dynamodb.AttributeValue{
-			"Path": {S: aws.String(recordPathForVaultKey(key))},
-			"Key":  {S: aws.String(recordKeyForVaultKey(key))},
+		Key: map[string]types.AttributeValue{
+			"Path": &types.AttributeValueMemberS{Value: recordPathForVaultKey(key)},
+			"Key":  &types.AttributeValueMemberS{Value: recordKeyForVaultKey(key)},
 		},
 	})
 	if err != nil {
@@ -344,7 +359,7 @@ func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry,
 	}
 
 	record := &DynamoDBRecord{}
-	if err := dynamodbattribute.UnmarshalMap(resp.Item, record); err != nil {
+	if err := attributevalue.UnmarshalMap(resp.Item, record); err != nil {
 		return nil, err
 	}
 
@@ -358,11 +373,11 @@ func (d *DynamoDBBackend) Get(ctx context.Context, key string) (*physical.Entry,
 func (d *DynamoDBBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"dynamodb", "delete"}, time.Now())
 
-	requests := []*dynamodb.WriteRequest{{
-		DeleteRequest: &dynamodb.DeleteRequest{
-			Key: map[string]*dynamodb.AttributeValue{
-				"Path": {S: aws.String(recordPathForVaultKey(key))},
-				"Key":  {S: aws.String(recordKeyForVaultKey(key))},
+	requests := []types.WriteRequest{{
+		DeleteRequest: &types.DeleteRequest{
+			Key: map[string]types.AttributeValue{
+				"Path": &types.AttributeValueMemberS{Value: recordPathForVaultKey(key)},
+				"Key":  &types.AttributeValueMemberS{Value: recordKeyForVaultKey(key)},
 			},
 		},
 	}}
@@ -394,11 +409,11 @@ func (d *DynamoDBBackend) Delete(ctx context.Context, key string) error {
 
 		if !hasChildren {
 			// If there are no children other than ones we know are being deleted then cleanup empty "folder" pointers
-			requests = append(requests, &dynamodb.WriteRequest{
-				DeleteRequest: &dynamodb.DeleteRequest{
-					Key: map[string]*dynamodb.AttributeValue{
-						"Path": {S: aws.String(recordPathForVaultKey(prefix))},
-						"Key":  {S: aws.String(fmt.Sprintf("%s/", recordKeyForVaultKey(prefix)))},
+			requests = append(requests, types.WriteRequest{
+				DeleteRequest: &types.DeleteRequest{
+					Key: map[string]types.AttributeValue{
+						"Path": &types.AttributeValueMemberS{Value: recordPathForVaultKey(prefix)},
+						"Key":  &types.AttributeValueMemberS{Value: fmt.Sprintf("%s/", recordKeyForVaultKey(prefix))},
 					},
 				},
 			})
@@ -426,18 +441,18 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 	queryInput := &dynamodb.QueryInput{
 		TableName:      aws.String(d.table),
 		ConsistentRead: aws.Bool(true),
-		KeyConditions: map[string]*dynamodb.Condition{
+		KeyConditions: map[string]types.Condition{
 			"Path": {
-				ComparisonOperator: aws.String("EQ"),
-				AttributeValueList: []*dynamodb.AttributeValue{{
-					S: aws.String(prefix),
-				}},
+				ComparisonOperator: types.ComparisonOperatorEq,
+				AttributeValueList: []types.AttributeValue{
+					&types.AttributeValueMemberS{Value: prefix},
+				},
 			},
 		},
 		ProjectionExpression: aws.String("#key, #path"),
-		ExpressionAttributeNames: map[string]*string{
-			"#key":  aws.String("Key"),
-			"#path": aws.String("Path"),
+		ExpressionAttributeNames: map[string]string{
+			"#key":  "Key",
+			"#path": "Path",
 		},
 	}
 
@@ -446,18 +461,21 @@ func (d *DynamoDBBackend) List(ctx context.Context, prefix string) ([]string, er
 	}
 	defer d.permitPool.Release()
 
-	err := d.client.QueryPagesWithContext(ctx, queryInput, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+	paginator := dynamodb.NewQueryPaginator(d.client, queryInput)
+	for paginator.HasMorePages() {
+		out, err := paginator.NextPage(ctx)
+		if err != nil {
+			return nil, err
+		}
 		var record DynamoDBRecord
 		for _, item := range out.Items {
-			dynamodbattribute.UnmarshalMap(item, &record)
+			if err := attributevalue.UnmarshalMap(item, &record); err != nil {
+				return nil, err
+			}
 			if !strings.HasPrefix(record.Key, DynamoDBLockPrefix) {
 				keys = append(keys, record.Key)
 			}
 		}
-		return !lastPage
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	return keys, nil
@@ -476,24 +494,24 @@ func (d *DynamoDBBackend) hasChildren(ctx context.Context, prefix string, exclud
 	queryInput := &dynamodb.QueryInput{
 		TableName:      aws.String(d.table),
 		ConsistentRead: aws.Bool(true),
-		KeyConditions: map[string]*dynamodb.Condition{
+		KeyConditions: map[string]types.Condition{
 			"Path": {
-				ComparisonOperator: aws.String("EQ"),
-				AttributeValueList: []*dynamodb.AttributeValue{{
-					S: aws.String(prefix),
-				}},
+				ComparisonOperator: types.ComparisonOperatorEq,
+				AttributeValueList: []types.AttributeValue{
+					&types.AttributeValueMemberS{Value: prefix},
+				},
 			},
 		},
 		ProjectionExpression: aws.String("#key, #path"),
-		ExpressionAttributeNames: map[string]*string{
-			"#key":  aws.String("Key"),
-			"#path": aws.String("Path"),
+		ExpressionAttributeNames: map[string]string{
+			"#key":  "Key",
+			"#path": "Path",
 		},
 		// Avoid fetching too many items from DynamoDB for performance reasons.
 		// We want to know if there are any children we don't expect to see.
 		// Answering that question requires fetching a minimum of one more item
 		// than the number we expect. In most cases this value will be 2
-		Limit: aws.Int64(int64(len(exclude) + 1)),
+		Limit: aws.Int32(int32(len(exclude) + 1)),
 	}
 
 	if err := d.permitPool.Acquire(ctx); err != nil {
@@ -501,22 +519,26 @@ func (d *DynamoDBBackend) hasChildren(ctx context.Context, prefix string, exclud
 	}
 	defer d.permitPool.Release()
 
-	out, err := d.client.QueryWithContext(ctx, queryInput)
+	out, err := d.client.Query(ctx, queryInput)
 	if err != nil {
 		return false, err
 	}
 	var childrenExist bool
 	for _, item := range out.Items {
+		key := item["Key"].(*types.AttributeValueMemberS).Value
+		// An item is a child we didn't expect only if it matches NONE of the
+		// excluded keys. Look for "folder" pointer keys (trailing slash) and
+		// regular value keys (no trailing slash).
+		isExcluded := false
 		for _, excluded := range exclude {
-			// Check if we've found an item we didn't expect to. Look for "folder" pointer keys (trailing slash)
-			// and regular value keys (no trailing slash)
-			if *item["Key"].S != excluded && *item["Key"].S != fmt.Sprintf("%s/", excluded) {
-				childrenExist = true
+			if key == excluded || key == fmt.Sprintf("%s/", excluded) {
+				isExcluded = true
 				break
 			}
 		}
-		if childrenExist {
+		if !isExcluded {
 			// We only need to find ONE child we didn't expect to.
+			childrenExist = true
 			break
 		}
 	}
@@ -545,12 +567,12 @@ func (d *DynamoDBBackend) HAEnabled() bool {
 	return d.haEnabled
 }
 
-// batchWriteRequests takes a list of write requests and executes them in badges
+// batchWriteRequests takes a list of write requests and executes them in batches
 // with a maximum size of 25 (which is the limit of BatchWriteItem requests).
-func (d *DynamoDBBackend) batchWriteRequests(ctx context.Context, requests []*dynamodb.WriteRequest) error {
+func (d *DynamoDBBackend) batchWriteRequests(ctx context.Context, requests []types.WriteRequest) error {
 	for len(requests) > 0 {
-		batchSize := int(math.Min(float64(len(requests)), 25))
-		batch := map[string][]*dynamodb.WriteRequest{d.table: requests[:batchSize]}
+		batchSize := min(len(requests), 25)
+		batch := map[string][]types.WriteRequest{d.table: requests[:batchSize]}
 		requests = requests[batchSize:]
 
 		var err error
@@ -563,7 +585,7 @@ func (d *DynamoDBBackend) batchWriteRequests(ctx context.Context, requests []*dy
 
 		for len(batch) > 0 {
 			var output *dynamodb.BatchWriteItemOutput
-			output, err = d.client.BatchWriteItemWithContext(ctx, &dynamodb.BatchWriteItemInput{
+			output, err = d.client.BatchWriteItem(ctx, &dynamodb.BatchWriteItemInput{
 				RequestItems: batch,
 			})
 			if err != nil {
@@ -657,19 +679,19 @@ func (l *DynamoDBLock) Unlock() error {
 	deleteMyLock := &dynamodb.DeleteItemInput{
 		TableName:           &l.backend.table,
 		ConditionExpression: &condition,
-		Key: map[string]*dynamodb.AttributeValue{
-			"Path": {S: aws.String(recordPathForVaultKey(l.key))},
-			"Key":  {S: aws.String(recordKeyForVaultKey(l.key))},
+		Key: map[string]types.AttributeValue{
+			"Path": &types.AttributeValueMemberS{Value: recordPathForVaultKey(l.key)},
+			"Key":  &types.AttributeValueMemberS{Value: recordKeyForVaultKey(l.key)},
 		},
-		ExpressionAttributeNames: map[string]*string{
-			"#identity": aws.String("Identity"),
+		ExpressionAttributeNames: map[string]string{
+			"#identity": "Identity",
 		},
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":identity": {B: []byte(l.identity)},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":identity": &types.AttributeValueMemberB{Value: []byte(l.identity)},
 		},
 	}
 
-	_, err := l.backend.client.DeleteItem(deleteMyLock)
+	_, err := l.backend.client.DeleteItem(context.Background(), deleteMyLock)
 	if isConditionCheckFailed(err) {
 		err = nil
 	}
@@ -709,7 +731,7 @@ func (l *DynamoDBLock) tryToLock(stop, success chan struct{}, errors chan error)
 		case <-ticker.C:
 			err := l.updateItem(true)
 			if err != nil {
-				if err, ok := err.(awserr.Error); ok {
+				if isAWSError(err) {
 					// Don't report a condition check failure, this means that the lock
 					// is already being held.
 					if !isConditionCheckFailed(err) {
@@ -767,11 +789,11 @@ func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 	// We also write if the lock expired.
 	conditionExpression += "(attribute_not_exists(#identity) or #identity = :identity or #expires <= :now)"
 
-	_, err := l.backend.client.UpdateItem(&dynamodb.UpdateItemInput{
+	_, err := l.backend.client.UpdateItem(context.Background(), &dynamodb.UpdateItemInput{
 		TableName: aws.String(l.backend.table),
-		Key: map[string]*dynamodb.AttributeValue{
-			"Path": {S: aws.String(recordPathForVaultKey(l.key))},
-			"Key":  {S: aws.String(recordKeyForVaultKey(l.key))},
+		Key: map[string]types.AttributeValue{
+			"Path": &types.AttributeValueMemberS{Value: recordPathForVaultKey(l.key)},
+			"Key":  &types.AttributeValueMemberS{Value: recordKeyForVaultKey(l.key)},
 		},
 		UpdateExpression: aws.String("SET #value=:value, #identity=:identity, #expires=:expires"),
 		// If both key and path already exist, we can only write if
@@ -779,18 +801,18 @@ func (l *DynamoDBLock) updateItem(createIfMissing bool) error {
 		// or
 		// B. The ttl on the item is <= to the current time
 		ConditionExpression: aws.String(conditionExpression),
-		ExpressionAttributeNames: map[string]*string{
-			"#path":     aws.String("Path"),
-			"#key":      aws.String("Key"),
-			"#identity": aws.String("Identity"),
-			"#expires":  aws.String("Expires"),
-			"#value":    aws.String("Value"),
+		ExpressionAttributeNames: map[string]string{
+			"#path":     "Path",
+			"#key":      "Key",
+			"#identity": "Identity",
+			"#expires":  "Expires",
+			"#value":    "Value",
 		},
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":identity": {B: []byte(l.identity)},
-			":value":    {B: []byte(l.value)},
-			":now":      {N: aws.String(strconv.FormatInt(now.UnixNano(), 10))},
-			":expires":  {N: aws.String(strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10))},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":identity": &types.AttributeValueMemberB{Value: []byte(l.identity)},
+			":value":    &types.AttributeValueMemberB{Value: []byte(l.value)},
+			":now":      &types.AttributeValueMemberN{Value: strconv.FormatInt(now.UnixNano(), 10)},
+			":expires":  &types.AttributeValueMemberN{Value: strconv.FormatInt(now.Add(l.ttl).UnixNano(), 10)},
 		},
 	})
 
@@ -811,12 +833,12 @@ WatchLoop:
 	for {
 		select {
 		case <-ticker.C:
-			resp, err := l.backend.client.GetItem(&dynamodb.GetItemInput{
+			resp, err := l.backend.client.GetItem(context.Background(), &dynamodb.GetItemInput{
 				TableName:      aws.String(l.backend.table),
 				ConsistentRead: aws.Bool(true),
-				Key: map[string]*dynamodb.AttributeValue{
-					"Path": {S: aws.String(recordPathForVaultKey(l.key))},
-					"Key":  {S: aws.String(recordKeyForVaultKey(l.key))},
+				Key: map[string]types.AttributeValue{
+					"Path": &types.AttributeValueMemberS{Value: recordPathForVaultKey(l.key)},
+					"Key":  &types.AttributeValueMemberS{Value: recordKeyForVaultKey(l.key)},
 				},
 			})
 			if err != nil {
@@ -831,7 +853,7 @@ WatchLoop:
 				break WatchLoop
 			}
 			record := &DynamoDBLockRecord{}
-			err = dynamodbattribute.UnmarshalMap(resp.Item, record)
+			err = attributevalue.UnmarshalMap(resp.Item, record)
 			if err != nil || string(record.Identity) != l.identity {
 				break WatchLoop
 			}
@@ -845,54 +867,51 @@ WatchLoop:
 // ensureTableExists creates a DynamoDB table with a given
 // DynamoDB client.
 // If the table already exists, it is not being reconfigured unless allowUpdates is true.
-func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, writeCapacity int, billingMode string, allowUpdates bool) error {
-	tableDescription, err := client.DescribeTable(&dynamodb.DescribeTableInput{
+func ensureTableExists(ctx context.Context, client *dynamodb.Client, table string, readCapacity, writeCapacity int, billingMode string, allowUpdates bool) error {
+	tableDescription, err := client.DescribeTable(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
 	if err != nil {
-		if awsError, ok := err.(awserr.Error); ok {
-			if awsError.Code() == "ResourceNotFoundException" {
-				createTableRequest := &dynamodb.CreateTableInput{
-					TableName: aws.String(table),
-					KeySchema: []*dynamodb.KeySchemaElement{{
-						AttributeName: aws.String("Path"),
-						KeyType:       aws.String("HASH"),
-					}, {
-						AttributeName: aws.String("Key"),
-						KeyType:       aws.String("RANGE"),
-					}},
-					AttributeDefinitions: []*dynamodb.AttributeDefinition{{
-						AttributeName: aws.String("Path"),
-						AttributeType: aws.String("S"),
-					}, {
-						AttributeName: aws.String("Key"),
-						AttributeType: aws.String("S"),
-					}},
-				}
-				if billingMode == "PAY_PER_REQUEST" {
-					// PAY_PER_REQUEST doesn't require setting capacity units
-					createTableRequest.BillingMode = aws.String(billingMode)
-				} else {
-					createTableRequest.BillingMode = aws.String(billingMode)
-					createTableRequest.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
-						ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
-						WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
-					}
-				}
-				_, err := client.CreateTable(createTableRequest)
-				if err != nil {
-					return err
-				}
-
-				err = client.WaitUntilTableExists(&dynamodb.DescribeTableInput{
-					TableName: aws.String(table),
-				})
-				if err != nil {
-					return err
-				}
-				// table created successfully
-				return nil
+		var notFoundErr *types.ResourceNotFoundException
+		if errors.As(err, &notFoundErr) {
+			createTableRequest := &dynamodb.CreateTableInput{
+				TableName: aws.String(table),
+				KeySchema: []types.KeySchemaElement{{
+					AttributeName: aws.String("Path"),
+					KeyType:       types.KeyTypeHash,
+				}, {
+					AttributeName: aws.String("Key"),
+					KeyType:       types.KeyTypeRange,
+				}},
+				AttributeDefinitions: []types.AttributeDefinition{{
+					AttributeName: aws.String("Path"),
+					AttributeType: types.ScalarAttributeTypeS,
+				}, {
+					AttributeName: aws.String("Key"),
+					AttributeType: types.ScalarAttributeTypeS,
+				}},
 			}
+			createTableRequest.BillingMode = types.BillingMode(billingMode)
+			if billingMode != "PAY_PER_REQUEST" {
+				// Non-PAY_PER_REQUEST billing modes require setting provisioned capacity units.
+				createTableRequest.ProvisionedThroughput = &types.ProvisionedThroughput{
+					ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
+					WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
+				}
+			}
+			_, err := client.CreateTable(ctx, createTableRequest)
+			if err != nil {
+				return err
+			}
+
+			err = dynamodb.NewTableExistsWaiter(client).Wait(ctx, &dynamodb.DescribeTableInput{
+				TableName: aws.String(table),
+			}, DynamoDBTableCreationTimeout)
+			if err != nil {
+				return err
+			}
+			// table created successfully
+			return nil
 		}
 		return err
 	}
@@ -901,17 +920,15 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 		updateTableRequest := &dynamodb.UpdateTableInput{
 			TableName: aws.String(table),
 		}
-		if billingMode == "PAY_PER_REQUEST" {
-			// PAY_PER_REQUEST doesn't require setting capacity units
-			updateTableRequest.BillingMode = aws.String(billingMode)
-		} else {
-			updateTableRequest.BillingMode = aws.String(billingMode)
-			updateTableRequest.ProvisionedThroughput = &dynamodb.ProvisionedThroughput{
+		updateTableRequest.BillingMode = types.BillingMode(billingMode)
+		if billingMode != "PAY_PER_REQUEST" {
+			// Non-PAY_PER_REQUEST billing modes require setting provisioned capacity units.
+			updateTableRequest.ProvisionedThroughput = &types.ProvisionedThroughput{
 				ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
 				WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
 			}
 		}
-		_, err := client.UpdateTable(updateTableRequest)
+		_, err := client.UpdateTable(ctx, updateTableRequest)
 		if err != nil {
 			return err
 		}
@@ -922,19 +939,27 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 
 // shouldUpdateTable compares the billingMode and provisioned capacity of the existing table with the
 // desired billingMode and capacity
-func shouldUpdateTable(tableDescription *dynamodb.TableDescription, billingMode string, readCapacity, writeCapacity int) bool {
+func shouldUpdateTable(tableDescription *types.TableDescription, billingMode string, readCapacity, writeCapacity int) bool {
 	existingBillingMode := "PROVISIONED"
 	// the dynamodb service returns nil when PROVISIONED is the billingMode
 	// as it is the default
 	billingSummary := tableDescription.BillingModeSummary
 	if billingSummary != nil {
-		existingBillingMode = *(billingSummary.BillingMode)
+		existingBillingMode = string(billingSummary.BillingMode)
 	}
 	if existingBillingMode != billingMode {
 		return true
 	}
+	// PAY_PER_REQUEST tables have no provisioned capacity to compare, and
+	// DynamoDB may return a nil ProvisionedThroughput for them.
+	if billingMode == "PAY_PER_REQUEST" {
+		return false
+	}
 	provisionedThroughput := tableDescription.ProvisionedThroughput
-	if int64(readCapacity) != *(provisionedThroughput.ReadCapacityUnits) && int64(writeCapacity) != *(provisionedThroughput.WriteCapacityUnits) {
+	if provisionedThroughput == nil || provisionedThroughput.ReadCapacityUnits == nil || provisionedThroughput.WriteCapacityUnits == nil {
+		return false
+	}
+	if int64(readCapacity) != *(provisionedThroughput.ReadCapacityUnits) || int64(writeCapacity) != *(provisionedThroughput.WriteCapacityUnits) {
 		return true
 	}
 	return false
@@ -988,13 +1013,19 @@ func unescapeEmptyPath(s string) string {
 	return s
 }
 
-// isConditionCheckFailed tests whether err is an ErrCodeConditionalCheckFailedException
+// isAWSError returns true if the given error is an error returned by the AWS
+// API (i.e. it implements the smithy.APIError interface).
+func isAWSError(err error) bool {
+	var apiErr smithy.APIError
+	return errors.As(err, &apiErr)
+}
+
+// isConditionCheckFailed tests whether err is a ConditionalCheckFailedException
 // from the AWS SDK.
 func isConditionCheckFailed(err error) bool {
 	if err != nil {
-		if err, ok := err.(awserr.Error); ok {
-			return err.Code() == dynamodb.ErrCodeConditionalCheckFailedException
-		}
+		var ccf *types.ConditionalCheckFailedException
+		return errors.As(err, &ccf)
 	}
 
 	return false
@@ -1017,10 +1048,7 @@ func (c *PermitPoolWithMetrics) Acquire(ctx context.Context) error {
 	err := c.Pool.Acquire(ctx)
 	atomic.AddInt32(&c.pendingPermits, -1)
 	c.emitPermitMetrics()
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Release returns a permit to the pool
