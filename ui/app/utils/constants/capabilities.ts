@@ -83,10 +83,16 @@ export const PATH_MAP = {
   pkiTidyStatus: apiPath`${'backend'}/tidy/status`,
   pkiExternalConfigAcmeAccount: apiPath`${'backend'}/config/acme-account`,
   pkiExternalConfigDns: apiPath`${'backend'}/config/dns`,
+  pkiExternalLookupCert: apiPath`${'backend'}/lookup/cert/*`, // Use glob since serial numbers are generated
+  pkiExternalLookupOrder: apiPath`${'backend'}/lookup/order/*`, // Use glob since order IDs are generated
   pkiExternalLookupOrders: apiPath`${'backend'}/lookup/orders`,
   pkiExternalLookupOrdersRecent: apiPath`${'backend'}/lookup/orders/recent`,
-  pkiExternalRole: apiPath`${'backend'}/role`,
+  pkiExternalRoleList: apiPath`${'backend'}/role`,
+  pkiExternalRole: apiPath`${'backend'}/role/${'roleName'}`,
   pkiExternalRoleActiveOrders: apiPath`${'backend'}/role/${'roleName'}/active-orders`,
+  pkiExternalRoleOrderStatus: apiPath`${'backend'}/role/${'roleName'}/order/+/status`, // Use wildcard since order IDs are generated
+  pkiExternalRoleOrderFetchCert: apiPath`${'backend'}/role/${'roleName'}/order/+/fetch-cert`, // Use wildcard since order IDs are generated
+  pkiExternalRoleCachedCert: apiPath`${'backend'}/role/${'roleName'}/cached`,
   policy: apiPath`sys/policies/${'policyType'}/${'id'}`,
   policies: apiPath`sys/policies`,
   sshCredentials: apiPath`${'backend'}/creds/${'id'}`,

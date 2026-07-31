@@ -3,7 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<ExternalPki::HeaderTabs @title="View order" @breadcrumbs={{@breadcrumbs}} @hideTabs={{true}} />
+<ExternalPki::HeaderTabs
+  @title="View order"
+  @breadcrumbs={{@breadcrumbs}}
+  @hideTabs={{true}}
+  @backend={{@model.engine}}
+  @roleName={{this.orderParams.details.role_name}}
+/>
 
 <Hds::Layout::Flex class="has-top-margin-s bottom-margin-8" @align="center">
   <Hds::Text::Body @tag="p" @size="200" data-test-text-body="Last refreshed">

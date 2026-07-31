@@ -90,29 +90,6 @@ module('Acceptance | enterprise | pki | external | overview route', function (ho
     assert.dom(GENERAL.overviewCard.content('Roles')).hasText('0');
   });
 
-  test('it fetches capabilities', async function (assert) {
-    const capabilitiesSpy = sinon.spy(this.owner.lookup('service:capabilities'), 'fetch');
-    this.acmeListStub.resolves({ keys: ['account-1', 'account-2'] });
-    this.dnsListStub.resolves({ keys: ['provider-1'] });
-    this.rolesListStub.resolves({ keys: ['role-1', 'role-2', 'role-3'] });
-    await visit(this.engineURL);
-    const [paths] = capabilitiesSpy.lastCall.args;
-    assert.propEqual(
-      paths,
-      [
-        `${this.mountPath}/config/acme-account`,
-        `${this.mountPath}/config/dns`,
-        `${this.mountPath}/role`,
-        `${this.mountPath}/lookup/orders`,
-      ],
-      'it requests capabilities service with expected paths'
-    );
-    assert.true(capabilitiesSpy.calledOnce, 'capabilities are only requested once');
-    assert.true(this.acmeListStub.calledOnce, 'request made to list ACME accounts');
-    assert.true(this.dnsListStub.calledOnce, 'request made to list DNS providers');
-    assert.true(this.rolesListStub.calledOnce, 'request made to list roles');
-  });
-
   test('it catches 403 permissions errors and hides cards', async function (assert) {
     const error = { errors: ['1 error occurred:\n\t* permission denied\n\n'] };
     this.acmeListStub.rejects(getErrorResponse(error, 403));

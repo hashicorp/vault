@@ -11,6 +11,10 @@ import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
+const SELECTORS = {
+  pathByContainer: (idx) => `${GENERAL.cardContainer(idx)} ${GENERAL.inputByAttr('path')}`,
+};
+
 module('Integration | Component | pki | external-pki | ExternalPki::Page::Certificate', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
@@ -19,7 +23,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Certif
     this.router = this.owner.lookup('service:router');
 
     this.model = {
-      engine: { id: 'pki-external-ca' },
+      engine: { id: 'my-pki-external-ca' },
       serial_number: 'ab:cd:ef:12:34:56',
       certLookup: {
         order_id: 'order-abc-123',
@@ -36,9 +40,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Certif
     this.renderComponent = () =>
       render(
         hbs`<ExternalPki::Page::Certificate @model={{this.model}} @breadcrumbs={{array (hash label="View order")}} />`,
-        {
-          owner: this.engine,
-        }
+        { owner: this.engine }
       );
   });
 
@@ -125,5 +127,36 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Certif
       .exists('cert card rendered from existing details');
     assert.dom(GENERAL.infoRowValue('Serial number')).hasText('ab:cd:ef:12:34:56');
     assert.dom(GENERAL.messageError).exists('error banner rendered alongside cert details');
+  });
+
+  module('policy flyout pre-population', function (hooks) {
+    hooks.beforeEach(function () {
+      // The Generate policy button only renders for enterprise
+      this.owner.lookup('service:version').type = 'enterprise';
+      this.currentRouteNameStub = sinon.stub(this.router, 'currentRouteName');
+    });
+
+    test('it pre-populates flyout stanzas when the role name is unavailable', async function (assert) {
+      this.currentRouteNameStub.value('vault.cluster.secrets.backend.pki.external.certificates.certificate');
+      this.model.certLookup = undefined;
+      await this.renderComponent();
+      await click(GENERAL.button('Generate policy'));
+
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('my-pki-external-ca/lookup/cert/*');
+      assert
+        .dom(SELECTORS.pathByContainer(1))
+        .hasValue('my-pki-external-ca/role/:role_name/order/+/fetch-cert');
+      assert.dom(GENERAL.cardContainer()).exists({ count: 2 });
+    });
+
+    test('it pre-populates flyout stanzas when the role name is provided', async function (assert) {
+      this.currentRouteNameStub.value('vault.cluster.secrets.backend.pki.external.certificates.certificate');
+      await this.renderComponent();
+      await click(GENERAL.button('Generate policy'));
+
+      assert.dom(SELECTORS.pathByContainer(0)).hasValue('my-pki-external-ca/lookup/cert/*');
+      assert.dom(SELECTORS.pathByContainer(1)).hasValue('my-pki-external-ca/role/myrole/order/+/fetch-cert');
+      assert.dom(GENERAL.cardContainer()).exists({ count: 2 });
+    });
   });
 });

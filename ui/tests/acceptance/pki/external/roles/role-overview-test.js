@@ -119,6 +119,17 @@ module('Acceptance | enterprise | pki | external | roles | role | overview route
     assert.true(this.activeOrdersListStub.notCalled, 'active-orders is not called');
     assert.dom('h1').hasText(this.mountPath, 'mount path is header');
     assert.dom(GENERAL.pageError.title(403)).exists().hasText('ERROR 403 Not authorized');
+    // check policy flyout
+    await click(GENERAL.button('Generate policy'));
+    assert
+      .dom(`${GENERAL.cardContainer(0)} ${GENERAL.inputByAttr('path')}`)
+      .hasValue(`${this.mountPath}/role/${this.roleName}`);
+    assert
+      .dom(`${GENERAL.cardContainer(1)} ${GENERAL.inputByAttr('path')}`)
+      .hasValue(`${this.mountPath}/role/${this.roleName}/active-orders`);
+    assert
+      .dom(`${GENERAL.cardContainer(2)} ${GENERAL.inputByAttr('path')}`)
+      .hasValue(`${this.mountPath}/role/${this.roleName}/cached`);
 
     await click(GENERAL.linkTo('Back'));
     assert.strictEqual(

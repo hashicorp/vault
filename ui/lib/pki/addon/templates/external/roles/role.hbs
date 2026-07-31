@@ -7,6 +7,8 @@
   <ExternalPki::HeaderTabs
     @title={{if isOrderRoute "View order" this.model.role_name}}
     @breadcrumbs={{this.generateCrumbs isOrderRoute this.model.role_name}}
+    @backend={{this.model.engine}}
+    @roleName={{this.model.role_name}}
   >
     <:tabs>
       {{#unless isOrderRoute}}

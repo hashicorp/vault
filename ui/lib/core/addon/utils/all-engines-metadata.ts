@@ -259,9 +259,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
         {
           pluginCategory: 'generic',
           displayName: 'Public PKI',
-          isConfigurable: true,
           engineRoute: 'pki.external.overview',
-          configRoute: 'pki.external.configuration',
           glyph: 'certificate',
           mountCategory: ['secret'],
           requiresEnterprise: true,
