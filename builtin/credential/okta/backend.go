@@ -98,6 +98,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		Id       string `json:"id"`
 		Type     string `json:"factorType"`
 		Provider string `json:"provider"`
+		Status   string `json:"status"`
 		Embedded struct {
 			Challenge struct {
 				CorrectAnswer *int `json:"correctAnswer"`
@@ -183,7 +184,8 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 			break
 		}
 
-		var selectedFactor, totpFactor, pushFactor *mfaFactor
+		var selectedFactor, totpFactor *mfaFactor
+		var pushFactors []*mfaFactor
 
 		// Scan for available factors
 		for _, v := range result.Embedded.Factors {
@@ -197,11 +199,17 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 				continue
 			}
 
+			// Skip inactive factors so they don't cause spurious auth failures
+			// when the user has other active factors available.
+			if v.Status != "" && v.Status != "ACTIVE" {
+				continue
+			}
+
 			switch v.Type {
 			case mfaTOTPMethod:
 				totpFactor = &v
 			case mfaPushMethod:
-				pushFactor = &v
+				pushFactors = append(pushFactors, &v)
 			}
 		}
 
@@ -211,14 +219,24 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 		switch {
 		case totpFactor != nil && totp != "":
 			selectedFactor = totpFactor
-		case pushFactor != nil && pushFactor.Provider == oktaProvider:
-			selectedFactor = pushFactor
+		case len(pushFactors) > 0:
+			// Prefer Okta Verify Push over Google Authenticator push
+			for _, pf := range pushFactors {
+				if pf.Provider == oktaProvider {
+					selectedFactor = pf
+					break
+				}
+			}
+			if selectedFactor == nil {
+				selectedFactor = pushFactors[0]
+			}
 		case totpFactor != nil && totp == "":
 			return nil, logical.ErrorResponse("'totp' passcode parameter is required to perform MFA"), nil, nil
 		default:
 			return nil, logical.ErrorResponse("Okta Verify Push or TOTP or Google TOTP factor is required in order to perform MFA"), nil, nil
 		}
 
+	verifyFactor:
 		requestPath := fmt.Sprintf("authn/factors/%s/verify", selectedFactor.Id)
 
 		payload := map[string]interface{}{
@@ -278,8 +296,40 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 					return nil, logical.ErrorResponse("exiting pending mfa challenge"), nil, nil
 				}
 			case "REJECTED":
+				// If there are more push factors, try the next one
+				if len(pushFactors) > 1 && selectedFactor.Type == mfaPushMethod {
+					// Remove the current factor and try the next
+					for i, pf := range pushFactors {
+						if pf.Id == selectedFactor.Id {
+							pushFactors = append(pushFactors[:i], pushFactors[i+1:]...)
+							break
+						}
+					}
+					if len(pushFactors) > 0 {
+						selectedFactor = pushFactors[0]
+						// Reset result state for the new factor
+						result.Status = "MFA_REQUIRED"
+						result.FactorResult = ""
+						goto verifyFactor
+					}
+				}
 				return nil, logical.ErrorResponse("multi-factor authentication denied"), nil, nil
 			case "TIMEOUT":
+				// If there are more push factors, try the next one
+				if len(pushFactors) > 1 && selectedFactor.Type == mfaPushMethod {
+					for i, pf := range pushFactors {
+						if pf.Id == selectedFactor.Id {
+							pushFactors = append(pushFactors[:i], pushFactors[i+1:]...)
+							break
+						}
+					}
+					if len(pushFactors) > 0 {
+						selectedFactor = pushFactors[0]
+						result.Status = "MFA_REQUIRED"
+						result.FactorResult = ""
+						goto verifyFactor
+					}
+				}
 				return nil, logical.ErrorResponse("failed to complete multi-factor authentication"), nil, nil
 			case "SUCCESS":
 				// Allowed
