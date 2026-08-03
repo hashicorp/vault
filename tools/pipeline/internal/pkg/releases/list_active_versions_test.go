@@ -72,7 +72,7 @@ func TestEnterpriseReleaseBranchForVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := enterpriseReleaseBranchForVersion(tt.version)
+			result := EnterpriseReleaseBranchForVersion(tt.version)
 			require.Equal(t, tt.expected, result)
 		})
 	}
@@ -109,7 +109,7 @@ func TestCEReleaseBranchForVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ceReleaseBranchForVersion(tt.version, tt.prefix)
+			result := CEReleaseBranchForVersion(tt.version, tt.prefix)
 			require.Equal(t, tt.expected, result)
 		})
 	}
