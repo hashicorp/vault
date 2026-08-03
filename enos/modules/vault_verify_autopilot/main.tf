@@ -53,7 +53,7 @@ module "verify_autopilot_status" {
   test_package = "github.com/hashicorp/vault/vault/external_tests/blackbox/isolated/verify"
   test_names   = ["TestAutopilotUpgradeStatus"]
 
-  vault_addr       = var.vault_addr
+  vault_addr       = null # Let it default to leader_public_ip - test runs locally, not on remote host
   vault_root_token = var.vault_root_token
   vault_edition    = "ent"
 
@@ -72,7 +72,7 @@ module "verify_autopilot_status_output" {
   test_package = "github.com/hashicorp/vault/vault/external_tests/blackbox/isolated/verify"
   test_names   = ["TestAutopilotUpgradeStatusOutput"]
 
-  vault_addr       = var.vault_addr
+  vault_addr       = null # Let it default to leader_public_ip - test runs locally, not on remote host
   vault_root_token = var.vault_root_token
   vault_edition    = "ent"
 
