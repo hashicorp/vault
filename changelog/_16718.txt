@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix Kubernetes auth method not saving `token_reviewer_jwt` — the wrong OpenAPI schema key (`KubernetesConfigureRequest`) was used instead of `KubernetesConfigureAuthRequest`, causing the JWT field to be omitted from the form and API payload on save.
+```

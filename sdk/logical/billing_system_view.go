@@ -10,13 +10,15 @@ import (
 
 // MountAttribution holds the metric count and mount metadata for a specific mount.
 type MountAttribution struct {
-	MountPath        string      `json:"mount_path"`         // User-facing mount path
-	MountType        string      `json:"mount_type"`         // Plugin type (e.g., "kv", "aws", "pki")
-	MountAccessor    string      `json:"mount_accessor"`     // Mount accessor (also used as map key)
-	NamespaceID      string      `json:"namespace_id"`       // Namespace identifier
-	NamespacePath    string      `json:"namespace_path"`     // User-facing namespace path
-	Count            interface{} `json:"count"`              // Count of a specific metric under this mount (int or float64)
-	BackendAwareUUID string      `json:"backend_aware_uuid"` // A stable identifier that is unique across clusters
+	MountPath           string      `json:"mount_path"`            // User-facing mount path
+	MountType           string      `json:"mount_type"`            // Plugin type (e.g., "kv", "aws", "pki")
+	MountAccessor       string      `json:"mount_accessor"`        // Mount accessor (also used as map key)
+	MountRunningVersion string      `json:"mount_running_version"` // Running version of the mount
+	NamespaceID         string      `json:"namespace_id"`          // Namespace identifier
+	NamespacePath       string      `json:"namespace_path"`        // User-facing namespace path
+	ParentNamespaceID   string      `json:"parent_namespace_id"`   // Parent namespace identifier
+	Count               interface{} `json:"count"`                 // Count of a specific metric under this mount (int or float64)
+	BackendAwareUUID    string      `json:"backend_aware_uuid"`    // A stable identifier that is unique across clusters
 }
 
 // MetricTypeAttribution holds mount attribution data for a specific metric type (e.g., "kv", "aws_static").

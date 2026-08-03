@@ -10,8 +10,30 @@ import "google/protobuf/any.proto";
 option go_package = "github.com/hashicorp/vault/vault/billing";
 
 // PluginBillingDataRequest contains the in-memory data protection call counts
-// from a performance standby node to be sent to the active node
+// and mount/namespace attribution from a performance standby node to be sent to the active node
 message PluginBillingDataRequest {
   // Map of plugin type to count (e.g., "transit" -> count)
   map<string, google.protobuf.Any> plugin_data = 1;
+
+  // Map of plugin type to attribution data (e.g., "transit" -> MountAttributionData)
+  map<string, google.protobuf.Any> attribution_data = 2;
+}
+
+// MountAttributionData contains mount/namespace attribution for a specific plugin type
+message MountAttributionData {
+  // Map of mount accessor to breakdown details
+  map<string, MountBreakdown> mount_breakdowns = 1;
+}
+
+// MountBreakdown contains the attribution details for a single mount
+message MountBreakdown {
+  string mount_path = 1;
+  string mount_type = 2;
+  string mount_accessor = 3;
+  string mount_running_version = 4;
+  string namespace_id = 5;
+  string namespace_path = 6;
+  string parent_namespace_id = 7;
+  double count = 8;
+  string backend_aware_uuid = 9;
 }
