@@ -376,7 +376,8 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 	a.queryStore = activity.NewPrecomputedQueryStore(
 		logger,
 		view.SubView(activityQueryBasePath),
-		config.RetentionMonths)
+		config.RetentionMonths,
+	)
 
 	return a, nil
 }
@@ -539,7 +540,7 @@ func (a *ActivityLog) saveSegmentTokensInternal(ctx context.Context, currentSegm
 	case err != nil:
 		a.logger.Error(fmt.Sprintf("unable to retrieve oldest version timestamp: %s", err.Error()))
 	case len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 &&
-		(oldestUpgradeTime.Add(time.Duration(trackedTWESegmentPeriod * time.Hour)).Before(time.Now())):
+		oldestUpgradeTime.Add(time.Duration(trackedTWESegmentPeriod*time.Hour)).Before(time.Now()):
 		a.logger.Error(fmt.Sprintf("storing nonzero token count over a month after vault was upgraded to %s", oldestVersion))
 	default:
 		if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
@@ -2116,6 +2117,15 @@ func (a *ActivityLog) setDefaultRetentionMonthsInConfig(ctx context.Context, inp
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
 // This currently occurs on token usage only.
 func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.TokenEntry, clientID string, isTWE bool) error {
+	// Pass in entry's client ID to the activity log
+	return a.HandleUsage(ctx, entry, clientID, isTWE, "")
+}
+
+// HandleUsage can handle standard flows, and also OBO (delegation) flows
+// if provided with optional actorEntityID parameter. For OBO flows,
+// it records the subject (human user) and actor (agent) entity
+// each as billable clients.
+func (a *ActivityLog) HandleUsage(ctx context.Context, entry *logical.TokenEntry, clientID string, isTWE bool, actorEntityID string) error {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
@@ -2155,9 +2165,13 @@ func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.Token
 	if mountEntry != nil {
 		mountAccessor = mountEntry.Accessor
 	}
+	accessTime := time.Now().Unix()
 
-	// Parse an entry's client ID and add it to the activity log
-	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor, time.Now().Unix())
+	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor, accessTime)
+	if actorEntityID != "" {
+		isTWE = false
+		a.AddClientToFragment(actorEntityID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor, accessTime)
+	}
 	return nil
 }
 
