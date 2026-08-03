@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
@@ -185,28 +185,48 @@ func TestAWSEndToEnd(t *testing.T) {
 		t.Fatal("expected notexist err")
 	}
 
-	// Wait 2 seconds for the env variables to be detected and an auth to be generated.
-	time.Sleep(time.Second * 2)
+	// Wait for the token file to be created with a timeout
+	var token *logical.HTTPWrapInfo
+	var lastErr error
+	deadline := time.Now().Add(10 * time.Second)
 
-	token, err := readToken(tokenSinkFileName)
-	if err != nil {
-		t.Fatal(err)
+	for time.Now().Before(deadline) {
+		var err error
+		token, err = readToken(tokenSinkFileName)
+		if err == nil && token != nil && token.Token != "" {
+			break
+		}
+		lastErr = err
+		time.Sleep(500 * time.Millisecond)
 	}
 
-	if token.Token == "" {
-		t.Fatal("expected token but didn't receive it")
+	if token == nil || token.Token == "" {
+		if lastErr != nil {
+			t.Fatalf("expected token but didn't receive it within timeout period, last error: %v", lastErr)
+		}
+		t.Fatal("expected token but didn't receive it within timeout period")
 	}
 }
 
 func setAwsEnvCreds() error {
-	cfg := &aws.Config{
-		Credentials: credentials.NewStaticCredentials(os.Getenv(envVarAwsTestAccessKey), os.Getenv(envVarAwsTestSecretKey), ""),
+	ctx := context.Background()
+	region := os.Getenv("AWS_REGION")
+	if region == "" {
+		region = "us-east-1"
 	}
-	sess, err := session.NewSession(cfg)
+	// Create AWS config with static credentials
+	cfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(region),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			os.Getenv(envVarAwsTestAccessKey),
+			os.Getenv(envVarAwsTestSecretKey),
+			"",
+		)),
+	)
 	if err != nil {
 		return err
 	}
-	client := sts.New(sess)
+	client := sts.NewFromConfig(cfg)
 
 	roleArn := os.Getenv(envVarAwsTestRoleArn)
 	uid, err := uuid.GenerateUUID()
@@ -215,10 +235,10 @@ func setAwsEnvCreds() error {
 	}
 
 	input := &sts.AssumeRoleInput{
-		RoleArn:         &roleArn,
-		RoleSessionName: &uid,
+		RoleArn:         aws.String(roleArn),
+		RoleSessionName: aws.String(uid),
 	}
-	output, err := client.AssumeRole(input)
+	output, err := client.AssumeRole(ctx, input)
 	if err != nil {
 		return err
 	}
