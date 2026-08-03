@@ -163,7 +163,7 @@ func findWorkflowArtifact(
 		ListOptions:         gh.ListOptions{PerPage: PerPageMax},
 		Status:              "success",
 	}
-	runs, err := getWorkflowRuns(ctx, client, owner, repo, workflowID, opts)
+	runs, err := getWorkflowRuns(ctx, client, owner, repo, workflowID, 0, opts)
 	if err != nil {
 		return nil, fmt.Errorf("getting workflow runs: %w", err)
 	}

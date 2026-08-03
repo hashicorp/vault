@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strings"
 
 	libgitclient "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -108,11 +109,11 @@ func (l *ListActiveVersionsRes) ToJSON(cePrefix string) ([]byte, error) {
 			Version:          version,
 			CEActive:         cfg.CEActive,
 			LTS:              cfg.LTS,
-			EnterpriseBranch: enterpriseReleaseBranchForVersion(version),
+			EnterpriseBranch: EnterpriseReleaseBranchForVersion(version),
 		}
 
 		if cfg.CEActive {
-			vwb.CEBranch = ceReleaseBranchForVersion(version, cePrefix)
+			vwb.CEBranch = CEReleaseBranchForVersion(version, cePrefix)
 		}
 
 		output.Versions = append(output.Versions, vwb)
@@ -137,12 +138,12 @@ func (l *ListActiveVersionsRes) ToTable(cePrefix string) string {
 	t.AppendHeader(table.Row{"version", "ce active", "lts", "enterprise branch", "ce branch"})
 	for _, version := range slices.Sorted(maps.Keys(l.VersionsConfig.ActiveVersion.Versions)) {
 		values := l.VersionsConfig.ActiveVersion.Versions[version]
-		entBranch := enterpriseReleaseBranchForVersion(version)
+		entBranch := EnterpriseReleaseBranchForVersion(version)
 		ceBranch := ""
 
 		// If CE active, show CE branch
 		if values.CEActive {
-			ceBranch = ceReleaseBranchForVersion(version, cePrefix)
+			ceBranch = CEReleaseBranchForVersion(version, cePrefix)
 		}
 
 		t.AppendRow(table.Row{version, values.CEActive, values.LTS, entBranch, ceBranch})
@@ -171,14 +172,14 @@ func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string)
 	// Generate branch names from versions
 	for version, cfg := range l.VersionsConfig.ActiveVersion.Versions {
 		// Enterprise branch (all versions)
-		entBranch := enterpriseReleaseBranchForVersion(version)
+		entBranch := EnterpriseReleaseBranchForVersion(version)
 		res.ActiveBranches = append(res.ActiveBranches, entBranch)
 		res.AllActiveBranches = append(res.AllActiveBranches, entBranch)
 
 		// CE branch (only if ce_active: true)
 		if cfg.CEActive {
 			res.CEActiveVersions = append(res.CEActiveVersions, version)
-			ceBranch := ceReleaseBranchForVersion(version, cePrefix)
+			ceBranch := CEReleaseBranchForVersion(version, cePrefix)
 			res.CEActiveBranches = append(res.CEActiveBranches, ceBranch)
 			res.AllActiveBranches = append(res.AllActiveBranches, ceBranch)
 		}
@@ -186,7 +187,7 @@ func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string)
 		// LTS branch (only if lts: true)
 		if cfg.LTS {
 			res.LTSVersions = append(res.LTSVersions, version)
-			ltsBranch := enterpriseReleaseBranchForVersion(version)
+			ltsBranch := EnterpriseReleaseBranchForVersion(version)
 			res.LTSActiveBranches = append(res.LTSActiveBranches, ltsBranch)
 		}
 
@@ -204,7 +205,7 @@ func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string)
 		// CE entry (only if ce_active: true)
 		if cfg.CEActive {
 			ceEntry := &ActiveVersionMatrixEntry{
-				Branch:  ceReleaseBranchForVersion(version, cePrefix),
+				Branch:  CEReleaseBranchForVersion(version, cePrefix),
 				Version: version,
 				Edition: "ce",
 				LTS:     cfg.LTS,
@@ -277,16 +278,25 @@ func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string)
 	return b, nil
 }
 
-// enterpriseReleaseBranchForVersion returns the enterprise release branch name for a version
-func enterpriseReleaseBranchForVersion(version string) string {
+// EnterpriseReleaseBranchForVersion returns the enterprise release branch name for a version.
+// Example: "1.19.x" -> "release/1.19.x+ent"
+func EnterpriseReleaseBranchForVersion(version string) string {
 	return fmt.Sprintf("release/%s+ent", version)
 }
 
-// ceReleaseBranchForVersion returns the CE release branch name for a version with optional prefix
-func ceReleaseBranchForVersion(version string, prefix string) string {
+// CEReleaseBranchForVersion returns the CE release branch name for a version with optional prefix.
+// Example: "1.19.x" -> "release/1.19.x"
+// With prefix "ce": "1.19.x" -> "ce/release/1.19.x"
+func CEReleaseBranchForVersion(version string, prefix string) string {
 	branch := fmt.Sprintf("release/%s", version)
 	if prefix != "" {
 		return fmt.Sprintf("%s/%s", prefix, branch)
 	}
 	return branch
+}
+
+// IsEnterpriseRepo returns true if the repository name indicates an enterprise repository.
+// Enterprise repositories follow the pattern: <name>-enterprise (e.g., vault-enterprise, consul-enterprise)
+func IsEnterpriseRepo(repo string) bool {
+	return strings.HasSuffix(repo, "-enterprise")
 }

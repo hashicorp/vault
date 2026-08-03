@@ -50,6 +50,7 @@ func newGithubCmd() *cobra.Command {
 
 	githubCmd.AddCommand(newGithubCheckCmd())
 	githubCmd.AddCommand(newGithubCloseCmd())
+	githubCmd.AddCommand(newCollectArtifactShasCmd())
 	githubCmd.AddCommand(newGithubCopyCmd())
 	githubCmd.AddCommand(newGithubCreateCmd())
 	githubCmd.AddCommand(newGithubFindCmd())
