@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -50,6 +50,7 @@ func newGithubCmd() *cobra.Command {
 
 	githubCmd.AddCommand(newGithubCheckCmd())
 	githubCmd.AddCommand(newGithubCloseCmd())
+	githubCmd.AddCommand(newCollectArtifactShasCmd())
 	githubCmd.AddCommand(newGithubCopyCmd())
 	githubCmd.AddCommand(newGithubCreateCmd())
 	githubCmd.AddCommand(newGithubFindCmd())
