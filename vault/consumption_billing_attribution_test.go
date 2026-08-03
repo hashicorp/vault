@@ -54,22 +54,26 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 		LastUpdated: lastUpdated,
 		Mounts: map[string]logical.MountAttribution{
 			"kv_5d4f8f1c": {
-				MountPath:        "secret/",
-				MountType:        "kv",
-				MountAccessor:    "kv_5d4f8f1c",
-				NamespaceID:      "root",
-				NamespacePath:    "",
-				Count:            5,
-				BackendAwareUUID: "wdasd23",
+				MountPath:           "secret/",
+				MountType:           "kv",
+				MountAccessor:       "kv_5d4f8f1c",
+				MountRunningVersion: "wre_43",
+				NamespaceID:         "root",
+				NamespacePath:       "",
+				ParentNamespaceID:   "",
+				Count:               5,
+				BackendAwareUUID:    "wdasd23",
 			},
 			"kv_be9766a3": {
-				MountPath:        "kv/",
-				MountType:        "kv",
-				MountAccessor:    "kv_be9766a3",
-				NamespaceID:      "3bFWF",
-				NamespacePath:    "ns1/",
-				Count:            5,
-				BackendAwareUUID: "adwdsd35",
+				MountPath:           "kv/",
+				MountType:           "kv",
+				MountAccessor:       "kv_be9766a3",
+				MountRunningVersion: "wtm_21",
+				NamespaceID:         "3bFWF",
+				NamespacePath:       "ns1/",
+				ParentNamespaceID:   "root",
+				Count:               5,
+				BackendAwareUUID:    "adwdsd35",
 			},
 		},
 	}
@@ -90,15 +94,19 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	m1 := got.Mounts["kv_5d4f8f1c"]
 	require.Equal(t, "secret/", m1.MountPath)
 	require.Equal(t, "kv", m1.MountType)
+	require.Equal(t, "wre_43", m1.MountRunningVersion)
 	require.Equal(t, "root", m1.NamespaceID)
 	require.Equal(t, "", m1.NamespacePath)
+	require.Equal(t, "", m1.ParentNamespaceID)
 	require.Equal(t, "kv_5d4f8f1c", m1.MountAccessor)
 	require.Equal(t, "5", fmt.Sprintf("%v", m1.Count))
 
 	m2 := got.Mounts["kv_be9766a3"]
 	require.Equal(t, "kv/", m2.MountPath)
+	require.Equal(t, "wtm_21", m2.MountRunningVersion)
 	require.Equal(t, "3bFWF", m2.NamespaceID)
 	require.Equal(t, "ns1/", m2.NamespacePath)
+	require.Equal(t, "", m1.ParentNamespaceID)
 	require.Equal(t, "5", fmt.Sprintf("%v", m2.Count))
 
 	// Overwrite with new data — second store must replace, not merge.
