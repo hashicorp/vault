@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -168,8 +168,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
-	iStore.oidcCache = newOIDCCache(cache.NoExpiration, cache.NoExpiration)
-	iStore.oidcAuthCodeCache = newOIDCCache(5*time.Minute, 5*time.Minute)
+	iStore.oidcCache = newOIDCCache(ttlcache.NoTTL)
+	iStore.oidcAuthCodeCache = newOIDCCache(5 * time.Minute)
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {

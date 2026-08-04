@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 )
 
 const useServiceDefaultRetries = -1
@@ -196,9 +197,9 @@ func (b *backend) getCachedUserId(userId string) string {
 	if userId == "" {
 		return ""
 	}
-	if entry, ok := b.iamUserIdToArnCache.Get(userId); ok {
-		b.iamUserIdToArnCache.SetDefault(userId, entry)
-		return entry.(string)
+	if item := b.iamUserIdToArnCache.Get(userId); item != nil {
+		b.iamUserIdToArnCache.Set(userId, item.Value(), ttlcache.DefaultTTL)
+		return item.Value()
 	}
 	return ""
 }
@@ -206,7 +207,7 @@ func (b *backend) getCachedUserId(userId string) string {
 // Sets an entry in the user ID cache
 func (b *backend) setCachedUserId(userId, arn string) {
 	if userId != "" {
-		b.iamUserIdToArnCache.SetDefault(userId, arn)
+		b.iamUserIdToArnCache.Set(userId, arn, ttlcache.DefaultTTL)
 	}
 }
 

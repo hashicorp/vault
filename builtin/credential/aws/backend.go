@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	cache "github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 )
 
 const (
@@ -94,7 +94,7 @@ type backend struct {
 	// Map of AWS unique IDs to the full ARN corresponding to that unique ID
 	// This avoids the overhead of an AWS API hit for every login request
 	// using the IAM auth method when bound_iam_principal_arn contains a wildcard
-	iamUserIdToArnCache *cache.Cache
+	iamUserIdToArnCache *ttlcache.Cache[string, string]
 
 	// AWS Account ID of the "default" AWS credentials
 	// This cache avoids the need to call GetCallerIdentity repeatedly to learn it
@@ -104,7 +104,7 @@ type backend struct {
 	defaultAWSAccountID string
 
 	// roleCache caches role entries to avoid locking headaches
-	roleCache *cache.Cache
+	roleCache *ttlcache.Cache[string, *awsRoleEntry]
 
 	resolveArnToUniqueIDFunc func(context.Context, logical.Storage, string) (string, error)
 
@@ -140,13 +140,17 @@ func Backend(_ *logical.BackendConfig) (*backend, error) {
 	b := &backend{
 		// Setting the periodic func to be run once in an hour.
 		// If there is a real need, this can be made configurable.
-		tidyCooldownPeriod:     time.Hour,
-		EC2ClientsMap:          make(map[clientKey]*ec2.Client),
-		IAMClientsMap:          make(map[clientKey]*iam.Client),
-		iamUserIdToArnCache:    cache.New(7*24*time.Hour, 24*time.Hour),
+		tidyCooldownPeriod: time.Hour,
+		EC2ClientsMap:      make(map[clientKey]*ec2.Client),
+		IAMClientsMap:      make(map[clientKey]*iam.Client),
+		iamUserIdToArnCache: func() *ttlcache.Cache[string, string] {
+			c := ttlcache.New[string, string](ttlcache.WithTTL[string, string](7 * 24 * time.Hour))
+			go c.Start()
+			return c
+		}(),
 		tidyDenyListCASGuard:   new(uint32),
 		tidyAccessListCASGuard: new(uint32),
-		roleCache:              cache.New(cache.NoExpiration, cache.NoExpiration),
+		roleCache:              ttlcache.New[string, *awsRoleEntry](),
 
 		deprecatedTerms: strings.NewReplacer(
 			"accesslist", "whitelist",
@@ -309,7 +313,7 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		b.defaultAWSAccountID = ""
 	case strings.HasPrefix(key, "role"):
 		// TODO: We could make this better
-		b.roleCache.Flush()
+		b.roleCache.DeleteAll()
 	}
 }
 

@@ -33,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	gocache "github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"go.uber.org/atomic"
 )
 
@@ -94,7 +94,7 @@ type LeaseCache struct {
 	idLocks []*locksutil.LockEntry
 
 	// inflightCache keeps track of inflight requests
-	inflightCache *gocache.Cache
+	inflightCache *ttlcache.Cache[string, *inflightRequest]
 
 	// ps is the persistent storage for tokens and leases
 	ps *cacheboltdb.BoltStorage
@@ -181,7 +181,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		baseCtxInfo:         baseCtxInfo,
 		l:                   &sync.RWMutex{},
 		idLocks:             locksutil.CreateLocks(),
-		inflightCache:       gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+		inflightCache:       ttlcache.New[string, *inflightRequest](),
 		ps:                  conf.Storage,
 		cacheStaticSecrets:  conf.CacheStaticSecrets,
 		cacheDynamicSecrets: conf.CacheDynamicSecrets,
@@ -349,10 +349,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// they both miss the cache due to it being clean when peeking the cache
 	// entry.
 	idLockDynamicSecret.Lock()
-	inflightRaw, found := c.inflightCache.Get(dynamicSecretCacheId)
-	if found {
+	inflightItem := c.inflightCache.Get(dynamicSecretCacheId)
+	if inflightItem != nil {
 		idLockDynamicSecret.Unlock()
-		inflight = inflightRaw.(*inflightRequest)
+		inflight = inflightItem.Value()
 		inflight.remaining.Inc()
 		defer inflight.remaining.Dec()
 
@@ -371,7 +371,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			defer close(inflight.ch)
 		}
 
-		c.inflightCache.Set(dynamicSecretCacheId, inflight, gocache.NoExpiration)
+		c.inflightCache.Set(dynamicSecretCacheId, inflight, ttlcache.NoTTL)
 		idLockDynamicSecret.Unlock()
 	}
 
@@ -383,10 +383,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// they both miss the cache due to it being clean when peeking the cache
 		// entry.
 		idLockStaticSecret.Lock()
-		inflightRaw, found = c.inflightCache.Get(staticSecretCacheId)
-		if found {
+		inflightItem = c.inflightCache.Get(staticSecretCacheId)
+		if inflightItem != nil {
 			idLockStaticSecret.Unlock()
-			inflight = inflightRaw.(*inflightRequest)
+			inflight = inflightItem.Value()
 			inflight.remaining.Inc()
 			defer inflight.remaining.Dec()
 
@@ -405,7 +405,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 				defer close(inflight.ch)
 			}
 
-			c.inflightCache.Set(staticSecretCacheId, inflight, gocache.NoExpiration)
+			c.inflightCache.Set(staticSecretCacheId, inflight, ttlcache.NoTTL)
 			idLockStaticSecret.Unlock()
 		}
 	}
