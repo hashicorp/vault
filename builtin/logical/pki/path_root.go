@@ -145,8 +145,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		Data: make(map[string]any),
 	}
 
-	// Tell getGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
-	genParams, warnings, errorResp := getGenerationParams(sc, data, true)
+	// Tell getCAGenerationParams we are generating a root, so that we can validate signatureBits against KeyType
+	genParams, warnings, errorResp := getCAGenerationParams(sc, data, true)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -268,6 +268,21 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 			resp.Data["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			resp.Data["private_key_type"] = cb.PrivateKeyType
 		}
+
+	case "pkcs12_bundle":
+		password := data.Get("pkcs12_password").(string)
+		encoder := data.Get("pkcs12_encoder").(string)
+		caChain := x509Certificates(parsedBundle.CAChain)
+		var privateKey crypto.Signer
+		if genParams.exported {
+			privateKey = parsedBundle.PrivateKey
+		}
+		pkcs12Bytes, err := EncodeToPKCS12(encoder, privateKey, parsedBundle.Certificate, caChain, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
+		resp.Data["issuing_ca"] = cb.Certificate
 	default:
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
@@ -372,7 +387,19 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	format := getFormat(data)
 	if format == "" {
-		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
+		return logical.ErrorResponse(`the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`), nil
+	}
+	if format == "pkcs12_bundle" {
+		// Cast to encoder type and validate it is a permitted value
+		_, err := validatePKCS12Encoder(data.Get("pkcs12_encoder").(string))
+		if err != nil {
+			return logical.ErrorResponse(`invalid "pkcs12_encoder" parameter: %v`, err), nil
+		}
+	}
+	encParams := certEncodingParams{
+		format:         format,
+		pkcs12Encoder:  data.Get("pkcs12_encoder").(string),
+		pkcs12Password: data.Get("pkcs12_password").(string),
 	}
 
 	role := &issuing.RoleEntry{
@@ -478,7 +505,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
-	resp, err := signIntermediateResponse(signingBundle, parsedBundle, format, warnings)
+	resp, err := signIntermediateResponse(signingBundle, parsedBundle, encParams, warnings)
 	if err != nil {
 		return nil, err
 	}
@@ -522,7 +549,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	return resp, nil
 }
 
-func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, format string, warnings []string) (*logical.Response, error) {
+type certEncodingParams struct {
+	format         string
+	pkcs12Encoder  string
+	pkcs12Password string
+}
+
+func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, encParams certEncodingParams, warnings []string) (*logical.Response, error) {
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
@@ -573,6 +606,7 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 
 	caChain := append([]string{cb.Certificate}, cb.CAChain...)
 
+	format := encParams.format
 	switch format {
 	case "pem":
 		resp.Data["certificate"] = cb.Certificate
@@ -594,6 +628,20 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 			derCaChain = append(derCaChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 		}
 		resp.Data["ca_chain"] = derCaChain
+
+	case "pkcs12_bundle":
+		password := encParams.pkcs12Password
+		encoder := encParams.pkcs12Encoder
+		// Use parsedBundle.CAChain (not caChain variable) because EncodeToPKCS12
+		// internally prepends parsedBundle.Certificate to create the full chain.
+		caCerts := x509Certificates(parsedBundle.CAChain)
+		// Intermediates are signed from a CSR, pass nil because no private key should be available here.
+		pkcs12Bytes, err := EncodeToPKCS12(encoder, nil, parsedBundle.Certificate, caCerts, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
+		resp.Data["issuing_ca"] = signingCB.Certificate
 
 	default:
 		return nil, fmt.Errorf("unsupported format argument: %s", format)

@@ -6,8 +6,10 @@ package pki
 import (
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 const (
@@ -22,7 +24,7 @@ const (
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
 // and signing
-func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema, allowedFormats []string) map[string]*framework.FieldSchema {
 	fields["exclude_cn_from_sans"] = &framework.FieldSchema{
 		Type:    framework.TypeBool,
 		Default: false,
@@ -34,15 +36,25 @@ Defaults to false (CN is included).`,
 		},
 	}
 
+	formatDescription := `Format for returned data. Can be "pem", "der" or
+	"pem_bundle". If "pem_bundle", any private
+	key and issuing cert will be appended to the
+	certificate pem. If "der", the value will be
+	base64 encoded. Defaults to "pem".`
+
+	if strutil.StrListContains(allowedFormats, "pkcs12_bundle") {
+		formatDescription = `Format for returned data. Can be "pem", "der",
+	"pem_bundle" or "pkcs12_bundle". If "pem_bundle", any private
+	key and issuing cert will be appended to the
+	certificate pem. If "der" or "pkcs12_bundle", the value will be
+	base64 encoded. Defaults to "pem".`
+	}
+
 	fields["format"] = &framework.FieldSchema{
-		Type:    framework.TypeString,
-		Default: "pem",
-		Description: `Format for returned data. Can be "pem", "der",
-or "pem_bundle". If "pem_bundle", any private
-key and issuing cert will be appended to the
-certificate pem. If "der", the value will be
-base64 encoded. Defaults to "pem".`,
-		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
+		Type:          framework.TypeString,
+		Default:       "pem",
+		Description:   formatDescription,
+		AllowedValues: strutil.StringListToInterfaceList(allowedFormats),
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "pem",
 		},
@@ -61,6 +73,33 @@ pkcs8 instead. Defaults to "der".`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "der",
 		},
+	}
+
+	if strutil.StrListContains(allowedFormats, "pkcs12_bundle") {
+		fields["pkcs12_encoder"] = &framework.FieldSchema{
+			Type:    framework.TypeString,
+			Default: "modern2026",
+			Description: `Encoder profile to use for PKCS#12 archives when
+format is set to "pkcs12_bundle". Valid values are "modern2026" and
+"modern2023". Defaults to "modern2026", which uses the newer PKCS#12
+integrity format (PBMAC1).`,
+			AllowedValues: []interface{}{"modern2026", "modern2023"},
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "PKCS#12 Encoder Profile",
+			},
+		}
+
+		fields["pkcs12_password"] = &framework.FieldSchema{
+			Type:    framework.TypeString,
+			Default: pkcs12.DefaultPassword,
+			Description: `Password for encrypting the PKCS#12
+		archive when format is set to "pkcs12_bundle". If not provided,
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "PKCS#12 Password",
+			},
+		}
 	}
 
 	fields["ip_sans"] = &framework.FieldSchema{
@@ -96,7 +135,7 @@ comma-delimited list.`,
 // addNonCACommonFields adds fields with help text specific to non-CA
 // certificate issuing and signing
 func addNonCACommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields = addIssueAndSignCommonFields(fields)
+	fields = addIssueAndSignCommonFields(fields, supportedFormats(true))
 
 	fields["role"] = &framework.FieldSchema{
 		Type: framework.TypeString,
@@ -181,8 +220,8 @@ Any values are added with OID 0.9.2342.19200300.100.1.1.`,
 
 // addCACommonFields adds fields with help text specific to CA
 // certificate issuing and signing
-func addCACommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields = addIssueAndSignCommonFields(fields)
+func addCACommonFields(fields map[string]*framework.FieldSchema, allowedFormats []string) map[string]*framework.FieldSchema {
+	fields = addIssueAndSignCommonFields(fields, allowedFormats)
 
 	fields["alt_names"] = &framework.FieldSchema{
 		Type: framework.TypeString,

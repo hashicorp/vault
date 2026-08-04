@@ -29,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/cryptobyte"
 	cbbasn1 "golang.org/x/crypto/cryptobyte/asn1"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 type inputBundle struct {
@@ -47,10 +48,18 @@ func getFormat(data *framework.FieldData) string {
 	case "pem":
 	case "der":
 	case "pem_bundle":
+	case "pkcs12_bundle":
 	default:
 		format = ""
 	}
 	return format
+}
+
+func supportedFormats(includePKCS12 bool) []string {
+	if includePKCS12 {
+		return []string{"pem", "der", "pem_bundle", "pkcs12_bundle"}
+	}
+	return []string{"pem", "der", "pem_bundle"}
 }
 
 // fetchCAInfo will fetch the CA info, will return an error if no ca info exists, this does NOT support
@@ -784,4 +793,56 @@ func validateCountry(country []string) error {
 		}
 	}
 	return nil
+}
+
+type pkcs12EncoderType string
+
+const (
+	PKCS12EncoderModern2026 pkcs12EncoderType = "modern2026"
+	PKCS12EncoderModern2023 pkcs12EncoderType = "modern2023"
+)
+
+// validatePKCS12Encoder validates the encoder string and returns the typed value.
+// Returns an error if the encoder type is invalid.
+func validatePKCS12Encoder(encoderStr string) (pkcs12EncoderType, error) {
+	encoder := pkcs12EncoderType(encoderStr)
+	switch encoder {
+	case "":
+		return PKCS12EncoderModern2026, nil
+	case PKCS12EncoderModern2026, PKCS12EncoderModern2023:
+		return encoder, nil
+	default:
+		return "", fmt.Errorf("encoder must be %q or %q; received: %q", PKCS12EncoderModern2026, PKCS12EncoderModern2023, encoder)
+	}
+}
+
+func (e pkcs12EncoderType) encodeToPKCS12(privateKey crypto.Signer, cert *x509.Certificate, caChain []*x509.Certificate, password string) ([]byte, error) {
+	var enc *pkcs12.Encoder
+	switch e {
+	case PKCS12EncoderModern2026:
+		enc = pkcs12.Modern2026
+	case PKCS12EncoderModern2023:
+		enc = pkcs12.Modern2023
+	default:
+		return nil, fmt.Errorf("unexpected encoder type: %q; encoder must be %q or %q", e, PKCS12EncoderModern2026, PKCS12EncoderModern2023)
+	}
+
+	if privateKey != nil {
+		return enc.Encode(privateKey, cert, caChain, password)
+	}
+	// For trust store (no private key), include the issued cert + CA chain
+	certs := append([]*x509.Certificate{cert}, caChain...)
+	return enc.EncodeTrustStore(certs, password)
+}
+
+func EncodeToPKCS12(encoder string, privateKey crypto.Signer, cert *x509.Certificate, caChain []*x509.Certificate, password string) ([]byte, error) {
+	return pkcs12EncoderType(encoder).encodeToPKCS12(privateKey, cert, caChain, password)
+}
+
+func x509Certificates(chain []*certutil.CertBlock) []*x509.Certificate {
+	var certs []*x509.Certificate
+	for _, cert := range chain {
+		certs = append(certs, cert.Certificate)
+	}
+	return certs
 }

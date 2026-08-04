@@ -27,7 +27,7 @@ type generationParams struct {
 	role     *issuing.RoleEntry
 }
 
-func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (params generationParams, warnings []string, errorResp *logical.Response) {
+func getCAGenerationParams(sc *storageContext, data *framework.FieldData, isRoot bool) (params generationParams, warnings []string, errorResp *logical.Response) {
 	exportedStr := data.Get("exported").(string)
 	switch exportedStr {
 	case "exported":
@@ -41,11 +41,25 @@ func getGenerationParams(sc *storageContext, data *framework.FieldData, isRoot b
 		return
 	}
 
+	// PKCS#12 formats are only supported for root certificate generation.
+	// For non-root operations, only a CSR is generated and PKCS#12 is not a valid output format.
 	params.format = getFormat(data)
-	if params.format == "" {
-		errorResp = logical.ErrorResponse(
-			`the "format" path parameter must be "pem", "der", or "pem_bundle"`)
+	if params.format == "" || (!isRoot && params.format == "pkcs12_bundle") {
+		errorMsg := `the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`
+		if !isRoot {
+			errorMsg = `the "format" parameter must be "pem", "der" or "pem_bundle"`
+		}
+		errorResp = logical.ErrorResponse(errorMsg)
 		return
+	}
+
+	if params.format == "pkcs12_bundle" {
+		// Cast to encoder type and validate it is a permitted value
+		_, err := validatePKCS12Encoder(data.Get("pkcs12_encoder").(string))
+		if err != nil {
+			errorResp = logical.ErrorResponse(`invalid "pkcs12_encoder" parameter: %v`, err)
+			return
+		}
 	}
 
 	keyType, keyBits, err := sc.getKeyTypeAndBitsForRole(data)

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // TestGenerateRoot_InvalidCountry validates that ISO 3166 is followed for the Country field
@@ -170,4 +171,130 @@ func requireMaxPathLengthZeroWarning(t testing.TB, warnings []string) {
 		}
 	}
 	require.True(t, foundWarning, "expected warning about zero max path length, got warnings: %v", warnings)
+}
+
+// TestGenerateAndRotateRoot_PKCS12Format validates PKCS12 support for (internal and exported) root generation and rotation.
+// PKCS12 archives from exported endpoints should contain a private key and root certificate while
+// internal endpoints should only have the root certificate.
+func TestGenerateAndRotateRoot_PKCS12Format(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+	var password string
+	buildData := func(omitPassword bool, encoder string) map[string]interface{} {
+		password = pkcs12.DefaultPassword
+		data := map[string]interface{}{
+			"format":      "pkcs12_bundle",
+			"common_name": "Root CA",
+			"ttl":         "87600h",
+			"key_type":    "ec",
+			"key_bits":    256,
+		}
+		if !omitPassword {
+			password = "secure-root-password"
+			data["pkcs12_password"] = password
+		}
+		if encoder != "" {
+			data["pkcs12_encoder"] = encoder
+		}
+		return data
+	}
+
+	for _, p := range []string{"root/generate/", "root/rotate/"} {
+		testCases := []struct {
+			name         string
+			endpoint     string
+			encoder      string
+			omitPassword bool
+			shouldError  bool
+		}{
+			// exported
+			{name: "custom password", endpoint: "exported"},
+			{name: "default password", endpoint: "exported", omitPassword: true},
+			{name: "with modern2026 encoder", endpoint: "exported", encoder: "modern2026"},
+			{name: "with modern2023 encoder", endpoint: "exported", encoder: "modern2023"},
+			{name: "with invalid encoder", endpoint: "exported", encoder: "modern2020", shouldError: true},
+			// internal
+			{name: "custom password", endpoint: "internal"},
+			{name: "default password", endpoint: "internal", omitPassword: true},
+			{name: "with modern2026 encoder", endpoint: "internal", encoder: "modern2026"},
+			{name: "with modern2023 encoder", endpoint: "internal", encoder: "modern2023"},
+			{name: "with invalid encoder", endpoint: "internal", encoder: "modern2020", shouldError: true},
+		}
+
+		for _, tc := range testCases {
+			path := p + tc.endpoint
+			t.Run(tc.name, func(t *testing.T) {
+				data := buildData(tc.omitPassword, tc.encoder)
+				pkcs12Bytes := requestAndVerifyPKCS12(t, tc.shouldError, requestPKCS12params{b, s, path, data})
+				if tc.shouldError {
+					return
+				}
+
+				if tc.endpoint == "exported" {
+					_, cert, caCerts := requireDecodesPKCS12Chain(t, pkcs12Bytes, password)
+					require.Equal(t, "Root CA", cert.Subject.CommonName)
+					require.True(t, cert.IsCA, "should be a CA certificate")
+					// The root certificate itself is in 'cert', not in 'caCerts'
+					require.Len(t, caCerts, 0, "should have no CA chain because root is self-signed")
+				} else {
+					// Validate PKCS12 trust store for internal root: contains only certificates (no private key)
+					certs := requireDecodesPKCS12TrustStore(t, pkcs12Bytes, password)
+					require.Len(t, certs, 1, "should have no additional certs because root is self-signed")
+					// First cert should be the root
+					require.True(t, certs[0].IsCA, "cert should be a CA")
+					require.Equal(t, "Root CA", certs[0].Subject.CommonName)
+					requireSignedBy(t, certs[0], certs[0])
+				}
+			})
+		}
+	}
+}
+
+// TestGenerateAndRotateRoot_FormatValidation validates that empty format string and invalid encoders are rejected
+func TestGenerateAndRotateRoot_FormatValidation(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	tcEmptyFormat := []struct {
+		name     string
+		endpoint string
+		format   string
+	}{
+		{name: "generate empty format", endpoint: "root/generate/exported", format: ""},
+		{name: "rotate empty format", endpoint: "root/rotate/exported", format: ""},
+	}
+
+	for _, tc := range tcEmptyFormat {
+		t.Run(tc.endpoint, func(t *testing.T) {
+			_, err := CBWrite(b, s, tc.endpoint, map[string]interface{}{
+				"common_name": "Root CA",
+				"format":      "",
+				"key_type":    "ec",
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), `the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`)
+		})
+	}
+
+	tcInvalidEncoder := []struct {
+		name     string
+		endpoint string
+		encoder  string
+	}{
+		{name: "generate invalid format", endpoint: "root/generate/exported", encoder: "invalid"},
+		{name: "rotate invalid format", endpoint: "root/rotate/exported", encoder: "invalid"},
+	}
+
+	for _, tc := range tcInvalidEncoder {
+		t.Run(tc.endpoint, func(t *testing.T) {
+			_, err := CBWrite(b, s, tc.endpoint, map[string]interface{}{
+				"common_name":    "Root CA",
+				"format":         "pkcs12_bundle",
+				"pkcs12_encoder": tc.encoder,
+				"key_type":       "ec",
+			})
+			require.Error(t, err)
+			require.Contains(t, err.Error(), `invalid "pkcs12_encoder" parameter: encoder must be "modern2026" or "modern2023"; received: "invalid"`)
+		})
+	}
 }
