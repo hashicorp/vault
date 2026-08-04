@@ -71,7 +71,7 @@ import (
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
-	"github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	uberAtomic "go.uber.org/atomic"
 	"google.golang.org/grpc"
 )
@@ -557,7 +557,7 @@ type Core struct {
 	// Current cluster leader values
 	clusterLeaderParams *atomic.Value
 	// Info on cluster members
-	clusterPeerClusterAddrsCache *cache.Cache
+	clusterPeerClusterAddrsCache *ttlcache.Cache[string, nodeHAConnectionInfo]
 	// The context for the client
 	rpcClientConnContext context.Context
 	// The function for canceling the client connection
@@ -1142,14 +1142,18 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		logger:               conf.Logger.Named("core"),
 		logLevel:             conf.LogLevel,
 
-		defaultLeaseTTL:                 conf.DefaultLeaseTTL,
-		maxLeaseTTL:                     conf.MaxLeaseTTL,
-		removeIrrevocableLeaseAfter:     conf.RemoveIrrevocableLeaseAfter,
-		sentinelTraceDisabled:           conf.DisableSentinelTrace,
-		cachingDisabled:                 conf.DisableCache,
-		clusterName:                     conf.ClusterName,
-		clusterNetworkLayer:             conf.ClusterNetworkLayer,
-		clusterPeerClusterAddrsCache:    cache.New(3*clusterHeartbeatInterval, time.Second),
+		defaultLeaseTTL:             conf.DefaultLeaseTTL,
+		maxLeaseTTL:                 conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter: conf.RemoveIrrevocableLeaseAfter,
+		sentinelTraceDisabled:       conf.DisableSentinelTrace,
+		cachingDisabled:             conf.DisableCache,
+		clusterName:                 conf.ClusterName,
+		clusterNetworkLayer:         conf.ClusterNetworkLayer,
+		clusterPeerClusterAddrsCache: func() *ttlcache.Cache[string, nodeHAConnectionInfo] {
+			c := ttlcache.New[string, nodeHAConnectionInfo](ttlcache.WithTTL[string, nodeHAConnectionInfo](3 * clusterHeartbeatInterval))
+			go c.Start()
+			return c
+		}(),
 		enableMlock:                     !conf.DisableMlock,
 		rawEnabled:                      conf.EnableRaw,
 		introspectionEnabled:            conf.EnableIntrospection,
@@ -3112,9 +3116,11 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
-	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
+	c.loginMFABackend.usedCodes = ttlcache.New[string, any]()
+	go c.loginMFABackend.usedCodes.Start()
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
-		c.systemBackend.mfaBackend.usedCodes = cache.New(0, 30*time.Second)
+		c.systemBackend.mfaBackend.usedCodes = ttlcache.New[string, any]()
+		go c.systemBackend.mfaBackend.usedCodes.Start()
 	}
 	if c.systemBackend != nil {
 		// all mounts need to be initialized before activity log reporting
@@ -4589,7 +4595,7 @@ type PeerNode struct {
 func (c *Core) GetHAPeerNodesCached() []PeerNode {
 	var nodes []PeerNode
 	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
-		info := item.Object.(nodeHAConnectionInfo)
+		info := item.Value()
 		var hostname, apiAddr string
 
 		// nodeInfo can be nil if there's a node with a much older version in
