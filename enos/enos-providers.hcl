@@ -3,6 +3,9 @@
 
 provider "aws" "default" {
   region = var.aws_region
+
+  # Enhanced retry configuration for transient AWS API failures
+  max_retries = 5
 }
 
 provider "docker" "default" {
