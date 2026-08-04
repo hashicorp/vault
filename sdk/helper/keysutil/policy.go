@@ -272,6 +272,25 @@ func (kt KeyType) HMACSupported() bool {
 	}
 }
 
+func (kt KeyType) KeyUsages() []string {
+	switch kt {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		return []string{"aead-encryption"}
+	case KeyType_AES128_CBC, KeyType_AES256_CBC:
+		return []string{"symmetric-encryption"}
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_ML_DSA, KeyType_SLH_DSA, KeyType_HYBRID:
+		return []string{"digital-signature"}
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		return []string{"asymmetric-encryption", "digital-signature"}
+	case KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES192_CMAC, KeyType_AES256_CMAC:
+		return []string{"message-authentication"}
+	case KeyType_MANAGED_KEY:
+		return []string{}
+	default:
+		return []string{}
+	}
+}
+
 func (kt KeyType) IsEnterpriseOnly() bool {
 	switch kt {
 	case KeyType_MANAGED_KEY, KeyType_AES128_CMAC, KeyType_AES192_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA, KeyType_HYBRID, KeyType_AES128_CBC, KeyType_AES256_CBC, KeyType_SLH_DSA:
