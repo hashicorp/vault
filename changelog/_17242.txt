@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix policy creation automation snippets not updating when switching from visual editor to code editor
+```
