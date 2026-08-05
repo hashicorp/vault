@@ -323,6 +323,7 @@ require (
 	github.com/oracle/oci-go-sdk/v65 v65.109.2 // indirect
 	github.com/std-uritemplate/std-uritemplate/go/v2 v2.0.3 // indirect
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
+	github.com/xanzy/go-gitlab v0.109.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/telemetry v0.0.0-20260625142307-59b4966ccb57 // indirect
@@ -462,6 +463,8 @@ require (
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
 	github.com/hashicorp/go-discover/provider/gce v0.0.0-20260514184450-13fff3633a00 // indirect
+	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6
+	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-metrics v0.6.1
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1 // indirect
