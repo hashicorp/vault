@@ -779,7 +779,7 @@ func (r *CheckWorkflowRunReq) buildBranchResult(
 		Status:        run.GetStatus(),
 		Conclusion:    run.GetConclusion(),
 		MatchedJobs:   eval.MatchedJobs,
-		CommitSHA:     run.GetHeadCommit().GetSHA(),
+		CommitSHA:     run.GetHeadSHA(),
 		WorkflowURL:   run.GetHTMLURL(),
 	}
 
