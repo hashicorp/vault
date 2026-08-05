@@ -1111,3 +1111,231 @@ func TestCheckForDeleteOrDestroyNamespacedEvent(t *testing.T) {
 	require.Equal(t, expectedVersions, actualVersions)
 	require.Equal(t, expectedPath, actualPath)
 }
+
+// TestLeaseCache_ListRequestNotCached verifies that GET requests with ?list=true
+// are never served from the static secret cache and are never written to it.
+// This prevents stale list responses after new secrets are added to a KV mount:
+// the event system fires data-write events on kv-v2/data/<name> paths, which
+// do not match the kv-v2/metadata path that a list response would be cached
+// under, so without this guard the list cache entry would never be invalidated.
+// The equivalent curl -X LIST form is also never cached (method != GET), so
+// this aligns both syntaxes.
+func TestLeaseCache_ListRequestNotCached(t *testing.T) {
+	t.Parallel()
+
+	// Spin up a real Vault cluster with a KVv2 backend so we can issue real
+	// requests through the LeaseCache and verify cache behaviour against actual
+	// Vault responses.
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+	}, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	// Mount KVv2 at "kv-v2".
+	err := client.Sys().Mount("kv-v2", &api.MountInput{
+		Type: "kv-v2",
+	})
+	require.NoError(t, err)
+
+	// Wire a real APIProxy → LeaseCache, mirroring how Vault Proxy is set up.
+	apiProxy, err := NewAPIProxy(&APIProxyConfig{
+		Client:                  client,
+		Logger:                  logging.NewVaultLogger(hclog.Trace).Named("cache.apiproxy"),
+		UserAgentStringFunction: func(s string) string { return s },
+		UserAgentString:         "test",
+	})
+	require.NoError(t, err)
+
+	lc, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             apiProxy,
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
+	})
+	require.NoError(t, err)
+	require.NoError(t, lc.RegisterAutoAuthToken(client.Token()))
+
+	// Write the first secret to the mount.
+	_, err = client.KVv2("kv-v2").Put(context.Background(), "alpha", map[string]interface{}{"val": "1"})
+	require.NoError(t, err)
+
+	// Helper to build a plain GET SendRequest.
+	makeGetReq := func(path string) *SendRequest {
+		r := client.NewRequest("GET", path)
+		httpReq, err := r.ToHTTP()
+		require.NoError(t, err)
+		return &SendRequest{Token: client.Token(), Request: httpReq}
+	}
+
+	// Helper to build a GET ?list=true SendRequest, mirroring what the Vault
+	// Go client's Logical.List does: set method=GET and params list=true.
+	makeListReq := func(path string) *SendRequest {
+		r := client.NewRequest("GET", path)
+		r.Params.Set("list", "true")
+		httpReq, err := r.ToHTTP()
+		require.NoError(t, err)
+		return &SendRequest{Token: client.Token(), Request: httpReq}
+	}
+
+	// --- Seed the data cache with a plain GET so there is a pre-existing
+	//     static secret entry. This ensures the read guard is exercised: a
+	//     ?list=true request must not hit this or any other cached entry.
+	dataPath := "/v1/kv-v2/data/alpha"
+	resp, err := lc.Send(context.Background(), makeGetReq(dataPath))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+	require.False(t, resp.CacheMeta.Hit, "first GET of data path should be a cache miss")
+
+	// Second GET of the same data path — must be a HIT, confirming the plain
+	// GET path was cached correctly (regression guard).
+	resp, err = lc.Send(context.Background(), makeGetReq(dataPath))
+	require.NoError(t, err)
+	require.True(t, resp.CacheMeta.Hit, "second GET of data path should be a cache hit")
+
+	// --- First list request via GET ?list=true — must always be a MISS.
+	metadataPath := "/v1/kv-v2/metadata"
+	resp, err = lc.Send(context.Background(), makeListReq(metadataPath))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+	require.False(t, resp.CacheMeta.Hit, "GET ?list=true should be a cache miss")
+
+	// Parse the list response and confirm it contains only "alpha".
+	listSecret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
+	require.NoError(t, err)
+	keys, ok := listSecret.Data["keys"].([]interface{})
+	require.True(t, ok)
+	require.Equal(t, []interface{}{"alpha"}, keys, "list should contain only alpha")
+
+	// Direct proof: nothing was written to the static secret cache for the
+	// list request. Compute the exact index ID that would have been used and
+	// assert it is absent from the DB.
+	listCacheKey := computeStaticSecretCacheIndex(makeListReq(metadataPath))
+	_, err = lc.db.Get(cachememdb.IndexNameID, listCacheKey)
+	require.ErrorIs(t, err, cachememdb.ErrCacheItemNotFound, "GET ?list=true must not be written to static secret cache")
+
+	// --- Add a second secret to the mount. Before the fix, subsequent list
+	//     requests would still return ["alpha"] from a stale cache HIT.
+	_, err = client.KVv2("kv-v2").Put(context.Background(), "gamma", map[string]interface{}{"val": "2"})
+	require.NoError(t, err)
+
+	// Second list request — must still be a MISS and must reflect the new secret.
+	// Before the fix this returned a stale HIT with only ["alpha"].
+	resp, err = lc.Send(context.Background(), makeListReq(metadataPath))
+	require.NoError(t, err)
+	require.False(t, resp.CacheMeta.Hit, "GET ?list=true after adding gamma should still be a cache miss")
+
+	listSecret, err = api.ParseSecret(bytes.NewReader(resp.ResponseBody))
+	require.NoError(t, err)
+	keys, ok = listSecret.Data["keys"].([]interface{})
+	require.True(t, ok)
+	require.Contains(t, keys, "alpha", "list should still contain alpha")
+	require.Contains(t, keys, "gamma", "list should now contain gamma")
+}
+
+// TestLeaseCache_ListRequestNotCached_KVv1 is the KVv1 equivalent of
+// TestLeaseCache_ListRequestNotCached. The same ?list=true bug applies to KVv1:
+// the event system fires data-write events on secret/<name> paths, which do not
+// match the secret path a list response would be cached under.
+// Both KVv1 and KVv2 return mount_type="kv", so the cache write guard applies
+// to both and this test confirms it.
+func TestLeaseCache_ListRequestNotCached_KVv1(t *testing.T) {
+	t.Parallel()
+
+	// vault.NewTestCluster pre-mounts a KVv1 backend at "secret/".
+	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	client := cluster.Cores[0].Client
+
+	// Wire a real APIProxy → LeaseCache.
+	apiProxy, err := NewAPIProxy(&APIProxyConfig{
+		Client:                  client,
+		Logger:                  logging.NewVaultLogger(hclog.Trace).Named("cache.apiproxy"),
+		UserAgentStringFunction: func(s string) string { return s },
+		UserAgentString:         "test",
+	})
+	require.NoError(t, err)
+
+	lc, err := NewLeaseCache(&LeaseCacheConfig{
+		Client:              client,
+		BaseContext:         context.Background(),
+		Proxier:             apiProxy,
+		Logger:              logging.NewVaultLogger(hclog.Trace).Named("cache.leasecache"),
+		CacheStaticSecrets:  true,
+		CacheDynamicSecrets: true,
+		UserAgentToUse:      "test",
+	})
+	require.NoError(t, err)
+	require.NoError(t, lc.RegisterAutoAuthToken(client.Token()))
+
+	// Write the first secret.
+	err = client.KVv1("secret").Put(context.Background(), "alpha", map[string]interface{}{"val": "1"})
+	require.NoError(t, err)
+
+	makeGetReq := func(path string) *SendRequest {
+		r := client.NewRequest("GET", path)
+		httpReq, err := r.ToHTTP()
+		require.NoError(t, err)
+		return &SendRequest{Token: client.Token(), Request: httpReq}
+	}
+
+	makeListReq := func(path string) *SendRequest {
+		r := client.NewRequest("GET", path)
+		r.Params.Set("list", "true")
+		httpReq, err := r.ToHTTP()
+		require.NoError(t, err)
+		return &SendRequest{Token: client.Token(), Request: httpReq}
+	}
+
+	// Seed the cache with a plain GET so a static secret entry exists.
+	// This exercises the read guard: the subsequent ?list=true must not
+	// serve this entry even though the cache key base path is the same.
+	resp, err := lc.Send(context.Background(), makeGetReq("/v1/secret/alpha"))
+	require.NoError(t, err)
+	require.False(t, resp.CacheMeta.Hit, "first GET should be a cache miss")
+
+	resp, err = lc.Send(context.Background(), makeGetReq("/v1/secret/alpha"))
+	require.NoError(t, err)
+	require.True(t, resp.CacheMeta.Hit, "second GET should be a cache hit (regression guard)")
+
+	// First ?list=true — must always be a MISS.
+	resp, err = lc.Send(context.Background(), makeListReq("/v1/secret"))
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+	require.False(t, resp.CacheMeta.Hit, "GET ?list=true should be a cache miss")
+
+	listSecret, err := api.ParseSecret(bytes.NewReader(resp.ResponseBody))
+	require.NoError(t, err)
+	keys, ok := listSecret.Data["keys"].([]interface{})
+	require.True(t, ok)
+	require.Equal(t, []interface{}{"alpha"}, keys, "list should contain only alpha")
+
+	// Direct proof: nothing was written to the static secret cache.
+	listCacheKey := computeStaticSecretCacheIndex(makeListReq("/v1/secret"))
+	_, err = lc.db.Get(cachememdb.IndexNameID, listCacheKey)
+	require.ErrorIs(t, err, cachememdb.ErrCacheItemNotFound, "GET ?list=true must not be written to static secret cache")
+
+	// Add a second secret — this is the exact bug scenario for KVv1.
+	err = client.KVv1("secret").Put(context.Background(), "gamma", map[string]interface{}{"val": "2"})
+	require.NoError(t, err)
+
+	// Second ?list=true — must still be a MISS and return both keys.
+	// Before the fix this would return a stale HIT with only ["alpha"].
+	resp, err = lc.Send(context.Background(), makeListReq("/v1/secret"))
+	require.NoError(t, err)
+	require.False(t, resp.CacheMeta.Hit, "GET ?list=true after adding gamma must still be a cache miss")
+
+	listSecret, err = api.ParseSecret(bytes.NewReader(resp.ResponseBody))
+	require.NoError(t, err)
+	keys, ok = listSecret.Data["keys"].([]interface{})
+	require.True(t, ok)
+	require.Contains(t, keys, "alpha", "list should still contain alpha")
+	require.Contains(t, keys, "gamma", "list should now contain gamma")
+}

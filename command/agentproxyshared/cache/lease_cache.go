@@ -323,6 +323,16 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 	staticSecretCacheId := computeStaticSecretCacheIndex(req)
+	// A GET request carrying ?list=true is semantically a list operation.
+	// For KVv2, the event system fires data-write events on <mount>/data/<name>
+	// paths, which do not match the <mount>/metadata path a list response would
+	// be cached under, so that cache entry would never be invalidated when a new
+	// secret is added. For KVv1, write events carry the secret's own path, which
+	// also does not match the mount-root path used for listing. In both cases,
+	// exclude these requests from the static secret cache entirely so that list
+	// responses remain consistent with Vault. This matches the behaviour of the
+	// equivalent curl -X LIST form, which is never cached (method != GET).
+	hasListQueryParam := req.Request.URL.Query().Get("list") == "true"
 
 	// Check the inflight cache to see if there are other inflight requests
 	// of the same kind, based on the computed ID. If so, we increment a counter
@@ -420,8 +430,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return cachedResp, nil
 	}
 
-	// Check if the response for this request is already in the static secret cache
-	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet && req.Token != "" {
+	// Check if the response for this request is already in the static secret cache.
+	// Exclude list requests (?list=true) — see hasListQueryParam declaration above.
+	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet && !hasListQueryParam && req.Token != "" {
 		cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
 		if err != nil {
 			return nil, err
@@ -487,8 +498,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// There shouldn't be a situation where secret.MountType == "kv" and
 	// staticSecretCacheId == "", but just in case.
 	// We restrict this to GETs as those are all we want to cache.
+	// Exclude list requests (?list=true) — see hasListQueryParam declaration above.
 	if c.cacheStaticSecrets && secret.MountType == "kv" &&
-		staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
+		staticSecretCacheId != "" && req.Request.Method == http.MethodGet && !hasListQueryParam {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
 		// We set the request path to be the canonical static secret path, so that
