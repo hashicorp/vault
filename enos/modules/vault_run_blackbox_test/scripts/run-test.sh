@@ -284,12 +284,15 @@ fi
 #   - Verify-test scalars (EXPECTED_STATE, TIMEOUT_SECONDS, RETRY_INTERVAL, DEFAULT_LCQ)
 
 # Collect relevant env vars, one per line, redacting secrets
-mapfile -t env_lines < <(env \
+env_lines=()
+while IFS= read -r line; do
+    env_lines+=("$line")
+done < <(env \
     | grep -E '^(VAULT_|LDAP_|PG|POSTGRES_|MONGO_|EXPECTED_STATE=|TIMEOUT_SECONDS=|RETRY_INTERVAL=|DEFAULT_LCQ=)' \
     | grep -v -E '^(VAULT_TEST_|VAULT_ADDR_DEBUG=)' \
-    | sed 's/^\(VAULT_TOKEN=\).*/\1***/' \
-    | sed 's/^\(VAULT_LICENSE=\).*/\1***/' \
-    | sed 's/^\(VAULT_LICENSE_IBM=\).*/\1***/' \
+    | sed 's/^\(VAULT_TOKEN=\).*/\1***REDACTED***/' \
+    | sed 's/^\(VAULT_LICENSE=\).*/\1***REDACTED***/' \
+    | sed 's/^\(VAULT_LICENSE_IBM=\).*/\1***REDACTED***/' \
     | sort)
 
 # Reconstruct the -run filter from the matrix if one was used
