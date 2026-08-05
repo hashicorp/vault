@@ -110,8 +110,17 @@ export default class PolicyFormComponent extends Component<Args> {
 
   get snippetArgs() {
     const policyName = this.args.form.data.name || '<policy name>';
-    const policy = this.visualEditorSupported ? this.formattedStanzas : this.debouncedPolicy;
-    return policySnippetArgs(policyName, policy);
+    return policySnippetArgs(policyName, this.snippetPolicy);
+  }
+
+  // Snippets must read from whichever editor is active, not just whichever is available.
+  // The code editor is the source of truth for typed, pasted and uploaded policies.
+  get isVisualEditorActive() {
+    return this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
+  }
+
+  get snippetPolicy() {
+    return this.isVisualEditorActive ? this.formattedStanzas : this.debouncedPolicy;
   }
 
   get visualEditorSupported() {
@@ -122,8 +131,7 @@ export default class PolicyFormComponent extends Component<Args> {
   get terraformSnippet(): string | null {
     if (!this.visualEditorSupported) return null;
     const name = this.args.form.data.name;
-    const policy = this.formattedStanzas;
-    return sysPoliciesAclNameMapping({ name, policy });
+    return sysPoliciesAclNameMapping({ name, policy: this.snippetPolicy });
   }
 
   @action
