@@ -405,7 +405,15 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
-			`the "format" path parameter must be "pem", "der", or "pem_bundle"`), nil
+			`the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`), nil
+	}
+
+	if format == "pkcs12_bundle" {
+		// Cast to encoder type and validate it is a permitted value
+		_, err := validatePKCS12Encoder(data.Get("pkcs12_encoder").(string))
+		if err != nil {
+			return logical.ErrorResponse(`invalid "pkcs12_encoder" parameter: %v`, err), nil
+		}
 	}
 
 	var caErr error
@@ -617,6 +625,19 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			respData["private_key_type"] = cb.PrivateKeyType
 		}
+
+	case "pkcs12_bundle":
+		password := data.Get("pkcs12_password").(string)
+		encoder := data.Get("pkcs12_encoder").(string)
+		caCerts := x509Certificates(caChainGen.chain)
+		// Pass parsedBundle.PrivateKey as is. It should be nil for signed certs and set for issued certs.
+		pkcs12Bytes, err := EncodeToPKCS12(encoder, parsedBundle.PrivateKey, parsedBundle.Certificate, caCerts, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
+		}
+		respData["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
+		respData["issuing_ca"] = signingCB.Certificate
+
 	default:
 		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
@@ -695,7 +716,7 @@ func (b *backend) issueSignEmptyCert(ctx context.Context, req *logical.Request, 
 		KeyType:           "ec", // We need more tests with "ec"
 	}
 	schema := map[string]*framework.FieldSchema{}
-	schema = addNonCACommonFields(addIssueAndSignCommonFields(schema))
+	schema = addNonCACommonFields(schema)
 	emptyData := &framework.FieldData{
 		Raw: map[string]interface{}{
 			"ttl":        "300s",

@@ -126,7 +126,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	}
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	genParams, warnings, errorResp := getGenerationParams(sc, data, false)
+	genParams, warnings, errorResp := getCAGenerationParams(sc, data, false)
 	if errorResp != nil {
 		return errorResp, nil
 	}

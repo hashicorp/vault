@@ -5,6 +5,10 @@ package pki
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -21,11 +25,13 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
+	pkihelper "github.com/hashicorp/vault/helper/testhelpers/pki"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 func TestPki_FetchCertBySerial(t *testing.T) {
@@ -112,7 +118,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 func TestPki_MultipleOUs(t *testing.T) {
 	t.Parallel()
 	b, _ := CreateBackendWithStorage(t)
-	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+	fields := addCACommonFields(map[string]*framework.FieldSchema{}, supportedFormats(true))
 
 	apiData := &framework.FieldData{
 		Schema: fields,
@@ -144,7 +150,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 func TestPki_PermitFQDNs(t *testing.T) {
 	t.Parallel()
 	b, _ := CreateBackendWithStorage(t)
-	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+	fields := addCACommonFields(map[string]*framework.FieldSchema{}, supportedFormats(true))
 
 	cases := map[string]struct {
 		input            *inputBundle
@@ -1288,4 +1294,166 @@ func TestVerify_chained_name_constraints(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test_PKCS12encoders tests for validatePKCS12Encoder and EncodeToPKCS12 utils
+func Test_PKCS12encoders(t *testing.T) {
+	// Generate test CA, leaf and key once for all subtests
+	key, cert, caChain := generateChainAndLeafCert(t)
+
+	t.Run("validatePKCS12Encoder", func(t *testing.T) {
+		tests := []struct {
+			name        string
+			input       string
+			wantEncoder pkcs12EncoderType
+			errorMsg    string
+		}{
+			{
+				name:        "empty string defaults to modern2026",
+				input:       "",
+				wantEncoder: PKCS12EncoderModern2026,
+			},
+			{
+				name:        "modern2026 explicit",
+				input:       string(PKCS12EncoderModern2026),
+				wantEncoder: PKCS12EncoderModern2026,
+			},
+			{
+				name:        "modern2023 explicit",
+				input:       string(PKCS12EncoderModern2023),
+				wantEncoder: PKCS12EncoderModern2023,
+			},
+			{
+				name:     "invalid encoder type",
+				input:    "invalid-type",
+				errorMsg: `encoder must be "modern2026" or "modern2023"; received: "invalid-type"`,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				encoder, err := validatePKCS12Encoder(tc.input)
+				if tc.errorMsg != "" {
+					require.Error(t, err)
+					require.Equal(t, err.Error(), tc.errorMsg)
+				} else {
+					require.NoError(t, err)
+					require.Equal(t, tc.wantEncoder, encoder)
+				}
+			})
+		}
+	})
+
+	t.Run("EncodeToPKCS12", func(t *testing.T) {
+		tests := []struct {
+			name         string
+			encoder      string
+			isTrustStore bool
+			withoutChain bool
+			errorMsg     string
+		}{
+			// Valid encodings with private key
+			{name: "keystore modern2026", encoder: "modern2026"},
+			{name: "keystore modern2023", encoder: "modern2023"},
+			// Valid encodings with private key, no CA chain
+			{name: "keystore modern2026 without CA chain", encoder: "modern2026", withoutChain: true},
+			{name: "keystore modern2023 without CA chain", encoder: "modern2023", withoutChain: true},
+			// Trust store only (no private key)
+			{name: "trust store modern2026", encoder: "modern2026", isTrustStore: true},
+			{name: "trust store modern2023", encoder: "modern2023", isTrustStore: true},
+
+			{name: "trust store modern2026 without CA chain", encoder: "modern2026", isTrustStore: true, withoutChain: true},
+			{name: "trust store modern2023 without CA chain", encoder: "modern2023", isTrustStore: true, withoutChain: true},
+
+			// Error case - invalid encoder caught by EncodeToPKCS12 -> encodeToPKCS12
+			{
+				name: "empty encoder type", encoder: "",
+				errorMsg: `unexpected encoder type: ""; encoder must be "modern2026" or "modern2023"`,
+			},
+			{
+				name: "invalid encoder type", encoder: "invalid-type",
+				errorMsg: `unexpected encoder type: "invalid-type"; encoder must be "modern2026" or "modern2023"`,
+			},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				var preEncodedKey crypto.Signer
+				var preEncodedChain []*x509.Certificate
+				if !tc.isTrustStore {
+					preEncodedKey = key
+				}
+				if !tc.withoutChain {
+					preEncodedChain = caChain
+				}
+
+				pfx, err := EncodeToPKCS12(tc.encoder, preEncodedKey, cert, preEncodedChain, "password")
+
+				if tc.errorMsg != "" {
+					require.Error(t, err)
+					require.Equal(t, err.Error(), tc.errorMsg)
+				} else {
+					require.NoError(t, err)
+					require.NotEmpty(t, pfx)
+
+					// Validate encoding can be decoded
+					if !tc.isTrustStore {
+						dKey, dCert, dCa, err := pkcs12.DecodeChain(pfx, "password")
+						require.NoError(t, err, "it should decode chain")
+						require.Equal(t, preEncodedKey, dKey)
+						require.Equal(t, cert, dCert)
+						require.Equal(t, preEncodedChain, dCa)
+					}
+
+					if tc.isTrustStore {
+						dCerts, err := pkcs12.DecodeTrustStore(pfx, "password")
+						require.NoError(t, err, "it should decode trust store")
+						if tc.withoutChain {
+							require.Len(t, dCerts, 1)
+						} else {
+							require.Len(t, dCerts, 2)
+						}
+					}
+				}
+			})
+		}
+	})
+}
+
+// Test_supportedFormats safeguards the function returns expected slice certificate formats
+func Test_supportedFormats(t *testing.T) {
+	require.Equal(t, []string{"pem", "der", "pem_bundle", "pkcs12_bundle"}, supportedFormats(true))
+	require.Equal(t, []string{"pem", "der", "pem_bundle"}, supportedFormats(false))
+}
+
+// generateChainAndLeafCert creates a leaf certificate signed by the provided CA
+func generateChainAndLeafCert(t *testing.T) (*ecdsa.PrivateKey, *x509.Certificate, []*x509.Certificate) {
+	ca := pkihelper.GenerateRootCa(t)
+
+	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	require.NoError(t, err)
+
+	leafTemplate := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+		},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(2 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
+	}
+
+	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	leafCertDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, ca.Cert, &leafKey.PublicKey, ca.Key)
+	require.NoError(t, err)
+
+	leafCert, err := x509.ParseCertificate(leafCertDER)
+	require.NoError(t, err)
+
+	return leafKey, leafCert, []*x509.Certificate{ca.Cert}
 }

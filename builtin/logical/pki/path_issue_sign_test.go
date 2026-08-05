@@ -6,13 +6,16 @@ package pki
 import (
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/stretchr/testify/require"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // TestPathIssueSign_KeyTypeAny is a regression test.  At one point, the signature bits
@@ -161,6 +164,247 @@ func signingBits(alg x509.SignatureAlgorithm) int {
 	default:
 		return 0
 	}
+}
+
+// TestPathIssueSign_PKCS12Format validates PKCS12 output for /issue and /sign endpoints:
+// - /issue: PKCS12 contains private key, issued cert, and CA chain
+// - /sign: PKCS12 trust store (no private key), signed cert, and CA chain
+// This test checks encoder parameter handling and basic structure. Interoperability and encryption
+// are covered in TestPathIssueSign_PKCS12OpenSSLValidation and TestPathIssueSign_PKCS12JavaValidation.
+func TestPathIssueSign_PKCS12Format(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Import a CA certificate for test setup
+	resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": ec256CaAndKey,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Get root cert data for tests with intermediate issuer
+	issuers := resp.Data["imported_issuers"].([]string)
+	issuerID := issuers[0]
+	resp, err = CBRead(b, s, "issuer/"+issuerID)
+	requireSuccessNonNilResponse(t, resp, err)
+	rootData := resp.Data
+	rootCert := rootData["certificate"].(string)
+
+	// Create a role that allows issuing/signing certificates
+	resp, err = CBWrite(b, s, "roles/test-role", map[string]interface{}{
+		"allow_any_name": true,
+		"max_ttl":        "2h",
+		"key_type":       "ec",
+		"key_bits":       "256",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Parse PEM bundle and CSR for validation
+	expectedRoot, err := certutil.ParsePEMBundle(ec256CaAndKey)
+	require.NoError(t, err)
+	block, _ := pem.Decode([]byte(ec256leafCsr))
+	require.NotNil(t, block)
+	expectedCSR, err := x509.ParseCertificateRequest(block.Bytes)
+	require.NoError(t, err)
+
+	buildData := func(password string, omitPassword bool, removeRoot bool, encoder string) map[string]interface{} {
+		data := map[string]interface{}{
+			"format":      "pkcs12_bundle",
+			"common_name": "test.example.com",
+		}
+		if !omitPassword {
+			data["pkcs12_password"] = password
+		}
+		if removeRoot {
+			data["remove_roots_from_chain"] = true
+		}
+		if encoder != "" {
+			data["pkcs12_encoder"] = encoder
+		}
+		return data
+	}
+
+	assertIssueBundle := func(removeRoot bool, cert *x509.Certificate, caCerts []*x509.Certificate) {
+		t.Helper()
+		require.False(t, cert.IsCA, "leaf should not be CA")
+		if removeRoot {
+			require.Len(t, caCerts, 0, "should have no CA cert when remove_roots_from_chain is true")
+		} else {
+			require.Len(t, caCerts, 1, "should have single cert in CA chain")
+			require.True(t, caCerts[0].IsCA, "cert should be CA")
+			require.Equal(t, expectedRoot.Certificate.Subject.CommonName, caCerts[0].Subject.CommonName)
+		}
+	}
+
+	assertSignBundle := func(removeRoot bool, certs []*x509.Certificate) {
+		t.Helper()
+		require.False(t, certs[0].IsCA, "first cert should be leaf (not CA)")
+		require.Equal(t, expectedCSR.RawSubjectPublicKeyInfo, certs[0].RawSubjectPublicKeyInfo, "first cert should contain CSR public key")
+		require.Equal(t, expectedRoot.Certificate.Subject, certs[0].Issuer, "first should be issued by the expected CA")
+
+		if removeRoot {
+			require.Len(t, certs, 1, "bundle should only contain leaf cert when remove_roots_from_chain is true")
+		} else {
+			require.Len(t, certs, 2, "bundle should contain leaf + CA")
+			require.True(t, certs[1].IsCA, "last cert should be CA")
+			require.Equal(t, expectedRoot.Certificate.Subject, certs[1].Subject, "last cert should match the expected CA certificate")
+		}
+	}
+
+	t.Run("issue", func(t *testing.T) {
+		testCases := []struct {
+			name         string
+			encoder      string
+			omitPassword bool
+			password     string
+			removeRoot   bool
+			shouldError  bool
+		}{
+			{name: "custom password", password: "123-secure-password"},
+			{name: "default password", password: pkcs12.DefaultPassword, omitPassword: true},
+			{name: "empty password", password: ""},
+			{name: "without CA chain", password: "123-secure-password", removeRoot: true},
+			{name: "with modern2026 encoder", password: "123-secure-password", encoder: "modern2026"},
+			{name: "with modern2023 encoder", password: "123-secure-password", encoder: "modern2023"},
+			{name: "with invalid encoder", encoder: "modern2020", shouldError: true},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				data := buildData(tc.password, tc.omitPassword, tc.removeRoot, tc.encoder)
+				pkcs12Bytes := requestAndVerifyPKCS12(t, tc.shouldError,
+					requestPKCS12params{b, s, "issue/test-role", data})
+
+				if !tc.shouldError {
+					_, cert, caCerts := requireDecodesPKCS12Chain(t, pkcs12Bytes, tc.password)
+					assertIssueBundle(tc.removeRoot, cert, caCerts)
+				}
+			})
+		}
+	})
+
+	t.Run("sign", func(t *testing.T) {
+		testCases := []struct {
+			name        string
+			encoder     string
+			endpoint    string
+			removeRoot  bool
+			shouldError bool
+		}{
+			{name: "sign", endpoint: "sign"},
+			{name: "sign verbatim", endpoint: "sign-verbatim"},
+			{name: "sign without CA chain", endpoint: "sign", removeRoot: true},
+			{name: "with modern2026 encoder", endpoint: "sign", encoder: "modern2026"},
+			{name: "with modern2023 encoder", endpoint: "sign", encoder: "modern2023"},
+			{name: "with invalid encoder", endpoint: "sign", encoder: "modern2020", shouldError: true},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				password := "123-secure-password"
+				data := buildData(password, false, tc.removeRoot, tc.encoder)
+				data["csr"] = ec256leafCsr
+				pkcs12Bytes := requestAndVerifyPKCS12(t, tc.shouldError,
+					requestPKCS12params{b, s, tc.endpoint + "/test-role", data})
+
+				if !tc.shouldError {
+					certs := requireDecodesPKCS12TrustStore(t, pkcs12Bytes, password)
+					assertSignBundle(tc.removeRoot, certs)
+				}
+			})
+		}
+
+		t.Run("with intermediate issuer", func(t *testing.T) {
+			// Setup an intermediate, signed by the root.
+			b_int, s_int := CreateBackendWithStorage(t)
+			resp, err = CBWrite(b_int, s_int, "intermediate/generate/exported", map[string]interface{}{
+				"common_name": "intermediate myvault.com",
+				"key_type":    "ec",
+			})
+			requireSuccessNonNilResponse(t, resp, err)
+			intermediateData := resp.Data
+			resp, err = CBWrite(b, s, "root/sign-intermediate", map[string]interface{}{
+				"csr":    intermediateData["csr"],
+				"format": "pem",
+			})
+			requireSuccessNonNilResponse(t, resp, err)
+			intermediateSignedData := resp.Data
+			intermediateCert := intermediateSignedData["certificate"].(string)
+			resp, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
+				"certificate": intermediateCert + "\n" + rootCert + "\n",
+			})
+			requireSuccessNonNilResponse(t, resp, err)
+			// Setup role for signing certs
+			resp, err = CBWrite(b_int, s_int, "roles/test-role", map[string]interface{}{
+				"allow_any_name": true,
+				"key_type":       "ec",
+				"key_bits":       "256",
+				"max_ttl":        "2h",
+			})
+			requireSuccessNonNilResponse(t, resp, err)
+
+			testCases := []struct {
+				name       string
+				endpoint   string
+				removeRoot bool
+			}{
+				{name: "sign", endpoint: "sign"},
+				{name: "sign without root", endpoint: "sign", removeRoot: true},
+				{name: "issue", endpoint: "issue"},
+				{name: "issue without root", endpoint: "issue", removeRoot: true},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					password := "123-secure-password"
+					data := buildData(password, false, tc.removeRoot, "")
+					if tc.endpoint == "sign" {
+						data["csr"] = ec256leafCsr
+					}
+					pkcs12Bytes := requestAndVerifyPKCS12(t, false,
+						requestPKCS12params{b_int, s_int, tc.endpoint + "/test-role", data})
+
+					if tc.endpoint == "issue" {
+						_, cert, caCerts := requireDecodesPKCS12Chain(t, pkcs12Bytes, password)
+						require.False(t, cert.IsCA, "leaf should not be CA")
+
+						if tc.removeRoot {
+							require.Len(t, caCerts, 1, "should have one CA cert when remove_roots_from_chain is true")
+							require.True(t, caCerts[0].IsCA, "cert should be CA")
+						} else {
+							require.Len(t, caCerts, 2, "should have two certs in CA chain")
+							require.True(t, caCerts[0].IsCA, "cert should be CA")
+							require.True(t, caCerts[1].IsCA, "cert should be CA")
+							require.Equal(t, expectedRoot.Certificate.Subject.CommonName, caCerts[1].Subject.CommonName)
+
+						}
+					}
+
+					if tc.endpoint == "sign" {
+						certs := requireDecodesPKCS12TrustStore(t, pkcs12Bytes, password)
+						// Verify first cert is the leaf
+						require.False(t, certs[0].IsCA, "first cert should be leaf (not CA)")
+						require.Equal(t, expectedCSR.RawSubjectPublicKeyInfo, certs[0].RawSubjectPublicKeyInfo, "first cert should contain CSR public key")
+
+						if tc.removeRoot {
+							require.Len(t, certs, 2, "should have leaf + intermediate (no root)")
+							require.True(t, certs[1].IsCA, "second cert should be CA")
+							require.Equal(t, certs[1].Subject, certs[0].Issuer, "leaf should be issued by intermediate")
+						} else {
+							require.Len(t, certs, 3, "should have leaf + intermediate + root")
+							require.True(t, certs[1].IsCA, "second cert should be CA")
+							require.Equal(t, certs[1].Subject, certs[0].Issuer, "leaf should be issued by intermediate")
+							require.True(t, certs[2].IsCA, "third cert should be CA")
+							require.Equal(t, certs[2].Subject, certs[1].Issuer, "intermediate should be issued by root")
+							requireSignedBy(t, certs[0], certs[1])
+							requireSignedBy(t, certs[1], certs[2])
+							// Verify root is self-signed
+							requireSignedBy(t, certs[2], certs[2])
+						}
+					}
+				})
+			}
+		})
+	})
 }
 
 // RSA keys (and certificates to a lesser degree) are very slow to generate which is

@@ -26,7 +26,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"os/exec"
 	"reflect"
 	"slices"
 	"sort"
@@ -7803,8 +7802,8 @@ func TestIssuance_DeltaCRLDistributionPoint(t *testing.T) {
 		"-text",
 		"-in", filePath,
 	}
-	out, err := exec.Command(opensslCmd, args...).CombinedOutput()
-	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+
+	out := runOpenSSL(t, log, opensslCmd, args)
 	require.Regexp(t, `\s+X509v3 Freshest CRL:\s+Full Name:\s+URI:http://example.com/crl/delta\s+Full Name:\s+URI:http://backup\.example\.com/crl/delta`, string(out))
 }
 

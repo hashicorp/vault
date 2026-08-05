@@ -250,7 +250,7 @@ func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuing.Issue
 
 func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBundle {
 	// Pretty gross just to generate a cert bundle, but
-	fields := addCACommonFields(map[string]*framework.FieldSchema{})
+	fields := addCACommonFields(map[string]*framework.FieldSchema{}, supportedFormats(true))
 	fields = addCAKeyGenerationFields(fields)
 	fields = addCAIssueFields(fields)
 	fields = addCACertKeyUsage(fields)
@@ -263,7 +263,7 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		},
 	}
 	sc := b.makeStorageContext(ctx, s)
-	genParams, _, respErr := getGenerationParams(sc, apiData, true)
+	genParams, _, respErr := getCAGenerationParams(sc, apiData, true)
 	require.Nil(t, respErr)
 
 	input := &inputBundle{

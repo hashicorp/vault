@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 // TestSignIntermediate_MaxPathLengthValidation verifies that when signing an
@@ -217,5 +218,81 @@ func TestSignIntermediate_MaxPathLengthValidation(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestSignIntermediate_PKCS12Format validates PKCS12 output for intermediate signing
+// and asserts encoder parameter handling and trust store structure.
+// PKCS12 archive should be a trust store (no private key) containing the signed intermediate and CA chain.
+func TestSignIntermediate_PKCS12Format(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	// Generate a root CA
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root CA",
+		"issuer_name": "root-ca",
+		"ttl":         "87600h",
+		"key_type":    "ec",
+		"key_bits":    256,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	// Generate an intermediate CSR
+	resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "Intermediate CA",
+		"key_type":    "ec",
+		"key_bits":    256,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	intermediateCsr := resp.Data["csr"].(string)
+
+	buildData := func(password string, omitPassword bool, encoder string) map[string]interface{} {
+		data := map[string]interface{}{
+			"format": "pkcs12_bundle",
+			"csr":    intermediateCsr,
+			"ttl":    "43800h",
+		}
+		if !omitPassword {
+			data["pkcs12_password"] = password
+		}
+		if encoder != "" {
+			data["pkcs12_encoder"] = encoder
+		}
+		return data
+	}
+
+	for _, path := range []string{"root/sign-intermediate", "issuer/root-ca/sign-intermediate"} {
+		testCases := []struct {
+			name         string
+			encoder      string
+			omitPassword bool
+			password     string
+			shouldError  bool
+		}{
+			{name: "custom password", password: "intermediate-password"},
+			{name: "default password", password: pkcs12.DefaultPassword, omitPassword: true},
+			{name: "empty password", password: ""},
+			{name: "with modern2026 encoder", password: "intermediate-password", encoder: "modern2026"},
+			{name: "with modern2023 encoder", password: "intermediate-password", encoder: "modern2023"},
+			{name: "with invalid encoder", encoder: "modern2020", shouldError: true},
+		}
+
+		for _, tc := range testCases {
+			name := path + tc.name
+			t.Run(name, func(t *testing.T) {
+				data := buildData(tc.password, tc.omitPassword, tc.encoder)
+				pkcs12Bytes := requestAndVerifyPKCS12(t, tc.shouldError, requestPKCS12params{b, s, path, data})
+				if !tc.shouldError {
+					certs := requireDecodesPKCS12TrustStore(t, pkcs12Bytes, tc.password)
+					// First cert should be the intermediate
+					require.Len(t, certs, 2, "should contain intermediate + root CA")
+					require.True(t, certs[0].IsCA, "first cert should be a CA")
+					require.Equal(t, "Intermediate CA", certs[0].Subject.CommonName)
+					require.True(t, certs[1].IsCA, "second cert should be CA")
+					require.Equal(t, "Root CA", certs[1].Subject.CommonName)
+				}
+			})
+		}
 	}
 }
