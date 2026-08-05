@@ -269,7 +269,122 @@ func (b *EntityBuilder) Upsert(ctx context.Context) (*identity.Entity, error) {
 	return b.entity, nil
 }
 
+// validateEntityNamePathSelectors ensures selector fields cannot retarget
+// entity/name updates away from the entity referenced by the path name.
+func (i *IdentityStore) validateEntityNamePathSelectors(ctx context.Context, d *framework.FieldData) *logical.Response {
+	rawName, ok := d.GetOk("name")
+	if !ok {
+		return nil
+	}
+	name := rawName.(string)
+	if name == "" {
+		return nil
+	}
+
+	rawID, hasID := d.GetOk("id")
+	rawExternalID, hasExternalID := d.GetOk("external_id")
+	if (!hasID || rawID.(string) == "") && (!hasExternalID || rawExternalID.(string) == "") {
+		return nil
+	}
+
+	entityByName, err := i.MemDBEntityByName(ctx, name, true)
+	if err != nil {
+		return logical.ErrorResponse(err.Error())
+	}
+
+	if hasID && rawID.(string) != "" {
+		if resp := validateSelectorEntityMatchesPathEntity("id", "name", entityByName, rawID.(string)); resp != nil {
+			return resp
+		}
+	}
+
+	if hasExternalID && rawExternalID.(string) != "" {
+		entityByExternalID, err := i.MemDBEntityByExternalID(ctx, rawExternalID.(string), true)
+		if err != nil {
+			return logical.ErrorResponse(err.Error())
+		}
+		if entityByExternalID != nil {
+			if resp := validateSelectorEntityMatchesPathEntity("external_id", "name", entityByName, entityByExternalID.ID); resp != nil {
+				return resp
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateSelectorEntityMatchesPathEntity returns an error response when a
+// selector resolves to a different entity than the one addressed by the path.
+func validateSelectorEntityMatchesPathEntity(selectorField string, pathType string, pathEntity *identity.Entity, selectedEntityID string) *logical.Response {
+	if pathEntity == nil || pathEntity.ID != selectedEntityID {
+		return logical.ErrorResponse(fmt.Sprintf("invalid %s for entity %s path", selectorField, pathType))
+	}
+	return nil
+}
+
+// validateEntityIDPathSelectors ensures selector fields cannot retarget
+// entity/id updates away from the entity referenced by the path id.
+func (i *IdentityStore) validateEntityIDPathSelectors(ctx context.Context, d *framework.FieldData) *logical.Response {
+	rawID, ok := d.GetOk("id")
+	if !ok || rawID.(string) == "" {
+		return logical.ErrorResponse("missing entity id")
+	}
+	pathID := rawID.(string)
+
+	rawExternalID, hasExternalID := d.GetOk("external_id")
+	if !hasExternalID || rawExternalID.(string) == "" {
+		return nil
+	}
+
+	entityByID, err := i.MemDBEntityByID(pathID, true)
+	if err != nil {
+		return logical.ErrorResponse(err.Error())
+	}
+	if entityByID == nil {
+		return logical.ErrorResponse(fmt.Sprintf("entity not found from id: %s", pathID))
+	}
+
+	entityByExternalID, err := i.MemDBEntityByExternalID(ctx, rawExternalID.(string), true)
+	if err != nil {
+		return logical.ErrorResponse(err.Error())
+	}
+	if entityByExternalID != nil {
+		if resp := validateSelectorEntityMatchesPathEntity("external_id", "id", entityByID, entityByExternalID.ID); resp != nil {
+			return resp
+		}
+	}
+
+	return nil
+}
+
+// EntityUpdateCommon creates or updates an entity from request field data.
 func (i *IdentityStore) EntityUpdateCommon(ctx context.Context, d *framework.FieldData) (*logical.Response, error) {
+	return NewEntityBuilder(i).
+		FromFieldData(ctx, d).
+		Build(ctx)
+}
+
+// EntityIDUpdateCommon creates or updates an entity from the entity/id path
+// after validating that selector fields cannot retarget the addressed entity.
+func (i *IdentityStore) EntityIDUpdateCommon(ctx context.Context, d *framework.FieldData) (*logical.Response, error) {
+	resp := i.validateEntityIDPathSelectors(ctx, d)
+	if resp != nil {
+		return resp, nil
+	}
+
+	return NewEntityBuilder(i).
+		FromFieldData(ctx, d).
+		Build(ctx)
+}
+
+// EntityNameUpdateCommon creates or updates an entity from the entity/name path
+// after validating that selector fields cannot retarget the addressed entity.
+func (i *IdentityStore) EntityNameUpdateCommon(ctx context.Context, d *framework.FieldData) (*logical.Response, error) {
+	resp := i.validateEntityNamePathSelectors(ctx, d)
+	if resp != nil {
+		return resp, nil
+	}
+
 	return NewEntityBuilder(i).
 		FromFieldData(ctx, d).
 		Build(ctx)
