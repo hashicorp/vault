@@ -746,6 +746,11 @@ func (b *Backend) handleHealthCheck(ctx context.Context, req *logical.Request) (
 		return nil, logical.CodedError(http.StatusNotImplemented, "health check not supported by this plugin")
 	}
 
+	// health check attempts to store the result which is a write operation, so we short-circuit the request
+	if !b.WriteSafeReplicationState() {
+		return nil, logical.ErrReadOnly
+	}
+
 	// Pass the full request to provide storage access and path information
 	healthCheckResponse, err := b.HealthCheck(ctx, req)
 	if err != nil {
