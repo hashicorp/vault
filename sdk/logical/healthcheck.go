@@ -50,6 +50,15 @@ func (r *HealthCheckExecutionResult) ToLogicalResponse() *Response {
 	}}
 }
 
+// Reason strings for the aggregate health check summary produced after
+// executing a backend's health checks.
+const (
+	HealthCheckReasonNoChecks       = "No checks reported"
+	HealthCheckReasonAllPassed      = "All checks passed"
+	HealthCheckReasonAllFailed      = "All checks failed"
+	HealthCheckReasonPartialFailure = "%d out of %d checks failed"
+)
+
 // HealthCheckExecutionResultFromLogicalResponse converts a logical.Response into a
 // typed execution result. Decoding is strict so backends cannot return arbitrary
 // fields, while weak typing and a time hook absorb the type changes introduced by
