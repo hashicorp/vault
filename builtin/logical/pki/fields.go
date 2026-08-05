@@ -42,11 +42,11 @@ Defaults to false (CN is included).`,
 	certificate pem. If "der", the value will be
 	base64 encoded. Defaults to "pem".`
 
-	if strutil.StrListContains(allowedFormats, "pkcs12_bundle") {
+	if strutil.StrListContains(allowedFormats, "pkcs12_bundle") && strutil.StrListContains(allowedFormats, "jks_bundle") {
 		formatDescription = `Format for returned data. Can be "pem", "der",
-	"pem_bundle" or "pkcs12_bundle". If "pem_bundle", any private
+	"pem_bundle", "pkcs12_bundle" or "jks_bundle". If "pem_bundle", any private
 	key and issuing cert will be appended to the
-	certificate pem. If "der" or "pkcs12_bundle", the value will be
+	certificate pem. Formats "der", "pkcs12_bundle" or "jks_bundle" are
 	base64 encoded. Defaults to "pem".`
 	}
 
@@ -85,7 +85,7 @@ format is set to "pkcs12_bundle". Valid values are "modern2026" and
 integrity format (PBMAC1).`,
 			AllowedValues: []interface{}{"modern2026", "modern2023"},
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "PKCS#12 Encoder Profile",
+				Name: "PKCS#12 encoder profile",
 			},
 		}
 
@@ -97,7 +97,21 @@ integrity format (PBMAC1).`,
 		defaults to "changeit". It is recommended to use the default password
 		and protect the file using other means or use a high-entropy password.`,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name: "PKCS#12 Password",
+				Name: "PKCS#12 password",
+			},
+		}
+	}
+
+	if strutil.StrListContains(allowedFormats, "jks_bundle") {
+		fields["jks_password"] = &framework.FieldSchema{
+			Type:    framework.TypeString,
+			Default: pkcs12.DefaultPassword,
+			Description: `Password for encrypting the Java keystore
+		when format is set to "jks_bundle". If not provided,
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Java keystore password",
 			},
 		}
 	}
@@ -780,6 +794,23 @@ usages (not extended key usages). Valid values can be found
 at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply 
 drop the "KeyUsage" part of the name.  If not set, key 
 usage will not appear on the CSR.`,
+	}
+
+	return fields
+}
+
+func addJKSPrivateKeyAlias(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["jks_private_key_alias"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "1",
+		Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle"
+		and bundle contains a single PrivateKeyEntry. This field is case-sensitive, but relying
+		on case-only differences for unique aliases is not recommended. Defaults to "1".
+		This parameter is ignored by endpoints that return TrustedCertificateEntry values
+		(trust stores), and instead entries are assigned incrementing numeric strings aliases starting at "1".`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Java keystore alias",
+		},
 	}
 
 	return fields

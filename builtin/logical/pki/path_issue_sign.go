@@ -111,6 +111,7 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 	}
 
 	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+	ret.Fields = addJKSPrivateKeyAlias(ret.Fields)
 	return ret
 }
 
@@ -405,7 +406,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 	format := getFormat(data)
 	if format == "" {
 		return logical.ErrorResponse(
-			`the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`), nil
+			`the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`), nil
 	}
 
 	if format == "pkcs12_bundle" {
@@ -636,6 +637,23 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
 		}
 		respData["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
+		respData["issuing_ca"] = signingCB.Certificate
+
+	case "jks_bundle":
+		var alias string
+		if _, ok := data.Schema["jks_private_key_alias"]; ok {
+			// Issue endpoints define jks_private_key_alias (defaults to "1")
+			// Sign endpoints do not define this field, so alias stays empty.
+			alias = data.Get("jks_private_key_alias").(string)
+		}
+		password := data.Get("jks_password").(string)
+		caCerts := x509Certificates(caChainGen.chain)
+		// Pass parsedBundle.PrivateKey as is. It should be nil for signed certs and set for issued certs.
+		jksBytes, err := EncodeToJKS(parsedBundle.PrivateKey, parsedBundle.Certificate, caCerts, alias, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to JKS format: %w", err)
+		}
+		respData["certificate"] = base64.StdEncoding.EncodeToString(jksBytes)
 		respData["issuing_ca"] = signingCB.Certificate
 
 	default:

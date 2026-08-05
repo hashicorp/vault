@@ -4,6 +4,7 @@
 package pki
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -30,6 +31,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
 	"software.sslmate.com/src/go-pkcs12"
@@ -117,27 +119,18 @@ func parseCert(t *testing.T, pemCert string) *x509.Certificate {
 }
 
 // PKCS12 helpers
-type requestPKCS12params struct {
-	backend *backend
-	storage logical.Storage
-	path    string
-	data    map[string]interface{}
-}
 
-// requestAndVerifyPKCS12 if a successful response is expected then it validates the endpoint includes
-// a non-empty base64 encoded PKCS#12 archive and if it should error then it asserts the error message.
-func requestAndVerifyPKCS12(t *testing.T, shouldError bool, p requestPKCS12params) []byte {
+// verifyAndDecodePKCS12 verifies a PKCS#12 response and decodes the base64 archive.
+// It accepts the response and error directly so callers can pass CBWrite inline.
+func verifyAndDecodePKCS12(t *testing.T, path string, resp *logical.Response, err error, shouldError bool) []byte {
 	t.Helper()
-	// Request data in PKCS12 format
-	resp, err := CBWrite(p.backend, p.storage, p.path, p.data)
 	if shouldError {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), `invalid "pkcs12_encoder" parameter: encoder must be "modern2026" or "modern2023"; received: "modern2020"`)
 		return nil
 	}
 
-	// Verify response
-	requireSuccessNonNilResponse(t, resp, err, fmt.Sprintf("endpoint: %s errored", p.path))
+	requireSuccessNonNilResponse(t, resp, err, fmt.Sprintf("endpoint: %s errored", path))
 	require.Contains(t, resp.Data, "certificate")
 	pkcs12Base64, ok := resp.Data["certificate"].(string)
 	require.True(t, ok, "pkcs12 field should be a string")
@@ -182,6 +175,93 @@ func requireDecodesPKCS12TrustStore(t *testing.T, pkcs12Bytes []byte, password s
 	require.NotEmpty(t, certs, "PKCS12 trust store should contain certificates")
 	return certs
 }
+
+// JKS helpers
+
+// verifyAndDecodeJKS verifies a JKS response and decodes the base64 archive.
+// It accepts the response and error directly so callers can pass CBWrite inline.
+func verifyAndDecodeJKS(t *testing.T, path string, resp *logical.Response, err error) []byte {
+	t.Helper()
+	requireSuccessNonNilResponse(t, resp, err, fmt.Sprintf("endpoint: %s errored", path))
+	require.Contains(t, resp.Data, "certificate")
+	jksBase64, ok := resp.Data["certificate"].(string)
+	require.True(t, ok, "jks field should be a string")
+	require.NotEmpty(t, jksBase64)
+
+	// Decode JKS
+	jksBytes, err := base64.StdEncoding.DecodeString(jksBase64)
+	require.NoError(t, err, "jks should be valid base64")
+	require.NotEmpty(t, jksBytes)
+	return jksBytes
+}
+
+// requireDecodesJKSChain decodes JKS with private key and returns key + certs
+func requireDecodesJKSChain(t *testing.T, jksBytes []byte, password string, expectedAlias string) (crypto.PrivateKey, *x509.Certificate, []*x509.Certificate) {
+	t.Helper()
+
+	ks := keystore.New()
+	err := ks.Load(bytes.NewReader(jksBytes), []byte(password))
+	require.NoError(t, err, "failed to load JKS keystore")
+
+	// First make sure the alias is what we expect since we use that to assert the entry
+	aliases := ks.Aliases()
+	require.Len(t, aliases, 1, "keystore should only have 1 alias")
+	require.Contains(t, aliases, expectedAlias, "list does not include expected alias")
+
+	// Get the PrivateKeyEntry and parse contents
+	pke, err := ks.GetPrivateKeyEntry(expectedAlias, []byte(password))
+	require.NoError(t, err, "failed to get private key entry")
+	require.NotNil(t, pke, "private key entry is nil")
+	require.NotEmpty(t, pke.CertificateChain, "certificate chain is empty")
+
+	// Parse private key (PKCS#8 DER format)
+	privKey, err := x509.ParsePKCS8PrivateKey(pke.PrivateKey)
+	require.NoError(t, err, "failed to parse private key")
+
+	// Parse certificates
+	leafCert, err := x509.ParseCertificate(pke.CertificateChain[0].Content)
+	require.NoError(t, err, "failed to parse leaf certificate")
+
+	var caCerts []*x509.Certificate
+	for i := 1; i < len(pke.CertificateChain); i++ {
+		cert, err := x509.ParseCertificate(pke.CertificateChain[i].Content)
+		require.NoError(t, err, "failed to parse CA certificate at index %d", i)
+		caCerts = append(caCerts, cert)
+	}
+
+	return privKey, leafCert, caCerts
+}
+
+// requireDecodesJKSTrustStore decodes JKS trust store (no private key) and returns all certs
+func requireDecodesJKSTrustStore(t *testing.T, jksBytes []byte, password string, expectedAliases []string) []*x509.Certificate {
+	t.Helper()
+
+	ks := keystore.New()
+	err := ks.Load(bytes.NewReader(jksBytes), []byte(password))
+	require.NoError(t, err, "failed to load JKS keystore, invalid password?")
+
+	// First make sure the alias is what we expect since we use that to assert the entry
+	aliases := ks.Aliases()
+	require.NotEmpty(t, aliases, "keystore has no entries")
+	// JKS does not guarantee alias iteration order, so compare aliases as a set.
+	require.ElementsMatch(t, expectedAliases, aliases, "list does not match expected aliases")
+
+	var certs []*x509.Certificate
+	// Retrieve TrustedCertificateEntry for each alias
+	for _, alias := range expectedAliases {
+		entry, err := ks.GetTrustedCertificateEntry(alias)
+		require.NoError(t, err, "failed to get trusted cert entry for alias %s", alias)
+
+		cert, err := x509.ParseCertificate(entry.Certificate.Content)
+		require.NoError(t, err, "failed to parse certificate for alias %s", alias)
+		certs = append(certs, cert)
+	}
+
+	require.NotEmpty(t, certs, "no trusted certificate entries found")
+	return certs
+}
+
+// End PKCS#12 and JKS helpers
 
 func requireMatchingPublicKeys(t *testing.T, cert *x509.Certificate, key crypto.PublicKey) {
 	t.Helper()

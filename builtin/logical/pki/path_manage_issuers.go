@@ -119,6 +119,7 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
 	ret.Fields = addCACertKeyUsage(ret.Fields)
+	ret.Fields = addJKSPrivateKeyAlias(ret.Fields)
 	return ret
 }
 
