@@ -1100,6 +1100,7 @@ func TestIdentityStoreInvalidate_EntityAliasDelete(t *testing.T) {
 		}
 	}
 
+	c.authLock.Lock()
 	c.auth = &MountTable{
 		Type: credentialTableType,
 		Entries: []*MountEntry{
@@ -1108,6 +1109,7 @@ func TestIdentityStoreInvalidate_EntityAliasDelete(t *testing.T) {
 			createMountEntry("/noop3", "mnop", mountAccessor3, true),
 		},
 	}
+	c.authLock.Unlock()
 
 	require.NoError(t, c.setupCredentials(context.Background()))
 
@@ -1225,6 +1227,7 @@ func TestIdentityStoreInvalidate_EntityLocalAliasDelete(t *testing.T) {
 		}
 	}
 
+	c.authLock.Lock()
 	c.auth = &MountTable{
 		Type: credentialTableType,
 		Entries: []*MountEntry{
@@ -1233,6 +1236,7 @@ func TestIdentityStoreInvalidate_EntityLocalAliasDelete(t *testing.T) {
 			createMountEntry("/noop3", "mnop", mountAccessor3, true),
 		},
 	}
+	c.authLock.Unlock()
 
 	require.NoError(t, c.setupCredentials(context.Background()))
 
