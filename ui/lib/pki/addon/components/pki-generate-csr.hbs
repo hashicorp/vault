@@ -24,7 +24,7 @@
           <InfoTableRow @label={{this.detailLabel fieldName}} @value={{value}} @addCopyButton={{eq fieldName "key_id"}}>
             {{#if value}}
               {{#if (includes fieldName (array "csr" "private_key"))}}
-                <CertificateCard @data={{value}} />
+                <EncodedDataCard @data={{value}} />
               {{else if (eq fieldName "key_id")}}
                 <LinkTo @route="keys.key.details" @models={{array this.secretMountPath.currentPath value}}>
                   {{value}}

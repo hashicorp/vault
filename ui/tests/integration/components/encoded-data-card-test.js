@@ -14,21 +14,19 @@ import sinon from 'sinon';
 const SELECTORS = {
   label: '[data-test-certificate-label]',
   value: '[data-test-certificate-value]',
-  icon: '[data-test-certificate-icon]',
-  copyIcon: '[data-test-icon="clipboard-copy"]',
 };
 const { rootPem, rootDer } = CERTIFICATES;
 
-module('Integration | Component | certificate-card', function (hooks) {
+module('Integration | Component | encoded-data-card', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders', async function (assert) {
-    await render(hbs`<CertificateCard />`);
+    await render(hbs`<EncodedDataCard />`);
 
     assert.dom(SELECTORS.label).hasNoText('There is no label because there is no value');
     assert.dom(SELECTORS.value).hasNoText('There is no value because none was provided');
-    assert.dom(SELECTORS.icon).exists('The certificate icon exists');
-    assert.dom(SELECTORS.copyIcon).exists('The copy icon renders');
+    assert.dom(GENERAL.icon('transform-data')).exists('The encoded data icon exists');
+    assert.dom(GENERAL.icon('clipboard-copy')).exists('The copy icon renders');
   });
 
   test('it renders with an example PEM Certificate', async function (assert) {
@@ -36,11 +34,11 @@ module('Integration | Component | certificate-card', function (hooks) {
     const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
 
     this.certificate = rootPem;
-    await render(hbs`<CertificateCard @data={{this.certificate}} />`);
+    await render(hbs`<EncodedDataCard @data={{this.certificate}} />`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is PEM Format');
     assert.dom(SELECTORS.value).hasText(this.certificate, 'The data rendered is correct');
-    assert.dom(SELECTORS.icon).exists('The certificate icon exists');
+    assert.dom(GENERAL.icon('certificate')).exists('The certificate icon renders for PEM formats');
 
     await click(GENERAL.copyButton);
     assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
@@ -53,16 +51,16 @@ module('Integration | Component | certificate-card', function (hooks) {
     clipboardSpy.restore(); // cleanup
   });
 
-  test('it renders with an example DER Certificate', async function (assert) {
+  test('it renders with encoded non-PEM data', async function (assert) {
     // Sinon spy for clipboard
     const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
 
     this.certificate = rootDer;
-    await render(hbs`<CertificateCard @data={{this.certificate}} />`);
+    await render(hbs`<EncodedDataCard @data={{this.certificate}} />`);
 
-    assert.dom(SELECTORS.label).hasText('DER Format', 'The label text is DER Format');
+    assert.dom(SELECTORS.label).hasText('Encoded Data', 'The label text is Encoded Data');
     assert.dom(SELECTORS.value).hasText(this.certificate, 'The data rendered is correct');
-    assert.dom(SELECTORS.icon).exists('The certificate icon exists');
+    assert.dom(GENERAL.icon('transform-data')).exists('The encoded data icon renders for non-pem');
 
     await click(GENERAL.copyButton);
     assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
@@ -77,9 +75,10 @@ module('Integration | Component | certificate-card', function (hooks) {
 
   test('it renders with the PEM Format label regardless of the value provided when @isPem is true', async function (assert) {
     this.certificate = 'example-certificate-text';
-    await render(hbs`<CertificateCard @data={{this.certificate}} @isPem={{true}}/>`);
+    await render(hbs`<EncodedDataCard @data={{this.certificate}} @isPem={{true}}/>`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is PEM Format');
+    assert.dom(GENERAL.icon('certificate')).exists('certificate icon renders');
     assert.dom(SELECTORS.value).hasText(this.certificate, 'The data rendered is correct');
   });
 
@@ -92,11 +91,11 @@ module('Integration | Component | certificate-card', function (hooks) {
       '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBA...\n-----END RSA PRIVATE KEY-----\n',
     ];
 
-    await render(hbs`<CertificateCard @data={{this.caChain}} />`);
+    await render(hbs`<EncodedDataCard @data={{this.caChain}} />`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is PEM Format');
     assert.dom(SELECTORS.value).hasText(this.caChain.join(','), 'The data rendered is correct');
-    assert.dom(SELECTORS.icon).exists('The certificate icon exists');
+    assert.dom(GENERAL.icon('certificate')).exists('The certificate icon exists');
 
     await click(GENERAL.copyButton);
     assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
@@ -107,5 +106,25 @@ module('Integration | Component | certificate-card', function (hooks) {
     );
     // Restore original clipboard
     clipboardSpy.restore(); // cleanup
+  });
+
+  test('it stringifies object data for copy', async function (assert) {
+    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
+    this.payload = { format: 'pkcs12', value: 'ZmFrZS1iYXNlNjQ=' };
+    await render(hbs`<EncodedDataCard @data={{this.payload}} />`);
+
+    assert.dom(SELECTORS.label).hasText('Encoded Data', 'The label text is Encoded Data for object payloads');
+    assert.dom(SELECTORS.encodedIcon).exists('The encoded data icon exists');
+
+    await click(GENERAL.copyButton);
+    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+    assert.strictEqual(
+      clipboardSpy.firstCall.args[0],
+      JSON.stringify(this.payload),
+      'copy value is object converted to a JSON string'
+    );
+
+    clipboardSpy.restore();
   });
 });
