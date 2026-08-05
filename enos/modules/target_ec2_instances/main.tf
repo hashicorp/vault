@@ -21,6 +21,10 @@ data "aws_ami" "ami" {
     name   = "image-id"
     values = [var.ami_id]
   }
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ec2_instance_type_offerings" "instance" {
@@ -30,6 +34,10 @@ data "aws_ec2_instance_type_offerings" "instance" {
   }
 
   location_type = "availability-zone"
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_availability_zones" "available" {
@@ -38,6 +46,10 @@ data "aws_availability_zones" "available" {
   filter {
     name   = "zone-name"
     values = data.aws_ec2_instance_type_offerings.instance.locations
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
@@ -50,6 +62,10 @@ data "aws_subnets" "vpc" {
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
@@ -216,6 +232,12 @@ resource "aws_instance" "targets" {
       "${var.cluster_tag_key}" = local.cluster_name
     },
   )
+
+  timeouts {
+    create = "10m"
+    update = "10m"
+    delete = "10m"
+  }
 }
 
 module "disable_selinux" {

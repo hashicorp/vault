@@ -14,12 +14,20 @@ terraform {
 
 data "aws_vpc" "vpc" {
   id = var.vpc_id
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_subnets" "vpc" {
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
@@ -415,6 +423,11 @@ resource "aws_spot_fleet_request" "targets" {
     var.common_tags,
     local.fleet_tags,
   )
+
+  timeouts {
+    create = "10m"
+    delete = "10m"
+  }
 }
 
 resource "time_sleep" "wait_for_fulfillment" {
@@ -442,6 +455,10 @@ data "aws_instances" "targets" {
   filter {
     name   = "iam-instance-profile.arn"
     values = [aws_iam_instance_profile.target.arn]
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
