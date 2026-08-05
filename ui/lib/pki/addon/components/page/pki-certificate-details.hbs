@@ -44,7 +44,7 @@
     {{#if value}}
       {{#if (this.isCertificate field)}}
         <InfoTableRow @label={{this.label field}}>
-          <CertificateCard @data={{value}} />
+          <EncodedDataCard @data={{value}} />
         </InfoTableRow>
       {{else if (eq field "serial_number")}}
         <InfoTableRow @label="Serial number">

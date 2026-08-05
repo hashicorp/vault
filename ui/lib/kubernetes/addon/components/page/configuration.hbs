@@ -21,7 +21,7 @@
     <InfoTableRow @label="Kubernetes host" @value={{@config.kubernetes_host}} />
     {{#if @config.kubernetes_ca_cert}}
       <InfoTableRow @label="Certificate">
-        <CertificateCard @data={{@config.kubernetes_ca_cert}} @isPem={{true}} />
+        <EncodedDataCard @data={{@config.kubernetes_ca_cert}} @isPem={{true}} />
       </InfoTableRow>
     {{/if}}
   {{else}}

@@ -10,11 +10,11 @@
   data-test-certificate-card
 >
   <span class="has-left-margin-s">
-    <Icon @name="certificate" @size="24" data-test-certificate-icon />
+    <Icon @name={{this.certDisplay.icon}} @size="24" />
   </span>
   <div class="has-left-margin-m is-min-width-0 is-flex-grow-1">
     <p class="has-text-weight-bold" data-test-certificate-label>
-      {{this.certLabel}}
+      {{this.certDisplay.label}}
     </p>
     <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
       {{@data}}

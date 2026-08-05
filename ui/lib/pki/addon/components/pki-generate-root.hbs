@@ -32,7 +32,7 @@
           </InfoTableRow>
         {{else if (this.isCertificateField fieldName)}}
           <InfoTableRow @label={{this.detailLabel fieldName}}>
-            <CertificateCard @data={{value}} />
+            <EncodedDataCard @data={{value}} />
           </InfoTableRow>
         {{else}}
           <InfoTableRow @label={{this.detailLabel fieldName}} @value={{value}} />
@@ -42,7 +42,7 @@
 
     <InfoTableRow @label="Private key">
       {{#if this.config.private_key}}
-        <CertificateCard @data={{this.config.private_key}} />
+        <EncodedDataCard @data={{this.config.private_key}} />
       {{else}}
         <Hds::Badge @text="internal" />
       {{/if}}

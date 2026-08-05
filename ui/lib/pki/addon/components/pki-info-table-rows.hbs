@@ -9,7 +9,7 @@
     {{#if (or value (includes field (array "common_name" "private_key" "private_key_type")))}}
       <InfoTableRow @label={{@label field}} @value={{value}} @addCopyButton={{includes field (array "issuer_id" "key_id")}}>
         {{#if (and (includes field (array "ca_chain" "certificate")) value)}}
-          <CertificateCard @data={{value}} />
+          <EncodedDataCard @data={{value}} />
         {{else if (includes field (array "issuer_id" "key_id"))}}
           <LinkTo @route={{if (eq field "issuer_id") "issuers.issuer.details" "keys.key.details"}} @model={{value}}>
             {{value}}
