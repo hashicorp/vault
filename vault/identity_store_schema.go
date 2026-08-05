@@ -185,6 +185,7 @@ func entitiesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 					Indexes: []memdb.Indexer{
 						&memdb.StringFieldIndex{Field: "NamespaceID"},
 						&memdb.StringFieldIndex{Field: "ScimClientID"},
+						&memdb.StringFieldIndex{Field: "Name"},
 					},
 				},
 			},

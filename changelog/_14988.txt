@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/scim (enterprise): Improve SCIM User and Group listing endpoint performance by using prefix sort instead of a separate sort pass.
+```
