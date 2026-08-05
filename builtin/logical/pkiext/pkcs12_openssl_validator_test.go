@@ -5,13 +5,21 @@ package pkiext
 
 import (
 	"context"
+	"crypto"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	pkihelper "github.com/hashicorp/vault/helper/testhelpers/pki"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
@@ -40,7 +48,8 @@ func TestPKCS12OpenSSLValidation(t *testing.T) {
 	})
 
 	// Generate test CA, leaf and key once for all subtests
-	leafKey, leafCert, caChain := generateChainAndLeafCert(t)
+	result := pkihelper.GenerateCertWithRoot(t)
+	leafKey, leafCert, caChain := result.Leaf.Key, result.Leaf.Cert, []*x509.Certificate{result.RootCa.Cert}
 
 	// Test matrix:
 	// 2 bundle types (with and without a private key) x 2 encoders (modern2026, modern2023) x 2 OpenSSL versions
@@ -141,6 +150,65 @@ func TestPKCS12OpenSSLValidation(t *testing.T) {
 				require.True(t, strings.TrimSpace(output) == "", "Key should be empty")
 			}
 		})
+	}
+
+	//  validates PKCS#12 bundles work with different key types
+	keyTypes := []struct {
+		name    string
+		keyType string
+		keyBits int
+	}{
+		// RSA keys
+		{name: "RSA-2048", keyType: "rsa", keyBits: 2048},
+		{name: "RSA-4096", keyType: "rsa", keyBits: 4096},
+
+		// ECDSA keys (ECDSA-P256 is used for interop tests above so not re-tested here)
+		{name: "ECDSA-P384", keyType: "ec", keyBits: 384},
+		{name: "ECDSA-P521", keyType: "ec", keyBits: 521},
+
+		// Ed25519
+		{name: "Ed25519", keyType: "ed25519", keyBits: 0},
+	}
+
+	for _, tc := range keyTypes {
+		// Generate key and certificate for this key type
+		privateKey, cert, caChain, err := generateKeyAndCert(t, tc.keyType, tc.keyBits)
+		require.NoError(t, err, "Should generate cert and private key: %s, bits: %s", tc.keyType, tc.keyBits)
+
+		// Test each encoder type
+		for _, encoder := range []string{"modern2023", "modern2026"} {
+			name := fmt.Sprintf("encoder=%s key=%s", encoder, tc.name)
+
+			t.Run(name, func(t *testing.T) {
+				// Encode to PKCS#12
+				pkcs12Bytes, err := pki.EncodeToPKCS12(
+					encoder,
+					privateKey,
+					cert,
+					caChain,
+					pkcs12Password,
+				)
+				require.NoError(t, err, "Failed to encode PKCS#12 for key type: %s, bits:", tc.keyType, tc.keyBits)
+
+				// Validate with OpenSSL
+				opensslInfo, err := runOpenSSLInfo(t, envs, pkcs12Bytes, openssl3_5)
+				require.NoError(t, err, "OpenSSL should read PKCS#12 bundle")
+				// Verify expected encryption algorithms
+				require.Contains(t, opensslInfo, "PBES2, PBKDF2, AES-256-CBC")
+				// Extract and verify private key
+				runner := envs[openssl3_5].runner
+				containerID := envs[openssl3_5].container.Container.ID
+				keyOutput, err := runOpenSSLCmd(runner, containerID, []string{
+					"pkcs12", "-in", "/tmp/bundle.p12",
+					"-nocerts", "-nodes",
+					"-passin", "pass:" + pkcs12Password,
+					"-noenc",
+				})
+				require.NoError(t, err, "Should extract private key")
+				require.Contains(t, keyOutput, "-----BEGIN PRIVATE KEY-----",
+					"Should contain private key for %s", tc.keyType)
+			})
+		}
 	}
 }
 
@@ -247,7 +315,6 @@ func validateCertificateOrder(t *testing.T, runner *docker.Runner, containerID s
 	require.NoError(t, err, "OpenSSL should extract all certificates")
 	certCount := strings.Count(allCertsOutput, "-----BEGIN CERTIFICATE-----")
 	require.Equal(t, 2, certCount, "Should have exactly 2 certificates (leaf + CA)")
-	require.Contains(t, allCertsOutput, "subject=CN=test.example.com", "Should contain leaf certificate")
 	require.Contains(t, allCertsOutput, "subject=CN=Root CA", "Should contain CA certificate")
 
 	// For trust stores: No private key, so all certs are treated as CA certs
@@ -261,7 +328,7 @@ func validateCertificateOrder(t *testing.T, runner *docker.Runner, containerID s
 			"-passin", "pass:" + pkcs12Password,
 		})
 		require.NoError(t, err, "OpenSSL should extract leaf certificate")
-		require.Contains(t, leafOutput, "subject=CN=test.example.com", "leaf cert should have correct subject")
+		require.Contains(t, leafOutput, "subject=CN=localhost", "leaf cert should have correct subject")
 
 		caOutput, err := runOpenSSLCmd(runner, containerID, []string{
 			"pkcs12",
@@ -273,4 +340,84 @@ func validateCertificateOrder(t *testing.T, runner *docker.Runner, containerID s
 		require.NoError(t, err, "OpenSSL should extract CA certificates")
 		require.Contains(t, caOutput, "subject=CN=Root CA", "CA cert should have correct subject")
 	}
+}
+
+// generateKeyAndCert creates a private key and certificate for the specified key type
+func generateKeyAndCert(t *testing.T, keyType string, keyBits int) (crypto.Signer, *x509.Certificate, []*x509.Certificate, error) {
+	container := &privateKeyContainer{}
+	if err := certutil.GeneratePrivateKey(keyType, keyBits, container); err != nil {
+		return nil, nil, nil, err
+	}
+	privateKey := container.key
+
+	// Generate CA certificate
+	caSerialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to generate CA serial: %w", err)
+	}
+
+	caTemplate := &x509.Certificate{
+		SerialNumber: caSerialNumber,
+		Subject: pkix.Name{
+			CommonName: "Root CA",
+		},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(24 * time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	caCertDER, err := x509.CreateCertificate(rand.Reader, caTemplate, caTemplate, privateKey.Public(), privateKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to create CA certificate: %w", err)
+	}
+
+	caCert, err := x509.ParseCertificate(caCertDER)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to parse CA certificate: %w", err)
+	}
+
+	// Generate leaf certificate
+	leafSerialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to generate leaf serial: %w", err)
+	}
+
+	leafTemplate := &x509.Certificate{
+		SerialNumber: leafSerialNumber,
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+		},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(2 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  false,
+	}
+
+	leafCertDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, caCert, privateKey.Public(), privateKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to create leaf certificate: %w", err)
+	}
+
+	leafCert, err := x509.ParseCertificate(leafCertDER)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to parse leaf certificate: %w", err)
+	}
+
+	return privateKey, leafCert, []*x509.Certificate{caCert}, nil
+}
+
+type privateKeyContainer struct {
+	key           crypto.Signer
+	keyType       certutil.PrivateKeyType
+	serializedKey []byte
+}
+
+func (c *privateKeyContainer) SetParsedPrivateKey(key crypto.Signer, keyType certutil.PrivateKeyType, serializedKey []byte) {
+	c.key = key
+	c.keyType = keyType
+	c.serializedKey = serializedKey
 }

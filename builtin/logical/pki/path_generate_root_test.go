@@ -4,6 +4,7 @@
 package pki
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -179,9 +180,10 @@ func requireMaxPathLengthZeroWarning(t testing.TB, warnings []string) {
 func TestGenerateAndRotateRoot_PKCS12Format(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
-	var password string
+
+	var decryptPw string
 	buildData := func(omitPassword bool, encoder string) map[string]interface{} {
-		password = pkcs12.DefaultPassword
+		decryptPw = pkcs12.DefaultPassword
 		data := map[string]interface{}{
 			"format":      "pkcs12_bundle",
 			"common_name": "Root CA",
@@ -190,8 +192,8 @@ func TestGenerateAndRotateRoot_PKCS12Format(t *testing.T) {
 			"key_bits":    256,
 		}
 		if !omitPassword {
-			password = "secure-root-password"
-			data["pkcs12_password"] = password
+			decryptPw = "secure-root-password"
+			data["pkcs12_password"] = "secure-root-password"
 		}
 		if encoder != "" {
 			data["pkcs12_encoder"] = encoder
@@ -220,25 +222,102 @@ func TestGenerateAndRotateRoot_PKCS12Format(t *testing.T) {
 			{name: "with modern2023 encoder", endpoint: "internal", encoder: "modern2023"},
 			{name: "with invalid encoder", endpoint: "internal", encoder: "modern2020", shouldError: true},
 		}
-
 		for _, tc := range testCases {
 			path := p + tc.endpoint
-			t.Run(tc.name, func(t *testing.T) {
-				data := buildData(tc.omitPassword, tc.encoder)
-				pkcs12Bytes := requestAndVerifyPKCS12(t, tc.shouldError, requestPKCS12params{b, s, path, data})
+			name := fmt.Sprintf("endpoint=%q %s", path, tc.name)
+
+			t.Run(name, func(t *testing.T) {
+				resp, err := CBWrite(b, s, path, buildData(tc.omitPassword, tc.encoder))
+				pkcs12Bytes := verifyAndDecodePKCS12(t, path, resp, err, tc.shouldError)
 				if tc.shouldError {
 					return
 				}
 
 				if tc.endpoint == "exported" {
-					_, cert, caCerts := requireDecodesPKCS12Chain(t, pkcs12Bytes, password)
+					_, cert, caCerts := requireDecodesPKCS12Chain(t, pkcs12Bytes, decryptPw)
 					require.Equal(t, "Root CA", cert.Subject.CommonName)
 					require.True(t, cert.IsCA, "should be a CA certificate")
 					// The root certificate itself is in 'cert', not in 'caCerts'
 					require.Len(t, caCerts, 0, "should have no CA chain because root is self-signed")
 				} else {
 					// Validate PKCS12 trust store for internal root: contains only certificates (no private key)
-					certs := requireDecodesPKCS12TrustStore(t, pkcs12Bytes, password)
+					certs := requireDecodesPKCS12TrustStore(t, pkcs12Bytes, decryptPw)
+					require.Len(t, certs, 1, "should have no additional certs because root is self-signed")
+					// First cert should be the root
+					require.True(t, certs[0].IsCA, "cert should be a CA")
+					require.Equal(t, "Root CA", certs[0].Subject.CommonName)
+					requireSignedBy(t, certs[0], certs[0])
+				}
+			})
+		}
+	}
+}
+
+// TestGenerateAndRotateRoot_JKSFormat validates JKS support for (internal and exported) root generation and rotation.
+// JKS archives from exported endpoints should contain a private key and root certificate while
+// internal endpoints should only have the root certificate.
+func TestGenerateAndRotateRoot_JKSFormat(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	var decryptPw string
+	buildData := func(alias string, password string) map[string]interface{} {
+		decryptPw = pkcs12.DefaultPassword
+		data := map[string]interface{}{
+			"format":      "jks_bundle",
+			"common_name": "Root CA",
+			"key_type":    "ec",
+			"key_bits":    256,
+		}
+		if alias != "" {
+			data["jks_private_key_alias"] = alias
+		}
+		if password != "" {
+			decryptPw = password
+			data["jks_password"] = password
+		}
+		return data
+	}
+
+	for _, p := range []string{"root/generate/", "root/rotate/"} {
+		testCases := []struct {
+			name            string
+			endpoint        string
+			alias           string
+			password        string
+			expectedAliases []string
+		}{
+			// exported
+			{name: "default password and alias", endpoint: "exported"},
+			{name: "custom alias and password", endpoint: "exported", alias: "myapp", password: "my-very-secure-password"},
+			// internal
+			{name: "default password and alias", endpoint: "internal", expectedAliases: []string{"1"}},
+			{name: "custom alias and password", endpoint: "internal", alias: "myapp", expectedAliases: []string{"1"}, password: "my-very-secure-password"},
+		}
+		for _, tc := range testCases {
+			path := p + tc.endpoint
+			name := fmt.Sprintf("endpoint=%q %s", path, tc.name)
+
+			t.Run(name, func(t *testing.T) {
+				data := buildData(tc.alias, tc.password)
+				resp, err := CBWrite(b, s, path, data)
+				jksBytes := verifyAndDecodeJKS(t, path, resp, err)
+
+				// If exported then JKS bundle should be a PrivateKeyEntry
+				if tc.endpoint == "exported" {
+					expectedAlias := tc.alias
+					if expectedAlias == "" {
+						// Alias should be default if unset
+						expectedAlias = "1"
+					}
+					_, cert, caCerts := requireDecodesJKSChain(t, jksBytes, decryptPw, expectedAlias)
+					require.Equal(t, "Root CA", cert.Subject.CommonName)
+					require.True(t, cert.IsCA, "should be a CA certificate")
+					// The root certificate itself is in 'cert', not in 'caCerts'
+					require.Len(t, caCerts, 0, "should have no CA chain because root is self-signed")
+				} else {
+					// Validate JKS trust store for internal root: contains only certificates (no private key)
+					certs := requireDecodesJKSTrustStore(t, jksBytes, decryptPw, tc.expectedAliases)
 					require.Len(t, certs, 1, "should have no additional certs because root is self-signed")
 					// First cert should be the root
 					require.True(t, certs[0].IsCA, "cert should be a CA")
@@ -272,7 +351,7 @@ func TestGenerateAndRotateRoot_FormatValidation(t *testing.T) {
 				"key_type":    "ec",
 			})
 			require.Error(t, err)
-			require.Contains(t, err.Error(), `the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`)
+			require.Contains(t, err.Error(), `the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`)
 		})
 	}
 

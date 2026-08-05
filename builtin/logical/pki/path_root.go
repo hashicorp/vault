@@ -273,16 +273,36 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		password := data.Get("pkcs12_password").(string)
 		encoder := data.Get("pkcs12_encoder").(string)
 		caChain := x509Certificates(parsedBundle.CAChain)
+
 		var privateKey crypto.Signer
 		if genParams.exported {
 			privateKey = parsedBundle.PrivateKey
 		}
+
 		pkcs12Bytes, err := EncodeToPKCS12(encoder, privateKey, parsedBundle.Certificate, caChain, password)
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode to PKCS#12 format: %w", err)
 		}
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
 		resp.Data["issuing_ca"] = cb.Certificate
+
+	case "jks_bundle":
+		alias := data.Get("jks_private_key_alias").(string)
+		password := data.Get("jks_password").(string)
+		caChain := x509Certificates(parsedBundle.CAChain)
+
+		var privateKey crypto.Signer
+		if genParams.exported {
+			privateKey = parsedBundle.PrivateKey
+		}
+
+		jksBytes, err := EncodeToJKS(privateKey, parsedBundle.Certificate, caChain, alias, password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to JKS format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(jksBytes)
+		resp.Data["issuing_ca"] = cb.Certificate
+
 	default:
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
@@ -387,7 +407,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	format := getFormat(data)
 	if format == "" {
-		return logical.ErrorResponse(`the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`), nil
+		return logical.ErrorResponse(`the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`), nil
 	}
 	if format == "pkcs12_bundle" {
 		// Cast to encoder type and validate it is a permitted value
@@ -400,6 +420,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		format:         format,
 		pkcs12Encoder:  data.Get("pkcs12_encoder").(string),
 		pkcs12Password: data.Get("pkcs12_password").(string),
+		jksPassword:    data.Get("jks_password").(string),
 	}
 
 	role := &issuing.RoleEntry{
@@ -553,6 +574,7 @@ type certEncodingParams struct {
 	format         string
 	pkcs12Encoder  string
 	pkcs12Password string
+	jksPassword    string
 }
 
 func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, encParams certEncodingParams, warnings []string) (*logical.Response, error) {
@@ -632,8 +654,7 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 	case "pkcs12_bundle":
 		password := encParams.pkcs12Password
 		encoder := encParams.pkcs12Encoder
-		// Use parsedBundle.CAChain (not caChain variable) because EncodeToPKCS12
-		// internally prepends parsedBundle.Certificate to create the full chain.
+		// Use parsedBundle.CAChain (not caChain var above) because EncodeToPKCS12 handles chain building.
 		caCerts := x509Certificates(parsedBundle.CAChain)
 		// Intermediates are signed from a CSR, pass nil because no private key should be available here.
 		pkcs12Bytes, err := EncodeToPKCS12(encoder, nil, parsedBundle.Certificate, caCerts, password)
@@ -642,6 +663,19 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 		}
 		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(pkcs12Bytes)
 		resp.Data["issuing_ca"] = signingCB.Certificate
+
+	case "jks_bundle":
+		password := encParams.jksPassword
+		// Use parsedBundle.CAChain (not caChain var above) because EncodeToJKS handles chain building.
+		caCerts := x509Certificates(parsedBundle.CAChain)
+		// Intermediates are signed from a CSR, pass nil because no private key should be available here.
+		// For trust stores custom aliases are currently unsupported, pass empty string.
+		jksBytes, err := EncodeToJKS(nil, parsedBundle.Certificate, caCerts, "", password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode to JKS format: %w", err)
+		}
+		resp.Data["certificate"] = base64.StdEncoding.EncodeToString(jksBytes)
+		resp.Data["issuing_ca"] = cb.Certificate
 
 	default:
 		return nil, fmt.Errorf("unsupported format argument: %s", format)

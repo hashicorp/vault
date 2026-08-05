@@ -4,11 +4,9 @@
 package pki
 
 import (
+	"bytes"
 	"context"
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
@@ -30,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/stretchr/testify/require"
 	"software.sslmate.com/src/go-pkcs12"
 )
@@ -1299,7 +1298,8 @@ func TestVerify_chained_name_constraints(t *testing.T) {
 // Test_PKCS12encoders tests for validatePKCS12Encoder and EncodeToPKCS12 utils
 func Test_PKCS12encoders(t *testing.T) {
 	// Generate test CA, leaf and key once for all subtests
-	key, cert, caChain := generateChainAndLeafCert(t)
+	result := pkihelper.GenerateCertWithRoot(t)
+	key, cert, caChain := result.Leaf.Key, result.Leaf.Cert, []*x509.Certificate{result.RootCa.Cert}
 
 	t.Run("validatePKCS12Encoder", func(t *testing.T) {
 		tests := []struct {
@@ -1420,40 +1420,182 @@ func Test_PKCS12encoders(t *testing.T) {
 	})
 }
 
-// Test_supportedFormats safeguards the function returns expected slice certificate formats
-func Test_supportedFormats(t *testing.T) {
-	require.Equal(t, []string{"pem", "der", "pem_bundle", "pkcs12_bundle"}, supportedFormats(true))
-	require.Equal(t, []string{"pem", "der", "pem_bundle"}, supportedFormats(false))
+// Test_JKSEncoders tests for EncodeToJKS and related helper functions
+func Test_JKSEncoders(t *testing.T) {
+	// Generate test CA, leaf and key once for all subtests
+	result := pkihelper.GenerateCertWithRoot(t)
+	key, cert, caChain := result.Leaf.Key, result.Leaf.Cert, []*x509.Certificate{result.RootCa.Cert}
+	pw := "123-secure-password"
+
+	t.Run("EncodeToJKS", func(t *testing.T) {
+		tests := []struct {
+			name            string
+			alias           string
+			expectedAliases []string
+			isTrustStore    bool
+			withoutChain    bool
+		}{
+			// Valid encodings with private key (keystore)
+			{name: "keystore with custom alias", alias: "myapp", expectedAliases: []string{"myapp"}},
+			{name: "keystore without CA chain", alias: "1", withoutChain: true, expectedAliases: []string{"1"}},
+
+			// Trust store only (no private key)
+			// jks_private_key_alias parameter should be ignored for trust stores and always start at "1"
+			{name: "trust store with numeric alias", alias: "2", isTrustStore: true, expectedAliases: []string{"1", "2"}},
+			{name: "trust store with non-numeric alias", alias: "myapp", isTrustStore: true, expectedAliases: []string{"1", "2"}},
+			{name: "trust store without CA chain", isTrustStore: true, withoutChain: true, expectedAliases: []string{"1"}},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				var preEncodedKey crypto.Signer
+				var preEncodedChain []*x509.Certificate
+				if !tc.isTrustStore {
+					preEncodedKey = key
+				}
+				if !tc.withoutChain {
+					preEncodedChain = caChain
+				}
+
+				jksBytes, err := EncodeToJKS(preEncodedKey, cert, preEncodedChain, tc.alias, pw)
+				require.NoError(t, err)
+				require.NotEmpty(t, jksBytes)
+
+				ks := keystore.New()
+				err = ks.Load(bytes.NewReader(jksBytes), []byte(pw))
+				require.NoError(t, err, "should load JKS keystore")
+
+				aliases := ks.Aliases()
+				require.NotEmpty(t, aliases, "keystore should have entries")
+				require.ElementsMatch(t, tc.expectedAliases, aliases, "aliases should match expected set")
+
+				if !tc.isTrustStore {
+					require.Len(t, aliases, 1, "keystore should have one private key entry")
+					require.True(t, ks.IsPrivateKeyEntry(tc.alias), "should have private key entry")
+
+					chain, err := ks.GetPrivateKeyEntryCertificateChain(tc.alias)
+					require.NoError(t, err, "should get private key certificate chain")
+
+					if tc.withoutChain {
+						require.Len(t, chain, 1, "chain should only have leaf cert")
+					} else {
+						require.Len(t, chain, 2, "chain should have leaf + CA cert")
+					}
+				}
+
+				if tc.isTrustStore {
+					for _, alias := range aliases {
+						require.True(t, ks.IsTrustedCertificateEntry(alias), "should be trusted certificate entry")
+					}
+
+					if tc.withoutChain {
+						require.Len(t, aliases, 1, "should only have one entry")
+					} else {
+						require.Len(t, aliases, 2, "should have two entries")
+					}
+				}
+			})
+		}
+	})
+
+	t.Run("setPrivateKeyEntry", func(t *testing.T) {
+		tests := []struct {
+			name         string
+			alias        string
+			withoutChain bool
+		}{
+			{name: "with default alias", alias: "1"},
+			{name: "with custom alias", alias: "myapp"},
+			{name: "without CA chain", alias: "5", withoutChain: true},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				ks := keystore.New()
+				var chain []*x509.Certificate
+				if !tc.withoutChain {
+					chain = caChain
+				}
+
+				certs := append([]*x509.Certificate{cert}, chain...)
+				err := setPrivateKeyEntry(ks, tc.alias, []byte(pw), key, certs)
+				require.NoError(t, err, "should set private key entry")
+
+				// Verify entry was created
+				require.True(t, ks.IsPrivateKeyEntry(tc.alias), "should have private key entry")
+
+				// Verify entry contents
+				pke, err := ks.GetPrivateKeyEntry(tc.alias, []byte(pw))
+				require.NoError(t, err, "should get private key entry")
+				require.NotNil(t, pke, "private key entry should not be nil")
+
+				// Verify private key
+				privKey, err := x509.ParsePKCS8PrivateKey(pke.PrivateKey)
+				require.NoError(t, err, "should parse private key")
+				require.Equal(t, key, privKey, "private key should match")
+
+				// Verify certificate chain
+				expectedChainLen := 1
+				if !tc.withoutChain {
+					expectedChainLen = 2
+				}
+				require.Len(t, pke.CertificateChain, expectedChainLen, "certificate chain length should match")
+
+				// Verify all certificates have correct type
+				for i, certEntry := range pke.CertificateChain {
+					require.Equal(t, "X509", certEntry.Type, "certificate type should be X509 at index %d", i)
+					parsedCert, err := x509.ParseCertificate(certEntry.Content)
+					require.NoError(t, err, "should parse certificate at index %d", i)
+					require.Equal(t, certs[i], parsedCert, "certificate should match at index %d", i)
+				}
+			})
+		}
+	})
+
+	t.Run("setTrustedCertificateEntry", func(t *testing.T) {
+		resultWithInt := pkihelper.GenerateCertWithIntermediaryRoot(t)
+		_, leafFromInt, chainWithInt := resultWithInt.Leaf.Key, resultWithInt.Leaf.Cert, []*x509.Certificate{resultWithInt.IntCa.Cert, resultWithInt.RootCa.Cert}
+		resultWithoutInt := pkihelper.GenerateCertWithRoot(t)
+		_, leafFromRoot, chainWithoutInt := resultWithoutInt.Leaf.Key, resultWithoutInt.Leaf.Cert, []*x509.Certificate{resultWithoutInt.RootCa.Cert}
+		tests := []struct {
+			name            string
+			certs           []*x509.Certificate
+			expectedAliases []string
+		}{
+			{name: "it sets aliases for leaf+root", certs: append([]*x509.Certificate{leafFromRoot}, chainWithoutInt...), expectedAliases: []string{"1", "2"}},
+			{name: "it sets aliases for leaf+int+root", certs: append([]*x509.Certificate{leafFromInt}, chainWithInt...), expectedAliases: []string{"1", "2", "3"}},
+		}
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				ks := keystore.New()
+
+				err := setTrustedCertificateEntry(ks, tc.certs)
+				require.NoError(t, err, "should set trusted certificate entries")
+
+				// Verify entries were created
+				aliases := ks.Aliases()
+				require.Len(t, aliases, len(tc.expectedAliases), "should have correct number of entries")
+				require.ElementsMatch(t, tc.expectedAliases, aliases, "aliases should match expected set")
+
+				// Verify all entries
+				for i, expectedAlias := range tc.expectedAliases {
+					expectedCert := tc.certs[i]
+					require.True(t, ks.IsTrustedCertificateEntry(expectedAlias), "should have trusted certificate entry at alias %s", expectedAlias)
+					tce, err := ks.GetTrustedCertificateEntry(expectedAlias)
+					require.NoError(t, err, "should get trusted certificate entry at alias %s", expectedAlias)
+					require.Equal(t, "X509", tce.Certificate.Type, "certificate type should be X509 at alias %s", expectedAlias)
+
+					parsedCert, err := x509.ParseCertificate(tce.Certificate.Content)
+					require.NoError(t, err, "should parse certificate at alias %s", expectedAlias)
+					require.Equal(t, expectedCert, parsedCert, "certificate should match at alias %s", expectedAlias)
+				}
+			})
+		}
+	})
 }
 
-// generateChainAndLeafCert creates a leaf certificate signed by the provided CA
-func generateChainAndLeafCert(t *testing.T) (*ecdsa.PrivateKey, *x509.Certificate, []*x509.Certificate) {
-	ca := pkihelper.GenerateRootCa(t)
-
-	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	require.NoError(t, err)
-
-	leafTemplate := &x509.Certificate{
-		SerialNumber: serialNumber,
-		Subject: pkix.Name{
-			CommonName: "test.example.com",
-		},
-		NotBefore:             time.Now().Add(-1 * time.Hour),
-		NotAfter:              time.Now().Add(2 * time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		BasicConstraintsValid: true,
-		IsCA:                  false,
-	}
-
-	leafKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-
-	leafCertDER, err := x509.CreateCertificate(rand.Reader, leafTemplate, ca.Cert, &leafKey.PublicKey, ca.Key)
-	require.NoError(t, err)
-
-	leafCert, err := x509.ParseCertificate(leafCertDER)
-	require.NoError(t, err)
-
-	return leafKey, leafCert, []*x509.Certificate{ca.Cert}
+// Test_supportedFormats safeguards the function returns expected slice certificate formats
+func Test_supportedFormats(t *testing.T) {
+	require.Equal(t, []string{"pem", "der", "pem_bundle", "pkcs12_bundle", "jks_bundle"}, supportedFormats(true))
+	require.Equal(t, []string{"pem", "der", "pem_bundle"}, supportedFormats(false))
 }

@@ -41,11 +41,12 @@ func getCAGenerationParams(sc *storageContext, data *framework.FieldData, isRoot
 		return
 	}
 
-	// PKCS#12 formats are only supported for root certificate generation.
-	// For non-root operations, only a CSR is generated and PKCS#12 is not a valid output format.
+	// PKCS#12/JKS formats are only supported for root certificate generation.
+	// For non-root operations, only a CSR is generated and PKCS#12/JKS is not a valid output format.
 	params.format = getFormat(data)
-	if params.format == "" || (!isRoot && params.format == "pkcs12_bundle") {
-		errorMsg := `the "format" parameter must be "pem", "der", "pem_bundle" or "pkcs12_bundle"`
+	isKeystoreFormat := params.format == "pkcs12_bundle" || params.format == "jks_bundle"
+	if params.format == "" || (!isRoot && isKeystoreFormat) {
+		errorMsg := `the "format" parameter must be "pem", "der", "pem_bundle", "pkcs12_bundle" or "jks_bundle"`
 		if !isRoot {
 			errorMsg = `the "format" parameter must be "pem", "der" or "pem_bundle"`
 		}
