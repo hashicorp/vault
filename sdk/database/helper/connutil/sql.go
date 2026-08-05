@@ -91,6 +91,9 @@ func SQLConnectionProducerFieldNames() map[string]any {
 		fieldNames[rType.Field(i).Tag.Get("json")] = 1
 	}
 
+	// this prevents username_template from getting flagged as an unrecognized parameter.
+	fieldNames["username_template"] = 1
+
 	return fieldNames
 }
 
