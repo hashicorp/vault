@@ -246,6 +246,18 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, req *logical.Reques
 func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
+	// Serialize concurrent finalize requests for the same order. Without this,
+	// two requests can both load the order while it is still "ready", both pass
+	// the readiness gate below, and both issue a separate certificate. The order
+	// only records one serial, so the other certificate becomes orphaned from
+	// every order-keyed lookup such as /acme/order/<id>/cert. Finalize always
+	// runs on the active node (ForwardPerformanceStandby), so an in-memory
+	// per-order lock is enough to guard the load, check, issue, and save
+	// sequence. See GH-31987.
+	orderLock := b.GetAcmeState().orderLockFor(orderId)
+	orderLock.Lock()
+	defer orderLock.Unlock()
+
 	csr, err := parseCsrFromFinalize(data)
 	if err != nil {
 		return nil, err
