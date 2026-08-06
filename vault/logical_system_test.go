@@ -5877,6 +5877,97 @@ func TestHandlePoliciesPasswordGenerate(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("success with prefix", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		policyEntry := storageEntryWithPrefix(t, "testprefix",
+			"length = 20\n"+
+				"rule \"charset\" {\n"+
+				"\tcharset=\"abcdefghij\"\n"+
+				"}", "", "vault.")
+		storage := makeStorage(t, policyEntry)
+
+		inputData := passwordPoliciesFieldData(map[string]interface{}{
+			"name": "testprefix",
+		})
+
+		for i := 0; i < 100; i++ {
+			req := &logical.Request{
+				Storage: storage,
+			}
+
+			b := &SystemBackend{}
+
+			actualResp, err := b.handlePoliciesPasswordGenerate(ctx, req, inputData)
+			if err != nil {
+				t.Fatalf("no error expected, got: %s", err)
+			}
+
+			assertTrue(t, actualResp != nil, "response is nil")
+			assertTrue(t, actualResp.Data != nil, "expected data, got nil")
+			assertHasKey(t, actualResp.Data, "password", "password key not found in data")
+			password := actualResp.Data["password"].(string)
+
+			if len(password) < 6 || password[:6] != "vault." {
+				t.Fatalf("password %s does not start with prefix 'vault.'", password)
+			}
+
+			passwordWithoutPrefix := password[6:]
+			passwordLength := len([]rune(passwordWithoutPrefix))
+			if passwordLength != 20 {
+				t.Fatalf("password without prefix is %d characters but should be 20", passwordLength)
+			}
+
+			rules := []random.Rule{
+				random.CharsetRule{
+					Charset:  []rune("abcdefghij"),
+					MinChars: 20,
+				},
+			}
+			for _, rule := range rules {
+				if !rule.Pass([]rune(passwordWithoutPrefix)) {
+					t.Fatalf("password %s does not have the correct characters after prefix", password)
+				}
+			}
+		}
+	})
+
+	t.Run("success empty prefix", func(t *testing.T) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		policyEntry := storageEntryWithPrefix(t, "testemptyprefix",
+			"length = 20\n"+
+				"rule \"charset\" {\n"+
+				"\tcharset=\"abcdefghij\"\n"+
+				"}", "", "")
+		storage := makeStorage(t, policyEntry)
+
+		inputData := passwordPoliciesFieldData(map[string]interface{}{
+			"name": "testemptyprefix",
+		})
+
+		req := &logical.Request{
+			Storage: storage,
+		}
+
+		b := &SystemBackend{}
+
+		actualResp, err := b.handlePoliciesPasswordGenerate(ctx, req, inputData)
+		if err != nil {
+			t.Fatalf("no error expected, got: %s", err)
+		}
+
+		assertTrue(t, actualResp != nil, "response is nil")
+		password := actualResp.Data["password"].(string)
+
+		passwordLength := len([]rune(password))
+		if passwordLength != 20 {
+			t.Fatalf("password is %d characters but should be 20", passwordLength)
+		}
+	})
 }
 
 func assertTrue(t *testing.T, pass bool, f string, vals ...interface{}) {
@@ -5929,6 +6020,17 @@ func storageEntry(t *testing.T, key string, policy string, entropySource string)
 		Value: toJson(t, passwordPolicyConfig{
 			HCLPolicy:     policy,
 			EntropySource: entropySource,
+		}),
+	}
+}
+
+func storageEntryWithPrefix(t *testing.T, key string, policy string, entropySource string, prefix string) *logical.StorageEntry {
+	return &logical.StorageEntry{
+		Key: getPasswordPolicyKey(key),
+		Value: toJson(t, passwordPolicyConfig{
+			HCLPolicy:     policy,
+			EntropySource: entropySource,
+			Prefix:        prefix,
 		}),
 	}
 }
