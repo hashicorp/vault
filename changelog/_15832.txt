@@ -1,0 +1,7 @@
+```release-note:improvement
+core/managed-keys/PKCS#11 (enterprise): slot and token_label are now strictly enforced as mutually exclusive identifiers for an HSM token
+```
+
+```release-note:improvement
+core/managed-keys/PKCS#11 (enterprise): Providing a non-empty value for one field while the other is already saved is rejected. To switch addressing modes, you must explicitly clear the old field by sending it as an empty string ("") in the same request alongside the new value.
+```
