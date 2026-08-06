@@ -66,7 +66,6 @@ func TestSysMonitorUnknownLogFormat(t *testing.T) {
 
 func TestSysMonitorStreamingLogs(t *testing.T) {
 	t.Parallel()
-	t.Skip("Skipping temporarily - flaky test")
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 		NumCores:    1,
