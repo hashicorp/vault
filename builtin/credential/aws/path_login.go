@@ -632,13 +632,13 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 
 	// Verify that the instance ID matches one of the ones set by the role
 	if len(roleEntry.BoundEc2InstanceIDs) > 0 && !strutil.StrListContains(roleEntry.BoundEc2InstanceIDs, *instance.InstanceId) {
-		return fmt.Errorf("instance ID %q does not belong to the role %q", *instance.InstanceId, roleName), nil
+		return fmt.Errorf("instance ID does not belong to the role %q", roleName), nil
 	}
 
 	// Verify that the AccountID of the instance trying to login matches the
 	// AccountID specified as a constraint on role
 	if len(roleEntry.BoundAccountIDs) > 0 && !strutil.StrListContains(roleEntry.BoundAccountIDs, identityDoc.AccountID) {
-		return fmt.Errorf("account ID %q does not belong to role %q", identityDoc.AccountID, roleName), nil
+		return fmt.Errorf("account ID does not belong to role %q", roleName), nil
 	}
 
 	// Verify that the AMI ID of the instance trying to login matches the
@@ -655,7 +655,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			return nil, fmt.Errorf("AMI ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundAmiIDs, *instance.ImageId) {
-			return fmt.Errorf("AMI ID %q does not belong to role %q", *instance.ImageId, roleName), nil
+			return fmt.Errorf("AMI ID does not belong to role %q", roleName), nil
 		}
 	}
 
@@ -665,7 +665,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			return nil, fmt.Errorf("subnet ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundSubnetIDs, *instance.SubnetId) {
-			return fmt.Errorf("subnet ID %q does not satisfy the constraint on role %q", *instance.SubnetId, roleName), nil
+			return fmt.Errorf("subnet ID does not satisfy the constraint on role %q", roleName), nil
 		}
 	}
 
@@ -675,7 +675,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			return nil, fmt.Errorf("VPC ID in the instance description is nil")
 		}
 		if !strutil.StrListContains(roleEntry.BoundVpcIDs, *instance.VpcId) {
-			return fmt.Errorf("VPC ID %q does not satisfy the constraint on role %q", *instance.VpcId, roleName), nil
+			return fmt.Errorf("VPC ID does not satisfy the constraint on role %q", roleName), nil
 		}
 	}
 
@@ -714,7 +714,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			}
 		}
 		if !matchesInstanceProfile {
-			return fmt.Errorf("IAM instance profile ARN %q does not satisfy the constraint role %q", iamInstanceProfileARN, roleName), nil
+			return fmt.Errorf("IAM instance profile ARN does not satisfy the constraint on role %q", roleName), nil
 		}
 	}
 
@@ -770,7 +770,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 			}
 		}
 		if !matchesInstanceRoleARN {
-			return fmt.Errorf("IAM role ARN %q does not satisfy the constraint role %q", iamRoleARN, roleName), nil
+			return fmt.Errorf("IAM role ARN does not satisfy the constraint on role %q", roleName), nil
 		}
 	}
 
@@ -849,7 +849,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 	// Verify that the `Region` of the instance trying to login matches the
 	// `Region` specified as a constraint on role
 	if len(roleEntry.BoundRegions) > 0 && !strutil.StrListContains(roleEntry.BoundRegions, identityDocParsed.Region) {
-		return logical.ErrorResponse(fmt.Sprintf("Region %q does not satisfy the constraint on role %q", identityDocParsed.Region, roleName)), nil
+		return logical.ErrorResponse(fmt.Sprintf("Region does not satisfy the constraint on role %q", roleName)), nil
 	}
 
 	validationError, err := b.verifyInstanceMeetsRoleRequirements(ctx, req.Storage, instance, roleEntry, roleName, identityDocParsed)
