@@ -22,6 +22,9 @@ const (
 	patternMountsAuthTune = "mounts/auth/(?P<path>.+?)/tune$"
 	patternMountsPath     = "mounts/(?P<path>.+?)"
 	patternMounts         = "mounts$"
+
+	// Secrets listing paths patterns
+	patternSecretsListRecursive = "secrets/list-recursive/?$"
 )
 
 var passwordPolicySchema = map[string]*framework.FieldSchema{

@@ -224,6 +224,60 @@ func (c *Logical) list(ctx context.Context, r *Request) (*Secret, error) {
 	return ParseSecret(resp.Body)
 }
 
+// ListRecursiveInput is the input to ListRecursive.
+type ListRecursiveInput struct {
+	Path        string
+	Pattern     string
+	Fuzzy       bool
+	Permissions string
+	AllMounts   bool
+}
+
+// ListRecursive lists all secrets recursively across all secret engine mounts
+// with optional pattern matching and permission filtering.
+func (c *Logical) ListRecursive(ctx context.Context, input *ListRecursiveInput) (*Secret, error) {
+	r := c.c.NewRequest("LIST", "/v1/sys/secrets/list-recursive")
+
+	if input != nil {
+		if input.Path != "" {
+			r.Params.Set("path", input.Path)
+		}
+		if input.Pattern != "" {
+			r.Params.Set("pattern", input.Pattern)
+		}
+		if input.Fuzzy {
+			r.Params.Set("fuzzy", "true")
+		}
+		if input.Permissions != "" {
+			r.Params.Set("permissions", input.Permissions)
+		}
+		if input.AllMounts {
+			r.Params.Set("all_mounts", "true")
+		}
+	}
+
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r.Method = http.MethodGet
+	r.Params.Set("list", "true")
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return ParseSecret(resp.Body)
+}
+
+// ListRecursive is a convenience wrapper for ListRecursive with context.Background().
+func (c *Logical) ListRecursiveWithContext(ctx context.Context, input *ListRecursiveInput) (*Secret, error) {
+	return c.ListRecursive(ctx, input)
+}
+
 func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, error) {
 	return c.WriteWithContext(context.Background(), path, data)
 }
