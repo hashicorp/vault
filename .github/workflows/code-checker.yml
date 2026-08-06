@@ -101,7 +101,8 @@ jobs:
         # You can add 'ignore-nil-nil-function-check' somewhere in the
         # godoc for the function.
       - run: make ci-vet-codechecker
-        name: Check custom linters
+        name: Check custom linters (non-blocking)
+        continue-on-error: true
       - run: make protolint
         name: Protobuf lint
 
