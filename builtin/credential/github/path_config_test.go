@@ -33,6 +33,17 @@ func createBackendWithStorage(t *testing.T) (*backend, logical.Storage) {
 	return b, config.StorageView
 }
 
+// setupUnauthorizedTestServer configures an httptest server that returns 401
+// for all requests, simulating an invalid/expired GitHub token.
+func setupUnauthorizedTestServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintln(w, `{"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}`)
+	}))
+}
+
 // setupTestServer configures httptest server to intercept and respond to the
 // request to base_url
 func setupTestServer(t *testing.T) *httptest.Server {
@@ -57,6 +68,7 @@ func setupTestServer(t *testing.T) *httptest.Server {
 // TestGitHub_WriteReadConfig tests that we can successfully read and write
 // the github auth config
 func TestGitHub_WriteReadConfig(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// use a test server to return our mock GH org info
@@ -94,6 +106,7 @@ func TestGitHub_WriteReadConfig(t *testing.T) {
 // TestGitHub_WriteReadConfig_OrgID tests that we can successfully read and
 // write the github auth config with an organization_id param
 func TestGitHub_WriteReadConfig_OrgID(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// Write the config and pass in organization_id
@@ -164,6 +177,7 @@ func TestGitHub_WriteReadConfig_Token(t *testing.T) {
 // TestGitHub_ErrorNoOrgID tests that an error is returned when we cannot fetch
 // the org ID for the given org name
 func TestGitHub_ErrorNoOrgID(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	// use a test server to return our mock GH org info
 	ts := func() *httptest.Server {
@@ -196,6 +210,7 @@ func TestGitHub_ErrorNoOrgID(t *testing.T) {
 // TestGitHub_WriteConfig_ErrorNoOrg tests that an error is returned when the
 // required "organization" parameter is not provided
 func TestGitHub_WriteConfig_ErrorNoOrg(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// Write the config
