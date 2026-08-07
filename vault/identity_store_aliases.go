@@ -12,6 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/jwt"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -256,6 +257,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 
 		// Get issuer if provided
 		issuer := d.Get("issuer").(string)
+
+		// normalize the issuer
+		issuer = jwt.NormalizeIssuer(issuer)
 
 		i.lock.Lock()
 		defer i.lock.Unlock()
