@@ -3575,6 +3575,213 @@ template {
 	}
 }
 
+// TestAgent_ReTriggerAutoAuth_RevokedToken tests that Vault Agent, when serving
+// requests through a listener with use_auto_auth_token = "force", re-triggers
+// auto-auth after the auto-auth token is revoked, instead of hanging.
+//
+// This is a regression test for the case where the auth handler's AuthInProgress and
+// InvalidToken channels were not wired into the cache ProxyHandler in command/agent.go
+// (they were wired in command/proxy.go but not agent.go). The ProxyHandler is used for
+// both the leaseCache and api_proxy paths, so with the channels unwired it sent on an
+// orphaned, unbuffered channel with no reader, blocking the request goroutine until
+// timeout and never triggering re-authentication. This test exercises the leaseCache
+// path via the cache {} block.
+func TestAgent_ReTriggerAutoAuth_RevokedToken(t *testing.T) {
+	agentLogger := logging.NewVaultLogger(hclog.Trace)
+	vaultLogger := logging.NewVaultLogger(hclog.Info)
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"approle": credAppRole.Factory,
+		},
+	}, &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: vaulthttp.Handler,
+		Logger:      vaultLogger,
+	})
+
+	serverClient := cluster.Cores[0].Client
+
+	// Enable the approle auth method
+	req := serverClient.NewRequest("POST", "/v1/sys/auth/approle")
+	req.BodyBytes = []byte(`{
+		"type": "approle"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Create a named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role")
+	req.BodyBytes = []byte(`{
+	  "secret_id_num_uses": "10",
+	  "secret_id_ttl": "1m",
+	  "token_max_ttl": "4m",
+	  "token_num_uses": "10",
+	  "token_ttl": "4m",
+	  "policies": "default"
+	}`)
+	request(t, serverClient, req, 204)
+
+	// Fetch the RoleID of the named role
+	req = serverClient.NewRequest("GET", "/v1/auth/approle/role/test-role/role-id")
+	body := request(t, serverClient, req, 200)
+	data := body["data"].(map[string]interface{})
+	roleID := data["role_id"].(string)
+
+	// Get a SecretID issued against the named role
+	req = serverClient.NewRequest("PUT", "/v1/auth/approle/role/test-role/secret-id")
+	body = request(t, serverClient, req, 200)
+	data = body["data"].(map[string]interface{})
+	secretID := data["secret_id"].(string)
+
+	// Write the RoleID and SecretID to temp files
+	roleIDPath := makeTempFile(t, "role_id.txt", roleID+"\n")
+	secretIDPath := makeTempFile(t, "secret_id.txt", secretID+"\n")
+
+	sinkFileName := makeTempFile(t, "sink-file", "")
+	autoAuthConfig := fmt.Sprintf(`
+auto_auth {
+    method "approle" {
+        mount_path = "auth/approle"
+        config = {
+            role_id_file_path = "%s"
+            secret_id_file_path = "%s"
+        }
+    }
+
+	sink "file" {
+		config = {
+			path = "%s"
+		}
+	}
+}`, roleIDPath, secretIDPath, sinkFileName)
+
+	listenAddr := generateListenerAddress(t)
+	listenConfig := fmt.Sprintf(`
+listener "tcp" {
+  address = "%s"
+  tls_disable = true
+}
+`, listenAddr)
+
+	config := fmt.Sprintf(`
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+api_proxy {
+  use_auto_auth_token = "force"
+}
+cache {}
+%s
+%s
+`, serverClient.Address(), listenConfig, autoAuthConfig)
+	configPath := makeTempFile(t, "config.hcl", config)
+
+	// Unset the environment variable so that agent picks up the right test
+	// cluster address
+	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+	os.Unsetenv(api.EnvVaultAddress)
+
+	// Start agent
+	_, cmd := testAgentCommand(t, agentLogger)
+	cmd.startedCh = make(chan struct{})
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		cmd.Run([]string{"-config", configPath})
+		wg.Done()
+	}()
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Errorf("timeout")
+	}
+
+	// Validate that the auto-auth token has been correctly attained
+	// and works for LookupSelf
+	conf := api.DefaultConfig()
+	conf.Address = "http://" + listenAddr
+	agentClient, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	agentClient.SetToken("")
+	err = agentClient.SetAddress("http://" + listenAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Wait for re-triggered auto auth to write new token to sink
+	waitForFile := func(prevModTime time.Time) {
+		ticker := time.Tick(100 * time.Millisecond)
+		timeout := time.After(15 * time.Second)
+		for {
+			select {
+			case <-ticker:
+			case <-timeout:
+				t.Fatal("timed out waiting for re-triggered auto auth to complete")
+			}
+			modTime, err := os.Stat(sinkFileName)
+			require.NoError(t, err)
+			if modTime.ModTime().After(prevModTime) {
+				return
+			}
+		}
+	}
+
+	// Wait for the token to be sent to sinks and be available to be used
+	waitForFile(time.Time{})
+	req = agentClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, agentClient, req, 200)
+
+	oldToken, err := os.ReadFile(sinkFileName)
+	require.NoError(t, err)
+	prevModTime, err := os.Stat(sinkFileName)
+	require.NoError(t, err)
+
+	// Revoke token
+	req = serverClient.NewRequest("PUT", "/v1/auth/token/revoke")
+	req.BodyBytes = []byte(fmt.Sprintf(`{
+	  "token": "%s"
+	}`, oldToken))
+	body = request(t, serverClient, req, 204)
+
+	// Agent uses the revoked token to make a request, which should result in an
+	// error. Run it in a goroutine with a timeout so that the test fails loudly
+	// (instead of hanging) if the request goroutine blocks because the InvalidToken
+	// channel is not wired up.
+	reqErrCh := make(chan error, 1)
+	go func() {
+		req = agentClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+		_, rawErr := agentClient.RawRequest(req)
+		reqErrCh <- rawErr
+	}()
+	select {
+	case rawErr := <-reqErrCh:
+		require.Error(t, rawErr)
+	case <-time.After(10 * time.Second):
+		t.Fatal("request with revoked token hung instead of returning; " +
+			"auto-auth self-healing is likely not wired into the cache ProxyHandler")
+	}
+
+	// Wait for new token to be written and available to use
+	waitForFile(prevModTime.ModTime())
+
+	// Verify new token is not equal to the old token
+	newToken, err := os.ReadFile(sinkFileName)
+	require.NoError(t, err)
+	require.NotEqual(t, string(newToken), string(oldToken))
+
+	// Verify that agent no longer fails when making a request
+	req = agentClient.NewRequest("GET", "/v1/auth/token/lookup-self")
+	body = request(t, agentClient, req, 200)
+
+	close(cmd.ShutdownCh)
+	wg.Wait()
+}
+
 // TestAgent_Config_AddrConformance verifies that the vault address is correctly
 // normalized to conform to RFC-5942 §4 when configured by a config file,
 // environment variables, or CLI flags.
