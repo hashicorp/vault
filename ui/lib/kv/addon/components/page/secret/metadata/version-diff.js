@@ -26,6 +26,23 @@ import isDeleted from 'kv/helpers/is-deleted';
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
 
+function restoreMultiline(obj) {
+  if (typeof obj === 'string') {
+    return obj.replace(/\\n/g, '\n');
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(restoreMultiline);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const out = {};
+    for (const key of Object.keys(obj)) {
+      out[key] = restoreMultiline(obj[key]);
+    }
+    return out;
+  }
+  return obj;
+}
+
 /* eslint-disable no-undef */
 export default class KvSecretMetadataVersionDiff extends Component {
   @service api;
@@ -70,13 +87,21 @@ export default class KvSecretMetadataVersionDiff extends Component {
   async createVisualDiff() {
     const leftSecretData = await this.fetchSecretData(this.leftVersion);
     const rightSecretData = await this.fetchSecretData(this.rightVersion);
+
+    // Normalize multiline values (e.g. literal "\n") before diffing
+    const leftFixed = restoreMultiline(leftSecretData);
+    const rightFixed = restoreMultiline(rightSecretData);
+
     const diffpatcher = jsondiffpatch.create({});
-    const delta = diffpatcher.diff(leftSecretData, rightSecretData);
+    const delta = diffpatcher.diff(leftFixed, rightFixed);
 
     this.statesMatch = !delta;
     this.visualDiff = delta
-      ? htmlformatter.format(delta, leftSecretData)
-      : JSON.stringify(rightSecretData, undefined, 2);
+      ? htmlformatter.format(delta, leftFixed)
+      : JSON.stringify(rightFixed, undefined, 2);
+
+    // restore HTML quotes and convert literal \n to real line breaks
+    this.visualDiff = this.visualDiff.replace(/&quot;/g, '"').replace(/\\n/g, '\n');
   }
 
   async fetchSecretData(version) {
