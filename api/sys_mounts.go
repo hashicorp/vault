@@ -112,7 +112,7 @@ func (c *Sys) UnmountWithContext(ctx context.Context, path string) error {
 	r := c.c.NewRequest(http.MethodDelete, fmt.Sprintf("/v1/sys/mounts/%s", path))
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -273,7 +273,7 @@ func (c *Sys) TuneMountAllowNilWithContext(ctx context.Context, path string, con
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
