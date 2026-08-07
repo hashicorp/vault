@@ -30,7 +30,6 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -347,8 +346,6 @@ listener "tcp" {
     tls_disable = true
     require_request_header = true
 	disable_request_limiter = true
-	# TODO (HCL_DUP_KEYS_DEPRECATION): remove duplicate attribute below
-	disable_request_limiter = true
 }
 `
 	listenAddr1 := generateListenerAddress(t)
@@ -364,7 +361,6 @@ listener "tcp" {
 	)
 	configPath := makeTempFile(t, "config.hcl", config)
 
-	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
 	cmd.client = serverClient
@@ -400,11 +396,6 @@ listener "tcp" {
 	//----------------------------------------------------
 	// Perform the tests
 	//----------------------------------------------------
-
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Eventually remove this check together with the duplicate attribute in this
-	// test's configuration
-	require.Contains(t, ui.ErrorWriter.String(),
-		"WARNING: Duplicate keys found")
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
@@ -3122,38 +3113,15 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	}
 }
 
-// TestAgent_Config_HclDuplicateKey checks that a log warning is printed when the agent config has duplicate attributes
-// TODO (HCL_DUP_KEYS_DEPRECATION): always expect error once deprecation is done
+// TestAgent_Config_HclDuplicateKey checks that an error is returned when the agent config has duplicate attributes
 func TestAgent_Config_HclDuplicateKey(t *testing.T) {
-	t.Run("duplicate error with env unset", func(t *testing.T) {
-		configFile := populateTempFile(t, "agent-config.hcl", `
+	configFile := populateTempFile(t, "agent-config.hcl", `
 log_level = "trace"
 log_level = "debug"
 `)
-		_, _, err := agentConfig.LoadConfigFileCheckDuplicates(configFile.Name())
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "Each argument can only be defined once")
-	})
-	t.Run("duplicate error with env set to false", func(t *testing.T) {
-		configFile := populateTempFile(t, "agent-config.hcl", `
-log_level = "trace"
-log_level = "debug"
-`)
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
-		_, _, err := agentConfig.LoadConfigFileCheckDuplicates(configFile.Name())
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "Each argument can only be defined once")
-	})
-	t.Run("duplicate warning with env set to true", func(t *testing.T) {
-		configFile := populateTempFile(t, "agent-config.hcl", `
-log_level = "trace"
-log_level = "debug"
-`)
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-		_, duplicate, err := agentConfig.LoadConfigFileCheckDuplicates(configFile.Name())
-		require.NoError(t, err)
-		require.True(t, duplicate)
-	})
+	_, err := agentConfig.LoadConfigFile(configFile.Name())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Each argument can only be defined once")
 }
 
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener

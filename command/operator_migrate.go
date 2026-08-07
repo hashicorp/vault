@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -332,13 +331,9 @@ func (c *OperatorMigrateCommand) loadMigratorConfig(path string) (*migratorConfi
 		return nil, err
 	}
 
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to hcl.Parse once duplicates are forbidden
-	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(string(d))
+	obj, err := hcl.Parse(string(d))
 	if err != nil {
 		return nil, err
-	}
-	if duplicate {
-		c.UI.Warn("WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 	}
 
 	var result migratorConfig

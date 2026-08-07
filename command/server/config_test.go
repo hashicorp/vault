@@ -169,7 +169,7 @@ func Test_ObservationSystemConfigMergeFromNoObservations(t *testing.T) {
 	require.Equal(t, true, merged.EnableUI)
 }
 
-// TestDuplicateKeyValidationHcl checks that the server command displays a warning when the HCL config file contains duplicate keys.
+// TestDuplicateKeyValidationHcl checks that loading an HCL config file with duplicate keys returns an error.
 func TestDuplicateKeyValidationHcl(t *testing.T) {
 	testDuplicateKeyValidationHcl(t)
 }

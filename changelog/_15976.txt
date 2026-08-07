@@ -1,0 +1,5 @@
+```release-note:change
+core: remove support for duplicate attributes in HCL configuration files and policy definitions. Parsing HCL with
+duplicate attributes now always fails, and the VAULT_ALLOW_PENDING_REMOVAL_DUPLICATE_HCL_ATTRIBUTES environment
+variable that previously restored the legacy behavior has been removed.
+```
