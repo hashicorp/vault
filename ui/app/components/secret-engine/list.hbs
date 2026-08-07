@@ -62,7 +62,7 @@
           checked={{includes type.name this.engineTypeFilters}}
           {{on "click" (fn this.filterByEngineType type.name)}}
           data-test-checkbox={{type.name}}
-        ><Hds::Icon @name={{type.icon}} @isInline={{true}} /> {{type.name}}</D.Checkbox>
+        ><Hds::Icon @name={{type.icon}} @isInline={{true}} class="is-v-centered" /> {{type.name}}</D.Checkbox>
       {{/each}}
     </SG.Dropdown>
     <SG.Dropdown @width="250px" as |D|>

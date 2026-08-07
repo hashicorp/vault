@@ -37,7 +37,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     );
 
     await visit('/vault/access/');
-    assert.dom(GENERAL.linkedBlock(path)).exists('mount is present in the list');
+    assert.dom(GENERAL.listItem(`${path}/`)).exists('mount is present in the list');
 
     // cleanup
     await runCmd(deleteAuthCmd(path));

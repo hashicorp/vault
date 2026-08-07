@@ -17,6 +17,7 @@ import type RouterService from '@ember/routing/router-service';
 import type WizardService from 'vault/services/wizard';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type AuthMethodResource from 'vault/resources/auth/method';
+import engineDisplayData from 'core/helpers/engines-display-data';
 
 /**
  * @module PageAuthMethods
@@ -41,43 +42,83 @@ export default class PageAuthMethodsComponent extends Component<Args> {
   @service declare readonly wizard: WizardService;
 
   @tracked authMethodOptions = [];
-  @tracked selectedAuthType: string | null = null;
-  @tracked selectedAuthName: string | null = null;
   @tracked methodToDisable: AuthMethodResource | null = null;
   @tracked shouldRenderIntroModal = false;
+  @tracked searchText = '';
+  @tracked authTypeFilters: Array<string> = [];
 
+  // search text for dropdown filters
+  @tracked typeSearchText = '';
   wizardId = WIZARD_ID_MAP.authMethods;
+
+  tableColumns = [
+    {
+      key: 'path',
+      label: 'Auth name',
+      isSortable: true,
+      customTableItem: true,
+    },
+    {
+      key: 'accessor',
+      label: 'Accessor',
+    },
+    {
+      key: 'description',
+      label: 'Description',
+    },
+    {
+      key: 'popupMenu',
+      label: 'Action',
+      width: '8%',
+    },
+  ];
 
   // list returned by getter is sorted in template
   get authMethodList() {
     const { methods } = this.args.model;
-    // return an options list to filter by engine type, ex: 'kv'
-    if (this.selectedAuthType) {
-      // check first if the user has also filtered by name.
-      // names are individualized across type so you can't have the same name for an aws auth method and userpass.
-      // this means it's fine to filter by first type and then name or just name.
-      if (this.selectedAuthName) {
-        return methods.filter((method) => this.selectedAuthName === method.id);
-      }
-      // otherwise filter by auth type
-      return methods.filter((method) => this.selectedAuthType === method.type);
+
+    let filteredMethodList = methods
+      .slice()
+      .sort((a, b) => Number(b) - Number(a) || a.id.localeCompare(b.id));
+
+    // check for any auth type filters
+    if (this.authTypeFilters.length > 0) {
+      filteredMethodList = filteredMethodList.filter((method) => {
+        return this.authTypeFilters.includes(method.type);
+      });
     }
-    // return an options list to filter by auth name, ex: 'my-userpass'
-    if (this.selectedAuthName) {
-      return methods.filter((method) => this.selectedAuthName === method.id);
+
+    // if there is search text, filter path name by that
+    if (this.searchText.trim() !== '') {
+      filteredMethodList = filteredMethodList.filter((backend) =>
+        backend.path.toLowerCase().includes(this.searchText.toLowerCase())
+      );
     }
-    // no filters, return full list
+    // no filters, return full sorted list.
+    return filteredMethodList;
+  }
+
+  // Returns filter options for engine type dropdown
+  get typeFilterOptions() {
+    const { methods } = this.args.model;
+    // if there is search text, filter types by that
+    if (this.typeSearchText.trim() !== '') {
+      return methods.filter((method) => {
+        return method.id.toLowerCase().includes(this.typeSearchText.toLowerCase());
+      });
+    }
     return methods;
   }
 
   get authMethodArrayByType() {
-    const arrayOfAllAuthTypes = this.authMethodList.map((modelObject) => modelObject.type);
+    const arrayOfAllAuthTypes = this.typeFilterOptions.map((modelObject) => modelObject.type);
     // filter out repeated auth types (e.g. [userpass, userpass] => [userpass])
     const arrayOfUniqueAuthTypes = [...new Set(arrayOfAllAuthTypes)];
 
     return arrayOfUniqueAuthTypes.map((authType) => ({
       name: authType,
       id: authType,
+      icon: engineDisplayData(authType).glyph ?? 'lock',
     }));
   }
 
@@ -110,14 +151,32 @@ export default class PageAuthMethodsComponent extends Component<Args> {
     return !this.showWizard || this.wizard.isIntroVisible(this.wizardId);
   }
 
+  getAuthMethodData = (path: string) => {
+    return this.authMethodList.find((method) => method.path === path);
+  };
+
   @action
-  filterAuthType([type]: [string]) {
-    this.selectedAuthType = type;
+  setSearchText(type: string, event: Event) {
+    const target = event.target as HTMLInputElement;
+    if (type === 'type') {
+      this.typeSearchText = target.value;
+    } else {
+      this.searchText = target.value;
+    }
   }
 
   @action
-  filterAuthName([name]: [string]) {
-    this.selectedAuthName = name;
+  filterByAuthType(type: string) {
+    if (this.authTypeFilters.includes(type)) {
+      this.authTypeFilters = this.authTypeFilters.filter((t) => t !== type);
+    } else {
+      this.authTypeFilters = [...this.authTypeFilters, type];
+    }
+  }
+
+  @action
+  clearAllFilters() {
+    this.authTypeFilters = [];
   }
 
   @action
