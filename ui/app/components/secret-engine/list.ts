@@ -73,12 +73,12 @@ export default class SecretEngineList extends Component<Args> {
       key: 'running_plugin_version',
       label: 'Version',
       isSortable: true,
-      width: '17%',
+      width: '15%',
     },
     {
       key: 'popupMenu',
       label: 'Action',
-      width: '80px',
+      width: '8%',
     },
   ];
 

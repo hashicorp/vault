@@ -140,7 +140,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
     await click('[data-test-auth-enable]');
     assert.dom('[data-test-sidebar-nav-panel="Access control"]').exists('Access nav panel renders');
     await click(link('Authentication methods'));
-    await click(GENERAL.linkedBlock('token'));
+    await click(GENERAL.linkTo('token/'));
     await click('[data-test-configure-link]');
     assert.dom('[data-test-sidebar-nav-panel="Access control"]').exists('Access nav panel renders');
   });

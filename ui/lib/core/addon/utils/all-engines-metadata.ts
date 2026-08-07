@@ -318,6 +318,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     displayName: 'Token',
     type: 'token',
+    glyph: 'users',
     mountCategory: ['auth'],
   },
   {
