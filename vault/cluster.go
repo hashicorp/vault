@@ -335,6 +335,7 @@ func (c *Core) loadCluster(ctx context.Context) error {
 	}
 
 	c.clusterID.Store(cluster.ID)
+	c.metricSink.SetDefaultClusterName(cluster.Name)
 	return nil
 }
 

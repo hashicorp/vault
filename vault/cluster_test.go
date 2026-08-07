@@ -14,6 +14,8 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -21,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/stretchr/testify/require"
 )
 
 var clusterTestPausePeriod = 2 * time.Second
@@ -193,6 +196,41 @@ func TestCluster_ForwardRequests(t *testing.T) {
 			ClusterLayers: inmemCluster,
 		})
 	})
+}
+
+// TestCluster_NamePopulatedOnUnseal verifies that a standby
+// node's metric sink carries a non-empty cluster name after unsealing when
+// cluster_name is not specified.
+func TestCluster_NamePopulatedOnUnseal(t *testing.T) {
+	t.Parallel()
+
+	tc := NewTestCluster(t, &CoreConfig{}, &TestClusterOptions{
+		NumCores:               2,
+		CoreMetricSinkProvider: testCluster_emptySinkProvider,
+	})
+
+	// After NewTestCluster returns: core[0] is active (ran setupCluster →
+	// SetDefaultClusterName) and core[1] is standby
+	active := tc.Cores[0]
+	standby := tc.Cores[1]
+
+	TestWaitActive(t, active.Core)
+
+	// Confirm core[1] is actually in standby mode before asserting.
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
+		isStandby, err := standby.Core.Standby()
+		if err != nil {
+			return err
+		}
+		if !isStandby {
+			return fmt.Errorf("core[1] has not entered standby mode yet")
+		}
+		return nil
+	})
+
+	standbyClusterName := standby.Core.metricSink.ClusterName.Load().(string)
+	require.NotEmpty(t, standbyClusterName,
+		"standby node metric sink cluster name must not be empty when cluster name is auto-generated")
 }
 
 func testCluster_ForwardRequestsCommon(t *testing.T, clusterOpts *TestClusterOptions) {
@@ -398,4 +436,15 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 			t.Fatal("bad response")
 		}
 	}
+}
+
+// testCluster_emptySinkProvider returns a CoreMetricSinkProvider that always creates a
+// ClusterMetricSink with an empty initial cluster name. This replicates the
+// production condition where the metric sink is constructed before the cluster
+// name is known (auto-generated, not specified in config), so the only path
+// that can populate it on a standby node is loadCluster → SetDefaultClusterName.
+func testCluster_emptySinkProvider(_ string) (*metricsutil.ClusterMetricSink, *metricsutil.MetricsHelper) {
+	inm := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	sink := metricsutil.NewClusterMetricSink("", inm)
+	return sink, metricsutil.NewMetricsHelper(inm, false)
 }
