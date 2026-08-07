@@ -6,6 +6,10 @@
 # Default CODEOWNER primarily for contact purposes
 * @hashicorp/vault
 
+# Plugin system is owned by Ecosystem
+/builtin/plugin/     @hashicorp/vault-ecosystem
+/sdk/plugin/         @hashicorp/vault-ecosystem
+
 # Select Auth engines are owned by Ecosystem
 /builtin/credential/aws/      @hashicorp/vault-ecosystem
 /builtin/credential/github/   @hashicorp/vault-ecosystem
