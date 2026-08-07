@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* 
- Helpers that define margin and padding in pixels 
+/*
+ Helpers that define margin and padding in pixels
  *New pattern* Use the numerical value in the name for class selectors
  i.e. "has-padding-24" instead of "has-padding-l"
  */
@@ -125,6 +125,10 @@
 
 .has-top-padding-l {
   padding-top: size_variables.$spacing-24;
+}
+
+.has-left-padding-xxs {
+  padding-left: size_variables.$spacing-4;
 }
 
 .has-left-padding-xs {

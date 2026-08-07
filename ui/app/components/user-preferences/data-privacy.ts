@@ -25,16 +25,12 @@ export default class UserPreferencesDataPrivacy extends Component {
   @tracked telemetryConsent = getPreference('telemetryConsent');
 
   // Items the anonymous telemetry would include / never include. Presentational.
-  included = [
-    'Feature usage patterns',
-    'Navigation flows and page visits',
-    'UI interaction events (clicks, form interactions)',
-  ];
+  included = ['Feature use', 'Navigation and page visits', 'Interaction events (clicks, configurations)'];
 
   excluded = [
-    'Secret values or credentials',
-    'Namespace paths or secret keys',
-    'Auth tokens or identity data',
+    'No secrets, certificates or keys',
+    'No namespace or secret paths',
+    'No auth tokens or identity data',
   ];
 
   @action

@@ -31,6 +31,27 @@ module('Acceptance | user-preferences', function (hooks) {
     assert
       .dom(GENERAL.button('user-menu-trigger'))
       .hasAttribute('aria-expanded', 'false', 'the dropdown closes after navigating');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('User preferences', 'the page header renders its title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Preferences', 'the page header renders its title');
+  });
+
+  test('the page header states browser-only storage and does not claim entity/cross-device persistence', async function (assert) {
+    const terms = ['identity', 'entity', 'user', 'cross-device'];
+
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'starts on the dashboard');
+
+    await click(GENERAL.button('user-menu-trigger'));
+    await click(GENERAL.menuItem('user-preferences'));
+
+    assert.dom(GENERAL.hdsPageHeaderDescription).includesText('Privacy Policy');
+    assert
+      .dom(`${GENERAL.hdsPageHeaderDescription} a`)
+      .hasAttribute('href', 'https://www.hashicorp.com/privacy');
+    assert
+      .dom(GENERAL.hdsPageHeaderDescription)
+      .includesText('stored in this browser only', 'page header states browser-only storage');
+
+    terms.forEach((s) =>
+      assert.dom(GENERAL.hdsPageHeaderDescription).doesNotIncludeText(s, `page header makes no ${s} claim`)
+    );
   });
 });
