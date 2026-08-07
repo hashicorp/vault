@@ -155,13 +155,17 @@ func findWorkflowArtifact(
 	sha string,
 	matcher func(*gh.Artifact) bool,
 ) (*gh.Artifact, error) {
-	// Get the workflow runs associated with the workflow and the PR
+	// Get the workflow runs associated with the workflow and the PR.
+	// NOTE: We intentionally allow all workflow run statuses here so that
+	// workflows that might be in_progress or perhaps even failed are still
+	// candidates. This allows workflows that produce the artifact we're searching
+	// for to utilize the tool, and to find the latest artifact even if other
+	// workflows might have failed and yet the artifact was still produced.
 	opts := &gh.ListWorkflowRunsOptions{
 		Branch:              branch,
 		ExcludePullRequests: false,
 		HeadSHA:             sha,
 		ListOptions:         gh.ListOptions{PerPage: PerPageMax},
-		Status:              "success",
 	}
 	runs, err := getWorkflowRuns(ctx, client, owner, repo, workflowID, 0, opts)
 	if err != nil {
