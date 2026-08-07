@@ -321,6 +321,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 						InitialInterval:     initialRetryInterval,
 						MaxInterval:         5 * time.Minute,
 						Multiplier:          2,
+						Stop:                backoff.Stop,
 						Clock:               backoff.SystemClock,
 					}
 					errorBackoff.Reset()
