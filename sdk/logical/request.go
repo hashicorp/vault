@@ -161,6 +161,14 @@ type Request struct {
 	// callers distinguish "claim missing" from "claim present but empty".
 	JwtAuthorizationDetailsClaimPresent bool `json:"jwt_authorization_details_claim_present,omitempty" structs:"jwt_authorization_details_claim_present" mapstructure:"jwt_authorization_details_claim_present"`
 
+	// OAuthJwtValidated is set to true after validateOAuthJwtAndFetchEntity has
+	// successfully completed for this request (JWT signature verified, entity
+	// resolved, token entry materialized). fetchACLTokenEntryAndEntity checks
+	// this flag to skip the full validation on subsequent calls within the same
+	// request lifecycle — e.g. when pathInternalUIMountRead re-invokes it after
+	// CheckToken has already done the work.
+	OAuthJwtValidated bool `json:"oauth_jwt_validated,omitempty" structs:"oauth_jwt_validated" mapstructure:"oauth_jwt_validated"`
+
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
 	ClientTokenAccessor string `json:"client_token_accessor" structs:"client_token_accessor" mapstructure:"client_token_accessor" sentinel:""`
