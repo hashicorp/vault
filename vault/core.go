@@ -2325,6 +2325,15 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 
 		c.standby = false
 	} else {
+		// Populate the metric sink cluster name from the barrier now that it is
+		// unsealed. This ensures standby nodes emit metrics with the correct
+		// cluster label even when the cluster name was auto-generated.
+		if err := c.loadCluster(ctx); err != nil {
+			// A warn is sufficient here since this is a best-effort enrichment of metric
+			// labels on a standby node. Aborting the unseal over this is unnecessary.
+			c.logger.Warn("failed to load cluster info for standby metrics", "error", err)
+		}
+
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.manualStepDownCh = make(chan struct{}, 1)

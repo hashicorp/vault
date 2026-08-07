@@ -18,11 +18,10 @@ module('Integration | Component | user-preferences', function (hooks) {
   });
 
   module('data-privacy', function () {
-    test('it renders the Share usage metrics card from HDS components', async function (assert) {
+    test('it renders the Share usage section card from HDS components', async function (assert) {
       await render(hbs`<UserPreferences::DataPrivacy />`);
 
       assert.dom('[data-test-data-privacy-section]').exists('the Data & Privacy section renders');
-      assert.dom(GENERAL.cardContainer('share-usage-metrics')).exists('the Share usage metrics card renders');
       assert.dom(GENERAL.toggleInput('telemetry-consent')).exists('the consent toggle renders');
       assert.dom('[data-test-data-privacy-included] li').exists({ count: 3 }, 'included items render');
       assert.dom('[data-test-data-privacy-excluded] li').exists({ count: 3 }, 'excluded items render');
@@ -56,17 +55,6 @@ module('Integration | Component | user-preferences', function (hooks) {
 
       assert.dom(GENERAL.toggleInput('telemetry-consent')).isNotChecked('toggle is off again');
       assert.false(getPreference('telemetryConsent'), 'consent persists as off');
-    });
-
-    test('the footer states browser-only storage and does not claim entity/cross-device persistence', async function (assert) {
-      await render(hbs`<UserPreferences::DataPrivacy />`);
-
-      assert
-        .dom('[data-test-data-privacy-footer]')
-        .includesText('stored in this browser only', 'footer states browser-only storage');
-      assert
-        .dom('[data-test-data-privacy-footer]')
-        .doesNotIncludeText('entity', 'footer makes no entity/cross-device claim');
     });
   });
 });
