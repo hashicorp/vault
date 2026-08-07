@@ -43,6 +43,12 @@ func TestRequiresMaterializedTokenState(t *testing.T) {
 		{name: "token renew self excluded", path: "auth/token/renew-self", want: false},
 		{name: "leases renew excluded", path: "sys/leases/renew", want: false},
 		{name: "unrelated", path: "secret/data/foo", want: false},
+		{name: "ui mounts preflight", path: "sys/internal/ui/mounts/secret/data/foo", want: true},
+		{name: "ui mounts with nested path", path: "sys/internal/ui/mounts/kv/data/nested/key", want: true},
+		{name: "ui mounts prefix only", path: "sys/internal/ui/mounts/", want: true},
+		{name: "ui mounts exact", path: "sys/internal/ui/mounts", want: true},
+		{name: "ui namespaces exact", path: "sys/internal/ui/namespaces", want: true},
+		{name: "ui namespaces with suffix excluded", path: "sys/internal/ui/namespaces/foo", want: false},
 	}
 
 	for _, tc := range tests {
