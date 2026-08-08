@@ -168,7 +168,7 @@ func (dc *DockerCluster) GetRootToken() string {
 }
 
 func (dc *DockerCluster) SetRootToken(s string) {
-	dc.Logger.Trace("cluster root token changed", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", s))
+	dc.Logger.Trace("cluster root token changed", "helpful_env", "VAULT_TOKEN=<redacted> VAULT_CACERT=/vault/config/ca.pem")
 	dc.rootToken = s
 }
 
@@ -451,7 +451,7 @@ func NewTestDockerClusterWithErr(t *testing.T, opts *DockerClusterOptions) (*Doc
 
 	dc, err := NewDockerCluster(ctx, opts)
 	if err == nil {
-		dc.Logger.Trace("cluster started", "helpful_env", fmt.Sprintf("VAULT_TOKEN=%s VAULT_CACERT=/vault/config/ca.pem", dc.GetRootToken()))
+		dc.Logger.Trace("cluster started", "helpful_env", "VAULT_TOKEN=<redacted> VAULT_CACERT=/vault/config/ca.pem")
 		// Register cleanup with t.Cleanup so it's automatically called when the test ends
 		t.Cleanup(dc.Cleanup)
 	}
