@@ -391,6 +391,176 @@ func TestTransit_BatchEncryptionCase5(t *testing.T) {
 	require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
 }
 
+
+
+func TestTransit_EncryptNoWarnWhenDerivedUsesContext(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/derived",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"type":    "aes256-gcm96",
+			"derived": true,
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("create key err:%v resp:%#v", err, resp)
+	}
+
+	encReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "encrypt/derived",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+			"context":   "Y29udGV4dC1h",
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), encReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("encrypt err:%v resp:%#v", err, resp)
+	}
+	for _, w := range resp.Warnings {
+		if strings.Contains(w, "context was supplied but this key does not have derivation") {
+			t.Fatalf("unexpected unused-context warning on derived key: %#v", resp.Warnings)
+		}
+	}
+}
+
+func TestTransit_EncryptWarnsOnUnusedContext(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	// Create a non-derived key explicitly.
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/plain",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"type": "aes256-gcm96",
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("create key err:%v resp:%#v", err, resp)
+	}
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
+	contextA := "Y29udGV4dC1h"
+	contextB := "Y29udGV4dC1i"
+
+	encReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "encrypt/plain",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": plaintext,
+			"context":   contextA,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), encReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("encrypt err:%v resp:%#v", err, resp)
+	}
+	ciphertext := resp.Data["ciphertext"].(string)
+
+	found := false
+	for _, w := range resp.Warnings {
+		if strings.Contains(w, "context") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected unused-context warning, got %#v", resp.Warnings)
+	}
+
+	// Decrypt without context must succeed (context was ignored at encrypt).
+	decReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "decrypt/plain",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"ciphertext": ciphertext,
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("decrypt without context err:%v resp:%#v", err, resp)
+	}
+	if resp.Data["plaintext"] != plaintext {
+		t.Fatalf("bad plaintext: got %q want %q", resp.Data["plaintext"], plaintext)
+	}
+
+	// Decrypt with a different context also succeeds (proves context was unused).
+	decReq.Data["context"] = contextB
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("decrypt with other context err:%v resp:%#v", err, resp)
+	}
+	if resp.Data["plaintext"] != plaintext {
+		t.Fatalf("bad plaintext with other context: got %q want %q", resp.Data["plaintext"], plaintext)
+	}
+}
+
+
+func TestTransit_DecryptWarnsOnUnusedContext(t *testing.T) {
+	b, s := createBackendWithStorage(t)
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/plain-dec",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"type": "aes256-gcm96",
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("create key err:%v resp:%#v", err, resp)
+	}
+
+	encReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "encrypt/plain-dec",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), encReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("encrypt err:%v resp:%#v", err, resp)
+	}
+	ciphertext := resp.Data["ciphertext"].(string)
+
+	decReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "decrypt/plain-dec",
+		Storage:   s,
+		Data: map[string]interface{}{
+			"ciphertext": ciphertext,
+			"context":    "Y29udGV4dC1h",
+		},
+	}
+	resp, err = b.HandleRequest(context.Background(), decReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("decrypt err:%v resp:%#v", err, resp)
+	}
+	found := false
+	for _, w := range resp.Warnings {
+		if strings.Contains(w, "context was supplied but this key does not have derivation") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected unused-context warning on decrypt, got %#v", resp.Warnings)
+	}
+}
+
 // Case6: Test batch encryption with an upserted non-derived key
 func TestTransit_BatchEncryptionCase6(t *testing.T) {
 	var resp *logical.Response
