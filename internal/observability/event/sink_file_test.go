@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -135,8 +136,18 @@ func TestFileSink_Reopen(t *testing.T) {
 		ExpectedFileMode      os.FileMode
 	}{
 		// Should be ignored by Reopen
+		"stdout": {
+			Path:                  stdout,
+			ShouldUseAbsolutePath: true,
+			ShouldIgnoreFileMode:  true,
+		},
+		"stderr": {
+			Path:                  stderr,
+			ShouldUseAbsolutePath: true,
+			ShouldIgnoreFileMode:  true,
+		},
 		"devnull": {
-			Path:                  "/dev/null",
+			Path:                  devnull,
 			ShouldUseAbsolutePath: true,
 			ShouldIgnoreFileMode:  true,
 		},
@@ -214,6 +225,20 @@ func TestFileSink_Process(t *testing.T) {
 		IsErrorExpected       bool
 		ExpectedErrorMessage  string
 	}{
+		"stdout": {
+			ShouldUseAbsolutePath: true,
+			Path:                  stdout,
+			Format:                "json",
+			Data:                  "foo",
+			IsErrorExpected:       false,
+		},
+		"stderr": {
+			ShouldUseAbsolutePath: true,
+			Path:                  stderr,
+			Format:                "json",
+			Data:                  "foo",
+			IsErrorExpected:       false,
+		},
 		"devnull": {
 			ShouldUseAbsolutePath: true,
 			Path:                  devnull,
@@ -376,4 +401,238 @@ func TestFileSink_log_timeoutWhileWaitingForPermit(t *testing.T) {
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("sink.log did not return promptly while waiting on permit")
 	}
+}
+
+func TestFileSink_Rotation_MaxDuration(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "vault.log")
+	options := []Option{WithMaxDurationFile("50ms")}
+
+	sink, err := NewFileSink(tempPath, "json", options...)
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	ctx := namespace.RootContext(nil)
+
+	event := &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("first entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing rotation max duration part 1")
+
+	time.Sleep(3 * sink.maxDuration)
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("second entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing rotation max duration part 2")
+
+	logFiles := listDir(t, tempDir)
+	require.Len(t, logFiles, 2)
+	require.Equal(t, "vault.log", logFiles[1])
+
+	content, err := os.ReadFile(filepath.Join(tempDir, logFiles[0]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("first entry"), content)
+
+	content, err = os.ReadFile(filepath.Join(tempDir, logFiles[1]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("second entry"), content)
+}
+
+func TestFileSink_Rotation_MaxBytes(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "vault.log")
+	options := []Option{WithMaxBytes("10"), WithMaxDurationFile("1d")}
+
+	sink, err := NewFileSink(tempPath, "json", options...)
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	ctx := namespace.RootContext(nil)
+
+	event := &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("first entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing rotation max bytes part 1")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("second entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing rotation max bytes part 2")
+
+	logFiles := listDir(t, tempDir)
+	require.Len(t, logFiles, 2)
+	require.Equal(t, "vault.log", logFiles[1])
+
+	content, err := os.ReadFile(filepath.Join(tempDir, logFiles[0]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("first entry"), content)
+
+	content, err = os.ReadFile(filepath.Join(tempDir, logFiles[1]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("second entry"), content)
+}
+
+func TestFileSink_PruneFiles(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "vault.log")
+	options := []Option{WithMaxFiles("1"), WithMaxBytes("10"), WithMaxDurationFile("1d")}
+
+	sink, err := NewFileSink(tempPath, "json", options...)
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	ctx := namespace.RootContext(nil)
+
+	event := &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("first entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files test part 1")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("second entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files test part 2")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("third entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files test part 3")
+
+	logFiles := listDir(t, tempDir)
+	require.Len(t, logFiles, 2)
+	require.Equal(t, "vault.log", logFiles[1])
+
+	content, err := os.ReadFile(filepath.Join(tempDir, logFiles[0]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("second entry"), content)
+
+	content, err = os.ReadFile(filepath.Join(tempDir, logFiles[1]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("third entry"), content)
+}
+
+func TestFileSink_PruneFiles_Disabled(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "vault.log")
+	options := []Option{WithMaxFiles("0"), WithMaxBytes("10"), WithMaxDurationFile("1d")}
+
+	sink, err := NewFileSink(tempPath, "json", options...)
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	ctx := namespace.RootContext(nil)
+
+	event := &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("first entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files - disabled test part 1")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("second entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files - disabled test part 2")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("third entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files - disabled test part 3")
+
+	require.Len(t, listDir(t, tempDir), 3)
+}
+
+func TestFileSink_PruneFiles_Always(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "vault.log")
+	options := []Option{WithMaxFiles("-1"), WithMaxBytes("10"), WithMaxDurationFile("1d")}
+
+	sink, err := NewFileSink(tempPath, "json", options...)
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	ctx := namespace.RootContext(nil)
+
+	event := &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("first entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files - always test part 1")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("second entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files - always test part 2")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("third entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during prune files - always test part 3")
+
+	logFiles := listDir(t, tempDir)
+	require.Len(t, logFiles, 1)
+	require.Equal(t, "vault.log", logFiles[0])
+
+	content, err := os.ReadFile(filepath.Join(tempDir, logFiles[0]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("third entry"), content)
+}
+
+func TestFileSink_FileRotation_Disabled(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "vault.log")
+	options := []Option{WithMaxFiles("0"), WithMaxBytes("0"), WithMaxDurationFile("0")}
+
+	sink, err := NewFileSink(tempPath, "json", options...)
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	ctx := namespace.RootContext(nil)
+
+	event := &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("first entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during rotation - disabled test part 1")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("second entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during rotation - disabled test part 2")
+
+	event = &eventlogger.Event{
+		Formatted: map[string][]byte{"json": []byte("third entry")},
+	}
+	_, err = sink.Process(ctx, event)
+	require.NoError(t, err, "error writing during rotation - disabled test part 3")
+
+	logFiles := listDir(t, tempDir)
+	require.Len(t, logFiles, 1)
+	require.Equal(t, "vault.log", logFiles[0])
+
+	content, err := os.ReadFile(filepath.Join(tempDir, logFiles[0]))
+	require.NoError(t, err)
+	require.Equal(t, []byte("first entrysecond entrythird entry"), content)
+}
+
+func listDir(t *testing.T, name string) []string {
+	t.Helper()
+	fh, err := os.Open(name)
+	require.NoError(t, err)
+	files, err := fh.Readdirnames(100)
+	require.NoError(t, err)
+	sort.Strings(files)
+	return files
 }
