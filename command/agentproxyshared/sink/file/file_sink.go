@@ -119,6 +119,9 @@ func (f *fileSink) WriteToken(token string) error {
 	}
 
 	if err := osutil.Chown(tmpFile, f.owner, f.group); err != nil {
+		// Attempt closing and deleting but ignore any error
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
 		return fmt.Errorf("error changing ownership of %s: %w", tmpFile.Name(), err)
 	}
 
