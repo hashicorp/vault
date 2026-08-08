@@ -125,7 +125,7 @@ func (j JsonFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) e
 		}
 	}
 
-	ui.Output(string(b))
+	_, err = os.Stdout.Write(b)
 	return nil
 }
 
