@@ -214,34 +214,25 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 
 				go s.runner.Start()
 			}
-
 		case err := <-s.runner.ErrCh:
 			s.logger.Error("template server error", "error", err.Error())
+
+			// Don't abort all templates when one fails. The consul-template
+			// runner's Start() function exits on watcher errors, but the
+			// Run() function already executed all templates and commands
+			// before returning the error. We restart the runner immediately
+			// (no backoff, no ExitOnRetryFailure) so that the other
+			// templates continue to be rendered normally.
 			s.runner.StopImmediately()
-
-			// Return after stopping the runner if exit on retry failure was specified
-			if s.config.AgentConfig.TemplateConfig != nil && s.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
-				return fmt.Errorf("template server: %w", err)
-			}
-
-			// Calculate the amount of time to backoff using exponential backoff
-			sleep, err := restartBackoff.Next()
-			if err != nil {
-				s.logger.Error("template server: reached maximum number restart attempts")
-				restartBackoff.Reset()
-			}
-
-			// Sleep for the calculated backoff time then attempt to create a new runner
-			s.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
-			time.Sleep(sleep)
+			restartBackoff.Reset()
 
 			s.runner, err = manager.NewRunner(runnerConfig, true)
 			if err != nil {
 				return fmt.Errorf("template server failed to create: %w", err)
 			}
+			// prevent the templates from being rendered to stdout in "dry" mode
+			s.runner.SetOutStream(io.Discard)
 			go s.runner.Start()
-
-		case <-s.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
 			s.logger.Trace("template rendered")
 			events := s.runner.RenderEvents()
