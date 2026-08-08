@@ -280,6 +280,12 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		resp = new(logical.Response)
 		resp.AddWarning("Okta MFA bypass is configured. In addition to ignoring Okta MFA requests, certain other account statuses will not be seen, such as PASSWORD_EXPIRED. Authentication will succeed in these cases.")
 	}
+	if cfg.Token == "" {
+		if resp == nil {
+			resp = new(logical.Response)
+		}
+		resp.AddWarning("No Okta API token is configured. Okta group membership will not be queried during login, so only policies from locally-defined users and groups will apply.")
+	}
 
 	return resp, nil
 }
