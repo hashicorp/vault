@@ -12,6 +12,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// testAuditEntryMinimal represents a minimal version of a MountEntry which would be
+// required by the audit system in order to compare two entries and establish if
+// they are distinct. It is declared here in testing, because 'auditEntryMinimal'
+// is not exported, and 'MountEntry' exists in the 'vault' package and would cause
+// an import cycle.
+type testAuditEntryMinimal struct {
+	path       string
+	deviceType string
+	options    map[string]string
+}
+
+// Type returns the device type of the entry.
+func (m *testAuditEntryMinimal) Type() string {
+	return m.deviceType
+}
+
+// Path returns the device mount path of the entry.
+func (m *testAuditEntryMinimal) Path() string {
+	return m.path
+}
+
+// Options returns the specified option given a key.
+func (m *testAuditEntryMinimal) Options(key string) string {
+	return m.options[key]
+}
+
 // TestBackend_newFormatterConfig ensures that all the configuration values are
 // parsed correctly when trying to create a new formatterConfig via newFormatterConfig.
 func TestBackend_newFormatterConfig(t *testing.T) {
@@ -267,6 +293,123 @@ func TestBackend_hasInvalidAuditOptions(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, tc.expected, HasInvalidOptions(tc.input))
+		})
+	}
+}
+
+// TestBackend_IsDistinct tests a variety of scenarios for deciding whether a proposed
+// audit backend is distinct from an existing one (basically just comparing some
+// properties of two backends).
+func TestBackend_IsDistinct(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		isDistinctExpected   bool
+		expectedErrorMessage string
+		proposed             backendComparer
+		existing             backendComparer
+	}{
+		"different-path-and-file-path": {
+			isDistinctExpected: true,
+			proposed: &testAuditEntryMinimal{
+				path:       "foo1/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit.log"},
+			},
+			existing: &testAuditEntryMinimal{
+				path:       "foo2/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit2.log"},
+			},
+		},
+		"different-path-same-file-path": {
+			isDistinctExpected:   false,
+			expectedErrorMessage: "\"file_path\" \"/var/vault/audit.log\" already in use on device: \"foo2/\": invalid configuration",
+			proposed: &testAuditEntryMinimal{
+				path:       "foo1/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit.log"},
+			},
+			existing: &testAuditEntryMinimal{
+				path:       "foo2/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit.log"},
+			},
+		},
+		"same-path-different-file-path": {
+			isDistinctExpected:   false,
+			expectedErrorMessage: "path \"foo1/\" already in use: invalid configuration",
+			proposed: &testAuditEntryMinimal{
+				path:       "foo1/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit2.log"},
+			},
+			existing: &testAuditEntryMinimal{
+				path:       "foo1/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit.log"},
+			},
+		},
+		"bad-type": {
+			isDistinctExpected:   false,
+			expectedErrorMessage: "unexpected 'type' for audit: \"juan\": invalid internal parameter",
+			proposed: &testAuditEntryMinimal{
+				path:       "foo2/",
+				deviceType: "juan",
+				options:    map[string]string{"file_path": "/var/vault/audit2.log"},
+			},
+			existing: &testAuditEntryMinimal{
+				path:       "foo1/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit.log"},
+			},
+		},
+		// These tests feel odd, but it's what the code was doing before any move
+		// to eventlogger:
+		// https://github.com/hashicorp/vault/blob/release/1.14.x/vault/audit.go#L81-L86
+		"proposed-has-prefix-of-existing": {
+			isDistinctExpected:   false,
+			expectedErrorMessage: "path \"foo1/\" already in use: invalid configuration",
+			proposed: &testAuditEntryMinimal{
+				path:       "foo1/bar/",
+				deviceType: "juan",
+				options:    map[string]string{"file_path": "/var/vault/audit2.log"},
+			},
+			existing: &testAuditEntryMinimal{
+				path:       "foo1/",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit.log"},
+			},
+		},
+		"existing-has-prefix-of-proposed": {
+			isDistinctExpected:   false,
+			expectedErrorMessage: "path \"foo1/bar\" already in use: invalid configuration",
+			proposed: &testAuditEntryMinimal{
+				path:       "foo1/",
+				deviceType: "juan",
+				options:    map[string]string{"file_path": "/var/vault/audit2.log"},
+			},
+			existing: &testAuditEntryMinimal{
+				path:       "foo1/bar",
+				deviceType: "file",
+				options:    map[string]string{"file_path": "/var/vault/audit.log"},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			ok, err := IsDistinct(tc.proposed, tc.existing)
+			require.Equal(t, tc.isDistinctExpected, ok)
+			if tc.isDistinctExpected {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.EqualError(t, err, tc.expectedErrorMessage)
+			}
 		})
 	}
 }
