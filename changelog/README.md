@@ -2,6 +2,28 @@
 
 This folder holds changelog updates from commit 3bc7d15 onwards.
 
+## Contributor workflow
+
+Add a changelog fragment for changes that users or operators should discover
+in release notes. This includes bug fixes, behavior changes, deprecations,
+features, and notable improvements. Test-only, CI-only, and
+repository-documentation changes generally do not need a fragment. When a
+fragment is unnecessary, explain why in the pull request description so a
+maintainer can apply the `pr/no-changelog` label.
+
+The changelog check for pull requests targeting `main` accepts either a valid
+fragment or the `pr/no-changelog` label. Since the fragment's filename uses the
+pull request number, you can open the pull request first and add the fragment
+in a follow-up commit. Public `hashicorp/vault` pull requests use
+`changelog/<PR number>.txt` without a leading underscore. Underscore-prefixed
+fragments use the Vault Enterprise branch convention. Although these files
+appear in this directory, do not copy that prefix for a public Vault pull
+request.
+
+During the release process, the fragments are collected into the root
+`CHANGELOG.md` and pull request links are added automatically. Do not edit
+`CHANGELOG.md` directly for an individual pull request.
+
 Release notes are text files with three lines:
 
  1. An opening code block with the `release-note:<MODE>` type annotation.
@@ -13,6 +35,9 @@ Release notes are text files with three lines:
     Valid modes are:
 
      - `bug` - Any sort of non-security defect fix. 
+     - `security` - A security-related change. Potential vulnerabilities must
+       be reported privately as described in [CONTRIBUTING](../CONTRIBUTING.md),
+       rather than through a public issue or pull request.
      - `change` - A change in the product that may require action or
        review by the operator. Examples would be any kind of API change
        (as opposed to backwards compatible addition), a notable behavior
