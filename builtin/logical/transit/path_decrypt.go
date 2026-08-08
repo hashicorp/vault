@@ -191,6 +191,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 	defer p.Unlock()
 
+	warnAboutUnusedContext := contextSet && !p.Derived
 	successesInBatch := false
 	successfulRequests := 0
 	for i, item := range batchInputItems {
@@ -271,6 +272,10 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 
 	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
 		b.Logger().Error("failed to track transit decrypt request count", "error", err.Error())
+	}
+
+	if warnAboutUnusedContext {
+		resp.AddWarning("context was supplied but this key does not have derivation enabled; the supplied context was ignored")
 	}
 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
