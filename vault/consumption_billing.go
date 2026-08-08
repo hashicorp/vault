@@ -48,6 +48,11 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	}
 	c.consumptionBillingLock.Unlock()
 
+	if c.billingConfig.DisableConsumptionBilling {
+		c.logger.Warn("consumption billing is disabled by configuration, billing metrics worker will not be started")
+		return nil
+	}
+
 	c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 		c.consumptionBillingMetricsWorker(ctx)
 		// Start the perf standby plugin counts worker if this is a perf standby
