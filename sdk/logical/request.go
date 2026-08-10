@@ -536,6 +536,25 @@ type MFACreds map[string][]string
 type InitializationRequest struct {
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
+
+	// MountPoint is the path at which the backend is mounted (e.g. "pki/").
+	//
+	// WARNING: plugins should not rely on MountPoint being static. Mounts can be
+	// moved to a different path after the backend has been initialized. Use this
+	// value only for informational purposes such as logging or billing attribution,
+	// never as a stable key or identifier.
+	MountPoint string
+
+	// MountType is the type name of the backend (e.g. "pki-external-ca").
+	MountType string
+
+	// MountAccessor is the accessor string for the mount
+	// (e.g. "pki-external-ca_abc123").
+	MountAccessor string
+
+	// BackendUUID is the unique identifier for this backend instance, sourced
+	// from the mount entry. It is stable across restarts and leadership changes.
+	BackendUUID string
 }
 
 type CustomHeader struct {

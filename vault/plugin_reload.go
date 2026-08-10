@@ -251,7 +251,13 @@ func (c *Core) forceReloadBackend(ctx context.Context, entry *MountEntry, isAuth
 		// rely on lazy loading for initialization. v5 backends do not rely on lazy loading
 		// for initialization unless the plugin process is killed. Reload of a v5 backend
 		// results in a new plugin process, so we must initialize the backend here.
-		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+		err := backend.Initialize(ctx, &logical.InitializationRequest{
+			Storage:       view,
+			MountPoint:    entry.Path,
+			MountType:     entry.Type,
+			MountAccessor: entry.Accessor,
+			BackendUUID:   entry.BackendAwareUUID,
+		})
 		if err != nil {
 			return err
 		}
