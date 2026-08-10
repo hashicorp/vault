@@ -726,7 +726,7 @@ func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Ti
 	}
 
 	// Sum the current count with the stored count
-	transitCount := cb.DataProtectionCallCounts.Transit.Swap(0) + storedTransitCount
+	transitCount := cb.SecretEngineCounts.Transit.MonthlyCount.Swap(0) + storedTransitCount
 
 	err = c.storeTransitCallCountsLocked(ctx, transitCount, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -752,7 +752,7 @@ func (c *Core) UpdateGcpKmsCallCounts(ctx context.Context, currentMonth time.Tim
 	}
 
 	// Sum the current count with the stored count
-	gcpKmsCount := cb.DataProtectionCallCounts.GcpKms.Swap(0) + storedGcpKmsCount
+	gcpKmsCount := cb.SecretEngineCounts.GcpKms.MonthlyCount.Swap(0) + storedGcpKmsCount
 
 	err = c.storeGcpKmsCallCountsLocked(ctx, gcpKmsCount, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -1283,7 +1283,7 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
 	}
 
 	// Update raw token duration
-	cb.IdentityTokenUnits.OidcTokenDuration.Add(durationSeconds)
+	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(durationSeconds)
 }
 
 // UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,
@@ -1303,7 +1303,7 @@ func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth
 
 	// Get in-memory raw token duration and reset value in memory
 	// Using Swap to atomically reset the value. If Vault crashes after a successful storage update but before reset, this prevents double counting.
-	totalTokenDurationSecondsFromMemory := cb.IdentityTokenUnits.OidcTokenDuration.Swap(0)
+	totalTokenDurationSecondsFromMemory := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
 
 	// Calculate duration-adjusted count from raw data
 	durationAdjustedCountMemory := DurationAdjustedTokenCount(totalTokenDurationSecondsFromMemory)

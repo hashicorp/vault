@@ -1456,7 +1456,7 @@ func TestIncrementOidcTokenCount(t *testing.T) {
 
 			// Verify in-memory counters
 			core.consumptionBillingLock.RLock()
-			actualTotalDuration := core.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Load()
+			actualTotalDuration := core.consumptionBilling.SecretEngineCounts.Oidc.MonthlyUnits.Load()
 			core.consumptionBillingLock.RUnlock()
 			require.Equal(t, tt.expectedInMemTotalDuration, actualTotalDuration)
 		})
@@ -1685,4 +1685,16 @@ func TestCore_BillingRetentionMonths(t *testing.T) {
 	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
 	require.NoError(t, err)
 	require.Equal(t, newRetention, retentionMonths)
+}
+
+func verifyMountAttributionBreakdowns(t *testing.T, expected logical.MountAttribution, actual logical.MountAttribution) {
+	t.Helper()
+	require.Equal(t, expected.MountAccessor, actual.MountAccessor)
+	require.Equal(t, expected.NamespaceID, actual.NamespaceID)
+	require.Equal(t, expected.NamespacePath, actual.NamespacePath)
+	require.Equal(t, expected.MountPath, actual.MountPath)
+	require.Equal(t, expected.ParentNamespaceID, actual.ParentNamespaceID)
+	// Count is interface{} and comes back as json.Number after a storage round-trip;
+	// compare via string representation to avoid type-mismatch failures.
+	require.Equal(t, fmt.Sprintf("%v", expected.Count), fmt.Sprintf("%v", actual.Count))
 }

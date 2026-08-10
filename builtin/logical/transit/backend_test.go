@@ -57,8 +57,10 @@ func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 	return b, config.StorageView
 }
@@ -81,8 +83,10 @@ func createBackendWithSysView(t testing.TB) (*backend, logical.Storage) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 
 	return b, storage
@@ -105,8 +109,10 @@ func createBackendWithSysViewWithStorage(t testing.TB, s logical.Storage) *backe
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 
 	return b
@@ -130,8 +136,10 @@ func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 
 	return b

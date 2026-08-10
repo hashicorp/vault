@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
@@ -54,26 +55,14 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 		LastUpdated: lastUpdated,
 		Mounts: map[string]logical.MountAttribution{
 			"kv_5d4f8f1c": {
-				MountPath:           "secret/",
-				MountType:           "kv",
-				MountAccessor:       "kv_5d4f8f1c",
-				MountRunningVersion: "wre_43",
-				NamespaceID:         "root",
-				NamespacePath:       "",
-				ParentNamespaceID:   "",
-				Count:               5,
-				BackendAwareUUID:    "wdasd23",
-			},
-			"kv_be9766a3": {
-				MountPath:           "kv/",
-				MountType:           "kv",
-				MountAccessor:       "kv_be9766a3",
-				MountRunningVersion: "wtm_21",
-				NamespaceID:         "3bFWF",
-				NamespacePath:       "ns1/",
-				ParentNamespaceID:   "root",
-				Count:               5,
-				BackendAwareUUID:    "adwdsd35",
+				MountPath:         "secret/",
+				MountType:         "kv",
+				MountAccessor:     "kv_5d4f8f1c",
+				NamespaceID:       "root",
+				NamespacePath:     "",
+				ParentNamespaceID: "",
+				Count:             5,
+				BackendAwareUUID:  "wdasd23",
 			},
 		},
 	}
@@ -89,25 +78,16 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	// Compare via fmt.Sprintf to avoid type mismatch between int and json.Number.
 	require.Equal(t, "10", fmt.Sprintf("%v", got.Count))
 	require.Equal(t, data.LastUpdated.UTC(), got.LastUpdated.UTC())
-	require.Len(t, got.Mounts, 2)
+	require.Len(t, got.Mounts, 1)
 
 	m1 := got.Mounts["kv_5d4f8f1c"]
 	require.Equal(t, "secret/", m1.MountPath)
 	require.Equal(t, "kv", m1.MountType)
-	require.Equal(t, "wre_43", m1.MountRunningVersion)
 	require.Equal(t, "root", m1.NamespaceID)
 	require.Equal(t, "", m1.NamespacePath)
 	require.Equal(t, "", m1.ParentNamespaceID)
 	require.Equal(t, "kv_5d4f8f1c", m1.MountAccessor)
 	require.Equal(t, "5", fmt.Sprintf("%v", m1.Count))
-
-	m2 := got.Mounts["kv_be9766a3"]
-	require.Equal(t, "kv/", m2.MountPath)
-	require.Equal(t, "wtm_21", m2.MountRunningVersion)
-	require.Equal(t, "3bFWF", m2.NamespaceID)
-	require.Equal(t, "ns1/", m2.NamespacePath)
-	require.Equal(t, "", m1.ParentNamespaceID)
-	require.Equal(t, "5", fmt.Sprintf("%v", m2.Count))
 
 	// Overwrite with new data — second store must replace, not merge.
 	overwrite := &logical.MetricTypeAttribution{
@@ -129,6 +109,180 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	require.False(t, hasOld, "old mounts should be gone after overwrite")
 	_, hasNew := got.Mounts["kv_bbb"]
 	require.True(t, hasNew, "new mount should be present after overwrite")
+}
+
+// TestTransitUpdateAndGetAttribution verifies that the store operation correctly writes the cumulative counts
+// of transit operations for the current month by. This also verifies that the retrieve operations correctly
+// returns a map by mount that contains the correct cumulative transit operation counts for each month.
+func TestTransitUpdateAndGetAttribution(t *testing.T) {
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{})
+	ctx := namespace.RootContext(context.Background())
+	currentMonth := time.Now()
+
+	mountAccessor := "transit-accessor"
+	mountAccessor2 := "transit-accessor-2"
+
+	// Get consumption billing reference
+	core.consumptionBillingLock.RLock()
+	cb := core.consumptionBilling
+	core.consumptionBillingLock.RUnlock()
+	require.NotNil(t, cb)
+
+	// Test Case 1: Simple update with a couple of mounts
+	t.Log("Test Case 1: Initial update with two mounts")
+	testBreakdown1 := logical.MountAttribution{
+		MountAccessor:     mountAccessor,
+		MountPath:         "transit/",
+		NamespaceID:       "root",
+		NamespacePath:     "",
+		ParentNamespaceID: "",
+		Count:             10.0,
+	}
+
+	testBreakdown2 := logical.MountAttribution{
+		MountAccessor:     mountAccessor2,
+		MountPath:         "transit2/",
+		NamespaceID:       "ns1-id",
+		NamespacePath:     "ns1/",
+		ParentNamespaceID: "root",
+		Count:             25.5,
+	}
+
+	// Store the breakdowns in the map
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Lock()
+	cb.SecretEngineCounts.Transit.MountAttribution[mountAccessor] = testBreakdown1
+	cb.SecretEngineCounts.Transit.MountAttribution[mountAccessor2] = testBreakdown2
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
+
+	err := core.UpdateTransitAttribution(ctx, currentMonth)
+	require.NoError(t, err, "First UpdateTransitAttribution should succeed")
+
+	retrievedAttribution, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, currentMonth, billing.TransitDataProtectionCallCountsPrefix)
+	require.NoError(t, err)
+	require.NotNil(t, retrievedAttribution)
+	require.Len(t, retrievedAttribution.Mounts, 2, "Should have 2 mounts after first update")
+	// Top-level count must equal the sum of all per-mount counts (10 + 25.5 = 35.5)
+	require.Equal(t, "35.5", fmt.Sprintf("%v", retrievedAttribution.Count), "Top-level count should be sum of all mount counts")
+
+	retrieved1, ok := retrievedAttribution.Mounts[mountAccessor]
+	require.True(t, ok, "Should find breakdown for first mount accessor")
+	verifyMountAttributionBreakdowns(t, testBreakdown1, retrieved1)
+
+	retrieved2, ok := retrievedAttribution.Mounts[mountAccessor2]
+	require.True(t, ok, "Should find breakdown for transit-accessor-2")
+	verifyMountAttributionBreakdowns(t, testBreakdown2, retrieved2)
+
+	// Test Case 2: Update with no mounts (empty map) - should keep existing counts
+	t.Log("Test Case 2: Update with no mounts (empty map)")
+	// TransitAttributions was already cleared by UpdateTransitAttribution above; nothing to add.
+
+	err = core.UpdateTransitAttribution(ctx, currentMonth)
+	require.NoError(t, err, "UpdateTransitAttribution with empty map should succeed")
+
+	// Retrieve and verify - stored counts must be unchanged since nothing was flushed
+	retrievedAttribution, err = core.GetStoredAttributionData(ctx, billing.LocalPrefix, currentMonth, billing.TransitDataProtectionCallCountsPrefix)
+	require.NoError(t, err, "GetTransitAttribution after empty update should succeed")
+	require.NotNil(t, retrievedAttribution, "Retrieved attribution should not be nil")
+	require.Len(t, retrievedAttribution.Mounts, 2, "Should still have 2 mounts (counts preserved)")
+
+	retrieved1, ok = retrievedAttribution.Mounts[mountAccessor]
+	require.True(t, ok, "Should still find breakdown for first mount accessor")
+	require.Equal(t, "10", fmt.Sprintf("%v", retrieved1.Count), "Count should remain unchanged")
+
+	retrieved2, ok = retrievedAttribution.Mounts[mountAccessor2]
+	require.True(t, ok, "Should still find breakdown for transit-accessor-2")
+	require.Equal(t, "25.5", fmt.Sprintf("%v", retrieved2.Count), "Count should remain unchanged")
+
+	// Test Case 3: Update with only one of the mounts - should accumulate counts correctly
+	t.Log("Test Case 3: Update with only one mount (cumulative count)")
+	testBreakdown1Updated := logical.MountAttribution{
+		MountAccessor:     mountAccessor,
+		MountPath:         "transit/",
+		NamespaceID:       "root",
+		NamespacePath:     "",
+		ParentNamespaceID: "",
+		Count:             15.0, // Adding 15 more to the existing 10
+	}
+
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Lock()
+	cb.SecretEngineCounts.Transit.MountAttribution[mountAccessor] = testBreakdown1Updated
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
+
+	err = core.UpdateTransitAttribution(ctx, currentMonth)
+	require.NoError(t, err, "UpdateTransitAttribution with one mount should succeed")
+
+	retrievedAttribution, err = core.GetStoredAttributionData(ctx, billing.LocalPrefix, currentMonth, billing.TransitDataProtectionCallCountsPrefix)
+	require.NoError(t, err)
+	require.Len(t, retrievedAttribution.Mounts, 2, "Should still have 2 mounts")
+	// Top-level count: 25 (mount1) + 25.5 (mount2) = 50.5
+	require.Equal(t, "50.5", fmt.Sprintf("%v", retrievedAttribution.Count), "Top-level count should be sum of all mount counts")
+
+	// Verify the first mount has cumulative count (10 + 15 = 25)
+	retrieved1, ok = retrievedAttribution.Mounts[mountAccessor]
+	require.True(t, ok, "Should find breakdown for first mount accessor")
+	require.Equal(t, "25", fmt.Sprintf("%v", retrieved1.Count), "Count should be cumulative: 10 + 15 = 25")
+	require.Equal(t, mountAccessor, retrieved1.MountAccessor)
+	require.Equal(t, "transit/", retrieved1.MountPath)
+
+	// Second mount is unchanged
+	retrieved2, ok = retrievedAttribution.Mounts[mountAccessor2]
+	require.True(t, ok, "Should still find breakdown for transit-accessor-2")
+	require.Equal(t, "25.5", fmt.Sprintf("%v", retrieved2.Count), "Count should remain unchanged for mount not in update")
+
+	// Additional Test: Update both mounts with new counts to verify cumulative behavior
+	t.Log("Additional Test: Update both mounts with new counts")
+	testBreakdown1NewCount := logical.MountAttribution{
+		MountAccessor:     mountAccessor,
+		MountPath:         "transit/",
+		NamespaceID:       "root",
+		NamespacePath:     "",
+		ParentNamespaceID: "",
+		Count:             5.0, // Adding 5 more to the existing 25
+	}
+	testBreakdown2NewCount := logical.MountAttribution{
+		MountAccessor:     mountAccessor2,
+		MountPath:         "transit2/",
+		NamespaceID:       "ns1-id",
+		NamespacePath:     "ns1/",
+		ParentNamespaceID: "root",
+		Count:             10.5, // Adding 10.5 more to the existing 25.5
+	}
+
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Lock()
+	cb.SecretEngineCounts.Transit.MountAttribution[mountAccessor] = testBreakdown1NewCount
+	cb.SecretEngineCounts.Transit.MountAttribution[mountAccessor2] = testBreakdown2NewCount
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
+
+	err = core.UpdateTransitAttribution(ctx, currentMonth)
+	require.NoError(t, err, "UpdateTransitAttribution with both mounts should succeed")
+
+	retrievedAttribution, err = core.GetStoredAttributionData(ctx, billing.LocalPrefix, currentMonth, billing.TransitDataProtectionCallCountsPrefix)
+	require.NoError(t, err)
+	require.Len(t, retrievedAttribution.Mounts, 2, "Should have 2 mounts")
+	// Top-level count: 30 (mount1) + 36 (mount2) = 66
+	require.Equal(t, "66", fmt.Sprintf("%v", retrievedAttribution.Count), "Top-level count should be sum of all mount counts")
+
+	// Verify cumulative counts: mount1 = 25 + 5 = 30, mount2 = 25.5 + 10.5 = 36
+	retrieved1, ok = retrievedAttribution.Mounts[mountAccessor]
+	require.True(t, ok, "Should find breakdown for first mount accessor")
+	require.Equal(t, "30", fmt.Sprintf("%v", retrieved1.Count), "Count should be cumulative: 25 + 5 = 30")
+
+	retrieved2, ok = retrievedAttribution.Mounts[mountAccessor2]
+	require.True(t, ok, "Should find breakdown for transit-accessor-2")
+	require.Equal(t, "36", fmt.Sprintf("%v", retrieved2.Count), "Count should be cumulative: 25.5 + 10.5 = 36")
+
+	// Verify in-memory map is empty after update (atomic swap behaviour)
+	cb.SecretEngineCounts.Transit.MountAttributionLock.RLock()
+	inMemoryCount := len(cb.SecretEngineCounts.Transit.MountAttribution)
+	cb.SecretEngineCounts.Transit.MountAttributionLock.RUnlock()
+	require.Equal(t, 0, inMemoryCount, "In-memory map should be empty after update (atomic swap)")
+
+	// Test retrieval for a different month (should return empty mounts map)
+	t.Log("Test: Retrieval for different month")
+	differentMonth := currentMonth.AddDate(0, 1, 0)
+	retrievedAttribution, err = core.GetStoredAttributionData(ctx, billing.LocalPrefix, differentMonth, billing.TransitDataProtectionCallCountsPrefix)
+	require.NoError(t, err, "GetTransitAttribution for different month should succeed")
+	require.Empty(t, retrievedAttribution.Mounts, "Should have no mounts for a month with no data")
 }
 
 // TestCertAttributionNamespaceMove verifies that when a cert mount's namespace

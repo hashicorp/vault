@@ -214,13 +214,13 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 
 	// Test defaults -- sha2-256
 	sig := signRequest(req, false, "")
-	require.Equal(t, uint64(1), b.billingDataCounts.Transit.Load(), "Counter after sign #1")
+	require.Equal(t, uint64(1), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sign #1")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load(), "Counter after verify #1")
+	require.Equal(t, uint64(2), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after verify #1")
 
 	// Test a bad signature
 	verifyRequest(req, true, false, "", sig[0:len(sig)-2])
-	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load(), "Counter after bad signature verify (should not increment)")
+	require.Equal(t, uint64(2), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after bad signature verify (should not increment)")
 
 	// Test a signature generated with the same key by openssl
 	switch bits {
@@ -232,73 +232,74 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 		sig = `vault:v1:MEUCIAgnEl9V8P305EBAlz68Nq4jZng5fE8k6MactcnlUw9dAiEAvJVePg3dazW6MaW7lRAVtEz82QJDVmR98tXCl8Pc7DA=`
 	}
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(3), b.billingDataCounts.Transit.Load(), "Counter after openssl verify")
+	require.Equal(t, uint64(3), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after openssl verify")
 
 	// Test algorithm selection in the path
 	sig = signRequest(req, false, "/sha2-224")
-	require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load(), "Counter after sha2-224 path sign")
+	require.Equal(t, uint64(4), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-224 path sign")
 	verifyRequest(req, false, false, "/sha2-224", sig)
-	require.Equal(t, uint64(5), b.billingDataCounts.Transit.Load(), "Counter after sha2-224 path verify")
+	require.Equal(t, uint64(5), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-224 path verify")
 
 	// Reset and test algorithm selection in the data
 	req.Data["hash_algorithm"] = "sha2-224"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(6), b.billingDataCounts.Transit.Load(), "Counter after sha2-224 data sign")
+	require.Equal(t, uint64(6), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-224 data sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(7), b.billingDataCounts.Transit.Load(), "Counter after sha2-224 data verify")
+	require.Equal(t, uint64(7), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-224 data verify")
 
 	req.Data["hash_algorithm"] = "sha2-384"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(8), b.billingDataCounts.Transit.Load(), "Counter after sha2-384 sign")
+	require.Equal(t, uint64(8), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-384 sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(9), b.billingDataCounts.Transit.Load(), "Counter after sha2-384 verify")
+	require.Equal(t, uint64(9), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-384 verify")
 
 	req.Data["hash_algorithm"] = "sha2-512"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(10), b.billingDataCounts.Transit.Load(), "Counter after sha2-512 sign")
+	require.Equal(t, uint64(10), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-512 sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(11), b.billingDataCounts.Transit.Load(), "Counter after sha2-512 verify")
+	require.Equal(t, uint64(11), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-512 verify")
 
 	req.Data["hash_algorithm"] = "sha3-224"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(12), b.billingDataCounts.Transit.Load(), "Counter after sha3-224 sign")
+	require.Equal(t, uint64(12), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-224 sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(13), b.billingDataCounts.Transit.Load(), "Counter after sha3-224 verify")
+	require.Equal(t, uint64(13), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-224 verify")
 
 	req.Data["hash_algorithm"] = "sha3-256"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(14), b.billingDataCounts.Transit.Load(), "Counter after sha3-256 sign")
+	require.Equal(t, uint64(14), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-256 sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(15), b.billingDataCounts.Transit.Load(), "Counter after sha3-256 verify")
+	require.Equal(t, uint64(15), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-256 verify")
 
 	req.Data["hash_algorithm"] = "sha3-384"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(16), b.billingDataCounts.Transit.Load(), "Counter after sha3-384 sign")
+	require.Equal(t, uint64(16), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-384 sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(17), b.billingDataCounts.Transit.Load(), "Counter after sha3-384 verify")
+	require.Equal(t, uint64(17), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-384 verify")
 
 	req.Data["hash_algorithm"] = "sha3-512"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(18), b.billingDataCounts.Transit.Load(), "Counter after sha3-512 sign")
+	require.Equal(t, uint64(18), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-512 sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(19), b.billingDataCounts.Transit.Load(), "Counter after sha3-512 verify")
+	require.Equal(t, uint64(19), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha3-512 verify")
 
 	req.Data["prehashed"] = true
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(20), b.billingDataCounts.Transit.Load(), "Counter after prehashed sign")
+	require.Equal(t, uint64(20), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after prehashed sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(21), b.billingDataCounts.Transit.Load(), "Counter after prehashed verify")
+	require.Equal(t, uint64(21), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after prehashed verify")
 	delete(req.Data, "prehashed")
 
 	// Test marshaling selection
 	// Bad value
 	req.Data["marshaling_algorithm"] = "asn2"
 	sig = signRequest(req, true, "")
-	require.Equal(t, uint64(21), b.billingDataCounts.Transit.Load(), "Counter after bad marshaling (asn2) - should not increment")
+	require.Equal(t, uint64(21), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after bad marshaling (asn2) - should not increment")
+
 	// Use the default, verify we can't validate with jws
 	req.Data["marshaling_algorithm"] = "asn1"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(22), b.billingDataCounts.Transit.Load(), "Counter after asn1 sign")
+	require.Equal(t, uint64(22), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after asn1 sign")
 
 	// Make sure we fail for the right reason that jws signature fails and not a base64 encoding issue
 	req.Data["marshaling_algorithm"] = "jws"
@@ -307,38 +308,39 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	require.NoError(t, err)
 	jwsSig := "vault:v1:" + base64.RawURLEncoding.EncodeToString(decodedAsn1Sig)
 	verifyRequest(req, false, true, "", jwsSig)
-	require.Equal(t, uint64(23), b.billingDataCounts.Transit.Load(), "Counter after jws verify (should fail signature verification which increments)")
+	require.Equal(t, uint64(23), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after jws verify (should fail signature verification which increments)")
 
 	// Sign with jws, verify we can validate
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(24), b.billingDataCounts.Transit.Load(), "Counter after jws sign")
+	require.Equal(t, uint64(24), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after jws sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(25), b.billingDataCounts.Transit.Load(), "Counter after jws verify")
+	require.Equal(t, uint64(25), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after jws verify")
+
 	// If we change marshaling back to asn1 we shouldn't be able to verify
 	delete(req.Data, "marshaling_algorithm")
 	verifyRequest(req, true, false, "", sig)
-	require.Equal(t, uint64(25), b.billingDataCounts.Transit.Load(), "Counter after asn1 verify (should fail) - should not increment")
+	require.Equal(t, uint64(25), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after asn1 verify (should fail) - should not increment")
 
 	// Test 512 and save sig for later to ensure we can't validate once min
 	// decryption version is set
 	req.Data["hash_algorithm"] = "sha2-512"
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(26), b.billingDataCounts.Transit.Load(), "Counter after sha2-512 sign")
+	require.Equal(t, uint64(26), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-512 sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(27), b.billingDataCounts.Transit.Load(), "Counter after sha2-512 verify")
+	require.Equal(t, uint64(27), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after sha2-512 verify")
 
 	v1sig := sig
 
 	// Test bad algorithm
 	req.Data["hash_algorithm"] = "foobar"
 	signRequest(req, true, "")
-	require.Equal(t, uint64(27), b.billingDataCounts.Transit.Load(), "Counter after bad algorithm - should not increment")
+	require.Equal(t, uint64(27), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after bad algorithm - should not increment")
 
 	// Test bad input
 	req.Data["hash_algorithm"] = "sha2-256"
 	req.Data["input"] = "foobar"
 	signRequest(req, true, "")
-	require.Equal(t, uint64(27), b.billingDataCounts.Transit.Load(), "Counter after bad input - should not increment")
+	require.Equal(t, uint64(27), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after bad input - should not increment")
 
 	// Rotate and set min decryption version
 	err = p.Rotate(context.Background(), storage, b.GetRandomReader())
@@ -359,12 +361,13 @@ func testTransit_SignVerify_ECDSA(t *testing.T, bits int) {
 	req.Data["hash_algorithm"] = "sha2-256"
 	// Make sure signing still works fine
 	sig = signRequest(req, false, "")
-	require.Equal(t, uint64(28), b.billingDataCounts.Transit.Load(), "Counter after final sign")
+	require.Equal(t, uint64(28), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after final sign")
 	verifyRequest(req, false, false, "", sig)
-	require.Equal(t, uint64(29), b.billingDataCounts.Transit.Load(), "Counter after final verify")
+	require.Equal(t, uint64(29), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after final verify")
+
 	// Now try the v1
 	verifyRequest(req, true, false, "", v1sig)
-	require.Equal(t, uint64(29), b.billingDataCounts.Transit.Load(), "Counter after v1sig verify (should fail) - should not increment")
+	require.Equal(t, uint64(29), b.secretEngineCounts.Transit.MonthlyCount.Load(), "Counter after v1sig verify (should fail) - should not increment")
 }
 
 func validatePublicKey(t *testing.T, in string, sig string, pubKeyRaw []byte, expectValid bool, postpath string, b *backend) {
@@ -509,10 +512,10 @@ func TestTransit_SignVerify_Ed25519Behavior(t *testing.T) {
 	}
 	// Verify the total successful transit requests
 	if constants.IsEnterprise {
-		require.Equal(t, uint64(4), b.billingDataCounts.Transit.Load())
+		require.Equal(t, uint64(4), b.secretEngineCounts.Transit.MonthlyCount.Load())
 	} else {
 		// We expect 0 successful calls on CE because we expect the verify to fail
-		require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
+		require.Equal(t, uint64(0), b.secretEngineCounts.Transit.MonthlyCount.Load())
 	}
 }
 
@@ -861,7 +864,7 @@ func TestTransit_SignVerify_ED25519(t *testing.T) {
 	verifyRequest(req, false, outcome, "bar", goodsig, true)
 
 	// Verify the total successful transit requests
-	require.Equal(t, uint64(24), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(24), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 func TestTransit_SignVerify_RSA_PSS(t *testing.T) {

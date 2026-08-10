@@ -642,7 +642,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	// Increment the counter for successful operations
-	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
 		b.Logger().Error("failed to track transit encrypt request count", "error", err.Error())
 	}
 
