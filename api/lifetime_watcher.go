@@ -269,7 +269,9 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 		return r.errLifetimeWatcherNotRenewable
 	}
 
-	initialTime := time.Now()
+	// A secret delivered from a cache describes a lease that began before the
+	// response arrived, so anchor the clock at issuance rather than at arrival.
+	initialTime := time.Now().Add(-r.secret.Age)
 	priorDuration := time.Duration(initLeaseDuration) * time.Second
 	r.calculateGrace(priorDuration, time.Duration(r.increment)*time.Second)
 	var errorBackoff backoff.BackOff
@@ -342,7 +344,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 			}
 
 			// Reset initial time
-			initialTime = time.Now()
+			initialTime = time.Now().Add(-renewal.Age)
 
 			// Grab the lease duration
 			initLeaseDuration = renewal.LeaseDuration
@@ -350,7 +352,7 @@ func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, 
 				initLeaseDuration = renewal.Auth.LeaseDuration
 			}
 
-			remainingLeaseDuration = time.Duration(initLeaseDuration) * time.Second
+			remainingLeaseDuration = remainingLease(time.Duration(initLeaseDuration)*time.Second, renewal.Age)
 		}
 
 		var sleepDuration time.Duration
@@ -423,6 +425,21 @@ func (r *LifetimeWatcher) calculateGrace(leaseDuration, increment time.Duration)
 	// For a given lease duration, we want to allow 80-90% of that to elapse,
 	// so the remaining amount is the grace period
 	r.grace = time.Duration(jitterMax) + time.Duration(uint64(r.random.Int63())%uint64(jitterMax))
+}
+
+// remainingLease reports how much of a lease is left once the time its
+// response spent in an intermediate cache is discounted.
+//
+// A cached response reports the lease duration measured from when the lease was
+// issued rather than from when the client received it, so trusting that value
+// directly overestimates the remaining lifetime by the age of the response.
+func remainingLease(leaseDuration time.Duration, age time.Duration) time.Duration {
+	remaining := leaseDuration - age
+	if remaining < 0 {
+		return 0
+	}
+
+	return remaining
 }
 
 type (
