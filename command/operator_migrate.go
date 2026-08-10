@@ -297,13 +297,25 @@ func (c *OperatorMigrateCommand) createDestinationBackend(kind string, conf map[
 		if err != nil {
 			return nil, fmt.Errorf("error parsing cluster address: %w", err)
 		}
-		if err := raftStorage.Bootstrap([]raft.Peer{
-			{
-				ID:      raftStorage.NodeID(),
-				Address: parsedClusterAddr.Host,
-			},
-		}); err != nil {
-			return nil, fmt.Errorf("could not bootstrap clustered storage: %w", err)
+
+		hasState, err := raftStorage.HasState()
+		if err != nil {
+			return nil, fmt.Errorf("error checking raft storage state: %w", err)
+		}
+
+		if hasState && c.flagStart == "" {
+			return nil, fmt.Errorf("raft destination already contains state; use -start to resume migration from a checkpoint")
+		}
+
+		if !hasState {
+			if err := raftStorage.Bootstrap([]raft.Peer{
+				{
+					ID:      raftStorage.NodeID(),
+					Address: parsedClusterAddr.Host,
+				},
+			}); err != nil {
+				return nil, fmt.Errorf("could not bootstrap clustered storage: %w", err)
+			}
 		}
 
 		if err := raftStorage.SetupCluster(context.Background(), raft.SetupOpts{
