@@ -13,6 +13,30 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
 
+// PluginFactoryConfig carries the inputs needed to build a plugin database
+// type. It exists so that new optional inputs can be added without breaking
+// existing callers of PluginFactory and PluginFactoryVersion.
+type PluginFactoryConfig struct {
+	// PluginName is the name of the database plugin in the plugin catalog.
+	PluginName string
+
+	// PluginVersion optionally pins a specific plugin version. An empty string
+	// selects the default, which is the builtin version when one exists.
+	PluginVersion string
+
+	Sys    pluginutil.LookRunnerUtil
+	Logger log.Logger
+
+	// Namespace, MountPoint, and ConnectionName identify the namespace, the
+	// specific database secrets engine mount, and the configured connection
+	// that this plugin instance serves. When set, the metrics middleware
+	// attaches each as a label to the telemetry it emits. Leave them empty to
+	// emit unlabeled metrics.
+	Namespace      string
+	MountPoint     string
+	ConnectionName string
+}
+
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
 func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
@@ -22,6 +46,22 @@ func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRu
 // PluginFactoryVersion is used to build plugin database types with a version specified.
 // It wraps the database object in a logging and metrics middleware.
 func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
+	return PluginFactoryWithConfig(ctx, PluginFactoryConfig{
+		PluginName:    pluginName,
+		PluginVersion: pluginVersion,
+		Sys:           sys,
+		Logger:        logger,
+	})
+}
+
+// PluginFactoryWithConfig is used to build plugin database types from a config
+// struct. It wraps the database object in a logging and metrics middleware.
+func PluginFactoryWithConfig(ctx context.Context, cfg PluginFactoryConfig) (Database, error) {
+	pluginName := cfg.PluginName
+	pluginVersion := cfg.PluginVersion
+	sys := cfg.Sys
+	logger := cfg.Logger
+
 	// Look for plugin in the plugin catalog
 	pluginRunner, err := sys.LookupPluginVersion(ctx, pluginName, consts.PluginTypeDatabase, pluginVersion)
 	if err != nil {
@@ -92,8 +132,11 @@ func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion 
 
 	// Wrap with metrics middleware
 	db = &databaseMetricsMiddleware{
-		next:    db,
-		typeStr: typeStr,
+		next:           db,
+		typeStr:        typeStr,
+		namespace:      cfg.Namespace,
+		mountPoint:     cfg.MountPoint,
+		connectionName: cfg.ConnectionName,
 	}
 
 	// Wrap with tracing middleware

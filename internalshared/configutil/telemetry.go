@@ -213,6 +213,11 @@ type Telemetry struct {
 	// Whether or not telemetry should include the mount point in the rollback
 	// metrics
 	RollbackMetricsIncludeMountPoint bool `hcl:"add_mount_point_rollback_metrics"`
+
+	// Whether or not telemetry should add mount_point and connection_name
+	// labels to the database secrets engine metrics. This is opt-in because it
+	// multiplies the series count by the number of configured connections.
+	DatabaseMetricsIncludeMountPoint bool `hcl:"add_mount_point_database_metrics"`
 }
 
 func (t *Telemetry) Validate(source string) []ConfigError {
@@ -493,6 +498,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	wrapper.TelemetryConsts.LeaseMetricsNameSpaceLabels = opts.Config.LeaseMetricsNameSpaceLabels
 	wrapper.TelemetryConsts.NumLeaseMetricsTimeBuckets = opts.Config.NumLeaseMetricsTimeBuckets
 	wrapper.TelemetryConsts.RollbackMetricsIncludeMountPoint = opts.Config.RollbackMetricsIncludeMountPoint
+	wrapper.TelemetryConsts.DatabaseMetricsIncludeMountPoint = opts.Config.DatabaseMetricsIncludeMountPoint
 
 	// Parse the metric filters
 	telemetryAllowedPrefixes, telemetryBlockedPrefixes, err := parsePrefixFilter(opts.Config.PrefixFilter)
