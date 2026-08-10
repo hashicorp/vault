@@ -64,7 +64,7 @@ on:
       - release/**
       - ce/**
   schedule:
-    - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
+    - cron: "05 02 * * *" # * is a special character in YAML so you have to quote this string
       timezone: "America/New_York"
 
 concurrency:
@@ -534,7 +534,7 @@ jobs:
       id-token: write
       issues: read
     with:
-      pull-request: ${{ github.event.pull-request.number || '0' }}
+      pull-request: ${{ github.event.pull_request.number || '0' }}
       branch: ${{ github.event_name == 'schedule' && 'main' || '' }}
       create-aws-image: true
       create-azure-image: false
