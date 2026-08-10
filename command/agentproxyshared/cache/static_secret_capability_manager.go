@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gammazero/workerpool"
@@ -45,6 +46,10 @@ type StaticSecretCapabilityManager struct {
 	workerPool                                 *workerpool.WorkerPool
 	staticSecretTokenCapabilityRefreshInterval time.Duration
 	tokenCapabilityRefreshBehaviour            TokenCapabilityRefreshBehaviour
+	// workerPoolLock must be held when submitting work to the pool (workerpool.Submit)
+	// or stopping (workerpool.Stop) the workerpool. workerpool.Stop and workerpool.Stopped
+	// both use an internal stopLock and as such don't need to be locked again.
+	workerPoolLock sync.RWMutex
 }
 
 // StaticSecretCapabilityManagerConfig is the configuration for initializing a new
@@ -107,6 +112,8 @@ func NewStaticSecretCapabilityManager(conf *StaticSecretCapabilityManagerConfig)
 // staticSecretTokenCapabilityRefreshInterval
 func (sscm *StaticSecretCapabilityManager) submitWorkToPoolAfterInterval(work func()) {
 	time.AfterFunc(sscm.staticSecretTokenCapabilityRefreshInterval, func() {
+		sscm.workerPoolLock.Lock()
+		defer sscm.workerPoolLock.Unlock()
 		if !sscm.workerPool.Stopped() {
 			sscm.workerPool.Submit(work)
 		}
@@ -116,6 +123,8 @@ func (sscm *StaticSecretCapabilityManager) submitWorkToPoolAfterInterval(work fu
 // Stop stops all ongoing jobs and ensures future jobs will not
 // get added to the worker pool.
 func (sscm *StaticSecretCapabilityManager) Stop() {
+	sscm.workerPoolLock.Lock()
+	defer sscm.workerPoolLock.Unlock()
 	sscm.workerPool.Stop()
 }
 
