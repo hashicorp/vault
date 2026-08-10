@@ -125,10 +125,10 @@ type backend struct {
 	entBackend
 
 	lm *keysutil.LockManager
-	// billingDataCounts tracks successful data protection operations
+	// secretEngineCounts tracks successful data protection operations
 	// for this backend instance. It's intended for test assertions and avoids
 	// cross-test/package contamination from global counters.
-	billingDataCounts billing.DataProtectionCallCounts
+	secretEngineCounts billing.SecretEngineCounts
 	// Lock to make changes to any of the backend's cache configuration.
 	configMutex          sync.RWMutex
 	cacheSizeChanged     bool
@@ -211,15 +211,32 @@ func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error
 }
 
 // incrementBillingCounts atomically increments the transit billing data counts
-func (b *backend) incrementBillingCounts(ctx context.Context, count uint64) error {
-	// If we are a test, we need to increment this testing structure to verify the counts are correct.
-	if b.billingDataCounts.Transit != nil {
-		b.billingDataCounts.Transit.Add(count)
+func (b *backend) incrementBillingCounts(ctx context.Context, req *logical.Request, count uint64) error {
+	// Get mount information from request
+	// Namespace information is resolved server-side from context inside Vault
+	mountPath := ""
+	mountAccessor := ""
+	mountType := ""
+	if req != nil {
+		mountPath = req.MountPoint
+		mountAccessor = req.MountAccessor
+		mountType = req.MountType
 	}
 
-	// Write billling data
+	// If we are a test, we need to increment this testing structure to verify the counts are correct.
+	if b.secretEngineCounts.Transit.MonthlyCount != nil {
+		b.secretEngineCounts.Transit.MonthlyCount.Add(count)
+	}
+
+	// Forward the count and mount/namespace context to the Vault billing manager.
+	// The manager accumulates attribution data in its own in-memory map and
+	// periodically flushes it to storage via UpdateTransitAttribution.
 	return b.ConsumptionBillingManager.WriteBillingData(ctx, "transit", map[string]interface{}{
-		"count": count,
+		"count":            count,
+		"mountAccessor":    mountAccessor,
+		"mountPath":        mountPath,
+		"mountType":        mountType,
+		"backendAwareUUID": b.backendUUID,
 	})
 }
 
