@@ -214,9 +214,10 @@ type Telemetry struct {
 	// metrics
 	RollbackMetricsIncludeMountPoint bool `hcl:"add_mount_point_rollback_metrics"`
 
-	// Whether or not telemetry should add mount_point and connection_name
-	// labels to the database secrets engine metrics. This is opt-in because it
-	// multiplies the series count by the number of configured connections.
+	// Whether or not telemetry should add namespace, mount_point, and
+	// connection_name labels to the database secrets engine metrics. This is
+	// opt-in because it multiplies the series count by the number of
+	// namespaces, mounts, and configured connections.
 	DatabaseMetricsIncludeMountPoint bool `hcl:"add_mount_point_database_metrics"`
 }
 

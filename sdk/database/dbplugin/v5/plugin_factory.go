@@ -5,6 +5,7 @@ package dbplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/errwrap"
@@ -37,6 +38,25 @@ type PluginFactoryConfig struct {
 	ConnectionName string
 }
 
+// validate reports whether the config carries the collaborators required to
+// build a plugin. It exists because callers construct PluginFactoryConfig as a
+// struct literal, so an omitted field would otherwise surface as a nil
+// dereference deep inside plugin startup rather than as an error the caller can
+// handle.
+//
+// Only the fields that would panic are checked. PluginName is deliberately not
+// validated: an unknown or empty name is already reported by the plugin catalog
+// lookup, which some callers rely on to resolve a default plugin.
+func (cfg PluginFactoryConfig) validate() error {
+	if cfg.Sys == nil {
+		return errors.New("plugin system view is required")
+	}
+	if cfg.Logger == nil {
+		return errors.New("logger is required")
+	}
+	return nil
+}
+
 // PluginFactory is used to build plugin database types. It wraps the database
 // object in a logging and metrics middleware.
 func PluginFactory(ctx context.Context, pluginName string, sys pluginutil.LookRunnerUtil, logger log.Logger) (Database, error) {
@@ -57,18 +77,17 @@ func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion 
 // PluginFactoryWithConfig is used to build plugin database types from a config
 // struct. It wraps the database object in a logging and metrics middleware.
 func PluginFactoryWithConfig(ctx context.Context, cfg PluginFactoryConfig) (Database, error) {
-	pluginName := cfg.PluginName
-	pluginVersion := cfg.PluginVersion
-	sys := cfg.Sys
-	logger := cfg.Logger
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
 
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPluginVersion(ctx, pluginName, consts.PluginTypeDatabase, pluginVersion)
+	pluginRunner, err := cfg.Sys.LookupPluginVersion(ctx, cfg.PluginName, consts.PluginTypeDatabase, cfg.PluginVersion)
 	if err != nil {
 		return nil, err
 	}
 
-	namedLogger := logger.Named(pluginName)
+	namedLogger := cfg.Logger.Named(cfg.PluginName)
 
 	var transport string
 	var db Database
@@ -83,34 +102,34 @@ func PluginFactoryWithConfig(ctx context.Context, cfg PluginFactoryConfig) (Data
 		var ok bool
 		db, ok = dbRaw.(Database)
 		if !ok {
-			return nil, fmt.Errorf("unsupported database type: %q", pluginName)
+			return nil, fmt.Errorf("unsupported database type: %q", cfg.PluginName)
 		}
 
 		transport = "builtin"
 
 	} else {
 		if pluginRunner.Download {
-			if err = sys.DownloadExtractVerifyPlugin(ctx, pluginRunner); err != nil {
+			if err = cfg.Sys.DownloadExtractVerifyPlugin(ctx, pluginRunner); err != nil {
 				return nil, fmt.Errorf("failed to extract and verify plugin=%q version=%q: %w",
 					pluginRunner.Name, pluginRunner.Version, err)
 			}
 		}
 
 		config := pluginutil.PluginClientConfig{
-			Name:            pluginName,
+			Name:            cfg.PluginName,
 			PluginType:      consts.PluginTypeDatabase,
-			Version:         pluginVersion,
+			Version:         cfg.PluginVersion,
 			PluginSets:      PluginSets,
 			HandshakeConfig: HandshakeConfig,
 			Logger:          namedLogger,
 			IsMetadataMode:  false,
 			AutoMTLS:        true,
-			Wrapper:         sys,
+			Wrapper:         cfg.Sys,
 			Tier:            pluginRunner.Tier,
 		}
 
 		// create a DatabasePluginClient instance
-		db, err = NewPluginClient(ctx, sys, config)
+		db, err = NewPluginClient(ctx, cfg.Sys, config)
 		if err != nil {
 			return nil, err
 		}
@@ -128,7 +147,7 @@ func PluginFactoryWithConfig(ctx context.Context, cfg PluginFactoryConfig) (Data
 	if err != nil {
 		return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
 	}
-	logger.Debug("got database plugin instance", "type", typeStr)
+	cfg.Logger.Debug("got database plugin instance", "type", typeStr)
 
 	// Wrap with metrics middleware
 	db = &databaseMetricsMiddleware{

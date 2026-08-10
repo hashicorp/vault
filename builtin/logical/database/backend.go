@@ -151,9 +151,10 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 }
 
 // metricsLabelsForConnection returns the telemetry labels to attach to metrics
-// emitted on behalf of the named connection. It returns the zero value unless
-// the operator opted in, in which case metrics stay unlabeled and aggregate
-// across mounts as they always have.
+// emitted on behalf of the named connection.
+//
+// When the operator has not opted in, it returns the zero value, which leaves
+// metrics unlabeled so they keep aggregating across mounts as they always have.
 func (b *databaseBackend) metricsLabelsForConnection(name string) databaseWrapperMetricsLabels {
 	if !b.includeMountPointInMetrics {
 		return databaseWrapperMetricsLabels{}
