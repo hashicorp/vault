@@ -3355,10 +3355,10 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
-	normalizedID := normalizeOAuthJwtToId(id)
-	if IsOAuthJwtId(normalizedID) {
-		return logical.ErrorResponse("cannot revoke JWTs"), nil
+	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
 	}
+
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
