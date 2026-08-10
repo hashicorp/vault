@@ -866,6 +866,10 @@ func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time)
 // secondary also detects it and gets charged. This is intentional, as the KMIP usage is per cluster.
 // We only store true when KMIP is enabled; we never store false. This means storing true multiple times
 // is idempotent and safe.
+//
+// Attribution is written once per month: once we have stored KMIP attribution for the first time
+// this month (indicated by KmipSeenEnabledThisMonth), we skip the mount scan on subsequent
+// billing cycles to avoid unnecessary overhead.
 func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
@@ -875,22 +879,43 @@ func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (b
 		return false, ErrConsumptionBillingNotInitialized
 	}
 
+	// If we have already stored KMIP attribution this month, skip the mount scan.
+	if cb.KmipSeenEnabledThisMonth.Load() {
+		return true, nil
+	}
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return false, errors.New("billing subview not available")
+	}
+
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	// Check if KMIP is currently enabled, including replicated mounts
-	kmipEnabled, err := c.IsKMIPEnabled(ctx)
+	// Scan all mounts to collect KMIP attribution data.
+	kmipMounts, err := c.CollectKmipMounts()
 	if err != nil {
 		return false, err
 	}
 
-	if kmipEnabled {
+	if len(kmipMounts) > 0 {
 		if err := c.storeKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth, true); err != nil {
 			return false, err
 		}
+		if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.KmipEnabledPrefix, &logical.MetricTypeAttribution{
+			Count:       1,
+			Mounts:      kmipMounts,
+			LastUpdated: currentMonth,
+		}); err != nil {
+			return false, err
+		}
+		// Mark KMIP as seen this month only after successfully writing both the billing
+		// flag and attribution to storage, so a future billing cycle does not skip the
+		// scan before the data has been persisted.
+		cb.KmipSeenEnabledThisMonth.Store(true)
 	}
 
-	return kmipEnabled, nil
+	return len(kmipMounts) > 0, nil
 }
 
 // GetStoredPkiDurationAdjustedCount retrieves the stored PKI duration-adjusted certificate count

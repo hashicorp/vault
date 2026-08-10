@@ -130,3 +130,76 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	_, hasNew := got.Mounts["kv_bbb"]
 	require.True(t, hasNew, "new mount should be present after overwrite")
 }
+
+// TestCertAttributionNamespaceMove verifies that when a cert mount's namespace
+// metadata changes between two storeCertAttributionLocked calls (i.e. across
+// flush boundaries), the stored entry reflects the new namespace while the
+// count remains cumulative. It exercises storeCertAttributionLocked directly,
+// covering PKI, SSH cert, and SSH OTP metric names in a single parameterised pass.
+func TestCertAttributionNamespaceMove(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	view := &logical.InmemStorage{}
+	month := time.Now().UTC()
+
+	const accessor = "pki_ns_move"
+
+	for _, metricName := range []string{
+		billing.PkiDurationAdjustedCountPrefix,
+		billing.SSHCertificateMetric,
+		billing.SSHOTPMetric,
+	} {
+		metricName := metricName // capture
+		t.Run(metricName, func(t *testing.T) {
+			// Flush 1: mount is in ns1 with count 10.
+			inNS1 := map[string]logical.MountAttribution{
+				accessor: {
+					MountAccessor: accessor,
+					MountPath:     "cert/",
+					MountType:     "pki",
+					NamespaceID:   "ns1-id",
+					NamespacePath: "ns1/",
+					Count:         10.0,
+				},
+			}
+			err := storeCertAttributionLocked(ctx, view, billing.LocalPrefix, metricName, 10.0, inNS1, month)
+			require.NoError(t, err)
+
+			stored, err := getStoredAttributionDataLocked(ctx, view, billing.LocalPrefix, month, metricName)
+			require.NoError(t, err)
+			require.Len(t, stored.Mounts, 1)
+			entry := stored.Mounts[accessor]
+			require.Equal(t, "ns1-id", entry.NamespaceID, "flush 1: NamespaceID should be ns1")
+			require.Equal(t, "ns1/", entry.NamespacePath)
+			require.Equal(t, "10", fmt.Sprintf("%v", entry.Count))
+
+			// Flush 2: same accessor, mount has moved to ns2, count delta 5.
+			inNS2 := map[string]logical.MountAttribution{
+				accessor: {
+					MountAccessor: accessor,
+					MountPath:     "cert/",
+					MountType:     "pki",
+					NamespaceID:   "ns2-id",
+					NamespacePath: "ns2/",
+					Count:         5.0,
+				},
+			}
+			err = storeCertAttributionLocked(ctx, view, billing.LocalPrefix, metricName, 5.0, inNS2, month)
+			require.NoError(t, err)
+
+			stored, err = getStoredAttributionDataLocked(ctx, view, billing.LocalPrefix, month, metricName)
+			require.NoError(t, err)
+			require.Len(t, stored.Mounts, 1, "still one entry — same accessor")
+
+			entry = stored.Mounts[accessor]
+			// Metadata must reflect ns2.
+			require.Equal(t, "ns2-id", entry.NamespaceID, "flush 2: NamespaceID should be updated to ns2")
+			require.Equal(t, "ns2/", entry.NamespacePath, "flush 2: NamespacePath should be updated to ns2")
+			// Count must be cumulative: 10 + 5 = 15.
+			require.Equal(t, "15", fmt.Sprintf("%v", entry.Count), "count should accumulate: 10 + 5 = 15")
+			// Top-level total must also accumulate.
+			require.Equal(t, "15", fmt.Sprintf("%v", stored.Count))
+		})
+	}
+}
