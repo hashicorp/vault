@@ -37,7 +37,7 @@ func (c *TokenAuth) CreateWithContext(ctx context.Context, opts *TokenCreateRequ
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) CreateOrphan(opts *TokenCreateRequest) (*Secret, error) {
@@ -59,7 +59,7 @@ func (c *TokenAuth) CreateOrphanWithContext(ctx context.Context, opts *TokenCrea
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) CreateWithRole(opts *TokenCreateRequest, roleName string) (*Secret, error) {
@@ -81,7 +81,7 @@ func (c *TokenAuth) CreateWithRoleWithContext(ctx context.Context, opts *TokenCr
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) Lookup(token string) (*Secret, error) {
@@ -105,7 +105,7 @@ func (c *TokenAuth) LookupWithContext(ctx context.Context, token string) (*Secre
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) LookupAccessor(accessor string) (*Secret, error) {
@@ -129,7 +129,7 @@ func (c *TokenAuth) LookupAccessorWithContext(ctx context.Context, accessor stri
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) LookupSelf() (*Secret, error) {
@@ -148,7 +148,7 @@ func (c *TokenAuth) LookupSelfWithContext(ctx context.Context) (*Secret, error) 
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) RenewAccessor(accessor string, increment int) (*Secret, error) {
@@ -173,7 +173,7 @@ func (c *TokenAuth) RenewAccessorWithContext(ctx context.Context, accessor strin
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) Renew(token string, increment int) (*Secret, error) {
@@ -198,7 +198,7 @@ func (c *TokenAuth) RenewWithContext(ctx context.Context, token string, incremen
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *TokenAuth) RenewSelf(increment int) (*Secret, error) {
@@ -222,7 +222,7 @@ func (c *TokenAuth) RenewSelfWithContext(ctx context.Context, increment int) (*S
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 // RenewTokenAsSelf wraps RenewTokenAsSelfWithContext using context.Background.
@@ -250,7 +250,7 @@ func (c *TokenAuth) RenewTokenAsSelfWithContext(ctx context.Context, token strin
 	}
 	defer resp.Body.Close()
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 // RevokeAccessor wraps RevokeAccessorWithContext using context.Background.
