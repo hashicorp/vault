@@ -109,6 +109,12 @@ type ConsumptionBilling struct {
 }
 
 type BillingConfig struct {
+	// DisableConsumptionBilling disables the periodic consumption billing metrics
+	// worker that walks the entire KV store every 10 minutes. When set to true,
+	// the billing worker is not registered during post-unseal, preventing the
+	// memory and performance impact of the periodic KV store enumeration.
+	// This can be set via the VAULT_DISABLE_CONSUMPTION_BILLING environment variable.
+	DisableConsumptionBilling bool
 	// For testing purposes. The cadence at which billing metrics are updated
 	MetricsUpdateCadence time.Duration
 	// For testing purposes. The cadence at which plugin counts are sent from perf standby to active
@@ -116,95 +122,4 @@ type BillingConfig struct {
 	// For testin purposes. TestOverrideClock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
 	// If nil, the default functions from the time package are used
 	TestOverrideClock timeutil.Clock
-}
-
-func GetMonthlyBillingMetricPath(localPrefix string, now time.Time, billingMetric string) string {
-	// Normalize to avoid double slashes since our prefixes include trailing "/".
-	// Example: localPrefix="replicated/", billingMetric="maxKvCounts/" =>
-	// "replicated/2026/01/maxKvCounts/"
-	year := now.Year()
-	month := int(now.Month())
-	return fmt.Sprintf(BillingMonthStorageFormat, localPrefix, year, month, billingMetric)
-}
-
-func GetMonthlyBillingPath(localPrefix string, now time.Time) string {
-	return fmt.Sprintf(BillingMonthStorageFormat, localPrefix, now.Year(), int(now.Month()), "")
-}
-
-func GetAttributionMaxPath(localPathPrefix string, month time.Time, attributionMetricName string) string {
-	return GetMonthlyBillingMetricPath(localPathPrefix, month, AttributionMaxPrefix+attributionMetricName)
-}
-
-type DataProtectionCallCounts struct {
-	Transit   *atomic.Uint64 `json:"transit,omitempty"`
-	Transform *atomic.Uint64 `json:"transform,omitempty"`
-	GcpKms    *atomic.Uint64 `json:"gcpkms,omitempty"`
-}
-
-// IdentityTokenUnits tracks billing metrics for identity and authentication services
-type IdentityTokenUnits struct {
-	// OidcTokenDuration tracks the token duration units (seconds, not duration-adjusted) for billing purposes in memory.
-	// This value is normalized before flushing to storage and is reset to 0 after flush in UpdateOidcDurationAdjustedCount.
-	OidcTokenDuration *uberatomic.Float64 `json:"oidc,omitempty"`
-
-	// SpiffeJwt stores duration-adjusted JWT token units as float64
-	// We need to use the uberAtomic package to store atomic float64 values
-	SpiffeJwt *uberatomic.Float64 `json:"spiffe_jwt,omitempty"`
-}
-
-var _ logical.ConsumptionBillingManager = (*ConsumptionBilling)(nil)
-
-func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType string, data map[string]interface{}) error {
-	if s == nil {
-		return nil
-	}
-
-	switch mountType {
-	case "transit":
-		val, ok := data["count"].(uint64)
-		if !ok {
-			err := fmt.Errorf("invalid value type for transit")
-			return err
-		}
-
-		s.DataProtectionCallCounts.Transit.Add(val)
-	case "transform":
-		val, ok := data["count"].(uint64)
-		if !ok {
-			err := fmt.Errorf("invalid value type for transform")
-			return err
-		}
-
-		s.DataProtectionCallCounts.Transform.Add(val)
-	case "spiffe":
-		// SPIFFE JWT uses float64 for duration-adjusted units
-		val, ok := data["units"].(float64)
-		if !ok {
-			err := fmt.Errorf("invalid value type for spiffe")
-			return err
-		}
-
-		s.IdentityTokenUnits.SpiffeJwt.Add(val)
-	case "gcpkms":
-		val, ok := data["count"].(uint64)
-		if !ok {
-			err := fmt.Errorf("invalid value type for gcp kms")
-			return err
-		}
-
-		s.DataProtectionCallCounts.GcpKms.Add(val)
-	case "external-ca":
-		// External CA uses float64 for duration-adjusted units
-		val, ok := data["units"].(float64)
-		if !ok {
-			err := fmt.Errorf("invalid value type for external-ca")
-			return err
-		}
-
-		s.ExternalCaCertUnits.Add(val)
-	default:
-		err := fmt.Errorf("unknown metric type: %s", mountType)
-		return err
-	}
-	return nil
 }
