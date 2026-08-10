@@ -53,7 +53,7 @@ jobs:
       sample: ${{ steps.metadata.outputs.sample }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.vault-revision }}
       - if: inputs.vault-edition != 'ce'
@@ -113,7 +113,7 @@ jobs:
       id-token: write # vault-auth
       contents: read
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.vault-revision }}
       - if: needs.metadata.outputs.is-ent-repo == 'true'
@@ -219,7 +219,7 @@ jobs:
       - uses: ./.github/actions/install-tools
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         with:
           aws-access-key-id: ${{ steps.secrets.outputs.aws-access-key-id }}
           aws-secret-access-key: ${{ steps.secrets.outputs.aws-secret-access-key }}

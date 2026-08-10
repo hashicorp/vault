@@ -8,13 +8,13 @@ jobs:
   update-client-dependency:
     # we only want to bump the version in enterprise which will get backported to ce
     if: github.repository == 'hashicorp/vault-enterprise'
-    runs-on: [self-hosted, ubuntu-latest]
+    runs-on: [self-hosted, ubuntu-22.04-x64]
     permissions:
       id-token: write # vault-auth
       contents: read
 
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
         id: checkout
@@ -25,7 +25,7 @@ jobs:
 
       - name: Fetch secrets
         id: secrets
-        uses: hashicorp/vault-action@4c06c5ccf5c0761b6029f56cfb1dcf5565918a3b # v3.4.0
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
           url: ${{ steps.vault-auth.outputs.addr }}
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
@@ -41,7 +41,7 @@ jobs:
         run: pnpm up @hashicorp/vault-client-typescript
 
       - name: Open PR with updated dependency
-        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v8.1.0
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}
           branch: ui/automated-client-update-${{ github.run_id }}
