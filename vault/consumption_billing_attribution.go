@@ -131,13 +131,14 @@ func storeCertAttributionLocked(ctx context.Context, view logical.Storage, local
 	}
 
 	// Merge per-mount deltas from the incoming batch into the stored per-mount totals.
+	// Always take metadata (path, namespace, type, UUID) from the incoming entry —
+	// it reflects the mount's current state. Only the count is accumulated from
+	// storage so that totals are not lost across flushes.
 	for accessor, attr := range incomingMounts {
 		if prev, ok := existing.Mounts[accessor]; ok {
-			prev.Count = toFloat64(prev.Count) + toFloat64(attr.Count)
-			existing.Mounts[accessor] = prev
-		} else {
-			existing.Mounts[accessor] = attr
+			attr.Count = toFloat64(prev.Count) + toFloat64(attr.Count)
 		}
+		existing.Mounts[accessor] = attr
 	}
 
 	// Accumulate the cluster-wide total and stamp with the worker-run time so
