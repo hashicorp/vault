@@ -1,0 +1,3 @@
+```release-note:improvement
+core/seal (enterprise): Update Oracle Cloud library to enable seal integration with newer regions.
+```
