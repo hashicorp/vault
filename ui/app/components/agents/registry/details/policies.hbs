@@ -56,7 +56,12 @@
   </Hds::Text::Display>
 
   <div class="has-top-margin-12">
-    <Hds::Tabs @isParentVisible={{@isParentVisible}} @selectedTabIndex={{1}} as |T|>
+    <Hds::Tabs
+      @isParentVisible={{@isParentVisible}}
+      @selectedTabIndex={{this.selectedTabIndex}}
+      @onClickTab={{this.onClickTab}}
+      as |T|
+    >
       {{#each this.customTabs key="key" as |tab|}}
         <T.Tab data-test-tab={{tab.key}}>{{tab.label}}</T.Tab>
         <T.Panel data-test-panel={{tab.key}} class="has-top-padding-m">
