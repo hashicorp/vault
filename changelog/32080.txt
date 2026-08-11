@@ -1,0 +1,3 @@
+```release-note:bug
+agent/gcp: derive service account from `GOOGLE_APPLICATION_CREDENTIALS` instead of hardcoding `"default"` when `service_account` is not explicitly configured, fixing `Error 400: Invalid form of account ID` on Cloud Run and GCE with non-default service accounts
+```
