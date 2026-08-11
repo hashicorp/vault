@@ -2879,6 +2879,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.setupExpiration(expireLeaseStrategyFairsharing)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			return c.setupOAuthTokenDenylist()
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
 		})
 		setupFunctions = append(setupFunctions, c.loadAudits)
