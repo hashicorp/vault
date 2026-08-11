@@ -118,12 +118,16 @@ func ParseRotationConfigFromFieldData(d *framework.FieldData) (*ParsedRotationCo
 			}
 
 			result.Scheduler = cronSc
+			// Explicitly set the rotation period to 0 when using a schedule.
+			if result.RotationSchedule != "" {
+				result.RotationPeriod = time.Duration(0)
+			}
 		}
 	}
 
 	if windowOk {
 		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
-			return nil, fmt.Errorf("rotation_window does not apply to period")
+			return nil, fmt.Errorf("rotation_window does not apply to rotation_period")
 		}
 		rotationWindowSeconds := rotationWindowSecondsRaw.(int)
 		result.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
@@ -132,6 +136,10 @@ func ParseRotationConfigFromFieldData(d *framework.FieldData) (*ParsedRotationCo
 	if periodOk {
 		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
 		result.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+		// Explicitly set the rotation schedule to empty when using a period.
+		if result.RotationPeriod != 0 {
+			result.RotationSchedule = ""
+		}
 	}
 
 	if (windowOk && rotationWindowSecondsRaw.(int) != 0) && (!scheduleOk || rotationScheduleRaw.(string) == "") {
