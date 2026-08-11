@@ -51,9 +51,8 @@ func NewGCPAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	var err error
 
 	g := &gcpMethod{
-		logger:         conf.Logger,
-		mountPath:      conf.MountPath,
-		serviceAccount: "default",
+		logger:    conf.Logger,
+		mountPath: conf.MountPath,
 	}
 
 	typeRaw, ok := conf.Config["type"]
@@ -128,6 +127,13 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 	case typeGCE:
 		httpClient := cleanhttp.DefaultClient()
 
+		// For GCE, "default" is a valid metadata-server alias when no
+		// service_account is explicitly configured.
+		serviceAccountGCE := g.serviceAccount
+		if serviceAccountGCE == "" {
+			serviceAccountGCE = "default"
+		}
+
 		// Fetch token
 		{
 			req, err := http.NewRequest("GET", fmt.Sprintf(identityEndpoint, g.serviceAccount), nil)
@@ -172,13 +178,15 @@ func (g *gcpMethod) Authenticate(ctx context.Context, client *api.Client) (retPa
 		httpClient := oauth2.NewClient(ctx, tokenSource)
 
 		var serviceAccount string
-		if g.serviceAccount == "" && credentials != nil {
-			serviceAccount = credentials.ClientEmail
-		} else {
+		switch {
+		case g.serviceAccount != "":
+			// Explicitly configured — use it as-is.
 			serviceAccount = g.serviceAccount
-		}
-		if serviceAccount == "" {
-			retErr = errors.New("could not obtain service account from credentials (possibly Application Default Credentials are being used); a service account to authenticate as must be provided")
+		case credentials != nil && credentials.ClientEmail != "":
+			// Derive from GOOGLE_APPLICATION_CREDENTIALS / service account key.
+			serviceAccount = credentials.ClientEmail
+		default:
+			retErr = errors.New("could not obtain service account: no 'service_account' configured and credentials do not contain a client email (Application Default Credentials may be in use); set 'service_account' explicitly in the auto_auth config")
 			return
 		}
 
