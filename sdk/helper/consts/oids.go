@@ -9,5 +9,7 @@ const (
 	// Reserve everything under .1 for Vault
 	vaultOIDBase = hashicorpPEN + ".1"
 	// TPMAuthOIDBase is the OID prefix reserved for the tpm auth method
-	TPMAuthOIDBase = vaultOIDBase + ".1"
+	TPMAuthOIDBase     = vaultOIDBase + ".1"
+	TPMAuthOIDTPMID    = TPMAuthOIDBase + ".1"
+	TPMAuthOIDRoleName = TPMAuthOIDBase + ".2"
 )

@@ -14,6 +14,11 @@ export default class Router extends EmberRouter {
 Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
+      this.route('agents', function () {
+        this.route('registry', function () {
+          this.route('index', { path: '/' });
+        });
+      });
       this.route('dashboard');
       this.mount('config-ui');
       this.mount('sync');
