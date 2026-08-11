@@ -68,6 +68,10 @@ func (i *IdentityStore) resetDB() error {
 	return nil
 }
 
+func (i *IdentityStore) Cleanup(context.Context) {
+	i.oidcAuthCodeCache.c.Stop()
+}
+
 func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendConfig, logger log.Logger) (*IdentityStore, error) {
 	iStore := &IdentityStore{
 		view:                            config.StorageView,

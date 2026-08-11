@@ -805,6 +805,11 @@ type Core struct {
 	certCountConsumerJobInterval time.Duration
 
 	agentRegistry *AgentRegistry
+
+	// noSleepOnALPNHandlerStop disables the short sleep when an ALPN handler is to be
+	// stopped, giving time for RPC requests to drain.  This is only meant to
+	// be used in test code.
+	noSleepOnALPNHandlerStop bool
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1018,6 +1023,10 @@ type CoreConfig struct {
 	// When true, "/" in template output will cause an error
 	// When false (default), "/" is allowed
 	DenySlashInTemplatedPolicyPaths bool
+
+	// NoSleepOnALPNHandlerTop means we don't sleep when ALPN handlers are
+	// stopped to give time for RPC requests to drain.  This is needed for synctest.
+	NoSleepOnALPNHandlerStop bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1142,18 +1151,14 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		logger:               conf.Logger.Named("core"),
 		logLevel:             conf.LogLevel,
 
-		defaultLeaseTTL:             conf.DefaultLeaseTTL,
-		maxLeaseTTL:                 conf.MaxLeaseTTL,
-		removeIrrevocableLeaseAfter: conf.RemoveIrrevocableLeaseAfter,
-		sentinelTraceDisabled:       conf.DisableSentinelTrace,
-		cachingDisabled:             conf.DisableCache,
-		clusterName:                 conf.ClusterName,
-		clusterNetworkLayer:         conf.ClusterNetworkLayer,
-		clusterPeerClusterAddrsCache: func() *ttlcache.Cache[string, nodeHAConnectionInfo] {
-			c := ttlcache.New[string, nodeHAConnectionInfo](ttlcache.WithTTL[string, nodeHAConnectionInfo](3 * clusterHeartbeatInterval))
-			go c.Start()
-			return c
-		}(),
+		defaultLeaseTTL:                 conf.DefaultLeaseTTL,
+		maxLeaseTTL:                     conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:     conf.RemoveIrrevocableLeaseAfter,
+		sentinelTraceDisabled:           conf.DisableSentinelTrace,
+		cachingDisabled:                 conf.DisableCache,
+		clusterName:                     conf.ClusterName,
+		clusterNetworkLayer:             conf.ClusterNetworkLayer,
+		clusterPeerClusterAddrsCache:    ttlcache.New[string, nodeHAConnectionInfo](ttlcache.WithTTL[string, nodeHAConnectionInfo](3 * clusterHeartbeatInterval)),
 		enableMlock:                     !conf.DisableMlock,
 		rawEnabled:                      conf.EnableRaw,
 		introspectionEnabled:            conf.EnableIntrospection,
@@ -1212,6 +1217,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		enableUnauthDROperationToken:    new(atomic.Bool),
 		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
 		certCountConsumerJobInterval:    conf.CertCountConsumerJobInterval,
+		noSleepOnALPNHandlerStop:        conf.NoSleepOnALPNHandlerStop,
 	}
 
 	c.certCountManager = cert_count.InitCertificateCountManager(c.logger, c.certCountConsumerJobInterval)
@@ -2310,8 +2316,15 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 			return err
 		}
 
+		if cancelIface := c.activeContextCancelFunc.Load(); cancelIface != nil {
+			if cancel, _ := cancelIface.(context.CancelFunc); cancel != nil {
+				cancel()
+			}
+		}
 		ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
-		if err := c.postUnseal(ctx, ctxCancel, standardUnsealStrategy{}); err != nil {
+		c.activeContext = ctx
+		c.activeContextCancelFunc.Store(ctxCancel)
+		if err := c.postUnseal(ctx, standardUnsealStrategy{}); err != nil {
 			c.logger.Error("post-unseal setup failed", "error", err)
 			c.barrier.Seal()
 			c.logger.Warn("vault is sealed")
@@ -3023,7 +3036,7 @@ func (c *Core) handleMultisealRewrapping(ctx context.Context, logger log.Logger)
 // allowing any user operations. This allows us to setup any state that
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
-func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc, unsealer UnsealStrategy) (retErr error) {
+func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr error) {
 	if stopTrace := c.tracePostUnsealIfEnabled(); stopTrace != nil {
 		defer stopTrace()
 	}
@@ -3033,13 +3046,8 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// Clear any out
 	c.postUnsealFuncs = nil
 
-	// Create a new request context
-	c.activeContext = ctx
-	c.activeContextCancelFunc.Store(ctxCancelFunc)
-
 	defer func() {
 		if retErr != nil {
-			ctxCancelFunc()
 			_ = c.preSeal()
 		}
 	}()
@@ -3134,6 +3142,8 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		c.systemBackend.mfaBackend.usedCodes = ttlcache.New[string, any]()
 		go c.systemBackend.mfaBackend.usedCodes.Start()
 	}
+	go c.clusterPeerClusterAddrsCache.Start()
+
 	if c.systemBackend != nil {
 		// all mounts need to be initialized before activity log reporting
 		// starts, which happens in the post-unseal functions above.
@@ -3264,8 +3274,12 @@ func (c *Core) preSeal() error {
 	}
 
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
-		c.systemBackend.mfaBackend.usedCodes = nil
+		if c.systemBackend.mfaBackend.usedCodes != nil {
+			c.systemBackend.mfaBackend.usedCodes.Stop()
+			c.systemBackend.mfaBackend.usedCodes = nil
+		}
 	}
+	c.clusterPeerClusterAddrsCache.Stop()
 	if err := c.teardownLoginMFA(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down login MFA, error: %w", err))
 	}

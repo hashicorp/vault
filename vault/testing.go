@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -58,6 +59,8 @@ import (
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
+	"go.opencensus.io/stats/view"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -339,7 +342,6 @@ func testCoreConfig(t testing.TB, physicalBackend physical.Backend, logger log.L
 
 // TestCoreInit initializes the core with a single key, and returns
 // the key that must be used to unseal the core and a root token.
-// ignore-vault-test-core-usage
 func TestCoreInit(t testing.TB, core *Core) ([][]byte, string) {
 	t.Helper()
 	secretShares, _, root := TestCoreInitClusterWrapperSetup(t, core)
@@ -384,7 +386,6 @@ func TestCoreInitClusterWrapperSetup(t testing.TB, core *Core) ([][]byte, [][]by
 	return result.SecretShares, result.RecoveryShares, innerToken
 }
 
-// ignore-vault-test-core-usage
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
 	return core.Unseal(key)
 }
@@ -494,48 +495,6 @@ func testCoreAddSecretMount(t testing.TB, core *Core, token, kvVersion string) {
 	if resp.IsError() {
 		t.Fatal(err)
 	}
-}
-
-func TestCoreUnsealedBackend(t testing.TB, backend physical.Backend) (*Core, [][]byte, string) {
-	t.Helper()
-	logger := corehelpers.NewTestLogger(t)
-	conf := testCoreConfig(t, backend, logger)
-	conf.Seal = NewTestSeal(t, nil)
-	conf.NumExpirationWorkers = numExpirationWorkersTest
-
-	core, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	keys, token := TestCoreInit(t, core) // ignore-vault-test-core-usage
-	for _, key := range keys {
-		if _, err := TestCoreUnseal(core, TestKeyCopy(key)); err != nil { // ignore-vault-test-core-usage
-			t.Fatalf("unseal err: %s", err)
-		}
-	}
-
-	if err := core.UnsealWithStoredKeys(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-
-	if core.Sealed() {
-		t.Fatal("should not be sealed")
-	}
-
-	t.Cleanup(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("panic closing core during cleanup", "panic", r)
-			}
-		}()
-		err := core.ShutdownWait()
-		if err != nil {
-			t.Logf("shutdown returned error: %v", err)
-		}
-	})
-
-	return core, keys, token
 }
 
 // TestKeyCopy is a silly little function to just copy the key so that
@@ -1055,6 +1014,15 @@ func (c *TestCluster) Cleanup() {
 	})
 }
 
+// CleanupSyncTest is a wrapper for Cleanup.  Tests that use synctest cannot
+// rely on cleanup happening in t.Cleanup, but we want to discourage non-synctest
+// tests from calling the deprecated Cleanup.  This wrapper allows synctest tests
+// to call a non-deprecated func while still making it clear that any other tests
+// should not be calling Cleanup or CleanupSyncTest.
+func (c *TestCluster) CleanupSyncTest() {
+	c.Cleanup()
+}
+
 func (c *TestCluster) ensureCoresSealed() error {
 	for _, core := range c.Cores {
 		if err := core.Shutdown(); err != nil {
@@ -1099,6 +1067,8 @@ type TestClusterCore struct {
 	NodeID               string
 	certGetter           *reloadutil.CertificateGetter
 	bundleMaker          func() *PhysicalBackendBundle
+	apiListenerLayer     cluster.NetworkLayer
+	apiClient            cluster.NetworkLayer
 }
 
 func (tcc *TestClusterCore) APIAddress() net.Addr {
@@ -1199,6 +1169,18 @@ type TestClusterOptions struct {
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
 	DisableTLS      bool
+	// SkipKVMount disables creation of a kv mount with version KVVersion (default 1) under /secret
+	SkipKVMount bool
+	// TransactionalStorage is incompatible with PhysicalFactory; by default inmem non-transactional
+	// storage is used when conf.Physical/HAPhysical are nil, unless TransactionalStorage is true
+	TransactionalStorage bool
+
+	InmemNetworkListener bool
+
+	// SyncTest creates a cluster that is synctest-compatible.  This implies
+	// InmemNetworkListener and InmemClusterLayers.  SkipKVMount must be set
+	// explicitly however.
+	SyncTest bool
 }
 
 type TestPluginConfig struct {
@@ -1239,6 +1221,10 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		numCores = DefaultNumCores
 	} else {
 		numCores = opts.NumCores
+	}
+
+	if opts.SyncTest {
+		view.Stop()
 	}
 
 	certIPs := []net.IP{net.IPv6loopback, ipv4Loopback}
@@ -1341,6 +1327,29 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		testCluster.Cores = append(testCluster.Cores, &TestClusterCore{NodeID: fmt.Sprintf("core-%d", i)})
 	}
 
+	// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
+	// This allows Prometheus running in docker to scrape the cluster for metrics.
+	dnsNames := []string{"localhost", "host.docker.internal"}
+	if opts.InmemNetworkListener || opts.SyncTest {
+		servers, err := cluster.NewInmemLayerCluster("servers", numCores, testCluster.Logger)
+		require.NoError(t, err)
+
+		clients, err := cluster.NewInmemLayerCluster("clients", numCores, testCluster.Logger)
+		require.NoError(t, err)
+
+		servers.ConnectCluster(clients)
+
+		for _, server := range servers.Layers() {
+			// Have to call Listeners to ensure an address is available in Addrs
+			server.Listeners()
+			dnsNames = append(dnsNames, server.Addrs()[0].String())
+		}
+		for i, tcc := range testCluster.Cores {
+			tcc.apiListenerLayer = servers.Layers()[i]
+			tcc.apiClient = clients.Layers()[i]
+		}
+	}
+
 	//
 	// Certs generation
 	//
@@ -1356,9 +1365,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 			Subject: pkix.Name{
 				CommonName: "localhost",
 			},
-			// Include host.docker.internal for the sake of benchmark-vault running on MacOS/Windows.
-			// This allows Prometheus running in docker to scrape the cluster for metrics.
-			DNSNames:    []string{"localhost", "host.docker.internal"},
+			DNSNames:    dnsNames,
 			IPAddresses: certIPs,
 			ExtKeyUsage: []x509.ExtKeyUsage{
 				x509.ExtKeyUsageServerAuth,
@@ -1435,19 +1442,33 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	coreConfig := applyBaseConfig(base, scheme)
+	if opts.SyncTest {
+		coreConfig.NoSleepOnALPNHandlerStop = true
+	}
 
 	if coreConfig.ClusterName == "" {
 		coreConfig.ClusterName = t.Name()
 	}
 
+	if opts.PhysicalFactory != nil && opts.TransactionalStorage {
+		t.Fatal("PhysicalFactory is incompatible with TransactionalStorage")
+	}
 	if coreConfig.Physical == nil && opts.PhysicalFactory == nil {
-		coreConfig.Physical, err = physInmem.NewInmem(nil, testCluster.Logger)
+		fact := physInmem.NewInmem
+		if opts.TransactionalStorage {
+			fact = physInmem.NewTransactionalInmem
+		}
+		coreConfig.Physical, err = fact(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 	if coreConfig.HAPhysical == nil && opts.PhysicalFactory == nil {
-		haPhys, err := physInmem.NewInmemHA(nil, testCluster.Logger)
+		fact := physInmem.NewInmemHA
+		if opts.TransactionalStorage {
+			fact = physInmem.NewTransactionalInmemHA
+		}
+		haPhys, err := fact(nil, testCluster.Logger)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1463,7 +1484,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		testCluster.LicensePrivateKey = priKey
 	}
 
-	if opts.InmemClusterLayers {
+	if opts.InmemClusterLayers || opts.SyncTest {
 		if opts.ClusterLayers != nil {
 			t.Fatalf("cannot specify ClusterLayers when InmemClusterLayers is true")
 		}
@@ -1664,15 +1685,21 @@ func (cluster *TestCluster) StartCore(t testing.TB, idx int, opts *TestClusterOp
 	tcc.CoreConfig.Logger.Info("starting core", "core", idx)
 
 	// Set up listeners
-	addr := &net.TCPAddr{
-		IP: ipv4Loopback,
-	}
-	if opts.BaseListenPort != 0 {
-		addr.Port = opts.BaseListenPort + idx
-	}
-	ln, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		t.Fatal(err)
+	var ln net.Listener
+	if tcc.apiListenerLayer != nil {
+		ln = tcc.apiListenerLayer.Listeners()[0]
+	} else {
+		addr := &net.TCPAddr{
+			IP: ipv4Loopback,
+		}
+		if opts.BaseListenPort != 0 {
+			addr.Port = opts.BaseListenPort + idx
+		}
+		var err error
+		ln, err = net.ListenTCP("tcp", addr)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	tcc.CoreConfig.Logger.Info("started listener for core", "addr", ln.Addr().String())
 
@@ -1772,7 +1799,6 @@ func (tcc *TestClusterCore) newCore(t testing.TB, idx int, opts *TestClusterOpti
 
 	if localConfig.MetricsHelper == nil {
 		inm := metrics.NewInmemSink(10*time.Second, time.Minute)
-		metrics.DefaultInmemSignal(inm)
 		localConfig.MetricsHelper = metricsutil.NewMetricsHelper(inm, false)
 	}
 	if opts.CoreMetricSinkProvider != nil {
@@ -1826,10 +1852,11 @@ func setupClusterListener(t testing.TB, idx int, core *Core, coreConfig *CoreCon
 	clusterAddrGen := func(lns []net.Listener, port int) []*net.TCPAddr {
 		ret := make([]*net.TCPAddr, len(lns))
 		for i, ln := range lns {
-			addr := ln.Addr().(*net.TCPAddr)
 			ret[i] = &net.TCPAddr{
-				IP:   addr.IP,
 				Port: port,
+			}
+			if addr, ok := ln.Addr().(*net.TCPAddr); ok {
+				ret[i].IP = addr.IP
 			}
 		}
 		return ret
@@ -1913,7 +1940,7 @@ func (tc *TestCluster) initCores(t testing.TB, opts *TestClusterOptions) {
 
 	// Unseal other cores unless otherwise specified
 	numCores := len(tc.Cores)
-	if (opts == nil || !opts.KeepStandbysSealed) && numCores > 1 {
+	if !opts.KeepStandbysSealed && numCores > 1 {
 		for i := 1; i < numCores; i++ {
 			tc.Cores[i].Core.seal.SetCachedBarrierConfig(cfg)
 			for _, key := range bKeys {
@@ -1955,12 +1982,13 @@ func (tc *TestCluster) initCores(t testing.TB, opts *TestClusterOptions) {
 	tc.ID = cluster.ID
 
 	// Configure a secret engine (kv)
-	kvVersion := "1"
-	if opts != nil {
-		kvVersion = opts.KVVersion
+	if !opts.SkipKVMount {
+		kvVersion := opts.KVVersion
+		if kvVersion == "" {
+			kvVersion = "1"
+		}
+		testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 	}
-
-	testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
 }
 
 func (c *TestCluster) getAPIClient(t testing.TB, idx int) *api.Client {
@@ -1973,6 +2001,14 @@ func (c *TestCluster) getAPIClient(t testing.TB, idx int) *api.Client {
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
+	}
+	if tcc.apiClient != nil {
+		transport.DialTLSContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			hostname := strings.TrimSuffix(addr, ":443")
+			tlsConf := transport.TLSClientConfig.Clone()
+			tlsConf.ServerName = hostname
+			return tcc.apiClient.Dial(hostname, time.Second, tlsConf)
+		}
 	}
 	client := &http.Client{
 		Transport: transport,

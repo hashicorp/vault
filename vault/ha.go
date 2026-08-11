@@ -439,6 +439,13 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 	defer close(doneCh)
 	defer close(manualStepDownCh)
 	c.logger.Info("entering standby mode")
+	if cancelIface := c.activeContextCancelFunc.Load(); cancelIface != nil {
+		cancel, ok := cancelIface.(context.CancelFunc)
+		if ok && cancel != nil {
+			cancel()
+		}
+		c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	}
 
 	var g run.Group
 	newLeaderCh := addEnterpriseHaActors(c, &g)
@@ -600,7 +607,12 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		c.heldHALock = lock
 
 		// Create the active context
-		activeCtx, activeCtxCancel := context.WithCancel(namespace.RootContext(nil))
+		activeCtx, baseCancel := context.WithCancel(namespace.RootContext(nil))
+		c.logger.Trace("created active context", "ctx", fmt.Sprintf("%p", activeCtx))
+		activeCtxCancel := context.CancelFunc(func() {
+			c.logger.Trace("cancelling active context", "ctx", fmt.Sprintf("%p", activeCtx))
+			baseCancel()
+		})
 		c.activeContext = activeCtx
 		c.activeContextCancelFunc.Store(activeCtxCancel)
 
@@ -698,7 +710,7 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		}
 
 		// Attempt the post-unseal process
-		err = c.postUnseal(activeCtx, activeCtxCancel, standardUnsealStrategy{})
+		err = c.postUnseal(activeCtx, standardUnsealStrategy{})
 		if err == nil {
 			c.standby = false
 			c.activeTime = time.Now()

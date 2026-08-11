@@ -36,7 +36,9 @@ var (
 	sysInitialize = ceSysInitialize
 
 	sysClean = func(b *SystemBackend) func(context.Context) {
-		return nil
+		return func(context.Context) {
+			b.Core.certCountManager.StopConsumerJob()
+		}
 	}
 
 	sysActivityLogReporting = func(b *SystemBackend) {}
