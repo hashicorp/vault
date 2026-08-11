@@ -68,6 +68,12 @@
   <Frame.Main id="app-main-content" class={{if this.console.isOpen "main--console-open"}}>
     {{! outlet for app content }}
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
+    {{! Only prompt when the operator has enabled ui_telemetry AND the user has
+    not yet recorded a consent decision. A recorded accept/decline ensures that
+    the banner does not reappear. }}
+    {{#if this.analytics.shouldPromptConsent}}
+      <PageBanners::TelemetryConsent />
+    {{/if}}
     {{yield}}
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
       {{#if this.console.isOpen}}

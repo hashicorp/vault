@@ -4,11 +4,16 @@
  */
 
 import { module, test } from 'qunit';
-import { PREFERENCES, getPreference, setPreference } from 'vault/utils/preferences';
+import sinon from 'sinon';
+import { PREFERENCES, getPreference, hasPreference, setPreference } from 'vault/utils/preferences';
 
 module('Unit | Util | preferences', function (hooks) {
   hooks.beforeEach(function () {
     window.localStorage.clear();
+  });
+
+  hooks.afterEach(function () {
+    sinon.restore();
   });
 
   test('registry keys follow the vault:prefs:<name> convention', function (assert) {
@@ -46,5 +51,32 @@ module('Unit | Util | preferences', function (hooks) {
 
     setPreference('telemetryConsent', false);
     assert.false(getPreference('telemetryConsent'), 'reads back an updated value');
+  });
+
+  module('fails safe when localStorage is unavailable', function () {
+    test('getPreference returns the registered default when reads throw', function (assert) {
+      sinon.stub(window.localStorage, 'getItem').throws(new Error('localStorage unavailable'));
+
+      assert.false(getPreference('telemetryConsent'), 'falls back to the default instead of throwing');
+    });
+
+    test('hasPreference returns false when reads throw', function (assert) {
+      sinon.stub(window.localStorage, 'getItem').throws(new Error('localStorage unavailable'));
+
+      assert.false(hasPreference('telemetryConsent'), 'treats unreadable storage as "not stored"');
+    });
+
+    test('setPreference is a no-op when writes throw', function (assert) {
+      sinon.stub(window.localStorage, 'setItem').throws(new Error('quota exceeded'));
+
+      let error = null;
+      try {
+        setPreference('telemetryConsent', true);
+      } catch (e) {
+        error = e;
+      }
+
+      assert.strictEqual(error, null, 'does not throw when the write fails');
+    });
   });
 });
