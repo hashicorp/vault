@@ -1,0 +1,31 @@
+/** * Copyright IBM Corp. 2016, 2026 * SPDX-License-Identifier: BUSL-1.1 */
+
+<Hds::Alert
+  @type="page"
+  @color="neutral"
+  @icon="shield-check"
+  @onDismiss={{fn this.recordConsent "decline"}}
+  data-test-telemetry-consent-banner
+  as |AL|
+>
+  <AL.Title>Help us improve Vault</AL.Title>
+  <AL.Description>Share anonymous usage data, like feature use and navigation, to help improve Vault. Secrets and other
+    sensitive data are never collected. You can change this later in your Preferences.</AL.Description>
+  <AL.Button
+    @text="Accept"
+    @color="primary"
+    data-test-telemetry-consent-accept
+    {{on "click" (fn this.recordConsent "accept")}}
+  />
+  <AL.Button
+    @text="Decline"
+    @color="secondary"
+    data-test-telemetry-consent-decline
+    {{on "click" (fn this.recordConsent "decline")}}
+  />
+  {{! TODO: JIRA: https://hashicorp.atlassian.net/browse/VAULT-49016
+  Link is missing as the doc does not yet exist. This is fine as the banner
+  will not appear unless the ui_telemetry field is configured in vault config
+  file }}
+  <AL.LinkStandalone @color="primary" @icon="docs-link" @text="Learn more about the data we collect" @href="#" />
+</Hds::Alert>
