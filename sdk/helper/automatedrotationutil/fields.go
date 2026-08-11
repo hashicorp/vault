@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package automatedrotationutil
@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/rotation"
+	"github.com/robfig/cron/v3"
 )
 
 var (
@@ -51,53 +52,97 @@ type RotationInfoResponseParams struct {
 
 // ParseAutomatedRotationFields provides common field parsing to embedding structs.
 func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.FieldData) error {
-	rotationScheduleRaw, scheduleOk := d.GetOk("rotation_schedule")
-	rotationWindowSecondsRaw, windowOk := d.GetOk("rotation_window")
-	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
-	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
 	rotationPolicyRaw, policyOk := d.GetOk("rotation_policy")
 
-	if scheduleOk {
-		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
-			return ErrRotationMutuallyExclusiveFields
-		}
-		p.RotationSchedule = rotationScheduleRaw.(string)
-
-		// parse schedule to ensure it is valid
-		if p.RotationSchedule != "" {
-			_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
-			if err != nil {
-				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
-			}
-		}
+	// use common extraction helper
+	automatedRotationParams, err := ParseRotationConfigFromFieldData(d)
+	if err != nil {
+		return err
 	}
 
-	if windowOk {
-		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
-			return fmt.Errorf("rotation_window does not apply to period")
-		}
-		rotationWindowSeconds := rotationWindowSecondsRaw.(int)
-		p.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
-	}
-
-	if periodOk {
-		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
-		p.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
-	}
-
-	if (windowOk && rotationWindowSecondsRaw.(int) != 0) && !scheduleOk {
-		return fmt.Errorf("cannot use rotation_window without rotation_schedule")
-	}
-
-	if disableRotationOk {
-		p.DisableAutomatedRotation = disableRotation.(bool)
-	}
+	// set fields from response
+	p.RotationSchedule = automatedRotationParams.RotationSchedule
+	p.RotationWindow = automatedRotationParams.RotationWindow
+	p.RotationPeriod = automatedRotationParams.RotationPeriod
+	p.DisableAutomatedRotation = automatedRotationParams.DisableAutomatedRotation
 
 	if policyOk {
 		p.RotationPolicy = rotationPolicyRaw.(string)
 	}
 
 	return nil
+}
+
+// ParsedRotationConfig contains rotation configuration fields extracted and validated
+// from framework.FieldData. This struct represents the parsed input data, not a response.
+//
+// Use ParseRotationConfigFromFieldData to extract these fields from user input.
+// Use AutomatedRotationParams when you need the full parameter set including RotationPolicy.
+type ParsedRotationConfig struct {
+	RotationSchedule         string        `json:"rotation_schedule"`
+	RotationWindow           time.Duration `json:"rotation_window"`
+	RotationPeriod           time.Duration `json:"rotation_period"`
+	DisableAutomatedRotation bool          `json:"disable_automated_rotation"`
+
+	// parsed cron schedule
+	Scheduler *cron.SpecSchedule `json:"scheduler"`
+}
+
+// ParseRotationConfigFromFieldData extracts and validates rotation configuration from field data.
+// It performs the following validations:
+//   - Ensures rotation_schedule and rotation_period are mutually exclusive
+//   - Validates rotation_schedule is a valid CRON expression if provided
+//   - Ensures rotation_window is only used with rotation_schedule, not rotation_period
+//   - Converts duration fields from seconds to time.Duration
+//
+// Returns ParsedRotationConfig with extracted values, or an error if validation fails.
+func ParseRotationConfigFromFieldData(d *framework.FieldData) (*ParsedRotationConfig, error) {
+	rotationScheduleRaw, scheduleOk := d.GetOk("rotation_schedule")
+	rotationWindowSecondsRaw, windowOk := d.GetOk("rotation_window")
+	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
+	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
+
+	result := &ParsedRotationConfig{}
+
+	if scheduleOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
+			return nil, ErrRotationMutuallyExclusiveFields
+		}
+		result.RotationSchedule = rotationScheduleRaw.(string)
+
+		// parse schedule to ensure it is valid
+		if result.RotationSchedule != "" {
+			cronSc, err := rotation.DefaultScheduler.Parse(result.RotationSchedule)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+			}
+
+			result.Scheduler = cronSc
+		}
+	}
+
+	if windowOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
+			return nil, fmt.Errorf("rotation_window does not apply to period")
+		}
+		rotationWindowSeconds := rotationWindowSecondsRaw.(int)
+		result.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
+	}
+
+	if periodOk {
+		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
+		result.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+	}
+
+	if (windowOk && rotationWindowSecondsRaw.(int) != 0) && (!scheduleOk || rotationScheduleRaw.(string) == "") {
+		return nil, fmt.Errorf("cannot use rotation_window without rotation_schedule")
+	}
+
+	if disableRotationOk {
+		result.DisableAutomatedRotation = disableRotation.(bool)
+	}
+
+	return result, nil
 }
 
 type RotationJobOperationResponse struct {
@@ -191,6 +236,7 @@ func (p *AutomatedRotationParams) HandleRegisterRotationJob(ctx context.Context,
 		RotationSchedule: p.RotationSchedule,
 		RotationWindow:   p.RotationWindow,
 		RotationPeriod:   p.RotationPeriod,
+		RotationPolicy:   p.RotationPolicy,
 	}
 
 	b.Logger().Debug("Registering rotation job", "mount", req.MountPoint, "path", req.Path)
@@ -310,13 +356,13 @@ func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
 }
 
 func (p *AutomatedRotationParams) ShouldDeregisterRotationJob() bool {
-	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0)
+	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0 && p.RotationPolicy == "")
 }
 
 // HasNonzeroRotationValues returns true if either of the primary rotation values (RotationSchedule or RotationPeriod)
 // are not the zero value.
 func (p *AutomatedRotationParams) HasNonzeroRotationValues() bool {
-	return p.RotationSchedule != "" || p.RotationPeriod != 0
+	return p.RotationSchedule != "" || p.RotationPeriod != 0 || p.RotationPolicy != ""
 }
 
 // AddAutomatedRotationFieldsWithGroup adds rotation fields to the given field schema map
