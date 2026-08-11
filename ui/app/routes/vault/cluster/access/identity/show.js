@@ -7,6 +7,26 @@ import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
 import { service } from '@ember/service';
+import { fetchIdentityItems } from 'vault/utils/identity-helpers';
+
+const RELATED_IDENTITIES = {
+  entity: {
+    groups: [
+      {
+        identityType: 'group',
+        modelKey: 'groups',
+        idKeys: ['group_ids', 'direct_group_ids', 'inherited_group_ids'],
+      },
+    ],
+  },
+  group: {
+    members: [
+      { identityType: 'group', modelKey: 'groups', idKeys: ['member_group_ids'] },
+      { identityType: 'entity', modelKey: 'entities', idKeys: ['member_entity_ids'] },
+    ],
+    'parent-groups': [{ identityType: 'group', modelKey: 'groups', idKeys: ['parent_group_ids'] }],
+  },
+};
 
 export default class IdentityShowRoute extends Route {
   @service router;
@@ -25,13 +45,36 @@ export default class IdentityShowRoute extends Route {
     }
 
     const methodType = itemType === 'entity' ? 'entityReadById' : 'groupReadById';
-    const { data } = await this.api.identity[methodType](params.item_id);
-    const canAddAlias = (await this.capabilities.for('groupAlias').canCreate) || false;
+    const [response, canAddAlias] = await Promise.all([
+      this.api.identity[methodType](params.item_id),
+      this.capabilities.for('groupAlias').canCreate,
+    ]);
+    const relatedIdentities = await this.fetchRelatedIdentities(itemType, section, response.data);
 
     return hash({
-      model: { ...data, identityType: itemType, canAddAlias },
+      model: {
+        ...response.data,
+        ...relatedIdentities,
+        identityType: itemType,
+        canAddAlias: canAddAlias || false,
+      },
       section,
     });
+  }
+
+  async fetchRelatedIdentities(itemType, section, model) {
+    const identities = (RELATED_IDENTITIES[itemType]?.[section] || []).filter(({ idKeys }) =>
+      idKeys.some((key) => model[key]?.length)
+    );
+    const results = await Promise.allSettled(
+      identities.map(({ identityType }) => fetchIdentityItems({ identityType, api: this.api }))
+    );
+
+    return identities.reduce((related, { modelKey }, index) => {
+      const result = results[index];
+      related[modelKey] = result.status === 'fulfilled' ? result.value : [];
+      return related;
+    }, {});
   }
 
   afterModel(resolvedModel) {
