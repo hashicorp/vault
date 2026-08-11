@@ -815,7 +815,10 @@ func (c *Core) teardownLoginMFA() error {
 		c.mfaResponseAuthQueue = nil
 		c.mfaResponseAuthQueueLock.Unlock()
 
-		c.loginMFABackend.usedCodes = nil
+		if c.loginMFABackend.usedCodes != nil {
+			c.loginMFABackend.usedCodes.Stop()
+			c.loginMFABackend.usedCodes = nil
+		}
 
 		if err := c.loginMFABackend.ResetLoginMFAMemDB(); err != nil {
 			return err
