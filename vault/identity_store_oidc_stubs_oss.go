@@ -13,8 +13,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 func (i *IdentityStore) generatePluginIdentityToken(_ context.Context, _ logical.Storage, _ *MountEntry, _ string, _ time.Duration) (string, time.Duration, error) {
 	return "", 0, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported
 }

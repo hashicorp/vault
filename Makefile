@@ -182,7 +182,6 @@ prep: check-go-version
 	@if [ "$(SKIP_GEN)" = "1" ]; then \
 		echo "==> Skipping go generate (SKIP_GEN=1)"; \
 	else \
-		$(MAKE) clean; \
 		echo "==> Running go generate..."; \
 		GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES); \
 		(cd api && GOARCH= GOOS= $(GO_CMD) generate $(API_PACKAGES)); \
@@ -415,14 +414,10 @@ ci-copywriteheaders:
 	cd sdk && $(CURDIR)/scripts/copywrite-exceptions.sh
 	cd shamir && $(CURDIR)/scripts/copywrite-exceptions.sh
 
-.PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker clean dev
+.PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker dev
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
 .PHONY: all-packages
 all-packages:
 	@echo $(ALL_PACKAGES) | tr ' ' '\n'
-
-.PHONY: clean
-clean:
-	@echo "==> Cleaning..."
