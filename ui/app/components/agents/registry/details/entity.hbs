@@ -1,0 +1,69 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-top-margin-s has-bottom-margin-s has-padding-s"
+  data-test-card-container="merged-ids"
+>
+  <Hds::Text::Display @color="faint" class="is-block">Merged IDs
+    <Hds::TooltipButton
+      @placement="right"
+      aria-label="More information"
+      class="is-v-centered"
+      @text="Merged IDs are a list of UUIDs belonging to deleted entities that were combined into a single surviving entity, maintained by Vault to ensure token continuity and a clear audit trail."
+    >
+      <Hds::Icon @name="info" />
+    </Hds::TooltipButton>
+  </Hds::Text::Display>
+  {{#if @data.entity.merged_entity_ids}}
+    {{#each @data.entity.merged_entity_ids as |mergedId|}}
+      <Hds::Copy::Snippet @textToCopy={{mergedId}} @color="secondary" />
+    {{/each}}
+  {{else}}
+    <Hds::Text::Body @color="faint" class="is-block">None</Hds::Text::Body>
+  {{/if}}
+</Hds::Card::Container>
+
+{{#if @data.groups}}
+  <ListTable @data={{@data.groups}} @columns={{this.columns}} @hidePagination={{true}} class="has-top-margin-s">
+    <:customTableItem as |data column|>
+      {{#let (get data column.key) as |value|}}
+        {{#if (eq column.key "name")}}
+          <Hds::Link::Inline @route="vault.cluster.access.identity.show" @models={{array "groups" data.id "details"}}>
+            {{value}}
+          </Hds::Link::Inline>
+        {{else if (eq column.key "policies")}}
+          {{#if (gt value.length 0)}}
+            <Hds::Layout::Flex @gap="8" @wrap="wrap" as |LF|>
+              {{#each value as |policy|}}
+                <LF.Item>
+                  <Hds::Badge @text={{policy}} @color="neutral" @size="small" />
+                </LF.Item>
+              {{/each}}
+            </Hds::Layout::Flex>
+          {{else}}
+            <Hds::Text::Body @color="faint" @size="200" class="is-block">No policy in this group yet</Hds::Text::Body>
+          {{/if}}
+        {{/if}}
+      {{/let}}
+    </:customTableItem>
+  </ListTable>
+{{/if}}
+
+{{#if @data.entity.metadata}}
+  <Hds::Text::Display>Entity metadata</Hds::Text::Display>
+
+  <div data-test-widget="entity-metadata">
+    {{#each-in @data.entity.metadata as |key value|}}
+      <div class="has-top-bottom-margin-12">
+        <Hds::Form::TextInput::Field @value={{value}} name={{key}} readonly as |F|>
+          <F.Label>{{humanize key}}</F.Label>
+        </Hds::Form::TextInput::Field>
+      </div>
+    {{/each-in}}
+  </div>
+{{/if}}

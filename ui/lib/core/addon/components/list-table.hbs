@@ -7,7 +7,8 @@
   @model={{this.paginatedTableData}}
   @columns={{@columns}}
   @isSelectable={{if @selectionKeyField true false}}
-  @hasResizableColumns={{true}}
+  @hasResizableColumns={{this.hasResizableColumns}}
+  @childrenKey={{@childrenKey}}
   @onSelectionChange={{@onSelectionChange}}
   class="has-bottom-margin-s"
   {{did-update this.resetPagination @data}}
@@ -25,16 +26,30 @@
           <B.Td data-test-table-data="popupMenu">
             {{yield B.data to="popupMenu"}}
           </B.Td>
-        {{else}}
-          <B.Td data-test-table-data={{column.key}} class="is-inline text-overflow-ellipsis">
+        {{else if column.isExpandable}}
+          {{! expandable columns must use Th for the expanding action to render }}
+          <B.Th data-test-table-data={{column.key}} class="is-inline text-overflow-ellipsis align-content-center">
             {{#if column.customTableItem}}
-              {{yield B.data to="customTableItem"}}
+              {{yield B.data column to="customTableItem"}}
             {{else}}
               {{#let (get B.data column.key) as |value|}}
                 {{! stringify value if it is an array or object, otherwise render directly }}
                 {{if (this.isObject value) (stringify value) value}}
               {{/let}}
             {{/if}}
+          </B.Th>
+        {{else}}
+          <B.Td data-test-table-data={{column.key}} class="is-inline text-overflow-ellipsis">
+            {{#let (get B.data column.key) as |value|}}
+              {{#if column.customTableItem}}
+                {{! Pass row data and column definition so consumers can render custom content for multiple columns }}
+                {{! Consumers can compute the value from B.data, but pass the resolved value for convenience }}
+                {{yield B.data column value to="customTableItem"}}
+              {{else}}
+                {{! stringify value if it is an array or object, otherwise render directly }}
+                {{if (this.isObject value) (stringify value) value}}
+              {{/if}}
+            {{/let}}
           </B.Td>
         {{/if}}
       {{/each}}
@@ -42,7 +57,7 @@
   </:body>
 </Hds::AdvancedTable>
 {{! WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage }}
-{{#if this.renderPagination}}
+{{#if (and this.renderPagination (not @hidePagination))}}
   <Hds::Pagination::Numbered
     class="has-bottom-margin-m is-fullwidth"
     @currentPage={{this.currentPage}}

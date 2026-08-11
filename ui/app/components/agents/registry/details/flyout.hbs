@@ -1,0 +1,31 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Flyout id="agent-registry-flyout" @onClose={{@onClose}} @size="large" data-test-flyout as |M|>
+  <M.Header @icon="robot">
+    {{@data.agent.display_name}}
+  </M.Header>
+  <M.Body>
+    {{#if @data}}
+      <Hds::Tabs @selectedTabIndex={{this.selectedTabIndex}} @onClickTab={{this.onClickTab}} as |T|>
+        {{#each this.tabs as |tab|}}
+          <T.Tab @key={{tab.key}} data-test-tab={{tab.key}}>{{tab.label}}</T.Tab>
+          <T.Panel @key={{tab.key}} class="has-top-bottom-margin-24" data-test-panel={{tab.key}}>
+            {{component
+              (concat "agents/registry/details/" tab.key)
+              data=@data
+              isParentVisible=(eq tab.key this.selectedTab)
+            }}
+          </T.Panel>
+        {{/each}}
+      </Hds::Tabs>
+    {{else}}
+      <LayoutLoading />
+    {{/if}}
+  </M.Body>
+  <M.Footer>
+    <Hds::Button @color="secondary" @text="Close details" {{on "click" @onClose}} data-test-button="Close details" />
+  </M.Footer>
+</Hds::Flyout>

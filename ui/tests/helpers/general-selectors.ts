@@ -47,7 +47,7 @@ export const GENERAL = {
   /* ────── Menus & Lists ────── */
   dropdownToggle: (text: string) => `[data-test-dropdown="${text}"]`, // Use when dropdown toggle has text
   menuTrigger: '[data-test-popup-menu-trigger]', // Use when dropdown toggle is just an icon
-  menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
+  menuItem: (name?: string) => (name ? `[data-test-popup-menu="${name}"]` : '[data-test-popup-menu]'),
   listItem: (label: string) => (label ? `[data-test-list-item="${label}"]` : '[data-test-list-item]'),
   listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
@@ -56,17 +56,22 @@ export const GENERAL = {
   table: (title: string) => `[data-test-table="${title}"]`,
   tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
+  tableDataNested: (idx: number, key: string) =>
+    `[role="row"]:nth-of-type(${idx + 1}) [data-test-table-data="${key}"]`,
   tableColumnHeader: (col: number, { isAdvanced = false } = {}) =>
     `${isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'}:nth-child(${col})`, // number is not 0-indexed, first column header is 1
   tableColumnHeaderSortButton: (col: number, { isAdvanced = false } = {}) =>
     `${
       isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'
     }:nth-child(${col}) .hds-advanced-table__th-button--sort`, // number is not 0-indexed, first column header is 1
+  tableExpandableColumn: (idx?: number, key?: string) =>
+    `${GENERAL.tableData(idx, key)} [data-advanced-table-child-focusable]`,
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
   confirmModalInput: '[data-test-confirmation-modal-input]',
   confirmMessage: '[data-test-confirm-action-message]',
+  confirmTitle: '[data-test-confirm-action-title]',
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
@@ -189,6 +194,8 @@ export const GENERAL = {
     header: (title: string) => `[data-test-modal-header="${title}"]`,
     body: (title: string) => `[data-test-modal-body="${title}"]`,
   },
+  confirmModal: '[data-test-confirm-modal]',
+  wizardIntro: '[data-test-intro]',
 
   /* ────── Misc ────── */
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),

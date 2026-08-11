@@ -1,0 +1,75 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Agent registry" @icon="robot">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:description>
+    Agent Registry gives you a centralized view of all AI agents registered in Vault -- their identities, assigned policies,
+    and operational status. Register agents via CLI or API.
+  </:description>
+  <:actions>
+    {{#if this.showIntroButton}}
+      <Hds::Button
+        @color="secondary"
+        @icon="bulb"
+        @text="New to Agent registry?"
+        {{on "click" this.showIntroPage}}
+        data-test-button="intro"
+      />
+    {{/if}}
+    {{#if (and this.showContent @model.agents.length)}}
+      <Hds::Button
+        @text="Export"
+        @color="secondary"
+        @icon="download"
+        {{on "click" this.exportRegistrations}}
+        data-test-agents-registry-export
+      />
+    {{/if}}
+  </:actions>
+</Page::Header>
+
+{{#if this.showWizard}}
+  <Wizard::AgentRegistry::AgentRegistryWizard
+    @isIntroModal={{this.shouldRenderIntroModal}}
+    @onRefresh={{this.refreshAgentsList}}
+  />
+{{/if}}
+
+{{#if this.showContent}}
+  {{#if @model.agents.length}}
+    <Agents::Registry::Table @model={{@model}} @onClick={{this.openFlyout}} />
+  {{else}}
+    {{! show empty state if no agents}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No agents yet" @titleTag="h2" @icon="skip" data-test-empty-state-title />
+      <A.Body
+        @text="Your agents will be listed here. Register an agent in CLI or API to get started."
+        data-test-empty-state-message
+      />
+      <A.Footer as |F|>
+        <F.Button
+          @color="secondary"
+          @icon="reload"
+          @text="Refresh"
+          {{on "click" this.refreshAgentsList}}
+          data-test-button="refresh-agents-list"
+        />
+        <F.LinkStandalone
+          @icon="external-link"
+          @iconPosition="trailing"
+          @text="Register via CLI"
+          @href={{doc-link "/vault/api-docs/secret/agent-registry"}}
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
+  {{/if}}
+{{/if}}
+
+{{#if this.showFlyout}}
+  <Agents::Registry::Details::Flyout @data={{this.flyoutData}} @onClose={{this.onFlyoutClose}} />
+{{/if}}
