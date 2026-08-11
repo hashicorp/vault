@@ -125,4 +125,41 @@ module('Integration | Component | agents/registry/details/flyout', function (hoo
     assert.dom(GENERAL.hdsTabPanel('entity')).doesNotHaveAttribute('hidden', 'shows the clicked tab panel');
     assert.dom(GENERAL.hdsTabPanel('agent')).hasAttribute('hidden', '', 'hides the previous panel');
   });
+
+  test('policy detail inner tabs are all clickable', async function (assert) {
+    await this.renderComponent();
+
+    await click(GENERAL.hdsTab('policies'));
+    assert.dom(GENERAL.hdsTab('policies')).hasAttribute('aria-selected', 'true', 'policies tab is selected');
+
+    // terraform tab is selected by default inside the policies panel
+    assert
+      .dom(GENERAL.hdsTab('terraform'))
+      .hasAttribute('aria-selected', 'true', 'terraform tab is selected by default');
+    assert
+      .dom(GENERAL.hdsTabPanel('terraform'))
+      .doesNotHaveAttribute('hidden', 'terraform panel is visible by default');
+
+    await click(GENERAL.hdsTab('allowed-actions'));
+    assert
+      .dom(GENERAL.hdsTab('allowed-actions'))
+      .hasAttribute('aria-selected', 'true', 'allowed actions tab becomes selected');
+    assert
+      .dom(GENERAL.hdsTabPanel('terraform'))
+      .hasAttribute('hidden', '', 'terraform panel is hidden after switching away');
+
+    await click(GENERAL.hdsTab('cli'));
+    assert.dom(GENERAL.hdsTab('cli')).hasAttribute('aria-selected', 'true', 'CLI tab becomes selected');
+    assert
+      .dom(GENERAL.hdsTabPanel('cli'))
+      .doesNotHaveAttribute('hidden', 'CLI panel is visible after clicking CLI tab');
+
+    await click(GENERAL.hdsTab('terraform'));
+    assert
+      .dom(GENERAL.hdsTab('terraform'))
+      .hasAttribute('aria-selected', 'true', 'terraform tab can be re-selected');
+    assert
+      .dom(GENERAL.hdsTabPanel('terraform'))
+      .doesNotHaveAttribute('hidden', 'terraform panel is visible again');
+  });
 });
