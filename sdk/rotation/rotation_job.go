@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package rotation
@@ -96,8 +96,8 @@ func (s *RotationJob) Validate() error {
 		return fmt.Errorf("ReqPath is required")
 	}
 
-	if s.Schedule.RotationSchedule == "" && s.Schedule.RotationPeriod.Seconds() == 0 {
-		return fmt.Errorf("RotationSchedule or RotationPeriod is required to set up rotation job")
+	if (s.Schedule.RotationSchedule == "" && s.Schedule.RotationPeriod.Seconds() == 0) && s.RotationPolicy == "" {
+		return fmt.Errorf("must specify one of rotation_schedule, rotation_period, or rotation_policy to register a rotation job")
 	}
 
 	return nil
