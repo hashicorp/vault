@@ -1,0 +1,40 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container
+  @level="base"
+  @hasBorder={{true}}
+  @background="neutral-secondary"
+  class="has-padding-m"
+  data-test-card-container="feature-spotlight"
+  ...attributes
+>
+  <Hds::Text::Display @weight="semibold" data-test-text-display={{@title}}>
+    {{@title}}
+  </Hds::Text::Display>
+
+  <Hds::Layout::Flex @align="start" @gap="16" class="has-top-margin-m has-bottom-margin-xs" as |LF|>
+    <LF.Item class="is-flex-1 is-min-width-0">
+      <Hds::Text::Body @tag="p" @size="200" @color="primary" data-test-text-body="feature-spotlight-description">
+        {{@description}}
+      </Hds::Text::Body>
+    </LF.Item>
+
+    {{#if @imageSrc}}
+      <LF.Item>
+        <img src={{@imageSrc}} alt={{@title}} width="100" />
+      </LF.Item>
+    {{/if}}
+  </Hds::Layout::Flex>
+
+  <Hds::Link::Standalone
+    @text="Learn more"
+    @href={{doc-link @link}}
+    @icon="arrow-right"
+    @iconPosition="trailing"
+    @isHrefExternal={{true}}
+    data-test-link-to="feature-spotlight-learn-more"
+  />
+</Hds::Card::Container>

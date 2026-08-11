@@ -86,6 +86,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(GENERAL.emptyState('secrets-engines')).exists();
     assert.dom(GENERAL.textDisplay('Learn more')).exists();
     assert.dom(GENERAL.textDisplay('Quick actions')).exists();
+    assert
+      .dom(GENERAL.cardContainer('feature-spotlight'))
+      .doesNotExist('feature spotlight card is not shown for community');
     assert.dom(GENERAL.textDisplay('Cluster information')).doesNotExist();
     assert.dom(GENERAL.textDisplay('Cluster replication')).doesNotExist();
     assert.dom(GENERAL.textDisplay('Client count')).doesNotExist();
@@ -298,6 +301,27 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(GENERAL.textDisplay('Client count')).exists();
       assert.dom(GENERAL.textDisplay('Replication')).doesNotExist();
     });
+  });
+
+  test('it shows the feature spotlight card on enterprise', async function (assert) {
+    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
+    await this.renderComponent();
+
+    assert
+      .dom(GENERAL.cardContainer('feature-spotlight'))
+      .exists('feature spotlight card is visible on enterprise');
+    assert.dom(GENERAL.textDisplay('New Agent Registry in Vault')).hasText('New Agent Registry in Vault');
+  });
+
+  test('it does not show the feature spotlight card on community', async function (assert) {
+    this.version.version = '1.13.1';
+    this.version.type = 'community';
+    await this.renderComponent();
+
+    assert
+      .dom(GENERAL.cardContainer('feature-spotlight'))
+      .doesNotExist('feature spotlight card is not shown for community');
   });
 
   test('it shows the learn more card on community', async function (assert) {

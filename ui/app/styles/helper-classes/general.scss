@@ -120,6 +120,11 @@
   white-space: nowrap;
 }
 
+.word-wrap {
+  overflow-wrap: anywhere;
+  text-wrap: auto;
+}
+
 // screen reader only
 .sr-only {
   border: 0;

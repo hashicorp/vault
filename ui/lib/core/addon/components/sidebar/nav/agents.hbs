@@ -1,0 +1,24 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppSideNav::Portal
+  @ariaLabel="Agents Navigation Links"
+  tabindex="0"
+  role="region"
+  data-test-sidebar-nav-panel="Agentic security"
+  as |Nav|
+>
+  <Nav.BackLink
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  <Nav.Title data-test-sidebar-nav-heading="Agentic security">Agentic security</Nav.Title>
+
+  <Nav.Link @route="vault.cluster.agents.registry" @text="Agent registry" data-test-sidebar-nav-link="Agent registry" />
+</Hds::AppSideNav::Portal>
