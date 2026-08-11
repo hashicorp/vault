@@ -1127,6 +1127,67 @@ func TestListener_parseChrootNamespaceSettings(t *testing.T) {
 	}
 }
 
+// TestListener_parseOperatorNamespaceSettings exercises the listener receiver parseOperatorNamespaceSettings.
+// This test validates that the operator_namespace_path setting is properly canonicalized.
+func TestListener_parseOperatorNamespaceSettings(t *testing.T) {
+	tests := map[string]struct {
+		rawOperatorNamespacePath      any
+		expectedOperatorNamespacePath string
+		isErrorExpected               bool
+		errorMessage                  string
+	}{
+		"nil": {
+			isErrorExpected: false,
+		},
+		"empty_string": {
+			rawOperatorNamespacePath:      "",
+			expectedOperatorNamespacePath: "",
+			isErrorExpected:               false,
+		},
+		"bad_type": {
+			rawOperatorNamespacePath: &Listener{}, // Unsure how we'd ever see this really.
+			isErrorExpected:          true,
+			errorMessage:             "invalid value for operator_namespace_path",
+		},
+		"good": {
+			rawOperatorNamespacePath:      "operator",
+			expectedOperatorNamespacePath: "operator/",
+			isErrorExpected:               false,
+		},
+		"good_with_trailing_slash": {
+			rawOperatorNamespacePath:      "operator/",
+			expectedOperatorNamespacePath: "operator/",
+			isErrorExpected:               false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Configure listener with raw values
+			l := &Listener{
+				OperatorNamespacePathRaw: tc.rawOperatorNamespacePath,
+			}
+
+			err := l.parseOperatorNamespaceSettings()
+
+			switch {
+			case tc.isErrorExpected:
+				require.Error(t, err)
+				require.ErrorContains(t, err, tc.errorMessage)
+			default:
+				// Assert we got the relevant values.
+				require.NoError(t, err)
+				require.Equal(t, tc.expectedOperatorNamespacePath, l.OperatorNamespacePath)
+
+				// Ensure the state was modified for the raw values.
+				require.Nil(t, l.OperatorNamespacePathRaw)
+			}
+		})
+	}
+}
+
 // TestListener_parseRedactionSettings exercises the listener receiver parseRedactionSettings.
 // We check various inputs to ensure we can parse the values as expected and
 // assign the relevant value on the SharedConfig struct.
