@@ -52,11 +52,14 @@ interface OnSelectionArgs {
 type OnSelectionChange = (callbackArgs: OnSelectionArgs) => void;
 
 interface Args {
-  data: Array<object>;
+  data: Array<Record<string, unknown>>;
   columns: TableColumn[];
   selectionKeyField?: string;
+  childrenKey?: string;
+  hasResizableColumns?: boolean; // when false, column resizing is disabled; defaults to true unless expandable rows are present
   page?: number; // optional page number to set current page, needed to keep pagination sync with url query param
   pageSize?: number; // optional page size, needed to keep pagination sync with url query param & keep page size
+  hidePagination?: boolean; // when true, pagination controls are not rendered
   onSelectionChange?: OnSelectionChange;
   onPageChange?: CallableFunction;
   onPageSizeChange?: CallableFunction;
@@ -73,6 +76,19 @@ export default class ListTable extends Component<Args> {
 
     this.currentPage = args.page || 1;
     this.pageSize = args.pageSize || 10;
+  }
+
+  get hasResizableColumns() {
+    // explicit arg takes precedence
+    if (this.args.hasResizableColumns !== undefined) {
+      return this.args.hasResizableColumns;
+    }
+    // if there are nested rows, resizable columns must be disabled
+    // check if there are children defined in the data structure or the childrenKey arg is present
+    if (this.args.childrenKey) {
+      return false;
+    }
+    return !this.args.data.some((item) => item['children']);
   }
 
   get paginatedTableData() {

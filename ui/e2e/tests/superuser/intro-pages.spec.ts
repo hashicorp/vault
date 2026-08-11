@@ -177,6 +177,29 @@ test('intro pages workflow', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'New to ACL policies?' })).not.toBeVisible();
   });
 
+  await test.step('Verify agent registry intro page content and workflow', async () => {
+    await page.getByRole('link', { name: 'Back to main navigation' }).click();
+    await page.getByRole('link', { name: 'Agentic security' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Register and govern AI agent' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Register via CLI' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Skip' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View documentation' })).toBeVisible();
+    await page.getByRole('button', { name: 'Skip' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Register and govern AI agent' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'New to Agent registry?' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'New to Agent registry?' }).click();
+    await expect(page.getByText('Register and govern AI agent')).toBeVisible();
+    await expect(
+      page.getByLabel('Register and govern AI agent').getByRole('link', { name: 'Register via CLI' })
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Close' }).click();
+  });
+
   await test.step('cleanup', async () => {
     await page.goto('dashboard');
     await page.getByRole('link', { name: 'Access control' }).click();

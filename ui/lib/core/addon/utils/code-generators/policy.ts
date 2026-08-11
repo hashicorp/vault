@@ -50,6 +50,7 @@ export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.p
 export const policySnippetArgs = (policyName: string, policy: string) => {
   const formattedPolicy = formatEot(policy);
   const resourceArgs = { name: `"${policyName}"`, policy: formattedPolicy };
+
   return {
     terraform: { resource: 'vault_policy', resourceArgs },
     cli: { command: `policy write ${policyName}`, content: `- ${formattedPolicy}` },

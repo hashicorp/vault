@@ -1,0 +1,78 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Table @caption="Policy list" data-test-table="policy-list">
+  <:head as |H|>
+    <H.Tr>
+      <H.Th>Level</H.Th>
+      <H.Th>Source</H.Th>
+      <H.Th>Policy</H.Th>
+    </H.Tr>
+  </:head>
+  <:body as |B|>
+    {{#each @data.agent.ceiling_policy as |policy|}}
+      <B.Tr>
+        <B.Td>Ceiling</B.Td>
+        <B.Td>{{@data.agent.display_name}}</B.Td>
+        <B.Td>
+          <Hds::Link::Inline @route="vault.cluster.policy.show" @models={{array "acl" policy}}>
+            {{policy}}
+          </Hds::Link::Inline>
+        </B.Td>
+      </B.Tr>
+    {{/each}}
+
+    {{#each @data.entity.policies as |policy|}}
+      <B.Tr>
+        <B.Td>Entity</B.Td>
+        <B.Td>{{@data.entity.name}}</B.Td>
+        <B.Td>
+          <Hds::Link::Inline @route="vault.cluster.policy.show" @models={{array "acl" policy}}>
+            {{policy}}
+          </Hds::Link::Inline>
+        </B.Td>
+      </B.Tr>
+    {{/each}}
+
+    {{#each this.groupPolicies as |groupPolicy|}}
+      <B.Tr>
+        <B.Td>Group</B.Td>
+        <B.Td>{{groupPolicy.name}}</B.Td>
+        <B.Td>
+          <Hds::Link::Inline @route="vault.cluster.policy.show" @models={{array "acl" groupPolicy.policy}}>
+            {{groupPolicy.policy}}
+          </Hds::Link::Inline>
+        </B.Td>
+      </B.Tr>
+    {{/each}}
+  </:body>
+</Hds::Table>
+
+<div class="has-top-bottom-margin-24">
+  <Hds::Text::Display @tag="h2" @weight="semibold">
+    Policy details
+  </Hds::Text::Display>
+
+  <div class="has-top-margin-12">
+    <Hds::Tabs @isParentVisible={{@isParentVisible}} @selectedTabIndex={{1}} as |T|>
+      {{#each this.customTabs key="key" as |tab|}}
+        <T.Tab data-test-tab={{tab.key}}>{{tab.label}}</T.Tab>
+        <T.Panel data-test-panel={{tab.key}} class="has-top-padding-m">
+          {{#if (eq tab.key "allowed-actions")}}
+            <PolicyAllowedActions @aggregatedPolicy={{@data.aggregatePolicy}} @isCard={{true}} />
+          {{else}}
+            <Hds::CodeBlock
+              @language={{or tab.language "hcl"}}
+              @value={{tab.snippet}}
+              @hasLineNumbers={{false}}
+              @hasCopyButton={{true}}
+              data-test-field={{tab.key}}
+            />
+          {{/if}}
+        </T.Panel>
+      {{/each}}
+    </Hds::Tabs>
+  </div>
+</div>

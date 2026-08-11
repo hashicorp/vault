@@ -5,6 +5,7 @@
 
 // add all handlers here
 // individual lookup done in mirage config
+import agentRegistry from './agent-registry';
 import base from './base';
 import chrootNamespace from './chroot-namespace';
 import clients from './clients';
@@ -24,6 +25,7 @@ import replication from './replication';
 import sync from './sync';
 
 export {
+  agentRegistry,
   base,
   chrootNamespace,
   clients,
