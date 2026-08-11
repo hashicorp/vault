@@ -4,6 +4,8 @@
  */
 
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { policySnippetArgs } from 'core/utils/code-generators/policy';
 import { terraformResourceTemplate } from 'core/utils/code-generators/terraform';
 import { cliTemplate } from 'core/utils/code-generators/cli';
@@ -16,6 +18,12 @@ interface Args {
 }
 
 export default class AgentRegistryDetailsPoliciesComponent extends Component<Args> {
+  @tracked selectedTabIndex = 1;
+
+  @action
+  onClickTab(_event: Event, index: number) {
+    this.selectedTabIndex = index;
+  }
   get groupPolicies() {
     return this.args.data.groups.flatMap((group) =>
       (group.policies ?? []).map((policy) => ({
