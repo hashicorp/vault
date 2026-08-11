@@ -67,11 +67,16 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
 			}
 		}
+
+		// Explicitly set the rotation period to 0 when using a schedule.
+		if p.RotationSchedule != "" {
+			p.RotationPeriod = time.Duration(0)
+		}
 	}
 
 	if windowOk {
 		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
-			return fmt.Errorf("rotation_window does not apply to period")
+			return fmt.Errorf("rotation_window does not apply to rotation_period")
 		}
 		rotationWindowSeconds := rotationWindowSecondsRaw.(int)
 		p.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
@@ -80,6 +85,11 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 	if periodOk {
 		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
 		p.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+
+		// Explicitly set the rotation schedule to empty when using a period.
+		if p.RotationPeriod != 0 {
+			p.RotationSchedule = ""
+		}
 	}
 
 	if (windowOk && rotationWindowSecondsRaw.(int) != 0) && !scheduleOk {
