@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 )
 
 func testWriteCommand(tb testing.TB) (*cli.MockUi, *WriteCommand) {
@@ -103,6 +104,9 @@ func TestWriteCommand_Run(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
+			err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+			require.NoError(t, err)
+
 			ui, cmd := testWriteCommand(t)
 			cmd.client = client
 
@@ -124,6 +128,9 @@ func TestWriteCommand_Run(t *testing.T) {
 
 		client, closer := testVaultServer(t)
 		defer closer()
+
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
 
 		ui, cmd := testWriteCommand(t)
 		cmd.client = client
@@ -180,6 +187,9 @@ func TestWriteCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
+
 		stdinR, stdinW := io.Pipe()
 		go func() {
 			stdinW.Write([]byte(`{"foo":"bar"}`))
@@ -215,6 +225,9 @@ func TestWriteCommand_Run(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
+
 		stdinR, stdinW := io.Pipe()
 		go func() {
 			stdinW.Write([]byte("bar"))
@@ -249,6 +262,9 @@ func TestWriteCommand_Run(t *testing.T) {
 
 		client, closer := testVaultServer(t)
 		defer closer()
+
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
 
 		_, cmd := testWriteCommand(t)
 		cmd.client = client

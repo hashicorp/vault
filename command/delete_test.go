@@ -8,6 +8,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/stretchr/testify/require"
 )
 
 func testDeleteCommand(tb testing.TB) (*cli.MockUi, *DeleteCommand) {
@@ -59,8 +62,10 @@ func TestDeleteCommand_Run(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				client, closer := testVaultServer(t)
-				defer closer()
+				cluster := minimal.NewTestSoloCluster(t, nil)
+				client := cluster.Cores[0].Client
+				err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+				require.NoError(t, err)
 
 				ui, cmd := testDeleteCommand(t)
 				cmd.client = client
@@ -81,8 +86,10 @@ func TestDeleteCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		client, closer := testVaultServer(t)
-		defer closer()
+		cluster := minimal.NewTestSoloCluster(t, nil)
+		client := cluster.Cores[0].Client
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
 
 		if _, err := client.Logical().Write("secret/delete/foo", map[string]interface{}{
 			"foo": "bar",

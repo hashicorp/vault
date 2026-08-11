@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func testAuditDisableCommand(tb testing.TB) (*cli.MockUi, *AuditDisableCommand) {
@@ -63,8 +64,8 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			client, closer := testVaultServer(t)
-			defer closer()
+			cluster := minimal.NewTestSoloCluster(t, nil)
+			client := cluster.Cores[0].Client
 
 			if err := client.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
 				Type: "file",
@@ -93,8 +94,8 @@ func TestAuditDisableCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Parallel()
 
-		client, closer := testVaultServer(t)
-		defer closer()
+		cluster := minimal.NewTestSoloCluster(t, nil)
+		client := cluster.Cores[0].Client
 
 		if err := client.Sys().EnableAuditWithOptions("integration_audit_disable", &api.EnableAuditOptions{
 			Type: "file",

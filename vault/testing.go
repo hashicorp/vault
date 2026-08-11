@@ -1156,7 +1156,6 @@ type TestClusterOptions struct {
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 
-	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
 
 	NoDefaultQuotas bool
@@ -1169,8 +1168,6 @@ type TestClusterOptions struct {
 	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
 	ABCDLoggerNames bool
 	DisableTLS      bool
-	// SkipKVMount disables creation of a kv mount with version KVVersion (default 1) under /secret
-	SkipKVMount bool
 	// TransactionalStorage is incompatible with PhysicalFactory; by default inmem non-transactional
 	// storage is used when conf.Physical/HAPhysical are nil, unless TransactionalStorage is true
 	TransactionalStorage bool
@@ -1980,15 +1977,6 @@ func (tc *TestCluster) initCores(t testing.TB, opts *TestClusterOptions) {
 		t.Fatal(err)
 	}
 	tc.ID = cluster.ID
-
-	// Configure a secret engine (kv)
-	if !opts.SkipKVMount {
-		kvVersion := opts.KVVersion
-		if kvVersion == "" {
-			kvVersion = "1"
-		}
-		testCoreAddSecretMount(t, leader.Core, tc.RootToken, kvVersion)
-	}
 }
 
 func (c *TestCluster) getAPIClient(t testing.TB, idx int) *api.Client {

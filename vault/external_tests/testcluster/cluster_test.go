@@ -28,8 +28,6 @@ func SyncTestNow(t *testing.T, f func(t *testing.T)) {
 func TestNewTestClusterInmemNetworkListener(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(nil, nil, nil)
 	opts.SyncTest = true
-	// We'd need https://github.com/hashicorp/vault-plugin-secrets-kv/pull/243 to eliminate this.
-	opts.SkipKVMount = true
 	SyncTestNow(t, func(t *testing.T) {
 		cluster := vault.NewTestCluster(t, conf, opts)
 		defer func() {
