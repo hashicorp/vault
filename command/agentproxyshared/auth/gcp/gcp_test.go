@@ -25,6 +25,10 @@ func baseConfig(extra map[string]interface{}) *auth.AuthConfig {
 	}
 }
 
+// TestNewGCPAuthMethod_serviceAccountDefault verifies that when no
+// service_account is provided the field is left empty, so that the IAM
+// branch can derive it from credentials.ClientEmail instead of sending
+// the literal string "default" to the GCP IAM API.
 func TestNewGCPAuthMethod_serviceAccountDefault(t *testing.T) {
 	m, err := NewGCPAuthMethod(baseConfig(nil))
 	if err != nil {
@@ -36,6 +40,8 @@ func TestNewGCPAuthMethod_serviceAccountDefault(t *testing.T) {
 	}
 }
 
+// TestNewGCPAuthMethod_explicitServiceAccount verifies that an explicitly
+// configured service_account is preserved as-is.
 func TestNewGCPAuthMethod_explicitServiceAccount(t *testing.T) {
 	const want = "my-sa@my-project.iam.gserviceaccount.com"
 	m, err := NewGCPAuthMethod(baseConfig(map[string]interface{}{
@@ -50,6 +56,9 @@ func TestNewGCPAuthMethod_explicitServiceAccount(t *testing.T) {
 	}
 }
 
+// TestNewGCPAuthMethod_GCETypeWithNoServiceAccount verifies that a GCE-type
+// method can be constructed without a service_account; the "default" alias
+// is applied inside Authenticate only for the GCE flow.
 func TestNewGCPAuthMethod_GCETypeWithNoServiceAccount(t *testing.T) {
 	m, err := NewGCPAuthMethod(&auth.AuthConfig{
 		Logger:    hclog.NewNullLogger(),
@@ -65,6 +74,7 @@ func TestNewGCPAuthMethod_GCETypeWithNoServiceAccount(t *testing.T) {
 	}
 }
 
+// TestNewGCPAuthMethod_missingType verifies that missing type returns an error.
 func TestNewGCPAuthMethod_missingType(t *testing.T) {
 	_, err := NewGCPAuthMethod(&auth.AuthConfig{
 		Logger:    hclog.NewNullLogger(),
@@ -76,6 +86,7 @@ func TestNewGCPAuthMethod_missingType(t *testing.T) {
 	}
 }
 
+// TestNewGCPAuthMethod_missingRole verifies that missing role returns an error.
 func TestNewGCPAuthMethod_missingRole(t *testing.T) {
 	_, err := NewGCPAuthMethod(&auth.AuthConfig{
 		Logger:    hclog.NewNullLogger(),
@@ -87,6 +98,7 @@ func TestNewGCPAuthMethod_missingRole(t *testing.T) {
 	}
 }
 
+// TestNewGCPAuthMethod_nilConfig verifies that a nil config returns an error.
 func TestNewGCPAuthMethod_nilConfig(t *testing.T) {
 	_, err := NewGCPAuthMethod(nil)
 	if err == nil {
