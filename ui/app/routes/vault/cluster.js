@@ -212,6 +212,7 @@ export default class ClusterRoute extends Route {
 
         this.analytics.identifyUser(entity, {
           licenseId: licenseId,
+          clusterId: model.id,
           licenseState: model.license?.state || 'community',
           version: model.version.version,
           storageType: model.storageType,

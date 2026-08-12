@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -15,6 +15,11 @@ interface SegmentConfig {
 
 // Allowlist of properties we intentionally send. Mirrors the PostHog redactEvent approach.
 // Anything not listed here is stripped before the event leaves the browser.
+//
+// Values must be scalars. IBM explodes nested objects/arrays into distinct
+// properties (e.g. `payload.policyType`) and has asked us not to rely on that,
+// so event detail is carried in flat named properties such as `object`,
+// `objectType`, `location` and `quantity` instead of a `payload` blob.
 const ALLOWED_PROPERTIES = new Set([
   // IBM required instrumentation properties
   'productTitle',
@@ -23,8 +28,8 @@ const ALLOWED_PROPERTIES = new Set([
   'UT30',
   'productPlanName',
   'productPlanType',
-  'instanceId',
-  'subscriptionId',
+  'instanceId', // clusterId
+  'subscriptionId', // licenseId, empty if community
   'elementId',
   'namespace',
   'channel',
@@ -33,19 +38,23 @@ const ALLOWED_PROPERTIES = new Set([
   'CTA',
   'location',
   'objectType',
+  'object',
   'process',
-  'payload',
+  'successFlag',
+  'quantity',
   'text',
+  // CTA Clicked context
+  'variation',
+  'uiElement',
+  'type',
   // Vault-specific
   'name',
   'routeName',
   'policy',
-  // Browser context
-  'userAgent',
+  // Browser context. Note: Segment auto-collects userAgent, timezone, screen and
+  // library on the event `context` (not `properties`), so they reach Segment
+  // regardless of this allowlist and do not need to be listed here.
   'locale',
-  'timezone',
-  'screen',
-  'library',
   // Viewport / form-factor (mobile vs desktop)
   'viewportWidth',
   'viewportHeight',
@@ -58,10 +67,6 @@ const redactMiddleware: MiddlewareFunction = ({ payload, next }) => {
   if (properties) {
     const redacted: Record<string, unknown> = {};
     for (const key of Object.keys(properties)) {
-      // Keep allowlisted properties plus any `custom.*` property, which IBM's
-      // Tracking Plan permits on every event type via its `^custom\.` pattern.
-      // This is how Created Object carries its descriptive detail, since that
-      // schema has no `payload` property of its own.
       if (ALLOWED_PROPERTIES.has(key) || key.startsWith('custom.')) {
         redacted[key] = properties[key];
       }
@@ -79,15 +84,14 @@ const redactMiddleware: MiddlewareFunction = ({ payload, next }) => {
 };
 
 // Static IBM instrumentation properties required on every event.
-// instanceId and subscriptionId are dynamically set from licenseId at identify() time.
+// instanceId and subscriptionId are dynamically set at identify() time.
 const IBM_STATIC_PROPERTIES = {
   productTitle: 'HASHICORP VAULT',
   productCode: '5621IJC',
   productCodeType: 'PID',
   UT30: '30GKT',
-  productPlanName: 'internal',
   productPlanType: 'internal',
-  platformTitle: 'Vault',
+  platformTitle: 'HashiCorp Vault',
 };
 
 // Map Vault-specific descriptive event names (sent as-is to PostHog for HVD) to
@@ -106,8 +110,11 @@ export class SegmentProvider implements AnalyticsProvider {
 
   client = new AnalyticsBrowser();
   licenseId = '';
+  clusterId = '';
   userId = '';
-  // instanceId and subscriptionId are both the licenseId per IBM Instrument Growth guidance
+  // Distinguishes enterprise from community clusters. Defaults to 'community'
+  // until identify() runs; a cluster is only 'enterprise' once confirmed.
+  productPlanName = 'community';
   instanceId = '';
 
   start(config: unknown) {
@@ -120,12 +127,17 @@ export class SegmentProvider implements AnalyticsProvider {
   }
 
   private get ibmProperties() {
-    // Note: userId flows automatically via identify(), and the license is carried
-    // by instanceId/subscriptionId. Sending raw userId/licenseId as top-level event
-    // properties is redundant and rejected by IBM's Tracking Plan schema.
+    // Note: userId flows automatically via identify().
+    // instanceId is the cluster ID - the deployed instance, unique per cluster
+    // and present on both CE and Enterprise.
+    // subscriptionId is the license ID - the commercial subscription. Community
+    // clusters have no license, so it is omitted entirely (rather than sent
+    // blank) to keep events schema-conformant.
     return {
       ...IBM_STATIC_PROPERTIES,
-      ...(this.instanceId ? { instanceId: this.instanceId, subscriptionId: this.instanceId } : {}),
+      productPlanName: this.productPlanName,
+      ...(this.instanceId ? { instanceId: this.instanceId } : {}),
+      ...(this.licenseId ? { subscriptionId: this.licenseId } : {}),
       ...this.viewportProperties,
     };
   }
@@ -147,10 +159,12 @@ export class SegmentProvider implements AnalyticsProvider {
     };
   }
 
-  identify(identifier: string, traits: Record<string, string>) {
+  identify(identifier: string, traits: Record<string, unknown>) {
     this.userId = identifier;
-    this.licenseId = traits['licenseId'] || '';
-    this.instanceId = this.licenseId;
+    this.licenseId = (traits['licenseId'] as string) || '';
+    this.clusterId = (traits['clusterId'] as string) || '';
+    this.instanceId = this.clusterId;
+    this.productPlanName = traits['isEnterprise'] ? 'enterprise' : 'community';
     this.client.identify(identifier, { ...this.ibmProperties, ...traits });
   }
 
