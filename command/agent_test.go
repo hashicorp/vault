@@ -1027,6 +1027,9 @@ func setupAppRoleAndKVMounts(t *testing.T, serverClient *api.Client) (string, st
 	request(t, serverClient, req, 204)
 
 	// setup the kv secrets
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
 	req.BodyBytes = []byte(`{
 	"options": {"version": "2"}
@@ -1565,7 +1568,10 @@ func TestAgent_Template_Retry(t *testing.T) {
 
 	methodConf := prepAgentApproleKV(t, serverClient)
 
-	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	err = serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
 			"version": "2",
 		},
@@ -2226,17 +2232,18 @@ func TestAgent_ApiProxy_Retry(t *testing.T) {
 
 	serverClient := cluster.Cores[0].Client
 
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{
+	_, err = serverClient.Logical().Write("secret/foo", map[string]interface{}{
 		"bar": "baz",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	intRef := func(i int) *int {
 		return &i
@@ -2376,7 +2383,10 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 
 	autoAuthConfig := prepAgentApproleKV(t, serverClient)
 
-	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	err = serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
 			"version": "2",
 		},

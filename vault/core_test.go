@@ -3649,7 +3649,7 @@ func TestSetSeals(t *testing.T) {
 		Generation:   1,
 	})
 	testCore := TestCoreWithSeal(t, oldSeal, false)
-	_, keys, _ := TestCoreInitClusterWrapperSetup(t, testCore, nil)
+	_, keys, _ := TestCoreInitClusterWrapperSetup(t, testCore)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(testCore, key); err != nil {
 			t.Fatalf("error unsealing core: %s", err)

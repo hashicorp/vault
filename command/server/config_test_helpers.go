@@ -954,6 +954,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_mount_point_rollback_metrics":       false,
 		},
 		"administrative_namespace_path":  "admin/",
+		"operator_namespace_path":        "",
 		"imprecise_lease_role_tracking":  false,
 		"enable_post_unseal_trace":       true,
 		"post_unseal_trace_directory":    "/tmp",

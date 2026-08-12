@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"sync"
 	syncatomic "sync/atomic"
 	"testing"
@@ -319,60 +318,6 @@ func TestOpenWebSocketConnection_AutoAuthSelfHeal(t *testing.T) {
 	}
 }
 
-// TestOpenWebSocketConnectionReceivesEventsDefaultMount tests that the openWebSocketConnection function
-// works as expected with the default KVV1 mount, and then the connection can be used to receive an event.
-// This acts as more of an event system sanity check than a test of the updater
-// logic. It's still important coverage, though.
-// It also adds a client timeout of 1 second and checks that the connection does not timeout as this is a
-// streaming request.
-func TestOpenWebSocketConnectionReceivesEventsDefaultMount(t *testing.T) {
-	if !constants.IsEnterprise {
-		t.Skip("test can only run on enterprise due to requiring the event notification system")
-	}
-	t.Parallel()
-	// We need a valid cluster for the connection to succeed.
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	oldClientTimeout := os.Getenv("VAULT_CLIENT_TIMEOUT")
-	os.Setenv("VAULT_CLIENT_TIMEOUT", "1")
-	defer os.Setenv("VAULT_CLIENT_TIMEOUT", oldClientTimeout)
-
-	client := cluster.Cores[0].Client
-
-	updater := testNewStaticSecretCacheUpdater(t, client)
-
-	conn, err := updater.openWebSocketConnection(context.Background())
-	require.NoError(t, err)
-	require.NotNil(t, conn)
-
-	t.Cleanup(func() {
-		conn.Close(websocket.StatusNormalClosure, "")
-	})
-
-	makeData := func(i int) map[string]interface{} {
-		return map[string]interface{}{
-			"foo": fmt.Sprintf("bar%d", i),
-		}
-	}
-	// Put a secret, which should trigger an event
-	err = client.KVv1("secret").Put(context.Background(), "foo", makeData(100))
-	require.NoError(t, err)
-
-	for i := 0; i < 5; i++ {
-		// Do a fresh PUT just to refresh the secret and send a new message
-		err = client.KVv1("secret").Put(context.Background(), "foo", makeData(i))
-		require.NoError(t, err)
-
-		// This method blocks until it gets a secret, so this test
-		// will only pass if we're receiving events correctly.
-		// It will fail here if the connection times out.
-		_, _, err = conn.Read(context.Background())
-		require.NoError(t, err)
-	}
-}
-
 // TestOpenWebSocketConnectionReceivesEventsKVV1 tests that the openWebSocketConnection function
 // works as expected with KVV1, and then the connection can be used to receive an event.
 // This acts as more of an event system sanity check than a test of the updater
@@ -636,7 +581,9 @@ func TestUpdateStaticSecret(t *testing.T) {
 		"foo": "bar",
 	}
 
-	// create the secret in Vault. n.b. the test cluster has already mounted the KVv1 backend at "secret"
+	// create the secret in Vault
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 	err = client.KVv1("secret").Put(context.Background(), "foo", secretData)
 	require.NoError(t, err)
 
@@ -771,7 +718,9 @@ func TestUpdateStaticSecret_EvictsIfInvalidTokens(t *testing.T) {
 		"foo": "bar",
 	}
 
-	// create the secret in Vault. n.b. the test cluster has already mounted the KVv1 backend at "secret"
+	// create the secret in Vault
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 	err = client.KVv1("secret").Put(context.Background(), "foo", secretData)
 	require.NoError(t, err)
 
@@ -1248,7 +1197,6 @@ func TestLeaseCache_ListRequestNotCached(t *testing.T) {
 func TestLeaseCache_ListRequestNotCached_KVv1(t *testing.T) {
 	t.Parallel()
 
-	// vault.NewTestCluster pre-mounts a KVv1 backend at "secret/".
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
@@ -1274,6 +1222,9 @@ func TestLeaseCache_ListRequestNotCached_KVv1(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NoError(t, lc.RegisterAutoAuthToken(client.Token()))
+
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	// Write the first secret.
 	err = client.KVv1("secret").Put(context.Background(), "alpha", map[string]interface{}{"val": "1"})

@@ -354,7 +354,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		return nil
 	}
 
-	if c.clusterListenerAddrs == nil || len(c.clusterListenerAddrs) == 0 {
+	if c.clusterNetworkLayer == nil && len(c.clusterListenerAddrs) == 0 {
 		c.logger.Warn("clustering not disabled but no addresses to listen on")
 		return fmt.Errorf("cluster addresses not found")
 	}
@@ -373,7 +373,8 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	c.clusterListener.Store(cluster.NewListener(networkLayer,
 		c.clusterCipherSuites,
 		listenerLogger,
-		5*c.clusterHeartbeatInterval))
+		5*c.clusterHeartbeatInterval,
+		!c.noSleepOnALPNHandlerStop))
 
 	c.AddLogger(listenerLogger)
 

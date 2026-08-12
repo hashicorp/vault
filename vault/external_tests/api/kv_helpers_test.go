@@ -15,6 +15,7 @@ import (
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -68,9 +69,14 @@ func TestKVHelpers(t *testing.T) {
 	client := cluster.Cores[0].Client
 	vault.TestWaitActive(t, core)
 
+	// mount the KVv1 backend
+	err := client.Sys().MountWithContext(context.Background(), "secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
+
 	// mount the KVv2 backend
-	// (the test cluster has already mounted the KVv1 backend at "secret")
-	err := client.Sys().MountWithContext(context.Background(), "secret-v2", &api.MountInput{
+	err = client.Sys().MountWithContext(context.Background(), "secret-v2", &api.MountInput{
 		Type: "kv-v2",
 	})
 	if err != nil {

@@ -9,6 +9,14 @@
   <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link @route="vault.cluster.secrets" @text="Secrets" @hasSubItems={{true}} data-test-sidebar-nav-link="Secrets" />
 
+  {{#if this.version.isEnterprise}}
+    <Nav.Link
+      @route="vault.cluster.agents"
+      @text="Agentic security"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Agentic security"
+    />
+  {{/if}}
   {{#if (display-nav-item this.navSection.resilienceAndRecovery)}}
     <Nav.Link
       @route="vault.cluster.resilience-recovery"

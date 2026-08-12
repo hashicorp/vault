@@ -90,6 +90,9 @@ func TestReadCommand_Run(t *testing.T) {
 				client, closer := testVaultServer(t)
 				defer closer()
 
+				err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+				require.NoError(t, err)
+
 				if _, err := client.Logical().Write("secret/read/foo", map[string]interface{}{
 					"foo": "bar",
 				}); err != nil {

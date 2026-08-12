@@ -69,57 +69,6 @@ func testVaultServer(tb testing.TB) (*api.Client, func()) {
 	return client, closer
 }
 
-func testVaultServerWithSecrets(ctx context.Context, tb testing.TB) (*api.Client, func()) {
-	tb.Helper()
-
-	client, _, closer := testVaultServerUnseal(tb)
-
-	// enable kv-v1 backend
-	if err := client.Sys().Mount("kv-v1/", &api.MountInput{
-		Type: "kv-v1",
-	}); err != nil {
-		tb.Fatal(err)
-	}
-
-	// enable kv-v2 backend
-	if err := client.Sys().Mount("kv-v2/", &api.MountInput{
-		Type: "kv-v2",
-	}); err != nil {
-		tb.Fatal(err)
-	}
-
-	// populate dummy secrets
-	for _, path := range []string{
-		"foo",
-		"app-1/foo",
-		"app-1/bar",
-		"app-1/nested/baz",
-	} {
-		if err := client.KVv1("kv-v1").Put(ctx, path, map[string]interface{}{
-			"user":     "test",
-			"password": "Hashi123",
-		}); err != nil {
-			tb.Fatal(err)
-		}
-
-		if _, err := client.KVv2("kv-v2").Put(ctx, path, map[string]interface{}{
-			"user":     "test",
-			"password": "Hashi123",
-		}); err != nil {
-			tb.Fatal(err)
-		}
-	}
-
-	return client, closer
-}
-
-func testVaultServerWithKVVersion(tb testing.TB, kvVersion string) (*api.Client, func()) {
-	tb.Helper()
-
-	client, _, closer := testVaultServerUnsealWithKVVersionWithSeal(tb, kvVersion, nil)
-	return client, closer
-}
-
 func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
 
@@ -138,16 +87,16 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 func testVaultServerAutoUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	testSeal, _ := seal.NewTestSeal(nil)
 	autoSeal := vault.NewAutoSeal(testSeal)
-	return testVaultServerUnsealWithKVVersionWithSeal(tb, "1", autoSeal)
+	return testVaultServerUnsealWithSeal(tb, autoSeal)
 }
 
 // testVaultServerUnseal creates a test vault cluster and returns a configured
 // API client, list of unseal keys (as strings), and a closer function.
 func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
-	return testVaultServerUnsealWithKVVersionWithSeal(tb, "1", nil)
+	return testVaultServerUnsealWithSeal(tb, nil)
 }
 
-func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string, seal vault.Seal) (*api.Client, []string, func()) {
+func testVaultServerUnsealWithSeal(tb testing.TB, seal vault.Seal) (*api.Client, []string, func()) {
 	tb.Helper()
 
 	return testVaultServerCoreConfigWithOpts(tb, &vault.CoreConfig{
@@ -159,7 +108,6 @@ func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string,
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
-		KVVersion:   kvVersion,
 	})
 }
 

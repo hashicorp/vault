@@ -10,14 +10,19 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/posener/complete"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPredictVaultPaths(t *testing.T) {
 	t.Parallel()
 
-	client, closer := testVaultServer(t)
-	defer closer()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	data := map[string]interface{}{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {
@@ -228,8 +233,8 @@ func TestPredictVaultPaths(t *testing.T) {
 func TestPredict_Audits(t *testing.T) {
 	t.Parallel()
 
-	client, closer := testVaultServer(t)
-	defer closer()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
 	badClient, badCloser := testVaultServerBad(t)
 	defer badCloser()
@@ -281,8 +286,8 @@ func TestPredict_Audits(t *testing.T) {
 func TestPredict_Mounts(t *testing.T) {
 	t.Parallel()
 
-	client, closer := testVaultServer(t)
-	defer closer()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
 	badClient, badCloser := testVaultServerBad(t)
 	defer badCloser()
@@ -300,7 +305,7 @@ func TestPredict_Mounts(t *testing.T) {
 		{
 			"good_path",
 			client,
-			[]string{"agent-registry/", "cubbyhole/", "identity/", "secret/", "sys/"},
+			[]string{"agent-registry/", "cubbyhole/", "identity/", "sys/"},
 		},
 	}
 
@@ -325,8 +330,8 @@ func TestPredict_Mounts(t *testing.T) {
 func TestPredict_Plugins(t *testing.T) {
 	t.Parallel()
 
-	client, closer := testVaultServer(t)
-	defer closer()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
 	badClient, badCloser := testVaultServerBad(t)
 	defer badCloser()
@@ -483,6 +488,9 @@ func TestPredict_Paths(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	data := map[string]interface{}{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {
 		t.Fatal(err)
@@ -552,20 +560,19 @@ func TestPredict_Paths(t *testing.T) {
 
 func TestPredict_PathsKVv2(t *testing.T) {
 	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
-	client, closer := testVaultServerWithKVVersion(t, "2")
-	defer closer()
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv", Options: map[string]string{"version": "2"}})
+	require.NoError(t, err)
 
 	data := map[string]interface{}{"data": map[string]interface{}{"a": "b"}}
-	if _, err := client.Logical().Write("secret/data/bar", data); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := client.Logical().Write("secret/data/foo", data); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := client.Logical().Write("secret/data/zip/zap", data); err != nil {
-		t.Fatal(err)
-	}
+	_, err = client.Logical().Write("secret/data/bar", data)
+	require.NoError(t, err)
+	_, err = client.Logical().Write("secret/data/foo", data)
+	require.NoError(t, err)
+	_, err = client.Logical().Write("secret/data/zip/zap", data)
+	require.NoError(t, err)
 
 	cases := []struct {
 		name         string
@@ -631,6 +638,9 @@ func TestPredict_ListPaths(t *testing.T) {
 
 	badClient, badCloser := testVaultServerBad(t)
 	defer badCloser()
+
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	data := map[string]interface{}{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {

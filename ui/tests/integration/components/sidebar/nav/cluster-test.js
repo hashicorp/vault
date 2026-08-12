@@ -81,6 +81,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Dashboard',
       'Secrets',
+      'Agentic security',
       'Access control',
       'Operational tools',
       'Support',
