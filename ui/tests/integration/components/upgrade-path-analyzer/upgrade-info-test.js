@@ -48,14 +48,20 @@ module('Integration | Component | UpgradePathAnalyzer::UpgradeInfo', function (h
     assert.dom(GENERAL.tab('Rollback steps')).exists();
 
     // UPGRADE_INFO has 4 (1.21) + 12 (1.20) = 16 known issues across all entries
-    assert.dom(GENERAL.badge('Known issues')).hasText('16', 'known issues badge count is correct');
+    assert
+      .dom(`${GENERAL.tab('Known issues')} .hds-tabs__tab-count`)
+      .hasText('16', 'known issues badge count is correct');
     // 1 (1.21) + 5 (1.20) = 6 breaking changes
-    assert.dom(GENERAL.badge('Breaking changes')).hasText('6', 'breaking changes badge count is correct');
+    assert
+      .dom(`${GENERAL.tab('Breaking changes')} .hds-tabs__tab-count`)
+      .hasText('6', 'breaking changes badge count is correct');
     // 1 (1.21) + 4 (1.20) = 5 new behavior entries
-    assert.dom(GENERAL.badge('New behavior')).hasText('5', 'new behavior badge count is correct');
+    assert
+      .dom(`${GENERAL.tab('New behavior')} .hds-tabs__tab-count`)
+      .hasText('5', 'new behavior badge count is correct');
     // rollback_steps is empty — the count badge is not rendered when count is falsy
     assert
-      .dom(GENERAL.badge('Rollback steps'))
+      .dom(`${GENERAL.tab('Rollback steps')} .hds-tabs__tab-count`)
       .doesNotExist('rollback steps badge is hidden when count is 0');
 
     // The first visible panel item is the first known issue (1.21 entry)

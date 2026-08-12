@@ -9,9 +9,8 @@
   </M.Header>
   <M.Body>
     {{#if @data}}
-      <Hds::Tabs @selectedTabIndex={{this.selectedTabIndex}} @onClickTab={{this.onClickTab}} as |T|>
+      <Page::Tabs @tabs={{this.tabs}} @selectedTabIndex={{this.selectedTabIndex}} @onClickTab={{this.onClickTab}} as |T|>
         {{#each this.tabs as |tab|}}
-          <T.Tab @key={{tab.key}} data-test-tab={{tab.key}}>{{tab.label}}</T.Tab>
           <T.Panel @key={{tab.key}} class="has-top-bottom-margin-24" data-test-panel={{tab.key}}>
             {{component
               (concat "agents/registry/details/" tab.key)
@@ -20,7 +19,7 @@
             }}
           </T.Panel>
         {{/each}}
-      </Hds::Tabs>
+      </Page::Tabs>
     {{else}}
       <LayoutLoading />
     {{/if}}

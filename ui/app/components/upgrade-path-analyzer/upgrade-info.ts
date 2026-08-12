@@ -107,10 +107,14 @@ export default class UpgradeInfoComponent extends Component<UpgradeInfoArgs> {
 
   get tabs() {
     return [
-      { text: 'Known issues', icon: 'shield-alert', count: this.panels[0]?.length },
-      { text: 'Breaking changes', icon: 'alert-triangle', count: this.panels[1]?.length },
-      { text: 'New behavior', icon: 'alert-circle', count: this.panels[2]?.length },
-      { text: 'Rollback steps', icon: 'rewind', count: this.args.upgradeInfo?.rollback_steps?.length ?? '0' },
+      { label: 'Known issues', icon: 'shield-alert', count: this.panels[0]?.length },
+      { label: 'Breaking changes', icon: 'alert-triangle', count: this.panels[1]?.length },
+      { label: 'New behavior', icon: 'alert-circle', count: this.panels[2]?.length },
+      {
+        label: 'Rollback steps',
+        icon: 'rewind',
+        count: this.args.upgradeInfo?.rollback_steps?.length ?? '0',
+      },
     ];
   }
 
