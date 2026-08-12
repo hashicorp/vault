@@ -1,0 +1,20 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Tabs
+  @onClickTab={{@onClickTab}}
+  @selectedTabIndex={{@selectedTabIndex}}
+  @isParentVisible={{@isParentVisible}}
+  @size={{@size}}
+  ...attributes
+  as |T|
+>
+  {{#each @tabs key="@index" as |tab|}}
+    <T.Tab @count={{tab.count}} @icon={{tab.icon}} data-test-tab={{or tab.key tab.label}}>
+      {{tab.label}}
+    </T.Tab>
+  {{/each}}
+  {{yield T}}
+</Hds::Tabs>

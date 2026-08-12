@@ -45,6 +45,9 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			},
 			GcpKms: billing.DataProtectionEngineCounts{
 				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			Oidc: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
@@ -257,6 +260,14 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.SecretEngineCounts.Transit.MountAttribution = make(map[string]logical.MountAttribution)
 	c.consumptionBilling.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
 
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Unlock()
+
 	return nil
 }
 
@@ -387,6 +398,12 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	// could contain a different value from the billable value.
 	if err := c.UpdateTransitAttribution(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transit mount breakdown: %w", err)
+	}
+	if err := c.UpdateTransformAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store transform mount breakdown: %w", err)
+	}
+	if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
 	}
 
 	return nil

@@ -25,17 +25,13 @@
   </:description>
 </Page::Header>
 
-<Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} class="top-margin-32" as |T|>
-  {{#each this.tabs as |tab|}}
-    <T.Tab data-test-tab={{tab.text}}>
-      <Hds::Icon @name={{tab.icon}} />
-      {{tab.text}}
-      {{#if tab.count}}
-        <Hds::BadgeCount @size="small" @text={{tab.count}} data-test-badge={{tab.text}} />
-      {{/if}}
-    </T.Tab>
-  {{/each}}
-
+<Page::Tabs
+  @tabs={{this.tabs}}
+  @onClickTab={{this.onClickTab}}
+  @selectedTabIndex={{this.selectedTabIndex}}
+  class="top-margin-32"
+  as |T|
+>
   {{! Known issues, Breaking changes, New behavior panels share the same item layout }}
   {{#each this.panels as |_panel panelIndex|}}
     <T.Panel data-test-panel>
@@ -143,4 +139,4 @@
       </Hds::Layout::Flex>
     </Hds::Layout::Flex>
   </T.Panel>
-</Hds::Tabs>
+</Page::Tabs>
