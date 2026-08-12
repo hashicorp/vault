@@ -1249,7 +1249,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 	c.clusterAddr.Store(conf.ClusterAddr)
-	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	c.activeContextCancelFunc.Store(context.CancelFunc(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
 
 	c.hcpLinkStatus = HCPLinkStatus{
