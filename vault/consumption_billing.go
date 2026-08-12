@@ -42,6 +42,9 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			},
 			Transform: billing.DataProtectionEngineCounts{
 				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			GcpKms: billing.DataProtectionEngineCounts{
 				MonthlyCount: &atomic.Uint64{},
