@@ -1597,7 +1597,11 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	// Simulate GCP KMS plugin writing billing data (this is what the plugin does when operations occur)
 	// In a real scenario, this would be triggered by actual encrypt/decrypt/sign/verify operations
 	err := core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count": uint64(1),
+		"count":            uint64(1),
+		"mountPath":        "gcpkms/",
+		"mountAccessor":    "gcpkms_accessor",
+		"mountType":        "gcpkms",
+		"backendAwareUUID": "gcpkms-backend-aware-uuid",
 	})
 	require.NoError(t, err)
 
@@ -1615,11 +1619,19 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 
 	// Simulate more operations
 	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count": uint64(1),
+		"count":            uint64(1),
+		"mountPath":        "gcpkms/",
+		"mountAccessor":    "gcpkms_accessor",
+		"mountType":        "gcpkms",
+		"backendAwareUUID": "gcpkms-backend-aware-uuid",
 	})
 	require.NoError(t, err)
 	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count": uint64(1),
+		"count":            uint64(1),
+		"mountPath":        "gcpkms/",
+		"mountAccessor":    "gcpkms_accessor",
+		"mountType":        "gcpkms",
+		"backendAwareUUID": "gcpkms-backend-aware-uuid",
 	})
 	require.NoError(t, err)
 

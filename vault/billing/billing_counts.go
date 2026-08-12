@@ -297,6 +297,9 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.GcpKms.MonthlyCount.Add(val)
+		if err := s.SecretEngineCounts.GcpKms.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+			return err
+		}
 	case MountTypeExCa:
 		// External CA uses float64 for duration-adjusted units
 		val, ok := data["units"].(float64)

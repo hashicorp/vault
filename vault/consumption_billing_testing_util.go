@@ -297,3 +297,38 @@ func (c *Core) GetInMemoryTransitAttribution() map[string]logical.MountAttributi
 	}
 	return nil
 }
+
+func (c *Core) GetInMemoryTransformAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.Transform.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.Transform.MountAttributionLock.RUnlock()
+		// Return a copy of the map to avoid race conditions
+		result := make(map[string]logical.MountAttribution, len(cb.SecretEngineCounts.Transform.MountAttribution))
+		for k, v := range cb.SecretEngineCounts.Transform.MountAttribution {
+			result[k] = v
+		}
+		return result
+	}
+	return nil
+}
+
+func (c *Core) GetInMemoryGcpKmsAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.GcpKms.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.GcpKms.MountAttributionLock.RUnlock()
+		result := make(map[string]logical.MountAttribution, len(cb.SecretEngineCounts.GcpKms.MountAttribution))
+		for k, v := range cb.SecretEngineCounts.GcpKms.MountAttribution {
+			result[k] = v
+		}
+		return result
+	}
+	return nil
+}

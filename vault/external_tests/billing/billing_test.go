@@ -39,11 +39,18 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	cbm := core.GetConsumptionBillingManager()
 	require.NotNil(t, cbm)
 
-	// Simulate GCP KMS operations by directly calling the billing manager
-	// This tests the Vault-side tracking without needing the actual plugin
+	// Simulate GCP KMS operations by directly calling the billing manager.
+	// Attribution fields are required now that GcpKms attribution tracking is enabled.
+	billingData := map[string]interface{}{
+		"count":            uint64(1),
+		"mountPath":        "gcpkms/",
+		"mountAccessor":    "gcpkms_accessor",
+		"mountType":        "gcpkms",
+		"backendAwareUUID": "gcpkms-backend-uuid",
+	}
 
 	// Simulate encrypt operation
-	err := cbm.WriteBillingData(ctx, "gcpkms", map[string]interface{}{"count": uint64(1)})
+	err := cbm.WriteBillingData(ctx, "gcpkms", billingData)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
@@ -55,7 +62,7 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
 	// Simulate decrypt operation
-	err = cbm.WriteBillingData(ctx, "gcpkms", map[string]interface{}{"count": uint64(1)})
+	err = cbm.WriteBillingData(ctx, "gcpkms", billingData)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
@@ -67,7 +74,7 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
 	// Simulate reencrypt operation
-	err = cbm.WriteBillingData(ctx, "gcpkms", map[string]interface{}{"count": uint64(1)})
+	err = cbm.WriteBillingData(ctx, "gcpkms", billingData)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
@@ -79,7 +86,7 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
 	// Simulate sign operation
-	err = cbm.WriteBillingData(ctx, "gcpkms", map[string]interface{}{"count": uint64(1)})
+	err = cbm.WriteBillingData(ctx, "gcpkms", billingData)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
@@ -91,7 +98,7 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
 	// Simulate verify operation
-	err = cbm.WriteBillingData(ctx, "gcpkms", map[string]interface{}{"count": uint64(1)})
+	err = cbm.WriteBillingData(ctx, "gcpkms", billingData)
 	require.NoError(t, err)
 	require.Equal(t, uint64(1), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 
