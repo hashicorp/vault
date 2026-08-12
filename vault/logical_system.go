@@ -4760,10 +4760,14 @@ func (b *SystemBackend) handleWrappingWrap(ctx context.Context, req *logical.Req
 	// tokens using them we can ensure that an operator can't spoof a legit JWT
 	// wrapped token, which makes certain init/rekey/generate-root cases have
 	// better properties.
-	req.WrapInfo.Format = "uuid"
-
+	// Format is set on the response rather than mutating req.WrapInfo, which
+	// routeCommon (router.go) unconditionally restores via a deferred assignment,
+	// silently discarding any mutation made by this handler.
 	return &logical.Response{
 		Data: data.Raw,
+		WrapInfo: &wrapping.ResponseWrapInfo{
+			Format: "uuid",
+		},
 	}, nil
 }
 
