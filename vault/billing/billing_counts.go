@@ -280,6 +280,9 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.Transform.MonthlyCount.Add(val)
+		if err := s.SecretEngineCounts.Transform.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+			return err
+		}
 	case MountTypeSpiffe:
 		// SPIFFE JWT uses float64 for duration-adjusted units
 		val, ok := data["units"].(float64)
