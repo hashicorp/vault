@@ -32,3 +32,7 @@ func (ts *TokenStore) revokeCommonJWT(ctx context.Context, req *logical.Request,
 func (ts *TokenStore) revokeJWT(ctx context.Context, req *logical.Request, jwtToken string) (*logical.Response, error) {
 	return logical.ErrorResponse("cannot revoke JWTs"), nil
 }
+
+func (c *Core) normalizeJwtForLookup(ctx context.Context, token string) (string, error) {
+	return "", nil
+}

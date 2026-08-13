@@ -249,7 +249,11 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		if !isValidEnterpriseJwt {
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
-		req.JwtUniqueId = getJwtUniqueId(tokenMetadataContainer)
+		req.JwtUniqueId, err = getJwtUniqueIDFromProfile(tokenMetadataContainer, chosenProfile)
+		if err != nil {
+			c.logger.Error("failed to extract unique ID from JWT", "error", err)
+			return nil, nil, nil, nil, fmt.Errorf("invalid JWT: %w", err)
+		}
 		req.JwtIssuer = getJwtIssuer(tokenMetadataContainer)
 		req.JwtTransactionClaim = getJwtTransaction(tokenMetadataContainer)
 		req.JwtAudienceClaim = getJwtAudience(tokenMetadataContainer)

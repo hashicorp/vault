@@ -3453,7 +3453,8 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		if id == req.ClientToken {
 			id = getOAuthJwtId(req.JwtUniqueId)
 		} else {
-			resolvedID, err := resolveOAuthJwtIdForLookup(id)
+			// For raw JWTs, validate to get the correct profile and unique ID claim
+			resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
 			if err != nil {
 				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 			}
