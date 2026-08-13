@@ -374,7 +374,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		c.clusterCipherSuites,
 		listenerLogger,
 		5*c.clusterHeartbeatInterval,
-		!c.noSleepOnALPNHandlerStop))
+		!c.synctest))
 
 	c.AddLogger(listenerLogger)
 

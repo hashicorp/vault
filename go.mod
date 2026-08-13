@@ -190,7 +190,7 @@ require (
 	github.com/jcmturner/gokrb5/v8 v8.4.4
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
 	github.com/jefferai/jsonx v1.0.1
-	github.com/jellydator/ttlcache/v3 v3.4.1
+	github.com/jellydator/ttlcache/v3 v3.4.2-0.20260813123107-3b64b9cd34ac
 	github.com/klauspost/compress v1.19.1
 	github.com/kr/pretty v0.3.1
 	github.com/kr/text v0.2.0

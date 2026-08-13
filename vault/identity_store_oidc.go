@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -2202,10 +2203,10 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	}
 }
 
-func newOIDCCache(defaultTTL time.Duration) *oidcCache {
+func newOIDCCache(ctx context.Context, defaultTTL time.Duration, synctest bool) *oidcCache {
 	c := ttlcache.New[string, any](ttlcache.WithTTL[string, any](defaultTTL))
 	if defaultTTL > 0 {
-		go c.Start()
+		cache.Start(ctx, c, !synctest)
 	}
 	return &oidcCache{c: c}
 }

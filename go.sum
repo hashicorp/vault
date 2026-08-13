@@ -938,8 +938,8 @@ github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f h1:E87tDTVS5W
 github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f/go.mod h1:3J2qVK16Lq8V+wfiL2lPeDZ7UWMxk5LemerHa1p6N00=
 github.com/jefferai/jsonx v1.0.1 h1:GvWkLWihoLqDG0BSP45TUQJH9qsINX50PVrFULgpc/I=
 github.com/jefferai/jsonx v1.0.1/go.mod h1:yFo3l2fcm7cZVHGq3HKLXE+Pd4RWuRjNBDHksM7XekQ=
-github.com/jellydator/ttlcache/v3 v3.4.1 h1:bOdXmXiycyK6E6Qjyuj5vl+/vU3SCOoDs8a86NbHjAQ=
-github.com/jellydator/ttlcache/v3 v3.4.1/go.mod h1:j7LO12PNghFg5+0v9budMAT4rDK4JY969jb9vOdOBBk=
+github.com/jellydator/ttlcache/v3 v3.4.2-0.20260813123107-3b64b9cd34ac h1:5dkVE8wyoc0QFe56OedsiZg3FjQBscNs42nkqDLJlx8=
+github.com/jellydator/ttlcache/v3 v3.4.2-0.20260813123107-3b64b9cd34ac/go.mod h1:mtCqThlao94LoTzUQBX7QhLQvOF6D3Fxzv8fzrjLQeQ=
 github.com/jhump/protoreflect v1.17.0 h1:qOEr613fac2lOuTgWN4tPAtLL7fUSbuJL5X5XumQh94=
 github.com/jhump/protoreflect v1.17.0/go.mod h1:h9+vUUL38jiBzck8ck+6G/aeMX8Z4QUY/NiJPwPNi+8=
 github.com/jimlambrt/gldap v0.1.13 h1:jxmVQn0lfmFbM9jglueoau5LLF/IGRti0SKf0vB753M=
