@@ -31,6 +31,10 @@ func getJwtIssuer(_ map[string]interface{}) string {
 	return ""
 }
 
+func getJwtUniqueIDFromProfile(_ map[string]interface{}, _ *OAuthResourceServerConfigProfile) (string, error) {
+	return "", errors.New("not implemented")
+}
+
 func getJwtTransaction(_ map[string]interface{}) string {
 	return ""
 }
