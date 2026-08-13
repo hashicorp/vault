@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/internalshared/configutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -1441,12 +1442,13 @@ func TestSystemBackend_leases(t *testing.T) {
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	b := core.systemBackend
+	var resp *logical.Response
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1506,12 +1508,13 @@ func TestSystemBackend_leases_list(t *testing.T) {
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	b := core.systemBackend
+	var resp *logical.Response
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1677,12 +1680,13 @@ func TestSystemBackend_renew(t *testing.T) {
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	b := core.systemBackend
+	var resp *logical.Response
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1862,13 +1866,14 @@ func TestSystemBackend_revoke(t *testing.T) {
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	b := core.systemBackend
+	var resp *logical.Response
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2031,13 +2036,14 @@ func TestSystemBackend_revokePrefix(t *testing.T) {
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	b := core.systemBackend
+	var resp *logical.Response
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -2094,13 +2100,14 @@ func TestSystemBackend_revokePrefix_origUrl(t *testing.T) {
 	}
 	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
 	b := core.systemBackend
+	var resp *logical.Response
 
 	// Create a key with a lease
 	req := logical.TestRequest(t, logical.UpdateOperation, "secret/foo")
 	req.Data["foo"] = "bar"
 	req.Data["lease"] = "1h"
 	req.ClientToken = root
-	resp, err := core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -6528,6 +6535,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 				Logger: logging.NewVaultLogger(hclog.Trace),
 			})
 			b := core.systemBackend
+			var resp *logical.Response
 
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
@@ -6698,6 +6706,7 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 		PluginDirectory: tempDir,
 	})
 	b := core.systemBackend
+	var resp *logical.Response
 
 	// Shadow a builtin and test getting a helpful error back.
 	file, err := ioutil.TempFile(tempDir, "temp")
@@ -6723,7 +6732,7 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 	// When we validate the version now, we should get a special error message
 	// about why the builtin isn't there.
 	k8sAuthBuiltin := versions.GetBuiltinVersion(consts.PluginTypeCredential, "kubernetes")
-	_, resp, err := b.validateVersion(context.Background(), k8sAuthBuiltin, "kubernetes", consts.PluginTypeCredential)
+	_, resp, err = b.validateVersion(context.Background(), k8sAuthBuiltin, "kubernetes", consts.PluginTypeCredential)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -7649,5 +7658,701 @@ func TestSealStatus_Removed(t *testing.T) {
 				require.Nil(t, status.RemovedFromCluster)
 			}
 		})
+	}
+
+}
+
+// TestListAllSecretsRecursive tests the ListAllSecretsRecursive handler.
+func TestListAllSecretsRecursive(t *testing.T) {
+	t.Parallel()
+
+	// Create an unsealed test core
+	core, _, rootToken := TestCoreUnsealed(t)
+
+	// Mount KV engines using the core directly
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data: map[string]interface{}{
+				"type": "kv",
+			},
+		}
+		resp, err := core.HandleRequest(namespace.RootContext(context.Background()), req)
+		if resp != nil {
+			t.Logf("mounted %s: err=%v resp.Data=%v", path, err, resp.Data)
+		} else {
+			t.Logf("mounted %s: err=%v (nil resp)", path, err)
+		}
+	}
+
+	// List via core.HandleRequest
+	listRecursive := func(t *testing.T, path string, pattern string, fuzzy bool, permissions string) *logical.Response {
+		req := &logical.Request{
+			Operation:   logical.ListOperation,
+			ClientToken: rootToken,
+			Path:        "sys/secrets/list-recursive",
+			Data: map[string]interface{}{
+				"path":        path,
+				"pattern":     pattern,
+				"fuzzy":       fuzzy,
+				"permissions": permissions,
+			},
+		}
+		resp, err := core.HandleRequest(namespace.RootContext(context.Background()), req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		t.Logf("listRecursive: path=%s pattern=%s fuzzy=%v permissions=%v", path, pattern, fuzzy, permissions)
+		t.Logf("  resp.Data=%v resp.Secret=%+v", resp.Data, resp.Secret)
+		if resp.Secret != nil {
+			t.Logf("  resp.Secret.InternalData=%v", resp.Secret.InternalData)
+		}
+		return resp
+	}
+
+	// TestCoreUnsealed already mounts secret/. Just mount db/ as additional.
+	mountKV("db")
+
+	// Write data to secret/ and db/ for the subsequent tests
+	writeSecret := func(t *testing.T, req *logical.Request) {
+		resp, err := core.HandleRequest(namespace.RootContext(context.Background()), req)
+		if err != nil {
+			t.Logf("writeSecret %s: err=%v resp=%v", req.Path, err, resp)
+		} else {
+			t.Logf("writeSecret %s: ok", req.Path)
+		}
+	}
+	writeSecret(t, &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "secret/foo",
+		Data:        map[string]interface{}{"bar": "baz"},
+	})
+	writeSecret(t, &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "secret/api-config",
+		Data:        map[string]interface{}{"host": "localhost"},
+	})
+	writeSecret(t, &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "db/conn",
+		Data:        map[string]interface{}{"host": "localhost"},
+	})
+
+	// Test 1: List all secrets recursively across all mounts
+	t.Run("list all", func(t *testing.T) {
+		resp := listRecursive(t, "", "", false, "")
+		require.NotNil(t, resp.Data["keys"])
+		keys := resp.Data["keys"].([]string)
+		require.NotEmpty(t, keys, "expected at least some keys")
+		t.Logf("list all: %d keys: %v", len(keys), keys)
+	})
+
+	// Test 2: List with path filter
+	t.Run("list by path", func(t *testing.T) {
+		resp := listRecursive(t, "secret", "", false, "")
+		require.NotNil(t, resp.Data["keys"])
+	})
+
+	// Test 3: List with pattern filter
+	t.Run("list with pattern", func(t *testing.T) {
+		resp := listRecursive(t, "", "*api*", false, "")
+		require.NotNil(t, resp.Data["keys"])
+	})
+
+	// Test 4: List with fuzzy matching
+	t.Run("list with fuzzy", func(t *testing.T) {
+		resp := listRecursive(t, "", "conn", true, "")
+		require.NotNil(t, resp.Data["keys"])
+	})
+
+	// Test 5: List with permissions filter
+	t.Run("list with permissions", func(t *testing.T) {
+		resp := listRecursive(t, "", "", false, "read")
+		require.NotNil(t, resp.Data["keys"])
+	})
+}
+
+func TestShouldFilterKey(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name    string
+		key     string
+		pattern string
+		fuzzy   bool
+		want    bool // true = should filter OUT (key excluded)
+	}{
+		{
+			name:    "no pattern keeps all",
+			key:     "my-key",
+			pattern: "",
+			fuzzy:   false,
+			want:    false,
+		},
+		{
+			name:    "exact match keeps",
+			key:     "my-key",
+			pattern: "my-key",
+			fuzzy:   false,
+			want:    false,
+		},
+		{
+			name:    "exact mismatch filters",
+			key:     "my-key",
+			pattern: "other-key",
+			fuzzy:   false,
+			want:    true,
+		},
+		{
+			name:    "glob prefix match",
+			key:     "api-config",
+			pattern: "*api*",
+			fuzzy:   false,
+			want:    false,
+		},
+		{
+			name:    "glob suffix match",
+			key:     "api-config",
+			pattern: "api*",
+			fuzzy:   false,
+			want:    false,
+		},
+		{
+			name:    "glob no match",
+			key:     "api-config",
+			pattern: "*db*",
+			fuzzy:   false,
+			want:    true,
+		},
+		{
+			name:    "fuzzy substring match",
+			key:     "my-api-config",
+			pattern: "api",
+			fuzzy:   true,
+			want:    false,
+		},
+		{
+			name:    "fuzzy substring no match",
+			key:     "my-api-config",
+			pattern: "db",
+			fuzzy:   true,
+			want:    true,
+		},
+		{
+			name:    "fuzzy case insensitive",
+			key:     "my-API-config",
+			pattern: "api",
+			fuzzy:   true,
+			want:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := shouldFilterKey(tc.key, tc.pattern, tc.fuzzy)
+			require.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestListAllSecretsRecursive_Direct(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+	mountKV("cubbyhole")
+
+	// Write a secret to secret/
+	writeReq := &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "secret/foo",
+		Data:        map[string]interface{}{"bar": "baz"},
+	}
+	core.HandleRequest(namespace.RootContext(context.Background()), writeReq)
+
+	// Write a secret to db/
+	writeReq2 := &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "db/conn",
+		Data:        map[string]interface{}{"host": "localhost"},
+	}
+	core.HandleRequest(namespace.RootContext(context.Background()), writeReq2)
+
+	// Call the handler directly
+	t.Run("direct handler", func(t *testing.T) {
+		ctx := namespace.RootContext(context.Background())
+		req := &logical.Request{
+			Operation:   logical.ListOperation,
+			ClientToken: rootToken,
+			Path:        "secrets/list-recursive",
+		}
+		// Find the system backend
+		backend := core.systemBackend
+		if backend == nil {
+			t.Fatal("system backend is nil")
+		}
+		t.Logf("direct: backend.Paths=%d", len(backend.Backend.Paths))
+		for i, p := range backend.Backend.Paths {
+			t.Logf("  path[%d]: pattern=%s", i, p.Pattern)
+		}
+		resp, err := backend.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		t.Logf("direct: resp.Data=%+v", resp.Data)
+		require.NotNil(t, resp.Data["keys"])
+	})
+}
+
+func TestListAllSecretsRecursive_Debug(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	// Write a secret to db/
+	writeReq := &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "db/conn",
+		Data:        map[string]interface{}{"host": "localhost"},
+	}
+	core.HandleRequest(namespace.RootContext(context.Background()), writeReq)
+
+	// Call the handler directly using core.HandleRequest (same as the main test)
+	t.Run("via core HandleRequest", func(t *testing.T) {
+		ctx := namespace.RootContext(context.Background())
+		req := &logical.Request{
+			Operation:   logical.ListOperation,
+			ClientToken: rootToken,
+			Path:        "sys/secrets/list-recursive",
+			Data: map[string]interface{}{
+				"path":        "",
+				"pattern":     "",
+				"fuzzy":       false,
+				"permissions": "",
+			},
+		}
+		resp, err := core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		t.Logf("core HR: resp.Data=%+v", resp.Data)
+		if resp.Data != nil {
+			for k, v := range resp.Data {
+				t.Logf("  key %q: %v (type=%T)", k, v, v)
+			}
+		}
+	})
+
+	// Call the handler directly without core routing
+	t.Run("via framework directly", func(t *testing.T) {
+		ctx := namespace.RootContext(context.Background())
+		backend := core.systemBackend
+		req := &logical.Request{
+			Operation:   logical.ListOperation,
+			ClientToken: rootToken,
+			Path:        "secrets/list-recursive",
+			Data: map[string]interface{}{
+				"path":        "",
+				"pattern":     "",
+				"fuzzy":       false,
+				"permissions": "",
+			},
+		}
+		resp, err := backend.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		t.Logf("framework: resp.Data=%+v", resp.Data)
+		if resp.Data != nil {
+			for k, v := range resp.Data {
+				t.Logf("  key %q: %v (type=%T)", k, v, v)
+			}
+		}
+	})
+}
+func TestListAllSecretsRecursive_Debug2(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	writeReq := &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "db/conn",
+		Data:        map[string]interface{}{"host": "localhost"},
+	}
+	core.HandleRequest(namespace.RootContext(context.Background()), writeReq)
+
+	// Call via framework directly
+	t.Run("via framework", func(t *testing.T) {
+		ctx := namespace.RootContext(context.Background())
+		backend := core.systemBackend
+		req := &logical.Request{
+			Operation:   logical.ListOperation,
+			ClientToken: rootToken,
+			Path:        "secrets/list-recursive",
+			Data: map[string]interface{}{
+				"path":        "",
+				"pattern":     "",
+				"fuzzy":       false,
+				"permissions": "",
+			},
+		}
+		resp, err := backend.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		if resp.Data != nil {
+			t.Logf("resp.Data is non-nil map with %d entries", len(resp.Data))
+			for k, v := range resp.Data {
+				t.Logf("  key %q: %v (type=%T)", k, v, v)
+			}
+		} else {
+			t.Log("resp.Data is nil")
+		}
+		// Also check if keys are in resp.Data but not printed
+		if k := resp.Data["keys"]; k != nil {
+			t.Logf("keys found: %v", k)
+		} else {
+			t.Log("keys NOT found in resp.Data")
+		}
+	})
+}
+func TestListAllSecretsRecursive_Debug3(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	writeReq := &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "db/conn",
+		Data:        map[string]interface{}{"host": "localhost"},
+	}
+	core.HandleRequest(namespace.RootContext(context.Background()), writeReq)
+
+	t.Run("debug mounts", func(t *testing.T) {
+		ctx := namespace.RootContext(context.Background())
+		backend := core.systemBackend
+		mounts, err := core.ListMounts()
+		require.NoError(t, err)
+		t.Logf("Total mounts: %d", len(mounts))
+		for _, m := range mounts {
+			t.Logf("  mount: path=%s type=%s table=%s local=%v accessor=%s", m.Path, m.Type, m.Table, m.Local, m.Accessor)
+			storage := core.router.MatchingStorageByStoragePath(ctx, m.Path)
+			if storage == nil {
+				t.Logf("    storage is nil for %s", m.Path)
+				continue
+			}
+			keys, err := logical.CollectKeysWithPrefix(ctx, storage, "")
+			t.Logf("    storage: keys=%v err=%v", keys, err)
+		}
+		req := &logical.Request{
+			Operation:   logical.ListOperation,
+			ClientToken: rootToken,
+			Path:        "secrets/list-recursive",
+			Data: map[string]interface{}{
+				"path":        "",
+				"pattern":     "",
+				"fuzzy":       false,
+				"permissions": "",
+			},
+		}
+		resp, err := backend.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		if resp.Data != nil {
+			t.Logf("resp.Data: %d entries", len(resp.Data))
+			for k, v := range resp.Data {
+				t.Logf("  key %q: %v", k, v)
+			}
+		}
+	})
+}
+func TestListAllSecretsRecursive_Simple(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	// Write a secret
+	core.HandleRequest(namespace.RootContext(context.Background()), &logical.Request{
+		Operation:   logical.CreateOperation,
+		ClientToken: rootToken,
+		Path:        "db/conn",
+		Data:        map[string]interface{}{"host": "localhost"},
+	})
+
+	// Call the handler directly via framework
+	ctx := namespace.RootContext(context.Background())
+	backend := core.systemBackend
+	req := &logical.Request{
+		Operation:   logical.ListOperation,
+		ClientToken: rootToken,
+		Path:        "secrets/list-recursive",
+	}
+
+	// List all mounts first
+	mounts, err := core.ListMounts()
+	require.NoError(t, err)
+	t.Logf("Total mounts: %d", len(mounts))
+	for _, m := range mounts {
+		if m.Local || m.Type == "system" {
+			t.Logf("  SKIP %s (local=%v, type=%s)", m.Path, m.Local, m.Type)
+			continue
+		}
+		storage := core.router.MatchingStorageByStoragePath(ctx, m.Path)
+		if storage == nil {
+			t.Logf("  NIL storage for %s", m.Path)
+			continue
+		}
+		keys, err := logical.CollectKeysWithPrefix(ctx, storage, "")
+		t.Logf("  CHECK %s: storage OK, keys=%v err=%v", m.Path, keys, err)
+	}
+
+	resp, err := backend.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	t.Logf("resp.Data keys=%+v", resp.Data["keys"])
+}
+func TestListAllSecretsRecursive_Storage(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	ctx := namespace.RootContext(context.Background())
+	mounts, err := core.ListMounts()
+	require.NoError(t, err)
+
+	t.Logf("Router storagePrefix entries:")
+	core.router.storagePrefix.WalkPrefix("secret/", func(k string, v interface{}) bool {
+		t.Logf("  storagePrefix key=%q value=%T", k, v)
+		return false
+	})
+	core.router.storagePrefix.WalkPrefix("db/", func(k string, v interface{}) bool {
+		t.Logf("  storagePrefix key=%q value=%T", k, v)
+		return false
+	})
+	core.router.storagePrefix.WalkPrefix("identity/", func(k string, v interface{}) bool {
+		t.Logf("  storagePrefix key=%q value=%T", k, v)
+		return false
+	})
+
+	// Check the root tree
+	t.Logf("Router root entries:")
+	core.router.root.WalkPrefix("secret", func(k string, v interface{}) bool {
+		t.Logf("  root key=%q value=%T", k, v)
+		return false
+	})
+	core.router.root.WalkPrefix("db", func(k string, v interface{}) bool {
+		t.Logf("  root key=%q value=%T", k, v)
+		return false
+	})
+
+	// Try MatchingMount
+	for _, mount := range mounts {
+		if mount.Local || mount.Type == "system" {
+			continue
+		}
+		mt := core.router.MatchingMount(ctx, mount.Path)
+		s := core.router.MatchingStorageByStoragePath(ctx, mount.Path)
+		t.Logf("  %s: MatchingMount=%s MatchingStorageByStoragePath=%s", mount.Path, mt, s)
+	}
+}
+func TestListAllSecretsRecursive_Storage2(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	_ = namespace.RootContext(context.Background())
+
+	t.Logf("Router storagePrefix ALL entries:")
+	core.router.storagePrefix.Walk(func(k string, v interface{}) bool {
+		t.Logf("  storagePrefix key=%q value=%T", k, v)
+		return false
+	})
+
+	t.Logf("Router root ALL entries:")
+	core.router.root.Walk(func(k string, v interface{}) bool {
+		t.Logf("  root key=%q value=%T", k, v)
+		return false
+	})
+}
+func TestListAllSecretsRecursive_Minimal(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+
+	// Mount db/ and verify storage tree
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	ctx := namespace.RootContext(context.Background())
+
+	// Check what ns.Path is
+	ns, err := namespace.FromContext(ctx)
+	t.Logf("ns.Path=%q ns.ID=%q err=%v", ns.Path, ns.ID, err)
+
+	// Check storagePrefix tree directly
+	t.Logf("storagePrefix tree entries:")
+	core.router.storagePrefix.WalkPrefix("/", func(k string, v interface{}) bool {
+		re := v.(*routeEntry)
+		t.Logf("  key=%q storagePrefix=%q", k, re.storagePrefix)
+		return false
+	})
+
+	// Now test LongestPrefix for each mount path
+	t.Logf("LongestPrefix tests:")
+	for _, p := range []string{"db/", "secret/", "identity/", "cubbyhole/"} {
+		nsPath := ns.Path
+		key := nsPath + p
+		_, raw, ok := core.router.storagePrefix.LongestPrefix(key)
+		t.Logf("  search=%q key=%q ok=%v raw=%v", p, key, ok, raw != nil)
+	}
+
+	// Now test MatchingStorageByStoragePath
+	t.Logf("MatchingStorageByStoragePath results:")
+	for _, p := range []string{"db/", "secret/", "identity/"} {
+		s := core.router.MatchingStorageByStoragePath(ctx, p)
+		t.Logf("  %q -> storage=%v", p, s != nil)
+		if s != nil {
+			t.Logf("    prefix=%s", s.(*BarrierView).Prefix())
+		}
+	}
+
+	// Final test: call ListAllSecretsRecursive
+	backend := core.systemBackend
+	req := &logical.Request{
+		Operation:   logical.ListOperation,
+		ClientToken: rootToken,
+		Path:        "secrets/list-recursive",
+	}
+	resp, err := backend.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	t.Logf("resp.Data keys=%+v", resp.Data["keys"])
+}
+func TestListAllSecretsRecursive_StorageWalk(t *testing.T) {
+	t.Parallel()
+	core, _, rootToken := TestCoreUnsealed(t)
+
+	mountKV := func(path string) {
+		req := &logical.Request{
+			Operation:   logical.UpdateOperation,
+			ClientToken: rootToken,
+			Path:        "sys/mounts/" + path,
+			Data:        map[string]interface{}{"type": "kv"},
+		}
+		core.HandleRequest(namespace.RootContext(context.Background()), req)
+	}
+	mountKV("db")
+
+	// Print ALL storagePrefix entries using Walk (prints ALL, not just prefix-matching)
+	t.Logf("ALL storagePrefix entries:")
+	core.router.storagePrefix.WalkPrefix("cubbyhole", func(k string, v interface{}) bool {
+		t.Logf("  WalkPrefix cubbyhole: key=%q", k)
+		return false
+	})
+
+	// Print root tree
+	t.Logf("ALL root entries:")
+	core.router.root.WalkPrefix("cubbyhole", func(k string, v interface{}) bool {
+		t.Logf("  root WalkPrefix cubbyhole: key=%q", k)
+		return false
+	})
+
+	// Now let's directly check the LongestPrefix for each storage prefix key
+	t.Logf("Direct LongestPrefix tests:")
+
+	// Use WalkPrefix to find all keys
+	var allStorageKeys []string
+	core.router.storagePrefix.WalkPrefix("", func(k string, v interface{}) bool {
+		allStorageKeys = append(allStorageKeys, k)
+		return false
+	})
+	t.Logf("  storagePrefix keys: %v", allStorageKeys)
+
+	// Test LongestPrefix with each key
+	for _, k := range allStorageKeys {
+		_, raw, ok := core.router.storagePrefix.LongestPrefix(k)
+		t.Logf("  LongestPrefix(%q) -> ok=%v raw=%v", k, ok, raw != nil)
+	}
+
+	// Test LongestPrefix with path-style keys
+	t.Logf("LongestPrefix with path-style:")
+	for _, p := range []string{"db/", "secret/", "identity/", "cubbyhole/"} {
+		_, raw, ok := core.router.storagePrefix.LongestPrefix(p)
+		t.Logf("  LongestPrefix(%q) -> ok=%v raw=%v", p, ok, raw != nil)
 	}
 }
