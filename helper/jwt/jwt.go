@@ -7,8 +7,12 @@ import (
 	"fmt"
 	"net/url"
 	"path"
+	"regexp"
 	"strings"
 )
+
+// IsValidKey is used to assert that a given JWT key does not contain any disallowed characters
+var IsValidKey = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`).MatchString
 
 // normalizeIssuer normalizes an issuer URL according to RFC 9207 and RFC 3986.
 //
