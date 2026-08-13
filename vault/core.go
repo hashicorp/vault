@@ -46,6 +46,7 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
+	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -806,10 +807,11 @@ type Core struct {
 
 	agentRegistry *AgentRegistry
 
-	// noSleepOnALPNHandlerStop disables the short sleep when an ALPN handler is to be
-	// stopped, giving time for RPC requests to drain.  This is only meant to
-	// be used in test code.
-	noSleepOnALPNHandlerStop bool
+	// synctest disables the short sleep when an ALPN handler is to be
+	// stopped, giving time for RPC requests to drain.  It also means that we
+	// don't sleep during polling to see whether a cache expiry goroutine is
+	// started.
+	synctest bool
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1024,9 +1026,8 @@ type CoreConfig struct {
 	// When false (default), "/" is allowed
 	DenySlashInTemplatedPolicyPaths bool
 
-	// NoSleepOnALPNHandlerTop means we don't sleep when ALPN handlers are
-	// stopped to give time for RPC requests to drain.  This is needed for synctest.
-	NoSleepOnALPNHandlerStop bool
+	// Synctest should be true when running within a synctest.Test bubble.
+	Synctest bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1217,7 +1218,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		enableUnauthDROperationToken:    new(atomic.Bool),
 		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
 		certCountConsumerJobInterval:    conf.CertCountConsumerJobInterval,
-		noSleepOnALPNHandlerStop:        conf.NoSleepOnALPNHandlerStop,
+		synctest:                        conf.Synctest,
 	}
 
 	c.certCountManager = cert_count.InitCertificateCountManager(c.logger, c.certCountConsumerJobInterval)
@@ -3137,12 +3138,12 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 	c.loginMFABackend.usedCodes = ttlcache.New[string, any]()
-	go c.loginMFABackend.usedCodes.Start()
+	cache.Start(ctx, c.loginMFABackend.usedCodes, !c.synctest)
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = ttlcache.New[string, any]()
-		go c.systemBackend.mfaBackend.usedCodes.Start()
+		cache.Start(ctx, c.systemBackend.mfaBackend.usedCodes, !c.synctest)
 	}
-	go c.clusterPeerClusterAddrsCache.Start()
+	cache.Start(ctx, c.clusterPeerClusterAddrsCache, !c.synctest)
 
 	if c.systemBackend != nil {
 		// all mounts need to be initialized before activity log reporting
