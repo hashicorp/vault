@@ -93,7 +93,7 @@ func (c *Core) BuildTotal() *uint32    { return nil }
 func (c *Core) teardownReplicationResolverHandler() {}
 func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
-func (c *Core) addExtraLogicalBackends(_ string) {}
+func (c *Core) addExtraLogicalBackends() {}
 
 func (c *Core) addExtraEventBackends() {}
 
