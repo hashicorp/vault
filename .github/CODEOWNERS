@@ -34,11 +34,9 @@
 # Web presence gets notified of, and can approve changes to web tooling, but not content.
 
 /website/               @hashicorp/web-presence
-/website/data/
-/website/public/
-/website/content/
 
 # Education gets notified of, and can approve changes to web content.
+# These more-specific patterns override the web-presence rule above for content subdirs.
 /website/data/          @hashicorp/vault-education-approvers
 /website/public/        @hashicorp/vault-education-approvers
 /website/content/       @hashicorp/vault-education-approvers
@@ -49,6 +47,14 @@
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 /website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 
+# Automation/Quality engineering
+/.github/                         @hashicorp/team-vault-quality @hashicorp/team-vault-engineering-productivity-team
+/enos/                            @hashicorp/team-vault-quality
+/.release/                        @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
+/.github/workflows/build.yml      @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
+
+
+# UI
 /.github/actions/build-ui/                  @hashicorp/vault-ui @hashicorp/vault-frontend
 /.github/actions/set-up-pnpm/               @hashicorp/vault-ui @hashicorp/vault-frontend
 /.github/workflows/gen-diff-spec/           @hashicorp/vault-ui @hashicorp/vault-frontend
@@ -63,17 +69,12 @@
 /ui/app/components/auth/form/saml.ts     @hashicorp/vault-ui @hashicorp/vault-frontend @hashicorp/vault-ecosystem
 /ui/app/routes/vault/cluster/oidc-*.js   @hashicorp/vault-ui @hashicorp/vault-frontend @hashicorp/vault-ecosystem
 
-# Release config; service account is required for automation tooling.
-/.release/                     @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
-/.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
-
-# Quality engineering
-/.github/  @hashicorp/team-vault-quality @hashicorp/team-vault-engineering-productivity-team
-/enos/     @hashicorp/team-vault-quality
-
-# Copilot instructions - exceptions to the general .github/ rule
-/.github/instructions/  @hashicorp/vault
+# AI assistant configuration
+/.bob/                            @hashicorp/vault
+/.opencode/                       @hashicorp/vault
+/opencode.json                    @hashicorp/vault
 /.github/copilot-instructions.md  @hashicorp/vault
+/.github/instructions/            @hashicorp/vault
 
 # Cryptosec
 /api/auth/cert/                                      @hashicorp/vault-crypto
