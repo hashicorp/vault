@@ -7,6 +7,6 @@ package vault
 
 import "context"
 
-func (c *Core) setupOAuthTokenDenylist(ctx context.Context) error {
+func (c *Core) populateIssuerNamespacesIndex(ctx context.Context) error {
 	return nil
 }

@@ -2920,8 +2920,11 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.setupExpiration(expireLeaseStrategyFairsharing)
 		})
-		setupFunctions = append(setupFunctions, func(_ context.Context) error {
-			return c.setupOAuthTokenDenylist()
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupOAuthTokenDenylist(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.populateIssuerNamespacesIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
