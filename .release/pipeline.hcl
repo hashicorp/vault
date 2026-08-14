@@ -326,6 +326,7 @@ changed_files {
         joinpath(".release", "ibm-pao"),
         // Internal developer tooling that must not sync to CE
         ".bob",
+        ".opencode",
         ".agents",
         joinpath("ui", ".agents"),
       ]
@@ -336,6 +337,7 @@ changed_files {
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
         "AGENTS.md",
+        "opencode.json",
       ]
     }
 
