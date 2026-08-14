@@ -192,7 +192,7 @@ func TestNewCore_configureLogicalBackends(t *testing.T) {
 
 			core := &Core{}
 			require.Len(t, core.logicalBackends, 0)
-			core.configureLogicalBackends(tc.backends, corehelpers.NewTestLogger(t), tc.adminNamespacePath)
+			core.configureLogicalBackends(tc.backends, corehelpers.NewTestLogger(t))
 			require.GreaterOrEqual(t, len(core.logicalBackends), tc.expectedNonEntBackends)
 			require.Contains(t, core.logicalBackends, mountTypeKV)
 			require.Contains(t, core.logicalBackends, mountTypeCubbyhole)
@@ -3898,5 +3898,5 @@ func Test_administrativeNamespacePath(t *testing.T) {
 		AdministrativeNamespacePath: adminNamespacePath,
 	}
 	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
-	require.Equal(t, core.administrativeNamespacePath(), adminNamespacePath)
+	require.Equal(t, core.AdministrativeNamespacePath(), adminNamespacePath)
 }

@@ -53,6 +53,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/helper/trace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -805,7 +806,9 @@ type Core struct {
 
 	certCountConsumerJobInterval time.Duration
 
-	agentRegistry *AgentRegistry
+	agentRegistry               *AgentRegistry
+	administrativeNamespacePath string
+	operatorNamespacePath       string
 
 	// synctest disables the short sleep when an ALPN handler is to be
 	// stopped, giving time for RPC requests to drain.  It also means that we
@@ -1006,6 +1009,9 @@ type CoreConfig struct {
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
 
+	// OperatorNamespacePath is used to configure the operator namespace path.
+	OperatorNamespacePath string
+
 	// ObservationSystemConfig is the config for the Observation System
 	ObservationSystemConfig *observations.ObservationSystemConfig
 
@@ -1097,6 +1103,16 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	// Instantiate a non-nil raw config if none is provided
 	if conf.RawConfig == nil {
 		conf.RawConfig = new(server.Config)
+	}
+	// Ensure SharedConfig exists so promoted fields are accessible.
+	if conf.RawConfig.SharedConfig == nil {
+		conf.RawConfig.SharedConfig = new(configutil.SharedConfig)
+	}
+	// Backfill AdministrativeNamespacePath into RawConfig when callers (e.g.
+	// tests) set it only on CoreConfig. RawConfig is the live-reloadable source
+	// of truth read by AdministrativeNamespacePath(), so it must be populated.
+	if conf.RawConfig.AdministrativeNamespacePath == "" && conf.AdministrativeNamespacePath != "" {
+		conf.RawConfig.AdministrativeNamespacePath = conf.AdministrativeNamespacePath
 	}
 
 	// secureRandomReader cannot be nil
@@ -1431,7 +1447,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Logical backends
-	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
+	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger)
 
 	// Credentials backends
 	c.configureCredentialsBackends(conf.CredentialBackends, conf.Logger)
@@ -1634,7 +1650,7 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 
 // configureLogicalBackends configures the Core with the ability to create
 // logical backends for various types.
-func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, logger log.Logger, adminNamespacePath string) {
+func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, logger log.Logger) {
 	logicalBackends := make(map[string]logical.Factory, len(backends))
 
 	for k, f := range backends {
@@ -1696,7 +1712,7 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	c.logicalBackends = logicalBackends
 
-	c.addExtraLogicalBackends(adminNamespacePath)
+	c.addExtraLogicalBackends()
 }
 
 // handleVersionTimeStamps stores the current version at the current time to
@@ -3969,13 +3985,23 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
-// administrativeNamespacePath returns the configured administrative namespace path.
-func (c *Core) administrativeNamespacePath() string {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return ""
+// AdministrativeNamespacePath returns the configured administrative namespace path.
+// It reads from rawConfig so that a live SIGHUP / SetConfig update is reflected immediately.
+// Falls back to the cached field when rawConfig has not been populated (e.g. in unit tests
+// that construct a bare Core without going through NewCore).
+func (c *Core) AdministrativeNamespacePath() string {
+	if conf := c.rawConfig.Load(); conf != nil {
+		return conf.(*server.Config).AdministrativeNamespacePath
 	}
-	return conf.(*server.Config).AdministrativeNamespacePath
+	return c.administrativeNamespacePath
+}
+
+// OperatorNamespacePath returns the configured operator namespace path. If set,
+// this namespace will be created if it doesn't exist, and operator APIs will
+// only be available in the configured path. An empty path means that operator
+// APIs will remain in the root namespace, as normal.
+func (c *Core) OperatorNamespacePath() string {
+	return c.operatorNamespacePath
 }
 
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env

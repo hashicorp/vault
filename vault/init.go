@@ -377,6 +377,14 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, err
 	}
 
+	if c.OperatorNamespacePath() != "" {
+		c.logger.Trace("creating operator namespace", "path", c.OperatorNamespacePath())
+		_, err := createNamespace(namespace.RootContext(ctx), c, namespace.Canonicalize(c.OperatorNamespacePath()), nil)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create operator namespace: %w", err)
+		}
+	}
+
 	// Save the configuration regardless, but only generate a key if it's not
 	// disabled. When using recovery keys they are stored in the barrier, so
 	// this must happen post-unseal.
