@@ -220,9 +220,12 @@ auto_auth {
 		logger.Trace("wrote test config", "path", conf)
 	}
 
+	var code int
+	var ui *cli.MockUi
 	doneCh := make(chan struct{})
 	go func() {
-		ui, cmd := testAgentCommand(t, logger)
+		var cmd *AgentCommand
+		ui, cmd = testAgentCommand(t, logger)
 		cmd.client = client
 
 		args := []string{"-config", conf}
@@ -230,12 +233,7 @@ auto_auth {
 			args = append(args, "-exit-after-auth")
 		}
 
-		code := cmd.Run(args)
-		if code != 0 {
-			t.Errorf("expected %d to be %d", code, 0)
-			t.Logf("output from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run(args)
 		close(doneCh)
 	}()
 
@@ -244,6 +242,12 @@ auto_auth {
 		break
 	case <-time.After(1 * time.Minute):
 		t.Fatal("timeout reached while waiting for agent to exit")
+	}
+
+	if code != 0 {
+		t.Errorf("expected %d to be %d", code, 0)
+		t.Logf("output from agent:\n%s", ui.OutputWriter.String())
+		t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
 	}
 
 	sink1Bytes, err := os.ReadFile(sinkFileName1)
@@ -540,15 +544,11 @@ vault {
 	ui, cmd := testAgentCommand(t, logger)
 	cmd.startedCh = make(chan struct{})
 
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
-		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
 
@@ -582,6 +582,12 @@ vault {
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
+
+	if code != 0 {
+		t.Errorf("non-zero return code when running agent: %d", code)
+		t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+		t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+	}
 }
 
 // TestAgent_Template_UserAgent Validates that the User-Agent sent to Vault
@@ -686,15 +692,11 @@ auto_auth {
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
-		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
 
@@ -708,6 +710,11 @@ auto_auth {
 	defer func() {
 		cmd.ShutdownCh <- struct{}{}
 		wg.Wait()
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
 	}()
 
 	verify := func(suffix string) {
@@ -887,15 +894,11 @@ auto_auth {
 			cmd.client = serverClient
 			cmd.startedCh = make(chan struct{})
 
+			var code int
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
-				code := cmd.Run([]string{"-config", configPath})
-				if code != 0 {
-					t.Errorf("non-zero return code when running agent: %d", code)
-					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-				}
+				code = cmd.Run([]string{"-config", configPath})
 				wg.Done()
 			}()
 
@@ -912,6 +915,20 @@ auto_auth {
 				defer func() {
 					cmd.ShutdownCh <- struct{}{}
 					wg.Wait()
+					if code != 0 {
+						t.Errorf("non-zero return code when running agent: %d", code)
+						t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+						t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+					}
+				}()
+			} else {
+				defer func() {
+					wg.Wait()
+					if code != 0 {
+						t.Errorf("non-zero return code when running agent: %d", code)
+						t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+						t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+					}
 				}()
 			}
 
@@ -1166,15 +1183,11 @@ auto_auth {
 			cmd.client = serverClient
 			cmd.startedCh = make(chan struct{})
 
+			var code int
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
-				code := cmd.Run([]string{"-config", configPath})
-				if code != 0 {
-					t.Errorf("non-zero return code when running agent: %d", code)
-					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-				}
+				code = cmd.Run([]string{"-config", configPath})
 				wg.Done()
 			}()
 
@@ -1187,6 +1200,11 @@ auto_auth {
 			defer func() {
 				cmd.ShutdownCh <- struct{}{}
 				wg.Wait()
+				if code != 0 {
+					t.Errorf("non-zero return code when running agent: %d", code)
+					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+				}
 			}()
 
 			// We need to poll for a bit to give Agent time to render the
@@ -1339,15 +1357,11 @@ exit_after_auth = true
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
-		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
 
@@ -1358,6 +1372,12 @@ exit_after_auth = true
 	}
 
 	wg.Wait()
+
+	if code != 0 {
+		t.Errorf("non-zero return code when running agent: %d", code)
+		t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+		t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+	}
 
 	//----------------------------------------------------
 	// Perform the tests
@@ -3361,6 +3381,8 @@ func TestAgent_Logging_ConsulTemplate(t *testing.T) {
 	templateConfig := fmt.Sprintf(templateConfigString, templateSrc, tempDir, "render_1.json")
 
 	config := `
+exit_after_auth = true
+
 vault {
   address = "%s"
 	tls_skip_verify = true
@@ -3386,20 +3408,18 @@ auto_auth {
 	_, cmd := testAgentCommand(t, nil)
 	logFilePath := filepath.Join(tempDir, "agent")
 
+	codeCh := make(chan int)
 	// Start Vault Agent
 	go func() {
-		code := cmd.Run([]string{"-config", configFileName, "-log-format", "json", "-log-file", logFilePath, "-log-level", "trace"})
-		require.Equalf(t, 0, code, "Vault Agent returned a non-zero exit code")
+		codeCh <- cmd.Run([]string{"-config", configFileName, "-log-format", "json", "-log-file", logFilePath, "-log-level", "trace"})
 	}()
 
 	select {
-	case <-cmd.startedCh:
+	case code := <-codeCh:
+		require.Equalf(t, 0, code, "Vault Agent returned a non-zero exit code")
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout starting agent")
 	}
-
-	// Give Vault Agent some time to render our template.
-	time.Sleep(3 * time.Second)
 
 	// This flag will be used to capture whether we saw a consul-template log
 	// message in the log file (the presence of the log file is also part of the test)
@@ -3488,6 +3508,8 @@ func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
 
 	autoAuthConfig := fmt.Sprintf(`
+exit_after_auth = true
+
 auto_auth {
     method {
 		type = "token_file"
@@ -3525,29 +3547,21 @@ template {
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	codeCh := make(chan int)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
+		codeCh <- cmd.Run([]string{"-config", configPath})
+	}()
+
+	select {
+	case code := <-codeCh:
 		if code != 0 {
 			t.Errorf("non-zero return code when running agent: %d", code)
 			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
 			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
 		}
-		wg.Done()
-	}()
-
-	select {
-	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
 		t.Errorf("timeout")
 	}
-
-	// We need to shut down the Agent command
-	defer func() {
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
-	}()
 
 	filePath := fmt.Sprintf("%s/%s", tmpDir, fileName)
 
