@@ -812,6 +812,10 @@ type Core struct {
 	// don't sleep during polling to see whether a cache expiry goroutine is
 	// started.
 	synctest bool
+
+	// ControlHubManager holds information regarding the node's connection to the control hub.
+	// It will be initialized to a no-op structure on CE
+	ControlHubManager *ControlHubManager
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1482,6 +1486,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Initialize ControlHubManager after barrier is set up
+	c.ControlHubManager = NewControlHubManager(c)
 
 	// Events
 	eventsLogger := conf.Logger.Named("events")

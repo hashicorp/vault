@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -137,11 +138,29 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	return reply, nil
 }
 
+func (s *forwardedRequestRPCServer) SendControlHubCredentials(ctx context.Context, in *SendControlHubCredentialsRequest) (*SendControlHubCredentialsResponse, error) {
+	s.core.logger.Info("forwarding client: received control hub cluster credentials")
+	if s.core.HAState() == consts.Active {
+		err := s.core.ControlHubManager.WriteData(ctx, in.ID, in.Value)
+		return &SendControlHubCredentialsResponse{}, err
+	} else {
+		return &SendControlHubCredentialsResponse{}, fmt.Errorf("node is not leader; cluster credentials are lost")
+	}
+}
+
 type forwardingClient struct {
 	RequestForwardingClient
 	core        *Core
 	echoTicker  *time.Ticker
 	echoContext context.Context
+}
+
+func (c *forwardingClient) SendControlHubCredentials(ctx context.Context, id string, value []byte) error {
+	_, err := c.RequestForwardingClient.SendControlHubCredentials(ctx, &SendControlHubCredentialsRequest{
+		ID:    id,
+		Value: value,
+	})
+	return err
 }
 
 // NOTE: we also take advantage of gRPC's keepalive bits, but as we send data
