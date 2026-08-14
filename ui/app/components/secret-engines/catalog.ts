@@ -11,6 +11,7 @@ import { filterEnginesByMountCategory } from 'core/utils/all-engines-metadata';
 import type { PluginCatalogData } from 'vault/services/plugin-catalog';
 import {
   categorizeEnginesByStatus,
+  EnhancedEngineDisplayData,
   enhanceEnginesWithCatalogData,
   MOUNT_CATEGORIES,
   PLUGIN_CATEGORIES,
@@ -18,6 +19,7 @@ import {
 } from 'vault/utils/plugin-catalog-helpers';
 
 import type VersionService from 'vault/services/version';
+import type FlashMessageService from 'vault/services/flash-messages';
 
 /**
  * @module SecretEnginesCatalog
@@ -38,10 +40,49 @@ interface Args {
 
 export default class SecretEnginesCatalogComponent extends Component<Args> {
   @service declare version: VersionService;
+  @service declare flashMessages: FlashMessageService;
 
+  @tracked selectedEngineType = '';
   @tracked showFlyout = false;
   @tracked flyoutPlugin: unknown = null;
   @tracked flyoutPluginType: string | null = null;
+  @tracked keywords = '';
+  @tracked secretTypeFilter: string | null = null;
+  @tracked rotationTypeFilter: string | null = null;
+  @tracked platformFilter: string | null = null;
+
+  secretTypes = [
+    { label: 'Database credentials', value: 'databaseCredentials' },
+    { label: 'API keys & tokens', value: 'apiKeysTokens' },
+    { label: 'Encryption keys', value: 'encryptionKeys' },
+    { label: 'Certificates & PKI', value: 'certificatesPki' },
+    { label: 'Static storage', value: 'staticStorage' },
+    { label: 'Cloud credentials', value: 'cloudCredentials' },
+    { label: 'SSH keys', value: 'sshKeys' },
+  ];
+
+  rotationTypes = [
+    { label: 'Static credentials', capability: 'static' },
+    { label: 'Dynamic credentials', capability: 'dynamic' },
+    { label: 'Rotation-enabled', capability: 'rotating' },
+  ];
+
+  platforms = [
+    { label: 'Common engines', category: PLUGIN_CATEGORIES.COMMON },
+    { label: 'Identity and access', category: PLUGIN_CATEGORIES.IDENTITY },
+    { label: 'Cryptography and data protection', category: PLUGIN_CATEGORIES.CRYPTO },
+    { label: 'Cloud and infrastructure', category: PLUGIN_CATEGORIES.CLOUD_PLUS },
+  ];
+
+  badgeLegendEntries = [
+    { badge: 'Static', description: 'Can store static credentials' },
+    { badge: 'Rotating', description: 'Can perform auto-rotation' },
+    { badge: 'Dynamic', description: 'Can generate temporary credentials' },
+    { badge: 'Encryption', description: 'Can perform encryption as a service' },
+    { badge: 'Signing', description: 'Can sign keys' },
+    { badge: 'Tokenization', description: 'Can tokenize sensitive data' },
+    { badge: 'Certificate authority', description: 'Can issue and manage certificates' },
+  ];
 
   get breadcrumbs() {
     return [
@@ -55,7 +96,7 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
         route: 'vault.cluster.secrets.backends',
       },
       {
-        label: 'Enable secrets engine',
+        label: 'Create a new secrets engine',
       },
     ];
   }
@@ -82,11 +123,40 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
     return staticEngines;
   }
 
+  get filteredEngines() {
+    const kw = this.keywords.trim().toLowerCase();
+
+    return this.secretEngines.filter((engine) => {
+      if (kw) {
+        const matchesKeyword =
+          engine.displayName?.toLowerCase().includes(kw) ||
+          engine.type?.toLowerCase().includes(kw) ||
+          engine.description?.toLowerCase().includes(kw);
+        if (!matchesKeyword) return false;
+      }
+
+      if (this.secretTypeFilter) {
+        if (!(engine.secretTypes ?? []).includes(this.secretTypeFilter)) return false;
+      }
+
+      if (this.rotationTypeFilter) {
+        if (!(engine.capabilities ?? []).includes(this.rotationTypeFilter)) return false;
+      }
+
+      if (this.platformFilter && engine.category !== this.platformFilter) {
+        return false;
+      }
+
+      return true;
+    });
+  }
+
   get pluginCategoriesList() {
     return [
-      PLUGIN_CATEGORIES.GENERIC,
-      PLUGIN_CATEGORIES.CLOUD,
-      PLUGIN_CATEGORIES.INFRA,
+      PLUGIN_CATEGORIES.COMMON,
+      PLUGIN_CATEGORIES.IDENTITY,
+      PLUGIN_CATEGORIES.CRYPTO,
+      PLUGIN_CATEGORIES.CLOUD_PLUS,
 
       // TODO: enable external plugins once version selection is available (VAULT-39241)
       // PLUGIN_CATEGORIES.EXTERNAL,
@@ -97,22 +167,39 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
     return MOUNT_CATEGORIES.SECRET;
   }
 
+  isDisabled = (type: EnhancedEngineDisplayData) => {
+    return (
+      (type.requiresEnterprise && !this.version.isEnterprise) ||
+      (type.requiredFeature && !this.hasFeature(type.requiredFeature))
+    );
+  };
+
+  showDeprecationBadge = (type: EnhancedEngineDisplayData) => {
+    return type.deprecationStatus && type.deprecationStatus !== 'supported';
+  };
+
+  hasFeature(featureName: string) {
+    return this.version.features?.includes(featureName) || false;
+  }
+
+  @action
+  selectEngineType(type: string) {
+    this.selectedEngineType = type;
+  }
+
+  @action
+  handleSelection() {
+    if (this.selectedEngineType) {
+      this.args.setMountType(this.selectedEngineType);
+    } else {
+      this.flashMessages.danger('Please select an engine to mount.');
+    }
+  }
+
   @action
   getMountTypesByCategory(category: string) {
-    try {
-      const mountTypes = this.secretEngines;
-      if (!mountTypes || !Array.isArray(mountTypes)) {
-        return { enabled: [], disabled: [] };
-      }
-
-      const allTypes = mountTypes.filter((type: unknown) => {
-        const engineType = type as { pluginCategory?: string };
-        return engineType?.pluginCategory === category;
-      });
-      return categorizeEnginesByStatus(allTypes);
-    } catch (error) {
-      return { enabled: [], disabled: [] };
-    }
+    const allTypes = this.filteredEngines.filter((engine) => engine.category === category);
+    return categorizeEnginesByStatus(allTypes);
   }
 
   @action
@@ -143,5 +230,41 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
     this.showFlyout = false;
     this.flyoutPlugin = null;
     this.flyoutPluginType = null;
+  }
+
+  @action
+  filterBySecretType(value: string) {
+    this.secretTypeFilter = this.secretTypeFilter === value ? null : value;
+  }
+
+  @action
+  filterByPlatform(category: string) {
+    this.platformFilter = this.platformFilter === category ? null : category;
+  }
+
+  @action
+  filterByRotationType(capability: string) {
+    this.rotationTypeFilter = this.rotationTypeFilter === capability ? null : capability;
+  }
+
+  @action
+  clearKeyword() {
+    this.keywords = '';
+  }
+
+  @action
+  clearAllFilters() {
+    this.keywords = '';
+    this.secretTypeFilter = null;
+    this.rotationTypeFilter = null;
+    this.platformFilter = null;
+  }
+
+  @action
+  setSearchText(type: string, event: Event) {
+    const target = event.target as HTMLInputElement;
+    if (type === 'keywords') {
+      this.keywords = target.value;
+    }
   }
 }

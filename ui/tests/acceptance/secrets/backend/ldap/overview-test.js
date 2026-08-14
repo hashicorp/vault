@@ -42,7 +42,7 @@ module('Acceptance | ldap | overview', function (hooks) {
     const backend = 'ldap-test-mount';
     await visit('/vault/secrets-engines');
     await click('[data-test-enable-engine]');
-    await mountBackend('ldap', backend);
+    await mountBackend('ldap', backend, true);
     assert.true(isURL('overview', backend), 'Transitions to ldap overview route on mount success');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText(backend);
     // cleanup mounted engine
