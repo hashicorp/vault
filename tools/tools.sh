@@ -99,7 +99,6 @@ install_internal() {
   # If you update this please update check tools below.
   tools=(
     codechecker
-    stubmaker
   )
 
   echo "==> Installing internal tools..."
@@ -116,7 +115,6 @@ check_internal() {
   local tools
   tools=(
     codechecker
-    stubmaker
   )
 
   echo "==> Checking for internal tools..."

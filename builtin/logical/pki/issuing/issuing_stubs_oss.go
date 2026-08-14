@@ -11,8 +11,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 func entSetCertVerifyOptions(issuer *IssuerEntry, view logical.SystemView, options *ctx509.VerifyOptions) (bool, error) {
 	return false, nil
 }
