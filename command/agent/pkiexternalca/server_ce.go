@@ -8,15 +8,15 @@ package pkiexternalca
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/hashicorp/vault/api"
-	"go.uber.org/atomic"
 )
 
 // Server is a CE stub; PKI external CA is an enterprise-only feature.
 type Server struct {
 	DoneCh  chan struct{}
-	stopped *atomic.Bool
+	stopped atomic.Bool
 }
 
 // NewServer returns a stub server for CE builds.
@@ -25,8 +25,8 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		return nil, fmt.Errorf("server config cannot be nil")
 	}
 	return &Server{
-		DoneCh:  make(chan struct{}),
-		stopped: atomic.NewBool(false),
+		DoneCh: make(chan struct{}),
+		// stopped: go.uber.org/atomic required explicit initialisation via atomic.NewBool(false), but sync/atomic.Bool is a value type whose zero value is already false.
 	}, nil
 }
 
@@ -38,7 +38,7 @@ func (s *Server) Run(ctx context.Context, _ chan string, _ *api.Client) error {
 
 // Stop closes DoneCh idempotently.
 func (s *Server) Stop() {
-	if s.stopped.CAS(false, true) {
+	if s.stopped.CompareAndSwap(false, true) {
 		close(s.DoneCh)
 	}
 }
