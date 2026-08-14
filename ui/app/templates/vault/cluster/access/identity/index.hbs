@@ -88,7 +88,7 @@
     {{! The identity routes expect the dynamic URL segment for identity/:item_type to be plural }}
     @model={{pluralize this.identityType}}
     @showSizeSelector={{false}}
-    @totalItems={{this.model.meta.total}}
+    @totalItems={{this.model.meta.totalItems}}
     @queryFunction={{this.paginationQueryParams}}
   />
 
