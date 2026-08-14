@@ -98,7 +98,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const engine = engineDisplayData('kmip');
 
     await mountSecrets.visit();
-    await mountBackend(engine.type, `${engine.type}-${uuidv4()}`);
+    await mountBackend(engine.type, `${engine.type}-${uuidv4()}`, true);
 
     assert.strictEqual(
       currentRouteName(),

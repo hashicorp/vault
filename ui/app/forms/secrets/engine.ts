@@ -188,7 +188,7 @@ export default class SecretsEngineForm extends MountForm<SecretsEngineFormData> 
   get formFieldGroups() {
     return [
       new FormFieldGroup('default', this.defaultFields),
-      new FormFieldGroup('Method Options', this.optionFields),
+      new FormFieldGroup('View additional settings', this.optionFields),
     ];
   }
 }

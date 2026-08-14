@@ -41,7 +41,7 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     const keymgmtType = 'keymgmt';
     await mountSecrets.visit();
     await settled();
-    await mountBackend(keymgmtType, keymgmtType);
+    await mountBackend(keymgmtType, keymgmtType, true);
     await click(GENERAL.dropdownToggle('Manage'));
     await click(GENERAL.menuItem('Configure'));
     assert

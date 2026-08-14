@@ -49,7 +49,7 @@
       {{else}}
         <ToggleButton
           @isOpen={{eq this.showGroup group}}
-          @openLabel={{concat "Hide " group}}
+          @openLabel={{if @openLabel @openLabel (concat "Hide " group)}}
           @closedLabel={{group}}
           @onClick={{fn this.toggleGroup group}}
           class="is-block"

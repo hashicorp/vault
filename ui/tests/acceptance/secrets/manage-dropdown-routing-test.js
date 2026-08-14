@@ -254,9 +254,10 @@ const secretsEngineListRoute = '/vault/secrets-engines';
 const mountEngine = async ({ type, version }, path) => {
   await mountSecrets.visit();
   await click(GENERAL.cardContainer(type));
+  await click(GENERAL.button('next'));
   await fillIn(GENERAL.inputByAttr('path'), path);
   if (type === 'kv' && version === 1) {
-    await click(GENERAL.button('Method Options'));
+    await click(GENERAL.button('View additional settings'));
     await mountSecrets.version(1);
   }
   await click(GENERAL.submitButton);
