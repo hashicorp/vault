@@ -177,11 +177,15 @@ protolint: prep check-tools-external
 # now run as a pre-commit hook (and there's little value in
 # making every build run the formatter), we've removed that
 # dependency.
-prep: check-go-version clean
-	@echo "==> Running go generate..."
-	@GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES)
-	@GOARCH= GOOS= cd api && $(GO_CMD) generate $(API_PACKAGES)
-	@GOARCH= GOOS= cd sdk && $(GO_CMD) generate $(SDK_PACKAGES)
+prep: check-go-version
+	@if [ "$(SKIP_GEN)" = "1" ]; then \
+		echo "==> Skipping go generate (SKIP_GEN=1)"; \
+	else \
+		echo "==> Running go generate..."; \
+		GOARCH= GOOS= $(GO_CMD) generate $(MAIN_PACKAGES); \
+		(cd api && GOARCH= GOOS= $(GO_CMD) generate $(API_PACKAGES)); \
+		(cd sdk && GOARCH= GOOS= $(GO_CMD) generate $(SDK_PACKAGES)); \
+	fi
 
 # Git doesn't allow us to store shared hooks in .git. Instead, we make sure they're up-to-date
 # whenever a make target is invoked.
@@ -409,14 +413,10 @@ ci-copywriteheaders:
 	cd sdk && $(CURDIR)/scripts/copywrite-exceptions.sh
 	cd shamir && $(CURDIR)/scripts/copywrite-exceptions.sh
 
-.PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker clean dev
+.PHONY: all bin default prep test vet bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker dev
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 
 .PHONY: all-packages
 all-packages:
 	@echo $(ALL_PACKAGES) | tr ' ' '\n'
-
-.PHONY: clean
-clean:
-	@echo "==> Cleaning..."
