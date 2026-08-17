@@ -12,7 +12,7 @@ test('keymgmt workflow', async ({ page }) => {
 
   await test.step('mock the distribution response', async () => {
     await page.route('**/v1/keymgmt-test/kms/test-provider/key/test-key', async (route) => {
-      if (route.request().method() === 'PUT') {
+      if (route.request().method() === 'POST') {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -46,9 +46,9 @@ test('keymgmt workflow', async ({ page }) => {
     await page.getByLabel('Type').selectOption('azurekeyvault');
     await page.getByRole('textbox', { name: 'Provider name' }).fill('test-provider');
     await page.getByRole('textbox', { name: 'Key Vault instance name' }).fill('keyvault-name');
-    await page.getByRole('textbox', { name: 'client_id' }).fill('a0454cd1-e28e-405e-bc50-7477fa8a00b7');
-    await page.getByRole('textbox', { name: 'client_secret' }).fill('eR%HizuCVEpAKgeaUEx');
-    await page.getByRole('textbox', { name: 'tenant_id' }).fill('cd4bf224-d114-4f96-9bbc-b8f45751c43f');
+    await page.getByRole('textbox', { name: 'Client ID' }).fill('a0454cd1-e28e-405e-bc50-7477fa8a00b7');
+    await page.getByRole('textbox', { name: 'Client Secret' }).fill('eR%HizuCVEpAKgeaUEx');
+    await page.getByRole('textbox', { name: 'Tenant ID' }).fill('cd4bf224-d114-4f96-9bbc-b8f45751c43f');
     await page.getByRole('button', { name: 'Create provider' }).click();
 
     await expect(page.locator('span').filter({ hasText: 'test-provider' })).toBeVisible();
