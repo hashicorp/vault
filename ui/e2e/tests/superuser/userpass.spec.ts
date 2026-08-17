@@ -51,7 +51,7 @@ test('userpass workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.getByRole('link', { name: 'Access control' }).click();
     await page.getByRole('link', { name: 'Authentication methods' }).click();
-    await page.getByRole('link', { name: 'Type of auth mount test-' }).getByLabel('Overflow options').click();
+    await page.getByRole('row', { name: 'Type of auth mount test-' }).getByLabel('Overflow options').click();
     await page.getByRole('button', { name: 'Disable' }).click();
     await page.getByRole('button', { name: 'Confirm' }).click();
   });
