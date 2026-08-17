@@ -23,10 +23,6 @@ func (c *Core) createAndStoreOAuthJwtTokenEntry(ctx context.Context, req *logica
 	return nil
 }
 
-func getJwtUniqueId(_ map[string]interface{}) string {
-	return ""
-}
-
 func getJwtIssuer(_ map[string]interface{}) string {
 	return ""
 }
