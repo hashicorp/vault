@@ -81,6 +81,12 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
     try {
       const { versions } = await this.api.sys.vaultVersionsReadRead('enterprise');
       this.targetVersions = versions as unknown as string[];
+      const filtered = this.filteredTargetVersions;
+      const latest = filtered[filtered.length - 1];
+      // Pre-select the most recent available target version
+      if (latest) {
+        this.selectedVersion = latest;
+      }
     } catch (e) {
       this.hasError = true;
     }
@@ -149,6 +155,16 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
   get currentVersion() {
     const raw = this.version.version as string | null;
     return raw ? cleanVersion(raw) : '';
+  }
+
+  /** True when the current version is already the latest available release. */
+  get isLatest(): boolean {
+    // Require currentVersion to be known to avoid a false positive while version service loads
+    return (
+      Boolean(this.currentVersion) &&
+      this.targetVersions.length > 0 &&
+      this.filteredTargetVersions.length === 0
+    );
   }
 
   get cluster() {
