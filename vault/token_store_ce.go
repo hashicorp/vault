@@ -34,5 +34,5 @@ func (ts *TokenStore) revokeJWT(ctx context.Context, req *logical.Request, jwtTo
 }
 
 func (c *Core) normalizeJwtForLookup(ctx context.Context, token string) (string, error) {
-	return "", nil
+	return token, nil
 }
