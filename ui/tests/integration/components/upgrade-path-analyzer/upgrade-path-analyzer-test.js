@@ -48,6 +48,37 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
       .doesNotExist('Known issues card is not rendered during the initial state');
   });
 
+  test('Analyze button is enabled on page load with the latest version pre-selected', async function (assert) {
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+    assert
+      .dom(GENERAL.button('Analyze'))
+      .isNotDisabled('Analyze button is enabled because the latest version (2.0.1) is pre-selected');
+    assert
+      .dom(GENERAL.selectByAttr('target version'))
+      .hasValue('2.0.1', 'Latest available version is pre-selected in the dropdown');
+  });
+
+  test('it shows an "already on latest" banner when current version is the latest available', async function (assert) {
+    this.version.version = '2.0.1';
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+    assert
+      .dom('[data-test-latest-empty-state]')
+      .exists('Already-on-latest banner is shown when no newer versions exist');
+    assert
+      .dom(GENERAL.button('Analyze'))
+      .doesNotExist('Analyze button is hidden when already on the latest version');
+    assert
+      .dom(GENERAL.selectByAttr('target version'))
+      .doesNotExist('Target version dropdown is hidden when already on the latest version');
+    assert
+      .dom(GENERAL.selectByAttr('2.0.1'))
+      .doesNotExist('Current version dropdown is hidden when already on the latest version');
+  });
+
   test('it detects the current version', async function (assert) {
     await render(
       hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`

@@ -31,41 +31,47 @@
     class="has-padding-24 top-margin-32 bottom-margin-32"
     data-test-card-container="version-selection"
   >
-    <Hds::Layout::Flex @align="center" @gap="16" @justify="space-between" as |LF|>
-      <Hds::Form::Select::Field disabled name="current-version" data-test-select={{this.currentVersion}} as |F|>
-        <F.Label>Current version</F.Label>
-        <F.Options>
-          <option value={{this.currentVersion}} selected>{{this.currentVersion}}</option>
-        </F.Options>
-      </Hds::Form::Select::Field>
+    {{#if this.isLatest}}
+      <Hds::ApplicationState data-test-latest-empty-state as |A|>
+        <A.Header @icon="check-circle" @title="You're already on the latest version" />
+        <A.Body @text="No upgrade path to analyze. Your cluster is running the most recent available release." />
+      </Hds::ApplicationState>
+    {{else}}
+      <Hds::Layout::Flex @align="center" @gap="16" @justify="space-between" as |LF|>
+        <Hds::Form::Select::Field disabled name="current-version" data-test-select={{this.currentVersion}} as |F|>
+          <F.Label>Current version</F.Label>
+          <F.Options>
+            <option value={{this.currentVersion}} selected>{{this.currentVersion}}</option>
+          </F.Options>
+        </Hds::Form::Select::Field>
 
-      <LF.Item>
-        <Hds::Icon @name="arrow-right" @size="24" />
-      </LF.Item>
+        <LF.Item>
+          <Hds::Icon @name="arrow-right" @size="24" />
+        </LF.Item>
 
-      <Hds::Form::Select::Field
-        name="target-version"
-        {{on "change" this.onVersionSelect}}
-        data-test-select="target version"
-        as |F|
-      >
-        <F.Label>Target version</F.Label>
-        <F.Options>
-          <option value="" selected disabled>Select a target version</option>
-          {{#each this.filteredTargetVersions as |version|}}
-            <option value={{version}}>{{version}}</option>
-          {{/each}}
-        </F.Options>
-      </Hds::Form::Select::Field>
+        <Hds::Form::Select::Field
+          name="target-version"
+          {{on "change" this.onVersionSelect}}
+          data-test-select="target version"
+          as |F|
+        >
+          <F.Label>Target version</F.Label>
+          <F.Options>
+            {{#each this.filteredTargetVersions as |version|}}
+              <option value={{version}} selected={{eq version this.selectedVersion}}>{{version}}</option>
+            {{/each}}
+          </F.Options>
+        </Hds::Form::Select::Field>
 
-      <Hds::Button
-        @icon="arrow-up-circle"
-        @text="Analyze"
-        class="align-self-end"
-        data-test-button="Analyze"
-        {{on "click" this.onAnalyzeClick}}
-      />
-    </Hds::Layout::Flex>
+        <Hds::Button
+          @icon="arrow-up-circle"
+          @text="Analyze"
+          class="align-self-end"
+          data-test-button="Analyze"
+          {{on "click" this.onAnalyzeClick}}
+        />
+      </Hds::Layout::Flex>
+    {{/if}}
   </Hds::Card::Container>
 
   {{#if this.upgradeInfo}}
