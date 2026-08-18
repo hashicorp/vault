@@ -292,6 +292,9 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.Spiffe.MonthlyUnits.Add(val)
+		if err := s.SecretEngineCounts.Spiffe.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+			return err
+		}
 	case MountTypeGcpKms:
 		val, ok := data["count"].(uint64)
 		if !ok {

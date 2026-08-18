@@ -57,6 +57,9 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			},
 			Spiffe: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			ExternalCa: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
@@ -271,6 +274,10 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttribution = make(map[string]logical.MountAttribution)
 	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Unlock()
 
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Unlock()
+
 	return nil
 }
 
@@ -409,5 +416,8 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 		return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
 	}
 
+	if err := c.UpdateSpiffeAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store spiffe mount breakcout: %w", err)
+	}
 	return nil
 }
