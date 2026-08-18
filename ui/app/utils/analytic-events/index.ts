@@ -55,5 +55,13 @@ export const WIZARD_NAMESPACE_STEP3_SELECT_UI = UI_INTERACTION;
 // Namespace wizard — intro CTA (guided start / docs / dismiss)
 export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
 
+// Resource creation — Created Object events fire on both success and failure
+// (distinguished by successFlag), with process: 'UI'.
+export const SECRET_ENGINE_CREATED = CREATED_OBJECT;
+export const AUTH_METHOD_CREATED = CREATED_OBJECT;
+export const POLICY_CREATED = CREATED_OBJECT;
 // Namespace wizard — namespace creation (fires on success and failure)
 export const NAMESPACE_CREATED = CREATED_OBJECT;
+
+// Policy creation cancelled
+export const POLICY_CREATION_CANCELLED = UI_INTERACTION;

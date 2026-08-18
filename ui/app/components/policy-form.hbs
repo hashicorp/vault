@@ -152,7 +152,7 @@
         @text="Cancel"
         @color="secondary"
         disabled={{this.save.isRunning}}
-        {{on "click" @onCancel}}
+        {{on "click" this.cancel}}
         data-test-cancel
       />
     </FF.ButtonSet>
