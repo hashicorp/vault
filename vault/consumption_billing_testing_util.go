@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/billing"
 )
 
 func (c *Core) ResetInMemoryTransitDataProtectionCallCounts() {
@@ -289,12 +290,7 @@ func (c *Core) GetInMemoryTransitAttribution() map[string]logical.MountAttributi
 	if cb != nil {
 		cb.SecretEngineCounts.Transit.MountAttributionLock.RLock()
 		defer cb.SecretEngineCounts.Transit.MountAttributionLock.RUnlock()
-		// Return a copy of the map to avoid race conditions
-		result := make(map[string]logical.MountAttribution, len(cb.SecretEngineCounts.Transit.MountAttribution))
-		for k, v := range cb.SecretEngineCounts.Transit.MountAttribution {
-			result[k] = v
-		}
-		return result
+		return maps.Clone(cb.SecretEngineCounts.Transit.MountAttribution)
 	}
 	return nil
 }
@@ -307,12 +303,7 @@ func (c *Core) GetInMemoryTransformAttribution() map[string]logical.MountAttribu
 	if cb != nil {
 		cb.SecretEngineCounts.Transform.MountAttributionLock.RLock()
 		defer cb.SecretEngineCounts.Transform.MountAttributionLock.RUnlock()
-		// Return a copy of the map to avoid race conditions
-		result := make(map[string]logical.MountAttribution, len(cb.SecretEngineCounts.Transform.MountAttribution))
-		for k, v := range cb.SecretEngineCounts.Transform.MountAttribution {
-			result[k] = v
-		}
-		return result
+		return maps.Clone(cb.SecretEngineCounts.Transform.MountAttribution)
 	}
 	return nil
 }
@@ -325,11 +316,20 @@ func (c *Core) GetInMemoryGcpKmsAttribution() map[string]logical.MountAttributio
 	if cb != nil {
 		cb.SecretEngineCounts.GcpKms.MountAttributionLock.RLock()
 		defer cb.SecretEngineCounts.GcpKms.MountAttributionLock.RUnlock()
-		result := make(map[string]logical.MountAttribution, len(cb.SecretEngineCounts.GcpKms.MountAttribution))
-		for k, v := range cb.SecretEngineCounts.GcpKms.MountAttribution {
-			result[k] = v
-		}
-		return result
+		return maps.Clone(cb.SecretEngineCounts.GcpKms.MountAttribution)
+	}
+	return nil
+}
+
+func (c *Core) GetInMemoryExternalCaAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.ExternalCa.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.ExternalCa.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.ExternalCa.MountAttribution)
 	}
 	return nil
 }
@@ -345,4 +345,10 @@ func (c *Core) GetInMemorySpiffeAttribution() map[string]logical.MountAttributio
 		return maps.Clone(cb.SecretEngineCounts.Spiffe.MountAttribution)
 	}
 	return nil
+}
+
+// GetConsumptionBillingManagerConcrete returns the underlying *billing.ConsumptionBilling,
+// available to tests outside the vault package that need to inspect or manipulate raw state.
+func (c *Core) GetCoreConsumptionBillingManager() *billing.ConsumptionBilling {
+	return c.consumptionBilling
 }

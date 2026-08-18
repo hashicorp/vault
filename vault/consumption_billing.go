@@ -63,6 +63,9 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			},
 			ExternalCa: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 		},
 		Logger: logger,
@@ -274,6 +277,10 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttribution = make(map[string]logical.MountAttribution)
 	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Unlock()
 
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttributionLock.Unlock()
+
 	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Lock()
 	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttribution = make(map[string]logical.MountAttribution)
 	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Unlock()
@@ -414,6 +421,9 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	}
 	if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
+	}
+	if err := c.UpdateExternalCaAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store external ca mount breakdown: %w", err)
 	}
 
 	if err := c.UpdateSpiffeAttribution(ctx, currentMonth); err != nil {
