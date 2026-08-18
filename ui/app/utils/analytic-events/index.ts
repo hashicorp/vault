@@ -16,9 +16,11 @@ export const PREFIX = 'vault_ui';
 const buildEventName = (category: string, resource: string, action: string) =>
   `${PREFIX}_${category}_${resource}_${action}`;
 
-// IBM Tracking Plan generic event name; the specifics (namespace, elementId,
-// action, CTA) are carried as event properties.
+// IBM Tracking Plan generic event names; the specifics (namespace, elementId,
+// action, CTA, object, etc.) are carried as event properties.
 const UI_INTERACTION = 'UI Interaction';
+const CTA_CLICKED = 'CTA Clicked';
+const CREATED_OBJECT = 'Created Object';
 
 export const TOGGLE_WEB_REPL = buildEventName('core', 'web-repl', 'toggle');
 
@@ -37,3 +39,21 @@ export const NAV_RAFT_STORAGE = UI_INTERACTION;
 export const NAV_AUTH_METHODS = UI_INTERACTION;
 export const NAV_ACL_POLICIES = UI_INTERACTION;
 export const NAV_NAMESPACES = UI_INTERACTION;
+
+// Namespace wizard — step 1 (security policy selection)
+export const WIZARD_NAMESPACE_STEP1_POLICY_SELECT = UI_INTERACTION;
+
+// Namespace wizard — step 2 (tips reveal + namespace field input)
+export const WIZARD_NAMESPACE_STEP2_TIPS_COLLAPSE = UI_INTERACTION;
+export const WIZARD_NAMESPACE_STEP2_FIELD_INPUT = UI_INTERACTION;
+
+// Namespace wizard — step 3 (creation-method selection)
+export const WIZARD_NAMESPACE_STEP3_SELECT_TERRAFORM = UI_INTERACTION;
+export const WIZARD_NAMESPACE_STEP3_SELECT_CLI_API = UI_INTERACTION;
+export const WIZARD_NAMESPACE_STEP3_SELECT_UI = UI_INTERACTION;
+
+// Namespace wizard — intro CTA (guided start / docs / dismiss)
+export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
+
+// Namespace wizard — namespace creation (fires on success and failure)
+export const NAMESPACE_CREATED = CREATED_OBJECT;
