@@ -48,8 +48,10 @@ test('kubernetes secrets workflow', async ({ page }) => {
       'Roles Create Role The number of Vault roles being used to generate Kubernetes credentials. None'
     );
     await expect(page.locator('section')).toContainText(
-      'Generate credentials Quickly generate credentials by typing the role name. Type to find a role... Generate'
+      'Generate credentials Quickly generate credentials by typing the role name. Generate'
     );
+    await page.getByRole('textbox', { name: 'Type to find a role...' }).click();
+    await page.getByText('Generate credentials Quickly').click();
     await basePage.dismissFlashMessages();
   });
 
