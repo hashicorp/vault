@@ -14,10 +14,12 @@ import { MOUNT_CATEGORIES } from 'vault/utils/plugin-catalog-helpers';
 import { ALL_ENGINES } from 'core/utils/all-engines-metadata';
 import { IdentityApiOidcListKeysListEnum } from '@hashicorp/vault-client-typescript';
 import OidcKeyForm from 'vault/forms/oidc/key';
+import { AUTH_METHOD_CREATED } from 'vault/utils/analytic-events';
 
 import type { ApiError } from '@ember-data/adapter/error';
 import type Store from '@ember-data/store';
 import type AuthMethodForm from 'vault/forms/auth/method';
+import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -53,6 +55,7 @@ export default class MountBackendForm extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly capabilities: CapabilitiesService;
   @service declare readonly api: ApiService;
+  @service declare readonly analytics: AnalyticsService;
 
   // validation related properties
   @tracked modelValidations: ValidationMap | null = null;
@@ -146,6 +149,15 @@ export default class MountBackendForm extends Component<Args> {
     }
   }
 
+  private trackAuthCreationEvent(type: string, successFlag: boolean) {
+    this.analytics.trackEvent(AUTH_METHOD_CREATED, {
+      objectType: 'auth-method',
+      object: type,
+      process: 'UI',
+      successFlag,
+    });
+  }
+
   @task
   @waitFor
   *mountBackend(event: Event) {
@@ -163,9 +175,11 @@ export default class MountBackendForm extends Component<Args> {
 
     try {
       yield this.api.sys.authEnableMethod(path, data);
+      this.trackAuthCreationEvent(type, true);
       this.flashMessages.success(`Successfully mounted the ${mountModel.type} auth method at ${path}.`);
       this.args.onMountSuccess(type, path, false);
     } catch (error) {
+      this.trackAuthCreationEvent(type, false);
       const { status, response, message } = yield this.api.parseError(error);
       this.onMountError(status, response?.errors, message);
     }

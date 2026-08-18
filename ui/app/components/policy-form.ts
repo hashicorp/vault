@@ -17,6 +17,9 @@ import {
   PolicyTypes,
 } from 'core/utils/code-generators/policy';
 import { validate } from 'vault/utils/forms/validate';
+import { POLICY_CREATED, POLICY_CREATION_CANCELLED } from 'vault/utils/analytic-events';
+
+import type AnalyticsService from 'vault/services/analytics';
 import { sysPoliciesAclNameMapping } from 'vault/utils/terraform-mappings/sys-policies-acl-name-mapping';
 
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
@@ -58,6 +61,7 @@ interface Args {
 }
 
 export default class PolicyFormComponent extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
 
@@ -176,6 +180,15 @@ export default class PolicyFormComponent extends Component<Args> {
     }
   }
 
+  private trackPolicyCreationEvent(successFlag: boolean) {
+    this.analytics.trackEvent(POLICY_CREATED, {
+      objectType: 'policy',
+      object: this.args.form.policyType,
+      process: 'UI',
+      successFlag,
+    });
+  }
+
   @task
   *save(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -217,6 +230,11 @@ export default class PolicyFormComponent extends Component<Args> {
           enforcement_level: data.enforcement_level,
         });
       }
+      // Track successful policy creation if this is a new policy
+      if (this.args.form.isNew) {
+        this.trackPolicyCreationEvent(true);
+      }
+
       this.flashMessages.success(
         `${policyType.toUpperCase()} policy "${data.name}" was successfully ${
           this.args.form.isNew ? 'created' : 'updated'
@@ -225,6 +243,11 @@ export default class PolicyFormComponent extends Component<Args> {
 
       this.args.onSave(data);
     } catch (error) {
+      // Track failed policy creation if this is a new policy
+      if (this.args.form.isNew) {
+        this.trackPolicyCreationEvent(false);
+      }
+
       const { message } = yield this.api.parseError(error);
       this.errorBanner = message;
     }
@@ -256,5 +279,18 @@ export default class PolicyFormComponent extends Component<Args> {
 
   private syncDebouncedPolicy(policy: string) {
     this.debouncedPolicy = policy;
+  }
+
+  @action
+  cancel() {
+    this.analytics.trackEvent(POLICY_CREATION_CANCELLED, {
+      namespace: 'resource-creation',
+      action: 'cancelled',
+      elementId: 'policy-form',
+      channel: 'webpage',
+      objectType: 'policy',
+      object: this.args.form.policyType,
+    });
+    this.args.onCancel();
   }
 }
