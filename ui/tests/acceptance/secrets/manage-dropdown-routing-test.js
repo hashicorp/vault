@@ -296,6 +296,11 @@ const clickVisibleConfirmButton = async () => {
   if (!visibleConfirmButton) {
     return false;
   }
+  // if the modal has a type-to-confirm input, fill it in before clicking confirm
+  const confirmInput = document.querySelector(GENERAL.confirmTextInput);
+  if (confirmInput) {
+    await fillIn(GENERAL.confirmTextInput, 'delete-engine');
+  }
   await click(visibleConfirmButton);
   return true;
 };
@@ -362,6 +367,7 @@ const runEngineCase = async (assert, engine, uid, isEnterprise = false) => {
     showGeneratePolicy: (engine.showGeneratePolicy ?? false) && isEnterprise,
     showConfigure: engine.showConfigure ?? true,
     showDelete: engine.showDelete ?? true,
+    showManageDropdownDelete: engine.showManageDropdownDelete ?? false,
   };
 
   // if engine path already exists, delete it before starting the test
@@ -455,7 +461,7 @@ const runEngineCase = async (assert, engine, uid, isEnterprise = false) => {
     {
       'Generate policy': expectedManage.showGeneratePolicy,
       Configure: expectedManage.showConfigure,
-      Delete: expectedManage.showDelete,
+      Delete: expectedManage.showManageDropdownDelete,
     },
     'Manage dropdown',
     engine.key
@@ -477,7 +483,7 @@ const runEngineCase = async (assert, engine, uid, isEnterprise = false) => {
     await click(GENERAL.dropdownToggle('Manage'));
   }
 
-  if (expectedManage.showDelete) {
+  if (expectedManage.showManageDropdownDelete) {
     // click delete and verify the engine is removed from the list
     await clickVisibleMenuItem('Delete');
     const didConfirmManageDelete = await clickVisibleConfirmButton();

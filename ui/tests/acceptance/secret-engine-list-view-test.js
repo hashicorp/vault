@@ -107,6 +107,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('Delete'));
+    await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
@@ -230,6 +231,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       // Delete the engine
       await click(`${GENERAL.listItem(`${enginePath1}/`)} ${GENERAL.menuTrigger}`);
       await click(GENERAL.menuItem('Delete'));
+      await fillIn(GENERAL.confirmTextInput, 'delete-engine');
       await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentRouteName(),
