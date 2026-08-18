@@ -52,9 +52,6 @@ export const WIZARD_NAMESPACE_STEP3_SELECT_TERRAFORM = UI_INTERACTION;
 export const WIZARD_NAMESPACE_STEP3_SELECT_CLI_API = UI_INTERACTION;
 export const WIZARD_NAMESPACE_STEP3_SELECT_UI = UI_INTERACTION;
 
-// Namespace wizard — intro CTA (guided start / docs / dismiss)
-export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
-
 // Resource creation — Created Object events fire on both success and failure
 // (distinguished by successFlag), with process: 'UI'.
 export const SECRET_ENGINE_CREATED = CREATED_OBJECT;
@@ -70,3 +67,13 @@ export const POLICY_CREATION_CANCELLED = UI_INTERACTION;
 export const DASHBOARD_QUICK_ACTION_CTA_CLICKED = CTA_CLICKED;
 export const DASHBOARD_SECRETS_ENGINE_VIEW_ALL = UI_INTERACTION;
 export const DASHBOARD_SECRETS_ENGINE_VIEW = UI_INTERACTION;
+
+// Intro pages
+export const INTRO_SECRETS_ENGINE_CTA_CLICKED = CTA_CLICKED;
+export const INTRO_AUTH_METHODS_CTA_CLICKED = CTA_CLICKED;
+export const INTRO_ACL_POLICIES_CTA_CLICKED = CTA_CLICKED;
+// Namespace wizard — intro CTA (guided start / docs / dismiss)
+export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
+
+// Intro reopen — re-opening a dismissed intro from a resource list page
+export const INTRO_REOPEN_CLICKED = UI_INTERACTION;

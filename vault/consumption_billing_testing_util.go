@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"maps"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -329,6 +330,19 @@ func (c *Core) GetInMemoryGcpKmsAttribution() map[string]logical.MountAttributio
 			result[k] = v
 		}
 		return result
+	}
+	return nil
+}
+
+func (c *Core) GetInMemorySpiffeAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.Spiffe.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.Spiffe.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.Spiffe.MountAttribution)
 	}
 	return nil
 }

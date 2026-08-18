@@ -267,4 +267,51 @@ module('Acceptance | oidc provider', function (hooks) {
     authStub.restore();
     await login();
   });
+
+  test('prompt=none with no session redirects to Vault auth, not directly to redirect_uri', async function (assert) {
+    const { providerName, clientId } = this.oidcSetupInformation;
+    const unregisteredRedirect = 'http://localhost:9999/';
+    const url = getAuthzUrl(providerName, unregisteredRedirect, clientId, { prompt: 'none' });
+
+    await visit('/vault/logout');
+    await visit(url);
+
+    assert.ok(
+      currentURL().startsWith('/vault/auth'),
+      `redirects to Vault auth page instead of ${unregisteredRedirect} (actual: ${currentURL()})`
+    );
+    assert.ok(currentURL().includes('o='), 'oidcProvider query param is present on auth page');
+  });
+
+  test('prompt=none with no session and registered redirect_uri: after login the backend redirects to the registered URI', async function (assert) {
+    const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
+    // callback ('http://127.0.0.1:8251/callback') IS in the allowlist.
+    const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'none' });
+
+    await visit('/vault/logout');
+    await visit(url);
+
+    assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth page before login');
+
+    // Log in as the OIDC end-user.
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom('[data-test-oidc-redirect]')
+      .exists('redirect link is shown after login (window.location.replace suppressed in tests)');
+    const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
+    assert.ok(
+      link.startsWith(callback),
+      `redirect targets the registered callback URI, not an arbitrary one (got: ${link})`
+    );
+    assert.ok(
+      link.includes(`${callback}?code=`),
+      'redirect carries an authorization code to the registered callback URI'
+    );
+  });
 });

@@ -253,3 +253,13 @@ func (c *Core) UpdateGcpKmsAttribution(ctx context.Context, currentMonth time.Ti
 	}
 	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.GcpKms.AttributionTracker, billing.GcpKmsDataProtectionCallCountsPrefix, currentMonth)
 }
+
+func (c *Core) UpdateSpiffeAttribution(ctx context.Context, currentMonth time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.Spiffe.AttributionTracker, billing.SpiffeJwtNormalizedTokenUnits, currentMonth)
+}

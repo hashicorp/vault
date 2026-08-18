@@ -565,6 +565,44 @@ module('Acceptance | pki workflow', function (hooks) {
         .dom('[data-test-input="common_name"]')
         .hasValue('Hashicorp Test', 'form prefilled with parent issuer cn');
     });
+
+    test('issuer list page loads and renders linked items when issuer count exceeds 10', async function (assert) {
+      await login(this.pkiAdminToken);
+      // 1 issuer exists from beforeEach; create 10 more to exceed the metadata-enrichment threshold
+      await runCmd(
+        Array.from(
+          { length: 10 },
+          (_, i) => `write ${this.mountPath}/root/generate/internal common_name="Issuer ${i + 1}"`
+        )
+      );
+
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/issuers`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.mountPath}/pki/issuers`,
+        'page loads without error'
+      );
+      assert.dom('.linked-block').exists({ count: 11 }, '11 issuers are rendered in the list');
+    });
+
+    test('issuer list items link to the correct details route when issuer count exceeds 10', async function (assert) {
+      await login(this.pkiAdminToken);
+      await runCmd(
+        Array.from(
+          { length: 10 },
+          (_, i) => `write ${this.mountPath}/root/generate/internal common_name="Issuer ${i + 1}"`
+        )
+      );
+
+      await visit(`/vault/secrets-engines/${this.mountPath}/pki/issuers`);
+      await click(GENERAL.menuTrigger);
+      await click(PKI_ISSUER_LIST.issuerPopupDetails);
+
+      assert.true(
+        /\/vault\/secrets-engines\/.+\/pki\/issuers\/[0-9a-f-]{36}\/details/.test(currentURL()),
+        'navigates to a details URL with a valid UUID'
+      );
+    });
   });
 
   module('rotate', function (hooks) {
