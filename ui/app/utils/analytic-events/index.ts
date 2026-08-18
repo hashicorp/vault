@@ -65,3 +65,8 @@ export const NAMESPACE_CREATED = CREATED_OBJECT;
 
 // Policy creation cancelled
 export const POLICY_CREATION_CANCELLED = UI_INTERACTION;
+
+// Dashboard quick actions and secrets engines widget
+export const DASHBOARD_QUICK_ACTION_CTA_CLICKED = CTA_CLICKED;
+export const DASHBOARD_SECRETS_ENGINE_VIEW_ALL = UI_INTERACTION;
+export const DASHBOARD_SECRETS_ENGINE_VIEW = UI_INTERACTION;
