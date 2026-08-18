@@ -12,8 +12,8 @@ import (
 	"testing"
 	"unicode/utf16"
 
-	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -28,7 +28,7 @@ func TestRotateRoot_DefaultSchema(t *testing.T) {
 	ctx := context.Background()
 
 	b, store := createBackendWithStorage(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 	// set up auth config
 	req := &logical.Request{
@@ -88,7 +88,7 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 	ctx := context.Background()
 
 	b, store := createBackendWithStorage(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 	const mainDummyUrl = "ldap://example.com:389"
 	// set up auth config
@@ -150,7 +150,7 @@ func TestRotateRoot_Schema_OpenLDAP(t *testing.T) {
 	}
 	ctx := context.Background()
 	b, store := createBackendWithStorage(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 	// set up auth config
 	req := &logical.Request{
@@ -203,7 +203,7 @@ func TestRotateRoot_UnsupportedSchema(t *testing.T) {
 	}
 	ctx := context.Background()
 	b, store := createBackendWithStorage(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 	// set up auth config
 	req := &logical.Request{
