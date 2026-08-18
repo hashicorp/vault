@@ -16,8 +16,8 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -60,10 +60,10 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	require.NoError(t, err)
 	entityID := secret.Data["id"].(string)
 
-	cleanup, config1 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup, config1 := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
-	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup2, config2 := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup2()
 
 	setupFunc := func(path string, cfg *ldaputil.ConfigEntry) string {
@@ -252,7 +252,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	// Configure LDAP auth
@@ -487,7 +487,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	// Configure LDAP auth
