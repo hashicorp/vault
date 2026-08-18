@@ -183,6 +183,9 @@ label {
     overflow: unset;
   }
 }
+.hds-modal.confirm-modal-wide {
+  width: min(500px, 95vw);
+}
 .hds-modal__body {
   &:has(.hds-dropdown) {
     overflow: unset;

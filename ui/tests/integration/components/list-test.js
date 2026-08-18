@@ -73,6 +73,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     assert.dom(GENERAL.linkTo(`${enginePath}/`)).exists('shows the link for the kvv2 secrets engine');
     await click(`${GENERAL.listItem(`${enginePath}/`)} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('Delete'));
+    await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click(GENERAL.confirmButton);
 
     assert.true(

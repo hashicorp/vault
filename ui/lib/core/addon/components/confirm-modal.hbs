@@ -10,7 +10,7 @@
 
 <Hds::Modal
   id="confirm-action-modal"
-  class="has-text-left"
+  class="has-text-left confirm-modal-wide"
   @color={{or @color "warning"}}
   @size="small"
   @onClose={{@onClose}}
@@ -32,7 +32,35 @@
       {{or @confirmTitle "Are you sure?"}}
     </M.Header>
     <M.Body data-test-confirm-action-message>
-      {{or @confirmMessage "You will not be able to recover it later."}}
+      {{#if (has-block "body")}}
+        {{yield to="body"}}
+      {{else}}
+        {{or @confirmMessage "You will not be able to recover it later."}}
+      {{/if}}
+      {{#if @confirmText}}
+        <div class="has-top-padding-m">
+          <Hds::Form::Label @controlId="confirm-modal-input" @isRequired={{true}}>
+            {{or @confirmLabel "Confirm"}}
+          </Hds::Form::Label>
+          <label class="sub-text has-top-bottom-margin-xxs" for="confirm-modal-input">
+            Type "{{@confirmText}}" to confirm
+          </label>
+          <Hds::Form::TextInput::Base
+            @type="text"
+            @id="confirm-modal-input"
+            class="has-margin-top"
+            autocomplete="off"
+            spellcheck="false"
+            data-test-confirm-modal-input
+            {{on "input" this.onInput}}
+          />
+          {{#if this.showConfirmWarning}}
+            <Hds::Form::Error data-test-confirm-modal-warning>
+              Input must match "{{@confirmText}}" to confirm
+            </Hds::Form::Error>
+          {{/if}}
+        </div>
+      {{/if}}
     </M.Body>
     <M.Footer as |F|>
       <Hds::ButtonSet>
@@ -41,7 +69,7 @@
           disabled={{@isRunning}}
           @icon={{if @isRunning "loading"}}
           @color={{if (eq @color "critical") "critical" "primary"}}
-          @text="Confirm"
+          @text={{or @confirmButtonText "Confirm"}}
           {{on "click" (fn this.saveAndClose F.close)}}
         />
         <Hds::Button data-test-cancel @color="secondary" @text="Cancel" {{on "click" F.close}} />

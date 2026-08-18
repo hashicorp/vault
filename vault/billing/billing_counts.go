@@ -315,6 +315,9 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.ExternalCa.MonthlyUnits.Add(val)
+		if err := s.SecretEngineCounts.ExternalCa.AccumulateMountAttributions(ctx, data, val, s.GetParentNamespaceID); err != nil {
+			return err
+		}
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err
