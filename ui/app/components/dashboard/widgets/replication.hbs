@@ -32,7 +32,7 @@
     </Hds::Text::Body>
   </div>
   {{#if (or @version.hasPerfReplication @version.hasDRReplication)}}
-    <Hds::Table class="has-top-margin-s" @caption="Vault configuration details">
+    <Hds::Table class="has-top-margin-s is-overflow-hidden" @caption="Vault configuration details">
       <:body as |B|>
         {{#if @version.hasDRReplication}}
           <B.Tr data-test-table-row="0">
