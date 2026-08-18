@@ -5,7 +5,6 @@
 
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { capitalize } from '@ember/string';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
@@ -117,14 +116,31 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     const breadcrumbs: { label: string; route?: string; icon?: string }[] = [
       { label: 'Vault', route: 'vault.cluster', icon: 'vault' },
       { label: 'Secrets engines', route: 'vault.cluster.secrets.backends' },
-      { label: 'Enable secrets engine', route: 'vault.cluster.secrets.enable' },
+      { label: 'Create a new secrets engine', route: 'vault.cluster.secrets.enable' },
     ];
 
     if (this.args?.model?.form?.normalizedType) {
-      breadcrumbs.push({ label: capitalize(this.args?.model?.form?.normalizedType) });
+      breadcrumbs.push({ label: this.pageTitle });
     }
 
     return breadcrumbs;
+  }
+
+  get pageTitle() {
+    const normalizedType = this.args?.model?.form?.normalizedType;
+    const displayName = normalizedType ? engineDisplayData(normalizedType).displayName : '';
+    return `Create a ${displayName} secrets engine`;
+  }
+
+  get engineDocPath(): string | null {
+    const normalizedType = this.args.model.form.normalizedType;
+    if (!normalizedType) return null;
+    const DOC_PATH_OVERRIDES: Record<string, string> = {
+      database: '/vault/docs/secrets/databases',
+      keymgmt: '/vault/docs/secrets/key-management',
+      'pki-external-ca': '/vault/docs/secrets/pki',
+    };
+    return DOC_PATH_OVERRIDES[normalizedType] ?? `/vault/docs/secrets/${normalizedType}`;
   }
 
   get pluginTypeOptions() {

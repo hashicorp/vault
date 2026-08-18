@@ -286,6 +286,150 @@ func TestTransit_CreateKey(t *testing.T) {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
 			entOnly:        true,
 		},
+		"Hybrid SLH-DSA-SHA2-128s-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-128s-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-128s-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-128s-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-128s-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-128s-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-128f-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-128f-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-128f-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-128f-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-128f-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-128f-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-192s-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-192s-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-192s-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-192s-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-192s-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-192s-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-192f-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-192f-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-192f-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-192f-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-192f-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-192f-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-256s-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-256s-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-256s-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-256s-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-256s-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-256s-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-256f-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-256f-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHA2-256f-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-256f-ECDSA-P256": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-256f-ECDSA-P384": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
+		"Hybrid SLH-DSA-SHAKE-256f-ECDSA-P521": {
+			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			entOnly:        true,
+		},
 		"SLH-DSA-SHA2-128s": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S},
 			entOnly:        true,

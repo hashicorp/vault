@@ -10,9 +10,12 @@ import (
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
+	armonmetrics "github.com/armon/go-metrics"
 	stackdriver "github.com/google/go-metrics-stackdriver"
 	stackdrivervault "github.com/google/go-metrics-stackdriver/vault"
 	"github.com/hashicorp/cli"
+	hclog "github.com/hashicorp/go-hclog"
+	hcmetrics "github.com/hashicorp/go-metrics"
 	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-metrics/compat/circonus"
 	"github.com/hashicorp/go-metrics/compat/datadog"
@@ -25,6 +28,50 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/metricregistry"
 	"google.golang.org/api/option"
 )
+
+// hcSinkAdapter bridges armon/go-metrics.MetricSink (used by the compat layer)
+// and hashicorp/go-metrics.MetricSink. The two packages define identical sink
+// interfaces except that their Label types are distinct, so a direct type
+// assertion is not possible. convertLabels handles the per-call translation.
+type hcSinkAdapter struct {
+	sink hcmetrics.MetricSink
+}
+
+func (a *hcSinkAdapter) SetGauge(key []string, val float32) {
+	a.sink.SetGauge(key, val)
+}
+
+func (a *hcSinkAdapter) SetGaugeWithLabels(key []string, val float32, labels []armonmetrics.Label) {
+	a.sink.SetGaugeWithLabels(key, val, convertLabels(labels))
+}
+
+func (a *hcSinkAdapter) EmitKey(key []string, val float32) {
+	a.sink.EmitKey(key, val)
+}
+
+func (a *hcSinkAdapter) IncrCounter(key []string, val float32) {
+	a.sink.IncrCounter(key, val)
+}
+
+func (a *hcSinkAdapter) IncrCounterWithLabels(key []string, val float32, labels []armonmetrics.Label) {
+	a.sink.IncrCounterWithLabels(key, val, convertLabels(labels))
+}
+
+func (a *hcSinkAdapter) AddSample(key []string, val float32) {
+	a.sink.AddSample(key, val)
+}
+
+func (a *hcSinkAdapter) AddSampleWithLabels(key []string, val float32, labels []armonmetrics.Label) {
+	a.sink.AddSampleWithLabels(key, val, convertLabels(labels))
+}
+
+func convertLabels(in []armonmetrics.Label) []hcmetrics.Label {
+	out := make([]hcmetrics.Label, len(in))
+	for i, l := range in {
+		out[i] = hcmetrics.Label{Name: l.Name, Value: l.Value}
+	}
+	return out
+}
 
 const (
 	PrometheusDefaultRetentionTime    = 24 * time.Hour
@@ -280,6 +327,7 @@ type SetupTelemetryOpts struct {
 	DisplayName string
 	UserAgent   string
 	ClusterName string
+	Logger      hclog.Logger
 }
 
 // SetupTelemetry is used to setup the telemetry sub-systems and returns the
@@ -334,20 +382,22 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	}
 
 	if opts.Config.StatsiteAddr != "" {
-		sink, err := metrics.NewStatsiteSink(opts.Config.StatsiteAddr)
+		sink, err := hcmetrics.NewStatsiteSink(opts.Config.StatsiteAddr)
 		if err != nil {
 			return nil, nil, false, err
 		}
-		fanout = append(fanout, sink)
+		sink.SetLogger(opts.Logger)
+		fanout = append(fanout, &hcSinkAdapter{sink: sink})
 	}
 
 	// Configure the statsd sink
 	if opts.Config.StatsdAddr != "" {
-		sink, err := metrics.NewStatsdSink(opts.Config.StatsdAddr)
+		sink, err := hcmetrics.NewStatsdSink(opts.Config.StatsdAddr)
 		if err != nil {
 			return nil, nil, false, err
 		}
-		fanout = append(fanout, sink)
+		sink.SetLogger(opts.Logger)
+		fanout = append(fanout, &hcSinkAdapter{sink: sink})
 	}
 
 	// Configure the Circonus sink

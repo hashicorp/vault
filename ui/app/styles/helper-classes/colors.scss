@@ -35,6 +35,9 @@
 }
 
 // borders
+.has-border-200 {
+  border: 1px solid var(--token-color-palette-neutral-200);
+}
 .has-border-top-light {
   border-radius: 0;
   border-top: 1px solid var(--token-color-palette-neutral-300);

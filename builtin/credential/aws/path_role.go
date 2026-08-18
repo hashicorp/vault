@@ -5,7 +5,6 @@ package awsauth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -15,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -263,18 +263,11 @@ func (b *backend) role(ctx context.Context, s logical.Storage, roleName string) 
 		return nil, fmt.Errorf("missing role name")
 	}
 
-	roleEntryRaw, found := b.roleCache.Get(roleName)
-	if found && roleEntryRaw != nil {
-		roleEntry, ok := roleEntryRaw.(*awsRoleEntry)
-		if !ok {
-			return nil, errors.New("could not convert role entry internally")
-		}
-		if roleEntry == nil {
-			return nil, errors.New("converted role entry is nil")
-		}
+	if roleItem := b.roleCache.Get(roleName); roleItem != nil {
+		return roleItem.Value(), nil
 	}
 
-	// Not found, or was nil
+	// Not found
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
@@ -284,15 +277,8 @@ func (b *backend) role(ctx context.Context, s logical.Storage, roleName string) 
 // roleInternal does not perform locking, and rechecks the cache, going to disk if necessary
 func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	// Check cache again now that we have the lock
-	roleEntryRaw, found := b.roleCache.Get(roleName)
-	if found && roleEntryRaw != nil {
-		roleEntry, ok := roleEntryRaw.(*awsRoleEntry)
-		if !ok {
-			return nil, errors.New("could not convert role entry internally")
-		}
-		if roleEntry == nil {
-			return nil, errors.New("converted role entry is nil")
-		}
+	if roleItem := b.roleCache.Get(roleName); roleItem != nil {
+		return roleItem.Value(), nil
 	}
 
 	// Fetch from storage
@@ -319,7 +305,7 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 		}
 	}
 
-	b.roleCache.SetDefault(roleName, result)
+	b.roleCache.Set(roleName, result, ttlcache.DefaultTTL)
 
 	return result, nil
 }
@@ -346,7 +332,7 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 		return err
 	}
 
-	b.roleCache.SetDefault(roleName, roleEntry)
+	b.roleCache.Set(roleName, roleEntry, ttlcache.DefaultTTL)
 
 	return nil
 }
@@ -586,7 +572,7 @@ func (b *backend) upgradeRole(ctx context.Context, s logical.Storage, roleEntry 
 
 // pathRoleDelete is used to delete the information registered for a given AMI ID.
 func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	roleName := data.Get("role").(string)
+	roleName := strings.ToLower(data.Get("role").(string))
 	if roleName == "" {
 		return logical.ErrorResponse("missing role"), nil
 	}
@@ -594,7 +580,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 	b.roleMutex.Lock()
 	defer b.roleMutex.Unlock()
 
-	err := req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
+	err := req.Storage.Delete(ctx, "role/"+roleName)
 	if err != nil {
 		return nil, fmt.Errorf("error deleting role: %w", err)
 	}

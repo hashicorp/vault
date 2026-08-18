@@ -45,4 +45,12 @@ module('Unit | Route | vault/cluster/settings/auth/configure/section', function 
       'editType is set to file for kubernetes_ca_cert field'
     );
   });
+
+  test('it should include token_reviewer_jwt field for kubernetes auth method', async function (assert) {
+    const { form } = await this.testModelForConfiguration('kubernetes', 'token_reviewer_jwt');
+    // token_reviewer_jwt lives in a non-default field group, so search across all groups
+    const allFields = form.formFieldGroups.flatMap((group) => Object.values(group)[0] || []);
+    const field = allFields.find((f) => f.name === 'token_reviewer_jwt');
+    assert.ok(field, 'token_reviewer_jwt field is present in the kubernetes auth method form');
+  });
 });

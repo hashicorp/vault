@@ -15,7 +15,15 @@ export default class SidebarNavComponent extends Component {
   @controller('vault.cluster') clusterController;
 
   trackReplToggle = () => {
-    this.analytics.trackEvent(TOGGLE_WEB_REPL);
+    // PostHog receives the descriptive event name; the Segment provider maps it
+    // to the IBM generic 'UI Interaction', so it needs these properties to be
+    // distinguishable from every other UI Interaction event.
+    this.analytics.trackEvent(TOGGLE_WEB_REPL, {
+      namespace: 'nav',
+      action: 'clicked',
+      elementId: 'web-repl-toggle',
+      channel: 'webpage',
+    });
   };
 
   closeConsole = (event) => {

@@ -56,6 +56,7 @@ type SharedConfig struct {
 	ClusterName string `hcl:"cluster_name"`
 
 	AdministrativeNamespacePath string `hcl:"administrative_namespace_path"`
+	OperatorNamespacePath       string `hcl:"operator_namespace_path"`
 }
 
 func ParseConfig(d string) (cfg *SharedConfig, err error) {
@@ -163,7 +164,7 @@ func ParseConfigCheckDuplicate(d string) (cfg *SharedConfig, duplicate bool, err
 		}
 	}
 
-	entConfig := &(result.EntSharedConfig)
+	entConfig := &result.EntSharedConfig
 	if err := entConfig.ParseConfig(list); err != nil {
 		return nil, duplicate, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
@@ -191,6 +192,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 		"pid_file":                      c.PidFile,
 		"cluster_name":                  c.ClusterName,
 		"administrative_namespace_path": c.AdministrativeNamespacePath,
+		"operator_namespace_path":       c.OperatorNamespacePath,
 	}
 
 	// Optional log related settings

@@ -106,7 +106,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
         gcp: 'GoogleCloudConfigureAuthRequest',
         jwt: 'JwtConfigureRequest',
         oidc: 'JwtConfigureRequest',
-        kubernetes: 'KubernetesConfigureRequest',
+        kubernetes: 'KubernetesConfigureAuthRequest',
         ldap: 'LdapConfigureAuthRequest',
         okta: 'OktaConfigureRequest',
         radius: 'RadiusConfigureRequest',

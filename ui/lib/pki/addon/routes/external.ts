@@ -18,7 +18,6 @@ import type {
   StandardListResponse,
 } from '@hashicorp/vault-client-typescript';
 import type ApiService from 'vault/services/api';
-import type CapabilitiesService from 'vault/services/capabilities';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
@@ -26,31 +25,7 @@ export type ExternalRouteModel = ModelFrom<PkiExternalRoute>;
 
 export default class PkiExternalRoute extends Route {
   @service declare readonly api: ApiService;
-  @service declare readonly capabilities: CapabilitiesService;
   @service declare readonly secretMountPath: SecretMountPath;
-
-  pathKeys = [
-    'pkiExternalConfigAcmeAccount',
-    'pkiExternalConfigDns',
-    'pkiExternalRole',
-    'pkiExternalLookupOrders',
-  ] as const;
-
-  async fetchPermissions() {
-    // Create key/value pair for each key in pathKeys with a value of its API path
-    const pathsByKey = this.pathKeys.reduce(
-      (obj, key) => {
-        obj[key] = this.capabilities.pathFor(key, { backend: this.secretMountPath.currentPath });
-        return obj;
-      },
-      {} as Record<(typeof this.pathKeys)[number], string>
-    );
-
-    // Request capabilities and cache for generate policy flyout
-    await this.capabilities.fetch(Object.values(pathsByKey), {
-      routeForCache: 'vault.cluster.secrets.backend.pki.external.overview',
-    });
-  }
 
   async fetchList(listRequest: () => Promise<PkiExternalCaListConfigDnsResponse | StandardListResponse>) {
     let keys: string[] = [],
@@ -77,7 +52,6 @@ export default class PkiExternalRoute extends Route {
   }
 
   async model() {
-    const perms = await this.fetchPermissions();
     const { currentPath } = this.secretMountPath;
     const [acmeAccountsResp, dnsProvidersResp, rolesResp] = await Promise.all([
       this.fetchList(() =>
@@ -109,7 +83,6 @@ export default class PkiExternalRoute extends Route {
       acmeAccountsResp,
       dnsProvidersResp,
       rolesResp,
-      permissions: perms,
       showConfigSnippets,
     };
   }

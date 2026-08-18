@@ -6,8 +6,8 @@
 {{#if (or (not (is-empty @model.member_group_ids)) (not (is-empty @model.member_entity_ids)))}}
   {{#each @model.member_group_ids as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
-      <div class="columns is-mobile">
-        <div class="column is-10">
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+        <LF.Item @grow={{true}} @shrink={{true}}>
           <LinkTo
             @route="vault.cluster.access.identity.show"
             @models={{array "groups" gid "details"}}
@@ -15,19 +15,19 @@
           >
             <Icon @name="folder" class="has-text-grey-light" />{{gid}}
           </LinkTo>
-        </div>
-        <div class="column has-text-right">
+        </LF.Item>
+        <LF.Item>
           {{#if @model.canEdit}}
             <Identity::PopupMembers @model={{@model}} @groupArray="member_group_ids" @memberId={{gid}} />
           {{/if}}
-        </div>
-      </div>
+        </LF.Item>
+      </Hds::Layout::Flex>
     </LinkedBlock>
   {{/each}}
   {{#each @model.member_entity_ids as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
-      <div class="columns">
-        <div class="column is-10">
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+        <LF.Item @grow={{true}} @shrink={{true}}>
           <LinkTo
             @route="vault.cluster.access.identity.show"
             @models={{array "entities" gid "details"}}
@@ -35,13 +35,13 @@
           >
             <Icon @name="user" class="has-text-grey-light" />{{gid}}
           </LinkTo>
-        </div>
-        <div class="column has-text-right">
+        </LF.Item>
+        <LF.Item>
           {{#if @model.canEdit}}
             <Identity::PopupMembers @model={{@model}} @groupArray="member_entity_ids" @memberId={{gid}} />
           {{/if}}
-        </div>
-      </div>
+        </LF.Item>
+      </Hds::Layout::Flex>
     </LinkedBlock>
   {{/each}}
 {{else}}

@@ -69,7 +69,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
-    await mountBackend(engine.type, engine.type);
+    await mountBackend(engine.type, engine.type, true);
 
     assert.strictEqual(
       currentRouteName(),
@@ -103,6 +103,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
     await click(GENERAL.cardContainer('transform'));
+    await click(GENERAL.button('next'));
     await fillIn(GENERAL.inputByAttr('path'), backend);
     await click(GENERAL.submitButton);
     const transformationName = 'foo';
@@ -154,7 +155,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const roleName = 'my-role';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     // create transformation without role
     await newTransformation(backend, 'a-transformation', true);
     await click(GENERAL.breadcrumbLink(backend));
@@ -198,7 +199,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const roleName = 'role-test';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     const transformation = await newTransformation(backend, 'b-transformation', true);
     await newRole(backend, roleName);
     await transformationsPage.visitShow({ backend, id: transformation });
@@ -210,7 +211,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const roleName = 'role-remove';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     // Create transformation
     const transformation = await newTransformation(backend, 'c-transformation', true);
     // create role
@@ -248,7 +249,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const templateName = 'my-template';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     await click(GENERAL.secretTab('Templates'));
 
     assert.strictEqual(
@@ -290,7 +291,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const alphabetName = 'vowels-only';
     await visit('/vault/secrets-engines/enable');
     const backend = `transform-${uuidv4()}`;
-    await mountBackend('transform', backend);
+    await mountBackend('transform', backend, true);
     await click(GENERAL.secretTab('Alphabets'));
 
     assert.strictEqual(

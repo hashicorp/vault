@@ -25,11 +25,13 @@
   {{#if (has-permission "policies")}}
     {{#if (has-permission "policies" routeParams="acl")}}
       <Nav.Link
+        id="nav-acl-policies"
         @route="vault.cluster.policies"
         @model="acl"
         @current-when="vault.cluster.policies vault.cluster.policy"
         @text="ACL policies"
         data-test-sidebar-nav-link="ACL policies"
+        {{on "click" (fn this.trackNavClick this.navEvents.aclPolicies "nav-acl-policies" "ACL policies")}}
       />
     {{/if}}
     {{#if (and (has-feature "Sentinel") (has-permission "policies" routeParams="rgp"))}}
@@ -71,10 +73,12 @@
     {{/if}}
     {{#if (has-permission "access" routeParams="methods")}}
       <Nav.Link
+        id="nav-auth-methods"
         @route="vault.cluster.access.methods"
         @current-when="vault.cluster.access.methods vault.cluster.access.method vault.cluster.settings.auth"
         @text="Authentication methods"
         data-test-sidebar-nav-link="Authentication methods"
+        {{on "click" (fn this.trackNavClick this.navEvents.authMethods "nav-auth-methods" "Authentication methods")}}
       />
     {{/if}}
     {{#if (has-permission "access" routeParams="mfa")}}
@@ -93,7 +97,13 @@
       <Nav.Title data-test-sidebar-nav-heading="Organization">Organization</Nav.Title>
     {{/if}}
     {{#if (and (has-feature "Namespaces") (has-permission "access" routeParams="namespaces"))}}
-      <Nav.Link @route="vault.cluster.access.namespaces" @text="Namespaces" data-test-sidebar-nav-link="Namespaces" />
+      <Nav.Link
+        id="nav-namespaces"
+        @route="vault.cluster.access.namespaces"
+        @text="Namespaces"
+        data-test-sidebar-nav-link="Namespaces"
+        {{on "click" (fn this.trackNavClick this.navEvents.namespaces "nav-namespaces" "Namespaces")}}
+      />
     {{/if}}
     {{#if (has-permission "access" routeParams="groups")}}
       <Nav.Link @route="vault.cluster.access.identity" @model="groups" @text="Groups" data-test-sidebar-nav-link="Groups" />

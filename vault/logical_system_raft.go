@@ -17,7 +17,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	snapshot "github.com/hashicorp/raft-snapshot"
 	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -667,7 +666,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool, makeSealer fu
 				}
 			}()
 
-			ctx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
+			ctx := b.Core.activeContext
 
 			// We are calling the callback function synchronously here while we
 			// have the lock. So set it to nil and restore the callback when we
@@ -711,7 +710,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool, makeSealer fu
 					return err
 				}
 			}
-			if err := b.Core.postUnseal(ctx, ctxCancel, standardUnsealStrategy{}); err != nil {
+			if err := b.Core.postUnseal(ctx, standardUnsealStrategy{}); err != nil {
 				b.Core.logger.Error("raft snapshot restore failed postUnseal", "error", err)
 				return err
 			}

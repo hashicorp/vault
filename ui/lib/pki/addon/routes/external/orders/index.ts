@@ -6,6 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { SecretsApiPkiExternalCaListLookupOrdersRecentListEnum } from '@hashicorp/vault-client-typescript';
+import timestamp from 'core/utils/timestamp';
 
 import type { Breadcrumb } from 'vault/app-types';
 import type { OrderStatusName } from 'pki/helpers/map-status-badge';
@@ -75,6 +76,7 @@ export default class PkiExternalOrdersIndexRoute extends Route {
       // adding transitions that cause the parent routes to refire repeatedly.
       // Manually pass the query as source of truth so the UI always displays what was sent to the API.
       query,
+      responseTimestamp: timestamp.now(),
     };
   }
 

@@ -1,4 +1,4 @@
-# Copyright IBM Corp. 2016, 2025
+# Copyright IBM Corp. 2016, 2026
 # SPDX-License-Identifier: BUSL-1.1
 
 terraform {
@@ -13,7 +13,13 @@ terraform {
 locals {
   test_names = var.test_names != null ? var.test_names : []
 
-  # isolated/verify tests require EXPECTED_STATE, TIMEOUT_SECONDS, and RETRY_INTERVAL.
+  vault_addr = var.vault_addr != null ? var.vault_addr : (
+    contains(split("", coalesce(var.leader_public_ip, "")), ":")
+    ? "http://[${var.leader_public_ip}]:8200"
+    : "http://${coalesce(var.leader_public_ip, "127.0.0.1")}:8200"
+  )
+
+  # isolated/verify tests require EXPECTED_STATE, TIMEOUT_SECONDS, RETRY_INTERVAL, and DEFAULT_LCQ.
   # When the test package includes isolated/verify and the caller hasn't already supplied
   # these via test_env_vars, inject the module-level defaults automatically.
   includes_verify_package = strcontains(var.test_package, "isolated/verify")
@@ -22,6 +28,7 @@ locals {
       EXPECTED_STATE  = var.verify_expected_state
       TIMEOUT_SECONDS = var.verify_timeout_seconds
       RETRY_INTERVAL  = var.verify_retry_interval
+      DEFAULT_LCQ     = var.verify_default_lcq
     } : k => v if !contains(keys(var.test_env_vars), k)
   } : {}
 }
@@ -50,11 +57,11 @@ resource "enos_local_exec" "run_blackbox_test" {
   environment = merge(
     {
       VAULT_TOKEN        = var.vault_root_token
-      VAULT_ADDR         = var.vault_addr != null ? var.vault_addr : (contains(split("", var.leader_public_ip), ":") ? "http://[${var.leader_public_ip}]:8200" : "http://${var.leader_public_ip}:8200")
+      VAULT_ADDR         = local.vault_addr
+      VAULT_ADDR_DEBUG   = "vault_addr_var=${coalesce(var.vault_addr, "null")}, leader_public_ip=${coalesce(var.leader_public_ip, "null")}, computed=${local.vault_addr}"
       VAULT_TEST_PACKAGE = var.test_package
       VAULT_TEST_MATRIX  = length(local.test_names) > 0 ? local_file.test_matrix.filename : ""
       VAULT_EDITION      = var.vault_edition
-      VAULT_ADDR_DEBUG   = "vault_addr_var=${var.vault_addr != null ? var.vault_addr : "null"}, leader_public_ip=${var.leader_public_ip}, computed=${var.vault_addr != null ? var.vault_addr : (contains(split("", var.leader_public_ip), ":") ? "http://[${var.leader_public_ip}]:8200" : "http://${var.leader_public_ip}:8200")}"
       # PATH and Go-related environment variables are inherited from the calling process
     },
     var.vault_namespace != null ? { VAULT_NAMESPACE = var.vault_namespace } : {},
@@ -127,5 +134,11 @@ locals {
   test_exit_code = try(
     tonumber(regex("TEST_EXIT_CODE=(.+)", enos_local_exec.run_blackbox_test.stdout)[0]),
     null
+  )
+  # The script emits BLACKBOX_TEST_CMD=<base64> so the multi-line command
+  # can survive regex extraction. base64decode() restores the pretty string.
+  blackbox_test_cmd = try(
+    base64decode(regex("BLACKBOX_TEST_CMD=(.+)", enos_local_exec.run_blackbox_test.stdout)[0]),
+    ""
   )
 }

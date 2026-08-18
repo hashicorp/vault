@@ -93,7 +93,7 @@ func (c *Core) BuildTotal() *uint32    { return nil }
 func (c *Core) teardownReplicationResolverHandler() {}
 func (c *Core) createSecondaries(_ hclog.Logger)    {}
 
-func (c *Core) addExtraLogicalBackends(_ string) {}
+func (c *Core) addExtraLogicalBackends() {}
 
 func (c *Core) addExtraEventBackends() {}
 
@@ -246,4 +246,11 @@ func (c *Core) GetConfigurableRNG(source string, defaultSource io.Reader) (io.Re
 		return nil, fmt.Errorf("unsupported entropy source: %s", source)
 	}
 	return rng, nil
+}
+
+// All control hub operations are No-op
+func (c *Core) EnrollControlHub(activationToken string) error { return nil }
+
+func (c *Core) StoreControlHubClusterCredentials(ctx context.Context, id string, value []byte) error {
+	return nil
 }

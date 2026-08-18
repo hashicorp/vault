@@ -39,7 +39,7 @@ module('Acceptance | enterprise | pki | external | orders | order route', functi
     await runCmd([`delete sys/mounts/${this.mountPath}`], false);
   });
 
-  test('it renders breadcrumbs for order from orders list', async function (assert) {
+  test('it renders breadcrumbs and header without tabs for order from orders list', async function (assert) {
     this.orderReadStub.resolves({
       order_id: this.orderId,
       status: 'valid',
@@ -62,6 +62,9 @@ module('Acceptance | enterprise | pki | external | orders | order route', functi
     assert
       .dom(GENERAL.breadcrumbs)
       .hasText(`Vault Secrets engines ${this.mountPath} Recent orders ${this.orderId}`);
+    ['Overview', 'Roles', 'Recent orders', 'DNS providers', 'ACME accounts'].forEach((t) => {
+      assert.dom(GENERAL.linkTo(t)).doesNotExist(`${t} tab does not render`);
+    });
   });
 
   test('it requests an order and displays response timestamp', async function (assert) {
@@ -99,7 +102,7 @@ module('Acceptance | enterprise | pki | external | orders | order route', functi
     );
     assert.true(this.orderReadStub.calledOnce, 'order read called once');
     assert.dom('h1').hasText('View order', 'page title is displayed');
-    assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed: July 20, 2026');
+    assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 20, 2026');
   });
 
   test('it does not fetch certificate when order status is not "completed"', async function (assert) {

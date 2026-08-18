@@ -440,3 +440,43 @@ func TestCertCount_IsZero_WithAttributions(t *testing.T) {
 	empty := CertCount{}
 	require.True(t, empty.IsZero())
 }
+
+// TestMergeMountAttributions_MetadataUpdate verifies that when the same mount
+// accessor appears in both dst and src, the merged entry takes all metadata
+// from src (the newer/incoming entry) while accumulating the count from dst.
+// This covers namespace moves that happen between two Add() calls within the
+// same accumulation window.
+func TestMergeMountAttributions_MetadataUpdate(t *testing.T) {
+	dst := map[string]MountAttribution{
+		"pki_aaa": {
+			MountAccessor: "pki_aaa",
+			MountPath:     "pki/",
+			MountType:     "pki",
+			NamespaceID:   "ns1-id",
+			NamespacePath: "ns1/",
+			Count:         1.0,
+		},
+	}
+
+	// Same accessor, mount has moved to ns2.
+	src := map[string]MountAttribution{
+		"pki_aaa": {
+			MountAccessor: "pki_aaa",
+			MountPath:     "pki/",
+			MountType:     "pki",
+			NamespaceID:   "ns2-id",
+			NamespacePath: "ns2/",
+			Count:         2.0,
+		},
+	}
+
+	mergeMountAttributions(&dst, src)
+
+	require.Len(t, dst, 1)
+	entry := dst["pki_aaa"]
+	// Metadata must come from src — the most recent call wins.
+	require.Equal(t, "ns2-id", entry.NamespaceID, "NamespaceID should be updated from src")
+	require.Equal(t, "ns2/", entry.NamespacePath, "NamespacePath should be updated from src")
+	// Count must be accumulated from both.
+	require.InDelta(t, 3.0, entry.Count.(float64), 0.0001, "count should be 1.0 + 2.0 = 3.0")
+}

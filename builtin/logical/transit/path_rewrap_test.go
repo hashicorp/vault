@@ -115,7 +115,7 @@ func TestTransit_BatchRewrapCase1(t *testing.T) {
 	}
 
 	// We expect 2 successful requests (1 for encrypt, 1 for rewrap)
-	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(2), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 // Check the normal flow of rewrap with upserted key
@@ -222,7 +222,7 @@ func TestTransit_BatchRewrapCase2(t *testing.T) {
 		t.Fatalf("unexpected key version; got: %d, expected: %d", keyVersion, 2)
 	}
 	// We expect 2 successful transit requests (1 for encrypt, 1 for rewrap)
-	require.Equal(t, uint64(2), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(2), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 // Batch encrypt plaintexts, rotate the keys and rewrap all the ciphertexts
@@ -331,7 +331,7 @@ func TestTransit_BatchRewrapCase3(t *testing.T) {
 		}
 	}
 	// We expect 6 successful transit requests (2 for batch encryption, 2 for batch rewrap, and 2 for decryption)
-	require.Equal(t, uint64(6), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(6), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 // TestTransit_BatchRewrapCase4 batch rewrap leveraging RSA padding schemes
@@ -446,5 +446,5 @@ func TestTransit_BatchRewrapCase4(t *testing.T) {
 		}
 	}
 	// We expect 6 succcessful calls to the transit backend (2 for batch encryption, 2 for batch decryption, and 2 for batch rewrap)
-	require.Equal(t, uint64(6), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(6), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }

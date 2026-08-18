@@ -4,6 +4,8 @@
  */
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+
+import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
@@ -13,17 +15,19 @@ import type VersionService from 'vault/services/version';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  upgradeInfo: unknown[] | null;
+  upgradeInfo: unknown | null;
+  targetVersion: string | null;
 }
 
 type ParentModel = ModelFrom<VaultClusterSupportUpgradeRoute>;
 
 export default class VaultClusterSupportUpgradeInfoRoute extends Route {
+  @service declare readonly flags: FlagsService;
   @service declare readonly router: RouterService;
   @service declare readonly version: VersionService;
 
   beforeModel() {
-    if (this.version.isCommunity) {
+    if (this.version.isCommunity || this.flags.isHvdManaged) {
       this.router.transitionTo('vault.cluster.dashboard');
       return;
     }
@@ -39,6 +43,7 @@ export default class VaultClusterSupportUpgradeInfoRoute extends Route {
     super.setupController(controller, {});
     const parentModel = this.modelFor('vault.cluster.support.upgrade') as ParentModel;
     controller.upgradeInfo = parentModel?.upgradeInfo ?? null;
+    controller.targetVersion = (parentModel as { targetVersion?: string })?.targetVersion ?? null;
     controller.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'Support', route: 'vault.cluster.support.upgrade' },

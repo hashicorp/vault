@@ -8,6 +8,15 @@
 
 .wizard {
   &.intro {
+    .intro-content-image--400 {
+      min-width: 300px;
+      align-self: center;
+
+      img.intro-content-image--400 {
+        width: 400px;
+      }
+    }
+
     &.full {
       @extend .top-margin-32;
       @extend .has-padding-l;

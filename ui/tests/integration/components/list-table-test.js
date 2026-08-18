@@ -22,7 +22,7 @@ module('Integration | Component | list-table', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.data = MOCK_DATA;
+    this.data = MOCK_DATA.map((item) => ({ ...item }));
     this.onSelectionChange = undefined;
     this.selectionKeyField = undefined;
     this.columns = [
@@ -308,5 +308,37 @@ module('Integration | Component | list-table', function (hooks) {
     await waitFor(GENERAL.paginationInfo);
     assert.dom(GENERAL.paginationInfo).hasText(`1–2 of ${this.data.length}`);
     assert.dom(GENERAL.paginationSizeSelector).hasValue('10', 'page selector is unchanged when data updates');
+  });
+
+  test('it should render expandable rows', async function (assert) {
+    delete this.columns[0].isSortable;
+    this.columns[0].isExpandable = true;
+    const childData = { island: 'Bahamas', visit_length: 2, trip_date: '2025-06-22T00:00:00.000Z' };
+    this.data[0].children = [childData];
+
+    await this.renderComponent();
+    assert.dom(GENERAL.tableDataNested(1, 'island')).isNotVisible('nested row is initially hidden');
+    await click(GENERAL.tableExpandableColumn(0, 'island'));
+    assert.dom(GENERAL.tableDataNested(1, 'island')).isVisible('nested row is visible when expanded');
+    assert.dom(GENERAL.tableDataNested(1, 'island')).hasText(childData.island, 'child island renders');
+    assert
+      .dom(GENERAL.tableDataNested(1, 'visit_length'))
+      .hasText(`${childData.visit_length}`, 'child visit length renders');
+    assert
+      .dom(GENERAL.tableDataNested(1, 'trip_date'))
+      .hasText(childData.trip_date, 'child trip date renders');
+    await click(GENERAL.tableExpandableColumn(0, 'island'));
+    assert.dom(GENERAL.tableDataNested(1, 'island')).isNotVisible('nested row hidden when collapsed');
+  });
+
+  test('it hides pagination when @hidePagination is true', async function (assert) {
+    await render(hbs`
+      <ListTable @columns={{this.columns}} @data={{this.data}} @hidePagination={{true}} />
+    `);
+
+    assert.dom(GENERAL.pagination).doesNotExist('pagination is not rendered when @hidePagination is true');
+    assert
+      .dom(GENERAL.tableRow())
+      .exists({ count: this.data.length }, 'all rows are rendered without pagination');
   });
 });

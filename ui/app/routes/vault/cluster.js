@@ -12,6 +12,7 @@ import getStorage from '../../lib/token-storage';
 import localStorage from 'vault/lib/local-storage';
 import clearModelCache from 'vault/utils/shared-model-boundary';
 import { assert } from '@ember/debug';
+import config from 'vault/config/environment';
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -174,7 +175,25 @@ export default class ClusterRoute extends Route {
     return this.transitionToTargetRoute(transition);
   }
 
+  // Reads the operator's ui_telemetry flag from sys/internal/ui/settings and hands
+  // it to the analytics service's consent gate.
+  async startVaultSmAnalytics() {
+    const { ANALYTICS_CONFIG } = config.APP;
+    let uiTelemetryEnabled = false;
+    try {
+      const settings = await this.api.sys.internalUiReadSettings();
+      uiTelemetryEnabled = Boolean(settings?.ui_telemetry_enabled);
+    } catch (e) {
+      uiTelemetryEnabled = false;
+    }
+    this.analytics.startVaultSmAnalytics(uiTelemetryEnabled, ANALYTICS_CONFIG);
+  }
+
   async addAnalyticsService(model) {
+    // HVD-managed clusters use PostHog, started at the application-route level.
+    // Segment is Self-Managed only.
+    if (!this.flagsService.isHvdManaged) await this.startVaultSmAnalytics();
+
     // identify user for analytics service
     if (this.analytics.activated) {
       let licenseId = '';
@@ -193,6 +212,7 @@ export default class ClusterRoute extends Route {
 
         this.analytics.identifyUser(entity, {
           licenseId: licenseId,
+          clusterId: model.id,
           licenseState: model.license?.state || 'community',
           version: model.version.version,
           storageType: model.storageType,

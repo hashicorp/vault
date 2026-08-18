@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -32,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/exp/maps"
 )
@@ -118,9 +119,9 @@ type discovery struct {
 	IDTokenAlgs   []string `json:"id_token_signing_alg_values_supported"`
 }
 
-// oidcCache is a thin wrapper around go-cache to partition by namespace
+// oidcCache is a thin wrapper around ttlcache to partition by namespace
 type oidcCache struct {
-	c *cache.Cache
+	c *ttlcache.Cache[string, any]
 }
 
 var (
@@ -2202,10 +2203,12 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	}
 }
 
-func newOIDCCache(defaultExpiration, cleanupInterval time.Duration) *oidcCache {
-	return &oidcCache{
-		c: cache.New(defaultExpiration, cleanupInterval),
+func newOIDCCache(ctx context.Context, defaultTTL time.Duration, synctest bool) *oidcCache {
+	c := ttlcache.New[string, any](ttlcache.WithTTL[string, any](defaultTTL))
+	if defaultTTL > 0 {
+		cache.Start(ctx, c, !synctest)
 	}
+	return &oidcCache{c: c}
 }
 
 func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
@@ -2216,15 +2219,18 @@ func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool,
 	if ns == nil {
 		return nil, false, errNilNamespace
 	}
-	v, found := c.c.Get(c.nskey(ns, key))
-	return v, found, nil
+	item := c.c.Get(c.nskey(ns, key))
+	if item == nil {
+		return nil, false, nil
+	}
+	return item.Value(), true, nil
 }
 
 func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) error {
 	if ns == nil {
 		return errNilNamespace
 	}
-	c.c.SetDefault(c.nskey(ns, key), obj)
+	c.c.Set(c.nskey(ns, key), obj, ttlcache.DefaultTTL)
 
 	return nil
 }

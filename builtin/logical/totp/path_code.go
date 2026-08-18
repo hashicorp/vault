@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	otplib "github.com/pquerna/otp"
 	totplib "github.com/pquerna/otp/totp"
 )
@@ -109,8 +110,7 @@ func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, da
 
 	usedName := fmt.Sprintf("%s_%s", name, code)
 
-	_, ok := b.usedCodes.Get(usedName)
-	if ok {
+	if b.usedCodes.Get(usedName) != nil {
 		return logical.ErrorResponse("code already used; wait until the next time period"), nil
 	}
 
@@ -129,14 +129,14 @@ func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, da
 		"valid":    valid,
 	})
 
-	// Take the key skew, add two for behind and in front, and multiple that by
-	// the period to cover the full possibility of the validity of the key
-	err = b.usedCodes.Add(usedName, nil, time.Duration(
+	// Take the key skew, add two for behind and in front, and multiply that by
+	// the period to cover the full possibility of the validity of the key.
+	_, alreadyPresent := b.usedCodes.GetOrSet(usedName, struct{}{}, ttlcache.WithTTL[string, struct{}](time.Duration(
 		int64(time.Second)*
 			int64(key.Period)*
-			int64((2+key.Skew))))
-	if err != nil {
-		return nil, fmt.Errorf("error adding code to used cache: %w", err)
+			int64(2+key.Skew))))
+	if alreadyPresent {
+		return nil, fmt.Errorf("invalid counter type returned in TOTP usedCode cache")
 	}
 
 	return &logical.Response{

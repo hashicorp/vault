@@ -7,6 +7,6 @@ package transit
 
 import "github.com/hashicorp/vault/sdk/helper/keysutil"
 
-func getFormattedPQCPublicKey(keyType keysutil.KeyType, entry keysutil.KeyEntry) string {
+func getFormattedPQCPublicKey(keyType keysutil.KeyType, entry keysutil.KeyEntry, hybridConfig keysutil.KeyType) string {
 	return ""
 }

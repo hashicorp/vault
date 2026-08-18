@@ -6,11 +6,12 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/vault/route';
+import timestamp from 'core/utils/timestamp';
 
 import type { Breadcrumb } from 'vault/app-types';
+import type { ExternalRouteModel } from 'pki/routes/external';
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type { ExternalRouteModel } from 'pki/routes/external';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
@@ -29,6 +30,7 @@ export default class PkiExternalRolesIndexRoute extends Route {
     return {
       engine,
       roles: rolesResp.keys,
+      responseTimestamp: timestamp.now(),
     };
   }
 

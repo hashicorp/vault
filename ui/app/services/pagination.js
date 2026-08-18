@@ -118,14 +118,16 @@ export default class Pagination extends Service {
   // with an additional `meta` block
   //
   // the meta block includes:
-  // currentPage, lastPage, nextPage, prevPage, total, filteredTotal
+  // currentPage, lastPage, nextPage, prevPage, total, filteredTotal, totalItems
   constructResponse(modelName, query) {
     const { pageFilter, responsePath, size, page } = query;
     const { response, dataset } = this.getDataset(modelName, query);
     const resp = { ...response };
     const data = this.filterData(pageFilter, dataset);
 
-    const lastPage = Math.ceil(data.length / size);
+    const total = dataset.length || 0;
+    const filteredTotal = data.length || 0;
+    const lastPage = Math.ceil(filteredTotal / size);
     const currentPage = clamp(page, 1, lastPage);
     const end = currentPage * size;
     const start = end - size;
@@ -137,8 +139,9 @@ export default class Pagination extends Service {
       lastPage,
       nextPage: clamp(currentPage + 1, 1, lastPage),
       prevPage: clamp(currentPage - 1, 1, lastPage),
-      total: dataset.length || 0,
-      filteredTotal: data.length || 0,
+      total,
+      filteredTotal,
+      totalItems: pageFilter ? filteredTotal : total,
       pageSize: size,
     };
 

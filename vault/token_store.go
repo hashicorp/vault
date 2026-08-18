@@ -1518,7 +1518,10 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
-	normalizedID := normalizeOAuthJwtToId(id)
+	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+	if err != nil {
+		return nil, logical.ErrInvalidRequest
+	}
 
 	// If it starts with "b." it's a batch token
 	if IsBatchToken(normalizedID) {
@@ -2683,7 +2686,10 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
-	normalizedClientToken := normalizeOAuthJwtToId(req.ClientToken)
+	normalizedClientToken, err := ts.core.normalizeJwtForLookup(ctx, req.ClientToken)
+	if err != nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
 	if !orphan && IsOAuthJwtId(normalizedClientToken) {
 		return logical.ErrorResponse("JWTs cannot create child tokens"), logical.ErrInvalidRequest
 	}
@@ -3355,10 +3361,10 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
-	normalizedID := normalizeOAuthJwtToId(id)
-	if IsOAuthJwtId(normalizedID) {
-		return logical.ErrorResponse("cannot revoke JWTs"), nil
+	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
 	}
+
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -3403,7 +3409,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	normalizedID := normalizeOAuthJwtToId(id)
+	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+	if err != nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
 	if IsOAuthJwtId(normalizedID) {
 		return logical.ErrorResponse("JWTs cannot be revoked"), nil
 	}
@@ -3453,7 +3462,8 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		if id == req.ClientToken {
 			id = getOAuthJwtId(req.JwtUniqueId)
 		} else {
-			resolvedID, err := resolveOAuthJwtIdForLookup(id)
+			// For raw JWTs, validate to get the correct profile and unique ID claim
+			resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
 			if err != nil {
 				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 			}
@@ -3571,7 +3581,10 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
-	normalizedID := normalizeOAuthJwtToId(id)
+	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+	if err != nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
 	if IsOAuthJwtId(normalizedID) {
 		return logical.ErrorResponse("JWTs cannot be renewed"), nil
 	}

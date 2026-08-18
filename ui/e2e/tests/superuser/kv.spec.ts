@@ -36,7 +36,7 @@ test('kvv2 workflow', async ({ page }) => {
   await expect(page.locator('section')).toContainText('bar');
   await page.getByRole('button', { name: 'show value' }).click();
   await expect(page.locator('pre')).toContainText('baz');
-  await page.locator('label').click();
+  await page.getByRole('button', { name: 'JSON' }).click();
   await expect(page.getByRole('code')).toContainText('{ "bar": "baz" }');
   // create metadata for the secret
   await page.getByRole('link', { name: 'Metadata', exact: true }).click();
@@ -117,6 +117,7 @@ test('kvv2 workflow', async ({ page }) => {
   await expect(page.locator('section')).toContainText(
     'Version 1 of this secret has been permanently destroyed A version that has been permanently deleted cannot be restored. You can view other versions of this secret in the Version History tab above. KV v2 API docs'
   );
+
   // generate policy
   await page.getByRole('button', { name: 'Generate policy' }).click();
   await page.getByRole('textbox', { name: 'Policy name' }).fill('foo-policy');
@@ -124,12 +125,15 @@ test('kvv2 workflow', async ({ page }) => {
   await page.getByRole('checkbox', { name: 'read' }).nth(1).check();
   await page.getByRole('checkbox', { name: 'list' }).nth(2).check();
   await page.getByRole('button', { name: 'Delete' }).nth(3).click();
+
   await page.getByRole('button', { name: 'Add rule' }).click();
   await page.getByRole('textbox', { name: 'Resource path' }).nth(5).fill('kv-test/nomatch');
   await page.getByRole('checkbox', { name: 'create' }).nth(5).check();
+  await page.getByRole('checkbox', { name: 'read' }).nth(3).check();
+  await page.getByRole('checkbox', { name: 'list' }).nth(4).check();
   await page.getByRole('button', { name: 'Automation snippets' }).click();
   await expect(page.getByRole('code')).toContainText(
-    'resource "vault_policy" "<local identifier>" { name = "foo-policy" policy = <<EOT path "kv-test/metadata/foo" { capabilities = ["sudo"] } path "kv-test/data/foo" { capabilities = ["read"] } path "kv-test/subkeys/foo" { capabilities = ["list"] } path "kv-test/undelete/foo" { capabilities = [] } path "kv-test/destroy/foo" { capabilities = [] } path "kv-test/nomatch" { capabilities = ["create"] } EOT }'
+    'resource "vault_policy" "<local identifier>" { name = "foo-policy" policy = <<EOT path "kv-test/metadata/foo" { capabilities = ["sudo"] } path "kv-test/data/foo" { capabilities = ["read"] } path "kv-test/subkeys/foo" { capabilities = ["list"] } path "kv-test/undelete/foo" { capabilities = ["read"] } path "kv-test/destroy/foo" { capabilities = ["list"] } path "kv-test/nomatch" { capabilities = ["create"] } EOT }'
   );
   await page.getByRole('button', { name: 'Save' }).click();
   await page.getByRole('link', { name: 'View policy' }).click();

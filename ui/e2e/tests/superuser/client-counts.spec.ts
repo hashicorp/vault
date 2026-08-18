@@ -39,14 +39,19 @@ test('client counts workflow', async ({ page }) => {
   });
 
   await test.step('client usage overview', async () => {
-    const { entity_clients, non_entity_clients, acme_clients } = activityData.total;
-    const totalClients = (entity_clients + non_entity_clients + acme_clients).toLocaleString();
-    await expect(page.getByRole('img', { name: `Total of ${totalClients} Total` })).toBeVisible();
+    const { clients } = activityData.total;
+    // the donut centre renders `runningTotals.clients`, which now counts secret syncs
+    // along with clients. Derive it from the same field the component reads rather
+    // than re-adding the parts.
+    const totalClients = clients.toLocaleString();
+    // the donut renders the number and its label as adjacent nodes with no whitespace between
+    // them, so assert on each separately rather than as one string
+    const donut = page.getByRole('img', { name: 'Client count and type distribution' });
+    await expect(donut).toContainText(totalClients);
+    await expect(donut).toContainText('Total clients');
+
     await expect(page.getByRole('switch', { name: 'Split by client type' })).toBeVisible();
-    await expect(page.locator('.lineal-chart')).toBeVisible();
-    await expect(page.locator('section')).toContainText(
-      `${entity_clients.toLocaleString()} Entity clients ${non_entity_clients.toLocaleString()} Non-entity clients ${acme_clients.toLocaleString()} ACME clients`
-    );
+    await expect(page.getByRole('img', { name: 'Client usage by month' })).toBeVisible();
   });
 
   await test.step('client attribution filters', async () => {

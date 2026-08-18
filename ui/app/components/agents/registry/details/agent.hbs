@@ -1,0 +1,143 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Text::Body class="has-top-margin-s" data-test-agent-description>
+  <strong>Description:</strong>
+  Orchestrates automated testing workflows and validates system integrity. Provides real-time feedback on code quality and
+  deployment readiness.
+</Hds::Text::Body>
+
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-top-margin-s has-padding-s"
+  data-test-card-container="agent-status"
+>
+  <Hds::Layout::Flex @gap="24" as |LF|>
+    <LF.Item>
+      <Hds::Text::Body @color="faint" class="is-block">Status</Hds::Text::Body>
+      <Hds::Badge
+        @text={{if @data.entity.disabled "Disabled" "Enabled"}}
+        @icon={{if @data.entity.disabled "alert-triangle" "running-static"}}
+        @color={{if @data.entity.disabled "warning" "neutral"}}
+        @size="small"
+      />
+
+    </LF.Item>
+    <LF.Item>
+      <Hds::Text::Body @color="faint" class="is-block">Agent created at</Hds::Text::Body>
+      <Hds::Text::Body @color="primary">{{date-format @data.agent.creation_time "MMM d yyyy, h:mm:ss aaa"}}</Hds::Text::Body>
+    </LF.Item>
+    <LF.Item>
+      <Hds::Text::Body @color="faint" class="is-block">Agent last updated</Hds::Text::Body>
+      <Hds::Text::Body @color="primary">{{date-from-now @data.agent.last_updated_time}}</Hds::Text::Body>
+      ago
+    </LF.Item>
+    <LF.Item>
+      <Hds::Text::Body @color="faint" class="is-block">Agent owner</Hds::Text::Body>
+      <Hds::Text::Body @color="primary">{{@data.agent.owner}}</Hds::Text::Body>
+    </LF.Item>
+  </Hds::Layout::Flex>
+</Hds::Card::Container>
+
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="has-top-margin-s has-padding-s"
+  data-test-card-container="agent-details"
+>
+  <Hds::Layout::Flex @gap="12" @align="center" as |LF|>
+    <Hds::Badge @text="agent id" @isIconOnly={{true}} @icon="identity-user" @size="large" />
+    <LF.Item>
+      <Hds::Text::Body @color="faint" class="is-block">Agent registry ID</Hds::Text::Body>
+      <Hds::Text::Code @color="primary">{{@data.agent.id}}</Hds::Text::Code>
+    </LF.Item>
+  </Hds::Layout::Flex>
+
+  <Hds::Layout::Flex @gap="12" @align="center" class="has-top-margin-s" as |LF|>
+    <Hds::Badge @text="entity" @isIconOnly={{true}} @icon="fingerprint" @size="large" />
+    <LF.Item>
+      <Hds::Text::Body @color="faint">Entity:</Hds::Text::Body>
+      <Hds::Link::Inline @route="vault.cluster.access.identity.show" @models={{array "entities" @data.entity.id "details"}}>
+        {{@data.entity.name}}
+      </Hds::Link::Inline>
+      <LF.Item>
+        <Hds::Text::Body @color="faint">Entity ID:</Hds::Text::Body>
+        <Hds::Text::Code @color="primary">{{@data.agent.entity_id}}</Hds::Text::Code>
+      </LF.Item>
+    </LF.Item>
+  </Hds::Layout::Flex>
+
+  {{#each @data.entity.aliases as |alias|}}
+    <Hds::Layout::Flex @gap="12" @align="start" class="has-top-margin-s" as |LF|>
+      <Hds::Badge @text="alias" @isIconOnly={{true}} @icon="at-sign" @size="large" />
+      <LF.Item>
+        <Hds::Text::Body @color="faint">Alias:</Hds::Text::Body>
+        <Hds::Link::Inline
+          @route="vault.cluster.access.identity.aliases.show"
+          @models={{array "entities" alias.id "details"}}
+        >
+          {{alias.name}}
+        </Hds::Link::Inline>
+        <LF.Item>
+          {{#if alias.mount_type}}
+            <Hds::Badge @text={{alias.mount_type}} @size="small" />
+          {{/if}}
+          <Hds::Text::Body @color="faint" @size="100">
+            <Hds::Icon @name="pipeline" @isInline={{true}} class="has-padding-xs is-v-centered" />
+            <Hds::Text::Code @size="100">{{alias.mount_path}}</Hds::Text::Code>
+            | Accessor:
+            <Hds::Text::Code @size="100">{{alias.mount_accessor}}</Hds::Text::Code>
+          </Hds::Text::Body>
+        </LF.Item>
+
+        <LF.Item>
+          <Hds::Text::Body @color="faint">Alias ID:</Hds::Text::Body>
+          <Hds::Text::Code @color="primary">{{alias.id}}</Hds::Text::Code>
+        </LF.Item>
+        {{#if alias.issuer_id}}
+          <LF.Item>
+            <Hds::Text::Body @color="faint">Issuer ID:</Hds::Text::Body>
+            <Hds::Text::Code @color="primary">{{alias.issuer_id}}</Hds::Text::Code>
+          </LF.Item>
+        {{/if}}
+        {{#if alias.external_id}}
+          <LF.Item>
+            <Hds::Text::Body @color="faint">External ID:</Hds::Text::Body>
+            <Hds::Text::Code @color="primary">{{alias.external_id}}</Hds::Text::Code>
+          </LF.Item>
+        {{/if}}
+
+        {{#if alias.profile_name}}
+          <LF.Item>
+            <Hds::Text::Body @color="faint">Profile Name:</Hds::Text::Body>
+            <Hds::Text::Code @color="primary">{{alias.profile_name}}</Hds::Text::Code>
+          </LF.Item>
+        {{/if}}
+        {{#if alias.profile_id}}
+          <LF.Item>
+            <Hds::Text::Body @color="faint">Profile ID:</Hds::Text::Body>
+            <Hds::Text::Code @color="primary">{{alias.profile_id}}</Hds::Text::Code>
+          </LF.Item>
+        {{/if}}
+        {{#if alias.namespace}}
+          <LF.Item>
+            <Hds::Text::Body @color="faint">Namespace:</Hds::Text::Body>
+            <Hds::Text::Code @color="primary">{{alias.namespace}}</Hds::Text::Code>
+          </LF.Item>
+        {{/if}}
+      </LF.Item>
+
+    </Hds::Layout::Flex>
+  {{/each}}
+</Hds::Card::Container>
+
+{{#if @data.aggregatePolicy}}
+  <PolicyAllowedActions
+    @aggregatedPolicy={{@data.aggregatePolicy}}
+    @isCard={{true}}
+    class="has-top-margin-s has-padding-s"
+  />
+{{/if}}

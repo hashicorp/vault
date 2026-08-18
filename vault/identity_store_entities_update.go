@@ -357,7 +357,8 @@ func (i *IdentityStore) validateEntityIDPathSelectors(ctx context.Context, d *fr
 	return nil
 }
 
-// EntityUpdateCommon creates or updates an entity from request field data.
+// EntityUpdateCommon creates or updates an entity from request field data. Returns (nil, nil) when
+// no changes are needed, which is the correct idempotent behavior for this operation.
 func (i *IdentityStore) EntityUpdateCommon(ctx context.Context, d *framework.FieldData) (*logical.Response, error) {
 	return NewEntityBuilder(i).
 		FromFieldData(ctx, d).

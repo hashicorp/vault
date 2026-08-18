@@ -2995,6 +2995,35 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-feature-flags"][1]),
 		},
 		{
+			Pattern: "internal/ui/settings",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "settings",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleConfigUISettings,
+					Summary:  "Return UI-related settings for the current cluster.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"ui_telemetry_enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-settings"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-settings"][1]),
+		},
+		{
 			Pattern: "internal/ui/mounts",
 
 			DisplayAttrs: &framework.DisplayAttributes{

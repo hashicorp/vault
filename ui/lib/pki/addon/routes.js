@@ -4,7 +4,6 @@
  */
 
 import buildRoutes from 'ember-engines/routes';
-import ENV from 'vault/config/environment';
 
 export default buildRoutes(function () {
   // Internal PKI
@@ -62,29 +61,27 @@ export default buildRoutes(function () {
   });
 
   // Public/External PKI
-  if (ENV.environment !== 'production') {
-    this.route('external', function () {
-      this.route('configuration');
-      this.route('overview');
-      this.route('roles', function () {
-        this.route('role', { path: '/:role_name' }, function () {
-          this.route('details');
-          this.route('active-orders');
-          // Some users may just have permissions to a particular role.
-          // This route uses API requests that are role path-based for order lookups
-          // e.g. `GET :mount/role/:role_name/order/:order_id/status`
-          this.route('order', { path: '/:order_id' });
-        });
-      });
-      this.route('orders', function () {
-        // Lookup by JUST order ID (not via role)
+  this.route('external', function () {
+    this.route('configuration');
+    this.route('overview');
+    this.route('roles', function () {
+      this.route('role', { path: '/:role_name' }, function () {
+        this.route('overview');
+        this.route('active-orders');
+        // Some users may just have permissions to a particular role.
+        // This route uses API requests that are role path-based for order lookups
+        // e.g. `GET /:mount/role/:role_name/order/:order_id/status`
         this.route('order', { path: '/:order_id' });
       });
-      this.route('certificates', function () {
-        this.route('certificate', { path: '/:serial_number' });
-      });
-      this.route('dns-providers');
-      this.route('acme-accounts');
     });
-  }
+    this.route('orders', function () {
+      // Lookup by JUST order ID (not via role) -> `GET	/:mount/lookup/order/:order_id
+      this.route('order', { path: '/:order_id' });
+    });
+    this.route('certificates', function () {
+      this.route('certificate', { path: '/:serial_number' });
+    });
+    this.route('dns-providers');
+    this.route('acme-accounts');
+  });
 });

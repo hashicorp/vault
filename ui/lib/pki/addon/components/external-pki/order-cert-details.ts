@@ -52,7 +52,7 @@ export default class ExternalPkiOrderCertDetailsComponent extends Component<Args
   @cached
   get orderConfigDisplay() {
     const { order, orderId: order_id } = this.args;
-    if (!order.details) return null;
+    if (!order?.details) return null;
 
     const { details } = order;
     // Rename last_update so it's clear the time corresponds to the order, not certificate
@@ -81,7 +81,7 @@ export default class ExternalPkiOrderCertDetailsComponent extends Component<Args
 
   @cached
   get tableData(): IdentifierRow[] {
-    const challenges = this.args.order.details?.challenges as Record<string, Challenge[]> | undefined;
+    const challenges = this.args.order?.details?.challenges as Record<string, Challenge[]> | undefined;
     if (!challenges) return [];
     return Object.entries(challenges).map(([identifier, challenges]) => {
       // At least one challenge has to be valid for the identifier's authorization to be valid

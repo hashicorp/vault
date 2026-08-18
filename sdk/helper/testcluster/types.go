@@ -84,6 +84,7 @@ type VaultNodeConfig struct {
 	FeatureFlags                   []string      `json:"feature_flags,omitempty"`
 	EnableUnauthenticatedAccess    []string      `json:"enable_unauthenticated_access,omitempty"`
 	EnableMultiSeal                bool          `json:"enable_multiseal"`
+	OperatorNamespacePath          string        `json:"operator_namespace_path,omitempty"`
 }
 
 type ClusterNode struct {
@@ -111,15 +112,17 @@ type ClusterOptions struct {
 	VaultNodeConfig             *VaultNodeConfig
 	VaultLicense                string
 	AdministrativeNamespacePath string
+	OperatorNamespacePath       string
 }
 
 type VaultNodeListenerConfig struct {
-	Port              int
-	ChrootNamespace   string
-	RedactAddresses   bool
-	RedactClusterName bool
-	RedactVersion     bool
-	TLSCipherSuites   []uint16
+	Port                  int
+	ChrootNamespace       string
+	RedactAddresses       bool
+	RedactClusterName     bool
+	RedactVersion         bool
+	TLSCipherSuites       []uint16
+	OperatorNamespacePath string
 }
 
 type VaultNodeSealConfig struct {

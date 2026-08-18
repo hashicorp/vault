@@ -192,6 +192,12 @@ type SigningResult struct {
 	PublicKey []byte
 }
 
+// CsrCreator is a function that creates a CSR from a key
+type CsrCreator func(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error)
+
+// LeafCertKeyMatchValidator is a function that validates whether a certificate's public key matches a transit key version.
+type LeafCertKeyMatchValidator func(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error)
+
 type ecdsaSignature struct {
 	R, S *big.Int
 }
@@ -263,6 +269,25 @@ func (kt KeyType) HMACSupported() bool {
 		return false
 	default:
 		return true
+	}
+}
+
+func (kt KeyType) KeyUsages() []string {
+	switch kt {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		return []string{"aead-encryption"}
+	case KeyType_AES128_CBC, KeyType_AES256_CBC:
+		return []string{"symmetric-encryption"}
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_ML_DSA, KeyType_SLH_DSA, KeyType_HYBRID:
+		return []string{"digital-signature"}
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		return []string{"asymmetric-encryption", "digital-signature"}
+	case KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES192_CMAC, KeyType_AES256_CMAC:
+		return []string{"message-authentication"}
+	case KeyType_MANAGED_KEY:
+		return []string{}
+	default:
+		return []string{}
 	}
 }
 
@@ -2692,11 +2717,8 @@ func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byt
 	return base64.StdEncoding.EncodeToString(wrappedKeys), nil
 }
 
-func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
-	if !p.Type.SigningSupported() {
-		return nil, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
-	}
-
+// CreateCsrWithKeyVersion creates a CSR from a regular (non-managed) key.
+func (p *Policy) CreateCsrWithKeyVersion(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return nil, err
@@ -2705,9 +2727,6 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 	if keyEntry.IsPrivateKeyMissing() {
 		return nil, errutil.UserError{Err: "private key not imported for key version selected"}
 	}
-
-	csrTemplate.Signature = nil
-	csrTemplate.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
 
 	var key crypto.Signer
 	switch p.Type {
@@ -2743,9 +2762,26 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 	default:
 		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type.String())}
 	}
+
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	if err != nil {
-		return nil, fmt.Errorf("could not create the cerfificate request: %w", err)
+		return nil, fmt.Errorf("could not create the certificate request: %w", err)
+	}
+
+	return csrBytes, nil
+}
+
+func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest, getCsrRequest CsrCreator) ([]byte, error) {
+	if !p.Type.SigningSupported() {
+		return nil, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
+	}
+
+	csrTemplate.Signature = nil
+	csrTemplate.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
+
+	csrBytes, err := getCsrRequest(keyVersion, csrTemplate)
+	if err != nil {
+		return nil, err
 	}
 
 	pemCsr := pem.EncodeToMemory(&pem.Block{
@@ -2756,7 +2792,8 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 	return pemCsr, nil
 }
 
-func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+// ValidateLeafCertKeyMatchWithNativeKeyVersion checks whether a certificate's public key matches a transit key version. It must only be used with native (non-managed) key types.
+func (p *Policy) ValidateLeafCertKeyMatchWithNativeKeyVersion(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
 	}
@@ -2833,7 +2870,7 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 	return false, nil
 }
 
-func (p *Policy) ValidateAndPersistCertificateChain(ctx context.Context, keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
+func (p *Policy) ValidateAndPersistCertificateChain(ctx context.Context, keyVersion int, certChain []*x509.Certificate, validateKeyMatch LeafCertKeyMatchValidator, storage logical.Storage) error {
 	if len(certChain) == 0 {
 		return errutil.UserError{Err: "expected at least one certificate in the parsed certificate chain"}
 	}
@@ -2848,7 +2885,7 @@ func (p *Policy) ValidateAndPersistCertificateChain(ctx context.Context, keyVers
 		}
 	}
 
-	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, certChain[0].PublicKeyAlgorithm, certChain[0].PublicKey)
+	valid, err := validateKeyMatch(keyVersion, certChain[0].PublicKeyAlgorithm, certChain[0].PublicKey)
 	if err != nil {
 		prefixedErr := fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
 		switch err.(type) {

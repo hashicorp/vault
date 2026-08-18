@@ -10,12 +10,17 @@ jobs:
   product-metadata:
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
     outputs:
       vault-revision: ${{ github.event.client_payload.payload.sha }}
       vault-version: ${{ github.event.client_payload.payload.version }}
       vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Check out the repository at the same Git SHA that was used to create
           # the artifacts to get the correct metadata.
@@ -39,6 +44,12 @@ jobs:
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
     needs: product-metadata
     uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
     strategy:
       fail-fast: false
       matrix:
@@ -67,6 +78,10 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs: test
+    permissions:
+      actions: read
+      contents: read
+      issues: read
     steps:
       - name: Persist metadata
         uses: hashicorp/actions-persist-metadata@4c07d5de3e4b78122d6e180657992d6e359d5ea1 # v3

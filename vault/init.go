@@ -369,9 +369,20 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	}
 
 	activeCtx, ctxCancel := context.WithCancel(namespace.RootContext(nil))
-	if err := c.postUnseal(activeCtx, ctxCancel, standardUnsealStrategy{}); err != nil {
+	c.activeContext = activeCtx
+	c.activeContextCancelFunc.Store(ctxCancel)
+
+	if err := c.postUnseal(c.activeContext, standardUnsealStrategy{}); err != nil {
 		c.logger.Error("post-unseal setup failed during init", "error", err)
 		return nil, err
+	}
+
+	if c.OperatorNamespacePath() != "" {
+		c.logger.Trace("creating operator namespace", "path", c.OperatorNamespacePath())
+		_, err := createNamespace(namespace.RootContext(ctx), c, namespace.Canonicalize(c.OperatorNamespacePath()), nil)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create operator namespace: %w", err)
+		}
 	}
 
 	// Save the configuration regardless, but only generate a key if it's not

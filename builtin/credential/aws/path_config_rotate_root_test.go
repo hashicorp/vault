@@ -16,6 +16,7 @@ import (
 
 type mockIAMClient = awsutil.MockIAM
 
+// TestPathConfigRotateRoot tests the rotate root functionality for AWS credentials.
 func TestPathConfigRotateRoot(t *testing.T) {
 	t.Setenv("AWS_REGION", "us-east-1")
 	t.Setenv("AWS_DEFAULT_REGION", "us-east-1")

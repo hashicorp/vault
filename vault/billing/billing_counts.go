@@ -6,11 +6,13 @@ package billing
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	uberatomic "go.uber.org/atomic"
@@ -86,6 +88,14 @@ const (
 
 	TotpKeys = "totp"
 	KmseKeys = "kmse"
+
+	// Mount type constants for consumption billing attribution.
+	MountTypeTransit   = "transit"
+	MountTypeTransform = "transform"
+	MountTypeGcpKms    = "gcpkms"
+	MountTypeSpiffe    = "spiffe"
+	MountTypeOidc      = "oidc"
+	MountTypeExCa      = "external-ca"
 )
 
 var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
@@ -94,18 +104,14 @@ type ConsumptionBilling struct {
 	// BillingStorageLock controls access to the billing storage paths
 	BillingStorageLock sync.RWMutex
 
-	BillingConfig            BillingConfig
-	DataProtectionCallCounts DataProtectionCallCounts
-	Logger                   log.Logger
+	BillingConfig        BillingConfig
+	SecretEngineCounts   SecretEngineCounts
+	Logger               log.Logger
+	GetParentNamespaceID func(string) string
 
 	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
 	// This is used to avoid scanning all mounts every 10 minutes for KMIP billing detection.
 	KmipSeenEnabledThisMonth atomic.Bool
-
-	IdentityTokenUnits IdentityTokenUnits
-
-	// ExternalCaCertUnits tracks duration-adjusted PKI external CA certificate units
-	ExternalCaCertUnits *uberatomic.Float64
 }
 
 type BillingConfig struct {
@@ -135,24 +141,119 @@ func GetAttributionMaxPath(localPathPrefix string, month time.Time, attributionM
 	return GetMonthlyBillingMetricPath(localPathPrefix, month, AttributionMaxPrefix+attributionMetricName)
 }
 
-type DataProtectionCallCounts struct {
-	Transit   *atomic.Uint64 `json:"transit,omitempty"`
-	Transform *atomic.Uint64 `json:"transform,omitempty"`
-	GcpKms    *atomic.Uint64 `json:"gcpkms,omitempty"`
+// SecretEngineCounts holds in-memory billing counters for all secret engine metric types.
+type SecretEngineCounts struct {
+	// Integer-counted data-protection engines
+	Transit   DataProtectionEngineCounts
+	Transform DataProtectionEngineCounts
+	GcpKms    DataProtectionEngineCounts
+
+	// Float-counted credential/certificate metrics
+	Oidc       CredentialUnits
+	Spiffe     CredentialUnits
+	ExternalCa CredentialUnits
 }
 
-// IdentityTokenUnits tracks billing metrics for identity and authentication services
-type IdentityTokenUnits struct {
-	// OidcTokenDuration tracks the token duration units (seconds, not duration-adjusted) for billing purposes in memory.
-	// This value is normalized before flushing to storage and is reset to 0 after flush in UpdateOidcDurationAdjustedCount.
-	OidcTokenDuration *uberatomic.Float64 `json:"oidc,omitempty"`
+// DataProtectionEngineCounts holds a uint64 monthly counter and mount attribution
+// for integer-counted data-protection engines (Transit, Transform, GcpKms).
+type DataProtectionEngineCounts struct {
+	// MonthlyCount is the monthly consumption billing count for the engine.
+	MonthlyCount *atomic.Uint64 `json:"monthlyCount,omitempty"`
+	// AttributionTracker holds the in-memory mount/namespace attribution for this engine.
+	AttributionTracker
+}
 
-	// SpiffeJwt stores duration-adjusted JWT token units as float64
-	// We need to use the uberAtomic package to store atomic float64 values
-	SpiffeJwt *uberatomic.Float64 `json:"spiffe_jwt,omitempty"`
+// CredentialUnits holds a float64 units counter and mount attribution for
+// float-counted metrics (Oidc, Spiffe, ExternalCa).
+type CredentialUnits struct {
+	// MonthlyUnits is the monthly consumption billing units for the engine.
+	MonthlyUnits *uberatomic.Float64
+	// AttributionTracker holds the in-memory mount/namespace attribution.
+	AttributionTracker
+}
+
+// AttributionTracker holds an in-memory map of mount attribution entries and the
+// lock that protects it. Embedding this struct gives any metric type a consistent
+// pair of fields (MountAttribution / MountAttributionLock) and a shared
+// AccumulateMountAttributions method, so attribution tracking can be added to new
+// metric types without duplicating fields or logic.
+type AttributionTracker struct {
+	// MountAttribution contains mount/namespace breakdown keyed by mount accessor.
+	MountAttribution map[string]logical.MountAttribution
+	// MountAttributionLock protects access to MountAttribution.
+	MountAttributionLock sync.RWMutex
 }
 
 var _ logical.ConsumptionBillingManager = (*ConsumptionBilling)(nil)
+
+// AccumulateMountAttributions extracts mount/namespace fields from a WriteBillingData
+// payload and upserts them into the MountAttribution map, incrementing the count
+// for an already-seen accessor or inserting a new entry.
+// The mountPath is stored without its namespace prefix so attribution paths are
+// consistent regardless of namespace depth.
+func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, data map[string]interface{}, count float64, getParentNamespaceID func(string) string) error {
+	// Resolve namespace info from context — plugins do not pass namespace fields.
+	namespaceID := ""
+	namespacePath := ""
+	if ns, err := namespace.FromContext(ctx); err == nil && ns != nil {
+		namespaceID = ns.ID
+		namespacePath = ns.Path
+	}
+	parentNamespaceID := ""
+	if getParentNamespaceID != nil {
+		parentNamespaceID = getParentNamespaceID(namespacePath)
+	}
+
+	// Extract the rest of the info from the plugin data.
+	mountPath, ok := data["mountPath"].(string)
+	if !ok {
+		return fmt.Errorf("invalid value type for mountPath")
+	}
+	// Strip the namespace prefix so we store only the mount-local path.
+	// e.g. "ns1/transit/" with namespacePath "ns1/" becomes "transit/".
+	if namespacePath != "" {
+		mountPath = strings.TrimPrefix(mountPath, namespacePath)
+	}
+	mountAccessor, ok := data["mountAccessor"].(string)
+	if !ok {
+		return fmt.Errorf("invalid value type for mountAccessor")
+	}
+	if mountAccessor == "" {
+		return fmt.Errorf("mountAccessor cannot be empty")
+	}
+	mountType, ok := data["mountType"].(string)
+	if !ok {
+		return fmt.Errorf("invalid value type for mountType")
+	}
+	backendAwareUUID, ok := data["backendAwareUUID"].(string)
+	if !ok {
+		return fmt.Errorf("invalid value type for backendAwareUUID")
+	}
+
+	d.MountAttributionLock.Lock()
+	var prev float64
+	if existing, exists := d.MountAttribution[mountAccessor]; exists {
+		if f, ok2 := existing.Count.(float64); ok2 {
+			prev = f
+		}
+	}
+	// Always write the full entry from the current request so that any metadata
+	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
+	// Only the accumulated count is carried over from the previous entry.
+	d.MountAttribution[mountAccessor] = logical.MountAttribution{
+		MountPath:         mountPath,
+		MountAccessor:     mountAccessor,
+		MountType:         mountType,
+		NamespaceID:       namespaceID,
+		NamespacePath:     namespacePath,
+		ParentNamespaceID: parentNamespaceID,
+		BackendAwareUUID:  backendAwareUUID,
+		Count:             prev + count,
+	}
+	d.MountAttributionLock.Unlock()
+
+	return nil
+}
 
 func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType string, data map[string]interface{}) error {
 	if s == nil {
@@ -160,23 +261,29 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 	}
 
 	switch mountType {
-	case "transit":
+	case MountTypeTransit:
 		val, ok := data["count"].(uint64)
 		if !ok {
 			err := fmt.Errorf("invalid value type for transit")
 			return err
 		}
 
-		s.DataProtectionCallCounts.Transit.Add(val)
-	case "transform":
+		s.SecretEngineCounts.Transit.MonthlyCount.Add(val)
+		if err := s.SecretEngineCounts.Transit.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+			return err
+		}
+	case MountTypeTransform:
 		val, ok := data["count"].(uint64)
 		if !ok {
 			err := fmt.Errorf("invalid value type for transform")
 			return err
 		}
 
-		s.DataProtectionCallCounts.Transform.Add(val)
-	case "spiffe":
+		s.SecretEngineCounts.Transform.MonthlyCount.Add(val)
+		if err := s.SecretEngineCounts.Transform.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+			return err
+		}
+	case MountTypeSpiffe:
 		// SPIFFE JWT uses float64 for duration-adjusted units
 		val, ok := data["units"].(float64)
 		if !ok {
@@ -184,16 +291,19 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 			return err
 		}
 
-		s.IdentityTokenUnits.SpiffeJwt.Add(val)
-	case "gcpkms":
+		s.SecretEngineCounts.Spiffe.MonthlyUnits.Add(val)
+	case MountTypeGcpKms:
 		val, ok := data["count"].(uint64)
 		if !ok {
 			err := fmt.Errorf("invalid value type for gcp kms")
 			return err
 		}
 
-		s.DataProtectionCallCounts.GcpKms.Add(val)
-	case "external-ca":
+		s.SecretEngineCounts.GcpKms.MonthlyCount.Add(val)
+		if err := s.SecretEngineCounts.GcpKms.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+			return err
+		}
+	case MountTypeExCa:
 		// External CA uses float64 for duration-adjusted units
 		val, ok := data["units"].(float64)
 		if !ok {
@@ -201,7 +311,7 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 			return err
 		}
 
-		s.ExternalCaCertUnits.Add(val)
+		s.SecretEngineCounts.ExternalCa.MonthlyUnits.Add(val)
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err

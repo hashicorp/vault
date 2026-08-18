@@ -75,7 +75,7 @@ export default class PageNamespacesComponent extends Component<Args> {
     {
       key: 'popupMenu',
       label: 'Action',
-      width: '75px',
+      width: '8%',
     },
   ];
 

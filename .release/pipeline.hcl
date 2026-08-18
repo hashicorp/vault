@@ -189,12 +189,19 @@ changed_files {
   // Documentation
   // ----------------------------------------------------------------------------
 
-  // The "changelog" group tracks our changelogs
+  // The "changelog" group tracks our changelog entries. We exclude these from
+  // community edition backports because the CHANGELOG is always generated on
+  // the vault-enterprise side.
   group "changelog" {
     match {
       base_dir = ["changelog"]
     }
+  }
 
+  // The "changelogmd" group tracks our CHANGELOG's. We have a different group
+  // for the rendered CHANGELOG as we do want it to get backported to the
+  // community edition.
+  group "changelogmd" {
     match {
       contains = ["CHANGELOG"]
     }
@@ -260,6 +267,8 @@ changed_files {
         joinpath(".github", "workflows", "build-artifacts-ent.yml"),
         joinpath(".github", "workflows", "backport-automation-ent.yml"),
         joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
+        # This was accidentally merged and synced before we had bob classified as ent only
+        joinpath(".bob", "enos-test-automation.md"),
       ]
     }
 
@@ -316,6 +325,8 @@ changed_files {
         joinpath("specs"),
         joinpath(".release", "ibm-pao"),
         // Internal developer tooling that must not sync to CE
+        ".bob",
+        ".opencode",
         ".agents",
         joinpath("ui", ".agents"),
       ]
@@ -325,6 +336,8 @@ changed_files {
       base_name = [
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
+        "AGENTS.md",
+        "opencode.json",
       ]
     }
 

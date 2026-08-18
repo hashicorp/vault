@@ -169,7 +169,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	// Increment the counter for successful operations
 	// Since there are not batched operations, we can add one successful
 	// request to the transit request counter.
-	if err = b.incrementBillingCounts(ctx, 1); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, 1); err != nil {
 		b.Logger().Error("failed to track transit data key request count", "error", err.Error())
 	}
 

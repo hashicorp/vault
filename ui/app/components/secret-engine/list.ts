@@ -56,29 +56,29 @@ export default class SecretEngineList extends Component<Args> {
       key: 'path',
       label: 'Engine path',
       isSortable: true,
-      width: '250px',
+      width: '25%',
       customTableItem: true,
     },
     {
       key: 'accessor',
       label: 'Accessor',
-      width: '205px',
+      width: '20%',
     },
     {
       key: 'description',
       label: 'Description',
-      width: '320px',
+      width: '32%',
     },
     {
       key: 'running_plugin_version',
       label: 'Version',
       isSortable: true,
-      width: '175px',
+      width: '15%',
     },
     {
       key: 'popupMenu',
       label: 'Action',
-      width: '80px',
+      width: '8%',
     },
   ];
 

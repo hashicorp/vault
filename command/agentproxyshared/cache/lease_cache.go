@@ -33,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	gocache "github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"go.uber.org/atomic"
 )
 
@@ -94,7 +94,7 @@ type LeaseCache struct {
 	idLocks []*locksutil.LockEntry
 
 	// inflightCache keeps track of inflight requests
-	inflightCache *gocache.Cache
+	inflightCache *ttlcache.Cache[string, *inflightRequest]
 
 	// ps is the persistent storage for tokens and leases
 	ps *cacheboltdb.BoltStorage
@@ -181,7 +181,7 @@ func NewLeaseCache(conf *LeaseCacheConfig) (*LeaseCache, error) {
 		baseCtxInfo:         baseCtxInfo,
 		l:                   &sync.RWMutex{},
 		idLocks:             locksutil.CreateLocks(),
-		inflightCache:       gocache.New(gocache.NoExpiration, gocache.NoExpiration),
+		inflightCache:       ttlcache.New[string, *inflightRequest](),
 		ps:                  conf.Storage,
 		cacheStaticSecrets:  conf.CacheStaticSecrets,
 		cacheDynamicSecrets: conf.CacheDynamicSecrets,
@@ -323,6 +323,16 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return nil, err
 	}
 	staticSecretCacheId := computeStaticSecretCacheIndex(req)
+	// A GET request carrying ?list=true is semantically a list operation.
+	// For KVv2, the event system fires data-write events on <mount>/data/<name>
+	// paths, which do not match the <mount>/metadata path a list response would
+	// be cached under, so that cache entry would never be invalidated when a new
+	// secret is added. For KVv1, write events carry the secret's own path, which
+	// also does not match the mount-root path used for listing. In both cases,
+	// exclude these requests from the static secret cache entirely so that list
+	// responses remain consistent with Vault. This matches the behaviour of the
+	// equivalent curl -X LIST form, which is never cached (method != GET).
+	hasListQueryParam := req.Request.URL.Query().Get("list") == "true"
 
 	// Check the inflight cache to see if there are other inflight requests
 	// of the same kind, based on the computed ID. If so, we increment a counter
@@ -349,10 +359,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// they both miss the cache due to it being clean when peeking the cache
 	// entry.
 	idLockDynamicSecret.Lock()
-	inflightRaw, found := c.inflightCache.Get(dynamicSecretCacheId)
-	if found {
+	inflightItem := c.inflightCache.Get(dynamicSecretCacheId)
+	if inflightItem != nil {
 		idLockDynamicSecret.Unlock()
-		inflight = inflightRaw.(*inflightRequest)
+		inflight = inflightItem.Value()
 		inflight.remaining.Inc()
 		defer inflight.remaining.Dec()
 
@@ -371,7 +381,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 			defer close(inflight.ch)
 		}
 
-		c.inflightCache.Set(dynamicSecretCacheId, inflight, gocache.NoExpiration)
+		c.inflightCache.Set(dynamicSecretCacheId, inflight, ttlcache.NoTTL)
 		idLockDynamicSecret.Unlock()
 	}
 
@@ -383,10 +393,10 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		// they both miss the cache due to it being clean when peeking the cache
 		// entry.
 		idLockStaticSecret.Lock()
-		inflightRaw, found = c.inflightCache.Get(staticSecretCacheId)
-		if found {
+		inflightItem = c.inflightCache.Get(staticSecretCacheId)
+		if inflightItem != nil {
 			idLockStaticSecret.Unlock()
-			inflight = inflightRaw.(*inflightRequest)
+			inflight = inflightItem.Value()
 			inflight.remaining.Inc()
 			defer inflight.remaining.Dec()
 
@@ -405,7 +415,7 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 				defer close(inflight.ch)
 			}
 
-			c.inflightCache.Set(staticSecretCacheId, inflight, gocache.NoExpiration)
+			c.inflightCache.Set(staticSecretCacheId, inflight, ttlcache.NoTTL)
 			idLockStaticSecret.Unlock()
 		}
 	}
@@ -420,8 +430,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 		return cachedResp, nil
 	}
 
-	// Check if the response for this request is already in the static secret cache
-	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet && req.Token != "" {
+	// Check if the response for this request is already in the static secret cache.
+	// Exclude list requests (?list=true) — see hasListQueryParam declaration above.
+	if staticSecretCacheId != "" && req.Request.Method == http.MethodGet && !hasListQueryParam && req.Token != "" {
 		cachedResp, err = c.checkCacheForStaticSecretRequest(staticSecretCacheId, req)
 		if err != nil {
 			return nil, err
@@ -487,8 +498,9 @@ func (c *LeaseCache) Send(ctx context.Context, req *SendRequest) (*SendResponse,
 	// There shouldn't be a situation where secret.MountType == "kv" and
 	// staticSecretCacheId == "", but just in case.
 	// We restrict this to GETs as those are all we want to cache.
+	// Exclude list requests (?list=true) — see hasListQueryParam declaration above.
 	if c.cacheStaticSecrets && secret.MountType == "kv" &&
-		staticSecretCacheId != "" && req.Request.Method == http.MethodGet {
+		staticSecretCacheId != "" && req.Request.Method == http.MethodGet && !hasListQueryParam {
 		index.Type = cacheboltdb.StaticSecretType
 		index.ID = staticSecretCacheId
 		// We set the request path to be the canonical static secret path, so that

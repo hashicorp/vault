@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 )
@@ -727,7 +726,7 @@ func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Ti
 	}
 
 	// Sum the current count with the stored count
-	transitCount := cb.DataProtectionCallCounts.Transit.Swap(0) + storedTransitCount
+	transitCount := cb.SecretEngineCounts.Transit.MonthlyCount.Swap(0) + storedTransitCount
 
 	err = c.storeTransitCallCountsLocked(ctx, transitCount, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -753,7 +752,7 @@ func (c *Core) UpdateGcpKmsCallCounts(ctx context.Context, currentMonth time.Tim
 	}
 
 	// Sum the current count with the stored count
-	gcpKmsCount := cb.DataProtectionCallCounts.GcpKms.Swap(0) + storedGcpKmsCount
+	gcpKmsCount := cb.SecretEngineCounts.GcpKms.MonthlyCount.Swap(0) + storedGcpKmsCount
 
 	err = c.storeGcpKmsCallCountsLocked(ctx, gcpKmsCount, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -867,6 +866,10 @@ func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time)
 // secondary also detects it and gets charged. This is intentional, as the KMIP usage is per cluster.
 // We only store true when KMIP is enabled; we never store false. This means storing true multiple times
 // is idempotent and safe.
+//
+// Attribution is written once per month: once we have stored KMIP attribution for the first time
+// this month (indicated by KmipSeenEnabledThisMonth), we skip the mount scan on subsequent
+// billing cycles to avoid unnecessary overhead.
 func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
@@ -876,22 +879,43 @@ func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (b
 		return false, ErrConsumptionBillingNotInitialized
 	}
 
+	// If we have already stored KMIP attribution this month, skip the mount scan.
+	if cb.KmipSeenEnabledThisMonth.Load() {
+		return true, nil
+	}
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return false, errors.New("billing subview not available")
+	}
+
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	// Check if KMIP is currently enabled, including replicated mounts
-	kmipEnabled, err := c.IsKMIPEnabled(ctx)
+	// Scan all mounts to collect KMIP attribution data.
+	kmipMounts, err := c.CollectKmipMounts()
 	if err != nil {
 		return false, err
 	}
 
-	if kmipEnabled {
+	if len(kmipMounts) > 0 {
 		if err := c.storeKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth, true); err != nil {
 			return false, err
 		}
+		if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.KmipEnabledPrefix, &logical.MetricTypeAttribution{
+			Count:       1,
+			Mounts:      kmipMounts,
+			LastUpdated: currentMonth,
+		}); err != nil {
+			return false, err
+		}
+		// Mark KMIP as seen this month only after successfully writing both the billing
+		// flag and attribution to storage, so a future billing cycle does not skip the
+		// scan before the data has been persisted.
+		cb.KmipSeenEnabledThisMonth.Store(true)
 	}
 
-	return kmipEnabled, nil
+	return len(kmipMounts) > 0, nil
 }
 
 // GetStoredPkiDurationAdjustedCount retrieves the stored PKI duration-adjusted certificate count
@@ -1082,8 +1106,7 @@ func (c *Core) getStoredSSHDurationAdjustedCertCountLocked(ctx context.Context, 
 		return 0, err
 	}
 
-	var certCount float64
-	err = se.DecodeJSON(&certCount)
+	certCount, err := strconv.ParseFloat(string(se.Value), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current SSH duration adjusted cert count: %w", err)
 	}
@@ -1117,14 +1140,9 @@ func (c *Core) UpdateStoredSSHDurationAdjustedCertCount(ctx context.Context, cur
 func (c *Core) storeSSHDurationAdjustedCertCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, certCount float64) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHCertificateMetric)
 
-	countBytes, err := jsonutil.EncodeJSON(certCount)
-	if err != nil {
-		return err
-	}
-
 	entry := &logical.StorageEntry{
 		Key:   billingPath,
-		Value: countBytes,
+		Value: []byte(strconv.FormatFloat(certCount, 'f', 4, 64)),
 	}
 
 	view, ok := c.GetBillingSubView()
@@ -1165,8 +1183,7 @@ func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix s
 		return 0, err
 	}
 
-	var otpCount float64
-	err = se.DecodeJSON(&otpCount)
+	otpCount, err := strconv.ParseFloat(string(se.Value), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current OTP cert count: %w", err)
 	}
@@ -1200,14 +1217,9 @@ func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Ti
 func (c *Core) storeSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, otpCount float64) error {
 	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
 
-	countBytes, err := jsonutil.EncodeJSON(otpCount)
-	if err != nil {
-		return err
-	}
-
 	entry := &logical.StorageEntry{
 		Key:   billingPath,
-		Value: countBytes,
+		Value: []byte(strconv.FormatFloat(otpCount, 'f', 4, 64)),
 	}
 
 	view, ok := c.GetBillingSubView()
@@ -1271,7 +1283,7 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
 	}
 
 	// Update raw token duration
-	cb.IdentityTokenUnits.OidcTokenDuration.Add(durationSeconds)
+	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(durationSeconds)
 }
 
 // UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,
@@ -1291,7 +1303,7 @@ func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth
 
 	// Get in-memory raw token duration and reset value in memory
 	// Using Swap to atomically reset the value. If Vault crashes after a successful storage update but before reset, this prevents double counting.
-	totalTokenDurationSecondsFromMemory := cb.IdentityTokenUnits.OidcTokenDuration.Swap(0)
+	totalTokenDurationSecondsFromMemory := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
 
 	// Calculate duration-adjusted count from raw data
 	durationAdjustedCountMemory := DurationAdjustedTokenCount(totalTokenDurationSecondsFromMemory)

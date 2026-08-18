@@ -6,36 +6,66 @@
 <Hds::AppSideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
-  <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
-  <Nav.Link @route="vault.cluster.secrets" @text="Secrets" @hasSubItems={{true}} data-test-sidebar-nav-link="Secrets" />
+  <Nav.Link
+    id="nav-dashboard"
+    @route="vault.cluster.dashboard"
+    @text="Dashboard"
+    data-test-sidebar-nav-link="Dashboard"
+    {{on "click" (fn this.trackNavClick this.navEvents.dashboard "nav-dashboard" "Dashboard")}}
+  />
+  <Nav.Link
+    id="nav-secrets"
+    @route="vault.cluster.secrets"
+    @text="Secrets"
+    @hasSubItems={{true}}
+    data-test-sidebar-nav-link="Secrets"
+    {{on "click" (fn this.trackNavClick this.navEvents.secrets "nav-secrets" "Secrets")}}
+  />
 
+  {{#if this.version.isEnterprise}}
+    <Nav.Link
+      @route="vault.cluster.agents"
+      @text="Agentic security"
+      @hasSubItems={{true}}
+      data-test-sidebar-nav-link="Agentic security"
+    />
+  {{/if}}
   {{#if (display-nav-item this.navSection.resilienceAndRecovery)}}
     <Nav.Link
+      id="nav-resilience-recovery"
       @route="vault.cluster.resilience-recovery"
       @text="Resilience and recovery"
       @hasSubItems={{true}}
       data-test-sidebar-nav-link="Resilience and recovery"
+      {{on
+        "click"
+        (fn this.trackNavClick this.navEvents.resilienceRecovery "nav-resilience-recovery" "Resilience and recovery")
+      }}
     />
   {{/if}}
   {{#if (or (has-permission "access") (has-permission "policies"))}}
     <Nav.Link
+      id="nav-access-control"
       @route={{this.accessRoute}}
       @models={{this.accessRouteModels}}
       @text="Access control"
       @hasSubItems={{true}}
       data-test-sidebar-nav-link="Access control"
+      {{on "click" (fn this.trackNavClick this.navEvents.accessControl "nav-access-control" "Access control")}}
     />
   {{/if}}
   {{#if (has-permission "tools")}}
     <Nav.Link
+      id="nav-operational-tools"
       @route="vault.cluster.tools.tool"
       @models={{get (route-params-for "tools") "models"}}
       @text="Operational tools"
       @hasSubItems={{true}}
       data-test-sidebar-nav-link="Operational tools"
+      {{on "click" (fn this.trackNavClick this.navEvents.operationalTools "nav-operational-tools" "Operational tools")}}
     />
   {{/if}}
-  {{#if this.version.isEnterprise}}
+  {{#if (and this.version.isEnterprise (not this.flags.isHvdManaged))}}
     <Nav.Link
       @route="vault.cluster.support.upgrade"
       @text="Support"
@@ -54,34 +84,42 @@
   {{/if}}
   {{#if (display-nav-item this.navSection.reporting)}}
     <Nav.Link
+      id="nav-reporting"
       @route={{if (display-nav-item this.routeName.vaultUsage) "vault.cluster.usage-reporting" "vault.cluster.license"}}
       @text="Reporting"
       data-test-sidebar-nav-link="Reporting"
       @hasSubItems={{true}}
+      {{on "click" (fn this.trackNavClick this.navEvents.reporting "nav-reporting" "Reporting")}}
     />
   {{/if}}
   {{#if (display-nav-item this.navSection.clientCount)}}
     <Nav.Link
+      id="nav-client-count"
       @route="vault.cluster.clients"
       @text="Client count"
       @hasSubItems={{true}}
       data-test-sidebar-nav-link="Client count"
+      {{on "click" (fn this.trackNavClick this.navEvents.clientCount "nav-client-count" "Client count")}}
     />
   {{/if}}
   {{#if (display-nav-item this.routeName.billingDashboard)}}
     <Nav.Link
+      id="nav-billing-metrics"
       @route="vault.cluster.billing.overview"
       @text="Billing metrics"
       @hasSubItems={{true}}
       data-test-sidebar-nav-link="Billing metrics"
+      {{on "click" (fn this.trackNavClick this.navEvents.billingMetrics "nav-billing-metrics" "Billing metrics")}}
     />
   {{/if}}
   {{#if (and this.cluster.usingRaft this.isRootNamespace (has-permission "status" routeParams="raft"))}}
     <Nav.Link
+      id="nav-raft-storage"
       @route="vault.cluster.storage"
       @model={{this.cluster.name}}
       @text="Raft storage"
       data-test-sidebar-nav-link="Raft storage"
+      {{on "click" (fn this.trackNavClick this.navEvents.raftStorage "nav-raft-storage" "Raft storage")}}
     />
   {{/if}}
 </Hds::AppSideNav::Portal>

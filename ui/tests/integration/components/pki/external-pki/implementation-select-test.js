@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CreationMethod } from 'vault/utils/constants/snippet';
-import { SetupSteps } from 'pki/components/external-pki/implementation-select';
+import { SetupSteps } from 'pki/utils/constants';
 
 module('Integration | Component | pki | external-pki | implementation-select', function (hooks) {
   setupRenderingTest(hooks);

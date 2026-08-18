@@ -143,9 +143,6 @@ tools/pipeline/.bin
 tools/pipeline/pipeline
 .ci-bootstrap
 
-# Ignore stubmaker outputs on ent so they don't get checked in
-*_stubs_ent.go
-
 # scratch directory holding random stuff
 scratch
 
@@ -154,4 +151,4 @@ scratch
 
 # bob
 .bob/notes
-.bob/*.md
+.bob/tmp

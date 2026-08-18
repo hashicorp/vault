@@ -65,7 +65,7 @@
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show" @methodModel.id @itemType list.item.id}} as |Item|>
       <Item.content>
-        <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
+        <Icon @name="folder" class="has-text-grey-light has-right-margin-4" />{{list.item.id}}
       </Item.content>
       <Item.menu>
         <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>

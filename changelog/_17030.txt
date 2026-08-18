@@ -1,0 +1,3 @@
+```release-note:improvement
+agent-registry (enterprise): Removed the restriction that disallowed the use of 'deny' in ceiling policies, resulting in request errors.
+```

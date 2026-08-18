@@ -163,8 +163,11 @@ func TestQuotas_RateLimit_DupName(t *testing.T) {
 	cluster := vault.NewTestCluster(t, conf, opts)
 	client := cluster.Cores[0].Client
 
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	// create a rate limit quota w/ 'secret' path
-	_, err := client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
 		"rate": 7.7,
 		"path": "secret",
 	})
@@ -195,8 +198,11 @@ func TestQuotas_RateLimit_DupPath(t *testing.T) {
 	cluster := vault.NewTestCluster(t, conf, opts)
 	client := cluster.Cores[0].Client
 
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	// create a global rate limit quota
-	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
 		"rate": 10,
 		"path": "",
 	})

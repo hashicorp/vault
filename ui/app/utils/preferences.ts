@@ -18,7 +18,7 @@ import localStorage from 'vault/lib/local-storage';
  * from localStorage returns the documented default defined here.
  */
 
-const NAMESPACE = 'vault:prefs';
+export const NAMESPACE = 'vault:prefs';
 
 interface PreferenceDefinition {
   key: string;
@@ -48,10 +48,35 @@ function resolve(name: PreferenceName): PreferenceDefinition {
 
 export function getPreference(name: PreferenceName): boolean {
   const def = resolve(name);
-  const stored = localStorage.getItem(def.key);
-  return stored === null || stored === undefined ? def.default : stored;
+  try {
+    const stored = localStorage.getItem(def.key);
+    return stored === null || stored === undefined ? def.default : stored;
+  } catch {
+    return def.default;
+  }
+}
+
+/**
+ * Whether a value has been explicitly stored for this preference, as opposed to
+ * falling back to its default. Consent gating needs this to tell "user has never
+ * decided" (show the banner) apart from "user explicitly declined" (stay quiet).
+ * Unreadable storage is treated as "not stored" (safe default).
+ */
+export function hasPreference(name: PreferenceName): boolean {
+  const def = resolve(name);
+  try {
+    const stored = localStorage.getItem(def.key);
+    return stored !== null && stored !== undefined;
+  } catch {
+    return false;
+  }
 }
 
 export function setPreference(name: PreferenceName, value: boolean): void {
-  localStorage.setItem(resolve(name).key, value);
+  const { key } = resolve(name);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Cannot persist (storage unavailable). Hence a no-op
+  }
 }

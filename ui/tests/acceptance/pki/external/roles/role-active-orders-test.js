@@ -13,13 +13,23 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { assertTabState } from 'vault/tests/helpers/pki/assertion-helpers';
 
+const ROLE_TABS = ['Overview', 'Active orders'];
 module('Acceptance | enterprise | pki | external | roles | role | active-orders route', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     // Test setup
     const api = this.owner.lookup('service:api');
+    this.roleReadStub = sinon.stub(api.secrets, 'pkiExternalCaReadRole');
+    this.roleReadStub.resolves({
+      name: this.roleName,
+      acme_account_name: 'production-account',
+      dns_provider_name: 'aws-route53-prod',
+      allowed_domains: ['example.com', '*.example.com'],
+      allow_subdomains: true,
+    });
     this.activeOrdersListStub = sinon.stub(api.secrets, 'pkiExternalCaListRoleActiveOrders');
     this.orderStatusStub = sinon.stub(api.secrets, 'pkiExternalCaReadRoleOrderStatus');
     this.mountPath = `pki-external-ca-${uuidv4()}`;
@@ -42,13 +52,11 @@ module('Acceptance | enterprise | pki | external | roles | role | active-orders 
     assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(this.roleName);
     assert.dom(GENERAL.breadcrumb).exists({ count: 5 });
     assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath} Roles ${this.roleName}`);
-    assert.dom(GENERAL.linkTo('Active orders')).exists().hasClass('active');
-    assert.dom(GENERAL.linkTo('Details')).exists().doesNotHaveClass('active');
+    assertTabState(assert, 'Active orders', ROLE_TABS);
 
     // Navigate to a role details
-    await click(GENERAL.linkTo('Details'));
-    assert.dom(GENERAL.linkTo('Details')).exists().hasClass('active');
-    assert.dom(GENERAL.linkTo('Active orders')).exists().doesNotHaveClass('active');
+    await click(GENERAL.linkTo('Overview'));
+    assertTabState(assert, 'Overview', ROLE_TABS);
   });
 
   test('it fetches and displays active orders', async function (assert) {
@@ -85,11 +93,8 @@ module('Acceptance | enterprise | pki | external | roles | role | active-orders 
     assert.true(this.activeOrdersListStub.calledOnce, 'active orders list called once');
     assert.dom('h1').hasText(this.roleName, 'role name is displayed');
     assert.dom(GENERAL.emptyStateTitle).exists().hasText('No active orders');
-    assert
-      .dom(GENERAL.emptyStateMessage)
-      .hasText(
-        'In progress orders will appear here once created. Lookup a specific order by its ID or navigate to Recent orders to view recently created and completed orders. Lookup order'
-      );
+    assert.dom(GENERAL.emptyStateMessage).hasText('Lookup a specific order by its ID below. Lookup order');
+    assert.dom(GENERAL.linkTo('Get cached certificate')).exists();
     assert.dom(GENERAL.linkTo('API docs: Create a new order')).exists();
   });
 
@@ -144,5 +149,13 @@ module('Acceptance | enterprise | pki | external | roles | role | active-orders 
       'vault.cluster.secrets.backend.pki.external.roles.role.order',
       "transitions to role's order route"
     );
+  });
+
+  test('it redirects to parent error route if role read 403s', async function (assert) {
+    const error = { errors: ['1 error occurred:\n\t* permission denied\n\n'] };
+    this.roleReadStub.rejects(getErrorResponse(error, 403));
+    await visit(this.activeOrdersURL);
+
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.external.error');
   });
 });

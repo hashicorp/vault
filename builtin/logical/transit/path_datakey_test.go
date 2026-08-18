@@ -91,7 +91,7 @@ func TestDataKeyWithPaddingScheme(t *testing.T) {
 		})
 	}
 	// We expect 8 successful requests ((3 valid cases x 2 operations) + (2 invalid cases x 1 operation))
-	require.Equal(t, uint64(8), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(8), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 // TestDataKeyWithPaddingSchemeInvalidKeyType validates we fail when we specify a
@@ -125,5 +125,5 @@ func TestDataKeyWithPaddingSchemeInvalidKeyType(t *testing.T) {
 	require.NotNil(t, resp, "response should not be nil")
 	require.Contains(t, resp.Error().Error(), "padding_scheme argument invalid: unsupported key")
 	// We expect 0 successful requests
-	require.Equal(t, uint64(0), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(0), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }

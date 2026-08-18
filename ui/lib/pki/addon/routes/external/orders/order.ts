@@ -21,9 +21,10 @@ interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
 
-// This route renders the same display component (ExternalPki::OrderCertDetails) as PkiExternalRolesRoleOrderRoute
-// but uses a global order lookup request instead of one scoped to a role.
-// Likely accessible to users with broader, more administrative, permissions.
+// Users get here by looking up an order via order ID from the overview orders card.
+// Performs GET /lookup/order/:order_id to retrieve the role name, then fetches the cert if the order is completed.
+// If the lookup request fails it throws because the role name is required to fetch the cert.
+// Renders <ExternalPki::OrderCertDetails> (same as PkiExternalCertificatesCertificateRoute and PkiExternalRolesRoleOrderRoute).
 export default class PkiExternalOrdersOrderRoute extends Route {
   @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;

@@ -1,0 +1,3 @@
+```release-note:bug
+core/metrics: Fixed a bug where log_format = "json" had no effect on telemetry sink errors from statsd and statsite backends.
+```

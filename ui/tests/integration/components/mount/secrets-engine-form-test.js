@@ -159,11 +159,13 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
       await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
-      // First check if the Method Options group is being rendered at all
-      assert.dom(GENERAL.button('Method Options')).exists('Method Options toggle button exists');
+      // First check if the View additional settings group is being rendered at all
+      assert
+        .dom(GENERAL.button('View additional settings'))
+        .exists('View additional settings toggle button exists');
 
-      // Click to expand Method Options if it's collapsed
-      await click(GENERAL.button('Method Options'));
+      // Click to expand View additional settings if it's collapsed
+      await click(GENERAL.button('View additional settings'));
 
       assert
         .dom(GENERAL.fieldByAttr('config.identity_token_key'))
@@ -189,8 +191,8 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
       }
       await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
 
-      // Expand Method Options section to show identity_token_key field
-      await click(GENERAL.button('Method Options'));
+      // Expand View additional settings section to show identity_token_key field
+      await click(GENERAL.button('View additional settings'));
 
       assert.strictEqual(
         this.form.data.config.identity_token_key,

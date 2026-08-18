@@ -36,10 +36,10 @@ importers:
         version: 3.0.0
       '@hashicorp/vault-client-typescript':
         specifier: github:hashicorp/vault-client-typescript
-        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/2455a8d3450c2cb18ea661ddcecf9c30ba804ab8
+        version: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6e9ab9e1bf2d8945038fb9d19bf44651356d5412
       '@segment/analytics-next':
-        specifier: ^1.84.0
-        version: 1.84.0
+        specifier: ^1.84.1
+        version: 1.84.1
       ember-auto-import:
         specifier: 2.10.0
         version: 2.10.0(@glint/template@1.7.7)(webpack@5.107.2)
@@ -198,8 +198,8 @@ importers:
         specifier: ~1.3.8
         version: 1.3.8(date-fns@2.30.0)
       dompurify:
-        specifier: ~3.4.0
-        version: 3.4.6
+        specifier: ~3.4.11
+        version: 3.4.13
       ember-a11y-testing:
         specifier: ~7.1.3
         version: 7.1.3(@babel/core@7.26.10)(@ember/test-helpers@5.2.2(@babel/core@7.26.10)(@glint/template@1.7.7))(@glint/template@1.7.7)(qunit@2.24.3)(webpack@5.107.2)
@@ -1708,8 +1708,8 @@ packages:
   '@hashicorp/flight-icons@3.14.0':
     resolution: {integrity: sha512-nyLDApaZsAHpAf2sRNwYX1MnJQU9UI3euiwE6wHPl2l/+Yt8wba1oXkmWL/Ptc4QgJxxnRUUhf66jGcB/AIOyQ==}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/2455a8d3450c2cb18ea661ddcecf9c30ba804ab8':
-    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/2455a8d3450c2cb18ea661ddcecf9c30ba804ab8}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6e9ab9e1bf2d8945038fb9d19bf44651356d5412':
+    resolution: {tarball: https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6e9ab9e1bf2d8945038fb9d19bf44651356d5412}
     version: 0.0.0
 
   '@humanwhocodes/config-array@0.13.0':
@@ -2003,8 +2003,8 @@ packages:
   '@segment/analytics-generic-utils@1.2.0':
     resolution: {integrity: sha512-DfnW6mW3YQOLlDQQdR89k4EqfHb0g/3XvBXkovH1FstUN93eL1kfW9CsDcVQyH3bAC5ZsFyjA/o/1Q2j0QeoWw==}
 
-  '@segment/analytics-next@1.84.0':
-    resolution: {integrity: sha512-V5scoCrhiTpRPOuBwNVpvE4KvHwrjgQ5fs282R72KiAZ0HoxmjLgReZYjZogBf7qq/c6VmQG3nidwh8PQGcY1A==}
+  '@segment/analytics-next@1.84.1':
+    resolution: {integrity: sha512-jcwALgEc4DP6PG6oj0YS0yLiQL2R/N1NAgGGH50898/FNcXLyv/v8c+qoiHJxIpGm3qp8nJZTDeGe1z1Co2NzA==}
 
   '@segment/analytics-page-tools@1.0.0':
     resolution: {integrity: sha512-o9OVB91qLB9qb0Bw1HfjmWm5AnrMNULRjx++4lBqLt8InKRX1urrRBparVlpj+yJA0sckN5ZcsfazRLuPgBYDQ==}
@@ -3968,8 +3968,8 @@ packages:
   dom-element-descriptors@0.5.1:
     resolution: {integrity: sha512-DLayMRQ+yJaziF4JJX1FMjwjdr7wdTr1y9XvZ+NfHELfOMcYDnCHneAYXAS4FT1gLILh4V0juMZohhH1N5FsoQ==}
 
-  dompurify@3.4.6:
-    resolution: {integrity: sha512-+7gzEI8trIIQkVCvQ3ucGtNfH3nOmDgVTzc62rAAOlMxLth78pwpPoZCPc7CyRzAQF89MqcfPdEWkDwnjgqktg==}
+  dompurify@3.4.13:
+    resolution: {integrity: sha512-2vmYIoqjze2d+kakP8S/nS5shfsl587kzwEjcGlTdiksUVgFHnFCsLYDVj/JNqJVOQZGSYBTmuycv0PodwmnMQ==}
 
   dot-case@3.0.4:
     resolution: {integrity: sha512-Kv5nKlh6yRrdrGvxeJ2e5y2eRUpkUosIW4A2AS38zwSz27zu7ufDwQPi5Jhs3XAlGNetl3bmnGhQsMtkKJnj3w==}
@@ -5756,9 +5756,8 @@ packages:
   jquery@3.7.1:
     resolution: {integrity: sha512-m4avr8yL8kmFN8psrbFFFmB/If14iN5o9nw/NgnnM+kybDJpRsAynV2BsfpTYrTRysYUdADVD7CkUUizgkpLfg==}
 
-  js-cookie@3.0.1:
-    resolution: {integrity: sha512-+0rgsUXZu4ncpPxRL+lNEptWMOWl9etvPHc/koSRp6MPwpRYAhmk0dUG00J4bxVV3r9uUzfo24wW0knS07SKSw==}
-    engines: {node: '>=12'}
+  js-cookie@3.0.8:
+    resolution: {integrity: sha512-yeJd4aNAdYZQjaon2bpD/Gb0B/omw7HQOsynXXcOiWVCacbBcPlgn8S/d1X6blFSaHao7ozqtW7NZW19xpCtIw==}
 
   js-string-escape@1.0.1:
     resolution: {integrity: sha512-Smw4xcfIQ5LVjAOuJCvN/zIodzA/BBSsluuoSykP+lUvScIi4U6RJLfwHet5cxFnCswUjISV8oAXaqaJDY3chg==}
@@ -9912,7 +9911,7 @@ snapshots:
       d3-cloud: 1.2.9
       d3-sankey: 0.12.3
       date-fns: 4.3.0
-      dompurify: 3.4.6
+      dompurify: 3.4.13
       html-to-image: 1.11.11
       lodash-es: 4.18.0
       topojson-client: 3.1.0
@@ -10910,7 +10909,7 @@ snapshots:
 
   '@hashicorp/flight-icons@3.14.0': {}
 
-  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/2455a8d3450c2cb18ea661ddcecf9c30ba804ab8': {}
+  '@hashicorp/vault-client-typescript@https://codeload.github.com/hashicorp/vault-client-typescript/tar.gz/6e9ab9e1bf2d8945038fb9d19bf44651356d5412': {}
 
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
@@ -11218,7 +11217,7 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@segment/analytics-next@1.84.0':
+  '@segment/analytics-next@1.84.1':
     dependencies:
       '@lukeed/uuid': 2.0.1
       '@segment/analytics-core': 1.8.3
@@ -11227,7 +11226,7 @@ snapshots:
       '@segment/analytics.js-video-plugins': 0.2.1
       '@segment/facade': 3.4.10
       dset: 3.1.4
-      js-cookie: 3.0.1
+      js-cookie: 3.0.8
       node-fetch: 2.7.0
       tslib: 2.8.1
       unfetch: 4.2.0
@@ -13688,7 +13687,7 @@ snapshots:
 
   dom-element-descriptors@0.5.1: {}
 
-  dompurify@3.4.6:
+  dompurify@3.4.13:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -16636,7 +16635,7 @@ snapshots:
 
   jquery@3.7.1: {}
 
-  js-cookie@3.0.1: {}
+  js-cookie@3.0.8: {}
 
   js-string-escape@1.0.1: {}
 

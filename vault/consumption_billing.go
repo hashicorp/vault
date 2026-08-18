@@ -19,6 +19,7 @@ import (
 var (
 	ErrCouldNotGetBillingSubView        = fmt.Errorf("could not get billing sub view")
 	ErrConsumptionBillingNotInitialized = fmt.Errorf("consumption billing is not initialized")
+	getParentNamespaceID                = func(*Core, string) string { return "" }
 )
 
 func (c *Core) setupConsumptionBilling(ctx context.Context) error {
@@ -29,17 +30,39 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	c.AddLogger(logger)
 	c.consumptionBilling = &billing.ConsumptionBilling{
 		BillingConfig: c.billingConfig,
-		DataProtectionCallCounts: billing.DataProtectionCallCounts{
-			Transit:   &atomic.Uint64{},
-			Transform: &atomic.Uint64{},
-			GcpKms:    &atomic.Uint64{},
+		GetParentNamespaceID: func(nsPath string) string {
+			return getParentNamespaceID(c, nsPath)
 		},
-		IdentityTokenUnits: billing.IdentityTokenUnits{
-			OidcTokenDuration: uberAtomic.NewFloat64(0),
-			SpiffeJwt:         uberAtomic.NewFloat64(0),
+		SecretEngineCounts: billing.SecretEngineCounts{
+			Transit: billing.DataProtectionEngineCounts{
+				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			Transform: billing.DataProtectionEngineCounts{
+				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			GcpKms: billing.DataProtectionEngineCounts{
+				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			Oidc: billing.CredentialUnits{
+				MonthlyUnits: uberAtomic.NewFloat64(0),
+			},
+			Spiffe: billing.CredentialUnits{
+				MonthlyUnits: uberAtomic.NewFloat64(0),
+			},
+			ExternalCa: billing.CredentialUnits{
+				MonthlyUnits: uberAtomic.NewFloat64(0),
+			},
 		},
-		ExternalCaCertUnits: uberAtomic.NewFloat64(0),
-		Logger:              logger,
+		Logger: logger,
 	}
 	if c.systemBarrierView != nil {
 		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
@@ -227,13 +250,27 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.logger.Info("resetting in memory billing metrics")
 	c.consumptionBillingLock.Lock()
 	defer c.consumptionBillingLock.Unlock()
-	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
-	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
-	c.consumptionBilling.IdentityTokenUnits.SpiffeJwt.Store(0)
-	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
+
+	c.consumptionBilling.SecretEngineCounts.Transit.MonthlyCount.Store(0)
+	c.consumptionBilling.SecretEngineCounts.Transform.MonthlyCount.Store(0)
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MonthlyCount.Store(0)
+	c.consumptionBilling.SecretEngineCounts.Oidc.MonthlyUnits.Store(0)
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MonthlyUnits.Store(0)
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MonthlyUnits.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
-	c.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Store(0)
-	c.consumptionBilling.ExternalCaCertUnits.Store(0)
+
+	c.consumptionBilling.SecretEngineCounts.Transit.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Transit.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Unlock()
+
 	return nil
 }
 
@@ -358,5 +395,19 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	if _, err := c.UpdateExternalCaCertUnits(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store external CA certificate units: %w", err)
 	}
+
+	// Note: this metric is always aggregated; the snapshot of the current month is always the
+	// same as the billable value for the current month. This differs from HWM metrics where the snapshot
+	// could contain a different value from the billable value.
+	if err := c.UpdateTransitAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store transit mount breakdown: %w", err)
+	}
+	if err := c.UpdateTransformAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store transform mount breakdown: %w", err)
+	}
+	if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
+	}
+
 	return nil
 }

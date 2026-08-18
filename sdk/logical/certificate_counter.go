@@ -91,9 +91,10 @@ func mergeMountAttributions(dst *map[string]MountAttribution, src map[string]Mou
 
 	for accessor, attr := range src {
 		if existing, ok := (*dst)[accessor]; ok {
-			existing.Count = asFloat64(existing.Count) + asFloat64(attr.Count)
-			(*dst)[accessor] = existing
-			continue
+			// Always take metadata from the incoming entry (src) — it reflects
+			// the mount's current state. Only the count is carried over from
+			// the existing entry so that totals are not lost.
+			attr.Count = asFloat64(existing.Count) + asFloat64(attr.Count)
 		}
 		(*dst)[accessor] = attr
 	}

@@ -29,7 +29,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);
     await mountSecrets.visit();
-    await mountBackend(engine.type, engine.type);
+    await mountBackend(engine.type, engine.type, true);
 
     assert.strictEqual(
       currentRouteName(),

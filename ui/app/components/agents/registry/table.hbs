@@ -1,0 +1,144 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Toolbar class="top-margin-16 has-bottom-margin-s">
+  <ToolbarFilters>
+    <FilterInput
+      name="agent registry filter"
+      aria-label="Filter agent registry table"
+      placeholder="Search"
+      @value={{this.filterValue}}
+      @wait={{200}}
+      @onInput={{fn (mut this.filterValue)}}
+    />
+  </ToolbarFilters>
+</Toolbar>
+
+{{#if this.data}}
+  <ListTable
+    @data={{this.data}}
+    @columns={{this.columns}}
+    @pageSize={{@model.pageSize}}
+    @page={{@model.page}}
+    @onPageChange={{this.onPageChange}}
+    @onPageSizeChange={{this.onPageSizeChange}}
+  >
+    <:customTableItem as |data column|>
+      {{#let (get data column.key) as |value|}}
+        {{#if value}}
+          {{#if (eq column.key "agentName")}}
+            {{#if data.isAlias}}
+              {{value}}
+            {{else}}
+              <Hds::Interactive
+                class="text-button has-text-info is-underline"
+                {{on "click" (fn @onClick data)}}
+                data-test-button="agent {{value}}"
+              >
+                {{value}}
+              </Hds::Interactive>
+              {{#if (gte data.children.length 1)}}
+                <Hds::Text::Body @tag="p">
+                  {{concat data.children.length (if (eq data.children.length 1) " alias" " aliases")}}
+                </Hds::Text::Body>
+              {{/if}}
+            {{/if}}
+          {{else if (eq column.key "entityAliasName")}}
+            {{#if data.isAlias}}
+              <Hds::Text::Body @weight="semibold" @tag="p">Alias:</Hds::Text::Body>
+              <Hds::Interactive
+                class="text-button has-text-info is-underline"
+                {{on "click" (fn @onClick data)}}
+                data-test-button="alias {{value}}"
+              >
+                {{value}}
+              </Hds::Interactive>
+            {{else}}
+              {{value}}
+            {{/if}}
+          {{else if (eq column.key "entityAliasId")}}
+            <Hds::Copy::Button
+              @text={{value}}
+              @textToCopy={{value}}
+              @isIconOnly={{true}}
+              @size="small"
+              @onError={{(fn
+                (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+              )}}
+              class="transparent"
+              data-test-copy-button
+            />
+            {{value}}
+          {{else if (eq column.key "entityStatus")}}
+            <Hds::Badge
+              @text={{value}}
+              @icon={{if (eq value "Enabled") "running-static" "alert-triangle"}}
+              @color={{if (eq value "Disabled") "warning"}}
+              @size="small"
+            />
+          {{/if}}
+        {{else if (not-eq column.key "agentName")}}
+          /
+        {{/if}}
+      {{/let}}
+    </:customTableItem>
+
+    <:popupMenu as |data|>
+      {{#unless data.isAlias}}
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          {{#if (eq data.entityStatus "Disabled")}}
+            <dd.Interactive
+              @icon="skip"
+              {{on "click" (fn this.toggleEntity data.entityAliasId false)}}
+              data-test-popup-menu="enable"
+            >
+              Enable entity
+            </dd.Interactive>
+          {{else}}
+            <dd.Interactive
+              @color="critical"
+              @icon="skip"
+              {{on "click" (fn (mut this.entityToDisable) data.entityAliasId)}}
+              data-test-popup-menu="disable"
+            >
+              Disable entity
+            </dd.Interactive>
+          {{/if}}
+          <dd.Interactive
+            @color="critical"
+            @icon="trash"
+            {{on "click" (fn (mut this.agentToDelete) data.agentName)}}
+            data-test-popup-menu="delete"
+          >
+            Delete from registry
+          </dd.Interactive>
+        </Hds::Dropdown>
+      {{/unless}}
+    </:popupMenu>
+  </ListTable>
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No agents found" @titleTag="h2" data-test-empty-state-title />
+  </Hds::ApplicationState>
+{{/if}}
+
+{{#if this.entityToDisable}}
+  <ConfirmModal
+    @confirmTitle="Disable associated entity for this agent registry record?"
+    @confirmMessage="Disabling this entity will prevent the agent from accessing credentials in Vault. Existing associated tokens will not be revoked, but they can no longer be used."
+    @onConfirm={{fn this.toggleEntity this.entityToDisable true}}
+    @onClose={{fn (mut this.entityToDisable) null}}
+  />
+{{/if}}
+
+{{#if this.agentToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete this agent registry record?"
+    @confirmMessage="Deleting {{this.agentToDelete}} will permanently remove this agent registry record, but its associated entity will remain. To edit, or delete the entity, go to the Entity page."
+    @onClose={{fn (mut this.agentToDelete) null}}
+    @onConfirm={{this.deleteAgent}}
+  />
+{{/if}}

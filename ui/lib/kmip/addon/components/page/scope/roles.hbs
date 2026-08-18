@@ -99,7 +99,7 @@
       @route="scope.roles"
       @models={{array @scope}}
       @showSizeSelector={{false}}
-      @totalItems={{@roles.meta.filteredTotal}}
+      @totalItems={{@roles.meta.totalItems}}
       @queryFunction={{this.paginationQueryParams}}
       data-test-pagination
     />

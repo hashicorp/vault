@@ -42,6 +42,7 @@ export default class WizardNamespacesStep3 extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     this.snippet.reset(this.args.wizardState.creationMethod || CreationMethod.TERRAFORM);
   }
 

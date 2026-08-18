@@ -1,22 +1,24 @@
 {{!
   Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#let (matches-current-url "external.roles.role.order") as |isOrderRoute|}}
   <ExternalPki::HeaderTabs
     @title={{if isOrderRoute "View order" this.model.role_name}}
     @breadcrumbs={{this.generateCrumbs isOrderRoute this.model.role_name}}
+    @backend={{this.model.engine}}
+    @roleName={{this.model.role_name}}
   >
     <:tabs>
       {{#unless isOrderRoute}}
         <li>
           <LinkTo
-            @current-when={{matches-current-url "external.roles.role.details"}}
-            @route="external.roles.role.details"
+            @current-when={{matches-current-url "external.roles.role.overview"}}
+            @route="external.roles.role.overview"
             @models={{array this.model.engine.id this.model.role_name}}
-            data-test-link-to="Details"
-          >Details</LinkTo>
+            data-test-link-to="Overview"
+          >Overview</LinkTo>
         </li>
         <li>
           <LinkTo

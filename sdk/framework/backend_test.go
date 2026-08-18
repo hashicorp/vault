@@ -599,6 +599,9 @@ func TestBackendHandleRequest_unsupportedOperation(t *testing.T) {
 	}
 }
 
+// TestBackend_handleHealthCheck verifies that handleHealthCheck correctly
+// dispatches to the HealthCheck callback, propagates errors, and returns a
+// 501 Not Implemented coded error when the callback is not set.
 func TestBackend_handleHealthCheck(t *testing.T) {
 	t.Parallel()
 
@@ -665,6 +668,9 @@ func TestBackend_handleHealthCheck(t *testing.T) {
 				t.Parallel()
 
 				b := &Backend{HealthCheck: tc.healthCheck}
+				require.NoError(t, b.Setup(context.Background(), &logical.BackendConfig{
+					System: logical.StaticSystemView{},
+				}))
 
 				resp, err := b.HandleRequest(context.Background(), &logical.Request{
 					Operation: logical.HealthCheckOperation,

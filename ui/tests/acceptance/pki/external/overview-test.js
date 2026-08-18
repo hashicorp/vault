@@ -6,13 +6,14 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { visit } from '@ember/test-helpers';
+import { currentRouteName, currentURL, visit } from '@ember/test-helpers';
 import sinon from 'sinon';
 
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { assertTabState, EXTERNAL_TABS } from 'vault/tests/helpers/pki/assertion-helpers';
 
 // Tests logic in the pki.external.ts route because the overview route inherits the model from its parent route
 module('Acceptance | enterprise | pki | external | overview route', function (hooks) {
@@ -37,6 +38,45 @@ module('Acceptance | enterprise | pki | external | overview route', function (ho
     await runCmd([`delete sys/mounts/${this.mountPath}`], false);
   });
 
+  test('it navigates to external overview', async function (assert) {
+    await visit(`vault/secrets-engines/${this.mountPath}/pki/external`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/overview`,
+      'it redirects from the index route to overview'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'navigating to pki.external.index redirects to overview'
+    );
+    assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText(this.mountPath);
+    assert.dom(GENERAL.breadcrumb).exists({ count: 3 });
+    assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath}`);
+    assertTabState(assert, 'Overview', EXTERNAL_TABS);
+  });
+
+  test('only "Overview" tab renders when no resources exist but user has permission to list everything', async function (assert) {
+    // getErrorResponse() throws 404 by default
+    this.acmeListStub.rejects(getErrorResponse());
+    this.dnsListStub.rejects(getErrorResponse());
+    this.rolesListStub.rejects(getErrorResponse());
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/external/overview`);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets-engines/${this.mountPath}/pki/external/overview`,
+      'it navigates to url'
+    );
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.pki.external.overview',
+      'it navigates to route'
+    );
+    assert.dom(GENERAL.linkTo('Overview')).exists().hasClass('active');
+    const hidden = EXTERNAL_TABS.filter((t) => t !== 'Overview');
+    hidden.forEach((t) => assert.dom(GENERAL.linkTo(t)).doesNotExist());
+  });
+
   test('it catches 404 errors', async function (assert) {
     this.acmeListStub.resolves({ keys: ['account-1', 'account-2'] });
     this.dnsListStub.rejects(getErrorResponse());
@@ -48,29 +88,6 @@ module('Acceptance | enterprise | pki | external | overview route', function (ho
     assert.dom(GENERAL.overviewCard.content('ACME accounts')).hasText('2');
     assert.dom(GENERAL.overviewCard.content('DNS providers')).hasText('0');
     assert.dom(GENERAL.overviewCard.content('Roles')).hasText('0');
-  });
-
-  test('it fetches capabilities', async function (assert) {
-    const capabilitiesSpy = sinon.spy(this.owner.lookup('service:capabilities'), 'fetch');
-    this.acmeListStub.resolves({ keys: ['account-1', 'account-2'] });
-    this.dnsListStub.resolves({ keys: ['provider-1'] });
-    this.rolesListStub.resolves({ keys: ['role-1', 'role-2', 'role-3'] });
-    await visit(this.engineURL);
-    const [paths] = capabilitiesSpy.lastCall.args;
-    assert.propEqual(
-      paths,
-      [
-        `${this.mountPath}/config/acme-account`,
-        `${this.mountPath}/config/dns`,
-        `${this.mountPath}/role`,
-        `${this.mountPath}/lookup/orders`,
-      ],
-      'it requests capabilities service with expected paths'
-    );
-    assert.true(capabilitiesSpy.calledOnce, 'capabilities are only requested once');
-    assert.true(this.acmeListStub.calledOnce, 'request made to list ACME accounts');
-    assert.true(this.dnsListStub.calledOnce, 'request made to list DNS providers');
-    assert.true(this.rolesListStub.calledOnce, 'request made to list roles');
   });
 
   test('it catches 403 permissions errors and hides cards', async function (assert) {
