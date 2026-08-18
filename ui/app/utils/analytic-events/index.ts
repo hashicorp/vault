@@ -74,3 +74,6 @@ export const INTRO_AUTH_METHODS_CTA_CLICKED = CTA_CLICKED;
 export const INTRO_ACL_POLICIES_CTA_CLICKED = CTA_CLICKED;
 // Namespace wizard — intro CTA (guided start / docs / dismiss)
 export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
+
+// Intro reopen — re-opening a dismissed intro from a resource list page
+export const INTRO_REOPEN_CLICKED = UI_INTERACTION;

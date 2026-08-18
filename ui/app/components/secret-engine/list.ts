@@ -11,9 +11,11 @@ import engineDisplayData from 'vault/helpers/engines-display-data';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
 
 import type RouterService from '@ember/routing/router-service';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type WizardService from 'vault/services/wizard';
@@ -34,6 +36,7 @@ interface Args {
 }
 
 export default class SecretEngineList extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
@@ -212,6 +215,13 @@ export default class SecretEngineList extends Component<Args> {
 
   @action
   showIntroPage() {
+    this.analytics.trackEvent(INTRO_REOPEN_CLICKED, {
+      namespace: 'intro-page',
+      action: 'clicked',
+      elementId: 'intro-reopen-button',
+      channel: 'webpage',
+      objectType: 'secrets-engine',
+    });
     // Reset the wizard dismissal state to allow re-entering the wizard
     this.wizard.reset(this.wizardId);
     this.shouldRenderIntroModal = true;

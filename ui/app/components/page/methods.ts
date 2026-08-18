@@ -10,7 +10,9 @@ import Component from '@glimmer/component';
 import { dropTask } from 'ember-concurrency';
 import sortObjects from 'vault/utils/sort-objects';
 import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
 
+import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
@@ -36,6 +38,7 @@ interface Args {
 }
 
 export default class PageAuthMethodsComponent extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
@@ -181,6 +184,13 @@ export default class PageAuthMethodsComponent extends Component<Args> {
 
   @action
   showIntroPage() {
+    this.analytics.trackEvent(INTRO_REOPEN_CLICKED, {
+      namespace: 'intro-page',
+      action: 'clicked',
+      elementId: 'intro-reopen-button',
+      channel: 'webpage',
+      objectType: 'auth-method',
+    });
     // Reset the wizard dismissal state to allow re-entering the wizard
     this.wizard.reset(this.wizardId);
     this.shouldRenderIntroModal = true;
