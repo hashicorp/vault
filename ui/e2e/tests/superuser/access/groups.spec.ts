@@ -51,10 +51,9 @@ test('groups workflow', async ({ page }) => {
     await expect(page.getByRole('link', { name: 'Policies', exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Policies', exact: true }).click();
     await expect(page.locator('section')).toContainText('test-policy');
-    await page.getByRole('button', { name: 'Identity policy management' }).click();
-    await page.getByRole('link', { name: 'View policy', exact: true }).click();
-    await page.getByText('Vault ACL policies test-policy test-policy Download policy').click();
-    await expect(page.getByText('Vault ACL policies test-policy test-policy Download policy')).toBeVisible();
+    await page.getByRole('link', { name: 'test-policy' }).first().click();
+    await expect(page.getByRole('button', { name: 'Download policy' })).toBeVisible();
+    page.getByRole('button', { name: 'Download policy' }).click();
     await page.getByRole('link', { name: 'Groups' }).click();
     await page.getByRole('link', { name: 'group-1', exact: true }).click();
 

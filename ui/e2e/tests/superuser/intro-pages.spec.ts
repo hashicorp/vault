@@ -213,7 +213,7 @@ test('intro pages workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Confirm' }).click();
     await page.getByRole('link', { name: 'Authentication methods' }).click();
     await page
-      .getByRole('link', { name: 'Type of auth mount userpass/' })
+      .getByRole('row', { name: 'Type of auth mount userpass/' })
       .getByLabel('Overflow options')
       .click();
     await page.getByRole('button', { name: 'Disable' }).click();
