@@ -9,7 +9,13 @@ import { action } from '@ember/object';
 import { SecurityPolicy } from './step-1';
 import type NamespaceService from 'vault/services/namespace';
 import type SnippetService from 'vault/services/snippet';
+import type AnalyticsService from 'vault/services/analytics';
 import { CreationMethod } from 'vault/utils/constants/snippet';
+import {
+  WIZARD_NAMESPACE_STEP3_SELECT_TERRAFORM,
+  WIZARD_NAMESPACE_STEP3_SELECT_CLI_API,
+  WIZARD_NAMESPACE_STEP3_SELECT_UI,
+} from 'vault/utils/analytic-events';
 import {
   generateApiSnippet,
   generateCliSnippet,
@@ -33,9 +39,16 @@ interface CreationMethodChoice {
   isRecommended?: boolean;
 }
 
+const CREATION_METHOD_EVENTS: Record<CreationMethod, string> = {
+  [CreationMethod.TERRAFORM]: WIZARD_NAMESPACE_STEP3_SELECT_TERRAFORM,
+  [CreationMethod.APICLI]: WIZARD_NAMESPACE_STEP3_SELECT_CLI_API,
+  [CreationMethod.UI]: WIZARD_NAMESPACE_STEP3_SELECT_UI,
+};
+
 export default class WizardNamespacesStep3 extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
   @service declare readonly snippet: SnippetService;
+  @service declare readonly analytics: AnalyticsService;
 
   methods = CreationMethod;
   policy = SecurityPolicy;
@@ -102,6 +115,13 @@ export default class WizardNamespacesStep3 extends Component<Args> {
     this.snippet.setCreationMethod(choice.label, this.tfSnippet, this.customTabs);
     this.args.updateWizardState('creationMethod', choice.label);
     this.args.updateWizardState('codeSnippet', this.snippet.codeSnippet);
+    this.analytics.trackEvent(CREATION_METHOD_EVENTS[choice.label], {
+      namespace: 'namespace-wizard',
+      action: 'selected',
+      elementId: 'method-selector',
+      channel: 'webpage',
+      location: 'step-3',
+    });
   }
 
   @action
