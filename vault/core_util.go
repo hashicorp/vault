@@ -248,9 +248,6 @@ func (c *Core) GetConfigurableRNG(source string, defaultSource io.Reader) (io.Re
 	return rng, nil
 }
 
-// All control hub operations are No-op
-func (c *Core) EnrollControlHub(activationToken string) error { return nil }
-
 func (c *Core) StoreControlHubClusterCredentials(ctx context.Context, id string, value []byte) error {
 	return nil
 }

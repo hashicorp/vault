@@ -141,7 +141,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 func (s *forwardedRequestRPCServer) SendControlHubCredentials(ctx context.Context, in *SendControlHubCredentialsRequest) (*SendControlHubCredentialsResponse, error) {
 	s.core.logger.Info("forwarding client: received control hub cluster credentials")
 	if s.core.HAState() == consts.Active {
-		err := s.core.ControlHubManager.WriteData(ctx, in.ID, in.Value)
+		err := s.core.ControlHubManager.WriteClusterCredentialsToStorage(ctx, in.ID, in.Value)
 		return &SendControlHubCredentialsResponse{}, err
 	} else {
 		return &SendControlHubCredentialsResponse{}, fmt.Errorf("node is not leader; cluster credentials are lost")
