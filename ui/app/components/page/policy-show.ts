@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { policySnippetArgs, PolicyTypes } from 'core/utils/code-generators/policy';
+import { sysPoliciesAclNameMapping } from 'vault/utils/terraform-mappings/sys-policies-acl-name-mapping';
 
 interface PolicyModel {
   name: string;
@@ -33,5 +34,10 @@ export default class PagePolicyShow extends Component<Args> {
 
   get snippetArgs() {
     return policySnippetArgs(this.args.model.name, this.args.model.policy);
+  }
+
+  get terraformSnippet() {
+    const { name, policy } = this.args.model;
+    return sysPoliciesAclNameMapping({ name, policy });
   }
 }

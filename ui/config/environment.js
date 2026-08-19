@@ -53,6 +53,8 @@ module.exports = function (environment) {
     ENV.APP.LOG_TRANSITIONS = true;
     // ENV.APP.LOG_TRANSITIONS_INTERNAL = true;
     // ENV.APP.LOG_VIEW_LOOKUPS = true;
+    ENV.APP.VAULT_BRANCH = process.env.VAULT_BRANCH || null;
+    ENV.APP.VAULT_COMMIT = process.env.VAULT_COMMIT || null;
     if (process.env.MIRAGE_DEV_HANDLER !== undefined) {
       ENV['ember-cli-mirage'] = {
         enabled: true,
@@ -66,6 +68,14 @@ module.exports = function (environment) {
         enabled: true,
         project_id: 'phc_zPQ9fPlFj4ZTYKJmThG1C8AE4J4RgPQx8dJJ7agg4SG',
         api_host: 'https://eu.i.posthog.com',
+      };
+    }
+
+    if (process.env.ENABLE_SEGMENT && process.env.SEGMENT_WRITE_KEY) {
+      ENV.APP.ANALYTICS_CONFIG = {
+        provider: 'segment',
+        enabled: true,
+        write_key: process.env.SEGMENT_WRITE_KEY,
       };
     }
   }

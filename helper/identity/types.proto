@@ -310,6 +310,15 @@ message ScimClient {
   // This allows cascading cleanup to be eventually handled even if there are failures during the deletion process.
   // @inject_tag: sentinel:"-"
   bool deleting = 6;
+
+  // DefaultSchemaVersion is the Vault SCIM extension schema version this client
+  // uses when a request does not itself specify an extension schema (and for
+  // responses to requests without a body, such as GET). An empty value is
+  // treated as the deprecated "2.0" schema for backwards compatibility with
+  // clients created before this field existed; newly created clients default to
+  // "2.1". Clients may set it explicitly to pin a version.
+  // @inject_tag: sentinel:"-"
+  string default_schema_version = 7;
 }
 
 // Deprecated. Retained for backwards compatibility.

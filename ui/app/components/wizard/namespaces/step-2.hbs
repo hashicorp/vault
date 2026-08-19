@@ -14,7 +14,7 @@
   </LG.Item>
 
   <LG.Item @colspan={{4}}>
-    <Hds::Reveal @isOpen={{true}} @text="Namespace best practices">
+    <Hds::Reveal @isOpen={{true}} @text="Namespace best practices" {{on "click" this.onTipsReveal}}>
       <Hds::Layout::Grid @columnMinWidth="10%" @gap="24" as |LG|>
         <LG.Item @colspan={{7}}>
           <ul class="bullet">

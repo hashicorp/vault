@@ -58,7 +58,17 @@ export default class Form<T extends object> {
         }, []);
         // combine the formFields and formGroupFields into a single array
         const allFields = [...fields, ...groupFields];
-        const formDataKeys = allFields.map((field) => field.name) || [];
+        const formDataKeys = allFields.reduce((keys: string[], field) => {
+          keys.push(field.name);
+          // keyValueFields sub-fields can bind directly to their own model attribute via `valuePath`
+          const keyValueFields = field.options?.keyValueFields || [];
+          keyValueFields.forEach((keyValueField) => {
+            if (keyValueField.valuePath) {
+              keys.push(keyValueField.valuePath);
+            }
+          });
+          return keys;
+        }, []);
         // if the property is a form field return the data object as the target, otherwise return the original target (this)
         // account for nested form data properties like 'config.maxLeaseTtl' when accessing the object like this.config
         const isDataProp = formDataKeys.some((key) => key === prop || key.split('.').includes(prop));

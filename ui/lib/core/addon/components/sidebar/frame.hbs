@@ -49,14 +49,31 @@
     </Hds::AppHeader>
   </Frame.Header>
   <Frame.Sidebar data-test-sidebar-nav>
-    <Hds::AppSideNav @isResponsive={{true}} @hasA11yRefocus={{true}} @a11yRefocusSkipTo="app-main-content">
+    <Hds::AppSideNav
+      @isResponsive={{true}}
+      @isCollapsible={{true}}
+      @hasA11yRefocus={{true}}
+      @a11yRefocusSkipTo="app-main-content"
+      data-test-sidebar
+      class="vault-sidebar-nav-body"
+    >
       {{! this block is where the Hds::AppSideNav::Portal components render into }}
-      <Hds::AppSideNav::Portal::Target />
+      <Hds::AppSideNav::Portal::Target data-test-portal />
+
+      <EnvBanner />
+
     </Hds::AppSideNav>
+
   </Frame.Sidebar>
   <Frame.Main id="app-main-content" class={{if this.console.isOpen "main--console-open"}}>
     {{! outlet for app content }}
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />
+    {{! Only prompt when the operator has enabled ui_telemetry AND the user has
+    not yet recorded a consent decision. A recorded accept/decline ensures that
+    the banner does not reappear. }}
+    {{#if this.analytics.shouldPromptConsent}}
+      <PageBanners::TelemetryConsent />
+    {{/if}}
     {{yield}}
     <div data-test-console-panel class={{if this.console.isOpen "panel-open"}}>
       {{#if this.console.isOpen}}

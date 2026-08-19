@@ -1,0 +1,131 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div {{did-update this.syncAliasIndex @data.agent.id @data.aliasId}}></div>
+
+<Hds::Card::Container
+  @level="mid"
+  @background="neutral-secondary"
+  class="has-padding-s has-bottom-margin-s"
+  data-test-card-container="alias-navigation"
+>
+  <Hds::Layout::Flex @justify="space-between" @align="center">
+    {{#if (gt this.aliases.length 1)}}
+      <Hds::Card::Container @level="mid" @hasBorder={{true}} @background="neutral-secondary" class="has-padding-xxs">
+        <Hds::Text::Body @tag="p">
+          {{this.selectedAliasPosition}}
+          /
+          {{this.aliasCount}}
+        </Hds::Text::Body>
+      </Hds::Card::Container>
+    {{/if}}
+    {{#if this.selectedAlias}}
+      <Hds::Text::Body @tag="p" @weight="semibold">Alias:
+        <Hds::Link::Inline
+          @route="vault.cluster.access.identity.aliases.show"
+          @models={{array "entities" this.selectedAlias.id "details"}}
+          data-test-link-to="selected alias"
+        >
+          {{this.selectedAlias.id}}
+        </Hds::Link::Inline>
+      </Hds::Text::Body>
+    {{/if}}
+
+    {{#if (gt this.aliases.length 1)}}
+      <div>
+        <Hds::Button
+          @text="Previous"
+          @size="small"
+          @color="secondary"
+          @icon="arrow-left"
+          disabled={{this.isPreviousDisabled}}
+          {{on "click" this.selectPreviousAlias}}
+          data-test-button="alias-previous"
+        />
+        <Hds::Button
+          @text="Next"
+          @size="small"
+          @color="secondary"
+          @icon="arrow-right"
+          @iconPosition="trailing"
+          disabled={{this.isNextDisabled}}
+          {{on "click" this.selectNextAlias}}
+          data-test-button="alias-next"
+        />
+      </div>
+    {{/if}}
+  </Hds::Layout::Flex>
+</Hds::Card::Container>
+
+{{#if this.selectedAlias}}
+  <Hds::Card::Container
+    @level="mid"
+    @background="neutral-secondary"
+    class="has-padding-s has-top-bottom-margin-24"
+    data-test-card-container="alias-auth-method"
+  >
+    <Hds::Layout::Flex @justify="space-between">
+      <div>
+        <Hds::Text::Body @tag="p" @color="faint">
+          Auth method type
+        </Hds::Text::Body>
+        <Hds::Badge @text={{this.selectedAlias.mount_type}} @size="small" />
+      </div>
+      <div data-test-text-display="selected-alias-mount-path">
+        <Hds::Text::Body @tag="p" @color="faint">
+          Mount path
+        </Hds::Text::Body>
+        {{#if this.selectedAlias.mount_path}}
+          <Hds::Copy::Snippet
+            @textToCopy={{this.selectedAlias.mount_path}}
+            @color="secondary"
+            data-test-copy-snippet="selected-alias-mount-path"
+          />
+        {{else}}
+          /
+        {{/if}}
+      </div>
+      <div>
+        <Hds::Text::Body @tag="p" @color="faint">
+          Mount accessor
+        </Hds::Text::Body>
+        <Hds::Text::Body @tag="p" @color="faint">
+          {{this.selectedAlias.mount_accessor}}
+        </Hds::Text::Body>
+      </div>
+    </Hds::Layout::Flex>
+  </Hds::Card::Container>
+{{/if}}
+
+{{#if (or @data.entity.metadata this.selectedAlias.custom_metadata)}}
+  <Hds::Text::Body @tag="p" @size="300" @weight="semibold" class="has-bottom-margin-m">
+    Alias metadata
+  </Hds::Text::Body>
+
+  {{#if @data.entity.metadata}}
+    <div data-test-widget="entity-metadata">
+      {{#each-in @data.entity.metadata as |key value|}}
+        <div class="has-top-bottom-margin-12">
+          <Hds::Form::TextInput::Field @value={{value}} name={{key}} readonly as |F|>
+            <F.Label>{{humanize key}}</F.Label>
+            <F.HelperText>Inherited from entity</F.HelperText>
+          </Hds::Form::TextInput::Field>
+        </div>
+      {{/each-in}}
+    </div>
+  {{/if}}
+
+  {{#if this.selectedAlias.custom_metadata}}
+    <div data-test-widget="alias-custom-metadata">
+      {{#each-in this.selectedAlias.custom_metadata as |key value|}}
+        <div class="has-top-bottom-margin-12">
+          <Hds::Form::TextInput::Field @value={{value}} name={{key}} readonly as |F|>
+            <F.Label>{{humanize key}}</F.Label>
+          </Hds::Form::TextInput::Field>
+        </div>
+      {{/each-in}}
+    </div>
+  {{/if}}
+{{/if}}

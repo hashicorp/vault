@@ -1,0 +1,123 @@
+{
+  "@programName": "ZAP",
+  "@version": "2.15.0",
+  "@generated": "Thu, 02 Jul 2026 17:37:43 GMT",
+  "site": [
+    {
+      "@name": "https://example.com",
+      "@host": "example.com",
+      "@port": "443",
+      "@ssl": "true",
+      "alerts": [
+        {
+          "pluginid": "10001",
+          "alertRef": "10001",
+          "alert": "Informational finding",
+          "name": "Informational finding",
+          "riskcode": "0",
+          "confidence": "2",
+          "riskdesc": "Informational (Medium)",
+          "desc": "<p>Informational finding</p>",
+          "instances": [
+            {
+              "uri": "https://example.com/info",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ],
+          "count": "1",
+          "solution": "",
+          "otherinfo": "",
+          "reference": "",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "0"
+        },
+        {
+          "pluginid": "10002",
+          "alertRef": "10002",
+          "alert": "Low severity issue",
+          "name": "Low severity issue",
+          "riskcode": "1",
+          "confidence": "2",
+          "riskdesc": "Low (Medium)",
+          "desc": "<p>Low severity issue</p>",
+          "instances": [
+            {
+              "uri": "https://example.com/warning",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ],
+          "count": "1",
+          "solution": "",
+          "otherinfo": "",
+          "reference": "",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "0"
+        },
+        {
+          "pluginid": "10003",
+          "alertRef": "10003",
+          "alert": "Medium severity issue",
+          "name": "Medium severity issue",
+          "riskcode": "2",
+          "confidence": "2",
+          "riskdesc": "Medium (Medium)",
+          "desc": "<p>Medium severity issue</p>",
+          "instances": [
+            {
+              "uri": "https://example.com/error",
+              "method": "POST",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ],
+          "count": "1",
+          "solution": "",
+          "otherinfo": "",
+          "reference": "",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "0"
+        },
+        {
+          "pluginid": "10004",
+          "alertRef": "10004",
+          "alert": "High severity issue",
+          "name": "High severity issue",
+          "riskcode": "3",
+          "confidence": "2",
+          "riskdesc": "High (Medium)",
+          "desc": "<p>High severity issue</p>",
+          "instances": [
+            {
+              "uri": "https://example.com/critical",
+              "method": "DELETE",
+              "param": "",
+              "attack": "",
+              "evidence": "",
+              "otherinfo": ""
+            }
+          ],
+          "count": "1",
+          "solution": "",
+          "otherinfo": "",
+          "reference": "",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "0"
+        }
+      ]
+    }
+  ]
+}

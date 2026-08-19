@@ -34,7 +34,7 @@ export default class PkiConfigGenerateForm extends OpenApiForm<PkiConfigGenerate
         possibleValues: ['exported', 'internal', 'existing', 'kms'],
         noDefault: true,
       }),
-      new FormField('customTtl', 'string', {
+      new FormField('customTtl', undefined, {
         label: 'Not valid after',
         subText:
           'The time after which this certificate will no longer be valid. This can be a TTL (a range of time from now) or a specific date.',

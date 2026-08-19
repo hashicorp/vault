@@ -8,7 +8,12 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import type NamespaceService from 'vault/services/namespace';
+import type AnalyticsService from 'vault/services/analytics';
 import { isEmpty } from '@ember/utils';
+import {
+  WIZARD_NAMESPACE_STEP2_TIPS_COLLAPSE,
+  WIZARD_NAMESPACE_STEP2_FIELD_INPUT,
+} from 'vault/utils/analytic-events';
 
 interface Project {
   name: string;
@@ -66,8 +71,10 @@ interface Args {
 
 export default class WizardNamespacesStepTemp extends Component<Args> {
   @service declare namespace: NamespaceService;
+  @service declare analytics: AnalyticsService;
   @tracked blocks: Block[];
   duplicateErrorMessage = 'No duplicate namespaces names are allowed within the same level';
+  #hasTrackedFieldInput = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -134,6 +141,35 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
     this.args.updateWizardState('namespaceBlocks', this.hasErrors ? null : this.blocks);
   }
 
+  #isRevealOpen = true;
+
+  @action
+  onTipsReveal() {
+    this.#isRevealOpen = !this.#isRevealOpen;
+    if (!this.#isRevealOpen) {
+      this.analytics.trackEvent(WIZARD_NAMESPACE_STEP2_TIPS_COLLAPSE, {
+        namespace: 'namespace-wizard',
+        action: 'clicked',
+        elementId: 'tips-reveal',
+        channel: 'webpage',
+        location: 'step-2',
+      });
+    }
+  }
+
+  #trackFieldInput() {
+    if (!this.#hasTrackedFieldInput) {
+      this.#hasTrackedFieldInput = true;
+      this.analytics.trackEvent(WIZARD_NAMESPACE_STEP2_FIELD_INPUT, {
+        namespace: 'namespace-wizard',
+        action: 'typed',
+        elementId: 'namespace-field',
+        channel: 'webpage',
+        location: 'step-2',
+      });
+    }
+  }
+
   @action
   addBlock() {
     this.blocks = [...this.blocks, new Block()];
@@ -162,6 +198,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
       block.globalError = block.validateInput(value);
       this.checkForDuplicateGlobals();
       this.updateWizardState();
+      this.#trackFieldInput();
     }
   }
 
@@ -188,6 +225,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
     // Trigger tree reactivity by reassigning the blocks array
     this.blocks = [...this.blocks];
     this.updateWizardState();
+    this.#trackFieldInput();
   }
 
   @action
@@ -233,6 +271,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
     // Trigger tree reactivity by reassigning the blocks array
     this.blocks = [...this.blocks];
     this.updateWizardState();
+    this.#trackFieldInput();
   }
 
   @action

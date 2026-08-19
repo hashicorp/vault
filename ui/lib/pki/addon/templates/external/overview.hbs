@@ -1,14 +1,12 @@
 {{!
   Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
-{{#let (and this.model.canListAcmeConfig (not this.model.acmeAccounts.length)) as |isNotConfigured|}}
-  <ExternalPki::HeaderTabs
-    @backend={{this.model.engine}}
-    @isNotConfigured={{isNotConfigured}}
-    @breadcrumbs={{this.breadcrumbs}}
-  />
+<ExternalPki::HeaderTabs
+  @backend={{this.model.engine}}
+  @showConfigSnippets={{this.model.showConfigSnippets}}
+  @breadcrumbs={{this.breadcrumbs}}
+/>
 
-  <ExternalPki::Page::Overview @model={{this.model}} @isNotConfigured={{isNotConfigured}} />
-{{/let}}
+<ExternalPki::Page::Overview @model={{this.model}} />

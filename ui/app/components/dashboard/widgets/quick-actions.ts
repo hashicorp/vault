@@ -17,10 +17,12 @@ import {
   SecretsApiPkiListCertsListEnum,
   SecretsApiPkiListIssuersListEnum,
 } from '@hashicorp/vault-client-typescript';
+import { DASHBOARD_QUICK_ACTION_CTA_CLICKED } from 'vault/utils/analytic-events';
 
 import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
+import type AnalyticsService from 'vault/services/analytics';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { StandardListResponse, PkiListIssuersResponse } from '@hashicorp/vault-client-typescript';
 
@@ -43,6 +45,7 @@ export default class DashboardWidgetsQuickActions extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly analytics: AnalyticsService;
 
   @tracked declare selectedEngine: SecretsEngineResource;
   @tracked selectedAction: string | null = null;
@@ -190,7 +193,32 @@ export default class DashboardWidgetsQuickActions extends Component<Args> {
   }
 
   @action
+  trackQuickActionCta(cta: string) {
+    this.analytics.trackEvent(DASHBOARD_QUICK_ACTION_CTA_CLICKED, {
+      CTA: cta,
+      channel: 'webpage',
+      location: 'dashboard',
+      objectType: 'quick-actions-widget',
+      uiElement: 'quick-action-cta',
+      type: 'Link',
+      action: 'clicked',
+    });
+  }
+
+  @action
   navigateToPage() {
+    const buttonText = this.searchSelectParams.buttonText;
+    this.analytics.trackEvent(DASHBOARD_QUICK_ACTION_CTA_CLICKED, {
+      CTA: buttonText,
+      channel: 'webpage',
+      location: 'dashboard',
+      objectType: 'secrets-engine-widget',
+      object: this.selectedEngine.type,
+      uiElement: 'quick-action-navigate',
+      type: 'Button',
+      action: 'navigated',
+    });
+
     let route = this.searchSelectParams.route;
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route

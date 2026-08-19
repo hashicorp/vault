@@ -24,6 +24,13 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this._originalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
+
     this.server.post('/sys/capabilities-self', () => ({
       data: {
         capabilities: ['root'],
@@ -50,6 +57,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   });
 
   hooks.afterEach(async function () {
+    window.ResizeObserver = this._originalResizeObserver;
     // ensure clean state
     localStorage.clear();
   });
@@ -65,6 +73,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     assert.dom(GENERAL.linkTo(`${enginePath}/`)).exists('shows the link for the kvv2 secrets engine');
     await click(`${GENERAL.listItem(`${enginePath}/`)} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('Delete'));
+    await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click(GENERAL.confirmButton);
 
     assert.true(

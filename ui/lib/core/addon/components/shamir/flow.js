@@ -77,7 +77,7 @@ export default class ShamirFlowComponent extends Component {
     try {
       this.errors = null;
       let response;
-      const headers = this.api.buildHeaders(primaryToken || '');
+      const headers = this.api.buildHeaders({ token: primaryToken || '' });
 
       if (this.args.action === 'generate-dr-operation-token') {
         if (!data) {

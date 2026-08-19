@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/net/idna"
@@ -247,11 +246,17 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, req *logical.Reques
 func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
-	// Per-order lock to prevent concurrent finalize requests from
-	// double-issuing certificates for the same order. See GH-31987.
-	lock := locksutil.LockForKey(b.acmeOrderLocks, orderId)
-	lock.Lock()
-	defer lock.Unlock()
+	// Serialize concurrent finalize requests for the same order. Without this,
+	// two requests can both load the order while it is still "ready", both pass
+	// the readiness gate below, and both issue a separate certificate. The order
+	// only records one serial, so the other certificate becomes orphaned from
+	// every order-keyed lookup such as /acme/order/<id>/cert. Finalize always
+	// runs on the active node (ForwardPerformanceStandby), so an in-memory
+	// per-order lock is enough to guard the load, check, issue, and save
+	// sequence. See GH-31987.
+	orderLock := b.GetAcmeState().orderLockFor(orderId)
+	orderLock.Lock()
+	defer orderLock.Unlock()
 
 	csr, err := parseCsrFromFinalize(data)
 	if err != nil {
@@ -285,16 +290,6 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		return nil, err
 	}
 
-	// Defense-in-depth against concurrent finalize: persist a
-	// "processing" status before issuing, so that even if another
-	// request somehow bypasses the per-order lock (e.g. across
-	// cluster nodes on different lock stripes), the status gate
-	// at the top of this handler will reject it.
-	order.Status = ACMEOrderProcessing
-	if err := b.GetAcmeState().SaveOrder(ac, order); err != nil {
-		return nil, fmt.Errorf("failed persisting processing status: %w", err)
-	}
-
 	var signedCertBundle *certutil.ParsedCertBundle
 	var issuerId issuing.IssuerID
 	if ac.runtimeOpts.isCiepsEnabled {
@@ -314,7 +309,8 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		if err != nil {
 			return nil, err
 		}
-		b.pkiCertificateCounter.Increment().AddIssuedCertificate(true, signedCertBundle.Certificate)
+		mountInfo := issuing.MountAttributionFromRequest(ac.sc.Context, r, b.backendUUID)
+		b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(true, signedCertBundle.Certificate)
 	}
 	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
 

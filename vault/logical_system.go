@@ -48,6 +48,7 @@ import (
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internal/releaseinfo"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -100,12 +101,18 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		return nil
 	}
 
+	healthCheckBackend := NewHealthCheckBackend(core, logger)
+	if err := healthCheckBackend.Setup(core.activeContext, config); err != nil {
+		return nil
+	}
+
 	b := &SystemBackend{
 		Core:                 core,
 		db:                   db,
 		logger:               logger,
 		mfaBackend:           NewPolicyMFABackend(core, logger),
 		syncBackend:          syncBackend,
+		healthCheckBackend:   healthCheckBackend,
 		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
@@ -223,53 +230,9 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 
 			Binary: append(append(rekeyPaths, generateRootPaths...), entBinaryPaths()...),
 		},
+		Paths: systemBackendPaths(b, true, config),
 	}
 	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
-
-	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, entWrappedPluginsCRUDPath(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsListPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsCRUDPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRootReloadPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, entWrappedMountsPath(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, entWrappedAuthPath(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, b.lockedUserPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.leasePaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.policyPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.wrappingPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.toolsPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.remountPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.inFlightRequestPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.activationFlagsPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.useCaseConsumptionBillingPaths()...)
-
-	if core.rawEnabled {
-		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
-	}
-	if backend := core.getRaftBackend(); backend != nil {
-		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
-	}
 
 	// If the node is in a DR secondary cluster, gate some raft operations by
 	// the DR operation token.
@@ -285,6 +248,56 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Clean = sysClean(b)
 	b.entInit()
 	return b
+}
+
+func operatorSystemBackendPaths(b *SystemBackend) []*framework.Path {
+	var ret []*framework.Path
+	ret = append(ret, entPaths(b)...)
+	ret = append(ret, b.configPaths()...)
+	ret = append(ret, b.rekeyPaths()...)
+	ret = append(ret, b.sealPaths()...)
+	ret = append(ret, b.statusPaths()...)
+	ret = append(ret, b.pluginsCatalogListPaths()...)
+	ret = append(ret, entWrappedPluginsCRUDPath(b)...)
+	ret = append(ret, b.pluginsCatalogPinsListPath())
+	ret = append(ret, b.pluginsCatalogPinsCRUDPath())
+	ret = append(ret, b.pluginsReloadPath())
+	ret = append(ret, b.pluginsRootReloadPath())
+	ret = append(ret, b.pluginsRuntimesCatalogCRUDPath())
+	ret = append(ret, b.pluginsRuntimesCatalogListPaths()...)
+	ret = append(ret, b.auditPaths()...)
+	ret = append(ret, entWrappedMountsPath(b)...)
+	ret = append(ret, entWrappedAuthPath(b)...)
+	ret = append(ret, b.lockedUserPaths()...)
+	ret = append(ret, b.leasePaths()...)
+	ret = append(ret, b.policyPaths()...)
+	ret = append(ret, b.wrappingPaths()...)
+	ret = append(ret, b.toolsPaths()...)
+	ret = append(ret, b.capabilitiesPaths()...)
+	ret = append(ret, b.internalPaths()...)
+	ret = append(ret, b.pprofPaths()...)
+	ret = append(ret, b.remountPaths()...)
+	ret = append(ret, b.metricsPath())
+	ret = append(ret, b.monitorPath())
+	ret = append(ret, b.inFlightRequestPath())
+	ret = append(ret, b.hostInfoPath())
+	ret = append(ret, b.quotasPaths()...)
+	ret = append(ret, b.rootActivityPaths()...)
+	ret = append(ret, b.loginMFAPaths()...)
+	ret = append(ret, b.experimentPaths()...)
+	ret = append(ret, b.introspectionPaths()...)
+	ret = append(ret, b.wellKnownPaths()...)
+	ret = append(ret, b.activationFlagsPaths()...)
+	ret = append(ret, b.useCaseConsumptionBillingPaths()...)
+
+	if b.Core.rawEnabled {
+		ret = append(ret, b.rawPaths()...)
+	}
+	if backend := b.Core.getRaftBackend(); backend != nil {
+		ret = append(ret, b.raftStoragePaths()...)
+	}
+
+	return ret
 }
 
 func (b *SystemBackend) rawPaths() []*framework.Path {
@@ -309,6 +322,7 @@ type SystemBackend struct {
 	logger               log.Logger
 	mfaBackend           *PolicyMFABackend
 	syncBackend          *SecretsSyncBackend
+	healthCheckBackend   *HealthCheckBackend
 	idStoreBackend       *framework.Backend
 	raftChallengeLimiter *rate.Limiter
 	activationFlags      *activationflags.FeatureActivationFlags
@@ -2001,14 +2015,16 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	err := expandStringValsWithCommas(configMap)
 	if err != nil {
 		return logical.ErrorResponse(
-				"unable to parse given auth config information"),
+				"unable to parse given auth config information",
+			),
 			logical.ErrInvalidRequest
 	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
 			return logical.ErrorResponse(
-					"unable to convert given mount config information"),
+					"unable to convert given mount config information",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -2020,7 +2036,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.DefaultLeaseTTL = tmpDef
@@ -2033,7 +2050,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.MaxLeaseTTL = tmpMax
@@ -2041,20 +2059,23 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
 		return logical.ErrorResponse(
-				"given default lease TTL greater than given max lease TTL"),
+				"given default lease TTL greater than given max lease TTL",
+			),
 			logical.ErrInvalidRequest
 	}
 
 	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
 		return logical.ErrorResponse(fmt.Sprintf(
-				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()),
+			)),
 			logical.ErrInvalidRequest
 	}
 
 	switch logicalType {
 	case "":
 		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
+				"backend type must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	case "plugin":
 		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
@@ -2066,7 +2087,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
-					"plugin_name must be provided for plugin backend"),
+					"plugin_name must be provided for plugin backend",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -2092,7 +2114,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	default:
 		if options != nil && options["version"] != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"secrets engine %q does not allow setting a version", logicalType)),
+					"secrets engine %q does not allow setting a version", logicalType,
+				)),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -2392,7 +2415,8 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	toPath := data.Get("to").(string)
 	if fromPath == "" || toPath == "" {
 		return logical.ErrorResponse(
-				"both 'from' and 'to' path must be specified as a string"),
+				"both 'from' and 'to' path must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -2541,7 +2565,8 @@ func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Req
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse(
-				"path must be specified as a string"),
+				"path must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	}
 	return b.handleTuneReadCommon(ctx, "auth/"+path)
@@ -2553,7 +2578,8 @@ func (b *SystemBackend) handleRemountStatusCheck(ctx context.Context, req *logic
 	migrationID := data.Get("migration_id").(string)
 	if migrationID == "" {
 		return logical.ErrorResponse(
-				"migrationID must be specified"),
+				"migrationID must be specified",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -2581,7 +2607,8 @@ func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Re
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse(
-				"path must be specified as a string"),
+				"path must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -2811,7 +2838,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
 			if err != nil {
 				return logical.ErrorResponse(
-						"unable to convert given user lockout config information"),
+						"unable to convert given user lockout config information",
+					),
 					logical.ErrInvalidRequest
 			}
 
@@ -3147,7 +3175,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			tokenType = logical.TokenTypeBatch
 		default:
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid value for 'token_type'")), logical.ErrInvalidRequest
+				"invalid value for 'token_type'",
+			)), logical.ErrInvalidRequest
 		}
 
 		oldVal := mountEntry.Config.TokenType
@@ -3405,14 +3434,16 @@ func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Reque
 	mountAccessor := data.Get("mount_accessor").(string)
 	if mountAccessor == "" {
 		return logical.ErrorResponse(
-				"missing mount_accessor"),
+				"missing mount_accessor",
+			),
 			logical.ErrInvalidRequest
 	}
 
 	aliasName := data.Get("alias_identifier").(string)
 	if aliasName == "" {
 		return logical.ErrorResponse(
-				"missing alias_identifier"),
+				"missing alias_identifier",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -3709,14 +3740,16 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	err := expandStringValsWithCommas(configMap)
 	if err != nil {
 		return logical.ErrorResponse(
-				"unable to parse given auth config information"),
+				"unable to parse given auth config information",
+			),
 			logical.ErrInvalidRequest
 	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
 			return logical.ErrorResponse(
-					"unable to convert given auth config information"),
+					"unable to convert given auth config information",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -3728,7 +3761,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.DefaultLeaseTTL = tmpDef
@@ -3741,7 +3775,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.MaxLeaseTTL = tmpMax
@@ -3749,13 +3784,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
 		return logical.ErrorResponse(
-				"given default lease TTL greater than given max lease TTL"),
+				"given default lease TTL greater than given max lease TTL",
+			),
 			logical.ErrInvalidRequest
 	}
 
 	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
 		return logical.ErrorResponse(fmt.Sprintf(
-				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()),
+			)),
 			logical.ErrInvalidRequest
 	}
 
@@ -3770,13 +3807,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.TokenType = logical.TokenTypeBatch
 	default:
 		return logical.ErrorResponse(fmt.Sprintf(
-			"invalid value for 'token_type'")), logical.ErrInvalidRequest
+			"invalid value for 'token_type'",
+		)), logical.ErrInvalidRequest
 	}
 
 	switch logicalType {
 	case "":
 		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
+				"backend type must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	case "plugin":
 		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
@@ -3788,7 +3827,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
-					"plugin_name must be provided for plugin backend"),
+					"plugin_name must be provided for plugin backend",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -3800,7 +3840,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	if options != nil && options["version"] != "" {
 		return logical.ErrorResponse(fmt.Sprintf(
-				"auth method %q does not allow setting a version", logicalType)),
+				"auth method %q does not allow setting a version", logicalType,
+			)),
 			logical.ErrInvalidRequest
 	}
 
@@ -4750,10 +4791,14 @@ func (b *SystemBackend) handleWrappingWrap(ctx context.Context, req *logical.Req
 	// tokens using them we can ensure that an operator can't spoof a legit JWT
 	// wrapped token, which makes certain init/rekey/generate-root cases have
 	// better properties.
-	req.WrapInfo.Format = "uuid"
-
+	// Format is set on the response rather than mutating req.WrapInfo, which
+	// routeCommon (router.go) unconditionally restores via a deferred assignment,
+	// silently discarding any mutation made by this handler.
 	return &logical.Response{
 		Data: data.Raw,
+		WrapInfo: &wrapping.ResponseWrapInfo{
+			Format: "uuid",
+		},
 	}, nil
 }
 
@@ -6712,6 +6757,39 @@ func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
 	}
 }
 
+// handleVaultVersionsRead handles the "/sys/vault-versions" endpoint to proxy releases.hashicorp.com
+func (b *SystemBackend) handleVaultVersionsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	edition, ok := data.GetOk("edition")
+	if !ok {
+		edition = "community"
+	}
+
+	versions, err := releaseinfo.FetchVaultVersions(ctx, edition.(string))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch vault versions: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"versions": versions,
+		},
+	}, nil
+}
+
+// handleReleaseInfoRead handles the "/sys/release-info" endpoint to fetch release information from GitHub
+func (b *SystemBackend) handleReleaseInfoRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	versions, err := releaseinfo.FetchReleaseInformationWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch release information: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"versions": versions,
+		},
+	}, nil
+}
+
 func sanitizePath(path string) string {
 	if !strings.HasSuffix(path, "/") {
 		path += "/"
@@ -7619,6 +7697,10 @@ This path responds to the following HTTP methods.
 	},
 	"internal-ui-feature-flags": {
 		"Enabled feature flags. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
+	"internal-ui-settings": {
+		"UI-related settings for the current cluster, such as whether UI telemetry is enabled. Internal API; its location, inputs, and outputs may change.",
 		"",
 	},
 	"internal-ui-mounts": {

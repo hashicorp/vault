@@ -42,7 +42,7 @@ export default class CodeGeneratorAutomationSnippets extends Component<Args> {
   get snippetTabs() {
     const tabs = [];
     const { tfSnippet, tfvpArgs, cliArgs, apiArgs } = this.args;
-    if (tfSnippet !== undefined || tfvpArgs) {
+    if (tfSnippet || tfvpArgs) {
       tabs.push({
         key: 'terraform',
         label: 'Terraform Vault Provider',

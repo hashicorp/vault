@@ -10,10 +10,13 @@ import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type { Breadcrumb } from 'vault/app-types';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type { ExternalRouteModel } from '../external';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
+
+export type ExternalOverviewRouteModel = ExternalRouteModel;
 
 export default class PkiExternalOverviewRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;

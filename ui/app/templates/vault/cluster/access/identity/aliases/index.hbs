@@ -11,8 +11,8 @@
       class="list-item-row"
       data-test-identity-row
     >
-      <div class="columns is-mobile">
-        <div class="column is-10">
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+        <LF.Item @grow={{true}} @shrink={{true}}>
           <LinkTo
             @route="vault.cluster.access.identity.aliases.show"
             @models={{array item.id "details"}}
@@ -25,15 +25,17 @@
           <div class="has-text-grey">
             {{item.id}}
           </div>
-          <Hds::Badge @text={{item.mount_type}} class="has-right-margin-8" />
+          {{#if item.mount_type}}
+            <Hds::Badge @text={{item.mount_type}} class="has-right-margin-8" />
+          {{/if}}
           <span class="has-text-grey is-size-8">
             {{item.mountAccessor}}
           </span>
-        </div>
-        <div class="column has-text-right">
+        </LF.Item>
+        <LF.Item>
           <Identity::PopupAlias @item={{item}} @identityType={{this.identityType}} />
-        </div>
-      </div>
+        </LF.Item>
+      </Hds::Layout::Flex>
     </LinkedBlock>
   {{/each}}
 
@@ -42,7 +44,7 @@
     @currentPageSize={{this.model.meta.pageSize}}
     @route="vault.cluster.access.identity.aliases.index"
     @showSizeSelector={{false}}
-    @totalItems={{this.model.meta.total}}
+    @totalItems={{this.model.meta.totalItems}}
     @queryFunction={{this.paginationQueryParams}}
   />
 

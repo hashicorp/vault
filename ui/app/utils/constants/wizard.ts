@@ -10,4 +10,5 @@ export const WIZARD_ID_MAP = {
   authMethods: 'auth-methods',
   secretEngines: 'secret-engines',
   namespace: 'namespace',
+  agentRegistry: 'agent-registry',
 } as const;

@@ -5,13 +5,14 @@ package aws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -195,49 +196,53 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 		return err
 	}
 
-	// Get information about this user
-	groupsResp, err := client.ListGroupsForUserWithContext(ctx, &iam.ListGroupsForUserInput{
+	// Get information about this user. Paginate so we collect every group the
+	// user belongs to, even if the total exceeds a single page of results.
+	var groups []iamtypes.Group
+	groupsPaginator := iam.NewListGroupsForUserPaginator(client, &iam.ListGroupsForUserInput{
 		UserName: aws.String(username),
-		MaxItems: aws.Int64(1000),
 	})
-	if err != nil {
-		// This isn't guaranteed to be perfect; for example, an IAM user
-		// might have gotten put into the WAL but then the IAM user creation
-		// failed (e.g., Vault didn't have permissions) and then the WAL
-		// deletion failed as well. Then, if Vault doesn't have access to
-		// call iam:ListGroupsForUser, AWS will return an access denied error
-		// and the WAL will never get cleaned up. But this is better than
-		// just having Vault "forget" about a user it actually created.
-		//
-		// BEWARE a potential race condition -- where this is called
-		// immediately after a user is created. AWS eventual consistency
-		// might say the user doesn't exist when the user does in fact
-		// exist, and this could cause Vault to forget about the user.
-		// This won't happen if the user creation fails (because the WAL
-		// minimum age is 5 minutes, and AWS eventual consistency is, in
-		// practice, never that long), but it could happen if a lease holder
-		// asks immediately after getting a user to revoke the lease, causing
-		// Vault to leak the secret, which would be a Very Bad Thing to allow.
-		// So we make sure that, if there's an associated lease, it must be at
-		// least 5 minutes old as well.
-		if aerr, ok := err.(awserr.Error); ok {
-			acceptMissingIamUsers := false
-			if req.Secret == nil || time.Since(req.Secret.IssueTime) > time.Duration(minAwsUserRollbackAge) {
-				// WAL rollback
-				acceptMissingIamUsers = true
+	for groupsPaginator.HasMorePages() {
+		groupsResp, err := groupsPaginator.NextPage(ctx)
+		if err != nil {
+			// This isn't guaranteed to be perfect; for example, an IAM user
+			// might have gotten put into the WAL but then the IAM user creation
+			// failed (e.g., Vault didn't have permissions) and then the WAL
+			// deletion failed as well. Then, if Vault doesn't have access to
+			// call iam:ListGroupsForUser, AWS will return an access denied error
+			// and the WAL will never get cleaned up. But this is better than
+			// just having Vault "forget" about a user it actually created.
+			//
+			// BEWARE a potential race condition -- where this is called
+			// immediately after a user is created. AWS eventual consistency
+			// might say the user doesn't exist when the user does in fact
+			// exist, and this could cause Vault to forget about the user.
+			// This won't happen if the user creation fails (because the WAL
+			// minimum age is 5 minutes, and AWS eventual consistency is, in
+			// practice, never that long), but it could happen if a lease holder
+			// asks immediately after getting a user to revoke the lease, causing
+			// Vault to leak the secret, which would be a Very Bad Thing to allow.
+			// So we make sure that, if there's an associated lease, it must be at
+			// least 5 minutes old as well.
+			if nse := (*iamtypes.NoSuchEntityException)(nil); errors.As(err, &nse) {
+				acceptMissingIamUsers := false
+				if req.Secret == nil || time.Since(req.Secret.IssueTime) > minAwsUserRollbackAge {
+					// WAL rollback
+					acceptMissingIamUsers = true
+				}
+				if acceptMissingIamUsers {
+					return nil
+				}
 			}
-			if aerr.Code() == iam.ErrCodeNoSuchEntityException && acceptMissingIamUsers {
-				return nil
-			}
+			return err
 		}
-		return err
+		groups = append(groups, groupsResp.Groups...)
 	}
-	groups := groupsResp.Groups
 
 	// Inline (user) policies
-	policiesResp, err := client.ListUserPoliciesWithContext(ctx, &iam.ListUserPoliciesInput{
+	policiesResp, err := client.ListUserPolicies(ctx, &iam.ListUserPoliciesInput{
 		UserName: aws.String(username),
-		MaxItems: aws.Int64(1000),
+		MaxItems: aws.Int32(1000),
 	})
 	if err != nil {
 		return err
@@ -245,18 +250,18 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	policies := policiesResp.PolicyNames
 
 	// Attached managed policies
-	manPoliciesResp, err := client.ListAttachedUserPoliciesWithContext(ctx, &iam.ListAttachedUserPoliciesInput{
+	manPoliciesResp, err := client.ListAttachedUserPolicies(ctx, &iam.ListAttachedUserPoliciesInput{
 		UserName: aws.String(username),
-		MaxItems: aws.Int64(1000),
+		MaxItems: aws.Int32(1000),
 	})
 	if err != nil {
 		return err
 	}
 	manPolicies := manPoliciesResp.AttachedPolicies
 
-	keysResp, err := client.ListAccessKeysWithContext(ctx, &iam.ListAccessKeysInput{
+	keysResp, err := client.ListAccessKeys(ctx, &iam.ListAccessKeysInput{
 		UserName: aws.String(username),
-		MaxItems: aws.Int64(1000),
+		MaxItems: aws.Int32(1000),
 	})
 	if err != nil {
 		return err
@@ -265,7 +270,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Revoke all keys
 	for _, k := range keys {
-		_, err = client.DeleteAccessKeyWithContext(ctx, &iam.DeleteAccessKeyInput{
+		_, err = client.DeleteAccessKey(ctx, &iam.DeleteAccessKeyInput{
 			AccessKeyId: k.AccessKeyId,
 			UserName:    aws.String(username),
 		})
@@ -276,7 +281,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Detach managed policies
 	for _, p := range manPolicies {
-		_, err = client.DetachUserPolicyWithContext(ctx, &iam.DetachUserPolicyInput{
+		_, err = client.DetachUserPolicy(ctx, &iam.DetachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: p.PolicyArn,
 		})
@@ -287,9 +292,9 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Delete any inline (user) policies
 	for _, p := range policies {
-		_, err = client.DeleteUserPolicyWithContext(ctx, &iam.DeleteUserPolicyInput{
+		_, err = client.DeleteUserPolicy(ctx, &iam.DeleteUserPolicyInput{
 			UserName:   aws.String(username),
-			PolicyName: p,
+			PolicyName: aws.String(p),
 		})
 		if err != nil {
 			return err
@@ -298,7 +303,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 
 	// Remove the user from all their groups
 	for _, g := range groups {
-		_, err = client.RemoveUserFromGroupWithContext(ctx, &iam.RemoveUserFromGroupInput{
+		_, err = client.RemoveUserFromGroup(ctx, &iam.RemoveUserFromGroupInput{
 			GroupName: g.GroupName,
 			UserName:  aws.String(username),
 		})
@@ -308,7 +313,7 @@ func (b *backend) pathUserRollback(ctx context.Context, req *logical.Request, _k
 	}
 
 	// Delete the user
-	_, err = client.DeleteUserWithContext(ctx, &iam.DeleteUserInput{
+	_, err = client.DeleteUser(ctx, &iam.DeleteUserInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {

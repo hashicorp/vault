@@ -360,6 +360,75 @@ func TestAppRole_RoleDoesNotExist(t *testing.T) {
 	}
 }
 
+func TestAppRole_LoginFailureDoesNotEchoSecretID(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+
+	roleName := "role-no-echo"
+	b.requestNoErr(t, &logical.Request{
+		Path:      "role/" + roleName,
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"bind_secret_id":     true,
+			"secret_id_num_uses": 1,
+		},
+	})
+
+	resp := b.requestNoErr(t, &logical.Request{
+		Path:      "role/" + roleName + "/role-id",
+		Operation: logical.ReadOperation,
+		Storage:   storage,
+	})
+	roleID := resp.Data["role_id"]
+
+	resp = b.requestNoErr(t, &logical.Request{
+		Path:      "role/" + roleName + "/secret-id",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+	})
+	secretID := resp.Data["secret_id"].(string)
+
+	resp = b.requestNoErr(t, &logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+		Storage: storage,
+	})
+	if resp.Auth == nil {
+		t.Fatal("expected initial login to succeed")
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"role_id":   roleID,
+			"secret_id": secretID,
+		},
+		Storage: storage,
+	})
+	if err != nil && err != logical.ErrInvalidCredentials {
+		t.Fatal(err)
+	}
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected error due to consumed secret ID")
+	}
+
+	errString, ok := resp.Data["error"].(string)
+	if !ok {
+		t.Fatal("error not part of response")
+	}
+	if strings.Contains(errString, secretID) {
+		t.Fatalf("error response must not contain secret_id, got: %q", errString)
+	}
+	if !strings.Contains(errString, "invalid role or secret ID") {
+		t.Fatalf("unexpected error string: %q", errString)
+	}
+}
+
 // TestAppRole_RoleLogin_AliasMetadata tests that the alias metadata is correctly set
 // in the role and that it is returned in the login response.
 func TestAppRole_RoleLogin_AliasMetadata(t *testing.T) {

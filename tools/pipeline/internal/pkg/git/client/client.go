@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package client
@@ -106,7 +106,8 @@ func (c *Client) Exec(ctx context.Context, subCmd string, opts OptStringer) (*Ex
 	var err error
 	res.Stdout, err = cmd.Output()
 	if err != nil {
-		slog.Default().ErrorContext(slogctx.Append(ctx,
+		slog.Default().ErrorContext(slogctx.Append(
+			ctx,
 			slog.String("error", err.Error()),
 		), "executing git command failed")
 		var exitErr *exec.ExitError

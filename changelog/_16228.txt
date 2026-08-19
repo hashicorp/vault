@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Bump pnpm.overrides entry for `ws` from 8.20.1 to 8.21.0.
+```

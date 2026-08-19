@@ -30,7 +30,7 @@ export default class PkiIssuerEditComponent extends Component<Args> {
   @service declare readonly secretMountPath: SecretMountPathService;
 
   @tracked usageValues: Array<string> = [];
-  @tracked error = null;
+  @tracked error = '';
   declare initialIssuerName: string;
 
   fields = [

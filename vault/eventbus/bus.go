@@ -16,11 +16,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -387,6 +387,21 @@ func (bus *EventBus) ApplyClusterWideFilterChanges(changes []FilterChange) {
 // filters for all cluster nodes.
 func (bus *EventBus) MakeClusterWideFilters() {
 	bus.filters.makeClusterWideFilters()
+}
+
+// GetClusterWideFilterAdditions returns the current cluster-wide filter
+// represented purely as additive changes. It is used by a secondary cluster's
+// active node to resync its full set of event subscription filters to the
+// primary.
+func (bus *EventBus) GetClusterWideFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(clusterWide)
+}
+
+// GetLocalFilterAdditions returns the current local filter represented
+// purely as additive changes. It is used by a performance standby node to
+// resync its full set of event subscription filters to the active node.
+func (bus *EventBus) GetLocalFilterAdditions() []FilterChange {
+	return bus.filters.getFilterAdditions(bus.filters.self)
 }
 
 // ClearClusterWideFilter removes all entries from the current cluster-wide

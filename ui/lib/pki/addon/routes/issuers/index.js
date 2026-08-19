@@ -13,15 +13,16 @@ export default class PkiIssuersListRoute extends Route {
   @service secretMountPath;
   @service api;
 
-  async getIssuerMetadata(issuer_id, listResponse) {
+  // Returns a new enriched copy of the key_info entry for the given issuer_id.
+  // Falls back to the bare list-stub on error so a single failing read doesn't break the page.
+  async getIssuerMetadata(issuer_id, keyInfoEntry) {
     try {
       const issuer = await this.api.secrets.pkiReadIssuer(issuer_id, this.secretMountPath.currentPath);
-      const keyInfo = listResponse.key_info[issuer_id];
       const isRoot = await verifyCertificates(issuer.certificate, issuer.certificate);
       const parsedCertificate = parseCertificate(issuer.certificate);
-      Object.assign(keyInfo, { ...keyInfo, ...issuer, isRoot, parsedCertificate });
+      return { ...keyInfoEntry, ...issuer, isRoot, parsedCertificate };
     } catch (e) {
-      return { ...listResponse.key_info[issuer_id], issuer_id };
+      return { ...keyInfoEntry };
     }
   }
 
@@ -34,13 +35,19 @@ export default class PkiIssuersListRoute extends Route {
         this.secretMountPath.currentPath,
         SecretsApiPkiListIssuersListEnum.TRUE
       );
-      // fetch full issuer data only if there are less than 10 issuers to avoid making too many requests
+
+      // fetch full issuer data only if there are 10 or fewer issuers to avoid making too many requests
+      let keyInfo = listResponse.key_info;
       if (listResponse.keys.length <= 10) {
-        await Promise.all(
-          listResponse.keys.map((issuer_id) => this.getIssuerMetadata(issuer_id, listResponse))
+        const enrichedEntries = await Promise.all(
+          listResponse.keys.map((issuer_id) =>
+            this.getIssuerMetadata(issuer_id, listResponse.key_info[issuer_id])
+          )
         );
+        keyInfo = Object.fromEntries(listResponse.keys.map((id, i) => [id, enrichedEntries[i]]));
       }
-      const issuers = this.api.keyInfoToArray(listResponse);
+
+      const issuers = this.api.keyInfoToArray({ ...listResponse, key_info: keyInfo }, 'issuer_id');
       return {
         issuers: paginate(issuers, { page }),
         parentModel,

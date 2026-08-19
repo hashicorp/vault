@@ -5,17 +5,19 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault/replication"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -98,7 +100,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 		replicationLagMillis: in.ReplicationPrimaryCanaryAgeMillis,
 	}
 	if in.ClusterAddr != "" {
-		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, ttlcache.DefaultTTL)
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
@@ -136,11 +138,29 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	return reply, nil
 }
 
+func (s *forwardedRequestRPCServer) SendControlHubCredentials(ctx context.Context, in *SendControlHubCredentialsRequest) (*SendControlHubCredentialsResponse, error) {
+	s.core.logger.Info("forwarding client: received control hub cluster credentials")
+	if s.core.HAState() == consts.Active {
+		err := s.core.ControlHubManager.WriteClusterCredentialsToStorage(ctx, in.ID, in.Value)
+		return &SendControlHubCredentialsResponse{}, err
+	} else {
+		return &SendControlHubCredentialsResponse{}, fmt.Errorf("node is not leader; cluster credentials are lost")
+	}
+}
+
 type forwardingClient struct {
 	RequestForwardingClient
 	core        *Core
 	echoTicker  *time.Ticker
 	echoContext context.Context
+}
+
+func (c *forwardingClient) SendControlHubCredentials(ctx context.Context, id string, value []byte) error {
+	_, err := c.RequestForwardingClient.SendControlHubCredentials(ctx, &SendControlHubCredentialsRequest{
+		ID:    id,
+		Value: value,
+	})
+	return err
 }
 
 // NOTE: we also take advantage of gRPC's keepalive bits, but as we send data

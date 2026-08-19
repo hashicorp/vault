@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Add a read-only YAML view option to the KV v2 secret details page, alongside the existing UI and JSON views.
+```

@@ -19,7 +19,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'aws-color',
     category: 'cloud',
     maskedParams: ['access_key_id', 'secret_access_key', 'identity_token_audience', 'identity_token_key'],
-    readonlyParams: ['name', 'region'],
+    readonlyParams: ['name', 'region', 'replica_regions'],
     defaultValues: {
       granularity: 'secret-path',
       credential_type: CredentialType.ACCOUNT,
@@ -70,7 +70,9 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'gcp-color',
     category: 'cloud',
     maskedParams: ['credentials', 'identity_token_audience', 'identity_token_key'],
-    readonlyParams: ['name'],
+    // encryption_type, kms_key_id, and replica_regions editing is disabled in the
+    // form, so exclude them from edit payloads
+    readonlyParams: ['name', 'encryption_type', 'kms_key_id', 'replica_regions'],
     defaultValues: {
       granularity: 'secret-path',
       credential_type: CredentialType.ACCOUNT,

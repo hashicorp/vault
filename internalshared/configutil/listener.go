@@ -135,6 +135,9 @@ type Listener struct {
 	ChrootNamespaceRaw interface{} `hcl:"chroot_namespace"`
 	ChrootNamespace    string      `hcl:"-"`
 
+	OperatorNamespacePathRaw interface{} `hcl:"operator_namespace_path"`
+	OperatorNamespacePath    string      `hcl:"-"`
+
 	// Per-listener redaction configuration
 	RedactAddressesRaw   any  `hcl:"redact_addresses"`
 	RedactAddresses      bool `hcl:"-"`
@@ -299,6 +302,7 @@ func parseListener(item *ast.ObjectItem) (*Listener, error) {
 		l.parseCORSSettings,
 		l.parseHTTPHeaderSettings,
 		l.parseChrootNamespaceSettings,
+		l.parseOperatorNamespaceSettings,
 		l.parseRedactionSettings,
 		l.parseDisableReplicationStatusEndpointSettings,
 		l.parseDisableRequestLimiter,
@@ -441,6 +445,27 @@ func (l *Listener) parseChrootNamespaceSettings() error {
 	}
 
 	l.ChrootNamespace = namespace.Canonicalize(setting)
+
+	return nil
+}
+
+// parseOperatorNamespaceSettings attempts to parse the raw listener
+// operator_namespace_path setting. This setting works in conjunction with the
+// global operator_namespace_path configuration to implement listener-isolated
+// access control. When an operator_namespace_path is defined globally, only
+// listeners with a matching operator_namespace_path can access that namespace.
+func (l *Listener) parseOperatorNamespaceSettings() error {
+	var (
+		err     error
+		setting string
+	)
+
+	err = parseAndClearString(&l.OperatorNamespacePathRaw, &setting)
+	if err != nil {
+		return fmt.Errorf("invalid value for operator_namespace_path: %w", err)
+	}
+
+	l.OperatorNamespacePath = namespace.Canonicalize(setting)
 
 	return nil
 }

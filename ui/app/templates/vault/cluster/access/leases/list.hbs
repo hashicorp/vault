@@ -115,7 +115,7 @@
     @currentPageSize={{this.model.meta.pageSize}}
     @route={{concat "vault.cluster.access.leases.list" (unless this.baseKey.id "-root")}}
     @showSizeSelector={{false}}
-    @totalItems={{this.model.meta.total}}
+    @totalItems={{this.model.meta.totalItems}}
     @queryFunction={{this.paginationQueryParams}}
   />
 {{else}}

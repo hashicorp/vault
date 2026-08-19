@@ -133,18 +133,18 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	var getCsrRequest keysutil.CsrRequestGetter
+	var createCsr keysutil.CsrCreator
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
 		factory, err := b.GetManagedKeyFactory(ctx)
 		if err != nil {
 			return nil, err
 		}
-		getCsrRequest = p.GetCsrRequestFromManagedKey(factory.GetManagedKeyParameters())
+		createCsr = p.CreateCsrWithManagedKeyVersion(factory.GetManagedKeyParameters())
 	} else {
-		getCsrRequest = p.GetCsrRequestFromKey
+		createCsr = p.CreateCsrWithKeyVersion
 	}
 
-	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate, getCsrRequest)
+	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate, createCsr)
 	if err != nil {
 		prefixedErr := fmt.Errorf("could not create the csr: %w", err)
 		switch err.(type) {
@@ -211,9 +211,13 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 		if err != nil {
 			return nil, err
 		}
-		validateKeyMatch = p.GetLeafCertKeyMatchValidatorFromManagedKey(factory.GetManagedKeyParameters())
+		validateKeyMatch = func(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+			return p.ValidateLeafCertKeyMatchWithManagedKeyVersion(keyVersion, certPublicKeyAlgorithm, certPublicKey, factory.GetManagedKeyParameters())
+		}
 	} else {
-		validateKeyMatch = p.GetLeafCertKeyMatchValidator()
+		validateKeyMatch = func(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+			return p.ValidateLeafCertKeyMatchWithNativeKeyVersion(keyVersion, certPublicKeyAlgorithm, certPublicKey)
+		}
 	}
 
 	err = p.ValidateAndPersistCertificateChain(ctx, keyVersion, certChain, validateKeyMatch, req.Storage)

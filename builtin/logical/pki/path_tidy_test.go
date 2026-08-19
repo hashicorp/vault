@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -358,7 +358,7 @@ func TestAutoTidyPersistsAcrossRestarts(t *testing.T) {
 	require.True(t, exists, "did not find last_auto_tidy_finished")
 
 	cluster.StopCore(t, 0)
-	cluster.StartCore(t, 0, opts)
+	cluster.StartCore(t, 0, opts, false)
 	cluster.UnsealCore(t, cluster.Cores[0])
 	vault.TestWaitActive(t, cluster.Cores[0].Core)
 

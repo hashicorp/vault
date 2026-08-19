@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
@@ -807,7 +807,13 @@ func (c *Core) mountInternalWithRequest(ctx context.Context, entry *MountEntry, 
 
 		// initialize, using the core's active context.
 		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
-		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{
+			Storage:       view,
+			MountPoint:    entry.Path,
+			MountType:     entry.Type,
+			MountAccessor: entry.Accessor,
+			BackendUUID:   entry.BackendAwareUUID,
+		})
 		if err != nil {
 			return err
 		}
@@ -1739,7 +1745,13 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				}
 
 				nsActiveContext := namespace.ContextWithNamespace(c.activeContext, localEntry.Namespace())
-				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
+				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{
+					Storage:       view,
+					MountPoint:    localEntry.Path,
+					MountType:     localEntry.Type,
+					MountAccessor: localEntry.Accessor,
+					BackendUUID:   localEntry.BackendAwareUUID,
+				})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}

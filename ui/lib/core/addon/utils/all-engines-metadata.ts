@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ENV from 'vault/config/environment';
-
 /**
  * Metadata configuration for secret and auth engines, including enterprise.
  *
@@ -24,6 +22,7 @@ import ENV from 'vault/config/environment';
  */
 
 export interface EngineDisplayData {
+  category?: string; // category for NEW grouping of engines - to replace pluginCategory
   pluginCategory?: string; // The plugin category is used to group engines in the UI. e.g., 'cloud', 'infra', 'generic'
   displayName: string;
   engineRoute?: string; // engines that have their own Ember engine will have this route defined.
@@ -37,6 +36,9 @@ export interface EngineDisplayData {
   type: string;
   value?: string;
   configRoute?: string; // override for custom route if not "configuration.plugin-settings" (used for Ember engines)
+  capabilities?: string[];
+  description?: string;
+  secretTypes?: string[]; // filter labels for the catalog secret type filter, e.g. 'cloud credentials', 'encryption keys'
 }
 
 /**
@@ -77,11 +79,15 @@ export const VERSIONED_ENGINE_TYPES = ['vault-plugin-secrets-kv', 'kv', 'generic
 
 export const ALL_ENGINES: EngineDisplayData[] = [
   {
+    category: 'cloud and infrastructure',
     pluginCategory: 'cloud',
     displayName: 'AliCloud',
     glyph: 'alibaba-color',
     mountCategory: ['auth', 'secret'],
     type: 'alicloud',
+    capabilities: ['dynamic', 'rotating'],
+    description: 'Manage dynamic secrets in AliCloud',
+    secretTypes: ['cloudCredentials'],
   },
   {
     pluginCategory: 'generic',
@@ -92,6 +98,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     value: 'approle',
   },
   {
+    category: 'common engines',
     pluginCategory: 'cloud',
     displayName: 'AWS',
     glyph: 'aws-color',
@@ -99,8 +106,12 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'aws',
+    capabilities: ['dynamic', 'rotating'],
+    description: 'Create dynamic credentials for MongoDB, MySQL, Elasticsearch, etc.',
+    secretTypes: ['cloudCredentials', 'apiKeysTokens'],
   },
   {
+    category: 'common engines',
     pluginCategory: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
@@ -109,13 +120,20 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'azure',
+    capabilities: ['dynamic', 'rotating'],
+    description: 'Manage dynamic secrets in Azure',
+    secretTypes: ['cloudCredentials', 'apiKeysTokens'],
   },
   {
+    category: 'cloud and infrastructure',
     pluginCategory: 'infra',
     displayName: 'Consul',
     glyph: 'consul-color',
     mountCategory: ['secret'],
     type: 'consul',
+    capabilities: ['dynamic'],
+    description: 'Store and retrieve secrets from Consul',
+    secretTypes: ['apiKeysTokens'],
   },
   {
     displayName: 'Cubbyhole',
@@ -123,11 +141,15 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     mountCategory: ['secret'],
   },
   {
+    category: 'common engines',
     pluginCategory: 'infra',
     displayName: 'Databases',
     glyph: 'database',
     mountCategory: ['secret'],
     type: 'database',
+    capabilities: ['dynamic', 'rotating'],
+    description: 'Create dynamic credentials for MongoDB, MySQL, Elasticsearch, etc.',
+    secretTypes: ['databaseCredentials'],
   },
   {
     pluginCategory: 'cloud',
@@ -138,6 +160,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     value: 'github',
   },
   {
+    category: 'common engines',
     pluginCategory: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
@@ -146,13 +169,20 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'gcp',
+    capabilities: ['dynamic', 'rotating'],
+    description: 'Manage GCP service account keys and secrets',
+    secretTypes: ['cloudCredentials', 'apiKeysTokens'],
   },
   {
+    category: 'cryptography and data protection',
     pluginCategory: 'cloud',
     displayName: 'Google Cloud KMS',
     glyph: 'gcp-color',
     mountCategory: ['secret'],
     type: 'gcpkms',
+    capabilities: ['encryption', 'signing'],
+    description: 'Integrate with Google Cloud KMS for encryption',
+    secretTypes: ['encryptionKeys'],
   },
   {
     pluginCategory: 'generic',
@@ -163,6 +193,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     value: 'jwt',
   },
   {
+    category: 'common engines',
     pluginCategory: 'generic',
     displayName: 'KV',
     engineRoute: 'kv.list',
@@ -170,8 +201,12 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     glyph: 'key-values',
     mountCategory: ['secret'],
     type: 'kv',
+    capabilities: ['static'],
+    description: 'Store static keys, including code snippets. No auto-rotating support.',
+    secretTypes: ['staticStorage'],
   },
   {
+    category: 'cryptography and data protection',
     pluginCategory: 'generic',
     displayName: 'KMIP',
     engineRoute: 'kmip.scopes.index',
@@ -182,8 +217,12 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     requiredFeature: 'KMIP',
     requiresEnterprise: true,
     type: 'kmip',
+    capabilities: ['encryption', 'certificate authority'],
+    description: 'Store and manage encryption keys using KMIP',
+    secretTypes: ['encryptionKeys', 'certificatesPki'],
   },
   {
+    category: 'cryptography and data protection',
     pluginCategory: 'generic',
     displayName: 'Transform',
     glyph: 'transform-data',
@@ -191,8 +230,12 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     requiredFeature: 'Transform Secrets Engine',
     requiresEnterprise: true,
     type: 'transform',
+    capabilities: ['encryption', 'tokenization'],
+    description: 'Perform data masking, encryption, and tokenization',
+    secretTypes: ['encryptionKeys'],
   },
   {
+    category: 'cryptography and data protection',
     pluginCategory: 'cloud',
     displayName: 'Key Management',
     glyph: 'key',
@@ -200,8 +243,12 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     requiredFeature: 'Key Management Secrets Engine',
     requiresEnterprise: true,
     type: 'keymgmt',
+    capabilities: ['encryption', 'signing'],
+    description: 'Centralize AWS, GCP, and Azure keys',
+    secretTypes: ['encryptionKeys', 'cloudCredentials'],
   },
   {
+    category: 'cloud and infrastructure',
     pluginCategory: 'generic',
     displayName: 'Kubernetes',
     engineRoute: 'kubernetes.overview',
@@ -210,8 +257,12 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     isConfigurable: true,
     mountCategory: ['auth', 'secret'],
     type: 'kubernetes',
+    capabilities: ['dynamic'],
+    description: 'Manage Kubernetes secrets and configurations',
+    secretTypes: ['apiKeysTokens'],
   },
   {
+    category: 'identity and access',
     pluginCategory: 'generic',
     displayName: 'LDAP',
     isConfigurable: true,
@@ -220,13 +271,20 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     glyph: 'folder-users',
     mountCategory: ['auth', 'secret'],
     type: 'ldap',
+    capabilities: ['static', 'dynamic', 'rotating'],
+    description: 'Create auto-rotating static roles and dynamic roles for your AD, RACF, or OpenLDAP',
+    secretTypes: ['staticStorage', 'apiKeysTokens'],
   },
   {
+    category: 'cloud and infrastructure',
     pluginCategory: 'infra',
     displayName: 'Nomad',
     glyph: 'nomad-color',
     mountCategory: ['secret'],
     type: 'nomad',
+    capabilities: ['dynamic'],
+    description: 'Manage secrets for Nomad jobs and services',
+    secretTypes: ['apiKeysTokens'],
   },
   {
     pluginCategory: 'generic',
@@ -245,6 +303,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     value: 'okta',
   },
   {
+    category: 'cryptography and data protection',
     pluginCategory: 'generic',
     displayName: 'Private PKI',
     isConfigurable: true,
@@ -253,22 +312,23 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     glyph: 'certificate',
     mountCategory: ['secret'],
     type: 'pki',
+    capabilities: ['dynamic', 'certificate authority'],
+    description: 'Generate and manage internal X.509 certificates',
+    secretTypes: ['certificatesPki'],
   },
-  ...(ENV.environment !== 'production'
-    ? [
-        {
-          pluginCategory: 'generic',
-          displayName: 'Public PKI',
-          isConfigurable: true,
-          engineRoute: 'pki.external.overview',
-          configRoute: 'pki.external.configuration',
-          glyph: 'certificate',
-          mountCategory: ['secret'],
-          requiresEnterprise: true,
-          type: 'pki-external-ca',
-        },
-      ]
-    : []),
+  {
+    category: 'cryptography and data protection',
+    pluginCategory: 'generic',
+    displayName: 'Public PKI',
+    engineRoute: 'pki.external.overview',
+    glyph: 'certificate',
+    mountCategory: ['secret'],
+    requiresEnterprise: true,
+    type: 'pki-external-ca',
+    capabilities: ['dynamic', 'certificate authority'],
+    description: 'Generate and manage X.509 certificates',
+    secretTypes: ['certificatesPki'],
+  },
   {
     pluginCategory: 'infra',
     displayName: 'RADIUS',
@@ -278,11 +338,15 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     value: 'radius',
   },
   {
+    category: 'cloud and infrastructure',
     pluginCategory: 'infra',
     displayName: 'RabbitMQ',
     glyph: 'rabbitmq-color',
     mountCategory: ['secret'],
     type: 'rabbitmq',
+    capabilities: ['dynamic', 'rotating'],
+    description: 'Generate dynamic credentials for RabbitMQ',
+    secretTypes: ['apiKeysTokens'],
   },
   {
     pluginCategory: 'generic',
@@ -294,12 +358,16 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     value: 'saml',
   },
   {
+    category: 'identity and access',
     pluginCategory: 'generic',
     displayName: 'SSH',
     glyph: 'terminal-screen',
     isConfigurable: true,
     mountCategory: ['secret'],
     type: 'ssh',
+    capabilities: ['dynamic', 'signing'],
+    description: 'Enable secure access to servers using SSH',
+    secretTypes: ['sshKeys'],
   },
   {
     pluginCategory: 'generic',
@@ -310,22 +378,31 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     value: 'cert',
   },
   {
+    category: 'identity and access',
     pluginCategory: 'generic',
     displayName: 'TOTP',
     glyph: 'history',
     mountCategory: ['secret'],
     type: 'totp',
+    capabilities: ['dynamic'],
+    description: 'Generate time-based one-time passwords for MFA',
+    secretTypes: ['apiKeysTokens'],
   },
   {
+    category: 'cryptography and data protection',
     pluginCategory: 'generic',
     displayName: 'Transit',
     glyph: 'swap-horizontal',
     mountCategory: ['secret'],
     type: 'transit',
+    capabilities: ['encryption', 'signing'],
+    description: 'Secure data with cryptography as a service, including post-quantum',
+    secretTypes: ['encryptionKeys'],
   },
   {
     displayName: 'Token',
     type: 'token',
+    glyph: 'users',
     mountCategory: ['auth'],
   },
   {

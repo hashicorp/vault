@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cert_count"
 	"github.com/hashicorp/vault/version"
 	"github.com/stretchr/testify/require"
@@ -22,26 +23,26 @@ func init() {
 	}
 }
 
-func (c *TestClusterCore) StopPkiCertificateCountConsumerJob() {
-	mgr := c.Core.certCountManager.(cert_count.CertificateCountManager)
+func (c *Core) StopPkiCertificateCountConsumerJob() {
+	mgr := c.certCountManager.(cert_count.CertificateCountManager)
 	mgr.StopConsumerJob()
 }
 
-func (c *TestClusterCore) ResetPkiCertificateCounts() {
-	mgr := c.Core.certCountManager.(cert_count.CertificateCountManager)
-	c.pkiCertificateCountData = mgr.GetCounts()
+func (c *Core) ResetPkiCertificateCounts() logical.CertCount {
+	mgr := c.certCountManager.(cert_count.CertificateCountManager)
+	return mgr.GetCounts()
 }
 
-func (c *TestClusterCore) RequirePkiCertificateCounts(t testing.TB, expectedIssuedCount, expectedStoredCount int) {
+func (c *Core) RequirePkiCertificateCounts(t testing.TB, baseline *logical.CertCount, expectedIssuedCount, expectedStoredCount int) {
 	t.Helper()
-	mgr := c.Core.certCountManager.(cert_count.CertificateCountManager)
+	mgr := c.certCountManager.(cert_count.CertificateCountManager)
 	actualCount := mgr.GetCounts()
 
-	actualCount.IssuedCerts -= c.pkiCertificateCountData.IssuedCerts
-	actualCount.StoredCerts -= c.pkiCertificateCountData.StoredCerts
+	actualCount.IssuedCerts -= baseline.IssuedCerts
+	actualCount.StoredCerts -= baseline.StoredCerts
 
-	c.pkiCertificateCountData.IssuedCerts += uint64(expectedIssuedCount)
-	c.pkiCertificateCountData.StoredCerts += uint64(expectedStoredCount)
+	baseline.IssuedCerts += uint64(expectedIssuedCount)
+	baseline.StoredCerts += uint64(expectedStoredCount)
 
 	require.Equal(t, expectedIssuedCount, int(actualCount.IssuedCerts), "PKI certificate issued count mismatch")
 	require.Equal(t, expectedStoredCount, int(actualCount.StoredCerts), "PKI certificate stored count mismatch")

@@ -119,14 +119,16 @@ func (c *Client) Do(ctx context.Context, req Requester) (*http.Response, error) 
 	}
 	httpReq, err := req.Request(c.Environment)
 	if err != nil {
-		slog.Default().ErrorContext(slogctx.Append(ctx,
-			append(logArgs, slog.String("error", err.Error()))),
+		slog.Default().ErrorContext(
+			slogctx.Append(ctx,
+				append(logArgs, slog.String("error", err.Error()))),
 			"performing request",
 		)
 		return nil, err
 	}
 
-	logArgs = append(logArgs,
+	logArgs = append(
+		logArgs,
 		slog.String("method", httpReq.Method),
 		slog.String("url", httpReq.URL.String()),
 	)

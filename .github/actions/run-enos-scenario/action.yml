@@ -112,7 +112,13 @@ runs:
       name: Prepare artifacts and debug directory
       shell: bash
       run: |
-        artifact_name="enos-debug-data_$(echo "${{ inputs.scenario-filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+        # Determine our debug data artifact name. We'll convert the scenario
+        # name into a safe file name, reduce it down and add some random chars
+        # to avoid very unlikely name conflicts. We don't use the full scenario
+        # as we want to ensure we're well below the 255 char max.
+        scenario_name="$(echo "${{ inputs.scenario-filter }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')"
+        random_suffix=$(printf '%05d' $RANDOM)
+        artifact_name="enos-debug-data_${scenario_name:0:207}_${random_suffix}"
         debug_dir="${{ inputs.debug-data-path }}"
         if [ -z "${debug_dir}" ]; then
           debug_dir="${ENOS_DEBUG_DATA_ROOT_DIR:-/tmp/enos-debug-data}"

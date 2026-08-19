@@ -22,7 +22,7 @@
     <VaultLogoSpinner />
   {{else}}
     {{#if this.activityData}}
-      <Hds::Table class="has-top-margin-s" @caption="Client count">
+      <Hds::Table class="has-top-margin-s is-overflow-hidden" @caption="Client count">
         <:body as |B|>
           <B.Tr data-test-table-row="0">
             <B.Td class="one-half-width" data-test-table-data="total">Total</B.Td>

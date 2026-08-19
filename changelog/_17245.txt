@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Scroll to top of page when loading step 3 of the namespace creation wizard
+```

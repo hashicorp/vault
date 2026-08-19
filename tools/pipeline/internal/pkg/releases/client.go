@@ -48,7 +48,8 @@ func NewClient() *Client {
 
 // GetRelease takes a context, product, edition, and version and returns the relase information.
 func (c *Client) GetRelease(ctx context.Context, product string, edition LicenseClass, version string) (*models.Release, error) {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("product", product),
 		slog.String("edition", string(edition)),
 		slog.String("version", version),
@@ -77,7 +78,8 @@ func (c *Client) ListVersions(ctx context.Context, product string, edition Licen
 	default:
 	}
 
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("product", product),
 		slog.String("edition", string(edition)),
 		slog.String("ceil", ceil.String()),

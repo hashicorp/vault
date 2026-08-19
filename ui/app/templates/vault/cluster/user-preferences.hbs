@@ -1,0 +1,24 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Sidebar::Nav::Cluster />
+
+<Page::Header @title="Preferences" class="has-bottom-margin-l" data-test-user-preferences-title>
+  <:description>
+    Vault UI preferences are stored in this browser only. See our
+    <Hds::Link::Inline @isHrefExternal={{true}} @href="https://www.hashicorp.com/privacy">
+      Privacy Policy
+    </Hds::Link::Inline>
+    for more information.
+  </:description>
+
+  <:breadcrumbs>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item @text="Vault" @icon="vault" @route="vault.cluster.dashboard" />
+      <Hds::Breadcrumb::Item @text="Preferences" @route="vault.cluster.user-preferences" />
+    </Hds::Breadcrumb>
+  </:breadcrumbs>
+</Page::Header>
+
+<UserPreferences::DataPrivacy />

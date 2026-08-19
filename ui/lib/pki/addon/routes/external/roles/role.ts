@@ -6,38 +6,81 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { ModelFrom } from 'vault/vault/route';
+import { SecretsApiPkiExternalCaListRoleActiveOrdersListEnum } from '@hashicorp/vault-client-typescript';
+import timestamp from 'core/utils/timestamp';
 
+import type { Breadcrumb } from 'vault/app-types';
+import type { ExternalRouteModel } from 'pki/routes/external';
+import type ApiService from 'vault/services/api';
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type { Breadcrumb } from 'vault/app-types';
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export type RoleRouteModel = ModelFrom<PkiExternalRolesRoleRoute>;
 
 interface RouteController extends Controller {
-  breadcrumbs: Array<Breadcrumb>;
+  generateCrumbs: (isOrderRoute: boolean, path: string, roleName: string) => Array<Breadcrumb>;
 }
 
 export default class PkiExternalRolesRoleRoute extends Route {
+  @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
 
-  model() {
-    const { role_name } = this.paramsFor('external.roles.role') as { role_name: string };
+  async fetchActiveOrders(roleName: string) {
+    let list: string[] = [];
+    let error;
+    try {
+      const resp = await this.api.secrets.pkiExternalCaListRoleActiveOrders(
+        roleName,
+        this.secretMountPath.currentPath,
+        SecretsApiPkiExternalCaListRoleActiveOrdersListEnum.TRUE
+      );
+      list = resp.keys ?? [];
+    } catch (e) {
+      // Catch all errors, the active-orders route will throw if necessary
+      error = await this.api.parseError(e);
+    }
+
+    return { list, error };
+  }
+
+  async model({ role_name }: { role_name: string }) {
+    const { engine } = this.modelFor('external') as ExternalRouteModel;
+    const role = await this.api.secrets.pkiExternalCaReadRole(role_name, this.secretMountPath.currentPath);
+    const activeOrders = await this.fetchActiveOrders(role_name);
+
     return {
-      engine: this.modelFor('application') as SecretsEngineResource,
+      engine,
       role_name,
+      role,
+      activeOrders,
+      responseTimestamp: timestamp.now(),
     };
   }
 
-  setupController(controller: RouteController, resolvedModel: RoleRouteModel) {
-    super.setupController(controller, resolvedModel);
-    const { currentPath } = this.secretMountPath;
-    controller.breadcrumbs = [
+  // Breadcrumbs and tabs are rendered in the parent template so they remain visible even when a
+  // child route throws an error. The "roles.role.order" child route needs to render different breadcrumbs
+  // so the template calls this function with the current route state (via matches-current-url).
+  // This also avoids us having to duplicate HeaderTabs in each child or using controllerFor to reach across routes.
+  generateCrumbs = (isOrderRoute: boolean, roleName: string): Array<Breadcrumb> => {
+    const path = this.secretMountPath.currentPath;
+    const base: Array<Breadcrumb> = [
       { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },
-      { label: currentPath, route: 'external.overview', model: currentPath },
-      { label: 'Roles', route: 'external.roles', model: currentPath },
-      { label: resolvedModel.role_name },
+      { label: path, route: 'external.overview', model: path },
+      { label: 'Roles', route: 'external.roles', model: path },
     ];
+    if (isOrderRoute) {
+      return [
+        ...base,
+        { label: roleName, route: 'external.roles.role', models: [path, roleName] },
+        { label: 'View order' },
+      ];
+    }
+    return [...base, { label: roleName }];
+  };
+
+  setupController(controller: RouteController, resolvedModel: RoleRouteModel) {
+    super.setupController(controller, resolvedModel);
+    controller.generateCrumbs = this.generateCrumbs;
   }
 }

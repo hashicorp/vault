@@ -94,7 +94,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 		return logical.ErrorResponse(fmt.Sprintf("provider %s is not among the supported ones %v", preferredProvider, b.getSupportedProviders())), nil
 	}
 
-	defer b.verifyCache.Delete(nonce)
+	defer b.verifyCache.Delete(nonce) // ttlcache Delete is a no-op if key doesn't exist
 
 	policies, resp, groupNames, err := b.Login(ctx, req, username, password, totp, nonce, preferredProvider)
 	// Handle an internal error
@@ -220,14 +220,14 @@ retrieve the number verification challenge for the matching request.`,
 func (b *backend) pathVerify(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	nonce := d.Get("nonce").(string)
 
-	correctRaw, ok := b.verifyCache.Get(nonce)
-	if !ok {
+	correctItem := b.verifyCache.Get(nonce)
+	if correctItem == nil {
 		return nil, nil
 	}
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
-			"correct_answer": correctRaw.(int),
+			"correct_answer": correctItem.Value(),
 		},
 	}
 

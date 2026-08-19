@@ -58,12 +58,22 @@ resource "enos_remote_exec" "promote_dr_secondary" {
     VAULT_TOKEN = var.vault_root_token
   }
 
-  inline = ["${var.vault_install_dir}/vault write -f sys/replication/dr/secondary/promote dr_operation_token=${local.dr_operation_token}"]
-
+  inline = ["${var.vault_install_dir}/vault write -format=json sys/replication/dr/secondary/promote dr_operation_token=${local.dr_operation_token}"]
 
   transport = {
     ssh = {
       host = var.secondary_leader_host.public_ip
     }
   }
+}
+
+locals {
+  # Parse the JSON response from the promote command to extract the new root token
+  promote_response = try(jsondecode(enos_remote_exec.promote_dr_secondary.stdout), {})
+  new_root_token   = try(local.promote_response.auth.client_token, var.vault_root_token)
+}
+
+output "new_root_token" {
+  description = "The new root token generated after DR promotion"
+  value       = local.new_root_token
 }

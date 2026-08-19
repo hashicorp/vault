@@ -231,13 +231,59 @@ func TestGRPCBackendPlugin_Setup(t *testing.T) {
 }
 
 func TestGRPCBackendPlugin_Initialize(t *testing.T) {
-	b, cleanup := testGRPCBackend(t)
-	defer cleanup()
+	t.Run("empty request", func(t *testing.T) {
+		b, cleanup := testGRPCBackend(t)
+		defer cleanup()
 
-	err := b.Initialize(context.Background(), &logical.InitializationRequest{})
-	if err != nil {
-		t.Fatal(err)
-	}
+		err := b.Initialize(context.Background(), &logical.InitializationRequest{})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("with mount metadata", func(t *testing.T) {
+		b, cleanup := testGRPCBackend(t)
+		defer cleanup()
+
+		err := b.Initialize(context.Background(), &logical.InitializationRequest{
+			MountPoint:    "pki-ext/",
+			MountType:     "pki-external-ca",
+			MountAccessor: "pki-external-ca_abc123",
+			BackendUUID:   "test-uuid-1234",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Read back via the mock's init-req path to assert the fields
+		// travelled correctly over the gRPC wire.
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "init-req",
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		wantMountPoint := "pki-ext/"
+		wantMountType := "pki-external-ca"
+		wantMountAccessor := "pki-external-ca_abc123"
+		wantBackendUUID := "test-uuid-1234"
+		if got := resp.Data["mount_point"]; got != wantMountPoint {
+			t.Errorf("mount_point: got %q, want %q", got, wantMountPoint)
+		}
+		if got := resp.Data["mount_type"]; got != wantMountType {
+			t.Errorf("mount_type: got %q, want %q", got, wantMountType)
+		}
+		if got := resp.Data["mount_accessor"]; got != wantMountAccessor {
+			t.Errorf("mount_accessor: got %q, want %q", got, wantMountAccessor)
+		}
+		if got := resp.Data["backend_uuid"]; got != wantBackendUUID {
+			t.Errorf("backend_uuid: got %q, want %q", got, wantBackendUUID)
+		}
+	})
 }
 
 func TestGRPCBackendPlugin_Version(t *testing.T) {

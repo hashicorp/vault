@@ -161,6 +161,14 @@ type Request struct {
 	// callers distinguish "claim missing" from "claim present but empty".
 	JwtAuthorizationDetailsClaimPresent bool `json:"jwt_authorization_details_claim_present,omitempty" structs:"jwt_authorization_details_claim_present" mapstructure:"jwt_authorization_details_claim_present"`
 
+	// OAuthJwtValidated is set to true after validateOAuthJwtAndFetchEntity has
+	// successfully completed for this request (JWT signature verified, entity
+	// resolved, token entry materialized). fetchACLTokenEntryAndEntity checks
+	// this flag to skip the full validation on subsequent calls within the same
+	// request lifecycle — e.g. when pathInternalUIMountRead re-invokes it after
+	// CheckToken has already done the work.
+	OAuthJwtValidated bool `json:"oauth_jwt_validated,omitempty" structs:"oauth_jwt_validated" mapstructure:"oauth_jwt_validated"`
+
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
 	ClientTokenAccessor string `json:"client_token_accessor" structs:"client_token_accessor" mapstructure:"client_token_accessor" sentinel:""`
@@ -514,10 +522,11 @@ const (
 	RecoverOperation                  = "recover"
 
 	// The operations below are called globally, the path is less relevant.
-	RevokeOperation   Operation = "revoke"
-	RenewOperation              = "renew"
-	RollbackOperation           = "rollback"
-	RotationOperation           = "rotate"
+	RevokeOperation      Operation = "revoke"
+	RenewOperation                 = "renew"
+	RollbackOperation              = "rollback"
+	RotationOperation              = "rotate"
+	HealthCheckOperation           = "health-check"
 )
 
 type MFACreds map[string][]string
@@ -527,6 +536,25 @@ type MFACreds map[string][]string
 type InitializationRequest struct {
 	// Storage can be used to durably store and retrieve state.
 	Storage Storage
+
+	// MountPoint is the path at which the backend is mounted (e.g. "pki/").
+	//
+	// WARNING: plugins should not rely on MountPoint being static. Mounts can be
+	// moved to a different path after the backend has been initialized. Use this
+	// value only for informational purposes such as logging or billing attribution,
+	// never as a stable key or identifier.
+	MountPoint string
+
+	// MountType is the type name of the backend (e.g. "pki-external-ca").
+	MountType string
+
+	// MountAccessor is the accessor string for the mount
+	// (e.g. "pki-external-ca_abc123").
+	MountAccessor string
+
+	// BackendUUID is the unique identifier for this backend instance, sourced
+	// from the mount entry. It is stable across restarts and leadership changes.
+	BackendUUID string
 }
 
 type CustomHeader struct {

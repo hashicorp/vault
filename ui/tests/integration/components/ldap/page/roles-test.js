@@ -33,6 +33,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
       pageSize: 10,
       filteredTotal: this.roles.length,
       total: this.roles.length,
+      totalItems: this.roles.length,
     };
     const getPerms = (type) => ({
       canDelete: true,

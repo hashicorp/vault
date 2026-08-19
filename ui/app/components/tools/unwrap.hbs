@@ -13,9 +13,7 @@
 </Page::Header>
 
 {{#if this.unwrapData}}
-  <Hds::Tabs as |T|>
-    <T.Tab data-test-tab="data">Data</T.Tab>
-    <T.Tab data-test-tab="details">Wrap Details</T.Tab>
+  <Page::Tabs @tabs={{array (hash key="data" label="Data") (hash key="details" label="Wrap Details")}} as |T|>
     <T.Panel>
       <JsonEditor
         class="has-top-padding-m"
@@ -31,7 +29,7 @@
         {{/each-in}}
       </div>
     </T.Panel>
-  </Hds::Tabs>
+  </Page::Tabs>
   <Hds::ButtonSet class="has-top-padding-m">
     <Hds::Copy::Button
       @text="Copy unwrapped data"

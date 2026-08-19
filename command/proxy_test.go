@@ -237,8 +237,13 @@ func TestProxy_NoTriggerAutoAuth_BadPolicy(t *testing.T) {
 
 	serverClient := cluster.Cores[0].Client
 
+	err := serverClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
+
 	// Add a secret to the KV engine
-	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{"user": "something"})
+	_, err = serverClient.Logical().Write("secret/foo", map[string]interface{}{"user": "something"})
 	require.NoError(t, err)
 
 	// Create kv read policy
@@ -1623,7 +1628,12 @@ func TestProxy_ApiProxy_Retry(t *testing.T) {
 	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
 	os.Unsetenv(api.EnvVaultAddress)
 
-	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{
+	err := serverClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
+
+	_, err = serverClient.Logical().Write("secret/foo", map[string]interface{}{
 		"bar": "baz",
 	})
 	if err != nil {

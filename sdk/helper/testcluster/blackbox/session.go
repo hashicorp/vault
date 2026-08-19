@@ -21,10 +21,11 @@ import (
 
 // Session holds the test context and Vault client
 type Session struct {
-	t         *testing.T
-	NoCleanup bool
-	Client    *api.Client
-	Namespace string
+	t             *testing.T
+	NoCleanup     bool
+	SkipNamespace bool
+	Client        *api.Client
+	Namespace     string
 }
 
 func (s *Session) T() *testing.T {
@@ -36,6 +37,12 @@ type SessionOpts func(s *Session)
 func WithNoCleanup() SessionOpts {
 	return func(s *Session) {
 		s.NoCleanup = true
+	}
+}
+
+func WithoutNamespace() SessionOpts {
+	return func(s *Session) {
+		s.SkipNamespace = true
 	}
 }
 
@@ -91,6 +98,22 @@ func New(t *testing.T, opts ...SessionOpts) *Session {
 		}
 	}
 
+	session := &Session{
+		t:      t,
+		Client: privClient,
+	}
+
+	// Apply options first to check if namespace should be skipped
+	for opt := range slices.Values(opts) {
+		opt(session)
+	}
+
+	// Skip namespace creation if requested
+	if session.SkipNamespace {
+		t.Log("Skipping namespace creation, using root namespace")
+		return session
+	}
+
 	// Use timestamp to ensure uniqueness across test retries
 	nsName := fmt.Sprintf("bbsdk-%d-%s", time.Now().UnixNano(), randomString(8))
 	nsURLPath := fmt.Sprintf("sys/namespaces/%s", nsName)
@@ -130,15 +153,8 @@ func New(t *testing.T, opts ...SessionOpts) *Session {
 	sessionClient.SetToken(token)
 	sessionClient.SetNamespace(fullNSPath)
 
-	session := &Session{
-		t:         t,
-		Client:    sessionClient,
-		Namespace: nsName,
-	}
-
-	for opt := range slices.Values(opts) {
-		opt(session)
-	}
+	session.Client = sessionClient
+	session.Namespace = nsName
 
 	t.Cleanup(func() {
 		if session.NoCleanup {
@@ -171,34 +187,69 @@ func randomString(n int) string {
 	return hex.EncodeToString(bytes)
 }
 
+// SkipIfVersionBelow is a package-level helper that skips the test if the Vault
+// version (from VAULT_VERSION) is below minVersion. It can be called before
+// blackbox.New so that namespace creation is never attempted on unsupported builds.
+// Example usage: blackbox.SkipIfVersionBelow(t, "2.0.0")
+func SkipIfVersionBelow(t *testing.T, minVersion string) {
+	t.Helper()
+
+	vaultVersion := os.Getenv("VAULT_VERSION")
+	if vaultVersion == "" {
+		t.Skip("VAULT_VERSION environment variable not set, skipping version check")
+		return
+	}
+
+	currentVer, err := version.NewVersion(vaultVersion)
+	if err != nil {
+		t.Fatalf("Failed to parse VAULT_VERSION '%s': %v", vaultVersion, err)
+	}
+
+	minVer, err := version.NewVersion(minVersion)
+	if err != nil {
+		t.Fatalf("Invalid minimum version constraint '%s': %v", minVersion, err)
+	}
+
+	if currentVer.LessThan(minVer) {
+		t.Skipf("Vault version %s is below required version %s", currentVer.String(), minVer.String())
+	}
+}
+
 // SkipIfVersionBelow skips the test if the Vault version is below the specified constraint.
 // The version is read from the VAULT_VERSION environment variable.
 // Example usage: s.SkipIfVersionBelow("2.0.0")
 func (s *Session) SkipIfVersionBelow(minVersion string) {
 	s.t.Helper()
+	SkipIfVersionBelow(s.t, minVersion)
+}
 
-	vaultVersion := os.Getenv("VAULT_VERSION")
-	if vaultVersion == "" {
-		s.t.Skip("VAULT_VERSION environment variable not set, skipping version check")
+// SkipIfEdition is a package-level helper that skips the test if the current
+// Vault edition (from VAULT_EDITION) matches any of the provided editions.
+// Valid editions: "ce", "ent", "ent.hsm", "ent.fips1403", "ent.hsm.fips1403".
+// It can be called before blackbox.New to avoid namespace creation on incompatible editions.
+// Example usage: blackbox.SkipIfEdition(t, "ce")
+func SkipIfEdition(t *testing.T, editions ...string) {
+	t.Helper()
+
+	vaultEdition := os.Getenv("VAULT_EDITION")
+	if vaultEdition == "" {
+		t.Skip("VAULT_EDITION environment variable not set, skipping edition check")
 		return
 	}
 
-	// Parse the current Vault version
-	currentVer, err := version.NewVersion(vaultVersion)
-	if err != nil {
-		s.t.Fatalf("Failed to parse VAULT_VERSION '%s': %v", vaultVersion, err)
+	for _, e := range editions {
+		if vaultEdition == e {
+			t.Skipf("skipping: test not applicable for Vault edition %q", vaultEdition)
+		}
 	}
+}
 
-	// Parse the minimum required version
-	minVer, err := version.NewVersion(minVersion)
-	if err != nil {
-		s.t.Fatalf("Invalid minimum version constraint '%s': %v", minVersion, err)
-	}
-
-	// Skip if current version is less than minimum required
-	if currentVer.LessThan(minVer) {
-		s.t.Skipf("Vault version %s is below required version %s", currentVer.String(), minVer.String())
-	}
+// SkipIfEdition skips the test if the current Vault edition matches any of the provided editions.
+// The edition is read from the VAULT_EDITION environment variable.
+// Example usage: s.SkipIfEdition("ce")
+func (s *Session) SkipIfEdition(editions ...string) {
+	s.t.Helper()
+	SkipIfEdition(s.t, editions...)
 }
 
 // SkipIfVersionAbove skips the test if the Vault version is above the specified constraint.

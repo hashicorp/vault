@@ -12,9 +12,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/armon/go-radix"
 	"github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -686,8 +686,10 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 
 		switch {
-		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, consts.LegacyServiceTokenPrefix) &&
-			!strings.HasPrefix(req.ClientToken, consts.ServiceTokenPrefix):
+		case te.NamespaceID == namespace.RootNamespaceID &&
+			!strings.HasPrefix(req.ClientToken, consts.LegacyServiceTokenPrefix) &&
+			!strings.HasPrefix(req.ClientToken, consts.ServiceTokenPrefix) &&
+			!strings.HasPrefix(req.ClientToken, consts.GetOAuthJwtPrefix()):
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			salt, err := r.tokenStoreSaltFunc(ctx)

@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 
 interface VaultListenerConfig {
-  tls_disable?: boolean;
+  tls_disable?: boolean | string;
   tls_cert_file?: string;
   tls_key_file?: string;
 }
@@ -45,12 +45,16 @@ export interface Args {
  */
 
 export default class DashboardWidgetsClusterConfiguration extends Component<Args> {
+  isTlsDisabled(tlsDisable?: boolean | string) {
+    return tlsDisable === true || tlsDisable === 'true';
+  }
+
   get tls() {
     // since the default for tls_disable is false it may not be in the config
     // consider tls enabled if tls_disable is undefined or false AND both tls_cert_file and tls_key_file are defined
     const tlsListener = this.args.vaultConfiguration?.listeners?.find((listener) => {
       const { tls_disable, tls_cert_file, tls_key_file } = listener.config || {};
-      return !tls_disable && tls_cert_file && tls_key_file;
+      return !this.isTlsDisabled(tls_disable) && tls_cert_file && tls_key_file;
     });
 
     return tlsListener ? 'Enabled' : 'Disabled';

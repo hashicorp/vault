@@ -1,0 +1,14 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{! This error template renders when a request fails to read role details, active-orders, or a role's order  }}
+
+<Page::Error @error={{this.model}} @titleTag="h2">
+  <:customFooter as |AppState|>
+    <AppState.Footer as |F|>
+      <F.LinkStandalone @icon="arrow-left" @text="Role overview" @route="external.roles.role.overview" />
+    </AppState.Footer>
+  </:customFooter>
+</Page::Error>

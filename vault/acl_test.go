@@ -1605,7 +1605,7 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				},
 				"case_sensitive_value_matching": {
 					parameters: `{"allowedParam": "ALLOWEDVALUE"}`,
-					allowed:    false,
+					allowed:    false, // non-policies params remain case-sensitive
 				},
 			},
 		},
@@ -1655,7 +1655,103 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				},
 				"case_sensitive_value_matching": {
 					parameters: `{"deniedParam": "DENIEDVALUE"}`,
+					allowed:    true, // non-policies params remain case-sensitive
+				},
+				"mixed_case_value_does_not_match_denied": {
+					parameters: `{"deniedParam": "DeniedValue"}`,
+					allowed:    true, // non-policies params remain case-sensitive
+				},
+			},
+		},
+		"token_policies_denied_parameters_case_folding": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"token_policies" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				// String form — works in both legacy and new slice matching.
+				"exact_lowercase_string_is_denied": {
+					parameters: `{"token_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"mixed_case_string_is_also_denied": {
+					parameters: `{"token_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"all_caps_string_is_also_denied": {
+					parameters: `{"token_policies": "SUPER-ADMIN"}`,
+					allowed:    false,
+				},
+				"non_denied_string_value_is_allowed": {
+					parameters: `{"token_policies": "default"}`,
 					allowed:    true,
+				},
+				// List form — only meaningful with new slice matching; legacy mode
+				// compares the whole slice value and would never match a string entry.
+				"exact_lowercase_list_is_denied": {
+					parameters:           `{"token_policies": ["super-admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"mixed_case_list_is_also_denied": {
+					parameters:           `{"token_policies": ["Super-Admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"all_caps_list_is_also_denied": {
+					parameters:           `{"token_policies": ["SUPER-ADMIN"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"non_denied_list_value_is_allowed": {
+					parameters:           `{"token_policies": ["default"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"token_policies_allowed_parameters_case_folding": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"token_policies" = ["read-only"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				// String form — works in both legacy and new slice matching.
+				"exact_lowercase_string_is_allowed": {
+					parameters: `{"token_policies": "read-only"}`,
+					allowed:    true,
+				},
+				"mixed_case_string_is_also_allowed": {
+					parameters: `{"token_policies": "Read-Only"}`,
+					allowed:    true,
+				},
+				"non_allowed_string_value_is_denied": {
+					parameters: `{"token_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				// List form — only meaningful with new slice matching.
+				"exact_lowercase_list_is_allowed": {
+					parameters:           `{"token_policies": ["read-only"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"mixed_case_list_is_also_allowed": {
+					parameters:           `{"token_policies": ["Read-Only"]}`,
+					allowed:              true,
+					onlyNewSliceMatching: true,
+				},
+				"non_allowed_list_value_is_denied": {
+					parameters:           `{"token_policies": ["super-admin"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
 				},
 			},
 		},

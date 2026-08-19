@@ -117,7 +117,8 @@ type PluginBackend struct {
 }
 
 // startBackend starts a plugin backend
-func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storage) error {
+func (b *PluginBackend) startBackend(ctx context.Context, req *logical.Request) error {
+	storage := req.Storage
 	pluginName := b.config.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
 	if err != nil {
@@ -155,14 +156,21 @@ func (b *PluginBackend) startBackend(ctx context.Context, storage logical.Storag
 	b.Backend = nb
 	b.loaded = true
 
-	// call Initialize() explicitly here.
-	return b.Backend.Initialize(ctx, &logical.InitializationRequest{
-		Storage: storage,
-	})
+	// Call Initialize() explicitly here. Mount metadata is read directly from
+	// the triggering request — it is always present on any real Vault request
+	// — and BackendUUID comes from the stable BackendConfig.
+	initReq := &logical.InitializationRequest{
+		Storage:       storage,
+		MountPoint:    req.MountPoint,
+		MountType:     req.MountType,
+		MountAccessor: req.MountAccessor,
+		BackendUUID:   b.config.BackendUUID,
+	}
+	return b.Backend.Initialize(ctx, initReq)
 }
 
 // lazyLoad lazy-loads the backend before running a method
-func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Storage, methodWrapper func() error) error {
+func (b *PluginBackend) lazyLoadBackend(ctx context.Context, req *logical.Request, methodWrapper func() error) error {
 	b.RLock()
 	canary := b.canary
 
@@ -173,7 +181,7 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Sto
 		b.Lock()
 		// Check once more after lock swap
 		if !b.loaded {
-			err := b.startBackend(ctx, storage)
+			err := b.startBackend(ctx, req)
 			if err != nil {
 				b.Unlock()
 				return err
@@ -194,7 +202,7 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Sto
 		b.Lock()
 		if b.canary == canary {
 			b.Backend.Logger().Debug("reloading plugin backend", "plugin", b.config.Config["plugin_name"])
-			err := b.startBackend(ctx, storage)
+			err := b.startBackend(ctx, req)
 			if err != nil {
 				b.Unlock()
 				return err
@@ -218,7 +226,7 @@ func (b *PluginBackend) lazyLoadBackend(ctx context.Context, storage logical.Sto
 // HandleRequest is a thin wrapper implementation of HandleRequest that includes
 // automatic plugin reload.
 func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request) (resp *logical.Response, err error) {
-	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
+	err = b.lazyLoadBackend(ctx, req, func() error {
 		var merr error
 		resp, merr = b.Backend.HandleRequest(ctx, req)
 		return merr
@@ -230,7 +238,7 @@ func (b *PluginBackend) HandleRequest(ctx context.Context, req *logical.Request)
 // HandleExistenceCheck is a thin wrapper implementation of HandleExistenceCheck
 // that includes automatic plugin reload.
 func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.Request) (checkFound bool, exists bool, err error) {
-	err = b.lazyLoadBackend(ctx, req.Storage, func() error {
+	err = b.lazyLoadBackend(ctx, req, func() error {
 		var merr error
 		checkFound, exists, merr = b.Backend.HandleExistenceCheck(ctx, req)
 		return merr
@@ -239,8 +247,8 @@ func (b *PluginBackend) HandleExistenceCheck(ctx context.Context, req *logical.R
 	return
 }
 
-// Initialize is intentionally a no-op here, the backend will instead be
-// initialized when it is lazily loaded.
+// Initialize is intentionally a no-op here; the backend will be initialized
+// with full mount metadata when it is lazily loaded via startBackend.
 func (b *PluginBackend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	return nil
 }

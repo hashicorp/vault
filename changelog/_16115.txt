@@ -1,0 +1,3 @@
+```release-note:feature
+secrets: Added ability to view secrets in YAML format
+```

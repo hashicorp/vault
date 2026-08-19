@@ -1,0 +1,3 @@
+```release-note:security
+identity: Prevent the entity batch-delete endpoint (identity/entity/batch-delete) from deleting the underlying storage of entities that belong to another namespace.
+```

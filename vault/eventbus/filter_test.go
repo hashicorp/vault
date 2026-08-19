@@ -25,6 +25,39 @@ func TestCleanJoinNamespaces(t *testing.T) {
 	assert.Equal(t, "abc def", cleanJoinNamespaces([]string{"def", "abc"}))
 }
 
+// TestFilters_GetFilterAdditions checks that getFilterAdditions returns the
+// current filter state as additive-only changes and an empty result when the
+// cluster node has no filters.
+func TestFilters_GetFilterAdditions(t *testing.T) {
+	f := NewFilters("self")
+
+	assert.Empty(t, f.getFilterAdditions("self"))
+	assert.Empty(t, f.getFilterAdditions(clusterWide))
+
+	f.addPattern("self", []string{"ns1"}, "e3", "uuid")
+	f.addPattern("self", []string{"ns1"}, "e2", "uuid2")
+
+	changes := f.getFilterAdditions("self")
+	// Every change must be an additive operation only and resending this should
+	// never remove filters.
+	assert.Len(t, changes, 2)
+	for _, c := range changes {
+		assert.Equal(t, FilterChangeAdd, c.Operation)
+	}
+	assert.ElementsMatch(t, []FilterChange{
+		{Operation: FilterChangeAdd, NamespacePatterns: []string{"ns1"}, EventTypePattern: "e3", SubscriberID: "uuid"},
+		{Operation: FilterChangeAdd, NamespacePatterns: []string{"ns1"}, EventTypePattern: "e2", SubscriberID: "uuid2"},
+	}, changes)
+
+	// Applying the additions to a fresh set of filters should reproduce the
+	// same matches, confirming the resync is sufficient on its own.
+	other := NewFilters("other")
+	other.applyChanges("self", changes)
+	ns1 := &namespace.Namespace{ID: "ns1", Path: "ns1"}
+	assert.True(t, other.clusterNodeMatch("self", ns1, "e3"))
+	assert.True(t, other.clusterNodeMatch("self", ns1, "e2"))
+}
+
 // TestFilters_AddRemoveMatchLocal checks that basic matching, adding, and removing of patterns all work.
 func TestFilters_AddRemoveMatchLocal(t *testing.T) {
 	f := NewFilters("self")

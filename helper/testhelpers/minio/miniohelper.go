@@ -9,11 +9,10 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/defaults"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
@@ -48,7 +47,7 @@ func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {
 		t.Fatalf("Could not start docker Minio: %s", err)
 	}
 
-	svc, err := runner.StartService(context.Background(), connectMinio)
+	svc, err := runner.StartService(t.Context(), connectMinio)
 	if err != nil {
 		t.Fatalf("Could not start docker Minio: %s", err)
 	}
@@ -78,7 +77,7 @@ func connectMinio(ctx context.Context, host string, port int) (docker.ServiceCon
 		return nil, err
 	}
 
-	_, err = s3conn.ListBuckets(&s3.ListBucketsInput{})
+	_, err = s3conn.ListBuckets(ctx, &s3.ListBucketsInput{})
 	if err != nil {
 		return nil, err
 	}
@@ -86,29 +85,30 @@ func connectMinio(ctx context.Context, host string, port int) (docker.ServiceCon
 	return docker.NewServiceURL(u), nil
 }
 
-func (c *Config) Conn() (*s3.S3, error) {
-	cfg := &aws.Config{
-		DisableSSL:       aws.Bool(true),
-		Region:           aws.String("us-east-1"),
-		Endpoint:         aws.String(c.Endpoint),
-		S3ForcePathStyle: aws.Bool(true),
-		Credentials: credentials.NewChainCredentials(
-			[]credentials.Provider{
-				&credentials.StaticProvider{
-					Value: credentials.Value{
-						AccessKeyID:     accessKeyID,
-						SecretAccessKey: secretKey,
-					},
-				},
-				&credentials.EnvProvider{},
-				&credentials.SharedCredentialsProvider{},
-				defaults.RemoteCredProvider(*(defaults.Config()), defaults.Handlers()),
-			}),
-	}
-
-	sess, err := session.NewSession(cfg)
+func (c *Config) Conn() (*s3.Client, error) {
+	// Static credentials only: MinIO always uses the hardcoded accessKeyID/secretKey.
+	// A full chain (env, shared file, IMDS) is omitted to prevent tests accidentally
+	// resolving real AWS credentials and hitting live S3 instead of the local container.
+	// Empty shared config/credentials file lists prevent LoadDefaultConfig from reading
+	// any host AWS profile, making the helper hermetic even when AWS_PROFILE or
+	// AWS_DEFAULT_PROFILE is set in the caller's environment.
+	cfg, err := config.LoadDefaultConfig(context.Background(),
+		config.WithRegion(c.Region),
+		config.WithSharedConfigFiles([]string{}),
+		config.WithSharedCredentialsFiles([]string{}),
+		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
+			c.AccessKeyID,
+			c.SecretAccessKey,
+			"",
+		)),
+	)
 	if err != nil {
 		return nil, err
 	}
-	return s3.New(sess), nil
+
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String("http://" + c.Endpoint)
+		o.UsePathStyle = true
+	})
+	return client, nil
 }

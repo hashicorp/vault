@@ -1,0 +1,76 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ZAP",
+          "version": "2.15.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "10021",
+          "level": "error",
+          "message": {
+            "text": "X-Content-Type-Options Header Missing"
+          },
+          "webRequest": {
+            "target": "https://api.example.com/v1/users",
+            "method": "GET"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "https://api.example.com/v1/users"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "10020",
+          "level": "warning",
+          "message": {
+            "text": "Missing Anti-clickjacking Header"
+          },
+          "webRequest": {
+            "target": "http://web.example.com:8080/login",
+            "method": "POST"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "http://web.example.com:8080/login"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "10021",
+          "level": "error",
+          "message": {
+            "text": "X-Content-Type-Options Header Missing"
+          },
+          "webRequest": {
+            "target": "https://api.example.com/v1/posts",
+            "method": "GET"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "https://api.example.com/v1/posts"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -9,21 +9,17 @@
 
   <M.Body>
     {{#if @form.policyType}}
-      <Hds::Tabs as |T|>
-        <T.Tab data-test-tab-your-policy>
-          Your Policy
-        </T.Tab>
-        <T.Tab Tab data-test-tab-example-policy>
-          Example Policy
-        </T.Tab>
-
+      <Page::Tabs
+        @tabs={{array (hash label="Your Policy" key="your-policy") (hash label="Example Policy" key="example-policy")}}
+        as |T|
+      >
         <T.Panel>
           <PolicyForm @onSave={{@onSave}} @form={{@form}} @onCancel={{@onCancel}} @isCompact={{true}} />
         </T.Panel>
         <T.Panel class="has-top-padding-m">
           <PolicyExample @policyType={{@form.policyType}} />
         </T.Panel>
-      </Hds::Tabs>
+      </Page::Tabs>
     {{else}}
       <Select
         @name="policyType"

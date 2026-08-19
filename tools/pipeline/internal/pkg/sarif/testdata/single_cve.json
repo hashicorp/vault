@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "TestScanner",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "CVE-2024-1234",
+              "name": "CVE-2024-1234",
+              "shortDescription": {
+                "text": "Critical vulnerability in component X"
+              },
+              "fullDescription": {
+                "text": "A critical vulnerability was found in component X that allows remote code execution."
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "CVE-2024-1234",
+                    "toolComponent": {
+                      "name": "CVE"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CVE-2024-1234",
+          "message": {
+            "text": "Critical vulnerability detected in component X"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/main.go"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -146,7 +146,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 				return fmt.Errorf("error getting absolute path of plugin dir for audit validation: %w", err)
 			}
 			// Walk the audit path up checking that none of them are the plugin dir
-			for len(auditDir) > 1 || auditDir[0] != filepath.Separator {
+			for {
 				rp, err := filepath.Rel(pluginDir, auditDir)
 				if err != nil {
 					return fmt.Errorf("error checking relative path for audit validation: %w", err)
@@ -154,7 +154,11 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 				if rp == "." {
 					return errors.New("audit file target may not be in the plugin directory")
 				}
-				auditDir = filepath.Dir(auditDir)
+				parent := filepath.Dir(auditDir)
+				if parent == auditDir { // reached filesystem root (works on all OSes)
+					break
+				}
+				auditDir = parent
 			}
 		}
 	}

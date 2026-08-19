@@ -169,7 +169,7 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 	}, nil
 }
 
-func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.InitializeArgs) (*pb.InitializeReply, error) {
+func (b *backendGRPCPluginServer) Initialize(ctx context.Context, args *pb.InitializeArgs) (*pb.InitializeReply, error) {
 	backend, brokeredClient, err := b.getBackendAndBrokeredClient(ctx)
 	if err != nil {
 		return &pb.InitializeReply{}, err
@@ -181,6 +181,12 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, _ *pb.Initiali
 
 	req := &logical.InitializationRequest{
 		Storage: newGRPCStorageClient(brokeredClient),
+	}
+	if args != nil {
+		req.MountPoint = args.MountPoint
+		req.MountType = args.MountType
+		req.MountAccessor = args.MountAccessor
+		req.BackendUUID = args.BackendUuid
 	}
 
 	respErr := backend.Initialize(ctx, req)

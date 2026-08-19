@@ -1,0 +1,50 @@
+{
+  "@programName": "ZAP",
+  "@version": "2.15.0",
+  "@generated": "Thu, 02 Jul 2026 17:37:25 GMT",
+  "site": [
+    {
+      "@name": "https://example.com",
+      "@host": "example.com",
+      "@port": "443",
+      "@ssl": "true",
+      "alerts": [
+        {
+          "pluginid": "10021",
+          "alertRef": "10021",
+          "alert": "X-Content-Type-Options Header Missing",
+          "name": "X-Content-Type-Options Header Missing",
+          "riskcode": "2",
+          "confidence": "2",
+          "riskdesc": "Medium (Medium)",
+          "desc": "<p>X-Content-Type-Options Header Missing</p>",
+          "instances": [
+            {
+              "uri": "https://example.com/api/users",
+              "method": "GET",
+              "param": "",
+              "attack": "",
+              "evidence": "HTTP/1.1 200 OK",
+              "otherinfo": ""
+            },
+            {
+              "uri": "https://example.com/api/posts",
+              "method": "POST",
+              "param": "",
+              "attack": "<script>alert(1)</script>",
+              "evidence": "HTTP/1.1 201 Created",
+              "otherinfo": ""
+            }
+          ],
+          "count": "2",
+          "solution": "",
+          "otherinfo": "",
+          "reference": "",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "0"
+        }
+      ]
+    }
+  ]
+}

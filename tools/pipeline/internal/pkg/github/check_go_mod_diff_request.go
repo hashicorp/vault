@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -62,7 +62,8 @@ func (r *CheckGoModDiffReq) Run(
 	var err error
 	res := &CheckGoModDiffRes{}
 
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("from-owner", r.AOwner),
 		slog.String("from-repo", r.ARepo),
 		slog.String("from-branch", r.ABranch),

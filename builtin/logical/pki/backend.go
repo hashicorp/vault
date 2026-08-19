@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
-	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -311,7 +310,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
 	b.acmeState = NewACMEState()
-	b.acmeOrderLocks = locksutil.CreateLocks()
 	b.certificateCounter = NewCertificateCounter(b.backendUUID)
 
 	if pkiCertCounterSysView, ok := conf.System.(logical.CertificateCountSystemView); ok {
@@ -367,7 +365,6 @@ type backend struct {
 	// Context around ACME operations
 	acmeState       *acmeState
 	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
-	acmeOrderLocks  []*locksutil.LockEntry
 
 	// Track when this mount was started.
 	mountStartup time.Time

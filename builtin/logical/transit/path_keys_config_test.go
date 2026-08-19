@@ -404,3 +404,76 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 		})
 	}
 }
+
+func TestTransit_KeyUsagesInConfigResponse(t *testing.T) {
+	b, storage := createBackendWithSysView(t)
+
+	doReq := func(op logical.Operation, path string, data map[string]interface{}) *logical.Response {
+		t.Helper()
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Storage:   storage,
+			Operation: op,
+			Path:      path,
+			Data:      data,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("unexpected error for %s %s: err=%v resp=%v", op, path, err, resp)
+		}
+		return resp
+	}
+
+	tests := []struct {
+		keyType      string
+		creationData map[string]interface{}
+		expected     []interface{}
+	}{
+		{"aes256-gcm96", nil, []interface{}{"aead-encryption"}},
+		{"aes128-gcm96", nil, []interface{}{"aead-encryption"}},
+		{"chacha20-poly1305", nil, []interface{}{"aead-encryption"}},
+		{"ecdsa-p256", nil, []interface{}{"digital-signature"}},
+		{"ecdsa-p384", nil, []interface{}{"digital-signature"}},
+		{"ecdsa-p521", nil, []interface{}{"digital-signature"}},
+		{"ed25519", nil, []interface{}{"digital-signature"}},
+		{"rsa-2048", nil, []interface{}{"asymmetric-encryption", "digital-signature"}},
+		{"rsa-3072", nil, []interface{}{"asymmetric-encryption", "digital-signature"}},
+		{"rsa-4096", nil, []interface{}{"asymmetric-encryption", "digital-signature"}},
+		{"hmac", map[string]interface{}{"key_size": 32}, []interface{}{"message-authentication"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.keyType, func(t *testing.T) {
+			keyName := "test-" + tt.keyType
+
+			// Build creation parameters
+			createData := map[string]interface{}{"type": tt.keyType}
+			for k, v := range tt.creationData {
+				createData[k] = v
+			}
+			doReq(logical.UpdateOperation, "keys/"+keyName, createData)
+
+			// Config endpoint must include key_usages
+			resp := doReq(logical.UpdateOperation, "keys/"+keyName+"/config", map[string]interface{}{})
+			usages, ok := resp.Data["key_usages"]
+			if !ok {
+				t.Fatalf("key_usages missing from config response for key type %s", tt.keyType)
+			}
+			gotSlice, ok := usages.([]string)
+			if !ok {
+				t.Fatalf("key_usages is not []string for key type %s, got %T", tt.keyType, usages)
+			}
+			// Convert to []interface{} for comparison
+			got := make([]interface{}, len(gotSlice))
+			for i, v := range gotSlice {
+				got[i] = v
+			}
+			if len(got) != len(tt.expected) {
+				t.Fatalf("key_usages mismatch for %s: got %v, want %v", tt.keyType, got, tt.expected)
+			}
+			for i := range got {
+				if got[i] != tt.expected[i] {
+					t.Fatalf("key_usages[%d] mismatch for %s: got %v, want %v", i, tt.keyType, got[i], tt.expected[i])
+				}
+			}
+		})
+	}
+}

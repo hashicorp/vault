@@ -80,7 +80,9 @@ func TestNewStaticSecretCapabilityManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	require.NotNil(t, updater)
+	updater.workerPoolLock.RLock()
 	require.NotNil(t, updater.workerPool)
+	updater.workerPoolLock.RUnlock()
 	require.NotNil(t, updater.staticSecretTokenCapabilityRefreshInterval)
 	require.NotNil(t, updater.client)
 	require.NotNil(t, updater.leaseCache)
@@ -98,7 +100,9 @@ func TestNewStaticSecretCapabilityManager(t *testing.T) {
 		t.Fatal(err)
 	}
 	require.NotNil(t, updater)
+	updater.workerPoolLock.RLock()
 	require.NotNil(t, updater.workerPool)
+	updater.workerPoolLock.RUnlock()
 	require.NotNil(t, updater.staticSecretTokenCapabilityRefreshInterval)
 	require.NotNil(t, updater.client)
 	require.NotNil(t, updater.leaseCache)
@@ -306,7 +310,7 @@ func TestSubmitWorkUpdatesIndex(t *testing.T) {
 	newIndex.IndexLock.RUnlock()
 
 	// Forcefully stop any remaining workers
-	sscm.workerPool.Stop()
+	sscm.Stop()
 }
 
 // TestSubmitWorkUpdatesIndexWithBadToken tests that an index will be correctly updated if the token
@@ -342,7 +346,7 @@ func TestSubmitWorkUpdatesIndexWithBadToken(t *testing.T) {
 	require.Nil(t, newIndex)
 
 	// Forcefully stop any remaining workers
-	sscm.workerPool.Stop()
+	sscm.Stop()
 }
 
 // TestSubmitWorkSealedVaultOptimistic tests that the capability manager
@@ -382,7 +386,7 @@ func TestSubmitWorkSealedVaultOptimistic(t *testing.T) {
 	require.NotNil(t, newIndex)
 
 	// Forcefully stop any remaining workers
-	sscm.workerPool.Stop()
+	sscm.Stop()
 }
 
 // TestSubmitWorkSealedVaultPessimistic tests that the capability manager
@@ -424,7 +428,7 @@ func TestSubmitWorkSealedVaultPessimistic(t *testing.T) {
 	require.Nil(t, newIndex)
 
 	// Forcefully stop any remaining workers
-	sscm.workerPool.Stop()
+	sscm.Stop()
 }
 
 // TestSubmitWorkUpdatesAllIndexes tests that an index will be correctly updated if the capabilities differ, as
@@ -514,5 +518,5 @@ func TestSubmitWorkUpdatesAllIndexes(t *testing.T) {
 	require.Equal(t, newPathIndex2, newPathIndex2)
 
 	// Forcefully stop any remaining workers
-	sscm.workerPool.Stop()
+	sscm.Stop()
 }

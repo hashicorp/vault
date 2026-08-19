@@ -123,7 +123,7 @@ export default class KvCreateEditForm extends Component {
           }
         } catch (error) {
           const { message, response } = await this.api.parseError(error);
-          if (response.isControlGroupError) {
+          if (response?.isControlGroupError) {
             this.controlGroup.saveTokenFromError(response);
             const err = this.controlGroup.logFromError(response);
             this.errorMessage = err.content;

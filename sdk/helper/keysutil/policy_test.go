@@ -85,6 +85,43 @@ func TestPolicy_HmacCmacSupported(t *testing.T) {
 	}
 }
 
+func TestKeyType_KeyUsages(t *testing.T) {
+	tests := []struct {
+		keyType  KeyType
+		expected []string
+	}{
+		{KeyType_AES256_GCM96, []string{"aead-encryption"}},
+		{KeyType_AES128_GCM96, []string{"aead-encryption"}},
+		{KeyType_ChaCha20_Poly1305, []string{"aead-encryption"}},
+		{KeyType_AES128_CBC, []string{"symmetric-encryption"}},
+		{KeyType_AES256_CBC, []string{"symmetric-encryption"}},
+		{KeyType_ECDSA_P256, []string{"digital-signature"}},
+		{KeyType_ECDSA_P384, []string{"digital-signature"}},
+		{KeyType_ECDSA_P521, []string{"digital-signature"}},
+		{KeyType_ED25519, []string{"digital-signature"}},
+		{KeyType_ML_DSA, []string{"digital-signature"}},
+		{KeyType_SLH_DSA, []string{"digital-signature"}},
+		{KeyType_HYBRID, []string{"digital-signature"}},
+		{KeyType_RSA2048, []string{"asymmetric-encryption", "digital-signature"}},
+		{KeyType_RSA3072, []string{"asymmetric-encryption", "digital-signature"}},
+		{KeyType_RSA4096, []string{"asymmetric-encryption", "digital-signature"}},
+		{KeyType_HMAC, []string{"message-authentication"}},
+		{KeyType_AES128_CMAC, []string{"message-authentication"}},
+		{KeyType_AES192_CMAC, []string{"message-authentication"}},
+		{KeyType_AES256_CMAC, []string{"message-authentication"}},
+		{KeyType_MANAGED_KEY, []string{}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.keyType.String(), func(t *testing.T) {
+			got := tt.keyType.KeyUsages()
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("KeyType(%s).KeyUsages() = %v, want %v", tt.keyType.String(), got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestPolicy_CMACKeyUpgrade(t *testing.T) {
 	ctx := context.Background()
 	lm, _ := NewLockManager(false, 0)

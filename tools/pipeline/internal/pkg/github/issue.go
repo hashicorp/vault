@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -19,7 +19,8 @@ func closeIssue(
 	repo string,
 	issueNumber int,
 ) error {
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("owner", owner),
 		slog.String("repo", repo),
 		slog.Int("issue-number", issueNumber),

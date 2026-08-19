@@ -306,5 +306,113 @@ module(
           .doesNotExist('Identity token TTL is not displayed');
       });
     });
+
+    // AWS-SM KMS key ID and replica regions display
+    module('aws-sm kms key and replica regions display', function (hooks) {
+      hooks.beforeEach(function () {
+        this.setupStubsForType(DestinationType.AwsSm);
+      });
+
+      test('it displays KMS key ID for the primary region', async function (assert) {
+        this.destination.connection_details.kms_key_id = 'arn:aws:kms:us-west-1:123456789012:key/my-key';
+        assert.expect(2);
+
+        await this.renderComponent();
+
+        assert.dom(GENERAL.infoRowLabel('KMS key ID')).exists('KMS key ID label is displayed');
+        assert
+          .dom(GENERAL.infoRowValue('KMS key ID'))
+          .hasText('arn:aws:kms:us-west-1:123456789012:key/my-key', 'shows the KMS key ID value');
+      });
+
+      test('it displays replica regions and KMS keys as key/value rows', async function (assert) {
+        this.destination.connection_details.replica_regions = {
+          'us-east-1': 'arn:aws:kms:us-east-1:123456789012:key/my-key',
+        };
+        assert.expect(3);
+
+        await this.renderComponent();
+
+        assert
+          .dom(PAGE.destinations.details.sectionHeader)
+          .hasText('Replica regions and KMS keys', 'renders the section header');
+        assert.dom(GENERAL.infoRowLabel('us-east-1')).exists('renders the region as the row label');
+        assert
+          .dom(GENERAL.infoRowValue('us-east-1'))
+          .hasText(
+            'arn:aws:kms:us-east-1:123456789012:key/my-key',
+            'renders the KMS key ID as the row value'
+          );
+      });
+
+      test('it displays replica regions as key/value rows even when no KMS keys are populated', async function (assert) {
+        // unlike gcp-sm, AWS always renders replica_regions as key/value rows since there's no
+        // "google-managed" style variant that collapses to a comma separated list
+        this.destination.connection_details.replica_regions = { 'us-east-1': '', 'us-west-2': '' };
+        assert.expect(2);
+
+        await this.renderComponent();
+
+        assert
+          .dom(PAGE.destinations.details.sectionHeader)
+          .hasText('Replica regions and KMS keys', 'renders the section header');
+        assert.dom(GENERAL.infoRowLabel('us-east-1')).exists('renders the region as the row label');
+      });
+    });
+
+    // GCP-SM encryption method display
+    module('gcp-sm encryption display', function (hooks) {
+      hooks.beforeEach(function () {
+        this.setupStubsForType(DestinationType.GcpSm);
+      });
+
+      test('it displays KMS key ID for Global KMS key encryption', async function (assert) {
+        this.destination.connection_details.kms_key_id =
+          'projects/my-project/locations/global/keyRings/my-ring/cryptoKeys/my-key';
+        assert.expect(2);
+
+        await this.renderComponent();
+
+        assert.dom(GENERAL.infoRowLabel('KMS key ID')).exists('KMS key ID label is displayed');
+        assert
+          .dom(GENERAL.infoRowValue('KMS key ID'))
+          .hasText(
+            'projects/my-project/locations/global/keyRings/my-ring/cryptoKeys/my-key',
+            'shows the KMS key ID value'
+          );
+      });
+
+      test('it displays replica regions as a comma separated list when only regions are selected', async function (assert) {
+        this.destination.connection_details.replica_regions = { 'us-west1': '', 'us-east1': '' };
+        assert.expect(2);
+
+        await this.renderComponent();
+
+        assert.dom(GENERAL.infoRowLabel('Replica regions')).exists('renders "Replica regions" label');
+        assert
+          .dom(GENERAL.infoRowValue('Replica regions'))
+          .hasText('us-west1, us-east1', 'renders regions as a comma separated list');
+      });
+
+      test('it displays replica regions and KMS keys as key/value rows when KMS keys are populated', async function (assert) {
+        this.destination.connection_details.replica_regions = {
+          'us-west1': 'projects/my-project/locations/us-west1/keyRings/my-ring/cryptoKeys/my-key',
+        };
+        assert.expect(3);
+
+        await this.renderComponent();
+
+        assert
+          .dom(PAGE.destinations.details.sectionHeader)
+          .hasText('Replica regions and KMS keys', 'renders the section header when KMS keys are populated');
+        assert.dom(GENERAL.infoRowLabel('us-west1')).exists('renders the region as the row label');
+        assert
+          .dom(GENERAL.infoRowValue('us-west1'))
+          .hasText(
+            'projects/my-project/locations/us-west1/keyRings/my-ring/cryptoKeys/my-key',
+            'renders the KMS key ID as the row value'
+          );
+      });
+    });
   }
 );

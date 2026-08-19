@@ -6,14 +6,27 @@ package database
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+// displayNameUnsafeChars matches any character that is not alphanumeric, a
+// hyphen, or an underscore. DisplayName can originate from untrusted input
+// and is interpolated into database statements
+// via username templates, so it must be constrained before use.
+var displayNameUnsafeChars = regexp.MustCompile(`[^a-zA-Z0-9_-]`)
+
+// sanitizeDisplayName replaces every character outside the [a-zA-Z0-9_-] set
+// with a hyphen. This prevents the caller-controlled DisplayName from carrying
+// SQL metacharacters into generated usernames and credentials.
+func sanitizeDisplayName(displayName string) string {
+	return displayNameUnsafeChars.ReplaceAllString(displayName, "-")
+}
 
 func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
@@ -139,7 +152,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 
 		newUserReq := v5.NewUserRequest{
 			UsernameConfig: v5.UsernameMetadata{
-				DisplayName: req.DisplayName,
+				DisplayName: sanitizeDisplayName(req.DisplayName),
 				RoleName:    name,
 			},
 			Statements: v5.Statements{
@@ -191,7 +204,7 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			}
 
 			// Set input credential
-			newUserReq.CredentialType = dbplugin.CredentialTypeClientCertificate
+			newUserReq.CredentialType = v5.CredentialTypeClientCertificate
 			newUserReq.Subject = subject
 
 			// Set output credential

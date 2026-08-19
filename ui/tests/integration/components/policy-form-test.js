@@ -351,6 +351,105 @@ EOT`;
       assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
     });
 
+    test('it updates snippets from the code editor', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'my-simple-policy');
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.accordionButton('Automation snippets'));
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+  name = "my-simple-policy"
+
+  policy = <<EOT
+${this.policy}
+EOT
+}`;
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasText(expectedTfvp, 'terraform snippet renders policy from the code editor');
+      const expectedCli = `vault policy write my-simple-policy - <<EOT
+${this.policy}
+EOT`;
+      assert
+        .dom(GENERAL.fieldByAttr('cli'))
+        .hasText(expectedCli, 'cli snippet renders policy from the code editor');
+    });
+
+    test('it updates snippets when the code editor changes after using the visual editor', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'my-secure-policy');
+      // Build a policy using the visual editor first
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      await click(GENERAL.checkboxByAttr('patch'));
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('capabilities = ["patch"]', 'snippet renders visual editor stanzas');
+      // Switching to the code editor and editing should update the snippets
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining(
+          'capabilities = [ "create", "read", "update", "list" ]',
+          'terraform snippet updates from the code editor'
+        );
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .doesNotIncludeText('"patch"', 'terraform snippet no longer renders visual editor stanzas');
+      assert
+        .dom(GENERAL.fieldByAttr('cli'))
+        .hasTextContaining(
+          'capabilities = [ "create", "read", "update", "list" ]',
+          'cli snippet updates from the code editor'
+        );
+    });
+
+    test('it updates snippets after uploading a policy file', async function (assert) {
+      const file = new File([this.policy], 'test-policy.txt');
+      await this.renderComponent();
+      await click(GENERAL.toggleInput('Upload file'));
+      await triggerEvent(GENERAL.fileInput, 'change', { files: [file] });
+      await waitFor('.cm-editor');
+      await settled();
+      await click(GENERAL.accordionButton('Automation snippets'));
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+  name = "test-policy"
+
+  policy = <<EOT
+${this.policy}
+EOT
+}`;
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasText(expectedTfvp, 'terraform snippet renders the uploaded policy');
+      const expectedCli = `vault policy write test-policy - <<EOT
+${this.policy}
+EOT`;
+      assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli, 'cli snippet renders the uploaded policy');
+    });
+
+    test('it reverts snippets to visual editor stanzas after discarding code editor changes', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      await click(GENERAL.checkboxByAttr('patch'));
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('path "secret/*"', 'snippet renders code editor policy');
+      // Switch back to the visual editor and discard code editor changes
+      await click(GENERAL.radioByAttr('visual'));
+      await click(GENERAL.confirmButton);
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('path "my/super/secret/*"', 'snippet reverts to visual editor stanzas');
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .doesNotIncludeText('path "secret/*"', 'snippet no longer renders discarded code editor policy');
+    });
+
     module('switch editors modal', function (hooks) {
       hooks.beforeEach(function () {
         this.originalPolicy = `path "secret/data/*" {

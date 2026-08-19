@@ -39,14 +39,12 @@ func entDecryptWithOptions(p *Policy, opts EncryptionOptions, value []byte) ([]b
 	return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 }
 
-func (p *Policy) GetCsrRequestFromManagedKey(params ManagedKeyParameters) CsrRequestGetter {
+func (p *Policy) CreateCsrWithManagedKeyVersion(params ManagedKeyParameters) CsrCreator {
 	return func(_ int, _ *x509.CertificateRequest) ([]byte, error) {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
 }
 
-func (p *Policy) GetLeafCertKeyMatchValidatorFromManagedKey(params ManagedKeyParameters) LeafCertKeyMatchValidator {
-	return func(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
-		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
-	}
+func (p *Policy) ValidateLeafCertKeyMatchWithManagedKeyVersion(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any, params ManagedKeyParameters) (bool, error) {
+	return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 }

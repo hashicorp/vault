@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -658,7 +658,8 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 				test.changedFiles,
 			)
 			require.Equalf(
-				t, test.skip, skip, "should have %t but got %t with %s", test.skip, skip, msg)
+				t, test.skip, skip, "should have %t but got %t with %s", test.skip, skip, msg,
+			)
 		})
 	}
 }

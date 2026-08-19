@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -35,7 +35,8 @@ func newGithubCmd() *cobra.Command {
 			if token, set := os.LookupEnv("GITHUB_TOKEN"); set {
 				githubCmdState.GithubV3 = githubCmdState.GithubV3.WithAuthToken(token)
 				githubCmdState.GithubV4 = githubv4.NewClient(
-					oauth2.NewClient(context.Background(),
+					oauth2.NewClient(
+						context.Background(),
 						oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
 					),
 				)
@@ -49,6 +50,7 @@ func newGithubCmd() *cobra.Command {
 
 	githubCmd.AddCommand(newGithubCheckCmd())
 	githubCmd.AddCommand(newGithubCloseCmd())
+	githubCmd.AddCommand(newCollectArtifactShasCmd())
 	githubCmd.AddCommand(newGithubCopyCmd())
 	githubCmd.AddCommand(newGithubCreateCmd())
 	githubCmd.AddCommand(newGithubFindCmd())

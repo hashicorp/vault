@@ -6,16 +6,13 @@ package event
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
-	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/stretchr/testify/require"
 )
 
@@ -321,34 +318,62 @@ func TestFileSink_log_cancelledContext(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, sink)
 
+	// Hold the sink serialization permit so log() cannot proceed to the write.
+	require.NoError(t, sink.acquirePermit(context.Background()))
+	t.Cleanup(func() { sink.releasePermit() })
+
 	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(func() { cancel() })
-
-	// Manually acquire the lock so that the 'log' method cannot.
-	sink.fileLock.Lock()
-
-	var done atomic.Bool
-	go func() {
-		err = sink.log(ctx, data)
-		done.Store(true)
-	}()
-
-	// We shouldn't have an error as 'log' will be trying to acquire the lock.
-	require.NoError(t, err)
-
-	// Manually cancel the context and unlock to let the waiting 'log' in.
 	cancel()
-	sink.fileLock.Unlock()
 
-	// Just a little bit of time to make sure that 'log' returned and err was set.
-	corehelpers.RetryUntil(t, 3*time.Second, func() error {
-		if done.Load() {
-			return nil
-		}
-
-		return fmt.Errorf("logging still not done")
-	})
+	start := time.Now()
+	err = sink.log(ctx, data)
+	require.Less(t, time.Since(start), 200*time.Millisecond)
 
 	// We expect that the error now has context cancelled in it.
 	require.True(t, errors.Is(err, context.Canceled))
+}
+
+// TestFileSink_log_timeoutWhileWaitingForPermit verifies that log returns
+// promptly with DeadlineExceeded when waiting on sink serialization.
+func TestFileSink_log_timeoutWhileWaitingForPermit(t *testing.T) {
+	tempDir := t.TempDir()
+	tempPath := filepath.Join(tempDir, "juan.log")
+	data := []byte("{\"foo\": \"bar\"}")
+
+	sink, err := NewFileSink(tempPath, "json")
+	require.NoError(t, err)
+	require.NotNil(t, sink)
+
+	// Hold the sink serialization permit so log() has to wait on acquire.
+	require.NoError(t, sink.acquirePermit(context.Background()))
+
+	errCh := make(chan error, 1)
+	doneCh := make(chan struct{})
+
+	// Wait cleanup is registered before release cleanup so release happens first.
+	t.Cleanup(func() {
+		select {
+		case <-doneCh:
+		case <-time.After(2 * time.Second):
+			t.Error("timed out waiting for log goroutine to exit")
+		}
+	})
+	t.Cleanup(func() { sink.releasePermit() })
+
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	t.Cleanup(cancel)
+
+	start := time.Now()
+	go func() {
+		defer close(doneCh)
+		errCh <- sink.log(ctx, data)
+	}()
+
+	select {
+	case err = <-errCh:
+		require.Less(t, time.Since(start), 500*time.Millisecond)
+		require.True(t, errors.Is(err, context.DeadlineExceeded))
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("sink.log did not return promptly while waiting on permit")
+	}
 }

@@ -8,6 +8,7 @@ import (
 	"crypto/elliptic"
 	"encoding/base64"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
@@ -417,10 +418,18 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 
 	case keysutil.KeyType_MANAGED_KEY:
 		retKeys, err := getFormattedManagedKeyPublicKey(ctx, b, p)
-		if err != nil {
+		switch {
+		case err == nil:
+			resp.Data["keys"] = retKeys
+		case errors.Is(err, errNotAsymmetricManagedKey):
+			symKeys := map[string]int64{}
+			for k, v := range p.Keys {
+				symKeys[k] = v.DeprecatedCreationTime
+			}
+			resp.Data["keys"] = symKeys
+		default:
 			return nil, err
 		}
-		resp.Data["keys"] = retKeys
 	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
@@ -429,7 +438,7 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 			}
 			switch p.Type {
 			case keysutil.KeyType_HYBRID, keysutil.KeyType_ML_DSA, keysutil.KeyType_SLH_DSA:
-				key.HybridPublicKey = getFormattedPQCPublicKey(p.Type, v)
+				key.HybridPublicKey = getFormattedPQCPublicKey(p.Type, v, p.HybridConfig.PQCKeyType)
 			default:
 				key.PublicKey = v.FormattedPublicKey
 			}
@@ -492,7 +501,7 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 			case keysutil.KeyType_ML_DSA:
 				key.Name = "ml-dsa-" + p.ParameterSet
 			case keysutil.KeyType_SLH_DSA:
-				key.Name = "slh-dsa" + p.ParameterSet
+				key.Name = p.ParameterSet
 			}
 
 			retKeys[k] = structs.New(key).Map()
@@ -530,6 +539,26 @@ func getHybridKeyConfig(pqcKeyType, parameterSet, ecKeyType string) (keysutil.Hy
 			parameterSet != keysutil.ParameterSet_ML_DSA_87 {
 			return keysutil.HybridKeyConfig{}, fmt.Errorf("invalid parameter set %s for key type %s", parameterSet, pqcKeyType)
 		}
+	case "slh-dsa":
+		config.PQCKeyType = keysutil.KeyType_SLH_DSA
+		switch parameterSet {
+		case keysutil.ParameterSet_SLH_DSA_SHA2_128S,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_128S,
+			keysutil.ParameterSet_SLH_DSA_SHA2_128F,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_128F,
+			keysutil.ParameterSet_SLH_DSA_SHA2_192S,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_192S,
+			keysutil.ParameterSet_SLH_DSA_SHA2_192F,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_192F,
+			keysutil.ParameterSet_SLH_DSA_SHA2_256S,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_256S,
+			keysutil.ParameterSet_SLH_DSA_SHA2_256F,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_256F:
+			break
+		default:
+			return keysutil.HybridKeyConfig{}, fmt.Errorf("invalid parameter set %s for key type %s", parameterSet, pqcKeyType)
+		}
+
 	default:
 		return keysutil.HybridKeyConfig{}, fmt.Errorf("invalid PQC key type: %s", pqcKeyType)
 	}
@@ -630,9 +659,10 @@ Applies to ML-DSA, SLH-DSA, and Hybrid key types.`,
 		"hybrid_key_type_pqc": {
 			Type: framework.TypeString,
 			Description: `The post-quantum key type to use for hybrid signature schemes.
-Supported types are: ml-dsa.`,
+Supported types are: ml-dsa and slh-dsa.`,
 			AllowedValues: []interface{}{
 				"ml-dsa",
+				"slh-dsa",
 			},
 		},
 		"hybrid_key_type_ec": {

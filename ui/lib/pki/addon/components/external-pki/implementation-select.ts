@@ -5,6 +5,7 @@
 
 import { action } from '@ember/object';
 import Component from '@glimmer/component';
+import { SetupSteps } from 'pki/utils/constants';
 import { tracked } from 'tracked-built-ins';
 import { CreationMethod } from 'vault/utils/constants/snippet';
 
@@ -15,10 +16,42 @@ import { CreationMethod } from 'vault/utils/constants/snippet';
 
 interface Args {
   engineId: string;
+  steps?: SetupSteps[];
+  title: string;
+}
+
+interface StepConfig {
+  number: number;
+  title: string;
+  config: { terraform?: object; cli?: object; api?: object };
 }
 
 export default class ExternalPkiImplementationSelect extends Component<Args> {
   @tracked selectedMethod = CreationMethod.TERRAFORM;
+
+  get displaySteps(): StepConfig[] {
+    const stepsToShow = this.args.steps || [SetupSteps.ACME_CONFIG, SetupSteps.ROLE_CONFIG];
+    const steps: StepConfig[] = [];
+    let stepNumber = 1;
+
+    if (stepsToShow.includes(SetupSteps.ACME_CONFIG)) {
+      steps.push({
+        number: stepNumber++,
+        title: 'Configure an ACME account',
+        config: this.acmeConfig,
+      });
+    }
+
+    if (stepsToShow.includes(SetupSteps.ROLE_CONFIG)) {
+      steps.push({
+        number: stepNumber++,
+        title: 'Create a role',
+        config: this.roleConfig,
+      });
+    }
+
+    return steps;
+  }
 
   methodOptions = [
     {

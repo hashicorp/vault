@@ -77,10 +77,11 @@ type DockerCluster struct {
 	Logger    log.Logger
 	builtTags map[string]struct{}
 
-	storage      testcluster.ClusterStorage
-	disableMlock bool
-	disableTLS   bool
-	cleanupOnce  sync.Once
+	storage           testcluster.ClusterStorage
+	disableMlock      bool
+	disableTLS        bool
+	cleanupOnce       sync.Once
+	operatorNamespace string
 }
 
 func (dc *DockerCluster) NamedLogger(s string) log.Logger {
@@ -177,10 +178,13 @@ func (n *DockerClusterNode) Name() string {
 }
 
 func (dc *DockerCluster) setupNode0(ctx context.Context, hasSealConfig bool) error {
-	client := dc.ClusterNodes[0].client
+	client, err := dc.ClusterNodes[0].client.Clone()
+	if err != nil {
+		return err
+	}
+	client.SetNamespace(dc.operatorNamespace)
 
 	var resp *api.InitResponse
-	var err error
 	req := &api.InitRequest{
 		SecretShares:    3,
 		SecretThreshold: 3,
@@ -475,17 +479,18 @@ func NewDockerCluster(ctx context.Context, opts *DockerClusterOptions) (*DockerC
 	}
 
 	dc := &DockerCluster{
-		DockerAPI:    api,
-		ClusterName:  opts.ClusterName,
-		Logger:       opts.Logger,
-		builtTags:    map[string]struct{}{},
-		CA:           opts.CA,
-		storage:      opts.Storage,
-		disableMlock: opts.DisableMlock,
-		disableTLS:   opts.DisableTLS,
-		barrierKeys:  opts.BarrierKeys,
-		recoveryKeys: opts.RecoveryKeys,
-		rootToken:    opts.RootToken,
+		DockerAPI:         api,
+		ClusterName:       opts.ClusterName,
+		Logger:            opts.Logger,
+		builtTags:         map[string]struct{}{},
+		CA:                opts.CA,
+		storage:           opts.Storage,
+		disableMlock:      opts.DisableMlock,
+		disableTLS:        opts.DisableTLS,
+		barrierKeys:       opts.BarrierKeys,
+		recoveryKeys:      opts.RecoveryKeys,
+		rootToken:         opts.RootToken,
+		operatorNamespace: opts.OperatorNamespacePath,
 	}
 
 	if err := dc.setupDockerCluster(ctx, opts); err != nil {
@@ -549,6 +554,7 @@ func (n *DockerClusterNode) APIClient() *api.Client {
 		panic(fmt.Sprintf("NewClient error on cloned config: %v", err))
 	}
 	client.SetToken(n.Cluster.rootToken)
+	client.SetNamespace(n.Cluster.operatorNamespace)
 	return client
 }
 
@@ -701,6 +707,7 @@ func (n *DockerClusterNode) writeConfig(opts *DockerClusterOptions) ([]string, e
 			listener := cfg["tcp"].(map[string]interface{})
 			listener["address"] = fmt.Sprintf("%s:%d", "0.0.0.0", config.Port)
 			listener["chroot_namespace"] = config.ChrootNamespace
+			listener["operator_namespace_path"] = config.OperatorNamespacePath
 			listener["redact_addresses"] = config.RedactAddresses
 			listener["redact_cluster_name"] = config.RedactClusterName
 			listener["redact_version"] = config.RedactVersion
@@ -802,6 +809,7 @@ func (n *DockerClusterNode) writeConfig(opts *DockerClusterOptions) ([]string, e
 	vaultCfg["cluster_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8201`
 
 	vaultCfg["administrative_namespace_path"] = opts.AdministrativeNamespacePath
+	vaultCfg["operator_namespace_path"] = opts.OperatorNamespacePath
 
 	if opts.VaultNodeConfig != nil {
 		localCfg := *opts.VaultNodeConfig
@@ -905,13 +913,13 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}}
 
 	postStartFunc := func(containerID string, realIP string) error {
-		err := n.setupCert(realIP)
-		if err != nil {
+		// If we signal Vault before it installs its sighup handler, it'll die.
+		wg.Wait()
+
+		if err := n.setupCert(realIP); err != nil {
 			return err
 		}
 
-		// If we signal Vault before it installs its sighup handler, it'll die.
-		wg.Wait()
 		n.Logger.Trace("running poststart", "containerID", containerID, "IP", realIP)
 		return n.runner.RefreshFiles(ctx, containerID)
 	}
@@ -982,6 +990,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		if err != nil {
 			return nil, err
 		}
+		client.SetNamespace(n.Cluster.operatorNamespace)
 		err = probe(client)
 		if err != nil {
 			return nil, err

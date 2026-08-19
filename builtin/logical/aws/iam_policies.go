@@ -9,9 +9,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -58,7 +57,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 	var agp *iam.ListAttachedGroupPoliciesOutput
 	var inlinePolicies *iam.ListGroupPoliciesOutput
 	var inlinePolicyDoc *iam.GetGroupPolicyOutput
-	var iamClient iamiface.IAMAPI
+	var iamClient iamAPI
 
 	// Return early if there are no groups, to avoid creating an IAM client
 	// needlessly
@@ -73,7 +72,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 
 	for _, g := range iamGroups {
 		// Collect managed policy ARNs from the IAM Group
-		agp, err = iamClient.ListAttachedGroupPoliciesWithContext(ctx, &iam.ListAttachedGroupPoliciesInput{
+		agp, err = iamClient.ListAttachedGroupPolicies(ctx, &iam.ListAttachedGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
 		if err != nil {
@@ -84,16 +83,16 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 		}
 
 		// Collect inline policy names from the IAM Group
-		inlinePolicies, err = iamClient.ListGroupPoliciesWithContext(ctx, &iam.ListGroupPoliciesInput{
+		inlinePolicies, err = iamClient.ListGroupPolicies(ctx, &iam.ListGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
 		if err != nil {
 			return nil, nil, err
 		}
 		for _, iP := range inlinePolicies.PolicyNames {
-			inlinePolicyDoc, err = iamClient.GetGroupPolicyWithContext(ctx, &iam.GetGroupPolicyInput{
-				GroupName:  &g,
-				PolicyName: iP,
+			inlinePolicyDoc, err = iamClient.GetGroupPolicy(ctx, &iam.GetGroupPolicyInput{
+				GroupName:  aws.String(g),
+				PolicyName: aws.String(iP),
 			})
 			if err != nil {
 				return nil, nil, err

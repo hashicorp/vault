@@ -61,6 +61,7 @@ type BaseCommand struct {
 	flagDisableRedirects  bool
 	flagWrapTTL           time.Duration
 	flagUnlockKey         string
+	flagTPMStateDir       string
 
 	flagFormat           string
 	flagField            string
@@ -584,6 +585,12 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Target:  &c.flagNonInteractive,
 				Default: false,
 				Usage:   "When set true, prevents asking the user for input via the terminal.",
+			})
+			f.StringVar(&StringVar{
+				Name:    "tpm-state-dir",
+				Target:  &c.flagTPMStateDir,
+				Default: ".",
+				Usage:   "Sets where to write the cert and associated files. Default is working directory",
 			})
 
 		}

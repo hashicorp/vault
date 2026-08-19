@@ -6,7 +6,7 @@
 <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
   <div>
     <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
-      <div class="is-flex-between">
+      <Hds::Layout::Flex @justify="space-between" @align="center">
         <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
         {{#if
           (has-capability
@@ -24,10 +24,10 @@
             {{on "click" (fn (mut this.showCheckOutPrompt) true)}}
           />
         {{/if}}
-      </div>
+      </Hds::Layout::Flex>
 
       <p class="has-text-grey is-size-8">The accounts within this library</p>
-      <hr class="has-background-gray-200" />
+      <Hds::Separator />
 
       <Hds::Table @model={{@statuses}} @columns={{array (hash label="Accounts") (hash label="Status")}}>
         <:body as |Body|>

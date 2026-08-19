@@ -1,0 +1,42 @@
+{
+  "@programName": "ZAP",
+  "@version": "2.15.0",
+  "@generated": "Thu, 02 Jul 2026 17:37:31 GMT",
+  "site": [
+    {
+      "@name": "http://localhost:8080",
+      "@host": "localhost",
+      "@port": "8080",
+      "@ssl": "false",
+      "alerts": [
+        {
+          "pluginid": "SEC-001",
+          "alertRef": "SEC-001",
+          "alert": "Potential security issue detected",
+          "name": "Potential security issue detected",
+          "riskcode": "1",
+          "confidence": "2",
+          "riskdesc": "Low (Medium)",
+          "desc": "<p>Potential security issue detected</p>",
+          "instances": [
+            {
+              "uri": "http://localhost:8080/admin",
+              "method": "",
+              "param": "",
+              "attack": "",
+              "evidence": "Sensitive data exposed",
+              "otherinfo": ""
+            }
+          ],
+          "count": "1",
+          "solution": "",
+          "otherinfo": "",
+          "reference": "",
+          "cweid": "-1",
+          "wascid": "-1",
+          "sourceid": "0"
+        }
+      ]
+    }
+  ]
+}

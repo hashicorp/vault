@@ -250,7 +250,13 @@ func (c *Core) enableCredentialWithRequestInternal(ctx context.Context, entry *M
 		view.setReadOnlyErr(origViewReadOnlyErr)
 		// initialize, using the core's active context.
 		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
-		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{
+			Storage:       view,
+			MountPoint:    entry.Path,
+			MountType:     entry.Type,
+			MountAccessor: entry.Accessor,
+			BackendUUID:   entry.BackendAwareUUID,
+		})
 		if err != nil {
 			return err
 		}
@@ -975,7 +981,13 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 					view.setReadOnlyErr(origViewReadOnlyErr)
 				}
 
-				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				err := backend.Initialize(ctx, &logical.InitializationRequest{
+					Storage:       view,
+					MountPoint:    localEntry.Path,
+					MountType:     localEntry.Type,
+					MountAccessor: localEntry.Accessor,
+					BackendUUID:   localEntry.BackendAwareUUID,
+				})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize auth backend", "error", err)
 				}

@@ -13,6 +13,7 @@ import { waitFor } from '@ember/test-waiters';
 import sortedVersions from 'kv/helpers/sorted-versions';
 import isDeleted from 'kv/helpers/is-deleted';
 import { isAdvancedSecret } from 'core/utils/advanced-secret';
+import { dump } from 'js-yaml';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret.
@@ -41,7 +42,7 @@ export default class KvSecretDetails extends Component {
   @service('app-router') router;
   @service api;
 
-  @tracked showJsonView = false;
+  @tracked format = 'ui';
   @tracked wrappedData = null;
   @tracked syncStatus = null; // array of association sync status info by destination
 
@@ -51,8 +52,23 @@ export default class KvSecretDetails extends Component {
     this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
     if (isAdvancedSecret(this.originalSecret)) {
       // Default to JSON view if advanced
-      this.showJsonView = true;
+      this.format = 'json';
     }
+  }
+
+  // 'json' and 'yaml' both render the code block
+  get showCodeView() {
+    return this.format !== 'ui';
+  }
+
+  get secretDataAsYaml() {
+    // fall back to an empty object so the view matches the JSON placeholder rather than rendering blank
+    return dump(this.args.secret.secretData || {}, { noRefs: true });
+  }
+
+  @action
+  setFormat(format) {
+    this.format = format;
   }
 
   @action
@@ -154,7 +170,7 @@ export default class KvSecretDetails extends Component {
   }
 
   get hideHeaders() {
-    return this.showJsonView || this.emptyState;
+    return this.showCodeView || this.emptyState;
   }
 
   get secretState() {

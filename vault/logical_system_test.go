@@ -7047,7 +7047,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 			testAccess, wrappers := seal.NewTestSeal(&tt.sealOpts)
 
 			c := TestCoreWithSeal(t, NewAutoSeal(testAccess), false)
-			_, keys, _ := TestCoreInitClusterWrapperSetup(t, c, nil)
+			_, keys, _ := TestCoreInitClusterWrapperSetup(t, c)
 			for _, key := range keys {
 				_, err := TestCoreUnseal(c, key)
 				require.NoError(t, err)
@@ -7114,7 +7114,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 	shamirSeal := NewDefaultSeal(a)
 
 	c := TestCoreWithSeal(t, shamirSeal, false)
-	keys, _, _ := TestCoreInitClusterWrapperSetup(t, c, nil)
+	keys, _, _ := TestCoreInitClusterWrapperSetup(t, c)
 	for _, key := range keys {
 		_, err := TestCoreUnseal(c, key)
 		require.NoError(t, err)

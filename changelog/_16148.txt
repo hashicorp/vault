@@ -1,0 +1,3 @@
+```release-note:improvement
+scim: User resources now include a read-only `groups` field listing the direct group memberships managed by the requesting SCIM client, per RFC 7643.
+```

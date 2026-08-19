@@ -1,0 +1,24 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @isBeta={{true}}
+  @isEnterprise={{true}}
+  @description="Agent Registry is a centralized backend for registering AI agents and their associated human owners in Vault, giving operators visibility into which agents are registered, what policies they hold, and their operational state. Register via CLI or directly sync from your IDP (IBM Verify)."
+  @imageAlt="Flow of agent registry access control by policy"
+  @imageSrc={{img-path "~/agent-registry-intro.png"}}
+  @imageClass="intro-content-image--400"
+>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="service">
+      Register agents with required identity and policy information, mapped to a responsible human owner.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="database">
+      Enforce least-privilege access with per-agent ceiling policies and ephemeral authorization.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="org">
+      Monitor registered agents - status, auth method, last activity, from a single centralized view.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>

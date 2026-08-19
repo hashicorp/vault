@@ -16,7 +16,12 @@ import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { syncDestinations, findDestination } from 'vault/helpers/sync-destinations';
 import formResolver from 'vault/forms/sync/resolver';
-import { DestinationType, CLOUD_DESTINATION_TYPES, CredentialType } from 'sync/utils/constants';
+import {
+  DestinationType,
+  CLOUD_DESTINATION_TYPES,
+  CredentialType,
+  GcpEncryptionType,
+} from 'sync/utils/constants';
 
 const SYNC_DESTINATIONS = syncDestinations();
 module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndEdit', function (hooks) {
@@ -29,13 +34,18 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     this.apiPath = 'sys/sync/destinations/:type/:name';
 
-    this.generateForm = (isNew = false, type = DestinationType.AwsSm) => {
+    // mutateDestination lets edit-mode tests seed connection_details before the form is constructed,
+    // e.g. to exercise gcp-sm's encryption_type derivation logic
+    this.generateForm = (isNew = false, type = DestinationType.AwsSm, mutateDestination) => {
       const { defaultValues } = findDestination(type);
       let data = defaultValues;
 
       if (!isNew) {
         if (type !== DestinationType.AwsSm) {
           this.setupStubsForType(type);
+        }
+        if (mutateDestination) {
+          mutateDestination(this.destination);
         }
         const { name, connection_details, options } = this.destination;
         options.granularity = options.granularity_level;
@@ -49,6 +59,17 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         const values = Object.values(group)[0] || [];
         return [...arr, ...values];
       }, []);
+
+      if (type === DestinationType.GcpSm) {
+        // kms_key_id and replica_regions are mutually exclusive for GCP
+        // only the field matching the current encryption_type renders
+        const visibleFieldName =
+          this.form.data.encryption_type === GcpEncryptionType.GLOBAL_KMS ? 'kms_key_id' : 'replica_regions';
+        this.formFields = this.formFields.filter((field) => {
+          const isEncryptionField = field.name === 'kms_key_id' || field.name === 'replica_regions';
+          return !isEncryptionField || field.name === visibleFieldName;
+        });
+      }
       this.type = type;
     };
 
@@ -56,6 +77,14 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       render(hbs` <Secrets::Page::Destinations::CreateAndEdit @form={{this.form}} @type={{this.type}} />`, {
         owner: this.engine,
       });
+
+    // expands every collapsed accordion (e.g. "Advanced configuration", "Replica regions and encryption")
+    // so their nested fields render in the DOM and can be interacted with
+    this.expandAccordions = async () => {
+      for (const button of document.querySelectorAll('[data-test-accordion] button')) {
+        await click(button);
+      }
+    };
   });
 
   test('create: it renders breadcrumbs and navigates back to create on cancel', async function (assert) {
@@ -510,7 +539,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
       // Fill in required fields
       await fillIn(GENERAL.inputByAttr('name'), name);
-      await fillIn(GENERAL.inputByAttr('region'), 'us-west-1');
+      await PAGE.form.fillInByAttr('region', 'us-west-1');
       await fillIn(GENERAL.inputByAttr('role_arn'), 'arn:aws:iam::123456789012:role/test-role');
       await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'test-audience');
 
@@ -596,6 +625,361 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     });
   });
 
+  // AWS-SM KMS KEY ID AND REPLICA REGIONS TESTS
+  module('aws-sm kms key id and replica regions support', function () {
+    test('create: it renders a KMS key ID input alongside the primary region select', async function (assert) {
+      this.generateForm(true, DestinationType.AwsSm);
+      assert.expect(2);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+
+      assert.dom(GENERAL.kvFieldByAttr('region')).exists('renders the primary region select');
+      assert
+        .dom(GENERAL.kvFieldByAttr('kms_key_id'))
+        .exists('renders the KMS key ID input alongside the primary region select');
+    });
+
+    test('create: it renders region and KMS key inputs for replica regions', async function (assert) {
+      this.generateForm(true, DestinationType.AwsSm);
+      assert.expect(2);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+
+      assert.dom(GENERAL.kvFieldByAttr('key')).exists('renders the replica region select');
+      assert
+        .dom(GENERAL.kvFieldByAttr('value'))
+        .exists('renders a KMS key ID input alongside the replica region select');
+    });
+
+    test('create: it successfully creates a destination with a primary region and KMS key ID', async function (assert) {
+      this.generateForm(true, DestinationType.AwsSm);
+      assert.expect(2);
+
+      const name = 'aws-primary-kms';
+      const path = `sys/sync/destinations/aws-sm/${name}`;
+      this.server.post(path, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        assert.propContains(payload, { region: 'us-west-1' }, 'payload contains region');
+        assert.propContains(
+          payload,
+          { kms_key_id: 'arn:aws:kms:us-west-1:123456789012:key/my-key' },
+          'payload contains kms_key_id'
+        );
+        return payload;
+      });
+
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await this.expandAccordions();
+      await fillIn(GENERAL.kvFieldByAttr('region'), 'us-west-1');
+      await fillIn(GENERAL.kvFieldByAttr('kms_key_id'), 'arn:aws:kms:us-west-1:123456789012:key/my-key');
+
+      await click(GENERAL.submitButton);
+    });
+
+    test('create: it successfully creates a destination with replica regions and KMS keys', async function (assert) {
+      this.generateForm(true, DestinationType.AwsSm);
+      assert.expect(1);
+
+      const name = 'aws-replica-kms';
+      const path = `sys/sync/destinations/aws-sm/${name}`;
+      this.server.post(path, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        assert.propEqual(
+          payload.replica_regions,
+          { 'us-east-1': 'arn:aws:kms:us-east-1:123456789012:key/my-key' },
+          'payload contains replica_regions with the region/key pair'
+        );
+        return payload;
+      });
+
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await this.expandAccordions();
+      await fillIn(GENERAL.kvFieldByAttr('key'), 'us-east-1');
+      await fillIn(GENERAL.kvFieldByAttr('value'), 'arn:aws:kms:us-east-1:123456789012:key/my-key');
+
+      await click(GENERAL.submitButton);
+    });
+
+    test('edit: it displays existing kms_key_id and replica_regions values as disabled', async function (assert) {
+      this.generateForm(false, DestinationType.AwsSm, (destination) => {
+        destination.connection_details.kms_key_id = 'arn:aws:kms:us-west-1:123456789012:key/my-key';
+        destination.connection_details.replica_regions = {
+          'us-east-1': 'arn:aws:kms:us-east-1:123456789012:key/my-key',
+        };
+      });
+      assert.expect(4);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+
+      assert
+        .dom(GENERAL.kvFieldByAttr('kms_key_id'))
+        .hasValue(
+          'arn:aws:kms:us-west-1:123456789012:key/my-key',
+          'kms_key_id field is pre-filled with the existing value'
+        );
+      assert.dom(GENERAL.kvFieldByAttr('kms_key_id')).isDisabled('kms_key_id field is disabled when editing');
+      assert
+        .dom(GENERAL.kvFieldByAttr('value'))
+        .hasValue(
+          'arn:aws:kms:us-east-1:123456789012:key/my-key',
+          'replica_regions value is pre-filled with the existing value'
+        );
+      assert.dom(GENERAL.kvFieldByAttr('value')).isDisabled('replica_regions field is disabled when editing');
+    });
+  });
+
+  // GCP-SM ENCRYPTION METHOD TESTS
+  module('gcp-sm encryption type support', function () {
+    test('create: it renders Google-managed encryption selected by default with a replica regions field', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(3);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+
+      assert
+        .dom(GENERAL.radioByAttr(GcpEncryptionType.GOOGLE_MANAGED))
+        .isChecked('Google-managed encryption is selected by default');
+      assert.dom(GENERAL.fieldByAttr('replica_regions')).exists('renders the replica regions field');
+      assert.dom(GENERAL.fieldByAttr('kms_key_id')).doesNotExist('does not render the KMS key ID field');
+    });
+
+    test('create: it renders the KMS key ID field when Global KMS key is selected', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(2);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+      await click(GENERAL.radioByAttr(GcpEncryptionType.GLOBAL_KMS));
+
+      assert.dom(GENERAL.fieldByAttr('kms_key_id')).exists('renders the KMS key ID field');
+      assert
+        .dom(GENERAL.fieldByAttr('replica_regions'))
+        .doesNotExist('does not render the replica regions field');
+    });
+
+    test('create: it renders region and KMS key inputs when Regional KMS keys is selected', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(3);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+      await click(GENERAL.radioByAttr(GcpEncryptionType.REGIONAL_KMS));
+
+      assert.dom(GENERAL.fieldByAttr('kms_key_id')).doesNotExist('does not render the KMS key ID field');
+      assert.dom(GENERAL.fieldByAttr('replica_regions')).exists('renders the replica regions field');
+      assert
+        .dom(GENERAL.kvFieldByAttr('value'))
+        .exists('renders a KMS key value input alongside the region select');
+    });
+
+    test('create: it clears previously entered values when switching encryption method', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(2);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+      await click(GENERAL.radioByAttr(GcpEncryptionType.GLOBAL_KMS));
+      await fillIn(
+        GENERAL.inputByAttr('kms_key_id'),
+        'projects/my-project/locations/global/keyRings/my-ring/cryptoKeys/my-key'
+      );
+
+      await click(GENERAL.radioByAttr(GcpEncryptionType.GOOGLE_MANAGED));
+      await click(GENERAL.radioByAttr(GcpEncryptionType.GLOBAL_KMS));
+
+      assert.dom(GENERAL.inputByAttr('kms_key_id')).hasValue('', 'kms_key_id was reset');
+      assert.strictEqual(this.form.data.kms_key_id, undefined, 'kms_key_id is undefined in form data');
+    });
+
+    test('create: it validates KMS key ID is required for Global KMS key encryption', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(1);
+
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'test-destination');
+      await this.expandAccordions();
+      await click(GENERAL.radioByAttr(GcpEncryptionType.GLOBAL_KMS));
+
+      await click(GENERAL.submitButton);
+
+      assert
+        .dom(GENERAL.validationErrorByAttr('kms_key_id'))
+        .hasText('KMS key ID is required.', 'renders validation error for missing kms_key_id');
+    });
+
+    test('create: it validates each replica region requires a KMS key for Regional KMS keys encryption', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(1);
+
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'test-destination');
+      await this.expandAccordions();
+      await click(GENERAL.radioByAttr(GcpEncryptionType.REGIONAL_KMS));
+      await fillIn(GENERAL.kvFieldByAttr('key'), 'us-west1');
+      // leave the KMS key value empty
+
+      await click(GENERAL.submitButton);
+
+      assert
+        .dom(GENERAL.validationErrorByAttr('replica_regions'))
+        .hasText(
+          'Each replica region requires a corresponding KMS key ID.',
+          'renders validation error for incomplete replica_regions row'
+        );
+    });
+
+    test('create: it successfully creates a destination with Global KMS key encryption', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(2);
+
+      const name = 'gcp-global-kms';
+      const path = `sys/sync/destinations/gcp-sm/${name}`;
+      this.server.post(path, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        assert.propContains(
+          payload,
+          { kms_key_id: 'projects/my-project/locations/global/keyRings/my-ring/cryptoKeys/my-key' },
+          'payload contains kms_key_id'
+        );
+        assert.notOk('encryption_type' in payload, 'encryption_type is not in payload');
+        return payload;
+      });
+
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await this.expandAccordions();
+      await click(GENERAL.radioByAttr(GcpEncryptionType.GLOBAL_KMS));
+      await fillIn(
+        GENERAL.inputByAttr('kms_key_id'),
+        'projects/my-project/locations/global/keyRings/my-ring/cryptoKeys/my-key'
+      );
+
+      await click(GENERAL.submitButton);
+    });
+
+    test('create: it successfully creates a destination with Regional KMS keys encryption', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(2);
+
+      const name = 'gcp-regional-kms';
+      const path = `sys/sync/destinations/gcp-sm/${name}`;
+      this.server.post(path, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        assert.propEqual(
+          payload.replica_regions,
+          { 'us-west1': 'projects/my-project/locations/us-west1/keyRings/my-ring/cryptoKeys/my-key' },
+          'payload contains replica_regions with the region/key pair'
+        );
+        assert.notOk('kms_key_id' in payload, 'kms_key_id is not in payload');
+        return payload;
+      });
+
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await this.expandAccordions();
+      await click(GENERAL.radioByAttr(GcpEncryptionType.REGIONAL_KMS));
+      await fillIn(GENERAL.kvFieldByAttr('key'), 'us-west1');
+      await fillIn(
+        GENERAL.kvFieldByAttr('value'),
+        'projects/my-project/locations/us-west1/keyRings/my-ring/cryptoKeys/my-key'
+      );
+
+      await click(GENERAL.submitButton);
+    });
+
+    test('create: it successfully creates a destination with Google-managed encryption and selected replica regions', async function (assert) {
+      this.generateForm(true, DestinationType.GcpSm);
+      assert.expect(2);
+
+      const name = 'gcp-google-managed';
+      const path = `sys/sync/destinations/gcp-sm/${name}`;
+      this.server.post(path, (schema, req) => {
+        const payload = JSON.parse(req.requestBody);
+        assert.propEqual(
+          payload.replica_regions,
+          { 'us-west1': '' },
+          'payload contains the region with an empty KMS key value'
+        );
+        assert.notOk('kms_key_id' in payload, 'kms_key_id is not in payload');
+        return payload;
+      });
+
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await this.expandAccordions();
+      // Google-managed encryption is selected by default
+      await fillIn(GENERAL.kvFieldByAttr('key'), 'us-west1');
+
+      await click(GENERAL.submitButton);
+    });
+
+    test('edit: it derives and disables Global KMS key encryption from an existing kms_key_id', async function (assert) {
+      this.generateForm(false, DestinationType.GcpSm, (destination) => {
+        destination.connection_details.kms_key_id =
+          'projects/my-project/locations/global/keyRings/my-ring/cryptoKeys/my-key';
+      });
+      assert.expect(4);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+
+      assert
+        .dom(GENERAL.radioByAttr(GcpEncryptionType.GLOBAL_KMS))
+        .isChecked('Global KMS key encryption method is derived from the existing kms_key_id');
+      assert
+        .dom(GENERAL.inputByAttr('kms_key_id'))
+        .hasValue(this.form.data.kms_key_id, 'kms_key_id field is pre-filled');
+      assert
+        .dom(GENERAL.radioByAttr(GcpEncryptionType.GLOBAL_KMS))
+        .isDisabled('encryption method radio is disabled when editing');
+      assert.dom(GENERAL.inputByAttr('kms_key_id')).isDisabled('kms_key_id field is disabled when editing');
+    });
+
+    test('edit: it derives Regional KMS keys encryption from existing replica_regions with populated values', async function (assert) {
+      this.generateForm(false, DestinationType.GcpSm, (destination) => {
+        destination.connection_details.replica_regions = {
+          'us-west1': 'projects/my-project/locations/us-west1/keyRings/my-ring/cryptoKeys/my-key',
+        };
+      });
+      assert.expect(3);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+
+      assert
+        .dom(GENERAL.radioByAttr(GcpEncryptionType.REGIONAL_KMS))
+        .isChecked('Regional KMS keys encryption method is derived from existing replica_regions');
+      assert.dom(GENERAL.kvFieldByAttr('key')).hasValue('us-west1', 'region is pre-filled');
+      assert
+        .dom(GENERAL.kvFieldByAttr('value'))
+        .hasValue(
+          'projects/my-project/locations/us-west1/keyRings/my-ring/cryptoKeys/my-key',
+          'KMS key ID is pre-filled'
+        );
+    });
+
+    test('edit: it derives Google-managed encryption from existing replica_regions with regions only', async function (assert) {
+      this.generateForm(false, DestinationType.GcpSm, (destination) => {
+        destination.connection_details.replica_regions = { 'us-west1': '' };
+      });
+      assert.expect(2);
+
+      await this.renderComponent();
+      await this.expandAccordions();
+
+      assert
+        .dom(GENERAL.radioByAttr(GcpEncryptionType.GOOGLE_MANAGED))
+        .isChecked('Google-managed encryption method is derived when replica_regions has no KMS key values');
+      assert.dom(GENERAL.kvFieldByAttr('key')).hasValue('us-west1', 'region is pre-filled');
+    });
+  });
+
   // CREATE FORM ASSERTIONS FOR EACH DESTINATION TYPE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
@@ -610,10 +994,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Create Destination for ${name}`);
 
-        const accordion = document.querySelector(GENERAL.accordionButton('Advanced configuration'));
-        if (accordion) {
-          await click(GENERAL.accordionButton('Advanced configuration'));
-        }
+        await this.expandAccordions();
 
         for (const field of this.formFields) {
           assert.dom(GENERAL.fieldByAttr(field.name)).exists();
@@ -659,13 +1040,10 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         await this.renderComponent();
 
-        const accordion = document.querySelector(GENERAL.accordionButton('Advanced configuration'));
-        if (accordion) {
-          await click(GENERAL.accordionButton('Advanced configuration'));
-        }
+        await this.expandAccordions();
 
         for (const field of this.formFields) {
-          await PAGE.form.fillInByAttr(field.name, `my-${field.name}`);
+          await PAGE.form.fillInByAttr(field.name, `my-${field.name}`, type);
         }
         await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
@@ -765,11 +1143,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
         assert.dom(GENERAL.hdsPageHeaderTitle).hasTextContaining(`Edit ${this.form.name}`);
 
-        // Expand Advanced configuration accordion if it exists (contains granularity, custom_tags, etc.)
-        const accordion = document.querySelector(GENERAL.accordionButton('Advanced configuration'));
-        if (accordion) {
-          await click(GENERAL.accordionButton('Advanced configuration'));
-        }
+        await this.expandAccordions();
 
         for (const field of this.formFields) {
           if (editable.includes(field.name)) {
@@ -777,9 +1151,19 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
               // Enable inputs with sensitive values
               await click(PAGE.form.enableInput(field.name));
             }
-            await PAGE.form.fillInByAttr(field.name, `new-${field.name}-value`);
+            await PAGE.form.fillInByAttr(field.name, `new-${field.name}-value`, type);
           } else {
-            assert.dom(GENERAL.inputByAttr(field.name)).isDisabled(`${field.name} is disabled`);
+            let disabledSelector;
+            if (field.options.keyValueFields) {
+              // keyValueInputs fields (e.g. region) disable their inner inputs, not the outer wrapper that data-test-input targets
+              disabledSelector = GENERAL.kvFieldByAttr(field.options.keyValueFields[0].name);
+            } else if (field.options.editType === 'radio') {
+              // radio fields (e.g. gcp-sm's encryption_type) disable each individual radio input
+              disabledSelector = GENERAL.radioByAttr(field.options.possibleValues[0].value);
+            } else {
+              disabledSelector = GENERAL.inputByAttr(field.name);
+            }
+            assert.dom(disabledSelector).isDisabled(`${field.name} is disabled`);
           }
         }
 

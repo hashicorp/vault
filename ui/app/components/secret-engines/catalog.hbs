@@ -3,11 +3,154 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header>
+<Page::Header
+  @title="Create a new secrets engine"
+  @icon="bank-vault"
+  @description="Choose the secrets engine that matches your infrastructure and use case. When your environment supports it, engines with dynamic credentials or automatic rotation provide enhanced security."
+>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
+  <:actions>
+    <Hds::Button
+      @text="View documentation"
+      @color="secondary"
+      @icon="external-link"
+      @iconPosition="trailing"
+      @href={{doc-link "/vault/docs/secrets"}}
+    />
+  </:actions>
 </Page::Header>
+
+<Hds::Layout::Flex @direction="column" @align="start" @gap="8" class="has-top-margin-l has-bottom-margin-m">
+  <Hds::Text::Display @size="400">Select engine type</Hds::Text::Display>
+
+  <Hds::Reveal
+    @text="View badge legend"
+    @textWhenOpen="Hide badge legend"
+    class="is-fullwidth"
+    data-test-reveal="badge legend"
+  >
+    <Hds::Layout::Flex @direction="column" @gap="16" class="has-bottom-margin-l has-top-margin-m" data-test-badge-legend>
+      {{#each this.badgeLegendEntries as |capability|}}
+        <Hds::Layout::Flex @align="center" @gap="16" @wrap={{false}}>
+          <Hds::Layout::Flex::Item @basis="12%" @grow={{false}} @shrink={{false}}>
+            <Hds::Badge @size="small" @text={{capability.badge}} data-test-badge={{capability.badge}} />
+          </Hds::Layout::Flex::Item>
+          <Hds::Layout::Flex::Item @basis="88%" @grow={{false}} @shrink={{false}}>
+            <Hds::Text::Body @color="foreground-primary" data-test-text-body={{capability.badge}}>
+              {{capability.description}}
+            </Hds::Text::Body>
+          </Hds::Layout::Flex::Item>
+        </Hds::Layout::Flex>
+      {{/each}}
+    </Hds::Layout::Flex>
+  </Hds::Reveal>
+</Hds::Layout::Flex>
+
+<Hds::SegmentedGroup as |SG|>
+  <SG.TextInput
+    @width="300px"
+    @type="search"
+    @value={{this.keywords}}
+    placeholder="Search by keywords"
+    aria-label="Search"
+    data-test-input-search="search by keywords"
+    {{on "input" (fn this.setSearchText "keywords")}}
+  />
+  <SG.Dropdown as |D|>
+    <D.ToggleButton
+      @color="secondary"
+      @text={{if this.secretTypeFilter (get (find-by "value" this.secretTypeFilter this.secretTypes) "label") "Secret type"}}
+      data-test-toggle-input="filter-by-secret-type"
+    />
+    {{#each this.secretTypes as |option|}}
+      <D.Checkmark
+        @selected={{eq option.value this.secretTypeFilter}}
+        {{on "click" (fn this.filterBySecretType option.value)}}
+        data-test-checkmark={{option.value}}
+      >{{option.label}}</D.Checkmark>
+    {{/each}}
+  </SG.Dropdown>
+  <SG.Dropdown as |D|>
+    <D.ToggleButton
+      @color="secondary"
+      @text={{if
+        this.rotationTypeFilter
+        (get (find-by "capability" this.rotationTypeFilter this.rotationTypes) "label")
+        "Rotation type"
+      }}
+      data-test-toggle-input="filter-by-rotation-type"
+    />
+    {{#each this.rotationTypes as |option|}}
+      <D.Checkmark
+        @selected={{eq option.capability this.rotationTypeFilter}}
+        {{on "click" (fn this.filterByRotationType option.capability)}}
+        data-test-checkmark={{option.capability}}
+      >{{option.label}}</D.Checkmark>
+    {{/each}}
+  </SG.Dropdown>
+  <SG.Dropdown as |D|>
+    <D.ToggleButton
+      @color="secondary"
+      @text={{if this.platformFilter (get (find-by "category" this.platformFilter this.platforms) "label") "Platforms"}}
+      data-test-toggle-input="filter-by-platform"
+    />
+    {{#each this.platforms as |option|}}
+      <D.Checkmark
+        @selected={{eq option.category this.platformFilter}}
+        {{on "click" (fn this.filterByPlatform option.category)}}
+        data-test-checkmark={{option.category}}
+      >{{option.label}}</D.Checkmark>
+    {{/each}}
+  </SG.Dropdown>
+</Hds::SegmentedGroup>
+
+<Hds::Layout::Flex @gap="8" class="has-top-margin-xs has-bottom-margin-xs" @align="center">
+  {{#if (and (not this.keywords) (not this.secretTypeFilter) (not this.rotationTypeFilter) (not this.platformFilter))}}
+    <Hds::Text::Body class="has-top-padding-xs" data-test-no-filters-applied>No filters applied.</Hds::Text::Body>
+  {{else}}
+    <Hds::Text::Body>Filters applied:</Hds::Text::Body>
+    {{#if this.keywords}}
+      <Hds::Tag @text={{this.keywords}} @onDismiss={{this.clearKeyword}} data-test-button="keyword-tag" />
+    {{/if}}
+    {{#if this.secretTypeFilter}}
+      {{#let (find-by "value" this.secretTypeFilter this.secretTypes) as |option|}}
+        <Hds::Tag
+          @text={{option.label}}
+          @onDismiss={{fn this.filterBySecretType this.secretTypeFilter}}
+          data-test-button={{this.secretTypeFilter}}
+        />
+      {{/let}}
+    {{/if}}
+    {{#if this.rotationTypeFilter}}
+      {{#let (find-by "capability" this.rotationTypeFilter this.rotationTypes) as |option|}}
+        <Hds::Tag
+          @text={{option.label}}
+          @onDismiss={{fn this.filterByRotationType this.rotationTypeFilter}}
+          data-test-button={{this.rotationTypeFilter}}
+        />
+      {{/let}}
+    {{/if}}
+    {{#if this.platformFilter}}
+      {{#let (find-by "category" this.platformFilter this.platforms) as |option|}}
+        <Hds::Tag
+          @text={{option.label}}
+          @onDismiss={{fn this.filterByPlatform this.platformFilter}}
+          data-test-button={{this.platformFilter}}
+        />
+      {{/let}}
+    {{/if}}
+    <Hds::Button
+      @text="Clear all"
+      @color="tertiary"
+      @icon="x"
+      @size="small"
+      data-test-button="Clear all"
+      {{on "click" this.clearAllFilters}}
+    />
+  {{/if}}
+</Hds::Layout::Flex>
 
 {{#if @pluginCatalogError}}
   <div class="has-bottom-padding-m">
@@ -21,50 +164,89 @@
   </div>
 {{/if}}
 
-{{#each this.pluginCategoriesList as |category|}}
-  {{#let (this.getMountTypesByCategory category) as |categorized|}}
-    {{! Only display the category if it has any enabled or disabled plugins }}
-    {{#if (or categorized.enabled.length categorized.disabled.length)}}
-      <div class="has-top-padding-m has-bottom-padding-s">
-        <Hds::Text::Display @tag="h2" size="400" class="is-flex align-items-center">
-          {{capitalize category}}
-          {{#if (eq category "external")}}
-            <Hds::Button
-              @text=""
-              @color="tertiary"
-              @icon="info"
-              @size="small"
-              @isIconOnly={{true}}
-              @ariaLabel="Information about external plugins"
-              class="has-left-margin-xs"
-              {{on "click" this.openExternalPluginsHelp}}
-            />
-          {{/if}}
-        </Hds::Text::Display>
-      </div>
-      <div class="flex row-wrap row-gap-16 column-gap-16 has-bottom-padding-m">
-        {{! Enabled plugins }}
-        {{#each categorized.enabled as |type|}}
-          <EnabledPluginCard @type={{type}} @setMountType={{@setMountType}} />
-        {{/each}}
+{{#if this.filteredEngines}}
+  {{#each this.pluginCategoriesList as |category|}}
+    {{#let (this.getMountTypesByCategory category) as |categorized|}}
+      {{! Only display the category if it has any enabled or disabled plugins }}
+      {{#if (or categorized.enabled.length categorized.disabled.length)}}
+        <div class="has-top-padding-m has-bottom-padding-s">
+          <Hds::Text::Display @tag="h2" size="400" class="is-flex align-items-center">
+            {{capitalize category}}
+            {{#if (eq category "external")}}
+              <Hds::Button
+                @text=""
+                @color="tertiary"
+                @icon="info"
+                @size="small"
+                @isIconOnly={{true}}
+                @ariaLabel="Information about external plugins"
+                class="has-left-margin-xs"
+                {{on "click" this.openExternalPluginsHelp}}
+              />
+            {{/if}}
+          </Hds::Text::Display>
+        </div>
+        <Hds::Form::RadioCard::Group @name={{category}} class="has-bottom-margin-m" @controlPosition="left" as |G|>
+          <Hds::Layout::Flex @wrap={{true}} class="is-fullwidth" @direction="row" as |LF|>
 
-        {{! Vertical separator if both enabled and disabled plugins exist }}
-        {{#if (and categorized.enabled.length categorized.disabled.length)}}
-          <div class="selectable-engines-vertical-divider has-top-bottom-margin-12"></div>
-        {{/if}}
+            {{! Enabled plugins }}
+            {{#each categorized.enabled as |type|}}
+              {{#let (this.isDisabled type) as |isDisabled|}}
+                <LF.Item @basis="360px" class="flex">
+                  <G.RadioCard
+                    @disabled={{isDisabled}}
+                    data-test-card-container={{type.type}}
+                    aria-label="{{@type.displayName}} - {{if isDisabled 'disabled' 'enabled'}} engine type"
+                    {{on "change" (fn this.selectEngineType type.type)}}
+                    as |R|
+                  >
+                    <R.Icon @name={{type.glyph}} />
+                    <R.Label>{{type.displayName}}</R.Label>
+                    {{#each type.capabilities as |capability|}}
+                      <R.Badge @text={{capitalize capability}} />
+                    {{/each}}
+                    {{#if (this.showDeprecationBadge type)}}
+                      <R.Badge @text={{capitalize type.deprecationStatus}} @size="small" />
+                    {{/if}}
+                    {{#if isDisabled}}
+                      <Hds::Badge @text="Enterprise" @size="small" />
+                    {{/if}}
+                    <R.Description>{{type.description}}</R.Description>
+                  </G.RadioCard>
+                </LF.Item>
+              {{/let}}
+            {{/each}}
 
-        {{! Disabled plugins }}
-        {{#each categorized.disabled as |type|}}
-          <DisabledPluginCard
-            @type={{type}}
-            @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
-            @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
-          />
-        {{/each}}
-      </div>
-    {{/if}}
-  {{/let}}
-{{/each}}
+            {{! Vertical separator if both enabled and disabled plugins exist }}
+            {{#if (and categorized.enabled.length categorized.disabled.length)}}
+              <div class="selectable-engines-vertical-divider has-top-bottom-margin-12"></div>
+            {{/if}}
+
+            {{! Disabled plugins }}
+            {{#each categorized.disabled as |type|}}
+              <LF.Item @basis="33%">
+                <DisabledPluginCard
+                  @type={{type}}
+                  @handleDisabledPluginClick={{this.handleDisabledPluginClick}}
+                  @handleDisabledPluginKeyDown={{this.handleDisabledPluginKeyDown}}
+                />
+              </LF.Item>
+            {{/each}}
+          </Hds::Layout::Flex>
+        </Hds::Form::RadioCard::Group>
+      {{/if}}
+    {{/let}}
+  {{/each}}
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No Secrets engines found" @titleTag="h2" data-test-empty-state-title />
+  </Hds::ApplicationState>
+{{/if}}
+
+<Hds::Layout::Flex @gap="16" @justify="end" class="has-padding-l sticky-footer">
+  <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backends" data-test-cancel />
+  <Hds::Button @text="Next" {{on "click" this.handleSelection}} class="has-right-margin-xl" data-test-button="next" />
+</Hds::Layout::Flex>
 
 <PluginDocumentationFlyout
   @isOpen={{this.showFlyout}}

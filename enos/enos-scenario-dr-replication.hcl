@@ -1016,6 +1016,8 @@ scenario "dr_replication" {
       ip_version            = matrix.ip_version
       primary_leader_host   = step.get_primary_cluster_ips.leader_host
       secondary_leader_host = step.get_secondary_cluster_ips.leader_host
+      primary_root_token    = step.create_primary_cluster.root_token
+      secondary_root_token  = step.create_secondary_cluster.root_token
       vault_addr            = step.create_primary_cluster.api_addr_localhost
       vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
     }
@@ -1095,7 +1097,7 @@ scenario "dr_replication" {
       timeout           = 120 // seconds
       vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_secondary_cluster.root_token
+      vault_root_token  = step.vault_failover_promote_dr_secondary_cluster.new_root_token
     }
   }
 
@@ -1201,7 +1203,7 @@ scenario "dr_replication" {
       vault_audit_log_path    = step.create_secondary_cluster.audit_device_file_path
       vault_edition           = matrix.edition
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token        = step.create_secondary_cluster.root_token
+      vault_root_token        = step.vault_failover_promote_dr_secondary_cluster.new_root_token
       verify_pki_certs        = false
       verify_aws_engine_creds = false
       verify_ssh_secrets      = false
@@ -1308,6 +1310,8 @@ scenario "dr_replication" {
       ip_version            = matrix.ip_version
       primary_leader_host   = step.get_secondary_cluster_ips.leader_host
       secondary_leader_host = step.get_primary_cluster_ips.leader_host
+      primary_root_token    = step.vault_failover_promote_dr_secondary_cluster.new_root_token
+      secondary_root_token  = step.create_primary_cluster.root_token
       vault_addr            = step.create_primary_cluster.api_addr_localhost
       vault_install_dir     = global.vault_install_dir[matrix.artifact_type]
     }
@@ -1345,7 +1349,7 @@ scenario "dr_replication" {
       vault_audit_log_path = step.create_secondary_cluster.audit_device_file_path
       vault_edition        = matrix.edition
       vault_install_dir    = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token     = step.create_secondary_cluster.root_token
+      vault_root_token     = step.vault_failover_promote_dr_secondary_cluster.new_root_token
       verify_pki_certs     = false
       verify_ssh_secrets   = false
     }
@@ -1378,7 +1382,7 @@ scenario "dr_replication" {
       leader_host        = step.get_secondary_cluster_ips.leader_host
       vault_addr         = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir  = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token   = step.create_secondary_cluster.root_token
+      vault_root_token   = step.vault_failover_promote_dr_secondary_cluster.new_root_token
       verify_ssh_secrets = false
     }
   }

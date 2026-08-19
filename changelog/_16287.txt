@@ -1,0 +1,3 @@
+```release-note:feature
+**Terraform Code Generator**: Adds TFVP code snippets to ACL policy surfaces (show, flyout and form), powered by a new reusable mapping engine for generating HCL from Vault API payloads.
+```
