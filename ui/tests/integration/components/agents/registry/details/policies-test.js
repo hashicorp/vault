@@ -18,7 +18,7 @@ module('Integration | Component | agents/registry/details/policies', function (h
         id: '1',
         display_name: 'agent-1',
         entity_id: 'entity-1',
-        ceiling_policy: ['ceiling-policy'],
+        ceiling_policies: ['ceiling-policy'],
       },
       entity: {
         id: 'entity-1',
@@ -56,7 +56,7 @@ path "kv/data/appB/*" {
     `);
 
     assert.dom(GENERAL.table('policy-list')).includesText('Policy list', 'renders table caption');
-    assert.dom(GENERAL.table('policy-list')).includesText('Ceiling', 'renders ceiling level rows');
+    assert.dom(GENERAL.table('policy-list')).includesText('OBO ceiling', 'renders ceiling level rows');
     assert
       .dom(GENERAL.table('policy-list'))
       .includesText('agent-1', 'renders display name as ceiling policy source');
@@ -106,7 +106,7 @@ path "kv/data/appB/*" {
       ...this.data,
       agent: {
         ...this.data.agent,
-        ceiling_policy: [],
+        ceiling_policies: [],
       },
     };
 

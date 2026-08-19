@@ -124,3 +124,9 @@ variable "verify_default_lcq" {
   description = "Expected DEFAULT_LCQ (max_leases) value for TestDefaultLCQ in isolated/verify. Empty string causes the test to skip (upgrading from < 1.16.0). Mirrors vault_autopilot_default_max_leases in vault_verify_default_lcq module."
   default     = ""
 }
+
+variable "enable_testonly_tests" {
+  type        = bool
+  description = "Enable tests that require the 'testonly' build tag (e.g., verify tests). Set to true for docker environments to run verify tests."
+  default     = null
+}

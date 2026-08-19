@@ -5,8 +5,7 @@
 
 <Hds::Text::Body class="has-top-margin-s" data-test-agent-description>
   <strong>Description:</strong>
-  Orchestrates automated testing workflows and validates system integrity. Provides real-time feedback on code quality and
-  deployment readiness.
+  {{@data.agent.description}}
 </Hds::Text::Body>
 
 <Hds::Card::Container
@@ -32,12 +31,11 @@
     </LF.Item>
     <LF.Item>
       <Hds::Text::Body @color="faint" class="is-block">Agent last updated</Hds::Text::Body>
-      <Hds::Text::Body @color="primary">{{date-from-now @data.agent.last_updated_time}}</Hds::Text::Body>
-      ago
+      <Hds::Text::Body @color="primary">{{date-from-now @data.agent.last_updated_time}} ago</Hds::Text::Body>
     </LF.Item>
     <LF.Item>
       <Hds::Text::Body @color="faint" class="is-block">Agent owner</Hds::Text::Body>
-      <Hds::Text::Body @color="primary">{{@data.agent.owner}}</Hds::Text::Body>
+      <Hds::Text::Body @color="primary">{{or @data.agent.owner "/"}}</Hds::Text::Body>
     </LF.Item>
   </Hds::Layout::Flex>
 </Hds::Card::Container>

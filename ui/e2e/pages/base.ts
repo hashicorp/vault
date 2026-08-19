@@ -33,7 +33,8 @@ export class BasePage {
       .getByLabel('supported secrets engine menu')
       .click();
     await this.page.getByRole('button', { name: 'Delete' }).click();
-    await this.page.getByRole('button', { name: 'Confirm' }).click();
+    await this.page.getByRole('textbox', { name: 'Confirm deletion   Type "' }).fill('delete-engine');
+    await this.page.getByRole('button', { name: 'Delete engine' }).click();
   }
 
   /**
@@ -58,7 +59,12 @@ export class BasePage {
 
     // Click "Enable new engine"
     await this.page.getByRole('link', { name: 'Enable new engine' }).click();
-    await this.page.getByRole('heading', { name: findEngineDisplayName(engineType) }).click();
+    await this.page
+      .locator('label')
+      .filter({ hasText: findEngineDisplayName(engineType) })
+      .getByLabel('- enabled engine type')
+      .click();
+    await this.page.getByRole('button', { name: 'Next' }).click();
 
     if (options?.external) {
       // Prerequisite: mock plugin catalog endpoint in the test so the External plugin option is available.
