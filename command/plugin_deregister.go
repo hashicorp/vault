@@ -120,28 +120,59 @@ func (c *PluginDeregisterCommand) Run(args []string) int {
 
 	// The deregister endpoint returns 200 if the plugin doesn't exist, so first
 	// try fetching the plugin to help improve info printed to the user.
-	// 404 => Return early with a descriptive message.
+	// 404 / 400 => Return early with a descriptive message.
+	// Auto-selected warning present => versioned-only plugin; no unversioned entry
+	//                                  to deregister, so treat as "does not exist".
 	// Other error => Continue attempting to deregister the plugin anyway.
 	// Plugin exists but is builtin => Error early.
 	// Otherwise => If deregister succeeds, we can report that the plugin really
 	//              was deregistered (and not just already absent).
 	var pluginExists bool
-	if info, err := client.Sys().GetPluginWithContext(context.Background(), &api.GetPluginInput{
-		Name:    pluginName,
-		Type:    pluginType,
-		Version: c.flagPluginVersion,
-	}); err != nil {
-		if respErr, ok := err.(*api.ResponseError); ok && respErr.StatusCode == http.StatusNotFound {
-			c.UI.Output(fmt.Sprintf("Plugin %q (type: %q, version %q) does not exist in the catalog", pluginName, pluginType, c.flagPluginVersion))
+	// Build the catalog path for the raw Logical read so we get back Warnings,
+	// which the typed GetPlugin API strips out.
+	catalogPath := fmt.Sprintf("sys/plugins/catalog/%s/%s", pluginType, pluginName)
+	req := client.NewRequest(http.MethodGet, "/v1/"+catalogPath)
+	if c.flagPluginVersion != "" {
+		req.Params.Set("version", c.flagPluginVersion)
+	}
+	if secret, err := client.RawRequestWithContext(context.Background(), req); err != nil {
+		if respErr, ok := err.(*api.ResponseError); ok && (respErr.StatusCode == http.StatusNotFound || respErr.StatusCode == http.StatusBadRequest) {
+			// Surface the server's error message directly — it already explains
+			// whether the plugin is missing entirely or multiple versions exist.
+			if len(respErr.Errors) > 0 {
+				c.UI.Error(respErr.Errors[0])
+			} else {
+				c.UI.Output(fmt.Sprintf("Plugin %q (type: %q, version %q) does not exist in the catalog", pluginName, pluginType, c.flagPluginVersion))
+			}
 			return 0
 		}
 		// Best-effort check, continue trying to deregister.
-	} else if info != nil {
-		if info.Builtin {
-			c.UI.Error(fmt.Sprintf("Plugin %q (type: %q) is a builtin plugin and cannot be deregistered", pluginName, pluginType))
-			return 2
+	} else {
+		defer secret.Body.Close()
+		var result api.Secret
+		if err := secret.DecodeJSON(&result); err == nil {
+			// If the server auto-selected a version because none was specified,
+			// there is no unversioned entry to deregister. Tell the user which
+			// version they need to specify explicitly.
+			for _, w := range result.Warnings {
+				if strings.Contains(w, "no version was specified") {
+					// Use the version from the response data — more reliable
+					// than parsing the warning string.
+					autoVersion, _ := result.Data["version"].(string)
+					if autoVersion != "" {
+						c.UI.Output(fmt.Sprintf("Plugin %q (type: %q, version %q) does not exist in the catalog as an unversioned entry; did you mean -version=%s?", pluginName, pluginType, autoVersion, autoVersion))
+					} else {
+						c.UI.Output(fmt.Sprintf("Plugin %q (type: %q) does not exist in the catalog as an unversioned entry; use -version to specify a version", pluginName, pluginType))
+					}
+					return 0
+				}
+			}
+			if builtin, _ := result.Data["builtin"].(bool); builtin {
+				c.UI.Error(fmt.Sprintf("Plugin %q (type: %q) is a builtin plugin and cannot be deregistered", pluginName, pluginType))
+				return 2
+			}
+			pluginExists = true
 		}
-		pluginExists = true
 	}
 
 	if err := client.Sys().DeregisterPluginWithContext(context.Background(), &api.DeregisterPluginInput{
