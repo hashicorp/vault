@@ -70,6 +70,7 @@ resource "enos_local_exec" "run_blackbox_test" {
     var.vault_build_date != null ? { VAULT_BUILD_DATE = var.vault_build_date } : {},
     var.vault_install_dir != null ? { VAULT_INSTALL_DIR = var.vault_install_dir } : {},
     var.vault_ibm_license_edition != null ? { VAULT_IBM_LICENSE_EDITION = var.vault_ibm_license_edition } : {},
+    var.enable_testonly_tests != null ? { ENABLE_TESTONLY_TESTS = var.enable_testonly_tests ? "true" : "false" } : {},
     local.ldap_environment,
     local.postgres_environment,
     local.mongodb_environment,
