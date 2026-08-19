@@ -241,7 +241,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	var actorEntity *identity.Entity
-	if IsOAuthJwt(req.ClientToken) {
+	if IsOAuthJwt(req.ClientToken) && !req.OAuthJwtValidated {
 		isValidEnterpriseJwt, tokenMetadataContainer, entity, jwtActor, chosenProfile, err := c.validateOAuthJwtAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate jwt", "error", err)
@@ -267,6 +267,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			}
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing jwt"))
 		}
+		req.OAuthJwtValidated = true
 	}
 
 	// Resolve the token policy
@@ -454,7 +455,27 @@ func requiresMaterializedTokenState(path string) bool {
 	case "auth/token/lookup-self", "auth/token/lookup":
 		return true
 	}
-	return strings.HasPrefix(path, "cubbyhole/")
+	if strings.HasPrefix(path, "cubbyhole/") {
+		return true
+	}
+	// The UI paths below are unauthenticated but re-fetch the token entry
+	// inside their handlers to build ACL context for hasMountAccess /
+	// entPathInternalUINamespacesRead. Non-storage-backed JWT tokens must be
+	// materialized before routing so the handler can look them up by ID.
+	//
+	// sys/internal/ui/mounts (exact) — pathInternalUIMountsRead: lists all
+	// mounts visible to the caller; called by the Vault UI sidebar after login.
+	//
+	// sys/internal/ui/mounts/* (prefix) — pathInternalUIMountRead: used by the
+	// CLI preflight request issued by `vault kv put/get`.
+	//
+	// sys/internal/ui/namespaces (exact) — entPathInternalUINamespacesRead:
+	// lists namespaces accessible to the caller; called by the Vault UI
+	// namespace picker after login.
+	if path == "sys/internal/ui/mounts" || path == "sys/internal/ui/namespaces" {
+		return true
+	}
+	return strings.HasPrefix(path, "sys/internal/ui/mounts/")
 }
 
 // CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
@@ -993,7 +1014,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
+	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth && !(IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
@@ -1214,8 +1235,23 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	var auth *logical.Auth
 	var te *logical.TokenEntry
 	var ctErr error
-	// Validate the token
-	auth, te, ctErr = c.CheckToken(ctx, req, false)
+	// Validate the token. OAuth JWT requests on unauthenticated paths that
+	// require a materialized token entry (sys/internal/ui/mounts,
+	// sys/internal/ui/namespaces) are routed here rather than to
+	// handleLoginRequest so that the full JWT validation and materialization
+	// flow runs. For those requests we preserve the "unauth" semantics — ACL
+	// policy enforcement is skipped just as it would be in handleLoginRequest,
+	// because the path is publicly accessible and pathInternalUIMountRead
+	// performs its own hasMountAccess check.
+	//
+	// Using requiresMaterializedTokenState rather than isActiveOAuthJwt here
+	// means the routing decision is path-driven rather than flag-driven. This
+	// avoids the activation-flag read lock on the hot path and correctly
+	// handles the case where a SPIFFE JWT arrives with the OAuth flag enabled:
+	// auth/spiffe/login is not in requiresMaterializedTokenState, so it still
+	// routes to handleLoginRequest as intended.
+	unauth := c.isLoginRequest(ctx, req) && IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)
+	auth, te, ctErr = c.CheckToken(ctx, req, unauth)
 	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}

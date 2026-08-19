@@ -144,6 +144,7 @@ module('Unit | Service | pagination', function (hooks) {
           prevPage: 1,
           total: 5,
           filteredTotal: 4,
+          totalItems: 4,
           pageSize: 3,
         },
       },
@@ -183,6 +184,7 @@ module('Unit | Service | pagination', function (hooks) {
         lastPage: 4,
         total: 7,
         filteredTotal: 7,
+        totalItems: 7,
         pageSize: 2,
       },
       'returns correct meta values'

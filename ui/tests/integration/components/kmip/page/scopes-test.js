@@ -41,6 +41,7 @@ module('Integration | Component | kmip | Page::Scopes', function (hooks) {
       pageSize: 10,
       filteredTotal: this.scopes.length,
       total: this.scopes.length,
+      totalItems: this.scopes.length,
     };
     this.filterValue = '';
 
