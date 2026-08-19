@@ -157,7 +157,7 @@
     "qunit": "~2.24.3",
     "qunit-dom": "~3.4.0",
     "sass": "^1.100.0",
-    "shell-quote": "~1.8.4",
+    "shell-quote": "^1.9.0",
     "sinon": "~20.0.0",
     "stylelint": "~16.19.1",
     "stylelint-config-standard": "~38.0.0",
