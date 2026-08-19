@@ -13,6 +13,7 @@ export default RESTSerializer.extend({
       return {
         username: payload.data.username,
         password: payload.data.password,
+        rsaPrivateKey: payload.data.rsa_private_key,
         leaseId: payload.lease_id,
         leaseDuration: payload.lease_duration,
         lastVaultRotation: payload.data.last_vault_rotation,
