@@ -14,7 +14,8 @@ test('kubernetes secrets workflow', async ({ page }) => {
     await page.goto('dashboard');
     await page.getByRole('link', { name: 'Secrets', exact: true }).click();
     await page.getByRole('link', { name: 'Enable new engine' }).click();
-    await page.getByLabel('Kubernetes - enabled engine').click();
+    await page.locator('label').filter({ hasText: 'Kubernetes' }).getByLabel('- enabled engine type').click();
+    await page.getByRole('button', { name: 'Next' }).click();
     await page.getByRole('button', { name: 'Enable engine' }).click();
     await expect(page.locator('section')).toContainText('Kubernetes not configured');
     await basePage.dismissFlashMessages();
