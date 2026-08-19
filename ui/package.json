@@ -218,7 +218,7 @@
     "@babel/core": "7.26.10",
     "@babel/eslint-parser": "^7.29.7",
     "@carbon/charts": "^1.27.11",
-    "@hashicorp/design-system-components": "4.24.1",
+    "@hashicorp/design-system-components": "6.5.0-rc-20260811173606",
     "@hashicorp/design-system-tokens": "3.0.0",
     "@hashicorp/vault-client-typescript": "github:hashicorp/vault-client-typescript",
     "@segment/analytics-next": "^1.84.1",
