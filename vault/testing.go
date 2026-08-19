@@ -248,6 +248,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = opts.Experiments
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
+	conf.OperatorNamespacePath = opts.OperatorNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
