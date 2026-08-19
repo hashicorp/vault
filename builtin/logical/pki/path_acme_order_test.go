@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -290,13 +291,19 @@ func TestACME_FinalizeOrderConcurrency(t *testing.T) {
 	t.Parallel()
 
 	b, s := CreateBackendWithStorage(t)
+	issuerID, _ := genTestRootCa(t, b, s)
+	sc := &storageContext{Context: ctx, Storage: s, Backend: b}
+	issuer, err := sc.fetchIssuerById(issuerID)
+	require.NoError(t, err)
+	baseURL, err := url.Parse("https://vault.example/v1/pki/acme/")
+	require.NoError(t, err)
 
 	// Set up a minimal ACME environment: an account and a ready order.
 	accountId := genUuid()
 	orderId := genUuid()
 	account := &acmeAccount{
 		KeyId:  accountId,
-		Status: ACMEAccountStatusValid,
+		Status: AccountStatusValid,
 	}
 	order := &acmeOrder{
 		OrderId:          orderId,
@@ -308,9 +315,9 @@ func TestACME_FinalizeOrderConcurrency(t *testing.T) {
 	}
 
 	// Persist account and order to storage.
-	err := b.GetAcmeState().SaveAccount(&acmeContext{sc: &storageContext{Context: ctx, Storage: s}}, account)
+	err = b.GetAcmeState().UpdateAccount(sc, account)
 	require.NoError(t, err)
-	err = b.GetAcmeState().SaveOrder(&acmeContext{sc: &storageContext{Context: ctx, Storage: s}}, order)
+	err = b.GetAcmeState().SaveOrder(&acmeContext{sc: sc}, order)
 	require.NoError(t, err)
 
 	// Generate a valid CSR for the order's identifier.
@@ -323,13 +330,15 @@ func TestACME_FinalizeOrderConcurrency(t *testing.T) {
 
 	// Build a minimal acmeContext pointing at our storage.
 	ac := &acmeContext{
-		sc:        &storageContext{Context: ctx, Storage: s},
+		sc:        sc,
 		acmeState: b.acmeState,
+		baseUrl:   baseURL,
 		runtimeOpts: acmeWrapperOpts{
 			isCiepsEnabled: false,
 		},
 	}
 	ac.Role = issuing.SignVerbatimRole()
+	ac.Issuer = issuer
 
 	// Build the jwsCtx for the account holder.
 	uc := &jwsCtx{Kid: accountId}
@@ -411,7 +420,7 @@ func TestACME_FinalizeOrderProcessingDefense(t *testing.T) {
 	}
 	ac.Role = issuing.SignVerbatimRole()
 	uc := &jwsCtx{Kid: accountId}
-	account := &acmeAccount{KeyId: accountId, Status: ACMEAccountStatusValid}
+	account := &acmeAccount{KeyId: accountId, Status: AccountStatusValid}
 
 	csrKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	csrTemplate := &x509.CertificateRequest{DNSNames: []string{"test.example.com"}}
