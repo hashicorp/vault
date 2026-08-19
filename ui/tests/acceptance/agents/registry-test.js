@@ -130,7 +130,7 @@ module('Acceptance | agents | registry', function (hooks) {
       display_name: 'agent-1',
       entity_id: 'entity-abc',
       owner: 'owner@example.com',
-      ceiling_policy: ['default'],
+      ceiling_policies: ['default'],
     });
 
     // Override entity read to return a deterministic entity with one alias
