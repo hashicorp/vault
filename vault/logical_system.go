@@ -695,8 +695,50 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	if err != nil {
 		return nil, err
 	}
+	// autoSelectedVersion is non-empty only when the user omitted -version
+	// but exactly one versioned entry existed and was auto-selected.
+	// Used below to attach a warning to the response.
+	var autoSelectedVersion string
 	if plugin == nil {
-		return nil, nil
+		if pluginVersion == "" {
+			// No unversioned entry found. Check whether versioned entries exist
+			// for this plugin name so we can give a better response.
+			var versioned []pluginutil.VersionedPlugin
+			versioned, err = b.Core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
+			if err != nil {
+				return nil, err
+			}
+			var versions []string
+			for _, vp := range versioned {
+				if vp.Name == pluginName && vp.Version != "" && !vp.Builtin {
+					versions = append(versions, vp.Version)
+				}
+			}
+			switch len(versions) {
+			case 1:
+				// Exactly one versioned entry — auto-select it and fall
+				// through to the response-building code below.
+				plugin, err = b.Core.pluginCatalog.Get(ctx, pluginName, pluginType, versions[0])
+				if err != nil {
+					return nil, err
+				}
+				autoSelectedVersion = versions[0]
+			case 0:
+				// No entries at all — fall through to the original nil, nil
+				// path below, preserving the existing 404 behavior.
+			default:
+				// Multiple versioned entries — the user must be explicit.
+				return logical.ErrorResponse(
+					"plugin %q (type %q) not found in catalog without a version specified; "+
+						"use -version to query a specific version. "+
+						"Available versions: %s",
+					pluginName, pluginTypeStr, strings.Join(versions, ", "),
+				), nil
+			}
+		}
+		if plugin == nil {
+			return nil, nil
+		}
 	}
 
 	command := plugin.Command
@@ -731,9 +773,17 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		data["runtime"] = plugin.Runtime
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: data,
-	}, nil
+	}
+	if autoSelectedVersion != "" {
+		resp.AddWarning(fmt.Sprintf(
+			"no version was specified; automatically selected the only registered version %q. "+
+				"Use -version=%s to avoid this message.",
+			autoSelectedVersion, autoSelectedVersion,
+		))
+	}
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
