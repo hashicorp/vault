@@ -641,3 +641,13 @@ func (node *asyncChanNode) Type() eventlogger.NodeType {
 func addSubscriptions(delta int64) {
 	metrics.SetGauge([]string{"events", "subscriptions"}, float32(subscriptions.Add(delta)))
 }
+
+// ActiveSubscriptionCount returns the number of active event subscriptions across all event buses.
+func ActiveSubscriptionCount() int64 {
+	return subscriptions.Load()
+}
+
+// IsBoundedQueueEnabled reports whether bounded subscriber queues are configured for this event bus.
+func (bus *EventBus) IsBoundedQueueEnabled() bool {
+	return bus.subscriberBufferSize > 0
+}
