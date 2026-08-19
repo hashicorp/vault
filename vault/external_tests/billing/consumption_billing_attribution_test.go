@@ -5,13 +5,18 @@ package billing
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/pluginconsts"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/helper/timeutil"
+	sdkconsts "github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/billing"
@@ -566,4 +571,85 @@ func TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM(t *testing.
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "totp_t2", stored.Mounts["totp_t2"].MountAccessor)
+}
+
+// TestUpdateMaxThirdPartyPluginCounts_StoresAttributionOnHWMUpdate verifies that when a new
+// HWM is reached, attribution is stored with all correct mount metadata fields including
+// MountRunningVersion, that a second call with the same count does not overwrite attribution,
+// and that two mounts of the same plugin+version deduplicate to a single count.
+func TestUpdateMaxThirdPartyPluginCounts_StoresAttributionOnHWMUpdate(t *testing.T) {
+	t.Parallel()
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		PluginDirectory: pluginDir,
+	})
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+
+	ctx := context.Background()
+	month := timeutil.StartOfMonth(time.Now().UTC())
+
+	// Register a plugin and mount it at two paths to verify deduplication.
+	secretPlugin := pluginhelpers.CompilePlugin(t, sdkconsts.PluginTypeSecrets, "v1.0.0", pluginDir)
+	_, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
+		Name:    secretPlugin.Name,
+		Type:    api.PluginType(secretPlugin.Typ),
+		Command: secretPlugin.FileName,
+		SHA256:  secretPlugin.Sha256,
+		Version: secretPlugin.Version,
+	})
+	require.NoError(t, err)
+	require.NoError(t, client.Sys().Mount(secretPlugin.Name, &api.MountInput{
+		Type: secretPlugin.Name,
+		Config: api.MountConfigInput{
+			PluginVersion: secretPlugin.Version,
+		},
+	}))
+	// Mount the same plugin at a second path; both mounts share the same plugin+version and
+	// must deduplicate to a single count.
+	require.NoError(t, client.Sys().Mount("mount-b", &api.MountInput{
+		Type:   secretPlugin.Name,
+		Config: api.MountConfigInput{PluginVersion: secretPlugin.Version},
+	}))
+	// A request is needed to start the plugin process and populate RunningVersion.
+	_, _ = client.Logical().Read(secretPlugin.Name + "/random")
+
+	mounts, err := core.ListMounts()
+	require.NoError(t, err)
+	var mountEntry *vault.MountEntry
+	for _, me := range mounts {
+		if me.Path == secretPlugin.Name+"/" {
+			mountEntry = me
+			break
+		}
+	}
+	require.NotNil(t, mountEntry, "mount entry not found for %q", secretPlugin.Name)
+
+	// First call: no previous HWM — two mounts of the same plugin+version deduplicate to HWM=1.
+	max, err := core.UpdateMaxThirdPartyPluginCounts(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, 1, max, "two mounts of the same plugin+version must deduplicate to 1")
+
+	stored, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.ThirdPartyPluginsPrefix)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1)
+	attr := stored.Mounts[mountEntry.Accessor]
+	require.Equal(t, json.Number("1"), attr.Count)
+	require.Equal(t, mountEntry.Accessor, attr.MountAccessor)
+	require.Equal(t, mountEntry.Path, attr.MountPath)
+	require.Equal(t, secretPlugin.Name, attr.MountType)
+	require.Equal(t, "v1.0.0", attr.MountRunningVersion, "MountRunningVersion must be stored in attribution")
+	require.Equal(t, "root", attr.NamespaceID)
+	require.Empty(t, attr.NamespacePath)
+	require.Equal(t, mountEntry.BackendAwareUUID, attr.BackendAwareUUID)
+
+	// Second call with the same count — HWM must not change and attribution must not be overwritten.
+	max, err = core.UpdateMaxThirdPartyPluginCounts(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, 1, max, "HWM must not change when count is the same")
+
+	storedAgain, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.ThirdPartyPluginsPrefix)
+	require.NoError(t, err)
+	require.Len(t, storedAgain.Mounts, 1, "attribution must not change when HWM is not updated")
 }

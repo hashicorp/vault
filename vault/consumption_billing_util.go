@@ -80,7 +80,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 	if err != nil {
 		return 0, err
 	}
-	maxCount, hwmUpdated := c.compareCounts(previousThirdPartyPluginCounts, len(currentThirdPartyPluginMounts), "Third-Party Plugins")
+	maxCount, hwmUpdated := c.compareCounts(len(currentThirdPartyPluginMounts), previousThirdPartyPluginCounts, "Third-Party Plugins")
 	err = c.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth, maxCount)
 	if err != nil {
 		return 0, err
@@ -91,15 +91,20 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		attribution := make(MountAttributionMap)
 		for _, entry := range currentThirdPartyPluginMounts {
 			if entry != nil {
+				var namespacePath string
+				if ns, err := c.NamespaceByID(ctx, entry.NamespaceID); err == nil && ns != nil {
+					namespacePath = ns.Path
+				}
 				// Each deduplicated plugin counts as 1
 				attribution[entry.Accessor] = logical.MountAttribution{
-					Count:            1,
-					MountAccessor:    entry.Accessor,
-					MountPath:        entry.Path,
-					MountType:        entry.Type,
-					NamespaceID:      entry.NamespaceID,
-					NamespacePath:    entry.namespace.Path,
-					BackendAwareUUID: entry.BackendAwareUUID,
+					Count:               1,
+					MountAccessor:       entry.Accessor,
+					MountPath:           entry.Path,
+					MountType:           entry.Type,
+					MountRunningVersion: entry.RunningVersion,
+					NamespaceID:         entry.NamespaceID,
+					NamespacePath:       namespacePath,
+					BackendAwareUUID:    entry.BackendAwareUUID,
 				}
 			}
 		}
