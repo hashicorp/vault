@@ -21,6 +21,7 @@ export type PaginatedMetadata = {
     prevPage: number;
     total: number;
     filteredTotal: number;
+    totalItems: number;
     pageSize: number;
   };
 };
@@ -61,6 +62,9 @@ export function paginate<T>(data: T[], options: PaginateOptions = {}) {
         prevPage: page - 1,
         total: data.length,
         filteredTotal,
+        // totalItems is the correct count to pass to Hds::Pagination::Numbered @totalItems:
+        // when a filter is active it reflects only matching items; otherwise the full dataset size.
+        totalItems: filter ? filteredTotal : data.length,
         pageSize,
       },
       writable: false,

@@ -40,6 +40,7 @@ policiesMockModel.meta = {
   prevPage: 0,
   total: 2,
   filteredTotal: 2,
+  totalItems: 2,
   pageSize: 15,
 };
 
@@ -75,6 +76,7 @@ customPoliciesMockModel.meta = {
   prevPage: 0,
   total: 4,
   filteredTotal: 4,
+  totalItems: 4,
   pageSize: 15,
 };
 

@@ -132,7 +132,7 @@
       @route="roles.{{this.router.currentRoute.localName}}"
       @models={{@currentRouteParams}}
       @showSizeSelector={{false}}
-      @totalItems={{@roles.meta.filteredTotal}}
+      @totalItems={{@roles.meta.totalItems}}
       @queryFunction={{this.paginationQueryParams}}
       data-test-pagination
     />

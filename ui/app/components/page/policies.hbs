@@ -179,7 +179,7 @@
           @currentPageSize={{@model.meta.pageSize}}
           @route="vault.cluster.policies.index"
           @showSizeSelector={{false}}
-          @totalItems={{@model.meta.filteredTotal}}
+          @totalItems={{@model.meta.totalItems}}
           @queryFunction={{this.paginationQueryParams}}
         />
       {{/unless}}
