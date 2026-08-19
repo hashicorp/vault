@@ -22,6 +22,7 @@ module('Integration | Component | agents/registry/details/agent', function (hook
         owner: 'owner-1@example.com',
         last_updated_time: '2026-06-26T18:56:38.507Z',
         no_default_ceiling_policy: false,
+        description: 'This is a test agent',
       },
       entity: {
         id: '6266cb5f-b9ff-4ac6-8a12-6fcb84c336ec',
@@ -69,10 +70,7 @@ module('Integration | Component | agents/registry/details/agent', function (hook
 
     assert
       .dom('[data-test-agent-description]')
-      .includesText(
-        'Orchestrates automated testing workflows and validates system integrity. Provides real-time feedback on code quality and deployment readiness.',
-        'renders the agent description'
-      );
+      .includesText(this.data.agent.description, 'renders the agent description');
 
     assert
       .dom(GENERAL.cardContainer('agent-status'))
