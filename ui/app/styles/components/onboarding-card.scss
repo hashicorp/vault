@@ -1,0 +1,60 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.onboarding-card {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+
+  &--large {
+    .onboarding-card__vault-icon {
+      width: 597px;
+      height: 357px;
+      top: -40px;
+    }
+  }
+
+  &--small {
+    .onboarding-card__vault-icon {
+      width: 418px;
+      height: 250px;
+      top: -28px;
+    }
+  }
+}
+
+.onboarding-card__background {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/**
+ * Aurora background: stretches across the full width of the card,
+ * anchored to the bottom edge.
+ */
+.onboarding-card__aurora {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+}
+
+/**
+ * Vault icon: large translucent V shape anchored to the right edge.
+ */
+.onboarding-card__vault-icon {
+  position: absolute;
+  right: 0;
+}
+
+.onboarding-card__content {
+  position: relative;
+}

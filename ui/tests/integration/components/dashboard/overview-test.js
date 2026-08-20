@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test } from 'qunit';
-import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { module, test } from 'qunit';
+import sinon from 'sinon';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -58,6 +59,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       ],
     };
     this.refreshModel = () => {};
+    // Disable checklist by default so existing tests are unaffected by the new
+    // checklist lifecycle rendering logic.
+    this.owner.lookup('service:checklist-state').isAvailable = false;
     this.renderComponent = async () => {
       return render(
         hbs`
@@ -354,5 +358,148 @@ module('Integration | Component | dashboard/overview', function (hooks) {
         'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
       );
     assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
+  });
+
+  module('checklist lifecycle states', function (hooks) {
+    hooks.beforeEach(function () {
+      this.version.type = 'enterprise';
+      this.checklistState = this.owner.lookup('service:checklist-state');
+      this.checklistState['_state'] = {};
+      // Reset the hidden-checklists list so tests that call hideChecklist() do
+      // not bleed localStorage state into subsequent tests.
+      this.checklistState['_hiddenChecklists'] = [];
+      // Re-enable checklist for these tests
+      this.checklistState.isAvailable = true;
+      // Grant the minimum permissions required for hasChecklistEntryAccess to
+      // return true (sys/mounts satisfies hasPermission('sys/mounts')).
+      this.permissions.exactPaths = {
+        'sys/mounts': { capabilities: ['read'] },
+      };
+      // Stub the API-backed tasks so step-completion toggles directly update
+      // in-memory state without needing a real network round-trip in these
+      // component integration tests. The service's API behavior is covered
+      // separately in its unit tests.
+      sinon.stub(this.checklistState.updateStep, 'perform').callsFake((checklistId, stepId, completed) => {
+        this.checklistState['_state'] = {
+          ...this.checklistState['_state'],
+          [checklistId]: { ...(this.checklistState['_state'][checklistId] ?? {}), [stepId]: completed },
+        };
+      });
+      sinon.stub(this.checklistState.markComplete, 'perform').callsFake((checklistId, stepId) => {
+        this.checklistState['_state'] = {
+          ...this.checklistState['_state'],
+          [checklistId]: { ...(this.checklistState['_state'][checklistId] ?? {}), [stepId]: true },
+        };
+      });
+    });
+
+    hooks.afterEach(function () {
+      sinon.restore();
+    });
+
+    test('shows checklist widget in active lifecycle state', async function (assert) {
+      // No steps complete → active
+      await this.renderComponent();
+
+      assert.dom('[data-test-widget="checklist"]').exists('Checklist widget is rendered');
+      assert.dom('[data-test-widget="congrats-banner"]').doesNotExist('No congrats banner');
+      assert.dom('[data-test-widget="explore-vault"]').doesNotExist('No explore vault');
+    });
+
+    test('shows congrats banner when all visible steps are complete', async function (assert) {
+      // Seed all inferred steps as complete (tvp-cli is excluded from visible on CE, but we're on enterprise)
+      // Use only the non-Enterprise-only inferred steps to keep test simple
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+
+      await this.renderComponent();
+
+      assert.dom('[data-test-widget="congrats-banner"]').exists('Congrats banner is rendered');
+      assert.dom('[data-test-widget="checklist"]').doesNotExist('No checklist widget');
+      assert.dom('[data-test-widget="explore-vault"]').doesNotExist('No explore vault');
+    });
+
+    test('does not show congrats banner when there are zero visible steps', async function (assert) {
+      // Simulate a token with no nav permissions → zero visible steps
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+      // Block all nav permissions so every permission-gated step is hidden
+      // tvp-cli and kv have no permission check so they're always visible — set all complete but block them via the stub
+      // Instead, override getVisibleSteps directly
+      sinon.stub(this.checklistState, 'getVisibleSteps').returns([]);
+
+      await this.renderComponent();
+
+      assert.dom('[data-test-widget="congrats-banner"]').doesNotExist('No congrats when zero visible steps');
+      sinon.restore();
+    });
+
+    test('shows explore vault banner in hidden lifecycle state', async function (assert) {
+      this.checklistState.hideChecklist('cluster-startup');
+
+      await this.renderComponent();
+
+      assert.dom('[data-test-widget="explore-vault"]').exists('Explore Vault banner shown');
+      assert.dom('[data-test-explore-vault-restore]').exists('Restore button present');
+      assert.dom('[data-test-widget="checklist"]').doesNotExist('No checklist widget');
+    });
+
+    test('shows explore vault banner in post-completion state', async function (assert) {
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+      this.checklistState.hideChecklist('cluster-startup');
+
+      await this.renderComponent();
+
+      assert
+        .dom('[data-test-widget="explore-vault"]')
+        .exists('Explore Vault banner shown after completion + dismiss');
+    });
+
+    test('restore button in explore vault banner brings back the checklist', async function (assert) {
+      this.checklistState.hideChecklist('cluster-startup');
+      await this.renderComponent();
+
+      assert.dom('[data-test-widget="explore-vault"]').exists('Starts in explore vault');
+
+      await click('[data-test-explore-vault-restore]');
+
+      assert.dom('[data-test-widget="checklist"]').exists('Checklist restored after clicking restore');
+    });
+
+    test('clicking hide button in checklist transitions to explore vault banner', async function (assert) {
+      await this.renderComponent();
+
+      assert.dom('[data-test-widget="checklist"]').exists('Starts in active checklist state');
+
+      await click('[data-test-checklist-hide]');
+
+      assert.dom('[data-test-widget="explore-vault"]').exists('Explore vault banner shown after hide');
+      assert.dom('[data-test-widget="checklist"]').doesNotExist('Checklist is no longer visible');
+    });
+
+    test('after back to setup, incomplete then re-complete shows congrats again', async function (assert) {
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+
+      await this.renderComponent();
+
+      assert.dom('[data-test-widget="congrats-banner"]').exists('Starts on congrats when fully complete');
+
+      await click('[data-test-congrats-back]');
+      assert.dom('[data-test-widget="checklist"]').exists('Back shows checklist with completed steps');
+
+      await click('[data-test-checklist-step="tvp-cli"] [data-test-checklist-step-mark-complete="tvp-cli"]');
+      assert
+        .dom('[data-test-widget="checklist"]')
+        .exists('Checklist remains visible after marking incomplete');
+
+      await click('[data-test-checklist-step="tvp-cli"] [data-test-checklist-step-mark-complete="tvp-cli"]');
+      assert.dom('[data-test-widget="congrats-banner"]').exists('Congrats shows again after re-completing');
+    });
   });
 });

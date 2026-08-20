@@ -12,6 +12,9 @@ This document provides SCSS styling coding standards for HashiCorp Ember.js UI a
 ## CSS Best Practices
 - Avoid `z-index` - manage stacking order through DOM structure instead
 - Avoid `!important` - use more specific selectors for overrides
+- Prefer existing HDS and Bulma classes, tokens, and component attributes first
+- Add custom SCSS only when the intended layout or visual behavior cannot be achieved with existing classes or utilities
+- Avoid one-off styling when an equivalent existing class or attribute can express the same result
 
 Examples:
 ```scss
