@@ -229,6 +229,8 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	if !ok {
 		return fmt.Errorf("invalid value type for backendAwareUUID")
 	}
+	// NEED TO FIX: MAKE mountRunningVersion REQUIRED AS PART OF VAULT-48738
+	mountRunningVersion, _ := data["mountRunningVersion"].(string)
 
 	d.MountAttributionLock.Lock()
 	var prev float64
@@ -241,14 +243,15 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
 	// Only the accumulated count is carried over from the previous entry.
 	d.MountAttribution[mountAccessor] = logical.MountAttribution{
-		MountPath:         mountPath,
-		MountAccessor:     mountAccessor,
-		MountType:         mountType,
-		NamespaceID:       namespaceID,
-		NamespacePath:     namespacePath,
-		ParentNamespaceID: parentNamespaceID,
-		BackendAwareUUID:  backendAwareUUID,
-		Count:             prev + count,
+		MountPath:           mountPath,
+		MountAccessor:       mountAccessor,
+		MountType:           mountType,
+		MountRunningVersion: mountRunningVersion,
+		NamespaceID:         namespaceID,
+		NamespacePath:       namespacePath,
+		ParentNamespaceID:   parentNamespaceID,
+		BackendAwareUUID:    backendAwareUUID,
+		Count:               prev + count,
 	}
 	d.MountAttributionLock.Unlock()
 
