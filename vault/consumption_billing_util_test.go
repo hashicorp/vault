@@ -1451,7 +1451,7 @@ func TestIncrementOidcTokenCount(t *testing.T) {
 
 			// Apply increments sequentially
 			for _, duration := range tt.durations {
-				core.IncrementOidcTokenCount(duration)
+				core.IncrementOidcTokenCount(duration, logical.MountAttribution{})
 			}
 
 			// Verify in-memory counters

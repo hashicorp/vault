@@ -352,3 +352,16 @@ func (c *Core) GetInMemorySpiffeAttribution() map[string]logical.MountAttributio
 func (c *Core) GetCoreConsumptionBillingManager() *billing.ConsumptionBilling {
 	return c.consumptionBilling
 }
+
+func (c *Core) GetInMemoryOidcAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.Oidc.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.Oidc.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.Oidc.MountAttribution)
+	}
+	return nil
+}

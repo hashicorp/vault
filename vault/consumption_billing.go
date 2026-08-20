@@ -54,6 +54,9 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			},
 			Oidc: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			Spiffe: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
@@ -273,6 +276,10 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.SecretEngineCounts.Transform.MountAttribution = make(map[string]logical.MountAttribution)
 	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Unlock()
 
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
+
 	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Lock()
 	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttribution = make(map[string]logical.MountAttribution)
 	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Unlock()
@@ -419,15 +426,18 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	if err := c.UpdateTransformAttribution(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transform mount breakdown: %w", err)
 	}
+	if err := c.UpdateOidcAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store OIDC mount breakdown: %w", err)
+	}
 	if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
 	}
 	if err := c.UpdateExternalCaAttribution(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store external ca mount breakdown: %w", err)
 	}
-
 	if err := c.UpdateSpiffeAttribution(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store spiffe mount breakcout: %w", err)
 	}
+
 	return nil
 }
