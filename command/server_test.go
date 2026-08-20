@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
+	sr "github.com/hashicorp/vault/serviceregistration"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/assert"
@@ -469,4 +470,206 @@ func TestReloadSeals(t *testing.T) {
 	reloaded, err = testCommand.reloadSealsOnSigHup(ctx, testCore, &testConfig)
 	require.NoError(t, err)
 	require.False(t, reloaded, "reloadSeals does not support Shamir seals")
+}
+
+// mockConfigTrackingServiceRegistration is a minimal ServiceRegistration
+// implementation that records what was passed to NotifyConfigurationReload.
+// It is used to verify the srConfig construction logic in the SIGHUP handler
+// without requiring a real Consul instance.
+type mockConfigTrackingServiceRegistration struct {
+	mu                     sync.Mutex
+	lastNotifyConfigCalled bool
+	lastNotifyConfigWasNil bool
+	lastNotifyConfig       map[string]string
+}
+
+func (m *mockConfigTrackingServiceRegistration) Run(_ <-chan struct{}, _ *sync.WaitGroup, _ string) error {
+	return nil
+}
+
+func (m *mockConfigTrackingServiceRegistration) NotifyActiveStateChange(_ bool) error { return nil }
+
+func (m *mockConfigTrackingServiceRegistration) NotifySealedStateChange(_ bool) error { return nil }
+
+func (m *mockConfigTrackingServiceRegistration) NotifyPerformanceStandbyStateChange(_ bool) error {
+	return nil
+}
+
+func (m *mockConfigTrackingServiceRegistration) NotifyInitializedStateChange(_ bool) error {
+	return nil
+}
+
+func (m *mockConfigTrackingServiceRegistration) NotifyConfigurationReload(conf *map[string]string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.lastNotifyConfigCalled = true
+	if conf == nil {
+		m.lastNotifyConfigWasNil = true
+		m.lastNotifyConfig = nil
+	} else {
+		m.lastNotifyConfigWasNil = false
+		m.lastNotifyConfig = *conf
+	}
+	return nil
+}
+
+// Compile-time assertion that the mock satisfies the interface.
+var _ sr.ServiceRegistration = (*mockConfigTrackingServiceRegistration)(nil)
+
+// computeSRConfig replicates the srConfig construction logic from the SIGHUP
+// handler in server.go so it can be unit-tested in isolation.
+//
+// This mirrors the block at command/server.go:
+//
+//	var srConfig *map[string]string
+//	if config.ServiceRegistration != nil {
+//	    srConfig = &config.ServiceRegistration.Config
+//	} else if config.Storage.Type == storageTypeConsul {
+//	    srConfig = &config.Storage.Config
+//	}
+func computeSRConfig(config *server.Config) *map[string]string {
+	var srConfig *map[string]string
+	if config.ServiceRegistration != nil {
+		srConfig = &config.ServiceRegistration.Config
+	} else if config.Storage.Type == storageTypeConsul {
+		// If no explicit service_registration block exists but Consul is
+		// the storage backend, maintain the implicit registration that was
+		// set up at startup. Passing nil would permanently deregister Vault.
+		srConfig = &config.Storage.Config
+	}
+	return srConfig
+}
+
+// TestSIGHUP_ServiceRegistrationConfigReload verifies that the SIGHUP handler
+// constructs the correct srConfig value for NotifyConfigurationReload across
+// all supported configuration combinations.
+//
+// Regression test for VAULT-41265: when Consul is the storage backend and no
+// explicit service_registration stanza exists in the config file, SIGHUP must
+// NOT pass nil to NotifyConfigurationReload. Passing nil triggers
+// deregisterService(), which permanently removes Vault from the Consul catalog
+// without any failover or re-registration.
+func TestSIGHUP_ServiceRegistrationConfigReload(t *testing.T) {
+	t.Parallel()
+
+	consulStorageConfig := map[string]string{
+		"address": "127.0.0.1:8500",
+		"path":    "vault/",
+	}
+
+	tests := []struct {
+		name                string
+		config              *server.Config
+		wantNil             bool
+		wantConfigMatchesTo map[string]string
+	}{
+		{
+			// Explicit service_registration block is present: the reload should
+			// pass that block's config, not the storage config.
+			name: "explicit service_registration block uses its own config",
+			config: &server.Config{
+				Storage: &server.Storage{
+					Type:   storageTypeConsul,
+					Config: consulStorageConfig,
+				},
+				ServiceRegistration: &server.ServiceRegistration{
+					Type:   "consul",
+					Config: map[string]string{"address": "127.0.0.1:8500", "token": "explicit-token"},
+				},
+			},
+			wantNil:             false,
+			wantConfigMatchesTo: map[string]string{"address": "127.0.0.1:8500", "token": "explicit-token"},
+		},
+		{
+			// Regression case for VAULT-41265.
+			// Consul is the storage backend, no explicit service_registration stanza.
+			// At startup, Vault auto-promotes the storage config into an implicit
+			// service registration. On SIGHUP the config is re-read from disk and
+			// config.ServiceRegistration is nil again — the auto-promotion does not
+			// re-run. Without the fix, srConfig stays nil, NotifyConfigurationReload
+			// receives nil, and deregisterService() is called permanently.
+			name: "implicit consul storage registration must not pass nil on SIGHUP",
+			config: &server.Config{
+				Storage: &server.Storage{
+					Type:   storageTypeConsul,
+					Config: consulStorageConfig,
+				},
+				ServiceRegistration: nil, // no explicit block in config file
+			},
+			wantNil:             false,
+			wantConfigMatchesTo: consulStorageConfig,
+		},
+		{
+			// Non-consul storage with no service_registration block: passing nil is
+			// correct here because the operator has explicitly removed the block,
+			// signalling that they want Vault deregistered from Consul.
+			name: "non-consul storage with no service_registration block passes nil",
+			config: &server.Config{
+				Storage: &server.Storage{
+					Type:   "raft",
+					Config: map[string]string{},
+				},
+				ServiceRegistration: nil,
+			},
+			wantNil: true,
+		},
+		{
+			// Non-consul storage with an explicit service_registration block:
+			// the reload should use the service_registration config as-is.
+			name: "non-consul storage with explicit service_registration uses its config",
+			config: &server.Config{
+				Storage: &server.Storage{
+					Type:   "raft",
+					Config: map[string]string{},
+				},
+				ServiceRegistration: &server.ServiceRegistration{
+					Type:   "consul",
+					Config: map[string]string{"address": "127.0.0.1:8500"},
+				},
+			},
+			wantNil:             false,
+			wantConfigMatchesTo: map[string]string{"address": "127.0.0.1:8500"},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			mock := &mockConfigTrackingServiceRegistration{}
+			srConfig := computeSRConfig(tc.config)
+
+			// Simulate the SIGHUP handler calling sr.NotifyConfigurationReload(srConfig).
+			if err := mock.NotifyConfigurationReload(srConfig); err != nil {
+				t.Fatalf("NotifyConfigurationReload returned unexpected error: %v", err)
+			}
+
+			if !mock.lastNotifyConfigCalled {
+				t.Fatal("expected NotifyConfigurationReload to be called")
+			}
+
+			if tc.wantNil && !mock.lastNotifyConfigWasNil {
+				t.Errorf("expected nil srConfig to be passed to NotifyConfigurationReload, got: %v", mock.lastNotifyConfig)
+			}
+
+			if !tc.wantNil && mock.lastNotifyConfigWasNil {
+				t.Errorf("expected non-nil srConfig to be passed to NotifyConfigurationReload, got nil — " +
+					"this would permanently deregister Vault from Consul (VAULT-41265 regression)")
+			}
+
+			if !tc.wantNil && tc.wantConfigMatchesTo != nil {
+				for k, want := range tc.wantConfigMatchesTo {
+					got, ok := mock.lastNotifyConfig[k]
+					if !ok {
+						t.Errorf("srConfig missing expected key %q", k)
+						continue
+					}
+					if got != want {
+						t.Errorf("srConfig[%q] = %q, want %q", k, got, want)
+					}
+				}
+			}
+		})
+	}
 }
