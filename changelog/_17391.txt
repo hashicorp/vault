@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Exposing the RSA Private Key field in the UI when generating credentials with the snowflake database secrets engine. Previously, this field was only shown in the cli.  
+```
