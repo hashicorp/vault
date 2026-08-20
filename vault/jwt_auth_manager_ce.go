@@ -7,6 +7,10 @@ package vault
 
 import "context"
 
+func (c *Core) migrateProfilesByIssuerIndex(ctx context.Context) error {
+	return nil
+}
+
 func (c *Core) populateIssuerNamespacesIndex(ctx context.Context) error {
 	return nil
 }
