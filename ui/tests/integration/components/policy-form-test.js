@@ -200,6 +200,13 @@ module('Integration | Component | policy-form', function (hooks) {
       assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
       this.assertNoVisualEditor(assert, 'it does not render visual editor when editing an ACL policy');
 
+      assert
+        .dom(GENERAL.accordionButton('Automation snippets'))
+        .exists('Automation snippets are still visible when editing an existing ACL policy');
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert.dom(GENERAL.hdsTab('terraform')).exists();
+      assert.dom(GENERAL.hdsTab('cli')).exists();
+
       await setEditorValue('updated');
       assert.strictEqual(this.form.policy, 'updated', 'Policy editor updates policy value on model');
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
