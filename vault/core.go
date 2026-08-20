@@ -2882,6 +2882,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.setupOAuthTokenDenylist(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.migrateProfilesByIssuerIndex(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.populateIssuerNamespacesIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
