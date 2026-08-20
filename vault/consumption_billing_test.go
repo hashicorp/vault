@@ -243,6 +243,7 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 	require.Equal(t, float64(0), core.GetInMemoryOidcCounts())
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 	require.Equal(t, 0, len(core.GetInMemoryTransitAttribution()))
+	require.Equal(t, 0, len(core.GetInMemoryOidcAttribution()))
 	require.Equal(t, 0, len(core.GetInMemoryExternalCaAttribution()))
 }
 
@@ -304,6 +305,22 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
+
+			// Add OIDC mount/namespace attribution data
+			err = core.StoreAttributionData(context.Background(), pathPrefix, month, billing.OidcDurationAdjustedCountPrefix, &logical.MetricTypeAttribution{
+				Count: 5.0,
+				Mounts: map[string]logical.MountAttribution{
+					"identity_accessor_1": {
+						MountAccessor: "identity_accessor_1",
+						MountPath:     "identity/",
+						MountType:     "identity",
+						NamespaceID:   "root",
+						NamespacePath: "",
+						Count:         5.0,
+					},
+				},
+			})
+			require.NoError(t, err)
 		}
 		// Store updatedAtTimestamp for each month
 		testUpdateTime := time.Date(month.Year(), month.Month(), 15, 12, 0, 0, 0, time.UTC)
@@ -342,6 +359,12 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		entry, err = view.Get(context.Background(), transitBreakdownPath)
 		require.NoError(t, err)
 		require.NotNil(t, entry, "Transit mount breakdown should exist before deletion")
+
+		// Verify OIDC mount breakdown exists
+		oidcBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.OidcDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), oidcBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "OIDC mount breakdown should exist before deletion")
 
 		// Verify external CA mount breakdown exists
 		externalCaBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.ExternalCaDurationAdjustedCountPrefix)
@@ -393,6 +416,12 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, entry, "Transit attribution should NOT be deleted by deleteExpiredBillingMetrics (independent retention)")
 
+		// Verify OIDC attribution data is also NOT deleted by deleteExpiredBillingMetrics
+		oidcBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.OidcDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), oidcBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "OIDC attribution should NOT be deleted by deleteExpiredBillingMetrics (independent retention)")
+
 		// Verify external CA attribution data is NOT deleted by deleteExpiredBillingMetrics
 		externalCaBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.ExternalCaDurationAdjustedCountPrefix)
 		entry, err = view.Get(context.Background(), externalCaBreakdownPath)
@@ -420,6 +449,12 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		entry, err = view.Get(context.Background(), transitBreakdownPath)
 		require.NoError(t, err)
 		require.NotNil(t, entry, "Transit mount breakdown should be kept for oldest retained month")
+
+		// Verify OIDC mount breakdown is kept for oldest retained month
+		oidcBreakdownPath = billing.GetAttributionMaxPath(pathPrefix, oldestRetainedMonth, billing.OidcDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), oidcBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "OIDC mount breakdown should be kept for oldest retained month")
 
 		// Verify external CA mount breakdown is kept for oldest retained month
 		externalCaBreakdownPath = billing.GetAttributionMaxPath(pathPrefix, oldestRetainedMonth, billing.ExternalCaDurationAdjustedCountPrefix)

@@ -168,7 +168,7 @@ type LocalNode interface {
 var _ LocalNode = &Core{}
 
 type BillingCounter interface {
-	IncrementOidcTokenCount(validitySeconds float64)
+	IncrementOidcTokenCount(validitySeconds float64, attr logical.MountAttribution)
 }
 
 var _ BillingCounter = &Core{}

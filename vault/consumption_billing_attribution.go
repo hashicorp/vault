@@ -273,3 +273,13 @@ func (c *Core) UpdateExternalCaAttribution(ctx context.Context, currentMonth tim
 	}
 	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.ExternalCa.AttributionTracker, billing.ExternalCaDurationAdjustedCountPrefix, currentMonth)
 }
+
+func (c *Core) UpdateOidcAttribution(ctx context.Context, currentMonth time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.Oidc.AttributionTracker, billing.OidcDurationAdjustedCountPrefix, currentMonth)
+}
