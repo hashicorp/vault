@@ -133,7 +133,6 @@ export default class PolicyFormComponent extends Component<Args> {
   }
 
   get terraformSnippet(): string | null {
-    if (!this.visualEditorSupported) return null;
     const name = this.args.form.data.name;
     return sysPoliciesAclNameMapping({ name, policy: this.snippetPolicy });
   }
