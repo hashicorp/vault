@@ -121,7 +121,7 @@ var (
 		view := storage.(*BarrierView)
 
 		switch {
-		case te.NamespaceID == namespace.RootNamespaceID && !IsServiceToken(te.ID):
+		case te.NamespaceID == namespace.RootNamespaceID && !IsServiceToken(te.ID) && !strings.HasPrefix(te.ID, consts.GetOAuthJwtPrefix()):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
