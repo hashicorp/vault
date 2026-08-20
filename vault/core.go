@@ -2882,6 +2882,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.setupOAuthTokenDenylist(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.migrateProfilesByIssuerIndex(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.populateIssuerNamespacesIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
@@ -4740,7 +4743,7 @@ func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Reque
 		Data:       req.Data,
 		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
 	})
-	if err != nil || resp.Auth.Alias == nil {
+	if err != nil || resp == nil || resp.Auth == nil || resp.Auth.Alias == nil {
 		return "", nil
 	}
 	return resp.Auth.Alias.Name, nil
