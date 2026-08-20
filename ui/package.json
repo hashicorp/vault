@@ -56,7 +56,6 @@
     "@babel/preset-env": "~7.29.5",
     "@babel/preset-typescript": "~7.27.1",
     "@codemirror/view": "^6.43.0",
-    "@docfy/ember": "~0.8.5",
     "@ember/legacy-built-in-components": "~0.4.2",
     "@ember/optional-features": "~2.2.0",
     "@ember/render-modifiers": "~3.0.0",
