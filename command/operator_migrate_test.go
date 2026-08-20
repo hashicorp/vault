@@ -293,6 +293,7 @@ storage_destination "raft" {
 		raftBackend := backend.(*physRaft.RaftBackend)
 		require.NoError(t, raftBackend.Bootstrap([]physRaft.Peer{{ID: "test-node", Address: "test-node"}}))
 		require.NoError(t, raftBackend.SetupCluster(context.Background(), physRaft.SetupOpts{StartAsLeader: true}))
+		require.NoError(t, raftBackend.TeardownCluster(nil))
 		require.NoError(t, raftBackend.Close())
 
 		cmd := &OperatorMigrateCommand{
@@ -322,6 +323,7 @@ storage_destination "raft" {
 		raftBackend := backend.(*physRaft.RaftBackend)
 		require.NoError(t, raftBackend.Bootstrap([]physRaft.Peer{{ID: "test-node", Address: "test-node"}}))
 		require.NoError(t, raftBackend.SetupCluster(context.Background(), physRaft.SetupOpts{StartAsLeader: true}))
+		require.NoError(t, raftBackend.TeardownCluster(nil))
 		require.NoError(t, raftBackend.Close())
 
 		cmd := &OperatorMigrateCommand{
@@ -336,8 +338,13 @@ storage_destination "raft" {
 				Config: map[string]string{"path": raftDir, "node_id": "test-node"},
 			},
 		}
-		_, err = cmd.createDestinationBackend("raft", config.StorageDestination.Config, config)
+		destBackend, err := cmd.createDestinationBackend("raft", config.StorageDestination.Config, config)
 		require.NoError(t, err)
+		destRaftBackend := destBackend.(*physRaft.RaftBackend)
+		t.Cleanup(func() {
+			require.NoError(t, destRaftBackend.TeardownCluster(nil))
+			require.NoError(t, destRaftBackend.Close())
+		})
 	})
 
 	t.Run("DFS Scan", func(t *testing.T) {
