@@ -40,7 +40,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
       {
         validator: ({ stanzas }) =>
           stanzas.length > 0 && stanzas.every((stanza: PolicyStanza) => stanza.isValid),
-        message: 'Invalid policy content.',
+        message: 'Path is required for each rule.',
       },
     ],
   };
