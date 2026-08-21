@@ -34,7 +34,11 @@ install_packages() {
         else
           echo "Installing ${package}"
           local output
-          if ! output=$(sudo apt install -y "${package}" 2>&1); then
+          # Bound apt's own lock-wait to RETRY_INTERVAL so that a competing process holding
+          # /var/lib/dpkg/lock-frontend (e.g. unattended-upgrades, apt-daily) doesn't cause a
+          # single apt invocation to consume our whole TIMEOUT_SECONDS budget. This lets the
+          # outer retry loop actually retry multiple times instead of timing out on one attempt.
+          if ! output=$(sudo apt install -y -o DPkg::Lock::Timeout="${RETRY_INTERVAL}" "${package}" 2>&1); then
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
           fi
