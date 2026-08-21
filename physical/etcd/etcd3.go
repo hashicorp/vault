@@ -132,6 +132,28 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		cfg.MaxCallSendMsgSize = int(val)
 	}
 
+	sDialKeepaliveTime := conf["dial_keepalive_time"]
+	if sDialKeepaliveTime == "" {
+		// minimum ping inteval permitted by grpc-go.
+		sDialKeepaliveTime = "10s"
+	}
+	dialKeepaliveTime, err := parseutil.ParseDurationSecond(sDialKeepaliveTime)
+	if err != nil {
+		return nil, fmt.Errorf("value [%v] of 'dial_keepalive_time' could not be understood: %w", sDialKeepaliveTime, err)
+	}
+	cfg.DialKeepAliveTime = dialKeepaliveTime
+
+	sDialKeepaliveTimeout := conf["dial_keepalive_timeout"]
+	if sDialKeepaliveTimeout == "" {
+		// keeps detection inside the default 15s lock timeout.
+		sDialKeepaliveTimeout = "5s"
+	}
+	dialKeepaliveTimeout, err := parseutil.ParseDurationSecond(sDialKeepaliveTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("value [%v] of 'dial_keepalive_timeout' could not be understood: %w", sDialKeepaliveTimeout, err)
+	}
+	cfg.DialKeepAliveTimeout = dialKeepaliveTimeout
+
 	etcd, err := clientv3.New(cfg)
 	if err != nil {
 		return nil, err
