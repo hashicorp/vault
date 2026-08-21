@@ -367,6 +367,160 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 	require.True(t, resp.IsError(), "expected an error updating key with a bad name, but did not get one.")
 }
 
+// TestPKI_PathManageKeys_UpdateKeyDetails_DuplicateNameRejected verifies all key rename scenarios: duplicate
+// duplicate names rejected, self-rename allowed(no error thrown but no change made either), rename to its own UUID allowed(happens in TestObservationsPKIKeys), clear name, freed name claimable, other key's UUID rejected.
+func TestPKI_PathManageKeys_UpdateKeyDetails_DuplicateNameRejected(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "keys/generate/internal",
+		Storage:    s,
+		Data:       map[string]interface{}{"key_type": "ec", "key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "Failed generating first key")
+	require.NotNil(t, resp, "Got nil response generating first key")
+	require.False(t, resp.IsError(), "resp contained errors generating first key: %#v", resp.Error())
+	keyId1 := resp.Data["key_id"].(issuing.KeyID)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "keys/generate/internal",
+		Storage:    s,
+		Data:       map[string]interface{}{"key_type": "ec", "key_name": "key-two"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "Failed generating second key")
+	require.NotNil(t, resp, "Got nil response generating second key")
+	require.False(t, resp.IsError(), "resp contained errors generating second key: %#v", resp.Error())
+	keyId2 := resp.Data["key_id"].(issuing.KeyID)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed updating second key with duplicate name")
+	require.NotNil(t, resp, "Got nil response updating second key with duplicate name")
+	require.True(t, resp.IsError(), "expected an error updating key with a duplicate name, but did not get one.")
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.ReadOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId2.String()), logical.ReadOperation), resp, true)
+	require.NoError(t, err, "failed reading second key after rejected rename")
+	require.NotNil(t, resp, "Got nil response reading second key")
+	require.False(t, resp.IsError(), "unexpected error reading second key: %#v", resp.Error())
+	keyName := resp.Data["key_name"].(string)
+	require.Equal(t, "key-two", keyName, "second key name should be unchanged after rejected rename, expected: key-two was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed updating first key with its own current name")
+	require.NotNil(t, resp, "Got nil response updating first key with its own current name")
+	require.False(t, resp.IsError(), "unexpected error updating key with its own current name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, "key-one", keyName, "failed to update key_name expected: key-one was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": keyId1.String()},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed updating first key with its own UUID as name")
+	require.NotNil(t, resp, "Got nil response updating first key with its own UUID as name")
+	require.False(t, resp.IsError(), "unexpected error updating key with its own UUID as name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, keyId1.String(), keyName, "expected key name to be own UUID, was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed restoring first key name")
+	require.False(t, resp.IsError(), "unexpected error restoring first key name: %#v", resp.Error())
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": ""},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed clearing first key name")
+	require.NotNil(t, resp, "Got nil response clearing first key name")
+	require.False(t, resp.IsError(), "unexpected error clearing key name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, "", keyName, "expected key name to be empty after clear, was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed restoring first key name after clear")
+	require.False(t, resp.IsError(), "unexpected error restoring first key name after clear: %#v", resp.Error())
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId1.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one-renamed"},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId1.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed renaming first key to free up key-one")
+	require.NotNil(t, resp, "Got nil response renaming first key")
+	require.False(t, resp.IsError(), "unexpected error renaming first key: %#v", resp.Error())
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": "key-one"},
+		MountPoint: "pki/",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId2.String()), logical.UpdateOperation), resp, true)
+	require.NoError(t, err, "failed updating second key with now-free name")
+	require.NotNil(t, resp, "Got nil response updating second key with now-free name")
+	require.False(t, resp.IsError(), "unexpected error updating second key with now-free name: %#v", resp.Error())
+	keyName = resp.Data["key_name"].(string)
+	require.Equal(t, "key-one", keyName, "failed to update key_name expected: key-one was: %s", keyName)
+
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "key/" + keyId2.String(),
+		Storage:    s,
+		Data:       map[string]interface{}{"key_name": keyId1.String()},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed updating second key with different key UUID as name")
+	require.NotNil(t, resp, "Got nil response updating second key with different key UUID as name")
+	require.True(t, resp.IsError(), "expected an error updating key with a different key's UUID as name, but did not get one.")
+}
+
 func TestPKI_PathManageKeys_ImportKeyBundleBadData(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
