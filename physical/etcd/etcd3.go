@@ -145,8 +145,8 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	sDialKeepaliveTimeout := conf["dial_keepalive_timeout"]
 	if sDialKeepaliveTimeout == "" {
-		// keeps detection inside the default 15s lock timeout.
-		sDialKeepaliveTimeout = "5s"
+		// keep unresponsive node detection window (dial_keepalive_time + dial_keepalive_timeout) inside the default 15s lock timeout.
+		sDialKeepaliveTimeout = "3s"
 	}
 	dialKeepaliveTimeout, err := parseutil.ParseDurationSecond(sDialKeepaliveTimeout)
 	if err != nil {
