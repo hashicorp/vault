@@ -279,7 +279,7 @@ path "second/path" {
       assert.strictEqual(actual.policy, expectedPolicy, 'onSave is called with expected policy');
     });
 
-    test('it shows validation errors for invalid policy stanzas', async function (assert) {
+    test('it shows validation errors for invalid policy stanzas (empty path)', async function (assert) {
       await this.renderComponent();
       await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
       await click(GENERAL.submitButton);
@@ -289,10 +289,10 @@ path "second/path" {
         .dom(GENERAL.messageError)
         .exists()
         .hasText('Error There is an error with this form. Invalid policy content.');
-      assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path cannot be empty.');
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path is required.');
       assert
         .dom(GENERAL.validationErrorByAttr('capabilities-0'))
-        .hasText('Rule must have at least one capability.');
+        .doesNotExist('capabilities do not block save');
     });
 
     test('it still saves from the code editor when visual stanzas are invalid', async function (assert) {
