@@ -1687,6 +1687,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for shutdown
 	shutdownTriggered := false
 	retCode := 0
+	disableGoroutineDump := config.DisableGoroutineTraceDump
 
 	for !shutdownTriggered {
 		select {
@@ -1697,6 +1698,11 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 			shutdownTriggered = true
+			if !disableGoroutineDump {
+				if path := writeGoroutineDump(c.logger); path != "" {
+					c.logger.Info("Wrote goroutine dump to", "path", path)
+				}
+			}
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
 
@@ -1766,6 +1772,9 @@ func (c *ServerCommand) Run(args []string) int {
 				}
 			}
 
+			// Update the reloadable disable_goroutine_trace_dump setting.
+			disableGoroutineDump = config.DisableGoroutineTraceDump
+
 			// notify ServiceRegistration that a configuration reload has occurred
 			if sr := coreConfig.GetServiceRegistration(); sr != nil {
 				var srConfig *map[string]string
@@ -1804,37 +1813,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
 				c.logger.Info("Writing stacktrace to file")
-
-				dir := ""
-				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
-				if path != "" {
-					if _, err := os.Stat(path); err != nil {
-						c.logger.Error("Checking stacktrace path failed", "error", err)
-						continue
-					}
-					dir = path
-				} else {
-					dir, err = os.MkdirTemp("", "vault-stacktrace")
-					if err != nil {
-						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
-						continue
-					}
+				if path := writeGoroutineDump(c.logger); path != "" {
+					c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", path))
 				}
-
-				f, err := os.CreateTemp(dir, "stacktrace")
-				if err != nil {
-					c.logger.Error("Could not create stacktrace file", "error", err)
-					continue
-				}
-
-				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
-					f.Close()
-					c.logger.Error("Could not write stacktrace to file", "error", err)
-					continue
-				}
-
-				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
-				f.Close()
 			}
 
 			// We can only get pprof outputs via the API but sometimes Vault can get

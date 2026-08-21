@@ -111,6 +111,9 @@ type Config struct {
 	DisableSentinelTrace    bool        `hcl:"-"`
 	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace,alias:DisableSentinelTrace"`
 
+	DisableGoroutineTraceDump    bool        `hcl:"-"`
+	DisableGoroutineTraceDumpRaw interface{} `hcl:"disable_goroutine_trace_dump"`
+
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
@@ -350,6 +353,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisableSentinelTrace = c.DisableSentinelTrace
 	if c2.DisableSentinelTrace {
 		result.DisableSentinelTrace = c2.DisableSentinelTrace
+	}
+
+	result.DisableGoroutineTraceDump = c.DisableGoroutineTraceDump
+	if c2.DisableGoroutineTraceDump {
+		result.DisableGoroutineTraceDump = c2.DisableGoroutineTraceDump
 	}
 
 	result.DisablePrintableCheck = c.DisablePrintableCheck
@@ -822,6 +830,12 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 
 	if result.DisableSentinelTraceRaw != nil {
 		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
+			return nil, duplicate, err
+		}
+	}
+
+	if result.DisableGoroutineTraceDumpRaw != nil {
+		if result.DisableGoroutineTraceDump, err = parseutil.ParseBool(result.DisableGoroutineTraceDumpRaw); err != nil {
 			return nil, duplicate, err
 		}
 	}
@@ -1460,10 +1474,11 @@ func (c *Config) Sanitized() map[string]interface{} {
 	}
 	sharedResult := c.SharedConfig.Sanitized()
 	result := map[string]interface{}{
-		"cache_size":              c.CacheSize,
-		"disable_sentinel_trace":  c.DisableSentinelTrace,
-		"disable_cache":           c.DisableCache,
-		"disable_printable_check": c.DisablePrintableCheck,
+		"cache_size":                   c.CacheSize,
+		"disable_sentinel_trace":       c.DisableSentinelTrace,
+		"disable_cache":                c.DisableCache,
+		"disable_goroutine_trace_dump": c.DisableGoroutineTraceDump,
+		"disable_printable_check":      c.DisablePrintableCheck,
 
 		"enable_ui": c.EnableUI,
 

@@ -962,6 +962,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"allow_audit_log_prefixing":      false,
 		"enable_unauthenticated_access":  []string(nil),
 		"deny_slash_in_templated_paths":  false,
+		"disable_goroutine_trace_dump":   false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
