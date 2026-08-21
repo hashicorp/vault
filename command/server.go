@@ -1272,6 +1272,10 @@ func (c *ServerCommand) Run(args []string) int {
 		DisplayName: "Vault",
 		UserAgent:   useragent.String(),
 		ClusterName: clusterName,
+		LogWriter: c.logger.StandardWriter(&hclog.StandardLoggerOptions{
+			InferLevels:              true,
+			InferLevelsWithTimestamp: true,
+		}),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))

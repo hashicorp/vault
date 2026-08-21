@@ -4,6 +4,8 @@
 package configutil
 
 import (
+	"bytes"
+	"log"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,4 +100,33 @@ func TestNormalizeTelemetryAddresses(t *testing.T) {
 			require.EqualValues(t, tc.expected, tc.given)
 		})
 	}
+}
+
+func TestSetupTelemetryDisablesStandardLoggerFlags(t *testing.T) {
+	origFlags := log.Flags()
+	origWriter := log.Writer()
+	defer func() {
+		log.SetFlags(origFlags)
+		log.SetOutput(origWriter)
+	}()
+	log.SetFlags(log.LstdFlags)
+
+	_, _, _, err := SetupTelemetry(&SetupTelemetryOpts{
+		Config: &Telemetry{},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, log.Flags())
+}
+
+func TestSetupTelemetrySetsStandardLoggerOutput(t *testing.T) {
+	origWriter := log.Writer()
+	defer log.SetOutput(origWriter)
+
+	writer := &bytes.Buffer{}
+	_, _, _, err := SetupTelemetry(&SetupTelemetryOpts{
+		Config:    &Telemetry{},
+		LogWriter: writer,
+	})
+	require.NoError(t, err)
+	assert.Same(t, writer, log.Writer())
 }

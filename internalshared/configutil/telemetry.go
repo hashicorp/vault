@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
 	"time"
 
 	monitoring "cloud.google.com/go/monitoring/apiv3"
@@ -280,6 +282,7 @@ type SetupTelemetryOpts struct {
 	DisplayName string
 	UserAgent   string
 	ClusterName string
+	LogWriter   io.Writer
 }
 
 // SetupTelemetry is used to setup the telemetry sub-systems and returns the
@@ -309,6 +312,10 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	metricsConf.EnableHostnameLabel = opts.Config.EnableHostnameLabel
 	if opts.Config.FilterDefault != nil {
 		metricsConf.FilterDefault = *opts.Config.FilterDefault
+	}
+	log.SetFlags(0)
+	if opts.LogWriter != nil {
+		log.SetOutput(opts.LogWriter)
 	}
 
 	// Configure the statsite sink

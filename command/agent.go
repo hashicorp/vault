@@ -305,6 +305,7 @@ func (c *AgentCommand) Run(args []string) int {
 		DisplayName: "Vault",
 		UserAgent:   useragent.AgentString(),
 		ClusterName: config.ClusterName,
+		LogWriter:   c.logWriter,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
