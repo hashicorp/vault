@@ -319,6 +319,22 @@ message ScimClient {
   // "2.1". Clients may set it explicitly to pin a version.
   // @inject_tag: sentinel:"-"
   string default_schema_version = 7;
+
+  // Unlinking indicates that the SCIM client is in the process of unlinking its resources.
+  // Resources are preserved but disassociated from the client. After all resources are unlinked,
+  // the client itself is deleted.
+  // @inject_tag: sentinel:"-"
+  bool unlinking = 8;
+
+  // AllowedExtraAliasMountAccessors is the allowlist of mount accessors that may
+  // be used for aliases managed through the SCIM aliases extension field. These
+  // aliases are additional aliases beyond the client's primary alias_mount_accessor.
+  // When empty or omitted the client may use any non-local mount (current unrestricted
+  // behaviour). alias_mount_accessor is always implicitly allowed and must not appear
+  // in this list. On update, omitting the field preserves the existing value; supplying
+  // an explicit empty list clears the allowlist.
+  // @inject_tag: sentinel:"-"
+  repeated string allowed_extra_alias_mount_accessors = 9;
 }
 
 // Deprecated. Retained for backwards compatibility.
