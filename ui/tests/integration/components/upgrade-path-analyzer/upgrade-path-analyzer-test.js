@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { UPGRADE_INFO } from 'vault/constants/upgrade-info';
 
@@ -162,6 +163,40 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
         'Upgrade alert title is shown'
       );
     assert.dom(GENERAL.button('Download steps')).exists('Download steps button is rendered');
+  });
+
+  test('it surfaces the release info error message to the user', async function (assert) {
+    this.server.get(
+      '/sys/release-info',
+      () => new Response(500, {}, { errors: ['Release info request failed'] })
+    );
+
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+
+    await waitFor(GENERAL.inlineError);
+
+    assert
+      .dom(GENERAL.inlineError)
+      .hasText('500: Release info request failed', 'The API error message is shown to the user');
+  });
+
+  test('it surfaces the vault versions error message to the user', async function (assert) {
+    this.server.get(
+      '/sys/vault-versions',
+      () => new Response(500, {}, { errors: ['Vault versions request failed'] })
+    );
+
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+
+    await waitFor(GENERAL.inlineError);
+
+    assert
+      .dom(GENERAL.inlineError)
+      .hasText('500: Vault versions request failed', 'The API error message is shown to the user');
   });
 
   module('release info filtering', function () {

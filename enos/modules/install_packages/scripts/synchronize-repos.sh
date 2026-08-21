@@ -106,7 +106,10 @@ apt_update_with_fallback() {
 
   # First, try a plain apt update using whatever sources the system already has.
   # This is the normal happy path and avoids touching sources.list at all.
-  if sudo apt-get update 2>&1; then
+  # Bound apt's own lock-wait to RETRY_INTERVAL (see install-packages.sh for rationale) so a
+  # competing process holding /var/lib/dpkg/lock-frontend doesn't consume our whole
+  # TIMEOUT_SECONDS budget in a single attempt.
+  if sudo apt-get update -o DPkg::Lock::Timeout="${RETRY_INTERVAL}" 2>&1; then
     return 0
   fi
 
@@ -124,6 +127,7 @@ apt_update_with_fallback() {
     if sudo apt-get update -o "Dir::Etc::SourceList=/dev/stdin" \
       -o "Dir::Etc::SourceParts=/dev/null" \
       -o "APT::Get::List-Cleanup=false" \
+      -o "DPkg::Lock::Timeout=${RETRY_INTERVAL}" \
       <<< "deb ${mirror} ${codename} main restricted universe multiverse
 deb ${mirror} ${codename}-updates main restricted universe multiverse
 deb ${mirror} ${codename}-security main restricted universe multiverse" 2>&1; then

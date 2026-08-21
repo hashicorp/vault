@@ -62,7 +62,7 @@
                 @icon="external-link"
                 @iconPosition="trailing"
                 @text="View details"
-                @href={{listItem.link}}
+                @href={{doc-link (concat "/" listItem.link)}}
                 data-test-link-to="Item details"
               />
             </Hds::Layout::Flex>

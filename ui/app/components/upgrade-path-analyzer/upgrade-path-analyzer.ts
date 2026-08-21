@@ -60,7 +60,7 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
   @tracked generalUpgradeInfoResp: UpgradeInfo[] | null = null;
   @tracked isLoading = false;
   @tracked isModalOpen = false;
-  @tracked hasError = false;
+  @tracked errorMessage = '';
   @tracked targetVersions: string[] = [];
 
   constructor(owner: unknown, args: UpgradePathAnalyzerArgs) {
@@ -70,25 +70,31 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
 
   async fetchReleaseInfo() {
     try {
-      const { versions } = await this.api.sys.releaseInfoReadReleaseInfo();
-      if (versions) {
-        this.generalUpgradeInfoResp = versions as UpgradeInfo[];
+      const resp = await this.api.sys.releaseInfoReadReleaseInfo();
+      if (resp.versions) {
+        this.generalUpgradeInfoResp = resp.versions as UpgradeInfo[];
       }
-    } catch (e) {
-      this.hasError = true;
+    } catch (e: unknown) {
+      const { status, message } = await this.api.parseError(e);
+      this.errorMessage = `${status}: ${message}`;
+
+      return;
     }
 
     try {
-      const { versions } = await this.api.sys.vaultVersionsReadRead('enterprise');
-      this.targetVersions = versions as unknown as string[];
-      const filtered = this.filteredTargetVersions;
-      const latest = filtered[filtered.length - 1];
-      // Pre-select the most recent available target version
-      if (latest) {
-        this.selectedVersion = latest;
+      const resp = await this.api.sys.vaultVersionsReadRead('enterprise');
+      if (resp.versions) {
+        this.targetVersions = resp.versions as unknown as string[];
+        const filtered = this.filteredTargetVersions;
+        const latest = filtered[filtered.length - 1];
+        // Pre-select the most recent available target version
+        if (latest) {
+          this.selectedVersion = latest;
+        }
       }
-    } catch (e) {
-      this.hasError = true;
+    } catch (e: unknown) {
+      const { status, message } = await this.api.parseError(e);
+      this.errorMessage = `${status}: ${message}`;
     }
   }
 
