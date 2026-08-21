@@ -19,10 +19,10 @@
   </:description>
 </Page::Header>
 
-{{#if this.hasError}}
+{{#if this.errorMessage}}
   <Hds::ApplicationState class="top-padding-32" as |A|>
-    <A.Header @icon="skip" @title="Nothing to see here" />
-    <A.Body @text="Something has gone wrong. Please review your network policies which may be restricting this feature. " />
+    <A.Header @icon="skip" @title="Something has gone wrong" />
+    <A.Body @text={{this.errorMessage}} data-test-inline-error-message />
   </Hds::ApplicationState>
 {{else}}
   <Hds::Card::Container
