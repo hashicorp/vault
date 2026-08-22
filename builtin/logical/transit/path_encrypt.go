@@ -526,6 +526,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	// item fails, respectively mark the error in the response
 	// collection and continue to process other items.
 	warnAboutNonceUsage := false
+	warnAboutUnusedContext := contextSet && !p.Derived
 	successesInBatch := false
 	successfulRequests := 0
 	for i, item := range batchInputItems {
@@ -635,6 +636,10 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 	if constants.IsFIPS() && warnAboutNonceUsage {
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
+	}
+
+	if warnAboutUnusedContext {
+		resp.AddWarning("context was supplied but this key does not have derivation enabled; the supplied context was ignored")
 	}
 
 	if req.Operation == logical.CreateOperation && !upserted {
