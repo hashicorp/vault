@@ -136,7 +136,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 
 		// Create a database plugin and initialize it.
-		dbw, err := newDatabaseWrapper(ctx, config.PluginName, pluginVersion, b.System(), b.logger)
+		dbw, err := newDatabaseWrapperWithMetricsLabels(ctx, config.PluginName, pluginVersion, b.System(), b.logger, b.metricsLabelsForConnection(name))
 		if err != nil {
 			return logical.ErrorResponse("error creating database object: %s", err), nil
 		}

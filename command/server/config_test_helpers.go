@@ -952,6 +952,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
 			"add_mount_point_rollback_metrics":       false,
+			"add_mount_point_database_metrics":       false,
 		},
 		"administrative_namespace_path":  "admin/",
 		"operator_namespace_path":        "",

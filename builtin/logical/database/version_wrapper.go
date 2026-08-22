@@ -25,10 +25,26 @@ type databaseVersionWrapper struct {
 
 var _ logical.PluginVersioner = databaseVersionWrapper{}
 
+// databaseWrapperMetricsLabels identifies the namespace, mount, and configured
+// connection a plugin instance serves, so that the metrics it emits can be
+// attributed to them. All fields are empty unless the operator opted in via the
+// add_mount_point_database_metrics telemetry setting.
+type databaseWrapperMetricsLabels struct {
+	namespace      string
+	mountPoint     string
+	connectionName string
+}
+
 // newDatabaseWrapper figures out which version of the database the pluginName is referring to and returns a wrapper object
 // that can be used to make operations on the underlying database plugin. If a builtin pluginVersion is provided, it will
 // be ignored.
 func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger) (dbw databaseVersionWrapper, err error) {
+	return newDatabaseWrapperWithMetricsLabels(ctx, pluginName, pluginVersion, sys, logger, databaseWrapperMetricsLabels{})
+}
+
+// newDatabaseWrapperWithMetricsLabels is newDatabaseWrapper with the addition of
+// telemetry labels identifying the mount and connection being served.
+func newDatabaseWrapperWithMetricsLabels(ctx context.Context, pluginName string, pluginVersion string, sys pluginutil.LookRunnerUtil, logger log.Logger, metricsLabels databaseWrapperMetricsLabels) (dbw databaseVersionWrapper, err error) {
 	// 1.12.0 and 1.12.1 stored plugin version in the config, but that stored
 	// builtin version may disappear from the plugin catalog when Vault is
 	// upgraded, so always reference builtin plugins by an empty version.
@@ -36,7 +52,15 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion st
 		pluginVersion = ""
 	}
 
-	newDB, err := v5.PluginFactoryVersion(ctx, pluginName, pluginVersion, sys, logger)
+	newDB, err := v5.PluginFactoryWithConfig(ctx, v5.PluginFactoryConfig{
+		PluginName:     pluginName,
+		PluginVersion:  pluginVersion,
+		Sys:            sys,
+		Logger:         logger,
+		Namespace:      metricsLabels.namespace,
+		MountPoint:     metricsLabels.mountPoint,
+		ConnectionName: metricsLabels.connectionName,
+	})
 	if err == nil {
 		dbw = databaseVersionWrapper{
 			v5: newDB,
@@ -47,6 +71,9 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion st
 	merr := &multierror.Error{}
 	merr = multierror.Append(merr, err)
 
+	// The legacy v4 plugin interface is deprecated and its factory does not
+	// carry telemetry labels, so v4-backed connections intentionally emit
+	// unlabeled metrics even when the operator opted in.
 	legacyDB, err := v4.PluginFactoryVersion(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{

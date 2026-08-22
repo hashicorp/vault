@@ -47,7 +47,7 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 		pluginVersion = pinnedVersion
 	}
 
-	dbw, err := newDatabaseWrapper(ctx, config.PluginName, pluginVersion, b.System(), b.logger)
+	dbw, err := newDatabaseWrapperWithMetricsLabels(ctx, config.PluginName, pluginVersion, b.System(), b.logger, b.metricsLabelsForConnection(name))
 	if err != nil {
 		return nil, fmt.Errorf("unable to create database instance: %w", err)
 	}
