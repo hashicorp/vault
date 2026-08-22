@@ -1,0 +1,3 @@
+```release-note:feature
+gcs: add support for the `universe_domain` parameter, allowing the backend to work with GCP sovereign cloud environments that require a custom API domain.
+```
