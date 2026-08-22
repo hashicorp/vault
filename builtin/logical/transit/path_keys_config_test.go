@@ -477,3 +477,57 @@ func TestTransit_KeyUsagesInConfigResponse(t *testing.T) {
 		})
 	}
 }
+
+
+func TestTransit_ConfigWarnsOnIrreversibleFlagDisable(t *testing.T) {
+	b, storage := createBackendWithSysView(t)
+
+	doReq := func(op logical.Operation, path string, data map[string]interface{}) *logical.Response {
+		t.Helper()
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Storage:   storage,
+			Operation: op,
+			Path:      path,
+			Data:      data,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("unexpected error for %s %s: err=%v resp=%v", op, path, err, resp)
+		}
+		return resp
+	}
+
+	hasWarning := func(resp *logical.Response, substr string) bool {
+		t.Helper()
+		for _, w := range resp.Warnings {
+			if strings.Contains(w, substr) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// Create an exportable key with plaintext backup enabled.
+	doReq(logical.UpdateOperation, "keys/irrev", map[string]interface{}{
+		"exportable":             true,
+		"allow_plaintext_backup": true,
+	})
+
+	// Attempt to disable both irreversible flags. Policy must stay enabled,
+	// and the response must warn that the supplied values were ignored.
+	resp := doReq(logical.UpdateOperation, "keys/irrev/config", map[string]interface{}{
+		"exportable":             false,
+		"allow_plaintext_backup": false,
+	})
+	if resp.Data["exportable"] != true {
+		t.Fatalf("exportable should remain true after disable attempt, got %#v", resp.Data["exportable"])
+	}
+	if resp.Data["allow_plaintext_backup"] != true {
+		t.Fatalf("allow_plaintext_backup should remain true after disable attempt, got %#v", resp.Data["allow_plaintext_backup"])
+	}
+	if !hasWarning(resp, "exportable cannot be disabled once set") {
+		t.Fatalf("expected exportable disable warning, got %#v", resp.Warnings)
+	}
+	if !hasWarning(resp, "allow_plaintext_backup cannot be disabled once set") {
+		t.Fatalf("expected allow_plaintext_backup disable warning, got %#v", resp.Warnings)
+	}
+}
