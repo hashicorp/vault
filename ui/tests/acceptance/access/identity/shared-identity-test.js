@@ -13,6 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { capitalize } from '@ember/string';
 import { singularize } from 'ember-inflector';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
 
 // Helper to create an entity or group
 async function createEntityOrGroup(itemType, name) {
@@ -148,4 +149,111 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
     });
   }
+
+  test('entity groups: it displays group names and keeps IDs in tooltips', async function (assert) {
+    const entityId = 'entity-id';
+    const directGroupId = 'direct-group-id';
+    const inheritedGroupId = 'inherited-group-id';
+    let groupListRequests = 0;
+
+    this.server.get(`/identity/entity/id/${entityId}`, () => ({
+      data: {
+        id: entityId,
+        name: 'example entity',
+        direct_group_ids: [directGroupId],
+        inherited_group_ids: [inheritedGroupId],
+      },
+    }));
+    this.server.get('/identity/group/id', () => {
+      groupListRequests++;
+      return {
+        data: {
+          keys: [directGroupId, inheritedGroupId],
+          key_info: {
+            [directGroupId]: { name: 'direct group' },
+            [inheritedGroupId]: { name: 'inherited group' },
+          },
+        },
+      };
+    });
+
+    await visit(`/vault/access/identity/entities/${entityId}/groups`);
+
+    assert
+      .dom(`[data-test-identity-item-name="${directGroupId}"]`)
+      .hasText('direct group')
+      .hasAttribute('title', directGroupId);
+    assert
+      .dom(`[data-test-identity-item-name="${inheritedGroupId}"]`)
+      .hasText('inherited group')
+      .hasAttribute('title', inheritedGroupId);
+    assert.strictEqual(groupListRequests, 1, 'loads all group names with one list request');
+  });
+
+  test('group members: it displays names for member groups and entities', async function (assert) {
+    const groupId = 'group-id';
+    const memberGroupId = 'member-group-id';
+    const memberEntityId = 'member-entity-id';
+    let groupListRequests = 0;
+    let entityListRequests = 0;
+
+    this.server.get(`/identity/group/id/${groupId}`, () => ({
+      data: {
+        id: groupId,
+        name: 'example group',
+        type: 'internal',
+        member_group_ids: [memberGroupId],
+        member_entity_ids: [memberEntityId],
+      },
+    }));
+    this.server.get('/identity/group/id', () => {
+      groupListRequests++;
+      return {
+        data: {
+          keys: [memberGroupId],
+          key_info: { [memberGroupId]: { name: 'member group' } },
+        },
+      };
+    });
+    this.server.get('/identity/entity/id', () => {
+      entityListRequests++;
+      return {
+        data: {
+          keys: [memberEntityId],
+          key_info: { [memberEntityId]: { name: 'member entity' } },
+        },
+      };
+    });
+
+    await visit(`/vault/access/identity/groups/${groupId}/members`);
+
+    assert
+      .dom(`[data-test-identity-item-name="${memberGroupId}"]`)
+      .hasText('member group')
+      .hasAttribute('title', memberGroupId);
+    assert
+      .dom(`[data-test-identity-item-name="${memberEntityId}"]`)
+      .hasText('member entity')
+      .hasAttribute('title', memberEntityId);
+    assert.strictEqual(groupListRequests, 1, 'loads all member group names with one list request');
+    assert.strictEqual(entityListRequests, 1, 'loads all member entity names with one list request');
+  });
+
+  test('related identity names: it falls back to IDs when the list request fails', async function (assert) {
+    const entityId = 'entity-id';
+    const groupId = 'group-id';
+
+    this.server.get(`/identity/entity/id/${entityId}`, () => ({
+      data: {
+        id: entityId,
+        name: 'example entity',
+        direct_group_ids: [groupId],
+      },
+    }));
+    this.server.get('/identity/group/id', () => new Response(403, {}, { errors: ['permission denied'] }));
+
+    await visit(`/vault/access/identity/entities/${entityId}/groups`);
+
+    assert.dom(`[data-test-identity-item-name="${groupId}"]`).hasText(groupId);
+  });
 });
