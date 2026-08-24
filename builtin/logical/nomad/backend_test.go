@@ -121,6 +121,77 @@ func prepareTestContainer(t *testing.T, bootstrap bool) (func(), *Config) {
 	return svc.Cleanup, svc.Config.(*Config)
 }
 
+// prepareTestContainerArm is identical to prepareTestContainer but uses the
+// official hashicorp/nomad image which supports ARM64 (Apple Silicon).
+func prepareTestContainerArm(t *testing.T, bootstrap bool) (func(), *Config) {
+	if retAddress := os.Getenv("NOMAD_ADDR"); retAddress != "" {
+		s, err := docker.NewServiceURLParse(retAddress)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return func() {}, &Config{*s, os.Getenv("NOMAD_TOKEN")}
+	}
+
+	runner, err := docker.NewServiceRunner(docker.RunOptions{
+		ImageRepo:     "hashicorp/nomad",
+		ImageTag:      "1.6.2",
+		ContainerName: "nomad-arm",
+		Ports:         []string{"4646/tcp"},
+		Cmd:           []string{"agent", "-dev", "-bind=0.0.0.0", "-acl-enabled"},
+	})
+	if err != nil {
+		t.Fatalf("Could not start docker Nomad: %s", err)
+	}
+
+	var nomadToken string
+	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+		nomadapiConfig := nomadapi.DefaultConfig()
+		nomadapiConfig.Address = fmt.Sprintf("http://%s:%d/", host, port)
+		nomad, err := nomadapi.NewClient(nomadapiConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = nomad.Status().Leader()
+		if err != nil {
+			t.Logf("[DEBUG] Nomad is not ready yet: %s", err)
+			return nil, err
+		}
+
+		if bootstrap {
+			aclbootstrap, _, err := nomad.ACLTokens().Bootstrap(nil)
+			if err != nil {
+				return nil, err
+			}
+			nomadToken = aclbootstrap.SecretID
+			t.Logf("[WARN] Generated Master token: %s", nomadToken)
+
+			nomadAuthConfig := nomadapi.DefaultConfig()
+			nomadAuthConfig.Address = nomad.Address()
+			nomadAuthConfig.SecretID = nomadToken
+
+			nomadAuth, err := nomadapi.NewClient(nomadAuthConfig)
+			if err != nil {
+				return nil, err
+			}
+			if err = preprePolicies(nomadAuth); err != nil {
+				return nil, err
+			}
+		}
+
+		u, _ := docker.NewServiceURLParse(nomadapiConfig.Address)
+		return &Config{
+			ServiceURL: *u,
+			Token:      nomadToken,
+		}, nil
+	})
+	if err != nil {
+		t.Fatalf("Could not start docker Nomad: %s", err)
+	}
+
+	return svc.Cleanup, svc.Config.(*Config)
+}
+
 func preprePolicies(nomadClient *nomadapi.Client) error {
 	policy := &nomadapi.ACLPolicy{
 		Name:        "test",
@@ -750,3 +821,149 @@ BEsMUc/DHYslZebbF1zAWnkKdTt+URhtHAFB2tYRDgkZfwW+wr/w12dJTIkX965o
 HO7tI4FgpU9b0i8FTuwYkBfjwp2j0Xd2/VBR8Qpd17qKl3I6NXDsf3ykjGZAvldH
 Tll+qwEZpXSRa5OWWTpGV8I=
 -----END PRIVATE KEY-----`
+
+// TestBackend_clientCaching verifies that b.client() returns the same
+// *api.Client instance on repeated calls (connection reuse) and that
+// resetClient() forces a new client to be built on the next call.
+func TestBackend_clientCaching(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nb := b.(*backend)
+
+	// Write a minimal config/access so client() has something to build from.
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data: map[string]interface{}{
+			"address": "http://127.0.0.1:4646",
+			"token":   "test-token",
+		},
+	}
+	if _, err := b.HandleRequest(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+
+	// First call builds and caches the client.
+	c1, err := nb.client(context.Background(), config.StorageView)
+	if err != nil {
+		t.Fatalf("first client() call failed: %v", err)
+	}
+	if c1 == nil {
+		t.Fatal("expected non-nil client")
+	}
+
+	// Second call must return the exact same pointer — no new client created.
+	c2, err := nb.client(context.Background(), config.StorageView)
+	if err != nil {
+		t.Fatalf("second client() call failed: %v", err)
+	}
+	if c1 != c2 {
+		t.Fatal("expected client to be cached: got different pointer on second call")
+	}
+
+	// resetClient() must clear the cache.
+	nb.resetClient()
+	if !nb.isCachedClientNil() {
+		t.Fatal("expected cachedClient to be nil after resetClient()")
+	}
+
+	// Next call must rebuild — pointer must differ from the original.
+	c3, err := nb.client(context.Background(), config.StorageView)
+	if err != nil {
+		t.Fatalf("post-reset client() call failed: %v", err)
+	}
+	if c3 == c1 {
+		t.Fatal("expected a new client after resetClient(), got the same pointer")
+	}
+}
+
+// TestBackend_configWriteResetsClient verifies that writing to config/access
+// invalidates the cached client so the next request picks up the new config.
+func TestBackend_configWriteResetsClient(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nb := b.(*backend)
+
+	writeConfig := func(addr string) {
+		req := &logical.Request{
+			Storage:   config.StorageView,
+			Operation: logical.UpdateOperation,
+			Path:      "config/access",
+			Data: map[string]interface{}{
+				"address": addr,
+				"token":   "test-token",
+			},
+		}
+		if _, err := b.HandleRequest(context.Background(), req); err != nil {
+			t.Fatalf("config write failed: %v", err)
+		}
+	}
+
+	writeConfig("http://127.0.0.1:4646")
+	c1, err := nb.client(context.Background(), config.StorageView)
+	if err != nil {
+		t.Fatalf("first client() call failed: %v", err)
+	}
+
+	// Writing config must reset the cached client.
+	writeConfig("http://127.0.0.1:4647")
+	if !nb.isCachedClientNil() {
+		t.Fatal("expected cachedClient to be nil after config/access write")
+	}
+
+	// New client must be built from the updated address.
+	c2, err := nb.client(context.Background(), config.StorageView)
+	if err != nil {
+		t.Fatalf("second client() call failed: %v", err)
+	}
+	if c2 == c1 {
+		t.Fatal("expected new client after config change, got same pointer")
+	}
+}
+
+// TestBackend_configDeleteResetsClient verifies that deleting config/access
+// invalidates the cached client.
+func TestBackend_configDeleteResetsClient(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nb := b.(*backend)
+
+	// Write then prime the cache.
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data: map[string]interface{}{
+			"address": "http://127.0.0.1:4646",
+			"token":   "test-token",
+		},
+	}
+	if _, err := b.HandleRequest(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := nb.client(context.Background(), config.StorageView); err != nil {
+		t.Fatalf("client() call failed: %v", err)
+	}
+
+	// Delete config — must clear the cache.
+	req.Operation = logical.DeleteOperation
+	if _, err := b.HandleRequest(context.Background(), req); err != nil {
+		t.Fatal(err)
+	}
+	if !nb.isCachedClientNil() {
+		t.Fatal("expected cachedClient to be nil after config/access delete")
+	}
+}
