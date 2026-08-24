@@ -178,7 +178,7 @@ func (i *IdentityStore) validateAliasMountAccessor(ctx context.Context, mountAcc
 		return nil, fmt.Errorf("failed to validate mount accessor %q due to internal configuration error", mountAccessor)
 	}
 
-	valid, err := i.syntheticAliasAccessorValidator.validateSyntheticAliasAccessor(ctx, mountAccessor)
+	valid, isLocal, err := i.syntheticAliasAccessorValidator.validateSyntheticAliasAccessor(ctx, mountAccessor)
 	if err != nil {
 		return nil, err
 	}
@@ -190,7 +190,7 @@ func (i *IdentityStore) validateAliasMountAccessor(ctx context.Context, mountAcc
 	if err != nil {
 		return nil, err
 	}
-	return &MountEntry{NamespaceID: ns.ID}, nil
+	return &MountEntry{NamespaceID: ns.ID, Local: isLocal}, nil
 }
 
 func aliasFieldSchema() map[string]*framework.FieldSchema {
@@ -347,11 +347,14 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 		if mountAccessor == "" {
 			// Only create synthetic alias accessor if issuer and external_id are both present
 			if issuer != "" && externalID != "" {
-				syntheticAccessor, err := i.syntheticAliasAccessorValidator.generateSyntheticAliasAccessor(ctx, issuer)
+				syntheticAccessor, _, err := i.syntheticAliasAccessorValidator.generateSyntheticAliasAccessor(ctx, issuer)
 				if err != nil {
 					return logical.ErrorResponse(err.Error()), nil
 				}
 				mountAccessor = syntheticAccessor
+				// locality is carried back through validateAliasMountAccessor
+				// below: it returns MountEntry.Local=true for local profiles,
+				// which flows into localMount and then handleAliasCreate.
 			} else {
 				return logical.ErrorResponse("'mount_accessor' or both 'issuer' and 'external_id' must be provided"), nil
 			}

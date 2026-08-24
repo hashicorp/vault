@@ -24,6 +24,10 @@ func entBinaryPaths() []string {
 	return []string{}
 }
 
+func entLocalStoragePaths() []string {
+	return []string{}
+}
+
 func (s *SystemBackend) entInit() {}
 
 func (s *SystemBackend) makeSnapshotSource(ctx context.Context, _ *framework.FieldData) (snapshots.Source, error) {
