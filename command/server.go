@@ -1272,10 +1272,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisplayName: "Vault",
 		UserAgent:   useragent.String(),
 		ClusterName: clusterName,
-		LogWriter: c.logger.StandardWriter(&hclog.StandardLoggerOptions{
-			InferLevels:              true,
-			InferLevelsWithTimestamp: true,
-		}),
+		Logger:      c.logger.Named("telemetry"),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
@@ -1514,6 +1511,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
+
+	infoKeys = append(infoKeys, "operator namespace")
+	info["operator namespace"] = config.OperatorNamespacePath
 
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
@@ -3016,6 +3016,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:                config.DisableSSCTokens,
 		Experiments:                     config.Experiments,
 		AdministrativeNamespacePath:     config.AdministrativeNamespacePath,
+		OperatorNamespacePath:           config.OperatorNamespacePath,
 		ObservationSystemConfig:         config.Observations,
 		ReportingScanDirectory:          config.ReportingScanDirectory,
 		EnableUnauthenticatedAccess:     config.EnableUnauthenticatedAccess,

@@ -280,7 +280,7 @@ func (c *ProxyCommand) Run(args []string) int {
 		DisplayName: "Vault",
 		UserAgent:   useragent.ProxyString(),
 		ClusterName: config.ClusterName,
-		LogWriter:   c.logWriter,
+		Logger:      c.logger.Named("telemetry"),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
