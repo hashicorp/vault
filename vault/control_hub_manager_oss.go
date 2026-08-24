@@ -24,7 +24,3 @@ func NewControlHubManager(c *Core) *ControlHubManager {
 func (c *ControlHubManager) WriteClusterCredentialsToStorage(ctx context.Context, key string, value []byte) error {
 	return fmt.Errorf("control hub is only available in Vault Enterprise")
 }
-
-func (c *ControlHubManager) LoadHostname(ctx context.Context) (string, error) {
-	return "", fmt.Errorf("control hub is only available in Vault Enterprise")
-}
