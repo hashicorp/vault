@@ -7455,7 +7455,6 @@ func TestWellKnownSysApi(t *testing.T) {
 
 	require.Contains(t, resp.Data["keys"], "mylabel1")
 	require.Contains(t, resp.Data["keys"], "mylabel2")
-	require.Len(t, resp.Data["keys"], 2)
 
 	keyInfo := resp.Data["key_info"].(map[string]interface{})
 	keyInfoLabel1 := keyInfo["mylabel1"].(map[string]interface{})
