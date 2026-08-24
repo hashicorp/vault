@@ -96,20 +96,108 @@ func pathConfig(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRead,
+				Summary:  "Return the current Okta configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "configuration",
+				},
+				Responses: map[int][]framework.Response{
+					200: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"org_name": {
+								Type:        framework.TypeString,
+								Description: "Name of the Okta organization.",
+							},
+							"organization": {
+								Type:        framework.TypeString,
+								Description: tokenutil.DeprecationText("org_name"),
+								Deprecated:  true,
+							},
+							"base_url": {
+								Type:        framework.TypeString,
+								Description: "The base domain used for the Okta API.",
+							},
+							"production": {
+								Type:        framework.TypeBool,
+								Description: tokenutil.DeprecationText("base_url"),
+								Deprecated:  true,
+							},
+							"bypass_okta_mfa": {
+								Type:        framework.TypeBool,
+								Description: "When true, Okta MFA requests are bypassed.",
+							},
+							"ttl": {
+								Type:        framework.TypeInt64,
+								Description: tokenutil.DeprecationText("token_ttl"),
+								Deprecated:  true,
+							},
+							"max_ttl": {
+								Type:        framework.TypeInt64,
+								Description: tokenutil.DeprecationText("token_max_ttl"),
+								Deprecated:  true,
+							},
+							"token_bound_cidrs": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "List of CIDRs valid for the token.",
+							},
+							"token_explicit_max_ttl": {
+								Type:        framework.TypeInt64,
+								Description: "Hard cap on the token TTL.",
+							},
+							"token_max_ttl": {
+								Type:        framework.TypeInt64,
+								Description: "Maximum token TTL.",
+							},
+							"token_no_default_policy": {
+								Type:        framework.TypeBool,
+								Description: "When true, the default policy is not added to the token.",
+							},
+							"token_period": {
+								Type:        framework.TypeInt64,
+								Description: "Period of the token.",
+							},
+							"token_policies": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "List of policies applied to the token.",
+							},
+							"token_type": {
+								Type:        framework.TypeString,
+								Description: "Type of the token.",
+							},
+							"token_ttl": {
+								Type:        framework.TypeInt64,
+								Description: "Token TTL in seconds.",
+							},
+							"token_num_uses": {
+								Type:        framework.TypeInt,
+								Description: "Number of uses the token is allowed.",
+							},
+							"alias_metadata": {
+								Type:        framework.TypeMap,
+								Description: "Metadata to be set on the token alias.",
+							},
+						},
+					}},
 				},
 			},
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigWrite,
+				Summary:  "Configure the Okta auth method.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "configure",
+				},
+				Responses: map[int][]framework.Response{
+					204: {{Description: "No Content"}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigWrite,
+				Summary:  "Configure the Okta auth method.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "configure",
+				},
+				Responses: map[int][]framework.Response{
+					204: {{Description: "No Content"}},
 				},
 			},
 		},
