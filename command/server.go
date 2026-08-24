@@ -111,7 +111,7 @@ type ServerCommand struct {
 	reloadFuncs       *map[string][]reloadutil.ReloadFunc
 	startedCh         chan (struct{}) // for tests
 	reloadedCh        chan (struct{}) // for tests
-	licenseReloadedCh chan (error)    // for tests
+	licenseReloadedCh chan error      // for tests
 
 	allLoggers []hclog.Logger
 
@@ -1780,6 +1780,11 @@ func (c *ServerCommand) Run(args []string) int {
 				var srConfig *map[string]string
 				if config.ServiceRegistration != nil {
 					srConfig = &config.ServiceRegistration.Config
+				} else if config.Storage.Type == storageTypeConsul {
+					// If no explicit service_registration block exists but Consul is
+					// the storage backend, maintain the implicit registration that was
+					// set up at startup. Passing nil would permanently deregister Vault.
+					srConfig = &config.Storage.Config
 				}
 				sr.NotifyConfigurationReload(srConfig)
 			}
