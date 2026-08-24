@@ -7,10 +7,10 @@ package vault
 
 import "context"
 
-func (c *Core) validateSyntheticAliasAccessor(context.Context, string) (bool, error) {
-	return false, nil
+func (c *Core) validateSyntheticAliasAccessor(context.Context, string) (bool, bool, error) {
+	return false, false, nil
 }
 
-func (c *Core) generateSyntheticAliasAccessor(context.Context, string) (string, error) {
-	return "", nil
+func (c *Core) generateSyntheticAliasAccessor(context.Context, string) (string, bool, error) {
+	return "", false, nil
 }

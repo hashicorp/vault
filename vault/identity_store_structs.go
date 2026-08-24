@@ -213,8 +213,13 @@ type MountLister interface {
 var _ MountLister = &Core{}
 
 type SyntheticAliasAccessorValidator interface {
-	validateSyntheticAliasAccessor(context.Context, string) (bool, error)
-	generateSyntheticAliasAccessor(context.Context, string) (string, error)
+	// validateSyntheticAliasAccessor returns (valid, isLocal, err).
+	// valid is true when the accessor is a known synthetic OAuth RS accessor.
+	// isLocal is true when the backing profile has Local=true.
+	validateSyntheticAliasAccessor(context.Context, string) (bool, bool, error)
+	// generateSyntheticAliasAccessor returns (accessor, isLocal, err).
+	// isLocal is true when the backing profile has Local=true.
+	generateSyntheticAliasAccessor(context.Context, string) (string, bool, error)
 }
 
 var _ SyntheticAliasAccessorValidator = &Core{}

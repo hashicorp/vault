@@ -214,13 +214,13 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 
 			Unauthenticated: unauthenticatedPaths,
 
-			LocalStorage: []string{
+			LocalStorage: append([]string{
 				expirationSubPath,
 				countersSubPath,
 				rotationLocalSubPath,
 				orphanLocalSubPath,
 				billing.BillingSubPath + billing.LocalPrefix,
-			},
+			}, entLocalStoragePaths()...),
 
 			SealWrapStorage: []string{
 				managedKeyRegistrySubPath,
