@@ -40,7 +40,7 @@ runs:
         key: dyn-cfg-${{ env.DYNAMIC_CONFIG_KEY }}
     - if: steps.dyn-cfg-cache.outputs.cache-hit != 'true'
       id: dyn-cfg-set-up-pipeline
-      # If we can't restore it from config then set up pipeline and generate it
+      # If we can't restore the config from cache, set up pipeline so we can generate it
       name: Set up the pipeline tool
       uses: ./.github/actions/set-up-pipeline
       with:

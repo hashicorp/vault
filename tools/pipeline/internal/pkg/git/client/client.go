@@ -21,6 +21,7 @@ import (
 // Client is the local git client.
 type Client struct {
 	Token   string
+	Host    string
 	envOnce sync.Once
 	envVal  []string
 	config  map[string]string
@@ -65,6 +66,14 @@ func NewClient(opts ...NewClientOpt) *Client {
 func WithToken(token string) NewClientOpt {
 	return func(client *Client) {
 		client.Token = token
+	}
+}
+
+// WithHost sets the git remote host used in credential URL rewrites.
+// When not set, defaults to "github.com".
+func WithHost(host string) NewClientOpt {
+	return func(client *Client) {
+		client.Host = host
 	}
 }
 
@@ -156,8 +165,12 @@ func (c *Client) configEnv() []string {
 			// have different rules around the user in the auth portion of the URL.
 			// Github doesn't care what the username is but requires one to be set so
 			// we always set it to user.
+			host := c.Host
+			if host == "" {
+				host = "github.com"
+			}
 			token := url.UserPassword("user", c.Token).String()
-			env[fmt.Sprintf("url.https://%s@github.com.insteadOf", token)] = "https://github.com"
+			env[fmt.Sprintf("url.https://%s@%s.insteadOf", token, host)] = "https://" + host
 		}
 
 		vars := []string{fmt.Sprintf("GIT_CONFIG_COUNT=%d", len(env))}

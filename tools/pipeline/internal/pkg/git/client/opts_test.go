@@ -4,6 +4,7 @@
 package client
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -767,6 +768,52 @@ func TestOptsStringers(t *testing.T) {
 			},
 			"--hard --no-refresh --quiet --refresh --patch abcd1234 HEAD~2 -- vault/something_ent.go vault/cli/another_ent.go",
 		},
+		"add 1/2 opts": {
+			&AddOpts{
+				All:      true,
+				DryRun:   true,
+				Force:    true,
+				Verbose:  true,
+				PathSpec: []string{"vault/something_ent.go", "vault/cli/another_ent.go"},
+			},
+			"--all --dry-run --force --verbose -- vault/something_ent.go vault/cli/another_ent.go",
+		},
+		"add 2/2 opts": {
+			&AddOpts{
+				Chmod:              "+x",
+				Edit:               true,
+				IgnoreErrors:       true,
+				IgnoreMissing:      true,
+				IntentToAdd:        true,
+				Interactive:        true,
+				NoAll:              true,
+				NoWarnEmbeddedRepo: true,
+				Patch:              true,
+				Refresh:            true,
+				Renormalize:        true,
+			},
+			"--chmod=+x --edit --ignore-errors --ignore-missing --intent-to-add --interactive --no-all --no-warn-embedded-repo --patch --refresh --renormalize",
+		},
+		"add pathspec-from-file suppresses PathSpec": {
+			// PathSpec must be silently ignored when PathspecFromFile is set;
+			// mixing the two is invalid git usage.
+			&AddOpts{
+				PathspecFromFile: "/specs/paths.txt",
+				PathspecFileNul:  true,
+				PathSpec:         []string{"should", "be", "ignored"},
+			},
+			"--pathspec-from-file=/specs/paths.txt --pathspec-file-nul",
+		},
+		"add pathspec only": {
+			&AddOpts{
+				PathSpec: []string{"file1", "file2"},
+			},
+			"-- file1 file2",
+		},
+		"add nil opts": {
+			(*AddOpts)(nil),
+			"",
+		},
 		"rm": {
 			&RmOpts{
 				Cached:          true,
@@ -1116,4 +1163,33 @@ func TestOptsStringers(t *testing.T) {
 			require.Equal(t, expect.expected, expect.opts.String())
 		})
 	}
+}
+
+// TestWithHost verifies that the WithHost functional option causes configEnv()
+// to emit credential URL rewrites for the specified host rather than github.com.
+func TestWithHost(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no WithHost, token set — defaults to github.com", func(t *testing.T) {
+		t.Parallel()
+		c := NewClient(WithToken("mytoken"))
+		env := strings.Join(c.configEnv(), "\n")
+		require.Contains(t, env, "github.com")
+	})
+
+	t.Run("WithHost github.ibm.com, token set — uses custom host not github.com", func(t *testing.T) {
+		t.Parallel()
+		c := NewClient(WithToken("mytoken"), WithHost("github.ibm.com"))
+		env := strings.Join(c.configEnv(), "\n")
+		require.Contains(t, env, "github.ibm.com")
+		require.NotContains(t, env, "insteadOf=https://github.com")
+	})
+
+	t.Run("WithHost set, no token — no insteadOf key emitted", func(t *testing.T) {
+		t.Parallel()
+		c := NewClient(WithHost("github.ibm.com"))
+		for _, e := range c.configEnv() {
+			require.NotContains(t, e, "insteadOf")
+		}
+	})
 }
