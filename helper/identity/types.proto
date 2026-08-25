@@ -335,6 +335,16 @@ message ScimClient {
   // an explicit empty list clears the allowlist.
   // @inject_tag: sentinel:"-"
   repeated string allowed_extra_alias_mount_accessors = 9;
+
+  // MaxActiveTokens is the maximum number of simultaneously active SCIM tokens
+  // for this client. Must be a positive non-zero value; defaults to 2.
+  // @inject_tag: sentinel:"-"
+  int32 max_active_tokens = 10;
+
+  // MaxTokenTTL is the maximum TTL (in nanoseconds) for tokens minted by this
+  // client. Zero means the cluster default is used.
+  // @inject_tag: sentinel:"-"
+  int64 max_token_ttl = 11;
 }
 
 // Deprecated. Retained for backwards compatibility.
