@@ -214,7 +214,8 @@ func IsSSCToken(token string) bool {
 
 func IsServiceToken(token string) bool {
 	return strings.HasPrefix(token, consts.ServiceTokenPrefix) ||
-		strings.HasPrefix(token, consts.LegacyServiceTokenPrefix)
+		strings.HasPrefix(token, consts.LegacyServiceTokenPrefix) ||
+		strings.HasPrefix(token, consts.GetSCIMTokenPrefix())
 }
 
 func IsBatchToken(token string) bool {

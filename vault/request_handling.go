@@ -1687,7 +1687,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
-			case logical.TokenTypeService:
+			case logical.TokenTypeService, logical.TokenTypeSCIM:
 				if !c.perfStandby {
 					registeredTokenEntry := &logical.TokenEntry{
 						TTL:         auth.TTL,
@@ -2755,7 +2755,7 @@ func (c *Core) registerAuthLeaseForToken(ctx context.Context, te *logical.TokenE
 	case logical.TokenTypeBatch:
 		// Ensure it's not marked renewable since it isn't
 		auth.Renewable = false
-	case logical.TokenTypeService, logical.TokenTypeEnt:
+	case logical.TokenTypeService, logical.TokenTypeEnt, logical.TokenTypeSCIM:
 		if auth.TokenType == logical.TokenTypeEnt {
 			// Ensure it's not marked renewable since enterprise tokens are not renewable
 			auth.Renewable = false
@@ -3019,11 +3019,12 @@ func DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return nil, fmt.Errorf("not service token")
 	}
 
-	// Consider the suffix of the token only when unmarshalling
+	// Consider the suffix of the token only when unmarshalling.
+	// Both "hvs." and "scm." are 4 characters, so token[4:] strips either prefix.
 	suffixToken := token[4:]
 
 	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
@@ -3048,7 +3049,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return token, nil
 	}
 	// Check token length to guess if this is an server side consistent token or not.
