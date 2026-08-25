@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/stretchr/testify/require"
 )
 
@@ -71,19 +70,8 @@ path "secret" {
 			out:       "failed to parse policy",
 			code:      1,
 		},
-		// TODO (HCL_DUP_KEYS_DEPRECATION): remove this test once deprecation is fully done
-		"hcl_duplicate_key_env_set": {
-			policyArg: `
-path "secret" {
-  capabilities = ["create", "update", "delete"]
-  capabilities = ["create"]
-}
-`,
-			envVars: map[string]string{random.AllowHclDuplicatesEnvVar: "true"},
-			code:    0,
-			out:     "WARNING: Duplicate keys found in the provided policy, duplicate keys in HCL files are deprecated and will be forbidden in a future release.",
-		},
-		"hcl_duplicate_key_env_not_set": {
+		// duplicate keys in HCL files are rejected by the parser
+		"hcl_duplicate_key": {
 			policyArg: `
 path "secret" {
   capabilities = ["create", "update", "delete"]
@@ -92,17 +80,6 @@ path "secret" {
 `,
 			code: 1,
 			out:  "failed to parse policy: The argument \"capabilities\" at 4:3 was already set. Each argument can only be defined once",
-		},
-		"hcl_duplicate_key_env_set_to_false": {
-			policyArg: `
-path "secret" {
-  capabilities = ["create", "update", "delete"]
-  capabilities = ["create"]
-}
-`,
-			envVars: map[string]string{random.AllowHclDuplicatesEnvVar: "false"},
-			code:    1,
-			out:     "failed to parse policy: The argument \"capabilities\" at 4:3 was already set. Each argument can only be defined once",
 		},
 	}
 

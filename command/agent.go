@@ -1278,16 +1278,11 @@ func (c *AgentCommand) loadConfig(paths []string) (*agentConfig.Config, error) {
 	cfg := agentConfig.NewConfig()
 
 	for _, configPath := range paths {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to agentConfig.LoadConfig and remove duplicate when deprecation is done
-		configFromPath, duplicate, err := agentConfig.LoadConfigCheckDuplicates(configPath)
+		configFromPath, err := agentConfig.LoadConfig(configPath)
 		if err != nil {
 			errs = multierror.Append(errs, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
 		} else {
 			cfg = cfg.Merge(configFromPath)
-		}
-		if duplicate {
-			c.UI.Warn(fmt.Sprintf(
-				"WARNING: Duplicate keys found in the Vault agent configuration file %q, duplicate keys in HCL files are deprecated and will be forbidden in a future release.", configPath))
 		}
 	}
 
