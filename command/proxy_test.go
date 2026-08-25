@@ -24,7 +24,6 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -274,8 +273,6 @@ auto_auth {
     }
 	sink "file" {
 		config = {
-			# TODO (HCL_DUP_KEYS_DEPRECATION): remove duplicate attribute below
-			path = ""
 			path = "%s"
 		}
 	}
@@ -308,13 +305,12 @@ auto_auth {
 	os.Unsetenv(api.EnvVaultAddress)
 
 	// Start proxy
-	ui, cmd := testProxyCommand(t, proxyLogger)
+	_, cmd := testProxyCommand(t, proxyLogger)
 	cmd.startedCh = make(chan struct{})
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 		cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
@@ -324,11 +320,6 @@ auto_auth {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timeout")
 	}
-
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Eventually remove this check together with the duplicate attribute in this
-	// test's configuration
-	require.Contains(t, ui.ErrorWriter.String(),
-		"WARNING: Duplicate keys found")
 
 	// Validate that the auto-auth token has been correctly attained
 	// and works for LookupSelf

@@ -12,7 +12,6 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
@@ -504,20 +503,10 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 	}
 }
 
-// TestPolicyStore_DuplicateAttributes checks that the policyStore.ACL method rejects templated
-// policies with duplicate attributes. The VAULT_ALLOW_PENDING_REMOVAL_DUPLICATE_HCL_ATTRIBUTES
-// environment variable has been removed, so duplicate attributes now always fail.
+// TestPolicyStore_DuplicateAttributes checks the behaviour of the policyStore.ACL method when it finds a templated
+// policy with duplicate attributes
 func TestPolicyStore_DuplicateAttributes(t *testing.T) {
-	logMu := &sync.Mutex{}
-	logOut := new(bytes.Buffer)
-	conf := &CoreConfig{
-		Logger: log.New(&log.LoggerOptions{
-			Mutex:  logMu,
-			Level:  log.Warn,
-			Output: logOut,
-		}),
-	}
-	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+	core, _, _ := TestCoreUnsealed(t)
 	ps := core.policyStore
 
 	dupAttrPolicy := aclPolicy + `
@@ -526,20 +515,19 @@ path "foo" {
 	capabilities = ["read"]
 }
 `
-	// Allow duplicates for initial parse to simulate legacy policy storage
-	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-	policy, err := ParseACLPolicy(namespace.RootNamespace, dupAttrPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
-	require.NoError(t, err)
-	// check that "list" and "read" get concatenated
-	require.Len(t, policy.Paths[len(policy.Paths)-1].Capabilities, 2)
-	policy.Templated = true
-	require.NoError(t, err)
+	// ParseACLPolicy now rejects duplicate attributes, so construct the policy manually
+	// to store the duplicate raw text and verify that re-parsing it fails.
+	policy := &Policy{
+		Name:      "dev",
+		Type:      PolicyTypeACL,
+		Templated: true,
+		Raw:       dupAttrPolicy,
+		namespace: namespace.RootNamespace,
+	}
 	ctx := namespace.RootContext(context.Background())
-	err = ps.SetPolicy(ctx, policy)
+	err := ps.SetPolicy(ctx, policy)
 	require.NoError(t, err)
 
-	// Now unset the env var duplicate attributes should always fail on re parse
-	t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
 	_, err = ps.ACL(ctx, nil, map[string][]string{namespace.RootNamespace.ID: {"dev", "ops"}})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "error parsing templated policy \"dev\": failed to parse policy: The argument \"capabilities\" at 61:2 was already set. Each argument can only be defined once")
