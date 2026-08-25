@@ -1006,6 +1006,9 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 	apiClient.ClearNamespace()
 
 	// Attempt to join the leader by requesting for the bootstrap challenge
+	// NOTE: We have investigated this as an SSRF vector and determined that it
+	// is not a risk. Any attacker would already need network access to this Vault node.
+	// An attacker would gain negligable information from a response.
 	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 		"server_id": c.getRaftBackend().NodeID(),
 	})
