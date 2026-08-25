@@ -224,11 +224,11 @@ runs:
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
+      uses: hashicorp/actions-packaging-linux@e6d9687e13bd55b1b3e3e5adb2e4d52789299025
       env:
         # Use our elevated token instead of the workflow token so that our
         # download of nfpm is less likely to fail.
         GH_TOKEN: ${{ inputs.github-token }}
-      uses: hashicorp/actions-packaging-linux@33f7d23b14f24e6a7b7d9948cb7f5caca2045ee3
       with:
         name: ${{ inputs.package-name }}
         description: Vault is a tool for secrets management, encryption as a service, and privileged access management.
@@ -244,6 +244,8 @@ runs:
         preinstall: .release/linux/preinst
         postinstall: .release/linux/postinst
         postremove: .release/linux/postrm
+        nfpm_cache: 'true'
+        nfpm_version: v2.47.0
     - if: inputs.create-packages == 'true'
       id: package-files
       name: Determine package file names
