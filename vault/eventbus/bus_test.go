@@ -1297,3 +1297,53 @@ func Test_getIndexForEvent(t *testing.T) {
 		})
 	}
 }
+
+// TestActiveSubscriptionCount verifies that ActiveSubscriptionCount increases when
+// subscriptions are created and decreases when they are canceled.
+func TestActiveSubscriptionCount(t *testing.T) {
+	subscriptions.Store(0)
+
+	bus, err := NewEventBus("", nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+
+	require.Equal(t, int64(0), ActiveSubscriptionCount())
+
+	_, cancel, err := bus.Subscribe(context.Background(), namespace.RootNamespace, "someType", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.Equal(t, int64(1), ActiveSubscriptionCount())
+
+	// cleanup is asynchronous, so wait for the counter to settle after canceling
+	cancel()
+	waitFor(t, 1*time.Second, func() bool { return ActiveSubscriptionCount() == 0 })
+}
+
+// TestIsBoundedQueueEnabled verifies that IsBoundedQueueEnabled reports whether a
+// positive bounded queue size is configured via the environment variable.
+func TestIsBoundedQueueEnabled(t *testing.T) {
+	testCases := map[string]struct {
+		envValue string
+		expected bool
+	}{
+		"disabled": {envValue: "0", expected: false},
+		"enabled":  {envValue: "16", expected: true},
+		"invalid":  {envValue: "notanumber", expected: false},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			// the buffer size is read from the environment at bus construction
+			t.Setenv(EnvVaultEventNotificationsBoundedQueueSize, tc.envValue)
+
+			bus, err := NewEventBus("", nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			require.Equal(t, tc.expected, bus.IsBoundedQueueEnabled())
+		})
+	}
+}
