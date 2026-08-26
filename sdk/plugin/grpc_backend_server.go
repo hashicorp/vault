@@ -187,6 +187,7 @@ func (b *backendGRPCPluginServer) Initialize(ctx context.Context, args *pb.Initi
 		req.MountType = args.MountType
 		req.MountAccessor = args.MountAccessor
 		req.BackendUUID = args.BackendUuid
+		req.MountRunningVersion = args.MountRunningVersion
 	}
 
 	respErr := backend.Initialize(ctx, req)

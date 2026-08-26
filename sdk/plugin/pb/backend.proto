@@ -411,6 +411,7 @@ message InitializeArgs {
   string mount_type = 2;
   string mount_accessor = 3;
   string backend_uuid = 4;
+  string mount_running_version = 5;
 }
 
 // InitializeReply is the reply for Initialize method.

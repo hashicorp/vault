@@ -71,13 +71,15 @@ func testLazyLoad(t *testing.T, methodWrapper func() error) *PluginBackend {
 		config:  config,
 	}
 
-	// lazy load
-	err = b.lazyLoadBackend(ctx, &logical.Request{
+	req := &logical.Request{
 		Storage:       &logical.InmemStorage{},
 		MountPoint:    "test/",
 		MountType:     "secret",
 		MountAccessor: "secret_test",
-	}, methodWrapper)
+	}
+	req.SetMountRunningVersion("versiontest")
+	// lazy load
+	err = b.lazyLoadBackend(ctx, req, methodWrapper)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -160,11 +160,12 @@ func (b *PluginBackend) startBackend(ctx context.Context, req *logical.Request) 
 	// the triggering request — it is always present on any real Vault request
 	// — and BackendUUID comes from the stable BackendConfig.
 	initReq := &logical.InitializationRequest{
-		Storage:       storage,
-		MountPoint:    req.MountPoint,
-		MountType:     req.MountType,
-		MountAccessor: req.MountAccessor,
-		BackendUUID:   b.config.BackendUUID,
+		Storage:             storage,
+		MountPoint:          req.MountPoint,
+		MountType:           req.MountType,
+		MountAccessor:       req.MountAccessor,
+		BackendUUID:         b.config.BackendUUID,
+		MountRunningVersion: req.MountRunningVersion(),
 	}
 	return b.Backend.Initialize(ctx, initReq)
 }
