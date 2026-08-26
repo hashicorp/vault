@@ -283,3 +283,7 @@ func (c *Core) UpdateOidcAttribution(ctx context.Context, currentMonth time.Time
 	}
 	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.Oidc.AttributionTracker, billing.OidcDurationAdjustedCountPrefix, currentMonth)
 }
+
+func isAttributionEmpty(attribution *logical.MetricTypeAttribution) bool {
+	return attribution == nil || attribution.Mounts == nil || len(attribution.Mounts) == 0
+}

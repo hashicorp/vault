@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 	uberAtomic "go.uber.org/atomic"
@@ -125,8 +126,28 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
-				if err := c.updateBillingMetrics(ctx, clock.Now().UTC()); err != nil {
+				now := clock.Now().UTC()
+				if err := c.updateBillingMetrics(ctx, now); err != nil {
 					c.logger.Error("error updating billing metrics", "error", err)
+				}
+				// If active node, also send metrics to the control hub
+				if state := c.HAStateWithLock(); state == consts.Active {
+					proto, err := c.buildMetricsProto(ctx, now)
+					if err != nil {
+						c.logger.Error("error creating metrics proto", "error", err)
+					}
+					if proto != nil {
+						// send proto to control hub via grpc method
+						// TO-DO (VAULT-49572)
+						// c.ControlHubManager.ProductOperationServicesClient.SendData()
+
+						// for testing purposes: if callback function exists, call it now
+						c.consumptionBillingLock.RLock()
+						if cb := c.consumptionBilling.BillingConfig.OnMetricsSent; cb != nil {
+							cb(proto)
+						}
+						c.consumptionBillingLock.RUnlock()
+					}
 				}
 			case <-ctx.Done():
 				return
@@ -138,6 +159,23 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				// On month boundary, we need to flush the current in-memory counts to storage
 				if err := c.updateBillingMetrics(ctx, previousMonth); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
+				}
+				// Send the month's final counts and attributions to control hub
+				if state := c.HAStateWithLock(); state == consts.Active {
+					proto, err := c.buildMetricsProto(ctx, previousMonth)
+					if err != nil {
+						c.logger.Error("error creating metrics proto", "error", err)
+					}
+					if proto != nil {
+						// send proto to control hub via grpc method
+						// TO-DO (VAULT-49572)
+						// c.ControlHubManager.ProductOperationServicesClient.SendData()
+
+						// for testing purposes: if callback function exists, call it now
+						if cb := c.consumptionBilling.BillingConfig.OnMetricsSent; cb != nil {
+							cb(proto)
+						}
+					}
 				}
 				c.HandleStartOfMonth(ctx, currentMonth)
 				endOfMonth.Reset(untilNextMonth(currentMonth))

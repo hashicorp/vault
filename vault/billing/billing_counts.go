@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	consumptionv1 "github.com/hashicorp/calistoga-control-plane/sdks/secure-products/scp/api/vault/consumption/v1"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -119,9 +120,12 @@ type BillingConfig struct {
 	MetricsUpdateCadence time.Duration
 	// For testing purposes. The cadence at which plugin counts are sent from perf standby to active
 	PluginCountsSendCadence time.Duration
-	// For testin purposes. TestOverrideClock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
+	// For testing purposes. TestOverrideClock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
 	// If nil, the default functions from the time package are used
 	TestOverrideClock timeutil.Clock
+	// OnMetricsSent is called in tests to observe the proto that would be sent
+	// to the control hub. It is never set in production.
+	OnMetricsSent func(*consumptionv1.ConsumptionMetrics)
 }
 
 func GetMonthlyBillingMetricPath(localPrefix string, now time.Time, billingMetric string) string {
