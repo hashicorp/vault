@@ -8,6 +8,7 @@ overrides:
   '@babel/runtime': 7.27.0
   ansi-html: 0.0.8
   braces: 3.0.3
+  clean-css: 5.3.3
   kind-of: 6.0.3
   markdown-it: 14.1.1
   micromatch: 4.0.8
@@ -363,8 +364,8 @@ importers:
         specifier: ~0.1.48
         version: 0.1.48
       node:
-        specifier: runtime:20.20.2
-        version: runtime:20.20.2
+        specifier: runtime:24.19.0
+        version: runtime:24.19.0
       pkijs:
         specifier: ~2.4.0
         version: 2.4.0
@@ -3030,11 +3031,6 @@ packages:
   clean-css-promise@0.1.1:
     resolution: {integrity: sha512-tzWkANXMD70ETa/wAu2TXAAxYWS0ZjVUFM2dVik8RQBoAbGMFJv4iVluz3RpcoEbo++fX4RV/BXfgGoOjp8o3Q==}
 
-  clean-css@3.4.28:
-    resolution: {integrity: sha512-aTWyttSdI2mYi07kWqHi24NUU9YlELFKGOAgFzZjDN1064DMAOy2FBuoyGmkKRlXkbpXd0EVHmiVkbKhKoirTw==}
-    engines: {node: '>=0.10.0'}
-    hasBin: true
-
   clean-css@5.3.3:
     resolution: {integrity: sha512-D5J+kHaVb/wKSFcyyV75uCn8fiY4sV38XJoe4CUyGQ+mOU/fMVYUdH1hJC+CJQ5uY3EnW27SbJYS4X8BiLrAFg==}
     engines: {node: '>= 10.0'}
@@ -3163,10 +3159,6 @@ packages:
 
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
-
-  commander@2.8.1:
-    resolution: {integrity: sha512-+pJLBFVk+9ZZdlAOB5WuIElVPPth47hILFkmGym57aq8kwxsowvByvB0DHs1vQAhyMZzdcpTtF0VDKGkSDR4ZQ==}
-    engines: {node: '>= 0.6.x'}
 
   commander@4.1.1:
     resolution: {integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==}
@@ -4985,9 +4977,6 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  graceful-readlink@1.0.1:
-    resolution: {integrity: sha512-8tLu60LgxF6XpdbK8OW3FA+IfTNBn1ZHGHKF4KQbEeSkajYw5PlYJcKluntgegDPTg8UkHjpet1T82vk6TQ68w==}
-
   grapheme-splitter@1.0.4:
     resolution: {integrity: sha512-bzh50DW9kTPM00T8y4o8vQg89Di9oLJVLW/KaOGIXJWP/iqCN6WKYkbNOF04vFLJhwcpYUh9ydh/+5vpOqV4YQ==}
 
@@ -6044,113 +6033,94 @@ packages:
     resolution: {integrity: sha512-3l4E8uMPY1HdMMryPRUAl+oIHtXtyiTlIiESNSVSNxcPfzAFzeTbXFQkZfAwBbo0B1qMSG8nUABx+Gd+YrbKrQ==}
     engines: {node: '>=6'}
 
-  node@runtime:20.20.2:
+  node@runtime:24.19.0:
     resolution:
       type: variations
       variants:
         - resolution:
             archive: tarball
             bin: bin/node
-            integrity: sha256-PGD1QGmlOtj/7vKw8R4fiDM7Et7P7XVbJs4/y14tl+Q=
+            integrity: sha256-9ONcExZd5ogMqiVYwKpIyoitpH/iI0vtB9Ztu4CkfI0=
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-aix-ppc64.tar.gz
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-aix-ppc64.tar.gz
           targets:
             - cpu: ppc64
               os: aix
         - resolution:
             archive: tarball
             bin: bin/node
-            integrity: sha256-Rm4F80d8IN+3IwVN/r/+Vbx0Zg7nf2EhZvyhIdrLZbY=
+            integrity: sha256-gpS3qpsDmXSBwGur8eiycMhZNY8n2lehFQmv5TesOB0=
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-darwin-arm64.tar.gz
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-darwin-arm64.tar.gz
           targets:
             - cpu: arm64
               os: darwin
         - resolution:
             archive: tarball
             bin: bin/node
-            integrity: sha256-i+b15LsSjIJ3T4oLjXocwTZaeXfZZXzs4Mpkez/gTmE=
+            integrity: sha256-0bXpmdsVjGL+j3JnpEdrA12L2TsaYFusJKPw3RZuMxY=
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-darwin-x64.tar.gz
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-darwin-x64.tar.gz
           targets:
             - cpu: x64
               os: darwin
         - resolution:
             archive: tarball
             bin: bin/node
-            integrity: sha256-R+9z1UPs9usZQ19sA6CsSAmzvw3Wsmx8Vx78KmVyp00=
+            integrity: sha256-0oyKW/CoCPDtQ0odzoxUrpjwNxwL2GrFirxhP3PmZD8=
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-linux-arm64.tar.gz
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-linux-arm64.tar.gz
           targets:
             - cpu: arm64
               os: linux
         - resolution:
             archive: tarball
             bin: bin/node
-            integrity: sha256-jhXxIechyTVBMgUxiNTBoY6p40XAGe5ED7JW492n3xU=
+            integrity: sha256-sxqMTLxYn5FS8y/bQxhGl1nhZViltdk7f/L7KHsBPbI=
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-linux-armv7l.tar.gz
-          targets:
-            - cpu: armv7l
-              os: linux
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-Xy/Q4M1nrqwNuACzNBUcrm6nDqM3SHsm95rJDj/hJuE=
-            type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-linux-ppc64le.tar.gz
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-linux-ppc64le.tar.gz
           targets:
             - cpu: ppc64le
               os: linux
         - resolution:
             archive: tarball
             bin: bin/node
-            integrity: sha256-7hyhGT51ptMbYAfFdd7KEbEW6Epr2hNq4ODb4ZOZiJw=
+            integrity: sha256-s6tqQ5KCjbn9TtloOY1VGIKSvMFYGVQtU74LEQDjMvw=
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-linux-s390x.tar.gz
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-linux-s390x.tar.gz
           targets:
             - cpu: s390x
               os: linux
         - resolution:
             archive: tarball
             bin: bin/node
-            integrity: sha256-GeVvCCVRAgfdkE8If+UvqgpOtrKqtfDqejODDQSIi4s=
+            integrity: sha256-9iXZfNcH30/5YlSRb7xf8BTwnAnv/loeDKj21BqHidQ=
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-linux-x64.tar.gz
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-linux-x64.tar.gz
           targets:
             - cpu: x64
               os: linux
         - resolution:
             archive: zip
             bin: node.exe
-            integrity: sha256-1cWx1W9/lGmDDrH1fv7sCmqQeMCp6IzVtLS0j0bCIGk=
-            prefix: node-v20.20.2-win-arm64
+            integrity: sha256-hQL0pQtFjUzDjtjyABVWws0jnUZJIPdAF5Jsyx4cFX8=
+            prefix: node-v24.19.0-win-arm64
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-win-arm64.zip
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-win-arm64.zip
           targets:
             - cpu: arm64
               os: win32
         - resolution:
             archive: zip
             bin: node.exe
-            integrity: sha256-3DcA/dV6Y+7bj9fjx7qqMuanQKG5BBZ/9CBLxo7Yv3c=
-            prefix: node-v20.20.2-win-x64
+            integrity: sha256-V/cas2UueX2ErN3HnIHMn/HG3bKhl0zbg/AP7pv/THM=
+            prefix: node-v24.19.0-win-x64
             type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-win-x64.zip
+            url: https://nodejs.org/download/release/v24.19.0/node-v24.19.0-win-x64.zip
           targets:
             - cpu: x64
               os: win32
-        - resolution:
-            archive: zip
-            bin: node.exe
-            integrity: sha256-zTTV2i8269hO1XJSdW7lEkR9tFAtn544yo3MtRGws1I=
-            prefix: node-v20.20.2-win-x86
-            type: binary
-            url: https://nodejs.org/download/release/v20.20.2/node-v20.20.2-win-x86.zip
-          targets:
-            - cpu: x86
-              os: win32
-    version: 20.20.2
+    version: 24.19.0
     hasBin: true
 
   nopt@3.0.6:
@@ -12489,13 +12459,8 @@ snapshots:
   clean-css-promise@0.1.1:
     dependencies:
       array-to-error: 1.1.1
-      clean-css: 3.4.28
+      clean-css: 5.3.3
       pinkie-promise: 2.0.1
-
-  clean-css@3.4.28:
-    dependencies:
-      commander: 2.8.1
-      source-map: 0.4.4
 
   clean-css@5.3.3:
     dependencies:
@@ -12606,10 +12571,6 @@ snapshots:
   commander@14.0.3: {}
 
   commander@2.20.3: {}
-
-  commander@2.8.1:
-    dependencies:
-      graceful-readlink: 1.0.1
 
   commander@4.1.1: {}
 
@@ -13947,7 +13908,7 @@ snapshots:
       ember-cli-string-utils: 1.1.0
       ember-cli-version-checker: 5.1.2
       ember-source: 5.8.0(@babel/core@7.26.10)(@glimmer/component@1.1.2(@babel/core@7.26.10))(@glint/template@1.7.7)(rsvp@4.8.5)(webpack@5.107.2)
-      lodash: 4.18.0
+      lodash: 4.18.1
     transitivePeerDependencies:
       - '@babel/core'
       - '@glint/template'
@@ -15422,8 +15383,6 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  graceful-readlink@1.0.1: {}
-
   grapheme-splitter@1.0.4: {}
 
   graphemer@1.4.0: {}
@@ -16427,7 +16386,7 @@ snapshots:
 
   node-watch@0.7.3: {}
 
-  node@runtime:20.20.2: {}
+  node@runtime:24.19.0: {}
 
   nopt@3.0.6:
     dependencies:
