@@ -74,11 +74,13 @@ const redactMiddleware: MiddlewareFunction = ({ payload, next }) => {
     payload.obj.properties = redacted;
   }
 
-  // Remove page-level context properties that are automatically added by Segment and strip out IP address
-  if (payload.obj.context) {
-    delete payload.obj.context.ip;
-    delete payload.obj.context.page;
-  }
+  // Segment's ingestion API backfills `context.ip` from the request's source IP
+  // whenever the field is absent, so deleting it is not enough as the real IP
+  // still lands in Segment. Setting it to a non-identifying placeholder tells
+  // Segment there is nothing to infer. Also drop the auto-collected page context.
+  payload.obj.context = payload.obj.context || {};
+  payload.obj.context.ip = '0.0.0.0';
+  delete payload.obj.context.page;
 
   next(payload);
 };

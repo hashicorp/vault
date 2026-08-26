@@ -5,7 +5,13 @@
 
 import { module, test } from 'qunit';
 import sinon from 'sinon';
-import { PREFERENCES, getPreference, hasPreference, setPreference } from 'vault/utils/preferences';
+import {
+  PREFERENCES,
+  getPreference,
+  hasPreference,
+  setPreference,
+  getOrCreateAnalyticsUserId,
+} from 'vault/utils/preferences';
 
 module('Unit | Util | preferences', function (hooks) {
   hooks.beforeEach(function () {
@@ -51,6 +57,36 @@ module('Unit | Util | preferences', function (hooks) {
 
     setPreference('telemetryConsent', false);
     assert.false(getPreference('telemetryConsent'), 'reads back an updated value');
+  });
+
+  module('getOrCreateAnalyticsUserId', function () {
+    test('generates and persists a raw (unprefixed) id on first use', function (assert) {
+      const id = getOrCreateAnalyticsUserId();
+
+      assert.ok(id, 'returns an id');
+      assert.notOk(id.startsWith('vault-'), 'the stored id is raw, without the vault- realm prefix');
+      assert.strictEqual(
+        window.localStorage.getItem('vault:prefs:analyticsUserId'),
+        JSON.stringify(id),
+        'persists the id under the namespaced key'
+      );
+    });
+
+    test('returns the same id across calls (stable per browser)', function (assert) {
+      const first = getOrCreateAnalyticsUserId();
+      const second = getOrCreateAnalyticsUserId();
+
+      assert.strictEqual(second, first, 'reuses the persisted id instead of generating a new one');
+    });
+
+    test('falls back to an in-memory id when localStorage is unavailable', function (assert) {
+      sinon.stub(window.localStorage, 'getItem').throws(new Error('localStorage unavailable'));
+      sinon.stub(window.localStorage, 'setItem').throws(new Error('localStorage unavailable'));
+
+      const id = getOrCreateAnalyticsUserId();
+      assert.ok(id, 'returns a uuid instead of throwing');
+      assert.notOk(id.startsWith('vault-'), 'fallback id is also raw');
+    });
   });
 
   module('fails safe when localStorage is unavailable', function () {

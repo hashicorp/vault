@@ -246,10 +246,11 @@ func TestGRPCBackendPlugin_Initialize(t *testing.T) {
 		defer cleanup()
 
 		err := b.Initialize(context.Background(), &logical.InitializationRequest{
-			MountPoint:    "pki-ext/",
-			MountType:     "pki-external-ca",
-			MountAccessor: "pki-external-ca_abc123",
-			BackendUUID:   "test-uuid-1234",
+			MountPoint:          "pki-ext/",
+			MountType:           "pki-external-ca",
+			MountAccessor:       "pki-external-ca_abc123",
+			BackendUUID:         "test-uuid-1234",
+			MountRunningVersion: "version1",
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -271,6 +272,8 @@ func TestGRPCBackendPlugin_Initialize(t *testing.T) {
 		wantMountType := "pki-external-ca"
 		wantMountAccessor := "pki-external-ca_abc123"
 		wantBackendUUID := "test-uuid-1234"
+		wantMountRunningVersion := "version1"
+
 		if got := resp.Data["mount_point"]; got != wantMountPoint {
 			t.Errorf("mount_point: got %q, want %q", got, wantMountPoint)
 		}
@@ -282,6 +285,9 @@ func TestGRPCBackendPlugin_Initialize(t *testing.T) {
 		}
 		if got := resp.Data["backend_uuid"]; got != wantBackendUUID {
 			t.Errorf("backend_uuid: got %q, want %q", got, wantBackendUUID)
+		}
+		if got := resp.Data["mount_running_version"]; got != wantMountRunningVersion {
+			t.Errorf("mount_running_version: got %q, want %q", got, wantMountRunningVersion)
 		}
 	})
 }

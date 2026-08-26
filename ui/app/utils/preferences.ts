@@ -80,3 +80,27 @@ export function setPreference(name: PreferenceName, value: boolean): void {
     // Cannot persist (storage unavailable). Hence a no-op
   }
 }
+
+// Stable per-browser anonymous analytics id, used as the Segment user identifier
+// for token-based access (which has no entityId). The value stored here is the
+// RAW, unprefixed id; the `vault-` realm prefix is applied only at identify()
+// time, never persisted.
+const ANALYTICS_USER_ID_KEY = `${NAMESPACE}:analyticsUserId`;
+
+/**
+ * Returns a stable anonymous id for this browser, generating and persisting one
+ * on first use so the same token user keeps the same Segment userId across page
+ * loads and sessions. Fails safe: if localStorage is unavailable (private mode,
+ * quota, blocked), returns a fresh in-memory uuid rather than throwing.
+ */
+export function getOrCreateAnalyticsUserId(): string {
+  try {
+    const existing = localStorage.getItem(ANALYTICS_USER_ID_KEY);
+    if (existing) return existing;
+    const generated = crypto.randomUUID();
+    localStorage.setItem(ANALYTICS_USER_ID_KEY, generated);
+    return generated;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
