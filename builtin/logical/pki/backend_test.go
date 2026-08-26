@@ -8297,18 +8297,22 @@ func TestBackend_IDNWithWildcards_AltNames(t *testing.T) {
 						// Generate a CSR with the test common name and alt names
 						// Note: CSRs include DNS SANs in the request, and they must be in Punycode (ASCII)
 						var dnsNames []string
-						if tc.altNames != "" {
-							// Split alt names by comma and convert to Punycode
-							altNamesList := strings.Split(tc.altNames, ",")
-							for _, name := range altNamesList {
-								// Convert IDN to Punycode for CSR (CSRs only support ASCII)
-								punycoded, err := idna.ToASCII(name)
-								if err != nil {
-									// If conversion fails, use original (will fail validation as expected)
-									dnsNames = append(dnsNames, name)
-								} else {
-									dnsNames = append(dnsNames, punycoded)
+						for _, name := range strings.Split(tc.altNames, ",") {
+							if name == "" {
+								continue
+							}
+							// CSRs require ASCII (Punycode) SANs. Unicode 16 IDNA rules
+							// reject trailing dots, so strip and restore around conversion.
+							fqdn := strings.HasSuffix(name, ".")
+							out, err := idna.ToASCII(strings.TrimSuffix(name, "."))
+							if err != nil {
+								// Conversion failed; use the original so Vault can reject it.
+								dnsNames = append(dnsNames, name)
+							} else {
+								if fqdn {
+									out += "."
 								}
+								dnsNames = append(dnsNames, out)
 							}
 						}
 
