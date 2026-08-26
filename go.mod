@@ -195,7 +195,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/kr/text v0.2.0
 	github.com/mattn/go-colorable v0.1.15
-	github.com/mattn/go-isatty v0.0.22
+	github.com/mattn/go-isatty v0.0.23
 	github.com/michaelklishin/rabbit-hole/v2 v2.12.0
 	github.com/miekg/dns v1.1.72
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
@@ -260,6 +260,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.51
 	github.com/aws/smithy-go v1.27.6
+	github.com/hashicorp/calistoga-control-plane/sdks/secure-products v0.0.0-20260813154222-8e81ede1ddea
 )
 
 require (
