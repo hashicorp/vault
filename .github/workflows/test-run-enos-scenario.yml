@@ -64,6 +64,8 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-save: true
+          no-restore: true
       # Install additional tools like gotestsum that are required for Enos scenarios
       - uses: ./.github/actions/install-tools
       - name: Configure Git
