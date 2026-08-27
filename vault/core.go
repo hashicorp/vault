@@ -817,8 +817,14 @@ type Core struct {
 	synctest bool
 
 	// ControlHubManager holds information regarding the node's connection to the control hub.
-	// It will be initialized to a no-op structure on CE
+	// It will be initialized to a no-op structure on CE. Access it through
+	// GetControlHubManager/SetControlHubManager, which take controlHubManagerLock.
 	ControlHubManager *ControlHubManager
+
+	// controlHubManagerLock protects the ControlHubManager pointer. It does not
+	// protect the manager's own in-memory state, which is guarded by the
+	// manager's internal locks.
+	controlHubManagerLock sync.RWMutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1504,7 +1510,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Initialize ControlHubManager after barrier is set up
-	c.ControlHubManager = NewControlHubManager(c)
+	c.SetControlHubManager(NewControlHubManager(c))
 
 	// Events
 	eventsLogger := conf.Logger.Named("events")
