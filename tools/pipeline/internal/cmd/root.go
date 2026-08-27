@@ -22,6 +22,7 @@ import (
 type rootCmdCfg struct {
 	logLevel          string
 	format            string
+	repoRoot          string
 	git               *git.Client
 	configDecodeRes   *config.DecodeRes
 	versionsDecodeRes *releases.DecodeRes
@@ -47,6 +48,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringVar(&versionsConfigPath, "versions-config", "", "Specify the path to versions.hcl configuration file (default: <git repo root>/.release/versions.hcl)")
 
 	rootCmd.AddCommand(newConfigCmd())
+	rootCmd.AddCommand(newEbomCmd())
 	rootCmd.AddCommand(newGenerateCmd())
 	rootCmd.AddCommand(newGitCmd())
 	rootCmd.AddCommand(newGithubCmd())
@@ -94,20 +96,19 @@ func newRootCmd() *cobra.Command {
 			return filepath.Join(strings.TrimSpace(string(revParse.Stdout))), nil
 		})
 
-		// Get repo root if needed
-		var repoRoot string
-		var err error
-		if pipelineCfgPath == "" || versionsConfigPath == "" {
-			repoRoot, err = getRepoRoot()
-			if err != nil {
-				return err
-			}
-		}
+		// Always attempt to resolve the repo root. Commands that don't require
+		// it can tolerate an empty value, but those that use it for config path
+		// defaults must have it, so we fail hard only in those cases.
+		var repoRootErr error
+		rootCfg.repoRoot, repoRootErr = getRepoRoot()
 
 		// Decode the pipeline config. Store the result (including any errors)
 		// for commands to handle as needed.
 		if pipelineCfgPath == "" {
-			pipelineCfgPath = filepath.Join(repoRoot, ".release", "pipeline.hcl")
+			if repoRootErr != nil {
+				return repoRootErr
+			}
+			pipelineCfgPath = filepath.Join(rootCfg.repoRoot, ".release", "pipeline.hcl")
 		}
 		rootCfg.configDecodeRes = config.Decode(ctx, &config.DecodeReq{
 			Path: pipelineCfgPath,
@@ -116,7 +117,10 @@ func newRootCmd() *cobra.Command {
 		// Decode the versions config. Store the result (including any errors)
 		// for commands to handle as needed.
 		if versionsConfigPath == "" {
-			versionsConfigPath = filepath.Join(repoRoot, ".release", "versions.hcl")
+			if repoRootErr != nil {
+				return repoRootErr
+			}
+			versionsConfigPath = filepath.Join(rootCfg.repoRoot, ".release", "versions.hcl")
 		}
 		rootCfg.versionsDecodeRes = releases.Decode(ctx, &releases.DecodeReq{
 			Path: versionsConfigPath,
