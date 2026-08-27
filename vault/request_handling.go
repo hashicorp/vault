@@ -404,6 +404,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	if actorEntity != nil {
+		req.ActorEntityID = actorEntity.ID
 		newAcl, err := c.performDelegationTokenChecks(tokenCtx, acl, actorEntity, actorEntityPolicyNames)
 		if err != nil {
 			return nil, nil, nil, nil, err
