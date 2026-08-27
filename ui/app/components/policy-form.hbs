@@ -34,6 +34,7 @@
         <Hds::Form::TextInput::Field
           name="name"
           @value={{lowercase @form.data.name}}
+          @isInvalid={{if (this.validationError "name") true false}}
           @isRequired={{true}}
           placeholder="Enter the policy name"
           autocomplete="off"
@@ -43,6 +44,9 @@
           as |F|
         >
           <F.Label>Policy name</F.Label>
+          {{#if (this.validationError "name")}}
+            <F.Error data-test-validation-error="name">{{this.validationError "name"}}</F.Error>
+          {{/if}}
         </Hds::Form::TextInput::Field>
       {{/if}}
     </FORM.Section>

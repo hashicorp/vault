@@ -6,6 +6,7 @@
 import { tracked } from '@glimmer/tracking';
 import Form from 'vault/forms/form';
 import FormField from 'vault/utils/forms/field';
+import type { Validations } from 'vault/app-types';
 
 type PolicyFormData = {
   name: string;
@@ -16,6 +17,10 @@ type PolicyFormData = {
 
 export default class PolicyForm extends Form<PolicyFormData> {
   @tracked declare policyType: string;
+
+  validations: Validations = {
+    name: [{ type: 'presence', message: 'Policy name cannot be empty or whitespace-only.' }],
+  };
 
   formFields = [
     new FormField('name', 'string', {
