@@ -150,6 +150,10 @@ export default class PolicyFormComponent extends Component<Args> {
   handleNameInput(event: HTMLElementEvent<HTMLInputElement>) {
     const { value } = event.target;
     this.setName(value);
+    // Clear a stale name error so it doesn't linger while the user is correcting it
+    if (this.validationErrors?.['name']) {
+      this.validationErrors = { ...this.validationErrors, name: { errors: [], warnings: [], isValid: true } };
+    }
   }
 
   @action
@@ -192,12 +196,21 @@ export default class PolicyFormComponent extends Component<Args> {
   *save(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Name is intentionally not validated here because the input has @isRequired=true
-    // which prevents the submit event all together when it is empty.
-    const { isValid, state } = validate({ stanzas: this.stanzas }, this.validations);
+    // The name input is marked @isRequired which only blocks submitting a completely empty value,
+    // so the form's own validations must still run to reject whitespace-only names.
+    // Trim first so leading/trailing whitespace is never persisted.
+    this.trimName();
+    const { isValid: isFormValid, state: formState, data } = this.args.form.toJSON();
+    const { isValid: areStanzasValid, state: stanzaState } = validate(
+      { stanzas: this.stanzas },
+      this.validations
+    );
+
     // Only enforce stanza validations for the Visual Editor
-    const shouldValidate = this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
-    if (!isValid && shouldValidate) {
+    const shouldValidateStanzas = this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
+    const state = shouldValidateStanzas ? { ...formState, ...stanzaState } : formState;
+
+    if (!isFormValid || (!areStanzasValid && shouldValidateStanzas)) {
       this.validationErrors = state;
       this.errorDetails = Object.values(state).flatMap((s) => s.errors);
       // Render general error message instead of exact count from validate() because
@@ -209,7 +222,6 @@ export default class PolicyFormComponent extends Component<Args> {
     }
     try {
       const policyType = this.args.form.policyType;
-      const { data } = this.args.form.toJSON();
       // remove enforcement from acl
       if (policyType === 'acl') {
         delete data.enforcement_level;
@@ -278,6 +290,13 @@ export default class PolicyFormComponent extends Component<Args> {
 
   private syncDebouncedPolicy(policy: string) {
     this.debouncedPolicy = policy;
+  }
+
+  private trimName() {
+    const { name } = this.args.form.data;
+    if (typeof name === 'string') {
+      this.args.form.data.name = name.trim();
+    }
   }
 
   @action

@@ -148,6 +148,59 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.true(this.onSave.notCalled, 'onSave is not called yet');
     assert.dom(GENERAL.messageError).includesText('An error occurred');
   });
+
+  test('it does not save a policy when the name is only whitespace', async function (assert) {
+    const requests = [];
+    this.server.post('/sys/policies/acl/:name', (_, req) => {
+      requests.push(req.params.name);
+      return overrideResponse(204);
+    });
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '    ');
+    // Change editors so we don't trigger visual editor validations
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('name'))
+      .hasText('Policy name cannot be empty or whitespace-only.', 'it renders inline name validation');
+    assert.dom(GENERAL.messageError).includesText('There is an error with this form.');
+    assert.strictEqual(requests.length, 0, 'it does not make a request to save the policy');
+    assert.true(this.onSave.notCalled, 'onSave is not called');
+  });
+
+  test('it clears the name validation error when the name is updated', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '  ');
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error renders');
+
+    await fillIn(GENERAL.inputByAttr('name'), 'my-policy');
+    assert.dom(GENERAL.validationErrorByAttr('name')).doesNotExist('validation error is cleared');
+
+    await click(GENERAL.submitButton);
+    assert.true(this.onSave.calledOnce, 'onSave is called after the name is corrected');
+  });
+
+  test('it trims leading and trailing whitespace from the policy name on save', async function (assert) {
+    const requests = [];
+    this.server.post('/sys/policies/acl/:name', (_, req) => {
+      requests.push(req.params.name);
+      return overrideResponse(204);
+    });
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '  My-Policy  ');
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+
+    assert.deepEqual(requests, ['my-policy'], 'it saves the trimmed, lowercased name');
+    assert.strictEqual(this.form.name, 'my-policy', 'form data holds the trimmed name');
+  });
+
   // End shared functionality tests
 
   module('ACL', function (hooks) {
