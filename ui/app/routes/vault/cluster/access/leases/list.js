@@ -10,7 +10,7 @@ import { service } from '@ember/service';
 
 export default Route.extend({
   pagination: service(),
-  store: service(),
+  capabilities: service(),
 
   queryParams: {
     page: {
@@ -46,8 +46,8 @@ export default Route.extend({
             }
           }),
         capabilities: hash({
-          revokePrefix: this.store.findRecord('capabilities', `sys/leases/revoke-prefix/${prefix}`),
-          forceRevokePrefix: this.store.findRecord('capabilities', `sys/leases/revoke-force/${prefix}`),
+          revokePrefix: this.capabilities.fetchPathCapabilities(`sys/leases/revoke-prefix/${prefix}`),
+          forceRevokePrefix: this.capabilities.fetchPathCapabilities(`sys/leases/revoke-force/${prefix}`),
         }),
       });
     }
