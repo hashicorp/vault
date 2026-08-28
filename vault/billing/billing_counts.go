@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	consumptionv1 "github.com/hashicorp/calistoga-control-plane/sdks/secure-products/scp/api/vault/consumption/v1"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
@@ -125,7 +124,7 @@ type BillingConfig struct {
 	TestOverrideClock timeutil.Clock
 	// OnMetricsSent is called in tests to observe the proto that would be sent
 	// to the control hub. It is never set in production.
-	OnMetricsSent func(*consumptionv1.ConsumptionMetrics)
+	OnMetricsSent func([]byte, error)
 }
 
 func GetMonthlyBillingMetricPath(localPrefix string, now time.Time, billingMetric string) string {

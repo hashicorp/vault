@@ -132,21 +132,8 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				}
 				// If active node, also send metrics to the control hub
 				if state := c.HAStateWithLock(); state == consts.Active {
-					proto, err := c.buildMetricsProto(ctx, now)
-					if err != nil {
-						c.logger.Error("error creating metrics proto", "error", err)
-					}
-					if proto != nil {
-						// send proto to control hub via grpc method
-						// TO-DO (VAULT-49572)
-						// c.ControlHubManager.ProductOperationServicesClient.SendData()
-
-						// for testing purposes: if callback function exists, call it now
-						c.consumptionBillingLock.RLock()
-						if cb := c.consumptionBilling.BillingConfig.OnMetricsSent; cb != nil {
-							cb(proto)
-						}
-						c.consumptionBillingLock.RUnlock()
+					if err := c.sendBillingMetrics(ctx, now); err != nil {
+						c.logger.Error("error sending billing metrics", "error", err)
 					}
 				}
 			case <-ctx.Done():
@@ -162,19 +149,8 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				}
 				// Send the month's final counts and attributions to control hub
 				if state := c.HAStateWithLock(); state == consts.Active {
-					proto, err := c.buildMetricsProto(ctx, previousMonth)
-					if err != nil {
-						c.logger.Error("error creating metrics proto", "error", err)
-					}
-					if proto != nil {
-						// send proto to control hub via grpc method
-						// TO-DO (VAULT-49572)
-						// c.ControlHubManager.ProductOperationServicesClient.SendData()
-
-						// for testing purposes: if callback function exists, call it now
-						if cb := c.consumptionBilling.BillingConfig.OnMetricsSent; cb != nil {
-							cb(proto)
-						}
+					if err := c.sendBillingMetrics(ctx, previousMonth); err != nil {
+						c.logger.Error("error sending billing metrics", "error", err)
 					}
 				}
 				c.HandleStartOfMonth(ctx, currentMonth)
