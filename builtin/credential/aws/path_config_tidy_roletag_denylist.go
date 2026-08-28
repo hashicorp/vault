@@ -5,6 +5,7 @@ package awsauth
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -43,28 +44,50 @@ Defaults to 4320h (180 days).`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
+				Summary:  "Configure the role-tag deny-list tidy operation.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "role-tag-deny-list-tidy-operation",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListCreateUpdate,
+				Summary:  "Configure the role-tag deny-list tidy operation.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "role-tag-deny-list-tidy-operation",
 				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListRead,
+				Summary:  "Return the role-tag deny-list tidy configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "role-tag-deny-list-tidy-settings",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: tidyConfigResponseFields(
+							"Duration past expiration before role tags are removed from storage.",
+							"Whether periodic tidying of deny-listed role tag entries is disabled.",
+						),
+					}},
 				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyRoletagDenyListDelete,
+				Summary:  "Delete the role-tag deny-list tidy configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "role-tag-deny-list-tidy-settings",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 		},

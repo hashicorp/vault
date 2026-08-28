@@ -133,6 +133,13 @@ needs to be supplied along with 'identity' parameter.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathLoginUpdate,
+				Summary:  "Authenticate to Vault using AWS credentials.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      framework.AuthLoginResponseFields(),
+					}},
+				},
 			},
 			logical.AliasLookaheadOperation: &framework.PathOperation{
 				Callback: b.pathLoginUpdate,
