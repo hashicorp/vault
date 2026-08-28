@@ -924,6 +924,11 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 		}
 		props["max_json_array_element_count"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONArrayElementCount)
 
+		if lnConfig.CustomMaxJSONToken == 0 {
+			lnConfig.CustomMaxJSONToken = vaulthttp.CustomMaxJSONToken
+		}
+		props["max_json_token"] = fmt.Sprintf("%d", lnConfig.CustomMaxJSONToken)
+
 		if lnConfig.MaxRequestDuration == 0 {
 			lnConfig.MaxRequestDuration = vault.DefaultMaxRequestDuration
 		}
