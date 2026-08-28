@@ -102,32 +102,69 @@ func (b *backend) pathConfigClient() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
+				Summary:  "Configure AWS IAM credentials used to query instance and role details.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "client",
 				},
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
+				Summary:  "Configure AWS IAM credentials used to query instance and role details.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "client",
 				},
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientDelete,
+				Summary:  "Delete the AWS client configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "client-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientRead,
+				Summary:  "Return the configured AWS client credentials.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "client-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"access_key":                 {Type: framework.TypeString, Description: "AWS access key ID."},
+							"endpoint":                   {Type: framework.TypeString, Description: "Custom endpoint URL for AWS EC2 API calls."},
+							"iam_endpoint":               {Type: framework.TypeString, Description: "Custom endpoint URL for AWS IAM API calls."},
+							"sts_endpoint":               {Type: framework.TypeString, Description: "Custom endpoint URL for AWS STS API calls."},
+							"sts_region":                 {Type: framework.TypeString, Description: "Region for the STS endpoint."},
+							"use_sts_region_from_client": {Type: framework.TypeBool, Description: "Whether to use the STS region from client requests."},
+							"iam_server_id_header_value": {Type: framework.TypeString, Description: "Required value for the X-Vault-AWS-IAM-Server-ID request header."},
+							"max_retries":                {Type: framework.TypeInt, Description: "Maximum number of retries for AWS API calls."},
+							"allowed_sts_header_values":  {Type: framework.TypeSlice, Description: "Allowed additional headers in AWS STS request headers."},
+							"role_arn":                   {Type: framework.TypeString, Description: "Role ARN for plugin identity token federation."},
+							"identity_token_ttl":         {Type: framework.TypeDurationSecond, Description: "Time-to-live for plugin identity tokens in seconds."},
+							"identity_token_audience":    {Type: framework.TypeString, Description: "Audience for plugin identity tokens."},
+							"rotation_schedule":          {Type: framework.TypeString, Description: "Automated rotation schedule in cron format."},
+							"rotation_window":            {Type: framework.TypeDurationSecond, Description: "Window in seconds during which automated rotation may occur."},
+							"rotation_period":            {Type: framework.TypeDurationSecond, Description: "Period in seconds between automated credential rotations."},
+							"disable_automated_rotation": {Type: framework.TypeBool, Description: "Whether automated rotation is disabled."},
+							"rotation_policy":            {Type: framework.TypeString, Description: "Name of the rotation policy to use."},
+						},
+					}},
 				},
 			},
 		},

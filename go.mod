@@ -260,7 +260,6 @@ require (
 require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.51
 	github.com/aws/smithy-go v1.27.6
-	github.com/hashicorp/calistoga-control-plane/sdks/secure-products v0.0.0-20260813154222-8e81ede1ddea
 )
 
 require (
