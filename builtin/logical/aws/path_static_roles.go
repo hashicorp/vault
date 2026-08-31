@@ -69,16 +69,19 @@ func pathStaticRoles(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathStaticRolesRead,
+				Summary:   "Return the configuration for a named static IAM role.",
 				Responses: roleResponse,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathStaticRolesWrite,
+				Summary:                     "Create or update a named static IAM role.",
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
 				Responses:                   roleResponse,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback:                    b.pathStaticRolesDelete,
+				Summary:                     "Delete a named static IAM role.",
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
 				Responses: map[int][]framework.Response{
@@ -100,6 +103,7 @@ func pathListStaticRoles(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathStaticRolesList,
+				Summary:  "List the configured static IAM roles.",
 			},
 		},
 		HelpSynopsis:    pathStaticRolesHelpSyn,

@@ -208,7 +208,8 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 func pathVerify(b *backend) *framework.Path {
 	return &framework.Path{
-		Pattern: `verify/(?P<nonce>.+)`,
+		Pattern:      `verify/(?P<nonce>.+)`,
+		HelpSynopsis: "Retrieve the number verification challenge for a pending Okta login request.",
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: operationPrefixOkta,
 			OperationVerb:   "verify",
