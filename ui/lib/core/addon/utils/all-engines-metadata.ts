@@ -107,7 +107,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     mountCategory: ['auth', 'secret'],
     type: 'aws',
     capabilities: ['dynamic', 'rotating'],
-    description: 'Create dynamic credentials for MongoDB, MySQL, Elasticsearch, etc.',
+    description: 'Generate dynamic AWS credentials with configurable IAM permissions.',
     secretTypes: ['cloudCredentials', 'apiKeysTokens'],
   },
   {
@@ -148,7 +148,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     mountCategory: ['secret'],
     type: 'database',
     capabilities: ['dynamic', 'rotating'],
-    description: 'Create dynamic credentials for MongoDB, MySQL, Elasticsearch, etc.',
+    description: 'Generate dynamic database credentials for MySQL, PostgreSQL, MongoDB, and more.',
     secretTypes: ['databaseCredentials'],
   },
   {

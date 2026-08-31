@@ -186,7 +186,12 @@
             {{/if}}
           </Hds::Text::Display>
         </div>
-        <Hds::Form::RadioCard::Group @name={{category}} class="has-bottom-margin-m" @controlPosition="left" as |G|>
+        <Hds::Form::RadioCard::Group
+          @name="secrets-engine-catalog-group"
+          class="has-bottom-margin-m"
+          @controlPosition="left"
+          as |G|
+        >
           <Hds::Layout::Flex @wrap={{true}} class="is-fullwidth" @direction="row" as |LF|>
 
             {{! Enabled plugins }}
@@ -245,7 +250,13 @@
 
 <Hds::Layout::Flex @gap="16" @justify="end" class="has-padding-l sticky-footer">
   <Hds::Button @text="Cancel" @color="secondary" @route="vault.cluster.secrets.backends" data-test-cancel />
-  <Hds::Button @text="Next" {{on "click" this.handleSelection}} class="has-right-margin-xl" data-test-button="next" />
+  <Hds::Button
+    @text="Next"
+    disabled={{not this.selectedEngineType}}
+    {{on "click" this.handleSelection}}
+    class="has-right-margin-xl"
+    data-test-button="next"
+  />
 </Hds::Layout::Flex>
 
 <PluginDocumentationFlyout
