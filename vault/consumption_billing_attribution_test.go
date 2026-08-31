@@ -17,25 +17,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestToFloat64 verifies that toFloat64 correctly handles all value types that
+// TestToFloat64 verifies that ToFloat64 correctly handles all value types that
 // can appear in a round-tripped MountAttribution.Count / MetricTypeAttribution.Count.
 func TestToFloat64(t *testing.T) {
 	// Native float64 — set by in-memory code paths.
-	require.Equal(t, 3.14, toFloat64(float64(3.14)))
-	require.Equal(t, 0.0, toFloat64(float64(0)))
+	require.Equal(t, 3.14, ToFloat64(float64(3.14)))
+	require.Equal(t, 0.0, ToFloat64(float64(0)))
 
 	// nil — should return 0 safely.
-	require.Equal(t, 0.0, toFloat64(nil))
+	require.Equal(t, 0.0, ToFloat64(nil))
 
 	// json.Number — returned by jsonutil.DecodeJSON for stored numeric values.
 	// Verify it is correctly unwrapped via the Float64() interface.
-	require.InDelta(t, 2.5, toFloat64(json.Number("2.5")), 0.0001, "Float64()-capable type should be unwrapped")
+	require.InDelta(t, 2.5, ToFloat64(json.Number("2.5")), 0.0001, "Float64()-capable type should be unwrapped")
 
 	// Integer types are coerced to float64.
-	require.Equal(t, 5.0, toFloat64(int(5)), "int should coerce to float64")
+	require.Equal(t, 5.0, ToFloat64(int(5)), "int should coerce to float64")
 
 	// Unsupported types return 0.
-	require.Equal(t, 0.0, toFloat64("3.14"), "string should return 0")
+	require.Equal(t, 0.0, ToFloat64("3.14"), "string should return 0")
 }
 
 // TestStoreAndGetAttributionData verifies the round-trip of storeAttributionDataLocked

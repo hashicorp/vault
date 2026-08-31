@@ -360,7 +360,7 @@ func (c *Core) consumeCertCountsOnActive(inc logical.CertCount) logical.CertCoun
 		attrDelta := flushedDelta
 		if attrDelta == 0 {
 			for _, a := range attributions {
-				attrDelta += toFloat64(a.Count)
+				attrDelta += ToFloat64(a.Count)
 			}
 		}
 		if attrDelta <= 0 {

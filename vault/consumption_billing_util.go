@@ -1303,7 +1303,7 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.Mou
 	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
 	// Only the accumulated count is carried over from the previous entry.
 	if existing, ok := cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor]; ok {
-		attr.Count = toFloat64(existing.Count) + toFloat64(attr.Count)
+		attr.Count = ToFloat64(existing.Count) + ToFloat64(attr.Count)
 	}
 	cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor] = attr
 	cb.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()

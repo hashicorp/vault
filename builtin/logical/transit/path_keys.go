@@ -343,6 +343,28 @@ func (b *backend) keyPolicyObservationMetadata(p *keysutil.Policy) map[string]in
 }
 
 func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, context []byte) (*logical.Response, error) {
+	// effectiveType returns the KeyType for a specific key entry. When entry.Algorithm
+	// is non-nil (set by RotateInMemoryWithAlgorithm after a POST .../algorithm call),
+	// that per-version type is used; otherwise the policy-level type is the fallback.
+	effectiveType := func(entry keysutil.KeyEntry) keysutil.KeyType {
+		if entry.Algorithm != nil {
+			return *entry.Algorithm
+		}
+		return p.Type
+	}
+
+	// Compute supports_* as the superset of capabilities across all key entries.
+	// After an algorithm change via POST .../algorithm, individual entries may
+	// carry a different Algorithm than p.Type, so we OR the flags together.
+	var supportsEncryption, supportsDecryption, supportsSigning, supportsDerivation bool
+	for _, entry := range p.Keys {
+		kt := effectiveType(entry)
+		supportsEncryption = supportsEncryption || kt.EncryptionSupported()
+		supportsDecryption = supportsDecryption || kt.DecryptionSupported()
+		supportsSigning = supportsSigning || kt.SigningSupported()
+		supportsDerivation = supportsDerivation || kt.DerivationSupported()
+	}
+
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -356,12 +378,13 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 			"latest_version":         p.LatestVersion,
 			"exportable":             p.Exportable,
 			"allow_plaintext_backup": p.AllowPlaintextBackup,
-			"supports_encryption":    p.Type.EncryptionSupported(),
-			"supports_decryption":    p.Type.DecryptionSupported(),
-			"supports_signing":       p.Type.SigningSupported(),
-			"supports_derivation":    p.Type.DerivationSupported(),
+			"supports_encryption":    supportsEncryption,
+			"supports_decryption":    supportsDecryption,
+			"supports_signing":       supportsSigning,
+			"supports_derivation":    supportsDerivation,
 			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
 			"imported_key":           p.Imported,
+			"latest_version_type":    p.KeyVersionType(p.LatestVersion).String(),
 		},
 	}
 	if p.KeySize != 0 {
@@ -408,6 +431,9 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 		resp.Data["hybrid_key_type_ec"] = p.HybridConfig.ECKeyType.String()
 	}
 
+	// The outer switch on p.Type is intentionally kept: isCompatibleKeyType ensures
+	// algorithm changes cannot cross the symmetric/asymmetric boundary, so every
+	// version in a ring always falls into the same broad rendering category.
 	switch p.Type {
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305, keysutil.KeyType_AES128_CBC, keysutil.KeyType_AES256_CBC:
 		retKeys := map[string]int64{}
@@ -436,7 +462,8 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 			key := asymKey{
 				CreationTime: v.CreationTime,
 			}
-			switch p.Type {
+			vType := effectiveType(v)
+			switch vType {
 			case keysutil.KeyType_HYBRID, keysutil.KeyType_ML_DSA, keysutil.KeyType_SLH_DSA:
 				key.HybridPublicKey = getFormattedPQCPublicKey(p.Type, v, p.HybridConfig.PQCKeyType)
 			default:
@@ -458,7 +485,7 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 				key.CertificateChain = strings.Join(pemCerts, "\n")
 			}
 
-			switch p.Type {
+			switch vType {
 			case keysutil.KeyType_ECDSA_P256:
 				key.Name = elliptic.P256().Params().Name
 			case keysutil.KeyType_ECDSA_P384:
@@ -485,11 +512,11 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 				key.Name = "ed25519"
 			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
 				key.Name = "rsa-2048"
-				if p.Type == keysutil.KeyType_RSA3072 {
+				if vType == keysutil.KeyType_RSA3072 {
 					key.Name = "rsa-3072"
 				}
 
-				if p.Type == keysutil.KeyType_RSA4096 {
+				if vType == keysutil.KeyType_RSA4096 {
 					key.Name = "rsa-4096"
 				}
 
@@ -737,6 +764,11 @@ the minimum version allowed for signing. If set to 0, only the latest version is
 	fields["latest_version"] = &framework.FieldSchema{
 		Type:        framework.TypeInt,
 		Description: `The latest (current) version of the key.`,
+		Required:    true,
+	}
+	fields["latest_version_type"] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: `The key type of the most recent key version.`,
 		Required:    true,
 	}
 	fields["supports_encryption"] = &framework.FieldSchema{
