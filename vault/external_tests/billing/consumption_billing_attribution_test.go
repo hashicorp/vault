@@ -23,6 +23,21 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// requireAttrCountEqualsMountSum asserts that MetricTypeAttribution.Count equals the sum
+// of all per-mount MountAttribution.Count values in the stored attribution blob.  It is
+// called at the end of every test that verifies a final stored state so that every metric
+// path is covered by the invariant without a separate standalone test.
+func requireAttrCountEqualsMountSum(t *testing.T, attr *logical.MetricTypeAttribution) {
+	t.Helper()
+	attrCount := vault.ToFloat64(attr.Count)
+	var mountSum float64
+	for _, m := range attr.Mounts {
+		mountSum += vault.ToFloat64(m.Count)
+	}
+	require.InDelta(t, attrCount, mountSum, 1e-9,
+		"MetricTypeAttribution.Count (%v) must equal sum of per-mount counts (%v)", attrCount, mountSum)
+}
+
 // TestDeleteExpiredAttributionData verifies that DeleteExpiredAttributionData removes
 // attribution data older than DefaultAttributionRetentionMonths while preserving
 // newer data and leaving regular billing metrics untouched.
@@ -134,7 +149,10 @@ func TestDeleteExpiredAttributionData(t *testing.T) {
 
 // TestStoreCertAttribution_PKI verifies the PKI attribution merge round-trip:
 // two flushes to the same mount accumulate counts, and a second mount is added
-// independently. MetricTypeAttribution.Count holds the running total.
+// independently. MetricTypeAttribution.Count holds the running total, and is
+// always equal to the separately-stored scalar (GetStoredPkiDurationAdjustedCount),
+// because production code calls UpdatePkiDurationAdjustedCount and StoreCertAttribution
+// with the same countDelta value in every flush.
 func TestStoreCertAttribution_PKI(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
@@ -161,8 +179,11 @@ func TestStoreCertAttribution_PKI(t *testing.T) {
 		Count:         2.0,
 	}
 
-	// First flush: mount1 only, delta = 1.0
-	err := core.StoreCertAttribution(ctx, billing.PkiDurationAdjustedCountPrefix, 1.0,
+	// First flush: mount1 only, delta = 1.0 (== mount1.Count).
+	// Mirror production: update scalar and attribution with the same delta.
+	err := core.UpdatePkiDurationAdjustedCount(ctx, 1.0, month)
+	require.NoError(t, err)
+	err = core.StoreCertAttribution(ctx, billing.PkiDurationAdjustedCountPrefix, 1.0,
 		map[string]logical.MountAttribution{"pki_aaa": mount1}, month)
 	require.NoError(t, err)
 
@@ -173,19 +194,23 @@ func TestStoreCertAttribution_PKI(t *testing.T) {
 	require.Len(t, got.Mounts, 1)
 	require.Equal(t, "pki_aaa", got.Mounts["pki_aaa"].MountAccessor)
 	require.Equal(t, "1", fmt.Sprintf("%v", got.Mounts["pki_aaa"].Count))
+	requireAttrCountEqualsMountSum(t, got)
 
-	// Second flush: mount1 again + mount2, delta = 3.0
+	// Second flush: mount1 (1.5 additional units) + mount2 (2.0 units).
+	// delta = 1.5 + 2.0 = 3.5 — identical to sum(incomingMounts.Count).
 	mount1v2 := mount1
-	mount1v2.Count = 1.5 // additional units for mount1 this flush
-	err = core.StoreCertAttribution(ctx, billing.PkiDurationAdjustedCountPrefix, 3.0,
+	mount1v2.Count = 1.5
+	err = core.UpdatePkiDurationAdjustedCount(ctx, 3.5, month)
+	require.NoError(t, err)
+	err = core.StoreCertAttribution(ctx, billing.PkiDurationAdjustedCountPrefix, 3.5,
 		map[string]logical.MountAttribution{"pki_aaa": mount1v2, "pki_bbb": mount2}, month)
 	require.NoError(t, err)
 
 	got, err = core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.PkiDurationAdjustedCountPrefix)
 	require.NoError(t, err)
 	require.NotNil(t, got)
-	// Running total: 1.0 + 3.0 = 4.0
-	require.Equal(t, "4", fmt.Sprintf("%v", got.Count))
+	// Running total: 1.0 + 3.5 = 4.5
+	require.Equal(t, "4.5", fmt.Sprintf("%v", got.Count))
 	require.Len(t, got.Mounts, 2)
 	// mount1 per-mount total: 1.0 + 1.5 = 2.5
 	require.Equal(t, "2.5", fmt.Sprintf("%v", got.Mounts["pki_aaa"].Count))
@@ -193,10 +218,19 @@ func TestStoreCertAttribution_PKI(t *testing.T) {
 	require.Equal(t, "2", fmt.Sprintf("%v", got.Mounts["pki_bbb"].Count))
 	require.Equal(t, "ns1", got.Mounts["pki_bbb"].NamespaceID)
 	require.Equal(t, "ns1/", got.Mounts["pki_bbb"].NamespacePath)
+	requireAttrCountEqualsMountSum(t, got)
+
+	// Billing scalar must equal attribution Count (both are running totals of the same deltas).
+	pkiScalar, err := core.GetStoredPkiDurationAdjustedCount(ctx, month)
+	require.NoError(t, err)
+	require.InDelta(t, pkiScalar, vault.ToFloat64(got.Count), 1e-9,
+		"PKI scalar (%v) must equal attribution Count (%v)", pkiScalar, got.Count)
 }
 
 // TestStoreCertAttribution_SSHCert verifies the SSH certificate attribution
 // round-trip using the SSHCertificateMetric storage key.
+// The scalar (GetStoredSSHDurationAdjustedCertCount) is updated with the same
+// delta as the attribution blob, mirroring what ConsumeCertCounts does in production.
 func TestStoreCertAttribution_SSHCert(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
@@ -214,7 +248,10 @@ func TestStoreCertAttribution_SSHCert(t *testing.T) {
 		Count:         0.5,
 	}
 
-	err := core.StoreCertAttribution(ctx, billing.SSHCertificateMetric, 0.5,
+	// Mirror production: update scalar and attribution with the same delta.
+	_, err := core.UpdateStoredSSHDurationAdjustedCertCount(ctx, month, 0.5)
+	require.NoError(t, err)
+	err = core.StoreCertAttribution(ctx, billing.SSHCertificateMetric, 0.5,
 		map[string]logical.MountAttribution{"ssh_cert_001": mount}, month)
 	require.NoError(t, err)
 
@@ -225,10 +262,19 @@ func TestStoreCertAttribution_SSHCert(t *testing.T) {
 	require.Len(t, got.Mounts, 1)
 	require.Equal(t, "0.5", fmt.Sprintf("%v", got.Mounts["ssh_cert_001"].Count))
 	require.Equal(t, "ssh_cert_001", got.Mounts["ssh_cert_001"].MountAccessor)
+	requireAttrCountEqualsMountSum(t, got)
+
+	// Billing scalar must equal attribution Count.
+	sshScalar, err := core.GetStoredSSHDurationAdjustedCertCount(ctx, month)
+	require.NoError(t, err)
+	require.InDelta(t, sshScalar, vault.ToFloat64(got.Count), 1e-9,
+		"SSH cert scalar (%v) must equal attribution Count (%v)", sshScalar, got.Count)
 }
 
 // TestStoreCertAttribution_SSHOTP verifies the SSH OTP attribution round-trip
 // using the SSHOTPMetric storage key.
+// The scalar (GetStoredSSHOTPCount) is updated with the same delta as the
+// attribution blob, mirroring what ConsumeCertCounts does in production.
 func TestStoreCertAttribution_SSHOTP(t *testing.T) {
 	t.Parallel()
 	cluster := minimal.NewTestSoloCluster(t, nil)
@@ -246,7 +292,10 @@ func TestStoreCertAttribution_SSHOTP(t *testing.T) {
 		Count:         0.0014,
 	}
 
-	err := core.StoreCertAttribution(ctx, billing.SSHOTPMetric, 0.0014,
+	// Mirror production: update scalar and attribution with the same delta.
+	_, err := core.UpdateStoredSSHOTPCount(ctx, month, 0.0014)
+	require.NoError(t, err)
+	err = core.StoreCertAttribution(ctx, billing.SSHOTPMetric, 0.0014,
 		map[string]logical.MountAttribution{"ssh_otp_001": mount}, month)
 	require.NoError(t, err)
 
@@ -256,9 +305,11 @@ func TestStoreCertAttribution_SSHOTP(t *testing.T) {
 	require.Equal(t, "0.0014", fmt.Sprintf("%v", got.Count))
 	require.Len(t, got.Mounts, 1)
 
-	// A second OTP on the same mount accumulates
+	// A second OTP on the same mount accumulates; mirror production scalar update too.
 	mount2 := mount
 	mount2.Count = 0.0014
+	_, err = core.UpdateStoredSSHOTPCount(ctx, month, 0.0014)
+	require.NoError(t, err)
 	err = core.StoreCertAttribution(ctx, billing.SSHOTPMetric, 0.0014,
 		map[string]logical.MountAttribution{"ssh_otp_001": mount2}, month)
 	require.NoError(t, err)
@@ -267,6 +318,13 @@ func TestStoreCertAttribution_SSHOTP(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "0.0028", fmt.Sprintf("%v", got.Count))
 	require.Equal(t, "0.0028", fmt.Sprintf("%v", got.Mounts["ssh_otp_001"].Count))
+	requireAttrCountEqualsMountSum(t, got)
+
+	// Billing scalar must equal attribution Count.
+	otpScalar, err := core.GetStoredSSHOTPCount(ctx, month)
+	require.NoError(t, err)
+	require.InDelta(t, otpScalar, vault.ToFloat64(got.Count), 1e-9,
+		"SSH OTP scalar (%v) must equal attribution Count (%v)", otpScalar, got.Count)
 }
 
 // TestConsumeCertCounts_StoresAttribution verifies the full Active-node path:
@@ -408,6 +466,13 @@ func TestUpdateMaxKvCounts_StoresAttributionOnHWMUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "kv_higher", stored.Mounts["kv_higher"].MountAccessor)
+	requireAttrCountEqualsMountSum(t, stored)
+
+	// The billing scalar (HWM) must equal the attribution Count.
+	kvScalar, err := core.GetStoredHWMKvCounts(ctx, billing.ReplicatedPrefix, month)
+	require.NoError(t, err)
+	require.InDelta(t, float64(kvScalar), vault.ToFloat64(stored.Count), 1e-9,
+		"HWM scalar (%d) must equal attribution Count (%v)", kvScalar, stored.Count)
 }
 
 // TestUpdateMaxKvCounts_NoAttributionWhenEmpty verifies that when attribution is nil or empty,
@@ -486,6 +551,14 @@ func TestUpdateMaxRoleAndManagedKeyCounts_StoresRoleAttributionPerType(t *testin
 	require.Equal(t, "aws_aaa", stored.Mounts["aws_aaa"].MountAccessor)
 	// Count is stored as JSON and deserialised as json.Number; compare via string to avoid type mismatch.
 	require.Equal(t, "5", fmt.Sprintf("%v", stored.Mounts["aws_aaa"].Count))
+
+	requireAttrCountEqualsMountSum(t, stored)
+
+	// The billing scalar for AWSDynamicRoles must equal the attribution Count.
+	roleScalars, err := core.GetStoredHWMRoleCounts(ctx, billing.ReplicatedPrefix, month)
+	require.NoError(t, err)
+	require.InDelta(t, float64(roleScalars.AWSDynamicRoles), vault.ToFloat64(stored.Count), 1e-9,
+		"AWSDynamicRoles scalar (%d) must equal attribution Count (%v)", roleScalars.AWSDynamicRoles, stored.Count)
 
 	// A role type that did not reach a new HWM should have no attribution stored
 	storedDB, err := core.GetStoredAttributionData(ctx, billing.ReplicatedPrefix, month, billing.RoleHWMCountsHWM+billing.DatabaseDynamicRoles)
@@ -571,6 +644,13 @@ func TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM(t *testing.
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "totp_t2", stored.Mounts["totp_t2"].MountAccessor)
+	requireAttrCountEqualsMountSum(t, stored)
+
+	// The billing scalar (TOTP HWM) must equal the attribution Count.
+	totpScalar, err := core.GetStoredHWMTotpCounts(ctx, billing.ReplicatedPrefix, month)
+	require.NoError(t, err)
+	require.InDelta(t, float64(totpScalar), vault.ToFloat64(stored.Count), 1e-9,
+		"TOTP HWM scalar (%d) must equal attribution Count (%v)", totpScalar, stored.Count)
 }
 
 // TestUpdateMaxThirdPartyPluginCounts_StoresAttributionOnHWMUpdate verifies that when a new
@@ -652,4 +732,11 @@ func TestUpdateMaxThirdPartyPluginCounts_StoresAttributionOnHWMUpdate(t *testing
 	storedAgain, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.ThirdPartyPluginsPrefix)
 	require.NoError(t, err)
 	require.Len(t, storedAgain.Mounts, 1, "attribution must not change when HWM is not updated")
+	requireAttrCountEqualsMountSum(t, storedAgain)
+
+	// The billing scalar (third-party plugin HWM) must equal the attribution Count.
+	tpScalar, err := core.GetStoredThirdPartyPluginCounts(ctx, month)
+	require.NoError(t, err)
+	require.InDelta(t, float64(tpScalar), vault.ToFloat64(storedAgain.Count), 1e-9,
+		"third-party plugin HWM scalar (%d) must equal attribution Count (%v)", tpScalar, storedAgain.Count)
 }
