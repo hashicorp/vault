@@ -138,13 +138,15 @@ func (c *Core) GetInMemoryOidcCounts() float64 {
 	return 0
 }
 
-func (c *Core) SetInMemoryOidcCounts(tokenDuration float64) {
+// SetInMemoryOidcCounts sets the in-memory OIDC duration-adjusted units counter.
+// The value should be pre-normalized (i.e. already converted via DurationAdjustedTokenCount).
+func (c *Core) SetInMemoryOidcCounts(normalizedUnits float64) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.SecretEngineCounts.Oidc.MonthlyUnits.Store(tokenDuration)
+		cb.SecretEngineCounts.Oidc.MonthlyUnits.Store(normalizedUnits)
 	}
 }
 
