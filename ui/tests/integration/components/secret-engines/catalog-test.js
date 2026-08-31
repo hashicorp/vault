@@ -75,6 +75,48 @@ module('Integration | Component | secret-engines/catalog', function (hooks) {
     assert.true(this.setMountType.calledWith('kv'), 'setMountType was called with kv');
   });
 
+  test('"Next" button is disabled until an engine is selected', async function (assert) {
+    await render(
+      hbs`<SecretEngines::Catalog
+        @setMountType={{this.setMountType}}
+        @pluginCatalogData={{this.pluginCatalogData}}
+        @pluginCatalogError={{this.pluginCatalogError}}
+      />`
+    );
+
+    assert
+      .dom(GENERAL.button('next'))
+      .hasAttribute('disabled', '', '"Next" is disabled before any selection');
+    await click(GENERAL.cardContainer('kv'));
+    assert
+      .dom(GENERAL.button('next'))
+      .doesNotHaveAttribute('disabled', '"Next" is enabled after selecting an engine');
+  });
+
+  test('applying a filter after selecting an engine clears the selection and disables "Next"', async function (assert) {
+    await render(
+      hbs`<SecretEngines::Catalog
+        @setMountType={{this.setMountType}}
+        @pluginCatalogData={{this.pluginCatalogData}}
+        @pluginCatalogError={{this.pluginCatalogError}}
+      />`
+    );
+
+    await click(GENERAL.cardContainer('kv'));
+    assert
+      .dom(GENERAL.button('next'))
+      .doesNotHaveAttribute('disabled', '"Next" is enabled after selecting KV');
+
+    // Apply a secret type filter — this should clear the selection
+    await click(SELECTORS.secretTypeToggle);
+    await click(SELECTORS.checkmark('encryptionKeys'));
+
+    assert
+      .dom(GENERAL.button('next'))
+      .hasAttribute('disabled', '', '"Next" is disabled again after filter applied');
+    assert.false(this.setMountType.called, 'setMountType was never called');
+  });
+
   test('it shows plugin catalog error when provided', async function (assert) {
     this.pluginCatalogError = true;
 
@@ -229,6 +271,33 @@ module('Integration | Component | secret-engines/catalog', function (hooks) {
     await fillIn(SELECTORS.searchInput, 'post-quantum');
 
     assert.dom(GENERAL.cardContainer('transit')).exists('Transit card shown for description match');
+    assert.dom(GENERAL.cardContainer('kv')).doesNotExist('KV card hidden when description does not match');
+  });
+
+  test('keyword search trims whitespace', async function (assert) {
+    await render(hbs`<SecretEngines::Catalog
+      @setMountType={{this.setMountType}}
+      @pluginCatalogData={{this.pluginCatalogData}}
+      @pluginCatalogError={{this.pluginCatalogError}}
+    />`);
+
+    await fillIn(SELECTORS.searchInput, 'google                  cloud');
+
+    assert.dom(GENERAL.cardContainer('gcp')).exists('Google cloud card shown for text match');
+  });
+
+  test('keyword search matches against engine badge', async function (assert) {
+    assert.expect(2);
+    await render(hbs`<SecretEngines::Catalog
+      @setMountType={{this.setMountType}}
+      @pluginCatalogData={{this.pluginCatalogData}}
+      @pluginCatalogError={{this.pluginCatalogError}}
+    />`);
+
+    // 'signing' appears only in badges
+    await fillIn(SELECTORS.searchInput, 'signing');
+
+    assert.dom(GENERAL.cardContainer('ssh')).exists('SSH card shown for badge match');
     assert.dom(GENERAL.cardContainer('kv')).doesNotExist('KV card hidden when description does not match');
   });
 
