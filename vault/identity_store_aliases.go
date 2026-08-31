@@ -751,9 +751,7 @@ func (i *IdentityStore) handleAliasReadCommon(ctx context.Context, alias *identi
 	respData["issuer"] = alias.Issuer
 	respData["external_id"] = alias.ExternalID
 
-	if i.scimEnabled {
-		respData["scim_client_id"] = alias.ScimClientID
-	}
+	respData["scim_client_id"] = alias.ScimClientID
 
 	if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 		respData["mount_path"] = mountValidationResp.MountPath

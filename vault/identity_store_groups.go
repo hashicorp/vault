@@ -470,9 +470,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["type"] = group.Type
 	respData["namespace_id"] = group.NamespaceID
 
-	if i.scimEnabled {
-		respData["scim_client_id"] = group.ScimClientID
-	}
+	respData["scim_client_id"] = group.ScimClientID
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {

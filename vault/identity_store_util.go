@@ -134,15 +134,6 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 		i.conflictResolver = &renameResolver{i.logger}
 	}
 
-	// Restore the in-memory scimEnabled flag from the persisted activation
-	// flags. The ActivationFunc callback only fires on API writes and storage
-	// invalidations, not on startup, so we must explicitly check the flag here
-	// to ensure SCIM paths remain available after seal/unseal.
-	if i.activationManager.IsActivationFlagEnabled(activationflags.SCIMEnablement) {
-		i.logger.Info("restoring SCIM enablement from persisted activation flags")
-		i.scimEnabled = true
-	}
-
 	// Load everything when MemDB is set to operate on lower cased names.
 	// errDuplicateIdentityName below should only happen if we're using the
 	// errorResolver (i.e. identity deduplication is not activated) and we
@@ -194,9 +185,6 @@ func (i *IdentityStore) activate(ctx context.Context, _ *logical.Request, featur
 	switch featureName {
 	case activationflags.IdentityDeduplication:
 		return i.activateDeduplication(ctx, nil)
-	case activationflags.SCIMEnablement:
-		i.logger.Info("activating SCIM paths; SCIM operations can now be performed")
-		i.scimEnabled = true
 	}
 
 	return nil

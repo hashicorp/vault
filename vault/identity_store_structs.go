@@ -140,9 +140,6 @@ type IdentityStore struct {
 	// activateDeduplicationDone is a channel used for synchronization in testing
 	activateDeduplicationDone chan struct{}
 
-	// scimEnabled is used to indicate if SCIM paths are enabled and if SCIM operations can be performed.
-	scimEnabled bool
-
 	// scimCleanupCtx is the context shared by all SCIM client cleanup goroutines.
 	// It is derived from the active context and cancelled on seal/standby.
 	scimCleanupCtx context.Context
