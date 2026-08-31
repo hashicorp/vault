@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -975,6 +976,7 @@ func BenchmarkSymmetric(b *testing.B) {
 			})
 		pt2, _ := p.SymmetricDecryptRaw(key, ct, SymmetricOpts{
 			AdditionalData: ad,
+			Algorithm:      p.KeyVersionType(1),
 		})
 		if !bytes.Equal(pt, pt2) {
 			b.Fail()
@@ -1344,4 +1346,74 @@ func isUnsupportedGoHashType(hashType HashType, err error) bool {
 	}
 
 	return false
+}
+
+// TestPolicy_KeyEntryAlgorithm verifies that KeyVersionType falls back to the
+// policy-level Type when the key entry's Algorithm is nil, and returns the
+// entry-level algorithm when it is set to a non-nil pointer.
+func TestPolicy_KeyEntryAlgorithm(t *testing.T) {
+	t.Parallel()
+
+	policyType := KeyType(KeyType_AES256_GCM96)
+	entryType := KeyType(KeyType_ECDSA_P256)
+
+	p := &Policy{
+		Type: policyType,
+		Keys: keyEntryMap{
+			"1": KeyEntry{Algorithm: nil},
+			"2": KeyEntry{Algorithm: &entryType},
+		},
+	}
+
+	require.Equal(t, policyType, p.KeyVersionType(1), "nil Algorithm should fall back to policy Type")
+	require.Equal(t, entryType, p.KeyVersionType(2), "non-nil Algorithm should return the entry-level algorithm")
+	require.Equal(t, policyType, p.KeyVersionType(99), "missing key version should fall back to policy Type")
+}
+
+// TestPolicy_RotateInMemoryWithAlgorithmSetsAlgorithmField verifies that after
+// RotateInMemoryWithAlgorithm the newly created key entry has its Algorithm
+// pointer set to the requested key type when the key usage is unchanged.
+func TestPolicy_RotateInMemoryWithAlgorithmSetsAlgorithmField(t *testing.T) {
+	t.Parallel()
+
+	p := &Policy{
+		Type: KeyType_AES256_GCM96,
+		Keys: keyEntryMap{
+			"1": KeyEntry{},
+		},
+		LatestVersion:        1,
+		MinDecryptionVersion: 1,
+	}
+
+	rotateType := KeyType(KeyType_AES128_GCM96)
+	err := p.RotateInMemoryWithAlgorithm(rand.Reader, rotateType, nil)
+	require.NoError(t, err)
+	require.Equal(t, 2, p.LatestVersion)
+
+	entry, ok := p.Keys[strconv.Itoa(p.LatestVersion)]
+	require.True(t, ok, "new key version should exist after rotation")
+	require.NotNil(t, entry.Algorithm, "Algorithm should be non-nil after RotateInMemoryWithAlgorithm")
+	require.Equal(t, rotateType, *entry.Algorithm, "Algorithm pointer should point to the requested key type")
+	require.Equal(t, rotateType, p.KeyVersionType(p.LatestVersion))
+}
+
+// TestPolicy_RotateInMemoryWithAlgorithmRejectsUsageChanges verifies that
+// RotateInMemoryWithAlgorithm rejects algorithm changes that alter key usage.
+func TestPolicy_RotateInMemoryWithAlgorithmRejectsUsageChanges(t *testing.T) {
+	t.Parallel()
+
+	p := &Policy{
+		Type: KeyType_AES256_GCM96,
+		Keys: keyEntryMap{
+			"1": KeyEntry{},
+		},
+		LatestVersion:        1,
+		MinDecryptionVersion: 1,
+	}
+
+	err := p.RotateInMemoryWithAlgorithm(rand.Reader, KeyType_ECDSA_P256, nil)
+	require.EqualError(t, err, "incompatible algorithm ecdsa-p256 for key type aes256-gcm96")
+	require.Equal(t, 1, p.LatestVersion)
+	_, ok := p.Keys["2"]
+	require.False(t, ok, "new key version should not be created after a rejected algorithm change")
 }

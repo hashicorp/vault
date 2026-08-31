@@ -419,7 +419,7 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 	}
 
 	// We can't auto-rotate managed keys
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
+	if p.KeyVersionType(p.LatestVersion) == keysutil.KeyType_MANAGED_KEY {
 		return keyRotationEntry{}, nil
 	}
 
