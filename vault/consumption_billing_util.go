@@ -1273,10 +1273,11 @@ func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, cur
 	return currentCount, nil
 }
 
-// IncrementOidcTokenCount increments the in-memory OIDC token count and total duration hours,
-// and accumulates per-mount attribution. This is called each time an OIDC token is created.
+// IncrementOidcTokenCount increments the in-memory OIDC duration-adjusted token count and
+// accumulates per-mount attribution. This is called each time an OIDC token is created.
 // The counts and attribution are flushed to storage periodically by the consumption billing metrics worker.
-// Note: OidcTokenDuration is not normalized and is duration-adjusted during flush to storage in UpdateOidcDurationAdjustedCount.
+// durationSeconds is the raw token TTL; it is normalized to duration-adjusted units immediately
+// so that MonthlyUnits and per-mount attribution totals remain in sync across flush cycles.
 func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.MountAttribution) {
 	c.consumptionBillingLock.RLock()
 	defer c.consumptionBillingLock.RUnlock()
@@ -1287,8 +1288,9 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.Mou
 		return
 	}
 
-	// Update raw token duration
-	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(durationSeconds)
+	// Normalize to duration-adjusted units immediately so MonthlyUnits and per-mount
+	// attribution totals are always consistent (both use per-token rounding).
+	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(DurationAdjustedTokenCount(durationSeconds))
 
 	// Accumulate per-mount attribution if the accessor is set.
 	if attr.MountAccessor == "" {
@@ -1307,8 +1309,8 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.Mou
 	cb.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
 }
 
-// UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,
-// normalizes them to duration-adjusted counts, and flushes them to storage.
+// UpdateOidcDurationAdjustedCount reads the in-memory OIDC duration-adjusted token count
+// and flushes it to storage.
 // This is called periodically by the consumption billing metrics worker.
 func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) error {
 	c.consumptionBillingLock.RLock()
@@ -1322,14 +1324,12 @@ func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	// Get in-memory raw token duration and reset value in memory
-	// Using Swap to atomically reset the value. If Vault crashes after a successful storage update but before reset, this prevents double counting.
-	totalTokenDurationSecondsFromMemory := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
+	// Swap out the accumulated duration-adjusted units (already normalized per-token in
+	// IncrementOidcTokenCount). Using Swap to atomically reset so a crash after a successful
+	// storage write does not cause double-counting on the next flush.
+	units := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
 
-	// Calculate duration-adjusted count from raw data
-	durationAdjustedCountMemory := DurationAdjustedTokenCount(totalTokenDurationSecondsFromMemory)
-
-	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, durationAdjustedCountMemory)
+	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, units)
 }
 
 func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time, inc float64) error {
