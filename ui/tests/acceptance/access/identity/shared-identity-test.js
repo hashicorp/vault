@@ -239,6 +239,38 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
     assert.strictEqual(entityListRequests, 1, 'loads all member entity names with one list request');
   });
 
+  test('group parent groups: it displays parent names and keeps IDs in tooltips', async function (assert) {
+    const groupId = 'group-id';
+    const parentGroupId = 'parent-group-id';
+    let groupListRequests = 0;
+
+    this.server.get(`/identity/group/id/${groupId}`, () => ({
+      data: {
+        id: groupId,
+        name: 'example group',
+        type: 'internal',
+        parent_group_ids: [parentGroupId],
+      },
+    }));
+    this.server.get('/identity/group/id', () => {
+      groupListRequests++;
+      return {
+        data: {
+          keys: [parentGroupId],
+          key_info: { [parentGroupId]: { name: 'parent group' } },
+        },
+      };
+    });
+
+    await visit(`/vault/access/identity/groups/${groupId}/parent-groups`);
+
+    assert
+      .dom(`[data-test-identity-item-name="${parentGroupId}"]`)
+      .hasText('parent group')
+      .hasAttribute('title', parentGroupId);
+    assert.strictEqual(groupListRequests, 1, 'loads all parent group names with one list request');
+  });
+
   test('related identity names: it falls back to IDs when the list request fails', async function (assert) {
     const entityId = 'entity-id';
     const groupId = 'group-id';
