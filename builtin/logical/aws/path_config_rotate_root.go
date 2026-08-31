@@ -6,6 +6,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
@@ -26,8 +27,17 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathConfigRotateRootUpdate,
+				Summary:                     "Rotate the root IAM credentials used by Vault for this secrets mount.",
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"access_key": {Type: framework.TypeString, Description: "New access key ID of the rotated root IAM credential."},
+						},
+					}},
+				},
 			},
 		},
 
