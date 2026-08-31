@@ -30,6 +30,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -247,6 +248,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 	conf.DetectDeadlocks = opts.DetectDeadlocks
 	conf.Experiments = opts.Experiments
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
+	conf.OperatorNamespacePath = opts.OperatorNamespacePath
 	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
@@ -1014,15 +1016,6 @@ func (c *TestCluster) Cleanup() {
 	})
 }
 
-// CleanupSyncTest is a wrapper for Cleanup.  Tests that use synctest cannot
-// rely on cleanup happening in t.Cleanup, but we want to discourage non-synctest
-// tests from calling the deprecated Cleanup.  This wrapper allows synctest tests
-// to call a non-deprecated func while still making it clear that any other tests
-// should not be calling Cleanup or CleanupSyncTest.
-func (c *TestCluster) CleanupSyncTest() {
-	c.Cleanup()
-}
-
 func (c *TestCluster) ensureCoresSealed() error {
 	for _, core := range c.Cores {
 		if err := core.Shutdown(); err != nil {
@@ -1440,7 +1433,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 
 	coreConfig := applyBaseConfig(base, scheme)
 	if opts.SyncTest {
-		coreConfig.NoSleepOnALPNHandlerStop = true
+		coreConfig.Synctest = true
 	}
 
 	if coreConfig.ClusterName == "" {
@@ -1587,7 +1580,12 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	// Register cleanup with t.Cleanup so it's automatically called when the test ends
-	t.Cleanup(testCluster.Cleanup)
+	t.Cleanup(func() {
+		if opts.SyncTest {
+			synctest.Wait()
+		}
+		testCluster.Cleanup()
+	})
 
 	return &testCluster
 }

@@ -28,8 +28,9 @@ test('intro pages workflow', async ({ page }) => {
 
     // verify clicking enable routes to enablement page
     await page.getByRole('link', { name: 'Enable a Secret engine' }).click();
-    await expect(page.getByText('Enable secrets engine')).toBeVisible();
-    await expect(page.getByLabel('KV - enabled engine type')).toBeVisible();
+    await expect(page.getByText('Select engine type')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'View badge legend' })).toBeVisible();
+    await page.locator('label').filter({ hasText: 'KV' }).click();
 
     // navigate back to secrets intro page and click skip and verify the intro page is dismissed
     await page.getByLabel('Secrets Navigation Links').getByRole('link', { name: 'Secrets engines' }).click();
@@ -46,7 +47,7 @@ test('intro pages workflow', async ({ page }) => {
     // clicking enable from banner routes to enablement page
     await page.getByRole('button', { name: 'New to Secret engines?' }).click();
     await page.getByRole('link', { name: 'Enable a Secret engine' }).click();
-    await expect(page.getByText('Enable secrets engine')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Create a new secrets engine' })).toBeVisible();
 
     // click button and close the banner and assert the banner is closed
     await page.getByLabel('breadcrumbs').getByRole('link', { name: 'Secrets engines' }).click();
@@ -213,7 +214,7 @@ test('intro pages workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Confirm' }).click();
     await page.getByRole('link', { name: 'Authentication methods' }).click();
     await page
-      .getByRole('link', { name: 'Type of auth mount userpass/' })
+      .getByRole('row', { name: 'Type of auth mount userpass/' })
       .getByLabel('Overflow options')
       .click();
     await page.getByRole('button', { name: 'Disable' }).click();

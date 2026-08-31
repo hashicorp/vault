@@ -12,7 +12,7 @@ test('billing metrics dashboard workflow', async ({ page }) => {
     await page.route('**/sys/license/features', async (route) =>
       route.fulfill({ json: { features: ['Consumption Billing'] } })
     );
-    await page.route('**/sys/billing/overview', async (route) =>
+    await page.route('**/sys/billing/overview**', async (route) =>
       route.fulfill({ json: METRICS_DATA_RESPONSE })
     );
     await page.goto('dashboard');
@@ -28,7 +28,7 @@ test('billing metrics dashboard workflow', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Summary' })).toBeVisible();
 
     await expect(page.locator('section')).toContainText(
-      'Summary Secrets 10 Credential units 303.617 Data protection calls 420 Managed keys 430 KMIP Enabled Custom plugins 100'
+      'Summary Secrets 10 Credential units 303.6170 Data protection calls 420 Managed keys 430 KMIP Enabled Custom plugins 100'
     );
   });
 
@@ -39,7 +39,7 @@ test('billing metrics dashboard workflow', async ({ page }) => {
       'Secrets Highest number of static secrets, static roles, and dynamic roles managed on the cluster during the month. Secrets replicated to this cluster are not counted. Total 210 KV Secrets 10 Dynamic roles 130 Static roles 70'
     );
     await expect(page.locator('section')).toContainText(
-      'Credential units Certificates, tokens, and other credentials issued during the month, adjusted by their duration. Total 303.617 PKI units 100.1234 SSH OTP units 50.1234 SSH certificate units 50.1234 OIDC token units 52.1234 SPIFFE JWT units 51.1234'
+      'Credential units Certificates, tokens, and other credentials issued during the month, adjusted by their duration. Total 303.6170 PKI units 100.1234 SSH OTP units 50.1234 SSH certificate units 50.1234 OIDC token units 52.1234 SPIFFE JWT units 51.1234'
     );
     await expect(page.locator('section')).toContainText(
       'Data protection calls Total number of data elements processed. Total 640 Transform 220 Transit 200 GCP KMS 220'

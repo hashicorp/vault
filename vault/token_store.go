@@ -121,7 +121,7 @@ var (
 		view := storage.(*BarrierView)
 
 		switch {
-		case te.NamespaceID == namespace.RootNamespaceID && !IsServiceToken(te.ID):
+		case te.NamespaceID == namespace.RootNamespaceID && !IsServiceToken(te.ID) && !strings.HasPrefix(te.ID, consts.GetOAuthJwtPrefix()):
 			saltedID, err := ts.SaltID(ctx, te.ID)
 			if err != nil {
 				return err
@@ -694,6 +694,11 @@ func (c *Core) LookupToken(ctx context.Context, token string) (*logical.TokenEnt
 	return c.tokenStore.Lookup(ctx, token)
 }
 
+// TokenStore returns the Core's token store.
+func (c *Core) TokenStore() *TokenStore {
+	return c.tokenStore
+}
+
 // CreateToken creates the given token in the core's token store.
 func (c *Core) CreateToken(ctx context.Context, entry *logical.TokenEntry) error {
 	if c.tokenStore == nil {
@@ -1071,13 +1076,8 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 	// Validate the inline policy if it's set
 	if entry.InlinePolicy != "" {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		_, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, entry.InlinePolicy, WithDenySlashInTemplatedPaths(ts.core.denySlashInTemplatedPolicyPaths))
-		if err != nil {
+		if _, err := ParseACLPolicy(tokenNS, entry.InlinePolicy, WithDenySlashInTemplatedPaths(ts.core.denySlashInTemplatedPolicyPaths)); err != nil {
 			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
-		}
-		if duplicate {
-			ts.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 	}
 
@@ -1117,7 +1117,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 
 	switch entry.Type {
-	case logical.TokenTypeDefault, logical.TokenTypeService, logical.TokenTypeEnt:
+	case logical.TokenTypeDefault, logical.TokenTypeService, logical.TokenTypeEnt, logical.TokenTypeSCIM:
 		// In case it was default, force to service
 		if entry.Type == logical.TokenTypeDefault {
 			entry.Type = logical.TokenTypeService
@@ -1144,16 +1144,23 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 				return fmt.Errorf("custom token ID cannot have the 'hvs.' prefix")
 			case strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix):
 				return fmt.Errorf("custom token ID cannot have the 's.' prefix")
+			case strings.HasPrefix(entry.ID, consts.GetSCIMTokenPrefix()):
+				return fmt.Errorf("custom token ID cannot have the 'scm.' prefix")
 			case strings.Contains(entry.ID, "."):
 				return fmt.Errorf("custom token ID cannot have a '.' in the value")
 			}
 		}
 
 		if !userSelectedID {
-			if !ts.core.DisableSSCTokens() {
-				entry.ID = fmt.Sprintf("hvs.%s", entry.ID)
-			} else {
-				entry.ID = fmt.Sprintf("s.%s", entry.ID)
+			switch entry.Type {
+			case logical.TokenTypeSCIM:
+				entry.ID = consts.GetSCIMTokenPrefix() + entry.ID
+			default:
+				if !ts.core.DisableSSCTokens() {
+					entry.ID = fmt.Sprintf("hvs.%s", entry.ID)
+				} else {
+					entry.ID = fmt.Sprintf("s.%s", entry.ID)
+				}
 			}
 		}
 
@@ -1166,7 +1173,8 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		if tokenNS.ID != namespace.RootNamespaceID ||
 			strings.HasPrefix(entry.ID, consts.ServiceTokenPrefix) ||
 			strings.HasPrefix(entry.ID, consts.LegacyServiceTokenPrefix) ||
-			strings.HasPrefix(entry.ID, consts.GetOAuthJwtPrefix()) {
+			strings.HasPrefix(entry.ID, consts.GetOAuthJwtPrefix()) ||
+			strings.HasPrefix(entry.ID, consts.GetSCIMTokenPrefix()) {
 			if entry.CubbyholeID == "" {
 				cubbyholeID, err := base62.Random(TokenLength)
 				if err != nil {
@@ -1177,7 +1185,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 
 		// If the user didn't specifically pick the ID, e.g. because they were
-		// sudo/root, check for collision; otherwise trust the process
+		// sudo/root, check for collision; otherwise trust the process.
+		// TokenTypeEnt always checks because the ID is prefixed after the fact
+		// so the bare random was never stored.
 		if userSelectedID || entry.Type == logical.TokenTypeEnt {
 			exist, _ := ts.lookupInternal(ctx, entry.ID, false, true)
 			if exist != nil {
@@ -1195,6 +1205,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return err
 		}
 		entry.ExternalID = entry.ID
+		// Service tokens wrap when SSC is enabled and the ID was auto-generated.
 		if !userSelectedID && !ts.core.DisableSSCTokens() {
 			entry.ExternalID = ts.GenerateSSCTokenID(entry.ID, logical.IndexStateFromContext(ctx), entry)
 		}
@@ -1284,22 +1295,27 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 // to continue operating even in the case where IDs can't be generated. Thus it logs
 // errors as opposed to throwing them.
 func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WALState, te *logical.TokenEntry) string {
+	// Determine the correct on-wire prefix for this token type.  SCIM tokens
+	// always carry the "scm." prefix; all other service tokens use "hvs.".
+	tokenPrefix := consts.ServiceTokenPrefix
+	if te.Type == logical.TokenTypeSCIM {
+		tokenPrefix = consts.GetSCIMTokenPrefix()
+	}
+
 	// Set up the prefix prepending function. This should really only be used in
 	// the token ID generation code itself.
-	prependServicePrefix := func(externalToken string) string {
-		if strings.HasPrefix(externalToken, consts.ServiceTokenPrefix) {
-			// We didn't generate a SSC token and furthermore are attempting
-			// to regenerate a token that already has passed through
-			// GenerateSSCTokenID, as it has a prefix.
+	prependPrefix := func(externalToken string) string {
+		if strings.HasPrefix(externalToken, tokenPrefix) {
+			// Token has already passed through GenerateSSCTokenID.
 			return externalToken
 		}
-		return consts.ServiceTokenPrefix + externalToken
+		return tokenPrefix + externalToken
 	}
 
 	// If we are not using server side consistent tokens, log it and return here
 	if ts.core.DisableSSCTokens() {
 		ts.logger.Trace("server side consistent tokens are disabled")
-		return prependServicePrefix(innerToken)
+		return prependPrefix(innerToken)
 	}
 
 	// If there is no WAL state, do not throw an error as it may be a single
@@ -1311,7 +1327,7 @@ func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WA
 		walState = &logical.WALState{}
 	}
 	if te.IsRoot() {
-		return prependServicePrefix(innerToken)
+		return prependPrefix(innerToken)
 	}
 
 	// If the token is a root token, we will always set the index and epoch to 0 so as to ensure
@@ -1325,7 +1341,7 @@ func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WA
 	marshalledToken, err := proto.Marshal(&t)
 	if err != nil {
 		ts.logger.Error("unable to marshal token", "error", err)
-		return prependServicePrefix(innerToken)
+		return prependPrefix(innerToken)
 	}
 
 	hmac, err := ts.CalculateSignedTokenHMAC(marshalledToken)
@@ -1333,17 +1349,17 @@ func (ts *TokenStore) GenerateSSCTokenID(innerToken string, walState *logical.WA
 		// If we can't calculate the HMAC for any reason, we should log an error
 		// but still allow vault to function, using the old token instead.
 		ts.logger.Error("unable to calculate token signature", "error", err)
-		return prependServicePrefix(innerToken)
+		return prependPrefix(innerToken)
 	}
 	st := tokens.SignedToken{TokenVersion: 1, Token: marshalledToken, Hmac: hmac}
 
 	marshalledSignedToken, err := proto.Marshal(&st)
 	if err != nil {
 		ts.logger.Error("unable to marshal signed token", "error", err)
-		return prependServicePrefix(innerToken)
+		return prependPrefix(innerToken)
 	}
 	generatedSSCToken := base64.RawURLEncoding.EncodeToString(marshalledSignedToken)
-	return prependServicePrefix(generatedSSCToken)
+	return prependPrefix(generatedSSCToken)
 }
 
 func (ts *TokenStore) CalculateSignedTokenHMAC(marshalledToken []byte) ([]byte, error) {
@@ -1518,7 +1534,10 @@ func (ts *TokenStore) Lookup(ctx context.Context, id string) (*logical.TokenEntr
 	if id == "" {
 		return nil, fmt.Errorf("cannot lookup blank token")
 	}
-	normalizedID := normalizeOAuthJwtToId(id)
+	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+	if err != nil {
+		return nil, logical.ErrInvalidRequest
+	}
 
 	// If it starts with "b." it's a batch token
 	if IsBatchToken(normalizedID) {
@@ -2683,7 +2702,10 @@ func (ts *TokenStore) handleCreate(ctx context.Context, req *logical.Request, d 
 
 // handleCreateCommon handles the auth/token/create path for creation of new tokens
 func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, orphan bool, role *tsRoleEntry) (*logical.Response, error) {
-	normalizedClientToken := normalizeOAuthJwtToId(req.ClientToken)
+	normalizedClientToken, err := ts.core.normalizeJwtForLookup(ctx, req.ClientToken)
+	if err != nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
 	if !orphan && IsOAuthJwtId(normalizedClientToken) {
 		return logical.ErrorResponse("JWTs cannot create child tokens"), logical.ErrInvalidRequest
 	}
@@ -2763,6 +2785,15 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	explicitMaxTTL := d.Get("explicit_max_ttl").(string)
 	numUses := d.Get("num_uses").(int)
 	period := d.Get("period").(string)
+
+	// scimClientID, scimMaxTTL, scimMaxActiveTokens, and scimUnlock are
+	// populated when type=scim is requested. scimUnlock is deferred to release
+	// the per-client cap lock after the token entry has been written.
+	var scimClientID string
+	var scimMaxTTL time.Duration
+	var scimMaxActiveTokens int32
+	var scimUnlock func()
+
 	switch tokenTypeStr {
 	case "", "service":
 	case "batch":
@@ -2792,6 +2823,24 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 		tokenType = logical.TokenTypeBatch
 		renewable = false
+	case "scim":
+		// SCIM tokens are a superset of service tokens: they go through the
+		// full service-token creation path but with additional pre-issuance
+		// checks and post-issuance fixups applied below.
+		var scimResp *logical.Response
+		var scimErr error
+		scimClientID, scimMaxTTL, scimMaxActiveTokens, scimResp, scimErr = ts.VerifySCIMTokenCreation(ctx, req, renewable, orphan)
+		if scimErr != nil || scimResp != nil {
+			return scimResp, scimErr
+		}
+		if scimClientID == "" {
+			return logical.ErrorResponse("SCIM token issuance not supported for non-SCIM client entities"), logical.ErrInvalidRequest
+		}
+		// Force the invariants that verifySCIMTokenCreation checked above so
+		// the rest of handleCreateCommon enforces them on the entry as well.
+		renewable = false
+		orphan = true
+		tokenType = logical.TokenTypeSCIM
 	default:
 		return logical.ErrorResponse("invalid 'token_type' value"), logical.ErrInvalidRequest
 	}
@@ -3259,13 +3308,50 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		resp.AddWarning("Supplying a custom ID for the token uses the weaker SHA1 hashing instead of the more secure SHA2-256 HMAC for token obfuscation. SHA1 hashed tokens on the wire leads to less secure lookups.")
 	}
 
-	// check if we are perfStandby, and if so forward the service token
+	// For SCIM tokens, stamp the client ID, creation path, and per-client TTL
+	// ceiling onto the entry before create() is called so that the SCIM branch
+	// of create()'s type switch sees them.
+	if scimClientID != "" {
+		// Path format: auth/token/create/scim/<clientID>[/<role>[/<pathSuffix>]]
+		te.Path = "auth/token/create/scim/" + scimClientID
+		if role != nil {
+			te.Path = te.Path + "/" + role.Name
+			if role.PathSuffix != "" {
+				te.Path = te.Path + "/" + role.PathSuffix
+			}
+		}
+
+		if te.InternalMeta == nil {
+			te.InternalMeta = make(map[string]string)
+		}
+		te.InternalMeta["scim_client_id"] = scimClientID
+
+		// Apply the per-client max_token_ttl ceiling.
+		if scimMaxTTL > 0 && te.TTL > scimMaxTTL {
+			te.TTL = scimMaxTTL
+		}
+	}
+
+	// For SCIM tokens, acquire the per-client cap lock immediately before
+	// issuing. The lock is held until create() returns, making the
+	// count-then-issue window atomic. defer guarantees release on all paths.
+	if scimClientID != "" {
+		var slotResp *logical.Response
+		var slotErr error
+		scimUnlock, slotResp, slotErr = ts.AcquireSCIMTokenSlot(ctx, req, scimClientID, scimMaxActiveTokens)
+		defer scimUnlock()
+		if slotErr != nil || slotResp != nil {
+			return slotResp, slotErr
+		}
+	}
+
+	// check if we are perfStandby, and if so forward the service or SCIM token
 	// creation to the active node
 	var roleName string
 	if role != nil {
 		roleName = role.Name
 	}
-	if te.Type == logical.TokenTypeService && ts.core.perfStandby {
+	if isServiceTokenDerivative(te) && ts.core.perfStandby {
 		forwardedTokenEntry, err := forwardCreateTokenRegisterAuth(ctx, ts.core, &te, roleName, renewable, periodToUse, explicitMaxTTLToUse)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), ErrInternalError
@@ -3313,8 +3399,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// We have registered the auth at this point if the token is of service
-	// type and core is perfStandby.
-	if te.Type == logical.TokenTypeService && ts.core.perfStandby && te.ExternalID != "" {
+	// or SCIM type and core is perfStandby.
+	if isServiceTokenDerivative(te) && ts.core.perfStandby && te.ExternalID != "" {
 		resp.Auth.ClientToken = te.ExternalID
 	}
 
@@ -3358,7 +3444,6 @@ func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, da
 	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
 		return ts.revokeCommonJWT(ctx, req, id)
 	}
-
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -3403,7 +3488,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	normalizedID := normalizeOAuthJwtToId(id)
+	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+	if err != nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
 	if IsOAuthJwtId(normalizedID) {
 		return logical.ErrorResponse("JWTs cannot be revoked"), nil
 	}
@@ -3453,7 +3541,8 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		if id == req.ClientToken {
 			id = getOAuthJwtId(req.JwtUniqueId)
 		} else {
-			resolvedID, err := resolveOAuthJwtIdForLookup(id)
+			// For raw JWTs, validate to get the correct profile and unique ID claim
+			resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
 			if err != nil {
 				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 			}
@@ -3571,7 +3660,10 @@ func (ts *TokenStore) handleRenew(ctx context.Context, req *logical.Request, dat
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
-	normalizedID := normalizeOAuthJwtToId(id)
+	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+	if err != nil {
+		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	}
 	if IsOAuthJwtId(normalizedID) {
 		return logical.ErrorResponse("JWTs cannot be renewed"), nil
 	}
@@ -3803,7 +3895,8 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 				if !matched {
 					return logical.ErrorResponse(fmt.Sprintf(
 						"given role path suffix contains invalid characters; must match %s",
-						pathSuffixSanitize.String())), nil
+						pathSuffixSanitize.String(),
+					)), nil
 				}
 			}
 			entry.PathSuffix = pathSuffix
@@ -3957,7 +4050,8 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 			}
 			resp.AddWarning(fmt.Sprintf(
 				"Given explicit max TTL of %d is greater than system/mount allowed value of %d seconds; until this is fixed attempting to create tokens against this role will result in an error",
-				int64(finalExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds())))
+				int64(finalExplicitMaxTTL.Seconds()), int64(sysView.MaxLeaseTTL().Seconds()),
+			))
 		}
 	}
 
@@ -4295,6 +4389,11 @@ func (ts *TokenStore) gaugeCollectorByMethod(ctx context.Context) ([]metricsutil
 		}
 	}
 	return flattenedResults, nil
+}
+
+// Check if the token should be treated as a service token during auth handling.
+func isServiceTokenDerivative(te logical.TokenEntry) bool {
+	return te.Type == logical.TokenTypeService || te.Type == logical.TokenTypeSCIM
 }
 
 const (

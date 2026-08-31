@@ -71,12 +71,92 @@ sles_ensure_suseconnect() {
   return 0
 }
 
-# Synchronize our repositories so that futher installation steps are working with updated cache
+# Try each mirror in order until one succeeds for apt update. We support Ubuntu
+# 22.04 (jammy), 24.04 (noble), and 26.04 (resolute) on four architectures:
+#   - amd64        (AWS)  → archive.ubuntu.com/ubuntu only
+#   - arm64        (AWS)  → ports.ubuntu.com/ubuntu-ports only
+#   - s390x        (Fyre) → ports.ubuntu.com/ubuntu-ports only
+#   - ppc64el      (Fyre) → ports.ubuntu.com/ubuntu-ports only
+#
+# Despite the Release file listing all architectures, actual package files are
+# split: archive.ubuntu.com only hosts amd64/i386; ports.ubuntu.com hosts
+# arm64, s390x, ppc64el, and other non-x86 architectures. We order mirrors by
+# the running architecture so the correct one is tried first, with the other as
+# a fallback in case of transient unavailability.
+#
+# Each fallback sources.list includes the base release plus the -updates and
+# -security pockets so that a full apt-get upgrade succeeds, not just apt-get update.
+apt_update_with_fallback() {
+  # Select mirror order based on architecture: amd64 uses archive first;
+  # arm64/s390x/ppc64el use ports first.
+  local arch
+  arch=$(dpkg --print-architecture)
+  local mirrors
+  if [[ "${arch}" == "amd64" ]]; then
+    mirrors=(
+      "http://archive.ubuntu.com/ubuntu"
+      "http://ports.ubuntu.com/ubuntu-ports"
+    )
+  else
+    mirrors=(
+      "http://ports.ubuntu.com/ubuntu-ports"
+      "http://archive.ubuntu.com/ubuntu"
+    )
+  fi
+
+  # First, try a plain apt update using whatever sources the system already has.
+  # This is the normal happy path and avoids touching sources.list at all.
+  # Bound apt's own lock-wait to RETRY_INTERVAL (see install-packages.sh for rationale) so a
+  # competing process holding /var/lib/dpkg/lock-frontend doesn't consume our whole
+  # TIMEOUT_SECONDS budget in a single attempt. Acquire::Retries absorbs a transient DNS/connection
+  # blip against this mirror before we give up on it and move on to a fallback mirror.
+  if sudo apt-get update -o DPkg::Lock::Timeout="${RETRY_INTERVAL}" -o Acquire::Retries="3" 2>&1; then
+    return 0
+  fi
+
+  echo "apt update failed with default sources, trying fallback mirrors..." 1>&2
+
+  local codename
+  codename=$(lsb_release -cs)
+
+  for mirror in "${mirrors[@]}"; do
+    echo "Trying mirror: ${mirror}" 1>&2
+    # Include the base release pocket plus -updates and -security so that a
+    # subsequent apt-get upgrade can resolve all packages for every supported
+    # Ubuntu version (22.04/jammy, 24.04/noble, 26.04/resolute) on all four
+    # architectures (amd64, arm64, s390x, ppc64el).
+    if sudo apt-get update -o "Dir::Etc::SourceList=/dev/stdin" \
+      -o "Dir::Etc::SourceParts=/dev/null" \
+      -o "APT::Get::List-Cleanup=false" \
+      -o "DPkg::Lock::Timeout=${RETRY_INTERVAL}" \
+      -o "Acquire::Retries=3" \
+      <<< "deb ${mirror} ${codename} main restricted universe multiverse
+deb ${mirror} ${codename}-updates main restricted universe multiverse
+deb ${mirror} ${codename}-security main restricted universe multiverse" 2>&1; then
+      echo "Successfully updated with mirror: ${mirror}" 1>&2
+      return 0
+    fi
+    echo "Mirror ${mirror} failed, trying next..." 1>&2
+  done
+
+  # Last resort: the alternate mirrors may not be reliably reachable from every network this
+  # script runs in, whereas the default sources are known-good for this host and may have only
+  # failed transiently on the first attempt. Retry them once more before giving up entirely.
+  echo "All fallback mirrors failed, retrying default sources one more time..." 1>&2
+  if sudo apt-get update -o DPkg::Lock::Timeout="${RETRY_INTERVAL}" -o Acquire::Retries="3" 2>&1; then
+    return 0
+  fi
+
+  echo "All mirrors failed" 1>&2
+  return 1
+}
+
+# Synchronize our repositories so that further installation steps are working with updated cache
 # and repo metadata.
 synchronize_repos() {
   case $PACKAGE_MANAGER in
     apt)
-      sudo apt update
+      apt_update_with_fallback
       ;;
     dnf)
       sudo dnf makecache

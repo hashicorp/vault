@@ -1102,13 +1102,24 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 		}
 	}
 
-	mountValidationResp := i.router.ValidateMountByAccessor(lAlias.MountAccessor)
-	if mountValidationResp == nil {
-		return nil, fmt.Errorf("invalid mount accessor %q", lAlias.MountAccessor)
+	var mountValidationResp *ValidateMountResponse
+	var isSyntheticLocal bool
+	if i.syntheticAliasAccessorValidator != nil {
+		valid, isLocal, err := i.syntheticAliasAccessorValidator.validateSyntheticAliasAccessor(ctx, lAlias.MountAccessor)
+		if err == nil && valid && isLocal {
+			isSyntheticLocal = true
+		}
 	}
 
-	if !mountValidationResp.MountLocal {
-		return nil, fmt.Errorf("mount accessor %q is not local", lAlias.MountAccessor)
+	if !isSyntheticLocal {
+		mountValidationResp = i.router.ValidateMountByAccessor(lAlias.MountAccessor)
+		if mountValidationResp == nil {
+			return nil, fmt.Errorf("invalid mount accessor %q", lAlias.MountAccessor)
+		}
+
+		if !mountValidationResp.MountLocal {
+			return nil, fmt.Errorf("mount accessor %q is not local", lAlias.MountAccessor)
+		}
 	}
 
 	alias, err := i.MemDBAliasByFactors(lAlias.MountAccessor, lAlias.Name, true, false)
@@ -1155,8 +1166,10 @@ func (i *IdentityStore) processLocalAlias(ctx context.Context, lAlias *logical.A
 	alias.Name = lAlias.Name
 	alias.MountAccessor = lAlias.MountAccessor
 	alias.Metadata = lAlias.Metadata
-	alias.MountPath = mountValidationResp.MountPath
-	alias.MountType = mountValidationResp.MountType
+	if mountValidationResp != nil {
+		alias.MountPath = mountValidationResp.MountPath
+		alias.MountType = mountValidationResp.MountType
+	}
 	alias.Local = lAlias.Local
 	alias.CustomMetadata = lAlias.CustomMetadata
 	alias.Issuer = lAlias.Issuer

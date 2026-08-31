@@ -37,13 +37,21 @@ type UIConfig struct {
 func NewUIConfig(enabled bool, physicalStorage physical.Backend, barrierStorage logical.Storage) *UIConfig {
 	defaultHeaders := http.Header{}
 	connectSrcHeader := "connect-src 'self';"
+	scriptSrcHeader := "script-src 'self';"
 	defaultHeaders.Set("Service-Worker-Allowed", "/")
 	defaultHeaders.Set("X-Content-Type-Options", "nosniff")
 	isHVD := os.Getenv("VAULT_CLOUD_ADMIN_NAMESPACE") // grab feature flag to determine if HVD
 	if isHVD != "" && isHVD != "0" {                  // only if HVD, set connect-src to include posthog
 		connectSrcHeader = "connect-src 'self' https://eu.i.posthog.com;"
+	} else {
+		// Allow event delivery to api.segment.io and the settings + Amplitude
+		// integration bundle from cdn.segment.com. Allowlisting only permits
+		// the traffic; nothing is sent unless UI telemetry is operator-enabled
+		// and the user has consented.
+		connectSrcHeader = "connect-src 'self' https://api.segment.io https://cdn.segment.com;"
+		scriptSrcHeader = "script-src 'self' https://cdn.segment.com;"
 	}
-	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; "+connectSrcHeader+" img-src 'self' data:; script-src 'self'; style-src 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
+	defaultHeaders.Set("Content-Security-Policy", "default-src 'none'; "+connectSrcHeader+" img-src 'self' data:; "+scriptSrcHeader+" style-src 'self'; form-action  'none'; frame-ancestors 'none'; font-src 'self'")
 	return &UIConfig{
 		physicalStorage: physicalStorage,
 		barrierStorage:  barrierStorage,

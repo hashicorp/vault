@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 	uberAtomic "go.uber.org/atomic"
@@ -42,18 +43,33 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			},
 			Transform: billing.DataProtectionEngineCounts{
 				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			GcpKms: billing.DataProtectionEngineCounts{
 				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			Oidc: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			Spiffe: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 			ExternalCa: billing.CredentialUnits{
 				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
 			},
 		},
 		Logger: logger,
@@ -110,8 +126,15 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 		for {
 			select {
 			case <-ticker.C:
-				if err := c.updateBillingMetrics(ctx, clock.Now().UTC()); err != nil {
+				now := clock.Now().UTC()
+				if err := c.updateBillingMetrics(ctx, now); err != nil {
 					c.logger.Error("error updating billing metrics", "error", err)
+				}
+				// If active node, also send metrics to the control hub
+				if state := c.HAStateWithLock(); state == consts.Active {
+					if err := c.sendBillingMetrics(ctx, now); err != nil {
+						c.logger.Error("error sending billing metrics", "error", err)
+					}
 				}
 			case <-ctx.Done():
 				return
@@ -123,6 +146,12 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				// On month boundary, we need to flush the current in-memory counts to storage
 				if err := c.updateBillingMetrics(ctx, previousMonth); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
+				}
+				// Send the month's final counts and attributions to control hub
+				if state := c.HAStateWithLock(); state == consts.Active {
+					if err := c.sendBillingMetrics(ctx, previousMonth); err != nil {
+						c.logger.Error("error sending billing metrics", "error", err)
+					}
 				}
 				c.HandleStartOfMonth(ctx, currentMonth)
 				endOfMonth.Reset(untilNextMonth(currentMonth))
@@ -257,6 +286,26 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.SecretEngineCounts.Transit.MountAttribution = make(map[string]logical.MountAttribution)
 	c.consumptionBilling.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
 
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Unlock()
+
 	return nil
 }
 
@@ -387,6 +436,21 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	// could contain a different value from the billable value.
 	if err := c.UpdateTransitAttribution(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transit mount breakdown: %w", err)
+	}
+	if err := c.UpdateTransformAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store transform mount breakdown: %w", err)
+	}
+	if err := c.UpdateOidcAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store OIDC mount breakdown: %w", err)
+	}
+	if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
+	}
+	if err := c.UpdateExternalCaAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store external ca mount breakdown: %w", err)
+	}
+	if err := c.UpdateSpiffeAttribution(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store spiffe mount breakcout: %w", err)
 	}
 
 	return nil

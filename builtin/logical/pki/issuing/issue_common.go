@@ -148,11 +148,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 			} else {
 				// Only add to dnsNames if it's actually a DNS name but convert
 				// idn first
-				p := idna.New(
-					idna.StrictDomainName(true),
-					idna.VerifyDNSLength(true),
-				)
-				converted, err := p.ToASCII(cn)
+				converted, err := idnaToASCII(cn)
 				if err != nil {
 					return nil, nil, errutil.UserError{Err: err.Error()}
 				}
@@ -172,11 +168,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 					} else {
 						// Only add to dnsNames if it's actually a DNS name but
 						// convert idn first
-						p := idna.New(
-							idna.StrictDomainName(true),
-							idna.VerifyDNSLength(true),
-						)
-						converted, err := p.ToASCII(v)
+						converted, err := idnaToASCII(v)
 						if err != nil {
 							return nil, nil, errutil.UserError{Err: err.Error()}
 						}
@@ -486,6 +478,33 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 	return creation, warnings, nil
 }
 
+// idnaProfile is the IDNA profile used for DNS name conversion throughout this
+// package. Constructed once and reused.
+var idnaProfile = idna.New(
+	idna.StrictDomainName(true),
+	idna.VerifyDNSLength(true),
+)
+
+// idnaToASCII converts a domain name to its ASCII (Punycode) representation.
+// It handles FQDNs with trailing dots by stripping the dot before IDNA
+// conversion and re-appending it afterward, since Unicode 16 IDNA rules
+// (golang.org/x/net v0.58+) reject domains with trailing dots when DNS
+// length validation is enabled.
+func idnaToASCII(domain string) (string, error) {
+	fqdn := strings.HasSuffix(domain, ".")
+	if fqdn {
+		domain = domain[:len(domain)-1]
+	}
+	out, err := idnaProfile.ToASCII(domain)
+	if err != nil {
+		return "", err
+	}
+	if fqdn {
+		out += "."
+	}
+	return out, nil
+}
+
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
@@ -560,11 +579,9 @@ func ValidateNames(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo,
 			if reducedName != "" {
 				// See note above about splitLabels having only one segment
 				// and setting reducedName to the empty string.
-				p := idna.New(
-					idna.StrictDomainName(true),
-					idna.VerifyDNSLength(true),
-				)
-				converted, err := p.ToASCII(reducedName)
+				// Use idnaToASCII to handle trailing dots correctly; newer
+				// versions of golang.org/x/text/idna reject labels with them.
+				converted, err := idnaToASCII(reducedName)
 				if err != nil {
 					return name
 				}

@@ -64,6 +64,7 @@ func (b *backendGRPCPluginClient) Initialize(ctx context.Context, req *logical.I
 		args.MountType = req.MountType
 		args.MountAccessor = req.MountAccessor
 		args.BackendUuid = req.BackendUUID
+		args.MountRunningVersion = req.MountRunningVersion
 	}
 	reply, err := b.client.Initialize(ctx, args, largeMsgGRPCCallOpts...)
 	if err != nil {

@@ -30,10 +30,6 @@ func TestNewTestClusterInmemNetworkListener(t *testing.T) {
 	opts.SyncTest = true
 	SyncTestNow(t, func(t *testing.T) {
 		cluster := vault.NewTestCluster(t, conf, opts)
-		defer func() {
-			synctest.Wait()
-			cluster.CleanupSyncTest()
-		}()
 		testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 		for i := range cluster.Cores {
 			require.NoError(t, testcluster.NodeHealthy(t.Context(), cluster, i))

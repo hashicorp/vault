@@ -80,7 +80,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 	if err != nil {
 		return 0, err
 	}
-	maxCount, hwmUpdated := c.compareCounts(previousThirdPartyPluginCounts, len(currentThirdPartyPluginMounts), "Third-Party Plugins")
+	maxCount, hwmUpdated := c.compareCounts(len(currentThirdPartyPluginMounts), previousThirdPartyPluginCounts, "Third-Party Plugins")
 	err = c.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth, maxCount)
 	if err != nil {
 		return 0, err
@@ -91,15 +91,20 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		attribution := make(MountAttributionMap)
 		for _, entry := range currentThirdPartyPluginMounts {
 			if entry != nil {
+				var namespacePath string
+				if ns, err := c.NamespaceByID(ctx, entry.NamespaceID); err == nil && ns != nil {
+					namespacePath = ns.Path
+				}
 				// Each deduplicated plugin counts as 1
 				attribution[entry.Accessor] = logical.MountAttribution{
-					Count:            1,
-					MountAccessor:    entry.Accessor,
-					MountPath:        entry.Path,
-					MountType:        entry.Type,
-					NamespaceID:      entry.NamespaceID,
-					NamespacePath:    entry.namespace.Path,
-					BackendAwareUUID: entry.BackendAwareUUID,
+					Count:               1,
+					MountAccessor:       entry.Accessor,
+					MountPath:           entry.Path,
+					MountType:           entry.Type,
+					MountRunningVersion: entry.RunningVersion,
+					NamespaceID:         entry.NamespaceID,
+					NamespacePath:       namespacePath,
+					BackendAwareUUID:    entry.BackendAwareUUID,
 				}
 			}
 		}
@@ -1268,13 +1273,13 @@ func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, cur
 	return currentCount, nil
 }
 
-// IncrementOidcTokenCount increments the in-memory OIDC token count and total duration hours.
-// This is called each time an OIDC token is created. The counts are flushed to storage
-// periodically by the consumption billing metrics worker.
+// IncrementOidcTokenCount increments the in-memory OIDC token count and total duration hours,
+// and accumulates per-mount attribution. This is called each time an OIDC token is created.
+// The counts and attribution are flushed to storage periodically by the consumption billing metrics worker.
 // Note: OidcTokenDuration is not normalized and is duration-adjusted during flush to storage in UpdateOidcDurationAdjustedCount.
-func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
-	c.consumptionBillingLock.Lock()
-	defer c.consumptionBillingLock.Unlock()
+func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.MountAttribution) {
+	c.consumptionBillingLock.RLock()
+	defer c.consumptionBillingLock.RUnlock()
 
 	cb := c.consumptionBilling
 
@@ -1284,6 +1289,22 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
 
 	// Update raw token duration
 	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(durationSeconds)
+
+	// Accumulate per-mount attribution if the accessor is set.
+	if attr.MountAccessor == "" {
+		return
+	}
+	// Resolve the parent namespace ID via the pluggable hook (no-op on OSS).
+	attr.ParentNamespaceID = getParentNamespaceID(c, attr.NamespacePath)
+	cb.SecretEngineCounts.Oidc.MountAttributionLock.Lock()
+	// Always write the full entry from the current request so that any metadata
+	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
+	// Only the accumulated count is carried over from the previous entry.
+	if existing, ok := cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor]; ok {
+		attr.Count = toFloat64(existing.Count) + toFloat64(attr.Count)
+	}
+	cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor] = attr
+	cb.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
 }
 
 // UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,

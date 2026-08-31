@@ -111,7 +111,7 @@ type ServerCommand struct {
 	reloadFuncs       *map[string][]reloadutil.ReloadFunc
 	startedCh         chan (struct{}) // for tests
 	reloadedCh        chan (struct{}) // for tests
-	licenseReloadedCh chan (error)    // for tests
+	licenseReloadedCh chan error      // for tests
 
 	allLoggers []hclog.Logger
 
@@ -436,14 +436,9 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 	// Load the configuration
 	var config *server.Config
 	for _, path := range c.flagConfigs {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): return to server.LoadConfig once deprecation is done
-		current, duplicate, err := server.LoadConfigCheckDuplicate(path)
+		current, err := server.LoadConfig(path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
-		}
-		if duplicate {
-			c.UI.Warn(fmt.Sprintf(
-				"WARNING: Duplicate keys found in the Vault server configuration file %q, duplicate keys in HCL files are deprecated and will be forbidden in a future release.", path))
 		}
 
 		configErrors = append(configErrors, current.Validate(path)...)
@@ -1512,6 +1507,9 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
+	infoKeys = append(infoKeys, "operator namespace")
+	info["operator namespace"] = config.OperatorNamespacePath
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1684,6 +1682,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for shutdown
 	shutdownTriggered := false
 	retCode := 0
+	disableGoroutineDump := config.DisableGoroutineTraceDump
 
 	for !shutdownTriggered {
 		select {
@@ -1694,6 +1693,11 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 			shutdownTriggered = true
+			if !disableGoroutineDump {
+				if path := writeGoroutineDump(c.logger); path != "" {
+					c.logger.Info("Wrote goroutine dump to", "path", path)
+				}
+			}
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
 
@@ -1763,11 +1767,19 @@ func (c *ServerCommand) Run(args []string) int {
 				}
 			}
 
+			// Update the reloadable disable_goroutine_trace_dump setting.
+			disableGoroutineDump = config.DisableGoroutineTraceDump
+
 			// notify ServiceRegistration that a configuration reload has occurred
 			if sr := coreConfig.GetServiceRegistration(); sr != nil {
 				var srConfig *map[string]string
 				if config.ServiceRegistration != nil {
 					srConfig = &config.ServiceRegistration.Config
+				} else if config.Storage.Type == storageTypeConsul {
+					// If no explicit service_registration block exists but Consul is
+					// the storage backend, maintain the implicit registration that was
+					// set up at startup. Passing nil would permanently deregister Vault.
+					srConfig = &config.Storage.Config
 				}
 				sr.NotifyConfigurationReload(srConfig)
 			}
@@ -1801,37 +1813,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
 				c.logger.Info("Writing stacktrace to file")
-
-				dir := ""
-				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
-				if path != "" {
-					if _, err := os.Stat(path); err != nil {
-						c.logger.Error("Checking stacktrace path failed", "error", err)
-						continue
-					}
-					dir = path
-				} else {
-					dir, err = os.MkdirTemp("", "vault-stacktrace")
-					if err != nil {
-						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
-						continue
-					}
+				if path := writeGoroutineDump(c.logger); path != "" {
+					c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", path))
 				}
-
-				f, err := os.CreateTemp(dir, "stacktrace")
-				if err != nil {
-					c.logger.Error("Could not create stacktrace file", "error", err)
-					continue
-				}
-
-				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
-					f.Close()
-					c.logger.Error("Could not write stacktrace to file", "error", err)
-					continue
-				}
-
-				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
-				f.Close()
 			}
 
 			// We can only get pprof outputs via the API but sometimes Vault can get
@@ -1921,9 +1905,7 @@ func (c *ServerCommand) reloadConfigFiles() (*server.Config, []configutil.Config
 	var config *server.Config
 	var configErrors []configutil.ConfigError
 	for _, path := range c.flagConfigs {
-		// don't care about HCL duplicate attributes here on reloading
-		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to server.LoadConfig and remove duplicate when deprecation is done
-		current, _, err := server.LoadConfigCheckDuplicate(path)
+		current, err := server.LoadConfig(path)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -3013,6 +2995,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:                config.DisableSSCTokens,
 		Experiments:                     config.Experiments,
 		AdministrativeNamespacePath:     config.AdministrativeNamespacePath,
+		OperatorNamespacePath:           config.OperatorNamespacePath,
 		ObservationSystemConfig:         config.Observations,
 		ReportingScanDirectory:          config.ReportingScanDirectory,
 		EnableUnauthenticatedAccess:     config.EnableUnauthenticatedAccess,

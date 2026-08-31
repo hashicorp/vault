@@ -16,6 +16,7 @@ func newSarifCmd() *cobra.Command {
 	sarifCmd.AddCommand(newSarifAnnotateCmd())
 	sarifCmd.AddCommand(newSarifConvertZapCmd())
 	sarifCmd.AddCommand(newSarifCVEReportCmd())
+	sarifCmd.AddCommand(newSarifUploadUSTArchiveCmd())
 
 	return sarifCmd
 }

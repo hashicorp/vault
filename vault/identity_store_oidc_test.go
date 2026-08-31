@@ -1600,7 +1600,7 @@ func TestOIDC_isTargetNamespacedKey(t *testing.T) {
 }
 
 func TestOIDC_Flush(t *testing.T) {
-	c := newOIDCCache(ttlcache.NoTTL)
+	c := newOIDCCache(t.Context(), ttlcache.NoTTL, false)
 	ns := []*namespace.Namespace{
 		{ID: "ns0"},
 		{ID: "ns1"},
@@ -1636,7 +1636,7 @@ func TestOIDC_Flush(t *testing.T) {
 }
 
 func TestOIDC_CacheNamespaceNilCheck(t *testing.T) {
-	cache := newOIDCCache(ttlcache.NoTTL)
+	cache := newOIDCCache(t.Context(), ttlcache.NoTTL, false)
 
 	if _, _, err := cache.Get(nil, "foo"); err == nil {
 		t.Fatal("expected error, got nil")

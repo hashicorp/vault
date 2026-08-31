@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -1080,14 +1081,46 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		"ttl":       int64(role.TokenTTL.Seconds()),
 	}
 
-	// Track OIDC token generation for billing
-	// Store duration (seconds), normalize later during storage flush
+	// Track OIDC token generation for billing.
+	// Store duration (seconds), normalize later during storage flush.
 	validity := expiry.Seconds()
 	if i.billingCounter != nil {
-		i.billingCounter.IncrementOidcTokenCount(validity)
+		// req.MountAccessor is only set in the router's cleanup defer (after the
+		// handler returns), so we resolve the mount entry via the router instead.
+		attr := i.oidcBillingAttribution(ctx, ns, validity)
+		i.billingCounter.IncrementOidcTokenCount(validity, attr)
 	}
 
 	return retResp, nil
+}
+
+// oidcBillingAttribution builds a MountAttribution for the identity mount by
+// looking up the mount entry from the router. req.MountAccessor is not
+// available during handler execution — it is only populated in the router's
+// post-handler cleanup defer — so we resolve the mount entry directly here.
+// validitySeconds is the raw token TTL in seconds; the duration-adjusted count
+// is computed inside this function via DurationAdjustedTokenCount.
+func (i *IdentityStore) oidcBillingAttribution(ctx context.Context, ns *namespace.Namespace, validitySeconds float64) logical.MountAttribution {
+	attr := logical.MountAttribution{
+		MountPath: "identity/",
+		MountType: "identity",
+		Count:     DurationAdjustedTokenCount(validitySeconds),
+	}
+	if ns != nil {
+		attr.NamespaceID = ns.ID
+		attr.NamespacePath = ns.Path
+	}
+	if i.router != nil {
+		// Each namespace has its own identity mount at "<ns-path>identity/".
+		// MatchingMountEntry prepends the namespace path from ctx, so passing
+		// the original request context resolves the correct per-namespace mount.
+		if mountEntry := i.router.MatchingMountEntry(ctx, "identity/"); mountEntry != nil {
+			attr.MountAccessor = mountEntry.Accessor
+			attr.BackendAwareUUID = mountEntry.BackendAwareUUID
+			attr.MountRunningVersion = mountEntry.RunningVersion
+		}
+	}
+	return attr
 }
 
 func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name string) (*namedKey, error) {
@@ -2202,10 +2235,10 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	}
 }
 
-func newOIDCCache(defaultTTL time.Duration) *oidcCache {
+func newOIDCCache(ctx context.Context, defaultTTL time.Duration, synctest bool) *oidcCache {
 	c := ttlcache.New[string, any](ttlcache.WithTTL[string, any](defaultTTL))
 	if defaultTTL > 0 {
-		go c.Start()
+		cache.Start(ctx, c, !synctest)
 	}
 	return &oidcCache{c: c}
 }

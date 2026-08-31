@@ -128,7 +128,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 			expectedSHA string
 		}{
 			"versioned":       {"v1.0.0", sha256Sum},
-			"builtin version": {versions.GetBuiltinVersion(consts.PluginTypeSecrets, pluginName), ""},
+			"builtin version": {versions.GetBuiltinVersion(consts.PluginTypeCredential, pluginName), ""},
 		} {
 			t.Run(name, func(t *testing.T) {
 				ui, cmd := testPluginInfoCommand(t)

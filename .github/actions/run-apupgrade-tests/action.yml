@@ -57,6 +57,7 @@ runs:
     - uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
+        no-save: true
     - name: Build external tools
       uses: ./.github/actions/install-tools
     - name: Checkout VCM repository

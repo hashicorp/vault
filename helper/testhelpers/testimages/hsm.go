@@ -58,7 +58,7 @@ func GetImageRepoAndTag(t *testing.T, hsm bool) (string, string) {
 // If vaultImage is populated, it is split by ":" and the two pieces are returned
 // as the repo and tag.  If vault_binary is populated, an image is created based on
 // the latest hsm image.
-// (TODO: currently hardcoded as "docker.io/hashicorp/vault-enterprise:2.0.1-ent.hsm")
+// (TODO: currently hardcoded as "docker.mirror.hashicorp.services/vault-enterprise:2.0.4-ent.hsm")
 // This is done by installing SoftHSM and the vaultBinary on top of that image.
 // If neither is populated an error is returned.
 func CreateOrReturnDockerImage(hsm bool) (repo string, tag string, output []byte, err error) {
@@ -84,9 +84,9 @@ func CreateOrReturnDockerImage(hsm bool) (repo string, tag string, output []byte
 		}
 		repo := base + "-ci"
 		tag := "latest"
-		source := "docker.io/" + base + ":latest"
+		source := "docker.mirror.hashicorp.services/" + base + ":latest"
 		if hsm {
-			source = "docker.io/hashicorp/vault-enterprise:2.0.1-ent.hsm"
+			source = "docker.mirror.hashicorp.services/hashicorp/vault-enterprise:2.0.4-ent.hsm"
 			tag = "latest-hsm"
 		}
 		target := fmt.Sprintf("%s:%s", repo, tag)
@@ -121,17 +121,22 @@ func createBuildContextWithBinary(vaultBinary string) (dockhelper.BuildContext, 
 }
 
 // createDockerImage creates an image named toImage from the given context and Dockerfile.
-func createDockerImage(toImage, containerFile string, bCtx dockhelper.BuildContext) ([]byte, error) {
+// Extra BuildOpt values (e.g. BuildArgs) may be passed to customise the build.
+func createDockerImage(toImage, containerFile string, bCtx dockhelper.BuildContext, extraOpts ...dockhelper.BuildOpt) ([]byte, error) {
 	client, err := dockhelper.NewDockerAPI()
 	if err != nil {
 		return nil, err
 	}
 
-	output, err := dockhelper.BuildImage(context.Background(), client, containerFile, bCtx,
+	buildOpts := []dockhelper.BuildOpt{
 		dockhelper.BuildRemove(true),
 		dockhelper.BuildForceRemove(true),
 		dockhelper.BuildPullParent(true),
-		dockhelper.BuildTags([]string{toImage}))
+		dockhelper.BuildTags([]string{toImage}),
+	}
+	buildOpts = append(buildOpts, extraOpts...)
+
+	output, err := dockhelper.BuildImage(context.Background(), client, containerFile, bCtx, buildOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("error building docker image: %w (output: %s)", err, output)
 	}
@@ -159,8 +164,18 @@ CMD ["server", "-dev"]
 	return createDockerImage(toImage, containerFile, bCtx)
 }
 
-// CreateHSMDockerImage creates a new vault-enterprise hsm docker image from an existing
-// hsm image.  The new image includes softhsm, and optionally a new vault binary.
+// CreateHSMDockerImage creates a new vault-enterprise HSM docker image from an
+// existing HSM base image. SoftHSM 2.7.0 is built from source using only
+// build deps from the UBI 10 repos (no external mirrors required at runtime).
+//
+// SoftHSM 2.6.1 — the newest version packaged by any RHEL 10-family distro —
+// crashes with a C++ bounds-check assertion when AES-GCM is called without
+// additional authenticated data (https://github.com/softhsm/SoftHSMv2/pull/664,
+// fixed in 2.7.0).  Until a distro ships 2.7.0 we must build from source.
+//
+// If GH_TOKEN or GITHUB_TOKEN is set in the environment the token is forwarded
+// to the build as a build-arg so that the GitHub release download is
+// authenticated and not subject to anonymous rate-limiting.
 func CreateHSMDockerImage(fromImage, toImage, vaultBinary string) ([]byte, error) {
 	bCtx := dockhelper.NewBuildContext()
 	if vaultBinary != "" {
@@ -185,38 +200,32 @@ exec docker-entrypoint.sh "$@"
 		Mode: 0o755,
 	}
 
-	bCtx["centos-stream.repo"] = &dockhelper.FileContents{
-		Data: []byte(`
-[centos-10-baseos]
-name=CentOS Stream 10 - BaseOS
-baseurl=https://mirror.stream.centos.org/10-stream/BaseOS/$basearch/os/
-gpgcheck=0
-enabled=1
+	// softhsm270SHA256 is the SHA-256 of the SoftHSMv2 2.7.0 source archive from
+	// https://github.com/softhsm/SoftHSMv2/archive/refs/tags/2.7.0.tar.gz
+	softhsm270SHA256 := "be14a5820ec457eac5154462ffae51ba5d8a643f6760514d4b4b83a77be91573"
 
-[centos-10-appstream]
-name=CentOS Stream 10 - AppStream
-baseurl=https://mirror.stream.centos.org/10-stream/AppStream/$basearch/os/
-gpgcheck=0
-enabled=1
-`),
-		Mode: 0o644,
-	}
-
+	// All build deps (gcc, openssl-devel, etc.) are available in the UBI 10
+	// baseos/appstream/CRB repos that are already enabled in the base image.
 	containerFile := fmt.Sprintf(`FROM %s AS builder
+
 USER root
 
-COPY centos-stream.repo /etc/yum.repos.d
+RUN microdnf install -y wget make gcc gcc-c++ openssl-devel automake autoconf libtool pkg-config
 
-RUN microdnf install -y tar gzip wget make gcc gcc-c++ openssl-devel sudo microdnf automake autoconf libtool pkg-config
+# GITHUB_TOKEN is an optional build-arg; when set it is forwarded as a Bearer
+# token so the download is authenticated and not subject to anonymous rate-limiting.
+ARG GITHUB_TOKEN
+RUN if [ -n "${GITHUB_TOKEN}" ]; then \
+        wget -q --header="Authorization: Bearer ${GITHUB_TOKEN}" \
+            https://github.com/softhsm/SoftHSMv2/archive/refs/tags/2.7.0.tar.gz; \
+    else \
+        wget -q \
+            https://github.com/softhsm/SoftHSMv2/archive/refs/tags/2.7.0.tar.gz; \
+    fi && \
+    echo "%s  2.7.0.tar.gz" | sha256sum -c && \
+    tar -xzf 2.7.0.tar.gz
 
-RUN pwd
-
-RUN wget https://github.com/softhsm/SoftHSMv2/archive/refs/tags/2.7.0.tar.gz
-RUN echo "be14a5820ec457eac5154462ffae51ba5d8a643f6760514d4b4b83a77be91573 2.7.0.tar.gz" | sha256sum -c
-RUN tar -xzf 2.7.0.tar.gz
-
-# disable GOST cryptography as it requires extra plugins
-RUN cd SoftHSMv2-2.7.0 && sh autogen.sh && ./configure --disable-gost && make
+RUN cd SoftHSMv2-2.7.0 && sh autogen.sh && ./configure --disable-gost && make -j$(nproc)
 
 FROM %s
 
@@ -225,7 +234,9 @@ USER root
 COPY --from=builder /SoftHSMv2-2.7.0/src/lib/.libs/libsofthsm2.so /usr/lib64/libsofthsm2.so
 COPY --from=builder /SoftHSMv2-2.7.0/src/bin/util/softhsm2-util /usr/bin/softhsm2-util
 COPY --from=builder /SoftHSMv2-2.7.0/src/lib/common/softhsm2.conf /etc/softhsm2.conf
-RUN mkdir /usr/local/lib/softhsm && ln /usr/lib64/libsofthsm2.so /usr/local/lib/softhsm/libsofthsm2.so
+
+RUN mkdir -p /usr/local/lib/softhsm && \
+    ln -sf /usr/lib64/libsofthsm2.so /usr/local/lib/softhsm/libsofthsm2.so
 
 # Put the tokens under /vault/file since that's the data volume, and if we want
 # to start a cluster using a pre-existing volume (i.e. resuming from a previous
@@ -241,8 +252,20 @@ COPY vault /bin/vault
 USER vault
 CMD ["server", "-dev"]
 ENTRYPOINT ["setup-softhsm.sh"]
-`, fromImage, fromImage)
-	return createDockerImage(toImage, containerFile, bCtx)
+`, fromImage, softhsm270SHA256, fromImage)
+
+	ghToken := os.Getenv("GH_TOKEN")
+	if ghToken == "" {
+		ghToken = os.Getenv("GITHUB_TOKEN")
+	}
+
+	// Forward a GitHub token as a build-arg if one is available in the environment.
+	var extraOpts []dockhelper.BuildOpt
+	if ghToken != "" {
+		extraOpts = append(extraOpts, dockhelper.BuildArgs{"GITHUB_TOKEN": &ghToken})
+	}
+
+	return createDockerImage(toImage, containerFile, bCtx, extraOpts...)
 }
 
 const (

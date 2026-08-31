@@ -55,10 +55,12 @@
 @use 'components/clients-counts-card.scss';
 @use 'components/clients-date-range';
 @use 'components/cluster-banners';
+@use 'components/checklist-widget';
 @use 'components/console-ui-panel';
 @use 'components/control-group';
 @use 'components/doc-link';
 @use 'components/env-banner';
+@use 'components/explore-vault';
 @use 'components/form-section';
 @use 'components/global-flash';
 @use 'components/icon';
@@ -71,6 +73,7 @@
 @use 'components/masked-input';
 @use 'components/namespace-picker';
 @use 'components/navigate-input';
+@use 'components/onboarding-card';
 @use 'components/overview-card';
 @use 'components/page-header-old';
 @use 'components/popup-menu';

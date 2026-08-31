@@ -40,6 +40,7 @@ module('Integration | Component | kmip | Page::Scope::Roles', function (hooks) {
       pageSize: 10,
       filteredTotal: this.roles.length,
       total: this.roles.length,
+      totalItems: this.roles.length,
     };
     this.filterValue = '';
 

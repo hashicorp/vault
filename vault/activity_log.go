@@ -1946,7 +1946,7 @@ func (c *Core) ActivityLogInjectResponse(ctx context.Context, pq *activity.Preco
 func (a *ActivityLog) includeInResponse(query *namespace.Namespace, record *namespace.Namespace) bool {
 	if record == nil {
 		// Deleted namespace, only include in root or admin namespace (if configured) queries
-		adminNsPath := namespace.Canonicalize(a.core.administrativeNamespacePath())
+		adminNsPath := namespace.Canonicalize(a.core.AdministrativeNamespacePath())
 		return query.ID == namespace.RootNamespaceID || (adminNsPath != "" && query.Path == adminNsPath)
 	}
 	return record.HasParent(query)

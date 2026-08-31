@@ -37,6 +37,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     ];
     this.destinations.meta = {
       filteredTotal: this.destinations.length,
+      totalItems: this.destinations.length,
       currentPage: 1,
       pageSize: 5,
     };

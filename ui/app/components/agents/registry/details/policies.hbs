@@ -12,9 +12,9 @@
     </H.Tr>
   </:head>
   <:body as |B|>
-    {{#each @data.agent.ceiling_policy as |policy|}}
+    {{#each @data.agent.ceiling_policies as |policy|}}
       <B.Tr>
-        <B.Td>Ceiling</B.Td>
+        <B.Td>OBO ceiling</B.Td>
         <B.Td>{{@data.agent.display_name}}</B.Td>
         <B.Td>
           <Hds::Link::Inline @route="vault.cluster.policy.show" @models={{array "acl" policy}}>
@@ -56,14 +56,14 @@
   </Hds::Text::Display>
 
   <div class="has-top-margin-12">
-    <Hds::Tabs
+    <Page::Tabs
+      @tabs={{this.customTabs}}
       @isParentVisible={{@isParentVisible}}
       @selectedTabIndex={{this.selectedTabIndex}}
       @onClickTab={{this.onClickTab}}
       as |T|
     >
       {{#each this.customTabs key="key" as |tab|}}
-        <T.Tab data-test-tab={{tab.key}}>{{tab.label}}</T.Tab>
         <T.Panel data-test-panel={{tab.key}} class="has-top-padding-m">
           {{#if (eq tab.key "allowed-actions")}}
             <PolicyAllowedActions @aggregatedPolicy={{@data.aggregatePolicy}} @isCard={{true}} />
@@ -78,6 +78,6 @@
           {{/if}}
         </T.Panel>
       {{/each}}
-    </Hds::Tabs>
+    </Page::Tabs>
   </div>
 </div>

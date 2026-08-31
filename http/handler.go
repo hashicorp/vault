@@ -304,6 +304,11 @@ func handlerWithSettings(props *vault.HandlerProperties, settings handlerSetting
 		chrootNamespace = props.ListenerConfig.ChrootNamespace
 	}
 
+	operatorNamespace := ""
+	if p := core.OperatorNamespacePath(); p != "" {
+		operatorNamespace = namespace.Canonicalize(p)
+	}
+
 	switch {
 	case props.RecoveryMode:
 		raw := vault.NewRawBackend(core)
@@ -313,52 +318,52 @@ func handlerWithSettings(props *vault.HandlerProperties, settings handlerSetting
 		mux.Handle("/v1/sys/generate-recovery-token/update", handleSysGenerateRootUpdate(core, strategy))
 	default:
 		// Handle non-forwarded paths
-		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core, chrootNamespace))
-		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/"+operatorNamespace+"sys/config/state/", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/"+operatorNamespace+"sys/host-info", handleLogicalNoForward(core, chrootNamespace))
 
-		mux.Handle("/v1/sys/init", handleSysInit(core))
-		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core,
+		mux.Handle("/v1/"+operatorNamespace+"sys/init", handleSysInit(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/seal-status", handleSysSealStatus(core,
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
-		mux.Handle("/v1/sys/seal-backend-status", handleSysSealBackendStatus(core))
-		mux.Handle("/v1/sys/seal", handleSysSeal(core))
-		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
-		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-		mux.Handle("/v1/sys/leader", handleSysLeader(core,
+		mux.Handle("/v1/"+operatorNamespace+"sys/seal-backend-status", handleSysSealBackendStatus(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/seal", handleSysSeal(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
+		mux.Handle("/v1/"+operatorNamespace+"sys/unseal", handleSysUnseal(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/leader", handleSysLeader(core,
 			WithRedactAddresses(props.ListenerConfig.RedactAddresses)))
-		mux.Handle("/v1/sys/health", handleSysHealth(core,
+		mux.Handle("/v1/"+operatorNamespace+"sys/health", handleSysHealth(core,
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
-		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/"+operatorNamespace+"sys/monitor", handleLogicalNoForward(core, chrootNamespace))
 
 		// Register generate-root endpoints as unauthenticated handlers only if unauthGenerateRoot is true.
 		// When false, these endpoints will be handled by the sys backend as authenticated endpoints.
 		if settings.unauthGenerateRoot {
-			mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
+			mux.Handle("/v1/"+operatorNamespace+"sys/generate-root/attempt", handleRequestForwarding(core,
 				handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
-			mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
+			mux.Handle("/v1/"+operatorNamespace+"sys/generate-root/update", handleRequestForwarding(core,
 				handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
 		}
 
 		// Register rekey endpoints as unauthenticated handlers only if unauthRekey is true.
 		// When false (the default), these endpoints will be handled by the sys backend as authenticated endpoints.
 		if settings.unauthRekey {
-			mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
-			mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
-			mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
-			mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
-			mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-			mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
 		}
 
-		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
-		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
-		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/storage/raft/join", handleSysRaftJoin(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
 
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core, chrootNamespace)))
 		}
-		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
+		mux.Handle("/v1/"+operatorNamespace+"sys/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
 		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
 		if core.UIEnabled() {
 			if uiBuiltIn {
@@ -694,7 +699,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				ReqPath:          r.URL.Path,
 				ClientRemoteAddr: clientAddr,
 				Method:           requestMethod,
-			})
+			},
+		)
 		defer func() {
 			// Not expecting this fail, so skipping the assertion check
 			core.FinalizeInFlightReqData(inFlightReqID, nw.StatusCode)

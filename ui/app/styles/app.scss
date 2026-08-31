@@ -7,7 +7,6 @@
 @use 'ember-basic-dropdown';
 @use 'ember-power-select';
 @use 'core';
-@use 'docs';
 
 @mixin font-face($name) {
   @font-face {

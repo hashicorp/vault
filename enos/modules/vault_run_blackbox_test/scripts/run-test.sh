@@ -133,6 +133,10 @@ fi
 if [[ "$VAULT_TEST_PACKAGE" == *"/system/"* ]]; then
     category_tags="${category_tags:+${category_tags},}system"
 fi
+# Add testonly tag when ENABLE_TESTONLY_TESTS is set (for verify tests)
+if [[ "${ENABLE_TESTONLY_TESTS:-}" == "true" ]]; then
+    category_tags="${category_tags:+${category_tags},}testonly"
+fi
 
 # Combine tags
 if [[ -n "$base_tags" && -n "$category_tags" ]]; then

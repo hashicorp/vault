@@ -110,7 +110,11 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType, parameterSet
 			req.Data["parameter_set"] = parameterSet
 		}
 		if ecKeyType != "" {
-			req.Data["hybrid_key_type_pqc"] = "ml-dsa"
+			pqcKeyType := "ml-dsa"
+			if strings.HasPrefix(parameterSet, "slh-dsa") {
+				pqcKeyType = "slh-dsa"
+			}
+			req.Data["hybrid_key_type_pqc"] = pqcKeyType
 			req.Data["hybrid_key_type_ec"] = ecKeyType
 		}
 		if keyType == "hmac" {

@@ -5,6 +5,8 @@
 
 package vault
 
-func (c *Core) setupOAuthTokenDenylist() error {
+import "context"
+
+func (c *Core) setupOAuthTokenDenylist(ctx context.Context) error {
 	return nil
 }

@@ -70,6 +70,8 @@ export const GENERAL = {
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
   confirmModalInput: '[data-test-confirmation-modal-input]',
+  confirmTextInput: '[data-test-confirm-modal-input]',
+  confirmWarning: '[data-test-confirm-modal-warning]',
   confirmMessage: '[data-test-confirm-action-message]',
   confirmTitle: '[data-test-confirm-action-title]',
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,

@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { UPGRADE_INFO } from 'vault/constants/upgrade-info';
 
@@ -46,6 +47,37 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
     assert
       .dom(GENERAL.cardContainer('Known issues'))
       .doesNotExist('Known issues card is not rendered during the initial state');
+  });
+
+  test('Analyze button is enabled on page load with the latest version pre-selected', async function (assert) {
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+    assert
+      .dom(GENERAL.button('Analyze'))
+      .isNotDisabled('Analyze button is enabled because the latest version (2.0.1) is pre-selected');
+    assert
+      .dom(GENERAL.selectByAttr('target version'))
+      .hasValue('2.0.1', 'Latest available version is pre-selected in the dropdown');
+  });
+
+  test('it shows an "already on latest" banner when current version is the latest available', async function (assert) {
+    this.version.version = '2.0.1';
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+    assert
+      .dom('[data-test-latest-empty-state]')
+      .exists('Already-on-latest banner is shown when no newer versions exist');
+    assert
+      .dom(GENERAL.button('Analyze'))
+      .doesNotExist('Analyze button is hidden when already on the latest version');
+    assert
+      .dom(GENERAL.selectByAttr('target version'))
+      .doesNotExist('Target version dropdown is hidden when already on the latest version');
+    assert
+      .dom(GENERAL.selectByAttr('2.0.1'))
+      .doesNotExist('Current version dropdown is hidden when already on the latest version');
   });
 
   test('it detects the current version', async function (assert) {
@@ -131,6 +163,40 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
         'Upgrade alert title is shown'
       );
     assert.dom(GENERAL.button('Download steps')).exists('Download steps button is rendered');
+  });
+
+  test('it surfaces the release info error message to the user', async function (assert) {
+    this.server.get(
+      '/sys/release-info',
+      () => new Response(500, {}, { errors: ['Release info request failed'] })
+    );
+
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+
+    await waitFor(GENERAL.inlineError);
+
+    assert
+      .dom(GENERAL.inlineError)
+      .hasText('500: Release info request failed', 'The API error message is shown to the user');
+  });
+
+  test('it surfaces the vault versions error message to the user', async function (assert) {
+    this.server.get(
+      '/sys/vault-versions',
+      () => new Response(500, {}, { errors: ['Vault versions request failed'] })
+    );
+
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+
+    await waitFor(GENERAL.inlineError);
+
+    assert
+      .dom(GENERAL.inlineError)
+      .hasText('500: Vault versions request failed', 'The API error message is shown to the user');
   });
 
   module('release info filtering', function () {

@@ -148,6 +148,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"default_max_request_duration":        json.Number("0"),
 				"disable_cache":                       false,
 				"disable_clustering":                  false,
+				"disable_goroutine_trace_dump":        false,
 				"disable_indexing":                    false,
 				"disable_mlock":                       false,
 				"disable_performance_standby":         false,

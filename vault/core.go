@@ -46,12 +46,14 @@ import (
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
+	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/helper/trace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -804,12 +806,25 @@ type Core struct {
 
 	certCountConsumerJobInterval time.Duration
 
-	agentRegistry *AgentRegistry
+	agentRegistry               *AgentRegistry
+	administrativeNamespacePath string
+	operatorNamespacePath       string
 
-	// noSleepOnALPNHandlerStop disables the short sleep when an ALPN handler is to be
-	// stopped, giving time for RPC requests to drain.  This is only meant to
-	// be used in test code.
-	noSleepOnALPNHandlerStop bool
+	// synctest disables the short sleep when an ALPN handler is to be
+	// stopped, giving time for RPC requests to drain.  It also means that we
+	// don't sleep during polling to see whether a cache expiry goroutine is
+	// started.
+	synctest bool
+
+	// ControlHubManager holds information regarding the node's connection to the control hub.
+	// It will be initialized to a no-op structure on CE. Access it through
+	// GetControlHubManager/SetControlHubManager, which take controlHubManagerLock.
+	ControlHubManager *ControlHubManager
+
+	// controlHubManagerLock protects the ControlHubManager pointer. It does not
+	// protect the manager's own in-memory state, which is guarded by the
+	// manager's internal locks.
+	controlHubManagerLock sync.RWMutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1000,6 +1015,9 @@ type CoreConfig struct {
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
 
+	// OperatorNamespacePath is used to configure the operator namespace path.
+	OperatorNamespacePath string
+
 	// ObservationSystemConfig is the config for the Observation System
 	ObservationSystemConfig *observations.ObservationSystemConfig
 
@@ -1024,9 +1042,8 @@ type CoreConfig struct {
 	// When false (default), "/" is allowed
 	DenySlashInTemplatedPolicyPaths bool
 
-	// NoSleepOnALPNHandlerTop means we don't sleep when ALPN handlers are
-	// stopped to give time for RPC requests to drain.  This is needed for synctest.
-	NoSleepOnALPNHandlerStop bool
+	// Synctest should be true when running within a synctest.Test bubble.
+	Synctest bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1092,6 +1109,16 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	// Instantiate a non-nil raw config if none is provided
 	if conf.RawConfig == nil {
 		conf.RawConfig = new(server.Config)
+	}
+	// Ensure SharedConfig exists so promoted fields are accessible.
+	if conf.RawConfig.SharedConfig == nil {
+		conf.RawConfig.SharedConfig = new(configutil.SharedConfig)
+	}
+	// Backfill AdministrativeNamespacePath into RawConfig when callers (e.g.
+	// tests) set it only on CoreConfig. RawConfig is the live-reloadable source
+	// of truth read by AdministrativeNamespacePath(), so it must be populated.
+	if conf.RawConfig.AdministrativeNamespacePath == "" && conf.AdministrativeNamespacePath != "" {
+		conf.RawConfig.AdministrativeNamespacePath = conf.AdministrativeNamespacePath
 	}
 
 	// secureRandomReader cannot be nil
@@ -1217,7 +1244,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		enableUnauthDROperationToken:    new(atomic.Bool),
 		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
 		certCountConsumerJobInterval:    conf.CertCountConsumerJobInterval,
-		noSleepOnALPNHandlerStop:        conf.NoSleepOnALPNHandlerStop,
+		synctest:                        conf.Synctest,
 	}
 
 	c.certCountManager = cert_count.InitCertificateCountManager(c.logger, c.certCountConsumerJobInterval)
@@ -1249,7 +1276,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
 	c.clusterAddr.Store(conf.ClusterAddr)
-	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+	c.activeContextCancelFunc.Store(context.CancelFunc(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
 
 	c.hcpLinkStatus = HCPLinkStatus{
@@ -1426,7 +1453,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	// Logical backends
-	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger, conf.AdministrativeNamespacePath)
+	c.configureLogicalBackends(conf.LogicalBackends, conf.Logger)
 
 	// Credentials backends
 	c.configureCredentialsBackends(conf.CredentialBackends, conf.Logger)
@@ -1481,6 +1508,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Initialize ControlHubManager after barrier is set up
+	c.SetControlHubManager(NewControlHubManager(c))
 
 	// Events
 	eventsLogger := conf.Logger.Named("events")
@@ -1626,7 +1656,7 @@ func (c *Core) configureCredentialsBackends(backends map[string]logical.Factory,
 
 // configureLogicalBackends configures the Core with the ability to create
 // logical backends for various types.
-func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, logger log.Logger, adminNamespacePath string) {
+func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, logger log.Logger) {
 	logicalBackends := make(map[string]logical.Factory, len(backends))
 
 	for k, f := range backends {
@@ -1688,7 +1718,7 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 
 	c.logicalBackends = logicalBackends
 
-	c.addExtraLogicalBackends(adminNamespacePath)
+	c.addExtraLogicalBackends()
 }
 
 // handleVersionTimeStamps stores the current version at the current time to
@@ -2912,8 +2942,14 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.setupExpiration(expireLeaseStrategyFairsharing)
 		})
-		setupFunctions = append(setupFunctions, func(_ context.Context) error {
-			return c.setupOAuthTokenDenylist()
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupOAuthTokenDenylist(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.migrateProfilesByIssuerIndex(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.populateIssuerNamespacesIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
@@ -3137,12 +3173,12 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
 	}
 	c.loginMFABackend.usedCodes = ttlcache.New[string, any]()
-	go c.loginMFABackend.usedCodes.Start()
+	cache.Start(ctx, c.loginMFABackend.usedCodes, !c.synctest)
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.usedCodes = ttlcache.New[string, any]()
-		go c.systemBackend.mfaBackend.usedCodes.Start()
+		cache.Start(ctx, c.systemBackend.mfaBackend.usedCodes, !c.synctest)
 	}
-	go c.clusterPeerClusterAddrsCache.Start()
+	cache.Start(ctx, c.clusterPeerClusterAddrsCache, !c.synctest)
 
 	if c.systemBackend != nil {
 		// all mounts need to be initialized before activity log reporting
@@ -3958,13 +3994,23 @@ func (c *Core) LogFormat() string {
 	return conf.(*server.Config).LogFormat
 }
 
-// administrativeNamespacePath returns the configured administrative namespace path.
-func (c *Core) administrativeNamespacePath() string {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return ""
+// AdministrativeNamespacePath returns the configured administrative namespace path.
+// It reads from rawConfig so that a live SIGHUP / SetConfig update is reflected immediately.
+// Falls back to the cached field when rawConfig has not been populated (e.g. in unit tests
+// that construct a bare Core without going through NewCore).
+func (c *Core) AdministrativeNamespacePath() string {
+	if conf := c.rawConfig.Load(); conf != nil {
+		return conf.(*server.Config).AdministrativeNamespacePath
 	}
-	return conf.(*server.Config).AdministrativeNamespacePath
+	return c.administrativeNamespacePath
+}
+
+// OperatorNamespacePath returns the configured operator namespace path. If set,
+// this namespace will be created if it doesn't exist, and operator APIs will
+// only be available in the configured path. An empty path means that operator
+// APIs will remain in the root namespace, as normal.
+func (c *Core) OperatorNamespacePath() string {
+	return c.operatorNamespacePath
 }
 
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env
@@ -4075,9 +4121,10 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 	}
 
 	qmFlags := &quotas.ManagerFlags{
-		IsPerfStandby: isPerfStandby,
-		IsDRSecondary: c.IsDRSecondary(),
-		IsNewInstall:  c.IsNewInstall(ctx),
+		IsPerfStandby:         isPerfStandby,
+		IsDRSecondary:         c.IsDRSecondary(),
+		IsNewInstall:          c.IsNewInstall(ctx),
+		OperatorNamespacePath: c.operatorNamespacePath,
 	}
 
 	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
@@ -4774,7 +4821,7 @@ func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Reque
 		Data:       req.Data,
 		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
 	})
-	if err != nil || resp.Auth.Alias == nil {
+	if err != nil || resp == nil || resp.Auth == nil || resp.Auth.Alias == nil {
 		return "", nil
 	}
 	return resp.Auth.Alias.Name, nil

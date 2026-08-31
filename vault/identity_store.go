@@ -172,8 +172,8 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}
 
-	iStore.oidcCache = newOIDCCache(ttlcache.NoTTL)
-	iStore.oidcAuthCodeCache = newOIDCCache(5 * time.Minute)
+	iStore.oidcCache = newOIDCCache(ctx, ttlcache.NoTTL, core.synctest)
+	iStore.oidcAuthCodeCache = newOIDCCache(ctx, 5*time.Minute, core.synctest)
 
 	err = iStore.Setup(ctx, config)
 	if err != nil {

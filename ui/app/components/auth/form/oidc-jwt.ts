@@ -62,9 +62,6 @@ export default class AuthFormOidcJwt extends AuthBase {
   @tracked isOIDC = true;
 
   get icon() {
-    // Right now there is a bug in HDS where the name includes a space, this line can be removed when we
-    // upgrade to an HDS version with the corrected icon name
-    if (this.provider === 'Ping Identity') return 'ping-identity ';
     return this.provider ? dasherize(this.provider.toLowerCase()) : '';
   }
 
