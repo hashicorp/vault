@@ -2450,6 +2450,13 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 		return logical.ErrorResponse("'to' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
 
+	// Strip any leading slashes so that e.g. "/ns/mount" is treated the same
+	// as "ns/mount". A leading slash would otherwise cause namespaceByPath to
+	// find no match in the radix tree (which stores paths without a leading
+	// slash) and silently fall back to the root namespace.
+	fromPath = strings.TrimLeft(fromPath, "/")
+	toPath = strings.TrimLeft(toPath, "/")
+
 	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
 	toPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, toPath)
 
