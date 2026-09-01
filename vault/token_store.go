@@ -3344,6 +3344,7 @@ func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	id := data.Get("token").(string)
+
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
