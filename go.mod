@@ -82,7 +82,7 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-errors/errors v1.5.1
 	github.com/go-jose/go-jose/v3 v3.0.5
-	github.com/go-ldap/ldap/v3 v3.4.13
+	github.com/go-ldap/ldap/v3 v3.4.14
 	github.com/go-sql-driver/mysql v1.10.0
 	github.com/go-test/deep v1.1.1
 	github.com/go-zookeeper/zk v1.0.3
@@ -177,7 +177,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.26.3-0.20260626165612-824fb96aa7a8
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.17.1
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.19.0
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.19.1-0.20260901000439-98216c0b6c76
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.14.1
 	github.com/hashicorp/vault-testing-stepwise v0.3.3
 	github.com/hashicorp/vault/api v1.23.0
@@ -227,7 +227,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/tink-crypto/tink-go/v2 v2.7.0
 	go.etcd.io/bbolt v1.4.3
 	go.etcd.io/etcd/client/pkg/v3 v3.7.1
@@ -422,9 +422,9 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/gammazero/deque v1.2.1 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.8 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
-	github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92 // indirect
+	github.com/go-ldap/ldif v0.0.0-20260814080914-716cb106d6e4 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -537,7 +537,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
