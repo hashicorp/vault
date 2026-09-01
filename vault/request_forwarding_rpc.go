@@ -138,17 +138,17 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 	return reply, nil
 }
 
-func (s *forwardedRequestRPCServer) SendControlHubCredentials(ctx context.Context, in *SendControlHubCredentialsRequest) (*SendControlHubCredentialsResponse, error) {
-	s.core.logger.Info("forwarding client: received control hub cluster credentials")
+func (s *forwardedRequestRPCServer) SendSecureHubCredentials(ctx context.Context, in *SendSecureHubCredentialsRequest) (*SendSecureHubCredentialsResponse, error) {
+	s.core.logger.Info("forwarding client: received secure hub cluster credentials")
 	if s.core.HAState() == consts.Active {
-		controlHubManager := s.core.GetControlHubManager()
-		if controlHubManager == nil {
-			return &SendControlHubCredentialsResponse{}, fmt.Errorf("control hub manager is not initialized; cluster credentials are lost")
+		secureHubManager := s.core.GetSecureHubManager()
+		if secureHubManager == nil {
+			return &SendSecureHubCredentialsResponse{}, fmt.Errorf("secure hub manager is not initialized; cluster credentials are lost")
 		}
-		err := controlHubManager.WriteClusterCredentialsToStorage(ctx, in.ID, in.Value)
-		return &SendControlHubCredentialsResponse{}, err
+		err := secureHubManager.WriteClusterCredentialsToStorage(ctx, in.ID, in.Value)
+		return &SendSecureHubCredentialsResponse{}, err
 	} else {
-		return &SendControlHubCredentialsResponse{}, fmt.Errorf("node is not leader; cluster credentials are lost")
+		return &SendSecureHubCredentialsResponse{}, fmt.Errorf("node is not leader; cluster credentials are lost")
 	}
 }
 
@@ -159,8 +159,8 @@ type forwardingClient struct {
 	echoContext context.Context
 }
 
-func (c *forwardingClient) SendControlHubCredentials(ctx context.Context, id string, value []byte) error {
-	_, err := c.RequestForwardingClient.SendControlHubCredentials(ctx, &SendControlHubCredentialsRequest{
+func (c *forwardingClient) SendSecureHubCredentials(ctx context.Context, id string, value []byte) error {
+	_, err := c.RequestForwardingClient.SendSecureHubCredentials(ctx, &SendSecureHubCredentialsRequest{
 		ID:    id,
 		Value: value,
 	})
