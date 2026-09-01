@@ -168,7 +168,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1
 	github.com/hashicorp/vault-plugin-database-redis v0.8.1
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.2-0.20260706104900-570a9d5344b1
-	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.16.1-0.20260901002845-e8ee729f631a
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.25.1
@@ -227,7 +227,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/tink-crypto/tink-go/v2 v2.7.0
 	go.etcd.io/bbolt v1.4.3
 	go.etcd.io/etcd/client/pkg/v3 v3.7.1
@@ -537,7 +537,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
@@ -546,7 +545,7 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
-	github.com/snowflakedb/gosnowflake v1.19.0 // indirect
+	github.com/snowflakedb/gosnowflake v1.19.1 // indirect
 	github.com/softlayer/softlayer-go v1.2.1 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
