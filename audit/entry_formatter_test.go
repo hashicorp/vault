@@ -655,6 +655,107 @@ func TestMergeEnterpriseTokenMetadata(t *testing.T) {
 	}
 }
 
+// TestEntryFormatter_AuthorizationDetailsInAuthSection verifies that authorization_details
+// from logical.Auth appear in the auth section of audit logs (not just request metadata).
+func TestEntryFormatter_AuthorizationDetailsInAuthSection(t *testing.T) {
+	t.Parallel()
+
+	staticSalt := newStaticSalt(t)
+
+	tests := map[string]struct {
+		AuthorizationDetails []logical.AuthorizationDetail
+		ExpectedInAuth       []any
+	}{
+		"single-authorization-detail": {
+			AuthorizationDetails: []logical.AuthorizationDetail{
+				{"type": "payment_initiation", "currency": "USD"},
+			},
+			ExpectedInAuth: []any{
+				map[string]any{"type": "payment_initiation", "currency": "USD"},
+			},
+		},
+		"multiple-authorization-details": {
+			AuthorizationDetails: []logical.AuthorizationDetail{
+				{"type": "payment_initiation", "currency": "USD"},
+				{"type": "account_information", "scope": "read"},
+			},
+			ExpectedInAuth: []any{
+				map[string]any{"type": "payment_initiation", "currency": "USD"},
+				map[string]any{"type": "account_information", "scope": "read"},
+			},
+		},
+		"empty-authorization-details": {
+			AuthorizationDetails: []logical.AuthorizationDetail{},
+			ExpectedInAuth:       nil,
+		},
+		"nil-authorization-details": {
+			AuthorizationDetails: nil,
+			ExpectedInAuth:       nil,
+		},
+	}
+
+	for name, tc := range tests {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg, err := newFormatterConfig(&testHeaderFormatter{}, map[string]string{
+				"hmac_accessor": "false",
+			})
+			require.NoError(t, err)
+			formatter, err := newEntryFormatter("test", cfg, staticSalt, hclog.NewNullLogger())
+			require.NoError(t, err)
+
+			in := &logical.LogInput{
+				Auth: &logical.Auth{
+					ClientToken:          "foo",
+					Accessor:             "bar",
+					DisplayName:          "testtoken",
+					EntityID:             "entity-123",
+					Policies:             []string{"default"},
+					TokenType:            logical.TokenTypeDefault,
+					AuthorizationDetails: tc.AuthorizationDetails,
+				},
+				Request: &logical.Request{
+					Operation: logical.ReadOperation,
+					Path:      "/secret/data/test",
+					Connection: &logical.Connection{
+						RemoteAddr: "127.0.0.1",
+					},
+				},
+			}
+
+			auditEvent, err := newEvent(RequestType)
+			require.NoError(t, err)
+			auditEvent.Data = in
+
+			e := &eventlogger.Event{
+				Type:      event.AuditType.AsEventType(),
+				CreatedAt: time.Now(),
+				Formatted: make(map[string][]byte),
+				Payload:   auditEvent,
+			}
+
+			e2, err := formatter.Process(nshelper.RootContext(nil), e)
+			require.NoError(t, err)
+
+			jsonBytes, ok := e2.Format(jsonFormat.String())
+			require.True(t, ok)
+			require.Positive(t, len(jsonBytes))
+
+			var result entry
+			require.NoError(t, json.Unmarshal(jsonBytes, &result))
+
+			require.NotNil(t, result.Auth)
+			if tc.ExpectedInAuth == nil {
+				require.Nil(t, result.Auth.AuthorizationDetails)
+			} else {
+				require.Equal(t, tc.ExpectedInAuth, result.Auth.AuthorizationDetails)
+			}
+		})
+	}
+}
+
 // TestEntryFormatter_Process_JSON_EnterpriseToken verifies that enterprise token fields
 // (actor_entity_id, actor_entity_name, jwt_unique_id, jwt_issuer,
 // jwt_transaction_claim,

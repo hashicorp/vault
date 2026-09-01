@@ -368,8 +368,17 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 			metadataForAudit[k] = v
 		}
 	}
+	var authorizationDetails []any
+	if len(input.AuthorizationDetails) > 0 {
+		authorizationDetails = make([]any, len(input.AuthorizationDetails))
+		for i, detail := range input.AuthorizationDetails {
+			authorizationDetails[i] = detail
+		}
+	}
+
 	return &auth{
 		Accessor:                  input.Accessor,
+		AuthorizationDetails:      authorizationDetails,
 		ClientToken:               input.ClientToken,
 		DisplayName:               input.DisplayName,
 		EntityCreated:             input.EntityCreated,
