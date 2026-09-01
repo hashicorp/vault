@@ -39,8 +39,8 @@ replace github.com/TritonDataCenter/triton-go/v2 => github.com/ryancragun/triton
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.21.0
-	cloud.google.com/go/monitoring v1.26.0
-	cloud.google.com/go/spanner v1.89.0
+	cloud.google.com/go/monitoring v1.30.0
+	cloud.google.com/go/spanner v1.91.0
 	cloud.google.com/go/storage v1.62.0
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
@@ -158,7 +158,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.23.1
 	github.com/hashicorp/vault-plugin-auth-azure v0.24.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.23.1
-	github.com/hashicorp/vault-plugin-auth-gcp v0.23.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.23.2-0.20260901004855-eeb2d370f4d6
 	github.com/hashicorp/vault-plugin-auth-jwt v0.26.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.17.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.1
@@ -227,7 +227,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/tink-crypto/tink-go/v2 v2.7.0
 	go.etcd.io/bbolt v1.4.3
 	go.etcd.io/etcd/client/pkg/v3 v3.7.1
@@ -248,8 +248,8 @@ require (
 	golang.org/x/term v0.45.0
 	golang.org/x/text v0.41.0
 	golang.org/x/tools v0.48.0
-	google.golang.org/api v0.279.0
-	google.golang.org/grpc v1.83.1
+	google.golang.org/api v0.296.0
+	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
@@ -334,12 +334,12 @@ require (
 require (
 	cel.dev/expr v0.25.2 // indirect
 	cloud.google.com/go v0.123.0 // indirect
-	cloud.google.com/go/auth v0.20.0 // indirect
+	cloud.google.com/go/auth v0.23.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	cloud.google.com/go/iam v1.8.0 // indirect
-	cloud.google.com/go/kms v1.31.0 // indirect
-	cloud.google.com/go/longrunning v0.9.0 // indirect
+	cloud.google.com/go/iam v1.12.0 // indirect
+	cloud.google.com/go/kms v1.32.0 // indirect
+	cloud.google.com/go/longrunning v1.2.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -451,8 +451,8 @@ require (
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.15 // indirect
-	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.20 // indirect
+	github.com/googleapis/gax-go/v2 v2.24.0 // indirect
 	github.com/gophercloud/gophercloud v1.14.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
@@ -537,7 +537,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
@@ -584,7 +583,7 @@ require (
 	golang.org/x/mod v0.38.0 // indirect
 	golang.org/x/time v0.15.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect
+	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688 // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
