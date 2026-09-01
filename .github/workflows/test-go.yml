@@ -643,15 +643,17 @@ jobs:
               const jobData = result.data.jobs.filter(
                 (job) => job.name.startsWith(prefixToSearchFor)
               );
+              if (jobData.length === 0) {
+                console.log("Warning: no job found matching prefix: " + prefixToSearchFor);
+                return;
+              }
               const url = jobData[0].html_url;
               const envVarName = "GH_JOB_URL";
               const envVar = envVarName + "=" + url;
               const envFile = process.env.GITHUB_ENV;
 
-              fs.appendFile(envFile, envVar, (err) => {
-                if (err) throw err;
-                console.log("Successfully set " + envVarName + " to: " + url);
-              });
+              await fs.promises.appendFile(envFile, envVar);
+              console.log("Successfully set " + envVarName + " to: " + url);
             } catch (error) {
               console.log("Error: " + error);
               return
@@ -664,7 +666,13 @@ jobs:
           # Then, it formats the results into rows of a Markdown table.k
           # An example row will resemble this:
           # | github.com/hashicorp/vault/package | TestName | fips | 0 | 2 | [view results](github.com/link-to-logs) |
-          jq -r -n 'inputs
+          # Group all pass/fail events by Package+Test, take the last verdict for each.
+          # This filters out tests that failed on the first attempt but passed on rerun
+          # (--rerun-fails), so only genuinely failing tests appear in the summary.
+          jq -r -n '[inputs]
+          | group_by(.Package + (.Test // ""))
+          | .[]
+          | last(.[] | select(.Action == "pass" or .Action == "fail"))
           | select(.Action == "fail")
           | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
