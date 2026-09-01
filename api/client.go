@@ -39,6 +39,9 @@ const (
 	EnvVaultCACert           = "VAULT_CACERT"
 	EnvVaultCACertBytes      = "VAULT_CACERT_BYTES"
 	EnvVaultCAPath           = "VAULT_CAPATH"
+	EnvVaultCRL              = "VAULT_CRL"
+	EnvVaultCRLBytes         = "VAULT_CRL_BYTES"
+	EnvVaultCRLPath          = "VAULT_CRL_PATH"
 	EnvVaultClientCert       = "VAULT_CLIENT_CERT"
 	EnvVaultClientKey        = "VAULT_CLIENT_KEY"
 	EnvVaultClientTimeout    = "VAULT_CLIENT_TIMEOUT"
@@ -214,6 +217,23 @@ type Config struct {
 	// primary node.
 	DisableRedirects bool
 	clientTLSConfig  *tls.Config
+
+	// crlProvider is the CRL provider resolved by the most recent configureTLS
+	// call that asked for one. Like curlCACert and curlCAPath, it is retained
+	// because TLS settings reach configureTLS through more than one call (for
+	// example ReadEnvironment, then the CLI's flag-derived TLSConfig), and a
+	// later call that says nothing about CRLs must not silently turn revocation
+	// checking off. Use TLSConfig.DisableCRL to turn it off deliberately.
+	crlProvider CRLProvider
+
+	// crlVerifyConnectionInstalled records whether configureTLS installed a
+	// CRL-checking VerifyConnection callback on clientTLSConfig, and
+	// preCRLVerifyConnection holds whatever callback was there beforehand.
+	// configureTLS runs against a live tls.Config and may run more than once,
+	// so these let a repeat call replace the previous check instead of chaining
+	// a new closure onto it.
+	crlVerifyConnectionInstalled bool
+	preCRLVerifyConnection       func(tls.ConnectionState) error
 }
 
 // TLSConfig contains the parameters needed to configure TLS on the HTTP client
@@ -244,6 +264,49 @@ type TLSConfig struct {
 
 	// Insecure enables or disables SSL verification
 	Insecure bool
+
+	// CRL is the path to a PEM- or DER-encoded certificate revocation list
+	// used to check whether the Vault server's certificate has been revoked.
+	// It takes precedence over CRLBytes and CRLPath.
+	//
+	// Supplying a CRL requires the Vault server certificate to be covered by
+	// one: if no valid, current CRL can be attributed to the certificate's
+	// issuer, the connection fails. Certificates further up the chain are
+	// checked when a CRL for them is available and skipped when it is not, so
+	// that supplying a CRL for one CA in a chain does not break connections.
+	//
+	// CRL checking cannot be combined with Insecure.
+	CRL string
+
+	// CRLBytes is a PEM- or DER-encoded certificate revocation list, or a PEM
+	// bundle of several. It takes precedence over CRLPath.
+	CRLBytes []byte
+
+	// CRLPath is the path to a directory of PEM- or DER-encoded certificate
+	// revocation list files.
+	CRLPath string
+
+	// CRLRefreshInterval is how often CRLs loaded from CRL or CRLPath are
+	// checked for changes on disk. Files are re-read only when their size or
+	// modification time changes, and only while connections are being made.
+	// Defaults to DefaultCRLRefreshInterval. Ignored when CRLBytes or
+	// CRLProvider is used.
+	CRLRefreshInterval time.Duration
+
+	// CRLProvider supplies CRLs during the TLS handshake, for callers that
+	// retrieve revocation data from somewhere other than the local
+	// filesystem. It takes precedence over CRL, CRLBytes and CRLPath.
+	CRLProvider CRLProvider
+
+	// DisableCRL turns off any revocation checking previously configured on the
+	// client.
+	//
+	// A TLSConfig that simply does not mention CRLs leaves existing revocation
+	// checking in place, because TLS settings reach the client through more than
+	// one ConfigureTLS call and turning a security control off implicitly would
+	// be surprising. Set DisableCRL to turn it off on purpose. It cannot be
+	// combined with the CRL fields.
+	DisableCRL bool
 }
 
 // DefaultConfig returns a default configuration for the client. It is
@@ -308,6 +371,13 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	}
 
 	clientTLSConfig := transport.TLSClientConfig
+	// ensure a sensible version of TLS Config exists
+	if clientTLSConfig == nil {
+		clientTLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+		transport.TLSClientConfig = clientTLSConfig
+	}
 
 	var clientCert tls.Certificate
 	foundClientCert := false
@@ -340,6 +410,11 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	}
 
 	if t.Insecure {
+		// Reject the CRL/Insecure conflict before setting InsecureSkipVerify,
+		// so a rejected call does not leave the shared tls.Config half-mutated.
+		if crlRequested(t) || (c.crlProvider != nil && !t.DisableCRL) {
+			return fmt.Errorf("CRL checking cannot be used with insecure TLS: certificate chain verification is disabled, so revocation cannot be checked reliably (set TLSConfig.DisableCRL to turn revocation checking off)")
+		}
 		clientTLSConfig.InsecureSkipVerify = true
 	}
 
@@ -355,9 +430,108 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if t.TLSServerName != "" {
 		clientTLSConfig.ServerName = t.TLSServerName
 	}
+
+	if err := c.configureCRL(t, clientTLSConfig); err != nil {
+		return err
+	}
+
 	c.clientTLSConfig = clientTLSConfig
 
 	return nil
+}
+
+// configureCRL installs, replaces or removes the CRL-checking callback on the
+// given tls.Config to match t. It must be called with c.modifyLock held for
+// write access.
+//
+// A t that does not mention CRLs re-applies whatever was configured before,
+// rather than removing the check: TLS settings arrive through more than one
+// configureTLS call, so an implicit removal would silently disable revocation
+// checking for common configurations. t.DisableCRL removes it explicitly.
+func (c *Config) configureCRL(t *TLSConfig, clientTLSConfig *tls.Config) error {
+	provider, err := crlProviderFromTLSConfig(t)
+	if err != nil {
+		return err
+	}
+
+	if t.DisableCRL && provider != nil {
+		return fmt.Errorf("DisableCRL cannot be combined with the CRL, CRLBytes, CRLPath or CRLProvider fields")
+	}
+
+	// Fall back to the CRL configuration already resolved on this Config, so
+	// that a later call which is silent about CRLs does not turn the check off.
+	if provider == nil && !t.DisableCRL {
+		provider = c.crlProvider
+	}
+
+	// Insecure is checked against the live tls.Config as well as the incoming
+	// TLSConfig: configureTLS only ever sets InsecureSkipVerify and never clears
+	// it, so it may already be set from an earlier call, from VAULT_SKIP_VERIFY,
+	// or by a caller-supplied http.Client. With chain verification disabled
+	// there is no verified chain for a CRL to be checked against.
+	if provider != nil && (t.Insecure || clientTLSConfig.InsecureSkipVerify) {
+		return fmt.Errorf("CRL checking cannot be used with insecure TLS: certificate chain verification is disabled, so revocation cannot be checked reliably (set TLSConfig.DisableCRL to turn revocation checking off)")
+	}
+
+	// Restore any pre-existing callback before installing a new one, so that
+	// repeated calls neither stack closures nor leave a stale check behind.
+	if c.crlVerifyConnectionInstalled {
+		clientTLSConfig.VerifyConnection = c.preCRLVerifyConnection
+		c.crlVerifyConnectionInstalled = false
+		c.preCRLVerifyConnection = nil
+	}
+
+	if provider == nil {
+		c.crlProvider = nil
+		return nil
+	}
+
+	checker := &crlChecker{provider: provider}
+	existing := clientTLSConfig.VerifyConnection
+
+	// VerifyConnection is used rather than VerifyPeerCertificate because the
+	// latter is not invoked on resumed TLS connections, which would let a
+	// resumed session bypass the revocation check.
+	clientTLSConfig.VerifyConnection = func(cs tls.ConnectionState) error {
+		if existing != nil {
+			if err := existing(cs); err != nil {
+				return err
+			}
+		}
+		return checker.verifyConnection(cs)
+	}
+	c.crlProvider = provider
+	c.crlVerifyConnectionInstalled = true
+	c.preCRLVerifyConnection = existing
+
+	return nil
+}
+
+// crlRequested reports whether t asks for CRL checking, without building the
+// provider, so the request can be validated before anything is mutated.
+func crlRequested(t *TLSConfig) bool {
+	return t.CRLProvider != nil || t.CRL != "" || len(t.CRLBytes) != 0 || t.CRLPath != ""
+}
+
+// crlProviderFromTLSConfig returns the CRLProvider described by t, or nil if no
+// CRL checking was requested.
+func crlProviderFromTLSConfig(t *TLSConfig) (CRLProvider, error) {
+	switch {
+	case t.CRLProvider != nil:
+		return t.CRLProvider, nil
+	case t.CRL != "":
+		return newFileCRLProvider(t.CRL, false, t.CRLRefreshInterval)
+	case len(t.CRLBytes) != 0:
+		crls, err := ParseCRLs(t.CRLBytes)
+		if err != nil {
+			return nil, err
+		}
+		return NewStaticCRLProvider(crls), nil
+	case t.CRLPath != "":
+		return newFileCRLProvider(t.CRLPath, true, t.CRLRefreshInterval)
+	default:
+		return nil, nil
+	}
 }
 
 func (c *Config) TLSConfig() *tls.Config {
@@ -383,6 +557,9 @@ func (c *Config) ReadEnvironment() error {
 	var envCACert string
 	var envCACertBytes []byte
 	var envCAPath string
+	var envCRL string
+	var envCRLBytes []byte
+	var envCRLPath string
 	var envClientCert string
 	var envClientKey string
 	var envClientTimeout time.Duration
@@ -416,6 +593,15 @@ func (c *Config) ReadEnvironment() error {
 	}
 	if v := os.Getenv(EnvVaultCAPath); v != "" {
 		envCAPath = v
+	}
+	if v := os.Getenv(EnvVaultCRL); v != "" {
+		envCRL = v
+	}
+	if v := os.Getenv(EnvVaultCRLBytes); v != "" {
+		envCRLBytes = []byte(v)
+	}
+	if v := os.Getenv(EnvVaultCRLPath); v != "" {
+		envCRLPath = v
 	}
 	if v := os.Getenv(EnvVaultClientCert); v != "" {
 		envClientCert = v
@@ -484,6 +670,9 @@ func (c *Config) ReadEnvironment() error {
 		ClientKey:     envClientKey,
 		TLSServerName: envTLSServerName,
 		Insecure:      envInsecure,
+		CRL:           envCRL,
+		CRLBytes:      envCRLBytes,
+		CRLPath:       envCRLPath,
 	}
 
 	c.modifyLock.Lock()
@@ -717,6 +906,9 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
 	newConfig.clientTLSConfig = c.config.clientTLSConfig
+	newConfig.crlProvider = c.config.crlProvider
+	newConfig.crlVerifyConnectionInstalled = c.config.crlVerifyConnectionInstalled
+	newConfig.preCRLVerifyConnection = c.config.preCRLVerifyConnection
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
@@ -1294,6 +1486,14 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	if config.CloneTLSConfig {
 		newConfig.clientTLSConfig = config.clientTLSConfig
 	}
+
+	// The clone shares the source's HttpClient and therefore its tls.Config, so
+	// it must also inherit the CRL bookkeeping that describes it. Without this a
+	// ConfigureTLS call on the clone would stack a second check onto the shared
+	// tls.Config rather than replacing the first.
+	newConfig.crlProvider = config.crlProvider
+	newConfig.crlVerifyConnectionInstalled = config.crlVerifyConnectionInstalled
+	newConfig.preCRLVerifyConnection = config.preCRLVerifyConnection
 
 	client, err := NewClient(newConfig)
 	if err != nil {
