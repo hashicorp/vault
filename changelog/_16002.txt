@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Enforce OAuth authorization_details vault:path_access constraints with strict path/capabilities and parameter-level controls.
+```
