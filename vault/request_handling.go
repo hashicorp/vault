@@ -246,7 +246,14 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		if err != nil {
 			c.logger.Error("failed to validate jwt", "error", err)
 		}
+
 		if !isValidEnterpriseJwt {
+			// currently only internal error and error missing from agent registration required have dedicated
+			// error body and http code, everything else gets normalize into "permission denied" with http code 403
+			// when reaching back to client
+			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) {
+				return nil, nil, nil, nil, err
+			}
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		req.JwtUniqueId, err = getJwtUniqueIDFromProfile(tokenMetadataContainer, chosenProfile)
@@ -269,7 +276,6 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 		req.OAuthJwtValidated = true
 	}
-
 	// Resolve the token policy
 	var te *logical.TokenEntry
 	switch req.TokenEntry() {

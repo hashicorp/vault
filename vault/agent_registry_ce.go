@@ -7,12 +7,15 @@ package vault
 
 import (
 	"context"
+	"errors"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var ErrAgentRegistrationRequired = errors.New("enterprise build required")
 
 type AgentRegistry struct {
 	*framework.Backend
