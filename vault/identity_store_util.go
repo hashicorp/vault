@@ -186,7 +186,7 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 func (i *IdentityStore) activate(ctx context.Context, _ *logical.Request, featureName string) error {
 	switch featureName {
 	case activationflags.IdentityDeduplication:
-		return i.activateDeduplication(ctx, nil)
+		return i.activateDeduplication()
 	case activationflags.SCIMEnablement:
 		i.logger.Info("activating SCIM paths; SCIM operations can now be performed")
 		i.scimEnabled = true
@@ -200,8 +200,18 @@ func (i *IdentityStore) activate(ctx context.Context, _ *logical.Request, featur
 // ([*IdentityStore].lock and [*IdentityStore].groupLock) to prevent concurrent
 // requests from updating MemDB state while we're modifying the underlying
 // schema and reloading from storage.
-func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.Request) error {
+func (i *IdentityStore) activateDeduplication() error {
 	go func() {
+		// Always signal the test-synchronization channel when done, whether the
+		// reload succeeded or failed, so that WaitForActivateDeduplicationDone
+		// never hangs.
+		defer func() {
+			select {
+			case i.activateDeduplicationDone <- struct{}{}:
+			default:
+			}
+		}()
+
 		i.lock.Lock()
 		defer i.lock.Unlock()
 
@@ -216,20 +226,18 @@ func (i *IdentityStore) activateDeduplication(ctx context.Context, req *logical.
 			return
 		}
 
+		// Use a fresh background context rooted at the root namespace so that
+		// the reload is not cancelled if the caller's context (e.g. the HA
+		// active context) is cancelled due to a leadership change or seal.
+		reloadCtx := namespace.RootContext(context.Background())
+
 		// If we fail to load from storage, we'll end up with a broken
 		// IdentityStore, so we're better of just sealing and letting another node
 		// take over!
-		if err := i.loadArtifacts(ctx, i.localNode.HAState() == consts.Active); err != nil {
+		if err := i.loadArtifacts(reloadCtx, i.localNode.HAState() == consts.Active); err != nil {
 			i.logger.Error("failed to activate identity deduplication, shutting down")
 			i.activationErrorHandler.Shutdown()
 			return
-		}
-
-		// Write to the test-synchronization channel if it's been created.
-		// Otherwise don't block trying to write to a nil chan.
-		select {
-		case i.activateDeduplicationDone <- struct{}{}:
-		default:
 		}
 
 		i.logger.Info("identity deduplication activated, identity store reload complete")
