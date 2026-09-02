@@ -73,6 +73,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-save: true
       - uses: ./.github/actions/install-tools # for staticcheck
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - run: make ci-deprecations
@@ -95,6 +96,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-save: true
       - uses: ./.github/actions/install-tools # for buf
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
         # Note: if there is a function we want to ignore the nilnil check for,
@@ -120,6 +122,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-save: true
       - uses: ./.github/actions/install-tools # for buf and protoc-*
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Check generate delta
@@ -140,6 +143,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-save: true
       - uses: ./.github/actions/install-tools # for buf and gofumpt
       - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Go format

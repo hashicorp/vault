@@ -210,6 +210,8 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
+          no-save: true
+          no-restore: true
 
       - name: Install LDAP client tools
         run: |

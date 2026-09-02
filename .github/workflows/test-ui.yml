@@ -44,6 +44,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-save: true
 
       - if: inputs.is-ent-repo == 'true'
         id: vault-auth
