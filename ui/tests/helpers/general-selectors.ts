@@ -54,7 +54,9 @@ export const GENERAL = {
 
   /* ────── Tables ────── */
   table: (title: string) => `[data-test-table="${title}"]`,
-  tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
+  tableRow: (idx?: number) =>
+    idx !== undefined ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]',
+  tableParentRow: '[data-test-table-parent-row]',
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
   tableDataNested: (idx: number, key: string) =>
     `[role="row"]:nth-of-type(${idx + 1}) [data-test-table-data="${key}"]`,

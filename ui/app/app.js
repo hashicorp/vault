@@ -8,6 +8,13 @@ import Resolver from 'ember-resolver';
 import loadInitializers from 'ember-load-initializers';
 import config from 'vault/config/environment';
 
+// HDS removed ember-engines as a peer dependency in 6.0.0
+// Adding below snippet to support ember engines
+import LinkToExternal from 'ember-engines/components/link-to-external';
+import { setLinkToExternal } from '@hashicorp/design-system-components/utils/hds-link-to-external';
+
+setLinkToExternal(LinkToExternal);
+
 export default class App extends Application {
   modulePrefix = config.modulePrefix;
   podModulePrefix = config.podModulePrefix;

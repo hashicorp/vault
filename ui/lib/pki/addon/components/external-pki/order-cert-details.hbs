@@ -93,7 +93,7 @@
 
     <Hds::AdvancedTable @columns={{this.tableColumns}} @model={{this.tableData}}>
       <:body as |B|>
-        <B.Tr data-test-table-row={{B.rowIndex}}>
+        <B.Tr data-test-table-row={{B.rowIndex}} data-test-table-parent-row={{if B.data.identifier "true"}}>
           <B.Th data-test-table-data="identifier">{{B.data.identifier}}</B.Th>
           <B.Td data-test-table-data="challenge_status">
             {{#let (map-status-badge B.data.challenge_status) as |badge|}}
