@@ -141,19 +141,9 @@ jobs:
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
             kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
             kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
-      - if: steps.global-metadata.outputs.is-ent-repo == 'true'
-        name: Setup Git configuration (private)
-        id: setup-git-private
-        run: |
-          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-      - if: steps.global-metadata.outputs.is-ent-repo != 'true'
-        name: Setup Git configuration (public)
-        id: setup-git-public
-        run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ steps.global-metadata.outputs.is-ent-repo == 'true' && steps.secrets.outputs.github-token || secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.global-metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.github-token }}
       - uses: ./.github/actions/install-tools # for gotestsum
       - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
       - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
@@ -176,7 +166,7 @@ jobs:
         name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ steps.global-metadata.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
@@ -187,7 +177,7 @@ jobs:
       - if: ${{ inputs.testonly }}
         name: Build matrix for tests tagged with testonly
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ steps.global-metadata.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
           # enable glob expansion
@@ -195,7 +185,7 @@ jobs:
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*,*verify*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
+            go list -tags="${{inputs.go-tags}}" ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files '${{ steps.local-metadata.outputs.go-test-dir }}/*.json' > matrix.json
           )
@@ -250,7 +240,7 @@ jobs:
       matrix:
         id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
-      GOPRIVATE: github.com/hashicorp/*
+      GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     outputs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
@@ -259,9 +249,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
+      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
+        name: Authenticate to Vault
+        id: vault-auth
+        run: vault-auth
+      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
+        name: Fetch Secrets
+        id: vault-secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
+            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
+            kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
+            kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ needs.test-matrix.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.github-token }}
+          no-save: true
       - id: metadata
         name: Set up metadata
         run: |
@@ -307,35 +317,6 @@ jobs:
             echo "gotestsum-results-prefix=${gotestsum_results_prefix}"
             echo "gotestsum-timing-events=${gotestsum_timing_events}"
           } | tee -a "$GITHUB_OUTPUT"
-      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
-        name: Authenticate to Vault
-        id: vault-auth
-        run: vault-auth
-      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
-        name: Fetch Secrets
-        id: secrets
-        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
-        with:
-          url: ${{ steps.vault-auth.outputs.addr }}
-          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
-          token: ${{ steps.vault-auth.outputs.token }}
-          secrets: |
-            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
-            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
-            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
-            kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
-            kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
-      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
-        id: setup-git-private
-        name: Setup Git configuration (private)
-        run: |
-          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-      - if: needs.test-matrix.outputs.is-ent-repo != 'true'
-        id: setup-git-public
-        name: Setup Git configuration (public)
-        run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/install-tools
       - if: github.repository == 'hashicorp/vault-enterprise'
         name: Configure Instana for test tracing
@@ -357,7 +338,7 @@ jobs:
       - if: inputs.binary-tests && matrix.id == inputs.total-runners && needs.test-matrix.outputs.is-ent-branch == 'true'
         name: Build Vault HSM binary for tests
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
           time make prep enthsmdev
@@ -367,7 +348,7 @@ jobs:
         name: Build dev binary for binary tests
         # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
           time make prep dev
@@ -424,6 +405,10 @@ jobs:
           }
           EOF
           sudo systemctl reload docker
+      - name: Install swtpm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y swtpm swtpm-tools
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -489,8 +474,9 @@ jobs:
           VAULT_TEST_LOG_DIR='${{ steps.metadata.outputs.go-test-log-dir-absolute }}'
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
+          unset VAULT_ADDR
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
-          GOARCH=${{ inputs.go-arch }} VAULT_ADDR='' \
+          GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \
               --junitfile '${{ steps.metadata.outputs.gotestsum-junitfile }}' \
               --jsonfile '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
@@ -538,8 +524,9 @@ jobs:
         continue-on-error: true
         env:
           DD_ENV: ci
+          DD_TAGS: "workflow:${{ github.workflow }},job:test-go,matrix_id:${{ matrix.id }},config:${{ inputs.name }}"
         run: |
-          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+          if [[ ${{ github.repository }} == 'hashicorp/vault' || ${{ github.repository }} == 'hashicorp/vault-enterprise' ]]; then
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" '${{ steps.metadata.outputs.gotestsum-junitfile }}'
@@ -683,7 +670,15 @@ jobs:
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
           path: ${{ steps.metadata.outputs.failure-summary-file-name }}
-
+      - if: inputs.name == 'standard' && contains(inputs.go-tags, 'enterprise')
+        name: Compile tests without enterprise tag to make sure they're backportable
+        run: |
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+          # shellcheck disable=SC2086 # can't quote packages
+          cepackages=$(go list -e -json -tags testonly ${packages} |
+            jq -r 'select(.TestGoFiles|length>0) | select(.Module.Path == "github.com/hashicorp/vault") | .Dir')
+          # shellcheck disable=SC2086 # can't quote cepackages
+          go test -o /dev/null -c ${cepackages}
 
   status:
     # Perform final data aggregation and determine overall status
@@ -697,6 +692,7 @@ jobs:
       contents: read
       id-token: write
       issues: read
+      pull-requests: write
     outputs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
@@ -769,224 +765,6 @@ jobs:
           ' shell {} \; > /dev/null 2>&1
 
           ls -lhR '${{ needs.test-matrix.outputs.go-test-dir }}'
-      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
-        name: Check out source for relevant test discovery
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          ref: ${{ inputs.checkout-ref }}
-      # Download test result artifacts from all matrix shards so relevant test results can be extracted.
-      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
-        name: Download Go test result artifacts
-        continue-on-error: true
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}
-          path: pr-go-test-results
-          merge-multiple: true
-      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
-        name: Build relevant test target manifest
-        id: relevant-tests
-        continue-on-error: true
-        env:
-          CHANGED_FILES_JSON: ${{ inputs.changed-files }}
-          SUITE_NAME: ${{ inputs.name }}
-        run: ./.github/scripts/build-relevant-tests-manifest.sh
-      # Post or update a PR comment with the aggregated test results
-      - if: always() && github.event_name == 'pull_request' && inputs.name == 'testonly'
-        name: Post test results to PR
-        continue-on-error: true
-        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
-        env:
-          RELEVANT_TESTS_MANIFEST: ${{ steps.relevant-tests.outputs.manifest }}
-          CHECKOUT_REF: ${{ inputs.checkout-ref }}
-        with:
-          script: |
-            const fs = require('fs');
-            const path = require('path');
-
-            const suiteName = '${{ inputs.name }}';
-            const overallResult = '${{ steps.status.outputs.result }}';
-            const dataRaceResult = '${{ steps.status.outputs.data-race-result }}';
-
-            function fileExists(filePath) {
-              try {
-                return fs.existsSync(filePath);
-              } catch {
-                return false;
-              }
-            }
-
-            let relevantManifest = [];
-            const manifestPath = process.env.RELEVANT_TESTS_MANIFEST;
-            if (manifestPath && fileExists(manifestPath)) {
-              try {
-                relevantManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-              } catch {
-                relevantManifest = [];
-              }
-            }
-
-            const relevantTestFileNames = new Set(relevantManifest.map(m => m.test_file));
-
-            // Build a map of test name -> {test_file, line} for link generation
-            const testLinkMap = new Map();
-            for (const entry of relevantManifest) {
-              for (const t of entry.tests || []) {
-                testLinkMap.set(`${entry.dir}::${t.name}`, { file: entry.test_file, line: t.line });
-              }
-            }
-
-            const treeId = context.sha;
-            const treeBase = `https://github.com/hashicorp/vault-enterprise/tree/${treeId}`;
-
-            const eventFiles = fileExists('pr-go-test-results')
-              ? fs.readdirSync('pr-go-test-results').filter(f => f.endsWith('.json')).sort()
-              : [];
-
-            // Keep final test status per package/test.
-            const statuses = new Map();
-            for (const file of eventFiles) {
-              const lines = fs.readFileSync(path.join('pr-go-test-results', file), 'utf8').split(/\r?\n/);
-              for (const line of lines) {
-                if (!line.trim()) continue;
-                let ev;
-                try {
-                  ev = JSON.parse(line);
-                } catch {
-                  continue;
-                }
-                if (!ev || !ev.Package || !ev.Test) continue;
-                if (!['pass', 'fail', 'skip'].includes(ev.Action)) continue;
-
-                const pkg = String(ev.Package);
-                const test = String(ev.Test);
-                const key = `${pkg}::${test}`;
-                const statusRank = ev.Action === 'fail' ? 3 : ev.Action === 'pass' ? 2 : 1;
-
-                const prev = statuses.get(key);
-                if (!prev || statusRank >= prev.rank) {
-                  statuses.set(key, {
-                    package: pkg,
-                    test,
-                    status: ev.Action,
-                    elapsed: typeof ev.Elapsed === 'number' ? ev.Elapsed : null,
-                    rank: statusRank,
-                  });
-                }
-              }
-            }
-
-            const relevantResults = [];
-            for (const value of statuses.values()) {
-              const pkg = value.package;
-              const test = value.test;
-              const isRelevant = relevantManifest.some(entry => {
-                if (!(entry.tests || []).some(t => t.name === test)) {
-                  return false;
-                }
-
-                if (entry.dir === '.' || entry.dir === '') {
-                  return true;
-                }
-
-                return pkg.endsWith(`/${entry.dir}`);
-              });
-
-              if (isRelevant) {
-                // Find the matching manifest entry to attach link info
-                const matchEntry = relevantManifest.find(entry =>
-                  (entry.tests || []).some(t => t.name === test) &&
-                  (entry.dir === '.' || entry.dir === '' || pkg.endsWith(`/${entry.dir}`))
-                );
-                const matchTest = matchEntry
-                  ? (matchEntry.tests || []).find(t => t.name === test)
-                  : null;
-                value.testFile = matchEntry ? matchEntry.test_file : null;
-                value.testLine = matchTest ? matchTest.line : null;
-                relevantResults.push(value);
-              }
-            }
-
-            relevantResults.sort((a, b) => {
-              if (a.status !== b.status) {
-                const order = { fail: 0, skip: 1, pass: 2 };
-                return order[a.status] - order[b.status];
-              }
-              if (a.package !== b.package) return a.package.localeCompare(b.package);
-              return a.test.localeCompare(b.test);
-            });
-
-            // Collect data race details from downloaded log files
-            let dataRaceDetails = '';
-            const raceDir = 'data-race-logs';
-            if (fs.existsSync(raceDir)) {
-              const files = fs.readdirSync(raceDir).filter(f => f.endsWith('.log'));
-              for (const file of files.sort()) {
-                dataRaceDetails += fs.readFileSync(path.join(raceDir, file), 'utf8');
-              }
-            }
-
-            const passed = overallResult === 'success' && dataRaceResult === 'success';
-            const statusIcon = passed ? ':white_check_mark:' : ':x:';
-            const statusText = passed ? 'All tests passed' : 'Some tests failed';
-
-            let body = `## Go Test Results — \`${suiteName}\`\n\n${statusIcon} **${statusText}**\n`;
-
-            if (relevantTestFileNames.size > 0) {
-              body += `\n### Relevant Test Files\n\n`;
-              for (const file of [...relevantTestFileNames].sort()) {
-                body += `- [\`${file}\`](${treeBase}/${file})\n`;
-              }
-            }
-
-            if (relevantResults.length > 0) {
-              body += `\n### Relevant Test Results\n\n`;
-              body += `| Status | Package | Test | Elapsed (s) |\n`;
-              body += `|--------|---------|------|-------------|\n`;
-              for (const row of relevantResults) {
-                const icon = row.status === 'pass' ? ':white_check_mark:' : row.status === 'fail' ? ':x:' : ':fast_forward:';
-                const elapsed = row.elapsed == null ? '-' : row.elapsed.toFixed(3);
-                const testLabel = (row.testFile && row.testLine)
-                  ? `[${row.test}](${treeBase}/${row.testFile}#L${row.testLine})`
-                  : row.test;
-                body += `| ${icon} ${row.status} | ${row.package} | ${testLabel} | ${elapsed} |\n`;
-              }
-            } else if (relevantTestFileNames.size > 0) {
-              body += `\nNo direct matching test events were found for the relevant test files in this run.\n`;
-            } else {
-              body += `\nNo directly relevant \`*_test.go\` files were inferred from changed Go files.\n`;
-            }
-
-            if (dataRaceDetails) {
-              body += `\n### Data Race Failures\n\n<details><summary>Show details</summary>\n\n\`\`\`\n${dataRaceDetails}\n\`\`\`\n</details>\n`;
-            }
-
-            // Use a hidden marker so we can update an existing comment rather than posting duplicates
-            const marker = `<!-- go-test-results-${suiteName} -->`;
-            body = `${marker}\n${body}`;
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-
-            const existing = comments.find(c => c.body && c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body,
-              });
-            }
       # Determine our overall pass/fail with our Go test results
       - if: always() && steps.status.outputs.result != 'success'
         name: Check for failed status

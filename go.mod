@@ -59,7 +59,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go-v2 v1.43.3
+	github.com/aws/aws-sdk-go-v2 v1.42.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.25
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.29
@@ -71,7 +71,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
-	github.com/coder/websocket v1.8.12
+	github.com/coder/websocket v1.8.14
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/denisenkom/go-mssqldb v0.12.3
 	github.com/duosecurity/duo_api_golang v0.0.0-20250430191550-ac36954387e7
@@ -100,8 +100,8 @@ require (
 	github.com/hashicorp/consul-template v0.41.1
 	github.com/hashicorp/consul/api v1.32.1
 	github.com/hashicorp/errwrap v1.1.0
-	github.com/hashicorp/eventlogger v0.2.10
-	github.com/hashicorp/go-bexpr v0.1.12
+	github.com/hashicorp/eventlogger v0.2.11
+	github.com/hashicorp/go-bexpr v0.1.15
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-discover v1.2.1-0.20260515152638-8c1c8adeb200
 	github.com/hashicorp/go-gcp-common v0.9.2
@@ -131,7 +131,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
-	github.com/hashicorp/go-secure-stdlib/password v0.1.4
+	github.com/hashicorp/go-secure-stdlib/password v0.1.5
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
 	github.com/hashicorp/go-secure-stdlib/regexp v1.0.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
@@ -195,7 +195,7 @@ require (
 	github.com/kr/pretty v0.3.1
 	github.com/kr/text v0.2.0
 	github.com/mattn/go-colorable v0.1.15
-	github.com/mattn/go-isatty v0.0.23
+	github.com/mattn/go-isatty v0.0.24
 	github.com/michaelklishin/rabbit-hole/v2 v2.12.0
 	github.com/miekg/dns v1.1.72
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
@@ -204,8 +204,8 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/mitchellh/reflectwalk v1.0.2
-	github.com/moby/moby/api v1.54.2
-	github.com/moby/moby/client v0.4.1
+	github.com/moby/moby/api v1.55.0
+	github.com/moby/moby/client v0.5.0
 	github.com/ncw/swift v1.0.47
 	github.com/oklog/run v1.2.0
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
@@ -214,7 +214,7 @@ require (
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pavlo-v-chernykh/keystore-go/v4 v4.5.0
-	github.com/pires/go-proxyproto v0.8.0
+	github.com/pires/go-proxyproto v0.11.0
 	github.com/pkg/errors v0.9.1
 	github.com/posener/complete v1.2.3
 	github.com/pquerna/otp v1.5.0
@@ -240,7 +240,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.45.0
 	go.uber.org/atomic v1.11.0
 	golang.org/x/crypto v0.55.0
-	golang.org/x/exp v0.0.0-20260410095643-746e56fc9e2f
+	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597
 	golang.org/x/net v0.58.0
 	golang.org/x/oauth2 v0.36.0
 	golang.org/x/sync v0.22.0
@@ -259,15 +259,15 @@ require (
 
 require (
 	github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue v1.20.51
-	github.com/aws/smithy-go v1.27.6
+	github.com/aws/smithy-go v1.27.3
 )
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.13 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.6.4 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.22.28 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.34 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.34 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.30 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.30 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.30 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodbstreams v1.35.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.53.8 // indirect
@@ -364,7 +364,7 @@ require (
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.7.0 // indirect
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0 // indirect
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/DataDog/datadog-go v4.8.3+incompatible // indirect
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.6.0 // indirect
@@ -412,7 +412,7 @@ require (
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/cli v27.4.1+incompatible // indirect
+	github.com/docker/cli v29.6.1+incompatible // indirect
 	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dvsekhvalnov/jose2go v1.7.0 // indirect
@@ -532,7 +532,7 @@ require (
 	github.com/opencontainers/runc v1.3.6 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
-	github.com/petermattis/goid v0.0.0-20250721140440-ea1c0173183e // indirect
+	github.com/petermattis/goid v0.0.0-20260716134002-a9b348f0a2b9 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect

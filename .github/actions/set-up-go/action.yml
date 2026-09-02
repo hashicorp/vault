@@ -7,7 +7,7 @@ description: Set up Go with a shared module cache.
 
 inputs:
   github-token:
-    description: An elevated Github token to access private modules if necessary.
+    description: A Github token used to authenticate module downloads and avoid rate limits. Defaults to github.token.
   no-restore:
     description: Whether or not to restore the Go module cache on a cache hit
     default: "false"
@@ -82,12 +82,33 @@ runs:
         # keeps cache upload time, download time, and storage size to a minimum.
         path: ${{ steps.metadata.outputs.cache-path }}
         key: ${{ steps.metadata.outputs.cache-key }}
+    - id: build-context
+      shell: bash
+      run: |
+        # Determine whether our branch is an enterprise branch. Only on those
+        # will we allow private access to modules.
+        is_enterprise_repo='${{ contains(github.repository, 'vault-enterprise') }}'
+        if [ "$is_enterprise_repo" = 'true' ]; then
+          base_ref='${{ github.event.pull_request.base.ref || github.ref_name }}'
+          if [[ "$base_ref" == ce/* || "$base_ref" == refs/heads/ce/* ]]; then
+            echo "is-enterprise=false" | tee -a "$GITHUB_OUTPUT"
+          else
+            echo "is-enterprise=true" | tee -a "$GITHUB_OUTPUT"
+          fi
+        else
+          echo "is-enterprise=false" | tee -a "$GITHUB_OUTPUT"
+        fi
     - if: steps.cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'true'
       name: Download go modules
       shell: bash
       env:
-        GOPRIVATE: github.com/hashicorp/*
+        # Only enable GOPRIVATE for enterprise builds.
+        GOPRIVATE: ${{ steps.build-context.outputs.is-enterprise == 'true' && 'github.com/hashicorp/*' || '' }}
+        # Configure the Git URL override with env vars to avoid poisoning the
+        # config with an elevated token.
+        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token || github.token }}@github.com.insteadOf
+        GIT_CONFIG_VALUE_0: https://github.com
       run: |
-        git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
         make go-mod-download
         du -h -d 1 ${{ steps.metadata.outputs.cache-path }}
