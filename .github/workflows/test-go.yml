@@ -141,19 +141,9 @@ jobs:
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
             kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
             kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
-      - if: steps.global-metadata.outputs.is-ent-repo == 'true'
-        name: Setup Git configuration (private)
-        id: setup-git-private
-        run: |
-          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-      - if: steps.global-metadata.outputs.is-ent-repo != 'true'
-        name: Setup Git configuration (public)
-        id: setup-git-public
-        run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ steps.global-metadata.outputs.is-ent-repo == 'true' && steps.secrets.outputs.github-token || secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.global-metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.github-token }}
       - uses: ./.github/actions/install-tools # for gotestsum
       - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
       - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
@@ -176,7 +166,7 @@ jobs:
         name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ steps.global-metadata.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
@@ -187,7 +177,7 @@ jobs:
       - if: ${{ inputs.testonly }}
         name: Build matrix for tests tagged with testonly
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ steps.global-metadata.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
           # enable glob expansion
@@ -195,7 +185,7 @@ jobs:
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*,*verify*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
+            go list -tags="${{inputs.go-tags}}" ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./command/*testonly* ./vault/ | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files '${{ steps.local-metadata.outputs.go-test-dir }}/*.json' > matrix.json
           )
@@ -250,7 +240,7 @@ jobs:
       matrix:
         id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
-      GOPRIVATE: github.com/hashicorp/*
+      GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     outputs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
@@ -259,9 +249,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
+      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
+        name: Authenticate to Vault
+        id: vault-auth
+        run: vault-auth
+      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
+        name: Fetch Secrets
+        id: vault-secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
+            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
+            kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
+            kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
       - uses: ./.github/actions/set-up-go
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ needs.test-matrix.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.github-token }}
+          no-save: true
       - id: metadata
         name: Set up metadata
         run: |
@@ -307,35 +317,6 @@ jobs:
             echo "gotestsum-results-prefix=${gotestsum_results_prefix}"
             echo "gotestsum-timing-events=${gotestsum_timing_events}"
           } | tee -a "$GITHUB_OUTPUT"
-      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
-        name: Authenticate to Vault
-        id: vault-auth
-        run: vault-auth
-      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
-        name: Fetch Secrets
-        id: secrets
-        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
-        with:
-          url: ${{ steps.vault-auth.outputs.addr }}
-          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
-          token: ${{ steps.vault-auth.outputs.token }}
-          secrets: |
-            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
-            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
-            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
-            kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
-            kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
-            kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
-      - if: needs.test-matrix.outputs.is-ent-repo == 'true'
-        id: setup-git-private
-        name: Setup Git configuration (private)
-        run: |
-          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-      - if: needs.test-matrix.outputs.is-ent-repo != 'true'
-        id: setup-git-public
-        name: Setup Git configuration (public)
-        run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - uses: ./.github/actions/install-tools
       - if: github.repository == 'hashicorp/vault-enterprise'
         name: Configure Instana for test tracing
@@ -357,7 +338,7 @@ jobs:
       - if: inputs.binary-tests && matrix.id == inputs.total-runners && needs.test-matrix.outputs.is-ent-branch == 'true'
         name: Build Vault HSM binary for tests
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
           time make prep enthsmdev
@@ -367,7 +348,7 @@ jobs:
         name: Build dev binary for binary tests
         # The dev mode binary has to exist for binary tests that are dispatched on the last runner.
         env:
-          GOPRIVATE: github.com/hashicorp/*
+          GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
           time make prep dev
@@ -424,6 +405,10 @@ jobs:
           }
           EOF
           sudo systemctl reload docker
+      - name: Install swtpm
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y swtpm swtpm-tools
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -489,8 +474,9 @@ jobs:
           VAULT_TEST_LOG_DIR='${{ steps.metadata.outputs.go-test-log-dir-absolute }}'
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
+          unset VAULT_ADDR
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
-          GOARCH=${{ inputs.go-arch }} VAULT_ADDR='' \
+          GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \
               --junitfile '${{ steps.metadata.outputs.gotestsum-junitfile }}' \
               --jsonfile '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
@@ -644,15 +630,17 @@ jobs:
               const jobData = result.data.jobs.filter(
                 (job) => job.name.startsWith(prefixToSearchFor)
               );
+              if (jobData.length === 0) {
+                console.log("Warning: no job found matching prefix: " + prefixToSearchFor);
+                return;
+              }
               const url = jobData[0].html_url;
               const envVarName = "GH_JOB_URL";
               const envVar = envVarName + "=" + url;
               const envFile = process.env.GITHUB_ENV;
 
-              fs.appendFile(envFile, envVar, (err) => {
-                if (err) throw err;
-                console.log("Successfully set " + envVarName + " to: " + url);
-              });
+              await fs.promises.appendFile(envFile, envVar);
+              console.log("Successfully set " + envVarName + " to: " + url);
             } catch (error) {
               console.log("Error: " + error);
               return
@@ -665,7 +653,13 @@ jobs:
           # Then, it formats the results into rows of a Markdown table.k
           # An example row will resemble this:
           # | github.com/hashicorp/vault/package | TestName | fips | 0 | 2 | [view results](github.com/link-to-logs) |
-          jq -r -n 'inputs
+          # Group all pass/fail events by Package+Test, take the last verdict for each.
+          # This filters out tests that failed on the first attempt but passed on rerun
+          # (--rerun-fails), so only genuinely failing tests appear in the summary.
+          jq -r -n '[inputs]
+          | group_by(.Package + (.Test // ""))
+          | .[]
+          | last(.[] | select(.Action == "pass" or .Action == "fail"))
           | select(.Action == "fail")
           | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
@@ -676,7 +670,15 @@ jobs:
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
           path: ${{ steps.metadata.outputs.failure-summary-file-name }}
-
+      - if: inputs.name == 'standard' && contains(inputs.go-tags, 'enterprise')
+        name: Compile tests without enterprise tag to make sure they're backportable
+        run: |
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+          # shellcheck disable=SC2086 # can't quote packages
+          cepackages=$(go list -e -json -tags testonly ${packages} |
+            jq -r 'select(.TestGoFiles|length>0) | select(.Module.Path == "github.com/hashicorp/vault") | .Dir')
+          # shellcheck disable=SC2086 # can't quote cepackages
+          go test -o /dev/null -c ${cepackages}
 
   status:
     # Perform final data aggregation and determine overall status

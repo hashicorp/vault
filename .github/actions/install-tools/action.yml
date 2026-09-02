@@ -78,7 +78,6 @@ runs:
       name: Install tools
       shell: bash
       env:
-        GOPRIVATE: github.com/hashicorp/*
         # `go install` to our vault tool cache
         GOBIN: ${{ env.VAULT_TOOLS_PATH }}
         # Don't use the global mod cache because we don't want to pollute it

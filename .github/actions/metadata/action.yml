@@ -154,7 +154,7 @@ runs:
         # Set CE, Ent, and CE in Ent specific workflow metadata
         is_enterprise_repo='${{ contains(github.repository, 'vault-enterprise') }}'
         if [ "$is_enterprise_repo" = 'true' ]; then
-          base_ref='${{ github.event.pull_request.base.ref || github.event.base_ref || github.ref_name || github.event.branch || github.ref }}'
+          base_ref='${{ github.event.pull_request.base.ref || github.event.base_ref || github.ref_name || github.ref }}'
           is_ent_repo='true'
           is_ent_branch='true'
           is_ce_in_enterprise=$([[ $base_ref == ce/* || $base_ref == refs/heads/ce/* ]] && echo "true" || echo "false")
@@ -187,7 +187,7 @@ runs:
         fi
         {
           echo "compute-build=${compute_build}"
-          echo "compute-build-ui=${compute_test_ui}"
+          echo "compute-build-ui=${compute_build_ui}"
           echo "compute-test-go=${compute_test_go}"
           echo "compute-test-ui=${compute_test_ui}"
           echo "compute-small=${compute_small}"
