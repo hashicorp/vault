@@ -312,6 +312,7 @@ changed_files {
     // Make sure our zap scanner is always ent only
     match {
       base_dir = [
+        joinpath(".github", "actions", "set-up-sarif-engine"),
         joinpath("enos", "modules", "zap_scan_ent")
       ]
     }
