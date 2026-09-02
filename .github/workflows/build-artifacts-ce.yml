@@ -106,7 +106,6 @@ jobs:
           create-docker-container: true
           create-packages: true
           create-redhat-container: ${{ matrix.redhat }}
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           goarch: ${{ matrix.goarch }}
           goos: ${{ matrix.goos }}
           go-tags: ui
@@ -214,7 +213,6 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           create-docker-container: ${{ matrix.docker }}
           create-packages: ${{ matrix.packages }}
           create-redhat-container: false
