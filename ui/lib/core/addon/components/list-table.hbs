@@ -19,6 +19,7 @@
       @selectionKey={{this.identifier B.data}}
       @selectionAriaLabelSuffix="row {{this.identifier B.data}}"
       data-test-table-row={{B.rowIndex}}
+      data-test-table-parent-row={{if (this.isParentRow B.data) "true"}}
       data-test-list-item={{this.identifier B.data}}
     >
       {{#each @columns as |column|}}
