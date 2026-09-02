@@ -19,7 +19,7 @@
             data-test-managed-namespace-root
           />
           <SG.TextInput
-            {{on "input" this.handleInput}}
+            {{on "change" this.handleInput}}
             {{did-insert this.maybeRefocus}}
             @value={{this.namespaceInput}}
             autocomplete="off"
@@ -33,7 +33,7 @@
     </Hds::Form::Field>
   {{else}}
     <Hds::Form::TextInput::Field
-      {{on "input" this.handleInput}}
+      {{on "change" this.handleInput}}
       {{did-insert this.maybeRefocus}}
       @value={{this.namespaceInput}}
       autocomplete="off"
