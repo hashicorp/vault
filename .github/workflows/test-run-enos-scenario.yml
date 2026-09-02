@@ -68,8 +68,6 @@ jobs:
           no-restore: true
       # Install additional tools like gotestsum that are required for Enos scenarios
       - uses: ./.github/actions/install-tools
-      - name: Configure Git
-        run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
       - name: Set up node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

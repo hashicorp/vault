@@ -44,12 +44,6 @@ runs:
           kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
           kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
           kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
-    - name: Setup Git configuration (private)
-      id: setup-git-private
-      if: github.repository == 'hashicorp/vault-enterprise'
-      shell: bash
-      run: |
-        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
     - name: Check out the .release/versions.hcl file from Vault Enterprise repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -88,7 +82,11 @@ runs:
     - name: Build dev binary for binary tests
       env:
         GOPATH: /home/runner/go
+        # This action is only called from ENT workflows; GOPRIVATE is unconditionally required.
         GOPRIVATE: github.com/hashicorp/*
+        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token }}@github.com.insteadOf
+        GIT_CONFIG_VALUE_0: https://github.com
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}" || exit 1
