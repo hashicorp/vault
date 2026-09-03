@@ -238,10 +238,8 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 }
 
 func Test_Format_Parsing(t *testing.T) {
-	defer func() {
-		t.Setenv(EnvVaultCLINoColor, "")
-		t.Setenv(EnvVaultFormat, "")
-	}()
+	t.Setenv(EnvVaultCLINoColor, "")
+	t.Setenv(EnvVaultFormat, "")
 
 	cases := []struct {
 		name string
