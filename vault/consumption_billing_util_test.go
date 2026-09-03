@@ -1608,11 +1608,12 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	// Simulate GCP KMS plugin writing billing data (this is what the plugin does when operations occur)
 	// In a real scenario, this would be triggered by actual encrypt/decrypt/sign/verify operations
 	err := core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-aware-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
 	})
 	require.NoError(t, err)
 
@@ -1630,19 +1631,21 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 
 	// Simulate more operations
 	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-aware-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
 	})
 	require.NoError(t, err)
 	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-aware-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
 	})
 	require.NoError(t, err)
 
@@ -1717,6 +1720,7 @@ func verifyMountAttributionBreakdowns(t *testing.T, expected logical.MountAttrib
 	require.Equal(t, expected.NamespacePath, actual.NamespacePath)
 	require.Equal(t, expected.MountPath, actual.MountPath)
 	require.Equal(t, expected.ParentNamespaceID, actual.ParentNamespaceID)
+	require.Equal(t, expected.MountRunningVersion, actual.MountRunningVersion)
 	// Count is interface{} and comes back as json.Number after a storage round-trip;
 	// compare via string representation to avoid type-mismatch failures.
 	require.Equal(t, fmt.Sprintf("%v", expected.Count), fmt.Sprintf("%v", actual.Count))

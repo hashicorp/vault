@@ -42,11 +42,12 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	// Simulate GCP KMS operations by directly calling the billing manager.
 	// Attribution fields are required now that GcpKms attribution tracking is enabled.
 	billingData := map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-uuid",
+		"mountRunningVersion": "version1",
 	}
 
 	// Simulate encrypt operation

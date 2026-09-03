@@ -232,8 +232,10 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	if !ok {
 		return fmt.Errorf("invalid value type for backendAwareUUID")
 	}
-	// NEED TO FIX: MAKE mountRunningVersion REQUIRED AS PART OF VAULT-48738
-	mountRunningVersion, _ := data["mountRunningVersion"].(string)
+	mountRunningVersion, ok := data["mountRunningVersion"].(string)
+	if !ok {
+		return fmt.Errorf("invalid value type for mountRunningVersion")
+	}
 
 	d.MountAttributionLock.Lock()
 	var prev float64
