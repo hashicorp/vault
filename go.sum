@@ -843,8 +843,8 @@ github.com/hashicorp/vault-plugin-auth-cf v0.23.1 h1:zrDYtAzIEwWjkxVDD83XOk9tI0v
 github.com/hashicorp/vault-plugin-auth-cf v0.23.1/go.mod h1:CUBTmP1g3IxckT3FlcUOjJ+c5mUUmCo6B42VUQvj5VQ=
 github.com/hashicorp/vault-plugin-auth-gcp v0.23.1 h1:E13iJgR6bGAULjrAhstuQH2PxVTZdrWivT75J7RY5Tw=
 github.com/hashicorp/vault-plugin-auth-gcp v0.23.1/go.mod h1:7eXqptuyLNtPLdvwia0Bc139bMGlCgYJZqyhKmR4RWE=
-github.com/hashicorp/vault-plugin-auth-jwt v0.26.3 h1:MsdvAE/rqyUx4gsf31/ebga3wJ+kozosVqaI4Bbugkg=
-github.com/hashicorp/vault-plugin-auth-jwt v0.26.3/go.mod h1:lcmkcwQC9vWOO8BdLBK2/NZsKcXX+JtwsJU7jWhqRDA=
+github.com/hashicorp/vault-plugin-auth-jwt v0.26.4 h1:AwKYYvp7oqTwiY+X+ou4FAVjmdivTXK+TII4urQVijY=
+github.com/hashicorp/vault-plugin-auth-jwt v0.26.4/go.mod h1:YBKepP8nVWeD94Fca5MyIPRFL3bL7WCo0aApe9QBt6I=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.17.1 h1:eOlMi+w5VTdvMmyP18GPnckybjwFYLna0eXBLWsb+BQ=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.17.1/go.mod h1:FET3h3/cvfy+H0PbQdMVgDZnBlgSFVhJbovrRRU+9Ic=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.1 h1:EBSaP3mKs0wffpJgmPWI+dU++8CLrC3uexdvmCON7/Y=
@@ -1483,8 +1483,8 @@ golang.org/x/crypto v0.13.0/go.mod h1:y6Z2r+Rw4iayiXXAIxJIDAJ1zMW4yaTpebo8fPOliY
 golang.org/x/crypto v0.17.0/go.mod h1:gCAAfMLgwOJRpTjQ2zCCt2OcSfYMTeZVSRtQlPC7Nq4=
 golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
 golang.org/x/crypto v0.21.0/go.mod h1:0BP7YvVV9gBbVKyeTG0Gyn+gZm94bibOW5BjDEYAOMs=
-golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
-golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
+golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
+golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20180807140117-3d87b88a115f/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
