@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
-	"os"
 	"strings"
 	"testing"
 
@@ -151,7 +150,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 
 func TestOperatorUnsealCommand_Format(t *testing.T) {
 	defer func() {
-		os.Setenv(EnvVaultCLINoColor, "")
+		t.Setenv(EnvVaultCLINoColor, "")
 	}()
 
 	client, keys, closer := testVaultServerUnseal(t)

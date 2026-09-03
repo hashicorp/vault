@@ -4,7 +4,6 @@
 package kubernetes
 
 import (
-	"os"
 	"strconv"
 	"sync"
 	"testing"
@@ -24,12 +23,8 @@ func TestServiceRegistration(t *testing.T) {
 	client.Scheme = testConf.ClientScheme
 	client.TokenFile = testConf.PathToTokenFile
 	client.RootCAFile = testConf.PathToRootCAFile
-	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
 
 	if testState.NumPatches() != 0 {
 		t.Fatalf("expected 0 patches but have %d: %+v", testState.NumPatches(), testState)

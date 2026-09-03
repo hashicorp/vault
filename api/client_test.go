@@ -25,22 +25,20 @@ import (
 )
 
 func init() {
-	// Ensure our special envvars are not present
-	os.Setenv("VAULT_ADDR", "")
-	os.Setenv("VAULT_TOKEN", "")
+	// Ensure our special envvars are not present. Runs in init(), no *testing.T is available here.
+	os.Unsetenv("VAULT_ADDR")
+	os.Unsetenv("VAULT_TOKEN")
 }
 
 func TestDefaultConfig_envvar(t *testing.T) {
-	os.Setenv("VAULT_ADDR", "https://vault.mycompany.com")
-	defer os.Setenv("VAULT_ADDR", "")
+	t.Setenv("VAULT_ADDR", "https://vault.mycompany.com")
 
 	config := DefaultConfig()
 	if config.Address != "https://vault.mycompany.com" {
 		t.Fatalf("bad: %s", config.Address)
 	}
 
-	os.Setenv("VAULT_TOKEN", "testing")
-	defer os.Setenv("VAULT_TOKEN", "")
+	t.Setenv("VAULT_TOKEN", "testing")
 
 	client, err := NewClient(config)
 	if err != nil {
@@ -72,8 +70,7 @@ func TestClientNilConfig(t *testing.T) {
 }
 
 func TestClientDefaultHttpClient_unixSocket(t *testing.T) {
-	os.Setenv("VAULT_AGENT_ADDR", "unix:///var/run/vault.sock")
-	defer os.Setenv("VAULT_AGENT_ADDR", "")
+	t.Setenv("VAULT_AGENT_ADDR", "unix:///var/run/vault.sock")
 
 	client, err := NewClient(nil)
 	if err != nil {
@@ -375,12 +372,6 @@ func TestDefaulRetryPolicy(t *testing.T) {
 }
 
 func TestClientEnvHeaders(t *testing.T) {
-	oldHeaders := os.Getenv(EnvVaultHeaders)
-
-	defer func() {
-		os.Setenv(EnvVaultHeaders, oldHeaders)
-	}()
-
 	cases := []struct {
 		Input string
 		Valid bool
@@ -404,7 +395,7 @@ func TestClientEnvHeaders(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		os.Setenv(EnvVaultHeaders, tc.Input)
+		t.Setenv(EnvVaultHeaders, tc.Input)
 		config := DefaultConfig()
 		config.ReadEnvironment()
 		_, err := NewClient(config)
@@ -419,7 +410,7 @@ func TestClientEnvHeaders(t *testing.T) {
 		}
 	}
 
-	os.Setenv(EnvVaultHeaders, "{\"foo\": \"bar\"}")
+	t.Setenv(EnvVaultHeaders, "{\"foo\": \"bar\"}")
 	config := DefaultConfig()
 	config.ReadEnvironment()
 	cli, _ := NewClient(config)
@@ -437,34 +428,14 @@ func TestClientEnvSettings(t *testing.T) {
 		t.Fatalf("error reading %q cert file: %v", cwd+"/test-fixtures/keys/cert.pem", err)
 	}
 
-	oldCACert := os.Getenv(EnvVaultCACert)
-	oldCACertBytes := os.Getenv(EnvVaultCACertBytes)
-	oldCAPath := os.Getenv(EnvVaultCAPath)
-	oldClientCert := os.Getenv(EnvVaultClientCert)
-	oldClientKey := os.Getenv(EnvVaultClientKey)
-	oldSkipVerify := os.Getenv(EnvVaultSkipVerify)
-	oldMaxRetries := os.Getenv(EnvVaultMaxRetries)
-	oldDisableRedirects := os.Getenv(EnvVaultDisableRedirects)
-
-	os.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
-	os.Setenv(EnvVaultCACertBytes, string(caCertBytes))
-	os.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
-	os.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
-	os.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
-	os.Setenv(EnvVaultSkipVerify, "true")
-	os.Setenv(EnvVaultMaxRetries, "5")
-	os.Setenv(EnvVaultDisableRedirects, "true")
-
-	defer func() {
-		os.Setenv(EnvVaultCACert, oldCACert)
-		os.Setenv(EnvVaultCACertBytes, oldCACertBytes)
-		os.Setenv(EnvVaultCAPath, oldCAPath)
-		os.Setenv(EnvVaultClientCert, oldClientCert)
-		os.Setenv(EnvVaultClientKey, oldClientKey)
-		os.Setenv(EnvVaultSkipVerify, oldSkipVerify)
-		os.Setenv(EnvVaultMaxRetries, oldMaxRetries)
-		os.Setenv(EnvVaultDisableRedirects, oldDisableRedirects)
-	}()
+	t.Setenv(EnvVaultCACert, cwd+"/test-fixtures/keys/cert.pem")
+	t.Setenv(EnvVaultCACertBytes, string(caCertBytes))
+	t.Setenv(EnvVaultCAPath, cwd+"/test-fixtures/keys")
+	t.Setenv(EnvVaultClientCert, cwd+"/test-fixtures/keys/cert.pem")
+	t.Setenv(EnvVaultClientKey, cwd+"/test-fixtures/keys/key.pem")
+	t.Setenv(EnvVaultSkipVerify, "true")
+	t.Setenv(EnvVaultMaxRetries, "5")
+	t.Setenv(EnvVaultDisableRedirects, "true")
 
 	config := DefaultConfig()
 	if err := config.ReadEnvironment(); err != nil {
@@ -487,9 +458,7 @@ func TestClientEnvSettings(t *testing.T) {
 }
 
 func TestClientDeprecatedEnvSettings(t *testing.T) {
-	oldInsecure := os.Getenv(EnvVaultInsecure)
-	os.Setenv(EnvVaultInsecure, "true")
-	defer os.Setenv(EnvVaultInsecure, oldInsecure)
+	t.Setenv(EnvVaultInsecure, "true")
 
 	config := DefaultConfig()
 	if err := config.ReadEnvironment(); err != nil {
@@ -510,9 +479,7 @@ func TestClientEnvNamespace(t *testing.T) {
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
 
-	oldVaultNamespace := os.Getenv(EnvVaultNamespace)
-	defer os.Setenv(EnvVaultNamespace, oldVaultNamespace)
-	os.Setenv(EnvVaultNamespace, "test")
+	t.Setenv(EnvVaultNamespace, "test")
 
 	client, err := NewClient(config)
 	if err != nil {
@@ -572,9 +539,7 @@ func TestParsingErrorCase(t *testing.T) {
 }
 
 func TestClientTimeoutSetting(t *testing.T) {
-	oldClientTimeout := os.Getenv(EnvVaultClientTimeout)
-	os.Setenv(EnvVaultClientTimeout, "10")
-	defer os.Setenv(EnvVaultClientTimeout, oldClientTimeout)
+	t.Setenv(EnvVaultClientTimeout, "10")
 	config := DefaultConfig()
 	config.ReadEnvironment()
 	_, err := NewClient(config)
@@ -1527,21 +1492,15 @@ func TestVaultProxy(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			if tc.vaultHttpProxy != "" {
-				oldVaultHttpProxy := os.Getenv(EnvHTTPProxy)
-				os.Setenv(EnvHTTPProxy, tc.vaultHttpProxy)
-				defer os.Setenv(EnvHTTPProxy, oldVaultHttpProxy)
+				t.Setenv(EnvHTTPProxy, tc.vaultHttpProxy)
 			}
 
 			if tc.vaultProxyAddr != "" {
-				oldVaultProxyAddr := os.Getenv(EnvVaultProxyAddr)
-				os.Setenv(EnvVaultProxyAddr, tc.vaultProxyAddr)
-				defer os.Setenv(EnvVaultProxyAddr, oldVaultProxyAddr)
+				t.Setenv(EnvVaultProxyAddr, tc.vaultProxyAddr)
 			}
 
 			if tc.noProxy != "" {
-				oldNoProxy := os.Getenv(NoProxy)
-				os.Setenv(NoProxy, tc.noProxy)
-				defer os.Setenv(NoProxy, oldNoProxy)
+				t.Setenv(NoProxy, tc.noProxy)
 			}
 
 			c := DefaultConfig()
