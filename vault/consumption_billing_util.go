@@ -1090,13 +1090,13 @@ func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, cur
 	return currentCount, nil
 }
 
-// IncrementOidcTokenCount increments the in-memory OIDC token count and total duration hours.
+// IncrementOidcTokenCount increments the in-memory OIDC duration-adjusted token count.
 // This is called each time an OIDC token is created. The counts are flushed to storage
-// periodically by the consumption billing metrics worker.
-// Note: OidcTokenDuration is not normalized and is duration-adjusted during flush to storage in UpdateOidcDurationAdjustedCount.
+// periodically by the consumption billing metrics worker. durationSeconds is the raw token TTL;
+// it is normalized to duration-adjusted units immediately.
 func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
-	c.consumptionBillingLock.Lock()
-	defer c.consumptionBillingLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	defer c.consumptionBillingLock.RUnlock()
 
 	cb := c.consumptionBilling
 
@@ -1104,12 +1104,12 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
 		return
 	}
 
-	// Update raw token duration
-	cb.IdentityTokenUnits.OidcTokenDuration.Add(durationSeconds)
+	// Update duration-adjusted units
+	cb.IdentityTokenUnits.OidcTokenUnits.Add(DurationAdjustedTokenCount(durationSeconds))
 }
 
-// UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,
-// normalizes them to duration-adjusted counts, and flushes them to storage.
+// UpdateOidcDurationAdjustedCount reads the in-memory OIDC duration-adjusted token count
+// and flushes it to storage.
 // This is called periodically by the consumption billing metrics worker.
 func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) error {
 	c.consumptionBillingLock.RLock()
@@ -1123,14 +1123,12 @@ func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	// Get in-memory raw token duration and reset value in memory
-	// Using Swap to atomically reset the value. If Vault crashes after a successful storage update but before reset, this prevents double counting.
-	totalTokenDurationSecondsFromMemory := cb.IdentityTokenUnits.OidcTokenDuration.Swap(0)
+	// Swap out the accumulated duration-adjusted units (already normalized per-token in
+	// IncrementOidcTokenCount). Using Swap to atomically reset so a crash after a successful
+	// storage write does not cause double-counting on the next flush.
+	units := cb.IdentityTokenUnits.OidcTokenUnits.Swap(0)
 
-	// Calculate duration-adjusted count from raw data
-	durationAdjustedCountMemory := DurationAdjustedTokenCount(totalTokenDurationSecondsFromMemory)
-
-	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, durationAdjustedCountMemory)
+	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, units)
 }
 
 func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time, inc float64) error {

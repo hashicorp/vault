@@ -33,8 +33,8 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 			GcpKms:    &atomic.Uint64{},
 		},
 		IdentityTokenUnits: billing.IdentityTokenUnits{
-			OidcTokenDuration: uberAtomic.NewFloat64(0),
-			SpiffeJwt:         uberAtomic.NewFloat64(0),
+			OidcTokenUnits: uberAtomic.NewFloat64(0),
+			SpiffeJwt:      uberAtomic.NewFloat64(0),
 		},
 		ExternalCaCertUnits: uberAtomic.NewFloat64(0),
 		Logger:              logger,
@@ -193,7 +193,7 @@ func (c *Core) resetInMemoryBillingMetrics() error {
 	c.consumptionBilling.IdentityTokenUnits.SpiffeJwt.Store(0)
 	c.consumptionBilling.DataProtectionCallCounts.GcpKms.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
-	c.consumptionBilling.IdentityTokenUnits.OidcTokenDuration.Store(0)
+	c.consumptionBilling.IdentityTokenUnits.OidcTokenUnits.Store(0)
 	c.consumptionBilling.ExternalCaCertUnits.Store(0)
 	return nil
 }
