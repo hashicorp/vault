@@ -285,6 +285,8 @@ func operatorSystemBackendPaths(b *SystemBackend) []*framework.Path {
 	ret = append(ret, b.experimentPaths()...)
 	ret = append(ret, b.introspectionPaths()...)
 	ret = append(ret, b.wellKnownPaths()...)
+	ret = append(ret, b.releaseInfoPaths()...)
+	ret = append(ret, b.vaultVersionsPaths()...)
 	ret = append(ret, b.activationFlagsPaths()...)
 	ret = append(ret, b.useCaseConsumptionBillingPaths()...)
 
