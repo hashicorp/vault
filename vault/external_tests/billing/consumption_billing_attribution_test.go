@@ -373,7 +373,7 @@ func TestConsumeCertCounts_StoresAttribution(t *testing.T) {
 	}
 
 	// ConsumeCertCounts checks HAState; the cluster core is Active.
-	core.ConsumeCertCounts(inc)
+	core.ConsumeCertCounts(inc, true)
 
 	// PKI attribution
 	pkiAttr, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.PkiDurationAdjustedCountPrefix)
