@@ -149,9 +149,7 @@ func TestOperatorUnsealCommand_Run(t *testing.T) {
 }
 
 func TestOperatorUnsealCommand_Format(t *testing.T) {
-	defer func() {
-		t.Setenv(EnvVaultCLINoColor, "")
-	}()
+	t.Setenv(EnvVaultCLINoColor, "")
 
 	client, keys, closer := testVaultServerUnseal(t)
 	defer closer()
