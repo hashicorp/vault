@@ -106,9 +106,9 @@ type DataProtectionCallCounts struct {
 
 // IdentityTokenUnits tracks billing metrics for identity and authentication services
 type IdentityTokenUnits struct {
-	// OidcTokenDuration tracks the token duration units (seconds, not duration-adjusted) for billing purposes in memory.
-	// This value is normalized before flushing to storage and is reset to 0 after flush in UpdateOidcDurationAdjustedCount.
-	OidcTokenDuration *uberatomic.Float64 `json:"oidc,omitempty"`
+	// OidcTokenUnits tracks the token duration units (duration-adjusted) for billing purposes in memory.
+	// This value is normalized and is reset to 0 after flush in UpdateOidcDurationAdjustedCount.
+	OidcTokenUnits *uberatomic.Float64 `json:"oidc,omitempty"`
 
 	// SpiffeJwt stores duration-adjusted JWT token units as float64
 	// We need to use the uberAtomic package to store atomic float64 values
