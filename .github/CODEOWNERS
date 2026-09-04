@@ -18,21 +18,15 @@
 
 # Secrets engines (pki, ssh, totp and transit omitted)
 /builtin/logical/aws/         @hashicorp/vault-ecosystem
-/builtin/logical/cassandra/   @hashicorp/vault-ecosystem
 /builtin/logical/consul/      @hashicorp/vault-ecosystem
 /builtin/logical/database/    @hashicorp/vault-ecosystem
-/builtin/logical/mongodb/     @hashicorp/vault-ecosystem
-/builtin/logical/mssql/       @hashicorp/vault-ecosystem
-/builtin/logical/mysql/       @hashicorp/vault-ecosystem
 /builtin/logical/nomad/       @hashicorp/vault-ecosystem
-/builtin/logical/postgresql/  @hashicorp/vault-ecosystem
 /builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem
 
 # Identity Integrations (OIDC, tokens)
 /vault/identity_store_oidc*   @hashicorp/vault-ecosystem
 
 /plugins/                     @hashicorp/vault-ecosystem
-/vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
 # Content on developer.hashicorp.com
 # Web presence gets notified of, and can approve changes to web tooling, but not content.
@@ -41,15 +35,8 @@
 
 # Education gets notified of, and can approve changes to web content.
 # These more-specific patterns override the web-presence rule above for content subdirs.
-/website/data/          @hashicorp/vault-education-approvers
-/website/public/        @hashicorp/vault-education-approvers
-/website/content/       @hashicorp/vault-education-approvers
-/website/templates/     @hashicorp/vault-education-approvers
-/website/redirects.js   @hashicorp/vault-education-approvers
 
 # Plugin docs
-/website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
-/website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 
 # Automation/Quality engineering
 /.github/                         @hashicorp/team-vault-quality @hashicorp/team-vault-engineering-productivity-team
@@ -61,10 +48,6 @@
 # UI
 /.github/actions/build-ui/                  @hashicorp/vault-ui @hashicorp/vault-frontend
 /.github/actions/set-up-pnpm/               @hashicorp/vault-ui @hashicorp/vault-frontend
-/.github/workflows/gen-diff-spec/           @hashicorp/vault-ui @hashicorp/vault-frontend
-/.github/workflows/test-enos-scenarios-ui/  @hashicorp/vault-ui @hashicorp/vault-frontend
-/.github/workflows/test-ui/                 @hashicorp/vault-ui @hashicorp/vault-frontend
-/.github/workflows/ui-client-update/        @hashicorp/vault-ui @hashicorp/vault-frontend
 /ui/                                        @hashicorp/vault-ui @hashicorp/vault-frontend
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
@@ -74,9 +57,6 @@
 /ui/app/routes/vault/cluster/oidc-*.js   @hashicorp/vault-ui @hashicorp/vault-frontend @hashicorp/vault-ecosystem
 
 # AI assistant configuration
-/.bob/                            @hashicorp/vault
-/.opencode/                       @hashicorp/vault
-/opencode.json                    @hashicorp/vault
 /.github/copilot-instructions.md  @hashicorp/vault
 /.github/instructions/            @hashicorp/vault
 
@@ -84,18 +64,9 @@
 /api/auth/cert/                                      @hashicorp/vault-crypto
 /builtin/logical/pki/                                @hashicorp/vault-crypto
 /builtin/logical/pkiext/                             @hashicorp/vault-crypto
-/website/content/docs/secrets/pki/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/secret/pki/                @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/secret/pki.mdx             @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /builtin/credential/cert/                            @hashicorp/vault-crypto
-/website/content/docs/auth/cert.mdx                  @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/auth/cert.mdx              @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /builtin/logical/ssh/                                @hashicorp/vault-crypto
-/website/content/docs/secrets/ssh/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/secret/ssh.mdx             @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /builtin/logical/transit/                            @hashicorp/vault-crypto
-/website/content/docs/secrets/transit/               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/secret/transit.mdx         @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /helper/random/                                      @hashicorp/vault-crypto
 /sdk/helper/certutil/                                @hashicorp/vault-crypto
 /sdk/helper/cryptoutil/                              @hashicorp/vault-crypto
@@ -109,14 +80,3 @@
 /vault/managed_key*                                  @hashicorp/vault-crypto
 /vault/seal*                                         @hashicorp/vault-crypto
 /vault/seal/                                         @hashicorp/vault-crypto
-/website/content/docs/configuration/seal/            @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/docs/enterprise/sealwrap.mdx        @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/system/sealwrap-rewrap.mdx @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/docs/secrets/transform/             @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/secret/transform.mdx       @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/docs/secrets/kmip-profiles.mdx      @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/docs/secrets/kmip.mdx               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/api-docs/secret/kmip.mdx            @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/docs/enterprise/fips/               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/website/content/docs/platform/k8s                   @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
-/website/content/                                    @hashicorp/vault-customer-engineering @hashicorp/vault-education-approvers
