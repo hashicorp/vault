@@ -752,6 +752,7 @@ func TestUpdateMaxThirdPartyPluginCounts_StoresAttributionOnHWMUpdate(t *testing
 	require.Equal(t, "root", attr.NamespaceID)
 	require.Empty(t, attr.NamespacePath)
 	require.Equal(t, mountEntry.BackendAwareUUID, attr.BackendAwareUUID)
+	require.True(t, attr.IsExternal)
 
 	// Second call with the same count — HWM must not change and attribution must not be overwritten.
 	max, err = core.UpdateMaxThirdPartyPluginCounts(ctx, month)

@@ -246,7 +246,7 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	if !ok {
 		return fmt.Errorf("invalid value type for mountRunningVersion")
 	}
-
+	isExternal, _ := data["isExternal"].(bool)
 	d.MountAttributionLock.Lock()
 	var prev float64
 	if existing, exists := d.MountAttribution[mountAccessor]; exists {
@@ -261,12 +261,13 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 		MountPath:           mountPath,
 		MountAccessor:       mountAccessor,
 		MountType:           mountType,
-		MountRunningVersion: mountRunningVersion,
 		NamespaceID:         namespaceID,
 		NamespacePath:       namespacePath,
 		ParentNamespaceID:   parentNamespaceID,
 		BackendAwareUUID:    backendAwareUUID,
 		Count:               prev + count,
+		MountRunningVersion: mountRunningVersion,
+		IsExternal:          isExternal,
 	}
 	d.MountAttributionLock.Unlock()
 

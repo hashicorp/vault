@@ -266,6 +266,7 @@ func TestWithMountInfo_PKI(t *testing.T) {
 	require.Equal(t, mount.MountType, attr.MountType)
 	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
 	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.False(t, attr.IsExternal)
 	require.Equal(t, mount.MountRunningVersion, attr.MountRunningVersion)
 	require.InDelta(t, 1.0, attr.Count.(float64), 0.0001, "per-mount count should equal billing units")
 
@@ -300,6 +301,7 @@ func TestWithMountInfo_SSH(t *testing.T) {
 	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
 	require.Equal(t, mount.NamespacePath, attr.NamespacePath)
 	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.False(t, attr.IsExternal)
 	require.Equal(t, mount.MountRunningVersion, attr.MountRunningVersion)
 	require.InDelta(t, 1.0, attr.Count.(float64), 0.0001)
 
@@ -331,6 +333,7 @@ func TestWithMountInfo_SSHOTP(t *testing.T) {
 	require.Equal(t, mount.MountType, attr.MountType)
 	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
 	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.False(t, attr.IsExternal)
 	require.Equal(t, mount.MountRunningVersion, attr.MountRunningVersion)
 	require.InDelta(t, 0.0014, attr.Count.(float64), 0.00001)
 
