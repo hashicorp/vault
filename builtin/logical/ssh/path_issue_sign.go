@@ -616,6 +616,7 @@ func sshMountAttribution(ctx context.Context, req *logical.Request, backendUUID 
 		attr.MountType = req.MountType
 		attr.BackendAwareUUID = backendUUID
 		attr.MountRunningVersion = req.MountRunningVersion()
+		attr.IsExternal = req.MountIsExternalPlugin()
 	}
 	if ns, err := namespace.FromContext(ctx); err == nil {
 		attr.NamespaceID = ns.ID

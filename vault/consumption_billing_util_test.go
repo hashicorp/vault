@@ -1715,13 +1715,21 @@ func TestCore_BillingRetentionMonths(t *testing.T) {
 
 func verifyMountAttributionBreakdowns(t *testing.T, expected logical.MountAttribution, actual logical.MountAttribution) {
 	t.Helper()
-	require.Equal(t, expected.MountAccessor, actual.MountAccessor)
-	require.Equal(t, expected.NamespaceID, actual.NamespaceID)
-	require.Equal(t, expected.NamespacePath, actual.NamespacePath)
-	require.Equal(t, expected.MountPath, actual.MountPath)
-	require.Equal(t, expected.ParentNamespaceID, actual.ParentNamespaceID)
-	require.Equal(t, expected.MountRunningVersion, actual.MountRunningVersion)
-	// Count is interface{} and comes back as json.Number after a storage round-trip;
-	// compare via string representation to avoid type-mismatch failures.
-	require.Equal(t, fmt.Sprintf("%v", expected.Count), fmt.Sprintf("%v", actual.Count))
+	require.Equal(t, expected.MountAccessor, actual.MountAccessor, "MountAccessor mismatch")
+	require.Equal(t, expected.MountPath, actual.MountPath, "MountPath mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.MountType, actual.MountType, "MountType mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.NamespaceID, actual.NamespaceID, "NamespaceID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.NamespacePath, actual.NamespacePath, "NamespacePath mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.ParentNamespaceID, actual.ParentNamespaceID, "ParentNamespaceID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.BackendAwareUUID, actual.BackendAwareUUID, "BackendAwareUUID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.MountRunningVersion, actual.MountRunningVersion, "MountRunningVersion mismatch for %s", expected.MountAccessor)
+	var actualCount, expectedCount float64
+	if _, err := fmt.Sscanf(fmt.Sprintf("%v", actual.Count), "%g", &actualCount); err != nil {
+		t.Fatalf("failed to parse actual count %v: %v", actual.Count, err)
+	}
+	if _, err := fmt.Sscanf(fmt.Sprintf("%v", expected.Count), "%g", &expectedCount); err != nil {
+		t.Fatalf("failed to parse expected count %v: %v", expected.Count, err)
+	}
+	require.InDelta(t, expectedCount, actualCount, 1e-9, "Count mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.IsExternal, actual.IsExternal)
 }

@@ -105,6 +105,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 					NamespaceID:         entry.NamespaceID,
 					NamespacePath:       namespacePath,
 					BackendAwareUUID:    entry.BackendAwareUUID,
+					IsExternal:          true, // all third party plugins are external
 				}
 			}
 		}
