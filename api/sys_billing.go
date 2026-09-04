@@ -132,7 +132,36 @@ func (c *Sys) SetBillingConfigWithContext(ctx context.Context, retentionMonths i
 	return nil
 }
 
+// SetAttributionRetentionConfig sets the attribution data retention period.
+func (c *Sys) SetAttributionRetentionConfig(attributionRetentionMonths int) error {
+	return c.SetAttributionRetentionConfigWithContext(context.Background(), attributionRetentionMonths)
+}
+
+// SetAttributionRetentionConfigWithContext sets the attribution data retention period.
+func (c *Sys) SetAttributionRetentionConfigWithContext(ctx context.Context, attributionRetentionMonths int) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	body := map[string]interface{}{
+		"attribution_retention_months": attributionRetentionMonths,
+	}
+
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/billing/config")
+	if err := r.SetJSONBody(body); err != nil {
+		return err
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 // BillingConfigResponse represents the response from the billing config endpoint.
 type BillingConfigResponse struct {
-	RetentionMonths int `json:"retention_months" mapstructure:"retention_months"`
+	RetentionMonths            int `json:"retention_months" mapstructure:"retention_months"`
+	AttributionRetentionMonths int `json:"attribution_retention_months" mapstructure:"attribution_retention_months"`
 }

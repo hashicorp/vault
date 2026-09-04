@@ -197,13 +197,43 @@ func (c *Core) DeleteExpiredBillingMetrics(ctx context.Context, currentMonth tim
 	return c.deleteExpiredDataAtPath(ctx, monthToDelete, false)
 }
 
-// DeleteExpiredAttributionData deletes attribution data older than the default retention period.
+// DeleteExpiredAttributionData deletes attribution data older than the configured retention period.
+// If attribution is disabled (retention = 0), all attribution data is wiped.
 func (c *Core) DeleteExpiredAttributionData(ctx context.Context, currentMonth time.Time) error {
-	// Delete attribution data from billing.DefaultAttributionRetentionMonths ago
-	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -billing.DefaultAttributionRetentionMonths, 0)
+	retentionMonths, err := c.GetAttributionRetentionMonths(ctx)
+	if err != nil {
+		c.logger.Warn("failed to get attribution retention configuration, using default")
+		retentionMonths = billing.DefaultAttributionRetentionMonths
+	}
+
+	if retentionMonths == billing.MinAttributionRetentionMonths {
+		// Attribution disabled: wipe all existing attribution data by iterating
+		// over every month within the maximum possible retention window and deleting
+		// the attribution subtree for each.
+		start := timeutil.StartOfMonth(currentMonth)
+		for i := 0; i <= billing.MaxAttributionRetentionMonths; i++ {
+			month := start.AddDate(0, -i, 0)
+			if err := c.deleteExpiredDataAtPath(ctx, month, true); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// Delete attribution data older than the configured retention period
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths, 0)
 
 	// attributionOnly=true: delete only the attribution/ subtree
 	return c.deleteExpiredDataAtPath(ctx, monthToDelete, true)
+}
+
+// IsAttributionDisabled reports whether attribution storage is currently disabled (retention = 0).
+func (c *Core) IsAttributionDisabled(ctx context.Context) bool {
+	retentionMonths, err := c.GetAttributionRetentionMonths(ctx)
+	if err != nil {
+		return false
+	}
+	return retentionMonths == billing.MinAttributionRetentionMonths
 }
 
 // deleteExpiredDataAtPath is a helper function that deletes billing data at a specific path.
@@ -434,23 +464,25 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	// Note: this metric is always aggregated; the snapshot of the current month is always the
 	// same as the billable value for the current month. This differs from HWM metrics where the snapshot
 	// could contain a different value from the billable value.
-	if err := c.UpdateTransitAttribution(ctx, currentMonth); err != nil {
-		return fmt.Errorf("could not store transit mount breakdown: %w", err)
-	}
-	if err := c.UpdateTransformAttribution(ctx, currentMonth); err != nil {
-		return fmt.Errorf("could not store transform mount breakdown: %w", err)
-	}
-	if err := c.UpdateOidcAttribution(ctx, currentMonth); err != nil {
-		return fmt.Errorf("could not store OIDC mount breakdown: %w", err)
-	}
-	if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
-		return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
-	}
-	if err := c.UpdateExternalCaAttribution(ctx, currentMonth); err != nil {
-		return fmt.Errorf("could not store external ca mount breakdown: %w", err)
-	}
-	if err := c.UpdateSpiffeAttribution(ctx, currentMonth); err != nil {
-		return fmt.Errorf("could not store spiffe mount breakcout: %w", err)
+	if !c.IsAttributionDisabled(ctx) {
+		if err := c.UpdateTransitAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store transit mount breakdown: %w", err)
+		}
+		if err := c.UpdateTransformAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store transform mount breakdown: %w", err)
+		}
+		if err := c.UpdateOidcAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store OIDC mount breakdown: %w", err)
+		}
+		if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
+		}
+		if err := c.UpdateExternalCaAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store external ca mount breakdown: %w", err)
+		}
+		if err := c.UpdateSpiffeAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store spiffe mount breakdown: %w", err)
+		}
 	}
 
 	return nil
