@@ -1563,9 +1563,10 @@ START:
 		if c.config.ReadYourWrites {
 			c.replicationStateStore.recordState(result)
 		}
-	}
-	if err := result.Error(); err != nil {
-		return result, err
+
+		if err := result.Error(); err != nil {
+			return result, err
+		}
 	}
 
 	return result, nil
