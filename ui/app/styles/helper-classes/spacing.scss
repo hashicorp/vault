@@ -63,6 +63,10 @@
   padding: size_variables.$spacing-16;
 }
 
+.has-padding-20 {
+  padding: size_variables.$spacing-20;
+}
+
 .has-padding-24 {
   padding: size_variables.$spacing-24;
 }
@@ -158,6 +162,10 @@
 // All Margin helpers
 .is-marginless {
   margin: 0 !important;
+}
+
+.bottom-margin-0 {
+  margin-bottom: 0;
 }
 
 // spacing-18 is between medium + large

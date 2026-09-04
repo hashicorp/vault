@@ -51,11 +51,12 @@ func TestGetAttributionPath(t *testing.T) {
 func TestAccumulateMountAttributions_MetadataUpdate(t *testing.T) {
 	const accessor = "transit_abc123"
 
-	data := map[string]interface{}{
-		"mountPath":        "transit/",
-		"mountAccessor":    accessor,
-		"mountType":        "transit",
-		"backendAwareUUID": "uuid-xyz",
+	data1 := map[string]interface{}{
+		"mountPath":           "transit-v1/",
+		"mountAccessor":       accessor,
+		"mountType":           "transit",
+		"backendAwareUUID":    "uuid-aaa",
+		"mountRunningVersion": "v1.0.0",
 	}
 
 	tracker := &AttributionTracker{
@@ -66,32 +67,48 @@ func TestAccumulateMountAttributions_MetadataUpdate(t *testing.T) {
 	ns1 := &namespace.Namespace{ID: "ns1-id", Path: "ns1/"}
 	ctx1 := namespace.ContextWithNamespace(context.Background(), ns1)
 
-	err := tracker.AccumulateMountAttributions(ctx1, data, 10.0, nil)
+	err := tracker.AccumulateMountAttributions(ctx1, data1, 10.0, nil)
 	require.NoError(t, err)
 
 	tracker.MountAttributionLock.RLock()
 	entry := tracker.MountAttribution[accessor]
 	tracker.MountAttributionLock.RUnlock()
 
+	require.Equal(t, "transit-v1/", entry.MountPath, "first call: MountPath should be transit-v1/")
+	require.Equal(t, "transit", entry.MountType, "first call: MountType should be transit")
+	require.Equal(t, "uuid-aaa", entry.BackendAwareUUID, "first call: BackendAwareUUID should be uuid-aaa")
+	require.Equal(t, "v1.0.0", entry.MountRunningVersion, "first call: MountRunningVersion should be v1.0.0")
 	require.Equal(t, "ns1-id", entry.NamespaceID, "first call: NamespaceID should be ns1")
-	require.Equal(t, "ns1/", entry.NamespacePath)
+	require.Equal(t, "ns1/", entry.NamespacePath, "first call: NamespacePath should be ns1/")
 	require.Equal(t, fmt.Sprintf("%v", 10.0), fmt.Sprintf("%v", entry.Count))
 
-	// Second call: same accessor, mount has moved to ns2.
+	// Second call: same accessor, all metadata has changed (mount renamed, plugin
+	// upgraded, namespace moved). Every field must reflect the newer values.
+	data2 := map[string]interface{}{
+		"mountPath":           "transit-v2/",
+		"mountAccessor":       accessor,
+		"mountType":           "transit",
+		"backendAwareUUID":    "uuid-bbb",
+		"mountRunningVersion": "v2.0.0",
+	}
 	ns2 := &namespace.Namespace{ID: "ns2-id", Path: "ns2/"}
 	ctx2 := namespace.ContextWithNamespace(context.Background(), ns2)
 
-	err = tracker.AccumulateMountAttributions(ctx2, data, 5.0, nil)
+	err = tracker.AccumulateMountAttributions(ctx2, data2, 5.0, nil)
 	require.NoError(t, err)
 
 	tracker.MountAttributionLock.RLock()
 	entry = tracker.MountAttribution[accessor]
 	tracker.MountAttributionLock.RUnlock()
 
-	// Metadata must reflect ns2 — the most recent call wins.
+	// All metadata fields must reflect the second call — the most recent call wins.
+	require.Equal(t, "transit-v2/", entry.MountPath, "second call: MountPath should be updated to transit-v2/")
+	require.Equal(t, "transit", entry.MountType, "second call: MountType should be transit")
+	require.Equal(t, "uuid-bbb", entry.BackendAwareUUID, "second call: BackendAwareUUID should be updated to uuid-bbb")
+	require.Equal(t, "v2.0.0", entry.MountRunningVersion, "second call: MountRunningVersion should be updated to v2.0.0")
 	require.Equal(t, "ns2-id", entry.NamespaceID, "second call: NamespaceID should be updated to ns2")
-	require.Equal(t, "ns2/", entry.NamespacePath, "second call: NamespacePath should be updated to ns2")
-	// Count must be the sum of both calls.
+	require.Equal(t, "ns2/", entry.NamespacePath, "second call: NamespacePath should be updated to ns2/")
+	// Count must be accumulated across both calls.
 	require.Equal(t, fmt.Sprintf("%v", 15.0), fmt.Sprintf("%v", entry.Count), "count should accumulate: 10 + 5 = 15")
 	require.Empty(t, entry.ParentNamespaceID)
 }

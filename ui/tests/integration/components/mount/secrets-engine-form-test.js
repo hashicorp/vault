@@ -146,6 +146,36 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
     });
   });
 
+  module('About this engine section', function () {
+    test('it shows the about-this-engine section for kv (a common engine)', async function (assert) {
+      // Common engines (kv, aws, azure, gcp, database) show the about-this-engine card on mount
+      this.form.type = 'kv';
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
+
+      assert.dom('[data-test-about-this-engine]').exists('about-this-engine section renders for kv');
+    });
+
+    test('it shows the about-this-engine section for aws (a common engine)', async function (assert) {
+      this.form.type = 'aws';
+      this.form.applyTypeSpecificDefaults();
+      if (!this.form.data.config) this.form.data.config = {};
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
+
+      assert.dom('[data-test-about-this-engine]').exists('about-this-engine section renders for aws');
+    });
+
+    test('it does not show the about-this-engine section for a non-common engine', async function (assert) {
+      // Non-common engines like ssh do not have about-engine info, so the section is absent
+      this.form.type = 'ssh';
+      this.form.data.path = 'ssh';
+      await render(hbs`<Mount::SecretsEngineForm @model={{this.model}} />`);
+
+      assert
+        .dom('[data-test-about-this-engine]')
+        .doesNotExist('about-this-engine section does not render for ssh');
+    });
+  });
+
   module('WIF secret engines', function () {
     test('it shows identity_token_key when type is a WIF engine and hides when its not', async function (assert) {
       // Test AWS (a WIF engine)

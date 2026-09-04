@@ -163,20 +163,22 @@ func TestStoreCertAttribution_PKI(t *testing.T) {
 	month := timeutil.StartOfMonth(time.Now().UTC())
 
 	mount1 := logical.MountAttribution{
-		MountAccessor: "pki_aaa",
-		MountPath:     "pki/",
-		MountType:     "pki",
-		NamespaceID:   "root",
-		NamespacePath: "",
-		Count:         1.0,
+		MountAccessor:       "pki_aaa",
+		MountPath:           "pki/",
+		MountType:           "pki",
+		NamespaceID:         "root",
+		NamespacePath:       "",
+		Count:               1.0,
+		MountRunningVersion: "version1",
 	}
 	mount2 := logical.MountAttribution{
-		MountAccessor: "pki_bbb",
-		MountPath:     "pki2/",
-		MountType:     "pki",
-		NamespaceID:   "ns1",
-		NamespacePath: "ns1/",
-		Count:         2.0,
+		MountAccessor:       "pki_bbb",
+		MountPath:           "pki2/",
+		MountType:           "pki",
+		NamespaceID:         "ns1",
+		NamespacePath:       "ns1/",
+		Count:               2.0,
+		MountRunningVersion: "version2",
 	}
 
 	// First flush: mount1 only, delta = 1.0 (== mount1.Count).
@@ -200,6 +202,7 @@ func TestStoreCertAttribution_PKI(t *testing.T) {
 	// delta = 1.5 + 2.0 = 3.5 — identical to sum(incomingMounts.Count).
 	mount1v2 := mount1
 	mount1v2.Count = 1.5
+	mount1v2.MountRunningVersion = "version1b"
 	err = core.UpdatePkiDurationAdjustedCount(ctx, 3.5, month)
 	require.NoError(t, err)
 	err = core.StoreCertAttribution(ctx, billing.PkiDurationAdjustedCountPrefix, 3.5,
@@ -212,12 +215,14 @@ func TestStoreCertAttribution_PKI(t *testing.T) {
 	// Running total: 1.0 + 3.5 = 4.5
 	require.Equal(t, "4.5", fmt.Sprintf("%v", got.Count))
 	require.Len(t, got.Mounts, 2)
-	// mount1 per-mount total: 1.0 + 1.5 = 2.5
+	// mount1 per-mount total: 1.0 + 1.5 = 2.5; version reflects latest flush
 	require.Equal(t, "2.5", fmt.Sprintf("%v", got.Mounts["pki_aaa"].Count))
+	require.Equal(t, "version1b", got.Mounts["pki_aaa"].MountRunningVersion, "MountRunningVersion should reflect latest flush")
 	// mount2 is new: 2.0
 	require.Equal(t, "2", fmt.Sprintf("%v", got.Mounts["pki_bbb"].Count))
 	require.Equal(t, "ns1", got.Mounts["pki_bbb"].NamespaceID)
 	require.Equal(t, "ns1/", got.Mounts["pki_bbb"].NamespacePath)
+	require.Equal(t, "version2", got.Mounts["pki_bbb"].MountRunningVersion, "MountRunningVersion should be stored for new mount")
 	requireAttrCountEqualsMountSum(t, got)
 
 	// Billing scalar must equal attribution Count (both are running totals of the same deltas).
@@ -241,11 +246,12 @@ func TestStoreCertAttribution_SSHCert(t *testing.T) {
 	month := timeutil.StartOfMonth(time.Now().UTC())
 
 	mount := logical.MountAttribution{
-		MountAccessor: "ssh_cert_001",
-		MountPath:     "ssh/",
-		MountType:     "ssh",
-		NamespaceID:   "root",
-		Count:         0.5,
+		MountAccessor:       "ssh_cert_001",
+		MountPath:           "ssh/",
+		MountType:           "ssh",
+		NamespaceID:         "root",
+		Count:               0.5,
+		MountRunningVersion: "version1",
 	}
 
 	// Mirror production: update scalar and attribution with the same delta.
@@ -262,6 +268,7 @@ func TestStoreCertAttribution_SSHCert(t *testing.T) {
 	require.Len(t, got.Mounts, 1)
 	require.Equal(t, "0.5", fmt.Sprintf("%v", got.Mounts["ssh_cert_001"].Count))
 	require.Equal(t, "ssh_cert_001", got.Mounts["ssh_cert_001"].MountAccessor)
+	require.Equal(t, "version1", got.Mounts["ssh_cert_001"].MountRunningVersion)
 	requireAttrCountEqualsMountSum(t, got)
 
 	// Billing scalar must equal attribution Count.
@@ -285,11 +292,12 @@ func TestStoreCertAttribution_SSHOTP(t *testing.T) {
 	month := timeutil.StartOfMonth(time.Now().UTC())
 
 	mount := logical.MountAttribution{
-		MountAccessor: "ssh_otp_001",
-		MountPath:     "ssh/",
-		MountType:     "ssh",
-		NamespaceID:   "root",
-		Count:         0.0014,
+		MountAccessor:       "ssh_otp_001",
+		MountPath:           "ssh/",
+		MountType:           "ssh",
+		NamespaceID:         "root",
+		Count:               0.0014,
+		MountRunningVersion: "version1",
 	}
 
 	// Mirror production: update scalar and attribution with the same delta.
@@ -304,10 +312,12 @@ func TestStoreCertAttribution_SSHOTP(t *testing.T) {
 	require.NotNil(t, got)
 	require.Equal(t, "0.0014", fmt.Sprintf("%v", got.Count))
 	require.Len(t, got.Mounts, 1)
+	require.Equal(t, "version1", got.Mounts["ssh_otp_001"].MountRunningVersion, "MountRunningVersion should be stored from first flush")
 
-	// A second OTP on the same mount accumulates; mirror production scalar update too.
+	// A second OTP on the same mount: count accumulates, version upgraded — confirms version is overwritten by latest flush
 	mount2 := mount
 	mount2.Count = 0.0014
+	mount2.MountRunningVersion = "version2"
 	_, err = core.UpdateStoredSSHOTPCount(ctx, month, 0.0014)
 	require.NoError(t, err)
 	err = core.StoreCertAttribution(ctx, billing.SSHOTPMetric, 0.0014,
@@ -318,6 +328,7 @@ func TestStoreCertAttribution_SSHOTP(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "0.0028", fmt.Sprintf("%v", got.Count))
 	require.Equal(t, "0.0028", fmt.Sprintf("%v", got.Mounts["ssh_otp_001"].Count))
+	require.Equal(t, "version2", got.Mounts["ssh_otp_001"].MountRunningVersion, "MountRunningVersion should reflect latest flush")
 	requireAttrCountEqualsMountSum(t, got)
 
 	// Billing scalar must equal attribution Count.
@@ -340,25 +351,28 @@ func TestConsumeCertCounts_StoresAttribution(t *testing.T) {
 	month := timeutil.StartOfMonth(time.Now().UTC())
 
 	pkiMount := logical.MountAttribution{
-		MountAccessor: "pki_consume",
-		MountPath:     "pki/",
-		MountType:     "pki",
-		NamespaceID:   "root",
-		Count:         1.0,
+		MountAccessor:       "pki_consume",
+		MountPath:           "pki/",
+		MountType:           "pki",
+		NamespaceID:         "root",
+		Count:               1.0,
+		MountRunningVersion: "version1",
 	}
 	sshMount := logical.MountAttribution{
-		MountAccessor: "ssh_consume",
-		MountPath:     "ssh/",
-		MountType:     "ssh",
-		NamespaceID:   "root",
-		Count:         0.5,
+		MountAccessor:       "ssh_consume",
+		MountPath:           "ssh/",
+		MountType:           "ssh",
+		NamespaceID:         "root",
+		Count:               0.5,
+		MountRunningVersion: "version1",
 	}
 	otpMount := logical.MountAttribution{
-		MountAccessor: "otp_consume",
-		MountPath:     "ssh/",
-		MountType:     "ssh",
-		NamespaceID:   "root",
-		Count:         0.0014,
+		MountAccessor:       "otp_consume",
+		MountPath:           "ssh/",
+		MountType:           "ssh",
+		NamespaceID:         "root",
+		Count:               0.0014,
+		MountRunningVersion: "version1",
 	}
 
 	inc := logical.CertCount{
@@ -373,7 +387,7 @@ func TestConsumeCertCounts_StoresAttribution(t *testing.T) {
 	}
 
 	// ConsumeCertCounts checks HAState; the cluster core is Active.
-	core.ConsumeCertCounts(inc)
+	core.ConsumeCertCounts(inc, true)
 
 	// PKI attribution
 	pkiAttr, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.PkiDurationAdjustedCountPrefix)
@@ -411,11 +425,12 @@ func TestUpdateMaxKvCounts_StoresAttributionOnHWMUpdate(t *testing.T) {
 
 	attribution := vault.MountAttributionMap{
 		"kv_abc123": logical.MountAttribution{
-			Count:         5,
-			MountAccessor: "kv_abc123",
-			MountPath:     "secret/",
-			MountType:     "kv",
-			NamespaceID:   "root",
+			Count:               5,
+			MountAccessor:       "kv_abc123",
+			MountPath:           "secret/",
+			MountType:           "kv",
+			NamespaceID:         "root",
+			MountRunningVersion: "v1.0.0",
 		},
 	}
 
@@ -428,15 +443,17 @@ func TestUpdateMaxKvCounts_StoresAttributionOnHWMUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "kv_abc123", stored.Mounts["kv_abc123"].MountAccessor)
+	require.Equal(t, "v1.0.0", stored.Mounts["kv_abc123"].MountRunningVersion)
 
 	// Second call with lower count — HWM must remain at 5 and attribution must not change.
 	lowerAttribution := vault.MountAttributionMap{
 		"kv_lower": logical.MountAttribution{
-			Count:         3,
-			MountAccessor: "kv_lower",
-			MountPath:     "lower/",
-			MountType:     "kv",
-			NamespaceID:   "root",
+			Count:               3,
+			MountAccessor:       "kv_lower",
+			MountPath:           "lower/",
+			MountType:           "kv",
+			NamespaceID:         "root",
+			MountRunningVersion: "v2.0.0",
 		},
 	}
 	max, err = core.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, month, 3, lowerAttribution)
@@ -447,15 +464,17 @@ func TestUpdateMaxKvCounts_StoresAttributionOnHWMUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "kv_abc123", stored.Mounts["kv_abc123"].MountAccessor)
+	require.Equal(t, "v1.0.0", stored.Mounts["kv_abc123"].MountRunningVersion, "attribution must not change when HWM not exceeded")
 
 	// Third call with higher count — should update HWM and replace attribution.
 	higherAttribution := vault.MountAttributionMap{
 		"kv_higher": logical.MountAttribution{
-			Count:         9,
-			MountAccessor: "kv_higher",
-			MountPath:     "higher/",
-			MountType:     "kv",
-			NamespaceID:   "root",
+			Count:               9,
+			MountAccessor:       "kv_higher",
+			MountPath:           "higher/",
+			MountType:           "kv",
+			NamespaceID:         "root",
+			MountRunningVersion: "v3.0.0",
 		},
 	}
 	max, err = core.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, month, 9, higherAttribution)
@@ -466,6 +485,7 @@ func TestUpdateMaxKvCounts_StoresAttributionOnHWMUpdate(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "kv_higher", stored.Mounts["kv_higher"].MountAccessor)
+	require.Equal(t, "v3.0.0", stored.Mounts["kv_higher"].MountRunningVersion, "attribution must reflect new HWM mount")
 	requireAttrCountEqualsMountSum(t, stored)
 
 	// The billing scalar (HWM) must equal the attribution Count.
@@ -509,11 +529,12 @@ func TestUpdateMaxRoleAndManagedKeyCounts_StoresRoleAttributionPerType(t *testin
 	month := timeutil.StartOfMonth(time.Now().UTC())
 
 	awsEntry := logical.MountAttribution{
-		Count:         5,
-		MountAccessor: "aws_aaa",
-		MountPath:     "aws/",
-		MountType:     pluginconsts.SecretEngineAWS,
-		NamespaceID:   "root",
+		Count:               5,
+		MountAccessor:       "aws_aaa",
+		MountPath:           "aws/",
+		MountType:           pluginconsts.SecretEngineAWS,
+		NamespaceID:         "root",
+		MountRunningVersion: "v1.0.0",
 	}
 	roleAttribution := map[string]vault.MountAttributionMap{
 		billing.AWSDynamicRoles: {"aws_aaa": awsEntry},
@@ -533,11 +554,12 @@ func TestUpdateMaxRoleAndManagedKeyCounts_StoresRoleAttributionPerType(t *testin
 	require.Equal(t, "aws_aaa", stored.Mounts["aws_aaa"].MountAccessor)
 	// Count is stored as JSON and deserialised as json.Number; compare via string to avoid type mismatch.
 	require.Equal(t, "5", fmt.Sprintf("%v", stored.Mounts["aws_aaa"].Count))
+	require.Equal(t, "v1.0.0", stored.Mounts["aws_aaa"].MountRunningVersion)
 
 	// Now pass a lower count with different attribution
 	lowerAttribution := map[string]vault.MountAttributionMap{
 		billing.AWSDynamicRoles: {
-			"aws_bbb": logical.MountAttribution{Count: 3, MountAccessor: "aws_bbb", MountPath: "aws/", MountType: pluginconsts.SecretEngineAWS, NamespaceID: "root"},
+			"aws_bbb": logical.MountAttribution{Count: 3, MountAccessor: "aws_bbb", MountPath: "aws/", MountType: pluginconsts.SecretEngineAWS, NamespaceID: "root", MountRunningVersion: "v2.0.0"},
 		},
 	}
 	lowerCounts := &vault.RoleCounts{AWSDynamicRoles: 3}
@@ -551,6 +573,7 @@ func TestUpdateMaxRoleAndManagedKeyCounts_StoresRoleAttributionPerType(t *testin
 	require.Equal(t, "aws_aaa", stored.Mounts["aws_aaa"].MountAccessor)
 	// Count is stored as JSON and deserialised as json.Number; compare via string to avoid type mismatch.
 	require.Equal(t, "5", fmt.Sprintf("%v", stored.Mounts["aws_aaa"].Count))
+	require.Equal(t, "v1.0.0", stored.Mounts["aws_aaa"].MountRunningVersion, "attribution must not change when HWM not exceeded")
 
 	requireAttrCountEqualsMountSum(t, stored)
 
@@ -579,11 +602,12 @@ func TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM(t *testing.
 	month := timeutil.StartOfMonth(time.Now().UTC())
 
 	totpEntry := logical.MountAttribution{
-		Count:         4,
-		MountAccessor: "totp_t1",
-		MountPath:     "totp/",
-		MountType:     pluginconsts.SecretEngineTOTP,
-		NamespaceID:   "root",
+		Count:               4,
+		MountAccessor:       "totp_t1",
+		MountPath:           "totp/",
+		MountType:           pluginconsts.SecretEngineTOTP,
+		NamespaceID:         "root",
+		MountRunningVersion: "v1.0.0",
 	}
 	managedKeyAttribution := map[string]vault.MountAttributionMap{
 		billing.TotpKeys: {"totp_t1": totpEntry},
@@ -602,16 +626,18 @@ func TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM(t *testing.
 	require.Equal(t, "totp_t1", stored.Mounts["totp_t1"].MountAccessor)
 	// Count is stored as JSON and deserialised as json.Number; compare via string to avoid type mismatch.
 	require.Equal(t, "4", fmt.Sprintf("%v", stored.Mounts["totp_t1"].Count))
+	require.Equal(t, "v1.0.0", stored.Mounts["totp_t1"].MountRunningVersion)
 
 	// Second call with higher count: hwmUpdated is true and attribution must be stored.
 	higherAttribution := map[string]vault.MountAttributionMap{
 		billing.TotpKeys: {
 			"totp_t2": logical.MountAttribution{
-				Count:         7,
-				MountAccessor: "totp_t2",
-				MountPath:     "totp2/",
-				MountType:     pluginconsts.SecretEngineTOTP,
-				NamespaceID:   "root",
+				Count:               7,
+				MountAccessor:       "totp_t2",
+				MountPath:           "totp2/",
+				MountType:           pluginconsts.SecretEngineTOTP,
+				NamespaceID:         "root",
+				MountRunningVersion: "v2.0.0",
 			},
 		},
 	}
@@ -623,16 +649,18 @@ func TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM(t *testing.
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "totp_t2", stored.Mounts["totp_t2"].MountAccessor)
+	require.Equal(t, "v2.0.0", stored.Mounts["totp_t2"].MountRunningVersion, "attribution must reflect new HWM mount")
 
 	// Third call with a lower count — HWM stays at 7 and attribution must not change.
 	lowerAttribution := map[string]vault.MountAttributionMap{
 		billing.TotpKeys: {
 			"totp_t3": logical.MountAttribution{
-				Count:         5,
-				MountAccessor: "totp_t3",
-				MountPath:     "totp3/",
-				MountType:     pluginconsts.SecretEngineTOTP,
-				NamespaceID:   "root",
+				Count:               5,
+				MountAccessor:       "totp_t3",
+				MountPath:           "totp3/",
+				MountType:           pluginconsts.SecretEngineTOTP,
+				NamespaceID:         "root",
+				MountRunningVersion: "v3.0.0",
 			},
 		},
 	}
@@ -644,6 +672,7 @@ func TestUpdateMaxRoleAndManagedKeyCounts_TotpAttributionStoredOnHWM(t *testing.
 	require.NoError(t, err)
 	require.Len(t, stored.Mounts, 1)
 	require.Equal(t, "totp_t2", stored.Mounts["totp_t2"].MountAccessor)
+	require.Equal(t, "v2.0.0", stored.Mounts["totp_t2"].MountRunningVersion, "attribution must not change when HWM not exceeded")
 	requireAttrCountEqualsMountSum(t, stored)
 
 	// The billing scalar (TOTP HWM) must equal the attribution Count.
