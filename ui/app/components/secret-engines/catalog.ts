@@ -273,6 +273,8 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
       if (target.value.trim()) {
         this.keywords = target.value;
         this.clearSelectedEngine();
+      } else {
+        this.keywords = '';
       }
     }
   }
