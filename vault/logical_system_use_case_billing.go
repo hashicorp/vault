@@ -89,6 +89,10 @@ func (b *SystemBackend) billingConfigPath() *framework.Path {
 				Type:        framework.TypeInt,
 				Description: fmt.Sprintf("Number of months to retain billing data. Must be between %d and %d months. Defaults to %d months.", billing.MinBillingRetentionMonths, billing.MaxBillingRetentionMonths, billing.DefaultBillingRetentionMonths),
 			},
+			"attribution_retention_months": {
+				Type:        framework.TypeInt,
+				Description: fmt.Sprintf("Number of months to retain mount attribution data for billing metrics. Must be between %d and %d months. Defaults to %d months. Setting to 0 disables attribution storage and wipes all existing attribution data.", billing.MinAttributionRetentionMonths, billing.MaxAttributionRetentionMonths, billing.DefaultAttributionRetentionMonths),
+			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -101,6 +105,10 @@ func (b *SystemBackend) billingConfigPath() *framework.Path {
 							"retention_months": {
 								Type:        framework.TypeInt,
 								Description: "Number of months of billing data to retain.",
+							},
+							"attribution_retention_months": {
+								Type:        framework.TypeInt,
+								Description: "Number of months of attribution data to retain. 0 means attribution storage is disabled.",
 							},
 						},
 					}},
@@ -143,37 +151,81 @@ func (b *SystemBackend) handleBillingConfigRead(ctx context.Context, req *logica
 		return nil, fmt.Errorf("failed to get billing retention configuration: %w", err)
 	}
 
+	attributionRetentionMonths, err := b.Core.GetAttributionRetentionMonths(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get attribution retention configuration: %w", err)
+	}
+
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"retention_months": retentionMonths,
+			"retention_months":             retentionMonths,
+			"attribution_retention_months": attributionRetentionMonths,
 		},
 	}, nil
 }
 
 func (b *SystemBackend) handleBillingConfigWrite(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	retentionMonths := data.Get("retention_months").(int)
-	if retentionMonths < billing.MinBillingRetentionMonths || retentionMonths > billing.MaxBillingRetentionMonths {
-		return logical.ErrorResponse(fmt.Sprintf("retention_months must be between %d and %d months", billing.MinBillingRetentionMonths, billing.MaxBillingRetentionMonths)), logical.ErrInvalidRequest
-	}
-
-	// Get current retention to check if it's being increased
-	currentRetention, err := b.Core.GetBillingRetentionMonths(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current billing retention configuration: %w", err)
-	}
-
-	// Store the configuration
-	if err := b.Core.UpdateBillingRetentionMonths(ctx, retentionMonths); err != nil {
-		return nil, fmt.Errorf("failed to set billing retention configuration: %w", err)
-	}
-
 	resp := &logical.Response{}
 
-	// Add warning if retention period is being increased
-	if retentionMonths > currentRetention {
-		resp.Warnings = append(resp.Warnings, fmt.Sprintf(
-			"Retention period increased from %d to %d months. Historical data will only be available for months within the previous retention period. Older months outside the previous retention range will not have data.",
-			currentRetention, retentionMonths))
+	// Handle retention_months if provided
+	if rawRetention, ok := data.GetOk("retention_months"); ok {
+		retentionMonths := rawRetention.(int)
+		if retentionMonths < billing.MinBillingRetentionMonths || retentionMonths > billing.MaxBillingRetentionMonths {
+			return logical.ErrorResponse(fmt.Sprintf("retention_months must be between %d and %d months", billing.MinBillingRetentionMonths, billing.MaxBillingRetentionMonths)), logical.ErrInvalidRequest
+		}
+
+		// Get current retention to check if it's being increased
+		currentRetention, err := b.Core.GetBillingRetentionMonths(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current billing retention configuration: %w", err)
+		}
+
+		// Store the configuration
+		if err := b.Core.UpdateBillingRetentionMonths(ctx, retentionMonths); err != nil {
+			return nil, fmt.Errorf("failed to set billing retention configuration: %w", err)
+		}
+
+		// Add warning if retention period is being increased
+		if retentionMonths > currentRetention {
+			resp.Warnings = append(resp.Warnings, fmt.Sprintf(
+				"Retention period increased from %d to %d months. Historical data will only be available for months within the previous retention period. Older months outside the previous retention range will not have data.",
+				currentRetention, retentionMonths))
+		}
+	}
+
+	// Handle attribution_retention_months if provided
+	if rawAttrRetention, ok := data.GetOk("attribution_retention_months"); ok {
+		attributionRetentionMonths := rawAttrRetention.(int)
+		if attributionRetentionMonths < billing.MinAttributionRetentionMonths || attributionRetentionMonths > billing.MaxAttributionRetentionMonths {
+			return logical.ErrorResponse(fmt.Sprintf("attribution_retention_months must be between %d and %d months", billing.MinAttributionRetentionMonths, billing.MaxAttributionRetentionMonths)), logical.ErrInvalidRequest
+		}
+
+		currentAttributionRetention, err := b.Core.GetAttributionRetentionMonths(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get current attribution retention configuration: %w", err)
+		}
+
+		// Store the configuration
+		if err := b.Core.UpdateAttributionRetentionMonths(ctx, attributionRetentionMonths); err != nil {
+			return nil, fmt.Errorf("failed to set attribution retention configuration: %w", err)
+		}
+
+		// Add warning if retention period is being increased
+		if attributionRetentionMonths > currentAttributionRetention {
+			resp.Warnings = append(resp.Warnings, fmt.Sprintf(
+				"Attribution retention period increased from %d to %d months. Historical data will only be available for months within the previous retention period. Older months outside the previous retention range will not have data.",
+				currentAttributionRetention, attributionRetentionMonths))
+		}
+
+		// When attribution is disabled (0 months), wipe all existing attribution data
+		if attributionRetentionMonths == billing.MinAttributionRetentionMonths {
+			if err := b.Core.DeleteExpiredAttributionData(ctx, time.Now().UTC()); err != nil {
+				b.Core.logger.Error("failed to wipe attribution data after disabling attribution", "error", err)
+				resp.Warnings = append(resp.Warnings, "Attribution storage has been disabled but existing data could not be fully wiped. It will be cleaned up on the next billing cycle.")
+			} else {
+				resp.Warnings = append(resp.Warnings, "Attribution storage has been disabled and all existing attribution data has been wiped.")
+			}
+		}
 	}
 
 	return resp, nil

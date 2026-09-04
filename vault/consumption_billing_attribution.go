@@ -99,6 +99,10 @@ func (c *Core) StoreAttributionData(ctx context.Context, localPathPrefix string,
 // It is added to the stored total and written as MetricTypeAttribution.Count.
 // incomingMounts are the per-mount deltas from the current batch (keyed by mount accessor).
 func (c *Core) StoreCertAttribution(ctx context.Context, metricName string, countDelta float64, incomingMounts map[string]logical.MountAttribution, currentMonth time.Time) error {
+	if c.IsAttributionDisabled(ctx) {
+		return nil
+	}
+
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
@@ -174,6 +178,10 @@ func ToFloat64(v interface{}) float64 {
 }
 
 func (c *Core) UpdateMountAttribution(ctx context.Context, tracker *billing.AttributionTracker, mountTypePrefix string, currentMonth time.Time) error {
+	if c.IsAttributionDisabled(ctx) {
+		return nil
+	}
+
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()

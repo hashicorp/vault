@@ -262,14 +262,23 @@ func TestSys_BillingConfig(t *testing.T) {
 	client, err := NewClient(cfg)
 	require.NoError(t, err)
 
-	// Test GetBillingConfig
+	// Test GetBillingConfig - both fields are decoded from the mock response.
 	resp, err := client.Sys().GetBillingConfig()
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Equal(t, 37, resp.RetentionMonths)
+	require.Equal(t, 37, resp.AttributionRetentionMonths)
 
 	// Test SetBillingConfig
 	err = client.Sys().SetBillingConfig(48)
+	require.NoError(t, err)
+
+	// Test SetAttributionRetentionConfig
+	err = client.Sys().SetAttributionRetentionConfig(24)
+	require.NoError(t, err)
+
+	// 0 is allowed for attribution (disables it)
+	err = client.Sys().SetAttributionRetentionConfig(0)
 	require.NoError(t, err)
 }
 
@@ -287,7 +296,8 @@ const billingConfigResponse = `{
   "renewable": false,
   "lease_duration": 0,
   "data": {
-    "retention_months": 37
+    "retention_months": 37,
+    "attribution_retention_months": 37
   },
   "wrap_info": null,
   "warnings": null,

@@ -769,3 +769,230 @@ func TestUpdateMaxThirdPartyPluginCounts_StoresAttributionOnHWMUpdate(t *testing
 	require.InDelta(t, float64(tpScalar), vault.ToFloat64(storedAgain.Count), 1e-9,
 		"third-party plugin HWM scalar (%d) must equal attribution Count (%v)", tpScalar, storedAgain.Count)
 }
+
+// TestDeleteExpiredAttributionData_CustomRetention verifies that DeleteExpiredAttributionData
+// uses the configured attribution retention period instead of the default.
+func TestDeleteExpiredAttributionData_CustomRetention(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+	currentMonth := timeutil.StartOfMonth(now)
+
+	// Configure a shorter retention: 3 months.
+	customRetention := 3
+	err := core.UpdateAttributionRetentionMonths(ctx, customRetention)
+	require.NoError(t, err)
+
+	// Three months ago should be deleted; two months ago should be kept.
+	monthToDelete := currentMonth.AddDate(0, -customRetention, 0)
+	oldestRetained := currentMonth.AddDate(0, -(customRetention - 1), 0)
+
+	attrData := &logical.MetricTypeAttribution{
+		Count:       1,
+		LastUpdated: currentMonth,
+		Mounts: map[string]logical.MountAttribution{
+			"kv_a": {Count: 1, MountAccessor: "kv_a", MountPath: "secret/", MountType: "kv"},
+		},
+	}
+
+	view, ok := core.GetBillingSubView()
+	require.True(t, ok)
+
+	for _, month := range []time.Time{monthToDelete, oldestRetained, currentMonth} {
+		require.NoError(t, core.StoreAttributionData(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM, attrData))
+	}
+
+	require.NoError(t, core.DeleteExpiredAttributionData(ctx, currentMonth))
+
+	// monthToDelete must be gone.
+	entry, err := view.Get(ctx, billing.GetAttributionMaxPath(billing.LocalPrefix, monthToDelete, billing.KvHWMCountsHWM))
+	require.NoError(t, err)
+	require.Nil(t, entry, "attribution older than custom retention must be deleted")
+
+	// oldestRetained and currentMonth must be present.
+	for _, month := range []time.Time{oldestRetained, currentMonth} {
+		entry, err := view.Get(ctx, billing.GetAttributionMaxPath(billing.LocalPrefix, month, billing.KvHWMCountsHWM))
+		require.NoError(t, err)
+		require.NotNil(t, entry, "attribution within custom retention period must be kept: %s", month.Format("2006-01"))
+	}
+}
+
+// TestDeleteExpiredAttributionData_ZeroRetentionWipes verifies that when attribution
+// retention is configured to 0, DeleteExpiredAttributionData wipes all existing attribution
+// data across all months and prefixes.
+func TestDeleteExpiredAttributionData_ZeroRetentionWipes(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+	currentMonth := timeutil.StartOfMonth(now)
+
+	view, ok := core.GetBillingSubView()
+	require.True(t, ok)
+
+	attrData := &logical.MetricTypeAttribution{
+		Count:       1,
+		LastUpdated: currentMonth,
+		Mounts: map[string]logical.MountAttribution{
+			"kv_b": {Count: 1, MountAccessor: "kv_b", MountPath: "secret/", MountType: "kv"},
+		},
+	}
+
+	// Store attribution for several months.
+	months := []time.Time{
+		currentMonth.AddDate(0, -2, 0),
+		currentMonth.AddDate(0, -1, 0),
+		currentMonth,
+	}
+	for _, m := range months {
+		require.NoError(t, core.StoreAttributionData(ctx, billing.LocalPrefix, m, billing.KvHWMCountsHWM, attrData))
+	}
+
+	// Configure retention to 0 (disable).
+	err := core.UpdateAttributionRetentionMonths(ctx, billing.MinAttributionRetentionMonths)
+	require.NoError(t, err)
+	require.True(t, core.IsAttributionDisabled(ctx))
+
+	require.NoError(t, core.DeleteExpiredAttributionData(ctx, currentMonth))
+
+	// All attribution entries must be gone.
+	for _, m := range months {
+		entry, err := view.Get(ctx, billing.GetAttributionMaxPath(billing.LocalPrefix, m, billing.KvHWMCountsHWM))
+		require.NoError(t, err)
+		require.Nil(t, entry, "attribution for %s must be wiped when retention=0", m.Format("2006-01"))
+	}
+}
+
+// TestAttributionDisabled_SkipsAllAttributionStorage verifies that every attribution
+// write path is suppressed when attribution storage is disabled (retention = 0).
+// The test covers all 8 production call sites:
+//   - StoreCertAttribution: PKI, SSH cert, SSH OTP
+//   - UpdateMountAttribution (via Update*Attribution): Transit, Transform, GcpKms, Spiffe, OIDC, ExternalCA
+//   - UpdateMaxKvCounts
+//   - UpdateMaxRoleAndManagedKeyCounts (roles + TOTP managed keys)
+//   - UpdateMaxThirdPartyPluginCounts
+//   - UpdateKmipEnabled
+func TestAttributionDisabled_SkipsAllAttributionStorage(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+
+	ctx := context.Background()
+	month := timeutil.StartOfMonth(time.Now().UTC())
+
+	// Disable attribution.
+	require.NoError(t, core.UpdateAttributionRetentionMonths(ctx, billing.MinAttributionRetentionMonths))
+
+	// Helper that asserts no attribution was stored for a given metric key.
+	assertEmpty := func(prefix, metricKey string) {
+		t.Helper()
+		got, err := core.GetStoredAttributionData(ctx, prefix, month, metricKey)
+		require.NoError(t, err)
+		require.Empty(t, got.Mounts, "attribution must not be stored for %s when disabled", metricKey)
+	}
+
+	mount := func(accessor, path, mountType string) logical.MountAttribution {
+		return logical.MountAttribution{
+			MountAccessor: accessor,
+			MountPath:     path,
+			MountType:     mountType,
+			NamespaceID:   "root",
+			Count:         1.0,
+		}
+	}
+
+	// --- StoreCertAttribution (PKI, SSH cert, SSH OTP) ---
+	require.NoError(t, core.StoreCertAttribution(ctx, billing.PkiDurationAdjustedCountPrefix, 1.0,
+		map[string]logical.MountAttribution{"pki_a": mount("pki_a", "pki/", "pki")}, month))
+	assertEmpty(billing.LocalPrefix, billing.PkiDurationAdjustedCountPrefix)
+
+	require.NoError(t, core.StoreCertAttribution(ctx, billing.SSHCertificateMetric, 0.5,
+		map[string]logical.MountAttribution{"ssh_a": mount("ssh_a", "ssh/", "ssh")}, month))
+	assertEmpty(billing.LocalPrefix, billing.SSHCertificateMetric)
+
+	require.NoError(t, core.StoreCertAttribution(ctx, billing.SSHOTPMetric, 0.0014,
+		map[string]logical.MountAttribution{"otp_a": mount("otp_a", "ssh/", "ssh")}, month))
+	assertEmpty(billing.LocalPrefix, billing.SSHOTPMetric)
+
+	// --- UpdateMountAttribution (in-memory tracker → storage) ---
+	// Seed each in-memory tracker directly, then call the corresponding Update*Attribution.
+	// If attribution is disabled the flush must write nothing.
+	cbTyped := core.GetCoreConsumptionBillingManager()
+	require.NotNil(t, cbTyped)
+
+	seedTracker := func(tracker *billing.AttributionTracker, accessor, path, mountType string) {
+		tracker.MountAttributionLock.Lock()
+		tracker.MountAttribution[accessor] = logical.MountAttribution{
+			MountAccessor: accessor, MountPath: path, MountType: mountType,
+			NamespaceID: "root", Count: 1.0,
+		}
+		tracker.MountAttributionLock.Unlock()
+	}
+
+	seedTracker(&cbTyped.SecretEngineCounts.Transit.AttributionTracker, "transit_a", "transit/", "transit")
+	require.NoError(t, core.UpdateTransitAttribution(ctx, month))
+	assertEmpty(billing.LocalPrefix, billing.TransitDataProtectionCallCountsPrefix)
+
+	seedTracker(&cbTyped.SecretEngineCounts.Transform.AttributionTracker, "transform_a", "transform/", "transform")
+	require.NoError(t, core.UpdateTransformAttribution(ctx, month))
+	assertEmpty(billing.LocalPrefix, billing.TransformDataProtectionCallCountsPrefix)
+
+	seedTracker(&cbTyped.SecretEngineCounts.GcpKms.AttributionTracker, "gcpkms_a", "gcpkms/", "gcpkms")
+	require.NoError(t, core.UpdateGcpKmsAttribution(ctx, month))
+	assertEmpty(billing.LocalPrefix, billing.GcpKmsDataProtectionCallCountsPrefix)
+
+	seedTracker(&cbTyped.SecretEngineCounts.Spiffe.AttributionTracker, "spiffe_a", "spiffe/", "spiffe")
+	require.NoError(t, core.UpdateSpiffeAttribution(ctx, month))
+	assertEmpty(billing.LocalPrefix, billing.SpiffeJwtNormalizedTokenUnits)
+
+	seedTracker(&cbTyped.SecretEngineCounts.Oidc.AttributionTracker, "oidc_a", "oidc/", "oidc")
+	require.NoError(t, core.UpdateOidcAttribution(ctx, month))
+	assertEmpty(billing.LocalPrefix, billing.OidcDurationAdjustedCountPrefix)
+
+	seedTracker(&cbTyped.SecretEngineCounts.ExternalCa.AttributionTracker, "exca_a", "pki/", "external-ca")
+	require.NoError(t, core.UpdateExternalCaAttribution(ctx, month))
+	assertEmpty(billing.LocalPrefix, billing.ExternalCaDurationAdjustedCountPrefix)
+
+	// --- UpdateMaxKvCounts ---
+	_, err := core.UpdateMaxKvCounts(ctx, billing.LocalPrefix, month, 5, vault.MountAttributionMap{
+		"kv_a": mount("kv_a", "secret/", "kv"),
+	})
+	require.NoError(t, err)
+	assertEmpty(billing.LocalPrefix, billing.KvHWMCountsHWM)
+
+	// --- UpdateMaxRoleAndManagedKeyCounts (AWS dynamic role + TOTP managed key) ---
+	roleAttr := map[string]vault.MountAttributionMap{
+		billing.AWSDynamicRoles: {"aws_a": mount("aws_a", "aws/", "aws")},
+	}
+	managedKeyAttr := map[string]vault.MountAttributionMap{
+		billing.TotpKeys: {"totp_a": mount("totp_a", "totp/", "totp")},
+	}
+	_, _, err = core.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, month,
+		&vault.RoleCounts{AWSDynamicRoles: 1},
+		&vault.ManagedKeyCounts{TotpKeys: 1},
+		roleAttr, managedKeyAttr)
+	require.NoError(t, err)
+	assertEmpty(billing.LocalPrefix, billing.RoleHWMCountsHWM+billing.AWSDynamicRoles)
+	assertEmpty(billing.LocalPrefix, billing.TotpHWMCountsHWM)
+
+	// --- UpdateMaxThirdPartyPluginCounts ---
+	// No real plugin mounts exist in this minimal cluster so the HWM will be 0
+	// and no attribution block is entered; the call must simply not error.
+	_, err = core.UpdateMaxThirdPartyPluginCounts(ctx, month)
+	require.NoError(t, err)
+	assertEmpty(billing.LocalPrefix, billing.ThirdPartyPluginsPrefix)
+
+	// --- UpdateKmipEnabled ---
+	// No KMIP mounts in the minimal cluster; call must not error and nothing stored.
+	_, err = core.UpdateKmipEnabled(ctx, month)
+	require.NoError(t, err)
+	assertEmpty(billing.LocalPrefix, billing.KmipEnabledPrefix)
+}

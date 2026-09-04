@@ -1,0 +1,3 @@
+```release-note:improvement
+consumption-billing: Mount attribution data is now stored for consumption billing metrics. The retention period can be configured via the new `attribution_retention_months` parameter on `sys/billing/config` (0–72 months, default 37). Setting to 0 disables attribution storage and immediately wipes all existing attribution data.
+```
