@@ -884,7 +884,9 @@ func TestSSHCertCounts(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, currentCount, storedCounts)
 
-	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Perform more operations to increase the counter
 	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/issue/test")
@@ -910,7 +912,9 @@ func TestSSHCertCounts(t *testing.T) {
 	expectedSum := currentCount + expectedCertUnit
 	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
 
-	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Add more operations without manually resetting
 	for i := 0; i < 3; i++ {
@@ -1013,7 +1017,9 @@ func TestSSHOTPCounts(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, currentCount, storedCounts)
 
-	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Perform more operations to increase the counter
 	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
@@ -1040,7 +1046,9 @@ func TestSSHOTPCounts(t *testing.T) {
 	expectedSum := currentCount + expectedOTPUnit
 	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
 
-	core.certCountManager.StartConsumerJob(core.consumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Add more operations without manually resetting
 	for i := 0; i < 3; i++ {
