@@ -555,6 +555,10 @@ type InitializationRequest struct {
 	// BackendUUID is the unique identifier for this backend instance, sourced
 	// from the mount entry. It is stable across restarts and leadership changes.
 	BackendUUID string
+
+	// MountRunningVersion is the version of the plugin that is
+	// actually loaded and serving requests for a given mount.
+	MountRunningVersion string
 }
 
 type CustomHeader struct {

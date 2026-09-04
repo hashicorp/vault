@@ -34,8 +34,18 @@ install_packages() {
         else
           echo "Installing ${package}"
           local output
-          if ! output=$(sudo apt install -y "${package}" 2>&1); then
+          # Bound apt's own lock-wait to RETRY_INTERVAL so that a competing process holding
+          # /var/lib/dpkg/lock-frontend (e.g. unattended-upgrades, apt-daily) doesn't cause a
+          # single apt invocation to consume our whole TIMEOUT_SECONDS budget. This lets the
+          # outer retry loop actually retry multiple times instead of timing out on one attempt.
+          # Acquire::Retries tells apt to retry a failed package download (e.g. transient 503s
+          # from a regional mirror) a few times within the same invocation before giving up.
+          if ! output=$(sudo apt install -y -o DPkg::Lock::Timeout="${RETRY_INTERVAL}" -o Acquire::Retries="3" "${package}" 2>&1); then
             echo "Failed to install ${package}: ${output}" 1>&2
+            # The package lists may be stale or the mirror may have recovered since
+            # synchronize-repos.sh ran. Best-effort refresh before the outer loop retries so the
+            # next attempt has a chance to see healed/updated metadata.
+            sudo apt-get update -o DPkg::Lock::Timeout="${RETRY_INTERVAL}" -o Acquire::Retries="3" 1>&2 || true
             return 1
           fi
         fi

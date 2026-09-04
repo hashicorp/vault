@@ -37,10 +37,6 @@ check_tool() {
 # Install external tools.
 install_external() {
   local tools
-  # If you update this please update check_external below as well as our external tools
-  # install action .github/actions/install-external-tools/action.yml
-  #
-  # All tool versions should match the versions in .github/actions/install-external-tools/action.yml
   # Protobuf tool versions should match what's in Vault's go.mod.
   tools=(
     honnef.co/go/tools/cmd/staticcheck@v0.6.0
@@ -48,7 +44,7 @@ install_external() {
     github.com/favadi/protoc-go-inject-tag@v1.4.0
     github.com/golangci/misspell/cmd/misspell@v0.6.0
     github.com/golangci/revgrep/cmd/revgrep@v0.8.0
-    github.com/stevendpclark/enumer@v0.0.0-20250122154818-a42b666c3cd3
+    github.com/ryancragun/enumer@v0.0.0-20260825172633-bd953a03880e
     github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
     golang.org/x/tools/cmd/goimports@v0.30.0
     google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5

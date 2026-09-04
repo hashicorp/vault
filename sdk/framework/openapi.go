@@ -204,6 +204,63 @@ var OASStdRespOK = &OASResponse{
 	Description: "OK",
 }
 
+// AuthLoginResponseFields returns the standard FieldSchema map for the auth
+// object returned by every credential backend login operation. These fields are
+// populated by Vault core from the logical.Auth struct and are identical across
+// all auth methods.
+func AuthLoginResponseFields() map[string]*FieldSchema {
+	return map[string]*FieldSchema{
+		"client_token": {
+			Type:        TypeString,
+			Description: "Token issued by Vault for the authenticated client.",
+		},
+		"accessor": {
+			Type:        TypeString,
+			Description: "Accessor for the client token.",
+		},
+		"policies": {
+			Type:        TypeCommaStringSlice,
+			Description: "List of policies associated with the token.",
+		},
+		"token_policies": {
+			Type:        TypeCommaStringSlice,
+			Description: "List of token policies.",
+		},
+		"metadata": {
+			Type:        TypeMap,
+			Description: "Metadata associated with the token.",
+		},
+		"lease_duration": {
+			Type:        TypeInt64,
+			Description: "Lease duration in seconds.",
+		},
+		"renewable": {
+			Type:        TypeBool,
+			Description: "Whether the token is renewable.",
+		},
+		"entity_id": {
+			Type:        TypeString,
+			Description: "Entity ID associated with the token.",
+		},
+		"token_type": {
+			Type:        TypeString,
+			Description: "Type of the token.",
+		},
+		"orphan": {
+			Type:        TypeBool,
+			Description: "Whether the token is an orphan.",
+		},
+		"mfa_requirement": {
+			Type:        TypeMap,
+			Description: "MFA requirement information.",
+		},
+		"num_uses": {
+			Type:        TypeInt,
+			Description: "Number of uses remaining for the token.",
+		},
+	}
+}
+
 var OASStdRespNoContent = &OASResponse{
 	Description: "empty body",
 }

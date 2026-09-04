@@ -101,10 +101,10 @@ module.exports = function (environment) {
 
   if (environment === 'production') {
     ENV.APP.ANALYTICS_CONFIG = {
-      provider: 'posthog',
       enabled: true,
-      project_id: 'phc_pIw6t5numW5jDram4dnJjSnwDOorf9IGd1MmlFp0dHh',
-      api_host: 'https://eu.i.posthog.com',
+      project_id: 'phc_pIw6t5numW5jDram4dnJjSnwDOorf9IGd1MmlFp0dHh', // PostHog (HVD)
+      api_host: 'https://eu.i.posthog.com', // PostHog (HVD)
+      write_key: 'a3CIuUGMSQs6JCeNfiguoXqGi95XvpDz', // Segment (Vault SM)
     };
   }
 

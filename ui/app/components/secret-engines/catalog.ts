@@ -124,14 +124,15 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
   }
 
   get filteredEngines() {
-    const kw = this.keywords.trim().toLowerCase();
+    const kw = this.keywords.replace(/\s+/g, ' ').trim().toLowerCase();
 
     return this.secretEngines.filter((engine) => {
       if (kw) {
         const matchesKeyword =
           engine.displayName?.toLowerCase().includes(kw) ||
           engine.type?.toLowerCase().includes(kw) ||
-          engine.description?.toLowerCase().includes(kw);
+          engine.description?.toLowerCase().includes(kw) ||
+          engine.capabilities?.find((capability) => capability.toLowerCase().includes(kw));
         if (!matchesKeyword) return false;
       }
 
@@ -182,6 +183,10 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
     return this.version.features?.includes(featureName) || false;
   }
 
+  clearSelectedEngine() {
+    this.selectedEngineType = '';
+  }
+
   @action
   selectEngineType(type: string) {
     this.selectedEngineType = type;
@@ -189,11 +194,7 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
 
   @action
   handleSelection() {
-    if (this.selectedEngineType) {
-      this.args.setMountType(this.selectedEngineType);
-    } else {
-      this.flashMessages.danger('Please select an engine to mount.');
-    }
+    this.args.setMountType(this.selectedEngineType);
   }
 
   @action
@@ -235,21 +236,25 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
   @action
   filterBySecretType(value: string) {
     this.secretTypeFilter = this.secretTypeFilter === value ? null : value;
+    this.clearSelectedEngine();
   }
 
   @action
   filterByPlatform(category: string) {
     this.platformFilter = this.platformFilter === category ? null : category;
+    this.clearSelectedEngine();
   }
 
   @action
   filterByRotationType(capability: string) {
     this.rotationTypeFilter = this.rotationTypeFilter === capability ? null : capability;
+    this.clearSelectedEngine();
   }
 
   @action
   clearKeyword() {
     this.keywords = '';
+    this.clearSelectedEngine();
   }
 
   @action
@@ -258,13 +263,17 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
     this.secretTypeFilter = null;
     this.rotationTypeFilter = null;
     this.platformFilter = null;
+    this.clearSelectedEngine();
   }
 
   @action
   setSearchText(type: string, event: Event) {
     const target = event.target as HTMLInputElement;
     if (type === 'keywords') {
-      this.keywords = target.value;
+      if (target.value.trim()) {
+        this.keywords = target.value;
+        this.clearSelectedEngine();
+      }
     }
   }
 }

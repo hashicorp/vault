@@ -243,13 +243,15 @@ func setAwsEnvCreds() error {
 		return err
 	}
 
-	if err := os.Setenv(envVarAwsAccessKey, *output.Credentials.AccessKeyId); err != nil {
+	// This function has no *testing.T; converting its os.Setenv calls to t.Setenv would require
+	// threading t through every caller.
+	if err := os.Setenv(envVarAwsAccessKey, *output.Credentials.AccessKeyId); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	if err := os.Setenv(envVarAwsSecretKey, *output.Credentials.SecretAccessKey); err != nil {
+	if err := os.Setenv(envVarAwsSecretKey, *output.Credentials.SecretAccessKey); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	return os.Setenv(envVarAwsSessionToken, *output.Credentials.SessionToken)
+	return os.Setenv(envVarAwsSessionToken, *output.Credentials.SessionToken) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 }
 
 func unsetAwsEnvCreds() error {

@@ -17,6 +17,9 @@ import {
   PolicyTypes,
 } from 'core/utils/code-generators/policy';
 import { validate } from 'vault/utils/forms/validate';
+import { POLICY_CREATED, POLICY_CREATION_CANCELLED } from 'vault/utils/analytic-events';
+
+import type AnalyticsService from 'vault/services/analytics';
 import { sysPoliciesAclNameMapping } from 'vault/utils/terraform-mappings/sys-policies-acl-name-mapping';
 
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
@@ -58,6 +61,7 @@ interface Args {
 }
 
 export default class PolicyFormComponent extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
 
@@ -129,7 +133,6 @@ export default class PolicyFormComponent extends Component<Args> {
   }
 
   get terraformSnippet(): string | null {
-    if (!this.visualEditorSupported) return null;
     const name = this.args.form.data.name;
     return sysPoliciesAclNameMapping({ name, policy: this.snippetPolicy });
   }
@@ -147,6 +150,10 @@ export default class PolicyFormComponent extends Component<Args> {
   handleNameInput(event: HTMLElementEvent<HTMLInputElement>) {
     const { value } = event.target;
     this.setName(value);
+    // Clear a stale name error so it doesn't linger while the user is correcting it
+    if (this.validationErrors?.['name']) {
+      this.validationErrors = { ...this.validationErrors, name: { errors: [], warnings: [], isValid: true } };
+    }
   }
 
   @action
@@ -176,16 +183,34 @@ export default class PolicyFormComponent extends Component<Args> {
     }
   }
 
+  private trackPolicyCreationEvent(successFlag: boolean) {
+    this.analytics.trackEvent(POLICY_CREATED, {
+      objectType: 'policy',
+      object: this.args.form.policyType,
+      process: 'UI',
+      successFlag,
+    });
+  }
+
   @task
   *save(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Name is intentionally not validated here because the input has @isRequired=true
-    // which prevents the submit event all together when it is empty.
-    const { isValid, state } = validate({ stanzas: this.stanzas }, this.validations);
+    // The name input is marked @isRequired which only blocks submitting a completely empty value,
+    // so the form's own validations must still run to reject whitespace-only names.
+    // Trim first so leading/trailing whitespace is never persisted.
+    this.trimName();
+    const { isValid: isFormValid, state: formState, data } = this.args.form.toJSON();
+    const { isValid: areStanzasValid, state: stanzaState } = validate(
+      { stanzas: this.stanzas },
+      this.validations
+    );
+
     // Only enforce stanza validations for the Visual Editor
-    const shouldValidate = this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
-    if (!isValid && shouldValidate) {
+    const shouldValidateStanzas = this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
+    const state = shouldValidateStanzas ? { ...formState, ...stanzaState } : formState;
+
+    if (!isFormValid || (!areStanzasValid && shouldValidateStanzas)) {
       this.validationErrors = state;
       this.errorDetails = Object.values(state).flatMap((s) => s.errors);
       // Render general error message instead of exact count from validate() because
@@ -197,7 +222,6 @@ export default class PolicyFormComponent extends Component<Args> {
     }
     try {
       const policyType = this.args.form.policyType;
-      const { data } = this.args.form.toJSON();
       // remove enforcement from acl
       if (policyType === 'acl') {
         delete data.enforcement_level;
@@ -217,6 +241,11 @@ export default class PolicyFormComponent extends Component<Args> {
           enforcement_level: data.enforcement_level,
         });
       }
+      // Track successful policy creation if this is a new policy
+      if (this.args.form.isNew) {
+        this.trackPolicyCreationEvent(true);
+      }
+
       this.flashMessages.success(
         `${policyType.toUpperCase()} policy "${data.name}" was successfully ${
           this.args.form.isNew ? 'created' : 'updated'
@@ -225,6 +254,11 @@ export default class PolicyFormComponent extends Component<Args> {
 
       this.args.onSave(data);
     } catch (error) {
+      // Track failed policy creation if this is a new policy
+      if (this.args.form.isNew) {
+        this.trackPolicyCreationEvent(false);
+      }
+
       const { message } = yield this.api.parseError(error);
       this.errorBanner = message;
     }
@@ -256,5 +290,25 @@ export default class PolicyFormComponent extends Component<Args> {
 
   private syncDebouncedPolicy(policy: string) {
     this.debouncedPolicy = policy;
+  }
+
+  private trimName() {
+    const { name } = this.args.form.data;
+    if (typeof name === 'string') {
+      this.args.form.data.name = name.trim();
+    }
+  }
+
+  @action
+  cancel() {
+    this.analytics.trackEvent(POLICY_CREATION_CANCELLED, {
+      namespace: 'resource-creation',
+      action: 'cancelled',
+      elementId: 'policy-form',
+      channel: 'webpage',
+      objectType: 'policy',
+      object: this.args.form.policyType,
+    });
+    this.args.onCancel();
   }
 }

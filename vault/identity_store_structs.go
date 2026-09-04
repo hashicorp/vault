@@ -140,9 +140,6 @@ type IdentityStore struct {
 	// activateDeduplicationDone is a channel used for synchronization in testing
 	activateDeduplicationDone chan struct{}
 
-	// scimEnabled is used to indicate if SCIM paths are enabled and if SCIM operations can be performed.
-	scimEnabled bool
-
 	// scimCleanupCtx is the context shared by all SCIM client cleanup goroutines.
 	// It is derived from the active context and cancelled on seal/standby.
 	scimCleanupCtx context.Context
@@ -163,12 +160,13 @@ type casesensitivity struct {
 type LocalNode interface {
 	ReplicationState() consts.ReplicationState
 	HAState() consts.HAState
+	OperatorNamespacePath() string
 }
 
 var _ LocalNode = &Core{}
 
 type BillingCounter interface {
-	IncrementOidcTokenCount(validitySeconds float64)
+	IncrementOidcTokenCount(validitySeconds float64, attr logical.MountAttribution)
 }
 
 var _ BillingCounter = &Core{}
@@ -213,8 +211,13 @@ type MountLister interface {
 var _ MountLister = &Core{}
 
 type SyntheticAliasAccessorValidator interface {
-	validateSyntheticAliasAccessor(context.Context, string) (bool, error)
-	generateSyntheticAliasAccessor(context.Context, string) (string, error)
+	// validateSyntheticAliasAccessor returns (valid, isLocal, err).
+	// valid is true when the accessor is a known synthetic OAuth RS accessor.
+	// isLocal is true when the backing profile has Local=true.
+	validateSyntheticAliasAccessor(context.Context, string) (bool, bool, error)
+	// generateSyntheticAliasAccessor returns (accessor, isLocal, err).
+	// isLocal is true when the backing profile has Local=true.
+	generateSyntheticAliasAccessor(context.Context, string) (string, bool, error)
 }
 
 var _ SyntheticAliasAccessorValidator = &Core{}

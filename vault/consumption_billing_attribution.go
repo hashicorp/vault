@@ -136,23 +136,23 @@ func storeCertAttributionLocked(ctx context.Context, view logical.Storage, local
 	// storage so that totals are not lost across flushes.
 	for accessor, attr := range incomingMounts {
 		if prev, ok := existing.Mounts[accessor]; ok {
-			attr.Count = toFloat64(prev.Count) + toFloat64(attr.Count)
+			attr.Count = ToFloat64(prev.Count) + ToFloat64(attr.Count)
 		}
 		existing.Mounts[accessor] = attr
 	}
 
 	// Accumulate the cluster-wide total and stamp with the worker-run time so
 	// all metrics updated in the same flush cycle share the same timestamp.
-	existing.Count = toFloat64(existing.Count) + countDelta
+	existing.Count = ToFloat64(existing.Count) + countDelta
 	existing.LastUpdated = currentMonth
 
 	return storeAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, metricName, existing)
 }
 
-// toFloat64 converts an interface{} count value to float64.
+// ToFloat64 converts an interface{} count value to float64.
 // Count fields are stored as float64 in memory but may be deserialised as
 // json.Number after a storage round-trip, so all cases are handled here.
-func toFloat64(v interface{}) float64 {
+func ToFloat64(v interface{}) float64 {
 	switch n := v.(type) {
 	case float64:
 		return n
@@ -206,7 +206,7 @@ func (c *Core) UpdateMountAttribution(ctx context.Context, tracker *billing.Attr
 	tracker.MountAttributionLock.Lock()
 	for mountAccessor, inMem := range tracker.MountAttribution {
 		if existing, ok := stored.Mounts[mountAccessor]; ok {
-			inMem.Count = toFloat64(existing.Count) + toFloat64(inMem.Count)
+			inMem.Count = ToFloat64(existing.Count) + ToFloat64(inMem.Count)
 		}
 		stored.Mounts[mountAccessor] = inMem
 		delete(tracker.MountAttribution, mountAccessor)
@@ -216,7 +216,7 @@ func (c *Core) UpdateMountAttribution(ctx context.Context, tracker *billing.Attr
 	// Recompute the top-level total count from the per-mount breakdown.
 	var total float64
 	for _, m := range stored.Mounts {
-		total += toFloat64(m.Count)
+		total += ToFloat64(m.Count)
 	}
 	stored.Count = total
 	stored.LastUpdated = currentMonth
@@ -252,4 +252,38 @@ func (c *Core) UpdateGcpKmsAttribution(ctx context.Context, currentMonth time.Ti
 		return ErrConsumptionBillingNotInitialized
 	}
 	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.GcpKms.AttributionTracker, billing.GcpKmsDataProtectionCallCountsPrefix, currentMonth)
+}
+
+func (c *Core) UpdateSpiffeAttribution(ctx context.Context, currentMonth time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.Spiffe.AttributionTracker, billing.SpiffeJwtNormalizedTokenUnits, currentMonth)
+}
+
+func (c *Core) UpdateExternalCaAttribution(ctx context.Context, currentMonth time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.ExternalCa.AttributionTracker, billing.ExternalCaDurationAdjustedCountPrefix, currentMonth)
+}
+
+func (c *Core) UpdateOidcAttribution(ctx context.Context, currentMonth time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+	return c.UpdateMountAttribution(ctx, &cb.SecretEngineCounts.Oidc.AttributionTracker, billing.OidcDurationAdjustedCountPrefix, currentMonth)
+}
+
+func isAttributionEmpty(attribution *logical.MetricTypeAttribution) bool {
+	return attribution == nil || attribution.Mounts == nil || len(attribution.Mounts) == 0
 }

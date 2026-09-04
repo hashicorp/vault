@@ -242,12 +242,13 @@ func TestWithMountInfo_PKI(t *testing.T) {
 	recording := &TestCertificateCounter{}
 
 	mount := MountAttribution{
-		MountAccessor:    "pki_abc123",
-		MountPath:        "pki/",
-		MountType:        "pki",
-		NamespaceID:      "root",
-		NamespacePath:    "",
-		BackendAwareUUID: "pki-backend-uuid-001",
+		MountAccessor:       "pki_abc123",
+		MountPath:           "pki/",
+		MountType:           "pki",
+		NamespaceID:         "root",
+		NamespacePath:       "",
+		BackendAwareUUID:    "pki-backend-uuid-001",
+		MountRunningVersion: "v1.2.3",
 	}
 
 	// 730 h = 1 standard duration = 1.0000 billing unit
@@ -265,6 +266,7 @@ func TestWithMountInfo_PKI(t *testing.T) {
 	require.Equal(t, mount.MountType, attr.MountType)
 	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
 	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.Equal(t, mount.MountRunningVersion, attr.MountRunningVersion)
 	require.InDelta(t, 1.0, attr.Count.(float64), 0.0001, "per-mount count should equal billing units")
 
 	require.Empty(t, recording.Record.SshCertMountAttributions)
@@ -277,12 +279,13 @@ func TestWithMountInfo_SSH(t *testing.T) {
 	recording := &TestCertificateCounter{}
 
 	mount := MountAttribution{
-		MountAccessor:    "ssh_xyz789",
-		MountPath:        "ssh/",
-		MountType:        "ssh",
-		NamespaceID:      "ns1",
-		NamespacePath:    "ns1/",
-		BackendAwareUUID: "ssh-backend-uuid-001",
+		MountAccessor:       "ssh_xyz789",
+		MountPath:           "ssh/",
+		MountType:           "ssh",
+		NamespaceID:         "ns1",
+		NamespacePath:       "ns1/",
+		BackendAwareUUID:    "ssh-backend-uuid-001",
+		MountRunningVersion: "v2.0.0",
 	}
 
 	// 730 h = 1.0 billing unit
@@ -297,6 +300,7 @@ func TestWithMountInfo_SSH(t *testing.T) {
 	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
 	require.Equal(t, mount.NamespacePath, attr.NamespacePath)
 	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.Equal(t, mount.MountRunningVersion, attr.MountRunningVersion)
 	require.InDelta(t, 1.0, attr.Count.(float64), 0.0001)
 
 	require.Empty(t, recording.Record.PkiMountAttributions)
@@ -309,11 +313,12 @@ func TestWithMountInfo_SSHOTP(t *testing.T) {
 	recording := &TestCertificateCounter{}
 
 	mount := MountAttribution{
-		MountAccessor:    "ssh_otp_001",
-		MountPath:        "ssh/",
-		MountType:        "ssh",
-		NamespaceID:      "root",
-		BackendAwareUUID: "ssh-backend-uuid-002",
+		MountAccessor:       "ssh_otp_001",
+		MountPath:           "ssh/",
+		MountType:           "ssh",
+		NamespaceID:         "root",
+		BackendAwareUUID:    "ssh-backend-uuid-002",
+		MountRunningVersion: "v0.9.1",
 	}
 
 	NewCertCountIncrementer(recording).WithMountInfo(mount).AddSSHOTP()
@@ -326,6 +331,7 @@ func TestWithMountInfo_SSHOTP(t *testing.T) {
 	require.Equal(t, mount.MountType, attr.MountType)
 	require.Equal(t, mount.NamespaceID, attr.NamespaceID)
 	require.Equal(t, mount.BackendAwareUUID, attr.BackendAwareUUID)
+	require.Equal(t, mount.MountRunningVersion, attr.MountRunningVersion)
 	require.InDelta(t, 0.0014, attr.Count.(float64), 0.00001)
 
 	require.Empty(t, recording.Record.PkiMountAttributions)

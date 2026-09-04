@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
@@ -88,27 +89,60 @@ func pathConfigRoot(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootRead,
+				Summary:  "Return the root IAM credentials configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "root-iam-credentials-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"access_key":                 {Type: framework.TypeString, Description: "AWS access key ID."},
+							"region":                     {Type: framework.TypeString, Description: "AWS region for API calls."},
+							"iam_endpoint":               {Type: framework.TypeString, Description: "Custom endpoint for AWS IAM API calls."},
+							"sts_endpoint":               {Type: framework.TypeString, Description: "Custom endpoint for AWS STS API calls."},
+							"sts_region":                 {Type: framework.TypeString, Description: "Specific region for STS API calls."},
+							"sts_fallback_endpoints":     {Type: framework.TypeSlice, Description: "Fallback endpoints if sts_endpoint is unreachable."},
+							"sts_fallback_regions":       {Type: framework.TypeSlice, Description: "Fallback regions if sts_region is unreachable."},
+							"max_retries":                {Type: framework.TypeInt, Description: "Maximum number of retries for AWS API calls."},
+							"username_template":          {Type: framework.TypeString, Description: "Template used to generate IAM usernames."},
+							"role_arn":                   {Type: framework.TypeString, Description: "Role ARN for plugin identity token federation."},
+							"identity_token_ttl":         {Type: framework.TypeDurationSecond, Description: "Time-to-live for plugin identity tokens in seconds."},
+							"identity_token_audience":    {Type: framework.TypeString, Description: "Audience for plugin identity tokens."},
+							"rotation_schedule":          {Type: framework.TypeString, Description: "Automated rotation schedule in cron format."},
+							"rotation_window":            {Type: framework.TypeDurationSecond, Description: "Window in seconds during which automated rotation may occur."},
+							"rotation_period":            {Type: framework.TypeDurationSecond, Description: "Period in seconds between automated credential rotations."},
+							"disable_automated_rotation": {Type: framework.TypeBool, Description: "Whether automated rotation is disabled."},
+							"rotation_policy":            {Type: framework.TypeString, Description: "Name of the rotation policy to use."},
+						},
+					}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootWrite,
+				Summary:  "Configure the root IAM credentials.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "root-iam-credentials",
 				},
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootWrite,
+				Summary:  "Configure the root IAM credentials.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "root-iam-credentials",
 				},
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 		},
 

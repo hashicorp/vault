@@ -490,3 +490,51 @@ func TestCheckConfig(t *testing.T) {
 		})
 	}
 }
+
+// TestDisableGoroutineTraceDump verifies that disable_goroutine_trace_dump
+// parses, defaults to false, and merges using OR semantics.
+func TestDisableGoroutineTraceDump(t *testing.T) {
+	t.Run("defaults to false when absent", func(t *testing.T) {
+		cfg, err := ParseConfig(`disable_cache = true`, "")
+		require.NoError(t, err)
+		require.False(t, cfg.DisableGoroutineTraceDump)
+	})
+
+	t.Run("parses true", func(t *testing.T) {
+		cfg, err := ParseConfig(`disable_goroutine_trace_dump = true`, "")
+		require.NoError(t, err)
+		require.True(t, cfg.DisableGoroutineTraceDump)
+		require.True(t, cfg.DisableGoroutineTraceDumpRaw.(bool))
+	})
+
+	t.Run("parses false", func(t *testing.T) {
+		cfg, err := ParseConfig(`disable_goroutine_trace_dump = false`, "")
+		require.NoError(t, err)
+		require.False(t, cfg.DisableGoroutineTraceDump)
+	})
+
+	t.Run("merge OR: false+true=true", func(t *testing.T) {
+		c1, err := ParseConfig(`disable_cache = true`, "")
+		require.NoError(t, err)
+		c2, err := ParseConfig(`disable_goroutine_trace_dump = true`, "")
+		require.NoError(t, err)
+		merged := c1.Merge(c2)
+		require.True(t, merged.DisableGoroutineTraceDump)
+	})
+
+	t.Run("merge OR: true+false=true", func(t *testing.T) {
+		c1, err := ParseConfig(`disable_goroutine_trace_dump = true`, "")
+		require.NoError(t, err)
+		c2, err := ParseConfig(`disable_cache = true`, "")
+		require.NoError(t, err)
+		merged := c1.Merge(c2)
+		require.True(t, merged.DisableGoroutineTraceDump)
+	})
+
+	t.Run("sanitized contains key", func(t *testing.T) {
+		cfg, err := ParseConfig(`disable_goroutine_trace_dump = true`, "")
+		require.NoError(t, err)
+		sanitized := cfg.Sanitized()
+		require.Equal(t, true, sanitized["disable_goroutine_trace_dump"])
+	})
+}

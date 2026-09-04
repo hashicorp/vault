@@ -138,8 +138,6 @@ var (
 		})...)
 
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
-			"activation-flags/oauth-resource-server/activate":                            {operations: []logical.Operation{logical.UpdateOperation}},
-			"activation-flags/oauth-resource-server/deactivate":                          {operations: []logical.Operation{logical.UpdateOperation}},
 			"config/oauth-resource-server/":                                              {operations: []logical.Operation{logical.ListOperation}},
 			"config/oauth-resource-server/" + framework.GenericNameRegex("name"):         {parameters: []string{"name"}, operations: []logical.Operation{logical.DeleteOperation, logical.ReadOperation, logical.UpdateOperation}},
 			"config/oauth-resource-server/id/" + framework.GenericNameRegex("config_id"): {parameters: []string{"config_id"}, operations: []logical.Operation{logical.ReadOperation}},
@@ -303,7 +301,7 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 		}
 
 		b.Core.certCountManager.StartConsumerJob(func(increment logical.CertCount) {
-			b.Core.ConsumeCertCounts(increment)
+			b.Core.ConsumeCertCounts(increment, true)
 		})
 		return nil
 	}
@@ -311,24 +309,16 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 
 // ConsumeCertCounts updates the certificate counts in storage if we are
 // running on the active node; otherwise it forwards them to the active node.
-func (c *Core) ConsumeCertCounts(inc logical.CertCount) {
-	haState := c.HAStateWithLock()
+func (c *Core) ConsumeCertCounts(inc logical.CertCount, isActive bool) {
 	if inc.IsZero() {
 		return
 	}
 
 	unconsumed := inc
-	switch haState {
-	case consts.Standby:
-		// nothing to do
-	case consts.PerfStandby:
-		if forwardCertCounts(c, inc) {
-			unconsumed = logical.CertCount{}
-		}
-	case consts.Active:
+	if isActive {
 		unconsumed = c.consumeCertCountsOnActive(inc)
-	default:
-		c.logger.Error("Unexpected HA state when consuming certificate counts", "ha_state", haState)
+	} else if forwardCertCounts(c, inc) {
+		unconsumed = logical.CertCount{}
 	}
 	// Add any unconsumed counts to the in-memory count so they can be included in the next increment
 	c.certCountManager.AddCount(unconsumed)
@@ -362,7 +352,7 @@ func (c *Core) consumeCertCountsOnActive(inc logical.CertCount) logical.CertCoun
 		attrDelta := flushedDelta
 		if attrDelta == 0 {
 			for _, a := range attributions {
-				attrDelta += toFloat64(a.Count)
+				attrDelta += ToFloat64(a.Count)
 			}
 		}
 		if attrDelta <= 0 {

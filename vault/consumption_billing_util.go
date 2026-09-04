@@ -80,7 +80,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 	if err != nil {
 		return 0, err
 	}
-	maxCount, hwmUpdated := c.compareCounts(previousThirdPartyPluginCounts, len(currentThirdPartyPluginMounts), "Third-Party Plugins")
+	maxCount, hwmUpdated := c.compareCounts(len(currentThirdPartyPluginMounts), previousThirdPartyPluginCounts, "Third-Party Plugins")
 	err = c.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth, maxCount)
 	if err != nil {
 		return 0, err
@@ -91,15 +91,20 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		attribution := make(MountAttributionMap)
 		for _, entry := range currentThirdPartyPluginMounts {
 			if entry != nil {
+				var namespacePath string
+				if ns, err := c.NamespaceByID(ctx, entry.NamespaceID); err == nil && ns != nil {
+					namespacePath = ns.Path
+				}
 				// Each deduplicated plugin counts as 1
 				attribution[entry.Accessor] = logical.MountAttribution{
-					Count:            1,
-					MountAccessor:    entry.Accessor,
-					MountPath:        entry.Path,
-					MountType:        entry.Type,
-					NamespaceID:      entry.NamespaceID,
-					NamespacePath:    entry.namespace.Path,
-					BackendAwareUUID: entry.BackendAwareUUID,
+					Count:               1,
+					MountAccessor:       entry.Accessor,
+					MountPath:           entry.Path,
+					MountType:           entry.Type,
+					MountRunningVersion: entry.RunningVersion,
+					NamespaceID:         entry.NamespaceID,
+					NamespacePath:       namespacePath,
+					BackendAwareUUID:    entry.BackendAwareUUID,
 				}
 			}
 		}
@@ -1268,13 +1273,14 @@ func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, cur
 	return currentCount, nil
 }
 
-// IncrementOidcTokenCount increments the in-memory OIDC token count and total duration hours.
-// This is called each time an OIDC token is created. The counts are flushed to storage
-// periodically by the consumption billing metrics worker.
-// Note: OidcTokenDuration is not normalized and is duration-adjusted during flush to storage in UpdateOidcDurationAdjustedCount.
-func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
-	c.consumptionBillingLock.Lock()
-	defer c.consumptionBillingLock.Unlock()
+// IncrementOidcTokenCount increments the in-memory OIDC duration-adjusted token count and
+// accumulates per-mount attribution. This is called each time an OIDC token is created.
+// The counts and attribution are flushed to storage periodically by the consumption billing metrics worker.
+// durationSeconds is the raw token TTL; it is normalized to duration-adjusted units immediately
+// so that MonthlyUnits and per-mount attribution totals remain in sync across flush cycles.
+func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.MountAttribution) {
+	c.consumptionBillingLock.RLock()
+	defer c.consumptionBillingLock.RUnlock()
 
 	cb := c.consumptionBilling
 
@@ -1282,12 +1288,29 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64) {
 		return
 	}
 
-	// Update raw token duration
-	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(durationSeconds)
+	// Normalize to duration-adjusted units immediately so MonthlyUnits and per-mount
+	// attribution totals are always consistent (both use per-token rounding).
+	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(DurationAdjustedTokenCount(durationSeconds))
+
+	// Accumulate per-mount attribution if the accessor is set.
+	if attr.MountAccessor == "" {
+		return
+	}
+	// Resolve the parent namespace ID via the pluggable hook (no-op on OSS).
+	attr.ParentNamespaceID = getParentNamespaceID(c, attr.NamespacePath)
+	cb.SecretEngineCounts.Oidc.MountAttributionLock.Lock()
+	// Always write the full entry from the current request so that any metadata
+	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
+	// Only the accumulated count is carried over from the previous entry.
+	if existing, ok := cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor]; ok {
+		attr.Count = ToFloat64(existing.Count) + ToFloat64(attr.Count)
+	}
+	cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor] = attr
+	cb.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
 }
 
-// UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,
-// normalizes them to duration-adjusted counts, and flushes them to storage.
+// UpdateOidcDurationAdjustedCount reads the in-memory OIDC duration-adjusted token count
+// and flushes it to storage.
 // This is called periodically by the consumption billing metrics worker.
 func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) error {
 	c.consumptionBillingLock.RLock()
@@ -1301,14 +1324,12 @@ func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	// Get in-memory raw token duration and reset value in memory
-	// Using Swap to atomically reset the value. If Vault crashes after a successful storage update but before reset, this prevents double counting.
-	totalTokenDurationSecondsFromMemory := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
+	// Swap out the accumulated duration-adjusted units (already normalized per-token in
+	// IncrementOidcTokenCount). Using Swap to atomically reset so a crash after a successful
+	// storage write does not cause double-counting on the next flush.
+	units := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
 
-	// Calculate duration-adjusted count from raw data
-	durationAdjustedCountMemory := DurationAdjustedTokenCount(totalTokenDurationSecondsFromMemory)
-
-	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, durationAdjustedCountMemory)
+	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, units)
 }
 
 func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time, inc float64) error {

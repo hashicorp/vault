@@ -34,6 +34,12 @@ binary {
         // https://github.com/google/go-attestation/security/advisories/GHSA-9r4w-jg96-92mv
         // https://github.com/golang/vulndb/issues/5795
         "GO-2026-5298",
+
+        // https://hashicorp.atlassian.net/browse/PSP-3913
+        // Exempt these until the scanner can handle the boringcrypto suffix for
+        // the FIPS 140-3 builds.
+        "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
+        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942"
       ]
     }
   }
@@ -74,6 +80,12 @@ container {
         // https://github.com/google/go-attestation/security/advisories/GHSA-9r4w-jg96-92mv
         // https://github.com/golang/vulndb/issues/5795
         "GO-2026-5298",
+
+        // https://hashicorp.atlassian.net/browse/PSP-3913
+        // Exempt these until the scanner can handle the boringcrypto suffix for
+        // the FIPS 140-3 builds.
+        "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
+        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942"
       ]
 
       // The OSV scanner will trip on several packages that are included in the

@@ -8,3 +8,7 @@ package consts
 func GetOAuthJwtPrefix() string {
 	return "unimplemented"
 }
+
+func GetSCIMTokenPrefix() string {
+	return "unimplemented"
+}

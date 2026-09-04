@@ -731,6 +731,7 @@ func TestIdentityStore_GroupsCreateUpdate(t *testing.T) {
 			"testkey2": "testvalue2",
 		},
 		"parent_group_ids": []string(nil),
+		"scim_client_id":   "",
 	}
 	expectedData["id"] = resp.Data["id"]
 	expectedData["type"] = resp.Data["type"]
@@ -823,6 +824,7 @@ func TestIdentityStore_GroupsCreateUpdateDuplicatePolicy(t *testing.T) {
 			"testkey2": "testvalue2",
 		},
 		"parent_group_ids": []string(nil),
+		"scim_client_id":   "",
 	}
 	expectedData["id"] = resp.Data["id"]
 	expectedData["type"] = resp.Data["type"]
@@ -942,6 +944,7 @@ func TestIdentityStore_GroupsCRUD_ByID(t *testing.T) {
 			"testkey2": "testvalue2",
 		},
 		"parent_group_ids": []string(nil),
+		"scim_client_id":   "",
 	}
 	expectedData["id"] = resp.Data["id"]
 	expectedData["type"] = resp.Data["type"]

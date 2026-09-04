@@ -12,9 +12,9 @@
     </H.Tr>
   </:head>
   <:body as |B|>
-    {{#each @data.agent.ceiling_policy as |policy|}}
+    {{#each @data.agent.ceiling_policies as |policy|}}
       <B.Tr>
-        <B.Td>Ceiling</B.Td>
+        <B.Td>OBO ceiling</B.Td>
         <B.Td>{{@data.agent.display_name}}</B.Td>
         <B.Td>
           <Hds::Link::Inline @route="vault.cluster.policy.show" @models={{array "acl" policy}}>

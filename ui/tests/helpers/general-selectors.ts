@@ -54,7 +54,9 @@ export const GENERAL = {
 
   /* ────── Tables ────── */
   table: (title: string) => `[data-test-table="${title}"]`,
-  tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
+  tableRow: (idx?: number) =>
+    idx !== undefined ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]',
+  tableParentRow: '[data-test-table-parent-row]',
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
   tableDataNested: (idx: number, key: string) =>
     `[role="row"]:nth-of-type(${idx + 1}) [data-test-table-data="${key}"]`,
@@ -70,6 +72,8 @@ export const GENERAL = {
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
   confirmModalInput: '[data-test-confirmation-modal-input]',
+  confirmTextInput: '[data-test-confirm-modal-input]',
+  confirmWarning: '[data-test-confirm-modal-warning]',
   confirmMessage: '[data-test-confirm-action-message]',
   confirmTitle: '[data-test-confirm-action-title]',
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,

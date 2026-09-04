@@ -28,7 +28,9 @@ import {
 } from 'vault/utils/external-plugin-helpers';
 import type { EngineVersionInfo } from 'vault/utils/plugin-catalog-helpers';
 import { sortVersions } from 'vault/utils/version-utils';
+import { SECRET_ENGINE_CREATED } from 'vault/utils/analytic-events';
 import type { ValidationMap } from 'vault/vault/app-types';
+import type AnalyticsService from 'vault/services/analytics';
 
 // Extended config interface for plugin mounting
 interface ExtendedMountConfig {
@@ -68,6 +70,7 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
  * ```
  */
 export default class MountSecretsEngineFormComponent extends Component<Args> {
+  @service declare analytics: AnalyticsService;
   @service declare flashMessages: FlashMessagesService;
   @service declare api: ApiService;
   @service declare capabilities: CapabilitiesService;
@@ -95,6 +98,10 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
 
     // Initialize plugin version
     this.configObject.plugin_version = '';
+  }
+
+  get normalizedType(): string {
+    return this.args.model.form.normalizedType ?? '';
   }
 
   // Helper to get config object with proper typing
@@ -246,6 +253,16 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     return externalVersions.map((version) => version.version);
   }
 
+  // `object` carries the engine type, suffixed with the version when one applies (e.g. "kv-v2")
+  private trackSecretsCreationEvent(type: string, successFlag: boolean, version?: number) {
+    this.analytics.trackEvent(SECRET_ENGINE_CREATED, {
+      objectType: 'secrets-engine',
+      object: version ? `${type}-v${version}` : type,
+      process: 'UI',
+      successFlag,
+    });
+  }
+
   // Check if the currently selected version differs from the pinned version
   get shouldShowPinWarning(): boolean {
     if (!this.isExternalPlugin) {
@@ -377,6 +394,9 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     this.formValidations = null;
     this.invalidFormAlert = null;
 
+    // Derived before the request so analytics can report it on failure too
+    const version = options ? options.version : data.options?.version;
+
     try {
       // Mount the secrets engine
       yield this.api.sys.mountsEnableSecretsEngine(path, data);
@@ -394,11 +414,12 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
       }
 
       // Determine if we should use engine routes
-      const version = options ? options.version : data.options?.version;
       const useEngineRoute = isAddonEngine(mountModel.normalizedType, Number(version));
 
+      this.trackSecretsCreationEvent(type, true, version);
       this.onMountSuccess(type, path, useEngineRoute);
     } catch (error) {
+      this.trackSecretsCreationEvent(type, false, version);
       const { status, response, message } = yield this.api.parseError(error);
       this.onMountError(status, response?.errors, message);
     }

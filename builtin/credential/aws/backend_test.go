@@ -1632,10 +1632,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 			t.Skipf("env var %s not set, skipping test", "TEST_"+envvar)
 		}
 
-		// restore existing environment variables (in case future tests need them)
-		defer os.Setenv(envvar, os.Getenv(envvar))
-
-		os.Setenv(envvar, testEnvVar)
+		t.Setenv(envvar, testEnvVar)
 	}
 	awsConfig, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion("us-east-1"))
 	if err != nil {

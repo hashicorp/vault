@@ -1,0 +1,70 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if this.hasEngineInfo}}
+  <div class="has-top-margin-l has-bottom-margin-l" data-test-about-this-engine>
+    <Hds::Layout::Flex @justify="space-between" @align="center" class="has-bottom-margin-l">
+      <Hds::Text::Display @tag="h2" @size="300" @color="strong" data-test-about-engine-heading>About this engine</Hds::Text::Display>
+      <Hds::Button
+        @text={{this.toggleLabel}}
+        @color="tertiary"
+        @icon={{if this.isOpen "chevron-up" "chevron-down"}}
+        @iconPosition="trailing"
+        {{on "click" this.toggleOpen}}
+        data-test-button="About engine toggle"
+      />
+    </Hds::Layout::Flex>
+
+    {{#if this.isOpen}}
+      <Hds::Layout::Flex
+        @direction="column"
+        @gap="12"
+        class="about-this-engine__content has-bottom-margin-s"
+        data-test-about-engine-content
+      >
+        {{#each this.rows as |row|}}
+          <Hds::Layout::Flex
+            @align="start"
+            @gap="24"
+            class="border-radius-medium is-fullwidth has-padding-20 {{row.bgClass}}"
+            data-test-about-engine-row={{row.key}}
+            as |LF|
+          >
+            <LF.Item @shrink={{false}}>
+              <Hds::Layout::Flex @align="center" @gap="8" class="about-this-engine__row-label" as |LF|>
+                <LF.Item @shrink={{false}}>
+                  <Hds::Icon @name={{row.icon}} @size="16" @color={{row.iconColor}} />
+                </LF.Item>
+                <Hds::Text::Display
+                  @size="200"
+                  @weight="semibold"
+                  @color={{row.labelColor}}
+                  data-test-text-display
+                >{{row.label}}</Hds::Text::Display>
+              </Hds::Layout::Flex>
+            </LF.Item>
+            <ul class="bullet bottom-margin-0 is-size-8 has-line-height-200 about-this-engine__list">
+              {{#each row.bullets as |parts|}}
+                <li>
+                  {{#each parts as |part|}}
+                    {{#if part.isLink}}
+                      <Hds::Link::Inline @href={{part.href}}>{{part.text}}</Hds::Link::Inline>
+                    {{else if part.isCode}}
+                      <Hds::Text::Body @weight="semibold" @color="strong">{{part.text}}</Hds::Text::Body>
+                    {{else}}
+                      <Hds::Text::Body @color="strong">{{part.text}}</Hds::Text::Body>
+                    {{/if}}
+                  {{/each}}
+                </li>
+              {{/each}}
+            </ul>
+          </Hds::Layout::Flex>
+        {{/each}}
+      </Hds::Layout::Flex>
+    {{/if}}
+
+    <Hds::Separator />
+  </div>
+{{/if}}

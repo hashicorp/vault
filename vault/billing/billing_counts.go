@@ -119,9 +119,12 @@ type BillingConfig struct {
 	MetricsUpdateCadence time.Duration
 	// For testing purposes. The cadence at which plugin counts are sent from perf standby to active
 	PluginCountsSendCadence time.Duration
-	// For testin purposes. TestOverrideClock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
+	// For testing purposes. TestOverrideClock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
 	// If nil, the default functions from the time package are used
 	TestOverrideClock timeutil.Clock
+	// OnMetricsSent is called in tests to observe the proto that would be sent
+	// to the control hub. It is never set in production.
+	OnMetricsSent func([]byte, error)
 }
 
 func GetMonthlyBillingMetricPath(localPrefix string, now time.Time, billingMetric string) string {
@@ -229,6 +232,10 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	if !ok {
 		return fmt.Errorf("invalid value type for backendAwareUUID")
 	}
+	mountRunningVersion, ok := data["mountRunningVersion"].(string)
+	if !ok {
+		return fmt.Errorf("invalid value type for mountRunningVersion")
+	}
 
 	d.MountAttributionLock.Lock()
 	var prev float64
@@ -241,14 +248,15 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
 	// Only the accumulated count is carried over from the previous entry.
 	d.MountAttribution[mountAccessor] = logical.MountAttribution{
-		MountPath:         mountPath,
-		MountAccessor:     mountAccessor,
-		MountType:         mountType,
-		NamespaceID:       namespaceID,
-		NamespacePath:     namespacePath,
-		ParentNamespaceID: parentNamespaceID,
-		BackendAwareUUID:  backendAwareUUID,
-		Count:             prev + count,
+		MountPath:           mountPath,
+		MountAccessor:       mountAccessor,
+		MountType:           mountType,
+		MountRunningVersion: mountRunningVersion,
+		NamespaceID:         namespaceID,
+		NamespacePath:       namespacePath,
+		ParentNamespaceID:   parentNamespaceID,
+		BackendAwareUUID:    backendAwareUUID,
+		Count:               prev + count,
 	}
 	d.MountAttributionLock.Unlock()
 
@@ -292,6 +300,9 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.Spiffe.MonthlyUnits.Add(val)
+		if err := s.SecretEngineCounts.Spiffe.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+			return err
+		}
 	case MountTypeGcpKms:
 		val, ok := data["count"].(uint64)
 		if !ok {
@@ -312,6 +323,9 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.ExternalCa.MonthlyUnits.Add(val)
+		if err := s.SecretEngineCounts.ExternalCa.AccumulateMountAttributions(ctx, data, val, s.GetParentNamespaceID); err != nil {
+			return err
+		}
 	default:
 		err := fmt.Errorf("unknown metric type: %s", mountType)
 		return err

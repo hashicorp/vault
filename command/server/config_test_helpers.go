@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/stretchr/testify/require"
 )
@@ -53,26 +52,14 @@ func testConfigRaftRetryJoin(t *testing.T) {
 	}{
 		"attributes_duplicate_error": {
 			configFile:    "./test-fixtures/raft_retry_join_attr.hcl",
-			errorContains: "The argument \"retry_join\" at 11:3 was already set. Each argument can only be defined once (if using the attribute syntax retry_join = [...], change it to the block syntax retry_join { ... })",
-		},
-		"attributes_allowed_with_env_var": {
-			configFile: "./test-fixtures/raft_retry_join_attr.hcl",
-			envVars: map[string]string{
-				random.AllowHclDuplicatesEnvVar: "true",
-			},
+			errorContains: "The argument \"retry_join\" at 11:3 was already set. Each argument can only be defined once",
 		},
 		"blocks": {
 			configFile: "./test-fixtures/raft_retry_join_block.hcl",
 		},
 		"mixed_duplicate_error": {
 			configFile:    "./test-fixtures/raft_retry_join_mixed.hcl",
-			errorContains: "The argument \"retry_join\" at 14:3 was already set. Each argument can only be defined once (if using the attribute syntax retry_join = [...], change it to the block syntax retry_join { ... })",
-		},
-		"mixed_allowed_with_env_var": {
-			configFile: "./test-fixtures/raft_retry_join_mixed.hcl",
-			envVars: map[string]string{
-				random.AllowHclDuplicatesEnvVar: "true",
-			},
+			errorContains: "The argument \"retry_join\" at 14:3 was already set. Each argument can only be defined once",
 		},
 	}
 
@@ -656,25 +643,9 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
-// TODO (HCL_DUP_KEYS_DEPRECATION): remove warning test once deprecation is completed
 func testDuplicateKeyValidationHcl(t *testing.T) {
-	t.Run("env unset", func(t *testing.T) {
-		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-		require.Error(t, err)
-	})
-
-	t.Run("env set to false", func(t *testing.T) {
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
-		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-		require.Error(t, err)
-	})
-
-	t.Run("env set to true", func(t *testing.T) {
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-		_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-		require.NoError(t, err)
-		require.True(t, duplicate)
-	})
+	_, err := LoadConfigFile("./test-fixtures/invalid_config_duplicate_key.hcl")
+	require.Error(t, err)
 }
 
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
@@ -962,6 +933,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"allow_audit_log_prefixing":      false,
 		"enable_unauthenticated_access":  []string(nil),
 		"deny_slash_in_templated_paths":  false,
+		"disable_goroutine_trace_dump":   false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})

@@ -14,7 +14,7 @@ import clearModelCache from 'vault/utils/shared-model-boundary';
 import { assert } from '@ember/debug';
 import config from 'vault/config/environment';
 
-import { v4 as uuidv4 } from 'uuid';
+import { getOrCreateAnalyticsUserId } from 'vault/utils/preferences';
 
 import {
   INIT,
@@ -207,10 +207,16 @@ export default class ClusterRoute extends Route {
       }
 
       try {
-        const entity_id = this.auth.authData?.entityId;
-        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
+        // Store the raw and un-prefixed ID, the entity ID when authenticated, else a
+        // stable per-browser uuid persisted in localStorage (token-based access
+        // has no entity ID). The `vault-` realm prefix is applied only here at
+        // identify() time and is never persisted or sent as uniqueSecurityName.
+        const entityId = this.auth.authData?.entityId;
+        const uniqueSecurityName = entityId ? entityId : getOrCreateAnalyticsUserId();
 
-        this.analytics.identifyUser(entity, {
+        this.analytics.identifyUser(`vault-${uniqueSecurityName}`, {
+          realmName: 'vault',
+          uniqueSecurityName,
           licenseId: licenseId,
           clusterId: model.id,
           licenseState: model.license?.state || 'community',

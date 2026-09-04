@@ -1,0 +1,22 @@
+# Copyright IBM Corp. 2016, 2025
+# SPDX-License-Identifier: BUSL-1.1
+
+rules:
+  - id: defer-http-body-close-in-loop
+    languages: [go]
+    severity: WARNING
+    message: >-
+      `defer resp.Body.Close()` inside a `for` loop leaks the HTTP response
+      body until the enclosing function returns, not at the end of each
+      iteration. Call `resp.Body.Close()` directly (without defer), or wrap
+      the loop body in a helper function.
+    patterns:
+      - pattern: defer $RESP.Body.Close()
+      - pattern-inside: |
+          for ... {
+            ...
+          }
+      - pattern-not-inside: |
+          func(...) {
+            ...
+          }

@@ -1591,7 +1591,7 @@ func TestSysTuneMount(t *testing.T) {
 			"options":                interface{}(nil),
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",

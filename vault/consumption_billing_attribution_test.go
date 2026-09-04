@@ -17,25 +17,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestToFloat64 verifies that toFloat64 correctly handles all value types that
+// TestToFloat64 verifies that ToFloat64 correctly handles all value types that
 // can appear in a round-tripped MountAttribution.Count / MetricTypeAttribution.Count.
 func TestToFloat64(t *testing.T) {
 	// Native float64 — set by in-memory code paths.
-	require.Equal(t, 3.14, toFloat64(float64(3.14)))
-	require.Equal(t, 0.0, toFloat64(float64(0)))
+	require.Equal(t, 3.14, ToFloat64(float64(3.14)))
+	require.Equal(t, 0.0, ToFloat64(float64(0)))
 
 	// nil — should return 0 safely.
-	require.Equal(t, 0.0, toFloat64(nil))
+	require.Equal(t, 0.0, ToFloat64(nil))
 
 	// json.Number — returned by jsonutil.DecodeJSON for stored numeric values.
 	// Verify it is correctly unwrapped via the Float64() interface.
-	require.InDelta(t, 2.5, toFloat64(json.Number("2.5")), 0.0001, "Float64()-capable type should be unwrapped")
+	require.InDelta(t, 2.5, ToFloat64(json.Number("2.5")), 0.0001, "Float64()-capable type should be unwrapped")
 
 	// Integer types are coerced to float64.
-	require.Equal(t, 5.0, toFloat64(int(5)), "int should coerce to float64")
+	require.Equal(t, 5.0, ToFloat64(int(5)), "int should coerce to float64")
 
 	// Unsupported types return 0.
-	require.Equal(t, 0.0, toFloat64("3.14"), "string should return 0")
+	require.Equal(t, 0.0, ToFloat64("3.14"), "string should return 0")
 }
 
 // TestStoreAndGetAttributionData verifies the round-trip of storeAttributionDataLocked
@@ -55,14 +55,15 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 		LastUpdated: lastUpdated,
 		Mounts: map[string]logical.MountAttribution{
 			"kv_5d4f8f1c": {
-				MountPath:         "secret/",
-				MountType:         "kv",
-				MountAccessor:     "kv_5d4f8f1c",
-				NamespaceID:       "root",
-				NamespacePath:     "",
-				ParentNamespaceID: "",
-				Count:             5,
-				BackendAwareUUID:  "wdasd23",
+				MountPath:           "secret/",
+				MountType:           "kv",
+				MountAccessor:       "kv_5d4f8f1c",
+				NamespaceID:         "root",
+				NamespacePath:       "",
+				ParentNamespaceID:   "",
+				Count:               5,
+				BackendAwareUUID:    "wdasd23",
+				MountRunningVersion: "version1",
 			},
 		},
 	}
@@ -88,13 +89,14 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	require.Equal(t, "", m1.ParentNamespaceID)
 	require.Equal(t, "kv_5d4f8f1c", m1.MountAccessor)
 	require.Equal(t, "5", fmt.Sprintf("%v", m1.Count))
+	require.Equal(t, "version1", m1.MountRunningVersion)
 
 	// Overwrite with new data — second store must replace, not merge.
 	overwrite := &logical.MetricTypeAttribution{
 		Count:       12,
 		LastUpdated: time.Now().UTC(),
 		Mounts: map[string]logical.MountAttribution{
-			"kv_bbb": {Count: 12, MountAccessor: "kv_bbb", MountPath: "new/", MountType: "kv"},
+			"kv_bbb": {Count: 12, MountAccessor: "kv_bbb", MountPath: "new/", MountType: "kv", MountRunningVersion: "v2.0.0"},
 		},
 	}
 	err = storeAttributionDataLocked(ctx, view, billing.LocalPrefix, month, billing.KvHWMCountsHWM, overwrite)
@@ -107,8 +109,9 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	require.Len(t, got.Mounts, 1, "overwrite should replace all previous mounts")
 	_, hasOld := got.Mounts["kv_5d4f8f1c"]
 	require.False(t, hasOld, "old mounts should be gone after overwrite")
-	_, hasNew := got.Mounts["kv_bbb"]
+	m2, hasNew := got.Mounts["kv_bbb"]
 	require.True(t, hasNew, "new mount should be present after overwrite")
+	require.Equal(t, "v2.0.0", m2.MountRunningVersion, "MountRunningVersion must survive overwrite round-trip")
 }
 
 // TestTransitUpdateAndGetAttribution verifies that the store operation correctly writes the cumulative counts
@@ -131,21 +134,23 @@ func TestTransitUpdateAndGetAttribution(t *testing.T) {
 	// Test Case 1: Simple update with a couple of mounts
 	t.Log("Test Case 1: Initial update with two mounts")
 	testBreakdown1 := logical.MountAttribution{
-		MountAccessor:     mountAccessor,
-		MountPath:         "transit/",
-		NamespaceID:       "root",
-		NamespacePath:     "",
-		ParentNamespaceID: "",
-		Count:             10.0,
+		MountAccessor:       mountAccessor,
+		MountPath:           "transit/",
+		NamespaceID:         "root",
+		NamespacePath:       "",
+		ParentNamespaceID:   "",
+		Count:               10.0,
+		MountRunningVersion: "version1",
 	}
 
 	testBreakdown2 := logical.MountAttribution{
-		MountAccessor:     mountAccessor2,
-		MountPath:         "transit2/",
-		NamespaceID:       "ns1-id",
-		NamespacePath:     "ns1/",
-		ParentNamespaceID: "root",
-		Count:             25.5,
+		MountAccessor:       mountAccessor2,
+		MountPath:           "transit2/",
+		NamespaceID:         "ns1-id",
+		NamespacePath:       "ns1/",
+		ParentNamespaceID:   "root",
+		Count:               25.5,
+		MountRunningVersion: "version2",
 	}
 
 	// Store the breakdowns in the map
@@ -188,20 +193,23 @@ func TestTransitUpdateAndGetAttribution(t *testing.T) {
 	retrieved1, ok = retrievedAttribution.Mounts[mountAccessor]
 	require.True(t, ok, "Should still find breakdown for first mount accessor")
 	require.Equal(t, "10", fmt.Sprintf("%v", retrieved1.Count), "Count should remain unchanged")
+	require.Equal(t, "version1", retrieved1.MountRunningVersion, "MountRunningVersion should remain unchanged")
 
 	retrieved2, ok = retrievedAttribution.Mounts[mountAccessor2]
 	require.True(t, ok, "Should still find breakdown for transit-accessor-2")
 	require.Equal(t, "25.5", fmt.Sprintf("%v", retrieved2.Count), "Count should remain unchanged")
+	require.Equal(t, "version2", retrieved2.MountRunningVersion, "MountRunningVersion should remain unchanged")
 
 	// Test Case 3: Update with only one of the mounts - should accumulate counts correctly
 	t.Log("Test Case 3: Update with only one mount (cumulative count)")
 	testBreakdown1Updated := logical.MountAttribution{
-		MountAccessor:     mountAccessor,
-		MountPath:         "transit/",
-		NamespaceID:       "root",
-		NamespacePath:     "",
-		ParentNamespaceID: "",
-		Count:             15.0, // Adding 15 more to the existing 10
+		MountAccessor:       mountAccessor,
+		MountPath:           "transit/",
+		NamespaceID:         "root",
+		NamespacePath:       "",
+		ParentNamespaceID:   "",
+		Count:               15.0, // Adding 15 more to the existing 10
+		MountRunningVersion: "version3",
 	}
 
 	cb.SecretEngineCounts.Transit.MountAttributionLock.Lock()
@@ -223,6 +231,7 @@ func TestTransitUpdateAndGetAttribution(t *testing.T) {
 	require.Equal(t, "25", fmt.Sprintf("%v", retrieved1.Count), "Count should be cumulative: 10 + 15 = 25")
 	require.Equal(t, mountAccessor, retrieved1.MountAccessor)
 	require.Equal(t, "transit/", retrieved1.MountPath)
+	require.Equal(t, "version3", retrieved1.MountRunningVersion, "MountRunningVersion should reflect latest flush")
 
 	// Second mount is unchanged
 	retrieved2, ok = retrievedAttribution.Mounts[mountAccessor2]
@@ -266,10 +275,12 @@ func TestTransitUpdateAndGetAttribution(t *testing.T) {
 	retrieved1, ok = retrievedAttribution.Mounts[mountAccessor]
 	require.True(t, ok, "Should find breakdown for first mount accessor")
 	require.Equal(t, "30", fmt.Sprintf("%v", retrieved1.Count), "Count should be cumulative: 25 + 5 = 30")
+	require.Equal(t, "", retrieved1.MountRunningVersion, "MountRunningVersion should be empty when not set in flush")
 
 	retrieved2, ok = retrievedAttribution.Mounts[mountAccessor2]
 	require.True(t, ok, "Should find breakdown for transit-accessor-2")
 	require.Equal(t, "36", fmt.Sprintf("%v", retrieved2.Count), "Count should be cumulative: 25.5 + 10.5 = 36")
+	require.Equal(t, "", retrieved2.MountRunningVersion, "MountRunningVersion should be empty when not set in flush")
 
 	// Verify in-memory map is empty after update (atomic swap behaviour)
 	cb.SecretEngineCounts.Transit.MountAttributionLock.RLock()
@@ -306,15 +317,16 @@ func TestCertAttributionNamespaceMove(t *testing.T) {
 	} {
 		metricName := metricName // capture
 		t.Run(metricName, func(t *testing.T) {
-			// Flush 1: mount is in ns1 with count 10.
+			// Flush 1: mount is in ns1 with count 10, running version v1.0.0.
 			inNS1 := map[string]logical.MountAttribution{
 				accessor: {
-					MountAccessor: accessor,
-					MountPath:     "cert/",
-					MountType:     "pki",
-					NamespaceID:   "ns1-id",
-					NamespacePath: "ns1/",
-					Count:         10.0,
+					MountAccessor:       accessor,
+					MountPath:           "cert/",
+					MountType:           "pki",
+					NamespaceID:         "ns1-id",
+					NamespacePath:       "ns1/",
+					Count:               10.0,
+					MountRunningVersion: "v1.0.0",
 				},
 			}
 			err := storeCertAttributionLocked(ctx, view, billing.LocalPrefix, metricName, 10.0, inNS1, month)
@@ -326,17 +338,19 @@ func TestCertAttributionNamespaceMove(t *testing.T) {
 			entry := stored.Mounts[accessor]
 			require.Equal(t, "ns1-id", entry.NamespaceID, "flush 1: NamespaceID should be ns1")
 			require.Equal(t, "ns1/", entry.NamespacePath)
+			require.Equal(t, "v1.0.0", entry.MountRunningVersion, "flush 1: MountRunningVersion should be v1.0.0")
 			require.Equal(t, "10", fmt.Sprintf("%v", entry.Count))
 
-			// Flush 2: same accessor, mount has moved to ns2, count delta 5.
+			// Flush 2: same accessor, mount has moved to ns2 and upgraded to v2.0.0, count delta 5.
 			inNS2 := map[string]logical.MountAttribution{
 				accessor: {
-					MountAccessor: accessor,
-					MountPath:     "cert/",
-					MountType:     "pki",
-					NamespaceID:   "ns2-id",
-					NamespacePath: "ns2/",
-					Count:         5.0,
+					MountAccessor:       accessor,
+					MountPath:           "cert/",
+					MountType:           "pki",
+					NamespaceID:         "ns2-id",
+					NamespacePath:       "ns2/",
+					Count:               5.0,
+					MountRunningVersion: "v2.0.0",
 				},
 			}
 			err = storeCertAttributionLocked(ctx, view, billing.LocalPrefix, metricName, 5.0, inNS2, month)
@@ -347,9 +361,10 @@ func TestCertAttributionNamespaceMove(t *testing.T) {
 			require.Len(t, stored.Mounts, 1, "still one entry — same accessor")
 
 			entry = stored.Mounts[accessor]
-			// Metadata must reflect ns2.
+			// Metadata must reflect ns2 and v2.0.0 — the most recent flush wins.
 			require.Equal(t, "ns2-id", entry.NamespaceID, "flush 2: NamespaceID should be updated to ns2")
 			require.Equal(t, "ns2/", entry.NamespacePath, "flush 2: NamespacePath should be updated to ns2")
+			require.Equal(t, "v2.0.0", entry.MountRunningVersion, "flush 2: MountRunningVersion should be updated to v2.0.0")
 			// Count must be cumulative: 10 + 5 = 15.
 			require.Equal(t, "15", fmt.Sprintf("%v", entry.Count), "count should accumulate: 10 + 5 = 15")
 			// Top-level total must also accumulate.

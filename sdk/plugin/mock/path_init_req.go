@@ -28,10 +28,11 @@ func (b *backend) pathInitReqRead(_ context.Context, _ *logical.Request, _ *fram
 	}
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"mount_point":    b.lastInitReq.MountPoint,
-			"mount_type":     b.lastInitReq.MountType,
-			"mount_accessor": b.lastInitReq.MountAccessor,
-			"backend_uuid":   b.lastInitReq.BackendUUID,
+			"mount_point":           b.lastInitReq.MountPoint,
+			"mount_type":            b.lastInitReq.MountType,
+			"mount_accessor":        b.lastInitReq.MountAccessor,
+			"backend_uuid":          b.lastInitReq.BackendUUID,
+			"mount_running_version": b.lastInitReq.MountRunningVersion,
 		},
 	}, nil
 }

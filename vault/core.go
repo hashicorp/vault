@@ -816,9 +816,15 @@ type Core struct {
 	// started.
 	synctest bool
 
-	// ControlHubManager holds information regarding the node's connection to the control hub.
-	// It will be initialized to a no-op structure on CE
-	ControlHubManager *ControlHubManager
+	// SecureHubManager holds information regarding the node's connection to the secure hub.
+	// It will be initialized to a no-op structure on CE. Access it through
+	// GetSecureHubManager/SetSecureHubManager, which take secureHubManagerLock.
+	SecureHubManager *SecureHubManager
+
+	// secureHubManagerLock protects the SecureHubManager pointer. It does not
+	// protect the manager's own in-memory state, which is guarded by the
+	// manager's internal locks.
+	secureHubManagerLock sync.RWMutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1503,8 +1509,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	// Initialize ControlHubManager after barrier is set up
-	c.ControlHubManager = NewControlHubManager(c)
+	// Initialize SecureHubManager after barrier is set up
+	c.SetSecureHubManager(NewSecureHubManager(c))
 
 	// Events
 	eventsLogger := conf.Logger.Named("events")
@@ -2940,6 +2946,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.setupOAuthTokenDenylist(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.migrateProfilesByIssuerIndex(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.populateIssuerNamespacesIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
@@ -4112,9 +4121,10 @@ func (c *Core) setupQuotas(ctx context.Context, isPerfStandby bool) error {
 	}
 
 	qmFlags := &quotas.ManagerFlags{
-		IsPerfStandby: isPerfStandby,
-		IsDRSecondary: c.IsDRSecondary(),
-		IsNewInstall:  c.IsNewInstall(ctx),
+		IsPerfStandby:         isPerfStandby,
+		IsDRSecondary:         c.IsDRSecondary(),
+		IsNewInstall:          c.IsNewInstall(ctx),
+		OperatorNamespacePath: c.operatorNamespacePath,
 	}
 
 	return c.quotaManager.Setup(ctx, c.systemBarrierView, qmFlags)
@@ -4811,7 +4821,7 @@ func (c *Core) aliasNameFromLoginRequest(ctx context.Context, req *logical.Reque
 		Data:       req.Data,
 		Storage:    c.router.MatchingStorageByAPIPath(ctx, req.Path),
 	})
-	if err != nil || resp.Auth.Alias == nil {
+	if err != nil || resp == nil || resp.Auth == nil || resp.Auth.Alias == nil {
 		return "", nil
 	}
 	return resp.Auth.Alias.Name, nil
