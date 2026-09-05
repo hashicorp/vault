@@ -13,7 +13,8 @@
             @models={{array "groups" gid "details"}}
             class="is-block has-text-black has-text-weight-semibold"
           >
-            <Icon @name="folder" class="has-text-grey-light" />{{gid}}
+            <Icon @name="folder" class="has-text-grey-light" />
+            <Identity::ItemName @id={{gid}} @items={{@model.groups}} />
           </LinkTo>
         </LF.Item>
         <LF.Item>
@@ -33,7 +34,8 @@
             @models={{array "entities" gid "details"}}
             class="is-block has-text-black has-text-weight-semibold"
           >
-            <Icon @name="user" class="has-text-grey-light" />{{gid}}
+            <Icon @name="user" class="has-text-grey-light" />
+            <Identity::ItemName @id={{gid}} @items={{@model.entities}} />
           </LinkTo>
         </LF.Item>
         <LF.Item>
