@@ -58,7 +58,7 @@ func (c *Sys) ConfigureCORSWithContext(ctx context.Context, req *CORSRequest) er
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -75,7 +75,7 @@ func (c *Sys) DisableCORSWithContext(ctx context.Context) error {
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/config/cors")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
