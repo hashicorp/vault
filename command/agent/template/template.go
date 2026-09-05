@@ -228,25 +228,25 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
+
+			// The consul-template runner's Start() function exits when it
+			// receives an error from its watcher. We need to restart the
+			// runner. However, the runner's Run() function already executed
+			// all templates and commands before returning the error, so
+			// restarting the runner will cause all templates to be
+			// re-rendered and all exec blocks to be re-executed.
+			//
+			// To avoid aborting all templates when one fails, we just log
+			// the error and continue. The consul-template runner's watcher
+			// handles individual template retries through its view's retry
+			// mechanism. When the runner is restarted on the next event
+			// (e.g. new token, template change), all templates will be
+			// re-rendered normally.
 			ts.runner.StopImmediately()
+			restartBackoff.Reset()
 
-			// Return after stopping the runner if exit on retry failure was
-			// specified
-			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
-				return fmt.Errorf("template server: %w", err)
-			}
-
-			// Calculate the amount of time to backoff using exponential backoff
-			sleep, err := restartBackoff.Next()
-			if err != nil {
-				ts.logger.Error("template server: reached maximum number of restart attempts")
-				restartBackoff.Reset()
-			}
-
-			// Sleep for the calculated backoff time then attempt to create a new runner
-			ts.logger.Warn(fmt.Sprintf("template server restart: retry attempt after %s", sleep))
-			time.Sleep(sleep)
-
+			// Create a new runner immediately (no backoff) so that the
+			// other templates continue to be rendered
 			ts.runner, err = manager.NewRunner(runnerConfig, false)
 			if err != nil {
 				return fmt.Errorf("template server failed to create: %w", err)
