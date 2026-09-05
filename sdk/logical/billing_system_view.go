@@ -19,6 +19,7 @@ type MountAttribution struct {
 	ParentNamespaceID   string      `json:"parent_namespace_id"`   // Parent namespace identifier
 	Count               interface{} `json:"count"`                 // Count of a specific metric under this mount (int or float64)
 	BackendAwareUUID    string      `json:"backend_aware_uuid"`    // A stable identifier that is unique across clusters
+	IsExternal          bool        `json:"is_external"`           // Is unofficial or external plugin
 }
 
 // MetricTypeAttribution holds mount attribution data for a specific metric type (e.g., "kv", "aws_static").

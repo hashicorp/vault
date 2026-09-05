@@ -89,6 +89,7 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	require.Equal(t, "", m1.ParentNamespaceID)
 	require.Equal(t, "kv_5d4f8f1c", m1.MountAccessor)
 	require.Equal(t, "5", fmt.Sprintf("%v", m1.Count))
+	require.False(t, m1.IsExternal)
 	require.Equal(t, "version1", m1.MountRunningVersion)
 
 	// Overwrite with new data — second store must replace, not merge.

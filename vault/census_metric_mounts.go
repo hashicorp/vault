@@ -144,6 +144,7 @@ func (c *Core) CountMetricsSecretMounts(officialOnly bool, collectAttribution bo
 					BackendAwareUUID:    entry.BackendAwareUUID,
 					MountRunningVersion: entry.RunningVersion,
 					ParentNamespaceID:   getParentNamespaceID(c, kvMount.Namespace.Path),
+					IsExternal:          entry.IsExternalPlugin(),
 				}
 				// Use mount accessor as the map key
 				targetKvAttribution[kvMount.MountAccessor] = attribution
@@ -252,6 +253,7 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 				BackendAwareUUID:    entry.BackendAwareUUID,
 				MountRunningVersion: entry.RunningVersion,
 				ParentNamespaceID:   getParentNamespaceID(c, entry.namespace.Path),
+				IsExternal:          entry.IsExternalPlugin(),
 			}
 			// Initialize the inner map if it doesn't exist
 			if targetRoleAttribution[roleType] == nil {
@@ -440,6 +442,7 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 				BackendAwareUUID:    entry.BackendAwareUUID,
 				MountRunningVersion: entry.RunningVersion,
 				ParentNamespaceID:   getParentNamespaceID(c, entry.namespace.Path),
+				IsExternal:          entry.IsExternalPlugin(),
 			}
 			// Initialize the inner map if it doesn't exist
 			if targetManagedKeyAttribution[billing.KmseKeys] == nil {

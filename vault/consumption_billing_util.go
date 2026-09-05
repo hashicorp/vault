@@ -86,8 +86,8 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		return 0, err
 	}
 
-	// Collect and store attribution if HWM was updated
-	if hwmUpdated && len(currentThirdPartyPluginMounts) > 0 {
+	// Collect and store attribution if HWM was updated and attribution storage is enabled
+	if hwmUpdated && len(currentThirdPartyPluginMounts) > 0 && !c.IsAttributionDisabled(ctx) {
 		attribution := make(MountAttributionMap)
 		for _, entry := range currentThirdPartyPluginMounts {
 			if entry != nil {
@@ -105,6 +105,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 					NamespaceID:         entry.NamespaceID,
 					NamespacePath:       namespacePath,
 					BackendAwareUUID:    entry.BackendAwareUUID,
+					IsExternal:          true, // all third party plugins are external
 				}
 			}
 		}
@@ -307,8 +308,8 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 		return 0, err
 	}
 
-	// If HWM updated, store current attribution data
-	if hwmUpdated && len(attributions) > 0 {
+	// If HWM updated, store current attribution data (skip if attribution storage is disabled)
+	if hwmUpdated && len(attributions) > 0 && !c.IsAttributionDisabled(ctx) {
 		attributionData := &logical.MetricTypeAttribution{
 			Count:       maxKvCounts,
 			Mounts:      attributions,
@@ -415,9 +416,10 @@ func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleC
 	}
 
 	// Helper function to update count and store attribution if HWM updated
+	attributionDisabled := c.IsAttributionDisabled(ctx)
 	storeRoleTypeAttribution := func(roleType string, currentCount, maxCount int) (int, error) {
 		newMax, updated := c.compareCounts(currentCount, maxCount, roleType)
-		if updated && len(attribution[roleType]) > 0 {
+		if updated && len(attribution[roleType]) > 0 && !attributionDisabled {
 			attributionData := &logical.MetricTypeAttribution{
 				Count:       newMax,
 				Mounts:      attribution[roleType],
@@ -536,8 +538,8 @@ func (c *Core) updateMaxTotpKeyCounts(ctx context.Context, currentKeyCounts int,
 		return 0, err
 	}
 
-	// Store attribution if HWM was updated
-	if hwmUpdated && len(attribution) > 0 {
+	// Store attribution if HWM was updated and attribution storage is enabled
+	if hwmUpdated && len(attribution) > 0 && !c.IsAttributionDisabled(ctx) {
 		// Use the actual HWM count as the total, not sum of mounts
 		attributionData := &logical.MetricTypeAttribution{
 			Count:       maxKeyCounts,
@@ -659,6 +661,53 @@ func (c *Core) UpdateBillingRetentionMonths(ctx context.Context, retentionMonths
 
 	if err := view.Put(ctx, entry); err != nil {
 		return fmt.Errorf("failed to store billing config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Core) GetAttributionRetentionMonths(ctx context.Context) (int, error) {
+	c.billingConfigLock.RLock()
+	defer c.billingConfigLock.RUnlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return billing.DefaultAttributionRetentionMonths, nil
+	}
+
+	entry, err := view.Get(ctx, billing.AttributionConfigPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read attribution config: %w", err)
+	}
+	if entry == nil {
+		// No config stored, return default
+		return billing.DefaultAttributionRetentionMonths, nil
+	}
+
+	retentionMonths, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+
+	return retentionMonths, nil
+}
+
+func (c *Core) UpdateAttributionRetentionMonths(ctx context.Context, retentionMonths int) error {
+	c.billingConfigLock.Lock()
+	defer c.billingConfigLock.Unlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return fmt.Errorf("billing sub view not available")
+	}
+
+	entry := &logical.StorageEntry{
+		Key:   billing.AttributionConfigPath,
+		Value: []byte(strconv.Itoa(retentionMonths)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("failed to store attribution config: %w", err)
 	}
 
 	return nil
@@ -907,12 +956,14 @@ func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (b
 		if err := c.storeKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth, true); err != nil {
 			return false, err
 		}
-		if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.KmipEnabledPrefix, &logical.MetricTypeAttribution{
-			Count:       1,
-			Mounts:      kmipMounts,
-			LastUpdated: currentMonth,
-		}); err != nil {
-			return false, err
+		if !c.IsAttributionDisabled(ctx) {
+			if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.KmipEnabledPrefix, &logical.MetricTypeAttribution{
+				Count:       1,
+				Mounts:      kmipMounts,
+				LastUpdated: currentMonth,
+			}); err != nil {
+				return false, err
+			}
 		}
 		// Mark KMIP as seen this month only after successfully writing both the billing
 		// flag and attribution to storage, so a future billing cycle does not skip the

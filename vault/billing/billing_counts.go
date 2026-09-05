@@ -32,6 +32,16 @@ const (
 	// DefaultAttributionRetentionMonths is the default number of months of attribution data to retain.
 	DefaultAttributionRetentionMonths = 37
 
+	// MinAttributionRetentionMonths is the minimum allowed attribution retention period.
+	// A value of 0 disables attribution storage entirely and wipes all existing attribution data.
+	MinAttributionRetentionMonths = 0
+
+	// MaxAttributionRetentionMonths is the maximum allowed attribution retention period (72 months = 6 years).
+	MaxAttributionRetentionMonths = 72
+
+	// AttributionConfigPath is the storage key for the attribution retention configuration.
+	AttributionConfigPath = "attribution_config"
+
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
 	PluginCountsSendTimeout = 30 * time.Second
@@ -236,7 +246,7 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	if !ok {
 		return fmt.Errorf("invalid value type for mountRunningVersion")
 	}
-
+	isExternal, _ := data["isExternal"].(bool)
 	d.MountAttributionLock.Lock()
 	var prev float64
 	if existing, exists := d.MountAttribution[mountAccessor]; exists {
@@ -251,12 +261,13 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 		MountPath:           mountPath,
 		MountAccessor:       mountAccessor,
 		MountType:           mountType,
-		MountRunningVersion: mountRunningVersion,
 		NamespaceID:         namespaceID,
 		NamespacePath:       namespacePath,
 		ParentNamespaceID:   parentNamespaceID,
 		BackendAwareUUID:    backendAwareUUID,
 		Count:               prev + count,
+		MountRunningVersion: mountRunningVersion,
+		IsExternal:          isExternal,
 	}
 	d.MountAttributionLock.Unlock()
 
