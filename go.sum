@@ -848,8 +848,8 @@ github.com/hashicorp/vault-plugin-auth-alicloud v0.23.1 h1:Nz3vSccCqsU36zgJ3+zGU
 github.com/hashicorp/vault-plugin-auth-alicloud v0.23.1/go.mod h1:s6MCWphgQ0dRyHoVRkGdqOdeLQtWq1pbsz9vpoAl/O0=
 github.com/hashicorp/vault-plugin-auth-azure v0.24.0 h1:RSzUR9g3HjaIVxJhwnSxGtcEFCeGgemuRSNMpM3q6hc=
 github.com/hashicorp/vault-plugin-auth-azure v0.24.0/go.mod h1:myKdKk/DooAtMT7sKady3NNqod/y6OoYfGL5+E83AqA=
-github.com/hashicorp/vault-plugin-auth-cf v0.23.1 h1:zrDYtAzIEwWjkxVDD83XOk9tI0vVxCYWGJGZAapfz4Y=
-github.com/hashicorp/vault-plugin-auth-cf v0.23.1/go.mod h1:CUBTmP1g3IxckT3FlcUOjJ+c5mUUmCo6B42VUQvj5VQ=
+github.com/hashicorp/vault-plugin-auth-cf v0.23.2-0.20260901005742-275027a45cdd h1:N/VKLjXFK0SfcyFcUP/69WbbUcfmjDJgilqXYZTqixk=
+github.com/hashicorp/vault-plugin-auth-cf v0.23.2-0.20260901005742-275027a45cdd/go.mod h1:nOdnownGCOJve5IStMYVIvWOmR/87UILK2r1pAkUApY=
 github.com/hashicorp/vault-plugin-auth-gcp v0.23.1 h1:E13iJgR6bGAULjrAhstuQH2PxVTZdrWivT75J7RY5Tw=
 github.com/hashicorp/vault-plugin-auth-gcp v0.23.1/go.mod h1:7eXqptuyLNtPLdvwia0Bc139bMGlCgYJZqyhKmR4RWE=
 github.com/hashicorp/vault-plugin-auth-jwt v0.26.3 h1:MsdvAE/rqyUx4gsf31/ebga3wJ+kozosVqaI4Bbugkg=
@@ -1342,8 +1342,9 @@ github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o
 github.com/stretchr/testify v1.8.2/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/stretchr/testify v1.8.4/go.mod h1:sz/lmYIOXD/1dqDmKjjqLyZ2RngseejIcXlSw2iwfAo=
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
-github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
+github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
+github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.480/go.mod h1:7sCQWVkxcsR38nffDW057DRGk8mUjK1Ing/EFOK8s8Y=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.83 h1:C8ro7XQVV17O+A7zUTe28VK02NuyazuaY0CB2CH5Scw=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.83/go.mod h1:r5r4xbfxSaeR04b166HGsBa/R4U3SueirEUpXGuw+Q0=
