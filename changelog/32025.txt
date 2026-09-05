@@ -1,0 +1,3 @@
+```release-note:bug
+audit: Include `request.id` for `path-help` audit entries
+```
