@@ -732,6 +732,41 @@ func TestRaft_Recovery(t *testing.T) {
 	})
 }
 
+func TestValidateRaftRecoveryConfig(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		address           raft.ServerAddress
+		validateAddresses bool
+		wantError         string
+	}{
+		"hostname and port":        {"node-1.example.com:8201", true, ""},
+		"IPv4 and port":            {"192.0.2.1:8201", true, ""},
+		"IPv6 and port":            {"[2001:db8::1]:8201", true, ""},
+		"URL scheme":               {"https://node-1.example.com:8201", true, "must use host:port format"},
+		"missing port":             {"node-1.example.com", true, "must use host:port format"},
+		"unbracketed IPv6":         {"2001:db8::1:8201", true, "must use host:port format"},
+		"opaque in-memory address": {"mem://node-1", false, ""},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			config := raft.Configuration{Servers: []raft.Server{{
+				ID:       "node-1",
+				Address:  tc.address,
+				Suffrage: raft.Voter,
+			}}}
+
+			err := validateRaftRecoveryConfig(config, false, tc.validateAddresses)
+			if tc.wantError != "" {
+				require.ErrorContains(t, err, tc.wantError)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
 func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	t.Parallel()
 	testBothRaftBackends(t, func(t *testing.T, useRaftWal string) {
