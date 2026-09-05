@@ -5,6 +5,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"os"
 	"regexp"
 	"strings"
@@ -94,6 +95,53 @@ func TestCustomPath(t *testing.T) {
 
 	if l, exp := len(storedToken), minTokenLengthExternal+vault.TokenPrefixLength; l < exp {
 		t.Errorf("expected token to be %d characters, was %d: %q", exp, l, storedToken)
+	}
+}
+
+type failStoreHelper struct {
+	*token.TestingTokenHelper
+}
+
+func (f *failStoreHelper) Store(string) error {
+	return errors.New("permission denied")
+}
+
+func TestNoPrintDoesNotDumpTokenWhenStoreFails(t *testing.T) {
+	t.Parallel()
+
+	client, closer := testVaultServer(t)
+	defer closer()
+
+	if err := client.Sys().EnableAuth("userpass-noprint", "userpass", ""); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := client.Logical().Write("auth/userpass-noprint/users/test", map[string]interface{}{
+		"password": "test",
+		"policies": "default",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ui, cmd := testLoginCommand(t)
+	cmd.client = client
+	cmd.tokenHelper = &failStoreHelper{TestingTokenHelper: token.NewTestingTokenHelper()}
+
+	code := cmd.Run([]string{
+		"-no-print",
+		"-method", "userpass",
+		"-path", "userpass-noprint",
+		"username=test",
+		"password=test",
+	})
+	if exp := 2; code != exp {
+		t.Errorf("expected %d, got %d", exp, code)
+	}
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if strings.Contains(combined, "token") && strings.Contains(combined, "hvs.") {
+		t.Fatalf("token leaked to UI despite -no-print: %q", combined)
+	}
+	if !strings.Contains(combined, "permission denied") {
+		t.Fatalf("expected store error, got %q", combined)
 	}
 }
 
