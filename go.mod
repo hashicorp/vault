@@ -162,7 +162,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.26.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.17.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.1
-	github.com/hashicorp/vault-plugin-auth-oci v0.21.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.21.2-0.20260901004152-f5976e60f96c
 	github.com/hashicorp/vault-plugin-database-couchbase v0.16.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.20.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1
@@ -321,7 +321,7 @@ require (
 	github.com/moby/go-archive v0.1.0 // indirect
 	github.com/moby/sys/atomicwriter v0.1.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
-	github.com/oracle/oci-go-sdk/v65 v65.123.0 // indirect
+	github.com/oracle/oci-go-sdk/v65 v65.124.0 // indirect
 	github.com/std-uritemplate/std-uritemplate/go/v2 v2.0.3 // indirect
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
