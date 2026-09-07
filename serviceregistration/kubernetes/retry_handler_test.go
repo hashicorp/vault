@@ -4,7 +4,6 @@
 package kubernetes
 
 import (
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -26,12 +25,8 @@ func TestRetryHandlerSimple(t *testing.T) {
 	client.Scheme = testConf.ClientScheme
 	client.TokenFile = testConf.PathToTokenFile
 	client.RootCAFile = testConf.PathToRootCAFile
-	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
 
 	logger := hclog.NewNullLogger()
 	shutdownCh := make(chan struct{})
@@ -81,12 +76,8 @@ func TestRetryHandlerAdd(t *testing.T) {
 	client.Scheme = testConf.ClientScheme
 	client.TokenFile = testConf.PathToTokenFile
 	client.RootCAFile = testConf.PathToRootCAFile
-	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
 
 	logger := hclog.NewNullLogger()
 	c, err := client.New(logger)
@@ -196,12 +187,8 @@ func TestRetryHandlerRacesAndDeadlocks(t *testing.T) {
 	client.Scheme = testConf.ClientScheme
 	client.TokenFile = testConf.PathToTokenFile
 	client.RootCAFile = testConf.PathToRootCAFile
-	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
 
 	logger := hclog.NewNullLogger()
 	shutdownCh := make(chan struct{})
@@ -271,12 +258,8 @@ func TestRetryHandlerAPIConnectivityProblemsInitialState(t *testing.T) {
 	client.TokenFile = testConf.PathToTokenFile
 	client.RootCAFile = testConf.PathToRootCAFile
 	client.RetryMax = 0
-	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
 
 	shutdownCh := make(chan struct{})
 	wait := &sync.WaitGroup{}
@@ -362,12 +345,8 @@ func TestRetryHandlerAPIConnectivityProblemsNotifications(t *testing.T) {
 	client.TokenFile = testConf.PathToTokenFile
 	client.RootCAFile = testConf.PathToRootCAFile
 	client.RetryMax = 0
-	if err := os.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort); err != nil {
-		t.Fatal(err)
-	}
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
 
 	shutdownCh := make(chan struct{})
 	wait := &sync.WaitGroup{}

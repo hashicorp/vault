@@ -900,7 +900,9 @@ func TestSSHCertCounts(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, currentCount, storedCounts)
 
-	core.certCountManager.StartConsumerJob(core.ConsumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Perform more operations to increase the counter
 	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/issue/test")
@@ -926,7 +928,9 @@ func TestSSHCertCounts(t *testing.T) {
 	expectedSum := currentCount + expectedCertUnit
 	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
 
-	core.certCountManager.StartConsumerJob(core.ConsumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Add more operations without manually resetting
 	for i := 0; i < 3; i++ {
@@ -1029,7 +1033,9 @@ func TestSSHOTPCounts(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, currentCount, storedCounts)
 
-	core.certCountManager.StartConsumerJob(core.ConsumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Perform more operations to increase the counter
 	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
@@ -1056,7 +1062,9 @@ func TestSSHOTPCounts(t *testing.T) {
 	expectedSum := currentCount + expectedOTPUnit
 	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
 
-	core.certCountManager.StartConsumerJob(core.ConsumeCertCounts)
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
 
 	// Add more operations without manually resetting
 	for i := 0; i < 3; i++ {
@@ -1600,11 +1608,12 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	// Simulate GCP KMS plugin writing billing data (this is what the plugin does when operations occur)
 	// In a real scenario, this would be triggered by actual encrypt/decrypt/sign/verify operations
 	err := core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-aware-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
 	})
 	require.NoError(t, err)
 
@@ -1622,19 +1631,21 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 
 	// Simulate more operations
 	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-aware-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
 	})
 	require.NoError(t, err)
 	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-aware-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
 	})
 	require.NoError(t, err)
 
@@ -1704,12 +1715,21 @@ func TestCore_BillingRetentionMonths(t *testing.T) {
 
 func verifyMountAttributionBreakdowns(t *testing.T, expected logical.MountAttribution, actual logical.MountAttribution) {
 	t.Helper()
-	require.Equal(t, expected.MountAccessor, actual.MountAccessor)
-	require.Equal(t, expected.NamespaceID, actual.NamespaceID)
-	require.Equal(t, expected.NamespacePath, actual.NamespacePath)
-	require.Equal(t, expected.MountPath, actual.MountPath)
-	require.Equal(t, expected.ParentNamespaceID, actual.ParentNamespaceID)
-	// Count is interface{} and comes back as json.Number after a storage round-trip;
-	// compare via string representation to avoid type-mismatch failures.
-	require.Equal(t, fmt.Sprintf("%v", expected.Count), fmt.Sprintf("%v", actual.Count))
+	require.Equal(t, expected.MountAccessor, actual.MountAccessor, "MountAccessor mismatch")
+	require.Equal(t, expected.MountPath, actual.MountPath, "MountPath mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.MountType, actual.MountType, "MountType mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.NamespaceID, actual.NamespaceID, "NamespaceID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.NamespacePath, actual.NamespacePath, "NamespacePath mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.ParentNamespaceID, actual.ParentNamespaceID, "ParentNamespaceID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.BackendAwareUUID, actual.BackendAwareUUID, "BackendAwareUUID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.MountRunningVersion, actual.MountRunningVersion, "MountRunningVersion mismatch for %s", expected.MountAccessor)
+	var actualCount, expectedCount float64
+	if _, err := fmt.Sscanf(fmt.Sprintf("%v", actual.Count), "%g", &actualCount); err != nil {
+		t.Fatalf("failed to parse actual count %v: %v", actual.Count, err)
+	}
+	if _, err := fmt.Sscanf(fmt.Sprintf("%v", expected.Count), "%g", &expectedCount); err != nil {
+		t.Fatalf("failed to parse expected count %v: %v", expected.Count, err)
+	}
+	require.InDelta(t, expectedCount, actualCount, 1e-9, "Count mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.IsExternal, actual.IsExternal)
 }

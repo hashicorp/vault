@@ -100,6 +100,10 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     this.configObject.plugin_version = '';
   }
 
+  get normalizedType(): string {
+    return this.args.model.form.normalizedType ?? '';
+  }
+
   // Helper to get config object with proper typing
   get configObject() {
     return this.args.model.form.data.config as ExtendedMountConfig;

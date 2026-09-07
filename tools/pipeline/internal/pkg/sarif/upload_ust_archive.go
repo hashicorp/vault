@@ -25,13 +25,13 @@ const (
 	pushRetryJitterMax = 2 * time.Second
 )
 
-// UploadUSTArchiveReq is the request to convert a SARIF file to Concert format,
-// package it as a UST dynamic-scan archive, and push it to the UST destination
-// Github repository.
+// UploadUSTArchiveReq converts a SARIF file to Concert format, packages it as
+// a UST dynamic-scan archive, and pushes it to the UST destination GitHub
+// repository.
 //
-// Authentication is provided via the GITHUB_TOKEN or GH_TOKEN environment
-// variable. Use actions/create-github-app-token in your workflow to mint a
-// short-lived installation token and pass it via one of those variables.
+// Authentication comes from the GITHUB_TOKEN or GH_TOKEN environment variable.
+// Use actions/create-github-app-token in your workflow to mint a short-lived
+// installation token and export it via one of those variables before calling Run.
 type UploadUSTArchiveReq struct {
 	SarifPath      string // path to the input SARIF file to convert and upload
 	OfferingID     string // UST offering identifier written into metadata.json
@@ -46,7 +46,7 @@ type UploadUSTArchiveReq struct {
 	GitName        string // git committer name used when pushing the results commit
 	GitEmail       string // git committer email used when pushing the results commit
 	ConcertOutPath string // if non-empty, the Concert JSON is also written to this path on disk
-	PushRetries    int    // number of pull-rebase+push retries after a push conflict (default 1)
+	UploadRetries  int    // max retry attempts when pushing the results
 }
 
 // UploadUSTArchiveRes is the response returned by UploadUSTArchiveReq.Run().
@@ -159,10 +159,9 @@ func (r *UploadUSTArchiveRes) String() string {
 		r.ArchiveName, r.DestinationURL, r.SourceBranch, r.SourceCommit)
 }
 
-// upload clones the destination repo, copies the archive and metadata, commits,
-// and pushes. On push conflict it pulls --rebase and retries up to PushRetries
-// times with a short randomised delay. It saves and restores the process
-// working directory unconditionally.
+// upload clones the destination repo, copies the archive and metadata files,
+// commits, and delegates the push to doUpload. It saves and restores the
+// working directory so callers don't have to worry about it.
 func (r *UploadUSTArchiveReq) upload(
 	ctx context.Context,
 	git *gitclient.Client,
@@ -222,34 +221,20 @@ func (r *UploadUSTArchiveReq) upload(
 	}
 
 	pushOpts := &gitclient.PushOpts{Repository: "origin", Refspec: []string{r.DestBranch}}
-	if _, pushErr := git.Push(ctx, pushOpts); pushErr != nil {
-		maxRetries := r.PushRetries
-		if maxRetries < 1 {
-			maxRetries = 1
-		}
-		var retryErr error
-		for attempt := 1; attempt <= maxRetries; attempt++ {
-			delay := pushRetryBaseDelay + time.Duration(rand.Int63n(int64(pushRetryJitterMax)))
-			slog.Default().DebugContext(ctx, "push failed, retrying after delay",
-				slog.Int("attempt", attempt),
-				slog.Int("max_retries", maxRetries),
-				slog.Duration("delay", delay),
-			)
-			time.Sleep(delay)
-			if _, pullErr := git.Pull(ctx, &gitclient.PullOpts{
-				Rebase:     gitclient.RebaseStrategyTrue,
-				Repository: "origin",
-				Refspec:    []string{r.DestBranch},
-			}); pullErr != nil {
-				return "", fmt.Errorf("git pull --rebase on retry %d: %w", attempt, pullErr)
-			}
-			if _, retryErr = git.Push(ctx, pushOpts); retryErr == nil {
-				break
-			}
-		}
-		if retryErr != nil {
-			return "", fmt.Errorf("git push failed after %d retries: %w", maxRetries, retryErr)
-		}
+	pullFn := func(ctx context.Context) error {
+		_, err := git.Pull(ctx, &gitclient.PullOpts{
+			Rebase:     gitclient.RebaseStrategyTrue,
+			Repository: "origin",
+			Refspec:    []string{r.DestBranch},
+		})
+		return err
+	}
+	pushFn := func(ctx context.Context) error {
+		_, err := git.Push(ctx, pushOpts)
+		return err
+	}
+	if err := r.doUpload(ctx, pushFn, pullFn); err != nil {
+		return "", err
 	}
 
 	revRes, err := git.RevParse(ctx, &gitclient.RevParseOpts{Args: []string{"HEAD"}})
@@ -257,6 +242,54 @@ func (r *UploadUSTArchiveReq) upload(
 		return "", fmt.Errorf("git rev-parse HEAD: %w", err)
 	}
 	return strings.TrimSpace(string(revRes.Stdout)), nil
+}
+
+// doUpload pushes our results to the remote host. Because we run scans in
+// parallel, several jobs often race to push at the same time. When a push
+// fails we pull --rebase and try again, up to UploadRetries times with a
+// short randomised delay between attempts. Both push and pull failures are
+// retryable. We extracted this from upload so we can test the retry logic
+// without needing a real repo.
+func (r *UploadUSTArchiveReq) doUpload(
+	ctx context.Context,
+	pushFn func(context.Context) error,
+	pullFn func(context.Context) error,
+) error {
+	if err := pushFn(ctx); err == nil {
+		return nil
+	}
+	maxRetries := r.UploadRetries
+	if maxRetries < 1 {
+		maxRetries = 1
+	}
+	var err error
+	for attempt := range maxRetries {
+		attempt++
+		delay := pushRetryBaseDelay + time.Duration(rand.Int63n(int64(pushRetryJitterMax)))
+		slog.Default().DebugContext(ctx, "push failed, retrying",
+			slog.Int("attempt", attempt),
+			slog.Int("max_retries", maxRetries),
+			slog.Duration("delay", delay),
+		)
+		time.Sleep(delay)
+		if pullErr := pullFn(ctx); pullErr != nil {
+			slog.Default().DebugContext(ctx, "pull --rebase failed, will retry",
+				slog.Int("attempt", attempt),
+				slog.Int("max_retries", maxRetries),
+				slog.String("error", pullErr.Error()),
+			)
+			err = errors.Join(err, pullErr)
+			continue
+		}
+		if pushErr := pushFn(ctx); pushErr != nil {
+			err = errors.Join(err, pushErr)
+			continue
+		}
+
+		return nil
+	}
+
+	return fmt.Errorf("failed to upload results: %w", err)
 }
 
 // commitMessage builds the commit message using CI environment variables.

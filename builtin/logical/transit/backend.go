@@ -217,10 +217,13 @@ func (b *backend) incrementBillingCounts(ctx context.Context, req *logical.Reque
 	mountPath := ""
 	mountAccessor := ""
 	mountType := ""
+	mountRunningVersion := ""
+
 	if req != nil {
 		mountPath = req.MountPoint
 		mountAccessor = req.MountAccessor
 		mountType = req.MountType
+		mountRunningVersion = req.MountRunningVersion()
 	}
 
 	// If we are a test, we need to increment this testing structure to verify the counts are correct.
@@ -232,11 +235,12 @@ func (b *backend) incrementBillingCounts(ctx context.Context, req *logical.Reque
 	// The manager accumulates attribution data in its own in-memory map and
 	// periodically flushes it to storage via UpdateTransitAttribution.
 	return b.ConsumptionBillingManager.WriteBillingData(ctx, "transit", map[string]interface{}{
-		"count":            count,
-		"mountAccessor":    mountAccessor,
-		"mountPath":        mountPath,
-		"mountType":        mountType,
-		"backendAwareUUID": b.backendUUID,
+		"count":               count,
+		"mountAccessor":       mountAccessor,
+		"mountPath":           mountPath,
+		"mountType":           mountType,
+		"backendAwareUUID":    b.backendUUID,
+		"mountRunningVersion": mountRunningVersion,
 	})
 }
 

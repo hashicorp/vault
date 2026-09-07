@@ -133,4 +133,11 @@ export default class ListTable extends Component<Args> {
     const identifier = this.args.selectionKeyField || firstColumn;
     return identifier ? cellData[identifier] : null;
   };
+
+  // Returns true if the row's data has the children key, regardless of whether the array is empty.
+  // Child rows never have this key; only top-level (parent) rows do.
+  isParentRow = (cellData: Record<string, unknown>) => {
+    const key = this.args.childrenKey ?? 'children';
+    return key in cellData;
+  };
 }

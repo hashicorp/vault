@@ -42,7 +42,12 @@ runs:
       name: Build pipeline
       shell: bash
       env:
+        # We need to enable GOPRIVATE to access the releases-api.
         GOPRIVATE: github.com/hashicorp/*
+        # Configure the Git URL override with env vars to avoid poisoning the
+        # config with an elevated token.
+        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token }}@github.com.insteadOf
+        GIT_CONFIG_VALUE_0: https://github.com
       run: |
-        git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
         make tools-pipeline

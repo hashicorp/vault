@@ -1815,8 +1815,12 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 
 	// Setup revocation timer
 	m.updatePending(&le)
-	if strings.HasPrefix(auth.ClientToken, consts.ServiceTokenPrefix) {
-		generatedTokenEntry := logical.TokenEntry{Policies: auth.Policies}
+	if IsServiceToken(auth.ClientToken) {
+		tokenType := logical.TokenTypeService
+		if strings.HasPrefix(auth.ClientToken, consts.GetSCIMTokenPrefix()) {
+			tokenType = logical.TokenTypeSCIM
+		}
+		generatedTokenEntry := logical.TokenEntry{Policies: auth.Policies, Type: tokenType}
 		tok := m.tokenStore.GenerateSSCTokenID(auth.ClientToken, logical.IndexStateFromContext(ctx), &generatedTokenEntry)
 		te.ExternalID = tok
 	}

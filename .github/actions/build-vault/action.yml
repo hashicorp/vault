@@ -64,10 +64,6 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
     - uses: ./.github/actions/install-tools # sets env.VAULT_TOOLS_PATH
-    - if: inputs.vault-edition != 'ce'
-      name: Configure Git
-      shell: bash
-      run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
     - name: Restore UI from cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
@@ -127,20 +123,25 @@ runs:
         GOARM: ${{ inputs.goarm }}
         GOOS: ${{ inputs.goos }}
         GOEXPERIMENT: ${{ inputs.goexperiment }}
-        GOPRIVATE: github.com/hashicorp
-        VERSION: ${{ inputs.version }}
+        # *NEVER* set GOPRIVATE for community builds
+        GOPRIVATE: ${{ inputs.vault-edition != 'ce' && 'github.com/hashicorp/*' || '' }}
+        VERSION: ${{ inputs.vault-version }}
         VERSION_METADATA: ${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}
       shell: bash
       run: make ci-build
-    - if: inputs.cgo-enabled == '1'
+    # CGO builds use a sandboxed container builder to cross-compile with the correct version of
+    # glibc and cross-compile toolchains. CE builds never require CGO but we gate the token and
+    # GITHUB_TOKEN injection here explicitly so that we don't accidentally allow private modules
+    # in CE builds if we ever move all builds to a shared container.
+    - if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
       uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       with:
         driver-opts: network=host # So we can run our own little registry
-    - if: inputs.cgo-enabled == '1'
+    - if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
       shell: bash
       run: docker run -d -p 5000:5000 --restart always --name registry registry:2
     - name: Build CGO builder image
-      if: inputs.cgo-enabled == '1'
+      if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
       id: build-push-action-attempt-1
       continue-on-error: true # we will retry this if it fails
       uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
@@ -164,7 +165,7 @@ runs:
     - name: Build CGO builder image
       id: build-push-action-attempt-2
       continue-on-error: false
-      if: inputs.cgo-enabled == '1' && steps.build-push-action-attempt-1.outcome != 'success'
+      if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce' && steps.build-push-action-attempt-1.outcome != 'success'
       uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       env:
         DOCKER_BUILD_SUMMARY: false
@@ -183,7 +184,7 @@ runs:
         cache-from: type=gha,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
         cache-to: type=gha,mode=min,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
         github-token: ${{ inputs.github-token }}
-    - if: inputs.cgo-enabled == '1'
+    - if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
       name: ${{ steps.metadata.outputs.build-step-name }}
       shell: bash
       run: |
@@ -201,8 +202,8 @@ runs:
             --env GOEXPERIMENT='${{ inputs.goexperiment }}' \
             --env GOMODCACHE=/go-mod-cache \
             --env GOOS='${{ inputs.goos }}' \
-            --env VERSION='${{ inputs.version }}' \
-            --env VERSION_METADATA='${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}' \
+            --env VERSION='${{ inputs.vault-version }}' \
+            --env VERSION_METADATA='${{ inputs.vault-edition }}' \
               localhost:5000/vault-builder:${{ steps.metadata.outputs.vault-builder-cache-key }} \
                 make ci-build
     - if: inputs.vault-edition != 'ce'
@@ -226,9 +227,10 @@ runs:
     - if: inputs.create-packages == 'true'
       uses: hashicorp/actions-packaging-linux@e6d9687e13bd55b1b3e3e5adb2e4d52789299025
       env:
-        # Use our elevated token instead of the workflow token so that our
-        # download of nfpm is less likely to fail.
-        GH_TOKEN: ${{ inputs.github-token }}
+        # If we've been given a token we use it here to reduce the chance of hitting
+        # GitHub rate limits when downloading nfpm. This is safe for CE and Ent as
+        # the token is only used for nfpm.
+        GH_TOKEN: ${{ inputs.github-token || github.token }}
       with:
         name: ${{ inputs.package-name }}
         description: Vault is a tool for secrets management, encryption as a service, and privileged access management.

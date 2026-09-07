@@ -93,6 +93,10 @@
   line-height: 1;
 }
 
+.has-line-height-200 {
+  line-height: var(--token-typography-body-200-line-height);
+}
+
 // Text color or styling
 .is-help {
   font-size: var(--token-typography-body-200-font-size);

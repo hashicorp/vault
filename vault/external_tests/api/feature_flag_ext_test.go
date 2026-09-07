@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/hashicorp/go-cleanhttp"
@@ -73,8 +72,7 @@ func TestFeatureFlags(t *testing.T) {
 
 	// Now try with the environment variable temporarily set
 	envVar := "VAULT_CLOUD_ADMIN_NAMESPACE"
-	os.Setenv(envVar, "1")
-	defer os.Unsetenv(envVar)
+	t.Setenv(envVar, "1")
 
 	httpResp = callApi()
 	featureFlags, ok = httpResp["feature_flags"]

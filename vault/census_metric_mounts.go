@@ -135,13 +135,16 @@ func (c *Core) CountMetricsSecretMounts(officialOnly bool, collectAttribution bo
 			// Collect KV attribution if requested and mount has secrets
 			if collectAttribution && kvMount.NumSecrets > 0 {
 				attribution := logical.MountAttribution{
-					Count:            kvMount.NumSecrets,
-					MountAccessor:    kvMount.MountAccessor,
-					MountPath:        kvMount.MountPoint,
-					MountType:        entry.Type,
-					NamespaceID:      kvMount.Namespace.ID,
-					NamespacePath:    kvMount.Namespace.Path,
-					BackendAwareUUID: entry.BackendAwareUUID,
+					Count:               kvMount.NumSecrets,
+					MountAccessor:       kvMount.MountAccessor,
+					MountPath:           kvMount.MountPoint,
+					MountType:           entry.Type,
+					NamespaceID:         kvMount.Namespace.ID,
+					NamespacePath:       kvMount.Namespace.Path,
+					BackendAwareUUID:    entry.BackendAwareUUID,
+					MountRunningVersion: entry.RunningVersion,
+					ParentNamespaceID:   getParentNamespaceID(c, kvMount.Namespace.Path),
+					IsExternal:          entry.IsExternalPlugin(),
 				}
 				// Use mount accessor as the map key
 				targetKvAttribution[kvMount.MountAccessor] = attribution
@@ -241,13 +244,16 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 	addRoleAttribution := func(roleType string, count int) {
 		if collectAttribution && count > 0 {
 			attribution := logical.MountAttribution{
-				Count:            count,
-				MountAccessor:    entry.Accessor,
-				MountPath:        entry.Path,
-				MountType:        entry.Type,
-				NamespaceID:      entry.NamespaceID,
-				NamespacePath:    entry.namespace.Path,
-				BackendAwareUUID: entry.BackendAwareUUID,
+				Count:               count,
+				MountAccessor:       entry.Accessor,
+				MountPath:           entry.Path,
+				MountType:           entry.Type,
+				NamespaceID:         entry.NamespaceID,
+				NamespacePath:       entry.namespace.Path,
+				BackendAwareUUID:    entry.BackendAwareUUID,
+				MountRunningVersion: entry.RunningVersion,
+				ParentNamespaceID:   getParentNamespaceID(c, entry.namespace.Path),
+				IsExternal:          entry.IsExternalPlugin(),
 			}
 			// Initialize the inner map if it doesn't exist
 			if targetRoleAttribution[roleType] == nil {
@@ -366,13 +372,15 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 		targetManagedKeys.TotpKeys += len(keyCountPerEntry)
 		if collectAttribution && len(keyCountPerEntry) > 0 {
 			attribution := logical.MountAttribution{
-				Count:            len(keyCountPerEntry),
-				MountAccessor:    entry.Accessor,
-				MountPath:        entry.Path,
-				MountType:        entry.Type,
-				NamespaceID:      entry.NamespaceID,
-				NamespacePath:    entry.namespace.Path,
-				BackendAwareUUID: entry.BackendAwareUUID,
+				Count:               len(keyCountPerEntry),
+				MountAccessor:       entry.Accessor,
+				MountPath:           entry.Path,
+				MountType:           entry.Type,
+				NamespaceID:         entry.NamespaceID,
+				NamespacePath:       entry.namespace.Path,
+				BackendAwareUUID:    entry.BackendAwareUUID,
+				MountRunningVersion: entry.RunningVersion,
+				ParentNamespaceID:   getParentNamespaceID(c, entry.namespace.Path),
 			}
 			// Initialize the inner map if it doesn't exist
 			if targetManagedKeyAttribution[billing.TotpKeys] == nil {
@@ -425,13 +433,16 @@ func (c *Core) collectMetricsForSecretMount(ctx context.Context, entry *MountEnt
 		targetManagedKeys.KmseKeys += len(keyCountPerEntry)
 		if collectAttribution && len(keyCountPerEntry) > 0 {
 			attribution := logical.MountAttribution{
-				Count:            len(keyCountPerEntry),
-				MountAccessor:    entry.Accessor,
-				MountPath:        entry.Path,
-				MountType:        entry.Type,
-				NamespaceID:      entry.NamespaceID,
-				NamespacePath:    entry.namespace.Path,
-				BackendAwareUUID: entry.BackendAwareUUID,
+				Count:               len(keyCountPerEntry),
+				MountAccessor:       entry.Accessor,
+				MountPath:           entry.Path,
+				MountType:           entry.Type,
+				NamespaceID:         entry.NamespaceID,
+				NamespacePath:       entry.namespace.Path,
+				BackendAwareUUID:    entry.BackendAwareUUID,
+				MountRunningVersion: entry.RunningVersion,
+				ParentNamespaceID:   getParentNamespaceID(c, entry.namespace.Path),
+				IsExternal:          entry.IsExternalPlugin(),
 			}
 			// Initialize the inner map if it doesn't exist
 			if targetManagedKeyAttribution[billing.KmseKeys] == nil {

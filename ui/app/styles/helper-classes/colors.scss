@@ -10,6 +10,14 @@
   background: var(--token-color-palette-neutral-50);
 }
 
+.has-background-surface-highlight {
+  background-color: var(--token-color-surface-highlight);
+}
+
+.has-background-surface-warning {
+  background-color: var(--token-color-surface-warning);
+}
+
 .has-background-white-bis {
   background: var(--token-color-surface-faint);
 }

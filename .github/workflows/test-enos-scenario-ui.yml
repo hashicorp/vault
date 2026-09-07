@@ -75,7 +75,6 @@ jobs:
       ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
       ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
       ENOS_VAR_vault_license_path: ./support/vault.hclic
-      GOPRIVATE: github.com/hashicorp
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -85,8 +84,6 @@ jobs:
       - uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - name: Set Up Git
-        run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
       - name: Set Up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

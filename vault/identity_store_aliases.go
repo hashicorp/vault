@@ -518,7 +518,7 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 	if name == alias.Name &&
 		mountAccessor == alias.MountAccessor &&
 		(canonicalID == alias.CanonicalID || canonicalID == "") &&
-		(strutil.EqualStringMaps(customMetadata, alias.CustomMetadata)) &&
+		strutil.EqualStringMaps(customMetadata, alias.CustomMetadata) &&
 		(externalID == alias.ExternalID) &&
 		(issuer == alias.Issuer) {
 		// Nothing to do; return nil to be idempotent

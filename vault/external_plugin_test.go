@@ -653,14 +653,7 @@ func TestCore_EnableExternalCredentialPlugin_InvalidName(t *testing.T) {
 
 func TestExternalPlugin_CheckFilePermissions(t *testing.T) {
 	// Turn on the check.
-	if err := os.Setenv(consts.VaultEnableFilePermissionsCheckEnv, "true"); err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := os.Unsetenv(consts.VaultEnableFilePermissionsCheckEnv); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	t.Setenv(consts.VaultEnableFilePermissionsCheckEnv, "true")
 
 	for name, tc := range map[string]struct {
 		pluginNameFmt string
@@ -801,7 +794,7 @@ func TestBackend_PluginMain_Multiplexed_Logical_v123(t *testing.T) {
 		return
 	}
 
-	os.Setenv(mock.MockPluginVersionEnv, "v1.2.3")
+	t.Setenv(mock.MockPluginVersionEnv, "v1.2.3")
 
 	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: mock.FactoryType(logical.TypeLogical),
@@ -817,7 +810,7 @@ func TestBackend_PluginMain_Multiplexed_Logical_v124(t *testing.T) {
 		return
 	}
 
-	os.Setenv(mock.MockPluginVersionEnv, "v1.2.4")
+	t.Setenv(mock.MockPluginVersionEnv, "v1.2.4")
 
 	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: mock.FactoryType(logical.TypeLogical),
@@ -833,7 +826,7 @@ func TestBackend_PluginMain_Multiplexed_Credential_v123(t *testing.T) {
 		return
 	}
 
-	os.Setenv(mock.MockPluginVersionEnv, "v1.2.3")
+	t.Setenv(mock.MockPluginVersionEnv, "v1.2.3")
 
 	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: mock.FactoryType(logical.TypeCredential),

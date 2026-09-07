@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -1851,4 +1852,125 @@ func TestSystemBackend_BillingConfig_AffectsOverview(t *testing.T) {
 	months, ok = resp.Data["months"].([]interface{})
 	require.True(t, ok)
 	require.Len(t, months, billing.MaxBillingRetentionMonths)
+}
+
+// TestSystemBackend_BillingConfig_AttributionRetention tests reading and writing the
+// attribution_retention_months field of the /sys/billing/config endpoint.
+func TestSystemBackend_BillingConfig_AttributionRetention(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	// Default read: both fields return their defaults.
+	readReq := logical.TestRequest(t, logical.ReadOperation, "billing/config")
+	resp, err := b.HandleRequest(ctx, readReq)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, billing.DefaultBillingRetentionMonths, resp.Data["retention_months"])
+	require.Equal(t, billing.DefaultAttributionRetentionMonths, resp.Data["attribution_retention_months"])
+
+	// Update only attribution_retention_months to a value below default — no warning.
+	writeReq := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeReq.Data = map[string]interface{}{
+		"attribution_retention_months": 24,
+	}
+	resp, err = b.HandleRequest(ctx, writeReq)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Empty(t, resp.Warnings, "decreasing attribution retention must not warn")
+
+	readResp, err := b.HandleRequest(ctx, logical.TestRequest(t, logical.ReadOperation, "billing/config"))
+	require.NoError(t, err)
+	require.Equal(t, billing.DefaultBillingRetentionMonths, readResp.Data["retention_months"],
+		"billing retention must not change when only attribution_retention_months is set")
+	require.Equal(t, 24, readResp.Data["attribution_retention_months"])
+
+	// Increase attribution retention — must warn about missing historical data.
+	writeIncrease := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeIncrease.Data = map[string]interface{}{
+		"attribution_retention_months": 48,
+	}
+	resp, err = b.HandleRequest(ctx, writeIncrease)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Warnings, 1, "increasing attribution retention must warn")
+	require.Contains(t, resp.Warnings[0], "Attribution retention period increased")
+	require.Contains(t, resp.Warnings[0], "24")
+	require.Contains(t, resp.Warnings[0], "48")
+
+	readRespAfterIncrease, err := b.HandleRequest(ctx, logical.TestRequest(t, logical.ReadOperation, "billing/config"))
+	require.NoError(t, err)
+	require.Equal(t, 48, readRespAfterIncrease.Data["attribution_retention_months"])
+
+	// Set back to 24 for the rest of the test.
+	writeBack := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeBack.Data = map[string]interface{}{"attribution_retention_months": 24}
+	_, err = b.HandleRequest(ctx, writeBack)
+	require.NoError(t, err)
+
+	// Update only retention_months; attribution retention must not change.
+	writeReq2 := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeReq2.Data = map[string]interface{}{
+		"retention_months": 48,
+	}
+	_, err = b.HandleRequest(ctx, writeReq2)
+	require.NoError(t, err)
+
+	readResp2, err := b.HandleRequest(ctx, logical.TestRequest(t, logical.ReadOperation, "billing/config"))
+	require.NoError(t, err)
+	require.Equal(t, 48, readResp2.Data["retention_months"])
+	require.Equal(t, 24, readResp2.Data["attribution_retention_months"],
+		"attribution retention must not change when only retention_months is set")
+
+	// Set attribution to minimum (0) — disables attribution and wipes data; warns on success.
+	writeZero := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeZero.Data = map[string]interface{}{
+		"attribution_retention_months": billing.MinAttributionRetentionMonths,
+	}
+	resp, err = b.HandleRequest(ctx, writeZero)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Warnings, 1, "disabling attribution must warn that data was wiped")
+	require.Contains(t, resp.Warnings[0], "Attribution storage has been disabled and all existing attribution data has been wiped.")
+
+	readResp3, err := b.HandleRequest(ctx, logical.TestRequest(t, logical.ReadOperation, "billing/config"))
+	require.NoError(t, err)
+	require.Equal(t, billing.MinAttributionRetentionMonths, readResp3.Data["attribution_retention_months"])
+
+	// IsAttributionDisabled should return true.
+	require.True(t, c.IsAttributionDisabled(ctx))
+
+	// Set attribution to maximum (72 months) — must be accepted.
+	writeMax := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+	writeMax.Data = map[string]interface{}{
+		"attribution_retention_months": billing.MaxAttributionRetentionMonths,
+	}
+	resp, err = b.HandleRequest(ctx, writeMax)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	readResp4, err := b.HandleRequest(ctx, logical.TestRequest(t, logical.ReadOperation, "billing/config"))
+	require.NoError(t, err)
+	require.Equal(t, billing.MaxAttributionRetentionMonths, readResp4.Data["attribution_retention_months"])
+	require.False(t, c.IsAttributionDisabled(ctx))
+}
+
+// TestSystemBackend_BillingConfig_AttributionRetention_InvalidValues tests that invalid
+// attribution_retention_months values are rejected with a descriptive error.
+func TestSystemBackend_BillingConfig_AttributionRetention_InvalidValues(t *testing.T) {
+	_, b, _ := testCoreSystemBackend(t)
+	ctx := namespace.RootContext(nil)
+
+	for _, invalidValue := range []int{-1, billing.MaxAttributionRetentionMonths + 1, 73, 100} {
+		t.Run(fmt.Sprintf("value=%d", invalidValue), func(t *testing.T) {
+			writeReq := logical.TestRequest(t, logical.UpdateOperation, "billing/config")
+			writeReq.Data = map[string]interface{}{
+				"attribution_retention_months": invalidValue,
+			}
+			resp, err := b.HandleRequest(ctx, writeReq)
+			require.Equal(t, logical.ErrInvalidRequest, err, "value %d should be rejected with ErrInvalidRequest", invalidValue)
+			require.NotNil(t, resp)
+			require.True(t, resp.IsError())
+			require.Contains(t, resp.Error().Error(), "must be between", "error for value %d should mention valid range", invalidValue)
+		})
+	}
 }

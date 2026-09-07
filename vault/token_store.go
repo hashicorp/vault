@@ -2827,19 +2827,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// SCIM tokens are a superset of service tokens: they go through the
 		// full service-token creation path but with additional pre-issuance
 		// checks and post-issuance fixups applied below.
-		var scimResp *logical.Response
-		var scimErr error
-		scimClientID, scimMaxTTL, scimMaxActiveTokens, scimResp, scimErr = ts.VerifySCIMTokenCreation(ctx, req, renewable, orphan)
-		if scimErr != nil || scimResp != nil {
-			return scimResp, scimErr
-		}
-		if scimClientID == "" {
-			return logical.ErrorResponse("SCIM token issuance not supported for non-SCIM client entities"), logical.ErrInvalidRequest
-		}
-		// Force the invariants that verifySCIMTokenCreation checked above so
-		// the rest of handleCreateCommon enforces them on the entry as well.
-		renewable = false
-		orphan = true
 		tokenType = logical.TokenTypeSCIM
 	default:
 		return logical.ErrorResponse("invalid 'token_type' value"), logical.ErrInvalidRequest
@@ -2909,6 +2896,19 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 		// Set new entity id
 		explicitEntityID = entity.ID
+	}
+
+	// For SCIM tokens, resolve the effective entity (entity_alias takes
+	// precedence over the caller's own entity) and verify it is a registered
+	// SCIM client.  This must run after the entity_alias block above so that
+	// explicitEntityID is fully resolved.
+	if tokenType == logical.TokenTypeSCIM {
+		var scimResp *logical.Response
+		var scimErr error
+		scimClientID, scimMaxTTL, scimMaxActiveTokens, scimResp, scimErr = ts.VerifySCIMTokenCreation(ctx, req, renewable, orphan || (role != nil && role.Orphan), explicitEntityID)
+		if scimErr != nil || scimResp != nil {
+			return scimResp, scimErr
+		}
 	}
 
 	// GetOk is used here solely to preserve the distinction between an absent/nil map and an empty map, to match the

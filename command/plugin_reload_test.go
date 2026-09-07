@@ -4,12 +4,16 @@
 package command
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/stretchr/testify/require"
 )
 
 func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *PluginReloadCommand) {
@@ -132,6 +136,61 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	// TestPluginReloadCommand_Run_MountsInRootNamespace verifies that using
+	// -mounts in the root namespace correctly routes to the ReloadPlugin API
+	// (sys/plugins/reload/backend) rather than the RootReloadPlugin API
+	// (sys/plugins/reload/:type/:name), which does not support mounts.
+	t.Run("mounts_in_root_namespace", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir := corehelpers.MakeTestPluginDir(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		workingDir, err := os.Getwd()
+		require.NoError(t, err)
+		plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeCredential, "", pluginDir)
+		currentDir, err := os.Getwd()
+		require.NoError(t, err)
+		require.Equal(t, workingDir, currentDir, "compiling a plugin must not change the process working directory")
+
+		resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
+			Name:    plugin.Name,
+			Type:    api.PluginType(plugin.Typ),
+			Command: plugin.Name,
+			SHA256:  plugin.Sha256,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Warnings) > 0 {
+			t.Errorf("expected no warnings, got: %v", resp.Warnings)
+		}
+
+		mountPath := "auth/" + plugin.Name + "/"
+		if err := client.Sys().EnableAuthWithOptions(plugin.Name, &api.EnableAuthOptions{
+			Type: plugin.Name,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testPluginReloadCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-mounts", mountPath,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d, output: %s", code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+		}
+
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, "Success! Reloaded mounts:") {
+			t.Errorf("expected %q to contain %q", combined, "Success! Reloaded mounts:")
 		}
 	})
 }

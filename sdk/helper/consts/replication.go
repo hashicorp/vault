@@ -161,3 +161,16 @@ const (
 	PerfStandby
 	Active
 )
+
+func (s HAState) String() string {
+	switch s {
+	case Standby:
+		return "standby"
+	case PerfStandby:
+		return "perfStandby"
+	case Active:
+		return "active"
+	default:
+		return "unknown"
+	}
+}
