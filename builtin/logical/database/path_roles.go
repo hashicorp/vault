@@ -65,7 +65,7 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "roles/" + framework.GenericNameRegex("name"),
+			Pattern: "roles/" + framework.GenericNameWithAtRegex("name"),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
 				OperationSuffix: "role",
@@ -84,7 +84,7 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 		},
 
 		{
-			Pattern: "static-roles/" + framework.GenericNameRegex("name"),
+			Pattern: "static-roles/" + framework.GenericNameWithAtRegex("name"),
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
 				OperationSuffix: "static-role",
@@ -1189,7 +1189,7 @@ and "}}" to be replaced.
 
   * "password" - The random password generated for the DB user. Populated if the
   static role's credential_type is 'password'.
-  
+
   * "public_key" - The public key generated for the DB user. Populated if the
   static role's credential_type is 'rsa_private_key'.
 
