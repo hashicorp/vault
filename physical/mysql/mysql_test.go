@@ -5,6 +5,8 @@ package mysql
 
 import (
 	"bytes"
+	"database/sql"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -263,6 +265,132 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	leaderCh2, err = lock2.Lock(stopCh2)
 	if err == nil {
 		t.Fatalf("expected error, got none, leaderCh2=%v", leaderCh2)
+	}
+}
+
+// TestMySQLHABackend_LockSurvivesWaitTimeout is a regression test for
+// https://github.com/hashicorp/vault/issues/18582. GET_LOCK used to run on an
+// arbitrary connection from the pool and the IS_USED_LOCK check ran on yet another
+// one, so nothing ever kept the session holding the lock busy. Once the server reaped
+// that idle session at wait_timeout, MySQL released the advisory lock, a standby node
+// could take it over, and the active node kept believing it was still the leader.
+//
+// wait_timeout is lowered below the test's idle window but kept above the 5s lock
+// monitor interval, which is what the fix relies on to keep the lock session alive.
+func TestMySQLHABackend_LockSurvivesWaitTimeout(t *testing.T) {
+	// waitTimeout must stay above the monitorLock poll interval (5s), otherwise the
+	// lock session is legitimately idle for longer than the server tolerates.
+	const waitTimeout = 8 * time.Second
+
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+	defer cleanup()
+
+	cfg, err := mysql.ParseDSN(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Reap idle sessions quickly. SET GLOBAL only affects sessions opened after this
+	// point, so it has to happen before the backends are created. The value is
+	// interpolated because MySQL rejects placeholders in SET GLOBAL statements.
+	adminDB, err := sql.Open("mysql", connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer adminDB.Close()
+
+	var originalWaitTimeout int
+	if err := adminDB.QueryRow("SELECT @@GLOBAL.wait_timeout").Scan(&originalWaitTimeout); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := adminDB.Exec(fmt.Sprintf("SET GLOBAL wait_timeout = %d", int(waitTimeout.Seconds()))); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		adminDB.Exec(fmt.Sprintf("SET GLOBAL wait_timeout = %d", originalWaitTimeout))
+	})
+
+	logger := logging.NewVaultLogger(log.Debug)
+	config := map[string]string{
+		"address":                      cfg.Addr,
+		"database":                     cfg.DBName,
+		"table":                        "test",
+		"username":                     cfg.User,
+		"password":                     cfg.Passwd,
+		"ha_enabled":                   "true",
+		"plaintext_connection_allowed": "true",
+	}
+
+	b, err := NewMySQLBackend(config, logger)
+	if err != nil {
+		t.Fatalf("Failed to create new backend: %v", err)
+	}
+
+	defer func() {
+		mysql := b.(*MySQLBackend)
+		if _, err := mysql.client.Exec("DROP TABLE IF EXISTS " + mysql.dbTable + " ," + mysql.dbLockTable); err != nil {
+			t.Fatalf("Failed to drop table: %v", err)
+		}
+	}()
+
+	b2, err := NewMySQLBackend(config, logger)
+	if err != nil {
+		t.Fatalf("Failed to create new backend: %v", err)
+	}
+
+	lock, err := b.(physical.HABackend).LockWith("foo", "bar")
+	if err != nil {
+		t.Fatalf("initial lock: %v", err)
+	}
+
+	leaderCh, err := lock.Lock(nil)
+	if err != nil {
+		t.Fatalf("lock attempt: %v", err)
+	}
+	if leaderCh == nil {
+		t.Fatal("missing leaderCh")
+	}
+	defer lock.Unlock()
+
+	// Stay idle well past wait_timeout. Only the lock monitor's IS_USED_LOCK poll
+	// touches the lock session during this window.
+	time.Sleep(waitTimeout + 6*time.Second)
+
+	// The active node must still consider itself the leader.
+	select {
+	case <-leaderCh:
+		t.Fatal("leaderCh was closed: the lock session was lost")
+	default:
+	}
+
+	// And a standby must still be unable to take the lock over.
+	lock2, err := b2.(physical.HABackend).LockWith("foo", "baz")
+	if err != nil {
+		t.Fatalf("lock 2: %v", err)
+	}
+
+	stopCh := make(chan struct{})
+	time.AfterFunc(5*time.Second, func() {
+		close(stopCh)
+	})
+
+	leaderCh2, err := lock2.Lock(stopCh)
+	if err != nil {
+		t.Fatalf("stop lock 2: %v", err)
+	}
+	if leaderCh2 != nil {
+		t.Fatal("standby acquired the lock after wait_timeout elapsed: the lock session was reaped")
+	}
+
+	held, val, err := lock.Value()
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !held {
+		t.Error("lock should still be held")
+	}
+	if val != "bar" {
+		t.Errorf("expected leader value bar, got %q", val)
 	}
 }
 
