@@ -174,3 +174,54 @@ var (
 	_ scimManaged = (*identity.Group)(nil)
 	_ scimManaged = (*identity.Alias)(nil)
 )
+
+// scimClientIDSentinel is the index key used for groups with no SCIM owner
+// (ScimClientID == ""). A plain StringFieldIndex returns (false, nil, nil) for
+// empty strings, which causes CompoundIndex+AllowMissing to truncate the stored
+// key to just the NamespaceID component. The radix-tree prefix iterator then
+// returns keys strictly longer than the search prefix, so a prefix scan for
+// (nsID, "") finds only owned/other-client groups — the unmanaged groups stored
+// at the exact nsID\x00 node are never yielded. The sentinel solves this by
+// ensuring every group's key is always fully qualified, making unmanaged groups
+// reachable via a normal prefix scan on (nsID, scimClientIDSentinel).
+const scimClientIDSentinel = "__unmanaged__"
+
+// scimClientIDIndexer is a memdb.SingleIndexer + memdb.PrefixIndexer for the
+// ScimClientID field of identity.Group. It maps "" to scimClientIDSentinel so
+// that unmanaged groups receive a full, distinct index key rather than a
+// truncated one, and are therefore reachable via a direct prefix scan.
+type scimClientIDIndexer struct{}
+
+func (scimClientIDIndexer) FromObject(raw interface{}) (bool, []byte, error) {
+	g, ok := raw.(*identity.Group)
+	if !ok {
+		return false, nil, fmt.Errorf("scimClientIDIndexer: unexpected type %T", raw)
+	}
+	val := g.ScimClientID
+	if val == "" {
+		val = scimClientIDSentinel
+	}
+	return true, []byte(val + "\x00"), nil
+}
+
+func (scimClientIDIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+	if len(args) != 1 {
+		return nil, fmt.Errorf("scimClientIDIndexer: expected 1 argument, got %d", len(args))
+	}
+	val, ok := args[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("scimClientIDIndexer: argument must be a string, got %T", args[0])
+	}
+	if val == "" {
+		val = scimClientIDSentinel
+	}
+	return []byte(val + "\x00"), nil
+}
+
+func (scimClientIDIndexer) PrefixFromArgs(args ...interface{}) ([]byte, error) {
+	b, err := scimClientIDIndexer{}.FromArgs(args...)
+	if err != nil {
+		return nil, err
+	}
+	return b[:len(b)-1], nil // strip null terminator, leaving a prefix
+}
