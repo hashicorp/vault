@@ -79,7 +79,7 @@ func (c *Sys) RevokeWithContext(ctx context.Context, id string) error {
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -96,7 +96,7 @@ func (c *Sys) RevokePrefixWithContext(ctx context.Context, id string) error {
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke-prefix/"+id)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -113,7 +113,7 @@ func (c *Sys) RevokeForceWithContext(ctx context.Context, id string) error {
 	r := c.c.NewRequest(http.MethodPut, "/v1/sys/leases/revoke-force/"+id)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -152,7 +152,7 @@ func (c *Sys) RevokeWithOptionsWithContext(ctx context.Context, opts *RevokeOpti
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
