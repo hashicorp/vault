@@ -11,17 +11,17 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-func diffReplace(a *modfile.File, b *modfile.File, strictDiff bool) []*Diff {
+func diffReplace(a *modfile.File, b *modfile.File, strictDiff bool, excludeReplace []string) []*Diff {
 	if (a == nil && b == nil) || (len(a.Replace) == 0 && len(b.Replace) == 0) {
 		return nil
 	}
 
 	var diffs []*Diff
 	if strictDiff {
-		diffs = append(diffReplaceFindMissing(a, b), diffReplaceFindMissing(b, a)...)
+		diffs = append(diffReplaceFindMissing(a, b, excludeReplace), diffReplaceFindMissing(b, a, excludeReplace)...)
 	}
-	versionDiffsA := diffReplaceFindDifferent(a, b)
-	versionDiffsB := diffReplaceFindDifferent(b, a)
+	versionDiffsA := diffReplaceFindDifferent(a, b, excludeReplace)
+	versionDiffsB := diffReplaceFindDifferent(b, a, excludeReplace)
 	maps.Copy(versionDiffsB, versionDiffsA)
 
 	return slices.DeleteFunc(
@@ -30,10 +30,14 @@ func diffReplace(a *modfile.File, b *modfile.File, strictDiff bool) []*Diff {
 	)
 }
 
-func diffReplaceFindMissing(a, b *modfile.File) []*Diff {
+func diffReplaceFindMissing(a, b *modfile.File, excludeReplace []string) []*Diff {
 	diffs := []*Diff{}
 	for _, needle := range a.Replace {
 		if needle == nil {
+			continue
+		}
+
+		if matchesAnyExcludePattern(excludeReplace, needle.Old.Path, needle.New.Path) {
 			continue
 		}
 
@@ -61,10 +65,14 @@ func diffReplaceFindMissing(a, b *modfile.File) []*Diff {
 	return diffs
 }
 
-func diffReplaceFindDifferent(a, b *modfile.File) map[string]*Diff {
+func diffReplaceFindDifferent(a, b *modfile.File, excludeReplace []string) map[string]*Diff {
 	diffs := map[string]*Diff{}
 	for _, needle := range a.Replace {
 		if needle == nil {
+			continue
+		}
+
+		if matchesAnyExcludePattern(excludeReplace, needle.Old.Path, needle.New.Path) {
 			continue
 		}
 

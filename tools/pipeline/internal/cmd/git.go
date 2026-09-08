@@ -14,6 +14,7 @@ func newGitCmd() *cobra.Command {
 
 	gitCmd.AddCommand(newGitCheckCmd())
 	gitCmd.AddCommand(newGitListCmd())
+	gitCmd.AddCommand(newGitSyncCmd())
 
 	return gitCmd
 }

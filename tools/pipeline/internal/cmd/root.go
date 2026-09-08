@@ -24,9 +24,15 @@ type rootCmdCfg struct {
 	format            string
 	repoRoot          string
 	git               *git.Client
+	gitUserName       string
+	gitUserEmail      string
 	configDecodeRes   *config.DecodeRes
 	versionsDecodeRes *releases.DecodeRes
 }
+
+// gitUserAuto is the sentinel value for --git-user-name / --git-user-email
+// that instructs the root command to infer the value from git config.
+const gitUserAuto = "auto"
 
 var rootCfg = &rootCmdCfg{
 	git: git.NewClient(git.WithLoadTokenFromEnv()),
@@ -46,6 +52,8 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringVarP(&rootCfg.format, "format", "f", "table", "The output format. Can be 'json', 'table', and sometimes 'markdown' or 'csv'")
 	rootCmd.PersistentFlags().StringVar(&pipelineCfgPath, "pipeline-config", "", "Specify the path to pipeline.hcl configuration file (default: <git repo root>/.release/pipeline.hcl)")
 	rootCmd.PersistentFlags().StringVar(&versionsConfigPath, "versions-config", "", "Specify the path to versions.hcl configuration file (default: <git repo root>/.release/versions.hcl)")
+	rootCmd.PersistentFlags().StringVar(&rootCfg.gitUserName, "git-user-name", "hc-github-team-secure-vault-core", `Git user.name for commits. Use "auto" to infer from local git config.`)
+	rootCmd.PersistentFlags().StringVar(&rootCfg.gitUserEmail, "git-user-email", "github-team-secure-vault-core@hashicorp.com", `Git user.email for commits. Use "auto" to infer from local git config.`)
 
 	rootCmd.AddCommand(newConfigCmd())
 	rootCmd.AddCommand(newEbomCmd())
@@ -61,7 +69,6 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 
-		// Setup a default logger before we process anything
 		var ll slog.Level
 		switch rootCfg.logLevel {
 		case "debug":
@@ -83,6 +90,31 @@ func newRootCmd() *cobra.Command {
 		default:
 			return fmt.Errorf("unsupported format: %s", rootCfg.format)
 		}
+
+		// Resolve git user identity. When the sentinel "auto" is supplied, read
+		// the value from the local git config.
+		if rootCfg.gitUserName == gitUserAuto {
+			name, err := rootCfg.git.ConfigGet(ctx, "user.name")
+			if err != nil {
+				return fmt.Errorf("--git-user-name=auto: %w", err)
+			}
+			rootCfg.gitUserName = name
+		}
+		if rootCfg.gitUserEmail == gitUserAuto {
+			email, err := rootCfg.git.ConfigGet(ctx, "user.email")
+			if err != nil {
+				return fmt.Errorf("--git-user-email=auto: %w", err)
+			}
+			rootCfg.gitUserEmail = email
+		}
+		slog.Default().DebugContext(ctx, "configuring git user identity",
+			slog.String("user.name", rootCfg.gitUserName),
+			slog.String("user.email", rootCfg.gitUserEmail),
+		)
+		git.WithConfig(map[string]string{
+			"user.name":  rootCfg.gitUserName,
+			"user.email": rootCfg.gitUserEmail,
+		})(rootCfg.git)
 
 		getRepoRoot := sync.OnceValues(func() (string, error) {
 			slog.DebugContext(ctx, "determining repository root to load configuration")
