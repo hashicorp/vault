@@ -60,7 +60,7 @@ jobs:
         with:
           terraform_wrapper: false
       - if: contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'test_enos')
-        uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
+        uses: hashicorp/action-setup-enos@bfd47bdf7d118b9372acfaab048bcb9967026747 # v1.54
       - if: contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'test_enos')
         name: Ensure shellcheck is available for linting
         run: which shellcheck || (sudo apt update && sudo apt install -y shellcheck)

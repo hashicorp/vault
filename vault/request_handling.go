@@ -281,11 +281,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	switch req.TokenEntry() {
 	case nil:
 		var err error
-		if IsOAuthJwt(req.ClientToken) {
-			te, err = c.tokenStore.Lookup(ctx, getOAuthJwtId(req.JwtUniqueId))
-		} else {
-			te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
-		}
+		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
