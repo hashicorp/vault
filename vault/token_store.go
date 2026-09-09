@@ -1153,8 +1153,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 
 		// Attach namespace ID for tokens that are not belonging to the root
-		// namespace
-		if tokenNS.ID != namespace.RootNamespaceID {
+		// namespace. JWT tokens (TokenTypeEnt) pre-compute the qualified ID in
+		// createAndStoreJwtTokenEntryJIT, so skip appending for them.
+		if tokenNS.ID != namespace.RootNamespaceID && entry.Type != logical.TokenTypeEnt {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
@@ -3409,6 +3410,7 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 	}
+
 	if IsOAuthJwtId(normalizedID) {
 		return logical.ErrorResponse("JWTs cannot be revoked"), nil
 	}
@@ -3451,20 +3453,11 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 	if IsOAuthJwt(id) {
-		// If the token specified in the request body is different from the caller's
-		// token, resolve the token ID based on the body token's claims (JTI) instead
-		// of req.JwtUniqueId, otherwise we may silently return the caller's
-		// own token entry or fail for non-Enterprise token callers.
-		if id == req.ClientToken {
-			id = getOAuthJwtId(req.JwtUniqueId)
-		} else {
-			// For raw JWTs, validate to get the correct profile and unique ID claim
-			resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
-			if err != nil {
-				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
-			}
-			id = resolvedID
+		resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+		if err != nil {
+			return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 		}
+		id = resolvedID
 	}
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
