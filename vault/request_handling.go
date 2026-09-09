@@ -1238,6 +1238,24 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	var auth *logical.Auth
 	var te *logical.TokenEntry
 	var ctErr error
+
+	// Normalize identity group/entity name paths to lowercase before the ACL
+	// check. The identity store resolves names case-insensitively but ACL paths
+	// are matched case-sensitively, allowing deny policies to be bypassed by
+	// altering the case of the name segment. The original path is restored
+	// after the ACL check so downstream handlers receive the caller's original
+	// casing.
+	originalPath := req.Path
+	for _, prefix := range []string{
+		"identity/group/name/",
+		"identity/entity/name/",
+	} {
+		if strings.HasPrefix(req.Path, prefix) {
+			req.Path = prefix + strings.ToLower(req.Path[len(prefix):])
+			break
+		}
+	}
+
 	// Validate the token. OAuth JWT requests on unauthenticated paths that
 	// require a materialized token entry (sys/internal/ui/mounts,
 	// sys/internal/ui/namespaces) are routed here rather than to
@@ -1255,6 +1273,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// routes to handleLoginRequest as intended.
 	unauth := c.isLoginRequest(ctx, req) && IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)
 	auth, te, ctErr = c.CheckToken(ctx, req, unauth)
+	// Restore the original path so downstream handlers (and audit logs) see
+	// the caller's original casing, not the normalized form.
+	req.Path = originalPath
 	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
