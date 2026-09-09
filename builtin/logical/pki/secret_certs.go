@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 // SecretCertsType is the name used to identify this type
@@ -91,5 +92,5 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		observe.NewAdditionalPKIMetadata("serial_number", parsing.SerialFromCert(cert)),
 	)
 
-	return revokeCert(sc, config, cert)
+	return revokeCert(sc, config, cert, ocsp.Unspecified)
 }

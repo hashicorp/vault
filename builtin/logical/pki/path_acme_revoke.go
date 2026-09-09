@@ -68,15 +68,17 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, req *logical.Reque
 	}
 
 	rawReason, present := data["reason"]
+	var reason int
 	if present {
-		reason, ok := rawReason.(float64)
+		parsedReason, ok := rawReason.(float64)
 		if !ok {
 			return nil, fmt.Errorf("invalid type (%T; expected float64) for field 'reason': %w", rawReason, ErrMalformed)
 		}
-
-		if int(reason) != 0 {
-			return nil, fmt.Errorf("Vault does not support revocation reasons (got %v; expected omitted or 0/unspecified): %w", int(reason), ErrBadRevocationReason)
+		reason = int(parsedReason)
+		if err := verifyReasonCode(reason); err != nil {
+			return nil, err
 		}
+
 	}
 
 	// If the certificate expired, there's no point in revoking it.
@@ -137,13 +139,13 @@ func (b *backend) acmeRevocationHandler(acmeCtx *acmeContext, req *logical.Reque
 	// Finally, do the relevant permissions/authorization check as
 	// appropriate based on the type of revocation happening.
 	if !userCtx.Existing {
-		return b.acmeRevocationByPoP(acmeCtx, userCtx, cert, config)
+		return b.acmeRevocationByPoP(acmeCtx, userCtx, cert, config, reason)
 	}
 
-	return b.acmeRevocationByAccount(acmeCtx, userCtx, cert, config)
+	return b.acmeRevocationByAccount(acmeCtx, userCtx, cert, config, reason)
 }
 
-func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *pki_backend.CrlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *pki_backend.CrlConfig, reason int) (*logical.Response, error) {
 	// Since this account does not exist, ensure we've gotten a private key
 	// matching the certificate's public key. This private key isn't
 	// explicitly provided, but instead provided by proxy (public key,
@@ -166,10 +168,10 @@ func (b *backend) acmeRevocationByPoP(acmeCtx *acmeContext, userCtx *jwsCtx, cer
 	b.GetRevokeStorageLock().Lock()
 	defer b.GetRevokeStorageLock().Unlock()
 
-	return revokeCert(acmeCtx.sc, config, cert)
+	return revokeCert(acmeCtx.sc, config, cert, reason)
 }
 
-func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *pki_backend.CrlConfig) (*logical.Response, error) {
+func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx, cert *x509.Certificate, config *pki_backend.CrlConfig, reason int) (*logical.Response, error) {
 	// Fetch the account; disallow revocations from non-valid-status accounts.
 	_, err := requireValidAcmeAccount(acmeCtx, userCtx)
 	if err != nil {
@@ -188,5 +190,5 @@ func (b *backend) acmeRevocationByAccount(acmeCtx *acmeContext, userCtx *jwsCtx,
 	b.GetRevokeStorageLock().Lock()
 	defer b.GetRevokeStorageLock().Unlock()
 
-	return revokeCert(acmeCtx.sc, config, cert)
+	return revokeCert(acmeCtx.sc, config, cert, reason)
 }
