@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, render } from '@ember/test-helpers';
+import { click, render, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import { dateFormat } from 'core/helpers/date-format';
@@ -15,8 +15,14 @@ module('Integration | Component | agents/page/registry', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    this.api = this.owner.lookup('service:api');
+    this.router = this.owner.lookup('service:router');
     this.downloadStub = Sinon.stub(this.owner.lookup('service:download'), 'csv');
+    // Prevent router from throwing in the test environment
+    Sinon.stub(this.router, 'transitionTo');
+    Sinon.stub(this.router, 'refresh');
     this.agent = {
+      id: 'agent-1',
       display_name: 'agent-1',
       name: 'cool agent name',
       entity_id: 'entity-1',
@@ -88,5 +94,49 @@ module('Integration | Component | agents/page/registry', function (hooks) {
       `Agent name,Agentic entity in Vault,Entity / Alias ID,Entity status,Entity created at,Entity updated at\nagent-1,test-entity,entity-1,Disabled,"${entryCreatedAt}","${entryUpdatedAt}"\n,Alias: test-alias,alias-id,/,"${aliasCreatedAt}","${aliasUpdatedAt}"`,
       'The CSV includes table rows and escaped values in display order'
     );
+  });
+
+  test('it reads ceiling_policies (plural) from the agent API response when opening the flyout', async function (assert) {
+    // Regression test: the agent READ endpoint returns `ceiling_policies` (plural).
+    // Previously the component checked for `ceiling_policy` (singular), causing policies
+    // from the agent to be silently dropped and the policies tab to never appear.
+    const agentWithPolicies = {
+      ...this.agent,
+      ceiling_policies: ['agent-ceiling-policy'],
+      entity_id: 'entity-1',
+      creation_time: '2025-06-01T13:02:03Z',
+      last_updated_time: '2025-06-01T13:02:03Z',
+    };
+
+    Sinon.stub(this.api.secrets, 'registrationReadById').resolves({
+      data: agentWithPolicies,
+    });
+    Sinon.stub(this.api.identity, 'entityReadById').resolves({
+      data: {
+        id: 'entity-1',
+        name: 'test-entity',
+        disabled: false,
+        policies: [],
+        group_ids: [],
+        aliases: [],
+        creation_time: '2025-06-01T13:02:03Z',
+        last_update_time: '2025-06-01T13:02:03Z',
+      },
+    });
+    Sinon.stub(this.api.sys, 'policiesReadAclPolicy').resolves({
+      policy: 'path "*" { capabilities = ["read"] }',
+    });
+
+    await render(hbs`
+      <Agents::Registry::Page @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} />
+    `);
+
+    await click(GENERAL.button('agent agent-1'));
+
+    // The flyout loads async data; wait for it to finish rendering
+    await waitFor(GENERAL.flyout);
+
+    assert.dom(GENERAL.flyout).exists('flyout opens after clicking an agent row');
+    assert.dom(GENERAL.hdsTab('policies')).exists('policies tab is shown when ceiling_policies has entries');
   });
 });
