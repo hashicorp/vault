@@ -239,7 +239,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.45.0
 	go.opentelemetry.io/otel/trace v1.45.0
 	go.uber.org/atomic v1.11.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597
 	golang.org/x/net v0.58.0
 	golang.org/x/oauth2 v0.36.0
