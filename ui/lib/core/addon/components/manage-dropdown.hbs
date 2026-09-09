@@ -25,7 +25,7 @@
     data-test-popup-menu="Configure"
   >Configure</D.Interactive>
 
-  {{#if this.shouldShowDelete}}
+  {{#if (this.canDelete @model)}}
     <D.Interactive
       {{on "click" (fn this.handleDeleteClick @model)}}
       @color="critical"
@@ -38,9 +38,22 @@
 {{#if this.engineToDisable}}
   <ConfirmModal
     @color="critical"
-    @confirmMessage="Any data in this engine will be permanently deleted."
-    @confirmTitle="Disable engine?"
+    @confirmTitle="Delete secrets engine {{this.engineToDisable.id}}?"
+    @confirmText="delete-engine"
+    @confirmLabel="Confirm deletion"
+    @confirmButtonText="Delete engine"
     @onClose={{this.handleModalClose}}
     @onConfirm={{this.handleModalConfirm}}
-  />
+  >
+    <:body>
+      <p>The following data <strong>will be permanently deleted</strong>:</p>
+      <ul class="bullet">
+        <li><strong>{{this.engineToDisable.id}}</strong> secrets engine</li>
+        {{#if (not-eq this.secretCount null)}}
+          <li><strong>{{this.secretCount}}</strong> secrets</li>
+        {{/if}}
+        <li>Engine configuration and third-party integrations</li>
+      </ul>
+    </:body>
+  </ConfirmModal>
 {{/if}}

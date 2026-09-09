@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { click, visit, currentURL } from '@ember/test-helpers';
+import { click, fillIn, visit, currentURL } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
@@ -80,10 +80,12 @@ module('Acceptance | ldap | overview', function (hooks) {
   test('it should delete the ldap engine on delete action', async function (assert) {
     ldapMirageScenario(this.server);
     await runCmd(mountEngineCmd('ldap', this.backend));
-    await visitURL('overview', this.backend);
-    await click(GENERAL.dropdownToggle('Manage'));
+    await visit('/vault/secrets-engines');
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), this.backend);
+    await click(`${GENERAL.listItem(`${this.backend}/`)} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('Delete'));
     assert.dom('[data-test-confirm-modal]').exists('Confirm delete modal renders');
+    await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click('[data-test-confirm-button]');
     assert.strictEqual(
       currentURL(),
