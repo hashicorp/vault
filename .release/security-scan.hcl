@@ -10,7 +10,36 @@ binary {
   triage {
     suppress {
       vulnerabilities = [
-        "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+        // GO-2022-0635 is valid. We will remove this when the ongoing migration
+        // to github.com/aws/aws-sdk-go/v2 has been completed.
+        "GO-2022-0635",
+
+        // GO-2026-5932 appears to be a false positive as it only relates to
+        // golang.org/x/crypto/openpgp, which is not in use in the project.
+        // https://pkg.go.dev/vuln/GO-2026-5932
+        "GO-2026-5932",
+
+        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
+        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
+        // those versions.
+        // https://pkg.go.dev/vuln/GO-2026-5856
+        // https://pkg.go.dev/vuln/GO-2026-4970
+        "GO-2026-5856", "GO-2026-4970",
+
+        // GO-2026-5298 appears to be a false positive as the associated
+        // Github Security Advisory shows that v0.6.1 contains the fix.
+        // The issue has been reported but the advisory has not been updated
+        // yet.
+        // https://pkg.go.dev/vuln/GO-2026-5298
+        // https://github.com/google/go-attestation/security/advisories/GHSA-9r4w-jg96-92mv
+        // https://github.com/golang/vulndb/issues/5795
+        "GO-2026-5298",
+
+        // https://hashicorp.atlassian.net/browse/PSP-3913
+        // Exempt these until the scanner can handle the boringcrypto suffix for
+        // the FIPS 140-3 builds.
+        "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
+        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942"
       ]
     }
   }
@@ -27,7 +56,36 @@ container {
   triage {
     suppress {
       vulnerabilities = [
-        "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+        // GO-2022-0635 is valid. We will remove this when the ongoing migration
+        // to github.com/aws/aws-sdk-go/v2 has been completed.
+        "GO-2022-0635",
+
+        // GO-2026-5932 appears to be a false positive as it only relates to
+        // golang.org/x/crypto/openpgp, which is not in use in the project.
+        // https://pkg.go.dev/vuln/GO-2026-5932
+        "GO-2026-5932",
+
+        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
+        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
+        // those versions
+        // https://pkg.go.dev/vuln/GO-2026-5856
+        // https://pkg.go.dev/vuln/GO-2026-4970
+        "GO-2026-5856", "GO-2026-4970",
+
+        // GO-2026-5298 appears to be a false positive as the associated
+        // Github Security Advisory shows that v0.6.1 contains the fix.
+        // The issue has been reported but the advisory has not been updated
+        // yet.
+        // https://pkg.go.dev/vuln/GO-2026-5298
+        // https://github.com/google/go-attestation/security/advisories/GHSA-9r4w-jg96-92mv
+        // https://github.com/golang/vulndb/issues/5795
+        "GO-2026-5298",
+
+        // https://hashicorp.atlassian.net/browse/PSP-3913
+        // Exempt these until the scanner can handle the boringcrypto suffix for
+        // the FIPS 140-3 builds.
+        "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
+        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942"
       ]
 
       // The OSV scanner will trip on several packages that are included in the

@@ -179,7 +179,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
 
       // Fill in required fields
       await fillIn(GENERAL.inputByAttr('name'), 'wif-destination');
-      await fillIn(GENERAL.inputByAttr('region'), 'us-west-1');
+      await ts.form.fillInByAttr('region', 'us-west-1');
       await fillIn(GENERAL.inputByAttr('role_arn'), 'arn:aws:iam::123456789012:role/test-role');
       await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'test-audience');
 
@@ -345,7 +345,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
 
       // Fill in required fields
       await fillIn(GENERAL.inputByAttr('name'), 'test-wif');
-      await fillIn(GENERAL.inputByAttr('region'), 'us-west-1');
+      await ts.form.fillInByAttr('region', 'us-west-1');
       await fillIn(GENERAL.inputByAttr('role_arn'), 'arn:aws:iam::123456789012:role/test-role');
       await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'test-audience');
 

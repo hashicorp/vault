@@ -95,6 +95,9 @@ test('oidc workflow', async ({ page }) => {
     await page.getByRole('link', { name: 'Create assignment' }).click();
     await page.getByRole('textbox', { name: 'Name' }).fill('oidc-assignment');
     await page.getByLabel('Entities').getByText('Search').click();
+    // close the dropdown before submitting - once enough entities exist the open option list
+    // overlays the Create button and intercepts the click
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.getByText('At least one entity or group')).toBeVisible();
     await page.getByLabel('Groups').getByText('Search').click();

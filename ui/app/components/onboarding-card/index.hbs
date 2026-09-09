@@ -1,0 +1,25 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container
+  ...attributes
+  @hasBorder={{true}}
+  class="onboarding-card has-padding-l {{this.sizeClass}}"
+  data-test-onboarding-card
+>
+  <div class="onboarding-card__background">
+    <img class="onboarding-card__aurora" src={{img-path "~/onboarding-checklist-aurora.svg"}} alt="" aria-hidden="true" />
+    <img
+      class="onboarding-card__vault-icon"
+      src={{img-path "~/onboarding-checklist-vault-icon.svg"}}
+      alt=""
+      aria-hidden="true"
+    />
+  </div>
+
+  <div class="onboarding-card__content">
+    {{yield}}
+  </div>
+</Hds::Card::Container>

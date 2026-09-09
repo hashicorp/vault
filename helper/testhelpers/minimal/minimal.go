@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/copystructure"
 )
 
 // NewTestSoloCluster is a simpler version of NewTestCluster that only creates
@@ -31,11 +30,8 @@ func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestClust
 
 	if config != nil {
 		// It's rude to modify an input argument as a side-effect
-		copy, err := copystructure.Copy(config)
-		if err != nil {
-			t.Fatal(err)
-		}
-		mycfg = copy.(*vault.CoreConfig)
+		local := *config
+		mycfg = &local
 	}
 	if mycfg.Physical == nil {
 		// Don't use NewTransactionalInmem because that would enable replication,

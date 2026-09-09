@@ -30,7 +30,6 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	agentConfig "github.com/hashicorp/vault/command/agent/config"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -220,9 +219,12 @@ auto_auth {
 		logger.Trace("wrote test config", "path", conf)
 	}
 
+	var code int
+	var ui *cli.MockUi
 	doneCh := make(chan struct{})
 	go func() {
-		ui, cmd := testAgentCommand(t, logger)
+		var cmd *AgentCommand
+		ui, cmd = testAgentCommand(t, logger)
 		cmd.client = client
 
 		args := []string{"-config", conf}
@@ -230,12 +232,7 @@ auto_auth {
 			args = append(args, "-exit-after-auth")
 		}
 
-		code := cmd.Run(args)
-		if code != 0 {
-			t.Errorf("expected %d to be %d", code, 0)
-			t.Logf("output from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run(args)
 		close(doneCh)
 	}()
 
@@ -244,6 +241,12 @@ auto_auth {
 		break
 	case <-time.After(1 * time.Minute):
 		t.Fatal("timeout reached while waiting for agent to exit")
+	}
+
+	if code != 0 {
+		t.Errorf("expected %d to be %d", code, 0)
+		t.Logf("output from agent:\n%s", ui.OutputWriter.String())
+		t.Logf("error from agent:\n%s", ui.ErrorWriter.String())
 	}
 
 	sink1Bytes, err := os.ReadFile(sinkFileName1)
@@ -342,8 +345,6 @@ listener "tcp" {
     tls_disable = true
     require_request_header = true
 	disable_request_limiter = true
-	# TODO (HCL_DUP_KEYS_DEPRECATION): remove duplicate attribute below
-	disable_request_limiter = true
 }
 `
 	listenAddr1 := generateListenerAddress(t)
@@ -359,7 +360,6 @@ listener "tcp" {
 	)
 	configPath := makeTempFile(t, "config.hcl", config)
 
-	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 	// Start the agent
 	ui, cmd := testAgentCommand(t, logger)
 	cmd.client = serverClient
@@ -395,11 +395,6 @@ listener "tcp" {
 	//----------------------------------------------------
 	// Perform the tests
 	//----------------------------------------------------
-
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Eventually remove this check together with the duplicate attribute in this
-	// test's configuration
-	require.Contains(t, ui.ErrorWriter.String(),
-		"WARNING: Duplicate keys found")
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
@@ -488,8 +483,19 @@ func TestAgent_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Create token file
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
@@ -540,15 +546,11 @@ vault {
 	ui, cmd := testAgentCommand(t, logger)
 	cmd.startedCh = make(chan struct{})
 
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
-		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
 
@@ -582,6 +584,12 @@ vault {
 
 	close(cmd.ShutdownCh)
 	wg.Wait()
+
+	if code != 0 {
+		t.Errorf("non-zero return code when running agent: %d", code)
+		t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+		t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+	}
 }
 
 // TestAgent_Template_UserAgent Validates that the User-Agent sent to Vault
@@ -620,8 +628,7 @@ func TestAgent_Template_UserAgent(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Setenv(api.EnvVaultAddress, serverClient.Address())
+	t.Setenv(api.EnvVaultAddress, serverClient.Address())
 
 	roleIDPath, secretIDPath := setupAppRoleAndKVMounts(t, serverClient)
 
@@ -686,15 +693,11 @@ auto_auth {
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
-		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
 
@@ -708,6 +711,11 @@ auto_auth {
 	defer func() {
 		cmd.ShutdownCh <- struct{}{}
 		wg.Wait()
+		if code != 0 {
+			t.Errorf("non-zero return code when running agent: %d", code)
+			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+		}
 	}()
 
 	verify := func(suffix string) {
@@ -787,8 +795,7 @@ func TestAgent_Template_Basic(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Setenv(api.EnvVaultAddress, serverClient.Address())
+	t.Setenv(api.EnvVaultAddress, serverClient.Address())
 
 	roleIDPath, secretIDPath := setupAppRoleAndKVMounts(t, serverClient)
 
@@ -887,15 +894,11 @@ auto_auth {
 			cmd.client = serverClient
 			cmd.startedCh = make(chan struct{})
 
+			var code int
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
-				code := cmd.Run([]string{"-config", configPath})
-				if code != 0 {
-					t.Errorf("non-zero return code when running agent: %d", code)
-					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-				}
+				code = cmd.Run([]string{"-config", configPath})
 				wg.Done()
 			}()
 
@@ -912,6 +915,20 @@ auto_auth {
 				defer func() {
 					cmd.ShutdownCh <- struct{}{}
 					wg.Wait()
+					if code != 0 {
+						t.Errorf("non-zero return code when running agent: %d", code)
+						t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+						t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+					}
+				}()
+			} else {
+				defer func() {
+					wg.Wait()
+					if code != 0 {
+						t.Errorf("non-zero return code when running agent: %d", code)
+						t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+						t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+					}
 				}()
 			}
 
@@ -1027,6 +1044,9 @@ func setupAppRoleAndKVMounts(t *testing.T, serverClient *api.Client) (string, st
 	request(t, serverClient, req, 204)
 
 	// setup the kv secrets
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	req = serverClient.NewRequest("POST", "/v1/sys/mounts/secret/tune")
 	req.BodyBytes = []byte(`{
 	"options": {"version": "2"}
@@ -1099,7 +1119,7 @@ func TestAgent_Template_VaultClientFromEnv(t *testing.T) {
 	}
 	defer os.RemoveAll(tmpDirRoot)
 
-	vaultAddr := "https://" + cluster.Cores[0].Listeners[0].Address.String()
+	vaultAddr := "https://" + cluster.Cores[0].APIAddress().String()
 	testCases := map[string]struct {
 		env map[string]string
 	}{
@@ -1163,15 +1183,11 @@ auto_auth {
 			cmd.client = serverClient
 			cmd.startedCh = make(chan struct{})
 
+			var code int
 			wg := &sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
-				code := cmd.Run([]string{"-config", configPath})
-				if code != 0 {
-					t.Errorf("non-zero return code when running agent: %d", code)
-					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-				}
+				code = cmd.Run([]string{"-config", configPath})
 				wg.Done()
 			}()
 
@@ -1184,6 +1200,11 @@ auto_auth {
 			defer func() {
 				cmd.ShutdownCh <- struct{}{}
 				wg.Wait()
+				if code != 0 {
+					t.Errorf("non-zero return code when running agent: %d", code)
+					t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+					t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+				}
 			}()
 
 			// We need to poll for a bit to give Agent time to render the
@@ -1336,15 +1357,11 @@ exit_after_auth = true
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
+	var code int
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
-		if code != 0 {
-			t.Errorf("non-zero return code when running agent: %d", code)
-			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
-			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
-		}
+		code = cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
 
@@ -1355,6 +1372,12 @@ exit_after_auth = true
 	}
 
 	wg.Wait()
+
+	if code != 0 {
+		t.Errorf("non-zero return code when running agent: %d", code)
+		t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
+		t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
+	}
 
 	//----------------------------------------------------
 	// Perform the tests
@@ -1560,12 +1583,26 @@ func TestAgent_Template_Retry(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	methodConf := prepAgentApproleKV(t, serverClient)
 
-	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	err = serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
 			"version": "2",
 		},
@@ -1880,8 +1917,19 @@ api_proxy {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Start the agent
 	_, cmd := testAgentCommand(t, logger)
@@ -1951,8 +1999,19 @@ func TestAgent_APIProxyWithoutCache_UserAgent(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -2035,8 +2094,19 @@ func TestAgent_APIProxyWithCache_UserAgent(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -2108,8 +2178,19 @@ func TestAgent_Cache_DynamicSecret(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	cacheConfig := `
 cache {
@@ -2226,17 +2307,29 @@ func TestAgent_ApiProxy_Retry(t *testing.T) {
 
 	serverClient := cluster.Cores[0].Client
 
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
-	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{
+	_, err = serverClient.Logical().Write("secret/foo", map[string]interface{}{
 		"bar": "baz",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	intRef := func(i int) *int {
 		return &i
@@ -2371,12 +2464,26 @@ func TestAgent_TemplateConfig_ExitOnRetryFailure(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	autoAuthConfig := prepAgentApproleKV(t, serverClient)
 
-	err := serverClient.Sys().TuneMount("secret", api.MountConfigInput{
+	err := serverClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	err = serverClient.Sys().TuneMount("secret", api.MountConfigInput{
 		Options: map[string]string{
 			"version": "2",
 		},
@@ -2734,11 +2841,19 @@ func TestAgent_Quit(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	err := os.Unsetenv(api.EnvVaultAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	listenAddr := generateListenerAddress(t)
 	listenAddr2 := generateListenerAddress(t)
@@ -3086,38 +3201,15 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	}
 }
 
-// TestAgent_Config_HclDuplicateKey checks that a log warning is printed when the agent config has duplicate attributes
-// TODO (HCL_DUP_KEYS_DEPRECATION): always expect error once deprecation is done
+// TestAgent_Config_HclDuplicateKey checks that an error is returned when the agent config has duplicate attributes
 func TestAgent_Config_HclDuplicateKey(t *testing.T) {
-	t.Run("duplicate error with env unset", func(t *testing.T) {
-		configFile := populateTempFile(t, "agent-config.hcl", `
+	configFile := populateTempFile(t, "agent-config.hcl", `
 log_level = "trace"
 log_level = "debug"
 `)
-		_, _, err := agentConfig.LoadConfigFileCheckDuplicates(configFile.Name())
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "Each argument can only be defined once")
-	})
-	t.Run("duplicate error with env set to false", func(t *testing.T) {
-		configFile := populateTempFile(t, "agent-config.hcl", `
-log_level = "trace"
-log_level = "debug"
-`)
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
-		_, _, err := agentConfig.LoadConfigFileCheckDuplicates(configFile.Name())
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "Each argument can only be defined once")
-	})
-	t.Run("duplicate warning with env set to true", func(t *testing.T) {
-		configFile := populateTempFile(t, "agent-config.hcl", `
-log_level = "trace"
-log_level = "debug"
-`)
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-		_, duplicate, err := agentConfig.LoadConfigFileCheckDuplicates(configFile.Name())
-		require.NoError(t, err)
-		require.True(t, duplicate)
-	})
+	_, err := agentConfig.LoadConfigFile(configFile.Name())
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Each argument can only be defined once")
 }
 
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener
@@ -3133,8 +3225,19 @@ func TestAgent_NonTLSListener_SIGHUP(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -3214,8 +3317,19 @@ func TestAgent_TokenRenewal(t *testing.T) {
 
 	// Unset the environment variable so that agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	policyName := "less-than-default"
 	// Has a subset of the default policy's permissions
@@ -3351,6 +3465,8 @@ func TestAgent_Logging_ConsulTemplate(t *testing.T) {
 	templateConfig := fmt.Sprintf(templateConfigString, templateSrc, tempDir, "render_1.json")
 
 	config := `
+exit_after_auth = true
+
 vault {
   address = "%s"
 	tls_skip_verify = true
@@ -3376,20 +3492,18 @@ auto_auth {
 	_, cmd := testAgentCommand(t, nil)
 	logFilePath := filepath.Join(tempDir, "agent")
 
+	codeCh := make(chan int)
 	// Start Vault Agent
 	go func() {
-		code := cmd.Run([]string{"-config", configFileName, "-log-format", "json", "-log-file", logFilePath, "-log-level", "trace"})
-		require.Equalf(t, 0, code, "Vault Agent returned a non-zero exit code")
+		codeCh <- cmd.Run([]string{"-config", configFileName, "-log-format", "json", "-log-file", logFilePath, "-log-level", "trace"})
 	}()
 
 	select {
-	case <-cmd.startedCh:
+	case code := <-codeCh:
+		require.Equalf(t, 0, code, "Vault Agent returned a non-zero exit code")
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout starting agent")
 	}
-
-	// Give Vault Agent some time to render our template.
-	time.Sleep(3 * time.Second)
 
 	// This flag will be used to capture whether we saw a consul-template log
 	// message in the log file (the presence of the log file is also part of the test)
@@ -3468,8 +3582,7 @@ func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
 
 	// Unset the environment variable so that Agent picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Setenv(api.EnvVaultAddress, serverClient.Address())
+	t.Setenv(api.EnvVaultAddress, serverClient.Address())
 
 	// create temp dir for this test run
 	tmpDir, err := os.MkdirTemp("", "TestAgent_DeleteAfterVersion_Rendering")
@@ -3478,6 +3591,8 @@ func TestAgent_DeleteAfterVersion_Rendering(t *testing.T) {
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
 
 	autoAuthConfig := fmt.Sprintf(`
+exit_after_auth = true
+
 auto_auth {
     method {
 		type = "token_file"
@@ -3515,29 +3630,21 @@ template {
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
+	codeCh := make(chan int)
 	go func() {
-		code := cmd.Run([]string{"-config", configPath})
+		codeCh <- cmd.Run([]string{"-config", configPath})
+	}()
+
+	select {
+	case code := <-codeCh:
 		if code != 0 {
 			t.Errorf("non-zero return code when running agent: %d", code)
 			t.Logf("STDOUT from agent:\n%s", ui.OutputWriter.String())
 			t.Logf("STDERR from agent:\n%s", ui.ErrorWriter.String())
 		}
-		wg.Done()
-	}()
-
-	select {
-	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
 		t.Errorf("timeout")
 	}
-
-	// We need to shut down the Agent command
-	defer func() {
-		cmd.ShutdownCh <- struct{}{}
-		wg.Wait()
-	}()
 
 	filePath := fmt.Sprintf("%s/%s", tmpDir, fileName)
 
@@ -3658,10 +3765,22 @@ vault {
 			// In CI our tests are run with VAULT_ADDR=, which will break our tests
 			// because it'll default to an unset address. Ensure that's cleared out
 			// of the environment.
+			//
+			// t.Setenv can't represent "unset" (it always leaves the var present,
+			// even with an empty value), and setStringFlag distinguishes "present"
+			// from "absent" via os.LookupEnv - not by checking for an empty string.
+			// So we capture the prior state up front and restore it in Cleanup,
+			// rather than using t.Setenv(api.EnvVaultAddress, "").
+			origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+			require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
 			t.Cleanup(func() {
-				os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+				if hadAddr {
+					os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+				} else {
+					os.Unsetenv(api.EnvVaultAddress)
+				}
 			})
-			os.Unsetenv(api.EnvVaultAddress)
+
 			for k, v := range test.envVars {
 				t.Setenv(k, v)
 			}

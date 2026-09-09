@@ -1,9 +1,10 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package client
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -767,6 +768,52 @@ func TestOptsStringers(t *testing.T) {
 			},
 			"--hard --no-refresh --quiet --refresh --patch abcd1234 HEAD~2 -- vault/something_ent.go vault/cli/another_ent.go",
 		},
+		"add 1/2 opts": {
+			&AddOpts{
+				All:      true,
+				DryRun:   true,
+				Force:    true,
+				Verbose:  true,
+				PathSpec: []string{"vault/something_ent.go", "vault/cli/another_ent.go"},
+			},
+			"--all --dry-run --force --verbose -- vault/something_ent.go vault/cli/another_ent.go",
+		},
+		"add 2/2 opts": {
+			&AddOpts{
+				Chmod:              "+x",
+				Edit:               true,
+				IgnoreErrors:       true,
+				IgnoreMissing:      true,
+				IntentToAdd:        true,
+				Interactive:        true,
+				NoAll:              true,
+				NoWarnEmbeddedRepo: true,
+				Patch:              true,
+				Refresh:            true,
+				Renormalize:        true,
+			},
+			"--chmod=+x --edit --ignore-errors --ignore-missing --intent-to-add --interactive --no-all --no-warn-embedded-repo --patch --refresh --renormalize",
+		},
+		"add pathspec-from-file suppresses PathSpec": {
+			// PathSpec must be silently ignored when PathspecFromFile is set;
+			// mixing the two is invalid git usage.
+			&AddOpts{
+				PathspecFromFile: "/specs/paths.txt",
+				PathspecFileNul:  true,
+				PathSpec:         []string{"should", "be", "ignored"},
+			},
+			"--pathspec-from-file=/specs/paths.txt --pathspec-file-nul",
+		},
+		"add pathspec only": {
+			&AddOpts{
+				PathSpec: []string{"file1", "file2"},
+			},
+			"-- file1 file2",
+		},
+		"add nil opts": {
+			(*AddOpts)(nil),
+			"",
+		},
 		"rm": {
 			&RmOpts{
 				Cached:          true,
@@ -1110,10 +1157,183 @@ func TestOptsStringers(t *testing.T) {
 			},
 			"--parseopt --sq-quote --keep-dashdash --stop-at-non-option --stuck-long --keep-argv0 --no-revs --revs --revs-only --no-flags --flags --all --branches --branches=main --branches=feature/* --tags --tags=v1.* --remotes --remotes=origin/* --glob=refs/heads/* --glob=refs/tags/* --exclude=refs/heads/tmp* --exclude=refs/tags/test* --disambiguate=abc123 --exclude-hidden --exclude-hidden=refs/stash --since=2 weeks ago --until=yesterday --before=2024-01-01 --after=2023-01-01 HEAD main",
 		},
+		"config get": {
+			&ConfigOpts{
+				Action: ConfigActionGet,
+				Key:    "user.name",
+			},
+			"get user.name",
+		},
+		"config get with scope": {
+			&ConfigOpts{
+				Action: ConfigActionGet,
+				Key:    "user.email",
+				Scope:  ConfigScopeGlobal,
+			},
+			"get --global user.email",
+		},
+		"config get with all flags": {
+			&ConfigOpts{
+				Action:       ConfigActionGet,
+				Key:          "remote.origin.url",
+				All:          true,
+				Regexp:       true,
+				Default:      "https://github.com",
+				Type:         ConfigTypePath,
+				Null:         true,
+				NameOnly:     true,
+				ShowNames:    true,
+				ShowOrigin:   true,
+				ShowScope:    true,
+				Includes:     true,
+				ValuePattern: "^https",
+				FixedValue:   true,
+				URL:          "https://github.com",
+			},
+			"get --all --regexp --url=https://github.com --value=^https --fixed-value --default=https://github.com --type=path --null --name-only --show-names --show-origin --show-scope --includes remote.origin.url",
+		},
+		"config set": {
+			&ConfigOpts{
+				Action: ConfigActionSet,
+				Key:    "user.name",
+				Value:  "Ryan Cragun",
+			},
+			"set user.name Ryan Cragun",
+		},
+		"config set with scope and type": {
+			&ConfigOpts{
+				Action: ConfigActionSet,
+				Key:    "core.fileMode",
+				Value:  "true",
+				Scope:  ConfigScopeLocal,
+				Type:   ConfigTypeBool,
+			},
+			"set --local --type=bool core.fileMode true",
+		},
+		"config set replace-all with comment": {
+			&ConfigOpts{
+				Action:     ConfigActionSet,
+				Key:        "http.proxy",
+				Value:      "http://proxy.example.com",
+				ReplaceAll: true,
+				Comment:    "set by pipeline",
+			},
+			"set --replace-all --comment=set by pipeline http.proxy http://proxy.example.com",
+		},
+		"config set append": {
+			&ConfigOpts{
+				Action: ConfigActionSet,
+				Key:    "remote.origin.fetch",
+				Value:  "+refs/heads/*:refs/remotes/origin/*",
+				Append: true,
+			},
+			"set --append remote.origin.fetch +refs/heads/*:refs/remotes/origin/*",
+		},
+		"config unset": {
+			&ConfigOpts{
+				Action: ConfigActionUnset,
+				Key:    "user.name",
+			},
+			"unset user.name",
+		},
+		"config unset all with value pattern": {
+			&ConfigOpts{
+				Action:       ConfigActionUnset,
+				Key:          "remote.origin.fetch",
+				All:          true,
+				ValuePattern: "origin",
+				FixedValue:   true,
+				Scope:        ConfigScopeGlobal,
+			},
+			"unset --global --all --value=origin --fixed-value remote.origin.fetch",
+		},
+		"config list": {
+			&ConfigOpts{
+				Action: ConfigActionList,
+			},
+			"list",
+		},
+		"config list with scope and output options": {
+			&ConfigOpts{
+				Action:     ConfigActionList,
+				Scope:      ConfigScopeSystem,
+				NameOnly:   true,
+				ShowOrigin: true,
+				ShowScope:  true,
+				Null:       true,
+				Includes:   true,
+			},
+			"list --system --null --name-only --show-origin --show-scope --includes",
+		},
+		"config rename-section": {
+			&ConfigOpts{
+				Action:  ConfigActionRenameSection,
+				OldName: "branch.master",
+				NewName: "branch.main",
+			},
+			"rename-section branch.master branch.main",
+		},
+		"config rename-section with file scope": {
+			&ConfigOpts{
+				Action:  ConfigActionRenameSection,
+				File:    "/path/to/.gitconfig",
+				OldName: "branch.master",
+				NewName: "branch.main",
+			},
+			"rename-section --file=/path/to/.gitconfig branch.master branch.main",
+		},
+		"config remove-section": {
+			&ConfigOpts{
+				Action:      ConfigActionRemoveSection,
+				SectionName: "branch",
+			},
+			"remove-section branch",
+		},
+		"config remove-section with blob": {
+			&ConfigOpts{
+				Action:      ConfigActionRemoveSection,
+				Blob:        "HEAD:.gitmodules",
+				SectionName: "submodule.tools",
+			},
+			"remove-section --blob=HEAD:.gitmodules submodule.tools",
+		},
+		"config nil opts": {
+			(*ConfigOpts)(nil),
+			"",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, expect.expected, expect.opts.String())
 		})
 	}
+}
+
+// TestWithHost verifies that the WithHost functional option causes configEnv()
+// to emit credential URL rewrites for the specified host rather than github.com.
+func TestWithHost(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no WithHost, token set — defaults to github.com", func(t *testing.T) {
+		t.Parallel()
+		c := NewClient(WithToken("mytoken"))
+		env := strings.Join(c.configEnv(), "\n")
+		require.Contains(t, env, "github.com")
+	})
+
+	t.Run("WithHost github.ibm.com, token set — uses custom host not github.com", func(t *testing.T) {
+		t.Parallel()
+		c := NewClient(WithToken("mytoken"), WithHost("github.ibm.com"))
+		env := strings.Join(c.configEnv(), "\n")
+		require.Contains(t, env, "github.ibm.com")
+		require.NotContains(t, env, "insteadOf=https://github.com")
+	})
+
+	t.Run("WithHost set, no token — no insteadOf key emitted", func(t *testing.T) {
+		t.Parallel()
+		c := NewClient(WithHost("github.ibm.com"))
+		for _, e := range c.configEnv() {
+			require.NotContains(t, e, "insteadOf")
+		}
+	})
 }

@@ -581,17 +581,18 @@ scenario "smoke" {
     ]
 
     variables {
-      add_back_nodes    = true
-      cluster_port      = step.create_vault_cluster.cluster_port
-      hosts             = step.get_vault_cluster_ips.follower_hosts
-      ip_version        = matrix.ip_version
-      listener_port     = step.create_vault_cluster.listener_port
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_leader_host = step.get_vault_cluster_ips.leader_host
-      vault_root_token  = step.create_vault_cluster.root_token
-      vault_seal_type   = matrix.seal
-      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+      add_back_nodes      = true
+      cluster_port        = step.create_vault_cluster.cluster_port
+      expected_node_count = 3
+      hosts               = step.get_vault_cluster_ips.follower_hosts
+      ip_version          = matrix.ip_version
+      listener_port       = step.create_vault_cluster.listener_port
+      vault_addr          = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir   = global.vault_install_dir[matrix.artifact_type]
+      vault_leader_host   = step.get_vault_cluster_ips.leader_host
+      vault_root_token    = step.create_vault_cluster.root_token
+      vault_seal_type     = matrix.seal
+      vault_unseal_keys   = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
     }
   }
 

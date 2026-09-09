@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -132,8 +131,7 @@ func TestGitHub_WriteReadConfig_Token(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	err := os.Setenv("VAULT_AUTH_CONFIG_GITHUB_TOKEN", "foobar")
-	assert.NoError(t, err)
+	t.Setenv("VAULT_AUTH_CONFIG_GITHUB_TOKEN", "foobar")
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Path:      "config",

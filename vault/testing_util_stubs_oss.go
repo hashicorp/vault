@@ -7,19 +7,11 @@ package vault
 
 import (
 	"crypto/ed25519"
-	"testing"
 )
-
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
 func GenerateTestLicenseKeys() (ed25519.PublicKey, ed25519.PrivateKey, error) { return nil, nil, nil }
 func testGetLicensingConfig(key ed25519.PublicKey) *LicensingConfig           { return &LicensingConfig{} }
-func testExtraTestCoreSetup(testing.TB, ed25519.PrivateKey, *TestClusterCore) {}
 func testAdjustUnderlyingStorage(tcc *TestClusterCore) {
 	tcc.UnderlyingStorage = tcc.physical
 }
 func TestApplyEntBaseConfig(coreConfig, base *CoreConfig) {}
-
-// Ent specific test config for licensing
-func (c *Core) testSetTestPubKeys(config CoreConfig)       {}
-func (c *Core) testSetTestIssuerOptions(config CoreConfig) {}

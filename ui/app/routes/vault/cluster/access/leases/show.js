@@ -11,6 +11,7 @@ import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 
 export default Route.extend(UnloadModelRoute, {
+  capabilities: service(),
   store: service(),
   router: service(),
 
@@ -33,8 +34,8 @@ export default Route.extend(UnloadModelRoute, {
         lease_id,
       }),
       capabilities: hash({
-        renew: this.store.findRecord('capabilities', 'sys/leases/renew'),
-        revoke: this.store.findRecord('capabilities', 'sys/leases/revoke'),
+        renew: this.capabilities.fetchPathCapabilities('sys/leases/renew'),
+        revoke: this.capabilities.fetchPathCapabilities('sys/leases/revoke'),
         leases: this.modelFor('vault.cluster.access.leases'),
       }),
     });

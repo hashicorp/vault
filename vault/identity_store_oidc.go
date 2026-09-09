@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -32,7 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/patrickmn/go-cache"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/exp/maps"
 )
@@ -118,9 +119,9 @@ type discovery struct {
 	IDTokenAlgs   []string `json:"id_token_signing_alg_values_supported"`
 }
 
-// oidcCache is a thin wrapper around go-cache to partition by namespace
+// oidcCache is a thin wrapper around ttlcache to partition by namespace
 type oidcCache struct {
-	c *cache.Cache
+	c *ttlcache.Cache[string, any]
 }
 
 var (
@@ -1080,14 +1081,46 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		"ttl":       int64(role.TokenTTL.Seconds()),
 	}
 
-	// Track OIDC token generation for billing
-	// Store duration (seconds), normalize later during storage flush
+	// Track OIDC token generation for billing.
+	// Store duration (seconds), normalize later during storage flush.
 	validity := expiry.Seconds()
 	if i.billingCounter != nil {
-		i.billingCounter.IncrementOidcTokenCount(validity)
+		// req.MountAccessor is only set in the router's cleanup defer (after the
+		// handler returns), so we resolve the mount entry via the router instead.
+		attr := i.oidcBillingAttribution(ctx, ns, validity)
+		i.billingCounter.IncrementOidcTokenCount(validity, attr)
 	}
 
 	return retResp, nil
+}
+
+// oidcBillingAttribution builds a MountAttribution for the identity mount by
+// looking up the mount entry from the router. req.MountAccessor is not
+// available during handler execution — it is only populated in the router's
+// post-handler cleanup defer — so we resolve the mount entry directly here.
+// validitySeconds is the raw token TTL in seconds; the duration-adjusted count
+// is computed inside this function via DurationAdjustedTokenCount.
+func (i *IdentityStore) oidcBillingAttribution(ctx context.Context, ns *namespace.Namespace, validitySeconds float64) logical.MountAttribution {
+	attr := logical.MountAttribution{
+		MountPath: "identity/",
+		MountType: "identity",
+		Count:     DurationAdjustedTokenCount(validitySeconds),
+	}
+	if ns != nil {
+		attr.NamespaceID = ns.ID
+		attr.NamespacePath = ns.Path
+	}
+	if i.router != nil {
+		// Each namespace has its own identity mount at "<ns-path>identity/".
+		// MatchingMountEntry prepends the namespace path from ctx, so passing
+		// the original request context resolves the correct per-namespace mount.
+		if mountEntry := i.router.MatchingMountEntry(ctx, "identity/"); mountEntry != nil {
+			attr.MountAccessor = mountEntry.Accessor
+			attr.BackendAwareUUID = mountEntry.BackendAwareUUID
+			attr.MountRunningVersion = mountEntry.RunningVersion
+		}
+	}
+	return attr
 }
 
 func (i *IdentityStore) getNamedKey(ctx context.Context, s logical.Storage, name string) (*namedKey, error) {
@@ -2202,10 +2235,12 @@ func (i *IdentityStore) oidcPeriodicFunc(ctx context.Context, s logical.Storage)
 	}
 }
 
-func newOIDCCache(defaultExpiration, cleanupInterval time.Duration) *oidcCache {
-	return &oidcCache{
-		c: cache.New(defaultExpiration, cleanupInterval),
+func newOIDCCache(ctx context.Context, defaultTTL time.Duration, synctest bool) *oidcCache {
+	c := ttlcache.New[string, any](ttlcache.WithTTL[string, any](defaultTTL))
+	if defaultTTL > 0 {
+		cache.Start(ctx, c, !synctest)
 	}
+	return &oidcCache{c: c}
 }
 
 func (c *oidcCache) nskey(ns *namespace.Namespace, key string) string {
@@ -2216,15 +2251,18 @@ func (c *oidcCache) Get(ns *namespace.Namespace, key string) (interface{}, bool,
 	if ns == nil {
 		return nil, false, errNilNamespace
 	}
-	v, found := c.c.Get(c.nskey(ns, key))
-	return v, found, nil
+	item := c.c.Get(c.nskey(ns, key))
+	if item == nil {
+		return nil, false, nil
+	}
+	return item.Value(), true, nil
 }
 
 func (c *oidcCache) SetDefault(ns *namespace.Namespace, key string, obj interface{}) error {
 	if ns == nil {
 		return errNilNamespace
 	}
-	c.c.SetDefault(c.nskey(ns, key), obj)
+	c.c.Set(c.nskey(ns, key), obj, ttlcache.DefaultTTL)
 
 	return nil
 }

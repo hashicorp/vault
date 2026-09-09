@@ -1,0 +1,5 @@
+```release-note:improvement
+identity/scim: `externalId` is now optional on `POST /Users` and is no longer
+required to be unique within a namespace. Multiple users may share the same
+`externalId` value.
+```

@@ -4,6 +4,10 @@
  */
 
 import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { service } from '@ember/service';
+import { WIZARD_NAMESPACE_STEP1_POLICY_SELECT } from 'vault/utils/analytic-events';
+import type AnalyticsService from 'vault/services/analytics';
 
 export enum SecurityPolicy {
   FLEXIBLE = 'flexible',
@@ -14,10 +18,26 @@ interface Args {
   wizardState: {
     securityPolicyChoice: SecurityPolicy | null;
   };
+  updateWizardState: (key: string, value: unknown) => void;
 }
 
 export default class WizardNamespacesStep1 extends Component<Args> {
+  @service declare analytics: AnalyticsService;
+
   policy = SecurityPolicy;
+
+  @action
+  selectPolicy(value: SecurityPolicy) {
+    this.analytics.trackEvent(WIZARD_NAMESPACE_STEP1_POLICY_SELECT, {
+      namespace: 'namespace-wizard',
+      action: 'selected',
+      elementId: 'policy-toggle',
+      channel: 'webpage',
+      location: 'step-1',
+      object: value,
+    });
+    this.args.updateWizardState('securityPolicyChoice', value);
+  }
 
   get cardInfo() {
     const { wizardState } = this.args;

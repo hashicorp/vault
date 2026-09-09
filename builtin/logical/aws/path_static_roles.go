@@ -10,8 +10,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -69,16 +69,19 @@ func pathStaticRoles(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathStaticRolesRead,
+				Summary:   "Return the configuration for a named static IAM role.",
 				Responses: roleResponse,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathStaticRolesWrite,
+				Summary:                     "Create or update a named static IAM role.",
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
 				Responses:                   roleResponse,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback:                    b.pathStaticRolesDelete,
+				Summary:                     "Delete a named static IAM role.",
 				ForwardPerformanceSecondary: true,
 				ForwardPerformanceStandby:   true,
 				Responses: map[int][]framework.Response{
@@ -100,6 +103,7 @@ func pathListStaticRoles(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathStaticRolesList,
+				Summary:  "List the configured static IAM roles.",
 			},
 		},
 		HelpSynopsis:    pathStaticRolesHelpSyn,
@@ -355,7 +359,7 @@ func (b *backend) validateIAMUserExists(ctx context.Context, storage logical.Sto
 	b.iamClient = c
 
 	// we don't really care about the content of the result, just that it's not an error
-	out, err := c.GetUser(&iam.GetUserInput{
+	out, err := c.GetUser(ctx, &iam.GetUserInput{
 		UserName: aws.String(entry.Username),
 	})
 	if err != nil || out.User == nil {

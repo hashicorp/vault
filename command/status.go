@@ -76,11 +76,6 @@ func (c *StatusCommand) Run(args []string) int {
 		return 1
 	}
 
-	// Always query in the root namespace.
-	// Although seal-status is present in other namespaces, it will not
-	// be available until Vault is unsealed.
-	client.SetNamespace("")
-
 	status, err := client.Sys().SealStatus()
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error checking seal status: %s", err))

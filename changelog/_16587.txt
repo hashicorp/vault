@@ -1,0 +1,7 @@
+```release-note:bug
+auth/cert: Add support for x-forwarded cert headers coming from AWS ALBs.
+```
+
+```release-note:improvement
+auth/cert: Support login via x-forwarded cert headers even with tls disabled on the vault listener.
+```

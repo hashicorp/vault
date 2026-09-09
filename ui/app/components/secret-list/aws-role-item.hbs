@@ -9,8 +9,8 @@
   data-test-secret-link={{@item.id}}
   @encode={{true}}
 >
-  <div class="columns is-mobile">
-    <div class="column is-10">
+  <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+    <LF.Item @grow={{true}} @shrink={{true}}>
       <LinkTo
         @route={{concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root")}}
         @model={{@item.id}}
@@ -21,8 +21,8 @@
           <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
         </div>
       </LinkTo>
-    </div>
-    <div class="column has-text-right">
+    </LF.Item>
+    <LF.Item>
       <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
         <dd.ToggleIcon
           @icon="more-horizontal"
@@ -69,8 +69,8 @@
           {{/if}}
         {{/if}}
       </Hds::Dropdown>
-    </div>
-  </div>
+    </LF.Item>
+  </Hds::Layout::Flex>
 </LinkedBlock>
 
 {{#if this.showConfirmModal}}

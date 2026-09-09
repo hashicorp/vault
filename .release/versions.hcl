@@ -9,7 +9,7 @@
 
 schema = 1
 active_versions {
-  version "2.0.x" {
+  version "2.1.x" {
     ce_active = true
     lts       = true
   }

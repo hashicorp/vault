@@ -367,6 +367,8 @@ func Test_ActivityLog_MountDeduplication(t *testing.T) {
 		"enabled": "enable",
 	})
 	require.NoError(t, err)
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 	now := time.Now().UTC()
 
 	_, err = clientcountutil.NewActivityLogData(client).
@@ -590,6 +592,8 @@ func TestActivityLog_CountersAPI_NoErrorOnLoadingClientIDsToMemoryFlag_CE(t *tes
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
 		"enabled": "enable",
 	})
+	require.NoError(t, err)
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
 	require.NoError(t, err)
 	a := core.GetActivityLog()
 	a.SetEnable(true)

@@ -128,6 +128,24 @@ module('Integration | Component | dashboard/widgets/cluster-configuration', func
     assert.dom(GENERAL.tableData('3', 'tls value')).hasText('Enabled');
   });
 
+  test('it should show tls as enabled if tls_disable is the string false', async function (assert) {
+    this.data.listeners[0].config.tls_disable = 'false';
+    this.data.listeners[0].config.tls_cert_file = './cert.pem';
+    this.data.listeners[0].config.tls_key_file = './key.pem';
+
+    await this.renderComponent();
+    assert.dom(GENERAL.tableData('3', 'tls value')).hasText('Enabled');
+  });
+
+  test('it should show tls as disabled if tls_disable is the string true', async function (assert) {
+    this.data.listeners[0].config.tls_disable = 'true';
+    this.data.listeners[0].config.tls_cert_file = './cert.pem';
+    this.data.listeners[0].config.tls_key_file = './key.pem';
+
+    await this.renderComponent();
+    assert.dom(GENERAL.tableData('3', 'tls value')).hasText('Disabled');
+  });
+
   test('it should show tls as enabled if only cert and key exist in config', async function (assert) {
     delete this.data.listeners[0].config.tls_disable;
     this.data.listeners[0].config.tls_cert_file = './cert.pem';

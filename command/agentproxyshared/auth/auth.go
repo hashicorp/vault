@@ -14,8 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/backoff"
@@ -359,10 +359,19 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			})
 			clientToUse = wrapClient
 		}
-		for key, values := range header {
-			for _, value := range values {
-				clientToUse.AddHeader(key, value)
+		// Copy-then-Set avoids accumulating duplicate header values across
+		// re-auth cycles.
+		if len(header) > 0 {
+			h := clientToUse.Headers()
+			if h == nil {
+				h = make(http.Header)
 			}
+			for key, values := range header {
+				for _, value := range values {
+					h.Set(key, value)
+				}
+			}
+			clientToUse.SetHeaders(h)
 		}
 
 		// This should only happen if there's no preloaded token (regular auto-auth login)

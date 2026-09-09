@@ -13,6 +13,7 @@ import type { Breadcrumb } from 'vault/app-types';
 interface RouteController extends Controller {
   engineId: string;
   breadcrumbs: Array<Breadcrumb>;
+  roleName?: string;
 }
 
 export default class PkiExternalErrorRoute extends Route {
@@ -22,6 +23,8 @@ export default class PkiExternalErrorRoute extends Route {
     super.setupController(controller, resolvedModel);
     const { currentPath } = this.secretMountPath;
     controller.engineId = currentPath;
+    const { role_name } = this.paramsFor('external.roles.role');
+    controller.roleName = role_name as string;
     controller.breadcrumbs = [
       { label: 'Vault', route: 'vault', icon: 'vault', linkExternal: true },
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },

@@ -4,7 +4,6 @@
  */
 
 import { helper as buildHelper } from '@ember/component/helper';
-import ENV from 'vault/config/environment';
 
 export enum SupportedSecretBackendsEnum {
   AWS = 'aws',
@@ -27,11 +26,6 @@ export enum SupportedSecretBackendsEnum {
 }
 
 export function supportedSecretBackends() {
-  if (ENV.environment === 'production') {
-    return Object.values(SupportedSecretBackendsEnum).filter(
-      (v) => v !== SupportedSecretBackendsEnum.PKI_EXTERNAL
-    );
-  }
   return Object.values(SupportedSecretBackendsEnum);
 }
 

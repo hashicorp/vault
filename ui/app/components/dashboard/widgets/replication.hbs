@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 <div data-test-card="replication" ...attributes>
-  <div class="is-flex-between">
+  <Hds::Layout::Flex @justify="space-between" @align="center">
     <Hds::Text::Display @size="300" data-test-text-display="Cluster replication">Cluster replication</Hds::Text::Display>
 
     {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
@@ -23,7 +23,7 @@
         data-test-link-to="Enable replication"
       />
     {{/if}}
-  </div>
+  </Hds::Layout::Flex>
 
   <div class="has-top-margin-s">
     <Hds::Text::Body @tag="p" @size="100" @color="faint">
@@ -32,7 +32,7 @@
     </Hds::Text::Body>
   </div>
   {{#if (or @version.hasPerfReplication @version.hasDRReplication)}}
-    <Hds::Table class="has-top-margin-s" @caption="Vault configuration details">
+    <Hds::Table class="has-top-margin-s is-overflow-hidden" @caption="Vault configuration details">
       <:body as |B|>
         {{#if @version.hasDRReplication}}
           <B.Tr data-test-table-row="0">

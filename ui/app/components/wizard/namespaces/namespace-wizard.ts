@@ -9,6 +9,7 @@ import Component from '@glimmer/component';
 import { SecurityPolicy } from 'vault/components/wizard/namespaces/step-1';
 import { CreationMethod } from 'vault/utils/constants/snippet';
 import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import { INTRO_NAMESPACES_CTA_CLICKED, NAMESPACE_CREATED } from 'vault/utils/analytic-events';
 
 import type ApiService from 'vault/services/api';
 import type Block from 'vault/components/wizard/namespaces/step-2';
@@ -16,6 +17,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
 import type RouterService from '@ember/routing/router-service';
 import type WizardService from 'vault/services/wizard';
+import type AnalyticsService from 'vault/services/analytics';
 import type { StepConfig } from 'vault/services/wizard';
 
 const DEFAULT_STEPS: StepConfig[] = [
@@ -51,6 +53,7 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly wizard: WizardService;
+  @service declare readonly analytics: AnalyticsService;
   @service declare namespace: NamespaceService;
 
   methods = CreationMethod;
@@ -126,16 +129,42 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
 
   @action
   async onDone() {
-    await this.onDismiss();
+    await this.onDismiss({ trackExit: false });
     this.args.onFlexiblePolicyComplete();
     this.flashMessages.success(`Your current setup is 1 namespace.`, { title: 'Guided start complete' });
   }
 
   @action
-  async onDismiss() {
+  async onDismiss({ trackExit = true }: { trackExit?: boolean } = {}) {
+    if (trackExit) {
+      const isOnIntro = this.wizard.isIntroVisible(this.wizardId);
+      const CTA = isOnIntro ? (this.args.isIntroModal ? 'Close' : 'Skip') : 'Exit';
+      const location = isOnIntro ? 'intro-page' : 'wizard';
+      this.trackCtaEvent(CTA, location, 'dismissed', 'intro-dismiss-button');
+    }
     this.wizard.dismiss(this.wizardId);
     this.wizard.clearWizardState(this.wizardId);
     await this.args.onRefresh();
+  }
+
+  @action
+  trackClickEvent(cta: string) {
+    this.trackCtaEvent(cta, 'intro', 'clicked', 'intro-cta-button');
+  }
+
+  // `variation` distinguishes the modal from the full-page intro, which is
+  // otherwise only implied by the CTA label.
+  private trackCtaEvent(CTA: string, location: string, action: string, uiElement: string) {
+    this.analytics.trackEvent(INTRO_NAMESPACES_CTA_CLICKED, {
+      CTA,
+      channel: 'webpage',
+      location,
+      objectType: 'namespace',
+      variation: this.args.isIntroModal ? 'modal' : 'page',
+      uiElement,
+      type: 'Button',
+      action,
+    });
   }
 
   @action
@@ -153,7 +182,23 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
 
   @action
   onIntroChange(visible: boolean) {
+    // Hiding the intro here means the user clicked "Guided start"
+    if (!visible) {
+      this.trackClickEvent('Guided start');
+    }
     this.wizard.setIntroVisible(this.wizardId, visible);
+  }
+
+  // Namespaces have no subtype, so `object` carries the security policy choice
+  // (strict/flexible) the user selected in the wizard.
+  private trackNamespaceCreationEvent(quantity: number, successFlag: boolean) {
+    this.analytics.trackEvent(NAMESPACE_CREATED, {
+      objectType: 'namespace',
+      object: this.wizardState.securityPolicyChoice ?? undefined,
+      process: 'UI',
+      quantity,
+      successFlag,
+    });
   }
 
   @action
@@ -171,12 +216,16 @@ export default class WizardNamespacesWizardComponent extends Component<Args> {
         await this.createNamespace(namespaceName, fullPath);
       }
 
+      this.trackNamespaceCreationEvent(namespacePaths.length, true);
+
       this.flashMessages.success('Your new configuration has been applied.', { title: 'Namespaces created' });
     } catch (error) {
+      this.trackNamespaceCreationEvent(this.wizardState.namespacePaths?.length ?? 0, false);
+
       const { message } = await this.api.parseError(error);
       this.flashMessages.danger(`Error creating namespaces: ${message}`);
     } finally {
-      this.onDismiss();
+      this.onDismiss({ trackExit: false });
     }
   }
 

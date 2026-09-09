@@ -1,0 +1,3 @@
+```release-note:improvement
+core (enterprise): Add an endpoint at `sys/config/oauth-resource-server/id/:config_id` to read oauth resource server profiles by `config_id`
+```

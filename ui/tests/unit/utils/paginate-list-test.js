@@ -60,6 +60,7 @@ module('Unit | Utility | paginate-list', function (hooks) {
       prevPage: 1,
       total: 20,
       filteredTotal: 20,
+      totalItems: 20,
       pageSize: 3,
     };
     assert.deepEqual(meta, expectedMeta, 'returns correct meta data');
@@ -76,7 +77,13 @@ module('Unit | Utility | paginate-list', function (hooks) {
     const data = Array.from({ length: 20 }, (_, i) => ({ id: i, name: i < 6 ? `match-${i}` : `skip-${i}` }));
     const { meta } = paginate(data, { page: 1, pageSize: 4, filter: 'match', filterKey: 'name' });
     assert.strictEqual(meta.filteredTotal, 6, 'filteredTotal is total matching items across all pages');
+    assert.strictEqual(meta.totalItems, 6, 'totalItems equals filteredTotal when a filter is active');
     assert.strictEqual(meta.lastPage, 2, 'lastPage is based on filteredTotal');
+  });
+
+  test('totalItems equals total when no filter is applied', function (assert) {
+    const { meta } = paginate(this.items, { page: 1, pageSize: 5 });
+    assert.strictEqual(meta.totalItems, 20, 'totalItems equals total dataset size when no filter');
   });
 
   test('it should reset to page 1 when page exceeds lastPage', function (assert) {
@@ -102,5 +109,31 @@ module('Unit | Utility | paginate-list', function (hooks) {
       'currentPage in meta reflects actual page shown, not requested page'
     );
     assert.strictEqual(meta.lastPage, 4, 'lastPage is computed correctly');
+  });
+
+  test('totalItems reflects filtered count when filtering, full count otherwise', function (assert) {
+    const data = Array.from({ length: 120 }, (_, i) => `item-${i}`);
+    const expectedFilteredCount = data.filter((item) => item.toLowerCase().includes('item-1')).length;
+
+    const filtered = paginate(data, { page: 1, pageSize: 100, filter: 'item-1' });
+    assert.strictEqual(filtered.meta.total, 120, 'total is always the full unfiltered dataset size');
+    assert.strictEqual(
+      filtered.meta.filteredTotal,
+      expectedFilteredCount,
+      'filteredTotal is all matching items'
+    );
+    assert.strictEqual(
+      filtered.meta.totalItems,
+      expectedFilteredCount,
+      'totalItems equals filteredTotal when filter is active'
+    );
+    assert.strictEqual(
+      filtered.meta.lastPage,
+      Math.ceil(expectedFilteredCount / 100),
+      'lastPage is based on filtered count'
+    );
+
+    const unfiltered = paginate(data, { page: 1, pageSize: 100 });
+    assert.strictEqual(unfiltered.meta.totalItems, 120, 'totalItems equals total when no filter is applied');
   });
 });

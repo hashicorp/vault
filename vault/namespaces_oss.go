@@ -7,9 +7,14 @@ package vault
 
 import (
 	"context"
+	"errors"
 
 	"github.com/hashicorp/vault/helper/namespace"
 )
+
+func createNamespace(_ context.Context, _ *Core, _ string, _ map[string]string) (*namespace.Namespace, error) {
+	return nil, errors.New("namespaces are a Vault Enterprise feature")
+}
 
 func (c *Core) NamespaceByID(ctx context.Context, nsID string) (*namespace.Namespace, error) {
 	return namespaceByID(ctx, nsID, c)

@@ -678,14 +678,18 @@ scenario "dev_pr_replication" {
     }
 
     variables {
-      ports             = global.ports
-      ipv4_cidr         = step.create_vpc.ipv4_cidr
-      hosts             = step.create_primary_cluster_targets.hosts
-      leader_host       = step.get_primary_cluster_ips.leader_host
-      vault_addr        = step.create_primary_cluster.api_addr_localhost
-      vault_edition     = matrix.edition
-      vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_primary_cluster.root_token
+      ports                  = global.ports
+      ipv4_cidr              = step.create_vpc.ipv4_cidr
+      hosts                  = step.create_primary_cluster_targets.hosts
+      integration_host_state = null
+      kmip_enabled           = false
+      ldap_enabled           = false
+      leader_host            = step.get_primary_cluster_ips.leader_host
+      vault_addr             = step.create_primary_cluster.api_addr_localhost
+      vault_audit_log_path   = step.create_primary_cluster.audit_device_file_path
+      vault_edition          = matrix.edition
+      vault_install_dir      = local.vault_install_dir
+      vault_root_token       = step.create_primary_cluster.root_token
     }
   }
 

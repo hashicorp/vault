@@ -28,8 +28,9 @@ test('intro pages workflow', async ({ page }) => {
 
     // verify clicking enable routes to enablement page
     await page.getByRole('link', { name: 'Enable a Secret engine' }).click();
-    await expect(page.getByText('Enable secrets engine')).toBeVisible();
-    await expect(page.getByLabel('KV - enabled engine type')).toBeVisible();
+    await expect(page.getByText('Select engine type')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'View badge legend' })).toBeVisible();
+    await page.locator('label').filter({ hasText: 'KV' }).click();
 
     // navigate back to secrets intro page and click skip and verify the intro page is dismissed
     await page.getByLabel('Secrets Navigation Links').getByRole('link', { name: 'Secrets engines' }).click();
@@ -46,7 +47,7 @@ test('intro pages workflow', async ({ page }) => {
     // clicking enable from banner routes to enablement page
     await page.getByRole('button', { name: 'New to Secret engines?' }).click();
     await page.getByRole('link', { name: 'Enable a Secret engine' }).click();
-    await expect(page.getByText('Enable secrets engine')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Create a new secrets engine' })).toBeVisible();
 
     // click button and close the banner and assert the banner is closed
     await page.getByLabel('breadcrumbs').getByRole('link', { name: 'Secrets engines' }).click();
@@ -177,6 +178,29 @@ test('intro pages workflow', async ({ page }) => {
     await expect(page.getByRole('button', { name: 'New to ACL policies?' })).not.toBeVisible();
   });
 
+  await test.step('Verify agent registry intro page content and workflow', async () => {
+    await page.getByRole('link', { name: 'Back to main navigation' }).click();
+    await page.getByRole('link', { name: 'Agentic security' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Register and govern AI agent' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Register via CLI' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Skip' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View documentation' })).toBeVisible();
+    await page.getByRole('button', { name: 'Skip' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Register and govern AI agent' })).not.toBeVisible();
+    await expect(page.getByRole('button', { name: 'New to Agent registry?' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'New to Agent registry?' }).click();
+    await expect(page.getByText('Register and govern AI agent')).toBeVisible();
+    await expect(
+      page.getByLabel('Register and govern AI agent').getByRole('link', { name: 'Register via CLI' })
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Close' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Close' }).click();
+  });
+
   await test.step('cleanup', async () => {
     await page.goto('dashboard');
     await page.getByRole('link', { name: 'Access control' }).click();
@@ -190,7 +214,7 @@ test('intro pages workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Confirm' }).click();
     await page.getByRole('link', { name: 'Authentication methods' }).click();
     await page
-      .getByRole('link', { name: 'Type of auth mount userpass/' })
+      .getByRole('row', { name: 'Type of auth mount userpass/' })
       .getByLabel('Overflow options')
       .click();
     await page.getByRole('button', { name: 'Disable' }).click();

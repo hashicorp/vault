@@ -209,12 +209,14 @@ func IsJWT(token string) bool {
 
 func IsSSCToken(token string) bool {
 	return len(token) > MaxNsIdLength+TokenLength+TokenPrefixLength &&
-		strings.HasPrefix(token, consts.ServiceTokenPrefix)
+		(strings.HasPrefix(token, consts.ServiceTokenPrefix) ||
+			strings.HasPrefix(token, consts.GetSCIMTokenPrefix()))
 }
 
 func IsServiceToken(token string) bool {
 	return strings.HasPrefix(token, consts.ServiceTokenPrefix) ||
-		strings.HasPrefix(token, consts.LegacyServiceTokenPrefix)
+		strings.HasPrefix(token, consts.LegacyServiceTokenPrefix) ||
+		strings.HasPrefix(token, consts.GetSCIMTokenPrefix())
 }
 
 func IsBatchToken(token string) bool {

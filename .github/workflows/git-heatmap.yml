@@ -1,0 +1,146 @@
+name: Git Heatmap
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  # Extended regex (grep -E) of paths to drop from the heatmap: dependency
+  # manifests, changelog fragments, and generated/vendored code. None of
+  # these reflect meaningful review complexity even when edited often.
+  HEATMAP_EXCLUDE: '(^|/)(go\.(mod|sum)|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$|^changelog/.*\.txt$|^vendor/|\.pb\.go$|^website/'
+
+jobs:
+  heatmap:
+    # GITHUB_TOKEN is read-only on fork PRs, so skip those rather than fail on editing the PR description.
+    # Otherwise: run if the PR currently carries the pr/generate-heatmap label
+    # (opt-in), or if this event is that exact label being removed (so we can
+    # clean up after it). The literal label name can't be pulled from env:
+    # the env context isn't available in a job-level if.
+    if: |
+      github.event.pull_request.head.repo.fork == false &&
+      (
+        contains(github.event.pull_request.labels.*.name, 'pr/generate-heatmap') ||
+        (github.event.action == 'unlabeled' && github.event.label.name == 'pr/generate-heatmap')
+      )
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          # Always needed, even on a removal (unlabeled) event: the "Remove
+          # heatmap section" step below still has to source a script from
+          # this checkout. Full history (fetch-depth: 0) is only needed to
+          # compute the heatmap itself though, so skip that cost on removal.
+          fetch-depth: ${{ (github.event.action == 'unlabeled' && github.event.label.name == 'pr/generate-heatmap') && 1 || 0 }}
+
+      - name: Fetch base branch
+        if: github.event.action != 'unlabeled' || github.event.label.name != 'pr/generate-heatmap'
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: git fetch origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}"
+
+      - name: Cache bars
+        id: cache-bars
+        if: github.event.action != 'unlabeled' || github.event.label.name != 'pr/generate-heatmap'
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        with:
+          path: ~/.npm-global
+          # Tied to the exact pinned commit below, so a future re-pin
+          # naturally busts the cache instead of serving a stale build.
+          key: git-heatmap-bars-d2047be60a2762f09ae2ff8b8e3c517764c02dee
+
+      - name: Install bars
+        if: (github.event.action != 'unlabeled' || github.event.label.name != 'pr/generate-heatmap') && steps.cache-bars.outputs.cache-hit != 'true'
+        # A plain `npm install --global` fails on this repo's self-hosted
+        # runner (EACCES: the runner user can't write to the system-wide
+        # /usr/local/lib/node_modules). Use a user-writable prefix instead.
+        run: |
+          mkdir -p "${HOME}/.npm-global"
+          npm config set prefix "${HOME}/.npm-global"
+          npm install --global "https://github.com/jez/bars.git#d2047be60a2762f09ae2ff8b8e3c517764c02dee" # v1.2.2
+
+      - name: Add bars to PATH
+        if: github.event.action != 'unlabeled' || github.event.label.name != 'pr/generate-heatmap'
+        run: echo "${HOME}/.npm-global/bin" >> "$GITHUB_PATH"
+
+      - name: Remove heatmap section
+        if: github.event.action == 'unlabeled' && github.event.label.name == 'pr/generate-heatmap'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          source ./.github/scripts/pr-description-section.sh
+          update_pr_body_section "$REPO" "$PR_NUMBER" "<!-- git-heatmap -->" "<!-- /git-heatmap -->"
+
+      - name: Generate heatmap and update PR description
+        if: github.event.action != 'unlabeled' || github.event.label.name != 'pr/generate-heatmap'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.event.repository.name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          source ./.github/scripts/pr-description-section.sh
+
+          marker_start="<!-- git-heatmap -->"
+          marker_end="<!-- /git-heatmap -->"
+          section_file="$(mktemp)"
+          trap 'rm -f "$section_file"' EXIT
+
+          # Passed into awk as a variable rather than written literally in the
+          # awk program below: a literal backtick inside a single-quoted
+          # string that sits inside a $(...) substitution trips shellcheck's
+          # SC2016 (it can't tell the backtick is inert inside single quotes).
+          tick='`'
+          bslash=$(printf '\x5c')
+          squote=$(printf '\047')
+
+          # The if-guard (rather than a bare command substitution) keeps this
+          # step's `set -e` from aborting if the heatmap can't be computed.
+          if heatmap="$(./.github/scripts/git-heatmap.sh -b "origin/${BASE_REF}" -n 30 --width 15 --exclude "${HEATMAP_EXCLUDE}")"; then
+            # git-heatmap.sh prints "<name> | <count> | <bar>" lines sized for
+            # a terminal; reflow those into a markdown table for the PR body,
+            # linking each file to its diff. GitHub anchors a file's diff as
+            # #diff-<sha256 of its path>, hex-encoded — verified live against
+            # this PR before relying on it.
+            table_rows=""
+            n=0
+            while IFS=$'\t' read -r name count bar; do
+              n=$((n + 1))
+              hash="$(printf '%s' "$name" | sha256sum | cut -d' ' -f1)"
+              url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pull/${PR_NUMBER}/files#diff-${hash}"
+              display_name="${name//${bslash}/${bslash}${bslash}}"
+              display_name="${display_name//|/${bslash}|}"
+              display_name="${display_name//\`/${squote}}"
+              row="$(printf '| %d | [%s%s%s](%s) | %s | %s |' "$n" "$tick" "$display_name" "$tick" "$url" "$count" "$bar")"
+              table_rows="${table_rows}${row}"$'\n'
+            done < <(printf '%s\n' "$heatmap" | awk -F' \\| ' '{
+              name = $1; count = $2; bar = $3
+              gsub(/^[ \t]+|[ \t]+$/, "", name)
+              gsub(/^[ \t]+|[ \t]+$/, "", count)
+              gsub(/[ \t]+$/, "", bar)
+              printf "%s\t%s\t%s\n", name, count, bar
+            }')
+
+            printf '%s\n---\n## Git Heatmap\nShows how many times each file in this PR has been edited across the repo'"'"'s entire history. Files with higher counts should get more attention during review.\n\n<details>\n<summary>Show heatmap</summary>\n\n| # | File | Edits (all-time) | Activity |\n|---|---|---|---|\n%s\n\n<sub>Only files changed in this PR are shown. Dependency manifests, changelog fragments, and generated/vendored code are excluded since they change often but aren'"'"'t a meaningful signal here.</sub>\n\n</details>\n%s\n' "$marker_start" "$table_rows" "$marker_end" > "$section_file"
+          else
+            printf '%s\n---\n## Git Heatmap\nCould not compute a heatmap for this PR.\n%s\n' "$marker_start" "$marker_end" > "$section_file"
+          fi
+
+          update_pr_body_section "$REPO" "$PR_NUMBER" "$marker_start" "$marker_end" "$section_file"

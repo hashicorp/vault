@@ -32,6 +32,14 @@
             </FORM.Section>
           {{/if}}
 
+          {{#if this.warningMessage}}
+            <FORM.Section @isFullWidth={{true}}>
+              <Hds::Alert @type="inline" @color="warning" as |A|>
+                <A.Description>{{this.warningMessage}}</A.Description>
+              </Hds::Alert>
+            </FORM.Section>
+          {{/if}}
+
           <FORM.Section @isFullWidth={{true}}>
             <Hds::Form::TextInput::Field
               name="name"
@@ -79,7 +87,7 @@
                 <:content>
                   <CodeGenerator::AutomationSnippets
                     @cliArgs={{this.snippetArgs.cli}}
-                    @tfvpArgs={{this.snippetArgs.terraform}}
+                    @tfSnippet={{this.terraformSnippet}}
                   />
                 </:content>
               </A.Item>

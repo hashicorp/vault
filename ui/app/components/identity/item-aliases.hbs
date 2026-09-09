@@ -4,11 +4,18 @@
 }}
 
 {{#each (if @model.alias.id (array @model.alias) @model.aliases) as |item|}}
-  <LinkedBlock @params={{array "vault.cluster.access.identity.aliases.show" item.id "details"}} class="list-item-row">
-    <div class="columns is-mobile">
-      <div class="column is-10">
+  <LinkedBlock
+    @params={{array
+      (concat "vault.cluster.access.identity." (pluralize @model.identityType) ".aliases.show")
+      item.id
+      "details"
+    }}
+    class="list-item-row"
+  >
+    <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+      <LF.Item @grow={{true}} @shrink={{true}}>
         <LinkTo
-          @route="vault.cluster.access.identity.aliases.show"
+          @route={{concat "vault.cluster.access.identity." (pluralize @model.identityType) ".aliases.show"}}
           @models={{array item.id "details"}}
           class="has-text-black has-text-weight-semibold"
         >
@@ -22,11 +29,11 @@
         <span class="has-text-grey is-size-8">
           {{item.mount_accessor}}
         </span>
-      </div>
-      <div class="column has-text-right">
+      </LF.Item>
+      <LF.Item>
         <Identity::PopupAlias @item={{item}} />
-      </div>
-    </div>
+      </LF.Item>
+    </Hds::Layout::Flex>
   </LinkedBlock>
 {{else}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>

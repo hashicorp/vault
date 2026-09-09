@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -856,8 +856,10 @@ type RoleCounts struct {
 	GCPImpersonatedAccounts    int `json:"gcp_impersonated_accounts"`
 	LDAPDynamicRoles           int `json:"ldap_dynamic_roles"`
 	LDAPStaticRoles            int `json:"ldap_static_roles"`
+	LDAPLibrarySets            int `json:"ldap_library_sets"`
 	OpenLDAPDynamicRoles       int `json:"openldap_dynamic_roles"`
 	OpenLDAPStaticRoles        int `json:"openldap_static_roles"`
+	OpenLDAPLibrarySets        int `json:"openldap_library_sets"`
 	AlicloudDynamicRoles       int `json:"alicloud_dynamic_roles"`
 	RabbitMQDynamicRoles       int `json:"rabbitmq_dynamic_roles"`
 	ConsulDynamicRoles         int `json:"consul_dynamic_roles"`
@@ -867,6 +869,9 @@ type RoleCounts struct {
 	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
 	OSLocalAccountRoles        int `json:"os_local_account_static_roles"`
 	TransformRoles             int `json:"transform_roles"`
+	SSHOTPRoles                int `json:"ssh_otp_roles"`
+	SSHCARoles                 int `json:"ssh_ca_roles"`
+	SpiffeRoles                int `json:"spiffe_roles"`
 }
 
 type ManagedKeyCounts struct {
@@ -892,7 +897,7 @@ type SecretEngineResourceCounts struct {
 // GetRoleCountsForCluster returns the total role counts across all mounts for a primary or secondary cluster
 // For use in tests only
 func (c *Core) GetRoleCountsForCluster() *RoleCounts {
-	m, err := c.CountMetricsSecretMounts(false)
+	m, err := c.CountMetricsSecretMounts(false, false)
 	if err != nil {
 		return nil
 	}
@@ -904,7 +909,7 @@ func (c *Core) GetRoleCountsForCluster() *RoleCounts {
 
 // GetManagedKeyCountsForCluster returns the total managed key counts across all mounts
 func (c *Core) GetManagedKeyCountsForCluster() *ManagedKeyCounts {
-	m, err := c.CountMetricsSecretMounts(false)
+	m, err := c.CountMetricsSecretMounts(false, false)
 	if err != nil {
 		return nil
 	}
@@ -917,7 +922,7 @@ func (c *Core) GetManagedKeyCountsForCluster() *ManagedKeyCounts {
 // GetSecretEngineResourceCountsForCluster returns the total secret engine resource counts across all mounts for a primary or secondary cluster.
 // On performance secondaries, only local mounts are counted.
 func (c *Core) GetSecretEngineResourceCountsForCluster() *SecretEngineResourceCounts {
-	m, err := c.CountMetricsSecretMounts(false)
+	m, err := c.CountMetricsSecretMounts(false, false)
 	if err != nil {
 		return nil
 	}

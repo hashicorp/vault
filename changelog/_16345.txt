@@ -1,0 +1,3 @@
+```release-note:improvement
+ci (enterprise): Upload build stage duration metrics to Instana for CI observability.
+```

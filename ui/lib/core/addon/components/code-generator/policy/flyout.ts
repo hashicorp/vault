@@ -11,6 +11,7 @@ import { validate } from 'vault/utils/forms/validate';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import routerLookup from 'core/utils/router-lookup';
+import { sysPoliciesAclNameMapping } from 'vault/utils/terraform-mappings/sys-policies-acl-name-mapping';
 
 import type { HTMLElementEvent } from 'vault/forms';
 import type { PolicyData } from './builder';
@@ -40,7 +41,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
       {
         validator: ({ stanzas }) =>
           stanzas.length > 0 && stanzas.every((stanza: PolicyStanza) => stanza.isValid),
-        message: 'Invalid policy content.',
+        message: 'Path is required for each rule.',
       },
     ],
   };
@@ -51,6 +52,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   @tracked showFlyout = false;
   @tracked stanzas: PolicyStanza[] = this.defaultStanzas;
   @tracked validationErrors: ValidationMap | null = null;
+  @tracked warningMessage = '';
 
   get router(): RouterService {
     return routerLookup(this);
@@ -70,6 +72,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   @action
   handlePolicyChange({ stanzas }: PolicyData) {
     this.stanzas = stanzas;
+    this.checkCapabilities();
   }
 
   get policyContent() {
@@ -80,6 +83,12 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
     const policyName = this.policyName || '<policy name>';
     const policy = formatStanzas(this.stanzas);
     return policySnippetArgs(policyName, policy);
+  }
+
+  get terraformSnippet() {
+    const policyName = this.policyName;
+    const policies = formatStanzas(this.stanzas);
+    return sysPoliciesAclNameMapping({ name: policyName, policy: policies });
   }
 
   @task
@@ -127,6 +136,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
     if (noChanges) {
       const presetStanzas = this.computePolicyPaths();
       this.stanzas = presetStanzas ? presetStanzas : this.stanzas;
+      this.checkCapabilities();
     }
   }
 
@@ -141,6 +151,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
     this.validationErrors = null;
     this.errorMessage = '';
     this.errorDetails = [];
+    this.warningMessage = '';
   }
 
   resetFlyoutState() {
@@ -161,6 +172,15 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
 
     const routePolicyPaths = this.capabilities.lookupRoutePaths(currentRouteName);
     return routePolicyPaths ? this.presetStanzas(Array.from(routePolicyPaths)) : null;
+  }
+
+  checkCapabilities() {
+    const hasNoCapabilities = this.stanzas.every((stanza) => stanza.capabilities.size === 0);
+    if (hasNoCapabilities) {
+      this.warningMessage = 'No capabilities selected. The policy will have no permissions.';
+    } else {
+      this.warningMessage = '';
+    }
   }
 
   presetStanzas(paths: string[]) {

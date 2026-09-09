@@ -37,14 +37,10 @@ jobs:
     outputs:
       ui-go-binary-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
-      - uses: ./.github/actions/set-up-go
-        with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-
       - if: inputs.is-ent-repo == 'true'
         id: vault-auth
         name: Authenticate to Vault
@@ -59,11 +55,16 @@ jobs:
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
             kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
-      - if: inputs.is-ent-repo == 'true'
-        name: Set up Git
-        run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ inputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}
+          no-save: true
       - uses: ./.github/actions/install-tools
       - name: build-go-dev
+        env:
+          GIT_CONFIG_COUNT: ${{ inputs.is-ent-repo == 'true' && '1' || '0' }}
+          GIT_CONFIG_KEY_0: url.https://user:${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com
         run: |
           rm -rf ./pkg
           mkdir ./pkg
@@ -85,12 +86,12 @@ jobs:
     outputs:
       ui-js-bundle-artifact-id: ${{ steps.upload.outputs.artifact-id }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
       - name: Build Ember Test Bundle
         working-directory: ./ui
         run: pnpm build:jsondiffpatch && pnpm exec ember build --environment=test --output-path=dist
@@ -114,7 +115,7 @@ jobs:
       matrix:
         ci-index: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         name: status
         with:
           ref: ${{ inputs.checkout-ref }}
@@ -135,11 +136,11 @@ jobs:
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
             kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
       - name: Install Chrome
-        uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
         with:
           chrome-version: stable
       - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
+        uses: ./.github/actions/set-up-pnpm
       - name: Download Ember Test Bundle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:

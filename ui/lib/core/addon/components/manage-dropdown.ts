@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import routerLookup from 'core/utils/router-lookup';
+import { SecretsApiKvV1ListListEnum, SecretsApiKvV2ListListEnum } from '@hashicorp/vault-client-typescript';
 
 import type RouterService from '@ember/routing/router-service';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
@@ -43,13 +44,15 @@ import type FlashMessageService from 'vault/services/flash-messages';
  *
  * @param {SecretsEngineResource} model - The secrets engine resource containing the engine details
  * @param {string} configRoute - Route for the Configure action.
- * @param {string} variant - Set to "icon" for "..." icon button, otherwise shows "Manage" text button (default)
+ * @param {string} [variant] - Set to "icon" for "..." icon button, otherwise shows "Manage" text button (default)
+ * @param {boolean} [showDelete] - When true, shows the Delete menu item. Defaults to false.
  */
 
 interface Args {
   model: SecretsEngineResource;
   configRoute: string;
   variant?: 'icon';
+  showDelete?: boolean;
 }
 
 export default class ManageDropdown extends Component<Args> {
@@ -57,6 +60,7 @@ export default class ManageDropdown extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
+  @tracked secretCount: number | null = null;
 
   get router(): RouterService {
     return routerLookup(this);
@@ -70,9 +74,11 @@ export default class ManageDropdown extends Component<Args> {
     return this.args.model.id;
   }
 
-  get shouldShowDelete() {
+  @action
+  canDelete(model: SecretsEngineResource) {
+    if (!this.args.showDelete) return false;
     // Don't show delete for cubbyhole engine
-    return this.args.model.type !== 'cubbyhole';
+    return model.type !== 'cubbyhole';
   }
 
   transitionOrRefresh() {
@@ -83,13 +89,30 @@ export default class ManageDropdown extends Component<Args> {
   }
 
   @action
-  handleDeleteClick(engine: SecretsEngineResource) {
+  async handleDeleteClick(engine: SecretsEngineResource) {
     this.engineToDisable = engine;
+    this.secretCount = null;
+    const { id, isV2KV, effectiveEngineType } = engine;
+    const isKV = isV2KV || effectiveEngineType === 'kv' || effectiveEngineType === 'generic';
+    if (!isKV) return;
+    try {
+      let keys: string[] | undefined;
+      if (isV2KV) {
+        ({ keys } = await this.api.secrets.kvV2List('', id, SecretsApiKvV2ListListEnum.TRUE));
+      } else {
+        ({ keys } = await this.api.secrets.kvV1List('', id, SecretsApiKvV1ListListEnum.TRUE));
+      }
+      this.secretCount = keys?.length ?? 0;
+    } catch {
+      // count is non-critical — leave as null if list fails (e.g. no list permission)
+      this.secretCount = null;
+    }
   }
 
   @action
   handleModalClose() {
     this.engineToDisable = undefined;
+    this.secretCount = null;
   }
 
   @action
@@ -108,6 +131,7 @@ export default class ManageDropdown extends Component<Args> {
         );
       } finally {
         this.engineToDisable = undefined;
+        this.secretCount = null;
       }
     }
   }

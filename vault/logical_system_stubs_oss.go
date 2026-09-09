@@ -14,8 +14,6 @@ import (
 	"github.com/hashicorp/vault/vault/snapshots"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 type entSystemBackend struct{}
 
 func entUnauthenticatedPaths() []string {
@@ -23,6 +21,10 @@ func entUnauthenticatedPaths() []string {
 }
 
 func entBinaryPaths() []string {
+	return []string{}
+}
+
+func entLocalStoragePaths() []string {
 	return []string{}
 }
 

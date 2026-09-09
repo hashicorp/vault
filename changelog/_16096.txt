@@ -1,0 +1,3 @@
+```release-note:security
+identity: entity/name updates now reject mismatched id or external_id selectors to prevent retargeting updates to a different entity
+```

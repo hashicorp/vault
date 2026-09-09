@@ -268,7 +268,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		req.PathLimited = true
 	}
 
-	if passHTTPReq {
+	if passHTTPReq || strings.HasPrefix(path, "identity/scim/") {
 		req.HTTPRequest = r
 	}
 	if responseWriter != nil {

@@ -58,7 +58,7 @@ $console-close-height: 35px;
   input {
     background-color: rgba(hsl(0, 0%, 4%), 0.5);
     border: 1px solid var(--token-color-palette-neutral-500);
-    border-radius: var(--token-side-nav-body-list-item-border-radius);
+    border-radius: var(--token-border-radius-small);
     caret-color: hsl(0, 0%, 100%);
     color: hsl(0, 0%, 100%);
     flex: 1 1 auto;

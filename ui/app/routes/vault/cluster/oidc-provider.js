@@ -33,15 +33,10 @@ export default class VaultClusterOidcProviderRoute extends Route {
     const qp = transition.to.queryParams;
     // remove redirect_to if carried over from auth
     qp.redirect_to = null;
-    if (!currentToken && 'none' === qp.prompt?.toLowerCase()) {
-      this._redirect(qp.redirect_uri, {
-        state: qp.state,
-        error: 'login_required',
-      });
-    } else if (!currentToken || 'login' === qp.prompt?.toLowerCase()) {
+    if (!currentToken || 'login' === qp.prompt?.toLowerCase()) {
+      // For prompt=login we also need to clear prompt to avoid an infinite loop.
       const logout = !!currentToken;
       if ('login' === qp.prompt?.toLowerCase()) {
-        // need to remove before redirect to avoid infinite loop
         qp.prompt = null;
       }
       return this._redirectToAuth({

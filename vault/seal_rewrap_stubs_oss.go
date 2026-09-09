@@ -5,8 +5,6 @@
 
 package vault
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 func stopPartialSealRewrapping(c *Core) {
 	// nothing to do
 }

@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
@@ -241,15 +241,26 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	var actorEntity *identity.Entity
-	if IsOAuthJwt(req.ClientToken) {
+	if IsOAuthJwt(req.ClientToken) && !req.OAuthJwtValidated {
 		isValidEnterpriseJwt, tokenMetadataContainer, entity, jwtActor, chosenProfile, err := c.validateOAuthJwtAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate jwt", "error", err)
 		}
+
 		if !isValidEnterpriseJwt {
+			// currently only internal error and error missing from agent registration required have dedicated
+			// error body and http code, everything else gets normalize into "permission denied" with http code 403
+			// when reaching back to client
+			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) {
+				return nil, nil, nil, nil, err
+			}
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
-		req.JwtUniqueId = getJwtUniqueId(tokenMetadataContainer)
+		req.JwtUniqueId, err = getJwtUniqueIDFromProfile(tokenMetadataContainer, chosenProfile)
+		if err != nil {
+			c.logger.Error("failed to extract unique ID from JWT", "error", err)
+			return nil, nil, nil, nil, fmt.Errorf("invalid JWT: %w", err)
+		}
 		req.JwtIssuer = getJwtIssuer(tokenMetadataContainer)
 		req.JwtTransactionClaim = getJwtTransaction(tokenMetadataContainer)
 		req.JwtAudienceClaim = getJwtAudience(tokenMetadataContainer)
@@ -263,18 +274,14 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			}
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing jwt"))
 		}
+		req.OAuthJwtValidated = true
 	}
-
 	// Resolve the token policy
 	var te *logical.TokenEntry
 	switch req.TokenEntry() {
 	case nil:
 		var err error
-		if IsOAuthJwt(req.ClientToken) {
-			te, err = c.tokenStore.Lookup(ctx, getOAuthJwtId(req.JwtUniqueId))
-		} else {
-			te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
-		}
+		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
@@ -356,13 +363,6 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		if err != nil {
 			return nil, nil, nil, nil, err
 		}
-		allowOnly, err := c.allPoliciesAllowOnly(ctx, actorEntityIdentityPolicies)
-		if err != nil {
-			return nil, nil, nil, nil, ErrInternalError
-		}
-		if !allowOnly {
-			return nil, nil, nil, nil, logical.ErrPermissionDenied
-		}
 		// Store second entity policies separately - do NOT merge with primary entity's policies
 		for nsID, nsPolicies := range actorEntityIdentityPolicies {
 			actorEntityPolicyNames[nsID] = policyutil.SanitizePolicies(nsPolicies, false)
@@ -390,13 +390,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// Add the inline policy if it's set
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
-		}
-		if duplicate {
-			c.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 	}
@@ -410,6 +406,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	if actorEntity != nil {
+		req.ActorEntityID = actorEntity.ID
 		newAcl, err := c.performDelegationTokenChecks(tokenCtx, acl, actorEntity, actorEntityPolicyNames)
 		if err != nil {
 			return nil, nil, nil, nil, err
@@ -461,7 +458,27 @@ func requiresMaterializedTokenState(path string) bool {
 	case "auth/token/lookup-self", "auth/token/lookup":
 		return true
 	}
-	return strings.HasPrefix(path, "cubbyhole/")
+	if strings.HasPrefix(path, "cubbyhole/") {
+		return true
+	}
+	// The UI paths below are unauthenticated but re-fetch the token entry
+	// inside their handlers to build ACL context for hasMountAccess /
+	// entPathInternalUINamespacesRead. Non-storage-backed JWT tokens must be
+	// materialized before routing so the handler can look them up by ID.
+	//
+	// sys/internal/ui/mounts (exact) — pathInternalUIMountsRead: lists all
+	// mounts visible to the caller; called by the Vault UI sidebar after login.
+	//
+	// sys/internal/ui/mounts/* (prefix) — pathInternalUIMountRead: used by the
+	// CLI preflight request issued by `vault kv put/get`.
+	//
+	// sys/internal/ui/namespaces (exact) — entPathInternalUINamespacesRead:
+	// lists namespaces accessible to the caller; called by the Vault UI
+	// namespace picker after login.
+	if path == "sys/internal/ui/mounts" || path == "sys/internal/ui/namespaces" {
+		return true
+	}
+	return strings.HasPrefix(path, "sys/internal/ui/mounts/")
 }
 
 // CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
@@ -711,7 +728,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	c.activityLogLock.RUnlock()
 	// If it is an authenticated ( i.e. with vault token ) request, increment client count
 	if !unauth && activityLog != nil {
-		err := activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		err := activityLog.HandleUsage(ctx, te, clientID, isTWE, auth.ActorEntityID)
 		if err != nil {
 			return auth, te, err
 		}
@@ -1000,7 +1017,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
+	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth && !(IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
@@ -1221,8 +1238,44 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	var auth *logical.Auth
 	var te *logical.TokenEntry
 	var ctErr error
-	// Validate the token
-	auth, te, ctErr = c.CheckToken(ctx, req, false)
+
+	// Normalize identity group/entity name paths to lowercase before the ACL
+	// check. The identity store resolves names case-insensitively but ACL paths
+	// are matched case-sensitively, allowing deny policies to be bypassed by
+	// altering the case of the name segment. The original path is restored
+	// after the ACL check so downstream handlers receive the caller's original
+	// casing.
+	originalPath := req.Path
+	for _, prefix := range []string{
+		"identity/group/name/",
+		"identity/entity/name/",
+	} {
+		if strings.HasPrefix(req.Path, prefix) {
+			req.Path = prefix + strings.ToLower(req.Path[len(prefix):])
+			break
+		}
+	}
+
+	// Validate the token. OAuth JWT requests on unauthenticated paths that
+	// require a materialized token entry (sys/internal/ui/mounts,
+	// sys/internal/ui/namespaces) are routed here rather than to
+	// handleLoginRequest so that the full JWT validation and materialization
+	// flow runs. For those requests we preserve the "unauth" semantics — ACL
+	// policy enforcement is skipped just as it would be in handleLoginRequest,
+	// because the path is publicly accessible and pathInternalUIMountRead
+	// performs its own hasMountAccess check.
+	//
+	// Using requiresMaterializedTokenState rather than isActiveOAuthJwt here
+	// means the routing decision is path-driven rather than flag-driven. This
+	// avoids the activation-flag read lock on the hot path and correctly
+	// handles the case where a SPIFFE JWT arrives with the OAuth flag enabled:
+	// auth/spiffe/login is not in requiresMaterializedTokenState, so it still
+	// routes to handleLoginRequest as intended.
+	unauth := c.isLoginRequest(ctx, req) && IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)
+	auth, te, ctErr = c.CheckToken(ctx, req, unauth)
+	// Restore the original path so downstream handlers (and audit logs) see
+	// the caller's original casing, not the normalized form.
+	req.Path = originalPath
 	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
@@ -1654,7 +1707,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
-			case logical.TokenTypeService:
+			case logical.TokenTypeService, logical.TokenTypeSCIM:
 				if !c.perfStandby {
 					registeredTokenEntry := &logical.TokenEntry{
 						TTL:         auth.TTL,
@@ -2722,7 +2775,7 @@ func (c *Core) registerAuthLeaseForToken(ctx context.Context, te *logical.TokenE
 	case logical.TokenTypeBatch:
 		// Ensure it's not marked renewable since it isn't
 		auth.Renewable = false
-	case logical.TokenTypeService, logical.TokenTypeEnt:
+	case logical.TokenTypeService, logical.TokenTypeEnt, logical.TokenTypeSCIM:
 		if auth.TokenType == logical.TokenTypeEnt {
 			// Ensure it's not marked renewable since enterprise tokens are not renewable
 			auth.Renewable = false
@@ -2986,11 +3039,12 @@ func DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return nil, fmt.Errorf("not service token")
 	}
 
-	// Consider the suffix of the token only when unmarshalling
+	// Consider the suffix of the token only when unmarshalling.
+	// Both "hvs." and "scm." are 4 characters, so token[4:] strips either prefix.
 	suffixToken := token[4:]
 
 	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
@@ -3015,7 +3069,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return token, nil
 	}
 	// Check token length to guess if this is an server side consistent token or not.
@@ -3091,70 +3145,4 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
 	// status code.
 	return "", logical.ErrMissingRequiredState
-}
-
-// allPoliciesAllowOnly is a helper function that checks if all policies in
-// a given set have only "allow" capabilities, and not "deny" or "sudo".
-//
-// Example of allow-only policy:
-//
-//	path "secret/data/team/public/*" {
-//	  capabilities = ["read"]
-//	}
-//
-// Example of a policy that is not allow-only:
-//
-//	path "secret/data/team/*" {
-//	  capabilities = ["read"]
-//	}
-//
-//	path "secret/data/team/private/*" {
-//	  capabilities = ["deny"]
-//	}
-func (c *Core) allPoliciesAllowOnly(ctx context.Context, policyNamesByNamespace map[string][]string) (bool, error) {
-	for nsID, policyNames := range policyNamesByNamespace {
-		policyNS, err := NamespaceByID(ctx, nsID, c)
-		if err != nil {
-			return false, err
-		}
-		if policyNS == nil {
-			return false, namespace.ErrNoNamespace
-		}
-
-		policyCtx := namespace.ContextWithNamespace(ctx, policyNS)
-		for _, policyName := range policyNames {
-			policy, err := c.policyStore.GetPolicy(policyCtx, policyName, PolicyTypeACL)
-			if err != nil {
-				return false, err
-			}
-			if policy == nil {
-				return false, fmt.Errorf("policy %q not found in namespace %q", policyName, policyNS.Path)
-			}
-			if !policyIsAllowOnly(policy) {
-				return false, nil
-			}
-		}
-	}
-
-	return true, nil
-}
-
-// policyIsAllowOnly is a helper function that checks if a policy has only "allow" capabilities, and not "deny" or "sudo".
-func policyIsAllowOnly(policy *Policy) bool {
-	if policy == nil || policy.Name == "root" {
-		return false
-	}
-
-	for _, pathRules := range policy.Paths {
-		if pathRules == nil || pathRules.Permissions == nil {
-			continue
-		}
-
-		capabilities := pathRules.Permissions.CapabilitiesBitmap
-		if capabilities&DenyCapabilityInt != 0 || capabilities&SudoCapabilityInt != 0 {
-			return false
-		}
-	}
-
-	return true
 }

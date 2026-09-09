@@ -28,8 +28,8 @@ export class PolicyStanza {
   }
 
   get isValid() {
-    // Stanza must have a non-empty path and capabilities selected to be valid
-    return !this.invalidCapabilities && !this.invalidPath;
+    // Path is required for each stanza to be valid; capabilities are optional
+    return !this.invalidPath;
   }
 
   // These getters return an error message when invalid and an empty string when valid.
@@ -41,7 +41,7 @@ export class PolicyStanza {
 
   get invalidPath() {
     const isValid = typeof this.path === 'string' && this.path.trim().length > 0;
-    return isValid ? '' : 'Path cannot be empty.';
+    return isValid ? '' : 'Path is required.';
   }
 }
 
@@ -50,6 +50,7 @@ export const formatStanzas = (stanzas: PolicyStanza[]) => stanzas.map((s) => s.p
 export const policySnippetArgs = (policyName: string, policy: string) => {
   const formattedPolicy = formatEot(policy);
   const resourceArgs = { name: `"${policyName}"`, policy: formattedPolicy };
+
   return {
     terraform: { resource: 'vault_policy', resourceArgs },
     cli: { command: `policy write ${policyName}`, content: `- ${formattedPolicy}` },

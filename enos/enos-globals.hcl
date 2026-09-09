@@ -295,6 +295,12 @@ globals {
     "Project" : "Enos",
     "Environment" : "ci"
   }, var.tags)
+
+  aws_api_config = {
+    max_retries      = 5
+    default_timeout  = "5m"
+    resource_timeout = "10m"
+  }
   vault_install_dir = {
     bundle  = "/opt/vault/bin"
     package = "/usr/bin"

@@ -10,9 +10,9 @@
 >
   <div class="level is-mobile">
     <div class="level-left">
-      <div class="is-flex-row">
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
         <Hds::Icon @size="24" @name={{@model.icon}} class="has-text-grey" data-test-mfa-method-list-icon={{@model.type}} />
-        <div>
+        <LF.Item @grow={{true}} @shrink={{true}}>
           <span class="has-text-weight-semibold has-text-black">
             {{@model.displayName}}
           </span>
@@ -25,8 +25,8 @@
               </code>
             </div>
           {{/if}}
-        </div>
-      </div>
+        </LF.Item>
+      </Hds::Layout::Flex>
     </div>
     <div class="level-right is-flex is-paddingless is-marginless">
       <div class="level-item">

@@ -24,7 +24,6 @@ import (
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
 	"github.com/hashicorp/vault/command/agent"
 	proxyConfig "github.com/hashicorp/vault/command/proxy/config"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -237,8 +236,13 @@ func TestProxy_NoTriggerAutoAuth_BadPolicy(t *testing.T) {
 
 	serverClient := cluster.Cores[0].Client
 
+	err := serverClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
+
 	// Add a secret to the KV engine
-	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{"user": "something"})
+	_, err = serverClient.Logical().Write("secret/foo", map[string]interface{}{"user": "something"})
 	require.NoError(t, err)
 
 	// Create kv read policy
@@ -269,8 +273,6 @@ auto_auth {
     }
 	sink "file" {
 		config = {
-			# TODO (HCL_DUP_KEYS_DEPRECATION): remove duplicate attribute below
-			path = ""
 			path = "%s"
 		}
 	}
@@ -299,17 +301,27 @@ auto_auth {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Start proxy
-	ui, cmd := testProxyCommand(t, proxyLogger)
+	_, cmd := testProxyCommand(t, proxyLogger)
 	cmd.startedCh = make(chan struct{})
 
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 		cmd.Run([]string{"-config", configPath})
 		wg.Done()
 	}()
@@ -319,11 +331,6 @@ auto_auth {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timeout")
 	}
-
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Eventually remove this check together with the duplicate attribute in this
-	// test's configuration
-	require.Contains(t, ui.ErrorWriter.String(),
-		"WARNING: Duplicate keys found")
 
 	// Validate that the auto-auth token has been correctly attained
 	// and works for LookupSelf
@@ -447,8 +454,19 @@ auto_auth {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Start proxy
 	_, cmd := testProxyCommand(t, proxyLogger)
@@ -597,8 +615,19 @@ auto_auth {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Start proxy
 	_, cmd := testProxyCommand(t, proxyLogger)
@@ -782,8 +811,19 @@ api_proxy {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Start proxy
 	_, cmd := testProxyCommand(t, proxyLogger)
@@ -969,8 +1009,19 @@ api_proxy {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Start proxy
 	_, cmd := testProxyCommand(t, proxyLogger)
@@ -1161,8 +1212,19 @@ api_proxy {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Start proxy
 	_, cmd := testProxyCommand(t, logger)
@@ -1232,8 +1294,19 @@ func TestProxy_APIProxyWithoutCache_UserAgent(t *testing.T) {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -1316,8 +1389,19 @@ func TestProxy_APIProxyWithCache_UserAgent(t *testing.T) {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	listenAddr := generateListenerAddress(t)
 	listenConfig := fmt.Sprintf(`
@@ -1391,8 +1475,19 @@ func TestProxy_Cache_DynamicSecret(t *testing.T) {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	cacheConfig := `
 cache {
@@ -1495,8 +1590,19 @@ func TestProxy_NoAutoAuthTokenIfNotConfigured(t *testing.T) {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	// Create token file
 	tokenFileName := makeTempFile(t, "token-file", serverClient.Token())
@@ -1620,10 +1726,26 @@ func TestProxy_ApiProxy_Retry(t *testing.T) {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	os.Unsetenv(api.EnvVaultAddress)
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
-	_, err := serverClient.Logical().Write("secret/foo", map[string]interface{}{
+	err := serverClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
+
+	_, err = serverClient.Logical().Write("secret/foo", map[string]interface{}{
 		"bar": "baz",
 	})
 	if err != nil {
@@ -1820,11 +1942,19 @@ func TestProxy_QuitAPI(t *testing.T) {
 
 	// Unset the environment variable so that proxy picks up the right test
 	// cluster address
-	defer os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
-	err := os.Unsetenv(api.EnvVaultAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// t.Setenv can't represent "unset" - it always leaves the var present,
+	// even with an empty value - and code that reads it via os.LookupEnv
+	// (rather than checking for an empty string) would treat that as
+	// explicitly set. Capture prior state and restore it via Cleanup instead.
+	origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+	require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
+	t.Cleanup(func() {
+		if hadAddr {
+			os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+		} else {
+			os.Unsetenv(api.EnvVaultAddress)
+		}
+	})
 
 	listenAddr := generateListenerAddress(t)
 	listenAddr2 := generateListenerAddress(t)
@@ -2268,10 +2398,20 @@ vault {
 			// In CI our tests are run with VAULT_ADDR=, which will break our tests
 			// because it'll default to an unset address. Ensure that's cleared out
 			// of the environment.
+			// t.Setenv can't represent "unset" - it always leaves the var present,
+			// even with an empty value - and code that reads it via os.LookupEnv
+			// (rather than checking for an empty string) would treat that as
+			// explicitly set. Capture prior state and restore it via Cleanup instead.
+			origAddr, hadAddr := os.LookupEnv(api.EnvVaultAddress)
+			require.NoError(t, os.Unsetenv(api.EnvVaultAddress))
 			t.Cleanup(func() {
-				os.Setenv(api.EnvVaultAddress, os.Getenv(api.EnvVaultAddress))
+				if hadAddr {
+					os.Setenv(api.EnvVaultAddress, origAddr) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- restoring original state inside t.Cleanup; t.Setenv cannot express "restore to absent"
+				} else {
+					os.Unsetenv(api.EnvVaultAddress)
+				}
 			})
-			os.Unsetenv(api.EnvVaultAddress)
+
 			for k, v := range test.envVars {
 				t.Setenv(k, v)
 			}

@@ -60,6 +60,8 @@
     </D.Interactive>
 
   {{/if}}
+  <D.Interactive @route="vault.cluster.user-preferences" {{on "click" D.close}} data-test-popup-menu="user-preferences">User
+    preferences</D.Interactive>
   <D.Interactive @route="vault.cluster.logout" @model={{this.currentCluster.cluster.name}} data-test-user-menu-item="logout">
     Log out
   </D.Interactive>

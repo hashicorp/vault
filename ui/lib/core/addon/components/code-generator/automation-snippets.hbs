@@ -4,11 +4,10 @@
 }}
 
 {{#if (gt this.tabs.length 1)}}
-  <Hds::Tabs @onClickTab={{this.handleTabChange}} as |T|>
+  <Page::Tabs @tabs={{this.tabs}} @onClickTab={{this.handleTabChange}} as |T|>
     {{! key="key" tells Ember to track each tab by its key property rather than array index. }}
     {{! This prevents the tabs from re-rendering and jarring page flashes when this.tabs recalculates. }}
     {{#each this.tabs key="key" as |tab|}}
-      <T.Tab data-test-tab={{tab.key}}>{{tab.label}}</T.Tab>
       <T.Panel data-test-panel={{tab.key}} class="has-top-padding-m">
         <Hds::CodeBlock
           @language={{or tab.language "hcl"}}
@@ -19,7 +18,7 @@
         />
       </T.Panel>
     {{/each}}
-  </Hds::Tabs>
+  </Page::Tabs>
 {{else}}
   {{! Just render code block outside of tabs}}
   {{#each this.tabs as |tab|}}

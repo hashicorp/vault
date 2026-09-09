@@ -10,7 +10,9 @@ import Component from '@glimmer/component';
 import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 import errorMessage from 'vault/utils/error-message';
 import { PolicyTypes } from 'core/utils/code-generators/policy';
+import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
 
+import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
@@ -33,6 +35,7 @@ interface Args {
 }
 
 export default class PagePoliciesComponent extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
@@ -158,6 +161,13 @@ export default class PagePoliciesComponent extends Component<Args> {
 
   @action
   showIntroPage() {
+    this.analytics.trackEvent(INTRO_REOPEN_CLICKED, {
+      namespace: 'intro-page',
+      action: 'clicked',
+      elementId: 'intro-reopen-button',
+      channel: 'webpage',
+      objectType: 'acl-policy',
+    });
     // Reset the wizard dismissal state to allow re-entering the wizard
     this.wizard.reset(this.wizardId);
     this.shouldRenderIntroModal = true;

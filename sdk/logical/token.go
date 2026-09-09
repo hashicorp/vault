@@ -38,6 +38,9 @@ const (
 
 	TokenTypeEnt
 
+	// TokenTypeSCIM is used by external IDPs for SCIM API access.
+	TokenTypeSCIM
+
 	// ClientIDTWEDelimiter Delimiter between the string fields used to generate a client
 	// ID for tokens without entities. This is the 0 character, which
 	// is a non-printable string. Please see unicode.IsPrint for details.
@@ -71,6 +74,8 @@ func (t *TokenType) UnmarshalJSON(b []byte) error {
 		*t = TokenTypeDefaultBatch
 	case `"ent"`:
 		*t = TokenTypeEnt
+	case `"scim"`:
+		*t = TokenTypeSCIM
 	default:
 		return fmt.Errorf("unknown token type %q", s)
 	}

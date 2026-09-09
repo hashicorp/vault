@@ -102,23 +102,6 @@ func (b *SystemBackend) activationFlagsPaths() []*framework.Path {
 			HelpSynopsis:    helpSynopsis,
 			HelpDescription: helpDescription,
 		},
-		{
-			Pattern: fmt.Sprintf("%s/%s/%s", prefixActivationFlags, activationflags.SCIMEnablement, verbActivationFlagsActivate),
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: prefixActivationFlags,
-				OperationVerb:   verbActivationFlagsActivate,
-			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                    b.handleActivationFlagsActivate,
-					ForwardPerformanceSecondary: true,
-					ForwardPerformanceStandby:   true,
-					Summary:                     summaryUpdate,
-				},
-			},
-			HelpSynopsis:    helpSynopsis,
-			HelpDescription: helpDescription,
-		},
 	}
 }
 

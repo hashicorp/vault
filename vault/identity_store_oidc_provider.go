@@ -2157,10 +2157,14 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenServerError, err.Error())
 	}
 
-	// Track OIDC token generated for billing
-	// Store duration (seconds), normalize later during storage flush
+	// Track OIDC token generated for billing.
+	// Store duration (seconds), normalize later during storage flush.
 	if i.billingCounter != nil {
-		i.billingCounter.IncrementOidcTokenCount(getMaxTokenTTL(client.AccessTokenTTL, client.IDTokenTTL).Seconds())
+		// req.MountAccessor is only set in the router's cleanup defer (after the
+		// handler returns), so we resolve the mount entry via the router instead.
+		validity := getMaxTokenTTL(client.AccessTokenTTL, client.IDTokenTTL).Seconds()
+		attr := i.oidcBillingAttribution(ctx, ns, validity)
+		i.billingCounter.IncrementOidcTokenCount(validity, attr)
 	}
 
 	return tokenResponse(map[string]interface{}{

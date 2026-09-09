@@ -15,6 +15,7 @@
  * @isWriteWithoutRead={{isWriteWithoutRead}}
  * @secretDataIsAdvanced={{secretDataIsAdvanced}}
  * @showAdvancedMode={{showAdvancedMode}}
+ * @editorFormat={{editorFormat}}
  * @modelForData={{this.modelForData}}
  * @canUpdateSecret={{canUpdateSecret}}
  * @editActions={{hash
@@ -29,6 +30,7 @@
  * @param {boolean} isWriteWithoutRead - boolean describing permissions
  * @param {boolean} secretDataIsAdvanced - used to determine if show JSON toggle
  * @param {boolean} showAdvancedMode - used for JSON toggle
+ * @param {string} editorFormat - determines editor format as JSON or YAML
  * @param {object} modelForData - a modified version of the model with secret data
  * @param {boolean} canUpdateSecret - permissions to hide/show edit secret button.
  * @param {object} editActions - actions passed from parent to child

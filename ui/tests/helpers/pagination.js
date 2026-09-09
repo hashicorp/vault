@@ -5,6 +5,8 @@
 
 export const STANDARD_META = {
   total: 2,
+  filteredTotal: 2,
+  totalItems: 2,
   currentPage: 1,
   pageSize: 100,
 };

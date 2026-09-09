@@ -59,10 +59,10 @@ module('Integration | Component | policy-form-modal', function (hooks) {
     await this.renderComponent();
 
     await fillIn(GENERAL.selectByAttr('policyType'), 'acl');
-    assert.dom('[data-test-tab-your-policy]').exists('renders policy tab when type is selected');
+    assert.dom(GENERAL.hdsTab('your-policy')).exists('renders policy tab when type is selected');
     assert.dom('[data-test-policy-form]').exists('renders policy form when tab is active');
 
-    await click('[data-test-tab-example-policy]');
+    await click(GENERAL.hdsTab('example-policy'));
     assert.dom('[data-test-policy-example]').exists('renders policy example when tab is selected');
   });
 

@@ -61,7 +61,6 @@
         <G.CheckboxField
           checked={{this.hasCapability capability}}
           @value={{capability}}
-          @isInvalid={{and @renderValidations @stanza.invalidCapabilities}}
           {{on "input" this.setPermissions}}
           data-test-checkbox={{capability}}
           as |F|
@@ -69,9 +68,6 @@
           <F.Label data-test-form-field-label={{capability}}>{{capability}}</F.Label>
         </G.CheckboxField>
       {{/each}}
-      {{#if (and @renderValidations @stanza.invalidCapabilities)}}
-        <G.Error data-test-validation-error="capabilities-{{@index}}">{{@stanza.invalidCapabilities}}</G.Error>
-      {{/if}}
     </Hds::Form::Checkbox::Group>
   {{/if}}
 

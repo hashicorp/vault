@@ -6,9 +6,10 @@ package aws
 import (
 	"context"
 	"fmt"
+	"net/http"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -26,8 +27,17 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathConfigRotateRootUpdate,
+				Summary:                     "Rotate the root IAM credentials used by Vault for this secrets mount.",
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"access_key": {Type: framework.TypeString, Description: "New access key ID of the rotated root IAM credential."},
+						},
+					}},
+				},
 			},
 		},
 
@@ -70,7 +80,7 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 	}
 
 	var getUserInput iam.GetUserInput // empty input means get current user
-	getUserRes, err := client.GetUserWithContext(ctx, &getUserInput)
+	getUserRes, err := client.GetUser(ctx, &getUserInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling GetUser: %w", err)
 	}
@@ -87,7 +97,7 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 	createAccessKeyInput := iam.CreateAccessKeyInput{
 		UserName: getUserRes.User.UserName,
 	}
-	createAccessKeyRes, err := client.CreateAccessKeyWithContext(ctx, &createAccessKeyInput)
+	createAccessKeyRes, err := client.CreateAccessKey(ctx, &createAccessKeyInput)
 	if err != nil {
 		return nil, fmt.Errorf("error calling CreateAccessKey: %w", err)
 	}
@@ -118,7 +128,7 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 		AccessKeyId: aws.String(oldAccessKey),
 		UserName:    getUserRes.User.UserName,
 	}
-	_, err = client.DeleteAccessKeyWithContext(ctx, &deleteAccessKeyInput)
+	_, err = client.DeleteAccessKey(ctx, &deleteAccessKeyInput)
 	if err != nil {
 		return nil, fmt.Errorf("error deleting old access key: %w", err)
 	}

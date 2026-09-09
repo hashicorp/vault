@@ -27,6 +27,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -1683,6 +1684,57 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
 }
 
+// TestAcmeRevokeReasonCode verifies that ACME certificate revocation correctly forwards the
+// reason code to Vault's revocation engine. A valid reason code (keyCompromise=1) must be
+// stored in the revocation entry, while an invalid reason code (7, which is
+// reserved/unused in RFC 5280) must be rejected with a badRevocationReason ACME error.
+func TestAcmeRevokeReasonCode(t *testing.T) {
+	t.Parallel()
+
+	cluster, vaultClient, _ := setupAcmeBackend(t)
+
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Issue two certs under the same account: one for the invalid-reason test, one for
+	// the valid-reason test.
+	acct, leafKey, certs := doACMEWorkflow(t, vaultClient, acmeClient)
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert bytes")
+
+	_, badCerts := doACMEOrderWorkflow(t, vaultClient, acmeClient, acct)
+
+	// Revoke with an invalid reason code (7 is unused/reserved per RFC 5280).
+	err = acmeClient.RevokeCert(testCtx, leafKey, badCerts[0], acme.CRLReasonCode(7))
+	require.Error(t, err, "expected error revoking with invalid reason code 7")
+	acmeErr, ok := err.(*acme.Error)
+	require.True(t, ok, "expected *acme.Error, got %T: %v", err, err)
+	require.Equal(t, "urn:ietf:params:acme:error:badRevocationReason", acmeErr.ProblemType)
+
+	// Revoke with a valid reason code: keyCompromise (1).
+	err = acmeClient.RevokeCert(testCtx, leafKey, certs[0], acme.CRLReasonKeyCompromise)
+	require.NoError(t, err, "failed to revoke certificate with keyCompromise reason")
+
+	// Verify the reason code was stored in the revocation entry via sys/raw.
+	pkiMount := findStorageMountUuid(t, vaultClient, "pki")
+	rawPath := path.Join("sys/raw/logical/", pkiMount, "revoked/", normalizeSerial(serialFromCert(acmeCert)))
+	rawResp, err := vaultClient.WithNamespace("").Logical().ReadWithContext(testCtx, rawPath)
+	require.NoError(t, err, "failed reading raw revocation entry")
+	require.NotNil(t, rawResp, "raw revocation entry was nil")
+	require.NotEmpty(t, rawResp.Data["value"], "raw revocation entry value was empty")
+
+	var revInfo revocation.RevocationInfo
+	err = jsonutil.DecodeJSON([]byte(rawResp.Data["value"].(string)), &revInfo)
+	require.NoError(t, err, "failed decoding raw revocation entry")
+	require.Equal(t, 1, revInfo.ReasonCode, "expected ReasonCode to be 1 (keyCompromise)")
+}
+
 // TestAcmeMaxTTL verify that we can update the ACME configuration's max_ttl value and
 // get a certificate that has a higher notAfter beyond the 90 day original limit
 func TestAcmeMaxTTL(t *testing.T) {
@@ -1919,7 +1971,7 @@ func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 }
 
 func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl string, key crypto.Signer) *acme.Client {
-	coreAddr := cluster.Cores[0].Listeners[0].Address
+	coreAddr := cluster.Cores[0].APIAddress()
 	tlsConfig := cluster.Cores[0].TLSConfig()
 
 	transport := cleanhttp.DefaultPooledTransport()

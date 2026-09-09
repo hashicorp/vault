@@ -4,7 +4,9 @@
 }}
 {{#if @isModal}}
   <Hds::Modal id={{@title "-intro-modal"}} @size="large" @onClose={{@onDismiss}} class="modal" ...attributes as |M|>
-    <M.Header>Welcome to {{@title}} </M.Header>
+    <M.Header>
+      {{or @customHeader (concat "Welcome to " @title)}}
+    </M.Header>
     <M.Body>
       <Hds::Layout::Flex @align="start" @gap="48">
         {{yield to="body"}}
@@ -17,8 +19,7 @@
 {{else}}
   <Hds::Card::Container @level="mid" @hasBorder={{true}} class="full" ...attributes>
     <Hds::Text::Display @tag="h1" @size="400" @weight="bold" class="has-bottom-margin-xs">
-      Welcome to
-      {{@title}}
+      {{or @customHeader (concat "Welcome to " @title)}}
     </Hds::Text::Display>
     <Hds::Layout::Grid @columnWidth="50%" @gap="16">
       {{yield to="body"}}

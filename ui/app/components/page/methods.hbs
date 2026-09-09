@@ -4,7 +4,7 @@
 }}
 
 {{#if this.showPageHeader}}
-  <Page::Header @title="Authentication methods">
+  <Page::Header @title="Authentication methods" @icon="lock">
     <:breadcrumbs>
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
     </:breadcrumbs>
@@ -25,6 +25,12 @@
           data-test-button="intro"
         />
       {{/if}}
+      <Hds::Button
+        @text="Enable new method"
+        @icon="plus"
+        @route="vault.cluster.settings.auth.enable"
+        data-test-auth-enable
+      />
     </:actions>
   </Page::Header>
 {{/if}}
@@ -34,68 +40,86 @@
 {{/if}}
 
 {{#if this.showContent}}
-  <Toolbar>
-    <ToolbarFilters>
-      <SearchSelect
-        @id="filter-by-auth-type"
-        @options={{this.authMethodArrayByType}}
-        @selectLimit="1"
-        @disallowNewItems={{true}}
-        @fallbackComponent="input-search"
-        @onChange={{this.filterAuthType}}
-        @placeholder={{"Filter by auth type"}}
-        @displayInherit={{true}}
-        @inputValue={{if this.selectedAuthType (array this.selectedAuthType)}}
-        @disabled={{if this.selectedAuthName true false}}
-        class="is-marginless"
-      />
-      <SearchSelect
-        @id="filter-by-auth-name"
-        @options={{this.authMethodArrayByName}}
-        @selectLimit="1"
-        @disallowNewItems={{true}}
-        @fallbackComponent="input-search"
-        @onChange={{this.filterAuthName}}
-        @placeholder={{"Filter by auth name"}}
-        @displayInherit={{true}}
-        @inputValue={{if this.selectedAuthName (array this.selectedAuthName)}}
-        class="is-marginless has-left-padding-s"
-      />
-    </ToolbarFilters>
-    <ToolbarActions>
-      <ToolbarLink @route="vault.cluster.settings.auth.enable" @type="add" data-test-auth-enable>
-        Enable new method
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
+  {{! Filters Section }}
+  <Hds::SegmentedGroup class="top-margin-12" as |SG|>
+    <SG.TextInput
+      @width="300px"
+      @type="search"
+      placeholder="Search by name"
+      aria-label="Search"
+      data-test-input-search="auth-method-name"
+      {{on "input" (fn this.setSearchText "name")}}
+    />
+    <SG.Dropdown @width="175px" as |D|>
+      <D.Header @hasDivider={{true}}>
+        <SG.TextInput
+          @type="search"
+          placeholder="Search"
+          aria-label="Search"
+          {{on "input" (fn this.setSearchText "type")}}
+        />
+      </D.Header>
+      <D.ToggleButton @color="secondary" @text="Auth type" data-test-toggle-input="filter-by-auth-type" />
+      {{#each this.authMethodArrayByType as |type|}}
+        <D.Checkbox
+          value={{type.name}}
+          checked={{includes type.name this.authTypeFilters}}
+          {{on "click" (fn this.filterByAuthType type.name)}}
+          data-test-checkbox={{type.name}}
+        > <Hds::Icon @name={{type.icon}} @isInline={{true}} class="is-v-centered" /> {{type.name}}</D.Checkbox>
+      {{/each}}
+    </SG.Dropdown>
+  </Hds::SegmentedGroup>
 
-  {{#each (this.sortMethods this.authMethodList) as |method|}}
-    <LinkedBlock
-      @params={{array "vault.cluster.access.method" method.id}}
-      class="list-item-row"
-      data-test-linked-block={{or method.id method.accessor}}
-    >
-      <div class="level is-mobile">
-        <div>
-          <div class="is-grid align-items-center linked-block-title">
+  <Hds::Layout::Flex @gap="8" class="has-top-margin-xs has-bottom-margin-xs" @align="center">
+    {{#if this.authTypeFilters}}
+      <Hds::Text::Body>Filters applied:</Hds::Text::Body>
+      {{#each this.authTypeFilters as |type|}}
+        <Hds::Tag @text={{type}} @onDismiss={{fn this.filterByAuthType type}} data-test-button={{type}} />
+      {{/each}}
+      <Hds::Button
+        @text="Clear all"
+        @color="tertiary"
+        @icon="x"
+        @size="small"
+        data-test-button="Clear all"
+        {{on "click" this.clearAllFilters}}
+      />
+    {{else}}
+      <Hds::Text::Body class="has-top-padding-xs">No filters applied.</Hds::Text::Body>
+    {{/if}}
+  </Hds::Layout::Flex>
+  {{! End Filters Section }}
+
+  {{! Table Section }}
+  {{#if this.authMethodList}}
+    <ListTable class="has-top-margin-xs" @columns={{this.tableColumns}} @data={{this.authMethodList}}>
+      <:customTableItem as |itemData|>
+        {{#let (this.getAuthMethodData itemData.path) as |method|}}
+          {{#if method}}
             <Hds::TooltipButton
               @text={{method.methodType}}
               aria-label="Type of auth mount"
               data-test-button={{method.methodType}}
+              isInline={{true}}
+              class="is-v-centered"
             >
-              <Icon @name={{method.icon}} class="has-text-grey-light" />
+              <Icon @name={{if method.icon method.icon "lock"}} class="has-text-grey-light" />
             </Hds::TooltipButton>
-            <span class="has-text-weight-semibold has-text-black overflow-wrap">
-              {{method.path}}
-            </span>
-            <br />
-            <code class="has-text-grey is-size-8">
-              {{method.accessor}}
-            </code>
-          </div>
-        </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
+            <Hds::Link::Inline
+              @route="vault.cluster.access.method"
+              @model={{method.id}}
+              @color="secondary"
+              class="has-text-weight-semibold"
+              data-test-link-to={{method.path}}
+            >{{method.path}}</Hds::Link::Inline>
+          {{/if}}
+        {{/let}}
+      </:customTableItem>
+
+      <:popupMenu as |rowData|>
+        {{#let (this.getAuthMethodData rowData.path) as |method|}}
+          {{#if method}}
             <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
               <dd.ToggleIcon
                 @icon="more-horizontal"
@@ -134,15 +158,15 @@
                 </dd.Interactive>
               {{/if}}
             </Hds::Dropdown>
-          </div>
-        </div>
-      </div>
-    </LinkedBlock>
+          {{/if}}
+        {{/let}}
+      </:popupMenu>
+    </ListTable>
   {{else}}
     <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
       <A.Header @title="No Authentication Methods found" @titleTag="h2" data-test-empty-state-title />
     </Hds::ApplicationState>
-  {{/each}}
+  {{/if}}
 
   {{#if this.methodToDisable}}
     <ConfirmModal

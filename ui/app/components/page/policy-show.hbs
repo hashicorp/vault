@@ -76,7 +76,7 @@
     <A.Item data-test-accordion="Automation snippets">
       <:toggle>Automation snippets</:toggle>
       <:content>
-        <CodeGenerator::AutomationSnippets @cliArgs={{this.snippetArgs.cli}} @tfvpArgs={{this.snippetArgs.terraform}} />
+        <CodeGenerator::AutomationSnippets @cliArgs={{this.snippetArgs.cli}} @tfSnippet={{this.terraformSnippet}} />
       </:content>
     </A.Item>
   </Hds::Accordion>

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { service } from '@ember/service';
 import { action } from '@ember/object';
 import Route from '@ember/routing/route';
+import { service } from '@ember/service';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export default class VaultClusterDashboardRoute extends Route {
@@ -13,6 +13,7 @@ export default class VaultClusterDashboardRoute extends Route {
   @service namespace;
   @service version;
   @service api;
+  @service('checklist-state') checklistState;
 
   async getVaultConfiguration(hasChroot) {
     try {
@@ -44,6 +45,22 @@ export default class VaultClusterDashboardRoute extends Route {
     const secretsEngines = this.api
       .responseObjectToArray(secret, 'path')
       .map((engine) => new SecretsEngineResource(engine));
+
+    const isChecklistNamespaceScope = this.namespace.inRootNamespace && !hasChroot;
+
+    if (
+      this.version.isEnterprise &&
+      isChecklistNamespaceScope &&
+      this.checklistState.hasChecklistEntryAccess
+    ) {
+      // Fetch persisted checklist state; isAvailable is set to false on 403/404/5xx so
+      // the component degrades gracefully without blocking the rest of the page.
+      try {
+        await this.checklistState.fetchState.perform();
+      } catch {
+        // Any unexpected error from the checklist fetch must not block page render.
+      }
+    }
 
     return {
       replication,

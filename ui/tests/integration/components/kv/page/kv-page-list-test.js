@@ -25,6 +25,7 @@ module('Integration | Component | kv-v2 | Page::List', function (hooks) {
       prevPage: 1,
       total: 5,
       filteredTotal: 5,
+      totalItems: 5,
       pageSize: 3,
     };
     this.secrets = ['secret-1', 'my-path/', 'secret-2'];

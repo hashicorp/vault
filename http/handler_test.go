@@ -896,8 +896,12 @@ func testNonPrintable(t *testing.T, disable bool) {
 func TestHandler_Parse_Form(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
+		NumCores:    1,
 	})
 	cores := cluster.Cores
+	client := cores[0].Client
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	c := cleanhttp.DefaultClient()
 	c.Transport = &http.Transport{
@@ -920,21 +924,14 @@ func TestHandler_Parse_Form(t *testing.T) {
 	req.Header.Set("x-vault-token", cluster.RootToken)
 	req.Header.Set("content-type", "application/x-www-form-urlencoded")
 	resp, err := c.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if resp.StatusCode != 204 {
 		t.Fatalf("bad response: %#v\nrequest was: %#v\nurl was: %#v", *resp, *req, req.URL)
 	}
 
-	client := cores[0].Client
-	client.SetToken(cluster.RootToken)
-
 	apiResp, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if apiResp == nil {
 		t.Fatal("api resp is nil")
 	}

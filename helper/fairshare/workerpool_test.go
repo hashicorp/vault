@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+// TestFairshare_newDispatcher verifies that a new dispatcher is created with
+// the correct configuration and initial state.
 func TestFairshare_newDispatcher(t *testing.T) {
 	testCases := []struct {
 		name               string
@@ -50,6 +52,8 @@ func TestFairshare_newDispatcher(t *testing.T) {
 	}
 }
 
+// TestFairshare_createDispatcher verifies that the dispatcher creation process
+// properly initializes all required components and worker pools.
 func TestFairshare_createDispatcher(t *testing.T) {
 	testCases := []struct {
 		name               string
@@ -114,6 +118,8 @@ func TestFairshare_createDispatcher(t *testing.T) {
 	}
 }
 
+// TestFairshare_initDispatcher verifies that dispatcher initialization sets up
+// the worker pool and job channels correctly.
 func TestFairshare_initDispatcher(t *testing.T) {
 	testCases := []struct {
 		numWorkers int
@@ -143,6 +149,8 @@ func TestFairshare_initDispatcher(t *testing.T) {
 	}
 }
 
+// TestFairshare_initializeWorker verifies that individual workers are properly
+// initialized with the correct configuration and channels.
 func TestFairshare_initializeWorker(t *testing.T) {
 	numWorkers := 3
 
@@ -168,6 +176,8 @@ func TestFairshare_initializeWorker(t *testing.T) {
 	}
 }
 
+// TestFairshare_startWorker verifies that workers can be started and begin
+// processing jobs from their assigned channels.
 func TestFairshare_startWorker(t *testing.T) {
 	d := newDispatcher("", 1, newTestLogger("workerpool-test"))
 
@@ -201,6 +211,8 @@ func TestFairshare_startWorker(t *testing.T) {
 	}
 }
 
+// TestFairshare_start verifies that the dispatcher can be started and all
+// workers begin processing jobs correctly.
 func TestFairshare_start(t *testing.T) {
 	numJobs := 10
 	var wg sync.WaitGroup
@@ -236,6 +248,8 @@ func TestFairshare_start(t *testing.T) {
 	}
 }
 
+// TestFairshare_stop verifies that the dispatcher can be stopped cleanly,
+// shutting down all workers and cleaning up resources.
 func TestFairshare_stop(t *testing.T) {
 	d := newDispatcher("", 5, newTestLogger("workerpool-test"))
 
@@ -258,6 +272,8 @@ func TestFairshare_stop(t *testing.T) {
 	}
 }
 
+// TestFairshare_stopMultiple verifies that calling stop multiple times on a
+// dispatcher is safe and doesn't cause panics or errors.
 func TestFairshare_stopMultiple(t *testing.T) {
 	d := newDispatcher("", 5, newTestLogger("workerpool-test"))
 
@@ -305,6 +321,8 @@ func TestFairshare_stopMultiple(t *testing.T) {
 	}
 }
 
+// TestFairshare_dispatch verifies that jobs are correctly dispatched to
+// available workers and processed in the expected order.
 func TestFairshare_dispatch(t *testing.T) {
 	d := newDispatcher("", 1, newTestLogger("workerpool-test"))
 
@@ -348,6 +366,8 @@ func TestFairshare_dispatch(t *testing.T) {
 	}
 }
 
+// TestFairshare_jobFailure verifies that the dispatcher handles job failures
+// gracefully and continues processing subsequent jobs.
 func TestFairshare_jobFailure(t *testing.T) {
 	numJobs := 10
 	testErr := fmt.Errorf("test error")
@@ -390,6 +410,8 @@ func TestFairshare_jobFailure(t *testing.T) {
 	}
 }
 
+// TestFairshare_nilLoggerDispatcher verifies that the dispatcher can operate
+// correctly even when initialized with a nil logger.
 func TestFairshare_nilLoggerDispatcher(t *testing.T) {
 	d := newDispatcher("test-job-mgr", 1, nil)
 	if d.logger == nil {

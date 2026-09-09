@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Bump pnpm.overrides entry for `tmp` from 0.2.6 to 0.2.7.
+```

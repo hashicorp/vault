@@ -12,15 +12,34 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
+
+// syncedBuffer is a thread-safe wrapper.
+// The idea is to reuse the same buffer for multiple tests
+type syncedBuffer struct {
+	mu  sync.Locker
+	buf *bytes.Buffer
+}
+
+func (b *syncedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+func (b *syncedBuffer) Reset() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.buf.Reset()
+}
 
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
 	conf := &CoreConfig{
 		DisableCache: disableCache,
 	}
+	// ignore-vault-test-core-usage
 	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
 	ps := core.policyStore
 
@@ -486,52 +505,33 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 
 // TestPolicyStore_DuplicateAttributes checks the behaviour of the policyStore.ACL method when it finds a templated
 // policy with duplicate attributes
-// TODO (HCL_DUP_KEYS_DEPRECATION): change this test to expect an error. Will need to manually create the policy since
-// ParseACLPolicy will fail on duplicate attributes.
 func TestPolicyStore_DuplicateAttributes(t *testing.T) {
-	logOut := new(bytes.Buffer)
-	conf := &CoreConfig{
-		Logger: log.New(&log.LoggerOptions{
-			Mutex:  &sync.Mutex{},
-			Level:  log.Warn,
-			Output: logOut,
-		}),
-	}
-	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+	core, _, _ := TestCoreUnsealed(t)
 	ps := core.policyStore
+
 	dupAttrPolicy := aclPolicy + `
 path "foo" {
 	capabilities = ["list"]
 	capabilities = ["read"]
 }
 `
-	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-	policy, err := ParseACLPolicy(namespace.RootNamespace, dupAttrPolicy, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
-	require.NoError(t, err)
-	// check that "list" and "read" get concatenated
-	require.Len(t, policy.Paths[len(policy.Paths)-1].Capabilities, 2)
-	policy.Templated = true
-	require.NoError(t, err)
+	// ParseACLPolicy now rejects duplicate attributes, so construct the policy manually
+	// to store the duplicate raw text and verify that re-parsing it fails.
+	policy := &Policy{
+		Name:      "dev",
+		Type:      PolicyTypeACL,
+		Templated: true,
+		Raw:       dupAttrPolicy,
+		namespace: namespace.RootNamespace,
+	}
 	ctx := namespace.RootContext(context.Background())
-	err = ps.SetPolicy(ctx, policy)
+	err := ps.SetPolicy(ctx, policy)
 	require.NoError(t, err)
 
-	logOut.Reset()
-	_, err = ps.ACL(ctx, nil, map[string][]string{namespace.RootNamespace.ID: {"dev", "ops"}})
-	require.NoError(t, err)
-	require.Contains(t, logOut.String(), "HCL policy contains duplicate attributes, which will no longer be supported in a future version")
-
-	ps.tokenPoliciesLRU.Purge()
-	logOut.Reset()
-	p, err := ps.GetPolicy(ctx, "dev", PolicyTypeACL)
-	require.NotNil(t, p)
-	require.NoError(t, err)
-	require.Contains(t, logOut.String(), "HCL policy contains duplicate attributes, which will no longer be supported in a future version")
-
-	t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
 	_, err = ps.ACL(ctx, nil, map[string][]string{namespace.RootNamespace.ID: {"dev", "ops"}})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "error parsing templated policy \"dev\": failed to parse policy: The argument \"capabilities\" at 61:2 was already set. Each argument can only be defined once")
+
 	ps.tokenPoliciesLRU.Purge()
 	_, err = ps.GetPolicy(ctx, "dev", PolicyTypeACL)
 	require.Error(t, err)
@@ -584,15 +584,21 @@ path "foo" {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			logMu := &sync.Mutex{}
 			logOut := new(bytes.Buffer)
 			conf := &CoreConfig{
 				Logger: log.New(&log.LoggerOptions{
-					Mutex:  &sync.Mutex{},
+					Mutex:  logMu,
 					Level:  log.Warn,
 					Output: logOut,
 				}),
 			}
+			// ignore-vault-test-core-usage
 			core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+			syncedLog := &syncedBuffer{
+				mu:  logMu,
+				buf: logOut,
+			}
 			ps := core.policyStore
 
 			// First policy
@@ -605,18 +611,18 @@ path "foo" {
 			require.NoError(t, err)
 
 			if tc.expectLog {
-				require.Contains(t, logOut.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
+				require.Contains(t, syncedLog.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
 			} else {
-				require.NotContains(t, logOut.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
+				require.NotContains(t, syncedLog.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
 			}
 
 			// Reset log output and add a second policy
-			logOut.Reset()
+			syncedLog.Reset()
 			err = ps.SetPolicy(ctx, parsedPolicy)
 			require.NoError(t, err)
 
 			// Ensure no additional log is generated for the second policy
-			require.NotContains(t, logOut.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
+			require.NotContains(t, syncedLog.String(), "you're using 'allowed_parameters' or 'denied_parameters' in one or more policies")
 		})
 	}
 }

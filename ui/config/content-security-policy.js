@@ -16,6 +16,11 @@ module.exports = function (environment) {
   };
 
   policy['connect-src'].push('https://eu.i.posthog.com');
+  // Segment event pipeline and integration bundle fetches
+  policy['connect-src'].push('https://api.segment.io');
+  policy['connect-src'].push('https://cdn.segment.com');
+  // Amplitude integration bundle — loaded at runtime by Segment from cdn.segment.com
+  policy['script-src'].push('https://cdn.segment.com');
 
   if (environment === 'test' || environment === 'development') {
     policy['style-src'].push("'unsafe-inline'");

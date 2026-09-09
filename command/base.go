@@ -61,6 +61,7 @@ type BaseCommand struct {
 	flagDisableRedirects  bool
 	flagWrapTTL           time.Duration
 	flagUnlockKey         string
+	flagTPMStateDir       string
 
 	flagFormat           string
 	flagField            string
@@ -80,11 +81,6 @@ type BaseCommand struct {
 	flagSnapshotID string
 
 	client *api.Client
-
-	// hclDuplicateKeysWarningPrinted tracks if a command execution has already printed the warning, to avoid printing
-	// it multiple times on a single execution.
-	// TODO (HCL_DUP_KEYS_DEPRECATION): remove this once we don't use the warning anymore
-	hclDuplicateKeysWarningPrinted bool
 }
 
 // Client returns the HTTP API client. The client is cached on the command to
@@ -276,14 +272,10 @@ func (c *BaseCommand) TokenHelper() (tokenhelper.TokenHelper, error) {
 	if c.tokenHelper != nil {
 		return c.tokenHelper, nil
 	}
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to DefaultTokenHelper once duplicates are forbidden
-	helper, duplicates, err := cliconfig.DefaultTokenHelperCheckDuplicates()
+
+	helper, err := cliconfig.DefaultTokenHelper()
 	if err != nil {
 		return nil, err
-	}
-	if duplicates && !c.hclDuplicateKeysWarningPrinted {
-		c.hclDuplicateKeysWarningPrinted = true
-		c.UI.Warn("WARNING: Duplicate keys found in the Vault token helper configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 	}
 	return helper, nil
 }
@@ -584,6 +576,12 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Target:  &c.flagNonInteractive,
 				Default: false,
 				Usage:   "When set true, prevents asking the user for input via the terminal.",
+			})
+			f.StringVar(&StringVar{
+				Name:    "tpm-state-dir",
+				Target:  &c.flagTPMStateDir,
+				Default: ".",
+				Usage:   "Sets where to write the cert and associated files. Default is working directory",
 			})
 
 		}

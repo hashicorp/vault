@@ -133,6 +133,10 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 
 	dockerImageTagSupportsRSA1   = "8.1_p1-r0-ls20"
 	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
+
+	// dockerImageTagFIPS pins OpenSSH 9.0, which matches the environment
+	// reported in vault/issues/15488.
+	dockerImageTagFIPS = "9.0_p1-r2-ls104"
 )
 
 var caObservationFields = []string{
@@ -146,6 +150,20 @@ var caObservationFields = []string{
 var ctx = context.Background()
 
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
+	return prepareTestContainerWithConfig(t, tag, caPublicKeyPEM, "")
+}
+
+// prepareTestContainerFIPS starts an OpenSSH container configured to only
+// accept rsa-sha2-256-cert-v01@openssh.com and rsa-sha2-512-cert-v01@openssh.com,
+// simulating a FIPS-like crypto policy that explicitly excludes ssh-rsa-cert-v01@openssh.com.
+//
+// OpenSSH 9.0 uses PubkeyAcceptedAlgorithms and CASignatureAlgorithms.
+func prepareTestContainerFIPS(t *testing.T, caPublicKeyPEM string) (func(), string) {
+	return prepareTestContainerWithConfig(t, dockerImageTagFIPS, caPublicKeyPEM,
+		"PubkeyAcceptedAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp256-cert-v01@openssh.com,ecdsa-sha2-nistp384,ecdsa-sha2-nistp384-cert-v01@openssh.com,ecdsa-sha2-nistp521,ecdsa-sha2-nistp521-cert-v01@openssh.com,ssh-ed25519,ssh-ed25519-cert-v01@openssh.com,rsa-sha2-256,rsa-sha2-256-cert-v01@openssh.com,rsa-sha2-512,rsa-sha2-512-cert-v01@openssh.com\nCASignatureAlgorithms ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521,rsa-sha2-256,rsa-sha2-512")
+}
+
+func prepareTestContainerWithConfig(t *testing.T, tag, caPublicKeyPEM string, extraSSHDConfig string) (func(), string) {
 	if tag == "" {
 		tag = dockerImageTagSupportsNoRSA1
 	}
@@ -180,13 +198,23 @@ func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), str
 		// Install util-linux for non-busybox flock that supports timeout option
 		err = testSSH("vaultssh", sshAddress, ssh.PublicKeys(signer), fmt.Sprintf(`
 			set -e;
-			sudo ln -s /config /home/vaultssh
-			sudo apk add util-linux;
+			if command -v apk >/dev/null 2>&1; then
+				sudo apk add util-linux;
+			elif command -v apt-get >/dev/null 2>&1; then
+				sudo apt-get update;
+				sudo DEBIAN_FRONTEND=noninteractive apt-get install -y util-linux;
+			fi;
 			echo "LogLevel DEBUG" | sudo tee -a /config/ssh_host_keys/sshd_config;
 			echo "TrustedUserCAKeys /config/ssh_host_keys/trusted-user-ca-keys.pem" | sudo tee -a /config/ssh_host_keys/sshd_config;
-			kill -HUP $(cat /config/sshd.pid)
+			%s
+			sudo kill -HUP $(cat /config/sshd.pid)
 			echo "%s" | sudo tee /config/ssh_host_keys/trusted-user-ca-keys.pem
-		`, caPublicKeyPEM))
+		`, func() string {
+			if extraSSHDConfig != "" {
+				return fmt.Sprintf(`echo "%s" | sudo tee -a /config/ssh_host_keys/sshd_config;`, extraSSHDConfig)
+			}
+			return ""
+		}(), caPublicKeyPEM))
 		if err != nil {
 			return nil, err
 		}
@@ -957,8 +985,59 @@ func TestSSHBackend_CA(t *testing.T) {
 	}
 }
 
+// TestSSHBackend_CA_FIPS reproduces the scenario from vault/issues/15488:
+// an sshd configured with a FIPS-like policy that only accepts
+// rsa-sha2-256-cert-v01@openssh.com and rsa-sha2-512-cert-v01@openssh.com,
+// explicitly excluding the deprecated ssh-rsa-cert-v01@openssh.com.
+func TestSSHBackend_CA_FIPS(t *testing.T) {
+	testCases := []struct {
+		name         string
+		caPublicKey  string
+		caPrivateKey string
+		algoSigner   string
+		expectError  bool
+	}{
+		{
+			// Default should succeed: Vault signs with rsa-sha2-256 which the
+			// FIPS policy accepts as rsa-sha2-256-cert-v01@openssh.com.
+			"RSAKey_DefaultAlgoSigner",
+			testCAPublicKey,
+			testCAPrivateKey,
+			"default",
+			false,
+		},
+		{
+			// rsa-sha2-256 explicit should also succeed.
+			"RSAKey_RSASHA2256AlgoSigner",
+			testCAPublicKey,
+			testCAPrivateKey,
+			ssh.KeyAlgoRSASHA256,
+			false,
+		},
+		{
+			// ssh-rsa (SHA-1) should fail: excluded by FIPS policy.
+			"RSAKey_RSA1AlgoSigner",
+			testCAPublicKey,
+			testCAPrivateKey,
+			ssh.SigAlgoRSA,
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cleanup, sshAddress := prepareTestContainerFIPS(t, tc.caPublicKey)
+			testSSHBackend_CAWithAddress(t, cleanup, sshAddress, tc.caPublicKey, tc.caPrivateKey, tc.algoSigner, tc.expectError)
+		})
+	}
+}
+
 func testSSHBackend_CA(t *testing.T, dockerImageTag, caPublicKey, caPrivateKey, algorithmSigner string, expectError bool) {
 	cleanup, sshAddress := prepareTestContainer(t, dockerImageTag, caPublicKey)
+	testSSHBackend_CAWithAddress(t, cleanup, sshAddress, caPublicKey, caPrivateKey, algorithmSigner, expectError)
+}
+
+func testSSHBackend_CAWithAddress(t *testing.T, cleanup func(), sshAddress, caPublicKey, caPrivateKey, algorithmSigner string, expectError bool) {
 	defer cleanup()
 	config := logical.TestBackendConfig()
 	obsRecorder := observations.NewTestObservationRecorder()

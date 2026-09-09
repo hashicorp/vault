@@ -30,12 +30,14 @@ import { tracked } from '@glimmer/tracking';
 import KVObject from 'vault/lib/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import { alias, or } from '@ember/object/computed';
+import { dump } from 'js-yaml';
 
 export default class SecretEdit extends Component {
   @service store;
 
   @tracked secretData = null;
   @tracked editorString = null;
+  @tracked editorFormat = 'json';
 
   breadcrumbs = [
     { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
@@ -107,6 +109,10 @@ export default class SecretEdit extends Component {
     return this.secretDataIsAdvanced || this.args.preferAdvancedEdit;
   }
 
+  get getSecretsDataInYAML() {
+    return dump(this.secretDataAsJSON, { noRefs: true });
+  }
+
   get isWriteWithoutRead() {
     if (!this.args.model) {
       return false;
@@ -126,5 +132,16 @@ export default class SecretEdit extends Component {
   @action
   toggleAdvanced(bool) {
     this.args.onToggleAdvancedEdit(bool);
+  }
+
+  @action
+  setView(format) {
+    // 'ui' shows the key/value form; 'json'/'yaml' show the advanced editor
+    if (format === 'ui') {
+      this.toggleAdvanced(false);
+    } else {
+      this.editorFormat = format;
+      this.toggleAdvanced(true);
+    }
   }
 }

@@ -250,7 +250,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
 		b.Logger().Error("failed to track transit hmac request count", "error", err.Error())
 	}
 
@@ -426,7 +426,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		}
 	}
 
-	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
 		b.Logger().Error("failed to track transit hmac verify request count", "error", err.Error())
 	}
 

@@ -16,7 +16,7 @@ test('mfa workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Enable method' }).click();
     await page.getByRole('button', { name: 'Update options' }).click();
 
-    await page.getByRole('link', { name: 'Type of auth mount userpass/' }).click();
+    await page.getByRole('link', { name: 'userpass/' }).click();
     await page.getByLabel('toolbar actions').getByRole('link', { name: 'Create user' }).click();
     await page.getByRole('textbox', { name: 'Username' }).fill('bob');
     await page.getByRole('textbox', { name: 'password', exact: true }).fill('bobpassword');
@@ -46,7 +46,7 @@ test('mfa workflow', async ({ page }) => {
 
     await expect(page.getByText('Issuer mfa-totp-issuer')).toBeVisible();
     await expect(page.getByText('Period 5 minutes')).toBeVisible();
-    await expect(page.getByText('Digits TOTP code length. 6')).toBeVisible();
+    await expect(page.getByText('Digits 6')).toBeVisible();
     await expect(page.getByText('Enable self-enrollment No')).toBeVisible();
     await page.getByRole('link', { name: 'Enforcements' }).click();
     await expect(page.getByRole('link', { name: 'mfa-totp-enforcement' })).toBeVisible();
@@ -85,7 +85,11 @@ test('mfa workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'Delete' }).click();
     await page.getByRole('textbox', { name: 'Type mfa-totp-enforcement' }).fill('mfa-totp-enforcement');
     await page.getByLabel('Delete enforcement?').getByRole('button', { name: 'Delete' }).click();
+    // wait for each transition to settle before clicking on - navigating while the delete
+    // transition is still in flight lands on the not found route
+    await expect(page).toHaveURL(/access\/mfa\/enforcements$/);
     await page.getByRole('link', { name: 'Methods', exact: true }).click();
+    await expect(page).toHaveURL(/access\/mfa\/methods$/);
     await page.getByRole('link', { name: 'TOTP' }).click();
     await page.getByRole('link', { name: 'Configuration' }).click();
     await page.getByRole('button', { name: 'Delete' }).click();
@@ -93,7 +97,7 @@ test('mfa workflow', async ({ page }) => {
 
     await page.getByRole('link', { name: 'Authentication methods' }).click();
     await page
-      .getByRole('link', { name: 'Type of auth mount userpass/' })
+      .getByRole('row', { name: 'Type of auth mount userpass/' })
       .getByLabel('Overflow options')
       .click();
     await page.getByRole('button', { name: 'Disable' }).click();

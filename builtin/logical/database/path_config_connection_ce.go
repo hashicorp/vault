@@ -226,6 +226,12 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 			}
 		}
 
+		// Warn if a custom username_template references untrusted DisplayName
+		// without bounding its length via truncate.
+		if w := displayNameTemplateWarning(config.ConnectionDetails); w != "" {
+			resp.AddWarning(w)
+		}
+
 		// If using a legacy DB plugin and set the `password_policy` field, send a warning to the user indicating
 		// the `password_policy` will not be used
 		if dbw.isV4() && config.PasswordPolicy != "" {
@@ -367,6 +373,11 @@ func (b *databaseBackend) connectionReadHandler() framework.OperationFunc {
 		delete(config.ConnectionDetails, "service_account_json")
 
 		resp := &logical.Response{}
+
+		// Warn if a username_template references untrusted DisplayName without bounding its length via truncate.
+		if w := displayNameTemplateWarning(config.ConnectionDetails); w != "" {
+			resp.AddWarning(w)
+		}
 		if dbi, err := b.GetConnectionSkipVerify(ctx, req.Storage, name); err == nil {
 			config.RunningPluginVersion = dbi.runningPluginVersion
 			if config.PluginVersion != "" && config.PluginVersion != config.RunningPluginVersion {

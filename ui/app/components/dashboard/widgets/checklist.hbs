@@ -1,0 +1,114 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div ...attributes data-test-widget="checklist">
+  <Hds::Layout::Flex @align="center" @justify="space-between" class="has-bottom-margin-xs">
+    <Hds::Layout::Flex @align="center" @gap="8">
+      <Hds::Icon @name="rocket" @color="primary" />
+      <Hds::Text::Display @size="300">{{@checklist.title}}</Hds::Text::Display>
+    </Hds::Layout::Flex>
+    {{#if this.visibleStepCount}}
+      <Hds::Text::Body @size="100" @color="faint" data-test-checklist-progress-label>
+        {{this.progressPercent}}%
+      </Hds::Text::Body>
+    {{/if}}
+  </Hds::Layout::Flex>
+
+  {{#if this.visibleStepCount}}
+    <progress
+      class="progress is-small is-info has-bottom-margin-m"
+      value={{this.completedCount}}
+      max={{this.visibleStepCount}}
+      data-test-checklist-progress
+    >{{this.completedCount}}/{{this.visibleStepCount}}</progress>
+  {{/if}}
+
+  <Hds::Accordion data-test-checklist-steps as |A|>
+    {{#each this.stepsWithStatus as |step index|}}
+      <A.Item
+        @isOpen={{eq step.id this.openStepId}}
+        @onClickToggle={{fn this.handleItemToggle step.id}}
+        data-test-checklist-step={{step.id}}
+      >
+        <:toggle>
+          <Hds::Layout::Flex @align="center" @gap="8">
+            <span class="checklist-step-marker" data-test-checklist-step-icon={{step.id}}>
+              {{#if step.isComplete}}
+                {{#if (eq step.id this.openStepId)}}
+                  <span class="checklist-step-marker-number-wrapper">
+                    <Hds::Icon @name="hexagon-fill" @color="primary" />
+                    <span class="checklist-step-marker-check">
+                      <Hds::Icon @name="check" class="checklist-step-marker-check-icon" />
+                    </span>
+                  </span>
+                {{else}}
+                  <Hds::Icon @name="check-hexagon" @color="success" />
+                {{/if}}
+              {{else if (eq step.id this.openStepId)}}
+                <span class="checklist-step-marker-number-wrapper">
+                  <Hds::Icon @name="hexagon-fill" @color="primary" />
+                  <span class="checklist-step-marker-number checklist-step-marker-number--focused">
+                    {{add index 1}}
+                  </span>
+                </span>
+              {{else}}
+                <span class="checklist-step-marker-number-wrapper">
+                  <Hds::Icon @name="hexagon" @color="primary" />
+                  <span class="checklist-step-marker-number">{{add index 1}}</span>
+                </span>
+              {{/if}}
+            </span>
+
+            <Hds::Text::Body @size="200" @weight={{if step.isComplete "medium" "regular"}}>
+              {{step.label}}
+            </Hds::Text::Body>
+          </Hds::Layout::Flex>
+        </:toggle>
+        <:content>
+          {{#if step.description}}
+            <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-bottom-margin-s">
+              {{step.description}}
+            </Hds::Text::Body>
+          {{/if}}
+          <Hds::Layout::Flex @gap="8" @wrap={{true}}>
+            {{#each step.ctas as |cta|}}
+              <Hds::Button
+                @text={{cta.text}}
+                @icon={{if cta.icon cta.icon "arrow-right"}}
+                @iconPosition={{if cta.iconPosition cta.iconPosition "trailing"}}
+                @color="secondary"
+                @size="small"
+                @route={{cta.route}}
+                @models={{if cta.models cta.models (array)}}
+                @href={{cta.href}}
+                @isHrefExternal={{if cta.href true}}
+              />
+            {{/each}}
+            <Hds::Button
+              @text={{if step.isComplete "Mark incomplete" "Mark complete"}}
+              @icon={{if step.isComplete "reload" "check"}}
+              @iconPosition="leading"
+              @color="tertiary"
+              @size="small"
+              {{on "click" (fn this.toggleStepCompletion step.id step.isComplete)}}
+              data-test-checklist-step-mark-complete={{step.id}}
+            />
+          </Hds::Layout::Flex>
+        </:content>
+      </A.Item>
+    {{/each}}
+  </Hds::Accordion>
+
+  <Hds::Button
+    @text={{@checklist.hideButtonText}}
+    @icon="eye-off"
+    @iconPosition="leading"
+    @color="tertiary"
+    @size="small"
+    class="has-top-margin-m has-bottom-margin-m"
+    {{on "click" @onHide}}
+    data-test-checklist-hide
+  />
+</div>

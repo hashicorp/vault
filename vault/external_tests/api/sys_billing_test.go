@@ -15,6 +15,7 @@ import (
 	logicalTransit "github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/billing"
@@ -328,4 +329,147 @@ func Test_BillingConfig_AffectsOverview(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.Len(t, resp.Months, billing.DefaultBillingRetentionMonths)
+}
+
+// Test_AttributionRetentionConfig tests GetBillingConfig and SetAttributionRetentionConfig
+// for the attribution_retention_months field via the real Vault API.
+func Test_AttributionRetentionConfig(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// Default: attribution_retention_months should be DefaultAttributionRetentionMonths
+	config, err := client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.NotNil(t, config)
+	require.Equal(t, billing.DefaultAttributionRetentionMonths, config.AttributionRetentionMonths)
+
+	// Set to a valid mid-range value
+	err = client.Sys().SetAttributionRetentionConfig(24)
+	require.NoError(t, err)
+
+	config, err = client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.Equal(t, 24, config.AttributionRetentionMonths)
+	// billing retention_months must be unaffected
+	require.Equal(t, billing.DefaultBillingRetentionMonths, config.RetentionMonths)
+
+	// Set to minimum (0) — disables attribution
+	err = client.Sys().SetAttributionRetentionConfig(billing.MinAttributionRetentionMonths)
+	require.NoError(t, err)
+
+	config, err = client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.Equal(t, billing.MinAttributionRetentionMonths, config.AttributionRetentionMonths)
+
+	// Set to maximum (72)
+	err = client.Sys().SetAttributionRetentionConfig(billing.MaxAttributionRetentionMonths)
+	require.NoError(t, err)
+
+	config, err = client.Sys().GetBillingConfig()
+	require.NoError(t, err)
+	require.Equal(t, billing.MaxAttributionRetentionMonths, config.AttributionRetentionMonths)
+}
+
+// Test_AttributionRetentionConfig_InvalidValues tests that invalid
+// attribution_retention_months values are rejected.
+func Test_AttributionRetentionConfig_InvalidValues(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// Below minimum: -1 is rejected
+	err := client.Sys().SetAttributionRetentionConfig(-1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must be between")
+
+	// Above maximum: 73 is rejected
+	err = client.Sys().SetAttributionRetentionConfig(billing.MaxAttributionRetentionMonths + 1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "must be between")
+}
+
+// Test_AttributionRetentionConfig_DisablesCollection verifies the end-to-end behaviour
+// when attribution is disabled (retention = 0):
+//   - attribution data written before disabling is wiped immediately
+//   - after disabling, new UpdateMaxKvCounts calls do not store attribution
+//   - after re-enabling, UpdateMaxKvCounts stores attribution again
+func Test_AttributionRetentionConfig_DisablesCollection(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	core := cluster.Cores[0].Core
+	vault.TestWaitActive(t, core)
+	client := cluster.Cores[0].Client
+
+	ctx := context.Background()
+	month := timeutil.StartOfMonth(time.Now().UTC())
+
+	attribution := vault.MountAttributionMap{
+		"kv_test": logical.MountAttribution{
+			Count:         5,
+			MountAccessor: "kv_test",
+			MountPath:     "secret/",
+			MountType:     "kv",
+			NamespaceID:   "root",
+		},
+	}
+
+	// Seed attribution data for the current month.
+	_, err := core.UpdateMaxKvCounts(ctx, billing.LocalPrefix, month, 5, attribution)
+	require.NoError(t, err)
+
+	// Verify data was stored.
+	stored, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, stored.Mounts, 1, "attribution should be present before disabling")
+
+	// Disable attribution (sets retention to 0, wipes existing data).
+	err = client.Sys().SetAttributionRetentionConfig(billing.MinAttributionRetentionMonths)
+	require.NoError(t, err)
+
+	// Existing attribution data must have been wiped.
+	wipedStored, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Empty(t, wipedStored.Mounts, "attribution should be wiped after disabling")
+
+	// New UpdateMaxKvCounts with a higher HWM must NOT store attribution.
+	higherAttribution := vault.MountAttributionMap{
+		"kv_higher": logical.MountAttribution{
+			Count:         10,
+			MountAccessor: "kv_higher",
+			MountPath:     "higher/",
+			MountType:     "kv",
+			NamespaceID:   "root",
+		},
+	}
+	_, err = core.UpdateMaxKvCounts(ctx, billing.LocalPrefix, month, 10, higherAttribution)
+	require.NoError(t, err)
+
+	afterDisable, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Empty(t, afterDisable.Mounts, "attribution must not be stored while disabled")
+
+	// Re-enable attribution and verify the next update stores attribution again.
+	err = client.Sys().SetAttributionRetentionConfig(billing.DefaultAttributionRetentionMonths)
+	require.NoError(t, err)
+
+	reEnabledAttribution := vault.MountAttributionMap{
+		"kv_reenabled": logical.MountAttribution{
+			Count:         20,
+			MountAccessor: "kv_reenabled",
+			MountPath:     "reenabled/",
+			MountType:     "kv",
+			NamespaceID:   "root",
+		},
+	}
+	_, err = core.UpdateMaxKvCounts(ctx, billing.LocalPrefix, month, 20, reEnabledAttribution)
+	require.NoError(t, err)
+
+	afterReEnable, err := core.GetStoredAttributionData(ctx, billing.LocalPrefix, month, billing.KvHWMCountsHWM)
+	require.NoError(t, err)
+	require.Len(t, afterReEnable.Mounts, 1, "attribution should be stored after re-enabling")
+	require.Contains(t, afterReEnable.Mounts, "kv_reenabled")
 }

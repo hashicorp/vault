@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	ttlcache "github.com/jellydator/ttlcache/v3"
 	"github.com/okta/okta-sdk-golang/v5/okta"
-	"github.com/patrickmn/go-cache"
 )
 
 const (
@@ -59,14 +59,15 @@ func Backend() *backend {
 		AuthRenew:   b.pathLoginRenew,
 		BackendType: logical.TypeCredential,
 	}
-	b.verifyCache = cache.New(5*time.Minute, time.Minute)
+	b.verifyCache = ttlcache.New[string, int](ttlcache.WithTTL[string, int](5 * time.Minute))
+	go b.verifyCache.Start()
 
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
-	verifyCache *cache.Cache
+	verifyCache *ttlcache.Cache[string, int]
 }
 
 func (b *backend) Login(ctx context.Context, req *logical.Request, username, password, totp, nonce, preferredProvider string) ([]string, *logical.Response, []string, error) {
@@ -259,7 +260,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username, pas
 						return nil, logical.ErrorResponse("nonce must be provided during login request when presented with number challenge"), nil, nil
 					}
 
-					b.verifyCache.SetDefault(nonce, *numberChallenge)
+					b.verifyCache.Set(nonce, *numberChallenge, ttlcache.DefaultTTL)
 				}
 
 				if err != nil {

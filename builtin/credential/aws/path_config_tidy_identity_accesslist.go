@@ -6,6 +6,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -42,28 +43,50 @@ expiration, before it is removed from the backend storage.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
+				Summary:  "Configure the identity access-list tidy operation.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "identity-access-list-tidy-operation",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
+				Summary:  "Configure the identity access-list tidy operation.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "identity-access-list-tidy-operation",
 				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListRead,
+				Summary:  "Return the identity access-list tidy configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "identity-access-list-tidy-settings",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: tidyConfigResponseFields(
+							"Duration past expiration before identities are removed from storage.",
+							"Whether periodic tidying of identity access-list entries is disabled.",
+						),
+					}},
 				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListDelete,
+				Summary:  "Delete the identity access-list tidy configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "identity-access-list-tidy-settings",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 		},

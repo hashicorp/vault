@@ -101,7 +101,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleEntityUpdateCommon(),
+					Callback: i.handleEntityNameUpdateCommon(),
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
@@ -135,7 +135,7 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: i.handleEntityUpdateCommon(),
+					Callback: i.handleEntityIDUpdateCommon(),
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
@@ -260,8 +260,9 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                  i.pathEntityMergeID(),
-					ForwardPerformanceStandby: true,
+					Callback:                    i.pathEntityMergeID(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 
@@ -269,6 +270,20 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(entityHelp["entity-merge-id"][1]),
 		},
 	}
+}
+
+// operatorNamespaceID returns the namespace ID of the configured operator namespace, or an empty string if no operator namespace is configured.
+func (i *IdentityStore) operatorNamespaceID() string {
+	path := namespace.Canonicalize(i.localNode.OperatorNamespacePath())
+	if path == "" {
+		return ""
+	}
+	for _, ns := range i.namespacer.ListNamespaces(false) {
+		if ns.Path == path {
+			return ns.ID
+		}
+	}
+	return ""
 }
 
 // pathEntityMergeID merges two or more entities into a single entity
@@ -303,9 +318,24 @@ func (i *IdentityStore) pathEntityMergeID() framework.OperationFunc {
 		txn := i.db.Txn(true)
 		defer txn.Abort()
 
-		toEntity, err := i.MemDBEntityByID(toEntityID, true)
+		toEntity, err := i.MemDBEntityByIDInTxn(txn, toEntityID, true)
 		if err != nil {
 			return nil, err
+		}
+
+		// Merging SCIM-managed entities via the API is not allowed.
+		if toEntity != nil && toEntity.ScimClientID != "" {
+			return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM, cannot target to_entity %s", toEntity.ID), logical.ErrPermissionDenied
+		}
+		for _, fromEntityID := range fromEntityIDs {
+			fromEntity, err := i.MemDBEntityByIDInTxn(txn, fromEntityID, false)
+			if err != nil {
+				return nil, err
+			}
+			// non-existent fromEntity validation is handled in mergeEntity
+			if fromEntity != nil && fromEntity.ScimClientID != "" {
+				return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM, cannot target from_entity %s", fromEntity.ID), logical.ErrPermissionDenied
+			}
 		}
 
 		userErr, intErr, aliases := i.mergeEntity(ctx, txn, toEntity, fromEntityIDs, conflictingAliasIDsToKeep, force, false, false, true, false)
@@ -334,8 +364,25 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		i.lock.Lock()
 		defer i.lock.Unlock()
-
 		return i.EntityUpdateCommon(ctx, d)
+	}
+}
+
+// handleEntityNameUpdateCommon is used to update an entity via the name path.
+func (i *IdentityStore) handleEntityNameUpdateCommon() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+		return i.EntityNameUpdateCommon(ctx, d)
+	}
+}
+
+// handleEntityIDUpdateCommon is used to update an entity via the id path.
+func (i *IdentityStore) handleEntityIDUpdateCommon() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		i.lock.Lock()
+		defer i.lock.Unlock()
+		return i.EntityIDUpdateCommon(ctx, d)
 	}
 }
 
@@ -416,9 +463,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["local"] = alias.Local
 		aliasMap["custom_metadata"] = alias.CustomMetadata
 
-		if i.scimEnabled {
-			aliasMap["scim_client_id"] = alias.ScimClientID
-		}
+		aliasMap["scim_client_id"] = alias.ScimClientID
 
 		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
@@ -432,9 +477,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	// formats
 	respData["aliases"] = aliasesToReturn
 
-	if i.scimEnabled {
-		respData["scim_client_id"] = entity.ScimClientID
-	}
+	respData["scim_client_id"] = entity.ScimClientID
 
 	addExtraEntityDataToResponse(entity, respData)
 
@@ -568,12 +611,22 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 			i.lock.Lock()
 			defer i.lock.Unlock()
 
+			ns, err := namespace.FromContext(ctx)
+			if err != nil {
+				return err
+			}
+
 			// Create a MemDB transaction to delete entities from the inmem database
 			// without altering storage. Batch deletion on storage bucket items is
 			// performed directly through entityPacker.
 			txn := i.db.Txn(true)
 			defer txn.Abort()
 
+			// Storage buckets are shared across namespaces and keyed only by entity
+			// ID, so deleting a caller-supplied ID that belongs to another namespace
+			// would destroy that entity's storage. Restrict deletion to entities in
+			// the request's namespace and hand only those IDs to the packer.
+			idsToDelete := make([]string, 0, len(entityIDs))
 			for _, entityID := range entityIDs {
 				// Fetch the entity using its ID
 				entity, err := i.MemDBEntityByIDInTxn(txn, entityID, true)
@@ -583,15 +636,22 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 				if entity == nil {
 					continue
 				}
+				if opNsID := i.operatorNamespaceID(); opNsID != "" && entity.NamespaceID == opNsID && ns.ID != opNsID {
+					return fmt.Errorf("cannot delete operator namespace entity %s from outside its own namespace", entity.ID)
+				}
+				if entity.NamespaceID != ns.ID {
+					continue
+				}
 
 				err = i.handleEntityDeleteCommon(ctx, txn, entity, false)
 				if err != nil {
 					return err
 				}
+				idsToDelete = append(idsToDelete, entityID)
 			}
 
 			// Write all updates for this bucket.
-			err := i.entityPacker.DeleteMultipleItems(ctx, i.logger, entityIDs)
+			err = i.entityPacker.DeleteMultipleItems(ctx, i.logger, idsToDelete)
 			if err != nil {
 				return err
 			}
@@ -624,6 +684,9 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
+	}
+	if opNsID := i.operatorNamespaceID(); opNsID != "" && entity.NamespaceID == opNsID && ns.ID != opNsID {
+		return errors.New("cannot delete operator namespace entity from outside its own namespace")
 	}
 	if entity.NamespaceID != ns.ID {
 		return nil
@@ -1299,7 +1362,8 @@ func (i *entityIntegrityCheck) deleteDuplicateAliasInstances(log hclog.Logger, a
 	if aliasToKeep == nil {
 		return errors.New("no identity aliases to keep in deduplication")
 	}
-	log.Trace("deleting all but one duplicate identity alias instance",
+	log.Trace(
+		"deleting all but one duplicate identity alias instance",
 		"num_to_delete", len(aliases)-1,
 		"alias_to_keep", aliasToKeep,
 	)
@@ -1349,7 +1413,8 @@ func (i *entityIntegrityCheck) resolveAndAssociateDanglingEntityAlias(log hclog.
 	// Update our entity ID with the correct entity ID while also including our
 	// prior ID in the aliases merged from field.
 	resolveAliasID := func() {
-		log.Warn("associating dangling identity alias with entity",
+		log.Warn(
+			"associating dangling identity alias with entity",
 			"alias_id", alias.ID,
 			"dangling_canonical_id", alias.CanonicalID,
 			"new_canonical_id", i.entity.ID,
@@ -1378,7 +1443,8 @@ func (i *entityIntegrityCheck) resolveAndAssociateDanglingEntityAlias(log hclog.
 		alias.Metadata["dangling_prior_name"] = oldName
 		alias.LastUpdateTime = now
 
-		log.Warn("renamed dangling duplicate identity alias",
+		log.Warn(
+			"renamed dangling duplicate identity alias",
 			"alias_id", alias.ID,
 			"name", alias.Name,
 			"old_name", oldName,

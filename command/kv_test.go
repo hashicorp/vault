@@ -13,6 +13,7 @@ import (
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 )
 
 func testKVPutCommand(tb testing.TB) (*cli.MockUi, *KVPutCommand) {
@@ -185,6 +186,9 @@ func TestKVPutCommand(t *testing.T) {
 			client, closer := testVaultServer(t)
 			defer closer()
 
+			err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+			require.NoError(t, err)
+
 			if err := client.Sys().Mount("kv/", &api.MountInput{
 				Type: "kv-v2",
 			}); err != nil {
@@ -266,6 +270,9 @@ func TestKVPutCommand(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
+
 		ui, cmd := testKVPutCommand(t)
 		cmd.client = client
 
@@ -299,6 +306,9 @@ func TestKVPutCommand(t *testing.T) {
 
 		client, closer := testVaultServer(t)
 		defer closer()
+
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
 
 		stdinR, stdinW := io.Pipe()
 		go func() {
@@ -335,6 +345,9 @@ func TestKVPutCommand(t *testing.T) {
 		client, closer := testVaultServer(t)
 		defer closer()
 
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
+
 		stdinR, stdinW := io.Pipe()
 		go func() {
 			stdinW.Write([]byte("bar"))
@@ -369,6 +382,9 @@ func TestKVPutCommand(t *testing.T) {
 
 		client, closer := testVaultServer(t)
 		defer closer()
+
+		err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+		require.NoError(t, err)
 
 		_, cmd := testKVPutCommand(t)
 		cmd.client = client
@@ -528,43 +544,41 @@ func TestKVGetCommand(t *testing.T) {
 
 				client, closer := testVaultServer(t)
 				defer closer()
-				if err := client.Sys().Mount("kv/", &api.MountInput{
+				err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+				require.NoError(t, err)
+				err = client.Sys().Mount("kv/", &api.MountInput{
 					Type: "kv-v2",
-				}); err != nil {
-					t.Fatal(err)
-				}
+				})
+
+				require.NoError(t, err)
 
 				// Give time for the upgrade code to run/finish
 				time.Sleep(time.Second)
 
-				if _, err := client.Logical().Write("secret/read/foo", map[string]interface{}{
+				_, err = client.Logical().Write("secret/read/foo", map[string]interface{}{
 					"foo": "bar",
-				}); err != nil {
-					t.Fatal(err)
-				}
+				})
+				require.NoError(t, err)
 
-				if _, err := client.Logical().Write("kv/data/read/foo", map[string]interface{}{
+				_, err = client.Logical().Write("kv/data/read/foo", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
-				}); err != nil {
-					t.Fatal(err)
-				}
+				})
+				require.NoError(t, err)
 
 				// create KV entries to test -mount flag where secret key is same as mount path
-				if _, err := client.Logical().Write("secret/secret", map[string]interface{}{
+				_, err = client.Logical().Write("secret/secret", map[string]interface{}{
 					"foo": "bar",
-				}); err != nil {
-					t.Fatal(err)
-				}
+				})
+				require.NoError(t, err)
 
-				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
+				_, err = client.Logical().Write("kv/data/kv", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
-				}); err != nil {
-					t.Fatal(err)
-				}
+				})
+				require.NoError(t, err)
 
 				ui, cmd := testKVGetCommand(t)
 				cmd.client = client
@@ -801,11 +815,13 @@ func TestKVMetadataGetCommand(t *testing.T) {
 
 				client, closer := testVaultServer(t)
 				defer closer()
-				if err := client.Sys().Mount("kv/", &api.MountInput{
+				err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+				require.NoError(t, err)
+
+				err = client.Sys().Mount("kv/", &api.MountInput{
 					Type: "kv-v2",
-				}); err != nil {
-					t.Fatal(err)
-				}
+				})
+				require.NoError(t, err)
 
 				// Give time for the upgrade code to run/finish
 				time.Sleep(time.Second)
@@ -819,14 +835,12 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				}
 
 				// create KV entry to test -mount flag where secret key is same as mount path
-				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
+				_, err = client.Logical().Write("kv/data/kv", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
-				}); err != nil {
-					t.Fatal(err)
-				}
-
+				})
+				require.NoError(t, err)
 				ui, cmd := testKVMetadataGetCommand(t)
 				cmd.client = client
 

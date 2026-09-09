@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
 )
 
@@ -39,6 +40,10 @@ func TestRecovery(t *testing.T) {
 
 		client := cluster.Cores[0].Client
 		rootToken = client.Token()
+		_, err = client.Logical().Write("sys/mounts/secret", map[string]interface{}{
+			"type": "kv",
+		})
+		require.NoError(t, err)
 		fooVal := map[string]interface{}{"bar": 1.0}
 		_, err = client.Logical().Write("secret/foo", fooVal)
 		if err != nil {

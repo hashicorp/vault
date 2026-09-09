@@ -2995,6 +2995,35 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-feature-flags"][1]),
 		},
 		{
+			Pattern: "internal/ui/settings",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-ui",
+				OperationVerb:   "read",
+				OperationSuffix: "settings",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleConfigUISettings,
+					Summary:  "Return UI-related settings for the current cluster.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"ui_telemetry_enabled": {
+									Type:     framework.TypeBool,
+									Required: true,
+								},
+							},
+						}},
+					},
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-settings"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["internal-ui-settings"][1]),
+		},
+		{
 			Pattern: "internal/ui/mounts",
 
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -4954,6 +4983,86 @@ func (b *SystemBackend) wellKnownPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["well-known"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["well-known"][1]),
+		},
+	}
+}
+
+func (b *SystemBackend) releaseInfoPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "release-info$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "release-info",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:    b.handleReleaseInfoRead,
+					Summary:     "Fetch release information from GitHub",
+					Description: "Returns parsed release information including breaking changes, new behavior, and known issues for each version.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"versions": {
+									Type:        framework.TypeSlice,
+									Description: "Array of version information objects containing breaking changes, new behavior, known issues, and rollback steps",
+									Required:    true,
+								},
+							},
+						}},
+					},
+				},
+			},
+			HelpSynopsis:    "Fetch release information",
+			HelpDescription: "Retrieves and parses all .mdx summary table files from the web-unified-docs repository on GitHub, returning structured version information.",
+		},
+	}
+}
+
+func (b *SystemBackend) vaultVersionsPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "vault-versions$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "vault-versions",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"edition": {
+					Type:        framework.TypeString,
+					Description: `Edition to filter by. "enterprise" returns only "+ent" versions; "community" (default) returns only versions with no build metadata.`,
+					Default:     "community",
+					Query:       true,
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleVaultVersionsRead,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "read",
+					},
+					Summary:     "Fetch available Vault versions from releases.hashicorp.com",
+					Description: "Returns deduplicated MAJOR.MINOR.PATCH version strings filtered by edition.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"versions": {
+									Type:        framework.TypeSlice,
+									Description: "Sorted array of Vault version strings matching the requested edition",
+									Required:    true,
+								},
+							},
+						}},
+					},
+				},
+			},
+			HelpSynopsis:    "Fetch available Vault versions",
+			HelpDescription: "Proxies a request to releases.hashicorp.com/vault/index.json, filters by edition, deduplicates to MAJOR.MINOR.PATCH, and returns a sorted list.",
 		},
 	}
 }

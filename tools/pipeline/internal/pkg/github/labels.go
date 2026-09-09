@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -38,7 +38,8 @@ func addLabelsToIssue(
 		return nil
 	}
 
-	ctx = slogctx.Append(ctx,
+	ctx = slogctx.Append(
+		ctx,
 		slog.String("labels", strings.Join(labels, ", ")),
 		slog.Int("issue-number", number),
 	)

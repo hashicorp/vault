@@ -1,0 +1,4 @@
+```release-note:bug
+core: Preserve URL query parameters when redirecting API requests containing duplicate slashes to their canonical path.
+Previously, the redirect dropped parameters such as `?list=true`, potentially changing the result of the request.
+```

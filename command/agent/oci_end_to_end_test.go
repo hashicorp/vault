@@ -100,7 +100,7 @@ func TestOCIEndToEnd(t *testing.T) {
 		}
 	}()
 
-	vaultAddr := "http://" + cluster.Cores[0].Listeners[0].Addr().String()
+	vaultAddr := "http://" + cluster.Cores[0].APIAddress().String()
 
 	am, err := agentoci.NewOCIAuthMethod(&auth.AuthConfig{
 		Logger:    logger.Named("auth.oci"),
@@ -200,17 +200,19 @@ func TestOCIEndToEnd(t *testing.T) {
 	}
 }
 
+// setOCIEnvCreds has no *testing.T; converting its os.Setenv calls to t.Setenv would require
+// threading t through every caller.
 func setOCIEnvCreds() error {
-	if err := os.Setenv(envVarOCITenancyOCID, os.Getenv(envVarOCITestTenancyOCID)); err != nil {
+	if err := os.Setenv(envVarOCITenancyOCID, os.Getenv(envVarOCITestTenancyOCID)); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	if err := os.Setenv(envVarOCIUserOCID, os.Getenv(envVarOCITestUserOCID)); err != nil {
+	if err := os.Setenv(envVarOCIUserOCID, os.Getenv(envVarOCITestUserOCID)); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	if err := os.Setenv(envVarOCIFingerprint, os.Getenv(envVarOCITestFingerprint)); err != nil {
+	if err := os.Setenv(envVarOCIFingerprint, os.Getenv(envVarOCITestFingerprint)); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	return os.Setenv(envVarOCIPrivateKeyPath, os.Getenv(envVarOCITestPrivateKeyPath))
+	return os.Setenv(envVarOCIPrivateKeyPath, os.Getenv(envVarOCITestPrivateKeyPath)) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 }
 
 func unsetOCIEnvCreds() error {

@@ -20,6 +20,7 @@ const META = {
     nextPage: 1,
     prevPage: 1,
     total: 3,
+    totalItems: 3,
     pageSize: 15,
   },
 };
@@ -151,6 +152,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
         nextPage: 1,
         prevPage: 1,
         total: this.messages.length,
+        totalItems: this.messages.length,
         pageSize: 100,
       },
     });

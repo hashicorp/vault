@@ -7,13 +7,20 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
+
+  <:actions>
+    <CodeGenerator::Policy::Flyout @policyPaths={{this.policyPaths}} />
+    {{#if @backend}}
+      <ManageDropdown @model={{@backend}} @configRoute="external.configuration" />
+    {{/if}}
+  </:actions>
 </Page::Header>
 
 <nav class="tabs" aria-label="external pki tabs">
   <ul>
     {{#if (has-block "tabs")}}
       {{yield to="tabs"}}
-    {{else if @backend.id}}
+    {{else if (and @backend.id (not @hideTabs))}}
       {{! Default parent tabs }}
       {{#each this.defaultTabs as |tab|}}
         <li>

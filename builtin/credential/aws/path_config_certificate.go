@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -29,6 +30,7 @@ func (b *backend) pathListCertificates() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathCertificatesList,
+				Summary:  "List the configured AWS public certificates.",
 			},
 		},
 
@@ -71,28 +73,50 @@ vary. Defaults to "pkcs7".`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateCreateUpdate,
+				Summary:  "Configure an AWS public key for PKCS7 or identity-document verification.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "certificate",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateCreateUpdate,
+				Summary:  "Configure an AWS public key for PKCS7 or identity-document verification.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "certificate",
 				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateRead,
+				Summary:  "Return the configured AWS public certificate.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "certificate-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"aws_public_cert": {Type: framework.TypeString, Description: "Base64-encoded AWS public certificate used to verify PKCS7 signatures."},
+							"type":            {Type: framework.TypeString, Description: "Type of document the certificate verifies, either pkcs7 or identity."},
+						},
+					}},
 				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigCertificateDelete,
+				Summary:  "Delete the configured AWS public certificate.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "certificate-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 		},

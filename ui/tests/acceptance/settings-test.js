@@ -35,8 +35,9 @@ module('Acceptance | secret engine mount settings', function (hooks) {
       'navigates to the mount secret backend page'
     );
     await click(GENERAL.cardContainer(type));
+    await click(GENERAL.button('next'));
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.button('Method Options'));
+    await click(GENERAL.button('View additional settings'));
     await click(GENERAL.toggleInput('Default Lease TTL'));
     await mountSecrets.defaultTTLUnit('s').defaultTTLVal(100);
     await click(GENERAL.submitButton);
@@ -84,7 +85,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const path = `totp-${this.uid}`;
 
     await visit('/vault/secrets-engines/enable');
-    await mountBackend(type, path);
+    await mountBackend(type, path, true);
     await click(GENERAL.dropdownToggle('Manage'));
     await click(GENERAL.menuItem('Configure'));
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.configuration.general-settings');
@@ -115,7 +116,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     const path = `ssh-${this.uid}`;
 
     await visit('/vault/secrets-engines/enable');
-    await mountBackend(type, path);
+    await mountBackend(type, path, true);
     await click(GENERAL.dropdownToggle('Manage'));
     await click(GENERAL.menuItem('Configure'));
 

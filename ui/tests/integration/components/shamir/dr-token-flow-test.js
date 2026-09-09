@@ -312,4 +312,66 @@ module('Integration | Component | shamir/dr-token-flow', function (hooks) {
     await click(GENERAL.cancelButton);
     assert.ok(cancelSpy.calledOnce, 'cancel spy called on click');
   });
+
+  test('it sends the primary root token as the X-Vault-Token header on every request', async function (assert) {
+    // Regression test for VAULT-47138: the primary root token entered by the user
+    // must be threaded through the status (GET), initialize (POST), and update requests
+    // as the X-Vault-Token header. A header-shape bug previously dropped it, causing 403s.
+    assert.expect(3);
+    const PRIMARY_TOKEN = 'hvs.primary-root-token';
+
+    this.server.get('/sys/replication/dr/secondary/generate-operation-token/attempt', function (_, req) {
+      assert.strictEqual(
+        req.requestHeaders['x-vault-token'],
+        PRIMARY_TOKEN,
+        'status (GET) request carries the primary root token'
+      );
+      return {};
+    });
+    this.server.post('/sys/replication/dr/secondary/generate-operation-token/attempt', function (_, req) {
+      assert.strictEqual(
+        req.requestHeaders['x-vault-token'],
+        PRIMARY_TOKEN,
+        'initialize (POST) request carries the primary root token'
+      );
+      return {
+        started: true,
+        nonce: 'nonce-1234',
+        progress: 0,
+        required: 3,
+        encoded_token: '',
+        otp: 'otp-9876',
+        otp_length: 24,
+        complete: false,
+      };
+    });
+    this.server.post('/sys/replication/dr/secondary/generate-operation-token/update', function (_, req) {
+      assert.strictEqual(
+        req.requestHeaders['x-vault-token'],
+        PRIMARY_TOKEN,
+        'update request carries the primary root token'
+      );
+      return {
+        started: true,
+        nonce: 'nonce-1234',
+        progress: 1,
+        required: 3,
+        encoded_token: '',
+        otp: '',
+        otp_length: 24,
+        complete: false,
+      };
+    });
+
+    await render(hbs`<Shamir::DrTokenFlow @action="generate-dr-operation-token" />`);
+    await click(GENERAL.button('generate-token-cta'));
+    await waitUntil(() => find(SHAMIR_FORM.flowStep('primary-token')));
+
+    await fillIn(GENERAL.inputByAttr('primary-token'), PRIMARY_TOKEN);
+    await click('[data-test-submit-primary-token]');
+    await waitUntil(() => find(SHAMIR_FORM.flowStep('shamir')));
+
+    await fillIn(GENERAL.inputByAttr('shamir-key'), 'some-key');
+    await click(GENERAL.submitButton);
+  });
 });

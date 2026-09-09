@@ -289,6 +289,10 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 	time.Sleep(stabilizationPadded)
 
 	cli := cluster.Cores[0].Client
+
+	err = cli.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	// Write more keys than snapshot_threshold
 	for i := 0; i < 50; i++ {
 		_, err := cli.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{

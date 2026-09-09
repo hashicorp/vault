@@ -6,8 +6,13 @@
 import { fillIn, click } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-export const mountBackend = async (type, path) => {
+export const mountBackend = async (type, path, isSecret) => {
   await click(GENERAL.cardContainer(type));
+
+  // catalog for secrets requires clicking next to route, auth method will auto-route on card click
+  if (isSecret) {
+    await click(GENERAL.button('next'));
+  }
   if (path) {
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.submitButton);

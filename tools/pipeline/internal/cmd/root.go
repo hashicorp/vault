@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 // Package cmd defines the pipeline CLI commands.
@@ -22,10 +22,17 @@ import (
 type rootCmdCfg struct {
 	logLevel          string
 	format            string
+	repoRoot          string
 	git               *git.Client
+	gitUserName       string
+	gitUserEmail      string
 	configDecodeRes   *config.DecodeRes
 	versionsDecodeRes *releases.DecodeRes
 }
+
+// gitUserAuto is the sentinel value for --git-user-name / --git-user-email
+// that instructs the root command to infer the value from git config.
+const gitUserAuto = "auto"
 
 var rootCfg = &rootCmdCfg{
 	git: git.NewClient(git.WithLoadTokenFromEnv()),
@@ -42,22 +49,26 @@ func newRootCmd() *cobra.Command {
 	var versionsConfigPath string
 
 	rootCmd.PersistentFlags().StringVar(&rootCfg.logLevel, "log", "warn", "Set the log level. One of 'debug', 'info', 'warn', 'error'")
-	rootCmd.PersistentFlags().StringVarP(&rootCfg.format, "format", "f", "table", "The output format. Can be 'json', 'table', and sometimes 'markdown'")
+	rootCmd.PersistentFlags().StringVarP(&rootCfg.format, "format", "f", "table", "The output format. Can be 'json', 'table', and sometimes 'markdown' or 'csv'")
 	rootCmd.PersistentFlags().StringVar(&pipelineCfgPath, "pipeline-config", "", "Specify the path to pipeline.hcl configuration file (default: <git repo root>/.release/pipeline.hcl)")
 	rootCmd.PersistentFlags().StringVar(&versionsConfigPath, "versions-config", "", "Specify the path to versions.hcl configuration file (default: <git repo root>/.release/versions.hcl)")
+	rootCmd.PersistentFlags().StringVar(&rootCfg.gitUserName, "git-user-name", "hc-github-team-secure-vault-core", `Git user.name for commits. Use "auto" to infer from local git config.`)
+	rootCmd.PersistentFlags().StringVar(&rootCfg.gitUserEmail, "git-user-email", "github-team-secure-vault-core@hashicorp.com", `Git user.email for commits. Use "auto" to infer from local git config.`)
 
 	rootCmd.AddCommand(newConfigCmd())
+	rootCmd.AddCommand(newEbomCmd())
 	rootCmd.AddCommand(newGenerateCmd())
 	rootCmd.AddCommand(newGitCmd())
 	rootCmd.AddCommand(newGithubCmd())
 	rootCmd.AddCommand(newGoCmd())
 	rootCmd.AddCommand(newHCPCmd())
 	rootCmd.AddCommand(newReleasesCmd())
+	rootCmd.AddCommand(newSarifCmd())
+	rootCmd.AddCommand(newSlackCmd())
 
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		ctx := cmd.Context()
 
-		// Setup a default logger before we process anything
 		var ll slog.Level
 		switch rootCfg.logLevel {
 		case "debug":
@@ -75,10 +86,35 @@ func newRootCmd() *cobra.Command {
 		slog.SetDefault(slog.New(h))
 
 		switch rootCfg.format {
-		case "json", "table", "markdown":
+		case "json", "table", "markdown", "csv":
 		default:
 			return fmt.Errorf("unsupported format: %s", rootCfg.format)
 		}
+
+		// Resolve git user identity. When the sentinel "auto" is supplied, read
+		// the value from the local git config.
+		if rootCfg.gitUserName == gitUserAuto {
+			name, err := rootCfg.git.ConfigGet(ctx, "user.name")
+			if err != nil {
+				return fmt.Errorf("--git-user-name=auto: %w", err)
+			}
+			rootCfg.gitUserName = name
+		}
+		if rootCfg.gitUserEmail == gitUserAuto {
+			email, err := rootCfg.git.ConfigGet(ctx, "user.email")
+			if err != nil {
+				return fmt.Errorf("--git-user-email=auto: %w", err)
+			}
+			rootCfg.gitUserEmail = email
+		}
+		slog.Default().DebugContext(ctx, "configuring git user identity",
+			slog.String("user.name", rootCfg.gitUserName),
+			slog.String("user.email", rootCfg.gitUserEmail),
+		)
+		git.WithConfig(map[string]string{
+			"user.name":  rootCfg.gitUserName,
+			"user.email": rootCfg.gitUserEmail,
+		})(rootCfg.git)
 
 		getRepoRoot := sync.OnceValues(func() (string, error) {
 			slog.DebugContext(ctx, "determining repository root to load configuration")
@@ -92,20 +128,19 @@ func newRootCmd() *cobra.Command {
 			return filepath.Join(strings.TrimSpace(string(revParse.Stdout))), nil
 		})
 
-		// Get repo root if needed
-		var repoRoot string
-		var err error
-		if pipelineCfgPath == "" || versionsConfigPath == "" {
-			repoRoot, err = getRepoRoot()
-			if err != nil {
-				return err
-			}
-		}
+		// Always attempt to resolve the repo root. Commands that don't require
+		// it can tolerate an empty value, but those that use it for config path
+		// defaults must have it, so we fail hard only in those cases.
+		var repoRootErr error
+		rootCfg.repoRoot, repoRootErr = getRepoRoot()
 
 		// Decode the pipeline config. Store the result (including any errors)
 		// for commands to handle as needed.
 		if pipelineCfgPath == "" {
-			pipelineCfgPath = filepath.Join(repoRoot, ".release", "pipeline.hcl")
+			if repoRootErr != nil {
+				return repoRootErr
+			}
+			pipelineCfgPath = filepath.Join(rootCfg.repoRoot, ".release", "pipeline.hcl")
 		}
 		rootCfg.configDecodeRes = config.Decode(ctx, &config.DecodeReq{
 			Path: pipelineCfgPath,
@@ -114,7 +149,10 @@ func newRootCmd() *cobra.Command {
 		// Decode the versions config. Store the result (including any errors)
 		// for commands to handle as needed.
 		if versionsConfigPath == "" {
-			versionsConfigPath = filepath.Join(repoRoot, ".release", "versions.hcl")
+			if repoRootErr != nil {
+				return repoRootErr
+			}
+			versionsConfigPath = filepath.Join(rootCfg.repoRoot, ".release", "versions.hcl")
 		}
 		rootCfg.versionsDecodeRes = releases.Decode(ctx, &releases.DecodeReq{
 			Path: versionsConfigPath,

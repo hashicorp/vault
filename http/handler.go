@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -31,6 +32,7 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -302,6 +304,11 @@ func handlerWithSettings(props *vault.HandlerProperties, settings handlerSetting
 		chrootNamespace = props.ListenerConfig.ChrootNamespace
 	}
 
+	operatorNamespace := ""
+	if p := core.OperatorNamespacePath(); p != "" {
+		operatorNamespace = namespace.Canonicalize(p)
+	}
+
 	switch {
 	case props.RecoveryMode:
 		raw := vault.NewRawBackend(core)
@@ -311,52 +318,52 @@ func handlerWithSettings(props *vault.HandlerProperties, settings handlerSetting
 		mux.Handle("/v1/sys/generate-recovery-token/update", handleSysGenerateRootUpdate(core, strategy))
 	default:
 		// Handle non-forwarded paths
-		mux.Handle("/v1/sys/config/state/", handleLogicalNoForward(core, chrootNamespace))
-		mux.Handle("/v1/sys/host-info", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/"+operatorNamespace+"sys/config/state/", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/"+operatorNamespace+"sys/host-info", handleLogicalNoForward(core, chrootNamespace))
 
-		mux.Handle("/v1/sys/init", handleSysInit(core))
-		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core,
+		mux.Handle("/v1/"+operatorNamespace+"sys/init", handleSysInit(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/seal-status", handleSysSealStatus(core,
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
-		mux.Handle("/v1/sys/seal-backend-status", handleSysSealBackendStatus(core))
-		mux.Handle("/v1/sys/seal", handleSysSeal(core))
-		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
-		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
-		mux.Handle("/v1/sys/leader", handleSysLeader(core,
+		mux.Handle("/v1/"+operatorNamespace+"sys/seal-backend-status", handleSysSealBackendStatus(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/seal", handleSysSeal(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
+		mux.Handle("/v1/"+operatorNamespace+"sys/unseal", handleSysUnseal(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/leader", handleSysLeader(core,
 			WithRedactAddresses(props.ListenerConfig.RedactAddresses)))
-		mux.Handle("/v1/sys/health", handleSysHealth(core,
+		mux.Handle("/v1/"+operatorNamespace+"sys/health", handleSysHealth(core,
 			WithRedactClusterName(props.ListenerConfig.RedactClusterName),
 			WithRedactVersion(props.ListenerConfig.RedactVersion)))
-		mux.Handle("/v1/sys/monitor", handleLogicalNoForward(core, chrootNamespace))
+		mux.Handle("/v1/"+operatorNamespace+"sys/monitor", handleLogicalNoForward(core, chrootNamespace))
 
 		// Register generate-root endpoints as unauthenticated handlers only if unauthGenerateRoot is true.
 		// When false, these endpoints will be handled by the sys backend as authenticated endpoints.
 		if settings.unauthGenerateRoot {
-			mux.Handle("/v1/sys/generate-root/attempt", handleRequestForwarding(core,
+			mux.Handle("/v1/"+operatorNamespace+"sys/generate-root/attempt", handleRequestForwarding(core,
 				handleAuditNonLogical(core, handleSysGenerateRootAttempt(core, vault.GenerateStandardRootTokenStrategy))))
-			mux.Handle("/v1/sys/generate-root/update", handleRequestForwarding(core,
+			mux.Handle("/v1/"+operatorNamespace+"sys/generate-root/update", handleRequestForwarding(core,
 				handleAuditNonLogical(core, handleSysGenerateRootUpdate(core, vault.GenerateStandardRootTokenStrategy))))
 		}
 
 		// Register rekey endpoints as unauthenticated handlers only if unauthRekey is true.
 		// When false (the default), these endpoints will be handled by the sys backend as authenticated endpoints.
 		if settings.unauthRekey {
-			mux.Handle("/v1/sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
-			mux.Handle("/v1/sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
-			mux.Handle("/v1/sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
-			mux.Handle("/v1/sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
-			mux.Handle("/v1/sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
-			mux.Handle("/v1/sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey/init", handleRequestForwarding(core, handleSysRekeyInit(core, false)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, false)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, false)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey-recovery-key/init", handleRequestForwarding(core, handleSysRekeyInit(core, true)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey-recovery-key/update", handleRequestForwarding(core, handleSysRekeyUpdate(core, true)))
+			mux.Handle("/v1/"+operatorNamespace+"sys/rekey-recovery-key/verify", handleRequestForwarding(core, handleSysRekeyVerify(core, true)))
 		}
 
-		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
-		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
-		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/storage/raft/join", handleSysRaftJoin(core))
+		mux.Handle("/v1/"+operatorNamespace+"sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
 
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core, chrootNamespace)))
 		}
-		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
+		mux.Handle("/v1/"+operatorNamespace+"sys/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
 		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core, chrootNamespace)))
 		if core.UIEnabled() {
 			if uiBuiltIn {
@@ -605,7 +612,11 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		cleanedPath := cleanPath(originalPath)
 		switch {
 		case originalPath != cleanedPath:
-			http.Redirect(w, r, r.URL.Path, http.StatusTemporaryRedirect)
+			redirectURL := cleanedPath
+			if r.URL.RawQuery != "" {
+				redirectURL += "?" + r.URL.RawQuery
+			}
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 			cancelFunc()
 			return
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
@@ -688,7 +699,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 				ReqPath:          r.URL.Path,
 				ClientRemoteAddr: clientAddr,
 				Method:           requestMethod,
-			})
+			},
+		)
 		defer func() {
 			// Not expecting this fail, so skipping the assertion check
 			core.FinalizeInFlightReqData(inFlightReqID, nw.StatusCode)
@@ -806,64 +818,88 @@ func WrapForwardedForHandler(h http.Handler, l *configutil.Listener) http.Handle
 		// There should be only 1 instance of the header, but looping allows for more flexibility
 		clientCertHeaders, clientCertHeadersOK := r.Header[textproto.CanonicalMIMEHeaderKey(clientCertHeader)]
 		if clientCertHeadersOK && len(clientCertHeaders) > 0 {
+			actions := strings.Split(clientCertHeaderDecoders, ",")
 			var client_certs []*x509.Certificate
 			for _, header := range clientCertHeaders {
-				// Multiple certs should be comma delimetered
+				// Multiple certs should be comma-delimited
 				vals := strings.Split(header, ",")
 				for _, v := range vals {
-					actions := strings.Split(clientCertHeaderDecoders, ",")
-					for _, action := range actions {
-						switch action {
-						case "URL":
-							decoded, err := url.QueryUnescape(v)
-							if err != nil {
-								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to url unescape the client certificate: %w", err))
-								return
-							}
-							v = decoded
-						case "BASE64":
-							// Support RFC 9440/8941 Structured Headers byte sequence values (":MIIC...==:").
-							// If the value is wrapped in leading/trailing colons, unwrap before decoding.
-							base64Value := v
-							if len(v) >= 2 && v[0] == ':' && v[len(v)-1] == ':' {
-								base64Value = v[1 : len(v)-1]
-							}
-
-							decoded, err := base64.StdEncoding.DecodeString(base64Value)
-							if err != nil {
-								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to base64 decode the client certificate: %w", err))
-								return
-							}
-							v = string(decoded[:])
-						case "DER":
-							decoded, _ := pem.Decode([]byte(v))
-							if decoded == nil {
-								respondError(w, http.StatusBadRequest, fmt.Errorf("failed to convert the client certificate to DER format: %w", err))
-								return
-							}
-							v = string(decoded.Bytes[:])
-						default:
-							respondError(w, http.StatusBadRequest, fmt.Errorf("unknown decode option specified: %s", action))
-							return
-						}
-					}
-
-					cert, err := x509.ParseCertificate([]byte(v))
+					cert, err := decodeAndParse(v, actions)
 					if err != nil {
-						respondError(w, http.StatusBadRequest, fmt.Errorf("failed to parse the client certificate: %w", err))
+						respondError(w, http.StatusBadRequest, err)
 						return
 					}
 					client_certs = append(client_certs, cert)
 				}
 			}
 			if r.TLS == nil {
-				respondError(w, http.StatusBadRequest, fmt.Errorf("Server must use TLS for certificate authentication"))
+				r.TLS = &tls.ConnectionState{
+					PeerCertificates: client_certs,
+				}
 			} else {
 				r.TLS.PeerCertificates = append(client_certs, r.TLS.PeerCertificates...)
 			}
 		}
 		h.ServeHTTP(w, r)
 	})
+}
+
+func decodeAndParse(v string, actions []string) (*x509.Certificate, error) {
+	decoded, decodeErr := decodeHeader(v, actions, url.PathUnescape)
+	cert, parseErr := x509.ParseCertificate([]byte(decoded))
+
+	if cert != nil {
+		return cert, nil
+	}
+
+	if strutil.StrListContains(actions, "URL") {
+		decoded, decodeErr = decodeHeader(v, actions, url.QueryUnescape)
+		cert, parseErr = x509.ParseCertificate([]byte(decoded))
+	}
+	if decodeErr != nil {
+		return nil, decodeErr
+	}
+	if parseErr != nil {
+		return nil, fmt.Errorf("failed to parse the client certificate: %w", parseErr)
+	}
+	return cert, nil
+}
+
+var errDecodeDer = fmt.Errorf("failed to convert the client certificate to DER format")
+
+func decodeHeader(v string, actions []string, urlUnescaper func(string) (string, error)) (string, error) {
+	for _, action := range actions {
+		switch action {
+		case "URL":
+			decoded, err := urlUnescaper(v)
+			if err != nil {
+				return "", fmt.Errorf("failed to url unescape the client certificate: %w", err)
+			}
+			v = decoded
+		case "BASE64":
+			// Support RFC 9440/8941 Structured Headers byte sequence values (":MIIC...==:").
+			// If the value is wrapped in leading/trailing colons, unwrap before decoding.
+			base64Value := v
+			if len(v) >= 2 && v[0] == ':' && v[len(v)-1] == ':' {
+				base64Value = v[1 : len(v)-1]
+			}
+
+			decoded, err := base64.StdEncoding.DecodeString(base64Value)
+			if err != nil {
+				return "", fmt.Errorf("failed to base64 decode the client certificate: %w", err)
+			}
+			v = string(decoded[:])
+		case "DER":
+			decoded, _ := pem.Decode([]byte(v))
+			if decoded == nil {
+				return "", errDecodeDer
+			}
+			v = string(decoded.Bytes[:])
+		default:
+			return "", fmt.Errorf("unknown decode option specified: %s", action)
+		}
+	}
+	return v, nil
 }
 
 // generateCSPNonce generates a cryptographically secure random nonce for CSP

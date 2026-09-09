@@ -22,6 +22,7 @@ export default create({
     await visit('/vault/secrets-engines/enable');
     // Click the engine type card to proceed to configuration
     await click(GENERAL.cardContainer(type));
+    await click(GENERAL.button('next'));
     // Fill in the path if provided
     if (path) {
       await fillIn(GENERAL.inputByAttr('path'), path);

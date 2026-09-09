@@ -39,6 +39,7 @@ module('Integration | Component | kmip | Page::Credentials', function (hooks) {
       pageSize: 10,
       filteredTotal: this.credentials.length,
       total: this.credentials.length,
+      totalItems: this.credentials.length,
     };
     this.filterValue = '';
     this.capabilities = { canDelete: true };

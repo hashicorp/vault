@@ -7,10 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	iamtypes "github.com/aws/aws-sdk-go-v2/service/iam/types"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,21 +23,21 @@ const ec2AllPolicy = `{"Version": "2012-10-17","Statement": [{"Effect": "Allow",
 const ec2SingleStatement = `{"Version": "2012-10-17", "Statement": {"Effect": "Allow", "Action": ["ec2:DescribeInstances"], "Resource": "*"}}`
 
 type mockGroupIAMClient struct {
-	iamiface.IAMAPI
+	iamAPI
 	ListAttachedGroupPoliciesResp iam.ListAttachedGroupPoliciesOutput
 	ListGroupPoliciesResp         iam.ListGroupPoliciesOutput
 	GetGroupPolicyResp            iam.GetGroupPolicyOutput
 }
 
-func (m mockGroupIAMClient) ListAttachedGroupPoliciesWithContext(_ aws.Context, in *iam.ListAttachedGroupPoliciesInput, _ ...request.Option) (*iam.ListAttachedGroupPoliciesOutput, error) {
+func (m mockGroupIAMClient) ListAttachedGroupPolicies(_ context.Context, in *iam.ListAttachedGroupPoliciesInput, _ ...func(*iam.Options)) (*iam.ListAttachedGroupPoliciesOutput, error) {
 	return &m.ListAttachedGroupPoliciesResp, nil
 }
 
-func (m mockGroupIAMClient) ListGroupPoliciesWithContext(_ aws.Context, in *iam.ListGroupPoliciesInput, _ ...request.Option) (*iam.ListGroupPoliciesOutput, error) {
+func (m mockGroupIAMClient) ListGroupPolicies(_ context.Context, in *iam.ListGroupPoliciesInput, _ ...func(*iam.Options)) (*iam.ListGroupPoliciesOutput, error) {
 	return &m.ListGroupPoliciesResp, nil
 }
 
-func (m mockGroupIAMClient) GetGroupPolicyWithContext(_ aws.Context, in *iam.GetGroupPolicyInput, _ ...request.Option) (*iam.GetGroupPolicyOutput, error) {
+func (m mockGroupIAMClient) GetGroupPolicy(_ context.Context, in *iam.GetGroupPolicyInput, _ ...func(*iam.Options)) (*iam.GetGroupPolicyOutput, error) {
 	return &m.GetGroupPolicyResp, nil
 }
 
@@ -57,7 +56,7 @@ func Test_getGroupPolicies(t *testing.T) {
 		{
 			description: "All IAM calls respond with data",
 			listAGPResp: iam.ListAttachedGroupPoliciesOutput{
-				AttachedPolicies: []*iam.AttachedPolicy{
+				AttachedPolicies: []iamtypes.AttachedPolicy{
 					{
 						PolicyArn:  aws.String("abcdefghijklmnopqrst"),
 						PolicyName: aws.String("test policy"),
@@ -65,8 +64,8 @@ func Test_getGroupPolicies(t *testing.T) {
 				},
 			},
 			listGPResp: iam.ListGroupPoliciesOutput{
-				PolicyNames: []*string{
-					aws.String("inline policy"),
+				PolicyNames: []string{
+					"inline policy",
 				},
 			},
 			getGPResp: iam.GetGroupPolicyOutput{
@@ -83,8 +82,8 @@ func Test_getGroupPolicies(t *testing.T) {
 			description: "No managed policies",
 			listAGPResp: iam.ListAttachedGroupPoliciesOutput{},
 			listGPResp: iam.ListGroupPoliciesOutput{
-				PolicyNames: []*string{
-					aws.String("inline policy"),
+				PolicyNames: []string{
+					"inline policy",
 				},
 			},
 			getGPResp: iam.GetGroupPolicyOutput{
@@ -100,7 +99,7 @@ func Test_getGroupPolicies(t *testing.T) {
 		{
 			description: "No inline policies",
 			listAGPResp: iam.ListAttachedGroupPoliciesOutput{
-				AttachedPolicies: []*iam.AttachedPolicy{
+				AttachedPolicies: []iamtypes.AttachedPolicy{
 					{
 						PolicyArn:  aws.String("abcdefghijklmnopqrst"),
 						PolicyName: aws.String("test policy"),
@@ -142,7 +141,7 @@ func Test_getGroupPolicies(t *testing.T) {
 			config.StorageView = &logical.InmemStorage{}
 
 			b := Backend(config)
-			if err := b.Setup(context.Background(), config); err != nil {
+			if err := b.Setup(t.Context(), config); err != nil {
 				t.Fatal(err)
 			}
 			b.iamClient = &mockGroupIAMClient{

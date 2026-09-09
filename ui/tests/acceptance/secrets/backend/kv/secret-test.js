@@ -48,6 +48,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const maxVersion = '101';
       await mountSecrets.visit();
       await click(GENERAL.cardContainer('kv'));
+      await click(GENERAL.button('next'));
       await fillIn(GENERAL.inputByAttr('path'), enginePath);
 
       await fillIn(GENERAL.inputByAttr('kv_config.max_versions'), maxVersion);
@@ -142,8 +143,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       // mount version 1 engine
       await mountSecrets.visit();
       await click(GENERAL.cardContainer('kv'));
+      await click(GENERAL.button('next'));
       await fillIn(GENERAL.inputByAttr('path'), this.backend);
-      await click(GENERAL.button('Method Options'));
+      await click(GENERAL.button('View additional settings'));
       await mountSecrets.version(1);
       await click(GENERAL.submitButton);
     });

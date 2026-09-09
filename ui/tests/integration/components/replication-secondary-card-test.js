@@ -45,7 +45,6 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
     await render(
       hbs`<ReplicationSecondaryCard @replicationDetails={{this.replicationDetails}} @title='Primary cluster'/>`
     );
-
     assert.dom('[data-test-info-table]').exists('it shows the known primary cluster details');
 
     const expectedUrl = `${REPLICATION_DETAILS.primaries[0].api_address}/ui/`;

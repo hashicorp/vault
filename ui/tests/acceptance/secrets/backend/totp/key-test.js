@@ -57,7 +57,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await login();
     // Setup TOTP engine
     await visit('/vault/secrets-engines/enable');
-    await mountBackend('totp', this.mountPath);
+    await mountBackend('totp', this.mountPath, true);
   });
 
   test('it views a key via menu option', async function (assert) {

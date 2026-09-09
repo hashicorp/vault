@@ -5,30 +5,20 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-.env-banner {
-  font-size: 0.8rem;
-  border-radius: 3rem;
-  background: linear-gradient(
-    135deg,
-    var(--token-color-palette-blue-200),
-    hsl(271, 100%, 71%)
-  ); // only use case for purple in the app. define here instead of utils/color_var
-  animation: env-banner-color-rotate 8s infinite linear alternate;
-  color: hsl(0, 0%, 100%);
-
-  .hs-icon {
-    margin: 0;
-  }
-
-  .notification {
-    background-color: transparent;
-    line-height: 2;
-    padding: 0 size_variables.$spacing-12;
-  }
-}
-
 @keyframes env-banner-color-rotate {
   100% {
     filter: hue-rotate(105deg);
+  }
+}
+
+.env-banner {
+  border-color: linear-gradient(135deg, var(--token-color-palette-blue-200), hsl(271, 100%, 71%));
+  border: 2px solid;
+  animation: env-banner-color-rotate 8s infinite linear alternate;
+  margin-top: auto;
+
+  .hds-alert__text > .hds-alert__title,
+  .hds-alert__text > .hds-alert__description {
+    font-size: 0.65rem;
   }
 }

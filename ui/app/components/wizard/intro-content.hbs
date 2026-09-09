@@ -5,9 +5,17 @@
 
 <Hds::Layout::Flex @align="start" @direction="column" as |LF|>
   <LF.Item class="has-bottom-margin-xs">
-    <Hds::Badge @text={{concat "Setup time: " @setupTime}} />
+    {{#if @setupTime}}
+      <Hds::Badge @text={{concat "Setup time: " @setupTime}} />
+    {{/if}}
     {{#if @isOptional}}
       <Hds::Badge @text="Optional" @type="outlined" class="has-left-margin-xs" />
+    {{/if}}
+    {{#if @isBeta}}
+      <Hds::Badge @text="Beta" class="has-left-margin-xs" />
+    {{/if}}
+    {{#if @isEnterprise}}
+      <Hds::Badge @text="Enterprise" @color="highlight" class="has-left-margin-xs" />
     {{/if}}
   </LF.Item>
 
@@ -16,7 +24,7 @@
   {{yield to="features"}}
 </Hds::Layout::Flex>
 
-<Hds::Layout::Flex @direction="column">
-  <img src={{@imageSrc}} alt={{@imageAlt}} />
+<Hds::Layout::Flex @direction="column" class={{@imageClass}} data-test-intro-content-image-container>
+  <img src={{@imageSrc}} alt={{@imageAlt}} class={{@imageClass}} data-test-intro-content-image />
   <Hds::Text::Body @align="left" @color="faint" @size="100" @tag="p">{{@imageCaption}}</Hds::Text::Body>
 </Hds::Layout::Flex>

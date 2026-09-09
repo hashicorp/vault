@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ocsp"
 )
 
 const (
@@ -144,6 +145,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				legacyCertBundlePath,
 				legacyCertBundleBackupPath,
 				keyPrefix,
+				exportKeyPrefix,
 			},
 
 			WriteForwardedStorage: []string{
@@ -894,13 +896,13 @@ type revoker struct {
 func (r *revoker) RevokeCert(cert *x509.Certificate) (revocation.RevokeCertInfo, error) {
 	r.backend.GetRevokeStorageLock().Lock()
 	defer r.backend.GetRevokeStorageLock().Unlock()
-	resp, err := revokeCert(r.storageContext, r.crlConfig, cert)
+	resp, err := revokeCert(r.storageContext, r.crlConfig, cert, ocsp.Unspecified)
 	return parseRevokeCertOutput(resp, err)
 }
 
 func (r *revoker) RevokeCertBySerial(serial string) (revocation.RevokeCertInfo, error) {
 	// NOTE: tryRevokeCertBySerial grabs the revoke storage lock for us
-	resp, err := tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial)
+	resp, err := tryRevokeCertBySerial(r.storageContext, r.crlConfig, serial, ocsp.Unspecified)
 	return parseRevokeCertOutput(resp, err)
 }
 

@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-const _TokenTypeName = "defaultservicebatchdefault-servicedefault-batchent"
+const _TokenTypeName = "defaultservicebatchdefault-servicedefault-batchentscim"
 
-var _TokenTypeIndex = [...]uint8{0, 7, 14, 19, 34, 47, 50}
+var _TokenTypeIndex = [...]uint8{0, 7, 14, 19, 34, 47, 50, 54}
 
 func (i TokenType) String() string {
 	if i >= TokenType(len(_TokenTypeIndex)-1) {
@@ -17,7 +17,7 @@ func (i TokenType) String() string {
 	return _TokenTypeName[_TokenTypeIndex[i]:_TokenTypeIndex[i+1]]
 }
 
-var _TokenTypeValues = []TokenType{0, 1, 2, 3, 4, 5}
+var _TokenTypeValues = []TokenType{0, 1, 2, 3, 4, 5, 6}
 
 var _TokenTypeNameToValueMap = map[string]TokenType{
 	_TokenTypeName[0:7]:   0,
@@ -26,6 +26,7 @@ var _TokenTypeNameToValueMap = map[string]TokenType{
 	_TokenTypeName[19:34]: 3,
 	_TokenTypeName[34:47]: 4,
 	_TokenTypeName[47:50]: 5,
+	_TokenTypeName[50:54]: 6,
 }
 
 // TokenTypeString retrieves an enum value from the enum constants string name.

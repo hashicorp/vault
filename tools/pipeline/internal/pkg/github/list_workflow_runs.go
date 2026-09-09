@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -158,7 +158,7 @@ func (r *ListWorkflowRunsReq) getWorkflowRuns(ctx context.Context, client *gh.Cl
 		opts.CheckSuiteID = r.CheckSuiteID
 	}
 
-	return getWorkflowRuns(ctx, client, r.Owner, r.Repo, id, opts)
+	return getWorkflowRuns(ctx, client, r.Owner, r.Repo, id, 0, opts)
 }
 
 // getWorkflowCheckRuns gets the check suite runs associated with the workflow runs.

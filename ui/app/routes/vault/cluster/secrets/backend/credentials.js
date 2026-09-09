@@ -33,18 +33,22 @@ export default Route.extend({
       if (roleType === 'static') {
         const { last_vault_rotation, lease_duration, data } =
           await this.api.secrets.databaseReadStaticRoleCredentials(secret, backend);
+        const { rsa_private_key, ...rest } = data;
         return {
           last_vault_rotation,
           lease_duration,
-          ...data,
+          ...rest,
+          ...(rsa_private_key !== undefined ? { rsaPrivateKey: rsa_private_key } : {}),
         };
       } else {
         const { data, lease_id, lease_duration } = await this.api.secrets.databaseGenerateCredentials(
           secret,
           backend
         );
+        const { rsa_private_key: rsaPrivateKey, ...rest } = data;
         return {
-          ...data,
+          ...rest,
+          ...(rsaPrivateKey !== undefined ? { rsaPrivateKey } : {}),
           lease_id,
           lease_duration,
         };

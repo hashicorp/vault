@@ -11,6 +11,22 @@ export const findEngineDisplayName = (engineType: string) => {
   return engine ? engine.displayName : engineType;
 };
 
+/**
+ * The configure tab label is NOT always the ALL_ENGINES displayName. Engines that render their own
+ * header inside an ember engine pass a hardcoded @displayName to Mount::ConfigureTabs, and pki's
+ * differs: lib/pki/addon/components/pki-page-header.hbs passes "PKI Certificates" while
+ * ALL_ENGINES says "Private PKI".
+ *
+ * Keep this separate from findEngineDisplayName - that one is also used to pick the engine tile on
+ * the enable page, which does render the ALL_ENGINES displayName (see enabled-plugin-card.hbs).
+ */
+const CONFIGURE_TAB_LABEL_OVERRIDES: Record<string, string> = {
+  pki: 'PKI Certificates',
+};
+
+const findConfigureTabLabel = (engineType: string) =>
+  CONFIGURE_TAB_LABEL_OVERRIDES[engineType] ?? findEngineDisplayName(engineType);
+
 const configurableEngines = ALL_ENGINES.filter((engine) => engine.isConfigurable).map(
   (engine) => engine.type
 );
@@ -27,7 +43,7 @@ export class ConfigurationSettingsPage {
   }
 
   async assertPluginSettingsTabActive(engineType: string) {
-    const engineDisplayName = findEngineDisplayName(engineType);
+    const engineDisplayName = findConfigureTabLabel(engineType);
     await expect(this.page.getByRole('link', { name: 'General settings' })).not.toHaveClass(/active/);
     await expect(this.page.getByRole('link', { name: `${engineDisplayName} settings` })).toHaveClass(
       /active/
@@ -38,7 +54,7 @@ export class ConfigurationSettingsPage {
   }
 
   async navigateToGeneralSettings(engineType: string) {
-    const engineDisplayName = findEngineDisplayName(engineType);
+    const engineDisplayName = findConfigureTabLabel(engineType);
     await this.page.getByRole('link', { name: 'General settings' }).click();
     await expect(this.page.getByRole('link', { name: 'General settings' })).toHaveClass(/active/);
 

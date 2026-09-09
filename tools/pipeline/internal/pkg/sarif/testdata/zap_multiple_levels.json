@@ -1,0 +1,96 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "ZAP",
+          "version": "2.15.0"
+        }
+      },
+      "results": [
+        {
+          "ruleId": "10001",
+          "level": "note",
+          "message": {
+            "text": "Informational finding"
+          },
+          "webRequest": {
+            "target": "https://example.com/info",
+            "method": "GET"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "https://example.com/info"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "10002",
+          "level": "warning",
+          "message": {
+            "text": "Low severity issue"
+          },
+          "webRequest": {
+            "target": "https://example.com/warning",
+            "method": "GET"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "https://example.com/warning"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "10003",
+          "level": "error",
+          "message": {
+            "text": "Medium severity issue"
+          },
+          "webRequest": {
+            "target": "https://example.com/error",
+            "method": "POST"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "https://example.com/error"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "10004",
+          "level": "critical",
+          "message": {
+            "text": "High severity issue"
+          },
+          "webRequest": {
+            "target": "https://example.com/critical",
+            "method": "DELETE"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "https://example.com/critical"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

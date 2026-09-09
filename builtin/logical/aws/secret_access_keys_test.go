@@ -4,7 +4,6 @@
 package aws
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -123,7 +122,7 @@ func TestReadConfig_DefaultTemplate(t *testing.T) {
 	config.System = &testSystemView{}
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -140,7 +139,7 @@ func TestReadConfig_DefaultTemplate(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      configData,
 	}
-	resp, err := b.HandleRequest(context.Background(), configReq)
+	resp, err := b.HandleRequest(t.Context(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
@@ -148,7 +147,7 @@ func TestReadConfig_DefaultTemplate(t *testing.T) {
 		t.Fatal("expected a nil response")
 	}
 
-	configResult, err := readConfig(context.Background(), config.StorageView)
+	configResult, err := readConfig(t.Context(), config.StorageView)
 	if err != nil {
 		t.Fatalf("expected err to be nil; got %s", err)
 	}
@@ -169,7 +168,7 @@ func TestReadConfig_CustomTemplate(t *testing.T) {
 	config.System = &testSystemView{}
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -186,7 +185,7 @@ func TestReadConfig_CustomTemplate(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      configData,
 	}
-	resp, err := b.HandleRequest(context.Background(), configReq)
+	resp, err := b.HandleRequest(t.Context(), configReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: resp: %#v\nerr:%s", resp, err)
 	}
@@ -194,7 +193,7 @@ func TestReadConfig_CustomTemplate(t *testing.T) {
 		t.Fatal("expected a nil response")
 	}
 
-	configResult, err := readConfig(context.Background(), config.StorageView)
+	configResult, err := readConfig(t.Context(), config.StorageView)
 	if err != nil {
 		t.Fatalf("expected err to be nil; got %s", err)
 	}

@@ -1,0 +1,77 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div ...attributes data-test-widget="explore-vault">
+  {{#if @isPostCompletion}}
+    <OnboardingCard @size="large" class="dashboard-explore-vault-card" data-test-explore-vault-card>
+      <Hds::Layout::Flex @justify="space-between" @align="start" class="has-bottom-margin-m">
+        <Hds::Text::Display @tag="h2" @size="400">Explore more of Vault</Hds::Text::Display>
+        <Hds::Button
+          @text="Setup guide"
+          @icon="eye"
+          @iconPosition="leading"
+          @color="tertiary"
+          @size="small"
+          {{on "click" @onRestore}}
+          data-test-explore-vault-restore
+        />
+      </Hds::Layout::Flex>
+
+      <Hds::Layout::Grid @columnMinWidth="50%" @gap="32" data-test-explore-vault-links>
+        <div>
+          <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-margin-xs">Read secrets</Hds::Text::Display>
+          <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-bottom-margin-s">
+            Let's get you working with the secrets in your cluster.
+          </Hds::Text::Body>
+          <Hds::Button
+            @text="How to use your secrets"
+            @icon="bulb"
+            @iconPosition="leading"
+            @color="secondary"
+            @size="small"
+            @href="https://developer.hashicorp.com/vault/tutorials/secrets-management"
+            @isHrefExternal={{true}}
+            data-test-explore-link="secrets-management"
+          />
+        </div>
+
+        <div>
+          <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-margin-xs">Use replication</Hds::Text::Display>
+          <Hds::Text::Body @tag="p" @size="100" @color="faint" class="has-bottom-margin-s">
+            Take advantage of cross-datacenter replication to ensure data availability.
+          </Hds::Text::Body>
+          <Hds::Button
+            @text="Replication"
+            @icon="arrow-right"
+            @iconPosition="trailing"
+            @color="secondary"
+            @size="small"
+            @route="vault.cluster.replication"
+            data-test-explore-link="replication"
+          />
+        </div>
+      </Hds::Layout::Grid>
+    </OnboardingCard>
+  {{else}}
+    <OnboardingCard @size="small" class="dashboard-guided-setup-card" data-test-guided-setup-card>
+      <div class="dashboard-guided-setup-card__content">
+        <Hds::Text::Display @tag="h2" @size="400" class="has-bottom-margin-xs">Guided cluster setup</Hds::Text::Display>
+        <Hds::Text::Body @tag="p" @size="200" class="has-bottom-margin-m">
+          Experience a seamless onboarding process by following our curated, step-by-step cluster setup guide.
+        </Hds::Text::Body>
+
+        <Hds::Button
+          @text="View setup guide"
+          @icon="eye"
+          @iconPosition="leading"
+          @color="secondary"
+          @size="small"
+          {{on "click" @onRestore}}
+          data-test-explore-vault-restore
+        />
+      </div>
+    </OnboardingCard>
+  {{/if}}
+</div>

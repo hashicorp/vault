@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -297,13 +296,25 @@ func (c *OperatorMigrateCommand) createDestinationBackend(kind string, conf map[
 		if err != nil {
 			return nil, fmt.Errorf("error parsing cluster address: %w", err)
 		}
-		if err := raftStorage.Bootstrap([]raft.Peer{
-			{
-				ID:      raftStorage.NodeID(),
-				Address: parsedClusterAddr.Host,
-			},
-		}); err != nil {
-			return nil, fmt.Errorf("could not bootstrap clustered storage: %w", err)
+
+		hasState, err := raftStorage.HasState()
+		if err != nil {
+			return nil, fmt.Errorf("error checking raft storage state: %w", err)
+		}
+
+		if hasState && c.flagStart == "" {
+			return nil, fmt.Errorf("raft destination already contains state; use -start to resume migration from a checkpoint")
+		}
+
+		if !hasState {
+			if err := raftStorage.Bootstrap([]raft.Peer{
+				{
+					ID:      raftStorage.NodeID(),
+					Address: parsedClusterAddr.Host,
+				},
+			}); err != nil {
+				return nil, fmt.Errorf("could not bootstrap clustered storage: %w", err)
+			}
 		}
 
 		if err := raftStorage.SetupCluster(context.Background(), raft.SetupOpts{
@@ -332,13 +343,9 @@ func (c *OperatorMigrateCommand) loadMigratorConfig(path string) (*migratorConfi
 		return nil, err
 	}
 
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to hcl.Parse once duplicates are forbidden
-	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(string(d))
+	obj, err := hcl.Parse(string(d))
 	if err != nil {
 		return nil, err
-	}
-	if duplicate {
-		c.UI.Warn("WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 	}
 
 	var result migratorConfig

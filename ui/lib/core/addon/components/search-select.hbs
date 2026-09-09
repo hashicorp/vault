@@ -77,19 +77,24 @@
               {{get selected this.idKey}}
             </small>
           {{else}}
-            <div class="list-item-text has-right-margin-4 text-overflow-ellipsis">
-              {{selected.id}}
-              {{#if @wildcardLabel}}
-                {{#if (is-wildcard-string selected.id)}}
-                  {{#let (filter-wildcard selected this.allOptions) as |wildcardCount|}}
-                    <Hds::Badge
-                      @text="includes {{pluralize wildcardCount @wildcardLabel}}"
-                      data-test-count={{wildcardCount}}
-                    />
-                  {{/let}}
-                {{/if}}
-              {{/if}}
-            </div>
+            {{! inline oidc application assignments do not save as an object, they are a direct string value }}
+            {{#let (if selected.id selected.id selected) as |label|}}
+              <Hds::TooltipButton @text={{label}} aria-label={{label}} class="list-item-text">
+                <div class="has-right-margin-4 text-overflow-ellipsis">
+                  {{label}}
+                  {{#if @wildcardLabel}}
+                    {{#if (is-wildcard-string label)}}
+                      {{#let (filter-wildcard selected this.allOptions) as |wildcardCount|}}
+                        <Hds::Badge
+                          @text="includes {{pluralize wildcardCount @wildcardLabel}}"
+                          data-test-count={{wildcardCount}}
+                        />
+                      {{/let}}
+                    {{/if}}
+                  {{/if}}
+                </div>
+              </Hds::TooltipButton>
+            {{/let}}
           {{/if}}
           <div class="control">
             {{#if selected.addTooltip}}

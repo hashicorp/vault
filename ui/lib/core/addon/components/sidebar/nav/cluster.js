@@ -5,14 +5,40 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
+import { action } from '@ember/object';
 import { NavSection, RouteName } from 'core/helpers/display-nav-item';
+import {
+  NAV_DASHBOARD,
+  NAV_SECRETS,
+  NAV_RESILIENCE_RECOVERY,
+  NAV_ACCESS_CONTROL,
+  NAV_OPERATIONAL_TOOLS,
+  NAV_REPORTING,
+  NAV_CLIENT_COUNT,
+  NAV_BILLING_METRICS,
+  NAV_RAFT_STORAGE,
+} from 'vault/utils/analytic-events';
 
 export default class SidebarNavClusterComponent extends Component {
+  @service analytics;
   @service currentCluster;
   @service flags;
   @service version;
   @service namespace;
   @service permissions;
+
+  // Event name constants for template access
+  navEvents = {
+    dashboard: NAV_DASHBOARD,
+    secrets: NAV_SECRETS,
+    resilienceRecovery: NAV_RESILIENCE_RECOVERY,
+    accessControl: NAV_ACCESS_CONTROL,
+    operationalTools: NAV_OPERATIONAL_TOOLS,
+    reporting: NAV_REPORTING,
+    clientCount: NAV_CLIENT_COUNT,
+    billingMetrics: NAV_BILLING_METRICS,
+    raftStorage: NAV_RAFT_STORAGE,
+  };
 
   navSection = {
     resilienceAndRecovery: NavSection.RESILIENCE_AND_RECOVERY,
@@ -79,5 +105,16 @@ export default class SidebarNavClusterComponent extends Component {
 
   routeParamsFor(routeName) {
     return this.permissions.navPathParams(routeName);
+  }
+
+  @action
+  trackNavClick(eventName, elementId, cta) {
+    this.analytics.trackEvent(eventName, {
+      namespace: 'nav',
+      action: 'clicked',
+      elementId,
+      CTA: cta,
+      channel: 'webpage',
+    });
   }
 }

@@ -244,8 +244,8 @@ func TestTransit_HMAC(t *testing.T) {
 			t.Fatalf("expected invalid request error, got %v", err)
 		}
 	}
-	// Verify the total successful transit requests
-	require.Equal(t, uint64(72), b.billingDataCounts.Transit.Load())
+	// Verify the total successful transit requests (36 per case * 2 cases)
+	require.Equal(t, uint64(72), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 func TestTransit_batchHMAC(t *testing.T) {
@@ -404,7 +404,7 @@ func TestTransit_batchHMAC(t *testing.T) {
 	}
 
 	// Verify the total successful transit requests
-	require.Equal(t, uint64(5), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(5), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 // TestHMACBatchResultsFields checks that responses to HMAC verify requests using batch_input

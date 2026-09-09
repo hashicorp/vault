@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -292,9 +292,11 @@ func (rf *requestForwardingHandler) Handoff(ctx context.Context, shutdownWg *syn
 }
 
 // Stop stops the request forwarding server and closes connections.
-func (rf *requestForwardingHandler) Stop() error {
+func (rf *requestForwardingHandler) Stop(sleep bool) error {
 	// Give some time for existing RPCs to drain.
-	time.Sleep(cluster.ListenerAcceptDeadline)
+	if sleep {
+		time.Sleep(cluster.ListenerAcceptDeadline)
+	}
 	close(rf.stopCh)
 	rf.fwRPCServer.Stop()
 	return nil

@@ -164,6 +164,11 @@ func TestRaft_BoltDBMetrics(t *testing.T) {
 	cluster := vault.NewTestCluster(t, conf, &opts)
 	leaderClient := cluster.Cores[0].Client
 
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
+
 	// Write a few keys
 	for i := 0; i < 50; i++ {
 		_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
@@ -618,6 +623,10 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 	cluster, _ := raftCluster(t, nil)
 
 	leaderClient := cluster.Cores[0].Client
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
 
 	// Write a few keys
 	for i := 0; i < 10; i++ {
@@ -631,7 +640,7 @@ func TestRaft_SnapshotAPI(t *testing.T) {
 
 	// Take a snapshot
 	buf := new(bytes.Buffer)
-	err := leaderClient.Sys().RaftSnapshot(buf)
+	err = leaderClient.Sys().RaftSnapshot(buf)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -682,6 +691,11 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	leaderClient := cluster.Cores[0].Client
 
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
+
 	// Write a bunch of keys; if too few, the detection code in api.RaftSnapshot
 	// will never make it into the tar part, it'll fail merely when trying to
 	// decompress the stream.
@@ -707,7 +721,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	wrappers[0].SetError(errors.New("seal failure"))
 	// Take a snapshot
-	err := leaderClient.Sys().RaftSnapshot(w)
+	err = leaderClient.Sys().RaftSnapshot(w)
 	w.Close()
 	if err == nil || err != api.ErrIncompleteSnapshot {
 		t.Fatalf("expected err=%v, got: %v", api.ErrIncompleteSnapshot, err)
@@ -785,6 +799,10 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			})
 
 			leaderClient := cluster.Cores[0].Client
+			err := leaderClient.Sys().Mount("secret", &api.MountInput{
+				Type: "kv",
+			})
+			require.NoError(t, err)
 
 			// Write a few keys
 			for i := 0; i < 10; i++ {
@@ -989,6 +1007,11 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 			leaderClient := cluster.Cores[0].Client
 
+			err := leaderClient.Sys().Mount("secret", &api.MountInput{
+				Type: "kv",
+			})
+			require.NoError(t, err)
+
 			// Write a few keys
 			for i := 0; i < 10; i++ {
 				_, err := leaderClient.Logical().Write(fmt.Sprintf("secret/%d", i), map[string]interface{}{
@@ -1174,6 +1197,11 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	cluster, _ := raftCluster(t, nil)
 
 	leaderClient := cluster.Cores[0].Client
+
+	err := leaderClient.Sys().Mount("secret", &api.MountInput{
+		Type: "kv",
+	})
+	require.NoError(t, err)
 
 	// Write a few keys
 	for i := 0; i < 10; i++ {
@@ -1382,7 +1410,11 @@ func TestRaftCluster_Removed(t *testing.T) {
 
 	follower := cluster.Cores[2]
 	followerClient := follower.Client
-	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+
+	err := followerClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
+	_, err = followerClient.Logical().Write("secret/foo", map[string]interface{}{
 		"test": "data",
 	})
 	require.NoError(t, err)
@@ -1426,7 +1458,9 @@ func TestRaftCluster_Removed_RaftConfig(t *testing.T) {
 
 	follower := cluster.Cores[2]
 	followerClient := follower.Client
-	_, err := followerClient.Logical().Write("secret/foo", map[string]interface{}{
+	err := followerClient.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+	_, err = followerClient.Logical().Write("secret/foo", map[string]interface{}{
 		"test": "data",
 	})
 	require.NoError(t, err)
@@ -1579,7 +1613,7 @@ func TestRaftCluster_Removed_ReAdd(t *testing.T) {
 	require.NoError(t, err)
 	require.Eventually(t, follower.Sealed, 10*time.Second, 250*time.Millisecond)
 
-	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.Address.String()}
+	joinReq := &api.RaftJoinRequest{LeaderAPIAddr: leader.APIAddress().String()}
 	_, err = follower.Client.Sys().RaftJoin(joinReq)
 	require.Error(t, err)
 }

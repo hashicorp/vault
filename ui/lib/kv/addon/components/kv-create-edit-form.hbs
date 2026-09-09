@@ -21,7 +21,7 @@
       {{/if}}
     {{/each}}
 
-    <hr class="is-marginless has-background-gray-200" />
+    <Hds::Separator @spacing="0" />
     {{#if @showJson}}
       <JsonEditor
         @title="{{if @form.isNew 'Secret' 'Version'}} data"

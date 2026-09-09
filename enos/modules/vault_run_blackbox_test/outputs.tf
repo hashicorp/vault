@@ -18,3 +18,12 @@ output "test_results_summary" {
     test_package = var.test_package
   }
 }
+
+output "blackbox_test_cmd" {
+  description = <<-EOT
+    The equivalent standalone go test command for this blackbox test run.
+    Copy and paste this into a terminal to reproduce the test outside of Enos.
+    Run with: enos scenario output <scenario> <filter> | jq -r '.blackbox_test_cmd.value'
+  EOT
+  value       = local.blackbox_test_cmd
+}

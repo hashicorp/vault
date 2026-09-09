@@ -148,6 +148,59 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.true(this.onSave.notCalled, 'onSave is not called yet');
     assert.dom(GENERAL.messageError).includesText('An error occurred');
   });
+
+  test('it does not save a policy when the name is only whitespace', async function (assert) {
+    const requests = [];
+    this.server.post('/sys/policies/acl/:name', (_, req) => {
+      requests.push(req.params.name);
+      return overrideResponse(204);
+    });
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '    ');
+    // Change editors so we don't trigger visual editor validations
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('name'))
+      .hasText('Policy name cannot be empty or whitespace-only.', 'it renders inline name validation');
+    assert.dom(GENERAL.messageError).includesText('There is an error with this form.');
+    assert.strictEqual(requests.length, 0, 'it does not make a request to save the policy');
+    assert.true(this.onSave.notCalled, 'onSave is not called');
+  });
+
+  test('it clears the name validation error when the name is updated', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '  ');
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error renders');
+
+    await fillIn(GENERAL.inputByAttr('name'), 'my-policy');
+    assert.dom(GENERAL.validationErrorByAttr('name')).doesNotExist('validation error is cleared');
+
+    await click(GENERAL.submitButton);
+    assert.true(this.onSave.calledOnce, 'onSave is called after the name is corrected');
+  });
+
+  test('it trims leading and trailing whitespace from the policy name on save', async function (assert) {
+    const requests = [];
+    this.server.post('/sys/policies/acl/:name', (_, req) => {
+      requests.push(req.params.name);
+      return overrideResponse(204);
+    });
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '  My-Policy  ');
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+
+    assert.deepEqual(requests, ['my-policy'], 'it saves the trimmed, lowercased name');
+    assert.strictEqual(this.form.name, 'my-policy', 'form data holds the trimmed name');
+  });
+
   // End shared functionality tests
 
   module('ACL', function (hooks) {
@@ -199,6 +252,13 @@ module('Integration | Component | policy-form', function (hooks) {
       assert.dom(GENERAL.inputByAttr('name')).doesNotExist('Name input is not rendered');
       assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
       this.assertNoVisualEditor(assert, 'it does not render visual editor when editing an ACL policy');
+
+      assert
+        .dom(GENERAL.accordionButton('Automation snippets'))
+        .exists('Automation snippets are still visible when editing an existing ACL policy');
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert.dom(GENERAL.hdsTab('terraform')).exists();
+      assert.dom(GENERAL.hdsTab('cli')).exists();
 
       await setEditorValue('updated');
       assert.strictEqual(this.form.policy, 'updated', 'Policy editor updates policy value on model');
@@ -272,7 +332,7 @@ path "second/path" {
       assert.strictEqual(actual.policy, expectedPolicy, 'onSave is called with expected policy');
     });
 
-    test('it shows validation errors for invalid policy stanzas', async function (assert) {
+    test('it shows validation errors for invalid policy stanzas (empty path)', async function (assert) {
       await this.renderComponent();
       await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
       await click(GENERAL.submitButton);
@@ -282,10 +342,10 @@ path "second/path" {
         .dom(GENERAL.messageError)
         .exists()
         .hasText('Error There is an error with this form. Invalid policy content.');
-      assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path cannot be empty.');
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path is required.');
       assert
         .dom(GENERAL.validationErrorByAttr('capabilities-0'))
-        .hasText('Rule must have at least one capability.');
+        .doesNotExist('capabilities do not block save');
     });
 
     test('it still saves from the code editor when visual stanzas are invalid', async function (assert) {
@@ -349,6 +409,105 @@ EOT
 }
 EOT`;
       assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
+    });
+
+    test('it updates snippets from the code editor', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'my-simple-policy');
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.accordionButton('Automation snippets'));
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+  name = "my-simple-policy"
+
+  policy = <<EOT
+${this.policy}
+EOT
+}`;
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasText(expectedTfvp, 'terraform snippet renders policy from the code editor');
+      const expectedCli = `vault policy write my-simple-policy - <<EOT
+${this.policy}
+EOT`;
+      assert
+        .dom(GENERAL.fieldByAttr('cli'))
+        .hasText(expectedCli, 'cli snippet renders policy from the code editor');
+    });
+
+    test('it updates snippets when the code editor changes after using the visual editor', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'my-secure-policy');
+      // Build a policy using the visual editor first
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      await click(GENERAL.checkboxByAttr('patch'));
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('capabilities = ["patch"]', 'snippet renders visual editor stanzas');
+      // Switching to the code editor and editing should update the snippets
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining(
+          'capabilities = [ "create", "read", "update", "list" ]',
+          'terraform snippet updates from the code editor'
+        );
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .doesNotIncludeText('"patch"', 'terraform snippet no longer renders visual editor stanzas');
+      assert
+        .dom(GENERAL.fieldByAttr('cli'))
+        .hasTextContaining(
+          'capabilities = [ "create", "read", "update", "list" ]',
+          'cli snippet updates from the code editor'
+        );
+    });
+
+    test('it updates snippets after uploading a policy file', async function (assert) {
+      const file = new File([this.policy], 'test-policy.txt');
+      await this.renderComponent();
+      await click(GENERAL.toggleInput('Upload file'));
+      await triggerEvent(GENERAL.fileInput, 'change', { files: [file] });
+      await waitFor('.cm-editor');
+      await settled();
+      await click(GENERAL.accordionButton('Automation snippets'));
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+  name = "test-policy"
+
+  policy = <<EOT
+${this.policy}
+EOT
+}`;
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasText(expectedTfvp, 'terraform snippet renders the uploaded policy');
+      const expectedCli = `vault policy write test-policy - <<EOT
+${this.policy}
+EOT`;
+      assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli, 'cli snippet renders the uploaded policy');
+    });
+
+    test('it reverts snippets to visual editor stanzas after discarding code editor changes', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      await click(GENERAL.checkboxByAttr('patch'));
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('path "secret/*"', 'snippet renders code editor policy');
+      // Switch back to the visual editor and discard code editor changes
+      await click(GENERAL.radioByAttr('visual'));
+      await click(GENERAL.confirmButton);
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('path "my/super/secret/*"', 'snippet reverts to visual editor stanzas');
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .doesNotIncludeText('path "secret/*"', 'snippet no longer renders discarded code editor policy');
     });
 
     module('switch editors modal', function (hooks) {

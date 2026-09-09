@@ -62,7 +62,7 @@
           checked={{includes type.name this.engineTypeFilters}}
           {{on "click" (fn this.filterByEngineType type.name)}}
           data-test-checkbox={{type.name}}
-        ><Hds::Icon @name={{type.icon}} @isInline={{true}} /> {{type.name}}</D.Checkbox>
+        ><Hds::Icon @name={{type.icon}} @isInline={{true}} class="is-v-centered" /> {{type.name}}</D.Checkbox>
       {{/each}}
     </SG.Dropdown>
     <SG.Dropdown @width="250px" as |D|>
@@ -150,7 +150,12 @@
         {{#let (this.getEngineResourceData rowData.path) as |backendData|}}
           {{! Only render if we have backendData, so this doesn't try to render while data for the list refreshes }}
           {{#if backendData}}
-            <ManageDropdown @model={{backendData}} @variant="icon" @configRoute={{backendData.backendConfigurationLink}} />
+            <ManageDropdown
+              @model={{backendData}}
+              @variant="icon"
+              @showDelete={{true}}
+              @configRoute={{backendData.backendConfigurationLink}}
+            />
           {{/if}}
         {{/let}}
       </:popupMenu>

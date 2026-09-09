@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -58,7 +58,8 @@ func (r *SyncBranchReq) Run(
 	res := &SyncBranchRes{Request: r}
 
 	disallowedGroupsStr := strings.Join(r.DisallowedGroups, ", ")
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("from-owner", r.FromOwner),
 		slog.String("from-repo", r.FromRepo),
 		slog.String("from-origin", r.FromOrigin),

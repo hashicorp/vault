@@ -1043,15 +1043,7 @@ func TestQueueTickIntervalKeyConfig(t *testing.T) {
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
 	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
-	oldToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
-	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
-	defer func() {
-		if oldToken != "" {
-			os.Setenv(pluginutil.PluginUnwrapTokenEnv, oldToken)
-		} else {
-			os.Unsetenv(pluginutil.PluginUnwrapTokenEnv)
-		}
-	}()
+	t.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
 
 	_, sys := getClusterPostgresDB(t)
 

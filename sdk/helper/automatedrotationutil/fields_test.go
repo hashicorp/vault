@@ -106,7 +106,7 @@ func TestParseAutomatedRotationFields(t *testing.T) {
 				},
 				Schema: schemaMap,
 			},
-			expectedError: "rotation_window does not apply to period",
+			expectedError: "rotation_window does not apply to rotation_period",
 		},
 		{
 			name: "window-without-schedule",

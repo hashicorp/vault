@@ -55,9 +55,7 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 			"badPolicy1",
 		},
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	entityID := resp.Data["id"].(string)
 
 	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
@@ -69,33 +67,28 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 		},
 		"name": "group_name",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	groupID := resp.Data["id"]
 
 	resp, err = client.Logical().Write("identity/group", map[string]interface{}{
 		"name": "foobar",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	foobarGroupID := resp.Data["id"]
+
+	err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	// Enable userpass auth
 	err = client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Create an external group and renew the token. This should add external
 	// group policies to the token.
 	auths, err := client.Sys().ListAuth()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	userpassAccessor := auths["userpass/"].Accessor
 
 	// Create an alias
@@ -112,21 +105,15 @@ path "secret/{{ identity.groups.names.foobar.name}}/*" {
 	_, err = client.Logical().Write("auth/userpass/users/testuser", map[string]interface{}{
 		"password": "testpassword",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Write in policies
 	goodPolicy1 = fmt.Sprintf(goodPolicy1, userpassAccessor)
 	goodPolicy2 = fmt.Sprintf(goodPolicy2, groupID)
 	err = client.Sys().PutPolicy("goodPolicy1", goodPolicy1)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	err = client.Sys().PutPolicy("goodPolicy2", goodPolicy2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	// Authenticate
 	secret, err := client.Logical().Write("auth/userpass/login/testuser", map[string]interface{}{
@@ -311,6 +298,10 @@ path "secret/{{identity.entity.aliases.%s.custom_metadata.test_path}}/*" {
 				"password": "testpassword",
 			})
 			require.NoError(t, err)
+
+			err = client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+			require.NoError(t, err)
+
 			clientToken := secret.Auth.ClientToken
 
 			// Try to access a path using the templated custom metadata value

@@ -6,9 +6,11 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"maps"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/billing"
 )
 
 func (c *Core) ResetInMemoryTransitDataProtectionCallCounts() {
@@ -17,7 +19,7 @@ func (c *Core) ResetInMemoryTransitDataProtectionCallCounts() {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.DataProtectionCallCounts.Transit.Store(0)
+		cb.SecretEngineCounts.Transit.MonthlyCount.Store(0)
 	}
 }
 
@@ -27,7 +29,7 @@ func (c *Core) GetInMemoryTransitDataProtectionCallCounts() uint64 {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		return cb.DataProtectionCallCounts.Transit.Load()
+		return cb.SecretEngineCounts.Transit.MonthlyCount.Load()
 	}
 	return 0
 }
@@ -38,7 +40,7 @@ func (c *Core) ResetInMemoryTransformDataProtectionCallCounts() {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.DataProtectionCallCounts.Transform.Store(0)
+		cb.SecretEngineCounts.Transform.MonthlyCount.Store(0)
 	}
 }
 
@@ -48,7 +50,7 @@ func (c *Core) GetInMemoryTransformDataProtectionCallCounts() uint64 {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		return cb.DataProtectionCallCounts.Transform.Load()
+		return cb.SecretEngineCounts.Transform.MonthlyCount.Load()
 	}
 	return 0
 }
@@ -59,7 +61,7 @@ func (c *Core) SetInMemoryTransitDataProtectionCallCounts(count uint64) {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.DataProtectionCallCounts.Transit.Store(count)
+		cb.SecretEngineCounts.Transit.MonthlyCount.Store(count)
 	}
 }
 
@@ -69,7 +71,7 @@ func (c *Core) SetInMemoryTransformDataProtectionCallCounts(count uint64) {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.DataProtectionCallCounts.Transform.Store(count)
+		cb.SecretEngineCounts.Transform.MonthlyCount.Store(count)
 	}
 }
 
@@ -79,7 +81,7 @@ func (c *Core) SetInMemoryGcpKmsDataProtectionCallCounts(count uint64) {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.DataProtectionCallCounts.GcpKms.Store(count)
+		cb.SecretEngineCounts.GcpKms.MonthlyCount.Store(count)
 	}
 }
 
@@ -89,7 +91,7 @@ func (c *Core) GetInMemoryGcpKmsDataProtectionCallCounts() uint64 {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		return cb.DataProtectionCallCounts.GcpKms.Load()
+		return cb.SecretEngineCounts.GcpKms.MonthlyCount.Load()
 	}
 	return 0
 }
@@ -100,7 +102,7 @@ func (c *Core) ResetInMemoryJwtSpiffeIdentityCounts() {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.IdentityTokenUnits.SpiffeJwt.Store(0)
+		cb.SecretEngineCounts.Spiffe.MonthlyUnits.Store(0)
 	}
 }
 
@@ -110,7 +112,7 @@ func (c *Core) GetInMemoryJwtSpiffeIdentityCounts() float64 {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		return cb.IdentityTokenUnits.SpiffeJwt.Load()
+		return cb.SecretEngineCounts.Spiffe.MonthlyUnits.Load()
 	}
 	return 0
 }
@@ -121,7 +123,7 @@ func (c *Core) SetInMemoryJwtSpiffeIdentityCounts(count float64) {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.IdentityTokenUnits.SpiffeJwt.Store(count)
+		cb.SecretEngineCounts.Spiffe.MonthlyUnits.Store(count)
 	}
 }
 
@@ -131,18 +133,20 @@ func (c *Core) GetInMemoryOidcCounts() float64 {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		return cb.IdentityTokenUnits.OidcTokenDuration.Load()
+		return cb.SecretEngineCounts.Oidc.MonthlyUnits.Load()
 	}
 	return 0
 }
 
-func (c *Core) SetInMemoryOidcCounts(tokenDuration float64) {
+// SetInMemoryOidcCounts sets the in-memory OIDC duration-adjusted units counter.
+// The value should be pre-normalized (i.e. already converted via DurationAdjustedTokenCount).
+func (c *Core) SetInMemoryOidcCounts(normalizedUnits float64) {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.IdentityTokenUnits.OidcTokenDuration.Store(tokenDuration)
+		cb.SecretEngineCounts.Oidc.MonthlyUnits.Store(normalizedUnits)
 	}
 }
 
@@ -255,7 +259,7 @@ func (c *Core) ResetInMemoryExternalCaCertUnits() {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.ExternalCaCertUnits.Store(0)
+		cb.SecretEngineCounts.ExternalCa.MonthlyUnits.Store(0)
 	}
 }
 
@@ -265,7 +269,7 @@ func (c *Core) GetInMemoryExternalCaCertUnits() float64 {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		return cb.ExternalCaCertUnits.Load()
+		return cb.SecretEngineCounts.ExternalCa.MonthlyUnits.Load()
 	}
 	return 0
 }
@@ -276,6 +280,90 @@ func (c *Core) SetInMemoryExternalCaCertUnits(count float64) {
 	c.consumptionBillingLock.RUnlock()
 
 	if cb != nil {
-		cb.ExternalCaCertUnits.Store(count)
+		cb.SecretEngineCounts.ExternalCa.MonthlyUnits.Store(count)
 	}
+}
+
+func (c *Core) GetInMemoryTransitAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.Transit.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.Transit.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.Transit.MountAttribution)
+	}
+	return nil
+}
+
+func (c *Core) GetInMemoryTransformAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.Transform.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.Transform.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.Transform.MountAttribution)
+	}
+	return nil
+}
+
+func (c *Core) GetInMemoryGcpKmsAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.GcpKms.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.GcpKms.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.GcpKms.MountAttribution)
+	}
+	return nil
+}
+
+func (c *Core) GetInMemoryExternalCaAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.ExternalCa.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.ExternalCa.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.ExternalCa.MountAttribution)
+	}
+	return nil
+}
+
+func (c *Core) GetInMemorySpiffeAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.Spiffe.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.Spiffe.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.Spiffe.MountAttribution)
+	}
+	return nil
+}
+
+// GetConsumptionBillingManagerConcrete returns the underlying *billing.ConsumptionBilling,
+// available to tests outside the vault package that need to inspect or manipulate raw state.
+func (c *Core) GetCoreConsumptionBillingManager() *billing.ConsumptionBilling {
+	return c.consumptionBilling
+}
+
+func (c *Core) GetInMemoryOidcAttribution() map[string]logical.MountAttribution {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb != nil {
+		cb.SecretEngineCounts.Oidc.MountAttributionLock.RLock()
+		defer cb.SecretEngineCounts.Oidc.MountAttributionLock.RUnlock()
+		return maps.Clone(cb.SecretEngineCounts.Oidc.MountAttribution)
+	}
+	return nil
 }

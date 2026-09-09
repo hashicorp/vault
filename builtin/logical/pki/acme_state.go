@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -46,6 +47,12 @@ type acmeState struct {
 	configDirty *atomic.Bool
 	_config     sync.RWMutex
 	config      acmeConfigEntry
+
+	// orderLocks is a striped pool of per-order locks. Order finalization uses
+	// them to serialize the load, check, issue, and save steps for a single
+	// order, so two concurrent finalize requests for the same order cannot both
+	// pass the readiness gate and double issue a certificate. See GH-31987.
+	orderLocks []*locksutil.LockEntry
 }
 
 type acmeThumbprint struct {
@@ -58,6 +65,7 @@ func NewACMEState() *acmeState {
 		nonces:      nonceutil.NewNonceService(),
 		validator:   NewACMEChallengeEngine(),
 		configDirty: new(atomic.Bool),
+		orderLocks:  locksutil.CreateLocks(),
 	}
 	// Config hasn't been loaded yet; mark dirty.
 	state.configDirty.Store(true)
@@ -507,6 +515,14 @@ func (a *acmeState) ParseRequestParams(ac *acmeContext, req *logical.Request, da
 	}
 
 	return &c, m, nil
+}
+
+// orderLockFor returns the striped lock guarding finalization of the given
+// ACME order. Callers must Lock it around the load, check, issue, and save
+// sequence so concurrent finalize requests for the same order cannot both
+// issue a certificate. See GH-31987.
+func (a *acmeState) orderLockFor(orderId string) *locksutil.LockEntry {
+	return locksutil.LockForKey(a.orderLocks, orderId)
 }
 
 func (a *acmeState) LoadOrder(ac *acmeContext, userCtx *jwsCtx, orderId string) (*acmeOrder, error) {

@@ -87,3 +87,8 @@ variable "vault_install_dir" {
   type        = string
   description = "The directory where the vault binary is installed"
 }
+
+variable "expected_node_count" {
+  type        = number
+  description = "The expected number of nodes in the cluster after nodes are added back"
+}

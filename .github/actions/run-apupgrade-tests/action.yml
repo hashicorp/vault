@@ -44,30 +44,25 @@ runs:
           kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
           kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
           kv/data/github/${{ github.repository }}/ibm-license license_2 | VAULT_LICENSE_IBM_2;
-    - name: Setup Git configuration (private)
-      id: setup-git-private
-      if: github.repository == 'hashicorp/vault-enterprise'
-      shell: bash
-      run: |
-        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
     - name: Check out the .release/versions.hcl file from Vault Enterprise repository
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         ref: ${{ inputs.checkout-ref }}
     - uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
+        no-save: true
     - name: Build external tools
       uses: ./.github/actions/install-tools
     - name: Checkout VCM repository
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: hashicorp/vcm
         ref: 1fcab6591e3bdc81d2921ca77441bfcf913c6a57
         token: ${{ inputs.github-token }}
         path: vcm
     - name: Checkout Vault tools repository to get the Autopilot upgrade tool
-      uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         repository: hashicorp/vault-tools
         token: ${{ inputs.github-token }}
@@ -87,7 +82,11 @@ runs:
     - name: Build dev binary for binary tests
       env:
         GOPATH: /home/runner/go
+        # This action is only called from ENT workflows; GOPRIVATE is unconditionally required.
         GOPRIVATE: github.com/hashicorp/*
+        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token }}@github.com.insteadOf
+        GIT_CONFIG_VALUE_0: https://github.com
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}" || exit 1

@@ -237,9 +237,9 @@ path "" {
   test('it passes @renderValidations through to CodeGenerator::Policy::Stanza', async function (assert) {
     this.renderValidations = true;
     await this.renderComponent();
-    assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path cannot be empty.');
+    assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path is required.');
     assert
       .dom(GENERAL.validationErrorByAttr('capabilities-0'))
-      .hasText('Rule must have at least one capability.');
+      .doesNotExist('capabilities do not render as a validation error');
   });
 });

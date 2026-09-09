@@ -42,6 +42,7 @@ type ManagedKey interface {
 
 type (
 	ManagedKeyConsumer             func(context.Context, ManagedKey) error
+	ManagedAsymmetricKeyConsumer   func(context.Context, ManagedAsymmetricKey) error
 	ManagedSigningKeyConsumer      func(context.Context, ManagedSigningKey) error
 	ManagedEncryptingKeyConsumer   func(context.Context, ManagedEncryptingKey) error
 	ManagedMACKeyConsumer          func(context.Context, ManagedMACKey) error
@@ -62,6 +63,9 @@ type ManagedKeySystemView interface {
 	// WithManagedSigningKeyByUUID retrieves an instantiated managed signing key for consumption by the given function,
 	// with the same semantics as WithManagedKeyByUUID
 	WithManagedSigningKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedSigningKeyConsumer) error
+	// WithManagedAsymmetricKeyByUUID retrieves an instantiated managed asymmetric key for consumption by the given function,
+	// with the same semantics as WithManagedKeyByUUID.
+	WithManagedAsymmetricKeyByUUID(ctx context.Context, keyUuid, backendUUID string, f ManagedAsymmetricKeyConsumer) error
 	// WithManagedSigningKeyByName retrieves an instantiated managed signing key for consumption by the given function,
 	// with the same semantics as WithManagedKeyByName
 	WithManagedEncryptingKeyByName(ctx context.Context, keyName, backendUUID string, f ManagedEncryptingKeyConsumer) error
@@ -79,6 +83,10 @@ type ManagedKeySystemView interface {
 type ManagedAsymmetricKey interface {
 	ManagedKey
 	GetPublicKey(ctx context.Context) (crypto.PublicKey, error)
+}
+
+type ManagedKeyTypeChecker interface {
+	IsAsymmetric() bool
 }
 
 type ManagedKeyLifecycle interface {

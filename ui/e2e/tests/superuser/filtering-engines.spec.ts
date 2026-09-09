@@ -14,14 +14,16 @@ test('filtering secrets engines workflow', async ({ page }) => {
 
   // enable transit
   await page.getByRole('link', { name: 'Enable new engine' }).click();
-  await page.getByLabel('Transit - enabled engine type').click();
+  await page.locator('label').filter({ hasText: 'Transit' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Enable engine' }).click();
   await basePage.dismissFlashMessages();
   await page.getByLabel('breadcrumbs').getByRole('link', { name: 'Secrets engines' }).click();
 
   // enable kv
   await page.getByRole('link', { name: 'Enable new engine' }).click();
-  await page.getByRole('heading', { name: 'KV' }).click();
+  await page.locator('label').filter({ hasText: 'KV' }).click();
+  await page.getByRole('button', { name: 'Next' }).click();
   await page.getByRole('button', { name: 'Enable engine' }).click();
   await basePage.dismissFlashMessages();
   await page.getByLabel('breadcrumbs').getByRole('link', { name: 'Secrets engines' }).click();

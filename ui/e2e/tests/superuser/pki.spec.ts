@@ -11,7 +11,8 @@ test('pki workflow', async ({ page }) => {
   const basePage = new BasePage(page);
 
   // enable PKI secrets engine
-  await basePage.enableEngine('PKI Certificates', 'pki-engine', {
+  // pass the engine type - enableEngine maps it to the ALL_ENGINES displayName ("Private PKI") rendered on the enable page
+  await basePage.enableEngine('pki', 'pki-engine', {
     defaultLeaseTtl: { unit: 5, option: 'm' },
     maxLeaseTtl: { unit: 10, option: 'm' },
   });
@@ -27,9 +28,16 @@ test('pki workflow', async ({ page }) => {
   await page.getByLabel('Type').selectOption('internal');
   await page.getByRole('textbox', { name: 'Common name' }).fill('pki-common-name');
   await page.getByRole('textbox', { name: 'Issuer name' }).fill('pki-issuer');
-  await page.getByRole('textbox', { name: 'Not valid after' }).fill('36000');
-  await page.getByLabel('TTL unit for Not before').selectOption('m');
-  await page.getByRole('textbox', { name: 'Number of units' }).fill('10');
+  // "Not valid after" renders a TTL/specific date radio group - TTL is selected by default
+  const notValidAfter = page
+    .getByRole('group')
+    .filter({ hasText: 'Set relative certificate expiry with TTL' });
+  await notValidAfter.getByRole('textbox', { name: 'Number of units' }).fill('36000');
+  await page.getByLabel('TTL unit for TTL').selectOption('s');
+  // scope to the group - "Not before duration" renders its own 'Number of units' textbox
+  const notBefore = page.getByRole('group', { name: 'Not before duration Lease will expire after' });
+  await page.getByLabel('TTL unit for Not before duration').selectOption('m');
+  await notBefore.getByRole('textbox', { name: 'Number of units' }).fill('10');
   await page.getByLabel('Format', { exact: true }).selectOption('der');
   await page.getByRole('textbox', { name: 'Max path length' }).fill('16');
   await page.getByRole('button', { name: 'Key parameters' }).click();

@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,6 +66,10 @@ var secretEngineBackends = map[string]struct {
 		mount: pluginconsts.SecretEngineLDAP,
 		key:   "static-role/",
 	},
+	"LDAP Library Sets": {
+		mount: pluginconsts.SecretEngineLDAP,
+		key:   "library/",
+	},
 	"OpenLDAP Dynamic Roles": {
 		mount: pluginconsts.SecretEngineOpenLDAP,
 		key:   "role/",
@@ -72,6 +77,10 @@ var secretEngineBackends = map[string]struct {
 	"OpenLDAP Static Roles": {
 		mount: pluginconsts.SecretEngineOpenLDAP,
 		key:   "static-role/",
+	},
+	"OpenLDAP Library Sets": {
+		mount: pluginconsts.SecretEngineOpenLDAP,
+		key:   "library/",
 	},
 	"Alicloud Dynamic Roles": {
 		mount: pluginconsts.SecretEngineAlicloud,
@@ -233,9 +242,12 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
 	require.Equal(t, float64(0), core.GetInMemoryOidcCounts())
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
+	require.Equal(t, 0, len(core.GetInMemoryTransitAttribution()))
+	require.Equal(t, 0, len(core.GetInMemoryOidcAttribution()))
+	require.Equal(t, 0, len(core.GetInMemoryExternalCaAttribution()))
 }
 
-// TestDeleteExpiredBillingMetrics specifically tests the deleteExpiredBillingMetrics method
+// TestDeleteExpiredBillingMetrics specifically tests the DeleteExpiredBillingMetrics method
 // to ensure it correctly deletes data from billing.DefaultBillingRetentionMonths ago while keeping
 // data from (billing.DefaultBillingRetentionMonths - 1) months ago.
 func TestDeleteExpiredBillingMetrics(t *testing.T) {
@@ -263,6 +275,52 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 			// Add SSH metrics which use subdirectory paths (ssh/normalized-certs-issued, ssh/credential-count)
 			core.storeSSHDurationAdjustedCertCountLocked(context.Background(), pathPrefix, month, 10.5)
 			core.storeSSHOTPCountLocked(context.Background(), pathPrefix, month, 25.0)
+
+			// Add transit mount/namespace attribution data
+			err := core.StoreAttributionData(context.Background(), pathPrefix, month, billing.TransitDataProtectionCallCountsPrefix, &logical.MetricTypeAttribution{
+				Count: 10.0,
+				Mounts: map[string]logical.MountAttribution{
+					"transit_accessor_1": {
+						MountAccessor: "transit_accessor_1",
+						MountPath:     "transit1/",
+						NamespaceID:   "root",
+						NamespacePath: "",
+						Count:         10.0,
+					},
+				},
+			})
+			require.NoError(t, err)
+
+			// Add external CA mount/namespace attribution data
+			err = core.StoreAttributionData(context.Background(), pathPrefix, month, billing.ExternalCaDurationAdjustedCountPrefix, &logical.MetricTypeAttribution{
+				Count: 9.5,
+				Mounts: map[string]logical.MountAttribution{
+					"external_ca_accessor_1": {
+						MountAccessor: "external_ca_accessor_1",
+						MountPath:     "pki-ext1/",
+						NamespaceID:   "root",
+						NamespacePath: "",
+						Count:         9.5,
+					},
+				},
+			})
+			require.NoError(t, err)
+
+			// Add OIDC mount/namespace attribution data
+			err = core.StoreAttributionData(context.Background(), pathPrefix, month, billing.OidcDurationAdjustedCountPrefix, &logical.MetricTypeAttribution{
+				Count: 5.0,
+				Mounts: map[string]logical.MountAttribution{
+					"identity_accessor_1": {
+						MountAccessor: "identity_accessor_1",
+						MountPath:     "identity/",
+						MountType:     "identity",
+						NamespaceID:   "root",
+						NamespacePath: "",
+						Count:         5.0,
+					},
+				},
+			})
+			require.NoError(t, err)
 		}
 		// Store updatedAtTimestamp for each month
 		testUpdateTime := time.Date(month.Year(), month.Month(), 15, 12, 0, 0, 0, time.UTC)
@@ -295,6 +353,24 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		entry, err = view.Get(context.Background(), sshOTPPath)
 		require.NoError(t, err)
 		require.NotNil(t, entry, "SSH OTP metric should exist before deletion")
+
+		// Verify transit mount breakdown exists
+		transitBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.TransitDataProtectionCallCountsPrefix)
+		entry, err = view.Get(context.Background(), transitBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "Transit mount breakdown should exist before deletion")
+
+		// Verify OIDC mount breakdown exists
+		oidcBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.OidcDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), oidcBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "OIDC mount breakdown should exist before deletion")
+
+		// Verify external CA mount breakdown exists
+		externalCaBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.ExternalCaDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), externalCaBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "External CA mount breakdown should exist before deletion")
 	}
 
 	// Verify updatedAtTimestamp exists for all months before deletion
@@ -304,8 +380,8 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		require.False(t, timestamp.IsZero(), "timestamp for month %s should exist before deletion", month.Format("2006-01"))
 	}
 
-	// Call deleteExpiredBillingMetrics directly
-	err := core.deleteExpiredBillingMetrics(context.Background(), currentMonth)
+	// Call DeleteExpiredBillingMetrics directly
+	err := core.DeleteExpiredBillingMetrics(context.Background(), currentMonth)
 	require.NoError(t, err)
 
 	// Verify deletion results
@@ -313,10 +389,14 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		view, ok := core.GetBillingSubView()
 		require.True(t, ok)
 
-		// Month to delete should have no data
+		// Month to delete should have no regular billing data left.
+		// Attribution data has its own independent retention and is intentionally skipped
+		// by deleteExpiredBillingMetrics, so the attribution/ directory may still be present.
 		paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, monthToDelete))
 		require.NoError(t, err)
-		require.Equal(t, 0, len(paths), "data from billing.DefaultBillingRetentionMonths ago should be deleted")
+		for _, p := range paths {
+			require.True(t, strings.HasPrefix(p, "attribution/"), "only attribution/ entries should survive billing deletion for month %s, got unexpected path: %s", monthToDelete.Format("2006-01"), p)
+		}
 
 		// Verify SSH metrics are deleted (they use subdirectory paths)
 		sshCertPath := billing.GetMonthlyBillingMetricPath(pathPrefix, monthToDelete, billing.SSHCertificateMetric)
@@ -328,6 +408,25 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		entry, err = view.Get(context.Background(), sshOTPPath)
 		require.NoError(t, err)
 		require.Nil(t, entry, "SSH OTP metric should be deleted")
+
+		// Verify transit attribution data is NOT deleted by deleteExpiredBillingMetrics —
+		// attribution has its own independent retention policy.
+		transitBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.TransitDataProtectionCallCountsPrefix)
+		entry, err = view.Get(context.Background(), transitBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "Transit attribution should NOT be deleted by deleteExpiredBillingMetrics (independent retention)")
+
+		// Verify OIDC attribution data is also NOT deleted by deleteExpiredBillingMetrics
+		oidcBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.OidcDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), oidcBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "OIDC attribution should NOT be deleted by deleteExpiredBillingMetrics (independent retention)")
+
+		// Verify external CA attribution data is NOT deleted by deleteExpiredBillingMetrics
+		externalCaBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.ExternalCaDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), externalCaBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "ExternalCA attribution should NOT be deleted by deleteExpiredBillingMetrics (independent retention)")
 
 		// Oldest retained month should still have data
 		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, oldestRetainedMonth))
@@ -344,6 +443,24 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		entry, err = view.Get(context.Background(), sshOTPPath)
 		require.NoError(t, err)
 		require.NotNil(t, entry, "SSH OTP metric should be kept for oldest retained month")
+
+		// Verify transit mount breakdown is kept for oldest retained month
+		transitBreakdownPath = billing.GetAttributionMaxPath(pathPrefix, oldestRetainedMonth, billing.TransitDataProtectionCallCountsPrefix)
+		entry, err = view.Get(context.Background(), transitBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "Transit mount breakdown should be kept for oldest retained month")
+
+		// Verify OIDC mount breakdown is kept for oldest retained month
+		oidcBreakdownPath = billing.GetAttributionMaxPath(pathPrefix, oldestRetainedMonth, billing.OidcDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), oidcBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "OIDC mount breakdown should be kept for oldest retained month")
+
+		// Verify external CA mount breakdown is kept for oldest retained month
+		externalCaBreakdownPath = billing.GetAttributionMaxPath(pathPrefix, oldestRetainedMonth, billing.ExternalCaDurationAdjustedCountPrefix)
+		entry, err = view.Get(context.Background(), externalCaBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "External CA mount breakdown should be kept for oldest retained month")
 
 		// Current month should still have data
 		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, currentMonth))
@@ -478,7 +595,7 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	require.False(t, core.consumptionBilling.KmipSeenEnabledThisMonth.Load())
 }
 
-// TestDeleteExpiredBillingMetrics_CustomRetention tests that deleteExpiredBillingMetrics
+// TestDeleteExpiredBillingMetrics_CustomRetention tests that DeleteExpiredBillingMetrics
 // respects custom retention configuration. It verifies that when a custom retention period
 // is set (e.g., 13 months), data is deleted according to that configuration rather than
 // the default 37 months.
@@ -544,8 +661,8 @@ func TestDeleteExpiredBillingMetrics_CustomRetention(t *testing.T) {
 		require.Greater(t, len(paths), 0, "oldest retained month should have data")
 	}
 
-	// Call deleteExpiredBillingMetrics - it should use the custom retention
-	err = core.deleteExpiredBillingMetrics(context.Background(), currentMonth)
+	// Call DeleteExpiredBillingMetrics - it should use the custom retention
+	err = core.DeleteExpiredBillingMetrics(context.Background(), currentMonth)
 	require.NoError(t, err)
 
 	// Verify deletion results with custom retention

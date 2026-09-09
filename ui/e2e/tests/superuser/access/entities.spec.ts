@@ -56,9 +56,7 @@ test('entities workflow', async ({ page }) => {
     await expect(page.getByRole('link', { name: 'Policies', exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Policies', exact: true }).click();
     await expect(page.locator('section')).toContainText('test-policy');
-    await page.getByRole('button', { name: 'Identity policy management' }).click();
-    await page.getByRole('link', { name: 'View policy', exact: true }).click();
-    await page.getByText('Vault ACL policies test-policy test-policy Download policy').click();
+    await page.getByRole('link', { name: 'test-policy' }).first().click();
     await expect(page.getByText('Vault ACL policies test-policy test-policy Download policy')).toBeVisible();
     await page.getByRole('link', { name: 'Entities' }).click();
     await page.getByRole('link', { name: 'entity-1', exact: true }).click();
@@ -78,24 +76,24 @@ test('entities workflow', async ({ page }) => {
 
   await test.step('create and view aliases', async () => {
     await page.getByRole('link', { name: 'Add alias' }).click();
-    await expect(page.getByRole('heading', { name: 'Create Entity Alias for' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Create Entity for' })).toBeVisible();
     await page.getByRole('textbox', { name: 'Name' }).fill('alias-1');
     await page.getByRole('button', { name: 'Create' }).click();
     await expect(page.locator('.hds-page-header__title-wrapper')).toBeVisible();
 
-    await page.getByRole('link', { name: 'Edit entity alias' }).click();
+    await page.getByRole('link', { name: 'Edit entity' }).click();
     await expect(page.locator('.hds-page-header__title-wrapper')).toBeVisible();
-    await page.getByRole('link', { name: 'Entity aliases' }).click();
-    await expect(page.getByRole('link', { name: 'alias-1', exact: true })).toBeVisible();
+    const alias = page.getByRole('textbox', { name: 'Name' });
+    await expect(alias).toBeVisible();
+    await expect(alias).toHaveValue('alias-1');
   });
 
   await test.step('cleanup by deleting entities if it was not deleted in previous step', async () => {
-    await page.getByLabel('navigation for entities').getByRole('link', { name: 'Entities' }).click();
-    await page.getByRole('button', { name: 'Identity management options' }).click();
-    await page.getByRole('button', { name: 'Delete' }).click();
+    await page.getByLabel('breadcrumbs').getByRole('link', { name: 'Entities' }).click();
+    await page.getByRole('button', { name: 'Alias management options' }).click();
+    await page.getByRole('button', { name: 'Remove' }).click();
     await page.getByRole('button', { name: 'Confirm' }).click();
-    await expect(page.getByRole('heading', { name: 'No entities yet' })).toBeVisible();
-    await page.getByRole('link', { name: 'Aliases' }).click();
     await expect(page.getByRole('heading', { name: 'No entity aliases yet' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Identity: entities and groups' })).toBeVisible();
   });
 });

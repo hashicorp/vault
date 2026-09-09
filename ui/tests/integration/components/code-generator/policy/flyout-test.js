@@ -315,59 +315,48 @@ EOT`;
     await click(GENERAL.submitButton);
   });
 
-  test('it renders validation errors for invalid policy content', async function (assert) {
-    await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
-    // Submit without filling in path or capabilities (missing path AND no capabilities)
-    await click(GENERAL.submitButton);
-    assert
-      .dom(GENERAL.messageError)
-      .exists()
-      .hasText('Error There is an error with this form. Invalid policy content.');
-    assert.dom(SELECTORS.pathByContainer(0)).hasClass('hds-form-text-input--is-invalid');
-    assert.dom(GENERAL.validationErrorByAttr('path-0')).exists().hasText('Path cannot be empty.');
-    assert
-      .dom(GENERAL.validationErrorByAttr('capabilities-0'))
-      .exists()
-      .hasText('Rule must have at least one capability.');
-  });
-
   test('it renders validation errors for missing path', async function (assert) {
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
-    await fillIn(GENERAL.inputByAttr('path'), 'secret/*');
-    await click(GENERAL.checkboxByAttr('read'));
-    // Add a second rule and just select capabilities (leave path empty)
-    await click(GENERAL.button('Add rule'));
-    await click(SELECTORS.checkboxByContainer(1, 'update'));
+    // Submit without filling in path (missing path, capabilities are optional)
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .exists()
-      .hasText('Error There is an error with this form. Invalid policy content.');
-    assert.dom(SELECTORS.pathByContainer(1)).hasClass('hds-form-text-input--is-invalid');
-    assert.dom(GENERAL.validationErrorByAttr('path-1')).hasText('Path cannot be empty.');
-    assert.dom('[data-test-validation-error]').exists({ count: 1 }, 'only one validation error renders');
+      .hasText('Error There is an error with this form. Path is required for each rule.');
+    assert.dom(SELECTORS.pathByContainer(0)).hasClass('hds-form-text-input--is-invalid');
+    assert.dom(GENERAL.validationErrorByAttr('path-0')).exists().hasText('Path is required.');
+    assert
+      .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+      .doesNotExist('capabilities error does not block save');
   });
 
-  test('it renders validation errors for missing capabilities', async function (assert) {
+  test('it renders validation errors for empty path in a second rule', async function (assert) {
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
     await fillIn(GENERAL.inputByAttr('path'), 'secret/*');
-    await click(GENERAL.checkboxByAttr('read'));
-    // Add a second rule and just fill in path (no capabilities selected)
+    // Add a second rule and leave path empty
     await click(GENERAL.button('Add rule'));
-    await fillIn(SELECTORS.pathByContainer(1), 'new/path/*');
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .exists()
-      .hasText('Error There is an error with this form. Invalid policy content.');
-    assert
-      .dom(GENERAL.validationErrorByAttr('capabilities-1'))
-      .exists()
-      .hasText('Rule must have at least one capability.');
+      .hasText('Error There is an error with this form. Path is required for each rule.');
+    assert.dom(SELECTORS.pathByContainer(1)).hasClass('hds-form-text-input--is-invalid');
+    assert.dom(GENERAL.validationErrorByAttr('path-1')).hasText('Path is required.');
     assert.dom('[data-test-validation-error]').exists({ count: 1 }, 'only one validation error renders');
+  });
+
+  test('it saves a policy with a path but no capabilities selected', async function (assert) {
+    assert.expect(4);
+    const expectedPolicy = `path "secret/data/*" {\n    capabilities = []\n}`;
+    this.assertSaveRequest(assert, expectedPolicy);
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/data/*');
+    // Intentionally do not select any capabilities
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.flyout).doesNotExist('flyout closes after successful save');
   });
 
   test('it renders validation error for empty policy name', async function (assert) {
@@ -388,12 +377,12 @@ EOT`;
     this.assertSaveRequest(assert, expectedPolicy);
     await this.renderComponent();
 
-    // First attempt without name and policy content
+    // First attempt without name (path is also empty so stanzas are invalid too)
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .exists()
-      .hasText('Error There are errors with this form. Name is required. Invalid policy content.');
+      .hasText('Error There are errors with this form. Name is required. Path is required for each rule.');
     assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error shows');
 
     // Second attempt with name
@@ -415,7 +404,7 @@ EOT`;
     assert
       .dom(GENERAL.messageError)
       .exists()
-      .hasText('Error There are errors with this form. Name is required. Invalid policy content.');
+      .hasText('Error There are errors with this form. Name is required. Path is required for each rule.');
     assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error shows');
     // Cancel and close flyout
     await click(GENERAL.cancelButton);
@@ -548,24 +537,16 @@ EOT`;
         assert.dom(SELECTORS.pathByContainer(1)).hasValue('new/path/*', 'user added path still exists');
       });
 
-      test('prepopulated paths trigger validation errors', async function (assert) {
+      test('prepopulated paths save successfully without capabilities selected', async function (assert) {
+        assert.expect(4);
+        const expectedPolicy = `path "path/one" {\n    capabilities = []\n}\npath "path/two" {\n    capabilities = []\n}`;
+        this.assertSaveRequest(assert, expectedPolicy);
         this.cacheCapabilityPaths('vault.cluster.secrets.secret', ['path/one', 'path/two']);
         await this.renderComponent();
-        // Only fill in name to make sure capabilities validation triggers
+        // Only fill in name — capabilities are optional so save should succeed
         await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
         await click(GENERAL.submitButton);
-        assert
-          .dom(GENERAL.messageError)
-          .exists()
-          .hasText('Error There is an error with this form. Invalid policy content.');
-        assert
-          .dom(GENERAL.validationErrorByAttr('capabilities-0'))
-          .exists()
-          .hasText('Rule must have at least one capability.');
-        assert
-          .dom(GENERAL.validationErrorByAttr('capabilities-1'))
-          .exists()
-          .hasText('Rule must have at least one capability.');
+        assert.dom(GENERAL.flyout).doesNotExist('flyout closes after successful save');
       });
     });
   });

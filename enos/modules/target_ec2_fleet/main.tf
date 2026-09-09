@@ -18,12 +18,20 @@ terraform {
 
 data "aws_vpc" "vpc" {
   id = var.vpc_id
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_subnets" "vpc" {
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
@@ -335,6 +343,12 @@ resource "aws_ec2_fleet" "targets" {
     on_demand_target_capacity    = var.capacity_type == "on-demand" ? var.instance_count : 0
     target_capacity_unit_type    = "units" // units == instance count
     total_target_capacity        = var.instance_count
+  }
+
+  timeouts {
+    create = "10m"
+    update = "10m"
+    delete = "10m"
   }
 }
 

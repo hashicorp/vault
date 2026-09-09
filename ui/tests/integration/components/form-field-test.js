@@ -1012,6 +1012,236 @@ module('Integration | Component | form field', function (hooks) {
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
 
+  // ––––– editType === 'keyValueInputs' –––––
+
+  test('it renders: editType=keyValueInputs - default key/value fields as Hds::Form::KeyValueInputs', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'object', { editType: 'keyValueInputs', defaultValue: { foo: 'bar' } })
+    );
+    assert.dom('fieldset[class^="hds-form-key-value-inputs"]').exists('renders as Hds::Form::KeyValueInputs');
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the fieldset legend as the label');
+    assert.dom('input[data-test-kv-field="key-0"]').hasValue('foo', 'renders the key of the existing row');
+    assert
+      .dom('input[data-test-kv-field="value-0"]')
+      .hasValue('bar', 'renders the value of the existing row');
+
+    await fillIn('input[data-test-kv-field="key-0"]', 'baz');
+    assert.deepEqual(model.get('myfield'), { baz: 'bar' }, 'model is set with the updated flat object');
+    assert.true(spy.calledWith('myfield', { baz: 'bar' }), 'onChange is called with the updated flat object');
+  });
+
+  test('it renders: editType=keyValueInputs - empty value renders a single empty row with default placeholders', async function (assert) {
+    await setup.call(this, createAttr('myfield', 'object', { editType: 'keyValueInputs' }));
+    assert.strictEqual(findAll('[data-test-kv-field^="key-"]').length, 1, 'renders exactly one row');
+    assert
+      .dom('input[data-test-kv-field="key-0"]')
+      .hasValue('')
+      .hasAttribute('placeholder', 'key', 'renders the default key placeholder');
+    assert
+      .dom('input[data-test-kv-field="value-0"]')
+      .hasValue('')
+      .hasAttribute('placeholder', 'value', 'renders the default value placeholder');
+  });
+
+  test('it renders: editType=keyValueInputs - add and delete row', async function (assert) {
+    await setup.call(this, createAttr('myfield', 'object', { editType: 'keyValueInputs' }));
+    assert.strictEqual(findAll('[data-test-kv-field^="key-"]').length, 1, 'starts with one row');
+
+    await click('.hds-form-key-value-inputs__add-row-button');
+    assert.strictEqual(findAll('[data-test-kv-field^="key-"]').length, 2, 'adds a new empty row');
+
+    await click('.hds-form-key-value-inputs__delete-row-button');
+    assert.strictEqual(findAll('[data-test-kv-field^="key-"]').length, 1, 'deletes a row');
+
+    await click('.hds-form-key-value-inputs__delete-row-button');
+    assert.strictEqual(
+      findAll('[data-test-kv-field^="key-"]').length,
+      1,
+      'always keeps at least one empty row after deleting the last one'
+    );
+  });
+
+  test('it renders: editType=keyValueInputs - editDisabled disables inputs and hides add/delete row buttons', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', 'object', {
+        editType: 'keyValueInputs',
+        editDisabled: true,
+        defaultValue: { foo: 'bar' },
+      })
+    );
+    assert.dom('input[data-test-kv-field="key-0"]').isDisabled('key input is disabled');
+    assert.dom('input[data-test-kv-field="value-0"]').isDisabled('value input is disabled');
+    assert.dom('.hds-form-key-value-inputs__add-row-button').doesNotExist('add row button is hidden');
+    assert.dom('.hds-form-key-value-inputs__delete-row-button').doesNotExist('delete row button is hidden');
+  });
+
+  test('it renders: editType=keyValueInputs - custom keyValueFields with select, textarea, masked and file inputs', async function (assert) {
+    const keyValueFields = [
+      {
+        name: 'region',
+        label: 'Region',
+        type: 'select',
+        noDefault: true,
+        possibleValues: [
+          { group: 'US', options: [{ value: 'us-east-1', displayName: 'US East (N. Virginia)' }] },
+          { group: 'EU', options: [{ value: 'eu-west-1', displayName: 'EU (Ireland)' }] },
+        ],
+      },
+      { name: 'note', label: 'Note', type: 'textarea' },
+      { name: 'secret', label: 'Secret', type: 'masked' },
+      { name: 'upload', label: 'Upload', type: 'file' },
+    ];
+    await setup.call(this, createAttr('myfield', 'array', { editType: 'keyValueInputs', keyValueFields }));
+
+    assert.dom('select[data-test-kv-field="region-0"]').exists('renders the select field');
+    assert
+      .dom('select[data-test-kv-field="region-0"] option')
+      .exists({ count: 3 }, 'renders the "Select one" placeholder plus the grouped options');
+    assert
+      .dom('select[data-test-kv-field="region-0"] optgroup[label="US"] option[value="us-east-1"]')
+      .hasText('US East (N. Virginia)', 'renders the option display name inside its group');
+    assert.dom('textarea[data-test-kv-field="note-0"]').exists('renders the textarea field');
+    assert.dom('input[data-test-kv-field="secret-0"]').exists('renders the masked input field');
+    assert.dom('input[type="file"][data-test-kv-field="upload-0"]').exists('renders the file input field');
+  });
+
+  test('it renders: editType=keyValueInputs - array attrs broadcast an array of row objects', async function (assert) {
+    const keyValueFields = [
+      { name: 'name', label: 'Name', type: 'text' },
+      { name: 'value', label: 'Value', type: 'text' },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'array', { editType: 'keyValueInputs', keyValueFields })
+    );
+
+    await fillIn('input[data-test-kv-field="name-0"]', 'foo');
+    await fillIn('input[data-test-kv-field="value-0"]', 'bar');
+
+    assert.deepEqual(
+      model.get('myfield'),
+      [{ name: 'foo', value: 'bar' }],
+      'broadcasts an array of row objects since fields are not named "key"/"value"'
+    );
+    assert.true(
+      spy.calledWith('myfield', [{ name: 'foo', value: 'bar' }]),
+      'onChange is called with the array of row objects'
+    );
+  });
+
+  test('it renders: editType=keyValueInputs - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('myfield', 'object', { editType: 'keyValueInputs' }),
+      model: { myfield: { foo: 'bar' } },
+      modelValidations: {
+        myfield: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom(GENERAL.validationWarningByAttr('myfield'))
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
+  test('it renders: editType=keyValueInputs - fields with independent valuePaths render one fixed row with no add/delete buttons', async function (assert) {
+    const keyValueFields = [
+      {
+        name: 'region',
+        label: 'Primary Region',
+        type: 'select',
+        possibleValues: ['us-east-1', 'us-west-2'],
+        noDefault: true,
+        valuePath: 'region',
+      },
+      { name: 'kms_key_id', label: 'KMS Key ID', type: 'text', valuePath: 'kms_key_id' },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('region', 'string', {
+        editType: 'keyValueInputs',
+        keyValueFields,
+        defaultValue: 'us-east-1',
+      })
+    );
+
+    assert.strictEqual(findAll('[data-test-kv-field^="region-"]').length, 1, 'renders exactly one row');
+    assert
+      .dom('select[data-test-kv-field="region-0"]')
+      .hasValue('us-east-1', 'renders the primary region value');
+    assert
+      .dom('.hds-form-key-value-inputs__add-row-button')
+      .doesNotExist('does not render an add row button');
+    assert
+      .dom('.hds-form-key-value-inputs__delete-row-button')
+      .doesNotExist('does not render a delete row button');
+
+    await fillIn('input[data-test-kv-field="kms_key_id-0"]', 'arn:aws:kms:us-east-1:123:key/abc');
+    assert.strictEqual(
+      model.get('kms_key_id'),
+      'arn:aws:kms:us-east-1:123:key/abc',
+      'sets the value on its own model attribute, not on "region"'
+    );
+    assert.true(
+      spy.calledWith('kms_key_id', 'arn:aws:kms:us-east-1:123:key/abc'),
+      'onChange is called with the field-specific valuePath'
+    );
+    assert.strictEqual(model.get('region'), 'us-east-1', 'the "region" attribute is unaffected');
+  });
+
+  test('it renders: editType=keyValueInputs - a single "key" keyValueField broadcasts a flat object with empty string values', async function (assert) {
+    const keyValueFields = [
+      {
+        name: 'key',
+        label: 'Region',
+        type: 'select',
+        noDefault: true,
+        possibleValues: ['us-west1', 'us-east1'],
+      },
+    ];
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'object', { editType: 'keyValueInputs', keyValueFields })
+    );
+
+    assert.dom('[data-test-kv-field="value-0"]').doesNotExist('does not render a value input');
+
+    await fillIn('select[data-test-kv-field="key-0"]', 'us-west1');
+
+    assert.deepEqual(
+      model.get('myfield'),
+      { 'us-west1': '' },
+      'broadcasts a flat object with an empty string value since there is no "value" field'
+    );
+    assert.true(
+      spy.calledWith('myfield', { 'us-west1': '' }),
+      'onChange is called with the flat object with empty string value'
+    );
+
+    await click('.hds-form-key-value-inputs__add-row-button');
+    await fillIn('select[data-test-kv-field="key-1"]', 'us-east1');
+
+    assert.deepEqual(
+      model.get('myfield'),
+      { 'us-west1': '', 'us-east1': '' },
+      'broadcasts multiple keys as an object of empty string values'
+    );
+  });
+
   // ––––– editType === 'password' –––––
 
   test('it renders: editType=password / type=string - as Hds::Form::TextInput [@type=password]', async function (assert) {

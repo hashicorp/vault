@@ -97,70 +97,66 @@
           @params={{array (if isDir "list-directory" "secret.index") @backend fullPath}}
           @linkPrefix={{this.mountPoint}}
         >
-          <div class="level is-mobile">
-            <div class="level-left">
-              <div>
-                <Icon @name={{if isDir "folder" "file"}} class="has-text-grey-light" />
-                <span class="has-text-weight-semibold is-underline" data-test-path>
-                  {{secretPath}}
-                </span>
-              </div>
-            </div>
-            <div class="level-right is-flex is-paddingless is-marginless">
-              <div class="level-item">
-                <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-                  <dd.ToggleIcon
-                    @icon="more-horizontal"
-                    @text="Manage secret"
-                    @hasChevron={{false}}
-                    data-test-popup-menu-trigger
-                  />
-                  {{#if isDir}}
+          <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+            <LF.Item @grow={{true}} @shrink={{true}}>
+              <Icon @name={{if isDir "folder" "file"}} class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline" data-test-path>
+                {{secretPath}}
+              </span>
+            </LF.Item>
+            <LF.Item>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="Manage secret"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#if isDir}}
+                  <dd.Interactive
+                    @route="list-directory"
+                    @models={{array @backend fullPath}}
+                    data-test-list-menu-item="Content"
+                  >
+                    Content
+                  </dd.Interactive>
+                {{else}}
+                  <dd.Interactive
+                    @route="secret.index"
+                    @models={{array @backend fullPath}}
+                    data-test-list-menu-item="Overview"
+                  >
+                    Overview
+                  </dd.Interactive>
+                  <dd.Interactive
+                    @route="secret.details"
+                    @models={{array @backend fullPath}}
+                    data-test-list-menu-item="Secret data"
+                  >
+                    Secret data
+                  </dd.Interactive>
+                  {{#if @capabilities.canRead}}
                     <dd.Interactive
-                      @route="list-directory"
+                      @route="secret.metadata.versions"
                       @models={{array @backend fullPath}}
-                      data-test-list-menu-item="Content"
+                      data-test-list-menu-item="View version history"
                     >
-                      Content
+                      View version history
                     </dd.Interactive>
-                  {{else}}
-                    <dd.Interactive
-                      @route="secret.index"
-                      @models={{array @backend fullPath}}
-                      data-test-list-menu-item="Overview"
-                    >
-                      Overview
-                    </dd.Interactive>
-                    <dd.Interactive
-                      @route="secret.details"
-                      @models={{array @backend fullPath}}
-                      data-test-list-menu-item="Secret data"
-                    >
-                      Secret data
-                    </dd.Interactive>
-                    {{#if @capabilities.canRead}}
-                      <dd.Interactive
-                        @route="secret.metadata.versions"
-                        @models={{array @backend fullPath}}
-                        data-test-list-menu-item="View version history"
-                      >
-                        View version history
-                      </dd.Interactive>
-                    {{/if}}
-                    {{#if @capabilities.canDelete}}
-                      <dd.Interactive
-                        @color="critical"
-                        {{on "click" (fn (mut this.metadataToDelete) secretPath)}}
-                        data-test-list-menu-item="Permanently delete"
-                      >
-                        Permanently delete
-                      </dd.Interactive>
-                    {{/if}}
                   {{/if}}
-                </Hds::Dropdown>
-              </div>
-            </div>
-          </div>
+                  {{#if @capabilities.canDelete}}
+                    <dd.Interactive
+                      @color="critical"
+                      {{on "click" (fn (mut this.metadataToDelete) secretPath)}}
+                      data-test-list-menu-item="Permanently delete"
+                    >
+                      Permanently delete
+                    </dd.Interactive>
+                  {{/if}}
+                {{/if}}
+              </Hds::Dropdown>
+            </LF.Item>
+          </Hds::Layout::Flex>
         </LinkedBlock>
       {{/let}}
     {{/each}}
@@ -178,7 +174,7 @@
       @route={{this.router.currentRoute.localName}}
       @showSizeSelector={{false}}
       @models={{@currentRouteParams}}
-      @totalItems={{@secrets.meta.total}}
+      @totalItems={{@secrets.meta.totalItems}}
       @queryFunction={{this.paginationQueryParams}}
       data-test-pagination
     />

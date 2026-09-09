@@ -14,6 +14,72 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// TestDisplayNameTemplateWarning tests whether a warning is
+// issued when a custom username_template references .DisplayName without a truncate function.
+func TestDisplayNameTemplateWarning(t *testing.T) {
+	tests := map[string]struct {
+		connectionDetails map[string]interface{}
+		wantWarning       bool
+	}{
+		"no username_template key": {
+			connectionDetails: map[string]interface{}{},
+			wantWarning:       false,
+		},
+		"username_template is nil": {
+			connectionDetails: map[string]interface{}{"username_template": nil},
+			wantWarning:       false,
+		},
+		"username_template is empty string": {
+			connectionDetails: map[string]interface{}{"username_template": ""},
+			wantWarning:       false,
+		},
+		"username_template is non-string": {
+			connectionDetails: map[string]interface{}{"username_template": 42},
+			wantWarning:       false,
+		},
+		"template without DisplayName": {
+			connectionDetails: map[string]interface{}{"username_template": "{{.RoleName}}-{{random 10}}"},
+			wantWarning:       false,
+		},
+		"DisplayName with truncate": {
+			connectionDetails: map[string]interface{}{"username_template": "{{.DisplayName | truncate 8}}-{{random 10}}"},
+			wantWarning:       false,
+		},
+		"DisplayName with wrapped pipeline truncate": {
+			connectionDetails: map[string]interface{}{"username_template": "{{printf \"%s\" .DisplayName | truncate 8}}-{{random 10}}"},
+			wantWarning:       false,
+		},
+		"truncate only applies to RoleName": {
+			connectionDetails: map[string]interface{}{"username_template": "{{.RoleName | truncate 8}}-{{.DisplayName}}-{{random 10}}"},
+			wantWarning:       true,
+		},
+		"DisplayName without truncate in action": {
+			connectionDetails: map[string]interface{}{"username_template": "{{.DisplayName | upper}}-{{random 10}}"},
+			wantWarning:       true,
+		},
+		"DisplayName without truncate": {
+			connectionDetails: map[string]interface{}{"username_template": "{{.DisplayName}}-{{random 10}}"},
+			wantWarning:       true,
+		},
+		"DisplayName only in comment, no warning": {
+			connectionDetails: map[string]interface{}{"username_template": "{{/* .DisplayName is intentionally not used */}}{{.RoleName | truncate 8}}"},
+			wantWarning:       false,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			got := displayNameTemplateWarning(tc.connectionDetails)
+			if tc.wantWarning && got == "" {
+				t.Fatalf("expected a warning, got none")
+			}
+			if !tc.wantWarning && got != "" {
+				t.Fatalf("expected no warning, got %q", got)
+			}
+		})
+	}
+}
+
 func TestWriteConfig_PluginVersionInStorage(t *testing.T) {
 	_, sys := getCluster(t)
 
