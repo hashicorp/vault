@@ -63,7 +63,12 @@ export default Component.extend({
       return;
     }
     if (response?.data?.id) {
-      return this.router.transitionTo('vault.cluster.access.identity.show', response.data.id, 'details');
+      const pluralType = type === 'group' ? 'groups' : 'entities';
+      return this.router.transitionTo(
+        `vault.cluster.access.identity.${pluralType}.show`,
+        response.data.id,
+        'details'
+      );
     } else {
       flash.danger(`We were unable to find an identity ${type} with a "${param}" of "${paramValue}".`);
     }

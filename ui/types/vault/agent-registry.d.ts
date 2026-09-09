@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import type { RegistrationUpdateByIdRequest } from '@hashicorp/vault-client-typescript';
 import type { ListEntity } from 'vault/identity';
 
 export type Agent = {

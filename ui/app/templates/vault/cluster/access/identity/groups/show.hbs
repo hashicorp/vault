@@ -1,0 +1,58 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title={{this.model.name}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" icon="vault" route="vault.cluster.dashboard")
+        (hash label=(capitalize (pluralize this.model.identityType)) route="vault.cluster.access.identity.groups.index")
+        (hash label=this.model.name)
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs sub-nav" aria-label="navigation for managing {{this.model.identityType}}">
+    <ul>
+      {{#each (tabs-for-identity-show this.model.identityType this.model.type) as |tab|}}
+        <LinkTo
+          @route="vault.cluster.access.identity.groups.show"
+          @models={{array this.model.id tab}}
+          data-test-tab-subnav={{tab}}
+        >
+          {{capitalize (humanize tab)}}
+        </LinkTo>
+      {{/each}}
+    </ul>
+  </nav>
+</div>
+<Toolbar>
+  <ToolbarActions>
+    {{! template-lint-disable simple-unless }}
+    {{#unless (or (and (eq this.model.identityType "group") (eq this.model.type "internal")) this.model.alias.id)}}
+      <ToolbarLink
+        @route="vault.cluster.access.identity.groups.aliases.add"
+        @models={{array this.model.id}}
+        @type="add"
+        data-test-entity-create-link={{true}}
+      >
+        Add alias
+      </ToolbarLink>
+    {{/unless}}
+    {{! template-lint-enable simple-unless }}
+    <ToolbarLink
+      @route="vault.cluster.access.identity.groups.edit"
+      @models={{array this.model.id}}
+      data-test-entity-edit-link={{true}}
+    >
+      Edit
+      {{this.model.identityType}}
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+{{! renders either the identity item-aliases or item-groups component}}
+{{component (concat "identity/item-" this.section) model=this.model}}

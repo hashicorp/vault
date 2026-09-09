@@ -21,12 +21,18 @@
             {{/let}}
           {{else}}
             {{#if (is-array this.itemRoute)}}
-              <LinkTo
-                @route={{(get this.itemRoute "0")}}
-                @models={{array (get this.itemRoute "1") item (get this.itemRoute "2")}}
-              >
-                {{item}}
-              </LinkTo>
+              {{#if (eq this.itemRoute.length 2)}}
+                <LinkTo @route={{(get this.itemRoute "0")}} @models={{array item (get this.itemRoute "1")}}>
+                  {{item}}
+                </LinkTo>
+              {{else}}
+                <LinkTo
+                  @route={{(get this.itemRoute "0")}}
+                  @models={{array (get this.itemRoute "1") item (get this.itemRoute "2")}}
+                >
+                  {{item}}
+                </LinkTo>
+              {{/if}}
             {{else}}
               <LinkTo
                 @route={{this.itemRoute}}

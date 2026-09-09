@@ -89,7 +89,7 @@ module('Unit | Service | permissions', function (hooks) {
       'sys/auth': { capabilities: ['deny'] },
       'identity/entity/id': { capabilities: ['read'] },
     };
-    const expected = { route: 'vault.cluster.access.identity', models: ['entities'] };
+    const expected = { route: 'vault.cluster.access.identity.entities.index', models: [] };
     this.service.setProperties({ exactPaths: accessPaths });
     assert.deepEqual(this.service.navPathParams('access'), expected);
   });
