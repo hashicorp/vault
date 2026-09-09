@@ -133,7 +133,7 @@ func (c *PluginReloadCommand) Run(args []string) int {
 	}
 
 	var reloadID string
-	if client.Namespace() == "" {
+	if client.Namespace() == "" && len(c.mounts) == 0 {
 		pluginType := api.PluginTypeUnknown
 		pluginTypeStr := strings.TrimSpace(c.pluginType)
 		if pluginTypeStr != "" {
