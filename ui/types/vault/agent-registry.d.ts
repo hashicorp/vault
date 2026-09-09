@@ -12,7 +12,7 @@ export type Agent = {
   entity_id: string;
   description: string;
   owner: string;
-  ceiling_policy: string[];
+  ceiling_policies: string[];
   no_default_ceiling_policy: boolean;
   creation_time: string;
   last_updated_time: string;
