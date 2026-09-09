@@ -71,21 +71,13 @@ fi
 
 # If we are running Vault, make sure it executes as the proper user.
 if [ "$1" = 'vault' ]; then
-    # When the container starts as a non-root user (e.g. USER vault in Dockerfile),
-    # we cannot chown or setcap.  Honor the explicit opt-out flags and also
-    # skip setcap when the runtime doesn't grant IPC_LOCK (e.g. AWS ECS Fargate).
+    # Only root can change ownership, set capabilities, and switch users.
     if [ "$(id -u)" != '0' ]; then
         if [ -n "$SKIP_CHOWN" ]; then
             echo "Container is running as non-root user, ignoring SKIP_CHOWN" >&2
         fi
         if [ -n "$SKIP_SETCAP" ]; then
             echo "Container is running as non-root user, ignoring SKIP_SETCAP" >&2
-        fi
-
-        # If mlock is disabled via config or env, nothing else to do.
-        # Otherwise warn that memory won't be locked.
-        if [ -z "$VAULT_DISABLE_MLOCK" ] && [ -z "$disable_mlock" ]; then
-            : # Vault will try mlock; on restricted runtimes it may fail later
         fi
     else
         if [ -z "$SKIP_CHOWN" ]; then

@@ -7,148 +7,174 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-// TestEntrypointNonRootUser verifies that when the entrypoint script runs as a
-// non-root user it does NOT attempt setcap or chown, and it still execs vault.
-func TestEntrypointNonRootUser(t *testing.T) {
-	// Locate the entrypoint script relative to the repo root.
-	scriptPath := "../../../scripts/docker/docker-entrypoint.sh"
-	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		scriptPath = "../../scripts/docker/docker-entrypoint.sh"
-		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-			t.Skip("entrypoint script not found")
-		}
-	}
-
-	// We run the script under `sh -n` to syntax-check it first.
-	cmd := exec.Command("sh", "-n", scriptPath)
-	out, err := cmd.CombinedOutput()
+func TestEntrypointUserSetup(t *testing.T) {
+	// The entrypoints use substring expansion supported by their container
+	// shells and bash, but not by every host's /bin/sh (for example, dash).
+	shell, err := exec.LookPath("bash")
 	if err != nil {
-		t.Fatalf("entrypoint script has syntax errors: %v\n%s", err, out)
+		t.Skip("bash is required to execute the entrypoint scripts")
 	}
 
-	// Verify that the script contains the non-root guard.
-	content, err := os.ReadFile(scriptPath)
-	if err != nil {
-		t.Fatalf("failed to read entrypoint: %v", err)
-	}
-	body := string(content)
-
-	if !strings.Contains(body, `if [ "$(id -u)" != '0' ]; then`) {
-		t.Error("entrypoint missing non-root user guard")
-	}
-	if !strings.Contains(body, "Container is running as non-root user, ignoring SKIP_SETCAP") {
-		t.Error("entrypoint missing SKIP_SETCAP warning for non-root")
-	}
-	if !strings.Contains(body, "VAULT_DISABLE_MLOCK") {
-		t.Error("entrypoint should reference VAULT_DISABLE_MLOCK")
+	for _, script := range []struct {
+		name, path, switchUser string
+	}{
+		{"development", "docker-entrypoint.sh", "su-exec"},
+		{"release", "../../.release/docker/docker-entrypoint.sh", "su-exec"},
+		{"ubi", "../../.release/docker/ubi-docker-entrypoint.sh", "su"},
+	} {
+		t.Run(script.name, func(t *testing.T) {
+			scriptPath, err := filepath.Abs(script.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if out, err := exec.Command(shell, "-n", scriptPath).CombinedOutput(); err != nil {
+				t.Fatalf("entrypoint syntax: %v\n%s", err, out)
+			}
+			for _, tc := range []struct {
+				name                        string
+				root, skipChown, skipSetcap bool
+				versionFails, disableMlock  bool
+				exitCode                    int
+			}{
+				{name: "nonroot"},
+				{name: "nonroot_skip_chown", skipChown: true},
+				{name: "nonroot_skip_setcap", skipSetcap: true},
+				{name: "nonroot_skip_both", skipChown: true, skipSetcap: true},
+				{name: "nonroot_mlock_disabled", disableMlock: true},
+				{name: "nonroot_exit_status", exitCode: 23},
+				{name: "root", root: true},
+				{name: "root_skip_chown", root: true, skipChown: true},
+				{name: "root_skip_setcap", root: true, skipSetcap: true},
+				{name: "root_skip_both", root: true, skipChown: true, skipSetcap: true},
+				{name: "root_capability_fallback", root: true, versionFails: true},
+				{name: "root_exit_status", root: true, exitCode: 23},
+			} {
+				t.Run(tc.name, func(t *testing.T) {
+					binDir := t.TempDir()
+					logPath := filepath.Join(binDir, "calls")
+					for _, command := range []string{"id", "stat", "chown", "setcap", "readlink", "which", "su-exec", "su", "vault"} {
+						if err := os.WriteFile(filepath.Join(binDir, command), []byte(entrypointCommandStub), 0o755); err != nil {
+							t.Fatal(err)
+						}
+					}
+					cmd := exec.Command(shell, scriptPath, "vault", "server", "-config=/tmp/config with spaces")
+					// Start from a clean environment so host Vault settings cannot
+					// write config files or change the behavior under test.
+					cmd.Env = []string{
+						"PATH=" + binDir + string(os.PathListSeparator) + os.Getenv("PATH"),
+						"ENTRYPOINT_SHELL=" + shell,
+						"COMMAND_LOG=" + logPath,
+						fmt.Sprintf("MOCK_EXIT_CODE=%d", tc.exitCode),
+					}
+					if tc.root {
+						cmd.Env = append(cmd.Env, "MOCK_UID=0")
+					} else {
+						cmd.Env = append(cmd.Env, "MOCK_UID=1000")
+					}
+					if tc.skipChown {
+						cmd.Env = append(cmd.Env, "SKIP_CHOWN=true")
+					}
+					if tc.skipSetcap {
+						cmd.Env = append(cmd.Env, "SKIP_SETCAP=true")
+					}
+					if tc.versionFails {
+						cmd.Env = append(cmd.Env, "MOCK_VERSION_EXIT=1")
+					}
+					if tc.disableMlock {
+						cmd.Env = append(cmd.Env, "VAULT_DISABLE_MLOCK=true")
+					}
+					out, err := cmd.CombinedOutput()
+					if cmd.ProcessState == nil || cmd.ProcessState.ExitCode() != tc.exitCode {
+						t.Fatalf("entrypoint exit status: got %v, want %d\n%s", err, tc.exitCode, out)
+					}
+					calls, err := os.ReadFile(logPath)
+					if err != nil {
+						t.Fatal(err)
+					}
+					log := string(calls)
+					assertCount := func(call string, want int) {
+						t.Helper()
+						if got := strings.Count(log, call); got != want {
+							t.Errorf("got %d calls containing %q, want %d\n%s", got, call, want, log)
+						}
+					}
+					assertCount("vault <server> <-config=/tmp/config with spaces>", 1)
+					for _, dir := range []string{"config", "logs", "file"} {
+						want := 0
+						if tc.root && !tc.skipChown {
+							want = 1
+						}
+						assertCount("chown <-R> <vault:vault> </vault/"+dir+">", want)
+					}
+					setcapCount, fallbackCount, switchCount := 0, 0, 0
+					if tc.root {
+						switchCount = 1
+						if !tc.skipSetcap {
+							setcapCount = 1
+							if tc.versionFails {
+								fallbackCount = 1
+							}
+						}
+					}
+					assertCount("setcap <cap_ipc_lock=+ep>", setcapCount)
+					assertCount("setcap <cap_ipc_lock=-ep>", fallbackCount)
+					assertCount(script.switchUser+" <vault>", switchCount)
+					if !tc.root {
+						for name, enabled := range map[string]bool{"SKIP_CHOWN": tc.skipChown, "SKIP_SETCAP": tc.skipSetcap} {
+							warning := "Container is running as non-root user, ignoring " + name
+							if strings.Contains(string(out), warning) != enabled {
+								t.Errorf("unexpected %s warning: %s", name, out)
+							}
+						}
+					}
+				})
+			}
+		})
 	}
 }
 
-// TestEntrypointRootUser verifies that the root path still performs chown and
-// setcap before dropping to the vault user.
-func TestEntrypointRootUser(t *testing.T) {
-	scriptPath := "../../../scripts/docker/docker-entrypoint.sh"
-	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		scriptPath = "../../scripts/docker/docker-entrypoint.sh"
-		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-			t.Skip("entrypoint script not found")
-		}
-	}
-
-	content, err := os.ReadFile(scriptPath)
-	if err != nil {
-		t.Fatalf("failed to read entrypoint: %v", err)
-	}
-	body := string(content)
-
-	if !strings.Contains(body, "setcap cap_ipc_lock=+ep") {
-		t.Error("entrypoint missing setcap for root user")
-	}
-	if !strings.Contains(body, "su-exec vault") {
-		t.Error("entrypoint missing su-exec vault for root user")
-	}
-}
-
-// TestUbiEntrypointNonRootUser verifies the same behaviour for the UBI
-// entrypoint variant used in Red Hat builds.
-func TestUbiEntrypointNonRootUser(t *testing.T) {
-	scriptPath := "../../../.release/docker/ubi-docker-entrypoint.sh"
-	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		scriptPath = "../../.release/docker/ubi-docker-entrypoint.sh"
-		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-			t.Skip("ubi entrypoint script not found")
-		}
-	}
-
-	cmd := exec.Command("sh", "-n", scriptPath)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("ubi entrypoint script has syntax errors: %v\n%s", err, out)
-	}
-
-	content, err := os.ReadFile(scriptPath)
-	if err != nil {
-		t.Fatalf("failed to read ubi entrypoint: %v", err)
-	}
-	body := string(content)
-
-	if !strings.Contains(body, `if [ "$(id -u)" != '0' ]; then`) {
-		t.Error("ubi entrypoint missing non-root user guard")
-	}
-	if !strings.Contains(body, "Container is running as non-root user, ignoring SKIP_SETCAP") {
-		t.Error("ubi entrypoint missing SKIP_SETCAP warning for non-root")
-	}
-	if !strings.Contains(body, "VAULT_DISABLE_MLOCK") {
-		t.Error("ubi entrypoint should reference VAULT_DISABLE_MLOCK")
-	}
-}
-
-// TestUbiEntrypointRootUser verifies the root path in the UBI entrypoint.
-func TestUbiEntrypointRootUser(t *testing.T) {
-	scriptPath := "../../../.release/docker/ubi-docker-entrypoint.sh"
-	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		scriptPath = "../../.release/docker/ubi-docker-entrypoint.sh"
-		if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-			t.Skip("ubi entrypoint script not found")
-		}
-	}
-
-	content, err := os.ReadFile(scriptPath)
-	if err != nil {
-		t.Fatalf("failed to read ubi entrypoint: %v", err)
-	}
-	body := string(content)
-
-	if !strings.Contains(body, "setcap cap_ipc_lock=+ep") {
-		t.Error("ubi entrypoint missing setcap for root user")
-	}
-	if !strings.Contains(body, "su vault -p") {
-		t.Error("ubi entrypoint missing su vault for root user")
-	}
-}
-
-// TestEntrypointEnvVars documents the expected environment variables.
-func TestEntrypointEnvVars(t *testing.T) {
-	// This test is purely documentary; it lists the env vars the entrypoint
-	// respects so that operators know what knobs are available.
-	vars := []string{
-		"SKIP_SETCAP",
-		"SKIP_CHOWN",
-		"VAULT_DISABLE_MLOCK",
-		"VAULT_REDIRECT_INTERFACE",
-		"VAULT_CLUSTER_INTERFACE",
-		"VAULT_LOCAL_CONFIG",
-		"VAULT_DEV_ROOT_TOKEN_ID",
-		"VAULT_DEV_LISTEN_ADDRESS",
-	}
-	for _, v := range vars {
-		if os.Getenv(v) == "" {
-			// We don't require them to be set; just document them.
-			fmt.Printf("documented env var: %s\n", v)
-		}
-	}
-}
+// All privileged commands are replaced with stubs. Tests never modify the
+// host's ownership, capabilities, or user identity.
+const entrypointCommandStub = `#!/bin/sh
+command=${0##*/}
+if [ "$command" = vault ] && [ "$1" = --help ]; then
+    exit 1
+fi
+{
+    printf '%s' "$command"
+    printf ' <%s>' "$@"
+    printf '\n'
+} >> "$COMMAND_LOG"
+case "$command" in
+    id)
+        if [ "$2" = vault ]; then printf '1000\n'; else printf '%s\n' "$MOCK_UID"; fi
+        ;;
+    stat) printf '0\n' ;;
+    which) command -v "$1" ;;
+    readlink) printf '%s\n' "$2" ;;
+    chown|setcap)
+        [ "$MOCK_UID" = 0 ] || exit 99
+        ;;
+    su-exec)
+        shift
+        export MOCK_UID=1000
+        exec "$@"
+        ;;
+    su)
+        shift 2
+        script=$1
+        shift 2
+        export MOCK_UID=1000
+        exec "$ENTRYPOINT_SHELL" "$script" "$@"
+        ;;
+    vault)
+        if [ "$1" = -version ]; then exit "${MOCK_VERSION_EXIT:-0}"; fi
+        exit "$MOCK_EXIT_CODE"
+        ;;
+esac
+`
