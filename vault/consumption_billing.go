@@ -31,7 +31,7 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	c.AddLogger(logger)
 	c.consumptionBilling = &billing.ConsumptionBilling{
 		BillingConfig: c.billingConfig,
-		GetParentNamespaceID: func(nsPath string) string {
+		ParentNamespaceIDFunc: func(nsPath string) string {
 			return getParentNamespaceID(c, nsPath)
 		},
 		SecretEngineCounts: billing.SecretEngineCounts{

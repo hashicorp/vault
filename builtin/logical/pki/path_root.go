@@ -350,7 +350,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	if err != nil {
 		return nil, err
 	}
-	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID)
+	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
 	b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(true, parsedBundle.Certificate)
 
 	// Build a fresh CRL
@@ -536,7 +536,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 	if err != nil {
 		return nil, err
 	}
-	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID)
+	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
 	b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(true, parsedBundle.Certificate)
 
 	if warnAboutTruncate &&

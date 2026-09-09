@@ -1,0 +1,107 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+name: Bob Review Gate
+
+# Blocks a PR until an IBM Bob Review marker exists for its head commit —
+# but only for PRs that opt in via the `require-bob-review` label. This
+# differs from the equivalent gate in hashicorp/vault-tools, which runs
+# unconditionally on every PR: that repo-wide default caused this exact
+# check to show up as a failing status on PRs that never used the Bob
+# Review extension at all, which is a real alert-fatigue risk before the
+# extension has real adoption in this repo. Gating on an explicit label
+# keeps this silent for everyone else, while still giving PRs that want it
+# enforced a real, code-checked way to require it.
+#
+# The marker (.bob-review/<sha>) is committed directly by the bob-review VS
+# Code extension after it posts a review for that commit (markReviewedInCI
+# in hashicorp/vault-tools's src/extension.ts). This job does not compute or
+# accept a SHA as input — it reads github.event.pull_request.head.sha
+# directly from the PR event, the same full 40-char SHA the extension
+# already resolves itself (fetchHeadSha) and uses to name the marker it
+# commits, so the two stay in sync without passing the value around.
+#
+# The marker commit itself becomes the new branch tip once pushed, so a
+# naive "does .bob-review/<HEAD> exist" check can never pass: HEAD is always
+# one commit ahead of whatever got marked, since committing the marker is
+# what moves HEAD there. Checking only whether HEAD itself is that marker
+# commit (its own immediate parent) is not enough either — once a PR has
+# been reviewed and approved, a separate workflow
+# (bob-review-approval-gate.yml, triggered by the clear-bob-receipt label)
+# lets the receipt be cleared, and further commits can land on top. So this
+# job instead searches the branch's full commit history for a
+# "bob-review: mark <sha> as reviewed" commit whose named SHA is still an
+# ancestor of HEAD. This keeps the gate satisfied no matter how many commits
+# have landed on top since the review, while still failing if a rebase or
+# force-push has introduced new, unreviewed changes since that commit.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check-bob-review:
+    name: Verify Bob Review marker (require-bob-review PRs only)
+    # Silent by default: only actually runs its check on PRs carrying the
+    # require-bob-review label. `labeled` is included in the trigger types
+    # above specifically so adding this label after the PR is already open
+    # causes this job to actually evaluate, rather than only ever being
+    # decided once at PR-open time. `unlabeled` is included for the reverse
+    # case: removing the label re-evaluates this same condition against the
+    # PR's now-current labels, which is what actually clears a stale
+    # failing status back to skipped instead of leaving it stuck.
+    if: contains(github.event.pull_request.labels.*.name, 'require-bob-review')
+    runs-on: [self-hosted, ubuntu-22.04-x64]
+    permissions:
+      contents: read
+    steps:
+      # fetch-depth: 0 (full history, not the default shallow clone) is
+      # required below — the history-search fallback needs to walk commits
+      # older than just HEAD to find a marker commit that may now be several
+      # commits back.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Verify IBM Bob Review marker exists for HEAD SHA
+        env:
+          # Pass via env rather than interpolating github.event.* directly
+          # into the run: script — GitHub's hardening guidance treats any
+          # such interpolation as untrusted, even for fields like this SHA
+          # that are actually safe by construction.
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          sha="$HEAD_SHA"
+          if [ -f ".bob-review/${sha}" ]; then
+            echo "Found IBM Bob Review marker for ${sha}."
+            exit 0
+          fi
+
+          # Fallback: the marker *file* may be gone by now (e.g. deleted by
+          # the approval receipt-clearing workflow once this PR has both been
+          # reviewed and approved), which would otherwise make this check
+          # fail again on every commit added after that deletion, including
+          # the deletion commit itself. Instead, search this branch's full
+          # commit history for a "bob-review: mark <sha> as reviewed" commit,
+          # and confirm the SHA it names is still an ancestor of the current
+          # HEAD — i.e. the exact code that was reviewed is genuinely still
+          # part of this PR's history, not just present at some earlier point
+          # before a rebase or force-push introduced new, unreviewed changes.
+          found=0
+          while IFS= read -r reviewed_sha; do
+            [ -z "$reviewed_sha" ] && continue
+            if git merge-base --is-ancestor "$reviewed_sha" HEAD 2>/dev/null; then
+              echo "Found a IBM Bob Review marker commit for ${reviewed_sha}, which is still an ancestor of HEAD."
+              found=1
+              break
+            fi
+          done < <(git log --format=%s HEAD | grep -oE '^bob-review: mark [0-9a-f]{40} as reviewed' | grep -oE '[0-9a-f]{40}')
+
+          if [ "$found" -eq 1 ]; then
+            exit 0
+          fi
+
+          echo "::error::No IBM Bob Review marker found for commit ${sha}, and no valid marker commit was found in this branch's history."
+          echo "Run the Bob Review VS Code extension locally (Bob: Review PR and post comment) before merging. It will commit .bob-review/${sha} for you."
+          exit 1
