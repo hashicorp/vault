@@ -111,7 +111,7 @@ export default class AgentsPageRegistryComponent extends Component<Args> {
     }
     // combine policy names across agent, entity and groups
     const agentPolicies =
-      'ceiling_policy' in agent && agent.ceiling_policy?.length ? agent.ceiling_policy : [];
+      'ceiling_policies' in agent && agent.ceiling_policies?.length ? agent.ceiling_policies : [];
     const entityPolicies = entity?.policies?.length ? entity.policies : [];
     const groupPolicies = groups.flatMap((group) => group.policies ?? []);
     // spreading the Set will return a unique array
