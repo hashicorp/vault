@@ -204,7 +204,7 @@ func (b *backend) GenerateOTPCredential(ctx context.Context, req *logical.Reques
 		return "", err
 	}
 
-	mountInfo := sshMountAttribution(ctx, req, b.backendUUID)
+	mountInfo := sshMountAttribution(ctx, req, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
 	b.sshCertificateCounter.Increment().WithMountInfo(mountInfo).AddSSHOTP()
 	return otp, nil
 }

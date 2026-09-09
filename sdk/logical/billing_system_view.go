@@ -32,6 +32,11 @@ type MetricTypeAttribution struct {
 // billing.ConsumptionBillingManager is an implementation of this interface that the backend can use to write billing data.
 type ConsumptionBillingManager interface {
 	WriteBillingData(ctx context.Context, pluginType string, data map[string]interface{}) error
+
+	// GetParentNamespaceID returns the ID of the parent namespace for the given
+	// namespace path. Returns an empty string when the path has no parent (root
+	// namespace) or when namespace resolution is unavailable (e.g. OSS).
+	GetParentNamespaceID(nsPath string) string
 }
 
 // ================================
@@ -46,4 +51,8 @@ type nullConsumptionBillingManager struct{}
 
 func (n *nullConsumptionBillingManager) WriteBillingData(ctx context.Context, pluginType string, data map[string]interface{}) error {
 	return nil
+}
+
+func (n *nullConsumptionBillingManager) GetParentNamespaceID(_ string) string {
+	return ""
 }
