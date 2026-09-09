@@ -31,7 +31,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await page.visit({ item_type: 'entities' });
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.access.identity.index',
+      'vault.cluster.access.identity.entities.index',
       'navigates to the correct route'
     );
   });
@@ -40,7 +40,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await page.visit({ item_type: 'groups' });
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.access.identity.index',
+      'vault.cluster.access.identity.groups.index',
       'navigates to the correct route'
     );
   });
@@ -51,11 +51,11 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await visit('/vault/access/identity/entities');
     assert.strictEqual(currentURL(), '/vault/access/identity/entities', 'navigates to entities tab');
 
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.listItem(name)} ${GENERAL.menuTrigger}`);
     assert
       .dom('.hds-dropdown ul')
-      .hasText('Details Create alias Edit Disable Delete', 'all actions render for entities');
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuItem('delete')}`);
+      .hasText('Edit entity Create alias Disable entity Delete entity', 'all actions render for entities');
+    await click(`${GENERAL.listItem(name)} ${GENERAL.menuItem('delete')}`);
     await click(GENERAL.confirmButton);
   });
 
@@ -130,11 +130,11 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     const flashSpy = sinon.spy(this.owner.lookup('service:flashMessages'), 'danger');
 
     await page.visit({ item_type: 'entities' });
-    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuTrigger}`);
-    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuItem('delete')}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuItem('delete')}`);
     await click(GENERAL.confirmButton);
 
-    const message = `There was a problem deleting entity: test - ${error}`;
+    const message = `Error deleting entity null: ${error}`;
     assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
   });
 
@@ -152,8 +152,8 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     const flashSpy = sinon.spy(this.owner.lookup('service:flashMessages'), 'success');
 
     await page.visit({ item_type: 'entities' });
-    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuTrigger}`);
-    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuItem('edit')}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuItem('edit')}`);
     await click(GENERAL.submitButton);
     const message = `Successfully saved Entity test.`;
     assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
@@ -172,8 +172,8 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     server.post('/identity/entity/id/test', () => new Response(500, {}, { errors: [error] }));
 
     await page.visit({ item_type: 'entities' });
-    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuTrigger}`);
-    await click(`${SELECTORS.listItem('foo')} ${GENERAL.menuItem('edit')}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuItem('edit')}`);
     await click(GENERAL.submitButton);
 
     assert.dom(GENERAL.messageError).exists();

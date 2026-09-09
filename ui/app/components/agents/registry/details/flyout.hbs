@@ -13,8 +13,13 @@
         {{#each this.tabs as |tab|}}
           <T.Panel @key={{tab.key}} class="has-top-bottom-margin-24" data-test-panel={{tab.key}}>
             {{component
-              (concat "agents/registry/details/" tab.key)
-              data=@data
+              (concat "details/" tab.key)
+              agent=@data.agent
+              entity=@data.entity
+              aliasId=@data.aliasId
+              aliases=@data.entity.aliases
+              groups=@data.groups
+              aggregatePolicy=@data.aggregatePolicy
               isParentVisible=(eq tab.key this.selectedTab)
             }}
           </T.Panel>

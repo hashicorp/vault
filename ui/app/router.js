@@ -114,18 +114,28 @@ Router.map(function () {
           this.route('show', { path: '/show/*lease_id' });
         });
         // the outer identity route handles group and entity items
-        // the "identity" routes expect :item_type to be plural
-        this.route('identity', { path: '/identity/:item_type' }, function () {
-          this.route('index', { path: '/' });
-          this.route('create');
-          this.route('merge');
-          this.route('edit', { path: '/edit/:item_id' });
-          this.route('show', { path: '/:item_id/:section' });
-          this.route('aliases', function () {
-            this.route('index', { path: '/' });
-            this.route('add', { path: '/add/:item_id' });
-            this.route('edit', { path: '/edit/:item_alias_id' });
-            this.route('show', { path: '/:item_alias_id/:section' });
+        this.route('identity', function () {
+          this.route('entities', function () {
+            this.route('create');
+            this.route('merge');
+            this.route('edit', { path: '/edit/:item_id' });
+            this.route('show', { path: '/:item_id/:section' });
+            this.route('aliases', function () {
+              this.route('add', { path: '/add/:item_id' });
+              this.route('edit', { path: '/edit/:item_alias_id' });
+              this.route('show', { path: '/:item_alias_id/:section' });
+            });
+          });
+          this.route('groups', function () {
+            this.route('create');
+            this.route('merge');
+            this.route('edit', { path: '/edit/:item_id' });
+            this.route('show', { path: '/:item_id/:section' });
+            this.route('aliases', function () {
+              this.route('add', { path: '/add/:item_id' });
+              this.route('edit', { path: '/edit/:item_alias_id' });
+              this.route('show', { path: '/:item_alias_id/:section' });
+            });
           });
         });
         this.route('control-groups');
