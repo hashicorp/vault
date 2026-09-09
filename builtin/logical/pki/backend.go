@@ -145,6 +145,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				legacyCertBundlePath,
 				legacyCertBundleBackupPath,
 				keyPrefix,
+				exportKeyPrefix,
 			},
 
 			WriteForwardedStorage: []string{
