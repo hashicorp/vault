@@ -150,7 +150,12 @@
         {{#let (this.getEngineResourceData rowData.path) as |backendData|}}
           {{! Only render if we have backendData, so this doesn't try to render while data for the list refreshes }}
           {{#if backendData}}
-            <ManageDropdown @model={{backendData}} @variant="icon" @configRoute={{backendData.backendConfigurationLink}} />
+            <ManageDropdown
+              @model={{backendData}}
+              @variant="icon"
+              @showDelete={{true}}
+              @configRoute={{backendData.backendConfigurationLink}}
+            />
           {{/if}}
         {{/let}}
       </:popupMenu>
