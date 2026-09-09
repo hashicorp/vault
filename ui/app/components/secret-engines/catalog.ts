@@ -64,7 +64,7 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
   rotationTypes = [
     { label: 'Static credentials', capability: 'static' },
     { label: 'Dynamic credentials', capability: 'dynamic' },
-    { label: 'Rotation-enabled', capability: 'rotating' },
+    { label: 'Rotating credentials', capability: 'rotating' },
   ];
 
   platforms = [
