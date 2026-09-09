@@ -10,7 +10,7 @@ following bug fixes from 1.0.0/1.0.1:
  * secrets/kv: Fix issue where storage version would get incorrectly downgraded
    [[GH-5809](https://github.com/hashicorp/vault/pull/5809)]
 
-It is otherwise identical to 0.11.5.
+It is otherwise identical to 0.11.5....
 
 ## 0.11.5 (November 13th, 2018)
 
