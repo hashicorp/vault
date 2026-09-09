@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIdentityStore_EntityDisabled(t *testing.T) {
@@ -352,4 +353,80 @@ func TestIdentityStore_EntityPoliciesInInitialAuth(t *testing.T) {
 	if !strutil.EquivalentSlices(policies, []string{"foo", "bar"}) {
 		t.Fatalf("policy mismatch, got policies: %v", policies)
 	}
+}
+
+// TestIdentity_EntityMerge_RequiresSudo verifies the identity entity merge API endpoint requires the sudo capability (in addition to update) when called via the HTTP API.
+func TestIdentity_EntityMerge_RequiresSudo(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	rootToken := client.Token()
+
+	// Create two entities as root to merge.
+	toEnt, err := client.Logical().Write("identity/entity", nil)
+	require.NoError(t, err)
+	require.NotNil(t, toEnt)
+	toID, ok := toEnt.Data["id"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, toID)
+
+	fromEnt, err := client.Logical().Write("identity/entity", nil)
+	require.NoError(t, err)
+	require.NotNil(t, fromEnt)
+	fromID, ok := fromEnt.Data["id"].(string)
+	require.True(t, ok)
+	require.NotEmpty(t, fromID)
+
+	// Token with update but without sudo should be denied.
+	require.NoError(t, client.Sys().PutPolicy("identity-merge-no-sudo", `
+path "identity/entity/merge" {
+  capabilities = ["update"]
+}
+`))
+
+	noSudoTok, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"identity-merge-no-sudo"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, noSudoTok)
+	require.NotNil(t, noSudoTok.Auth)
+	require.NotEmpty(t, noSudoTok.Auth.ClientToken)
+
+	client.SetToken(noSudoTok.Auth.ClientToken)
+	_, err = client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":    toID,
+		"from_entity_ids": []string{fromID},
+	})
+	require.Error(t, err)
+	require.ErrorContains(t, err, logical.ErrPermissionDenied.Error())
+
+	// Token with update+sudo should succeed.
+	client.SetToken(rootToken)
+	require.NoError(t, client.Sys().PutPolicy("identity-merge-with-sudo", `
+path "identity/entity/merge" {
+  capabilities = ["update", "sudo"]
+}
+`))
+
+	sudoTok, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"identity-merge-with-sudo"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, sudoTok)
+	require.NotNil(t, sudoTok.Auth)
+	require.NotEmpty(t, sudoTok.Auth.ClientToken)
+
+	client.SetToken(sudoTok.Auth.ClientToken)
+	_, err = client.Logical().Write("identity/entity/merge", map[string]interface{}{
+		"to_entity_id":    toID,
+		"from_entity_ids": []string{fromID},
+	})
+	require.NoError(t, err)
+
+	// Verify the merge happened by checking the from entity was deleted.
+	client.SetToken(rootToken)
+	deleted, err := client.Logical().Read("identity/entity/id/" + fromID)
+	require.NoError(t, err)
+	require.Nil(t, deleted)
 }

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#each @model as |client|}}
+{{#each @model.clients as |client|}}
   <LinkedBlock
     class="list-item-row"
     @params={{array "vault.cluster.access.oidc.clients.client.details" client.name}}
@@ -18,13 +18,13 @@
           </span>
           <div class="has-text-grey is-size-8">
             Client ID:
-            {{client.clientId}}
+            {{client.client_id}}
           </div>
         </div>
       </div>
       <div class="level-right is-flex is-paddingless is-marginless">
         <div class="level-item">
-          {{#if (or client.canRead client.canEdit)}}
+          {{#if (has-capability @model.capabilities "read" "update" pathKey="oidcClient" params=client)}}
             <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
               <dd.ToggleIcon
                 @icon="more-horizontal"
@@ -32,19 +32,23 @@
                 @hasChevron={{false}}
                 data-test-popup-menu-trigger
               />
-              {{#if client.canRead}}
+              {{#if (has-capability @model.capabilities "read" pathKey="oidcClient" params=client)}}
                 <dd.Interactive
                   @route="vault.cluster.access.oidc.clients.client.details"
                   @model={{client.name}}
                   data-test-oidc-client-menu-link="details"
-                >Details</dd.Interactive>
+                >
+                  Details
+                </dd.Interactive>
               {{/if}}
-              {{#if client.canEdit}}
+              {{#if (has-capability @model.capabilities "update" pathKey="oidcClient" params=client)}}
                 <dd.Interactive
                   @route="vault.cluster.access.oidc.clients.client.edit"
                   @model={{client.name}}
                   data-test-oidc-client-menu-link="edit"
-                >Edit</dd.Interactive>
+                >
+                  Edit
+                </dd.Interactive>
               {{/if}}
             </Hds::Dropdown>
           {{/if}}

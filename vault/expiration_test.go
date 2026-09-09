@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -17,17 +16,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
+	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/fairshare"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/physical/inmem"
 )
 
 var testImagePull sync.Once
@@ -47,11 +44,6 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 	}
 
 	return c.expiration
-}
-
-func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, _, _ := TestCoreUnsealedBackend(t, backend)
-	return c, c.expiration
 }
 
 func TestExpiration_Metrics(t *testing.T) {
@@ -647,162 +639,6 @@ func TestExpiration_Tidy(t *testing.T) {
 	// Post the tidy operation, the valid lease entry should not get affected
 	if count != 1 {
 		t.Fatalf("bad: lease count; expected:1 actual:%d", count)
-	}
-}
-
-// To avoid pulling in deps for all users of the package, don't leave these
-// uncommented in the public tree
-/*
-func BenchmarkExpiration_Restore_Etcd(b *testing.B) {
-	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
-	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
-
-	logger := logging.NewVaultLogger(log.Trace)
-	physicalBackend, err := physEtcd.NewEtcdBackend(map[string]string{
-		"address":      addr,
-		"path":         randPath,
-		"max_parallel": "256",
-	}, logger)
-	if err != nil {
-		b.Fatalf("err: %s", err)
-	}
-
-	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
-}
-
-func BenchmarkExpiration_Restore_Consul(b *testing.B) {
-	addr := os.Getenv("PHYSICAL_BACKEND_BENCHMARK_ADDR")
-	randPath := fmt.Sprintf("vault-%d/", time.Now().Unix())
-
-	logger := logging.NewVaultLogger(log.Trace)
-	physicalBackend, err := physConsul.NewConsulBackend(map[string]string{
-		"address":      addr,
-		"path":         randPath,
-		"max_parallel": "256",
-	}, logger)
-	if err != nil {
-		b.Fatalf("err: %s", err)
-	}
-
-	benchmarkExpirationBackend(b, physicalBackend, 10000) // 10,000 leases
-}
-*/
-
-func BenchmarkExpiration_Restore_InMem(b *testing.B) {
-	logger := logging.NewVaultLogger(log.Trace)
-	inm, err := inmem.NewInmem(nil, logger)
-	if err != nil {
-		b.Fatal(err)
-	}
-	benchmarkExpirationBackend(b, inm, 100000) // 100,000 Leases
-}
-
-func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
-	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
-	exp := c.expiration
-	noop := &NoopBackend{}
-	view := NewBarrierView(c.barrier, "logical/")
-	meUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		b.Fatal(err)
-	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	// Register fake leases
-	for i := 0; i < numLeases; i++ {
-		pathUUID, err := uuid.GenerateUUID()
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		req := &logical.Request{
-			Operation:   logical.ReadOperation,
-			Path:        "prod/aws/" + pathUUID,
-			ClientToken: "root",
-		}
-		req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
-		resp := &logical.Response{
-			Secret: &logical.Secret{
-				LeaseOptions: logical.LeaseOptions{
-					TTL: 400 * time.Second,
-				},
-			},
-			Data: map[string]interface{}{
-				"access_key": "xyz",
-				"secret_key": "abcd",
-			},
-		}
-		_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
-	}
-
-	// Stop everything
-	err = exp.Stop()
-	if err != nil {
-		b.Fatalf("err: %v", err)
-	}
-	// Avoid panic due to calling exp.Stop multiple times
-	c.expiration = nil
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		err = exp.Restore(nil)
-		// Restore
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
-	}
-	b.StopTimer()
-}
-
-func BenchmarkExpiration_Create_Leases(b *testing.B) {
-	logger := logging.NewVaultLogger(log.Trace)
-	inm, err := inmem.NewInmem(nil, logger)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	c, _, _ := TestCoreUnsealedBackend(b, inm)
-	exp := c.expiration
-	noop := &NoopBackend{}
-	view := NewBarrierView(c.barrier, "logical/")
-	meUUID, err := uuid.GenerateUUID()
-	if err != nil {
-		b.Fatal(err)
-	}
-	err = exp.router.Mount(noop, "prod/aws/", &MountEntry{Path: "prod/aws/", Type: "noop", UUID: meUUID, Accessor: "noop-accessor", namespace: namespace.RootNamespace}, view)
-	if err != nil {
-		b.Fatal(err)
-	}
-	req := &logical.Request{
-		Operation:   logical.ReadOperation,
-		ClientToken: "root",
-	}
-	req.SetTokenEntry(&logical.TokenEntry{ID: "root", NamespaceID: "root"})
-	resp := &logical.Response{
-		Secret: &logical.Secret{
-			LeaseOptions: logical.LeaseOptions{
-				TTL: 400 * time.Second,
-			},
-		},
-		Data: map[string]interface{}{
-			"access_key": "xyz",
-			"secret_key": "abcd",
-		},
-	}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		req.Path = fmt.Sprintf("prod/aws/%d", i)
-		_, err = exp.Register(namespace.RootContext(nil), req, resp, "")
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
 	}
 }
 
@@ -1832,6 +1668,13 @@ func TestExpiration_RenewToken_NotRenewable(t *testing.T) {
 
 func TestExpiration_Renew(t *testing.T) {
 	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+	ch, cancel, err := exp.core.events.Subscribe(ctx, namespace.RootNamespace, leaseEventTypeRenewed, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -1885,6 +1728,8 @@ func TestExpiration_Renew(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
+	expectedPath := req.Path
+
 	noop.Lock()
 	defer noop.Unlock()
 
@@ -1899,10 +1744,24 @@ func TestExpiration_Renew(t *testing.T) {
 	if req.Operation != logical.RenewOperation {
 		t.Fatalf("Bad: %v", req)
 	}
+
+	select {
+	case receivedEvent := <-ch:
+		assertLeaseRenewEvent(t, receivedEvent, leaseEventTypeRenewed, expectedPath, id)
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout waiting for %s event", leaseEventTypeRenewed)
+	}
 }
 
 func TestExpiration_Renew_NotRenewable(t *testing.T) {
 	exp := mockExpiration(t)
+	ctx := namespace.RootContext(nil)
+	ch, cancel, err := exp.core.events.Subscribe(ctx, namespace.RootNamespace, leaseEventTypeRenewFailed, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
 	noop := &NoopBackend{}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "logical/")
@@ -1949,6 +1808,13 @@ func TestExpiration_Renew_NotRenewable(t *testing.T) {
 
 	if len(noop.Requests) != 0 {
 		t.Fatalf("Bad: %#v", noop.Requests)
+	}
+
+	select {
+	case receivedEvent := <-ch:
+		assertLeaseRenewEvent(t, receivedEvent, leaseEventTypeRenewFailed, req.Path, "")
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout waiting for %s event", leaseEventTypeRenewFailed)
 	}
 }
 
@@ -2968,9 +2834,8 @@ func TestExpiration_FairsharingEnvVar(t *testing.T) {
 		},
 	}
 
-	defer os.Unsetenv(fairshareWorkersOverrideVar)
 	for _, tc := range testCases {
-		os.Setenv(fairshareWorkersOverrideVar, tc.set)
+		t.Setenv(fairshareWorkersOverrideVar, tc.set)
 		exp := mockExpiration(t)
 
 		if fairshare.GetNumWorkers(exp.jobManager) != tc.expected {
@@ -3505,5 +3370,35 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 	numLeases := numLeasesRaw.(int)
 	if numLeases != expectedNumLeases {
 		t.Errorf("bad lease count. expected %d, got %d", expectedNumLeases, numLeases)
+	}
+}
+
+func assertLeaseRenewEvent(t *testing.T, receivedEvent *eventlogger.Event, expectedEventType, expectedPath, expectedLeaseID string) {
+	t.Helper()
+
+	if receivedEvent == nil || receivedEvent.Payload == nil {
+		t.Fatal("missing event payload")
+	}
+
+	received, ok := receivedEvent.Payload.(*logical.EventReceived)
+	if !ok || received == nil {
+		t.Fatalf("unexpected payload type: %T", receivedEvent.Payload)
+	}
+	if received.EventType != expectedEventType {
+		t.Fatalf("unexpected event type: %s", received.EventType)
+	}
+	if received.Event == nil || received.Event.Metadata == nil {
+		t.Fatal("missing event metadata")
+	}
+
+	metadata := received.Event.Metadata.Fields
+	if metadata[logical.EventMetadataOperation].GetStringValue() != leaseOperationRenew {
+		t.Fatalf("unexpected operation: %s", metadata[logical.EventMetadataOperation].GetStringValue())
+	}
+	if metadata[logical.EventMetadataPath].GetStringValue() != expectedPath {
+		t.Fatalf("unexpected path: %s", metadata[logical.EventMetadataPath].GetStringValue())
+	}
+	if expectedLeaseID != "" && metadata[leaseMetadataLeaseID].GetStringValue() != expectedLeaseID {
+		t.Fatalf("unexpected lease id: %s", metadata[leaseMetadataLeaseID].GetStringValue())
 	}
 }

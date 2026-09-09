@@ -16,14 +16,13 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
-	"github.com/mitchellh/copystructure"
 )
 
 // NewTestSoloCluster is a simpler version of NewTestCluster that only creates
-// single-node clusters.  It is intentionally minimalist, if you need something
-// from vault.TestClusterOptions, use NewTestCluster instead.  It should work fine
-// with a nil config argument.  There is no need to call Start or Cleanup or
-// TestWaitActive on the resulting cluster.
+// single-node clusters. It is intentionally minimalist, if you need something
+// from vault.TestClusterOptions, use NewTestCluster instead. It should work fine
+// with a nil config argument. There is no need to call Cleanup or TestWaitActive
+// on the resulting cluster.
 func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestCluster {
 	logger := corehelpers.NewTestLogger(t)
 
@@ -31,11 +30,8 @@ func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestClust
 
 	if config != nil {
 		// It's rude to modify an input argument as a side-effect
-		copy, err := copystructure.Copy(config)
-		if err != nil {
-			t.Fatal(err)
-		}
-		mycfg = copy.(*vault.CoreConfig)
+		local := *config
+		mycfg = &local
 	}
 	if mycfg.Physical == nil {
 		// Don't use NewTransactionalInmem because that would enable replication,
@@ -71,11 +67,15 @@ func NewTestSoloCluster(t testing.TB, config *vault.CoreConfig) *vault.TestClust
 		mycfg.BuiltinRegistry = builtinplugins.Registry
 	}
 
+	// Apply the entConfig values to mycfg too.
+	if config != nil {
+		vault.TestApplyEntBaseConfig(mycfg, config)
+	}
+
 	cluster := vault.NewTestCluster(t, mycfg, &vault.TestClusterOptions{
 		NumCores:    1,
 		HandlerFunc: http.Handler,
 		Logger:      logger,
 	})
-	t.Cleanup(cluster.Cleanup)
 	return cluster
 }

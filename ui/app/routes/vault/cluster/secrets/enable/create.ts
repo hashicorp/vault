@@ -6,10 +6,13 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
-import type ApiService from 'vault/services/api';
-import type PluginCatalogService from 'vault/services/plugin-catalog';
 import { getExternalPluginNameFromBuiltin } from 'vault/utils/external-plugin-helpers';
 import { getAllVersionsForEngineType, type EngineVersionInfo } from 'vault/utils/plugin-catalog-helpers';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { IdentityApiOidcListKeysListEnum } from '@hashicorp/vault-client-typescript/dist/apis/IdentityApi';
+
+import type ApiService from 'vault/services/api';
+import type PluginCatalogService from 'vault/services/plugin-catalog';
 
 export default class VaultClusterSecretsEnableCreateRoute extends Route {
   @service('plugin-catalog') declare readonly pluginCatalog: PluginCatalogService;
@@ -36,6 +39,23 @@ export default class VaultClusterSecretsEnableCreateRoute extends Route {
     form.applyTypeSpecificDefaults();
 
     // Fetch plugin catalog data to get available versions for this engine type
+    const { availableVersions, hasUnversionedPlugins } = await this.fetchPluginVersions(form);
+    // Get pinned version for this plugin type
+    const pinnedVersion = await this.fetchPinnedVersion(mount_type, availableVersions);
+
+    // WIF engines require fetching OIDC keys to populate an additional form field
+    const oidcKeys = await this.fetchOidcKeys(mount_type);
+
+    return {
+      form,
+      availableVersions,
+      hasUnversionedPlugins,
+      pinnedVersion,
+      oidcKeys,
+    };
+  }
+
+  async fetchPluginVersions(form: SecretsEngineForm) {
     const pluginCatalogResponse = await this.pluginCatalog.fetchPluginCatalog();
     let availableVersions: EngineVersionInfo[] = [];
     let hasUnversionedPlugins = false;
@@ -43,7 +63,7 @@ export default class VaultClusterSecretsEnableCreateRoute extends Route {
     if (pluginCatalogResponse.data?.detailed) {
       const versionResult = getAllVersionsForEngineType(
         pluginCatalogResponse.data.detailed,
-        mount_type,
+        form.type,
         'secret'
       );
 
@@ -53,8 +73,10 @@ export default class VaultClusterSecretsEnableCreateRoute extends Route {
       // Set up the plugin version field with available versions
       form.setupPluginVersionField(availableVersions);
     }
+    return { availableVersions, hasUnversionedPlugins };
+  }
 
-    // Get pinned version for this plugin type
+  async fetchPinnedVersion(mountType: string, availableVersions: EngineVersionInfo[]) {
     let pinnedVersion: string | null = null;
 
     // Only fetch external pinned version if there are external versions available
@@ -62,7 +84,7 @@ export default class VaultClusterSecretsEnableCreateRoute extends Route {
     if (hasExternalVersions) {
       try {
         // Convert builtin type to external plugin name for API call
-        const externalPluginName = getExternalPluginNameFromBuiltin(mount_type);
+        const externalPluginName = getExternalPluginNameFromBuiltin(mountType);
         if (externalPluginName) {
           const response = await this.api.sys.pluginsCatalogPinsReadPinnedVersion(
             externalPluginName,
@@ -75,12 +97,23 @@ export default class VaultClusterSecretsEnableCreateRoute extends Route {
         pinnedVersion = null;
       }
     }
+    return pinnedVersion;
+  }
 
-    return {
-      form,
-      availableVersions,
-      hasUnversionedPlugins,
-      pinnedVersion,
-    };
+  async fetchOidcKeys(type: string) {
+    // an additional form field for identity_token_key is displayed for WIF engines
+    // fetch oidc keys to populate the search select component
+    let oidcKeys: { id: string }[] = [];
+    const isWIF = !!ALL_ENGINES.find((engine) => engine.type === type && engine.isWIF);
+    if (isWIF) {
+      try {
+        const { keys } = await this.api.identity.oidcListKeys(IdentityApiOidcListKeysListEnum.TRUE);
+        // SearchSelect requires options to be objects
+        oidcKeys = keys?.map((key) => ({ id: key })) || [];
+      } catch (e) {
+        // swallow fetch error and fallback component will be used
+      }
+    }
+    return oidcKeys;
   }
 }

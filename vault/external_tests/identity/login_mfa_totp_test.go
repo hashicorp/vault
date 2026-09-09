@@ -70,9 +70,6 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			HandlerFunc: vaulthttp.Handler,
 		})
 
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	client := cluster.Cores[0].Client
 
 	// Enable the audit backend

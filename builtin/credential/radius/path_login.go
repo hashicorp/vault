@@ -62,6 +62,14 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 		return nil, fmt.Errorf("missing username")
 	}
 
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg != nil && cfg.CaseInsensitiveNames {
+		username = strings.ToLower(username)
+	}
+
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
@@ -103,6 +111,10 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 
 	if password == "" {
 		return logical.ErrorResponse("password cannot be empty"), nil
+	}
+
+	if cfg.CaseInsensitiveNames {
+		username = strings.ToLower(username)
 	}
 
 	policies, resp, err := b.RadiusLogin(ctx, req, username, password)
@@ -150,6 +162,9 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	}
 
 	username := req.Auth.Metadata["username"]
+	if cfg.CaseInsensitiveNames {
+		username = strings.ToLower(username)
+	}
 	password := req.Auth.InternalData["password"].(string)
 
 	var resp *logical.Response

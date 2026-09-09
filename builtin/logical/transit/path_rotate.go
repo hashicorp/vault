@@ -52,8 +52,9 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
-		Storage: req.Storage,
-		Name:    name,
+		Storage:     req.Storage,
+		Name:        name,
+		WriteLocked: true,
 	}, b.GetRandomReader())
 	if err != nil {
 		// the error here will be something about "couldn't get policy")
@@ -64,13 +65,9 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		b.Logger().Error("failed to rotate key on user request", "name", name, "error", "key not found")
 		return logical.ErrorResponse("key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(true)
-	}
 	defer p.Unlock()
-
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		var keyId string
+	var keyId string
+	if p.KeyVersionType(p.LatestVersion) == keysutil.KeyType_MANAGED_KEY {
 		keyId, err = GetManagedKeyUUID(ctx, b, managedKeyName, managedKeyId)
 		if err != nil {
 			b.Logger().Error("failed to rotate key", "name", name, "error", err.Error())
@@ -82,17 +79,26 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		err = p.Rotate(ctx, req.Storage, b.GetRandomReader())
 	}
 
+	keyMetadata := b.keyPolicyObservationMetadata(p)
+	if p.Type == keysutil.KeyType_MANAGED_KEY && keyId != "" {
+		keyMetadata["managed_key_id"] = keyId
+	}
+
 	if err != nil {
 		b.Logger().Error("failed to rotate key on user request", "name", name, "error", err.Error())
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyRotateFail, keyMetadata)
 		return nil, err
 	}
 
-	resp, err := b.formatKeyPolicy(p, nil)
+	resp, err := b.formatKeyPolicy(ctx, p, nil)
 	if err != nil {
 		b.Logger().Error("failed to rotate key on user request", "name", name, "error", err.Error())
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyRotateFail, keyMetadata)
 	} else {
 		b.Logger().Info("successfully rotated key on user request", "name", name)
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyRotateSuccess, keyMetadata)
 	}
+
 	// formatKeyPolicy returns a response even on error so be sure to return both.
 	return resp, err
 }

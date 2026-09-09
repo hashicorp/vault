@@ -11,13 +11,14 @@ import { action } from '@ember/object';
 import Ember from 'ember';
 import { macroCondition, isDevelopingApp } from '@embroider/macros';
 import { findDestination } from 'core/helpers/sync-destinations';
+import { DestinationType } from 'sync/utils/constants';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
 import type FlagsService from 'vault/services/flags';
 import type ApiService from 'vault/services/api';
 import type { SystemReadSyncDestinationsTypeNameAssociationsResponse } from '@hashicorp/vault-client-typescript';
-import type { ListDestination, DestinationMetrics, AssociatedSecret, DestinationType } from 'vault/sync';
+import type { ListDestination, DestinationMetrics, AssociatedSecret } from 'vault/sync';
 
 interface Args {
   destinations: ListDestination[];
@@ -127,7 +128,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
     if (this.flags.isHvdManaged) {
       errors.push(
-        'Secrets Sync is available for Plus tier clusters only. Please check the tier of your cluster to enable Secrets Sync.'
+        'Secrets Sync is available for Standard tier clusters only. Please check the tier of your cluster to enable Secrets Sync.'
       );
     }
     this.activationErrors = errors;

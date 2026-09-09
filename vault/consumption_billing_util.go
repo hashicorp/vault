@@ -5,11 +5,22 @@ package vault
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"math"
 	"strconv"
 	"time"
 
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
+)
+
+const (
+	// standard duration in hours for calculation of duration adjusted units (approx 1 month)
+	DurationAdjustedStandardDuration = 730.0
+	DecimalPrecisionMultiplier       = 10000 // Multiplier for rounding to 4 decimal places (10^4)
+	MinBillableUnits                 = 0.0001
 )
 
 func (c *Core) storeThirdPartyPluginCountsLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, thirdPartyPluginCounts int) error {
@@ -49,28 +60,87 @@ func (c *Core) getStoredThirdPartyPluginCountsLocked(ctx context.Context, localP
 // Note that this count is per cluster. It does NOT de-duplicate across clusters. For that reason,
 // we will always store the count at the "local" prefix.
 func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	currentThirdPartyPluginMounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	previousThirdPartyPluginCounts, err := c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
 		return 0, err
 	}
-	currentThirdPartyPluginCounts, err := c.ListDeduplicatedExternalSecretPlugins(ctx)
-	if err != nil {
-		return 0, err
-	}
-	maxCount := c.compareCounts(previousThirdPartyPluginCounts, len(currentThirdPartyPluginCounts), "Third-Party Plugins")
+	maxCount, hwmUpdated := c.compareCounts(len(currentThirdPartyPluginMounts), previousThirdPartyPluginCounts, "Third-Party Plugins")
 	err = c.storeThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, currentMonth, maxCount)
 	if err != nil {
 		return 0, err
 	}
+
+	// Collect and store attribution if HWM was updated and attribution storage is enabled
+	if hwmUpdated && len(currentThirdPartyPluginMounts) > 0 && !c.IsAttributionDisabled(ctx) {
+		attribution := make(MountAttributionMap)
+		for _, entry := range currentThirdPartyPluginMounts {
+			if entry != nil {
+				var namespacePath string
+				if ns, err := c.NamespaceByID(ctx, entry.NamespaceID); err == nil && ns != nil {
+					namespacePath = ns.Path
+				}
+				// Each deduplicated plugin counts as 1
+				attribution[entry.Accessor] = logical.MountAttribution{
+					Count:               1,
+					MountAccessor:       entry.Accessor,
+					MountPath:           entry.Path,
+					MountType:           entry.Type,
+					MountRunningVersion: entry.RunningVersion,
+					NamespaceID:         entry.NamespaceID,
+					NamespacePath:       namespacePath,
+					ParentNamespaceID:   getParentNamespaceID(c, namespacePath),
+					BackendAwareUUID:    entry.BackendAwareUUID,
+					IsExternal:          true, // all third party plugins are external
+				}
+			}
+		}
+
+		attributionData := &logical.MetricTypeAttribution{
+			Count:       maxCount,
+			Mounts:      attribution,
+			LastUpdated: currentMonth,
+		}
+
+		if view, ok := c.GetBillingSubView(); ok {
+			if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.ThirdPartyPluginsPrefix, attributionData); err != nil {
+				c.logger.Error("error storing third-party plugin attribution data", "error", err)
+				// Don't fail the entire operation if attribution storage fails
+			}
+		} else {
+			c.logger.Error("failed to get billing subview to update third-party plugin attribution data")
+		}
+	}
+
 	return maxCount, nil
 }
 
 func (c *Core) GetStoredThirdPartyPluginCounts(ctx context.Context, month time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredThirdPartyPluginCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
@@ -96,8 +166,10 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 		a.GCPImpersonatedAccounts + b.GCPImpersonatedAccounts,
 		a.LDAPDynamicRoles + b.LDAPDynamicRoles,
 		a.LDAPStaticRoles + b.LDAPStaticRoles,
+		a.LDAPLibrarySets + b.LDAPLibrarySets,
 		a.OpenLDAPDynamicRoles + b.OpenLDAPDynamicRoles,
 		a.OpenLDAPStaticRoles + b.OpenLDAPStaticRoles,
+		a.OpenLDAPLibrarySets + b.OpenLDAPLibrarySets,
 		a.AlicloudDynamicRoles + b.AlicloudDynamicRoles,
 		a.RabbitMQDynamicRoles + b.RabbitMQDynamicRoles,
 		a.ConsulDynamicRoles + b.ConsulDynamicRoles,
@@ -105,6 +177,49 @@ func combineRoleCounts(a, b *RoleCounts) *RoleCounts {
 		a.KubernetesDynamicRoles + b.KubernetesDynamicRoles,
 		a.MongoDBAtlasDynamicRoles + b.MongoDBAtlasDynamicRoles,
 		a.TerraformCloudDynamicRoles + b.TerraformCloudDynamicRoles,
+		a.OSLocalAccountRoles + b.OSLocalAccountRoles,
+		a.TransformRoles + b.TransformRoles,
+		a.SSHOTPRoles + b.SSHOTPRoles,
+		a.SSHCARoles + b.SSHCARoles,
+		a.SpiffeRoles + b.SpiffeRoles,
+	}
+}
+
+func combineManagedKeyCounts(a, b *ManagedKeyCounts) *ManagedKeyCounts {
+	if a == nil && b == nil {
+		return &ManagedKeyCounts{}
+	}
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	return &ManagedKeyCounts{
+		a.TotpKeys + b.TotpKeys,
+		a.KmseKeys + b.KmseKeys,
+		a.TransitKeys + b.TransitKeys,
+	}
+}
+
+func combineSecretEngineResourceCounts(a, b *SecretEngineResourceCounts) *SecretEngineResourceCounts {
+	if a == nil && b == nil {
+		return &SecretEngineResourceCounts{}
+	}
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	return &SecretEngineResourceCounts{
+		a.TransformTransformations + b.TransformTransformations,
+		a.TransformTemplates + b.TransformTemplates,
+		a.TransformAlphabets + b.TransformAlphabets,
+		a.TransformStores + b.TransformStores,
+		a.KmipScopes + b.KmipScopes,
+		a.KmipScopeRoles + b.KmipScopeRoles,
+		a.KmipCas + b.KmipCas,
 	}
 }
 
@@ -144,33 +259,32 @@ func (c *Core) getStoredMaxKvCountsLocked(ctx context.Context, localPathPrefix s
 }
 
 func (c *Core) GetStoredHWMKvCounts(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, month)
 }
 
-// UpdateMaxKvCounts updates the HWM kv counts for the given month, and returns the value that was stored.
-func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (int, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+// UpdateMaxKvCounts updates the HWM kv counts for the given month by comparing the current counts passed in with the stored count,
+// and returns the updated stored value. If a new HWM is reached, it also updates the stored attribution data.
+func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentKvCounts int, attributions MountAttributionMap) (int, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
 
-	local := localPathPrefix == billing.LocalPrefix
-
-	// Get the current count of kv version 1 secrets
-	currentKvCounts, err := c.GetKvUsageMetricsByNamespace(ctx, "1", "", local, !local, false)
-	if err != nil {
-		c.logger.Error("error getting count of kv version 1 secrets", "error", err)
-		return 0, err
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
 	}
-	totalKvCounts := getTotalSecretsAcrossAllNamespaces(currentKvCounts)
 
-	// Get the current count of kv version 2 secrets
-	currentKvCounts, err = c.GetKvUsageMetricsByNamespace(ctx, "2", "", local, !local, false)
-	if err != nil {
-		c.logger.Error("error getting current count of kv version 2 secrets", "error", err)
-		return 0, err
-	}
-	totalKvCounts += getTotalSecretsAcrossAllNamespaces(currentKvCounts)
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	// Get the stored max kv counts
 	maxKvCounts, err := c.getStoredMaxKvCountsLocked(ctx, localPathPrefix, currentMonth)
@@ -178,18 +292,40 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 		c.logger.Error("error getting stored max kv counts", "error", err)
 		return 0, err
 	}
+
+	// Check if HWM has been updated
+	hwmUpdated := false
 	if maxKvCounts == 0 {
-		maxKvCounts = totalKvCounts
-	}
-	if totalKvCounts > maxKvCounts {
-		c.logger.Info("updating max kv counts", "totalKvCounts", totalKvCounts, "maxKvCounts", maxKvCounts)
-		maxKvCounts = totalKvCounts
+		maxKvCounts = currentKvCounts
+		hwmUpdated = true
+	} else if currentKvCounts > maxKvCounts {
+		c.logger.Info("updating max kv counts", "currentKvCounts", currentKvCounts, "maxKvCounts", maxKvCounts)
+		maxKvCounts = currentKvCounts
+		hwmUpdated = true
 	}
 	err = c.storeMaxKvCountsLocked(ctx, maxKvCounts, localPathPrefix, currentMonth)
 	if err != nil {
 		c.logger.Error("error storing max kv counts", "error", err)
 		return 0, err
 	}
+
+	// If HWM updated, store current attribution data (skip if attribution storage is disabled)
+	if hwmUpdated && len(attributions) > 0 && !c.IsAttributionDisabled(ctx) {
+		attributionData := &logical.MetricTypeAttribution{
+			Count:       maxKvCounts,
+			Mounts:      attributions,
+			LastUpdated: currentMonth,
+		}
+		if view, ok := c.GetBillingSubView(); ok {
+			if err := storeAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, billing.KvHWMCountsHWM, attributionData); err != nil {
+				c.logger.Error("error storing KV attribution data", "error", err)
+				// Don't fail the entire operation if attribution storage fails
+			}
+		} else {
+			c.logger.Error("failed to get billing subview to update KV attribution data")
+		}
+	}
+
 	return maxKvCounts, nil
 }
 
@@ -207,13 +343,71 @@ func (c *Core) storeMaxRoleCountsLocked(ctx context.Context, maxRoleCounts *Role
 	return view.Put(ctx, entry)
 }
 
-func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+// UpdateMaxRoleAndManagedKeyCounts updates the HWM role and managed key counts for the given month by comparing the current counts
+// passed in with the stored counts. If a new HWM is reached, it also updates the stored attribution data.
+func (c *Core) UpdateMaxRoleAndManagedKeyCounts(ctx context.Context, localPathPrefix string, currentMonth time.Time, currentRoleCounts *RoleCounts, currentManagedKeyCounts *ManagedKeyCounts, roleAttribution, managedKeyAttribution map[string]MountAttributionMap) (*RoleCounts, *ManagedKeyCounts, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
 
-	local := localPathPrefix == billing.LocalPrefix
-	currentRoleCounts := c.getRoleCountsInternal(local, !local, true)
+	if cb == nil {
+		return nil, nil, ErrConsumptionBillingNotInitialized
+	}
 
+	// If somehow the current counts is empty, we should try get the counts (and attributions) here
+	// before taking BillingStorageLock. CountMetricsSecretMounts traverses mounts and
+	// may acquire other locks, so holding the billing storage lock here can create
+	// lock-order inversions.
+	if currentRoleCounts == nil || currentManagedKeyCounts == nil {
+		c.logger.Debug("current role or managed key counts is empty, trying to get counts again")
+		metrics, err := c.CountMetricsSecretMounts(true, true)
+		if err != nil {
+			c.logger.Error("error getting current role and managed key counts", "error", err)
+			return nil, nil, err
+		}
+		if localPathPrefix == billing.LocalPrefix {
+			currentRoleCounts = metrics.LocalRoleCounts
+			currentManagedKeyCounts = metrics.LocalManagedKeys
+			roleAttribution = metrics.LocalRoleAttribution
+			managedKeyAttribution = metrics.LocalManagedKeyAttribution
+		} else {
+			currentRoleCounts = metrics.ReplicatedRoleCounts
+			currentManagedKeyCounts = metrics.ReplicatedManagedKeys
+			roleAttribution = metrics.ReplicatedRoleAttribution
+			managedKeyAttribution = metrics.ReplicatedManagedKeyAttribution
+		}
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+
+	// get max role counts - this also stores updated attribution data if HWM is updated
+	maxRoleCounts, err := c.updateMaxRoleCounts(ctx, currentRoleCounts, roleAttribution, localPathPrefix, currentMonth)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	maxManagedKeyCounts := &ManagedKeyCounts{}
+
+	// get max totp key counts - this also stores updated attribution data if HWM is updated
+	totpAttribution := managedKeyAttribution[billing.TotpKeys]
+	maxTotpKeyCounts, err := c.updateMaxTotpKeyCounts(ctx, currentManagedKeyCounts.TotpKeys, totpAttribution, localPathPrefix, currentMonth)
+	if err != nil {
+		return nil, nil, err
+	}
+	maxManagedKeyCounts.TotpKeys = maxTotpKeyCounts
+
+	// get max kmse key counts - this also stores updated attribution data if HWM is updated
+	kmseAttribution := managedKeyAttribution[billing.KmseKeys]
+	maxKmseKeyCounts, err := c.updateMaxKmseKeyCounts(ctx, currentManagedKeyCounts.KmseKeys, kmseAttribution, localPathPrefix, currentMonth)
+	if err != nil {
+		return nil, nil, err
+	}
+	maxManagedKeyCounts.KmseKeys = maxKmseKeyCounts
+	return maxRoleCounts, maxManagedKeyCounts, nil
+}
+
+func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleCounts, attribution map[string]MountAttributionMap, localPathPrefix string, currentMonth time.Time) (*RoleCounts, error) {
 	maxRoleCounts, err := c.getStoredRoleCountsLocked(ctx, localPathPrefix, currentMonth)
 	if maxRoleCounts == nil {
 		maxRoleCounts = &RoleCounts{}
@@ -221,26 +415,53 @@ func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, 
 	if currentRoleCounts == nil {
 		currentRoleCounts = &RoleCounts{}
 	}
-	maxRoleCounts.AWSDynamicRoles = c.compareCounts(currentRoleCounts.AWSDynamicRoles, maxRoleCounts.AWSDynamicRoles, "AWS Dynamic Roles")
-	maxRoleCounts.AzureDynamicRoles = c.compareCounts(currentRoleCounts.AzureDynamicRoles, maxRoleCounts.AzureDynamicRoles, "Azure Dynamic Roles")
-	maxRoleCounts.AzureStaticRoles = c.compareCounts(currentRoleCounts.AzureStaticRoles, maxRoleCounts.AzureStaticRoles, "Azure Static Roles")
-	maxRoleCounts.GCPRolesets = c.compareCounts(currentRoleCounts.GCPRolesets, maxRoleCounts.GCPRolesets, "GCP Rolesets")
-	maxRoleCounts.AWSStaticRoles = c.compareCounts(currentRoleCounts.AWSStaticRoles, maxRoleCounts.AWSStaticRoles, "AWS Static Roles")
-	maxRoleCounts.DatabaseDynamicRoles = c.compareCounts(currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles, "Database Dynamic Roles")
-	maxRoleCounts.OpenLDAPStaticRoles = c.compareCounts(currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles, "OpenLDAP Static Roles")
-	maxRoleCounts.OpenLDAPDynamicRoles = c.compareCounts(currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles, "OpenLDAP Dynamic Roles")
-	maxRoleCounts.LDAPDynamicRoles = c.compareCounts(currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles, "LDAP Dynamic Roles")
-	maxRoleCounts.LDAPStaticRoles = c.compareCounts(currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles, "LDAP Static Roles")
-	maxRoleCounts.DatabaseStaticRoles = c.compareCounts(currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles, "Database Static Roles")
-	maxRoleCounts.GCPImpersonatedAccounts = c.compareCounts(currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts, "GCPImpersonated Accounts")
-	maxRoleCounts.GCPStaticAccounts = c.compareCounts(currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts, "GCP Static Accounts")
-	maxRoleCounts.AlicloudDynamicRoles = c.compareCounts(currentRoleCounts.AlicloudDynamicRoles, maxRoleCounts.AlicloudDynamicRoles, "Alicloud Dynamic Roles")
-	maxRoleCounts.RabbitMQDynamicRoles = c.compareCounts(currentRoleCounts.RabbitMQDynamicRoles, maxRoleCounts.RabbitMQDynamicRoles, "RabbitMQ Dynamic Roles")
-	maxRoleCounts.ConsulDynamicRoles = c.compareCounts(currentRoleCounts.ConsulDynamicRoles, maxRoleCounts.ConsulDynamicRoles, "Consul Dynamic Roles")
-	maxRoleCounts.NomadDynamicRoles = c.compareCounts(currentRoleCounts.NomadDynamicRoles, maxRoleCounts.NomadDynamicRoles, "Nomad Dynamic Roles")
-	maxRoleCounts.KubernetesDynamicRoles = c.compareCounts(currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles, "Kubernetes Dynamic Roles")
-	maxRoleCounts.MongoDBAtlasDynamicRoles = c.compareCounts(currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles, "MongoDB Atlas Dynamic Roles")
-	maxRoleCounts.TerraformCloudDynamicRoles = c.compareCounts(currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles, "Terraform Cloud Dynamic Roles")
+
+	// Helper function to update count and store attribution if HWM updated
+	attributionDisabled := c.IsAttributionDisabled(ctx)
+	storeRoleTypeAttribution := func(roleType string, currentCount, maxCount int) (int, error) {
+		newMax, updated := c.compareCounts(currentCount, maxCount, roleType)
+		if updated && len(attribution[roleType]) > 0 && !attributionDisabled {
+			attributionData := &logical.MetricTypeAttribution{
+				Count:       newMax,
+				Mounts:      attribution[roleType],
+				LastUpdated: currentMonth,
+			}
+			// Store each role subtype separately but keep them all under the "maxRoleCounts/" parent
+			if view, ok := c.GetBillingSubView(); ok {
+				if err := storeAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, billing.RoleHWMCountsHWM+roleType, attributionData); err != nil {
+					c.logger.Error("error storing role attribution data", "roleType", roleType, "error", err)
+					// Don't fail the entire operation if attribution storage fails
+				}
+			} else {
+				c.logger.Error("failed to get billing subview to update role attribution data")
+			}
+		}
+		return newMax, nil
+	}
+
+	maxRoleCounts.AWSDynamicRoles, _ = storeRoleTypeAttribution(billing.AWSDynamicRoles, currentRoleCounts.AWSDynamicRoles, maxRoleCounts.AWSDynamicRoles)
+	maxRoleCounts.AWSStaticRoles, _ = storeRoleTypeAttribution(billing.AWSStaticRoles, currentRoleCounts.AWSStaticRoles, maxRoleCounts.AWSStaticRoles)
+	maxRoleCounts.AzureDynamicRoles, _ = storeRoleTypeAttribution(billing.AzureDynamicRoles, currentRoleCounts.AzureDynamicRoles, maxRoleCounts.AzureDynamicRoles)
+	maxRoleCounts.AzureStaticRoles, _ = storeRoleTypeAttribution(billing.AzureStaticRoles, currentRoleCounts.AzureStaticRoles, maxRoleCounts.AzureStaticRoles)
+	maxRoleCounts.GCPRolesets, _ = storeRoleTypeAttribution(billing.GCPRolesets, currentRoleCounts.GCPRolesets, maxRoleCounts.GCPRolesets)
+	maxRoleCounts.GCPStaticAccounts, _ = storeRoleTypeAttribution(billing.GCPStaticAccounts, currentRoleCounts.GCPStaticAccounts, maxRoleCounts.GCPStaticAccounts)
+	maxRoleCounts.GCPImpersonatedAccounts, _ = storeRoleTypeAttribution(billing.GCPImpersonatedAccounts, currentRoleCounts.GCPImpersonatedAccounts, maxRoleCounts.GCPImpersonatedAccounts)
+	maxRoleCounts.DatabaseDynamicRoles, _ = storeRoleTypeAttribution(billing.DatabaseDynamicRoles, currentRoleCounts.DatabaseDynamicRoles, maxRoleCounts.DatabaseDynamicRoles)
+	maxRoleCounts.DatabaseStaticRoles, _ = storeRoleTypeAttribution(billing.DatabaseStaticRoles, currentRoleCounts.DatabaseStaticRoles, maxRoleCounts.DatabaseStaticRoles)
+	maxRoleCounts.OpenLDAPStaticRoles, _ = storeRoleTypeAttribution(billing.OpenLDAPStaticRoles, currentRoleCounts.OpenLDAPStaticRoles, maxRoleCounts.OpenLDAPStaticRoles)
+	maxRoleCounts.OpenLDAPDynamicRoles, _ = storeRoleTypeAttribution(billing.OpenLDAPDynamicRoles, currentRoleCounts.OpenLDAPDynamicRoles, maxRoleCounts.OpenLDAPDynamicRoles)
+	maxRoleCounts.OpenLDAPLibrarySets, _ = storeRoleTypeAttribution(billing.OpenLDAPLibrarySets, currentRoleCounts.OpenLDAPLibrarySets, maxRoleCounts.OpenLDAPLibrarySets)
+	maxRoleCounts.LDAPDynamicRoles, _ = storeRoleTypeAttribution(billing.LDAPDynamicRoles, currentRoleCounts.LDAPDynamicRoles, maxRoleCounts.LDAPDynamicRoles)
+	maxRoleCounts.LDAPStaticRoles, _ = storeRoleTypeAttribution(billing.LDAPStaticRoles, currentRoleCounts.LDAPStaticRoles, maxRoleCounts.LDAPStaticRoles)
+	maxRoleCounts.LDAPLibrarySets, _ = storeRoleTypeAttribution(billing.LDAPLibrarySets, currentRoleCounts.LDAPLibrarySets, maxRoleCounts.LDAPLibrarySets)
+	maxRoleCounts.AlicloudDynamicRoles, _ = storeRoleTypeAttribution(billing.AlicloudDynamicRoles, currentRoleCounts.AlicloudDynamicRoles, maxRoleCounts.AlicloudDynamicRoles)
+	maxRoleCounts.RabbitMQDynamicRoles, _ = storeRoleTypeAttribution(billing.RabbitMQDynamicRoles, currentRoleCounts.RabbitMQDynamicRoles, maxRoleCounts.RabbitMQDynamicRoles)
+	maxRoleCounts.ConsulDynamicRoles, _ = storeRoleTypeAttribution(billing.ConsulDynamicRoles, currentRoleCounts.ConsulDynamicRoles, maxRoleCounts.ConsulDynamicRoles)
+	maxRoleCounts.NomadDynamicRoles, _ = storeRoleTypeAttribution(billing.NomadDynamicRoles, currentRoleCounts.NomadDynamicRoles, maxRoleCounts.NomadDynamicRoles)
+	maxRoleCounts.KubernetesDynamicRoles, _ = storeRoleTypeAttribution(billing.KubernetesDynamicRoles, currentRoleCounts.KubernetesDynamicRoles, maxRoleCounts.KubernetesDynamicRoles)
+	maxRoleCounts.MongoDBAtlasDynamicRoles, _ = storeRoleTypeAttribution(billing.MongoDBAtlasDynamicRoles, currentRoleCounts.MongoDBAtlasDynamicRoles, maxRoleCounts.MongoDBAtlasDynamicRoles)
+	maxRoleCounts.TerraformCloudDynamicRoles, _ = storeRoleTypeAttribution(billing.TerraformCloudDynamicRoles, currentRoleCounts.TerraformCloudDynamicRoles, maxRoleCounts.TerraformCloudDynamicRoles)
+	maxRoleCounts.OSLocalAccountRoles, _ = storeRoleTypeAttribution(billing.OSLocalAccountRoles, currentRoleCounts.OSLocalAccountRoles, maxRoleCounts.OSLocalAccountRoles)
 
 	err = c.storeMaxRoleCountsLocked(ctx, maxRoleCounts, localPathPrefix, currentMonth)
 	if err != nil {
@@ -251,8 +472,16 @@ func (c *Core) UpdateMaxRoleCounts(ctx context.Context, localPathPrefix string, 
 }
 
 func (c *Core) GetStoredHWMRoleCounts(ctx context.Context, localPathPrefix string, month time.Time) (*RoleCounts, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return nil, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredRoleCountsLocked(ctx, localPathPrefix, month)
 }
 
@@ -276,23 +505,213 @@ func (c *Core) getStoredRoleCountsLocked(ctx context.Context, localPathPrefix st
 	return maxRoleCounts, nil
 }
 
-func (c *Core) compareCounts(current, previous int, metricName string) int {
+// compareCounts compares the current to the previous count, returns the larger number and if a new max has been reached
+func (c *Core) compareCounts(current, previous int, metricName string) (int, bool) {
 	if previous > current {
-		return previous
+		return previous, false
 	}
-	c.logger.Debug("updating max counts", "metricName", metricName, "previous", previous, "current", current)
-	return current
+	if current > previous {
+		c.logger.Debug("updating max counts", "metricName", metricName, "previous", previous, "current", current)
+		return current, true
+	}
+	return current, false
+}
+
+func (c *Core) updateMaxTotpKeyCounts(ctx context.Context, currentKeyCounts int, attribution MountAttributionMap, localPathPrefix string, currentMonth time.Time) (int, error) {
+	maxKeyCounts, err := c.getStoredTotpKeyCountsLocked(ctx, localPathPrefix, currentMonth)
+	if err != nil {
+		c.logger.Error("error getting stored max totp key counts", "error", err)
+		return 0, err
+	}
+
+	hwmUpdated := false
+	if maxKeyCounts == 0 {
+		maxKeyCounts = currentKeyCounts
+		hwmUpdated = true
+	} else if currentKeyCounts > maxKeyCounts {
+		c.logger.Debug("updating max totp counts", "totalTotpKeyCounts", currentKeyCounts, "maxTotpKeyCounts", maxKeyCounts)
+		maxKeyCounts = currentKeyCounts
+		hwmUpdated = true
+	}
+
+	err = c.storeMaxTotpKeyCountsLocked(ctx, maxKeyCounts, localPathPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	// Store attribution if HWM was updated and attribution storage is enabled
+	if hwmUpdated && len(attribution) > 0 && !c.IsAttributionDisabled(ctx) {
+		// Use the actual HWM count as the total, not sum of mounts
+		attributionData := &logical.MetricTypeAttribution{
+			Count:       maxKeyCounts,
+			Mounts:      attribution,
+			LastUpdated: currentMonth,
+		}
+
+		if view, ok := c.GetBillingSubView(); ok {
+			if err := storeAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, billing.TotpHWMCountsHWM, attributionData); err != nil {
+				c.logger.Error("error storing totp attribution data", "error", err)
+				// Don't fail the entire operation if attribution storage fails
+			}
+		} else {
+			c.logger.Error("failed to get billing subview to update totp attribution data")
+		}
+	}
+
+	return maxKeyCounts, nil
+}
+
+// storeMaxTotpKeyCountsLocked must be called with BillingStorageLock held
+func (c *Core) storeMaxTotpKeyCountsLocked(ctx context.Context, maxKeyCounts int, localPathPrefix string, month time.Time) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TotpHWMCountsHWM)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.Itoa(maxKeyCounts)),
+	}
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+func (c *Core) GetStoredHWMTotpCounts(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+	return c.getStoredTotpKeyCountsLocked(ctx, localPathPrefix, month)
+}
+
+func (c *Core) getStoredTotpKeyCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (int, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.TotpHWMCountsHWM)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
+	if err != nil {
+		return 0, err
+	}
+	if entry == nil {
+		return 0, nil
+	}
+	totpKeyCount, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+	return totpKeyCount, nil
 }
 
 func (c *Core) GetBillingSubView() (*BarrierView, bool) {
-	c.mountsLock.RLock()
-	view := c.systemBarrierView
-	c.mountsLock.RUnlock()
-
-	if view == nil {
-		return nil, false
+	c.consumptionBillingLock.RLock()
+	defer c.consumptionBillingLock.RUnlock()
+	if c.consumptionBillingSubView == nil {
+		// Initialize the consumption billing sub view
+		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
 	}
-	return view.SubView(billing.BillingSubPath), true
+	return c.consumptionBillingSubView, true
+}
+
+func (c *Core) GetBillingRetentionMonths(ctx context.Context) (int, error) {
+	c.billingConfigLock.RLock()
+	defer c.billingConfigLock.RUnlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return billing.DefaultBillingRetentionMonths, nil
+	}
+
+	entry, err := view.Get(ctx, billing.BillingConfigPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read billing config: %w", err)
+	}
+	if entry == nil {
+		// No config stored, return default
+		return billing.DefaultBillingRetentionMonths, nil
+	}
+
+	retentionMonths, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+
+	return retentionMonths, nil
+}
+
+func (c *Core) UpdateBillingRetentionMonths(ctx context.Context, retentionMonths int) error {
+	c.billingConfigLock.Lock()
+	defer c.billingConfigLock.Unlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return fmt.Errorf("billing sub view not available")
+	}
+
+	entry := &logical.StorageEntry{
+		Key:   billing.BillingConfigPath,
+		Value: []byte(strconv.Itoa(retentionMonths)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("failed to store billing config: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Core) GetAttributionRetentionMonths(ctx context.Context) (int, error) {
+	c.billingConfigLock.RLock()
+	defer c.billingConfigLock.RUnlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return billing.DefaultAttributionRetentionMonths, nil
+	}
+
+	entry, err := view.Get(ctx, billing.AttributionConfigPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read attribution config: %w", err)
+	}
+	if entry == nil {
+		// No config stored, return default
+		return billing.DefaultAttributionRetentionMonths, nil
+	}
+
+	retentionMonths, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+
+	return retentionMonths, nil
+}
+
+func (c *Core) UpdateAttributionRetentionMonths(ctx context.Context, retentionMonths int) error {
+	c.billingConfigLock.Lock()
+	defer c.billingConfigLock.Unlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return fmt.Errorf("billing sub view not available")
+	}
+
+	entry := &logical.StorageEntry{
+		Key:   billing.AttributionConfigPath,
+		Value: []byte(strconv.Itoa(retentionMonths)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("failed to store attribution config: %w", err)
+	}
+
+	return nil
 }
 
 // storeTransitCallCountsLocked must be called with BillingStorageLock held
@@ -333,22 +752,36 @@ func (c *Core) getStoredTransitCallCountsLocked(ctx context.Context, localPathPr
 }
 
 func (c *Core) GetStoredTransitCallCounts(ctx context.Context, month time.Time) (uint64, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredTransitCallCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
 func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Time) (uint64, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
 
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 	storedTransitCount, err := c.getStoredTransitCallCountsLocked(ctx, billing.LocalPrefix, currentMonth)
 	if err != nil {
 		return 0, err
 	}
 
 	// Sum the current count with the stored count
-	transitCount := c.consumptionBilling.DataProtectionCallCounts.Transit.Swap(0) + storedTransitCount
+	transitCount := cb.SecretEngineCounts.Transit.MonthlyCount.Swap(0) + storedTransitCount
 
 	err = c.storeTransitCallCountsLocked(ctx, transitCount, billing.LocalPrefix, currentMonth)
 	if err != nil {
@@ -356,6 +789,83 @@ func (c *Core) UpdateTransitCallCounts(ctx context.Context, currentMonth time.Ti
 	}
 
 	return transitCount, nil
+}
+
+func (c *Core) UpdateGcpKmsCallCounts(ctx context.Context, currentMonth time.Time) (uint64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+	storedGcpKmsCount, err := c.getStoredGcpKmsCallCountsLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	// Sum the current count with the stored count
+	gcpKmsCount := cb.SecretEngineCounts.GcpKms.MonthlyCount.Swap(0) + storedGcpKmsCount
+
+	err = c.storeGcpKmsCallCountsLocked(ctx, gcpKmsCount, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	return gcpKmsCount, nil
+}
+
+// storeGcpKmsCallCountsLocked must be called with BillingStorageLock held
+func (c *Core) storeGcpKmsCallCountsLocked(ctx context.Context, gcpKmsCount uint64, localPathPrefix string, month time.Time) error {
+	// Store count for each data protection type separately because they are atomic counters
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.GcpKmsDataProtectionCallCountsPrefix)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatUint(gcpKmsCount, 10)),
+	}
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+// getStoredGcpKmsCallCountsLocked must be called with BillingStorageLock held
+func (c *Core) getStoredGcpKmsCallCountsLocked(ctx context.Context, localPathPrefix string, month time.Time) (uint64, error) {
+	// Retrieve count for each data protection type separately because they are atomic counters
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, month, billing.GcpKmsDataProtectionCallCountsPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
+	if err != nil {
+		return 0, err
+	}
+	if entry == nil {
+		return 0, nil
+	}
+	gcpKmsCount, err := strconv.ParseUint(string(entry.Value), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return gcpKmsCount, nil
+}
+
+func (c *Core) GetStoredGcpKmsCallCounts(ctx context.Context, month time.Time) (uint64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+	return c.getStoredGcpKmsCallCountsLocked(ctx, billing.LocalPrefix, month)
 }
 
 func (c *Core) storeKmipEnabledLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, kmipEnabled bool) error {
@@ -392,8 +902,16 @@ func (c *Core) getStoredKmipEnabledLocked(ctx context.Context, localPathPrefix s
 }
 
 func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
-	c.consumptionBilling.BillingStorageLock.RLock()
-	defer c.consumptionBilling.BillingStorageLock.RUnlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return false, ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
 	return c.getStoredKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth)
 }
 
@@ -403,21 +921,519 @@ func (c *Core) GetStoredKmipEnabled(ctx context.Context, currentMonth time.Time)
 // secondary also detects it and gets charged. This is intentional, as the KMIP usage is per cluster.
 // We only store true when KMIP is enabled; we never store false. This means storing true multiple times
 // is idempotent and safe.
+//
+// Attribution is written once per month: once we have stored KMIP attribution for the first time
+// this month (indicated by KmipSeenEnabledThisMonth), we skip the mount scan on subsequent
+// billing cycles to avoid unnecessary overhead.
 func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (bool, error) {
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
 
-	// Check if KMIP is currently enabled, including replicated mounts
-	kmipEnabled, err := c.IsKMIPEnabled(ctx)
+	if cb == nil {
+		return false, ErrConsumptionBillingNotInitialized
+	}
+
+	// If we have already stored KMIP attribution this month, skip the mount scan.
+	if cb.KmipSeenEnabledThisMonth.Load() {
+		return true, nil
+	}
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return false, errors.New("billing subview not available")
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+
+	// Scan all mounts to collect KMIP attribution data.
+	kmipMounts, err := c.CollectKmipMounts()
 	if err != nil {
 		return false, err
 	}
 
-	if kmipEnabled {
+	if len(kmipMounts) > 0 {
 		if err := c.storeKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth, true); err != nil {
 			return false, err
 		}
+		if !c.IsAttributionDisabled(ctx) {
+			if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.KmipEnabledPrefix, &logical.MetricTypeAttribution{
+				Count:       1,
+				Mounts:      kmipMounts,
+				LastUpdated: currentMonth,
+			}); err != nil {
+				return false, err
+			}
+		}
+		// Mark KMIP as seen this month only after successfully writing both the billing
+		// flag and attribution to storage, so a future billing cycle does not skip the
+		// scan before the data has been persisted.
+		cb.KmipSeenEnabledThisMonth.Store(true)
 	}
 
-	return kmipEnabled, nil
+	return len(kmipMounts) > 0, nil
+}
+
+// GetStoredPkiDurationAdjustedCount retrieves the stored PKI duration-adjusted certificate count
+// for the specified month. The count is stored as a float64 string with 4 decimal places of precision.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredPkiDurationAdjustedCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredPkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth)
+}
+
+// UpdatePkiDurationAdjustedCount increments the stored PKI duration-adjusted certificate count
+// for the specified month by the given increment value. The increment must be non-negative.
+// The count is stored as a float64 string with 4 decimal places of precision.
+func (c *Core) UpdatePkiDurationAdjustedCount(ctx context.Context, inc float64, currentMonth time.Time) error {
+	if inc < 0 {
+		return fmt.Errorf("PKI duration-adjusted increment must be non-negative, got %f", inc)
+	}
+
+	if c.consumptionBilling == nil {
+		return errors.New("consumption billing is not initialized")
+	}
+
+	c.consumptionBilling.BillingStorageLock.Lock()
+	defer c.consumptionBilling.BillingStorageLock.Unlock()
+
+	return c.storePkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth, inc)
+}
+
+func (c *Core) getStoredPkiDurationAdjustedCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.PkiDurationAdjustedCountPrefix)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading PKI duration-adjusted count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current PKI duration adjusted cert count: %w", err)
+	}
+
+	return currentCount, nil
+}
+
+func (c *Core) storePkiDurationAdjustedCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, inc float64) error {
+	currentCount, err := c.getStoredPkiDurationAdjustedCountLocked(ctx, localPathPrefix, currentMonth)
+	if err != nil {
+		return err
+	}
+
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.PkiDurationAdjustedCountPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return errors.New("error storing PKI duration-adjusted count: billing subview not available")
+	}
+
+	// Write new value
+	newCount := currentCount + inc
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatFloat(newCount, 'f', 4, 64)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("error writing PKI duration adjusted cert count: %w", err)
+	}
+
+	return nil
+}
+
+// storeMetricsLastUpdateTimeLocked must be called with BillingStorageLock held
+func (c *Core) storeMetricsLastUpdateTimeLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, updateTime time.Time) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.MetricsLastUpdatedAtPrefix)
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(updateTime.Format(time.RFC3339)),
+	}
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+// getMetricsLastUpdateTimeLocked retrieves timestamp of the last billing metrics update for the given month. If the value does not exist, the 0 timestamp will be returned.
+func (c *Core) getMetricsLastUpdateTimeLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (time.Time, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.MetricsLastUpdatedAtPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return time.Time{}, nil
+	}
+	entry, err := view.Get(ctx, billingPath)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if entry == nil {
+		return time.Time{}, nil
+	}
+	updateTime, err := time.Parse(time.RFC3339, string(entry.Value))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return updateTime, nil
+}
+
+func (c *Core) GetMetricsLastUpdateTime(ctx context.Context, currentMonth time.Time) (time.Time, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return time.Time{}, ErrConsumptionBillingNotInitialized
+	}
+
+	// Normalize month to UTC start-of-month to avoid timezone/midnight mismatches
+	normalizedMonth := timeutil.StartOfMonth(currentMonth.UTC())
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+	return c.getMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, normalizedMonth)
+}
+
+// UpdateMetricsLastUpdateTime updates the last update time for billing metrics for the given month, and returns the value that was stored.
+// Note that this last metrics update time is per cluster. It does NOT de-duplicate across clusters. For that reason,
+// we will always store the time at the "local" prefix.
+func (c *Core) UpdateMetricsLastUpdateTime(ctx context.Context, currentMonth, updateTime time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+
+	// Normalize month to UTC start-of-month and ensure updateTime is in UTC
+	normalizedMonth := timeutil.StartOfMonth(currentMonth.UTC())
+	updateTime = updateTime.UTC()
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+
+	return c.storeMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, normalizedMonth, updateTime)
+}
+
+// GetStoredSSHDurationAdjustedCertCount retrieves the stored SSH duration-adjusted certificate count
+// for the specified month. The count is stored as a float64.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredSSHDurationAdjustedCertCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth)
+}
+
+func (c *Core) getStoredSSHDurationAdjustedCertCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHCertificateMetric)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading SSH duration-adjusted count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	certCount, err := strconv.ParseFloat(string(se.Value), 64)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current SSH duration adjusted cert count: %w", err)
+	}
+
+	return certCount, nil
+}
+
+func (c *Core) UpdateStoredSSHDurationAdjustedCertCount(ctx context.Context, currentMonth time.Time, certCount float64) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+	storedCertCount, err := c.getStoredSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	err = c.storeSSHDurationAdjustedCertCountLocked(ctx, billing.LocalPrefix, currentMonth, certCount+storedCertCount)
+	if err != nil {
+		return 0, err
+	}
+
+	return certCount, nil
+}
+
+func (c *Core) storeSSHDurationAdjustedCertCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, certCount float64) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHCertificateMetric)
+
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatFloat(certCount, 'f', 4, 64)),
+	}
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+// GetStoredSSHOTPCount retrieves the stored SSH OTP count
+// for the specified month. The count is stored as a uint64.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredSSHOTPCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth)
+}
+
+func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading SSH OTP count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	otpCount, err := strconv.ParseFloat(string(se.Value), 64)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current OTP cert count: %w", err)
+	}
+
+	return otpCount, nil
+}
+
+func (c *Core) UpdateStoredSSHOTPCount(ctx context.Context, currentMonth time.Time, otpCount float64) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, ErrConsumptionBillingNotInitialized
+	}
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+	storedOTPCount, err := c.getStoredSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth)
+	if err != nil {
+		return 0, err
+	}
+
+	err = c.storeSSHOTPCountLocked(ctx, billing.LocalPrefix, currentMonth, otpCount+storedOTPCount)
+	if err != nil {
+		return 0, err
+	}
+
+	return otpCount, nil
+}
+
+func (c *Core) storeSSHOTPCountLocked(ctx context.Context, localPathPrefix string, currentMonth time.Time, otpCount float64) error {
+	billingPath := billing.GetMonthlyBillingMetricPath(localPathPrefix, currentMonth, billing.SSHOTPMetric)
+
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatFloat(otpCount, 'f', 4, 64)),
+	}
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return nil
+	}
+	return view.Put(ctx, entry)
+}
+
+// GetStoredOidcDurationAdjustedCount retrieves the stored OIDC duration-adjusted token count
+// for the specified month. The count is stored as a float64 string with 4 decimal places of precision.
+// Returns 0 if no count has been stored for the given month.
+func (c *Core) GetStoredOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) (float64, error) {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return 0, errors.New("consumption billing is not initialized")
+	}
+
+	cb.BillingStorageLock.RLock()
+	defer cb.BillingStorageLock.RUnlock()
+
+	return c.getStoredOidcDurationAdjustedCountLocked(ctx, currentMonth)
+}
+
+func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time) (float64, error) {
+	billingPath := billing.GetMonthlyBillingMetricPath(billing.LocalPrefix, currentMonth, billing.OidcDurationAdjustedCountPrefix)
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return 0, errors.New("error reading OIDC duration-adjusted token count: billing subview not available")
+	}
+
+	se, err := view.Get(ctx, billingPath)
+	if se == nil || err != nil {
+		return 0, err
+	}
+
+	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	if err != nil {
+		return 0, fmt.Errorf("error decoding current OIDC duration-adjusted token count: %w", err)
+	}
+
+	return currentCount, nil
+}
+
+// IncrementOidcTokenCount increments the in-memory OIDC duration-adjusted token count and
+// accumulates per-mount attribution. This is called each time an OIDC token is created.
+// The counts and attribution are flushed to storage periodically by the consumption billing metrics worker.
+// durationSeconds is the raw token TTL; it is normalized to duration-adjusted units immediately
+// so that MonthlyUnits and per-mount attribution totals remain in sync across flush cycles.
+func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.MountAttribution) {
+	c.consumptionBillingLock.RLock()
+	defer c.consumptionBillingLock.RUnlock()
+
+	cb := c.consumptionBilling
+
+	if cb == nil {
+		return
+	}
+
+	// Normalize to duration-adjusted units immediately so MonthlyUnits and per-mount
+	// attribution totals are always consistent (both use per-token rounding).
+	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(DurationAdjustedTokenCount(durationSeconds))
+
+	// Accumulate per-mount attribution if the accessor is set.
+	if attr.MountAccessor == "" {
+		return
+	}
+	// Resolve the parent namespace ID via the pluggable hook (no-op on OSS).
+	attr.ParentNamespaceID = getParentNamespaceID(c, attr.NamespacePath)
+	cb.SecretEngineCounts.Oidc.MountAttributionLock.Lock()
+	// Always write the full entry from the current request so that any metadata
+	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
+	// Only the accumulated count is carried over from the previous entry.
+	if existing, ok := cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor]; ok {
+		attr.Count = ToFloat64(existing.Count) + ToFloat64(attr.Count)
+	}
+	cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor] = attr
+	cb.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
+}
+
+// UpdateOidcDurationAdjustedCount reads the in-memory OIDC duration-adjusted token count
+// and flushes it to storage.
+// This is called periodically by the consumption billing metrics worker.
+func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) error {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return ErrConsumptionBillingNotInitialized
+	}
+
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
+
+	// Swap out the accumulated duration-adjusted units (already normalized per-token in
+	// IncrementOidcTokenCount). Using Swap to atomically reset so a crash after a successful
+	// storage write does not cause double-counting on the next flush.
+	units := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
+
+	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, units)
+}
+
+func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time, inc float64) error {
+	if inc < 0 {
+		return fmt.Errorf("OIDC duration-adjusted increment must be non-negative, got %f", inc)
+	}
+
+	// Get stored count from previous flush
+	// this is duration-adjusted token count from storage
+	currentCount, err := c.getStoredOidcDurationAdjustedCountLocked(ctx, currentMonth)
+	if err != nil {
+		return err
+	}
+
+	// Sum the inc with the stored count which is the updated count
+	newCount := inc + currentCount
+
+	billingPath := billing.GetMonthlyBillingMetricPath(billing.LocalPrefix, currentMonth, billing.OidcDurationAdjustedCountPrefix)
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return errors.New("error storing OIDC duration-adjusted token count: billing subview not available")
+	}
+
+	// Write new value
+	entry := &logical.StorageEntry{
+		Key:   billingPath,
+		Value: []byte(strconv.FormatFloat(newCount, 'f', 4, 64)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("error writing OIDC duration-adjusted token count: %w", err)
+	}
+
+	return nil
+}
+
+// DurationAdjustedTokenCount calculates the billable units for a token based on its
+// validity duration.
+// WARNING: Beware the maximum value for time.Duration (approximately 290 years).
+// The calculation follows the billing specification:
+// - Standard duration is 730 hours (1 month)
+// - Units = (Validity Hours ÷ 730), rounded to 4 decimal places
+// - Example: 1-year cert (8760 hours) = 12.0000 units
+// - Example: 1-day cert (24 hours) = 0.0329 units
+func DurationAdjustedTokenCount(tokenDurationSeconds float64) float64 {
+	validityHours := tokenDurationSeconds / (time.Hour.Seconds())
+	units := validityHours / DurationAdjustedStandardDuration
+	// Round to 4 decimal places
+	ret := math.Round(units*DecimalPrecisionMultiplier) / DecimalPrecisionMultiplier
+	if ret == 0.0 && tokenDurationSeconds > 0 {
+		// Ensure we don't return 0.0, which would be interpreted as no billable units.
+		return MinBillableUnits
+	}
+	return ret
 }

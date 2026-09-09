@@ -217,7 +217,7 @@ Here are the steps to configure the GitHub Actions service user:
 - Full access to the CI AWS account is required.
 
 **Notes:**
-- For help with access to Terraform Cloud and the CI Account, contact the QT team on Slack (#team-quality)
+- For help with access to Terraform Cloud and the CI Account, contact the Vault Automation team on Slack (#team-vault-automation)
   for an invite. After receiving an invite to Terraform Cloud, a personal access token can be created
   by clicking `User Settings` --> `Tokens` --> `Create an API token`.
 - Access to the AWS account can be done via Doormat, at: https://doormat.hashicorp.services/.
@@ -228,7 +228,7 @@ Here are the steps to configure the GitHub Actions service user:
 1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the
    repository for which it is being created, but the pattern is: `<repository>-ci-enos-service-user-iam`,
    e.g. `vault-ci-enos-service-user-iam`. It is important that the execution mode for the workspace be set
-   to `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality)
+   to `local`. For help on setting up the workspace, contact the Vault Automation team on Slack (#team-vault-automation)
 
 
 2. **Execute the Terraform module**
@@ -250,7 +250,7 @@ workspace must be created as follows:
 1. **Create the Terraform Cloud Workspace** - The name workspace to be created depends on the repository
    for which it is being created, but the pattern is: `<repository>-ci-bootstrap`, e.g.
    `vault-ci-bootstrap`. It is important that the execution mode for the workspace be set to
-   `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality).
+   `local`. For help on setting up the workspace, contact the Vault Automation team on Slack (#team-vault-automation).
 
 Once the workspace has been created, changes to the bootstrap module will automatically be applied via
 the GitHub PR workflow. Each time a PR is created for changes to files within that module the module

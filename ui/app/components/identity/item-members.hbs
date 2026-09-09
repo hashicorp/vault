@@ -3,49 +3,49 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @model.hasMembers}}
-  {{#each @model.memberGroupIds as |gid|}}
-    <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
-      <div class="columns is-mobile">
-        <div class="column is-10">
+{{#if (or (not (is-empty @model.member_group_ids)) (not (is-empty @model.member_entity_ids)))}}
+  {{#each @model.member_group_ids as |gid|}}
+    <LinkedBlock @params={{array "vault.cluster.access.identity.groups.show" gid "details"}} class="list-item-row">
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+        <LF.Item @grow={{true}} @shrink={{true}}>
           <LinkTo
-            @route="vault.cluster.access.identity.show"
-            @models={{array "groups" gid "details"}}
+            @route="vault.cluster.access.identity.groups.show"
+            @models={{array gid "details"}}
             class="is-block has-text-black has-text-weight-semibold"
           >
             <Icon @name="folder" class="has-text-grey-light" />{{gid}}
           </LinkTo>
-        </div>
-        <div class="column has-text-right">
+        </LF.Item>
+        <LF.Item>
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @model={{@model}} @groupArray="memberGroupIds" @memberId={{gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="member_group_ids" @memberId={{gid}} />
           {{/if}}
-        </div>
-      </div>
+        </LF.Item>
+      </Hds::Layout::Flex>
     </LinkedBlock>
   {{/each}}
-  {{#each @model.memberEntityIds as |gid|}}
-    <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
-      <div class="columns">
-        <div class="column is-10">
+  {{#each @model.member_entity_ids as |gid|}}
+    <LinkedBlock @params={{array "vault.cluster.access.identity.entities.show" gid "details"}} class="list-item-row">
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+        <LF.Item @grow={{true}} @shrink={{true}}>
           <LinkTo
-            @route="vault.cluster.access.identity.show"
-            @models={{array "entities" gid "details"}}
+            @route="vault.cluster.access.identity.entities.show"
+            @models={{array gid "details"}}
             class="is-block has-text-black has-text-weight-semibold"
           >
             <Icon @name="user" class="has-text-grey-light" />{{gid}}
           </LinkTo>
-        </div>
-        <div class="column has-text-right">
+        </LF.Item>
+        <LF.Item>
           {{#if @model.canEdit}}
-            <Identity::PopupMembers @model={{@model}} @groupArray="memberEntityIds" @memberId={{gid}} />
+            <Identity::PopupMembers @model={{@model}} @groupArray="member_entity_ids" @memberId={{gid}} />
           {{/if}}
-        </div>
-      </div>
+        </LF.Item>
+      </Hds::Layout::Flex>
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @title="No members in this group yet" @titleTag="h2" />
   </Hds::ApplicationState>
 {{/if}}

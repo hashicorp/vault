@@ -8,6 +8,7 @@ import { set, computed } from '@ember/object';
 import { service } from '@ember/service';
 import { readOnly } from '@ember/object/computed';
 import { task, timeout } from 'ember-concurrency';
+import { INTERNAL_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
 
 export default Component.extend({
   'data-test-component': 'path-filter-config',
@@ -120,7 +121,7 @@ export default Component.extend({
 
   // singleton mounts are not eligible for per-mount-filtering
   singletonMountTypes: computed(function () {
-    return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity', 'ns_token'];
+    return ['cubbyhole', 'token', 'ns_system', 'ns_identity', 'ns_token', ...INTERNAL_ENGINE_TYPES];
   }),
 
   actions: {

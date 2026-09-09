@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
@@ -106,7 +106,9 @@ module('Integration | Component | kubernetes | KubernetesHeader', function (hook
     assert.dom(GENERAL.dropdownToggle('Manage')).hasText('Manage', 'Manage dropdown renders');
     await click(GENERAL.dropdownToggle('Manage'));
     assert.dom(GENERAL.menuItem('Configure')).exists('Configure dropdown item renders');
-    assert.dom(GENERAL.menuItem('Delete')).exists('Delete dropdown item renders');
+    assert
+      .dom(GENERAL.menuItem('Delete'))
+      .doesNotExist('Delete is not shown in the Manage dropdown (only available in the list action menu)');
   });
 
   test('it should render exit configuration button when configRoute is provided', async function (assert) {

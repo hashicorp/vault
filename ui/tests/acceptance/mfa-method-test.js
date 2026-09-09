@@ -20,7 +20,6 @@ module('Acceptance | mfa-method', function (hooks) {
 
   hooks.beforeEach(async function () {
     mfaConfigHandler(this.server);
-    this.store = this.owner.lookup('service:store');
     this.getMethods = () =>
       ['Totp', 'Duo', 'Okta', 'Pingid'].reduce((methods, type) => {
         methods = [...methods, ...this.server.db[`mfa${type}Methods`].where({})];
@@ -61,13 +60,13 @@ module('Acceptance | mfa-method', function (hooks) {
     await click(GENERAL.breadcrumbAtIdx(1));
 
     const methods = this.getMethods();
-    const model = this.store.peekRecord('mfa-method', methods[0].id);
+    const method = methods[0];
     assert.dom('[data-test-mfa-method-list-item]').exists({ count: methods.length }, 'Methods list renders');
-    assert.dom(`[data-test-mfa-method-list-icon="${model.type}"]`).exists('Icon renders for list item');
+    assert.dom(`[data-test-mfa-method-list-icon="${method.type}"]`).exists('Icon renders for list item');
     assert
-      .dom(`[data-test-mfa-method-list-item="${model.id}"]`)
+      .dom(`[data-test-mfa-method-list-item="${method.id}"]`)
       .includesText(
-        `${model.name} ${model.id} Namespace: ${model.namespace_path}`,
+        `${method.name} ${method.id} Namespace: ${method.namespace_path}`,
         'Copy renders for list item'
       );
 
@@ -91,11 +90,11 @@ module('Acceptance | mfa-method', function (hooks) {
   test('it should not display for the root namespace', async function (assert) {
     await visit('/vault/access/mfa');
     const methods = this.getMethods();
-    const duoModel = this.store.peekRecord('mfa-method', methods[1].id);
-    assert.strictEqual(duoModel.namespace_path, '', 'Namespace path is unset');
+    const duoMethod = methods[1];
+    assert.strictEqual(duoMethod.namespace_path, '', 'Namespace path is unset');
     assert
-      .dom(`[data-test-mfa-method-list-item="${duoModel.id}"]`)
-      .includesText(`${duoModel.name} ${duoModel.id}`, 'Copy renders for list item without namespace path')
+      .dom(`[data-test-mfa-method-list-item="${duoMethod.id}"]`)
+      .includesText(`${duoMethod.name} ${duoMethod.id}`, 'Copy renders for list item without namespace path')
       .doesNotContainText('Namespace:', 'Does not include the namespace label');
   });
 
@@ -128,7 +127,7 @@ module('Acceptance | mfa-method', function (hooks) {
 
     const fields = [
       ['Issuer', 'Period', 'Key size', 'QR size', 'Algorithm', 'Digits', 'Skew', 'Max validation attempts'],
-      ['Duo API hostname', 'Passcode reminder'],
+      ['API hostname', 'Passcode reminder'],
       ['Organization name', 'Base URL'],
       ['Use signature', 'Idp url', 'Admin url', 'Authenticator url', 'Org alias'],
     ];
@@ -138,17 +137,17 @@ module('Acceptance | mfa-method', function (hooks) {
       }
       const url = currentURL();
       const id = url.slice(url.lastIndexOf('/') + 1);
-      const model = this.store.peekRecord('mfa-method', id);
+      const method = this.getMethods().find((m) => m.id === id);
 
       labels.forEach((label) => {
         assert.dom(`[data-test-row-label="${label}"]`).hasText(label, `${label} field label renders`);
         const key =
           {
-            'Duo API hostname': 'api_hostname',
+            'API hostname': 'api_hostname',
             'Passcode reminder': 'use_passcode',
             'Organization name': 'org_name',
           }[label] || underscore(label);
-        let value = typeof model[key] === 'boolean' ? (model[key] ? 'Yes' : 'No') : model[key].toString();
+        let value = typeof method[key] === 'boolean' ? (method[key] ? 'Yes' : 'No') : method[key].toString();
         if (key === 'period') {
           value = duration([Number(value)]);
         }
@@ -205,6 +204,7 @@ module('Acceptance | mfa-method', function (hooks) {
       }
 
       await click('[data-test-mfa-create-save]');
+
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.access.mfa.methods.method.index',
@@ -222,19 +222,23 @@ module('Acceptance | mfa-method', function (hooks) {
     await click('[data-test-radio-card="totp"]');
     await click('[data-test-mfa-create-next]');
     await fillIn('[data-test-input="issuer"]', 'foo');
-    await fillIn('[data-test-mlef-input="name"]', 'bar');
+    await fillIn(GENERAL.inputByAttr('name'), 'bar');
     await fillIn('[data-test-mount-accessor-select]', 'auth_userpass_bb95c2b1');
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mfa-create-save]');
+
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.methods.method.index',
       'Route transitions to method on save'
     );
     await click('[data-test-tab="enforcements"]');
-    assert.dom('[data-test-list-item]').hasTextContaining('bar', 'Enforcement is listed in method view');
+    assert
+      .dom('[data-test-list-item="bar"]')
+      .hasTextContaining('bar', 'Enforcement is listed in method view');
     await click('[data-test-sidebar-nav-link="Multi-factor authentication"]');
     await click('[data-test-tab="enforcements"]');
+
     assert
       .dom('[data-test-list-item="bar"]')
       .hasTextContaining('bar', 'Enforcement is listed in enforcements view');
@@ -270,7 +274,7 @@ module('Acceptance | mfa-method', function (hooks) {
     const id = this.element
       .querySelector('[data-test-mfa-method-list-item] .hds-badge div')
       .textContent.trim();
-    const model = this.store.peekRecord('mfa-method', id);
+    const method = this.getMethods().find((m) => m.id === id);
     await click('[data-test-mfa-method-list-item] [data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="edit"]');
 
@@ -279,17 +283,17 @@ module('Acceptance | mfa-method', function (hooks) {
       if (key === 'period') {
         assert
           .dom('[data-test-ttl-value="Period"]')
-          .hasValue(model.period.toString(), 'Period form field is populated with model value');
+          .hasValue(method.period.toString(), 'Period form field is populated with method value');
         assert.dom('[data-test-select="ttl-unit"]').hasValue('s', 'Correct time unit is shown for period');
       } else if (key === 'algorithm' || key === 'digits' || key === 'skew') {
         const radioElem = this.element.querySelector(`input[name=${key}]:checked`);
         assert
           .dom(radioElem)
-          .hasValue(model[key].toString(), `${key} form field is populated with model value`);
+          .hasValue(method[key].toString(), `${key} form field is populated with method value`);
       } else {
         assert
           .dom(`[data-test-input="${key}"]`)
-          .hasValue(model[key].toString(), `${key} form field is populated with model value`);
+          .hasValue(method[key].toString(), `${key} form field is populated with method value`);
       }
     });
 
@@ -298,9 +302,8 @@ module('Acceptance | mfa-method', function (hooks) {
     await click(SHA1radioBtn);
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
     await click('[data-test-mfa-save]');
-    await fillIn('[data-test-confirmation-modal-input]', model.type);
+    await fillIn('[data-test-confirmation-modal-input]', method.type);
     await click(GENERAL.confirmButton);
-
     assert.dom('[data-test-row-value="Issuer"]').hasText('foo', 'Issuer field is updated');
     assert.dom('[data-test-row-value="Algorithm"]').hasText('SHA1', 'Algorithm field is updated');
     assert

@@ -19,7 +19,9 @@
               @onKeyUp={{@onKeyUp}}
               @modelValidations={{@modelValidations}}
               @showHelpText={{@showHelpText}}
-            />
+            >
+              {{yield attr}}
+            </FormField>
           {{else}}
             {{! OTHERWISE WE'RE EDITING }}
             {{#if (or (eq attr.name "name") (attr.options.editDisabled))}}
@@ -38,14 +40,16 @@
                 @onKeyUp={{@onKeyUp}}
                 @modelValidations={{@modelValidations}}
                 @showHelpText={{@showHelpText}}
-              />
+              >
+                {{yield attr}}
+              </FormField>
             {{/if}}
           {{/if}}
         {{/each}}
       {{else}}
         <ToggleButton
           @isOpen={{eq this.showGroup group}}
-          @openLabel={{concat "Hide " group}}
+          @openLabel={{if @openLabel @openLabel (concat "Hide " group)}}
           @closedLabel={{group}}
           @onClick={{fn this.toggleGroup group}}
           class="is-block"
@@ -66,9 +70,7 @@
                   @modelValidations={{@modelValidations}}
                   @showHelpText={{@showHelpText}}
                 >
-                  {{#if (and (has-block "identityTokenKey") (eq attr.name "config.identity_token_key"))}}
-                    {{yield to="identityTokenKey"}}
-                  {{/if}}
+                  {{yield attr}}
                 </FormField>
               {{else}}
                 {{! OTHERWISE WE'RE EDITING }}
@@ -84,7 +86,9 @@
                     @onKeyUp={{@onKeyUp}}
                     @modelValidations={{@modelValidations}}
                     @showHelpText={{@showHelpText}}
-                  />
+                  >
+                    {{yield attr}}
+                  </FormField>
                 {{/if}}
               {{/if}}
             {{/each}}

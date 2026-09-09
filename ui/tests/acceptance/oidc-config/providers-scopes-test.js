@@ -23,9 +23,10 @@ import {
   SCOPE_DATA_RESPONSE,
   PROVIDER_LIST_RESPONSE,
   PROVIDER_DATA_RESPONSE,
-  clearRecord,
 } from 'vault/tests/helpers/oidc-config';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import sinon from 'sinon';
+
 const searchSelect = create(ss);
 const flashMessage = create(fm);
 
@@ -37,7 +38,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
   hooks.beforeEach(function () {
     oidcConfigHandlers(this.server);
-    this.store = this.owner.lookup('service:store');
+    this.api = this.owner.lookup('service:api');
     // mock client list so OIDC BASE URL does not redirect to landing call-to-action image
     this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
     return login();
@@ -46,7 +47,13 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   // LIST SCOPES EMPTY
   test('it navigates to scopes list view and renders empty state when no scopes are configured', async function (assert) {
     assert.expect(4);
-    this.server.get('/identity/oidc/scope', () => overrideResponse(404));
+    this.server.get(
+      '/identity/oidc/scope',
+      () => ({
+        errors: ['Nothing found'],
+      }),
+      404
+    );
     await visit(OIDC_BASE_URL);
     await click(GENERAL.tab('scopes'));
     assert.strictEqual(currentURL(), '/vault/access/oidc/scopes');
@@ -165,9 +172,13 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   test('it creates a scope, and creates a provider with that scope', async function (assert) {
     assert.expect(28);
 
+    const apiSpy = sinon.spy(this.api.identity, 'oidcWriteProvider');
+
     //* clear out test state
-    await clearRecord(this.store, 'oidc/scope', 'test-scope');
-    await clearRecord(this.store, 'oidc/provider', 'test-provider');
+    await Promise.allSettled([
+      this.api.identity.oidcDeleteScope('test-scope'),
+      this.api.identity.oidcDeleteProvider('test-provider'),
+    ]);
 
     // create a new scope
     await visit(OIDC_BASE_URL + '/scopes/create');
@@ -242,8 +253,8 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'navigates to provider create form'
     );
     await fillIn(GENERAL.inputByAttr('name'), 'test-provider');
-    await clickTrigger('#scopesSupported');
-    await selectChoose('#scopesSupported', 'test-scope');
+    await clickTrigger('#oidc-provider-form-scope-select');
+    await selectChoose('#oidc-provider-form-scope-select', 'test-scope');
     await click(SELECTORS.providerSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
@@ -282,7 +293,9 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'navigates to provider edit page from details'
     );
     await click('[data-test-oidc-radio="limited"]');
-    await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
+    await click(
+      '[data-test-component="search-select"]#oidc-provider-form-client-select .ember-basic-dropdown-trigger'
+    );
     await fillIn(GENERAL.searchSelect.searchInput, 'test-app');
     await searchSelect.options.objectAt(0).click();
     await click(SELECTORS.providerSaveButton);
@@ -296,9 +309,9 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.providers.provider.details',
       'navigates back to provider details after updating'
     );
-    const providerModel = this.store.peekRecord('oidc/provider', 'test-provider');
+    const { allowed_client_ids } = apiSpy.lastCall.args[1];
     assert.propEqual(
-      providerModel.allowedClientIds,
+      allowed_client_ids,
       ['whaT7KB0C3iBH1l3rXhd5HPf0n6vXU0s'],
       'provider saves client_id (not id or name) in allowed_client_ids param'
     );
@@ -390,20 +403,22 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   // PROVIDER DELETE + EDIT PERMISSIONS
   test('it hides delete and edit for a provider when no permission', async function (assert) {
     assert.expect(3);
-    this.server.get('/identity/oidc/providers', () =>
-      overrideResponse(null, { data: { providers: ['test-provider'] } })
-    );
+
+    const provider = {
+      allowed_client_ids: ['*'],
+      issuer: 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider',
+      scopes_supported: ['test-scope'],
+    };
+    const data = {
+      keys: ['test-provider'],
+      key_info: { 'test-provider': provider },
+    };
+    this.server.get('/identity/oidc/provider', () => overrideResponse(null, { data }));
     this.server.get('/identity/oidc/provider/test-provider', () =>
-      overrideResponse(null, {
-        data: {
-          allowed_client_ids: ['*'],
-          issuer: 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider',
-          scopes_supported: ['test-scope'],
-        },
-      })
+      overrideResponse(null, { data: provider })
     );
     this.server.post('/sys/capabilities-self', () =>
-      capabilitiesStub(OIDC_BASE_URL + '/provider/test-provider', ['read'])
+      capabilitiesStub('identity/oidc/provider/test-provider', ['read'])
     );
 
     await visit(OIDC_BASE_URL + '/providers');

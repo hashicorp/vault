@@ -1,0 +1,3 @@
+```release-note:security
+ui: Upgrade dompurify to 3.4.0
+```

@@ -5,7 +5,6 @@
 
 import EmberRouter from '@ember/routing/router';
 import config from 'vault/config/environment';
-import { addDocfyRoutes } from '@docfy/ember';
 export default class Router extends EmberRouter {
   location = config.locationType;
   rootURL = config.rootURL;
@@ -14,6 +13,11 @@ export default class Router extends EmberRouter {
 Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
+      this.route('agents', function () {
+        this.route('registry', function () {
+          this.route('index', { path: '/' });
+        });
+      });
       this.route('dashboard');
       this.mount('config-ui');
       this.mount('sync');
@@ -44,6 +48,7 @@ Router.map(function () {
         this.route('edit');
       });
       this.route('usage-reporting');
+      this.route('user-preferences');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
@@ -62,6 +67,10 @@ Router.map(function () {
       this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
         this.mount('open-api-explorer', { path: '/api-explorer' });
+      });
+      this.route('support', function () {
+        this.route('upgrade', { path: '/' });
+        this.route('upgrade-info', { path: '/upgrade/issues' });
       });
       this.route('access', function () {
         this.route('reset-password');
@@ -105,18 +114,28 @@ Router.map(function () {
           this.route('show', { path: '/show/*lease_id' });
         });
         // the outer identity route handles group and entity items
-        // the "identity" routes expect :item_type to be plural
-        this.route('identity', { path: '/identity/:item_type' }, function () {
-          this.route('index', { path: '/' });
-          this.route('create');
-          this.route('merge');
-          this.route('edit', { path: '/edit/:item_id' });
-          this.route('show', { path: '/:item_id/:section' });
-          this.route('aliases', function () {
-            this.route('index', { path: '/' });
-            this.route('add', { path: '/add/:item_id' });
-            this.route('edit', { path: '/edit/:item_alias_id' });
-            this.route('show', { path: '/:item_alias_id/:section' });
+        this.route('identity', function () {
+          this.route('entities', function () {
+            this.route('create');
+            this.route('merge');
+            this.route('edit', { path: '/edit/:item_id' });
+            this.route('show', { path: '/:item_id/:section' });
+            this.route('aliases', function () {
+              this.route('add', { path: '/add/:item_id' });
+              this.route('edit', { path: '/edit/:item_alias_id' });
+              this.route('show', { path: '/:item_alias_id/:section' });
+            });
+          });
+          this.route('groups', function () {
+            this.route('create');
+            this.route('merge');
+            this.route('edit', { path: '/edit/:item_id' });
+            this.route('show', { path: '/:item_id/:section' });
+            this.route('aliases', function () {
+              this.route('add', { path: '/add/:item_id' });
+              this.route('edit', { path: '/edit/:item_alias_id' });
+              this.route('show', { path: '/:item_alias_id/:section' });
+            });
           });
         });
         this.route('control-groups');
@@ -168,6 +187,7 @@ Router.map(function () {
         });
       });
       this.route('secrets-redirect', { path: '/secrets' }); // legacy redirect
+      this.route('secrets-redirect-with-path', { path: '/secrets/*path' }); // legacy redirect with wildcard to capture full path
       this.route('secrets', { path: '/secrets-engines' }, function () {
         this.route('enable', function () {
           this.route('create', { path: '/:mount_type' });
@@ -219,16 +239,17 @@ Router.map(function () {
         this.route('show', { path: '/:policy_name' });
         this.route('edit', { path: '/:policy_name/edit' });
       });
+      this.route('billing', function () {
+        this.route('overview');
+      });
       this.route('resilience-recovery');
       this.route('replication-dr-promote', function () {
         this.route('details');
       });
       this.mount('replication');
+      // Catch-all for unmatched routes within the cluster (e.g., /vault/fake-route)
+      // renders template: vault/cluster/not-found.hbs
       this.route('not-found', { path: '/*path' });
     });
-    this.route('not-found', { path: '/*path' });
   });
-  if (config.environment !== 'production') {
-    addDocfyRoutes(this);
-  }
 });

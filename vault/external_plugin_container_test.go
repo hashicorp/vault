@@ -43,9 +43,6 @@ func testClusterWithContainerPlugins(t *testing.T, types []consts.PluginType) (*
 		Plugins: plugins,
 	})
 
-	cluster.Start()
-	t.Cleanup(cluster.Cleanup)
-
 	core := cluster.Cores[0]
 	TestWaitActive(t, core.Core)
 

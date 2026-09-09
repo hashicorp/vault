@@ -5,17 +5,32 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { IdentityApiOidcListProvidersListEnum } from '@hashicorp/vault-client-typescript';
 
 export default class OidcProvidersRoute extends Route {
-  @service store;
+  @service api;
+  @service capabilities;
 
-  model() {
-    return this.store.query('oidc/provider', {}).catch((err) => {
-      if (err.httpStatus === 404) {
-        return [];
+  async model() {
+    try {
+      const response = await this.api.identity.oidcListProviders(IdentityApiOidcListProvidersListEnum.TRUE);
+      const paths = response.keys.map((name) => this.capabilities.pathFor('oidcProvider', { name }));
+      const capabilities = paths ? await this.capabilities.fetch(paths) : {};
+
+      return {
+        providers: this.api.keyInfoToArray(response, 'name'),
+        capabilities,
+      };
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return {
+          providers: [],
+          capabilities: {},
+        };
       } else {
-        throw err;
+        throw error;
       }
-    });
+    }
   }
 }

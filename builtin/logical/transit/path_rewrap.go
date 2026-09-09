@@ -196,9 +196,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	warnAboutNonceUsage := false
@@ -220,6 +217,16 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		if item.Nonce != "" && !nonceAllowed(p) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
+		}
+
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
 		}
 
 		opts := keysutil.EncryptionOptions{
@@ -252,10 +259,21 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			warnAboutNonceUsage = true
 		}
 
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			factory, err := b.GetManagedKeyFactory(ctx)
+			if err != nil {
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+
+			factories = append(factories, factory)
+		}
+
 		opts = keysutil.EncryptionOptions{
 			KeyVersion: item.KeyVersion,
 			Context:    item.DecodedContext,
 			Nonce:      item.DecodedNonce,
+			Raw:        true,
 		}
 
 		ciphertext, err := p.EncryptWithOptions(opts, plaintext, factories...)
@@ -308,7 +326,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
-	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
 		b.Logger().Error("failed to track transit rewrap request count", "error", err.Error())
 	}
 

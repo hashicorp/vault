@@ -38,6 +38,7 @@ export function setupDataStubs(hooks) {
       this.destinations = [this.destination];
       this.destinations.meta = {
         filteredTotal: this.destinations.length,
+        totalItems: this.destinations.length,
         currentPage: 1,
         pageSize: 5,
       };
@@ -58,6 +59,7 @@ export function setupDataStubs(hooks) {
       this.associations = [this.association];
       this.associations.meta = {
         filteredTotal: this.associations.length,
+        totalItems: this.associations.length,
         currentPage: 1,
         pageSize: 5,
       };

@@ -74,6 +74,9 @@ type PolicyRequest struct {
 
 	// HybridConfig contains the key types and parameters for hybrid keys
 	HybridConfig HybridKeyConfig
+
+	// WriteLocked determines whether the returned policy will have an exclusive lock
+	WriteLocked bool
 }
 
 type HybridKeyConfig struct {
@@ -150,21 +153,21 @@ func (lm *LockManager) InitCache(cacheSize int) error {
 
 // RestorePolicy acquires an exclusive lock on the policy name and restores the
 // given policy along with the archive.
-func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) error {
+func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storage, name, backup string, force bool) (string, error) {
 	backupBytes, err := base64.StdEncoding.DecodeString(backup)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	var keyData KeyData
 	err = jsonutil.DecodeJSON(backupBytes, &keyData)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	// Validate that the policy exists in the backup data
 	if keyData.Policy == nil {
-		return errors.New("backup data does not contain a valid policy")
+		return "", errors.New("backup data does not contain a valid policy")
 	}
 
 	// Set a different name if desired
@@ -188,7 +191,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if lm.useCache {
 		pRaw, ok = lm.cache.Load(name)
 		if ok && !force {
-			return fmt.Errorf("key %q already exists", name)
+			return "", fmt.Errorf("key %q already exists", name)
 		}
 	}
 
@@ -207,10 +210,10 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if pRaw == nil {
 		p, err = lm.getPolicyFromStorage(ctx, storage, name)
 		if err != nil {
-			return err
+			return "", err
 		}
 		if p != nil && !force {
-			return fmt.Errorf("key %q already exists", name)
+			return "", fmt.Errorf("key %q already exists", name)
 		}
 	}
 
@@ -230,7 +233,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if keyData.ArchivedKeys != nil {
 		err = keyData.Policy.storeArchive(ctx, storage, keyData.ArchivedKeys)
 		if err != nil {
-			return errwrap.Wrapf(fmt.Sprintf("failed to restore archived keys for key %q: {{err}}", name), err)
+			return "", errwrap.Wrapf(fmt.Sprintf("failed to restore archived keys for key %q: {{err}}", name), err)
 		}
 	}
 
@@ -243,7 +246,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	// Restore the policy. This will also attempt to adjust the archive.
 	err = keyData.Policy.Persist(ctx, storage)
 	if err != nil {
-		return errwrap.Wrapf(fmt.Sprintf("failed to restore the policy %q: {{err}}", name), err)
+		return "", errwrap.Wrapf(fmt.Sprintf("failed to restore the policy %q: {{err}}", name), err)
 	}
 
 	keyData.Policy.l = new(sync.RWMutex)
@@ -252,7 +255,7 @@ func (lm *LockManager) RestorePolicy(ctx context.Context, storage logical.Storag
 	if lm.useCache {
 		lm.cache.Store(name, keyData.Policy)
 	}
-	return nil
+	return name, nil
 }
 
 func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage, name string) (string, error) {
@@ -298,7 +301,7 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 	return backup, nil
 }
 
-// When the function returns, if caching was disabled, the Policy's lock must
+// When the function returns, the Policy's lock must
 // be unlocked when the caller is done (and it should not be re-locked).
 func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io.Reader) (retP *Policy, retUpserted bool, retErr error) {
 	var p *Policy
@@ -315,6 +318,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		if atomic.LoadUint32(&p.deleted) == 1 {
 			return nil, false, nil
 		}
+		p.Lock(req.WriteLocked)
 		return p, false, nil
 	}
 
@@ -328,10 +332,10 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 	// return from here with the lock still held.
 	cleanup := func() {
 		switch {
-		// If using the cache we always unlock, the caller locks the policy
-		// themselves
-		case lm.useCache:
+		// If using the cache we use the policy request to determine which lock type to use
+		case lm.useCache && retP != nil:
 			lock.Unlock()
+			retP.Lock(req.WriteLocked)
 
 		// If not using the cache, if we aren't returning a policy the caller
 		// doesn't have a lock, so we must unlock

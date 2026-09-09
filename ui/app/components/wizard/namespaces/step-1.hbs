@@ -12,7 +12,7 @@
     <Hds::Form::Radio::Group @name="security-policy" as |G|>
       <G.RadioField
         checked={{eq @wizardState.securityPolicyChoice this.policy.FLEXIBLE}}
-        {{on "change" (fn @updateWizardState "securityPolicyChoice" this.policy.FLEXIBLE)}}
+        {{on "change" (fn this.selectPolicy this.policy.FLEXIBLE)}}
         data-test-radio="flexible"
         as |F|
       >
@@ -25,7 +25,7 @@
       </G.RadioField>
       <G.RadioField
         checked={{eq @wizardState.securityPolicyChoice this.policy.STRICT}}
-        {{on "change" (fn @updateWizardState "securityPolicyChoice" this.policy.STRICT)}}
+        {{on "change" (fn this.selectPolicy this.policy.STRICT)}}
         data-test-radio="strict"
         as |F|
       >

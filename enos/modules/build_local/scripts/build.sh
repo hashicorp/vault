@@ -22,7 +22,9 @@ root_dir="$(git rev-parse --show-toplevel)"
 pushd "$root_dir" > /dev/null
 
 if [ -n "$BUILD_UI" ] && [ "$BUILD_UI" = "true" ]; then
-  make ci-build-ui
+  if ! output=$(make ci-build-ui 2>&1); then
+    echo "Failed to build the UI assets. Make sure you have the required node version (defined in ui/package.json) install and have set up pnpm (npm i -g pnpm): ${output}" 1>&2
+  fi
 fi
 
 make ci-build

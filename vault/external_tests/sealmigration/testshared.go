@@ -109,7 +109,6 @@ func ParamTestSealMigrationTransitToShamir_Post14(t *testing.T, logger hclog.Log
 	opts.SealFunc = func() vault.Seal { return nil }
 	leaderIdx := migratePost14(t, storage, cluster, opts, cluster.RecoveryKeys)
 	validateMigration(t, storage, cluster, leaderIdx, verifySealConfigShamir)
-
 	cluster.Cleanup()
 	storage.Cleanup(t, cluster)
 
@@ -210,7 +209,7 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 		Logger:                logger.Named("migrateFromTransitToShamir"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
-		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseListenPort:        basePort,
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
 		UnwrapSealFunc:        sealFunc,
@@ -218,7 +217,6 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 	storage.Setup(&conf, &opts)
 	conf.DisableAutopilot = true
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)
@@ -285,7 +283,7 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 		Logger:                logger.Named("migrateFromShamirToTransit"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
-		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseListenPort:        basePort,
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
 		// N.B. Providing a transit seal puts us in migration mode.
@@ -299,7 +297,6 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)
@@ -375,7 +372,7 @@ func migratePost14(t *testing.T, storage teststorage.ReusableStorage, cluster *v
 		if storage.IsRaft {
 			teststorage.CloseRaftStorage(t, cluster, i)
 		}
-		cluster.StartCore(t, i, opts)
+		cluster.StartCore(t, i, opts, true)
 
 		unsealMigrate(t, cluster.Cores[i].Client, unsealKeys, true)
 	}
@@ -423,7 +420,7 @@ func migratePost14(t *testing.T, storage teststorage.ReusableStorage, cluster *v
 	// Bring core 0 back up; we still have the seal migration config in place,
 	// but now that migration has been performed we should be able to unseal
 	// with the new seal and without using the `migrate` unseal option.
-	cluster.StartCore(t, 0, opts)
+	cluster.StartCore(t, 0, opts, true)
 	unseal(t, cluster.Cores[0].Client, unsealKeys)
 
 	// Write a new secret
@@ -586,12 +583,11 @@ func initializeShamir(t *testing.T, logger hclog.Logger, storage teststorage.Reu
 		Logger:                logger.Named("initializeShamir"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
-		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseListenPort:        basePort,
 		BaseClusterListenPort: baseClusterPort,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 
 	leader := cluster.Cores[0]
 	client := leader.Client
@@ -639,13 +635,12 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 		Logger:                logger.Named("runShamir"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
-		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseListenPort:        basePort,
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)
@@ -711,7 +706,7 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 		Logger:                logger.Named("initializeTransit"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
-		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseListenPort:        basePort,
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
 			seal, err := tss.MakeSeal(t, sealKeyName)
@@ -723,7 +718,6 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 
 	leader := cluster.Cores[0]
 	client := leader.Client
@@ -770,14 +764,13 @@ func runAutoseal(t *testing.T, logger hclog.Logger, storage teststorage.Reusable
 		Logger:                logger.Named("runTransit"),
 		HandlerFunc:           http.Handler,
 		NumCores:              numTestCores,
-		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
+		BaseListenPort:        basePort,
 		BaseClusterListenPort: baseClusterPort,
 		SkipInit:              true,
 		SealFunc:              sealFunc,
 	}
 	storage.Setup(&conf, &opts)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	cluster.Start()
 	defer func() {
 		cluster.Cleanup()
 		storage.Cleanup(t, cluster)

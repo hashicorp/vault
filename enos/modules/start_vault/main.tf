@@ -1,4 +1,4 @@
-# Copyright IBM Corp. 2016, 2025
+# Copyright IBM Corp. 2016, 2026
 # SPDX-License-Identifier: BUSL-1.1
 
 terraform {
@@ -36,12 +36,20 @@ locals {
   followers                 = toset(slice(local.instances, 1, length(local.instances)))
   instances                 = [for idx in range(length(var.hosts)) : tostring(idx)]
   leader                    = toset(slice(local.instances, 0, 1))
+  leader_api_addr           = var.leader_api_addr == null ? local.api_addrs_internal[0][var.ip_version] : var.leader_api_addr
   listener_address          = var.ip_version == 4 ? "0.0.0.0:${var.listener_port}" : "[::]:${var.listener_port}"
   prometheus_retention_time = var.enable_telemetry ? "24h" : "0"
   // Handle cases where we might have to distribute HSM tokens for the pkcs11 seal before starting
   // vault.
   token_base64           = try(lookup(var.seal_attributes, "token_base64", ""), "")
   token_base64_secondary = try(lookup(var.seal_attributes_secondary, "token_base64", ""), "")
+  telemetry = var.enable_telemetry ? {
+    unauthenticated_metrics_access = true
+    disable_hostname               = true
+    prometheus_retention_time      = "12h"
+    } : {
+    unauthenticated_metrics_access = false,
+  }
   // This module currently supports up to two defined seals. Most of our locals logic here is for
   // creating the correct seal configuration.
   seals = {
@@ -129,8 +137,13 @@ locals {
   ]
   storage_retry_join = {
     "raft" : {
-      auto_join : "provider=aws addr_type=${var.ip_version == 4 ? "private_v4" : "public_v6"} tag_key=${var.cluster_tag_key} tag_value=${var.cluster_name}",
-      auto_join_scheme : "http",
+      "leader_api_addr" : [for addr in local.api_addrs : {
+        "leader_api_addr" : addr[var.ip_version]
+      }],
+      "aws" : {
+        auto_join : "provider=aws addr_type=${var.ip_version == 4 ? "private_v4" : "public_v6"} tag_key=${var.cluster_tag_key} tag_value=${var.cluster_name}",
+        auto_join_scheme : "http",
+      },
     },
   }
 }
@@ -192,7 +205,7 @@ resource "enos_vault_start" "leader" {
   environment = merge(var.environment, {
     VAULT_DISABLE_MLOCK = var.disable_mlock
   })
-  config = {
+  config = merge({
     api_addr     = local.api_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_addr = local.cluster_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_name = var.cluster_name
@@ -202,23 +215,16 @@ resource "enos_vault_start" "leader" {
         address     = local.listener_address
         tls_disable = "true"
       }
-      telemetry = {
-        unauthenticated_metrics_access = var.enable_telemetry
-      }
     }
     log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = local.storage_attributes[each.key]
-      retry_join = try(local.storage_retry_join[var.storage_backend], null)
+      retry_join = try(local.storage_retry_join[var.storage_backend][var.retry_join_method], null)
     }
     seals = local.seals
     ui    = true
-    telemetry = {
-      prometheus_retention_time = local.prometheus_retention_time
-      disable_hostname          = true
-    }
-  }
+  }, local.telemetry == null ? {} : { telemetry = local.telemetry })
   license        = var.license
   manage_service = var.manage_service
   username       = var.service_username
@@ -243,7 +249,7 @@ resource "enos_vault_start" "followers" {
   environment = merge(var.environment, {
     VAULT_DISABLE_MLOCK = var.disable_mlock
   })
-  config = {
+  config = merge({
     api_addr     = local.api_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_addr = local.cluster_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_name = var.cluster_name
@@ -253,23 +259,16 @@ resource "enos_vault_start" "followers" {
         address     = local.listener_address
         tls_disable = "true"
       }
-      telemetry = {
-        unauthenticated_metrics_access = var.enable_telemetry
-      }
     }
     log_level = var.log_level
     storage = {
       type       = var.storage_backend
       attributes = { for key, value in local.storage_attributes[each.key] : key => value }
-      retry_join = try(local.storage_retry_join[var.storage_backend], null)
+      retry_join = try(local.storage_retry_join[var.storage_backend][var.retry_join_method], null)
     }
     seals = local.seals
     ui    = true
-    telemetry = {
-      prometheus_retention_time = local.prometheus_retention_time
-      disable_hostname          = true
-    }
-  }
+  }, local.telemetry == null ? {} : { telemetry = local.telemetry })
   license        = var.license
   manage_service = var.manage_service
   username       = var.service_username
@@ -280,6 +279,10 @@ resource "enos_vault_start" "followers" {
       host = var.hosts[each.value].public_ip
     }
   }
+}
+
+output "leader_api_addr" {
+  value = local.leader_api_addr
 }
 
 output "token_base64" {

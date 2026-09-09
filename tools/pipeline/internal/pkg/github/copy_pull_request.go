@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v81/github"
+	libgithub "github.com/google/go-github/v83/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -57,7 +57,8 @@ func (r *CopyPullRequestReq) Run(
 		SkippedCommits: []*libgithub.RepositoryCommit{},
 	}
 
-	slog.Default().DebugContext(slogctx.Append(ctx,
+	slog.Default().DebugContext(slogctx.Append(
+		ctx,
 		slog.String("from-owner", r.FromOwner),
 		slog.String("from-repo", r.FromRepo),
 		slog.String("from-origin", r.FromOrigin),
@@ -233,7 +234,8 @@ func (r *CopyPullRequestReq) Run(
 
 		parents := strings.TrimSpace(string(cherryPickRes.Stdout))
 		if len(strings.Split(parents, " ")) > 1 {
-			slog.Default().DebugContext(slogctx.Append(ctx,
+			slog.Default().DebugContext(slogctx.Append(
+				ctx,
 				slog.String("sha", commit.GetSHA()),
 				slog.String("parents", parents),
 			), "skipping merge commit")

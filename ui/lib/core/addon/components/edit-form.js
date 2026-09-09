@@ -85,11 +85,13 @@ export default Component.extend({
   ).drop(),
 
   willDestroy() {
-    // components are torn down after store is unloaded and will cause an error if attempt to unload record
-    const noTeardown = this.store && !this.store.isDestroying;
-    const { model } = this;
-    if (noTeardown && model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
-      model.rollbackAttributes();
+    try {
+      const { model } = this;
+      if (model && model.isDirty && !model.isDestroyed && !model.isDestroying) {
+        model.rollbackAttributes();
+      }
+    } catch (e) {
+      // silent catch if component is torn down after store is unloaded
     }
     this._super(...arguments);
   },

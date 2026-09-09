@@ -158,20 +158,9 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 	return reloaded, nil
 }
 
-// reloadBackendCommon is a generic method to reload a backend provided a
-// MountEntry.
-func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAuth bool) error {
-	// Make sure our cache is up-to-date. Since some singleton mounts can be
-	// tuned, we do this before the below check.
-	entry.SyncCache()
-
-	// We don't want to reload the singleton mounts. They often have specific
-	// inmemory elements and we don't want to touch them here.
-	if strutil.StrListContains(singletonMounts, entry.Type) {
-		c.logger.Debug("skipping reload of singleton mount", "type", entry.Type)
-		return nil
-	}
-
+// forceReloadBackend reloads any backend, even a singleton. It does not update the cache. Most users
+// should use reloadBackendCommon.
+func (c *Core) forceReloadBackend(ctx context.Context, entry *MountEntry, isAuth bool) error {
 	path := entry.Path
 
 	if isAuth {
@@ -262,7 +251,14 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		// rely on lazy loading for initialization. v5 backends do not rely on lazy loading
 		// for initialization unless the plugin process is killed. Reload of a v5 backend
 		// results in a new plugin process, so we must initialize the backend here.
-		err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+		err := backend.Initialize(ctx, &logical.InitializationRequest{
+			Storage:             view,
+			MountPoint:          entry.Path,
+			MountType:           entry.Type,
+			MountAccessor:       entry.Accessor,
+			BackendUUID:         entry.BackendAwareUUID,
+			MountRunningVersion: entry.RunningVersion,
+		})
 		if err != nil {
 			return err
 		}
@@ -270,18 +266,22 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 		// Set paths as well
 		paths := backend.SpecialPaths()
 		if paths != nil {
-			re.rootPaths.Store(pathsToRadix(paths.Root))
-			loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
+			rootPathsEntry, err := parseSpecialPaths(paths.Root)
+			if err != nil {
+				return err
+			}
+			re.rootPaths.Store(rootPathsEntry)
+			loginPathsEntry, err := parseSpecialPaths(paths.Unauthenticated)
 			if err != nil {
 				return err
 			}
 			re.loginPaths.Store(loginPathsEntry)
-			binaryPathsEntry, err := parseUnauthenticatedPaths(paths.Binary)
+			binaryPathsEntry, err := parseSpecialPaths(paths.Binary)
 			if err != nil {
 				return err
 			}
 			re.binaryPaths.Store(binaryPathsEntry)
-			allowSnapshotReadPathsEntry, err := parseUnauthenticatedPaths(paths.AllowSnapshotRead)
+			allowSnapshotReadPathsEntry, err := parseSpecialPaths(paths.AllowSnapshotRead)
 			if err != nil {
 				return err
 			}
@@ -290,6 +290,23 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	}
 
 	return nil
+}
+
+// reloadBackendCommon is a generic method to reload a backend provided a
+// MountEntry.
+func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAuth bool) error {
+	// Make sure our cache is up-to-date. Since some singleton mounts can be
+	// tuned, we do this before the below check.
+	entry.SyncCache()
+
+	// We don't want to reload the singleton mounts. They often have specific
+	// inmemory elements and we don't want to touch them here.
+	if strutil.StrListContains(singletonMounts, entry.Type) {
+		c.logger.Debug("skipping reload of singleton mount", "type", entry.Type)
+		return nil
+	}
+
+	return c.forceReloadBackend(ctx, entry, isAuth)
 }
 
 func (c *Core) setupPluginReload() error {

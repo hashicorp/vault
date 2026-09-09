@@ -146,6 +146,49 @@ func TestOcsp_MalformedRequests(t *testing.T) {
 	}
 }
 
+// Tests that revocation with a reason code will be reflected in the oscp response.
+// Checks both a valid and invalid reason code.
+func TestOcsp_RevokeReasonCode(t *testing.T) {
+	t.Parallel()
+
+	b, s, testEnv := setupOcspEnv(t, "ec")
+
+	// Revoke the entry
+	serial := serialFromCert(testEnv.leafCertIssuer1)
+	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": serial,
+		// key compromise
+		"revocation_reason": 1,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "revoke")
+
+	certResp, err := CBRead(b, s, "cert/"+serial)
+	requireSuccessNonNilResponse(t, certResp, err, "cert read")
+	require.Equal(t, 1, certResp.Data["revocation_reason"])
+
+	resp, err = SendOcspRequest(t, b, s, "get", testEnv.leafCertIssuer1, testEnv.issuer1, crypto.SHA1)
+	require.NoError(t, err)
+	requireFieldsSetInResp(t, resp, "http_content_type", "http_status_code", "http_raw_body")
+	require.Equal(t, 200, resp.Data["http_status_code"])
+	respDer := resp.Data["http_raw_body"].([]byte)
+
+	ocspResp, err := ocsp.ParseResponse(respDer, testEnv.issuer1)
+	require.NoError(t, err, "error parsing oscp response")
+	require.Equal(t, ocsp.Revoked, ocspResp.Status)
+	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
+	require.Equal(t, 1, ocspResp.RevocationReason)
+
+	// Attempt to revoke with a bad reason code
+	serial = serialFromCert(testEnv.leafCertIssuer2)
+	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": serial,
+		// unused, bad reason code
+		"revocation_reason": 7,
+	})
+	require.NotNil(t, resp)
+	require.True(t, resp.IsError(), "expected error response for invalid reason code")
+}
+
 // Validate that we properly handle a revocation entry that contains an issuer ID that no longer exists,
 // the best we can do in this use case is to respond back with the default issuer that we don't know
 // the issuer that they are requesting (we can't guarantee that the client is actually requesting a serial
@@ -384,8 +427,6 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 	mountPKIEndpoint(t, client, "pki")
 	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{

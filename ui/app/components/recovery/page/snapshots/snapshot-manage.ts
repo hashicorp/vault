@@ -11,7 +11,7 @@ import { restartableTask } from 'ember-concurrency';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import SecretsEngineResource, { RecoverySupportedEngines } from 'vault/resources/secrets/engine';
 import { SupportedSecretBackendsEnum } from 'vault/helpers/supported-secret-backends';
-import { ROOT_NAMESPACE } from 'vault/services/namespace';
+import { ROOT_NAMESPACE } from 'vault/utils/constants/namespace';
 import {
   createPollingTask,
   getSnapshotStatusBadge,

@@ -12,10 +12,10 @@ export default IdentityModel.extend({
     return ['toEntityId', 'fromEntityIds', 'force'];
   }),
   toEntityId: attr('string', {
-    label: 'Entity to merge to',
+    label: 'Entity ID to merge to',
   }),
   fromEntityIds: attr({
-    label: 'Entities to merge from',
+    label: 'Entity IDs to merge from',
     editType: 'stringArray',
   }),
   force: attr('boolean', {

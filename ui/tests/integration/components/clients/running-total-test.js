@@ -4,19 +4,19 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, find, render } from '@ember/test-helpers';
+import { click, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { getUnixTime } from 'date-fns';
-import { findAll } from '@ember/test-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import {
   destructureClientCounts,
   formatByMonths,
@@ -30,6 +30,13 @@ module('Integration | Component | clients/running-total', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    setRunOptions({
+      rules: {
+        // Carbon Charts renders path.bar elements with role="graphics-symbol" without aria-label.
+        // This is a known Carbon Charts library limitation; the rule is suppressed here.
+        'svg-img-alt': { enabled: false },
+      },
+    });
     this.flags = this.owner.lookup('service:flags');
     this.version = this.owner.lookup('service:version');
     this.flags.activatedFlags = ['secrets-sync'];
@@ -91,36 +98,43 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
 
     assert.dom(CLIENT_COUNT.card('Client usage trends')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
-    assert.dom(CHARTS.legend).hasText('New clients');
-    const expectedColor = 'rgb(28, 52, 95)';
-    const color = getComputedStyle(find(CHARTS.legendDot(1))).backgroundColor;
-    assert.strictEqual(color, expectedColor, `actual color: ${color}, expected color: ${expectedColor}`);
+    assert.dom(GENERAL.inputByAttr('toggle view')).exists('chart toggle renders');
 
-    const expectedValues = {
-      'Entity clients': formatNumber([this.activity.total.entity_clients]),
-      'Non-entity clients': formatNumber([this.activity.total.non_entity_clients]),
-      'ACME clients': formatNumber([this.activity.total.acme_clients]),
-      'Secret sync clients': formatNumber([this.activity.total.secret_syncs]),
-    };
-    for (const label in expectedValues) {
+    const donutLegendItems = findAll(CHARTS.carbonLegendLabel('Client count and type distribution'));
+    const expectedDonutLabels = [
+      'Entity clients',
+      'Non-entity clients',
+      'ACME clients',
+      'Secret sync clients',
+    ];
+    assert.strictEqual(
+      donutLegendItems.length,
+      expectedDonutLabels.length,
+      'donut chart legend has correct number of items'
+    );
+    donutLegendItems.forEach((el, i) => {
       assert
-        .dom(CLIENT_COUNT.statLegendValue(label))
-        .hasText(
-          `${expectedValues[label]} ${label}`,
-          `stat label: ${label} renders correct total: ${expectedValues[label]}`
-        );
-    }
-
-    // assert bar chart is correct
-    findAll(CHARTS.xAxisLabel).forEach((e, i) => {
-      const timestamp = this.byMonthClients[i].timestamp;
-      const displayMonth = parseAPITimestamp(timestamp, 'M/yy');
-      assert.dom(e).hasText(displayMonth, `renders x-axis labels for bar chart: ${displayMonth}`);
+        .dom(el)
+        .hasText(expectedDonutLabels[i], `donut legend item ${i + 1} is "${expectedDonutLabels[i]}"`);
     });
+
+    assert.dom('[data-test-chart="Client usage by month (simple)"]').exists('simple chart container renders');
+    assert.dom('[data-test-chart="Client usage by month (simple)"] svg').exists('Carbon chart renders SVG');
     assert
-      .dom(CHARTS.verticalBar)
-      .exists({ count: this.byMonthClients.length }, 'renders correct number of bars ');
+      .dom(CHARTS.carbonLegendLabel('Client usage by month (simple)'))
+      .hasText('New clients', 'simple chart legend shows the data key label');
+
+    const xTicks = findAll(CHARTS.carbonXAxisTick('Client usage by month (simple)'));
+    assert.strictEqual(xTicks.length, this.byMonthClients.length, 'x-axis has one tick per month');
+    assert
+      .dom(xTicks[0])
+      .hasText(
+        parseAPITimestamp(this.byMonthClients[0].timestamp, 'M/yy'),
+        'first x-axis tick shows the first month'
+      );
+    assert
+      .dom(CHARTS.carbonBar('Client usage by month (simple)'))
+      .exists({ count: this.byMonthClients.length }, 'renders one bar per month');
   });
 
   test('it toggles to split chart by client type', async function (assert) {
@@ -128,41 +142,27 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await click(GENERAL.inputByAttr('toggle view'));
 
     assert.dom(CLIENT_COUNT.card('Client usage trends')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert
-      .dom(CHARTS.legend)
-      .hasText(
-        'Entity clients Non-entity clients ACME clients Secret sync clients',
-        'it renders legend in order that matches the stacked bar data and secret sync clients is last'
-      );
+      .dom('[data-test-chart="Client usage by month (stacked)"]')
+      .exists('stacked chart container renders');
+    assert.dom('[data-test-chart="Client usage by month (stacked)"] svg').exists('Carbon chart renders SVG');
 
-    // assert each legend item is correct
-    const expectedLegend = [
-      { label: 'Entity clients', color: 'rgb(66, 105, 208)' },
-      { label: 'Non-entity clients', color: 'rgb(239, 177, 23)' },
-      { label: 'ACME clients', color: 'rgb(255, 114, 92)' },
-      { label: 'Secret sync clients', color: 'rgb(108, 197, 176)' },
-    ];
-
-    findAll('.legend-item').forEach((e, i) => {
-      const { label, color } = expectedLegend[i];
-      assert.dom(e).hasText(label, `legend renders label: ${label}`);
-      const dotColor = getComputedStyle(find(CHARTS.legendDot(i + 1))).backgroundColor;
-      assert.strictEqual(dotColor, color, `${label} - actual color: ${dotColor}, expected: ${color}`);
-    });
-
-    // assert bar chart is correct
-    findAll(CHARTS.xAxisLabel).forEach((e, i) => {
-      const timestamp = this.byMonthClients[i].timestamp;
-      const displayMonth = parseAPITimestamp(timestamp, 'M/yy');
-      assert.dom(e).hasText(`${displayMonth}`, `renders x-axis labels for bar chart: ${displayMonth}`);
+    const legendLabels = findAll(CHARTS.carbonLegendLabel('Client usage by month (stacked)'));
+    const expectedLabels = ['Entity clients', 'Non-entity clients', 'ACME clients', 'Secret sync clients'];
+    assert.strictEqual(
+      legendLabels.length,
+      expectedLabels.length,
+      'stacked chart legend has correct number of items'
+    );
+    legendLabels.forEach((el, i) => {
+      assert.dom(el).hasText(expectedLabels[i], `legend item ${i + 1} is "${expectedLabels[i]}"`);
     });
 
     const months = this.byMonthClients.length;
-    const barsPerMonth = expectedLegend.length;
+    const groupCount = expectedLabels.length;
     assert
-      .dom(CHARTS.verticalBar)
-      .exists({ count: months * barsPerMonth }, `renders ${barsPerMonth} bars per month`);
+      .dom(CHARTS.carbonBar('Client usage by month (stacked)'))
+      .exists({ count: months * groupCount }, `renders ${groupCount} bars per month`);
   });
 
   test('it renders when no monthly breakdown is available', async function (assert) {
@@ -182,7 +182,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
           `stat label: ${label} renders single month new clients: ${expectedStats[label]}`
         );
     }
-    assert.dom(CHARTS.chart('Client usage by month')).doesNotExist('bar chart does not render');
+    assert.dom(CHARTS.chart('Client usage by month (simple)')).doesNotExist('bar chart does not render');
     assert.dom(CLIENT_COUNT.statTextValue()).exists({ count: 5 }, 'renders 5 stat text containers');
   });
 
@@ -194,37 +194,42 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
 
     assert.dom(CLIENT_COUNT.card('Client usage trends')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
-    assert.dom(CLIENT_COUNT.statLegendValue('Entity clients')).exists();
-    assert.dom(CLIENT_COUNT.statLegendValue('Non-entity clients')).exists();
-    assert
-      .dom(CLIENT_COUNT.statLegendValue('Secret sync clients'))
-      .doesNotExist('does not render secret syncs');
+    assert.dom('[data-test-chart="Client usage by month (simple)"]').exists('simple chart container renders');
+    const donutLegendItems = findAll(CHARTS.carbonLegendLabel('Client count and type distribution'));
+    const expectedDonutLabels = ['Entity clients', 'Non-entity clients', 'ACME clients'];
+    assert.strictEqual(
+      donutLegendItems.length,
+      expectedDonutLabels.length,
+      'donut legend has 3 items — secret sync clients is not included'
+    );
+    donutLegendItems.forEach((el, i) => {
+      assert
+        .dom(el)
+        .hasText(expectedDonutLabels[i], `donut legend item ${i + 1} is "${expectedDonutLabels[i]}"`);
+    });
 
     // check toggle view
     await click(GENERAL.inputByAttr('toggle view'));
     assert
-      .dom(CHARTS.legend)
-      .hasText('Entity clients Non-entity clients ACME clients', 'legend does not include sync clients');
+      .dom('[data-test-chart="Client usage by month (stacked)"]')
+      .exists('stacked chart container renders');
+    assert.dom('[data-test-chart="Client usage by month (stacked)"] svg').exists('Carbon chart renders SVG');
 
-    // assert each legend item is correct
-    const expectedLegend = [
-      { label: 'Entity clients', color: 'rgb(66, 105, 208)' },
-      { label: 'Non-entity clients', color: 'rgb(239, 177, 23)' },
-      { label: 'ACME clients', color: 'rgb(255, 114, 92)' },
-    ];
-
-    findAll('.legend-item').forEach((e, i) => {
-      const { label, color } = expectedLegend[i];
-      assert.dom(e).hasText(label, `legend renders label: ${label}`);
-      const dotColor = getComputedStyle(find(CHARTS.legendDot(i + 1))).backgroundColor;
-      assert.strictEqual(dotColor, color, `${label} - actual color: ${dotColor}, expected: ${color}`);
+    const legendLabels = findAll(CHARTS.carbonLegendLabel('Client usage by month (stacked)'));
+    const expectedLabels = ['Entity clients', 'Non-entity clients', 'ACME clients'];
+    assert.strictEqual(
+      legendLabels.length,
+      expectedLabels.length,
+      'stacked legend has 3 items — secret sync clients is not included'
+    );
+    legendLabels.forEach((el, i) => {
+      assert.dom(el).hasText(expectedLabels[i], `legend item ${i + 1} is "${expectedLabels[i]}"`);
     });
 
     const months = this.byMonthClients.length;
-    const barsPerMonth = expectedLegend.length;
+    const groupCount = expectedLabels.length;
     assert
-      .dom(CHARTS.verticalBar)
-      .exists({ count: months * barsPerMonth }, `renders ${barsPerMonth} bars per month`);
+      .dom(CHARTS.carbonBar('Client usage by month (stacked)'))
+      .exists({ count: months * groupCount }, `renders ${groupCount} bars per month without secret sync`);
   });
 });

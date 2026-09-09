@@ -168,8 +168,6 @@ func TestSysInit_Put_ValidateParams_AutoUnseal(t *testing.T) {
 		Logger:      corehelpers.NewTestLogger(t).Named("transit-seal" + strconv.Itoa(0)),
 	}
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	cores := cluster.Cores
 	core := cores[0].Core

@@ -16,6 +16,7 @@ import (
 	"math"
 	"strings"
 	sync "sync/atomic"
+	"text/template"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
@@ -38,6 +39,8 @@ type ServerConfig struct {
 	Logger hclog.Logger
 	// Client        *api.Client
 	AgentConfig *config.Config
+	// PKIExternalCAServer provides access to named external CA material for templates.
+	PKIExternalCAServer PKIExternalCAProvider
 
 	ExitAfterAuth bool
 	Namespace     string
@@ -50,6 +53,12 @@ type ServerConfig struct {
 	// the same io.Writer that Vault Agent itself is using.
 	LogLevel  hclog.Level
 	LogWriter io.Writer
+}
+
+// PKIExternalCAProvider returns template-ready data for named external CA entries.
+type PKIExternalCAProvider interface {
+	TemplatePEMByName(name string) (any, error)
+	CertIssuedCh() <-chan struct{}
 }
 
 // Server manages the Consul Template Runner which renders templates
@@ -111,6 +120,15 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 		ts.logger.Info("no templates found")
 		<-ctx.Done()
 		return nil
+	}
+
+	ts.applyPKIExternalCAFuncs(templates)
+
+	// certIssuedCh fires whenever a PKI external CA issues or renews a cert,
+	// signalling that templates should be re-rendered.
+	var certIssuedCh <-chan struct{}
+	if ts.config.PKIExternalCAServer != nil {
+		certIssuedCh = ts.config.PKIExternalCAServer.CertIssuedCh()
 	}
 
 	// construct a consul template vault config based the agents vault
@@ -192,6 +210,22 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				go ts.runner.Start()
 			}
 
+		case <-certIssuedCh:
+			// A PKI external CA issued or renewed a certificate; restart the runner
+			// so templates that use pkiCertExternalCa pick up the new material.
+			if !ts.runnerStarted.Load() {
+				continue
+			}
+			ts.logger.Info("template server restarting runner: PKI external CA certificate updated")
+			ts.runner.Stop()
+			var runnerCertErr error
+			ts.runner, runnerCertErr = manager.NewRunner(runnerConfig, false)
+			if runnerCertErr != nil {
+				ts.logger.Error("template server failed to restart runner after cert issuance", "error", runnerCertErr)
+				continue
+			}
+			go ts.runner.Start()
+
 		case err := <-ts.runner.ErrCh:
 			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
@@ -265,6 +299,48 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				invalidTokenCh <- err
 			}
 		}
+	}
+}
+
+// applyPKIExternalCAFuncs injects the pkiCertExternalCa template function into
+// each template's ExtFuncMap. The CA name must always be passed explicitly as an
+// argument: {{ pkiCertExternalCa "ca-name" }}.
+func (ts *Server) applyPKIExternalCAFuncs(templates []*ctconfig.TemplateConfig) {
+	if ts.config == nil || ts.config.PKIExternalCAServer == nil {
+		return
+	}
+
+	for _, tmpl := range templates {
+		if tmpl.ExtFuncMap == nil {
+			tmpl.ExtFuncMap = make(template.FuncMap)
+		}
+		tmpl.ExtFuncMap["pkiCertExternalCa"] = pkiCertExternalCaFunc(ts.config.PKIExternalCAServer)
+	}
+}
+
+func pkiCertExternalCaFunc(server PKIExternalCAProvider) func(...string) (interface{}, error) {
+	return func(args ...string) (interface{}, error) {
+		if server == nil {
+			return nil, fmt.Errorf("pki external ca server is not configured")
+		}
+		if len(args) != 1 {
+			return nil, fmt.Errorf("pkiCertExternalCa requires exactly one argument: the pki_external_ca name")
+		}
+
+		name := strings.TrimSpace(args[0])
+		if name == "" {
+			return nil, fmt.Errorf("pkiCertExternalCa requires a non-empty pki_external_ca name")
+		}
+
+		pem, err := server.TemplatePEMByName(name)
+		if err != nil {
+			return nil, err
+		}
+		if pem == nil {
+			// Certificate not yet available; return nil so {{ with }} skips the block.
+			return nil, nil
+		}
+		return pem, nil
 	}
 }
 

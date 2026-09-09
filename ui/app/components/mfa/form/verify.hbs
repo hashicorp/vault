@@ -19,7 +19,7 @@
     <form id="mfa-form" {{on "submit" this.handleSubmit}}>
       {{#each (this.sortConstraints @constraints) as |constraint index|}}
         {{#if index}}
-          <hr class="has-background-gray-300" />
+          <Hds::Separator />
         {{/if}}
         {{! Only render the select if there is more than one constraint
         because otherwise the method is selected in Mfa::Form::ChooseMethod }}

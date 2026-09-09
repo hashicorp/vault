@@ -1,0 +1,3 @@
+```release-note:bug
+consumption-billing: Fixed deadlocks in KMIP and mount-scanning billing paths by avoiding nested lock acquisition during mount and plugin enumeration.
+```

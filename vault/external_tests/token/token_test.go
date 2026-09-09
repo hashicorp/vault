@@ -13,8 +13,8 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -102,7 +102,7 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
+	cleanup, cfg := docker.PrepareLDAPTestContainer(t, docker.DefaultLDAPVersion)
 	defer cleanup()
 
 	// Configure LDAP auth

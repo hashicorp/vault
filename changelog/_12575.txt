@@ -1,0 +1,3 @@
+```release-note:improvement
+core/seal: Enhance sys/seal-backend-status to provide more information about seal backends.
+```

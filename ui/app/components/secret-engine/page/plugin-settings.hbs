@@ -57,31 +57,38 @@
     {{/each}}
   {{else if engineDisplayData.isConfigurable}}
     {{! Prompt user to configure the secret engine }}
-    <EmptyState
-      @title="{{engineDisplayData.displayName}} not configured"
-      @message="Get started by configuring your {{engineDisplayData.displayName}} secrets engine."
-    >
-      <Hds::Link::Standalone
-        @icon="chevron-right"
-        @iconPosition="trailing"
-        @text="Configure {{engineDisplayData.displayName}}"
-        @route="vault.cluster.secrets.backend.configuration.edit"
-        @model={{@model.secretsEngine.id}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="{{engineDisplayData.displayName}} not configured" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="Get started by configuring your {{engineDisplayData.displayName}} secrets engine."
+        data-test-empty-state-message
       />
-    </EmptyState>
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="chevron-right"
+          @iconPosition="trailing"
+          @text="Configure {{engineDisplayData.displayName}}"
+          @route="vault.cluster.secrets.backend.configuration.edit"
+          @model={{@model.secretsEngine.id}}
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
   {{else}}
-    <EmptyState
-      data-test-no-config
-      @title="No configuration details available"
-      @message="{{engineDisplayData.displayName}} does not have any plugin specific configuration. All configurable parameters for this engine are under 'General Settings'."
-    >
-      <Hds::Link::Standalone
-        @icon="chevron-right"
-        @iconPosition="trailing"
-        @text="Back to general settings"
-        @route="vault.cluster.secrets.backend.configuration.general-settings"
-        @model={{@model.secretsEngine.id}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" data-test-no-config as |A|>
+      <A.Header @title="No configuration details available" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="{{engineDisplayData.displayName}} does not have any plugin specific configuration. All configurable parameters for this engine are under 'General Settings'."
+        data-test-empty-state-message
       />
-    </EmptyState>
+      <A.Footer data-test-empty-state-actions as |F|>
+        <F.LinkStandalone
+          @icon="chevron-right"
+          @iconPosition="trailing"
+          @text="Back to general settings"
+          @route="vault.cluster.secrets.backend.configuration.general-settings"
+          @model={{@model.secretsEngine.id}}
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
   {{/if}}
 {{/let}}

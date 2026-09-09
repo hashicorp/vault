@@ -78,6 +78,13 @@ export default class TtlPickerV2 extends Component<Args> {
     this.selectedUnit = unit;
   }
 
+  // reinitializes TTL when the model changes
+  // after tuning, the model data is refreshed and the TTL units need to be recalculated & re-set
+  @action
+  onModelChange() {
+    this.initializeTtl();
+  }
+
   get unitOptions() {
     return [
       { label: 'seconds', value: 's' },

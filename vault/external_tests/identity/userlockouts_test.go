@@ -38,8 +38,6 @@ func TestIdentityStore_DisableUserLockoutTest(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	// standby client
 	client := cluster.Cores[1].Client
@@ -112,7 +110,7 @@ func TestIdentityStore_DisableUserLockoutTest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.setDisableUserLockoutEnvVar != "" {
-				os.Setenv("VAULT_DISABLE_USER_LOCKOUT", tt.setDisableUserLockoutEnvVar)
+				t.Setenv("VAULT_DISABLE_USER_LOCKOUT", tt.setDisableUserLockoutEnvVar)
 			} else {
 				os.Unsetenv("VAULT_DISABLE_USER_LOCKOUT")
 			}

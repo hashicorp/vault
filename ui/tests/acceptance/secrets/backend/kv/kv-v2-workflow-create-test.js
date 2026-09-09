@@ -180,10 +180,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -436,10 +443,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -583,10 +597,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -750,10 +771,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata
@@ -976,10 +1004,17 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // max_versions validation
       await fillIn(FORM.inputByAttr('max_versions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('Maximum versions must be a number.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a non-negative number.');
       await fillIn(FORM.inputByAttr('max_versions'), '99999999999999999');
       await click(FORM.saveBtn);
       assert.dom(GENERAL.validationErrorByAttr('max_versions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('max_versions'), '1.23');
+      await click(FORM.saveBtn);
+      assert
+        .dom(GENERAL.validationErrorByAttr('max_versions'))
+        .hasText('Maximum versions must be a whole number.');
       await fillIn(FORM.inputByAttr('max_versions'), '7');
 
       // Fill in other metadata

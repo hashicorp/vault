@@ -5,6 +5,8 @@ package radius
 
 import (
 	"context"
+	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -81,6 +83,17 @@ func pathConfig(b *backend) *framework.Path {
 				Description: "RADIUS NAS Identifier field (optional)",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "NAS Identifier",
+				},
+			},
+			"case_insensitive_names": {
+				Type:    framework.TypeBool,
+				Default: false,
+				Description: "If true, Vault normalizes usernames to lowercase. This affects local user-to-policy " +
+					"lookups, how usernames are stored and managed through the users CRUD endpoints, and the " +
+					"username used for login alias and metadata. Enable this when usernames should be treated " +
+					"case-insensitively across the auth method (default: false).",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name: "Case Insensitive Names",
 				},
 			},
 		},
@@ -166,6 +179,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 		"read_timeout":               cfg.ReadTimeout,
 		"nas_port":                   cfg.NasPort,
 		"nas_identifier":             cfg.NasIdentifier,
+		"case_insensitive_names":     cfg.CaseInsensitiveNames,
 	}
 	cfg.PopulateTokenData(data)
 
@@ -260,6 +274,24 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 		cfg.NasIdentifier = d.Get("nas_identifier").(string)
 	}
 
+	checkCollisions := false
+	caseInsensitiveNames, ok := d.GetOk("case_insensitive_names")
+	if ok {
+		cfg.CaseInsensitiveNames = caseInsensitiveNames.(bool)
+		checkCollisions = cfg.CaseInsensitiveNames
+	} else if req.Operation == logical.CreateOperation {
+		cfg.CaseInsensitiveNames = d.Get("case_insensitive_names").(bool)
+		checkCollisions = cfg.CaseInsensitiveNames
+	}
+
+	var warnings []string
+	if checkCollisions {
+		warnings, err = b.caseInsensitiveCollisionWarnings(ctx, req.Storage)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	entry, err := logical.StorageEntryJSON("config", cfg)
 	if err != nil {
 		return nil, err
@@ -268,7 +300,61 @@ func (b *backend) pathConfigCreateUpdate(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
+	if len(warnings) > 0 {
+		return &logical.Response{Warnings: warnings}, nil
+	}
+
 	return nil, nil
+}
+
+func (b *backend) caseInsensitiveCollisionWarnings(ctx context.Context, s logical.Storage) ([]string, error) {
+	users, err := s.List(ctx, "user/")
+	if err != nil {
+		return nil, err
+	}
+
+	collisions := make(map[string]map[string]struct{})
+	hasMixedCaseUsernames := false
+	for _, user := range users {
+		if user != strings.ToLower(user) {
+			hasMixedCaseUsernames = true
+		}
+
+		normalized := strings.ToLower(user)
+		if collisions[normalized] == nil {
+			collisions[normalized] = make(map[string]struct{})
+		}
+		collisions[normalized][user] = struct{}{}
+	}
+
+	keys := make([]string, 0, len(collisions))
+	for k := range collisions {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	warnings := make([]string, 0)
+	if hasMixedCaseUsernames {
+		warnings = append(warnings,
+			"Detected existing usernames with uppercase characters. When case_insensitive_names is enabled, local user lookups use lowercase keys, so review or rename those usernames before enabling.")
+	}
+
+	hasCaseCollisions := false
+	for _, normalized := range keys {
+		if len(collisions[normalized]) < 2 {
+			continue
+		}
+
+		hasCaseCollisions = true
+		break
+	}
+
+	if hasCaseCollisions {
+		warnings = append(warnings,
+			fmt.Sprintf("Detected existing usernames that differ only by case. For example, %q and %q would collide after lowercase normalization. Consolidate those usernames before enabling case_insensitive_names.", "ExampleUser", "exampleuser"))
+	}
+
+	return warnings, nil
 }
 
 type ConfigEntry struct {
@@ -282,6 +368,7 @@ type ConfigEntry struct {
 	ReadTimeout              int      `json:"read_timeout" structs:"read_timeout" mapstructure:"read_timeout"`
 	NasPort                  int      `json:"nas_port" structs:"nas_port" mapstructure:"nas_port"`
 	NasIdentifier            string   `json:"nas_identifier" structs:"nas_identifier" mapstructure:"nas_identifier"`
+	CaseInsensitiveNames     bool     `json:"case_insensitive_names" structs:"case_insensitive_names" mapstructure:"case_insensitive_names"`
 }
 
 const pathConfigHelpSyn = `

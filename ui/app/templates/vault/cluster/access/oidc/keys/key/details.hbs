@@ -2,45 +2,46 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
+{{#let this.model.key this.model.capabilities as |key capabilities|}}
+  <Toolbar>
+    <ToolbarActions>
+      {{#if (and (not-eq key.name "default") capabilities.canDelete)}}
+        <ConfirmAction
+          @buttonText="Delete key"
+          data-test-oidc-key-delete
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @onConfirmAction={{this.delete}}
+          @confirmTitle="Delete key?"
+          @confirmMessage="This key will be permanently deleted. You will not be able to recover it."
+        />
+        <div class="toolbar-separator"></div>
+      {{/if}}
+      {{#if capabilities.canRotate}}
+        <ConfirmAction
+          @buttonText="Rotate key"
+          data-test-oidc-key-rotate
+          class="toolbar-button"
+          @buttonColor="secondary"
+          @onConfirmAction={{perform this.rotateKey}}
+          @confirmTitle="Rotate this key?"
+          @confirmMessage="After rotation, a new public/private key pair will be generated."
+          @modalColor="warning"
+          @isRunning={{this.rotateKey.isRunning}}
+        />
+      {{/if}}
+      {{#if capabilities.canUpdate}}
+        <ToolbarLink @route="vault.cluster.access.oidc.keys.key.edit" @model={{key.name}} data-test-oidc-key-edit>
+          Edit key
+        </ToolbarLink>
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
 
-<Toolbar>
-  <ToolbarActions>
-    {{#if (and (not-eq this.model.name "default") this.model.canDelete)}}
-      <ConfirmAction
-        @buttonText="Delete key"
-        data-test-oidc-key-delete
-        class="toolbar-button"
-        @buttonColor="secondary"
-        @onConfirmAction={{this.delete}}
-        @confirmTitle="Delete key?"
-        @confirmMessage="This key will be permanently deleted. You will not be able to recover it."
-      />
-      <div class="toolbar-separator"></div>
-    {{/if}}
-    {{#if this.model.canRotate}}
-      <ConfirmAction
-        @buttonText="Rotate key"
-        data-test-oidc-key-rotate
-        class="toolbar-button"
-        @buttonColor="secondary"
-        @onConfirmAction={{perform this.rotateKey}}
-        @confirmTitle="Rotate this key?"
-        @confirmMessage="After rotation, a new public/private key pair will be generated."
-        @modalColor="warning"
-        @isRunning={{this.rotateKey.isRunning}}
-      />
-    {{/if}}
-    {{#if this.model.canEdit}}
-      <ToolbarLink @route="vault.cluster.access.oidc.keys.key.edit" @model={{this.model.name}} data-test-oidc-key-edit>
-        Edit key
-      </ToolbarLink>
-    {{/if}}
-  </ToolbarActions>
-</Toolbar>
-
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  <InfoTableRow @label="Name" @value={{this.model.name}} @alwaysRender={{true}} />
-  <InfoTableRow @label="Algorithm" @value={{this.model.algorithm}} @alwaysRender={{true}} />
-  <InfoTableRow @label="Rotation period" @value={{format-duration this.model.rotationPeriod}} @alwaysRender={{true}} />
-  <InfoTableRow @label="Verification TTL" @value={{format-duration this.model.verificationTtl}} @alwaysRender={{true}} />
-</div>
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    <InfoTableRow @label="Name" @value={{key.name}} @alwaysRender={{true}} />
+    <InfoTableRow @label="Algorithm" @value={{key.algorithm}} @alwaysRender={{true}} />
+    <InfoTableRow @label="Rotation period" @value={{format-duration key.rotation_period}} @alwaysRender={{true}} />
+    <InfoTableRow @label="Verification TTL" @value={{format-duration key.verification_ttl}} @alwaysRender={{true}} />
+  </div>
+{{/let}}

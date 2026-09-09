@@ -40,7 +40,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/access/control-groups', 'Approval workflow route renders');
 
     await click(GENERAL.navLink('Namespaces'));
-    assert.strictEqual(currentURL(), '/vault/access/namespaces?page=1', 'Replication route renders');
+    assert.strictEqual(currentURL(), '/vault/access/namespaces', 'Namespaces route renders');
 
     await click(GENERAL.navLink('Back to main navigation'));
     await click(GENERAL.navLink('Access control'));

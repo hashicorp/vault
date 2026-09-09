@@ -15,7 +15,6 @@ import (
 const (
 	storagePathActivationFlags = "activation-flags"
 	IdentityDeduplication      = "force-identity-deduplication"
-	SCIMEnablement             = "enable-scim"
 )
 
 // FeatureActivationFlags stores activation flags in a local map and storage.
@@ -119,9 +118,6 @@ func (f *FeatureActivationFlags) ReloadFlagsFromStorage(ctx context.Context) (ma
 
 	// State Change Logic for Flags
 	//
-	// This logic determines changes to flags, but it does NOT account for flags that have been deleted.
-	// As of this writing, flag removal is not supported for activation flags.
-	//
 	// Valid State Transitions:
 	// 1. Unset (new flag) -> Active
 	// 2. Active -> Inactive
@@ -132,6 +128,9 @@ func (f *FeatureActivationFlags) ReloadFlagsFromStorage(ctx context.Context) (ma
 	//   Nodes should only react to the new flag if its state is being set to "Active".
 	// - If a flag exists in-memory, any change in its value (e.g., Active -> Inactive) is considered valid
 	//   and is marked as a state change.
+	// - If a flag has been removed from the registry its storage entry will be pruned on the next
+	//   read (via PruneUnknownFlags). Until that happens the stale key is loaded into the in-memory
+	//   cache but is otherwise ignored: no handler exists for it in onActivationFlagUpdate.
 	//
 	// The resulting `changedFlags` map will store the flags with their new values if they meet the above criteria.
 	changedFlags := map[string]bool{}
@@ -154,6 +153,45 @@ func (f *FeatureActivationFlags) ReloadFlagsFromStorage(ctx context.Context) (ma
 	f.activationFlags = storageActivationFlags
 
 	return changedFlags, nil
+}
+
+// PruneUnknownFlags removes any flags from storage whose keys are not in the
+// provided validFlags set. It is a no-op when storage is nil or there are no
+// stale keys to remove.
+func (f *FeatureActivationFlags) PruneUnknownFlags(ctx context.Context, validFlags []string) error {
+	f.activationFlagsLock.Lock()
+	defer f.activationFlagsLock.Unlock()
+
+	if f.storage == nil {
+		return nil
+	}
+
+	valid := make(map[string]struct{}, len(validFlags))
+	for _, v := range validFlags {
+		valid[v] = struct{}{}
+	}
+
+	pruned := make(map[string]bool, len(valid))
+	for k, v := range f.activationFlags {
+		if _, ok := valid[k]; ok {
+			pruned[k] = v
+		}
+	}
+
+	if len(pruned) == len(f.activationFlags) {
+		return nil
+	}
+
+	entry, err := logical.StorageEntryJSON(storagePathActivationFlags, pruned)
+	if err != nil {
+		return fmt.Errorf("failed to marshal pruned activation flags: %w", err)
+	}
+	if err := f.storage.Put(ctx, entry); err != nil {
+		return fmt.Errorf("failed to save pruned activation flags: %w", err)
+	}
+
+	f.activationFlags = pruned
+	return nil
 }
 
 // SetActivationFlagEnabled is the helper function called by the

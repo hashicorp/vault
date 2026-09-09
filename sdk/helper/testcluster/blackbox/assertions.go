@@ -74,6 +74,17 @@ func (ma *MapAssertion) HasKey(key string, expected any) *MapAssertion {
 	return ma
 }
 
+func (ma *MapAssertion) GetKey(key string) any {
+	ma.t.Helper()
+
+	val, ok := ma.data[key]
+	if !ok {
+		ma.t.Fatalf("[%s] missing expected key: %q", ma.path, key)
+	}
+
+	return val
+}
+
 func (ma *MapAssertion) HasKeyCustom(key string, f func(val any) bool) *MapAssertion {
 	ma.t.Helper()
 

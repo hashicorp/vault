@@ -2,25 +2,11 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 regions:
-- eu-north-1
-- ap-south-1
-- eu-west-3
-- eu-west-2
-- eu-west-1
-- ap-northeast-3
-- ap-northeast-2
-- ap-northeast-1
-- sa-east-1
-- ca-central-1
-- ap-southeast-1
-- ap-southeast-2
-- eu-central-1
-- us-east-1
-- us-east-2
-- us-west-1
-- us-west-2
-- global
+  # REGION replaced in CI
+  - REGION
 
+# A blocklist must exist for the tool to run so we set it to a non-existant
+# account.
 blocklist:
  - 1234567890
 
@@ -32,11 +18,20 @@ accounts:
       - olderthan
       - honeybee
       - enos
+      - wiz
+
+settings:
+  EC2Instance:
+    DisableStopProtection: true
+    DisableDeletionProtection: true
+  RDSInstance:
+    DisableDeletionProtection: true
 
 presets:
   default:
     # Ignores default VPC resources
     filters:
+      # NOTE: These values are strings not bools so they must stay quoted
       EC2VPC:
         - property: IsDefault
           value: "true"
@@ -61,30 +56,52 @@ presets:
     # TIME_LIMIT replaced in CI
     filters:
       EC2Instance:
-        - property: LaunchTime
-          type: dateOlderThan
-          value: "TIME_LIMIT"
-      EC2NetworkACL:
-      EC2RouteTable:
-      EC2SecurityGroup:
-      EC2Subnet:
-      EC2Volume:
-      EC2VPC:
-        - property: tag:cloud-nuke-first-seen
-          type: dateOlderThan
-          value: "TIME_LIMIT"
+        - type: dateOlderThanNow
+          property: LaunchTime
+          value: -TIME_LIMIT
+          invert: true
       ELBv2:
-        - property: tag:cloud-nuke-first-seen
-          type: dateOlderThan
-          value: "TIME_LIMIT"
-      ELBv2TargetGroup:
-      EC2NetworkInterface:
-      EC2InternetGateway:
-      EC2InternetGatewayAttachment:
+        - type: dateOlderThanNow
+          property: CreatedTime
+          value: -TIME_LIMIT
+          invert: true
+      IAMUser:
+        - type: dateOlderThanNow
+          property: CreateDate
+          value: -TIME_LIMIT
+          invert: true
+      IAMInstanceProfile:
+        - type: dateOlderThanNow
+          # Instance profiles don't record a create time
+          # The enos/modules/target_ec2_instances module will set this tag for us
+          property: tag:CreateTime
+          value: -TIME_LIMIT
+          invert: true
+      IAMInstanceProfileRole:
+        - type: dateOlderThanNow
+          property: role:CreateDate
+          value: -TIME_LIMIT
+          invert: true
+      IAMRole:
+        - type: dateOlderThanNow
+          property: CreateDate
+          value: -TIME_LIMIT
+          invert: true
+      IAMRolePolicyAttachment:
+        - type: dateOlderThanNow
+          property: RoleCreateDate
+          value: -TIME_LIMIT
+          invert: true
+      IAMUserAccessKey:
+        - type: dateOlderThanNow
+          property: CreateDate
+          value: -TIME_LIMIT
+          invert: true
       RDSInstance:
-        - property: InstanceCreateTime
-          type: dateOlderThan
-          value: "TIME_LIMIT"
+        - type: dateOlderThanNow
+          property: InstanceCreateTime
+          value: -TIME_LIMIT
+          invert: true
 
   honeybee:
     # Cloudsec
@@ -129,17 +146,36 @@ presets:
           value: "rds-*"
       IAMRolePolicyAttachment:
         - "rds-monitoring-role -> AmazonRDSEnhancedMonitoringRole"
+      IAMUser:
+        - type: glob
+          value: github_actions-vault_*
+      IAMUserAccessKey:
+        - property: UserName
+          type: glob
+          value: github_actions-vault_*
       IAMUserPolicy:
         - "github_actions-vault_ci -> AssumeServiceUserRole"
         - "github_actions-vault_enterprise_ci -> AssumeServiceUserRole"
+
+  wiz:
+    filters:
+      __global__:
+        - property: tag:wiz
+          value: "auto-gen-cmk"
+      EC2Snapshot:
+        - property: Description
+          type: glob
+          value: '*Wiz*'
+      KMSAlias:
+        - property: Name
+          type: glob
+          value: "alias/wizKey"
 
 resource-types:
   # Run against everything, excluding these:
   excludes:
     # Avoid cloudsec things
-    - IAMUser
     - IAMPolicy
-    - IAMUserAccessKey
     - S3Object
     - S3Bucket
     - EC2KeyPair
@@ -159,10 +195,14 @@ resource-types:
 
     # Unused services, filtering these speeds up runs and
     # removes errors about things we don't have enabled
+    - AccessAnalyzer
+    - AccessAnalyzerArchiveRule
     - ACMCertificate
     - ACMPCACertificateAuthority
     - ACMPCACertificateAuthorityState
     - AMGWorkspace
+    - AmplifyApp
+    - AMPScraper
     - AMPWorkspace
     - APIGatewayAPIKey
     - APIGatewayClientCertificate
@@ -177,6 +217,9 @@ resource-types:
     - AWS::AppRunner::Service
     - AWS::ApplicationInsights::Application
     - AWS::Backup::Framework
+    - AWS::ECR::PullThroughCacheRule
+    - AWS::ECR::RegistryPolicy
+    - AWS::ECR::ReplicationConfiguration
     - AWS::MWAA::Environment
     - AWS::NetworkFirewall::Firewall
     - AWS::NetworkFirewall::FirewallPolicy
@@ -186,18 +229,22 @@ resource-types:
     - AWS::Timestream::ScheduledQuery
     - AWS::Timestream::Table
     - AWS::Transfer::Workflow
-    - AWSBackupPlan
-    - AWSBackupRecoveryPoint
-    - AWSBackupSelection
-    - AWSBackupVault
-    - AWSBackupVaultAccessPolicy
-    - AccessAnalyzer
+    - AppConfigApplication
+    - AppConfigConfigurationProfile
+    - AppConfigDeploymentStrategy
+    - AppConfigEnvironment
+    - AppConfigHostedConfigurationVersion
+    - ApplicationAutoScalingScalableTarget
+    - AppMeshGatewayRoute
     - AppMeshMesh
     - AppMeshRoute
     - AppMeshVirtualGateway
     - AppMeshVirtualNode
     - AppMeshVirtualRouter
     - AppMeshVirtualService
+    - AppRegistryApplication
+    - AppRunnerConnection
+    - AppRunnerService
     - AppStreamDirectoryConfig
     - AppStreamFleet
     - AppStreamFleetState
@@ -206,27 +253,100 @@ resource-types:
     - AppStreamImageBuilderWaiter
     - AppStreamStack
     - AppStreamStackFleetAttachment
+    - AppSyncAPI
+    - AppSyncAPIAssociation
+    - AppSyncDomainName
     - AppSyncGraphqlAPI
-    - ApplicationAutoScalingScalableTarget
     - ArchiveRule
+    - AthenaDataCatalog
     - AthenaNamedQuery
+    - AthenaPreparedStatement
     - AthenaWorkGroup
+    - AutoScalingGroup
+    - AutoScalingLaunchConfiguration
+    - AutoScalingLifecycleHook
+    - AutoScalingPlansScalingPlan
+    - AWSBackupPlan
+    - AWSBackupRecoveryPoint
+    - AWSBackupSelection
+    - AWSBackupVault
+    - AWSBackupVaultAccessPolicy
+    - BackupReportPlan
+    - BackupVault
     - BatchComputeEnvironment
     - BatchComputeEnvironmentState
     - BatchJobQueue
     - BatchJobQueueState
+    - BedrockAgent
+    - BedrockAgentAlias
+    - BedrockAgentCoreAgentRuntime
+    - BedrockAgentCoreAPIKeyCredentialProvider
+    - BedrockAgentCoreBrowser
+    - BedrockAgentCoreCodeInterpreter
+    - BedrockAgentCoreGateway
+    - BedrockAgentCoreGatewayTarget
+    - BedrockAgentCoreMemory
+    - BedrockAgentCoreOauth2CredentialProvider
+    - BedrockAgentCoreWorkloadIdentity
+    - BedrockCustomModel
+    - BedrockDataSource
+    - BedrockEvaluationJob
+    - BedrockFlowAlias
+    - BedrockGuardrail
+    - BedrockKnowledgeBase
+    - BedrockModelCustomizationJob
+    - BedrockModelInvocationLoggingConfiguration
+    - BedrockPrompt
+    - BedrockProvisionedModelThroughput
     - BillingCostandUsageReport
     - Budget
+    - BudgetsBudget
     - Cloud9Environment
     - CloudDirectoryDirectory
     - CloudDirectorySchema
+    - CloudFormationStack
+    - CloudFormationStackSet
+    - CloudFormationType
+    - CloudFrontCachePolicy
+    - CloudFrontDistribution
+    - CloudFrontDistributionDeployment
+    - CloudFrontFunction
+    - CloudFrontKeyGroup
+    - CloudFrontOriginAccessControl
+    - CloudFrontOriginAccessIdentity
+    - CloudFrontOriginRequestPolicy
+    - CloudFrontPublicKey
+    - CloudFrontResponseHeadersPolicy
+    - CloudHSMV2Cluster
+    - CloudHSMV2ClusterHSM
+    - CloudSearchDomain
+    - CloudWatchAlarm
+    - CloudWatchAnomalyDetector
+    - CloudWatchDashboard
+    - CloudWatchEventsBuses
+    - CloudWatchInsightRule
+    - CloudWatchLogsDestination
+    - CloudWatchLogsResourcePolicy
+    - CloudWatchRUMApp
     - CodeArtifactDomain
     - CodeArtifactRepository
+    - CodeBuildBuild
+    - CodeBuildBuildBatch
     - CodeBuildProject
+    - CodeBuildReport
+    - CodeBuildReportGroup
+    - CodeBuildSourceCredential
     - CodeCommitRepository
     - CodeDeployApplication
+    - CodeDeployDeploymentConfig
+    - CodeDeployDeploymentGroup
+    - CodeGuruProfilingGroup
+    - CodeGuruReviewerRepositoryAssociation
+    - CodePipelineCustomActionType
     - CodePipelinePipeline
+    - CodePipelineWebhook
     - CodeStarConnection
+    - CodeStarNotification
     - CodeStarNotificationRule
     - CodeStarProject
     - CognitoIdentityPool
@@ -239,41 +359,136 @@ resource-types:
     - ComprehendEndpoint
     - ComprehendEntitiesDetectionJob
     - ComprehendEntityRecognizer
+    - ComprehendEventsDetectionJob
     - ComprehendKeyPhrasesDetectionJob
+    - ComprehendPiiEntitiesDetectionJob
     - ComprehendSentimentDetectionJob
+    - ComprehendTargetedSentimentDetectionJob
     - ConfigServiceConfigRule
     - ConfigServiceConfigurationRecorder
+    - ConfigServiceConformancePack
     - ConfigServiceDeliveryChannel
-    - DAXCluster
-    - DAXParameterGroup
-    - DAXSubnetGroup
-    - DataPipelinePipeline
     - DatabaseMigrationServiceCertificate
     - DatabaseMigrationServiceEndpoint
     - DatabaseMigrationServiceEventSubscription
     - DatabaseMigrationServiceReplicationInstance
     - DatabaseMigrationServiceReplicationTask
     - DatabaseMigrationServiceSubnetGroup
+    - DataPipelinePipeline
+    - DAXCluster
+    - DAXParameterGroup
+    - DAXSubnetGroup
     - DeviceFarmProject
     - DirectoryServiceDirectory
-    - EC2ClientVpnEndpointAttachment
+    - DocDBCluster
+    - DocDBElasticCluster
+    - DocDBEventSubscription
+    - DocDBInstance
+    - DocDBParameterGroup
+    - DocDBSnapshot
+    - DocDBSubnetGroup
+    - DSQLCluster
+    - DynamoDBBackup
+    - DynamoDBTable
+    - DynamoDBTableItem
+    - EC2Address
     - EC2ClientVpnEndpoint
+    - EC2ClientVpnEndpointAttachment
+    - EC2CustomerGateway
     - EC2DefaultSecurityGroupRule
+    - EC2DHCPOption
+    - EC2Host
+    - EC2Image
+    - EC2InstanceConnectEndpoint
+    - EC2PlacementGroup
+    - EC2Snapshot
+    - EC2TGW
+    - EC2TGWAttachment
+    - EC2TGWConnectPeer
+    - EC2VerifiedAccessEndpoint
+    - EC2VerifiedAccessGroup
+    - EC2VerifiedAccessInstance
+    - EC2VerifiedAccessTrustProvider
+    - EC2VPCEndpoint
+    - EC2VPCEndpointConnection
+    - EC2VPCEndpointServiceConfiguration
+    - EC2VPCPeeringConnection
+    - EC2VPNConnection
+    - ECRPublicRepository
+    - ECRRepository
+    - ECSCapacityProvider
+    - ECSCluster
+    - ECSClusterInstance
+    - ECSService
+    - ECSTask
+    - ECSTaskDefinition
+    - EFSFileSystem
+    - EFSMountTarget
+    - EKSCluster
+    - EKSFargateProfile
+    - EKSNodegroup
+    - ElasticacheCacheCluster
+    - ElasticacheCacheParameterGroup
+    - ElasticacheReplicationGroup
+    - ElasticacheSubnetGroup
+    - ElasticacheUser
+    - ElasticacheUserGroup
+    - ElasticBeanstalkApplication
+    - ElasticBeanstalkEnvironment
+    - ElasticTranscoderPipeline
+    - ElasticTranscoderPreset
+    - EMRCluster
+    - EMRSecurityConfiguration
+    - ESDomain
+    - FirehoseDeliveryStream
     - FMSNotificationChannel
     - FMSPolicy
     - FSxBackup
     - FSxFileSystem
-    - FirehoseDeliveryStream
+    - GameLiftBuild
+    - GameLiftFleet
+    - GameLiftMatchmakingConfiguration
+    - GameLiftMatchmakingRuleSet
+    - GameLiftQueue
     - GlobalAccelerator
     - GlobalAcceleratorEndpointGroup
     - GlobalAcceleratorListener
+    - GlueBlueprint
     - GlueClassifier
     - GlueConnection
     - GlueCrawler
     - GlueDatabase
+    - GlueDataBrewDatasets
+    - GlueDataBrewJobs
+    - GlueDataBrewProjects
+    - GlueDataBrewRecipe
+    - GlueDataBrewRulesets
+    - GlueDataBrewSchedules
     - GlueDevEndpoint
     - GlueJob
+    - GlueMLTransform
+    - GlueSecurityConfiguration
+    - GlueSession
     - GlueTrigger
+    - GlueWorkflow
+    - IAMAccountSettingPasswordPolicy
+    - IAMGroup
+    - IAMGroupPolicy
+    - IAMGroupPolicyAttachment
+    - IAMOpenIDConnectProvider
+    - IAMRolesAnywhereCRL
+    - IAMRolesAnywhereProfile
+    - IAMRolesAnywhereTrustAnchor
+    - IAMSAMLProvider
+    - IAMServerCertificate
+    - IAMServiceSpecificCredential
+    - IAMSigningCertificate
+    - ImageBuilderComponent
+    - ImageBuilderDistributionConfiguration
+    - ImageBuilderImage
+    - ImageBuilderInfrastructureConfiguration
+    - ImageBuilderPipeline
+    - ImageBuilderRecipe
     - Inspector2
     - InspectorAssessmentRun
     - InspectorAssessmentTarget
@@ -285,16 +500,34 @@ resource-types:
     - IoTOTAUpdate
     - IoTPolicy
     - IoTRoleAlias
+    - IoTSiteWiseAccessPolicy
+    - IoTSiteWiseAsset
+    - IoTSiteWiseAssetModel
+    - IoTSiteWiseDashboard
+    - IoTSiteWiseGateway
+    - IoTSiteWisePortal
+    - IoTSiteWiseProject
     - IoTStream
     - IoTThing
     - IoTThingGroup
     - IoTThingType
     - IoTThingTypeState
     - IoTTopicRule
+    - IoTTwinMakerComponentType
+    - IoTTwinMakerEntity
+    - IoTTwinMakerScene
+    - IoTTwinMakerSyncJob
+    - IoTTwinMakerWorkspace
     - KendraIndex
     - KinesisAnalyticsApplication
     - KinesisStream
     - KinesisVideoProject
+    - LakeFormationLocation
+    - LakeFormationPermission
+    - LakeFormationTag
+    - LambdaEventSourceMapping
+    - LambdaFunction
+    - LambdaLayer
     - LexBot
     - LexIntent
     - LexModelBuildingServiceBotAlias
@@ -306,14 +539,12 @@ resource-types:
     - LightsailKeyPair
     - LightsailLoadBalancer
     - LightsailStaticIP
-    - MQBroker
-    - MSKCluster
-    - MSKConfiguration
     - MachineLearningBranchPrediction
     - MachineLearningDataSource
     - MachineLearningEvaluation
     - MachineLearningMLModel
     - Macie
+    - ManagedBlockchainMember
     - MediaConvertJobTemplate
     - MediaConvertPreset
     - MediaConvertQueue
@@ -325,10 +556,34 @@ resource-types:
     - MediaStoreContainer
     - MediaStoreDataItems
     - MediaTailorConfiguration
+    - MemoryDBACL
+    - MemoryDBCluster
+    - MemoryDBParameterGroup
+    - MemoryDBSubnetGroup
+    - MemoryDBUser
+    - MGNApplication
+    - MGNJob
+    - MGNLaunchConfigurationTemplate
+    - MGNReplicationConfigurationTemplate
+    - MGNSourceServer
+    - MGNWave
     - MobileProject
+    - MQBroker
+    - MSKCluster
+    - MSKConfiguration
     - NeptuneCluster
+    - NeptuneGraph
     - NeptuneInstance
+    - NeptuneSnapshot
     - NetpuneSnapshot
+    - NetworkFirewall
+    - NetworkFirewallLoggingConfiguration
+    - NetworkFirewallPolicy
+    - NetworkFirewallRuleGroup
+    - NetworkManagerConnectPeer
+    - NetworkManagerCoreNetwork
+    - NetworkManagerGlobalNetwork
+    - NetworkManagerNetworkAttachment
     - OpsWorksApp
     - OpsWorksCMBackup
     - OpsWorksCMServer
@@ -336,22 +591,64 @@ resource-types:
     - OpsWorksInstance
     - OpsWorksLayer
     - OpsWorksUserProfile
+    - OSCollection
+    - OSDomain
+    - OSPackage
+    - OSPipeline
+    - OSVPCEndpoint
+    - PinpointApp
+    - PinpointPhoneNumber
+    - PipesPipe
+    - PollyLexicon
     - QLDBLedger
+    - QuickSightSubscription
+    - QuickSightUser
+    - RAMResourceShare
+    - RedshiftCluster
+    - RedshiftParameterGroup
+    - RedshiftScheduledAction
+    - RedshiftServerlessNamespace
+    - RedshiftServerlessSnapshot
+    - RedshiftServerlessWorkgroup
+    - RedshiftSnapshot
+    - RedshiftSnapshotSchedule
+    - RedshiftSubnetGroup
+    - RekognitionCollection
+    - RekognitionDataset
+    - RekognitionProject
+    - ResourceExplorer2Index
+    - ResourceExplorer2View
+    - ResourceGroupGroup
+    - RoboMakerDeploymentJob
+    - RoboMakerFleet
+    - RoboMakerRobot
     - RoboMakerRobotApplication
     - RoboMakerSimulationApplication
     - RoboMakerSimulationJob
-    - SESConfigurationSet
-    - SESIdentity
-    - SESReceiptFilter
-    - SESReceiptRuleSet
-    - SESTemplate
-    - SSMActivation
-    - SSMAssociation
-    - SSMDocument
-    - SSMMaintenanceWindow
-    - SSMParameter
-    - SSMPatchBaseline
-    - SSMResourceDataSync
+    - Route53HealthCheck
+    - Route53HostedZone
+    - Route53Profile
+    - Route53ProfileAssociation
+    - Route53ResolverEndpoint
+    - Route53ResolverFirewallDomainList
+    - Route53ResolverFirewallRuleGroup
+    - Route53ResolverQueryLogConfig
+    - Route53ResolverRule
+    - Route53ResourceRecordSet
+    - Route53TrafficPolicy
+    - RDSDBCluster
+    - RDSDBClusterParameterGroup
+    - RDSDBParameterGroup
+    - RDSDBSubnetGroup
+    - RDSEventSubscription
+    - RDSInstance
+    - RDSOptionGroup
+    - RDSProxy
+    - S3AccessGrantsGrant
+    - S3AccessGrantsInstance
+    - S3AccessGrantsLocation
+    - S3AccessPoint
+    - S3MultipartUpload
     - SageMakerApp
     - SageMakerDomain
     - SageMakerEndpoint
@@ -360,7 +657,11 @@ resource-types:
     - SageMakerNotebookInstance
     - SageMakerNotebookInstanceLifecycleConfig
     - SageMakerNotebookInstanceState
+    - SageMakerSpace
     - SageMakerUserProfiles
+    - SchedulerSchedule
+    - SecretsManagerSecret
+    - SecurityHub
     - ServiceCatalogConstraintPortfolioAttachment
     - ServiceCatalogPortfolio
     - ServiceCatalogPortfolioProductAttachment
@@ -373,13 +674,46 @@ resource-types:
     - ServiceDiscoveryInstance
     - ServiceDiscoveryNamespace
     - ServiceDiscoveryService
+    - SESConfigurationSet
+    - SESIdentity
+    - SESReceiptFilter
+    - SESReceiptRuleSet
+    - SESTemplate
+    - SFNStateMachine
+    - ShieldProtection
+    - ShieldProtectionGroup
+    - SignerSigningJob
     - SimpleDBDomain
+    - SNSEndpoint
+    - SNSPlatformApplication
+    - SNSSubscription
+    - SNSTopic
+    - SQSQueue
+    - SSMActivation
+    - SSMAssociation
+    - SSMDocument
+    - SSMMaintenanceWindow
+    - SSMParameter
+    - SSMPatchBaseline
+    - SSMQuickSetupConfigurationManager
+    - SSMResourceDataSync
     - StorageGatewayFileShare
     - StorageGatewayGateway
     - StorageGatewayTape
     - StorageGatewayVolume
+    - TextractAdapter
+    - TextractAdapterVersion
+    - TranscribeCallAnalyticsCategory
+    - TranscribeCallAnalyticsJob
+    - TranscribeLanguageModel
+    - TranscribeMedicalTranscriptionJob
+    - TranscribeMedicalVocabulary
+    - TranscribeTranscriptionJob
+    - TranscribeVocabulary
+    - TranscribeVocabularyFilter
     - TransferServer
     - TransferServerUser
+    - TransferWebApp
     - WAFRegionalByteMatchSet
     - WAFRegionalByteMatchSetIP
     - WAFRegionalIPSet
@@ -396,14 +730,14 @@ resource-types:
     - WAFRegionalWebACL
     - WAFRegionalWebACLRuleAttachment
     - WAFRule
-    - WAFWebACL
-    - WAFWebACLRuleAttachment
+    - WAFv2APIKey
     - WAFv2IPSet
     - WAFv2RegexPatternSet
     - WAFv2RuleGroup
     - WAFv2WebACL
+    - WAFWebACL
+    - WAFWebACLRuleAttachment
     - WorkLinkFleet
     - WorkSpacesWorkspace
     - XRayGroup
     - XRaySamplingRule
-

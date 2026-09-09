@@ -1,10 +1,9 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -40,7 +39,7 @@ func newCopyGithubPullRequestCmd() *cobra.Command {
 func runCopyGithubPullRequestCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := copyGithubPullRequestReq.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
+	res, err := copyGithubPullRequestReq.Run(cmd.Context(), githubCmdState.GithubV3, rootCfg.git)
 
 	switch rootCfg.format {
 	case "json":

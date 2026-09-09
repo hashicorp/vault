@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { service } from '@ember/service';
@@ -13,7 +12,8 @@ import { service } from '@ember/service';
  */
 export default Route.extend(UnloadModelRoute, {
   router: service(),
-  store: service(),
+  api: service(),
+  capabilities: service(),
 
   beforeModel() {
     const params = this.paramsFor(this.routeName);
@@ -23,19 +23,43 @@ export default Route.extend(UnloadModelRoute, {
     }
   },
 
-  model(params) {
+  async model(params) {
     const type = this.policyType();
-    return hash({
-      policy: this.store.findRecord(`policy/${type}`, params.policy_name),
-    });
+
+    let res;
+    if (type === 'acl') {
+      res = await this.api.sys.policiesReadAclPolicy(params.policy_name);
+    } else if (type === 'egp') {
+      res = (await this.api.sys.systemReadPoliciesEgpName(params.policy_name)).data;
+    } else {
+      res = (await this.api.sys.systemReadPoliciesRgpName(params.policy_name)).data;
+    }
+
+    const policy = { name: params.policy_name, ...res };
+
+    return {
+      ...policy,
+      policyType: type,
+      format: this.format(res.policy),
+      capabilities: await this.capabilities.for('policy', {
+        policyType: this.policyType(),
+        id: params.policy_name,
+      }),
+    };
   },
 
-  setupController(controller, model) {
-    controller.setProperties({
-      model: model.policy,
-      capabilities: model.capabilities,
-      policyType: this.policyType(),
-    });
+  format(policy) {
+    let isJSON;
+    try {
+      const parsed = JSON.parse(policy);
+      if (parsed) {
+        isJSON = true;
+      }
+    } catch (e) {
+      // can't parse JSON
+      isJSON = false;
+    }
+    return isJSON ? 'json' : 'hcl';
   },
 
   policyType() {

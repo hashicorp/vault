@@ -9,6 +9,10 @@ terraform {
       source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.14.0"
+    }
   }
 }
 
@@ -21,6 +25,10 @@ data "aws_ami" "ami" {
     name   = "image-id"
     values = [var.ami_id]
   }
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ec2_instance_type_offerings" "instance" {
@@ -30,6 +38,10 @@ data "aws_ec2_instance_type_offerings" "instance" {
   }
 
   location_type = "availability-zone"
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_availability_zones" "available" {
@@ -38,6 +50,10 @@ data "aws_availability_zones" "available" {
   filter {
     name   = "zone-name"
     values = data.aws_ec2_instance_type_offerings.instance.locations
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
@@ -50,6 +66,10 @@ data "aws_subnets" "vpc" {
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
@@ -120,6 +140,9 @@ resource "random_string" "unique_id" {
   special = false
 }
 
+resource "time_static" "create_time" {
+}
+
 resource "aws_iam_role" "target_instance_role" {
   name               = "${local.name_prefix}-instance-role"
   assume_role_policy = data.aws_iam_policy_document.target_instance_role.json
@@ -128,6 +151,9 @@ resource "aws_iam_role" "target_instance_role" {
 resource "aws_iam_instance_profile" "target" {
   name = "${local.name_prefix}-instance-profile"
   role = aws_iam_role.target_instance_role.name
+  tags = {
+    CreateTime = time_static.create_time.rfc3339
+  }
 }
 
 resource "aws_iam_role_policy" "target" {
@@ -216,6 +242,12 @@ resource "aws_instance" "targets" {
       "${var.cluster_tag_key}" = local.cluster_name
     },
   )
+
+  timeouts {
+    create = "10m"
+    update = "10m"
+    delete = "10m"
+  }
 }
 
 module "disable_selinux" {

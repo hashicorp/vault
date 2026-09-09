@@ -22,6 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	uuid "github.com/hashicorp/go-uuid"
@@ -32,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/billing"
@@ -55,8 +57,10 @@ func createBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 	return b, config.StorageView
 }
@@ -79,8 +83,10 @@ func createBackendWithSysView(t testing.TB) (*backend, logical.Storage) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 
 	return b, storage
@@ -103,8 +109,10 @@ func createBackendWithSysViewWithStorage(t testing.TB, s logical.Storage) *backe
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 
 	return b
@@ -128,11 +136,34 @@ func createBackendWithForceNoCacheWithSysViewWithStorage(t testing.TB, s logical
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.billingDataCounts = billing.DataProtectionCallCounts{
-		Transit: &atomic.Uint64{},
+	b.secretEngineCounts = billing.SecretEngineCounts{
+		Transit: billing.DataProtectionEngineCounts{
+			MonthlyCount: &atomic.Uint64{},
+		},
 	}
 
 	return b
+}
+
+func createBackendWithObservationRecorder(t testing.TB) (*backend, logical.Storage, *observations.TestObservationRecorder) {
+	config := logical.TestBackendConfig()
+	obsRecorder := observations.NewTestObservationRecorder()
+	config.StorageView = &logical.InmemStorage{}
+	config.ObservationRecorder = obsRecorder
+
+	b, _ := Backend(context.Background(), config)
+	require.NotNil(t, b)
+	err := b.Backend.Setup(context.Background(), config)
+	require.NoError(t, err)
+	return b, config.StorageView, obsRecorder
+}
+
+func factoryWithObservationRecorder(t testing.TB) (logical.Factory, *observations.TestObservationRecorder) {
+	obsRecorder := observations.NewTestObservationRecorder()
+	return func(ctx context.Context, bc *logical.BackendConfig) (logical.Backend, error) {
+		bc.ObservationRecorder = obsRecorder
+		return Factory(ctx, bc)
+	}, obsRecorder
 }
 
 func TestTransit_RSA(t *testing.T) {
@@ -361,56 +392,59 @@ func testTransit_RSA(t *testing.T, keyType string) {
 }
 
 func TestBackend_basic(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, obsRecorder),
 			testAccStepEncrypt(t, "test", testPlaintext, decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEncrypt(t, "test", "", decryptData),
 			testAccStepDecrypt(t, "test", "", decryptData),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepEnableDeletion(t, "test"),
 			testAccStepDisableDeletion(t, "test"),
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 		},
 	})
 }
 
 func TestBackend_upsert(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	decryptData := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 			testAccStepListPolicy(t, "test", true),
 			testAccStepEncryptUpsert(t, "test", testPlaintext, decryptData),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, obsRecorder),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 		},
 	})
 }
 
 func TestBackend_datakey(t *testing.T) {
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	dataKeyInfo := make(map[string]interface{})
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, false),
+			testAccStepReadPolicy(t, "test", false, false, nil),
 			testAccStepWriteDatakey(t, "test", false, 256, dataKeyInfo),
 			testAccStepDecryptDatakey(t, "test", dataKeyInfo),
 			testAccStepWriteDatakey(t, "test", true, 128, dataKeyInfo),
@@ -419,20 +453,20 @@ func TestBackend_datakey(t *testing.T) {
 }
 
 func TestBackend_rotation(t *testing.T) {
-	defer os.Setenv("TRANSIT_ACC_KEY_TYPE", "")
 	testBackendRotation(t)
-	os.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
+	t.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
 	testBackendRotation(t)
 }
 
 func testBackendRotation(t *testing.T) {
 	decryptData := make(map[string]interface{})
 	encryptHistory := make(map[int]map[string]interface{})
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", false),
+			testAccStepWritePolicy(t, "test", false, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 0, encryptHistory),
 			testAccStepEncryptVX(t, "test", testPlaintext, decryptData, 1, encryptHistory),
@@ -460,7 +494,7 @@ func testBackendRotation(t *testing.T) {
 			testAccStepDeleteNotDisabledPolicy(t, "test"),
 			testAccStepAdjustPolicyMinDecryption(t, "test", 3),
 			testAccStepAdjustPolicyMinEncryption(t, "test", 4),
-			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 3, 4, obsRecorder),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecryptExpectFailure(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -472,7 +506,7 @@ func testBackendRotation(t *testing.T) {
 			testAccStepLoadVX(t, "test", decryptData, 4, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepAdjustPolicyMinDecryption(t, "test", 1),
-			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4),
+			testAccStepReadPolicyWithVersions(t, "test", false, false, 1, 4, obsRecorder),
 			testAccStepLoadVX(t, "test", decryptData, 0, encryptHistory),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepLoadVX(t, "test", decryptData, 1, encryptHistory),
@@ -482,8 +516,8 @@ func testBackendRotation(t *testing.T) {
 			testAccStepRewrap(t, "test", decryptData, 4),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, false),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, false, obsRecorder),
 			testAccStepListPolicy(t, "test", true),
 		},
 	})
@@ -491,28 +525,42 @@ func testBackendRotation(t *testing.T) {
 
 func TestBackend_basic_derived(t *testing.T) {
 	decryptData := make(map[string]interface{})
+	factory, obsRecorder := factoryWithObservationRecorder(t)
 	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: Factory,
+		LogicalFactory: factory,
 		Steps: []logicaltest.TestStep{
 			testAccStepListPolicy(t, "test", true),
-			testAccStepWritePolicy(t, "test", true),
+			testAccStepWritePolicy(t, "test", true, obsRecorder),
 			testAccStepListPolicy(t, "test", false),
-			testAccStepReadPolicy(t, "test", false, true),
+			testAccStepReadPolicy(t, "test", false, true, obsRecorder),
 			testAccStepEncryptContext(t, "test", testPlaintext, "my-cool-context", decryptData),
 			testAccStepDecrypt(t, "test", testPlaintext, decryptData),
 			testAccStepEnableDeletion(t, "test"),
-			testAccStepDeletePolicy(t, "test"),
-			testAccStepReadPolicy(t, "test", true, true),
+			testAccStepDeletePolicy(t, "test", obsRecorder),
+			testAccStepReadPolicy(t, "test", true, true, obsRecorder),
 		},
 	})
 }
 
-func testAccStepWritePolicy(t *testing.T, name string, derived bool) logicaltest.TestStep {
+func testAccStepWritePolicy(t *testing.T, name string, derived bool, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	ts := logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "keys/" + name,
 		Data: map[string]interface{}{
 			"derived": derived,
+		},
+		Check: func(resp *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyWrite)
+			if obs == nil {
+				return fmt.Errorf("no observation")
+			}
+			if name != obs.Data["key_name"] {
+				return fmt.Errorf("expected name %s, got %s", name, obs.Data["key_name"])
+			}
+			return nil
 		},
 	}
 	if os.Getenv("TRANSIT_ACC_KEY_TYPE") == "CHACHA" {
@@ -597,10 +645,24 @@ func testAccStepEnableDeletion(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
-func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
+func testAccStepDeletePolicy(t *testing.T, name string, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.DeleteOperation,
 		Path:      "keys/" + name,
+		Check: func(_ *logical.Response) error {
+			if obsRecorder == nil {
+				return nil
+			}
+
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyDelete)
+			if obs == nil {
+				return fmt.Errorf("expected observation of type %s but got none", ObservationTypeTransitKeyDelete)
+			}
+			if obs.Data["key_name"] != name {
+				return fmt.Errorf("expected name %s, got %s", name, obs.Data["key_name"])
+			}
+			return nil
+		},
 	}
 }
 
@@ -621,11 +683,11 @@ func testAccStepDeleteNotDisabledPolicy(t *testing.T, name string) logicaltest.T
 	}
 }
 
-func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool) logicaltest.TestStep {
-	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0)
+func testAccStepReadPolicy(t *testing.T, name string, expectNone, derived bool, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
+	return testAccStepReadPolicyWithVersions(t, name, expectNone, derived, 1, 0, obsRecorder)
 }
 
-func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int) logicaltest.TestStep {
+func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, derived bool, minDecryptionVersion int, minEncryptionVersion int, obsRecorder *observations.TestObservationRecorder) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "keys/" + name,
@@ -686,6 +748,25 @@ func testAccStepReadPolicyWithVersions(t *testing.T, name string, expectNone, de
 			if derived && d.KDF != "hkdf_sha256" {
 				return fmt.Errorf("bad: %#v", d)
 			}
+
+			if obsRecorder == nil {
+				return nil
+			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyRead)
+			if obs == nil {
+				return fmt.Errorf("expected key read observation but found none")
+			}
+			if obs.Data == nil {
+				return fmt.Errorf("observation data should not be nil")
+			}
+			keyName, ok := obs.Data["key_name"]
+			if !ok {
+				return fmt.Errorf("observation data missing key_name field")
+			}
+			if keyName != name {
+				return fmt.Errorf("observation key_name mismatch: expected %s, got %v", name, keyName)
+			}
+
 			return nil
 		},
 	}
@@ -1668,6 +1749,10 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				err = b.Initialize(context.Background(), &logical.InitializationRequest{Storage: storage})
+				if err != nil {
+					t.Fatal(err)
+				}
 
 				// Write a key with the default auto rotate value (0/disabled)
 				req := &logical.Request{
@@ -1745,6 +1830,7 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				p.Unlock()
 
 				// Run the rotation check and validate the state of key rotations
 				b.checkAutoRotateAfter = time.Now()
@@ -1784,6 +1870,184 @@ func TestTransit_AutoRotateKeys(t *testing.T) {
 			},
 		)
 	}
+}
+
+// TestTransit_AutoRotateKeysNotAffectedByManualRotation sets up a backend, then tests: that a (1h auto-rotate) key
+// which was manually rotated is not auto-rotated 1hour after initial creation, rather 1hour after it's manual rotation.
+// Because auto-rotation sets up a priority queue to do this, the ordering of that queue needs to be tested: this tests
+// that by setting up two auto-rotating keys.
+func TestTransit_AutoRotateKeysNotAffectedByManualRotation(t *testing.T) {
+	sysView := logical.TestSystemView()
+	storage := &logical.InmemStorage{}
+
+	conf := &logical.BackendConfig{
+		StorageView: storage,
+		System:      sysView,
+	}
+
+	synctest.Test(t, func(t *testing.T) {
+		b, _ := Backend(context.Background(), conf)
+		if b == nil {
+			t.Fatal("failed to create backend")
+		}
+
+		err := b.Backend.Setup(context.Background(), conf)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		err = b.Backend.Initialize(context.Background(), &logical.InitializationRequest{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Write a key with 1h rotate value
+		req := &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test1",
+			Data: map[string]interface{}{
+				"auto_rotate_period": 1 * time.Hour,
+			},
+		}
+		resp, err := b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		// Write a second key with an auto rotate value
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test2",
+			Data: map[string]interface{}{
+				"auto_rotate_period": 1 * time.Hour,
+			},
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 10)
+
+		// Manually Rotate the First Key
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test1/rotate",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 10)
+
+		// Manually Rotate the Second Key
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test2/rotate",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.NotNil(t, resp, "expected populated request")
+
+		time.Sleep(time.Minute * 41)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that no auto-rotation happened when keys were only 50, 40 minutes old
+		// If this is the case version should be "2" - the keys were rotated once manually
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      "keys/test1",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+
+		// This is when the auto-rotation of key test1 should happen
+		time.Sleep(time.Minute * 11)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that the first key auto-rotated when it reached an hour old (but the second didn't at 50 minutes)
+		req = &logical.Request{
+			Storage:   storage,
+			Operation: logical.ReadOperation,
+			Path:      "keys/test1",
+		}
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 3 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 3)
+		}
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 2 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 2)
+		}
+
+		time.Sleep(time.Minute * 10)
+		err = b.periodicFunc(context.Background(), &logical.Request{Storage: storage})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that the second key auto-rotated when it reached an hour old
+		req.Path = "keys/test2"
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("expected non-nil response")
+		}
+		if resp.Data["latest_version"] != 3 {
+			t.Fatalf("incorrect latest_version found, got: %d, want: %d", resp.Data["latest_version"], 3)
+		}
+	})
 }
 
 func TestTransit_AEAD(t *testing.T) {
@@ -1951,8 +2215,6 @@ func TestTransitPKICSR(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	cores := cluster.Cores
 
@@ -2166,12 +2428,11 @@ func TestTransit_VerifyWithImportedPublicKey(t *testing.T) {
 	}
 
 	// Retrieve public wrapping key
-	wrappingKey, err := b.getWrappingKey(context.Background(), s)
-	if err != nil || wrappingKey == nil {
+	privWrappingKey, err := b.getWrappingKey(context.Background(), s)
+	if err != nil || privWrappingKey == nil {
 		t.Fatalf("failed to retrieve public wrapping key: %s", err)
 	}
 
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	pubWrappingKey := &privWrappingKey.PublicKey
 
 	// generate ciphertext

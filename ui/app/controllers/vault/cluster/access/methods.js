@@ -4,97 +4,10 @@
  */
 
 import Controller from '@ember/controller';
-import { dropTask } from 'ember-concurrency';
-import { service } from '@ember/service';
-import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
-import sortObjects from 'vault/utils/sort-objects';
 
 export default class VaultClusterAccessMethodsController extends Controller {
-  @service flashMessages;
-  @service api;
-  @service router;
-
-  @tracked authMethodOptions = [];
-  @tracked selectedAuthType = null;
-  @tracked selectedAuthName = null;
-  @tracked methodToDisable = null;
-
-  queryParams = ['page, pageFilter'];
+  queryParams = ['page', 'pageFilter'];
 
   page = 1;
   pageFilter = null;
-  filter = null;
-
-  // list returned by getter is sorted in template
-  get authMethodList() {
-    const { methods } = this.model;
-    // return an options list to filter by engine type, ex: 'kv'
-    if (this.selectedAuthType) {
-      // check first if the user has also filtered by name.
-      // names are individualized across type so you can't have the same name for an aws auth method and userpass.
-      // this means it's fine to filter by first type and then name or just name.
-      if (this.selectedAuthName) {
-        return methods.filter((method) => this.selectedAuthName === method.id);
-      }
-      // otherwise filter by auth type
-      return methods.filter((method) => this.selectedAuthType === method.type);
-    }
-    // return an options list to filter by auth name, ex: 'my-userpass'
-    if (this.selectedAuthName) {
-      return methods.filter((method) => this.selectedAuthName === method.id);
-    }
-    // no filters, return full list
-    return methods;
-  }
-
-  get authMethodArrayByType() {
-    const arrayOfAllAuthTypes = this.authMethodList.map((modelObject) => modelObject.type);
-    // filter out repeated auth types (e.g. [userpass, userpass] => [userpass])
-    const arrayOfUniqueAuthTypes = [...new Set(arrayOfAllAuthTypes)];
-
-    return arrayOfUniqueAuthTypes.map((authType) => ({
-      name: authType,
-      id: authType,
-    }));
-  }
-
-  get authMethodArrayByName() {
-    return this.authMethodList.map((modelObject) => ({
-      name: modelObject.id,
-      id: modelObject.id,
-    }));
-  }
-
-  @action
-  filterAuthType([type]) {
-    this.selectedAuthType = type;
-  }
-
-  @action
-  filterAuthName([name]) {
-    this.selectedAuthName = name;
-  }
-
-  @dropTask
-  *disableMethod(method) {
-    const { type, path } = method;
-    try {
-      yield this.api.sys.authDisableMethod(path);
-      this.flashMessages.success(`The ${type} Auth Method at ${path} has been disabled.`);
-      this.router.transitionTo('vault.cluster.access.methods');
-    } catch (err) {
-      const { message } = yield this.api.parseError(err);
-      this.flashMessages.danger(`There was an error disabling Auth Method at ${path}: ${message}.`);
-    } finally {
-      this.methodToDisable = null;
-    }
-  }
-
-  // template helper
-  sortMethods = (methods) => {
-    // make sure there are methods to sort otherwise slice with throw an error
-    if (!Array.isArray(methods) || methods.length === 0) return [];
-    return sortObjects(methods.slice(), 'path');
-  };
 }

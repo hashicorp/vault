@@ -1,0 +1,3 @@
+```release-note:bug
+agent/pkiexternalca: Fix token distribution to PKI system and HTTP-01 challenge server shutdown preventing certificate acquisition and retries
+```

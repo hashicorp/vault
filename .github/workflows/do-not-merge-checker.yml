@@ -15,7 +15,7 @@ jobs:
   do-not-merge-check:
     # If there is a `do-not-merge` label we ignore this check
     if: ${{ contains(github.event.pull_request.labels.*.name, 'do-not-merge') }}
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     steps:
       - name: Fail if do-not-merge label is applied
         run: |

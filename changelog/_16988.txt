@@ -1,0 +1,3 @@
+```release-note:bug
+aws/auth: Redact EC2 instance metadata values from AWS auth error messages.
+```

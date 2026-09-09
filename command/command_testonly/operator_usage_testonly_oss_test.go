@@ -43,10 +43,6 @@ func TestOperatorUsageCommandRun(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
-
 	client := cluster.Cores[0].Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{"enabled": "enable"})
 	require.NoError(t, err)

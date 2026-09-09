@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 )
 
 var _ eventlogger.Node = (*SocketSink)(nil)
@@ -24,7 +25,8 @@ type SocketSink struct {
 	address        string
 	socketType     string
 	maxDuration    time.Duration
-	socketLock     sync.RWMutex
+	writePermit    *permitpool.Pool
+	permitInitOnce sync.Once
 	connection     net.Conn
 	logger         hclog.Logger
 }
@@ -52,12 +54,26 @@ func NewSocketSink(address string, format string, opt ...Option) (*SocketSink, e
 		address:        address,
 		socketType:     opts.withSocketType,
 		maxDuration:    opts.withMaxDuration,
-		socketLock:     sync.RWMutex{},
 		connection:     nil,
 		logger:         opts.withLogger,
 	}
 
 	return sink, nil
+}
+
+func (s *SocketSink) initPermitPool() {
+	s.permitInitOnce.Do(func() {
+		s.writePermit = permitpool.New(1)
+	})
+}
+
+func (s *SocketSink) acquirePermit(ctx context.Context) error {
+	s.initPermitPool()
+	return s.writePermit.Acquire(ctx)
+}
+
+func (s *SocketSink) releasePermit() {
+	s.writePermit.Release()
 }
 
 // Process handles writing the event to the socket.
@@ -86,10 +102,11 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (_ *even
 		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	// Wait for the lock, but ensure we check for a cancelled context as soon as
-	// we have it, as there's no point in continuing if we're cancelled.
-	s.socketLock.Lock()
-	defer s.socketLock.Unlock()
+	if err := s.acquirePermit(ctx); err != nil {
+		return nil, err
+	}
+	defer s.releasePermit()
+
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -123,10 +140,12 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (_ *even
 
 // Reopen handles reopening the connection for the socket sink.
 func (s *SocketSink) Reopen() error {
-	s.socketLock.Lock()
-	defer s.socketLock.Unlock()
+	if err := s.acquirePermit(context.Background()); err != nil {
+		return err
+	}
+	defer s.releasePermit()
 
-	err := s.reconnect(nil)
+	err := s.reconnect(context.Background())
 	if err != nil {
 		return fmt.Errorf("error reconnecting %q: %w", s.address, err)
 	}

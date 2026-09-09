@@ -94,9 +94,6 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	if p == nil {
 		return nil, nil
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	if !p.Exportable && exportType != exportTypePublicKey && exportType != exportTypeCertificateChain {
@@ -129,6 +126,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 			retKeys[k] = exportKey
 		}
 
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExport, b.keyPolicyObservationMetadata(p))
 	default:
 		var versionValue int
 		if version == "latest" {
@@ -155,6 +153,9 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		}
 
 		retKeys[strconv.Itoa(versionValue)] = exportKey
+		metadata := b.keyPolicyObservationMetadata(p)
+		metadata["export_version"] = versionValue
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExport, metadata)
 	}
 
 	resp := &logical.Response{

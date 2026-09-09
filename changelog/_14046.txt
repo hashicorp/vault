@@ -1,0 +1,3 @@
+```release-note:bug
+database/snowflake: Fix WAL rollback issue for key-pair root credential rotation.
+```

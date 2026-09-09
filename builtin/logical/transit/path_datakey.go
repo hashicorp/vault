@@ -117,9 +117,6 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	if p == nil {
 		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	params.factories = make([]any, 0)
@@ -172,7 +169,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	// Increment the counter for successful operations
 	// Since there are not batched operations, we can add one successful
 	// request to the transit request counter.
-	if err = b.incrementBillingCounts(ctx, 1); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, 1); err != nil {
 		b.Logger().Error("failed to track transit data key request count", "error", err.Error())
 	}
 
@@ -182,18 +179,12 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 func (b *backend) generateDataKey(ctx context.Context, p *keysutil.Policy, params *DataKeyParams) (string, string, error) {
 	factories := params.factories
 	if p.Type == keysutil.KeyType_MANAGED_KEY {
-		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
-		if !ok {
-			return "", "", errors.New("unsupported system view")
+		factory, err := b.GetManagedKeyFactory(ctx)
+		if err != nil {
+			return "", "", err
 		}
 
-		factories = append(params.factories, ManagedKeyFactory{
-			managedKeyParams: keysutil.ManagedKeyParameters{
-				ManagedKeySystemView: managedKeySystemView,
-				BackendUUID:          b.backendUUID,
-				Context:              ctx,
-			},
-		})
+		factories = append(params.factories, factory)
 	}
 
 	newKey := make([]byte, params.bits/8)

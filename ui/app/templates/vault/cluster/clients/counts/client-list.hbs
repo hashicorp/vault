@@ -4,14 +4,8 @@
 }}
 
 {{#if this.model.cannotRequestExport}}
-  <Hds::ApplicationState @align="center" class="has-top-margin-xxl" as |A|>
-    <A.Header
-      @icon="skip"
-      class="align-items-end"
-      @title="You are not authorized"
-      @titleTag="h2"
-      data-test-empty-state-title
-    />
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @icon="skip" @title="You are not authorized" @titleTag="h2" data-test-empty-state-title />
 
     <A.Body data-test-empty-state-message>
       Viewing export data requires
@@ -20,8 +14,8 @@
       <Hds::Text::Code class="code-in-text">/sys/internal/counters/activity/export</Hds::Text::Code>.
     </A.Body>
 
-    <A.Footer data-test-empty-state-actions>
-      <Hds::Link::Standalone
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
         @icon="docs-link"
         @iconPosition="trailing"
         @text="Client Export Documentation"

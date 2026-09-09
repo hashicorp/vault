@@ -14,6 +14,7 @@ import ControlGroupError from 'vault/lib/control-group-error';
 export default class ApplicationRoute extends Route {
   @service analytics;
   @service controlGroup;
+  @service intl;
   @service('router') routing;
   @service('namespace') namespaceService;
   @service('flags') flagsService;
@@ -72,6 +73,7 @@ export default class ApplicationRoute extends Route {
   }
 
   beforeModel() {
+    this.intl.setLocale(['en-us']);
     return this.flagsService.fetchFeatureFlags();
   }
 
@@ -83,7 +85,12 @@ export default class ApplicationRoute extends Route {
     // if the app is built for prod -> attempt to start the analytics service based on the config setting AND HVD ownership
     // if the app is built for test -> don't start the analytics service
     if (environment === 'development') {
-      this.analytics.start('posthog', ANALYTICS_CONFIG);
+      // Vault SM (Segment) is started via the consent gate in the cluster route
+      // so it can prompt for consent before activating. So Segment is the provider
+      // wait until consent gate is presented
+      if (ANALYTICS_CONFIG.provider !== 'segment') {
+        this.analytics.start(ANALYTICS_CONFIG.provider, ANALYTICS_CONFIG);
+      }
     } else if (environment === 'production' && this.flagsService.isHvdManaged) {
       this.analytics.start('posthog', ANALYTICS_CONFIG);
     }

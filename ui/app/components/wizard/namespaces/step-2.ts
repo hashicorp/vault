@@ -8,6 +8,12 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import type NamespaceService from 'vault/services/namespace';
+import type AnalyticsService from 'vault/services/analytics';
+import { isEmpty } from '@ember/utils';
+import {
+  WIZARD_NAMESPACE_STEP2_TIPS_COLLAPSE,
+  WIZARD_NAMESPACE_STEP2_FIELD_INPUT,
+} from 'vault/utils/analytic-events';
 
 interface Project {
   name: string;
@@ -40,7 +46,8 @@ class Block {
   // briefly and then remains blank.
   get hasMultipleNodes() {
     const hasMultipleOrgs = this.hasMultipleItems(this.orgs);
-    const orgHasMultipleProjects = this.orgs.some((org) => this.hasMultipleItems(org.projects));
+    const filledOrgs = this.orgs.filter((org) => !isEmpty(org.name));
+    const orgHasMultipleProjects = filledOrgs.some((org) => this.hasMultipleItems(org.projects));
     return hasMultipleOrgs || orgHasMultipleProjects;
   }
 
@@ -64,8 +71,10 @@ interface Args {
 
 export default class WizardNamespacesStepTemp extends Component<Args> {
   @service declare namespace: NamespaceService;
+  @service declare analytics: AnalyticsService;
   @tracked blocks: Block[];
   duplicateErrorMessage = 'No duplicate namespaces names are allowed within the same level';
+  #hasTrackedFieldInput = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -110,7 +119,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   }
 
   checkForDuplicateGlobals() {
-    const globals = this.blocks.map((block) => block.global).filter((global) => global !== '');
+    const globals = this.blocks.map((block) => block.global).filter((global) => !isEmpty(global));
     const globalCounts = new Map();
 
     globals.forEach((global) => {
@@ -130,6 +139,35 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   updateWizardState() {
     this.args.updateWizardState('namespacePaths', this.hasErrors ? null : this.namespacePaths);
     this.args.updateWizardState('namespaceBlocks', this.hasErrors ? null : this.blocks);
+  }
+
+  #isRevealOpen = true;
+
+  @action
+  onTipsReveal() {
+    this.#isRevealOpen = !this.#isRevealOpen;
+    if (!this.#isRevealOpen) {
+      this.analytics.trackEvent(WIZARD_NAMESPACE_STEP2_TIPS_COLLAPSE, {
+        namespace: 'namespace-wizard',
+        action: 'clicked',
+        elementId: 'tips-reveal',
+        channel: 'webpage',
+        location: 'step-2',
+      });
+    }
+  }
+
+  #trackFieldInput() {
+    if (!this.#hasTrackedFieldInput) {
+      this.#hasTrackedFieldInput = true;
+      this.analytics.trackEvent(WIZARD_NAMESPACE_STEP2_FIELD_INPUT, {
+        namespace: 'namespace-wizard',
+        action: 'typed',
+        elementId: 'namespace-field',
+        channel: 'webpage',
+        location: 'step-2',
+      });
+    }
   }
 
   @action
@@ -160,6 +198,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
       block.globalError = block.validateInput(value);
       this.checkForDuplicateGlobals();
       this.updateWizardState();
+      this.#trackFieldInput();
     }
   }
 
@@ -167,7 +206,9 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   updateOrgValue(block: Block, orgToUpdate: Org, event: Event) {
     const target = event.target as HTMLInputElement;
     const value = target.value.trim();
-    const isDuplicate = block.orgs.some((org) => org !== orgToUpdate && org.name === value);
+    const isDuplicate = isEmpty(value)
+      ? false
+      : block.orgs.some((org) => org !== orgToUpdate && org.name === value);
 
     const updatedOrgs = block.orgs.map((org) => {
       if (org === orgToUpdate) {
@@ -184,6 +225,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
     // Trigger tree reactivity by reassigning the blocks array
     this.blocks = [...this.blocks];
     this.updateWizardState();
+    this.#trackFieldInput();
   }
 
   @action
@@ -203,7 +245,9 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   updateProjectValue(block: Block, org: Org, projectToUpdate: Project, event: Event) {
     const target = event.target as HTMLInputElement;
     const value = target.value.trim();
-    const isDuplicate = org.projects.some((project) => project !== projectToUpdate && project.name === value);
+    const isDuplicate = isEmpty(value)
+      ? false
+      : org.projects.some((project) => project !== projectToUpdate && project.name === value);
 
     const updatedOrgs = block.orgs.map((currentOrg) => {
       if (currentOrg === org) {
@@ -227,6 +271,7 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
     // Trigger tree reactivity by reassigning the blocks array
     this.blocks = [...this.blocks];
     this.updateWizardState();
+    this.#trackFieldInput();
   }
 
   @action
@@ -263,25 +308,27 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   }
 
   get treeData() {
-    const parsed = this.blocks.map((block) => {
-      return {
-        name: block.global,
-        children: block.orgs
-          .filter((org) => org.name !== '')
-          .map((org) => {
-            return {
-              name: org.name,
-              children: org.projects
-                .filter((project) => project.name !== '')
-                .map((project) => {
-                  return {
-                    name: project.name,
-                  };
-                }),
-            };
-          }),
-      };
-    });
+    const parsed = this.blocks
+      .filter((block) => !isEmpty(block.global))
+      .map((block) => {
+        return {
+          name: block.global,
+          children: block.orgs
+            .filter((org) => !isEmpty(org.name))
+            .map((org) => {
+              return {
+                name: org.name,
+                children: org.projects
+                  .filter((project) => !isEmpty(project.name))
+                  .map((project) => {
+                    return {
+                      name: project.name,
+                    };
+                  }),
+              };
+            }),
+        };
+      });
 
     return parsed;
   }
@@ -289,15 +336,15 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
   // The Carbon tree chart only supports displaying nodes with at least 1 "fork" i.e. at least 2 globals, 2 orgs or 2 projects
   get shouldShowTreeChart(): boolean {
     // Count total globals across blocks
-    const globalsCount = this.blocks.filter((block) => block.global !== '').length;
+    const filledBlocks = this.blocks.filter((block) => !isEmpty(block.global));
 
     // Check if there are multiple globals
-    if (globalsCount > 1) {
+    if (filledBlocks.length > 1) {
       return true;
     }
 
     // Check for multiple projects or orgs within a block
-    return this.blocks.some((block) => block.hasMultipleNodes);
+    return filledBlocks.some((block) => block.hasMultipleNodes);
   }
 
   // Store namespace paths to be used for code snippets in the format "global", "global/org", "global/org/project"
@@ -307,23 +354,23 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
         const results: string[] = [];
 
         // Add global namespace if it exists
-        if (block.global !== '') {
+        if (!isEmpty(block.global)) {
           results.push(block.global);
         }
 
         block.orgs.forEach((org) => {
-          if (org.name !== '') {
+          if (!isEmpty(org.name)) {
             // Add global/org namespace
-            const globalOrg = [block.global, org.name].filter((value) => value !== '').join('/');
+            const globalOrg = [block.global, org.name].filter((value) => !isEmpty(value)).join('/');
             if (globalOrg && !results.includes(globalOrg)) {
               results.push(globalOrg);
             }
 
             org.projects.forEach((project) => {
-              if (project.name !== '') {
+              if (!isEmpty(project.name)) {
                 // Add global/org/project namespace
                 const fullNamespace = [block.global, org.name, project.name]
-                  .filter((value) => value !== '')
+                  .filter((value) => !isEmpty(value))
                   .join('/');
                 if (fullNamespace && !results.includes(fullNamespace)) {
                   results.push(fullNamespace);
@@ -335,6 +382,6 @@ export default class WizardNamespacesStepTemp extends Component<Args> {
         return results;
       })
       .flat()
-      .filter((namespace) => namespace !== '');
+      .filter((namespace) => !isEmpty(namespace));
   }
 }

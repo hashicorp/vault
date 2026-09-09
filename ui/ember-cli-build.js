@@ -49,7 +49,6 @@ const appConfig = {
       './node_modules/@hashicorp/design-system-tokens/dist/products/css',
       './node_modules/ember-basic-dropdown/',
       './node_modules/ember-power-select/',
-      './node_modules/@hashicorp-internal/vault-reporting/dist/styles',
     ],
   },
   minifyCSS: {
@@ -79,7 +78,6 @@ const appConfig = {
 module.exports = function (defaults) {
   const app = new EmberApp(defaults, appConfig);
 
-  app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
   app.import('vendor/jsondiffpatch.umd.js');
   app.import('vendor/htmlformatter.umd.js');
@@ -89,6 +87,7 @@ module.exports = function (defaults) {
   app.import(
     'node_modules/@hashicorp/design-system-components/dist/styles/@hashicorp/design-system-components.css'
   );
+  app.import('node_modules/@carbon/charts/dist/styles.css');
 
   return app.toTree();
 };

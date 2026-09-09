@@ -161,14 +161,13 @@ func TestQuotas_RateLimit_DupName(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
+
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	// create a rate limit quota w/ 'secret' path
-	_, err := client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/secret-rlq", map[string]interface{}{
 		"rate": 7.7,
 		"path": "secret",
 	})
@@ -197,14 +196,13 @@ func TestQuotas_RateLimit_DupPath(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
+
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
+
 	// create a global rate limit quota
-	_, err := client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
+	_, err = client.Logical().Write("sys/quotas/rate-limit/global-rlq", map[string]interface{}{
 		"rate": 10,
 		"path": "",
 	})
@@ -237,12 +235,7 @@ func TestQuotas_RateLimitQuota_ExemptPaths(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
 		"rate": 7.7,
@@ -289,12 +282,7 @@ func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
 	opts.NoDefaultQuotas = true
 	opts.RequestResponseCallback = schema.ResponseValidatingCallback(t)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	_, err := client.Logical().Write("sys/quotas/rate-limit/rlq", map[string]interface{}{
 		"rate": 1,
@@ -318,12 +306,7 @@ func TestQuotas_RateLimitQuota_DefaultExemptPaths(t *testing.T) {
 func TestQuotas_RateLimitQuota_Mount(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	err := client.Sys().Mount("pki", &api.MountInput{
 		Type: "pki",
@@ -407,13 +390,7 @@ func TestQuotas_RateLimitQuota_MountPrecedence(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-
-	vault.TestWaitActive(t, core)
 
 	// create PKI mount
 	err := client.Sys().Mount("pki", &api.MountInput{
@@ -494,13 +471,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-
-	vault.TestWaitActive(t, core)
 
 	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
 		Type: "userpass",
@@ -573,13 +544,7 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	opts.NoDefaultQuotas = true
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	t.Cleanup(cluster.Cleanup)
-
-	core := cluster.Cores[0].Core
 	client := cluster.Cores[0].Client
-
-	vault.TestWaitActive(t, core)
 
 	testCases := map[string]struct {
 		reqData              map[string]interface{}
@@ -757,8 +722,6 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 func TestQuotas_RateLimit_ZeroRetryRegression(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNode(t, cluster)
 	client := cluster.Cores[0].Client
@@ -799,7 +762,6 @@ func TestQuotas_RateLimit_NilStorage_ResolveRole(t *testing.T) {
 		NumCores:    1,
 	}, nil)
 	cluster := vault.NewTestCluster(t, conf, opts)
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Enable our custom panic auth method which will panic on nil storage

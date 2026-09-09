@@ -731,3 +731,42 @@ func TestConsul_NewServiceRegistration_serviceTags(t *testing.T) {
 		})
 	}
 }
+
+// TestConsul_checkDuration_merge_race exercises the data race between
+// checkDuration() (reader) and merge() (writer) on c.checkTimeout.
+// Run with -race to verify the fix; without the serviceLock guard in
+// checkDuration() the race detector would fire within milliseconds.
+func TestConsul_checkDuration_merge_race(t *testing.T) {
+	logger := logging.NewVaultLogger(log.Error)
+
+	conf := map[string]string{
+		// use a very short check_timeout so checkDuration() fires rapidly
+		"check_timeout": "1s",
+	}
+	be, err := NewServiceRegistration(conf, logger, sr.State{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := be.(*serviceRegistration)
+
+	shutdownCh := make(chan struct{})
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go c.runEventDemuxer(&wg, shutdownCh)
+
+	// Repeatedly call NotifyConfigurationReload (which calls merge and writes
+	// c.checkTimeout) while runEventDemuxer is concurrently calling
+	// checkDuration (which reads c.checkTimeout).
+	newConf := map[string]string{"check_timeout": "2s"}
+	for i := 0; i < 200; i++ {
+		if err := c.NotifyConfigurationReload(&newConf); err != nil {
+			t.Fatal(err)
+		}
+		if err := c.NotifyConfigurationReload(&conf); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	close(shutdownCh)
+	wg.Wait()
+}

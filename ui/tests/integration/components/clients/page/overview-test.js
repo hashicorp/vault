@@ -9,11 +9,12 @@ import { click, find, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
-import { CHARTS, CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 import { ClientFilters, flattenMounts } from 'core/utils/client-counts/helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import {
   destructureClientCounts,
   formatByMonths,
@@ -25,6 +26,13 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    setRunOptions({
+      rules: {
+        // Carbon Charts renders path.bar elements with role="graphics-symbol" without aria-label.
+        // This is a known Carbon Charts library limitation; the rule is suppressed here.
+        'svg-img-alt': { enabled: false },
+      },
+    });
     this.server.get('sys/internal/counters/activity', () => {
       return {
         request_id: 'some-activity-id',
@@ -168,7 +176,6 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       .mounts.find((m) => m.label === 'auth/userpass/0/');
 
     await this.renderComponent();
-    assert.dom(CHARTS.legend).hasText('New clients');
     assert
       .dom(GENERAL.tableData(0, 'clients'))
       .hasText(`${topMount.clients}`, 'table renders total monthly clients');
@@ -251,7 +258,6 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       .mounts.find((m) => m.label === 'acme/pki/0/');
 
     await this.renderComponent();
-    assert.dom(CHARTS.legend).hasText('Clients');
     assert
       .dom(GENERAL.tableData(0, 'clients'))
       .hasText(`${topMount.clients}`, 'table renders total monthly clients');

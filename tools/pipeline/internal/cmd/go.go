@@ -13,6 +13,7 @@ func newGoCmd() *cobra.Command {
 	}
 
 	goCmd.AddCommand(newGoDiffCmd())
+	goCmd.AddCommand(newGoSyncCmd())
 
 	return goCmd
 }

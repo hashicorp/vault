@@ -187,3 +187,39 @@ func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.Rotat
 func (d testSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
 	return nil
 }
+
+// TestBackend_PathConfigClient_RotationParameters tests that configuration
+// of root creds rotation returns an immediate error.
+func TestBackend_PathConfigClient_RotationParameters(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = &testSystemView{}
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	configData := map[string]interface{}{
+		"disable_automated_rotation": "false",
+		"rotation_schedule":          "0 2 1-7 * TUE",
+		"rotation_window":            "1h",
+	}
+
+	configReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   config.StorageView,
+		Path:      "config/client",
+		Data:      configData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), configReq)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.ErrorContains(t, resp.Error(), automatedrotationutil.ErrRotationManagerUnsupported.Error())
+}

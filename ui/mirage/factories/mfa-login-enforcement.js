@@ -43,7 +43,7 @@ export default Factory.extend({
       identity_entity_ids: ['f831667b-7392-7a1c-c0fc-33d48cb1c57d'],
     };
     for (const key in targets) {
-      if (!record.key) {
+      if (!record[key]) {
         record.update(key, targets[key]);
       }
     }

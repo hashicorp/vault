@@ -3724,3 +3724,70 @@ func TestOIDC_Path_OpenIDProviderConfig_ProviderDoesNotExist(t *testing.T) {
 		t.Fatalf("expected empty response but got success; error:\n%v\nresp: %#v", err, resp)
 	}
 }
+
+// TestGetMaxTokenTTL tests the getMaxTokenTTL utility function
+func TestGetMaxTokenTTL(t *testing.T) {
+	tests := []struct {
+		name           string
+		accessTokenTTL time.Duration
+		idTokenTTL     time.Duration
+		expected       time.Duration
+	}{
+		{
+			name:           "access token TTL is greater",
+			accessTokenTTL: 2 * time.Hour,
+			idTokenTTL:     1 * time.Hour,
+			expected:       2 * time.Hour,
+		},
+		{
+			name:           "id token TTL is greater",
+			accessTokenTTL: 1 * time.Hour,
+			idTokenTTL:     2 * time.Hour,
+			expected:       2 * time.Hour,
+		},
+		{
+			name:           "both TTLs are equal",
+			accessTokenTTL: 1 * time.Hour,
+			idTokenTTL:     1 * time.Hour,
+			expected:       1 * time.Hour,
+		},
+		{
+			name:           "access token TTL is zero",
+			accessTokenTTL: 0,
+			idTokenTTL:     1 * time.Hour,
+			expected:       1 * time.Hour,
+		},
+		{
+			name:           "id token TTL is zero",
+			accessTokenTTL: 1 * time.Hour,
+			idTokenTTL:     0,
+			expected:       1 * time.Hour,
+		},
+		{
+			name:           "both TTLs are zero",
+			accessTokenTTL: 0,
+			idTokenTTL:     0,
+			expected:       0,
+		},
+		{
+			name:           "large TTL values",
+			accessTokenTTL: 24 * time.Hour,
+			idTokenTTL:     48 * time.Hour,
+			expected:       48 * time.Hour,
+		},
+		{
+			name:           "small TTL values",
+			accessTokenTTL: 30 * time.Second,
+			idTokenTTL:     15 * time.Second,
+			expected:       30 * time.Second,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := getMaxTokenTTL(tt.accessTokenTTL, tt.idTokenTTL)
+			require.Equal(t, tt.expected, result, "getMaxTokenTTL(%v, %v) = %v, want %v",
+				tt.accessTokenTTL, tt.idTokenTTL, result, tt.expected)
+		})
+	}
+}

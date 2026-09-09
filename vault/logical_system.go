@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	crand "crypto/rand"
 	"crypto/sha256"
@@ -14,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"io"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -43,8 +45,10 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internal/releaseinfo"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -97,13 +101,72 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		return nil
 	}
 
+	healthCheckBackend := NewHealthCheckBackend(core, logger)
+	if err := healthCheckBackend.Setup(core.activeContext, config); err != nil {
+		return nil
+	}
+
 	b := &SystemBackend{
 		Core:                 core,
 		db:                   db,
 		logger:               logger,
 		mfaBackend:           NewPolicyMFABackend(core, logger),
 		syncBackend:          syncBackend,
+		healthCheckBackend:   healthCheckBackend,
 		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
+	}
+
+	// Build the unauthenticated paths list.
+	unauthenticatedPaths := []string{
+		"wrapping/lookup",
+		"wrapping/pubkey",
+		"replication/status",
+		"internal/specs/openapi",
+		"internal/ui/authenticated-messages",
+		"internal/ui/unauthenticated-messages",
+		"internal/ui/mounts",
+		"internal/ui/mounts/*",
+		"internal/ui/namespaces",
+		"replication/performance/status",
+		"replication/dr/status",
+		"replication/dr/secondary/promote",
+		"replication/dr/secondary/disable",
+		"replication/dr/secondary/recover",
+		"replication/dr/secondary/update-primary",
+		"replication/dr/secondary/operation-token/delete",
+		"replication/dr/secondary/license",
+		"replication/dr/secondary/license/signed",
+		"replication/dr/secondary/license/status",
+		"replication/dr/secondary/sys/config/reload/license",
+		"replication/dr/secondary/reindex",
+		"storage/raft/bootstrap/challenge",
+		"storage/raft/bootstrap/answer",
+		"init",
+		"seal-status",
+		"unseal",
+		"leader",
+		"health",
+		"decode-token",
+		"mfa/validate",
+	}
+
+	// Note that while rekeyPaths and generateRootPaths are not part of unauthenticatedPaths, that's
+	// because they are defined both here and in http.handler.  The latter ones
+	// are unauthenticated and don't use the logical framework.  They are enabled
+	// only when Core.enableUnauthRekey or Core.enableUnauthGenerateRoot is true, and being more specific paths
+	// than the v1/sys mux path they take precedence when enabled.
+	rekeyPaths := []string{
+		"rekey/init",
+		"rekey/update",
+		"rekey/verify",
+		"rekey-recovery-key/init",
+		"rekey-recovery-key/update",
+		"rekey-recovery-key/verify",
+	}
+
+	generateRootPaths := []string{
+		"generate-root/attempt",
+		"generate-root/update",
 	}
 
 	b.Backend = &framework.Backend{
@@ -113,6 +176,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		PathsSpecial: &logical.Paths{
 			Root: []string{
 				"auth/*",
+				"mounts/auth/+/tune",
 				"remount",
 				"audit",
 				"audit/*",
@@ -145,107 +209,28 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
 				"seal",
 				"step-down",
+				"config/oauth-resource-server/*",
 			},
 
-			Unauthenticated: []string{
-				"wrapping/lookup",
-				"wrapping/pubkey",
-				"replication/status",
-				"internal/specs/openapi",
-				"internal/ui/authenticated-messages",
-				"internal/ui/unauthenticated-messages",
-				"internal/ui/mounts",
-				"internal/ui/mounts/*",
-				"internal/ui/namespaces",
-				"replication/performance/status",
-				"replication/dr/status",
-				"replication/dr/secondary/promote",
-				"replication/dr/secondary/disable",
-				"replication/dr/secondary/recover",
-				"replication/dr/secondary/update-primary",
-				"replication/dr/secondary/operation-token/delete",
-				"replication/dr/secondary/license",
-				"replication/dr/secondary/license/signed",
-				"replication/dr/secondary/license/status",
-				"replication/dr/secondary/sys/config/reload/license",
-				"replication/dr/secondary/reindex",
-				"storage/raft/bootstrap/challenge",
-				"storage/raft/bootstrap/answer",
-				"init",
-				"seal-status",
-				"unseal",
-				"leader",
-				"health",
-				"generate-root/attempt",
-				"generate-root/update",
-				"decode-token",
-				"rekey/init",
-				"rekey/update",
-				"rekey/verify",
-				"rekey-recovery-key/init",
-				"rekey-recovery-key/update",
-				"rekey-recovery-key/verify",
-				"mfa/validate",
-			},
+			Unauthenticated: unauthenticatedPaths,
 
-			LocalStorage: []string{
+			LocalStorage: append([]string{
 				expirationSubPath,
 				countersSubPath,
 				rotationLocalSubPath,
 				orphanLocalSubPath,
 				billing.BillingSubPath + billing.LocalPrefix,
-			},
+			}, entLocalStoragePaths()...),
 
 			SealWrapStorage: []string{
 				managedKeyRegistrySubPath,
 			},
+
+			Binary: append(append(rekeyPaths, generateRootPaths...), entBinaryPaths()...),
 		},
+		Paths: systemBackendPaths(b, true, config),
 	}
 	b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, entUnauthenticatedPaths()...)
-
-	b.Backend.Paths = append(b.Backend.Paths, entPaths(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, b.configPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.rekeyPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, entWrappedPluginsCRUDPath(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsListPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsCRUDPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRootReloadPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, entWrappedMountsPath(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, entWrappedAuthPath(b)...)
-	b.Backend.Paths = append(b.Backend.Paths, b.lockedUserPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.leasePaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.policyPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.wrappingPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.toolsPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.capabilitiesPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.internalPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pprofPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.remountPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.metricsPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.monitorPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.inFlightRequestPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.hostInfoPath())
-	b.Backend.Paths = append(b.Backend.Paths, b.quotasPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.rootActivityPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.loginMFAPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.activationFlagsPaths()...)
-
-	if core.rawEnabled {
-		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
-	}
-	if backend := core.getRaftBackend(); backend != nil {
-		b.Backend.Paths = append(b.Backend.Paths, b.raftStoragePaths()...)
-	}
 
 	// If the node is in a DR secondary cluster, gate some raft operations by
 	// the DR operation token.
@@ -261,6 +246,58 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Clean = sysClean(b)
 	b.entInit()
 	return b
+}
+
+func operatorSystemBackendPaths(b *SystemBackend) []*framework.Path {
+	var ret []*framework.Path
+	ret = append(ret, entPaths(b)...)
+	ret = append(ret, b.configPaths()...)
+	ret = append(ret, b.rekeyPaths()...)
+	ret = append(ret, b.sealPaths()...)
+	ret = append(ret, b.statusPaths()...)
+	ret = append(ret, b.pluginsCatalogListPaths()...)
+	ret = append(ret, entWrappedPluginsCRUDPath(b)...)
+	ret = append(ret, b.pluginsCatalogPinsListPath())
+	ret = append(ret, b.pluginsCatalogPinsCRUDPath())
+	ret = append(ret, b.pluginsReloadPath())
+	ret = append(ret, b.pluginsRootReloadPath())
+	ret = append(ret, b.pluginsRuntimesCatalogCRUDPath())
+	ret = append(ret, b.pluginsRuntimesCatalogListPaths()...)
+	ret = append(ret, b.auditPaths()...)
+	ret = append(ret, entWrappedMountsPath(b)...)
+	ret = append(ret, entWrappedAuthPath(b)...)
+	ret = append(ret, b.lockedUserPaths()...)
+	ret = append(ret, b.leasePaths()...)
+	ret = append(ret, b.policyPaths()...)
+	ret = append(ret, b.wrappingPaths()...)
+	ret = append(ret, b.toolsPaths()...)
+	ret = append(ret, b.capabilitiesPaths()...)
+	ret = append(ret, b.internalPaths()...)
+	ret = append(ret, b.pprofPaths()...)
+	ret = append(ret, b.remountPaths()...)
+	ret = append(ret, b.metricsPath())
+	ret = append(ret, b.monitorPath())
+	ret = append(ret, b.inFlightRequestPath())
+	ret = append(ret, b.hostInfoPath())
+	ret = append(ret, b.quotasPaths()...)
+	ret = append(ret, b.rootActivityPaths()...)
+	ret = append(ret, b.loginMFAPaths()...)
+	ret = append(ret, b.experimentPaths()...)
+	ret = append(ret, b.introspectionPaths()...)
+	ret = append(ret, b.wellKnownPaths()...)
+	ret = append(ret, b.releaseInfoPaths()...)
+	ret = append(ret, b.vaultVersionsPaths()...)
+	ret = append(ret, b.activationFlagsPaths()...)
+	ret = append(ret, b.useCaseConsumptionBillingPaths()...)
+
+	if b.Core.rawEnabled {
+		ret = append(ret, b.rawPaths()...)
+	}
+	if backend := b.Core.getRaftBackend(); backend != nil {
+		ret = append(ret, b.raftStoragePaths()...)
+	}
+
+	return ret
 }
 
 func (b *SystemBackend) rawPaths() []*framework.Path {
@@ -285,6 +322,7 @@ type SystemBackend struct {
 	logger               log.Logger
 	mfaBackend           *PolicyMFABackend
 	syncBackend          *SecretsSyncBackend
+	healthCheckBackend   *HealthCheckBackend
 	idStoreBackend       *framework.Backend
 	raftChallengeLimiter *rate.Limiter
 	activationFlags      *activationflags.FeatureActivationFlags
@@ -672,8 +710,50 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	if err != nil {
 		return nil, err
 	}
+	// autoSelectedVersion is non-empty only when the user omitted -version
+	// but exactly one versioned entry existed and was auto-selected.
+	// Used below to attach a warning to the response.
+	var autoSelectedVersion string
 	if plugin == nil {
-		return nil, nil
+		if pluginVersion == "" {
+			// No unversioned entry found. Check whether versioned entries exist
+			// for this plugin name so we can give a better response.
+			var versioned []pluginutil.VersionedPlugin
+			versioned, err = b.Core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
+			if err != nil {
+				return nil, err
+			}
+			var versions []string
+			for _, vp := range versioned {
+				if vp.Name == pluginName && vp.Version != "" && !vp.Builtin {
+					versions = append(versions, vp.Version)
+				}
+			}
+			switch len(versions) {
+			case 1:
+				// Exactly one versioned entry — auto-select it and fall
+				// through to the response-building code below.
+				plugin, err = b.Core.pluginCatalog.Get(ctx, pluginName, pluginType, versions[0])
+				if err != nil {
+					return nil, err
+				}
+				autoSelectedVersion = versions[0]
+			case 0:
+				// No entries at all — fall through to the original nil, nil
+				// path below, preserving the existing 404 behavior.
+			default:
+				// Multiple versioned entries — the user must be explicit.
+				return logical.ErrorResponse(
+					"plugin %q (type %q) not found in catalog without a version specified; "+
+						"use -version to query a specific version. "+
+						"Available versions: %s",
+					pluginName, pluginTypeStr, strings.Join(versions, ", "),
+				), nil
+			}
+		}
+		if plugin == nil {
+			return nil, nil
+		}
 	}
 
 	command := plugin.Command
@@ -708,9 +788,17 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		data["runtime"] = plugin.Runtime
 	}
 
-	return &logical.Response{
+	resp := &logical.Response{
 		Data: data,
-	}, nil
+	}
+	if autoSelectedVersion != "" {
+		resp.AddWarning(fmt.Sprintf(
+			"no version was specified; automatically selected the only registered version %q. "+
+				"Use -version=%s to avoid this message.",
+			autoSelectedVersion, autoSelectedVersion,
+		))
+	}
+	return resp, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1372,6 +1460,519 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
+type RekeyStatusResponse struct {
+	Nonce                string   `json:"nonce"`
+	Started              bool     `json:"started"`
+	T                    int      `json:"t"`
+	N                    int      `json:"n"`
+	Progress             int      `json:"progress"`
+	Required             int      `json:"required"`
+	PGPFingerprints      []string `json:"pgp_fingerprints"`
+	Backup               bool     `json:"backup"`
+	VerificationRequired bool     `json:"verification_required"`
+	VerificationNonce    string   `json:"verification_nonce,omitempty"`
+}
+
+func HandleSysRekeyInitGet(ctx context.Context, core *Core, recovery bool, grabLock bool) (*RekeyStatusResponse, int, error) {
+	barrierConfig, barrierConfErr := core.SealAccess().BarrierConfig(ctx)
+	if barrierConfErr != nil {
+		return nil, http.StatusInternalServerError, barrierConfErr
+	}
+	if barrierConfig == nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("server is not yet initialized")
+	}
+
+	// Get the rekey configuration
+	rekeyConf, err := core.RekeyConfig(recovery, grabLock)
+	if err != nil {
+		return nil, err.Code(), err
+	}
+
+	sealThreshold, err := core.RekeyThreshold(ctx, recovery, grabLock)
+	if err != nil {
+		return nil, err.Code(), err
+	}
+
+	// Format the status
+	status := &RekeyStatusResponse{
+		Started:  false,
+		T:        0,
+		N:        0,
+		Required: sealThreshold,
+	}
+	if rekeyConf != nil {
+		// Get the progress
+		started, progress, err := core.RekeyProgress(recovery, false, grabLock)
+		if err != nil {
+			return nil, err.Code(), err
+		}
+
+		status.Nonce = rekeyConf.Nonce
+		status.Started = started
+		status.T = rekeyConf.SecretThreshold
+		status.N = rekeyConf.SecretShares
+		status.Progress = progress
+		status.VerificationRequired = rekeyConf.VerificationRequired
+		status.VerificationNonce = rekeyConf.VerificationNonce
+		if rekeyConf.PGPKeys != nil && len(rekeyConf.PGPKeys) != 0 {
+			pgpFingerprints, err := pgpkeys.GetFingerprints(rekeyConf.PGPKeys, nil)
+			if err != nil {
+				return nil, http.StatusInternalServerError, err
+			}
+			status.PGPFingerprints = pgpFingerprints
+			status.Backup = rekeyConf.Backup
+		}
+	}
+	return status, 0, nil
+}
+
+type RekeyRequest struct {
+	SecretShares        int      `json:"secret_shares"`
+	SecretThreshold     int      `json:"secret_threshold"`
+	StoredShares        int      `json:"stored_shares"`
+	PGPKeys             []string `json:"pgp_keys"`
+	Backup              bool     `json:"backup"`
+	RequireVerification bool     `json:"require_verification"`
+}
+
+func HandleSysRekeyInitPut(core *Core, recovery bool, req *RekeyRequest, grabLock bool) (int, error) {
+	if req.Backup && len(req.PGPKeys) == 0 {
+		return http.StatusBadRequest, fmt.Errorf("cannot request a backup of the new keys without providing PGP keys for encryption")
+	}
+
+	if len(req.PGPKeys) > 0 && len(req.PGPKeys) != req.SecretShares {
+		return http.StatusBadRequest, fmt.Errorf("incorrect number of PGP keys for rekey")
+	}
+
+	// Initialize the rekey
+	err := core.RekeyInit(&SealConfig{
+		SecretShares:         req.SecretShares,
+		SecretThreshold:      req.SecretThreshold,
+		StoredShares:         req.StoredShares,
+		PGPKeys:              req.PGPKeys,
+		Backup:               req.Backup,
+		VerificationRequired: req.RequireVerification,
+		Created:              time.Now().UTC(),
+	}, recovery, grabLock)
+	if err != nil {
+		return err.Code(), err
+	}
+	return http.StatusOK, nil
+}
+
+type RekeyUpdateRequest struct {
+	Nonce string
+	Key   string
+}
+
+type RekeyUpdateResponse struct {
+	Nonce                string   `json:"nonce"`
+	Complete             bool     `json:"complete"`
+	Keys                 []string `json:"keys"`
+	KeysB64              []string `json:"keys_base64"`
+	PGPFingerprints      []string `json:"pgp_fingerprints"`
+	Backup               bool     `json:"backup"`
+	VerificationRequired bool     `json:"verification_required"`
+	VerificationNonce    string   `json:"verification_nonce,omitempty"`
+}
+
+func HandleSysRekeyUpdatePut(ctx context.Context, core *Core, recovery bool, req *RekeyUpdateRequest, grabLock bool) (*RekeyUpdateResponse, int, error) {
+	if req.Key == "" {
+		return nil, http.StatusBadRequest, errors.New("'key' must be specified in request body as JSON")
+	}
+
+	// Decode the key, which is base64 or hex encoded
+	min, max := core.BarrierKeyLength()
+	key, err := hex.DecodeString(req.Key)
+	// We check min and max here to ensure that a string that is base64
+	// encoded but also valid hex will not be valid and we instead base64
+	// decode it
+	if err != nil || len(key) < min || len(key) > max {
+		key, err = base64.StdEncoding.DecodeString(req.Key)
+		if err != nil {
+			return nil, http.StatusBadRequest, errors.New("'key' must be a valid hex or base64 string")
+		}
+	}
+
+	// Use the key to make progress on rekey
+	result, rekeyErr := core.RekeyUpdate(ctx, key, req.Nonce, recovery, grabLock)
+
+	if rekeyErr != nil {
+		return nil, rekeyErr.Code(), rekeyErr
+	}
+
+	// Format the response
+	resp := &RekeyUpdateResponse{}
+	if result != nil {
+		resp.Complete = true
+		resp.Nonce = req.Nonce
+		resp.Backup = result.Backup
+		resp.PGPFingerprints = result.PGPFingerprints
+		resp.VerificationRequired = result.VerificationRequired
+		resp.VerificationNonce = result.VerificationNonce
+
+		// Encode the keys
+		keys := make([]string, 0, len(result.SecretShares))
+		keysB64 := make([]string, 0, len(result.SecretShares))
+		for _, k := range result.SecretShares {
+			keys = append(keys, hex.EncodeToString(k))
+			keysB64 = append(keysB64, base64.StdEncoding.EncodeToString(k))
+		}
+		resp.Keys = keys
+		resp.KeysB64 = keysB64
+		return resp, 0, nil
+	}
+	return nil, 0, nil
+}
+
+type RekeyVerifyStatusResponse struct {
+	Nonce    string `json:"nonce"`
+	Started  bool   `json:"started"`
+	T        int    `json:"t"`
+	N        int    `json:"n"`
+	Progress int    `json:"progress"`
+}
+
+func HandleSysRekeyVerifyGet(ctx context.Context, core *Core, recovery bool, grabLock bool) (*RekeyVerifyStatusResponse, int, error) {
+	barrierConfig, err := core.SealAccess().BarrierConfig(ctx)
+	if err != nil {
+		return nil, http.StatusInternalServerError, err
+	}
+	if barrierConfig == nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("server is not yet initialized")
+	}
+
+	// Get the rekey configuration
+	rekeyConf, rekeyErr := core.RekeyConfig(recovery, grabLock)
+	if rekeyErr != nil {
+		return nil, rekeyErr.Code(), rekeyErr
+	}
+	if rekeyConf == nil {
+		return nil, http.StatusBadRequest, fmt.Errorf("no rekey configuration found")
+	}
+
+	// Get the progress
+	started, progress, rekeyErr := core.RekeyProgress(recovery, true, grabLock)
+	if rekeyErr != nil {
+		return nil, rekeyErr.Code(), rekeyErr
+	}
+
+	// Format the status
+	status := &RekeyVerifyStatusResponse{
+		Started:  started,
+		Nonce:    rekeyConf.VerificationNonce,
+		T:        rekeyConf.SecretThreshold,
+		N:        rekeyConf.SecretShares,
+		Progress: progress,
+	}
+	return status, 0, nil
+}
+
+type RekeyVerificationUpdateRequest struct {
+	Nonce string `json:"nonce"`
+	Key   string `json:"key"`
+}
+
+type RekeyVerificationUpdateResponse struct {
+	Nonce    string `json:"nonce"`
+	Complete bool   `json:"complete"`
+}
+
+func HandleSysRekeyVerifyPut(ctx context.Context, core *Core, recovery bool, grabLock bool, req *RekeyVerificationUpdateRequest) (*RekeyVerificationUpdateResponse, int, error) {
+	if req.Key == "" {
+		return nil, http.StatusBadRequest, errors.New("'key' must be specified in request body as JSON")
+	}
+
+	// Decode the key, which is base64 or hex encoded
+	min, max := core.BarrierKeyLength()
+	key, err := hex.DecodeString(req.Key)
+	// We check min and max here to ensure that a string that is base64
+	// encoded but also valid hex will not be valid and we instead base64
+	// decode it
+	if err != nil || len(key) < min || len(key) > max {
+		key, err = base64.StdEncoding.DecodeString(req.Key)
+		if err != nil {
+			return nil, http.StatusBadRequest, errors.New("'key' must be a valid hex or base64 string")
+		}
+	}
+
+	// Use the key to make progress on rekey
+	result, rekeyErr := core.RekeyVerify(ctx, key, req.Nonce, recovery, grabLock)
+	if rekeyErr != nil {
+		return nil, rekeyErr.Code(), rekeyErr
+	}
+	if result != nil {
+		return &RekeyVerificationUpdateResponse{
+			Nonce:    result.Nonce,
+			Complete: result.Complete,
+		}, http.StatusOK, nil
+	}
+	return nil, 0, nil
+}
+
+// handleRekeyInit handles the rekey/init endpoint for both barrier and recovery keys
+func (b *SystemBackend) handleRekeyInit(
+	ctx context.Context,
+	req *logical.Request,
+	recovery bool,
+) (*logical.Response, error) {
+	// Check replication state
+	repState := b.Core.ReplicationState()
+	if repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("rekeying can only be performed on the primary cluster when replication is activated"), nil
+	}
+
+	// Check if recovery key is supported
+	if recovery && !b.Core.SealAccess().RecoveryKeySupported() {
+		return logical.ErrorResponse("recovery rekeying not supported"), nil
+	}
+
+	switch req.Operation {
+	case logical.ReadOperation:
+		return b.handleRekeyInitGet(ctx, recovery)
+	case logical.UpdateOperation:
+		return b.handleRekeyInitPut(ctx, recovery)
+	case logical.DeleteOperation:
+		return b.handleRekeyInitDelete(ctx, recovery)
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+}
+
+// getJSONBody populates the out struct with the contents of the HTTP request body
+// and returns (nil, nil), or on error returns values that a handler can return
+// for failure.  This is intended for older APIs that don't use the framework.
+func getJSONBody(ctx context.Context, out any) (*logical.Response, error) {
+	body, ok := logical.ContextOriginalBodyValue(ctx)
+	if !ok {
+		return nonLogicalError(http.StatusInternalServerError, fmt.Errorf("failed to retrieve request body"))
+	}
+	err := jsonutil.DecodeJSONFromReader(body, out)
+	if err != nil && err != io.EOF {
+		return nonLogicalError(http.StatusBadRequest, fmt.Errorf("failed to parse JSON input: %w", err))
+	}
+	return nil, nil
+}
+
+// nonLogicalError creates an error response for older handlers that don't follow
+// current vault response conventions.
+func nonLogicalError(code int, err error) (*logical.Response, error) {
+	logical.AdjustErrorStatusCode(&code, err)
+	defer logical.IncrementResponseStatusCodeMetric(code)
+
+	var buf bytes.Buffer
+	json.NewEncoder(&buf).Encode(logical.GenerateNonLogicalErrorResponse(code, err))
+
+	resp, _ := logical.RespondWithStatusCode(nil, nil, code)
+	resp.Data[logical.HTTPRawBodyError] = buf.String()
+	return resp, err
+}
+
+// nonLogicalResponse takes the result of a request handler, and either returns
+// an error response if err is non nil, or serializes the val into the response.
+// It uses the HTTP raw body field in response data, since this is for older
+// APIs that don't follow our usual response format.
+func nonLogicalResponse(val any, code int, err error) (*logical.Response, error) {
+	if err != nil {
+		return nonLogicalError(code, err)
+	}
+
+	var buf bytes.Buffer
+	json.NewEncoder(&buf).Encode(val)
+	resp, _ := logical.RespondWithStatusCode(nil, nil, http.StatusOK)
+	resp.Data[logical.HTTPRawBody] = buf.String()
+	return resp, nil
+}
+
+func (b *SystemBackend) handleRekeyInitBarrier(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyInit(ctx, req, false)
+}
+
+func (b *SystemBackend) handleRekeyInitRecovery(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyInit(ctx, req, true)
+}
+
+func (b *SystemBackend) handleRekeyInitGet(ctx context.Context, recovery bool) (*logical.Response, error) {
+	status, code, err := HandleSysRekeyInitGet(ctx, b.Core, recovery, false)
+	return nonLogicalResponse(status, code, err)
+}
+
+func (b *SystemBackend) handleRekeyInitPut(ctx context.Context, recovery bool) (*logical.Response, error) {
+	var req RekeyRequest
+	resp, err := getJSONBody(ctx, &req)
+	if err != nil {
+		return resp, err
+	}
+
+	code, err := HandleSysRekeyInitPut(b.Core, recovery, &req, false)
+	if err != nil {
+		return nonLogicalError(code, err)
+	}
+
+	return b.handleRekeyInitGet(ctx, recovery)
+}
+
+type RekeyDeleteRequest struct {
+	Nonce string `json:"nonce"`
+	Key   string `json:"key"`
+}
+
+func (b *SystemBackend) handleRekeyInitDelete(ctx context.Context, recovery bool) (*logical.Response, error) {
+	var req RekeyDeleteRequest
+	resp, err := getJSONBody(ctx, &req)
+	if err != nil {
+		return resp, err
+	}
+
+	if err := b.Core.RekeyCancel(recovery, req.Nonce, 10*time.Minute, false); err != nil {
+		return nil, fmt.Errorf("failed to cancel rekey: %w", err)
+	}
+
+	return nil, nil
+}
+
+// handleRekeyUpdate handles the rekey/update endpoint for both barrier and recovery keys
+func (b *SystemBackend) handleRekeyUpdate(ctx context.Context, recovery bool) (*logical.Response, error) {
+	var req RekeyUpdateRequest
+	resp, err := getJSONBody(ctx, &req)
+	if err != nil {
+		return resp, err
+	}
+
+	// Use the key to make progress on rekey
+	result, code, err := HandleSysRekeyUpdatePut(ctx, b.Core, recovery, &req, false)
+	if err == nil && result == nil {
+		return b.handleRekeyInitGet(ctx, recovery)
+	}
+	return nonLogicalResponse(result, code, err)
+}
+
+func (b *SystemBackend) handleRekeyUpdateBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyUpdate(ctx, false)
+}
+
+func (b *SystemBackend) handleRekeyUpdateRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyUpdate(ctx, true)
+}
+
+// handleGenerateRootAttempt handles the generate-root/attempt endpoint
+func (b *SystemBackend) handleGenerateRootAttempt(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	switch req.Operation {
+	case logical.ReadOperation:
+		return b.handleGenerateRootAttemptGet(ctx)
+	case logical.UpdateOperation:
+		return b.handleGenerateRootAttemptPut(ctx)
+	case logical.DeleteOperation:
+		return b.handleGenerateRootAttemptDelete(ctx)
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+}
+
+func (b *SystemBackend) handleGenerateRootAttemptGet(ctx context.Context) (*logical.Response, error) {
+	status, code, err := HandleSysGenerateRootAttemptGet(ctx, b.Core, "", false)
+	return nonLogicalResponse(status, code, err)
+}
+
+func (b *SystemBackend) handleGenerateRootAttemptPut(ctx context.Context) (*logical.Response, error) {
+	var req GenerateRootInitRequest
+	resp, err := getJSONBody(ctx, &req)
+	if err != nil {
+		return resp, err
+	}
+
+	otp, code, err := HandleSysGenerateRootAttemptPut(b.Core, GenerateStandardRootTokenStrategy, &req, false)
+	if err != nil {
+		return nonLogicalError(code, err)
+	}
+
+	// Return status with OTP if generated
+	status, code, err := HandleSysGenerateRootAttemptGet(ctx, b.Core, otp, false)
+	return nonLogicalResponse(status, code, err)
+}
+
+func (b *SystemBackend) handleGenerateRootAttemptDelete(ctx context.Context) (*logical.Response, error) {
+	code, err := HandleSysGenerateRootAttemptDelete(b.Core, false)
+	if err != nil {
+		return nonLogicalError(code, err)
+	}
+	return nil, nil
+}
+
+// handleGenerateRootUpdate handles the generate-root/update endpoint
+func (b *SystemBackend) handleGenerateRootUpdate(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	var updateReq GenerateRootUpdateRequest
+	resp, err := getJSONBody(ctx, &updateReq)
+	if err != nil {
+		return resp, err
+	}
+
+	result, code, err := HandleSysGenerateRootUpdate(ctx, b.Core, GenerateStandardRootTokenStrategy, &updateReq, false)
+	return nonLogicalResponse(result, code, err)
+}
+
+// handleRekeyVerify handles the rekey/verify endpoint for both barrier and recovery keys
+func (b *SystemBackend) handleRekeyVerify(ctx context.Context, req *logical.Request, _ *framework.FieldData, recovery bool) (*logical.Response, error) {
+	repState := b.Core.ReplicationState()
+	if repState.HasState(consts.ReplicationPerformanceSecondary) {
+		return logical.ErrorResponse("rekeying can only be performed on the primary cluster when replication is activated"), nil
+	}
+
+	// Check if recovery key is supported
+	if recovery && !b.Core.SealAccess().RecoveryKeySupported() {
+		return logical.ErrorResponse("recovery rekeying not supported"), nil
+	}
+
+	switch req.Operation {
+	case logical.ReadOperation:
+		return b.handleRekeyVerifyGet(ctx, recovery)
+	case logical.UpdateOperation:
+		return b.handleRekeyVerifyPut(ctx, recovery)
+	case logical.DeleteOperation:
+		return b.handleRekeyVerifyDelete(ctx, recovery)
+	default:
+		return nil, logical.ErrUnsupportedOperation
+	}
+}
+
+func (b *SystemBackend) handleRekeyVerifyBarrier(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyVerify(ctx, req, data, false)
+}
+
+func (b *SystemBackend) handleRekeyVerifyRecovery(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	return b.handleRekeyVerify(ctx, req, data, true)
+}
+
+func (b *SystemBackend) handleRekeyVerifyGet(ctx context.Context, recovery bool) (*logical.Response, error) {
+	status, code, err := HandleSysRekeyVerifyGet(ctx, b.Core, recovery, false)
+	return nonLogicalResponse(status, code, err)
+}
+
+func (b *SystemBackend) handleRekeyVerifyDelete(ctx context.Context, recovery bool) (*logical.Response, error) {
+	if err := b.Core.RekeyVerifyRestart(recovery, false); err != nil {
+		return nil, fmt.Errorf("failed to restart rekey verification: %w", err)
+	}
+
+	return b.handleRekeyVerifyGet(ctx, recovery)
+}
+
+func (b *SystemBackend) handleRekeyVerifyPut(ctx context.Context, recovery bool) (*logical.Response, error) {
+	var req RekeyVerificationUpdateRequest
+	resp, err := getJSONBody(ctx, &req)
+	if err != nil {
+		return resp, err
+	}
+
+	result, code, err := HandleSysRekeyVerifyPut(ctx, b.Core, recovery, false, &RekeyVerificationUpdateRequest{
+		Nonce: req.Nonce,
+		Key:   req.Key,
+	})
+	if err == nil && result == nil {
+		return b.handleRekeyVerifyGet(ctx, recovery)
+	}
+	return nonLogicalResponse(result, code, err)
+}
+
 func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	encodedToken := data.Get("encoded_token").(string)
 	otp := data.Get("otp").(string)
@@ -1464,14 +2065,16 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	err := expandStringValsWithCommas(configMap)
 	if err != nil {
 		return logical.ErrorResponse(
-				"unable to parse given auth config information"),
+				"unable to parse given auth config information",
+			),
 			logical.ErrInvalidRequest
 	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
 			return logical.ErrorResponse(
-					"unable to convert given mount config information"),
+					"unable to convert given mount config information",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -1483,7 +2086,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.DefaultLeaseTTL = tmpDef
@@ -1496,7 +2100,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.MaxLeaseTTL = tmpMax
@@ -1504,20 +2109,23 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 
 	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
 		return logical.ErrorResponse(
-				"given default lease TTL greater than given max lease TTL"),
+				"given default lease TTL greater than given max lease TTL",
+			),
 			logical.ErrInvalidRequest
 	}
 
 	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
 		return logical.ErrorResponse(fmt.Sprintf(
-				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()),
+			)),
 			logical.ErrInvalidRequest
 	}
 
 	switch logicalType {
 	case "":
 		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
+				"backend type must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	case "plugin":
 		// Only set plugin-name if mount is of type plugin, with apiConfig.PluginName
@@ -1529,7 +2137,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
-					"plugin_name must be provided for plugin backend"),
+					"plugin_name must be provided for plugin backend",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -1555,7 +2164,8 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	default:
 		if options != nil && options["version"] != "" {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"secrets engine %q does not allow setting a version", logicalType)),
+					"secrets engine %q does not allow setting a version", logicalType,
+				)),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -1855,7 +2465,8 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	toPath := data.Get("to").(string)
 	if fromPath == "" || toPath == "" {
 		return logical.ErrorResponse(
-				"both 'from' and 'to' path must be specified as a string"),
+				"both 'from' and 'to' path must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -1865,6 +2476,13 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 	if strings.HasPrefix(toPath, " ") || strings.HasSuffix(toPath, " ") {
 		return logical.ErrorResponse("'to' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
+
+	// Strip any leading slashes so that e.g. "/ns/mount" is treated the same
+	// as "ns/mount". A leading slash would otherwise cause namespaceByPath to
+	// find no match in the radix tree (which stores paths without a leading
+	// slash) and silently fall back to the root namespace.
+	fromPath = strings.TrimLeft(fromPath, "/")
+	toPath = strings.TrimLeft(toPath, "/")
 
 	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
 	toPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, toPath)
@@ -2004,7 +2622,8 @@ func (b *SystemBackend) handleAuthTuneRead(ctx context.Context, req *logical.Req
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse(
-				"path must be specified as a string"),
+				"path must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	}
 	return b.handleTuneReadCommon(ctx, "auth/"+path)
@@ -2016,7 +2635,8 @@ func (b *SystemBackend) handleRemountStatusCheck(ctx context.Context, req *logic
 	migrationID := data.Get("migration_id").(string)
 	if migrationID == "" {
 		return logical.ErrorResponse(
-				"migrationID must be specified"),
+				"migrationID must be specified",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -2044,7 +2664,8 @@ func (b *SystemBackend) handleMountTuneRead(ctx context.Context, req *logical.Re
 	path := data.Get("path").(string)
 	if path == "" {
 		return logical.ErrorResponse(
-				"path must be specified as a string"),
+				"path must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -2274,7 +2895,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			err := mapstructure.Decode(userLockoutConfigMap, &apiuserLockoutConfig)
 			if err != nil {
 				return logical.ErrorResponse(
-						"unable to convert given user lockout config information"),
+						"unable to convert given user lockout config information",
+					),
 					logical.ErrInvalidRequest
 			}
 
@@ -2610,7 +3232,8 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 			tokenType = logical.TokenTypeBatch
 		default:
 			return logical.ErrorResponse(fmt.Sprintf(
-				"invalid value for 'token_type'")), logical.ErrInvalidRequest
+				"invalid value for 'token_type'",
+			)), logical.ErrInvalidRequest
 		}
 
 		oldVal := mountEntry.Config.TokenType
@@ -2868,14 +3491,16 @@ func (b *SystemBackend) handleUnlockUser(ctx context.Context, req *logical.Reque
 	mountAccessor := data.Get("mount_accessor").(string)
 	if mountAccessor == "" {
 		return logical.ErrorResponse(
-				"missing mount_accessor"),
+				"missing mount_accessor",
+			),
 			logical.ErrInvalidRequest
 	}
 
 	aliasName := data.Get("alias_identifier").(string)
 	if aliasName == "" {
 		return logical.ErrorResponse(
-				"missing alias_identifier"),
+				"missing alias_identifier",
+			),
 			logical.ErrInvalidRequest
 	}
 
@@ -3172,14 +3797,16 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 	err := expandStringValsWithCommas(configMap)
 	if err != nil {
 		return logical.ErrorResponse(
-				"unable to parse given auth config information"),
+				"unable to parse given auth config information",
+			),
 			logical.ErrInvalidRequest
 	}
 	if configMap != nil && len(configMap) != 0 {
 		err := mapstructure.Decode(configMap, &apiConfig)
 		if err != nil {
 			return logical.ErrorResponse(
-					"unable to convert given auth config information"),
+					"unable to convert given auth config information",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -3191,7 +3818,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		tmpDef, err := parseutil.ParseDurationSecond(apiConfig.DefaultLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err)),
+					"unable to parse default TTL of %s: %s", apiConfig.DefaultLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.DefaultLeaseTTL = tmpDef
@@ -3204,7 +3832,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		tmpMax, err := parseutil.ParseDurationSecond(apiConfig.MaxLeaseTTL)
 		if err != nil {
 			return logical.ErrorResponse(fmt.Sprintf(
-					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err)),
+					"unable to parse max TTL of %s: %s", apiConfig.MaxLeaseTTL, err,
+				)),
 				logical.ErrInvalidRequest
 		}
 		config.MaxLeaseTTL = tmpMax
@@ -3212,13 +3841,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	if config.MaxLeaseTTL != 0 && config.DefaultLeaseTTL > config.MaxLeaseTTL {
 		return logical.ErrorResponse(
-				"given default lease TTL greater than given max lease TTL"),
+				"given default lease TTL greater than given max lease TTL",
+			),
 			logical.ErrInvalidRequest
 	}
 
 	if config.DefaultLeaseTTL > b.Core.maxLeaseTTL && config.MaxLeaseTTL == 0 {
 		return logical.ErrorResponse(fmt.Sprintf(
-				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()))),
+				"given default lease TTL greater than system max lease TTL of %d", int(b.Core.maxLeaseTTL.Seconds()),
+			)),
 			logical.ErrInvalidRequest
 	}
 
@@ -3233,13 +3864,15 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		config.TokenType = logical.TokenTypeBatch
 	default:
 		return logical.ErrorResponse(fmt.Sprintf(
-			"invalid value for 'token_type'")), logical.ErrInvalidRequest
+			"invalid value for 'token_type'",
+		)), logical.ErrInvalidRequest
 	}
 
 	switch logicalType {
 	case "":
 		return logical.ErrorResponse(
-				"backend type must be specified as a string"),
+				"backend type must be specified as a string",
+			),
 			logical.ErrInvalidRequest
 	case "plugin":
 		// Only set plugin name if mount is of type plugin, with apiConfig.PluginName
@@ -3251,7 +3884,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 			logicalType = pluginName
 		default:
 			return logical.ErrorResponse(
-					"plugin_name must be provided for plugin backend"),
+					"plugin_name must be provided for plugin backend",
+				),
 				logical.ErrInvalidRequest
 		}
 	}
@@ -3263,7 +3897,8 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 
 	if options != nil && options["version"] != "" {
 		return logical.ErrorResponse(fmt.Sprintf(
-				"auth method %q does not allow setting a version", logicalType)),
+				"auth method %q does not allow setting a version", logicalType,
+			)),
 			logical.ErrInvalidRequest
 	}
 
@@ -3608,12 +4243,9 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			policy.Raw = string(polBytes)
 		}
 
-		var duplicate bool
 		switch policyType {
 		case PolicyTypeACL:
-			var p *Policy
-			// TODO (HCL_DUP_KEYS_DEPRECATION): go back to ParseACLPolicy once the deprecation is done
-			p, duplicate, err = ParseACLPolicyCheckDuplicates(ns, policy.Raw)
+			p, err := ParseACLPolicy(ns, policy.Raw, WithDenySlashInTemplatedPaths(b.Core.denySlashInTemplatedPolicyPaths))
 			if err != nil {
 				return handleError(err)
 			}
@@ -3637,14 +4269,6 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return handleError(err)
 		}
 
-		if duplicate {
-			if resp == nil {
-				resp = &logical.Response{}
-			}
-			// TODO (HCL_DUP_KEYS_DEPRECATION): remove log and API Warning once the deprecation is done
-			b.logger.Warn("newly created HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", ns.Path)
-			resp.AddWarning("policy contains duplicate attributes, which will no longer be supported in a future version")
-		}
 		return resp, nil
 	}
 }
@@ -4213,10 +4837,14 @@ func (b *SystemBackend) handleWrappingWrap(ctx context.Context, req *logical.Req
 	// tokens using them we can ensure that an operator can't spoof a legit JWT
 	// wrapped token, which makes certain init/rekey/generate-root cases have
 	// better properties.
-	req.WrapInfo.Format = "uuid"
-
+	// Format is set on the response rather than mutating req.WrapInfo, which
+	// routeCommon (router.go) unconditionally restores via a deferred assignment,
+	// silently discarding any mutation made by this handler.
 	return &logical.Response{
 		Data: data.Raw,
+		WrapInfo: &wrapping.ResponseWrapInfo{
+			Format: "uuid",
+		},
 	}, nil
 }
 
@@ -5489,29 +6117,32 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type               string   `json:"type"`
-	Initialized        bool     `json:"initialized"`
-	Sealed             bool     `json:"sealed"`
-	T                  int      `json:"t"`
-	N                  int      `json:"n"`
-	Progress           int      `json:"progress"`
-	Nonce              string   `json:"nonce"`
-	Version            string   `json:"version"`
-	BuildDate          string   `json:"build_date"`
-	Migration          bool     `json:"migration"`
-	ClusterName        string   `json:"cluster_name,omitempty"`
-	ClusterID          string   `json:"cluster_id,omitempty"`
-	RecoverySeal       bool     `json:"recovery_seal"`
-	StorageType        string   `json:"storage_type,omitempty"`
-	HCPLinkStatus      string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID  string   `json:"hcp_link_resource_ID,omitempty"`
-	Warnings           []string `json:"warnings,omitempty"`
-	RecoverySealType   string   `json:"recovery_seal_type,omitempty"`
-	RemovedFromCluster *bool    `json:"removed_from_cluster,omitempty"`
+	Type                 string   `json:"type"`
+	Initialized          bool     `json:"initialized"`
+	Sealed               bool     `json:"sealed"`
+	T                    int      `json:"t"`
+	N                    int      `json:"n"`
+	Progress             int      `json:"progress"`
+	Nonce                string   `json:"nonce"`
+	Version              string   `json:"version"`
+	BuildDate            string   `json:"build_date"`
+	Migration            bool     `json:"migration"`
+	ClusterName          string   `json:"cluster_name,omitempty"`
+	ClusterID            string   `json:"cluster_id,omitempty"`
+	RecoverySeal         bool     `json:"recovery_seal"`
+	StorageType          string   `json:"storage_type,omitempty"`
+	HCPLinkStatus        string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID    string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings             []string `json:"warnings,omitempty"`
+	RecoverySealType     string   `json:"recovery_seal_type,omitempty"`
+	RemovedFromCluster   *bool    `json:"removed_from_cluster,omitempty"`
+	MigrationDoneAtEpoch int64    `json:"migration_done_at_epoch,omitempty"`
 }
 
 type SealBackendStatus struct {
 	Name           string `json:"name"`
+	Configured     bool   `json:"configured"`
+	Disabled       bool   `json:"disabled"`
 	Healthy        bool   `json:"healthy"`
 	UnhealthySince string `json:"unhealthy_since,omitempty"`
 }
@@ -5618,6 +6249,9 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		RecoverySealType:   recoverySealType,
 		StorageType:        core.StorageType(),
 	}
+	if p := core.sealMigrationDone.Load(); p != nil {
+		s.MigrationDoneAtEpoch = p.Unix()
+	}
 
 	if resourceIDonHCP != "" {
 		s.HCPLinkStatus = hcpLinkStatus
@@ -5641,10 +6275,12 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if a, ok := c.seal.(*autoSeal); ok {
 		r.Healthy = c.seal.Healthy()
 		var uhMin time.Time
-		for _, sealWrapper := range a.GetConfiguredSealWrappersByPriority() {
+		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
 			b := SealBackendStatus{
-				Name:    sealWrapper.Name,
-				Healthy: sealWrapper.IsHealthy(),
+				Name:       sealWrapper.Name,
+				Configured: sealWrapper.Configured,
+				Healthy:    sealWrapper.IsHealthy(),
+				Disabled:   sealWrapper.Disabled,
 			}
 			if !sealWrapper.IsHealthy() {
 				lastSeenHealthy := sealWrapper.LastSeenHealthy()
@@ -5660,11 +6296,21 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		if !uhMin.IsZero() {
 			r.UnhealthySince = uhMin.String()
 		}
+		if c.IsInSealMigrationMode(false) {
+			r.Backends = append(r.Backends, SealBackendStatus{
+				Name:       "shamir",
+				Configured: true,
+				Healthy:    true,
+				Disabled:   true,
+			})
+		}
 	} else {
 		r.Backends = []SealBackendStatus{
 			{
-				Name:    "shamir", // "default?"
-				Healthy: true,
+				Name:       "shamir",
+				Configured: true,
+				Healthy:    true,
+				Disabled:   false,
 			},
 		}
 		r.Healthy = true
@@ -6155,6 +6801,39 @@ func (b *SystemBackend) handleWellKnownRead() framework.OperationFunc {
 			},
 		}, nil
 	}
+}
+
+// handleVaultVersionsRead handles the "/sys/vault-versions" endpoint to proxy releases.hashicorp.com
+func (b *SystemBackend) handleVaultVersionsRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	edition, ok := data.GetOk("edition")
+	if !ok {
+		edition = "community"
+	}
+
+	versions, err := releaseinfo.FetchVaultVersions(ctx, edition.(string))
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch vault versions: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"versions": versions,
+		},
+	}, nil
+}
+
+// handleReleaseInfoRead handles the "/sys/release-info" endpoint to fetch release information from GitHub
+func (b *SystemBackend) handleReleaseInfoRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	versions, err := releaseinfo.FetchReleaseInformationWithContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch release information: %w", err)
+	}
+
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"versions": versions,
+		},
+	}, nil
 }
 
 func sanitizePath(path string) string {
@@ -7064,6 +7743,10 @@ This path responds to the following HTTP methods.
 	},
 	"internal-ui-feature-flags": {
 		"Enabled feature flags. Internal API; its location, inputs, and outputs may change.",
+		"",
+	},
+	"internal-ui-settings": {
+		"UI-related settings for the current cluster, such as whether UI telemetry is enabled. Internal API; its location, inputs, and outputs may change.",
 		"",
 	},
 	"internal-ui-mounts": {

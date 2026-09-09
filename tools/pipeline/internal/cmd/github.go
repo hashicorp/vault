@@ -1,31 +1,29 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
 
 import (
-	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 
-	"github.com/google/go-github/v81/github"
-	git "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
+	gh "github.com/google/go-github/v83/github"
+	ghpkg "github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
 	"github.com/shurcooL/githubv4"
 	"github.com/spf13/cobra"
-	"golang.org/x/oauth2"
 )
 
 type githubCommandState struct {
-	Git      *git.Client
-	GithubV3 *github.Client
-	GithubV4 *githubv4.Client
+	GithubV3   *gh.Client
+	GithubV4   *githubv4.Client
+	GithubHost string
 }
 
 var githubCmdState = &githubCommandState{
-	GithubV3: github.NewClient(nil),
+	GithubV3: gh.NewClient(nil),
 	GithubV4: githubv4.NewClient(nil),
-	Git:      git.NewClient(git.WithLoadTokenFromEnv()),
 }
 
 func newGithubCmd() *cobra.Command {
@@ -34,23 +32,33 @@ func newGithubCmd() *cobra.Command {
 		Short: "Github commands",
 		Long:  "Github commands",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if token, set := os.LookupEnv("GITHUB_TOKEN"); set {
-				githubCmdState.GithubV3 = githubCmdState.GithubV3.WithAuthToken(token)
-				githubCmdState.GithubV4 = githubv4.NewClient(
-					oauth2.NewClient(context.Background(),
-						oauth2.StaticTokenSource(&oauth2.Token{AccessToken: token}),
-					),
-				)
-			} else {
-				fmt.Println("\x1b[1;33;49mWARNING\x1b[0m: GITHUB_TOKEN has not been set. While not always required for read actions on public repositories you're likely to get throttled without it")
+			token, tokenSet := os.LookupEnv("GITHUB_TOKEN")
+			if !tokenSet {
+				slog.Default().WarnContext(cmd.Context(), "GITHUB_TOKEN has not been set. While not always required for read actions on public repositories you're likely to get throttled without it")
+			}
+
+			// Both clients are constructed via the shared ghpkg helpers so
+			// auth transport setup (oauth2.Transport) is never duplicated here.
+			var err error
+			githubCmdState.GithubV3, err = ghpkg.NewClient(githubCmdState.GithubHost, token, nil)
+			if err != nil {
+				return fmt.Errorf("creating GitHub v3 REST client: %w", err)
+			}
+
+			githubCmdState.GithubV4, err = ghpkg.NewV4Client(githubCmdState.GithubHost, token, nil)
+			if err != nil {
+				return fmt.Errorf("creating GitHub v4 GraphQL client: %w", err)
 			}
 
 			return nil
 		},
 	}
 
+	githubCmd.PersistentFlags().StringVar(&githubCmdState.GithubHost, "github-host", "github.com", "GitHub API host (use for GitHub Enterprise Server)")
+
 	githubCmd.AddCommand(newGithubCheckCmd())
 	githubCmd.AddCommand(newGithubCloseCmd())
+	githubCmd.AddCommand(newCollectArtifactShasCmd())
 	githubCmd.AddCommand(newGithubCopyCmd())
 	githubCmd.AddCommand(newGithubCreateCmd())
 	githubCmd.AddCommand(newGithubFindCmd())

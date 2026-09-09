@@ -8,14 +8,15 @@ import { service } from '@ember/service';
 
 import type Transition from '@ember/routing/transition';
 import type AdapterError from '@ember-data/adapter/error';
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type Controller from '@ember/controller';
 import type SecretMountPath from 'vault/services/secret-mount-path';
+import type { LdapApplicationModel } from './application';
 
 interface LdapErrorController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  backend: SecretEngineModel;
+  backend: SecretsEngineResource;
 }
 
 export default class LdapErrorRoute extends Route {
@@ -28,6 +29,7 @@ export default class LdapErrorRoute extends Route {
       { label: 'Secrets engines', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
     ];
-    controller.backend = this.modelFor('application') as SecretEngineModel;
+    const { secretsEngine } = this.modelFor('application') as LdapApplicationModel;
+    controller.backend = secretsEngine;
   }
 }

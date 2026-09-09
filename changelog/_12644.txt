@@ -1,0 +1,3 @@
+```release-note:feature
+*** PKI External CA (Enterprise) ***: A new plugin that provides the ability to acquire PKI certificates from Public CA providers through the ACME protocol
+```

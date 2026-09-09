@@ -256,6 +256,82 @@ func TestHANA_DeleteUser(t *testing.T) {
 	}
 }
 
+// TestHANA_DeleteUser_DefaultRevoke_QuotesIdentifier_PreventsInjection verifies
+// that the default revoke path quotes the username as an identifier and does not
+// execute injected SQL.
+func TestHANA_DeleteUser_DefaultRevoke_QuotesIdentifier_PreventsInjection(t *testing.T) {
+	if os.Getenv("HANA_URL") == "" || os.Getenv("VAULT_ACC") != "1" {
+		t.SkipNow()
+	}
+	connURL := os.Getenv("HANA_URL")
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+
+	initReq := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
+
+	cleanupUser := func(username string) {
+		_, _ = db.DeleteUser(context.Background(), dbplugin.DeleteUserRequest{
+			Username: username,
+			Statements: dbplugin.Statements{
+				Commands: []string{testHANADrop},
+			},
+		})
+	}
+
+	decoyPassword := "Decoy_ThirtyTwo_Chars_Password_1"
+	victimPassword := "Victim_ThirtyTwo_Chars_Password_2"
+
+	decoy := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "decoy",
+			RoleName:    "sqli",
+		},
+		Password: decoyPassword,
+		Statements: dbplugin.Statements{
+			Commands: []string{testHANARole},
+		},
+		Expiration: time.Now().Add(time.Hour),
+	})
+	t.Cleanup(func() { cleanupUser(decoy.Username) })
+
+	victim := dbtesting.AssertNewUser(t, db, dbplugin.NewUserRequest{
+		UsernameConfig: dbplugin.UsernameMetadata{
+			DisplayName: "victim",
+			RoleName:    "sqli",
+		},
+		Password: victimPassword,
+		Statements: dbplugin.Statements{
+			Commands: []string{testHANARole},
+		},
+		Expiration: time.Now().Add(time.Hour),
+	})
+	t.Cleanup(func() { cleanupUser(victim.Username) })
+
+	assertCredsExist(t, connURL, decoy.Username, decoyPassword)
+	assertCredsExist(t, connURL, victim.Username, victimPassword)
+
+	injectedUsername := fmt.Sprintf(`%s"; DROP USER "%s" CASCADE; --`, decoy.Username, victim.Username)
+
+	_, err := db.DeleteUser(context.Background(), dbplugin.DeleteUserRequest{
+		Username: injectedUsername,
+		Statements: dbplugin.Statements{
+			Commands: []string{},
+		},
+	})
+	require.Error(t, err)
+
+	assertCredsExist(t, connURL, victim.Username, victimPassword)
+}
+
 func testCredsExist(t testing.TB, connURL, username, password string) error {
 	// Log in with the new creds
 	parts := strings.Split(connURL, "@")

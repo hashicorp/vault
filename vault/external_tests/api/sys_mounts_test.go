@@ -22,13 +22,15 @@ func TestGetMount(t *testing.T) {
 		expectErr   bool
 	}{
 		{
-			name:       "get-default-mount-success",
-			mountName:  "secret",
-			mountInput: nil,
+			name:      "get-default-mount-success",
+			mountName: "secret",
+			mountInput: &api.MountInput{
+				Type: "kv",
+			},
 			expected: &api.MountOutput{
 				Type: "kv",
 			},
-			shouldMount: false,
+			shouldMount: true,
 			expectErr:   false,
 		},
 		{

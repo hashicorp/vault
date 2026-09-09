@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"hash"
-	"strconv"
 	"strings"
 	"time"
 
@@ -240,9 +239,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if p != nil {
-		if b.System().CachingDisabled() {
-			p.Unlock()
-		}
+		p.Unlock()
 		return nil, errors.New("the import path cannot be used with an existing key; use import-version to rotate an existing imported key")
 	}
 
@@ -255,6 +252,15 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyImport, map[string]interface{}{
+		"key_name":               name,
+		"type":                   polReq.KeyType,
+		"derived":                polReq.Derived,
+		"exportable":             polReq.Exportable,
+		"allow_plaintext_backup": polReq.AllowPlaintextBackup,
+		"auto_rotate_period":     int64(autoRotatePeriod.Seconds()),
+	})
 
 	return nil, nil
 }
@@ -272,6 +278,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		Name:         name,
 		Upsert:       false,
 		IsPrivateKey: isCiphertextSet,
+		WriteLocked:  true,
 	}
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
 	if err != nil {
@@ -280,6 +287,7 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	if p == nil {
 		return nil, fmt.Errorf("no key found with name %s; to import a new key, use the import/ endpoint", name)
 	}
+	defer p.Unlock()
 	if !p.Imported {
 		return nil, errors.New("the import_version endpoint can only be used with an imported key")
 	}
@@ -287,24 +295,21 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 		return nil, errors.New("import_version cannot be used on keys with convergent encryption enabled")
 	}
 
-	if !b.System().CachingDisabled() {
-		p.Lock(true)
-	}
-	defer p.Unlock()
-
 	key, resp, err := b.extractKeyFromFields(ctx, req, d, p.Type, isCiphertextSet)
 	if err != nil {
 		return resp, err
 	}
 
+	var versionToUpdate *int
 	// Get param version if set else import a new version.
 	if version, ok := d.GetOk("version"); ok {
-		versionToUpdate := version.(int)
+		versionValue := version.(int)
+		versionToUpdate = &versionValue
 
 		// Check if given version can be updated given input
-		err = p.KeyVersionCanBeUpdated(versionToUpdate, isCiphertextSet)
+		err = p.KeyVersionCanBeUpdated(*versionToUpdate, isCiphertextSet)
 		if err == nil {
-			err = p.ImportPrivateKeyForVersion(ctx, req.Storage, versionToUpdate, key)
+			err = p.ImportPrivateKeyForVersion(ctx, req.Storage, *versionToUpdate, key)
 		}
 	} else {
 		err = p.ImportPublicOrPrivate(ctx, req.Storage, key, isCiphertextSet, b.GetRandomReader())
@@ -313,6 +318,12 @@ func (b *backend) pathImportVersionWrite(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return nil, err
 	}
+
+	metadata := b.keyPolicyObservationMetadata(p)
+	if versionToUpdate != nil {
+		metadata["import_version"] = *versionToUpdate
+	}
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyImport, metadata)
 
 	return nil, nil
 }
@@ -326,15 +337,14 @@ func (b *backend) decryptImportedKey(ctx context.Context, storage logical.Storag
 	wrappedEphKey := ciphertext[:EncryptedKeyBytes]
 	wrappedImportKey := ciphertext[EncryptedKeyBytes:]
 
-	wrappingKey, err := b.getWrappingKey(ctx, storage)
+	privWrappingKey, err := b.getWrappingKey(ctx, storage)
 	if err != nil {
 		return nil, err
 	}
-	if wrappingKey == nil {
+	if privWrappingKey == nil {
 		return nil, fmt.Errorf("error importing key: wrapping key was nil")
 	}
 
-	privWrappingKey := wrappingKey.Keys[strconv.Itoa(wrappingKey.LatestVersion)].RSAKey
 	ephKey, err := rsa.DecryptOAEP(hashFn, b.GetRandomReader(), privWrappingKey, wrappedEphKey, []byte{})
 	if err != nil {
 		return nil, err

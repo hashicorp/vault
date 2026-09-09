@@ -21,9 +21,10 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/random"
+	physRaft "github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 const trailing_slash_key = "trailing_slash/"
@@ -198,7 +199,6 @@ storage_source "consul" {
 
 storage_destination "raft" {
   path = "dest_path"
-  path = "dest_path"
 }`), 0o644)
 
 		expCfg := &migratorConfig{
@@ -215,7 +215,6 @@ storage_destination "raft" {
 				},
 			},
 		}
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 		cfg, err := cmd.loadMigratorConfig(cfgName)
 		if err != nil {
 			t.Fatal(cfg)
@@ -223,9 +222,6 @@ storage_destination "raft" {
 		if diff := deep.Equal(cfg, expCfg); diff != nil {
 			t.Fatal(diff)
 		}
-		// TODO (HCL_DUP_KEYS_DEPRECATION): Remove warning and leave only this "verifyBad" test down below
-		strings.Contains(ui.ErrorWriter.String(), "WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
 
 		verifyBad := func(cfg string) {
 			os.WriteFile(cfgName, []byte(cfg), 0o644)
@@ -284,6 +280,71 @@ storage_destination "raft" {
   path = "dest_path"
   path = "dest_path"
 }`)
+	})
+
+	t.Run("Raft destination with existing state, no -start flag returns error", func(t *testing.T) {
+		raftDir := t.TempDir()
+
+		backend, err := physRaft.NewRaftBackend(map[string]string{
+			"path":    raftDir,
+			"node_id": "test-node",
+		}, log.NewNullLogger())
+		require.NoError(t, err)
+		raftBackend := backend.(*physRaft.RaftBackend)
+		require.NoError(t, raftBackend.Bootstrap([]physRaft.Peer{{ID: "test-node", Address: "test-node"}}))
+		require.NoError(t, raftBackend.SetupCluster(context.Background(), physRaft.SetupOpts{StartAsLeader: true}))
+		require.NoError(t, raftBackend.TeardownCluster(nil))
+		require.NoError(t, raftBackend.Close())
+
+		cmd := &OperatorMigrateCommand{
+			logger:           log.NewNullLogger(),
+			flagStart:        "",
+			PhysicalBackends: handlers.physicalBackends,
+		}
+		config := &migratorConfig{
+			ClusterAddr: "http://127.0.0.1:8201",
+			StorageDestination: &server.Storage{
+				Type:   "raft",
+				Config: map[string]string{"path": raftDir, "node_id": "test-node"},
+			},
+		}
+		_, err = cmd.createDestinationBackend("raft", config.StorageDestination.Config, config)
+		require.ErrorContains(t, err, "raft destination already contains state; use -start to resume migration from a checkpoint")
+	})
+
+	t.Run("Raft destination with existing state and -start flag proceeds", func(t *testing.T) {
+		raftDir := t.TempDir()
+
+		backend, err := physRaft.NewRaftBackend(map[string]string{
+			"path":    raftDir,
+			"node_id": "test-node",
+		}, log.NewNullLogger())
+		require.NoError(t, err)
+		raftBackend := backend.(*physRaft.RaftBackend)
+		require.NoError(t, raftBackend.Bootstrap([]physRaft.Peer{{ID: "test-node", Address: "test-node"}}))
+		require.NoError(t, raftBackend.SetupCluster(context.Background(), physRaft.SetupOpts{StartAsLeader: true}))
+		require.NoError(t, raftBackend.TeardownCluster(nil))
+		require.NoError(t, raftBackend.Close())
+
+		cmd := &OperatorMigrateCommand{
+			logger:           log.NewNullLogger(),
+			flagStart:        "some/key",
+			PhysicalBackends: handlers.physicalBackends,
+		}
+		config := &migratorConfig{
+			ClusterAddr: "http://127.0.0.1:8201",
+			StorageDestination: &server.Storage{
+				Type:   "raft",
+				Config: map[string]string{"path": raftDir, "node_id": "test-node"},
+			},
+		}
+		destBackend, err := cmd.createDestinationBackend("raft", config.StorageDestination.Config, config)
+		require.NoError(t, err)
+		destRaftBackend := destBackend.(*physRaft.RaftBackend)
+		t.Cleanup(func() {
+			require.NoError(t, destRaftBackend.TeardownCluster(nil))
+			require.NoError(t, destRaftBackend.Close())
+		})
 	})
 
 	t.Run("DFS Scan", func(t *testing.T) {

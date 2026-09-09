@@ -7,7 +7,7 @@ terraform {
     # to the public registry
     enos = {
       source  = "registry.terraform.io/hashicorp-forge/enos"
-      version = ">= 0.4.0"
+      version = ">= 0.6.6"
     }
   }
 }
@@ -162,10 +162,12 @@ module "start_vault" {
   hosts                     = var.hosts
   install_dir               = var.install_dir
   ip_version                = var.ip_version
+  leader_api_addr           = var.leader_api_addr
   license                   = var.license
   listener_port             = var.listener_port
   log_level                 = var.log_level
   manage_service            = var.manage_service
+  retry_join_method         = var.retry_join_method
   seal_attributes           = var.seal_attributes
   seal_attributes_secondary = var.seal_attributes_secondary
   seal_type                 = var.seal_type
@@ -205,6 +207,7 @@ resource "enos_vault_unseal" "leader" {
   depends_on = [
     module.start_vault,
     enos_vault_init.leader,
+    //   enos_remote_exec.raft_join_followers_when_no_autojoin,
   ]
   for_each = enos_vault_init.leader // only unseal the leader if we initialized it
 
@@ -224,6 +227,7 @@ resource "enos_vault_unseal" "followers" {
   depends_on = [
     enos_vault_init.leader,
     enos_vault_unseal.leader,
+    //  enos_remote_exec.raft_join_followers_when_no_autojoin,
   ]
   // Only unseal followers if we're not using an auto-unseal method and we've
   // initialized the cluster

@@ -4,8 +4,8 @@
 }}
 
 <div class="box is-sideless is-fullwidth is-marginless" ...attributes>
-  {{#each @model.attrs as |attr|}}
-    <FormField @attr={{attr}} @model={{@model}} @modelValidations={{or @validations this.editValidations}} />
+  {{#each @form.formFields as |field|}}
+    <FormField @attr={{field}} @model={{@form}} @modelValidations={{@validations}} />
   {{/each}}
 </div>
 {{#if @hasActions}}
@@ -24,10 +24,10 @@
 {{/if}}
 
 <ConfirmationModal
-  @title="Edit {{@model.type}} configuration?"
+  @title="Edit {{@form.type}} configuration?"
   @onClose={{action (mut this.isEditModalActive) false}}
   @isActive={{this.isEditModalActive}}
-  @confirmText={{@model.type}}
+  @confirmText={{@form.type}}
   @onConfirm={{perform this.save}}
 >
   <p>

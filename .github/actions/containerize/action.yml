@@ -39,7 +39,7 @@ runs:
   using: composite
   steps:
     - if: inputs.vault-edition != 'ce' && (inputs.docker == 'true' || inputs.redhat == 'true')
-      uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      uses: hashicorp-forge/actions-pao-tool/select-license@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
       id: build-vault-select-license
       with:
         arch: ${{ matrix.goarch }}
@@ -121,7 +121,7 @@ runs:
         [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
         [[ ! -f "$dest_path" ]] && cp ${{ inputs.vault-binary-path }} "${dest_path}"
     - if: inputs.docker == 'true'
-      uses: hashicorp/actions-docker-build@ryan/VAULT-34830-allow-repo-configuration
+      uses: hashicorp/actions-docker-build@4e0c63aad578fbc5d9dc5a88d108b8fc6253f769
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
@@ -134,7 +134,7 @@ runs:
         target: ${{ steps.vars.outputs.docker-container-target }}
         version: ${{ steps.vars.outputs.container-version }}
     - if: inputs.redhat == 'true'
-      uses: hashicorp/actions-docker-build@ryan/VAULT-34830-allow-repo-configuration
+      uses: hashicorp/actions-docker-build@4e0c63aad578fbc5d9dc5a88d108b8fc6253f769
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary

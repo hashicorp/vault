@@ -32,6 +32,9 @@ export default class MessagesList extends Component {
 
   @tracked showMaxMessageModal = false;
   @tracked messageToDelete = null;
+  @tracked pageFilterValue = this.args.params?.pageFilter || '';
+  @tracked statusValue = this.args.params?.status || '';
+  @tracked typeValue = this.args.params?.type || '';
 
   isStartTimeAfterToday = (message) => {
     return isAfter(message.start_time, timestamp.now());
@@ -58,13 +61,12 @@ export default class MessagesList extends Component {
           })}`;
           badgeColor = 'highlight';
         } else {
-          badgeDisplayText = `Inactive:  ${dateFormat([message.start_time, 'MMM d, yyyy hh:mm aaa'], {
+          badgeDisplayText = `Inactive: ${dateFormat([message.end_time, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
           badgeColor = 'neutral';
         }
       }
-
       message.badgeDisplayText = badgeDisplayText;
       message.badgeColor = badgeColor;
       return message;
@@ -85,6 +87,25 @@ export default class MessagesList extends Component {
         page,
       };
     };
+  }
+
+  get hasFiltersSelected() {
+    return !!(this.pageFilterValue || this.statusValue || this.typeValue);
+  }
+
+  @action
+  updatePageFilter(event) {
+    this.pageFilterValue = event.target.value;
+  }
+
+  @action
+  updateStatus(event) {
+    this.statusValue = event.target.value;
+  }
+
+  @action
+  updateType(event) {
+    this.typeValue = event.target.value;
   }
 
   transitionToMessagesWithParams(queryParams) {
@@ -126,6 +147,9 @@ export default class MessagesList extends Component {
 
   @action
   resetFilters() {
+    this.pageFilterValue = '';
+    this.statusValue = '';
+    this.typeValue = '';
     this.transitionToMessagesWithParams({ pageFilter: '', status: null, type: null });
   }
 

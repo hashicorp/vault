@@ -5,6 +5,7 @@ package awsauth
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -33,9 +34,28 @@ gets cached in this accesslist, keyed off of instance ID.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathIdentityAccesslistRead,
+				Summary:  "Return the access-list entry for the given EC2 instance ID.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"role":                      {Type: framework.TypeString, Description: "Name of the role used during the last successful login."},
+							"client_nonce":              {Type: framework.TypeString, Description: "Client nonce used during the login."},
+							"creation_time":             {Type: framework.TypeString, Description: "Time the access-list entry was created, in RFC3339 format."},
+							"disallow_reauthentication": {Type: framework.TypeBool, Description: "Whether reauthentication is disallowed for this instance."},
+							"pending_time":              {Type: framework.TypeString, Description: "The pendingTime field from the instance identity document."},
+							"expiration_time":           {Type: framework.TypeString, Description: "Time the access-list entry expires, in RFC3339 format."},
+							"last_updated_time":         {Type: framework.TypeString, Description: "Time the access-list entry was last updated, in RFC3339 format."},
+						},
+					}},
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathIdentityAccesslistDelete,
+				Summary:  "Delete the access-list entry for the given EC2 instance ID.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 		},
 
@@ -56,6 +76,7 @@ func (b *backend) pathListIdentityAccessList() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathAccessListIdentitiesList,
+				Summary:  "List the EC2 instance IDs in the identity access list.",
 			},
 		},
 

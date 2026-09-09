@@ -5,8 +5,6 @@
 
 package command
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-hclog"

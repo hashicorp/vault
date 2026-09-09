@@ -78,7 +78,6 @@ func testRaftHANewCluster(t *testing.T, bundler teststorage.PhysicalBackendBundl
 
 	teststorage.RaftHASetup(&conf, &opts, bundler)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	defer cluster.Cleanup()
 
 	joinFunc := func(client *api.Client, addClientCerts bool) {
 		req := &api.RaftJoinRequest{
@@ -223,7 +222,6 @@ func testRaftHARecoverCluster(t *testing.T, physBundle *vault.PhysicalBackendBun
 	// Ensure no writes are happening before we try to clean it up, to prevent
 	// issues deleting the files.
 	clusterRestored.EnsureCoresSealed(t)
-	clusterRestored.Cleanup()
 }
 
 func TestRaft_HA_ExistingCluster(t *testing.T) {
@@ -249,8 +247,6 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		clusterRootToken   string
 	)
 	createCluster := func(t *testing.T) {
-		t.Log("simulating cluster creation without raft as HABackend")
-
 		storage.Setup(&conf, &opts)
 
 		cluster := vault.NewTestCluster(t, &conf, &opts)
@@ -269,8 +265,6 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 	defer haCleanup()
 
 	updateCluster := func(t *testing.T) {
-		t.Log("simulating cluster update with raft as HABackend")
-
 		opts.SkipInit = true
 		haStorage.Setup(&conf, &opts)
 
@@ -342,8 +336,6 @@ func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
 	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
 	teststorage.RaftHASetup(&conf, &opts, teststorage.MakeFileBackend)
 	cluster := vault.NewTestCluster(t, &conf, &opts)
-	defer cluster.Cleanup()
-	vault.TestWaitActive(t, cluster.Cores[0].Core)
 
 	leader := cluster.Cores[0]
 	follower := cluster.Cores[2]

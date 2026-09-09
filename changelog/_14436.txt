@@ -1,0 +1,3 @@
+```release-note:change
+identity: Require `sudo` capability to invoke the identity entity merge API endpoint (`identity/entity/merge`).
+```

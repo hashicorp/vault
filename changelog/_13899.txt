@@ -1,0 +1,4 @@
+```release-note:improvement
+sdk/helper/keysutil: The lock manager's GetPolicy function now always returns a locked Policy, even when caching is
+enabled. The PolicyRequest struct has a new field to indicate whether the caller requires a write lock on the policy.
+```

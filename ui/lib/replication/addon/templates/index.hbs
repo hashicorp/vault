@@ -4,7 +4,7 @@
 }}
 
 <section class="section">
-  <div class="container is-widescreen">
+  <div class="is-widescreen">
     {{#if (eq this.model.mode "unsupported")}}
       {{! Replication is unsupported in non-enterprise or when using non-transactional storage (eg inmem) }}
       <Page::Header @title="Replication unsupported">
@@ -18,7 +18,13 @@
         </:breadcrumbs>
       </Page::Header>
 
-      <EmptyState @title="The current cluster configuration does not support replication" />
+      <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+        <A.Header
+          @title="The current cluster configuration does not support replication"
+          @titleTag="h2"
+          data-test-empty-state-title
+        />
+      </Hds::ApplicationState>
     {{else if this.model.replicationIsInitializing}}
       <LayoutLoading />
     {{else if this.model.allReplicationDisabled}}

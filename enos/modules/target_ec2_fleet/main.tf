@@ -9,17 +9,29 @@ terraform {
       source  = "registry.terraform.io/hashicorp-forge/enos"
       version = ">= 0.3.24"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = ">= 0.14.0"
+    }
   }
 }
 
 data "aws_vpc" "vpc" {
   id = var.vpc_id
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_subnets" "vpc" {
   filter {
     name   = "vpc-id"
     values = [var.vpc_id]
+  }
+
+  timeouts {
+    read = "5m"
   }
 }
 
@@ -79,6 +91,9 @@ resource "random_string" "unique_id" {
   special = false
 }
 
+resource "time_static" "create_time" {
+}
+
 // ec2:CreateFleet only allows up to 4 InstanceRequirements overrides so we can only ever request
 // a fleet across 4 or fewer subnets if we want to bid with InstanceRequirements instead of
 // weighted instance types.
@@ -109,6 +124,9 @@ resource "aws_iam_role" "target" {
 resource "aws_iam_instance_profile" "target" {
   name = "${local.name_prefix}-target-profile"
   role = aws_iam_role.target.name
+  tags = {
+    CreateTime = time_static.create_time.rfc3339
+  }
 }
 
 resource "aws_iam_role_policy" "target" {
@@ -325,6 +343,12 @@ resource "aws_ec2_fleet" "targets" {
     on_demand_target_capacity    = var.capacity_type == "on-demand" ? var.instance_count : 0
     target_capacity_unit_type    = "units" // units == instance count
     total_target_capacity        = var.instance_count
+  }
+
+  timeouts {
+    create = "10m"
+    update = "10m"
+    delete = "10m"
   }
 }
 

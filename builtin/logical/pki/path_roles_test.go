@@ -219,6 +219,37 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	}
 }
 
+// TestPki_RoleBadCountry validates that ISO 3166 is followed for the Country field
+func TestPki_RoleBadCountry(t *testing.T) {
+	t.Parallel()
+	b, storage := CreateBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"allowed_domains": "myvault.com",
+		"ttl":             "5h",
+		"country":         "Japan",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/testrole",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), roleReq)
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+	require.True(t, stringSliceContainsAny(resp.Warnings, "3166"))
+
+	roleData["country"] = "3p"
+
+	resp, err = b.HandleRequest(context.Background(), roleReq)
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+	require.True(t, stringSliceContainsAny(resp.Warnings, "country code"))
+}
+
 func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
@@ -897,7 +928,7 @@ func TestPki_RolePatch(t *testing.T) {
 		{
 			Field:   "country",
 			Before:  []string{"US"},
-			Patched: []string{"USA"},
+			Patched: []string{"CA"},
 		},
 		{
 			Field:   "locality",

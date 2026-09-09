@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="{{if @model.isNew 'Create' 'Edit'}} Scope">
+<Page::Header @title="{{if @form.isNew 'Create' 'Edit'}} Scope">
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
@@ -24,13 +24,11 @@
       Providers may reference a set of scopes to make specific identity information available as claims
     </p>
     <MessageError @errorMessage={{this.errorBanner}} />
-    {{#each @model.formFields as |field|}}
-      <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
-    {{/each}}
+    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} />
   </div>
   <div class="has-top-margin-l has-bottom-margin-l">
     <Hds::Button
-      @text={{if @model.isNew "Create" "Update"}}
+      @text={{if @form.isNew "Create" "Update"}}
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}
@@ -41,7 +39,7 @@
       @color="secondary"
       class="has-left-margin-s"
       disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" @onCancel}}
       data-test-oidc-scope-cancel
     />
   </div>

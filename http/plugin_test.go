@@ -50,12 +50,10 @@ func getPluginClusterAndCore(t *testing.T, logger log.Logger) (*vault.TestCluste
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
 
 	cores := cluster.Cores
 	core := cores[0]
 
-	vault.TestWaitActive(t, core.Core)
 	vault.TestAddTestPlugin(t, core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain",
 		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
 
@@ -101,8 +99,7 @@ func TestPlugin_MockList(t *testing.T) {
 	logger := log.New(&log.LoggerOptions{
 		Mutex: &sync.Mutex{},
 	})
-	cluster, core := getPluginClusterAndCore(t, logger)
-	defer cluster.Cleanup()
+	_, core := getPluginClusterAndCore(t, logger)
 
 	_, err := core.Client.Logical().Write("mock/kv/foo", map[string]interface{}{
 		"value": "baz",
@@ -139,8 +136,7 @@ func TestPlugin_MockRawResponse(t *testing.T) {
 	logger := log.New(&log.LoggerOptions{
 		Mutex: &sync.Mutex{},
 	})
-	cluster, core := getPluginClusterAndCore(t, logger)
-	defer cluster.Cleanup()
+	_, core := getPluginClusterAndCore(t, logger)
 
 	resp, err := core.Client.RawRequest(core.Client.NewRequest("GET", "/v1/mock/raw"))
 	if err != nil {
@@ -164,8 +160,7 @@ func TestPlugin_GetParams(t *testing.T) {
 	logger := log.New(&log.LoggerOptions{
 		Mutex: &sync.Mutex{},
 	})
-	cluster, core := getPluginClusterAndCore(t, logger)
-	defer cluster.Cleanup()
+	_, core := getPluginClusterAndCore(t, logger)
 
 	_, err := core.Client.Logical().Write("mock/kv/foo", map[string]interface{}{
 		"value": "baz",

@@ -5,7 +5,12 @@
 
 <Page::Header @title={{this.title}}>
   <:breadcrumbs>
-    <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
+    <KeyValueHeader
+      @path="vault.cluster.secrets.backend.show"
+      @mode={{@mode}}
+      @root={{this.breadcrumbs}}
+      @showCurrent={{true}}
+    />
   </:breadcrumbs>
 </Page::Header>
 
@@ -141,7 +146,7 @@
           @modelValidations={{this.modelValidations}}
         />
       {{else}}
-        <Hds::ApplicationState @align="center" class="bottom-padding-32" as |A|>
+        <Hds::ApplicationState class="bottom-padding-32 is-marginless" as |A|>
           <A.Header data-test-empty-state-title @title="No database connection selected" @titleTag="h2" />
           <A.Body data-test-empty-state-message @text="Choose a connection to be able to configure a role type." />
         </Hds::ApplicationState>

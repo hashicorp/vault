@@ -20,11 +20,6 @@ import (
 )
 
 func testHttpGet(t *testing.T, token string, addr string) *http.Response {
-	loggedToken := token
-	if len(token) == 0 {
-		loggedToken = "<empty>"
-	}
-	t.Logf("Token is %s", loggedToken)
 	return testHttpData(t, "GET", token, addr, "", nil, false, 0, false)
 }
 
@@ -159,7 +154,22 @@ func testResponseHeader(t *testing.T, resp *http.Response, expectedHeaders map[s
 	t.Helper()
 	for k, v := range expectedHeaders {
 		hv := resp.Header.Get(k)
-		if v != hv {
+		// Special handling for Content-Security-Policy header which may have a nonce appended
+		if k == "Content-Security-Policy" {
+			// Check if the actual header starts with the expected value
+			// and optionally contains a nonce directive
+			if !strings.HasPrefix(hv, v) {
+				t.Fatalf("expected header value %v to start with %v, got %v", k, v, hv)
+			}
+			// Verify that if there's additional content, it's a valid nonce directive
+			if len(hv) > len(v) {
+				remainder := strings.TrimPrefix(hv, v)
+				// Should start with ; and contain style-src 'nonce-
+				if !strings.HasPrefix(remainder, ";style-src 'nonce-") {
+					t.Fatalf("expected CSP header %v=%v to have nonce appended, got %v=%v", k, v, k, hv)
+				}
+			}
+		} else if v != hv {
 			t.Fatalf("expected header value %v=%v, got %v=%v", k, v, k, hv)
 		}
 	}

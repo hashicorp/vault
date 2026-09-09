@@ -10,6 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func (s *Session) Read(path string) (*api.Secret, error) {
+	s.t.Helper()
+
+	return s.Client.Logical().Read(path)
+}
+
 func (s *Session) MustWrite(path string, data map[string]any) *api.Secret {
 	s.t.Helper()
 
@@ -22,6 +28,14 @@ func (s *Session) MustRead(path string) *api.Secret {
 	s.t.Helper()
 
 	secret, err := s.Client.Logical().Read(path)
+	require.NoError(s.t, err)
+	return secret
+}
+
+func (s *Session) MustList(path string) *api.Secret {
+	s.t.Helper()
+
+	secret, err := s.Client.Logical().List(path)
 	require.NoError(s.t, err)
 	return secret
 }
@@ -50,4 +64,11 @@ func (s *Session) MustReadKV2(mountPath, secretPath string) *api.Secret {
 
 	fullPath := path.Join(mountPath, "data", secretPath)
 	return s.MustRead(fullPath)
+}
+
+func (s *Session) MustDelete(path string) {
+	s.t.Helper()
+
+	_, err := s.Client.Logical().Delete(path)
+	require.NoError(s.t, err)
 }

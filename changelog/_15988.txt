@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/scim (enterprise): Added filtering support to the `GET /scim/v2/Users` and `GET /scim/v2/Groups` endpoints per RFC 7644. Supported filters: `userName eq`, `externalId eq`, `active eq`, and `meta.lastModified gt/ge/lt/le` for Users; `displayName eq` and `meta.lastModified gt/ge/lt/le` for Groups. Unsupported filter expressions return HTTP 400. `ServiceProviderConfig` now advertises `filter.supported: true`.
+```

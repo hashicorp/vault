@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
@@ -124,7 +124,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
   });
 
   test('it should show error messages', async function (assert) {
-    this.writeStub.rejects(getErrorResponse({ errors: ['Some error occurred'] }));
+    this.writeStub.rejects(getErrorResponse({ errors: ['Some error occurred'] }, 400));
 
     await this.renderComponent();
     await click(GENERAL.submitButton);

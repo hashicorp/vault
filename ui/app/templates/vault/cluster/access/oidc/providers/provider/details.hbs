@@ -5,7 +5,7 @@
 
 <Toolbar>
   <ToolbarActions>
-    {{#if (and (not-eq this.model.name "default") this.model.canDelete)}}
+    {{#if (and (not-eq this.model.provider.name "default") this.model.capabilities.canDelete)}}
       <ConfirmAction
         data-test-oidc-provider-delete
         @buttonText="Delete provider"
@@ -17,10 +17,10 @@
       />
       <div class="toolbar-separator"></div>
     {{/if}}
-    {{#if this.model.canEdit}}
+    {{#if this.model.capabilities.canUpdate}}
       <ToolbarLink
         @route="vault.cluster.access.oidc.providers.provider.edit"
-        @model={{this.model.name}}
+        @model={{this.model.provider.name}}
         data-test-oidc-provider-edit
       >
         Edit provider
@@ -29,15 +29,13 @@
   </ToolbarActions>
 </Toolbar>
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  <InfoTableRow @label="Name" @value={{this.model.name}} @alwaysRender={{true}} />
-  <InfoTableRow @label="Issuer URL" @value={{this.model.issuer}} @addCopyButton={{true}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Name" @value={{this.model.provider.name}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Issuer URL" @value={{this.model.provider.issuer}} @addCopyButton={{true}} @alwaysRender={{true}} />
   <InfoTableRow
     @label="Scopes"
     @type="array"
-    @value={{@model.scopesSupported}}
-    @model={{@model}}
+    @value={{this.model.provider.scopes_supported}}
     @isLink={{true}}
-    @modelType="oidc/scope"
     @itemRoute={{"vault.cluster.access.oidc.scopes.scope.details"}}
     @alwaysRender={{true}}
     @doNotTruncate={{true}}

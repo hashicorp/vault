@@ -1,0 +1,3 @@
+```release-note:improvement
+events (enterprise): Add event notifications support for lease events.
+```

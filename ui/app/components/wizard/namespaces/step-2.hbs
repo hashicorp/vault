@@ -14,7 +14,7 @@
   </LG.Item>
 
   <LG.Item @colspan={{4}}>
-    <Hds::Reveal @isOpen={{true}} @text="Namespace best practices">
+    <Hds::Reveal @isOpen={{true}} @text="Namespace best practices" {{on "click" this.onTipsReveal}}>
       <Hds::Layout::Grid @columnMinWidth="10%" @gap="24" as |LG|>
         <LG.Item @colspan={{7}}>
           <ul class="bullet">
@@ -32,7 +32,7 @@
               used as paths in API calls and CLI commands. You will not be able to edit it later.
             </li>
           </ul>
-          <Hds::Text:Body @tag="p" class="has-top-margin-s">Example path that your users or apps will reference:</Hds::Text:Body>
+          <Hds::Text::Body @tag="p" class="has-top-margin-s">Example path that your users or apps will reference:</Hds::Text::Body>
           <Hds::Text::Code @tag="p" class="has-top-margin-s">
             $$global/finance-org/payroll-app/kv/data/config$$
           </Hds::Text::Code>

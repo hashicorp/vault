@@ -37,7 +37,11 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   test('it renders error template when permission is denied', async function (assert) {
     this.server.get('/sys/config/ui/login/default-auth', () => overrideResponse(403));
     await visit('vault/config-ui/login-settings');
-    assert.dom(GENERAL.pageError.error).hasText('Error permission denied');
+    assert
+      .dom(GENERAL.pageError.error)
+      .hasText(
+        'ERROR 403 Not authorized You are not authorized to access content at /v1/sys/config/ui/login/default-auth/?list=true. Double check the URL or return to the dashboard. Go to dashboard'
+      );
   });
 
   module('list, read and delete', function (hooks) {

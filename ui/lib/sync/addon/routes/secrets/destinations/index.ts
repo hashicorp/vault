@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { SystemListSyncDestinationsListEnum } from '@hashicorp/vault-client-typescript';
+import { SystemApiSystemListSyncDestinationsListEnum } from '@hashicorp/vault-client-typescript';
 import { listDestinationsTransform } from 'sync/utils/api-transforms';
 import { paginate } from 'core/utils/paginate-list';
 
@@ -56,7 +56,9 @@ export default class SyncSecretsDestinationsIndexRoute extends Route {
 
   async model(params: SyncSecretsDestinationsIndexRouteParams) {
     const { name = '', type = '', page } = params;
-    const response = await this.api.sys.systemListSyncDestinations(SystemListSyncDestinationsListEnum.TRUE);
+    const response = await this.api.sys.systemListSyncDestinations(
+      SystemApiSystemListSyncDestinationsListEnum.TRUE
+    );
     // transform and paginate destinations response
     const destinations = listDestinationsTransform(response, name, type);
     const paginatedDestinations = paginate(destinations, { page: Number(page) || 1 });

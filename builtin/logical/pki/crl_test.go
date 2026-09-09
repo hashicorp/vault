@@ -5,9 +5,11 @@ package pki
 
 import (
 	"context"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -18,7 +20,9 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -958,8 +962,6 @@ func TestAutoRebuild(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Mount PKI
@@ -1548,4 +1550,317 @@ func TestCRLIssuerRemoval(t *testing.T) {
 		require.Contains(t, afterUnifiedCRLList, entry)
 	}
 	require.Equal(t, len(afterUnifiedCRLList), len(unifiedCRLList))
+}
+
+// TestCRLFreshestCRLExtension verifies when the Freshest CRL extension is
+// present on the base CRL and that it never appears on the delta CRL.
+func TestCRLFreshestCRLExtension(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Create a root CA
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	tests := []struct {
+		name              string
+		enableDelta       bool
+		expectedDeltaCDPs []string // If this is nil there should be no Freshest CRL
+		mountUrl          []string
+		issuerUrl         []string
+	}{
+		{
+			name:              "issuer URL takes precedence over mount URL",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/issuer"},
+			mountUrl:          []string{"http://example.com/mount"},
+			issuerUrl:         []string{"http://example.com/issuer"},
+		},
+		{
+			name:              "uses issuer URL when mount URL not set",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/issuer"},
+			mountUrl:          nil,
+			issuerUrl:         []string{"http://example.com/issuer"},
+		},
+		{
+			name:              "falls back to mount URL when issuer URL not set",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/mount"},
+			mountUrl:          []string{"http://example.com/mount"},
+			issuerUrl:         nil,
+		},
+		{
+			name:              "supports multiple delta CRL distribution points and LDAP urls",
+			enableDelta:       true,
+			expectedDeltaCDPs: []string{"http://example.com/primary", "ldap://ldap.example.com/"},
+			mountUrl:          []string{"http://example.com/primary", "ldap://ldap.example.com/"},
+			issuerUrl:         nil,
+		},
+		{
+			name:              "no extension when delta CRL enabled and no URLs",
+			enableDelta:       true,
+			expectedDeltaCDPs: nil,
+			mountUrl:          nil,
+			issuerUrl:         nil,
+		},
+		{
+			name:              "no extension when URLs are empty slices",
+			enableDelta:       true,
+			expectedDeltaCDPs: nil,
+			mountUrl:          []string{},
+			issuerUrl:         []string{},
+		},
+		{
+			name:              "no extension when delta CRL disabled despite URLs configured",
+			enableDelta:       false,
+			expectedDeltaCDPs: nil,
+			mountUrl:          []string{"http://127.0.0.1:8200/v1/pki/mount"},
+			issuerUrl:         []string{"http://127.0.0.1:8200/v1/pki/issuer"},
+		},
+		{
+			name:              "no extension when delta CRL disabled and no URLs",
+			enableDelta:       false,
+			expectedDeltaCDPs: nil,
+			mountUrl:          nil,
+			issuerUrl:         nil,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Configure mount's delta CDP
+			_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+				"delta_crl_distribution_points": tc.mountUrl,
+			})
+			require.NoError(t, err)
+
+			// Update issuer's delta CDP
+			_, err = CBPatch(b, s, "issuer/root", map[string]interface{}{
+				"delta_crl_distribution_points": tc.issuerUrl,
+			})
+			require.NoError(t, err)
+
+			// Enable delta CRL
+			_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+				"enable_delta": tc.enableDelta,
+				"auto_rebuild": tc.enableDelta,
+			})
+			require.NoError(t, err)
+
+			// Rotate CRL to apply updates
+			_, err = CBRead(b, s, "crl/rotate")
+			require.NoError(t, err)
+
+			// There should only be a Freshest CRL extension if expectedDeltaCDPs != nil
+			var expectedExtValue []byte
+			if len(tc.expectedDeltaCDPs) > 0 {
+				// Encode expected extension to compare to actual
+				ext, err := certutil.CreateDeltaCRLExtension(tc.expectedDeltaCDPs)
+				require.NoError(t, err)
+				expectedExtValue = ext.Value
+			}
+
+			resp := requestCrlFromBackend(t, s, b)
+			crl := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
+
+			foundFreshestExt, ext, _ := findExtension(certutil.FreshestCrlOid, crl.Extensions)
+
+			// Verify base CRL has Freshest CRL Extension (if expected)
+			if len(tc.expectedDeltaCDPs) > 0 {
+				require.True(t, foundFreshestExt, "freshest CRL extension not found in base CRL")
+				require.Equal(t, expectedExtValue, ext.Value, "freshest CRL value does not match expected")
+			} else {
+				require.False(t, foundFreshestExt, "freshest CRL extension exists in base CRL")
+			}
+
+			// Verify delta CRL does not have Freshest CRL extension (only base CRL should)
+			if tc.enableDelta {
+				deltaCrl := getParsedCrlFromBackend(t, b, s, "crl/delta").TBSCertList
+				foundFreshestInDelta, _, _ := findExtension(certutil.FreshestCrlOid, deltaCrl.Extensions)
+				require.False(t, foundFreshestInDelta, "freshest CRL extension exists in CRL")
+			}
+		})
+	}
+}
+
+// TestCRLOpenSSLVerifyFreshestExtension verifies OpenSSL output for Freshest
+// CRL on the base CRL and confirms the extension is absent on the delta CRL.
+func TestCRLOpenSSLVerifyFreshestExtension(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+	// Configure mount's delta CDP
+	resp, err := CBWrite(b, s, "config/urls", map[string]interface{}{
+		"delta_crl_distribution_points": []string{"http://example.com/crl/delta", "ldap://ldap.example.com"},
+	})
+	require.NoError(t, err)
+
+	// Create a root CA.
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"issuer_name": "root",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+
+	// Enable delta CRL
+	_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+		"enable_delta": true,
+		"auto_rebuild": true,
+	})
+	require.NoError(t, err)
+
+	// Rotate CRL to apply updates
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+
+	// Fetch base CRL
+	resp, err = CBRead(b, s, "crl/pem")
+	require.NoError(t, err)
+	baseCRLpem := resp.Data["http_raw_body"].([]byte)
+
+	// Write to temp file for OpenSSL
+	tmpDir := t.TempDir()
+	filePath := writeToTmpDir(t, tmpDir, "base_crl.pem", string(baseCRLpem))
+
+	opensslCmd, output, found := findOpenSSL()
+	if !found {
+		t.Skipf("no appropriate OpenSSL version found")
+	}
+
+	log := corehelpers.NewTestLogger(t)
+	log.Info("Using OpenSSL", "path", opensslCmd, "version", output)
+
+	// The open ssl test:
+	args := []string{
+		"crl",
+		"-noout",
+		"-text",
+		"-in", filePath,
+	}
+
+	out, err := exec.Command(opensslCmd, args...).CombinedOutput()
+	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+	require.Regexp(t, `\s+X509v3 Freshest CRL:\s+Full Name:\s+URI:http://example.com/crl/delta\s+Full Name:\s+URI:ldap://ldap.example.com`, string(out))
+
+	// Confirm Freshest CRL is NOT in delta CRL
+	resp, err = CBRead(b, s, "crl/delta/pem")
+	requireSuccessNonNilResponse(t, resp, err)
+	deltaCRLPem := resp.Data["http_raw_body"].([]byte)
+	filePath = writeToTmpDir(t, tmpDir, "delta_crl.pem", string(deltaCRLPem))
+
+	args = []string{
+		"crl",
+		"-noout",
+		"-text",
+		"-in", filePath,
+	}
+
+	out, err = exec.Command(opensslCmd, args...).CombinedOutput()
+	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
+	require.NotContains(t, string(out), "X509v3 Freshest CRL")
+}
+
+// TestCRL_ReasonCodeExtension verifies that revoking a certificate with a
+// revocation_reason causes the reason code extension to appear. Omitting the
+// reason code should default to 0 (unspecified)
+func TestCRL_ReasonCodeExtension(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Set up a root CA and a role.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"key_type":    "ec",
+		"ttl":         "40h",
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "1h",
+	})
+	require.NoError(t, err)
+
+	// Issue three leaf certs: one to revoke with a reason, one without, one with an invalid reason code.
+	resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "with-reason.example.com",
+	})
+	require.NoError(t, err)
+	serialWithReason := resp.Data["serial_number"].(string)
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "without-reason.example.com",
+	})
+	require.NoError(t, err)
+	serialWithoutReason := resp.Data["serial_number"].(string)
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "invalid-reason.example.com",
+	})
+	require.NoError(t, err)
+	serialInvalidReason := resp.Data["serial_number"].(string)
+
+	// Revoke the first cert with keyCompromise (1).
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number":     serialWithReason,
+		"revocation_reason": 1,
+	})
+	require.NoError(t, err)
+
+	// Revoke the second cert with no reason.
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": serialWithoutReason,
+	})
+	require.NoError(t, err)
+
+	// Revoke the third cert with an invalid reason code, this should throw an error.
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number":     serialInvalidReason,
+		"revocation_reason": -1,
+	})
+	require.Error(t, err)
+
+	// Fetch and parse the CRL.
+	crlResp := requestCrlFromBackend(t, s, b)
+	crl := parseCrlPemBytes(t, crlResp.Data["http_raw_body"].([]byte))
+
+	// Find each serial in the CRL and check its per-entry extensions.
+	var entryWithReason, entryWithoutReason *pkix.RevokedCertificate
+	for i, entry := range crl.RevokedCertificates {
+		serial := certutil.GetHexFormatted(entry.SerialNumber.Bytes(), ":")
+		switch serial {
+		case serialWithReason:
+			entryWithReason = &crl.RevokedCertificates[i]
+		case serialWithoutReason:
+			entryWithoutReason = &crl.RevokedCertificates[i]
+		}
+	}
+
+	require.NotNil(t, entryWithReason, "cert revoked with reason not found in CRL")
+	require.NotNil(t, entryWithoutReason, "cert revoked without reason not found in CRL")
+
+	// The entry revoked with keyCompromise must have the reason code extension.
+	foundReason, reasonExt, _ := findExtension(certutil.ReasonCodeOid, entryWithReason.Extensions)
+	require.True(t, foundReason, "reason code extension (OID 2.5.29.21) missing from CRL entry revoked with keyCompromise")
+	require.False(t, reasonExt.Critical, "reason code extension must not be marked critical per RFC 5280")
+
+	// Decode the ENUMERATED value and verify it equals 1 (keyCompromise).
+	var reasonVal asn1.RawValue
+	_, err = asn1.Unmarshal(reasonExt.Value, &reasonVal)
+	require.NoError(t, err, "failed to unmarshal reason code extension value")
+	require.Equal(t, asn1.TagEnum, reasonVal.Tag, "reason code extension must use ENUMERATED ASN.1 tag")
+	require.Len(t, reasonVal.Bytes, 1, "reason code value should be a single byte for codes 0-10")
+	require.Equal(t, byte(1), reasonVal.Bytes[0], "expected keyCompromise (1) reason code")
+
+	// The entry revoked without a reason must have no reason code extension.
+	foundReason, _, _ = findExtension(certutil.ReasonCodeOid, entryWithoutReason.Extensions)
+	require.False(t, foundReason, "reason code extension should not be present when no reason was specified")
 }

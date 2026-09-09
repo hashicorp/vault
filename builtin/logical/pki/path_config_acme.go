@@ -29,14 +29,16 @@ const (
 )
 
 type acmeConfigEntry struct {
-	Enabled                bool          `json:"enabled"`
-	AllowedIssuers         []string      `json:"allowed_issuers="`
-	AllowedRoles           []string      `json:"allowed_roles"`
-	AllowRoleExtKeyUsage   bool          `json:"allow_role_ext_key_usage"`
-	DefaultDirectoryPolicy string        `json:"default_directory_policy"`
-	DNSResolver            string        `json:"dns_resolver"`
-	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
-	MaxTTL                 time.Duration `json:"max_ttl"`
+	Enabled                    bool          `json:"enabled"`
+	AllowedIssuers             []string      `json:"allowed_issuers="`
+	AllowedRoles               []string      `json:"allowed_roles"`
+	AllowRoleExtKeyUsage       bool          `json:"allow_role_ext_key_usage"`
+	DefaultDirectoryPolicy     string        `json:"default_directory_policy"`
+	DNSResolver                string        `json:"dns_resolver"`
+	EabPolicyName              EabPolicyName `json:"eab_policy_name"`
+	MaxTTL                     time.Duration `json:"max_ttl"`
+	ChallengePermittedIPRanges []string      `json:"challenge_permitted_ip_ranges"`
+	ChallengeExcludedIPRanges  []string      `json:"challenge_excluded_ip_ranges"`
 }
 
 var defaultAcmeConfig = acmeConfigEntry{
@@ -144,6 +146,16 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Description: `Specify the maximum TTL for ACME certificates. Role TTL values will be limited to this value`,
 				Default:     defaultAcmeMaxTTL.Seconds(),
 			},
+			"challenge_permitted_ip_ranges": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `List of CIDR blocks that are permitted for ACME challenge validation. If set, only IPs within these ranges will be allowed for validation. Can be individual IPs or CIDR notation.`,
+				Default:     []string{},
+			},
+			"challenge_excluded_ip_ranges": {
+				Type:        framework.TypeCommaStringSlice,
+				Description: `List of CIDR blocks that are excluded from ACME challenge validation. IPs within these ranges will be rejected for validation. Can be individual IPs or CIDR notation. This list takes precedence over challenge_permitted_ip_ranges.`,
+				Default:     []string{},
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -195,14 +207,16 @@ func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *fra
 func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logical.Response {
 	response := &logical.Response{
 		Data: map[string]interface{}{
-			"allowed_roles":            config.AllowedRoles,
-			"allow_role_ext_key_usage": config.AllowRoleExtKeyUsage,
-			"allowed_issuers":          config.AllowedIssuers,
-			"default_directory_policy": config.DefaultDirectoryPolicy,
-			"enabled":                  config.Enabled,
-			"dns_resolver":             config.DNSResolver,
-			"eab_policy":               config.EabPolicyName,
-			"max_ttl":                  config.MaxTTL.Seconds(),
+			"allowed_roles":                 config.AllowedRoles,
+			"allow_role_ext_key_usage":      config.AllowRoleExtKeyUsage,
+			"allowed_issuers":               config.AllowedIssuers,
+			"default_directory_policy":      config.DefaultDirectoryPolicy,
+			"enabled":                       config.Enabled,
+			"dns_resolver":                  config.DNSResolver,
+			"eab_policy":                    config.EabPolicyName,
+			"max_ttl":                       config.MaxTTL.Seconds(),
+			"challenge_permitted_ip_ranges": config.ChallengePermittedIPRanges,
+			"challenge_excluded_ip_ranges":  config.ChallengeExcludedIPRanges,
 		},
 		Warnings: warnings,
 	}
@@ -277,6 +291,34 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 			return nil, fmt.Errorf("invalid max_ttl value, must be greater than 0")
 		}
 		config.MaxTTL = maxTTL
+	}
+
+	if permittedIPRangesRaw, ok := d.GetOk("challenge_permitted_ip_ranges"); ok {
+		permittedIPRanges := permittedIPRangesRaw.([]string)
+		// Validate each CIDR entry
+		for _, cidr := range permittedIPRanges {
+			if _, _, err := net.ParseCIDR(cidr); err != nil {
+				// Try parsing as IP address
+				if net.ParseIP(cidr) == nil {
+					return nil, fmt.Errorf("invalid CIDR or IP address in challenge_permitted_ip_ranges: %s", cidr)
+				}
+			}
+		}
+		config.ChallengePermittedIPRanges = permittedIPRanges
+	}
+
+	if excludedIPRangesRaw, ok := d.GetOk("challenge_excluded_ip_ranges"); ok {
+		excludedIPRanges := excludedIPRangesRaw.([]string)
+		// Validate each CIDR entry
+		for _, cidr := range excludedIPRanges {
+			if _, _, err := net.ParseCIDR(cidr); err != nil {
+				// Try parsing as IP address
+				if net.ParseIP(cidr) == nil {
+					return nil, fmt.Errorf("invalid CIDR or IP address in challenge_excluded_ip_ranges: %s", cidr)
+				}
+			}
+		}
+		config.ChallengeExcludedIPRanges = excludedIPRanges
 	}
 
 	// Validate Default Directory Behavior:

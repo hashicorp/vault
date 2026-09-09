@@ -5,6 +5,7 @@
 
 import Component from '@ember/component';
 import { service } from '@ember/service';
+import { getRelativePath, sanitizePath } from 'core/utils/sanitize-path';
 
 import type FlagsService from 'vault/services/flags';
 import type ApiService from 'vault/services/api';
@@ -14,7 +15,7 @@ import type {
   getUsageDataFunction,
   getNamespaceDataFunction,
   UsageDashboardData,
-} from '@hashicorp-internal/vault-reporting/types/index';
+} from 'vault/types/usage-reporting';
 import type { UtilizationReport } from 'vault/usage';
 
 /**
@@ -45,9 +46,19 @@ export default class UsagePage extends Component {
      * the vault-reporting addon change.
      */
 
-    // Convert "root" display value back to empty string for API calls
-    const apiNamespace = namespace === 'root' ? undefined : namespace;
-    const response = (await this.api.sys.generateUtilizationReport(apiNamespace)) as UtilizationReport;
+    // Fetch utilization data from the user's root namespace context and pass a relative namespace query.
+    const userRootNamespace = sanitizePath(this.namespace.userRootNamespace);
+    const selectedNamespace = namespace === 'root' ? '' : sanitizePath(namespace || '');
+    const relativeNamespace = getRelativePath(selectedNamespace, userRootNamespace);
+
+    const initOverrides = userRootNamespace
+      ? this.api.buildHeaders({ namespace: userRootNamespace })
+      : undefined;
+
+    const response = (await this.api.sys.generateUtilizationReport(
+      relativeNamespace || undefined,
+      initOverrides
+    )) as UtilizationReport;
 
     const { lease_count_quotas, replication_status, pki, secret_sync } = response;
 
@@ -81,6 +92,7 @@ export default class UsagePage extends Component {
         totalDestinations: secret_sync?.total_destinations || 0,
       },
     };
+
     return data;
   };
 
@@ -90,6 +102,7 @@ export default class UsagePage extends Component {
     const data = {
       keys: options.map((option) => option.label),
     };
+
     return data;
   };
 }

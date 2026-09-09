@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
@@ -37,6 +37,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     ];
     this.destinations.meta = {
       filteredTotal: this.destinations.length,
+      totalItems: this.destinations.length,
       currentPage: 1,
       pageSize: 5,
     };

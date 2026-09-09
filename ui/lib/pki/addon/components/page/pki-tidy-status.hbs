@@ -97,19 +97,23 @@
     {{/each}}
   {{/if}}
 {{else}}
-  <EmptyState
-    @title="Tidy status unavailable"
-    @message="After the next tidy operation has been performed, information about the current or most recent tidy operation will display here."
-  >
-    <Hds::Button
-      @color="tertiary"
-      @icon="chevron-right"
-      @iconPosition="trailing"
-      {{on "click" (fn (mut this.tidyOptionsModal) true)}}
-      data-test-tidy-empty-state-configure
-      @text="Tidy"
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="Tidy status unavailable" @titleTag="h2" data-test-empty-state-title />
+    <A.Body
+      @text="After the next tidy operation has been performed, information about the current or most recent tidy operation will display here."
+      data-test-empty-state-message
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.Button
+        @color="tertiary"
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        {{on "click" (fn (mut this.tidyOptionsModal) true)}}
+        data-test-tidy-empty-state-configure
+        @text="Tidy"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/if}}
 
 {{! TIDY OPTIONS MODAL }}

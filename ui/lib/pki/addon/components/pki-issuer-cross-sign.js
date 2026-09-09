@@ -11,7 +11,7 @@ import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { addToArray } from 'vault/helpers/add-to-array';
-import { PkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
 /**
  * @module PkiIssuerCrossSign
  * PkiIssuerCrossSign components render from a parent issuer's details page to cross-sign an intermediate issuer (from a different mount).
@@ -88,7 +88,7 @@ export default class PkiIssuerCrossSign extends Component {
       for (let row = 0; row < this.formData.length; row++) {
         const { intermediateMount, newCrossSignedIssuer } = this.formData[row];
         const issuers = await this.api.secrets
-          .pkiListIssuers(intermediateMount, PkiListIssuersListEnum.TRUE)
+          .pkiListIssuers(intermediateMount, SecretsApiPkiListIssuersListEnum.TRUE)
           .then((response) => this.api.keyInfoToArray(response, 'issuer_id'))
           .catch(() => []);
         // for cross-signing error handling we want to record the list of issuers before the process starts

@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { click, render } from '@ember/test-helpers';
 import sinon from 'sinon';
@@ -54,20 +54,20 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
         return render(hbs`
-          <Auth::Form::Okta 
-            @authType={{this.authType}} 
+          <Auth::Form::Okta
+            @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
             @handleAuthResponse={{this.handleAuthResponse}}
           >
             <:advancedSettings>
               <label for="path">Mount path</label>
-              <input data-test-input="path" id="path" name="path" type="text" /> 
+              <input data-test-input="path" id="path" name="path" type="text" />
             </:advancedSettings>
           </Auth::Form::Okta>`);
       }
       return render(hbs`
-      <Auth::Form::Okta       
+      <Auth::Form::Okta
         @authType={{this.authType}}
         @cluster={{this.cluster}}
         @onError={{this.onError}}

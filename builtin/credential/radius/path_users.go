@@ -6,6 +6,7 @@ package radius
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -73,7 +74,11 @@ func pathUsers(b *backend) *framework.Path {
 }
 
 func (b *backend) userExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
-	userEntry, err := b.user(ctx, req.Storage, data.Get("name").(string))
+	name, err := b.normalizeName(ctx, req, data.Get("name").(string))
+	if err != nil {
+		return false, err
+	}
+	userEntry, err := b.user(ctx, req.Storage, name)
 	if err != nil {
 		return false, err
 	}
@@ -102,8 +107,23 @@ func (b *backend) user(ctx context.Context, s logical.Storage, username string) 
 	return &result, nil
 }
 
+func (b *backend) normalizeName(ctx context.Context, req *logical.Request, name string) (string, error) {
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return "", err
+	}
+	if cfg != nil && cfg.CaseInsensitiveNames {
+		return strings.ToLower(name), nil
+	}
+	return name, nil
+}
+
 func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "user/"+d.Get("name").(string))
+	name, err := b.normalizeName(ctx, req, d.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+	err = req.Storage.Delete(ctx, "user/"+name)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +132,11 @@ func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *f
 }
 
 func (b *backend) pathUserRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	user, err := b.user(ctx, req.Storage, d.Get("name").(string))
+	name, err := b.normalizeName(ctx, req, d.Get("name").(string))
+	if err != nil {
+		return nil, err
+	}
+	user, err := b.user(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -135,8 +159,30 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
+	rawName := d.Get("name").(string)
+	name, err := b.normalizeName(ctx, req, rawName)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg != nil && cfg.CaseInsensitiveNames {
+		users, err := req.Storage.List(ctx, "user/")
+		if err != nil {
+			return nil, err
+		}
+		for _, existingUser := range users {
+			if strings.EqualFold(existingUser, rawName) && (existingUser != rawName || existingUser != name) {
+				return logical.ErrorResponse("username %q collides with existing username %q when case_insensitive_names=true", rawName, existingUser), nil
+			}
+		}
+	}
+
 	// Store it
-	entry, err := logical.StorageEntryJSON("user/"+d.Get("name").(string), &UserEntry{
+	entry, err := logical.StorageEntryJSON("user/"+name, &UserEntry{
 		Policies: policies,
 	})
 	if err != nil {

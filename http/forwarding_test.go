@@ -39,17 +39,11 @@ func TestHTTP_Fallback_Bad_Address(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
 
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
-
 	addrs := []string{
-		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
-		fmt.Sprintf("https://127.0.0.1:%d", cores[2].Listeners[0].Address.Port),
+		fmt.Sprintf("https://%s", cores[1].APIAddress().String()),
+		fmt.Sprintf("https://%s", cores[2].APIAddress().String()),
 	}
 
 	for _, addr := range addrs {
@@ -87,17 +81,11 @@ func TestHTTP_Fallback_Disabled(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
 
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
-
 	addrs := []string{
-		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
-		fmt.Sprintf("https://127.0.0.1:%d", cores[2].Listeners[0].Address.Port),
+		fmt.Sprintf("https://%s", cores[1].APIAddress().String()),
+		fmt.Sprintf("https://%s", cores[2].APIAddress().String()),
 	}
 
 	for _, addr := range addrs {
@@ -144,13 +132,8 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
 	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	wg := sync.WaitGroup{}
 
@@ -158,8 +141,8 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	keys := []string{"test1", "test2", "test3"}
 
 	hosts := []string{
-		fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[1].Listeners[0].Address.Port),
-		fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[2].Listeners[0].Address.Port),
+		fmt.Sprintf("https://%s/v1/transit/", cores[1].APIAddress().String()),
+		fmt.Sprintf("https://%s/v1/transit/", cores[2].APIAddress().String()),
 	}
 
 	transport := &http.Transport{
@@ -177,7 +160,7 @@ func testHTTP_Forwarding_Stress_Common(t *testing.T, parallel bool, num uint32) 
 	}
 
 	// core.Logger().Printf("[TRACE] mounting transit")
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/mounts/transit", cores[0].Listeners[0].Address.Port),
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://%s/v1/sys/mounts/transit", cores[0].APIAddress().String()),
 		bytes.NewBufferString("{\"type\": \"transit\"}"))
 	if err != nil {
 		t.Fatal(err)
@@ -452,13 +435,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
 
 	transport := cleanhttp.DefaultTransport()
 	transport.TLSClientConfig = cores[0].TLSConfig()
@@ -470,7 +447,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 		Transport: transport,
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/auth/cert", cores[0].Listeners[0].Address.Port),
+	req, err := http.NewRequest("POST", fmt.Sprintf("https://%s/v1/sys/auth/cert", cores[0].APIAddress().String()),
 		bytes.NewBufferString("{\"type\": \"cert\"}"))
 	if err != nil {
 		t.Fatal(err)
@@ -492,7 +469,7 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req, err = http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/auth/cert/certs/test", cores[0].Listeners[0].Address.Port),
+	req, err = http.NewRequest("POST", fmt.Sprintf("https://%s/v1/auth/cert/certs/test", cores[0].APIAddress().String()),
 		bytes.NewBuffer(encodedCertConfig))
 	if err != nil {
 		t.Fatal(err)
@@ -504,8 +481,8 @@ func TestHTTP_Forwarding_ClientTLS(t *testing.T) {
 	}
 
 	addrs := []string{
-		fmt.Sprintf("https://127.0.0.1:%d", cores[1].Listeners[0].Address.Port),
-		fmt.Sprintf("https://127.0.0.1:%d", cores[2].Listeners[0].Address.Port),
+		fmt.Sprintf("https://%s", cores[1].APIAddress().String()),
+		fmt.Sprintf("https://%s", cores[2].APIAddress().String()),
 	}
 
 	for i, addr := range addrs {
@@ -565,11 +542,7 @@ func TestHTTP_Forwarding_HelpOperation(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
 
 	testHelp := func(client *api.Client) {
 		help, err := client.Help("auth/token")
@@ -589,11 +562,7 @@ func TestHTTP_Forwarding_LocalOnly(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
 
 	testLocalOnly := func(client *api.Client) {
 		_, err := client.Logical().Read("sys/config/state/sanitized")

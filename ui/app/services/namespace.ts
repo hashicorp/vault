@@ -8,15 +8,13 @@ import { task } from 'ember-concurrency';
 import { getRelativePath, sanitizePath } from 'core/utils/sanitize-path';
 import { tracked } from '@glimmer/tracking';
 import { buildWaiter } from '@ember/test-waiters';
+import { ROOT_NAMESPACE, ADMINISTRATIVE_NAMESPACE } from 'vault/utils/constants/namespace';
 
 import type AuthService from 'vault/services/auth';
 import type ApiService from 'vault/services/api';
 import type FlagsService from 'vault/services/flags';
 
 const waiter = buildWaiter('namespaces');
-
-export const ROOT_NAMESPACE = '';
-export const ADMINISTRATIVE_NAMESPACE = 'admin';
 
 export interface NamespaceOption {
   path: string;

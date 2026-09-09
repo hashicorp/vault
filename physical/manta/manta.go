@@ -15,14 +15,14 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	triton "github.com/TritonDataCenter/triton-go/v2"
+	"github.com/TritonDataCenter/triton-go/v2/authentication"
+	"github.com/TritonDataCenter/triton-go/v2/errors"
+	"github.com/TritonDataCenter/triton-go/v2/storage"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
-	triton "github.com/joyent/triton-go"
-	"github.com/joyent/triton-go/authentication"
-	"github.com/joyent/triton-go/errors"
-	"github.com/joyent/triton-go/storage"
 )
 
 const mantaDefaultRootStore = "/stor"

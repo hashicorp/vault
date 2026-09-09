@@ -1,0 +1,3 @@
+```release-note:improvement
+command/agent: Migrate AWS client from aws-sdk-go v1 to aws-sdk-go-v2.
+```

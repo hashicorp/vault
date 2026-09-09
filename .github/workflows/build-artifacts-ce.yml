@@ -97,7 +97,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -106,7 +106,6 @@ jobs:
           create-docker-container: true
           create-packages: true
           create-redhat-container: ${{ matrix.redhat }}
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           goarch: ${{ matrix.goarch }}
           goos: ${{ matrix.goos }}
           go-tags: ui
@@ -209,12 +208,11 @@ jobs:
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           create-docker-container: ${{ matrix.docker }}
           create-packages: ${{ matrix.packages }}
           create-redhat-container: false
@@ -236,7 +234,7 @@ jobs:
       - core
       - extended
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Determine status

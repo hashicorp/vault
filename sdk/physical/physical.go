@@ -5,6 +5,7 @@ package physical
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
@@ -27,6 +28,9 @@ const (
 	ErrValueTooLarge = "put failed due to value being too large"
 	ErrKeyTooLarge   = "put failed due to key being too large"
 )
+
+// ErrValueSize is the error returned when the value is too large
+var ErrValueSize = errors.New(ErrValueTooLarge)
 
 // Backend is the interface required for a physical
 // backend. A physical backend is used to durably store

@@ -80,3 +80,7 @@ func (c *Core) entBuiltinPluginMetrics(ctx context.Context, entry *MountEntry, v
 func newSnapshotStorageRouter(c *Core, storage logical.Storage) logical.Storage {
 	return storage
 }
+
+func (c *Core) addRequiredNamespaceMounts(mountEntries []*MountEntry) ([]*MountEntry, bool, error) {
+	return mountEntries, false, nil
+}

@@ -33,7 +33,7 @@ export default class KvSecretsListRoute extends Route {
       return paginate(keys, { page: Number(params.page) || 1, filter: params.pageFilter });
     } catch (error) {
       const { status, response } = await this.api.parseError(error);
-      if (status === 403 && !response.isControlGroupError) {
+      if (status === 403 && !response?.isControlGroupError) {
         return 403;
       }
       if (status === 404) {

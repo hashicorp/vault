@@ -10,10 +10,62 @@ import Mixin from '@ember/object/mixin';
 import { task } from 'ember-concurrency';
 
 export default Mixin.create({
-  store: service(),
+  api: service(),
+
   loading: or('save.isRunning', 'submitSuccess.isRunning'),
+
   onDisable() {},
   onPromote() {},
+
+  replicationAction(action, replicationMode, clusterMode, data = {}) {
+    switch (action) {
+      case 'disable':
+        if (replicationMode === 'dr' && clusterMode === 'primary') {
+          return this.api.sys.systemWriteReplicationDrPrimaryDisable();
+        }
+        if (replicationMode === 'dr' && clusterMode === 'secondary') {
+          return this.api.sys.systemWriteReplicationDrSecondaryDisable(data);
+        }
+        if (replicationMode === 'performance' && clusterMode === 'primary') {
+          return this.api.sys.systemWriteReplicationPerformancePrimaryDisable();
+        }
+        if (replicationMode === 'performance' && clusterMode === 'secondary') {
+          return this.api.sys.systemWriteReplicationPerformanceSecondaryDisable();
+        }
+        break;
+      case 'demote':
+        if (replicationMode === 'dr' && clusterMode === 'primary') {
+          return this.api.sys.systemWriteReplicationDrPrimaryDemote();
+        }
+        if (replicationMode === 'performance' && clusterMode === 'primary') {
+          return this.api.sys.systemWriteReplicationPerformancePrimaryDemote();
+        }
+        break;
+      case 'promote':
+        if (replicationMode === 'dr' && clusterMode === 'secondary') {
+          return this.api.sys.systemWriteReplicationDrSecondaryPromote(data);
+        }
+        if (replicationMode === 'performance' && clusterMode === 'secondary') {
+          return this.api.sys.systemWriteReplicationPerformanceSecondaryPromote(data);
+        }
+        break;
+      case 'update-primary':
+        if (replicationMode === 'dr' && clusterMode === 'secondary') {
+          return this.api.sys.systemWriteReplicationDrSecondaryUpdatePrimary(data);
+        }
+        if (replicationMode === 'performance' && clusterMode === 'secondary') {
+          return this.api.sys.systemWriteReplicationPerformanceSecondaryUpdatePrimary(data);
+        }
+        break;
+      case 'recover':
+        return this.api.sys.systemWriteReplicationRecover();
+      case 'reindex':
+        return this.api.sys.systemWriteReplicationReindex(data);
+    }
+
+    throw new Error(`Unsupported replication action: ${replicationMode}/${clusterMode}/${action}`);
+  },
+
   submitHandler: task(function* (action, clusterMode, data, event) {
     const replicationMode = (data && data.replicationMode) || this.replicationMode;
     if (event && event.preventDefault) {
@@ -40,15 +92,13 @@ export default Mixin.create({
   }),
 
   save: task(function* (action, replicationMode, clusterMode, data) {
-    let resp;
     try {
-      resp = yield this.store
-        .adapterFor('cluster')
-        .replicationAction(action, replicationMode, clusterMode, data);
+      const response = yield this.replicationAction(action, replicationMode, clusterMode, data);
+      return yield this.submitSuccess.perform(response, action, clusterMode);
     } catch (e) {
-      return this.submitError(e);
+      const { response } = yield this.api.parseError(e);
+      return this.submitError(response);
     }
-    return yield this.submitSuccess.perform(resp, action, clusterMode);
   }).drop(),
 
   submitSuccess: task(function* (resp, action) {

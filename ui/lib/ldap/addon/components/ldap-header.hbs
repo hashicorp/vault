@@ -15,21 +15,7 @@
     {{#if @configRoute}}
       <Hds::Button @color="secondary" @route="overview" @text="Exit configuration" data-test-button="Exit configuration" />
     {{else}}
-      <Hds::Dropdown as |D|>
-        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
-        <D.Interactive
-          @icon="settings"
-          @route={{if @promptConfig "configure" "configuration"}}
-          @model={{@model.id}}
-          data-test-popup-menu="Configure"
-        >Configure</D.Interactive>
-        <D.Interactive
-          {{on "click" (fn (mut this.engineToDisable) @model)}}
-          @color="critical"
-          @icon="trash"
-          data-test-popup-menu="Delete"
-        >Delete</D.Interactive>
-      </Hds::Dropdown>
+      <ManageDropdown @model={{@model}} @configRoute={{if @promptConfig "configure" "configuration"}} />
     {{/if}}
   </:actions>
 </Page::Header>
@@ -49,16 +35,6 @@
       <li><LinkTo @route="libraries" data-test-tab="libraries">Libraries</LinkTo></li>
     </ul>
   </nav>
-{{/if}}
-
-{{#if this.engineToDisable}}
-  <ConfirmModal
-    @color="critical"
-    @confirmMessage="Any data in this engine will be permanently deleted."
-    @confirmTitle="Disable engine?"
-    @onClose={{fn (mut this.engineToDisable) null}}
-    @onConfirm={{perform this.disableEngine this.engineToDisable}}
-  />
 {{/if}}
 
 <Toolbar aria-label="nav for managing LDAP">

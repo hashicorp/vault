@@ -75,7 +75,7 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	}
 
 	// We expect 6 successful requests (3 for batch encryption, 3 for batch decryption)
-	require.Equal(t, uint64(6), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(6), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }
 
 func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
@@ -287,5 +287,5 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 	}
 
 	// We expect 7 successful requests (2 for batch encryption + 1 single-item decryption + 2 batch decryption + 2 batch decryption)
-	require.Equal(t, uint64(7), b.billingDataCounts.Transit.Load())
+	require.Equal(t, uint64(7), b.secretEngineCounts.Transit.MonthlyCount.Load())
 }

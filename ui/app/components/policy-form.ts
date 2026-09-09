@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { debounce } from '@ember/runloop';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import trimRight from 'vault/utils/trim-right';
@@ -15,12 +16,18 @@ import {
   PolicyStanza,
   PolicyTypes,
 } from 'core/utils/code-generators/policy';
-import errorMessage from 'vault/utils/error-message';
+import { validate } from 'vault/utils/forms/validate';
+import { POLICY_CREATED, POLICY_CREATION_CANCELLED } from 'vault/utils/analytic-events';
+
+import type AnalyticsService from 'vault/services/analytics';
+import { sysPoliciesAclNameMapping } from 'vault/utils/terraform-mappings/sys-policies-acl-name-mapping';
 
 import type FlashMessageService from 'ember-cli-flash/services/flash-messages';
 import type { HTMLElementEvent } from 'vault/forms';
 import type { PolicyData } from 'core/components/code-generator/policy/builder';
-import type { FormField } from 'vault/vault/app-types';
+import type { ValidationMap, Validations } from 'vault/vault/app-types';
+import ApiService from 'vault/services/api';
+import PolicyForm from 'vault/forms/policy';
 
 /**
  * @module PolicyForm
@@ -28,7 +35,7 @@ import type { FormField } from 'vault/vault/app-types';
  *
  * @example
  *  <PolicyForm
- *    @model={{this.model}}
+ *    @form={{this.form}}
  *    @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
  *    @onCancel={{transition-to "vault.cluster.policies.index"}}
  *    @isCompact={{false}}
@@ -36,7 +43,7 @@ import type { FormField } from 'vault/vault/app-types';
  * ```
  * @callback onCancel - callback triggered when cancel button is clicked
  * @callback onSave - callback triggered when save button is clicked. Passes saved model
- * @param {object} model - ember data model from createRecord
+ * @param {object} form - policy form class
  * @param {boolean} isCompact - renders a compact version of the form component, such as when rendering in a modal (see policy-template.hbs)
  */
 
@@ -45,61 +52,89 @@ enum EditorTypes {
   VISUAL = 'visual',
 }
 
-interface PolicyModel {
-  name: string;
-  policy: string;
-  policyType: PolicyTypes;
-  isNew: boolean;
-  additionalAttrs?: FormField[]; // Only exist for "rgp" and "egp" policy types
-  save: () => Promise<void>;
-  unloadRecord: () => void;
-  rollbackAttributes: () => void;
-}
-
 interface Args {
   onCancel: () => void;
-  onSave: (model: PolicyModel) => void;
-  model: PolicyModel;
+  onSave: (model: PolicyForm['data']) => void;
+  form: PolicyForm;
+  policyType: PolicyTypes;
   isCompact?: boolean;
 }
 
 export default class PolicyFormComponent extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly api: ApiService;
 
   editTypes = { [EditorTypes.VISUAL]: 'Visual editor', [EditorTypes.CODE]: 'Code editor' } as const;
+  validations: Validations = {
+    stanzas: [
+      {
+        validator: ({ stanzas }) =>
+          stanzas.length > 0 && stanzas.every((stanza: PolicyStanza) => stanza.isValid),
+        message: 'Invalid policy content.',
+      },
+    ],
+  };
 
   @tracked editType: EditorTypes = EditorTypes.VISUAL;
   @tracked errorBanner = '';
+  @tracked errorDetails: string[] = [];
   @tracked showFileUpload = false;
   @tracked showSwitchEditorsModal = false;
   @tracked showTemplateModal = false;
   @tracked stanzas: PolicyStanza[] = [new PolicyStanza()];
+  @tracked validationErrors: ValidationMap | null = null;
+  @tracked debouncedPolicy: string = this.args.form.data.policy ?? '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     // Only ACL policies support the visual editor
-    this.editType = this.args.model.policyType === PolicyTypes.ACL ? EditorTypes.VISUAL : EditorTypes.CODE;
+    this.editType = this.args.form.policyType === PolicyTypes.ACL ? EditorTypes.VISUAL : EditorTypes.CODE;
   }
 
+  // Template helpers
   isActiveEditor = (type: string): boolean => type === this.editType;
 
+  validationError = (param: string) => {
+    const { isValid, errors } = this.validationErrors?.[param] ?? {};
+    return !isValid && errors ? errors.join(' ') : '';
+  };
+
+  get formattedStanzas() {
+    return formatStanzas(this.stanzas);
+  }
+
   get hasPolicyDiff() {
-    const { policy } = this.args.model;
+    const { policy } = this.args.form.data;
     // Make sure policy has a value (if it's undefined, neither editor has been used)
     // Return true if there is a difference between stanzas and policy arg
     // which means the user has made changes using the code editor
-    return policy && formatStanzas(this.stanzas) !== policy;
+    return policy && this.formattedStanzas !== policy;
   }
 
   get snippetArgs() {
-    const policyName = this.args.model.name || '<policy name>';
-    const policy = formatStanzas(this.stanzas);
-    return policySnippetArgs(policyName, policy);
+    const policyName = this.args.form.data.name || '<policy name>';
+    return policySnippetArgs(policyName, this.snippetPolicy);
+  }
+
+  // Snippets must read from whichever editor is active, not just whichever is available.
+  // The code editor is the source of truth for typed, pasted and uploaded policies.
+  get isVisualEditorActive() {
+    return this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
+  }
+
+  get snippetPolicy() {
+    return this.isVisualEditorActive ? this.formattedStanzas : this.debouncedPolicy;
   }
 
   get visualEditorSupported() {
-    const { model, isCompact } = this.args;
-    return model.isNew && model.policyType === PolicyTypes.ACL && !isCompact;
+    const { form, isCompact } = this.args;
+    return form.isNew && form.policyType === PolicyTypes.ACL && !isCompact;
+  }
+
+  get terraformSnippet(): string | null {
+    const name = this.args.form.data.name;
+    return sysPoliciesAclNameMapping({ name, policy: this.snippetPolicy });
   }
 
   @action
@@ -108,19 +143,24 @@ export default class PolicyFormComponent extends Component<Args> {
     this.editType = EditorTypes.VISUAL;
     this.showSwitchEditorsModal = false;
     // Reset this.args.model.policy to match visual editor stanzas
-    this.setPolicy(formatStanzas(this.stanzas));
+    this.setPolicy(this.formattedStanzas);
   }
 
   @action
   handleNameInput(event: HTMLElementEvent<HTMLInputElement>) {
     const { value } = event.target;
     this.setName(value);
+    // Clear a stale name error so it doesn't linger while the user is correcting it
+    if (this.validationErrors?.['name']) {
+      this.validationErrors = { ...this.validationErrors, name: { errors: [], warnings: [], isValid: true } };
+    }
   }
 
   @action
-  handlePolicyChange({ policy, stanzas }: PolicyData) {
-    this.setPolicy(policy);
+  handlePolicyChange({ stanzas }: PolicyData) {
+    // Update tracked stanzas first, then pass formatted policy back to model
     this.stanzas = stanzas;
+    this.setPolicy(this.formattedStanzas);
   }
 
   @action
@@ -143,31 +183,97 @@ export default class PolicyFormComponent extends Component<Args> {
     }
   }
 
+  private trackPolicyCreationEvent(successFlag: boolean) {
+    this.analytics.trackEvent(POLICY_CREATED, {
+      objectType: 'policy',
+      object: this.args.form.policyType,
+      process: 'UI',
+      successFlag,
+    });
+  }
+
   @task
   *save(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    // The name input is marked @isRequired which only blocks submitting a completely empty value,
+    // so the form's own validations must still run to reject whitespace-only names.
+    // Trim first so leading/trailing whitespace is never persisted.
+    this.trimName();
+    const { isValid: isFormValid, state: formState, data } = this.args.form.toJSON();
+    const { isValid: areStanzasValid, state: stanzaState } = validate(
+      { stanzas: this.stanzas },
+      this.validations
+    );
+
+    // Only enforce stanza validations for the Visual Editor
+    const shouldValidateStanzas = this.visualEditorSupported && this.editType === EditorTypes.VISUAL;
+    const state = shouldValidateStanzas ? { ...formState, ...stanzaState } : formState;
+
+    if (!isFormValid || (!areStanzasValid && shouldValidateStanzas)) {
+      this.validationErrors = state;
+      this.errorDetails = Object.values(state).flatMap((s) => s.errors);
+      // Render general error message instead of exact count from validate() because
+      // stanzas (which are validated as a single input) can have up to 2 errors each.
+      const msg = this.errorDetails.length > 1 ? 'are errors' : 'is an error';
+      this.errorBanner = `There ${msg} with this form.`;
+      // Abort saving
+      return;
+    }
     try {
-      const { name, policyType, isNew } = this.args.model;
-      yield this.args.model.save();
+      const policyType = this.args.form.policyType;
+      // remove enforcement from acl
+      if (policyType === 'acl') {
+        delete data.enforcement_level;
+      }
+
+      if (policyType === 'acl') {
+        yield this.api.sys.policiesWriteAclPolicy(data.name, { policy: data.policy });
+      } else if (policyType === 'egp') {
+        yield this.api.sys.systemWritePoliciesEgpName(data.name, {
+          policy: data.policy,
+          enforcement_level: data.enforcement_level,
+          paths: data.paths,
+        });
+      } else {
+        yield this.api.sys.systemWritePoliciesRgpName(data.name, {
+          policy: data.policy,
+          enforcement_level: data.enforcement_level,
+        });
+      }
+      // Track successful policy creation if this is a new policy
+      if (this.args.form.isNew) {
+        this.trackPolicyCreationEvent(true);
+      }
+
       this.flashMessages.success(
-        `${policyType.toUpperCase()} policy "${name}" was successfully ${isNew ? 'created' : 'updated'}.`
+        `${policyType.toUpperCase()} policy "${data.name}" was successfully ${
+          this.args.form.isNew ? 'created' : 'updated'
+        }.`
       );
-      this.args.onSave(this.args.model);
+
+      this.args.onSave(data);
     } catch (error) {
-      this.errorBanner = errorMessage(error);
+      // Track failed policy creation if this is a new policy
+      if (this.args.form.isNew) {
+        this.trackPolicyCreationEvent(false);
+      }
+
+      const { message } = yield this.api.parseError(error);
+      this.errorBanner = message;
     }
   }
 
   @action
   setName(name: string) {
-    this.args.model.name = name.toLowerCase();
+    this.args.form.data.name = name.toLowerCase();
   }
 
   @action
   setPolicyFromFile(fileInfo: { value: string; filename: string }) {
     const { value, filename } = fileInfo;
     this.setPolicy(value);
-    if (!this.args.model.name) {
+    if (!this.args.form.data.name) {
       const trimmedFileName = trimRight(filename, ['.json', '.txt', '.hcl', '.policy']);
       this.setName(trimmedFileName);
     }
@@ -178,13 +284,31 @@ export default class PolicyFormComponent extends Component<Args> {
 
   @action
   setPolicy(policy: string) {
-    this.args.model.policy = policy;
+    this.args.form.data.policy = policy;
+    debounce(this, this.syncDebouncedPolicy, policy, 500);
+  }
+
+  private syncDebouncedPolicy(policy: string) {
+    this.debouncedPolicy = policy;
+  }
+
+  private trimName() {
+    const { name } = this.args.form.data;
+    if (typeof name === 'string') {
+      this.args.form.data.name = name.trim();
+    }
   }
 
   @action
   cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
+    this.analytics.trackEvent(POLICY_CREATION_CANCELLED, {
+      namespace: 'resource-creation',
+      action: 'cancelled',
+      elementId: 'policy-form',
+      channel: 'webpage',
+      objectType: 'policy',
+      object: this.args.form.policyType,
+    });
     this.args.onCancel();
   }
 }

@@ -48,8 +48,6 @@ func performTestSealUnwrapper(t *testing.T, phys physical.Backend, logger log.Lo
 	cluster := NewTestCluster(t, base, &TestClusterOptions{
 		Logger: logger,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	physImem := phys.(interface{ Underlying() *inmem.InmemBackend }).Underlying()
 

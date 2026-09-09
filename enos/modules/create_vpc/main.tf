@@ -8,6 +8,10 @@ data "aws_availability_zones" "available" {
     name   = "zone-name"
     values = ["*"]
   }
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 resource "random_string" "cluster_id" {

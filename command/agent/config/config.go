@@ -17,13 +17,13 @@ import (
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	ctsignals "github.com/hashicorp/consul-template/signals"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/mitchellh/mapstructure"
@@ -32,25 +32,45 @@ import (
 
 // Config is the configuration for Vault Agent.
 type Config struct {
+	// SharedConfig carries listener, telemetry, and other shared agent settings.
 	*configutil.SharedConfig `hcl:"-"`
 
-	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
-	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
-	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy"`
-	Vault                       *Vault                     `hcl:"vault"`
-	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
-	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
-	DisableIdleConns            []string                   `hcl:"disable_idle_connections"`
-	DisableIdleConnsAPIProxy    bool                       `hcl:"-"`
-	DisableIdleConnsTemplating  bool                       `hcl:"-"`
-	DisableIdleConnsAutoAuth    bool                       `hcl:"-"`
-	DisableKeepAlives           []string                   `hcl:"disable_keep_alives"`
-	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
-	DisableKeepAlivesTemplating bool                       `hcl:"-"`
-	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
-	Exec                        *ExecConfig                `hcl:"exec,optional"`
-	EnvTemplates                []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
+	// AutoAuth configures the agent auth method and token sinks.
+	AutoAuth *AutoAuth `hcl:"auto_auth"`
+	// ExitAfterAuth exits the agent after the first successful authentication.
+	ExitAfterAuth bool `hcl:"exit_after_auth"`
+	// Cache configures the local caching mode for proxied Vault requests.
+	Cache *Cache `hcl:"cache"`
+	// APIProxy configures the agent's API proxy mode.
+	APIProxy *APIProxy `hcl:"api_proxy"`
+	// Vault configures how the agent connects to upstream Vault servers.
+	Vault *Vault `hcl:"vault"`
+	// TemplateConfig defines defaults shared by all template stanzas.
+	TemplateConfig *TemplateConfig `hcl:"template_config"`
+	// Templates lists file-rendering template stanzas.
+	Templates []*ctconfig.TemplateConfig `hcl:"templates"`
+	// PKIExternalCAs stores parsed pki_external_ca blocks available to templates.
+	PKIExternalCAs []*PKIExternalCA `hcl:"-"`
+	// DisableIdleConns holds the raw disable_idle_connections subsystem names from HCL.
+	DisableIdleConns []string `hcl:"disable_idle_connections"`
+	// DisableIdleConnsAPIProxy is true when idle HTTP connections are disabled for caching or proxying.
+	DisableIdleConnsAPIProxy bool `hcl:"-"`
+	// DisableIdleConnsTemplating is true when idle HTTP connections are disabled for templating.
+	DisableIdleConnsTemplating bool `hcl:"-"`
+	// DisableIdleConnsAutoAuth is true when idle HTTP connections are disabled for auto-auth.
+	DisableIdleConnsAutoAuth bool `hcl:"-"`
+	// DisableKeepAlives holds the raw disable_keep_alives subsystem names from HCL.
+	DisableKeepAlives []string `hcl:"disable_keep_alives"`
+	// DisableKeepAlivesAPIProxy is true when HTTP keep-alives are disabled for caching or proxying.
+	DisableKeepAlivesAPIProxy bool `hcl:"-"`
+	// DisableKeepAlivesTemplating is true when HTTP keep-alives are disabled for templating.
+	DisableKeepAlivesTemplating bool `hcl:"-"`
+	// DisableKeepAlivesAutoAuth is true when HTTP keep-alives are disabled for auto-auth.
+	DisableKeepAlivesAutoAuth bool `hcl:"-"`
+	// Exec defines the child process used with env_template mode.
+	Exec *ExecConfig `hcl:"exec,optional"`
+	// EnvTemplates lists env_template stanzas rendered into the exec environment.
+	EnvTemplates []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -297,6 +317,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
 	}
 
+	for _, pkiExternalCA := range c.PKIExternalCAs {
+		result.PKIExternalCAs = append(result.PKIExternalCAs, pkiExternalCA)
+	}
+
+	for _, pkiExternalCA := range c2.PKIExternalCAs {
+		result.PKIExternalCAs = append(result.PKIExternalCAs, pkiExternalCA)
+	}
+
 	return result
 }
 
@@ -313,7 +341,7 @@ func (c *Config) IsDefaultListerDefined() bool {
 
 // ValidateConfig validates an Agent configuration after it has been fully merged together, to
 // ensure that required combinations of configs are there
-func (c *Config) ValidateConfig() error {
+func (c *Config) ValidateConfig(logger hclog.Logger) error {
 	if c.APIProxy != nil && c.Cache != nil {
 		if c.Cache.UseAutoAuthTokenRaw != nil {
 			if c.APIProxy.UseAutoAuthTokenRaw != nil {
@@ -365,6 +393,10 @@ func (c *Config) ValidateConfig() error {
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	if err := c.validatePKIExternalCAConfig(logger); err != nil {
+		return err
 	}
 
 	return c.validateEnvTemplateConfig()
@@ -493,47 +525,31 @@ func (c *Config) validateEnvTemplateConfig() error {
 // LoadConfig loads the configuration at the given path, regardless if
 // it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
-	cfg, _, err := LoadConfigCheckDuplicates(path)
-	return cfg, err
-}
-
-// LoadConfigCheckDuplicates is the same as the above but adds the ability to check if the HCL config file has
-// duplicate attributes.
-// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfig once deprecation is complete
-func LoadConfigCheckDuplicates(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDirCheckDuplicates(path)
+		return LoadConfigDir(path)
 	}
-	return LoadConfigFileCheckDuplicates(path)
+	return LoadConfigFile(path)
 }
 
 // LoadConfigDir loads the configuration at the given path if it's a directory
 func LoadConfigDir(dir string) (*Config, error) {
-	cfg, _, err := LoadConfigDirCheckDuplicates(dir)
-	return cfg, err
-}
-
-// LoadConfigDirCheckDuplicates is the same as the above but adds the ability to check if the HCL config file has
-// duplicate attributes.
-// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigDir once deprecation is complete
-func LoadConfigDirCheckDuplicates(dir string) (cfg *Config, duplicate bool, err error) {
 	f, err := os.Open(dir)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	if !fi.IsDir() {
-		return nil, false, fmt.Errorf("configuration path must be a directory: %q", dir)
+		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -542,7 +558,7 @@ func LoadConfigDirCheckDuplicates(dir string) (cfg *Config, duplicate bool, err 
 		var fis []os.FileInfo
 		fis, err = f.Readdir(128)
 		if err != nil && err != io.EOF {
-			return nil, false, err
+			return nil, err
 		}
 
 		for _, fi := range fis {
@@ -570,11 +586,10 @@ func LoadConfigDirCheckDuplicates(dir string) (cfg *Config, duplicate bool, err 
 
 	result := NewConfig()
 	for _, f := range files {
-		config, dup, err := LoadConfigFileCheckDuplicates(f)
+		config, err := LoadConfigFile(f)
 		if err != nil {
-			return nil, duplicate, fmt.Errorf("error loading %q: %w", f, err)
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
 		}
-		duplicate = duplicate || dup
 
 		if result == nil {
 			result = config
@@ -583,7 +598,7 @@ func LoadConfigDirCheckDuplicates(dir string) (cfg *Config, duplicate bool, err 
 		}
 	}
 
-	return result, duplicate, nil
+	return result, nil
 }
 
 // isTemporaryFile returns true or false depending on whether the
@@ -597,33 +612,25 @@ func isTemporaryFile(name string) bool {
 
 // LoadConfigFile loads the configuration at the given path if it's a file
 func LoadConfigFile(path string) (*Config, error) {
-	cfg, _, err := LoadConfigFileCheckDuplicates(path)
-	return cfg, err
-}
-
-// LoadConfigFileCheckDuplicates is the same as the above but adds the ability to check if the HCL config file has
-// duplicate attributes.
-// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigFile once deprecation is complete
-func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	if fi.IsDir() {
-		return nil, false, fmt.Errorf("location is a directory, not a file")
+		return nil, fmt.Errorf("location is a directory, not a file")
 	}
 
 	// Read the file
 	d, err := os.ReadFile(path)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	// Parse!
-	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(string(d))
+	obj, err := hcl.Parse(string(d))
 	if err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
 
 	// Attribute
@@ -637,14 +644,13 @@ func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, er
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
 
-	sharedConfig, dup, err := configutil.ParseConfigCheckDuplicate(string(d))
+	sharedConfig, err := configutil.ParseConfig(string(d))
 	if err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
-	duplicate = duplicate || dup
 
 	// Pruning custom headers for Agent for now
 	for _, ln := range sharedConfig.Listeners {
@@ -655,35 +661,39 @@ func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, er
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, duplicate, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	if err := parseAutoAuth(result, list); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'auto_auth': %w", err)
+		return nil, fmt.Errorf("error parsing 'auto_auth': %w", err)
 	}
 
 	if err := parseCache(result, list); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'cache':%w", err)
+		return nil, fmt.Errorf("error parsing 'cache':%w", err)
 	}
 
 	if err := parseAPIProxy(result, list); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'api_proxy':%w", err)
+		return nil, fmt.Errorf("error parsing 'api_proxy':%w", err)
 	}
 
 	if err := parseTemplateConfig(result, list); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'template_config': %w", err)
+		return nil, fmt.Errorf("error parsing 'template_config': %w", err)
 	}
 
 	if err := parseTemplates(result, list); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'template': %w", err)
+		return nil, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
 	if err := parseExec(result, list); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'exec': %w", err)
+		return nil, fmt.Errorf("error parsing 'exec': %w", err)
 	}
 
 	if err := parseEnvTemplates(result, list); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'env_template': %w", err)
+		return nil, fmt.Errorf("error parsing 'env_template': %w", err)
+	}
+
+	if err := parsePKIExternalCA(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'pki_external_ca': %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
@@ -695,7 +705,7 @@ func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, er
 
 	err = parseVault(result, list)
 	if err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing 'vault':%w", err)
+		return nil, fmt.Errorf("error parsing 'vault':%w", err)
 	}
 
 	if result.Vault != nil {
@@ -714,7 +724,7 @@ func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, er
 	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
 		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
 		if err != nil {
-			return nil, duplicate, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
 		}
 	}
 
@@ -729,14 +739,14 @@ func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, er
 		case "":
 			continue
 		default:
-			return nil, duplicate, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
+			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
 		}
 	}
 
 	if disableKeepAlivesEnv := os.Getenv(DisableKeepAlivesEnv); disableKeepAlivesEnv != "" {
 		result.DisableKeepAlives, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableKeepAlivesEnv))
 		if err != nil {
-			return nil, duplicate, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
+			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
 		}
 	}
 
@@ -751,11 +761,11 @@ func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, er
 		case "":
 			continue
 		default:
-			return nil, duplicate, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
+			return nil, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
 		}
 	}
 
-	return result, duplicate, nil
+	return result, nil
 }
 
 func parseVault(result *Config, list *ast.ObjectList) error {

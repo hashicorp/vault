@@ -10,13 +10,48 @@ import (
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
+
+// iamAPI is the subset of the AWS SDK v2 IAM client used by this backend. It is
+// defined locally because the v2 SDK no longer ships generated interface
+// packages (the v1 iamiface). *iam.Client satisfies this interface, and tests
+// provide their own implementations.
+type iamAPI interface {
+	AddUserToGroup(ctx context.Context, params *iam.AddUserToGroupInput, optFns ...func(*iam.Options)) (*iam.AddUserToGroupOutput, error)
+	AttachUserPolicy(ctx context.Context, params *iam.AttachUserPolicyInput, optFns ...func(*iam.Options)) (*iam.AttachUserPolicyOutput, error)
+	CreateAccessKey(ctx context.Context, params *iam.CreateAccessKeyInput, optFns ...func(*iam.Options)) (*iam.CreateAccessKeyOutput, error)
+	CreateUser(ctx context.Context, params *iam.CreateUserInput, optFns ...func(*iam.Options)) (*iam.CreateUserOutput, error)
+	DeleteAccessKey(ctx context.Context, params *iam.DeleteAccessKeyInput, optFns ...func(*iam.Options)) (*iam.DeleteAccessKeyOutput, error)
+	DeleteUser(ctx context.Context, params *iam.DeleteUserInput, optFns ...func(*iam.Options)) (*iam.DeleteUserOutput, error)
+	DeleteUserPolicy(ctx context.Context, params *iam.DeleteUserPolicyInput, optFns ...func(*iam.Options)) (*iam.DeleteUserPolicyOutput, error)
+	DetachUserPolicy(ctx context.Context, params *iam.DetachUserPolicyInput, optFns ...func(*iam.Options)) (*iam.DetachUserPolicyOutput, error)
+	GetGroupPolicy(ctx context.Context, params *iam.GetGroupPolicyInput, optFns ...func(*iam.Options)) (*iam.GetGroupPolicyOutput, error)
+	GetUser(ctx context.Context, params *iam.GetUserInput, optFns ...func(*iam.Options)) (*iam.GetUserOutput, error)
+	ListAccessKeys(ctx context.Context, params *iam.ListAccessKeysInput, optFns ...func(*iam.Options)) (*iam.ListAccessKeysOutput, error)
+	ListAttachedGroupPolicies(ctx context.Context, params *iam.ListAttachedGroupPoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedGroupPoliciesOutput, error)
+	ListAttachedUserPolicies(ctx context.Context, params *iam.ListAttachedUserPoliciesInput, optFns ...func(*iam.Options)) (*iam.ListAttachedUserPoliciesOutput, error)
+	ListGroupPolicies(ctx context.Context, params *iam.ListGroupPoliciesInput, optFns ...func(*iam.Options)) (*iam.ListGroupPoliciesOutput, error)
+	ListGroupsForUser(ctx context.Context, params *iam.ListGroupsForUserInput, optFns ...func(*iam.Options)) (*iam.ListGroupsForUserOutput, error)
+	ListUserPolicies(ctx context.Context, params *iam.ListUserPoliciesInput, optFns ...func(*iam.Options)) (*iam.ListUserPoliciesOutput, error)
+	PutUserPolicy(ctx context.Context, params *iam.PutUserPolicyInput, optFns ...func(*iam.Options)) (*iam.PutUserPolicyOutput, error)
+	RemoveUserFromGroup(ctx context.Context, params *iam.RemoveUserFromGroupInput, optFns ...func(*iam.Options)) (*iam.RemoveUserFromGroupOutput, error)
+	TagUser(ctx context.Context, params *iam.TagUserInput, optFns ...func(*iam.Options)) (*iam.TagUserOutput, error)
+}
+
+// stsAPI is the subset of the AWS SDK v2 STS client used by this backend.
+// *sts.Client satisfies this interface.
+type stsAPI interface {
+	AssumeRole(ctx context.Context, params *sts.AssumeRoleInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error)
+	GetCallerIdentity(ctx context.Context, params *sts.GetCallerIdentityInput, optFns ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error)
+	GetFederationToken(ctx context.Context, params *sts.GetFederationTokenInput, optFns ...func(*sts.Options)) (*sts.GetFederationTokenOutput, error)
+	GetSessionToken(ctx context.Context, params *sts.GetSessionTokenInput, optFns ...func(*sts.Options)) (*sts.GetSessionTokenOutput, error)
+}
 
 const (
 	rootConfigPath        = "config/root"
@@ -91,7 +126,7 @@ type backend struct {
 
 	// Function pointer used to override the IAM client creation for mocked testing
 	// If set, this function will be called instead of creating real IAM clients
-	nonCachedClientIAMFunc func(context.Context, logical.Storage, hclog.Logger, *staticRoleEntry) (iamiface.IAMAPI, error)
+	nonCachedClientIAMFunc func(context.Context, logical.Storage, hclog.Logger, *staticRoleEntry) (iamAPI, error)
 
 	// Mutex to protect access to reading and writing policies
 	roleMutex sync.RWMutex
@@ -101,8 +136,8 @@ type backend struct {
 
 	// iamClient and stsClient hold configured iam and sts clients for reuse, and
 	// to enable mocking with AWS iface for tests
-	iamClient iamiface.IAMAPI
-	stsClient stsiface.STSAPI
+	iamClient iamAPI
+	stsClient stsAPI
 
 	// the age of a static role's credential is tracked by a priority queue and handled
 	// by the PeriodicFunc
@@ -139,7 +174,7 @@ func (b *backend) clearClients() {
 // clientIAM returns the configured IAM client. If nil, it constructs a new one
 // and returns it, setting it the internal variable.
 // entry is only needed when configuring the client to use for role assumption.
-func (b *backend) clientIAM(ctx context.Context, s logical.Storage, entry *staticRoleEntry) (iamiface.IAMAPI, error) {
+func (b *backend) clientIAM(ctx context.Context, s logical.Storage, entry *staticRoleEntry) (iamAPI, error) {
 	b.clientMutex.RLock()
 	if b.iamClient != nil {
 		b.clientMutex.RUnlock()
@@ -167,7 +202,7 @@ func (b *backend) clientIAM(ctx context.Context, s logical.Storage, entry *stati
 	return b.iamClient, nil
 }
 
-func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsiface.STSAPI, error) {
+func (b *backend) clientSTS(ctx context.Context, s logical.Storage) (stsAPI, error) {
 	b.clientMutex.RLock()
 	if b.stsClient != nil {
 		b.clientMutex.RUnlock()
@@ -260,7 +295,7 @@ func (b *backend) initialize(ctx context.Context, request *logical.Initializatio
 // getNonCachedIAMClient returns an IAM client. In a test env, if a mocked client creation
 // function is set (nonCachedClientIAMFunc), it will be used instead of the default client creation function.
 // This allows us to mock AWS clients in tests.
-func (b *backend) getNonCachedIAMClient(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) (iamiface.IAMAPI, error) {
+func (b *backend) getNonCachedIAMClient(ctx context.Context, storage logical.Storage, cfg staticRoleEntry) (iamAPI, error) {
 	if b.nonCachedClientIAMFunc != nil {
 		return b.nonCachedClientIAMFunc(ctx, storage, b.Logger(), &cfg)
 	}

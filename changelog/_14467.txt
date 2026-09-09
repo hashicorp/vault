@@ -1,0 +1,3 @@
+```release-note:improvement
+consumption-billing: Add billing tracking for OS Local Account static roles to support consumption-based billing metrics and high-water mark (HWM) tracking.
+```

@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: Change to using Trail of Bits libraries for PQC signature implementation in Transit
+```

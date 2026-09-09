@@ -122,7 +122,10 @@ type Factory func(context.Context, *BackendConfig) (Backend, error)
 
 // Paths is the structure of special paths that is used for SpecialPaths.
 type Paths struct {
-	// Root are the API paths that require a root token to access
+	// Root are the API paths that require a root token to access.
+	// These can't be regular expressions; each entry is either an exact match,
+	// a prefix match (append '*' as a suffix), or a wildcard segment match
+	// (use '+' in a segment, e.g. 'foo/+/bar').
 	Root []string
 
 	// Unauthenticated are the API paths that can be accessed without any auth.

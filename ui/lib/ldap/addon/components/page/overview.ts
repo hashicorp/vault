@@ -9,8 +9,8 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { restartableTask } from 'ember-concurrency';
 import {
-  LdapLibraryListListEnum,
-  LdapLibraryListLibraryPathListEnum,
+  SecretsApiLdapLibraryListListEnum,
+  SecretsApiLdapLibraryListLibraryPathListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 import type {
@@ -147,9 +147,9 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
       ? await this.api.secrets.ldapLibraryListLibraryPath(
           pathToLibrary,
           currentPath,
-          LdapLibraryListLibraryPathListEnum.TRUE
+          SecretsApiLdapLibraryListLibraryPathListEnum.TRUE
         )
-      : await this.api.secrets.ldapLibraryList(currentPath, LdapLibraryListListEnum.TRUE);
+      : await this.api.secrets.ldapLibraryList(currentPath, SecretsApiLdapLibraryListListEnum.TRUE);
 
     const libraries =
       keys?.map((name) => {

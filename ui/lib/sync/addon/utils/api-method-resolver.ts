@@ -13,8 +13,7 @@
  */
 
 import { capitalize, classify } from '@ember/string';
-
-import type { DestinationType } from 'vault/sync';
+import { DestinationType } from 'sync/utils/constants';
 
 type TypeKey = 'AwsSm' | 'AzureKv' | 'GcpSm' | 'Gh' | 'VercelProject';
 

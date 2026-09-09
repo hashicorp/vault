@@ -15,5 +15,6 @@ rules:
         - "*_test.go"
         - "cmd/*.go"
         - "cmd/**/*.go"
+        - "tools/*/main.go"
         - sdk/database/dbplugin/server.go # effectively a cmd
         - sdk/database/dbplugin/v5/plugin_server.go # effectively a cmd

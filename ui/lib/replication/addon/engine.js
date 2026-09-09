@@ -15,6 +15,7 @@ const Eng = Engine.extend({
   Resolver,
   dependencies: {
     services: [
+      'api',
       'auth',
       'capabilities',
       'flash-messages',

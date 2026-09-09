@@ -8,6 +8,7 @@ import (
 	"crypto"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
@@ -330,9 +331,22 @@ func (b *backend) pathUpdateKeyHandler(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	newName := data.Get(keyNameParam).(string)
-	if len(newName) > 0 && !nameMatcher.MatchString(newName) {
-		return logical.ErrorResponse("new key name outside of valid character limits"), nil
+	newName := strings.TrimSpace(data.Get(keyNameParam).(string))
+	// Validate format and reject duplicates; resolve again on conflict to allow
+	// self-references (e.g. renaming a key to its own UUID which is done in TestObservationsPKIKeys).
+	if len(newName) > 0 && newName != key.Name {
+		validatedName, err := getKeyName(sc, data)
+		if err != nil && err != errKeyNameInUse {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+		if err == errKeyNameInUse {
+			resolvedId, _ := sc.resolveKeyReference(newName)
+			if resolvedId != keyId {
+				return logical.ErrorResponse(errKeyNameInUse.Error()), nil
+			}
+		} else {
+			newName = validatedName
+		}
 	}
 
 	if newName != key.Name {

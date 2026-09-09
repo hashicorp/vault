@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -356,7 +357,6 @@ func TestAudit_BeforePostUnseal(t *testing.T) {
 		HandlerFunc: vaulthttp.Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
 
 	testhelpers.WaitForActiveNode(t, cluster)
 	err := cluster.Cores[0].Client.Sys().Mount("test", &api.MountInput{
@@ -368,4 +368,84 @@ func TestAudit_BeforePostUnseal(t *testing.T) {
 	cluster.UnsealCores(t)
 	testhelpers.WaitForActiveNode(t, cluster)
 	require.False(t, didPanic.Load())
+}
+
+// TestAudit_PluginDirectorySecurityCheck_WithPathOrFilePath validates that the
+// audit security check still rejects a real audit target inside the plugin
+// directory and that Windows-style drive-root paths passed via either 'path' or
+// 'file_path' do not trigger false plugin-directory rejections
+func TestAudit_PluginDirectorySecurityCheck_WithPathOrFilePath(t *testing.T) {
+	pluginDir := corehelpers.MakeTestPluginDir(t)
+
+	tests := []struct {
+		name        string
+		pluginDir   string
+		auditPath   string
+		wantErr     bool
+		errContains string
+	}{
+		{
+			name:        "inside plugin dir is rejected",
+			pluginDir:   pluginDir,
+			auditPath:   pluginDir + "/audit.log",
+			wantErr:     true,
+			errContains: "audit file target may not be in the plugin directory",
+		},
+		{
+			name:      "windows: outside plugin dir is allowed",
+			pluginDir: `C:\Vault\plugins`,
+			auditPath: `C:\Vault\logs\audit.log`,
+		},
+		{
+			name:      "windows: drive root is allowed",
+			pluginDir: `C:\Vault\plugins`,
+			auditPath: `C:\audit.log`,
+		},
+		{
+			name:      "windows: alternate drive outside plugin dir is allowed",
+			pluginDir: `D:\Vault\plugins`,
+			auditPath: `D:\Vault\logs\audit.log`,
+		},
+		{
+			name:      "windows: alternate drive root is allowed",
+			pluginDir: `D:\Vault\plugins`,
+			auditPath: `D:\audit.log`,
+		},
+		{
+			name:      "windows: cross-volume audit path is allowed",
+			pluginDir: `D:\Vault\plugins`,
+			auditPath: `E:\audit.log`,
+		},
+	}
+
+	for _, optionKey := range []string{"path", "file_path"} {
+		for _, tc := range tests {
+			t.Run(fmt.Sprintf("%s/%s", optionKey, tc.name), func(t *testing.T) {
+				cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+					PluginDirectory: tc.pluginDir,
+				})
+				client := cluster.Cores[0].Client
+
+				deviceData := map[string]any{
+					"type":        "file",
+					"description": "test audit device",
+					"local":       false,
+					"options": map[string]any{
+						optionKey: tc.auditPath,
+					},
+				}
+
+				_, err := client.Logical().Write("sys/audit/test", deviceData)
+				if tc.wantErr {
+					require.Error(t, err)
+					require.ErrorContains(t, err, tc.errContains)
+					return
+				}
+
+				if err != nil {
+					require.NotContains(t, err.Error(), "audit file target may not be in the plugin directory")
+				}
+			})
+		}
+	}
 }

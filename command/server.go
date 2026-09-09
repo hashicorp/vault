@@ -111,7 +111,7 @@ type ServerCommand struct {
 	reloadFuncs       *map[string][]reloadutil.ReloadFunc
 	startedCh         chan (struct{}) // for tests
 	reloadedCh        chan (struct{}) // for tests
-	licenseReloadedCh chan (error)    // for tests
+	licenseReloadedCh chan error      // for tests
 
 	allLoggers []hclog.Logger
 
@@ -128,6 +128,7 @@ type ServerCommand struct {
 	flagDevNoStoreToken    bool
 	flagDevPluginDir       string
 	flagDevPluginInit      bool
+	flagDevPluginPGPKey    string
 	flagDevHA              bool
 	flagDevLatency         int
 	flagDevLatencyJitter   int
@@ -317,6 +318,13 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Hidden:  true,
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "dev-plugin-pgp-key",
+		Target:  &c.flagDevPluginPGPKey,
+		Default: "",
+		Hidden:  true,
+	})
+
 	f.BoolVar(&BoolVar{
 		Name:    "dev-ha",
 		Target:  &c.flagDevHA,
@@ -428,14 +436,9 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 	// Load the configuration
 	var config *server.Config
 	for _, path := range c.flagConfigs {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): return to server.LoadConfig once deprecation is done
-		current, duplicate, err := server.LoadConfigCheckDuplicate(path)
+		current, err := server.LoadConfig(path)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error loading configuration from %s: %w", path, err)
-		}
-		if duplicate {
-			c.UI.Warn(fmt.Sprintf(
-				"WARNING: Duplicate keys found in the Vault server configuration file %q, duplicate keys in HCL files are deprecated and will be forbidden in a future release.", path))
 		}
 
 		configErrors = append(configErrors, current.Validate(path)...)
@@ -552,7 +555,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	hasPartialPaths, err := vault.HasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
 		return 1
@@ -691,6 +694,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
+			MaxHeaderBytes:    vaulthttp.TokenHeaderMaxBytes(ln.Config),
 		}
 
 		go server.Serve(ln.Listener)
@@ -1156,6 +1160,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	logProxyEnvironmentVariables(c.logger)
 
+	envDenySlash := os.Getenv("VAULT_DENY_SLASH_IN_TEMPLATED_PATHS")
+	if envDenySlash != "" {
+		var err error
+		config.DenySlashInTemplatedPaths, err = strconv.ParseBool(envDenySlash)
+		if err != nil {
+			c.UI.Output("Error parsing the environment variable VAULT_DENY_SLASH_IN_TEMPLATED_PATHS")
+			return 1
+		}
+	}
+
 	envMlock := os.Getenv("VAULT_DISABLE_MLOCK")
 	if envMlock != "" {
 		var err error
@@ -1253,6 +1267,7 @@ func (c *ServerCommand) Run(args []string) int {
 		DisplayName: "Vault",
 		UserAgent:   useragent.String(),
 		ClusterName: clusterName,
+		Logger:      c.logger.Named("telemetry"),
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing telemetry: %s", err))
@@ -1492,6 +1507,9 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "administrative namespace")
 	info["administrative namespace"] = config.AdministrativeNamespacePath
 
+	infoKeys = append(infoKeys, "operator namespace")
+	info["operator namespace"] = config.OperatorNamespacePath
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1516,7 +1534,8 @@ func (c *ServerCommand) Run(args []string) int {
 	core.SetClusterHandler(vaulthttp.Handler.Handler(&vault.HandlerProperties{
 		Core: core,
 		ListenerConfig: &configutil.Listener{
-			DisableJSONLimitParsing: true,
+			DisableJSONLimitParsing:       true,
+			DisableTokenHeaderSizeParsing: true,
 		},
 	}))
 
@@ -1663,6 +1682,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// Wait for shutdown
 	shutdownTriggered := false
 	retCode := 0
+	disableGoroutineDump := config.DisableGoroutineTraceDump
 
 	for !shutdownTriggered {
 		select {
@@ -1673,6 +1693,11 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.ShutdownCh:
 			c.UI.Output("==> Vault shutdown triggered")
 			shutdownTriggered = true
+			if !disableGoroutineDump {
+				if path := writeGoroutineDump(c.logger); path != "" {
+					c.logger.Info("Wrote goroutine dump to", "path", path)
+				}
+			}
 		case <-c.SighupCh:
 			c.UI.Output("==> Vault reload triggered")
 
@@ -1742,11 +1767,19 @@ func (c *ServerCommand) Run(args []string) int {
 				}
 			}
 
+			// Update the reloadable disable_goroutine_trace_dump setting.
+			disableGoroutineDump = config.DisableGoroutineTraceDump
+
 			// notify ServiceRegistration that a configuration reload has occurred
 			if sr := coreConfig.GetServiceRegistration(); sr != nil {
 				var srConfig *map[string]string
 				if config.ServiceRegistration != nil {
 					srConfig = &config.ServiceRegistration.Config
+				} else if config.Storage.Type == storageTypeConsul {
+					// If no explicit service_registration block exists but Consul is
+					// the storage backend, maintain the implicit registration that was
+					// set up at startup. Passing nil would permanently deregister Vault.
+					srConfig = &config.Storage.Config
 				}
 				sr.NotifyConfigurationReload(srConfig)
 			}
@@ -1780,37 +1813,9 @@ func (c *ServerCommand) Run(args []string) int {
 
 			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
 				c.logger.Info("Writing stacktrace to file")
-
-				dir := ""
-				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
-				if path != "" {
-					if _, err := os.Stat(path); err != nil {
-						c.logger.Error("Checking stacktrace path failed", "error", err)
-						continue
-					}
-					dir = path
-				} else {
-					dir, err = os.MkdirTemp("", "vault-stacktrace")
-					if err != nil {
-						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
-						continue
-					}
+				if path := writeGoroutineDump(c.logger); path != "" {
+					c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", path))
 				}
-
-				f, err := os.CreateTemp(dir, "stacktrace")
-				if err != nil {
-					c.logger.Error("Could not create stacktrace file", "error", err)
-					continue
-				}
-
-				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
-					f.Close()
-					c.logger.Error("Could not write stacktrace to file", "error", err)
-					continue
-				}
-
-				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
-				f.Close()
 			}
 
 			// We can only get pprof outputs via the API but sometimes Vault can get
@@ -1900,9 +1905,7 @@ func (c *ServerCommand) reloadConfigFiles() (*server.Config, []configutil.Config
 	var config *server.Config
 	var configErrors []configutil.ConfigError
 	for _, path := range c.flagConfigs {
-		// don't care about HCL duplicate attributes here on reloading
-		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to server.LoadConfig and remove duplicate when deprecation is done
-		current, _, err := server.LoadConfigCheckDuplicate(path)
+		current, err := server.LoadConfig(path)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1925,7 +1928,7 @@ func (c *ServerCommand) configureSeals(ctx context.Context, config *server.Confi
 		return nil, nil, fmt.Errorf("Error getting seal generation info: %v", err)
 	}
 
-	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	hasPartialPaths, err := vault.HasPartiallyWrappedPaths(ctx, backend)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Cannot determine if there are partially seal wrapped entries in storage: %v", err)
 	}
@@ -2348,6 +2351,9 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 	// Set Introspection Endpoint to enabled with new value in the config after reload
 	core.ReloadIntrospectionEndpointEnabled()
 
+	// Reload unauthenticated endpoints override configuration
+	core.ReloadEnableUnauthenticatedAccess()
+
 	// Send a message that we reloaded. This prevents "guessing" sleep times
 	// in tests.
 	select {
@@ -2739,23 +2745,14 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Enabled:    multisealEnabled,
 	}
 
-	if multisealEnabled || (existingSealGenInfo != nil && existingSealGenInfo.Enabled) {
-		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
-		if err != nil {
-			return nil, err
-		}
+	// Validate multi seal concerns of the seal configuration. Note that at this
+	// point Vault is starting up, not initializing (as in "vault operator init").
+	err := vaultseal.ValidateMultiSealGenerationInfo(false, newSealGenInfo, existingSealGenInfo, hasPartiallyWrappedPaths)
+	if err != nil {
+		return nil, err
 	}
 
 	return newSealGenInfo, nil
-}
-
-func hasPartiallyWrappedPaths(ctx context.Context, backend physical.Backend) (bool, error) {
-	paths, err := vault.GetPartiallySealWrappedPaths(ctx, backend)
-	if err != nil {
-		return false, err
-	}
-
-	return len(paths) > 0, nil
 }
 
 func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {
@@ -2950,56 +2947,59 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
 ) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
-		RawConfig:                      config,
-		Physical:                       backend,
-		RedirectAddr:                   config.Storage.RedirectAddr,
-		StorageType:                    config.Storage.Type,
-		HAPhysical:                     nil,
-		ServiceRegistration:            configSR,
-		Seal:                           barrierSeal,
-		UnwrapSeal:                     unwrapSeal,
-		AuditBackends:                  c.AuditBackends,
-		CredentialBackends:             c.CredentialBackends,
-		LogicalBackends:                c.LogicalBackends,
-		LogLevel:                       config.LogLevel,
-		Logger:                         c.logger,
-		DetectDeadlocks:                config.DetectDeadlocks,
-		ImpreciseLeaseRoleTracking:     config.ImpreciseLeaseRoleTracking,
-		DisableSentinelTrace:           config.DisableSentinelTrace,
-		DisableCache:                   config.DisableCache,
-		DisableMlock:                   config.DisableMlock,
-		MaxLeaseTTL:                    config.MaxLeaseTTL,
-		DefaultLeaseTTL:                config.DefaultLeaseTTL,
-		RemoveIrrevocableLeaseAfter:    config.RemoveIrrevocableLeaseAfter,
-		ClusterName:                    config.ClusterName,
-		CacheSize:                      config.CacheSize,
-		PluginDirectory:                config.PluginDirectory,
-		PluginTmpdir:                   config.PluginTmpdir,
-		PluginFileUid:                  config.PluginFileUid,
-		PluginFilePermissions:          config.PluginFilePermissions,
-		EnableUI:                       config.EnableUI,
-		EnableRaw:                      config.EnableRawEndpoint,
-		EnableIntrospection:            config.EnableIntrospectionEndpoint,
-		DisableSealWrap:                config.DisableSealWrap,
-		DisablePerformanceStandby:      config.DisablePerformanceStandby,
-		DisableIndexing:                config.DisableIndexing,
-		AllowAuditLogPrefixing:         config.AllowAuditLogPrefixing,
-		AllLoggers:                     c.allLoggers,
-		BuiltinRegistry:                builtinplugins.Registry,
-		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
-		MetricsHelper:                  metricsHelper,
-		MetricSink:                     metricSink,
-		SecureRandomReader:             secureRandomReader,
-		EnableResponseHeaderHostname:   config.EnableResponseHeaderHostname,
-		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
-		License:                        config.License,
-		LicensePath:                    config.LicensePath,
-		LicenseReload:                  c.licenseReloadedCh,
-		DisableSSCTokens:               config.DisableSSCTokens,
-		Experiments:                    config.Experiments,
-		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
-		ObservationSystemConfig:        config.Observations,
-		ReportingScanDirectory:         config.ReportingScanDirectory,
+		RawConfig:                       config,
+		Physical:                        backend,
+		RedirectAddr:                    config.Storage.RedirectAddr,
+		StorageType:                     config.Storage.Type,
+		HAPhysical:                      nil,
+		ServiceRegistration:             configSR,
+		Seal:                            barrierSeal,
+		UnwrapSeal:                      unwrapSeal,
+		AuditBackends:                   c.AuditBackends,
+		CredentialBackends:              c.CredentialBackends,
+		LogicalBackends:                 c.LogicalBackends,
+		LogLevel:                        config.LogLevel,
+		Logger:                          c.logger,
+		DetectDeadlocks:                 config.DetectDeadlocks,
+		ImpreciseLeaseRoleTracking:      config.ImpreciseLeaseRoleTracking,
+		DisableSentinelTrace:            config.DisableSentinelTrace,
+		DisableCache:                    config.DisableCache,
+		DisableMlock:                    config.DisableMlock,
+		MaxLeaseTTL:                     config.MaxLeaseTTL,
+		DefaultLeaseTTL:                 config.DefaultLeaseTTL,
+		RemoveIrrevocableLeaseAfter:     config.RemoveIrrevocableLeaseAfter,
+		ClusterName:                     config.ClusterName,
+		CacheSize:                       config.CacheSize,
+		PluginDirectory:                 config.PluginDirectory,
+		PluginTmpdir:                    config.PluginTmpdir,
+		PluginFileUid:                   config.PluginFileUid,
+		PluginFilePermissions:           config.PluginFilePermissions,
+		EnableUI:                        config.EnableUI,
+		EnableRaw:                       config.EnableRawEndpoint,
+		EnableIntrospection:             config.EnableIntrospectionEndpoint,
+		DisableSealWrap:                 config.DisableSealWrap,
+		DisablePerformanceStandby:       config.DisablePerformanceStandby,
+		DisableIndexing:                 config.DisableIndexing,
+		AllowAuditLogPrefixing:          config.AllowAuditLogPrefixing,
+		AllLoggers:                      c.allLoggers,
+		BuiltinRegistry:                 builtinplugins.Registry,
+		DisableKeyEncodingChecks:        config.DisablePrintableCheck,
+		MetricsHelper:                   metricsHelper,
+		MetricSink:                      metricSink,
+		SecureRandomReader:              secureRandomReader,
+		EnableResponseHeaderHostname:    config.EnableResponseHeaderHostname,
+		EnableResponseHeaderRaftNodeID:  config.EnableResponseHeaderRaftNodeID,
+		License:                         config.License,
+		LicensePath:                     config.LicensePath,
+		LicenseReload:                   c.licenseReloadedCh,
+		DisableSSCTokens:                config.DisableSSCTokens,
+		Experiments:                     config.Experiments,
+		AdministrativeNamespacePath:     config.AdministrativeNamespacePath,
+		OperatorNamespacePath:           config.OperatorNamespacePath,
+		ObservationSystemConfig:         config.Observations,
+		ReportingScanDirectory:          config.ReportingScanDirectory,
+		EnableUnauthenticatedAccess:     config.EnableUnauthenticatedAccess,
+		DenySlashInTemplatedPolicyPaths: config.DenySlashInTemplatedPaths,
 	}
 
 	if c.flagDev {
@@ -3011,6 +3011,9 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		}
 		if c.flagDevPluginDir != "" {
 			coreConfig.PluginDirectory = c.flagDevPluginDir
+		}
+		if c.flagDevPluginPGPKey != "" {
+			coreConfig.DevPluginPGPKey = c.flagDevPluginPGPKey
 		}
 		if c.flagDevLatency > 0 {
 			injectLatency := time.Duration(c.flagDevLatency) * time.Millisecond
@@ -3061,6 +3064,16 @@ func initDevCore(c *ServerCommand, coreConfig *vault.CoreConfig, config *server.
 
 			for _, name := range list {
 				path := filepath.Join(f.Name(), name)
+
+				// Skip directories (e.g., enterprise plugin packages)
+				fileInfo, err := os.Stat(path)
+				if err != nil {
+					return fmt.Errorf("Error reading plugin file info %s: %s", name, err)
+				}
+				if fileInfo.IsDir() {
+					continue
+				}
+
 				if err := c.addPlugin(path, init.RootToken, core); err != nil {
 					if !errwrap.Contains(err, plugincatalog.ErrPluginBadType.Error()) {
 						return fmt.Errorf("Error enabling plugin %s: %s", name, err)
@@ -3194,6 +3207,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			ReadTimeout:       30 * time.Second,
 			IdleTimeout:       5 * time.Minute,
 			ErrorLog:          c.logger.StandardLogger(nil),
+			MaxHeaderBytes:    vaulthttp.TokenHeaderMaxBytes(ln.Config),
 		}
 
 		// override server defaults with config values for read/write/idle timeouts if configured

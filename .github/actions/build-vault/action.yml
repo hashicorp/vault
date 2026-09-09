@@ -64,12 +64,8 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
     - uses: ./.github/actions/install-tools # sets env.VAULT_TOOLS_PATH
-    - if: inputs.vault-edition != 'ce'
-      name: Configure Git
-      shell: bash
-      run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
     - name: Restore UI from cache
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         # Restore the UI asset from the UI build workflow. Never use a partial restore key.
         enableCrossOsArchive: true
@@ -115,9 +111,9 @@ runs:
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.vault-edition != 'ce'
       id: build-vault-select-license
-      uses: hashicorp-forge/actions-pao-tool/select-license@6997f7457c338e008506005cc370e7b02f7fb421 # v1.0.3
+      uses: hashicorp-forge/actions-pao-tool/select-license@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
       with:
-        arch: ${{ matrix.goarch }}
+        arch: ${{ inputs.goarch }}
     - if: inputs.cgo-enabled == '0'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:
@@ -127,23 +123,28 @@ runs:
         GOARM: ${{ inputs.goarm }}
         GOOS: ${{ inputs.goos }}
         GOEXPERIMENT: ${{ inputs.goexperiment }}
-        GOPRIVATE: github.com/hashicorp
-        VERSION: ${{ inputs.version }}
+        # *NEVER* set GOPRIVATE for community builds
+        GOPRIVATE: ${{ inputs.vault-edition != 'ce' && 'github.com/hashicorp/*' || '' }}
+        VERSION: ${{ inputs.vault-version }}
         VERSION_METADATA: ${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}
       shell: bash
       run: make ci-build
-    - if: inputs.cgo-enabled == '1'
-      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+    # CGO builds use a sandboxed container builder to cross-compile with the correct version of
+    # glibc and cross-compile toolchains. CE builds never require CGO but we gate the token and
+    # GITHUB_TOKEN injection here explicitly so that we don't accidentally allow private modules
+    # in CE builds if we ever move all builds to a shared container.
+    - if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
+      uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
       with:
         driver-opts: network=host # So we can run our own little registry
-    - if: inputs.cgo-enabled == '1'
+    - if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
       shell: bash
       run: docker run -d -p 5000:5000 --restart always --name registry registry:2
     - name: Build CGO builder image
-      if: inputs.cgo-enabled == '1'
+      if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
       id: build-push-action-attempt-1
       continue-on-error: true # we will retry this if it fails
-      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       env:
         DOCKER_BUILD_SUMMARY: false
       with:
@@ -164,8 +165,8 @@ runs:
     - name: Build CGO builder image
       id: build-push-action-attempt-2
       continue-on-error: false
-      if: inputs.cgo-enabled == '1' && steps.build-push-action-attempt-1.outcome != 'success'
-      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce' && steps.build-push-action-attempt-1.outcome != 'success'
+      uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
       env:
         DOCKER_BUILD_SUMMARY: false
       with:
@@ -183,7 +184,7 @@ runs:
         cache-from: type=gha,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
         cache-to: type=gha,mode=min,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
         github-token: ${{ inputs.github-token }}
-    - if: inputs.cgo-enabled == '1'
+    - if: inputs.cgo-enabled == '1' && inputs.vault-edition != 'ce'
       name: ${{ steps.metadata.outputs.build-step-name }}
       shell: bash
       run: |
@@ -201,8 +202,8 @@ runs:
             --env GOEXPERIMENT='${{ inputs.goexperiment }}' \
             --env GOMODCACHE=/go-mod-cache \
             --env GOOS='${{ inputs.goos }}' \
-            --env VERSION='${{ inputs.version }}' \
-            --env VERSION_METADATA='${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}' \
+            --env VERSION='${{ inputs.vault-version }}' \
+            --env VERSION_METADATA='${{ inputs.vault-edition }}' \
               localhost:5000/vault-builder:${{ steps.metadata.outputs.vault-builder-cache-key }} \
                 make ci-build
     - if: inputs.vault-edition != 'ce'
@@ -218,13 +219,18 @@ runs:
         BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
       shell: bash
       run: make ci-bundle
-    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.metadata.outputs.artifact-basename }}.zip
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: hashicorp/actions-packaging-linux@33f7d23b14f24e6a7b7d9948cb7f5caca2045ee3
+      uses: hashicorp/actions-packaging-linux@e6d9687e13bd55b1b3e3e5adb2e4d52789299025
+      env:
+        # If we've been given a token we use it here to reduce the chance of hitting
+        # GitHub rate limits when downloading nfpm. This is safe for CE and Ent as
+        # the token is only used for nfpm.
+        GH_TOKEN: ${{ inputs.github-token || github.token }}
       with:
         name: ${{ inputs.package-name }}
         description: Vault is a tool for secrets management, encryption as a service, and privileged access management.
@@ -240,6 +246,8 @@ runs:
         preinstall: .release/linux/preinst
         postinstall: .release/linux/postinst
         postremove: .release/linux/postrm
+        nfpm_cache: 'true'
+        nfpm_version: v2.47.0
     - if: inputs.create-packages == 'true'
       id: package-files
       name: Determine package file names
@@ -250,13 +258,13 @@ runs:
           echo "deb-files=$(basename out/*.deb)"
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.package-files.outputs.rpm-files }}
         path: out/${{ steps.package-files.outputs.rpm-files }}
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: ${{ steps.package-files.outputs.deb-files }}
         path: out/${{ steps.package-files.outputs.deb-files }}

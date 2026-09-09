@@ -4,12 +4,10 @@
  */
 
 import Route from '@ember/routing/route';
-import { service } from '@ember/service';
+import OidcScopeForm from 'vault/forms/oidc/scope';
 
 export default class OidcScopesCreateRoute extends Route {
-  @service store;
-
   model() {
-    return this.store.createRecord('oidc/scope');
+    return new OidcScopeForm({}, { isNew: true });
   }
 }

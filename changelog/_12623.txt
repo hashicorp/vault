@@ -1,0 +1,4 @@
+
+```release-note:bug
+secrets/pki: The root/sign-intermediate endpoint max_path_length parameter is now restricted by the signing CA's max_path_length if set.
+```

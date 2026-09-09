@@ -16,6 +16,7 @@ import type RouterService from '@ember/routing/router-service';
 import type { ValidationMap, Breadcrumb } from 'vault/app-types';
 import type Owner from '@ember/owner';
 import type KubernetesConfigForm from 'vault/forms/secrets/kubernetes/config';
+import type FlashMessageService from 'vault/services/flash-messages';
 
 interface Args {
   form: KubernetesConfigForm;
@@ -32,6 +33,7 @@ export default class ConfigurePageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly flashMessages: FlashMessageService;
 
   @tracked inferredState: 'success' | 'error' | null = null;
   @tracked modelValidations: ValidationMap | null = null;
@@ -91,6 +93,7 @@ export default class ConfigurePageComponent extends Component<Args> {
       if (isValid) {
         try {
           await this.api.secrets.kubernetesConfigure(this.secretMountPath.currentPath, data);
+          this.flashMessages.success('Successfully configured Kubernetes engine');
           this.leave('configuration');
         } catch (error) {
           const { message } = await this.api.parseError(

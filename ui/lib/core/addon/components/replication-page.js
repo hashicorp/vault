@@ -28,7 +28,8 @@ const MODE = {
 };
 
 export default class ReplicationPage extends Component {
-  @service store;
+  @service api;
+
   @tracked reindexingDetails = null;
 
   // This component renders both within and outside the replication engine so we have to dynamically look up the router
@@ -44,8 +45,8 @@ export default class ReplicationPage extends Component {
 
   @task
   @waitFor
-  *getReplicationModeStatus(replicationMode) {
-    let resp;
+  *getReplicationModeStatus([replicationMode]) {
+    let resp = {};
     if (this.isSummaryDashboard) {
       // the summary dashboard is not mode specific and will error
       // while running replication/null/status in the replication-mode adapter
@@ -53,11 +54,17 @@ export default class ReplicationPage extends Component {
     }
 
     try {
-      resp = yield this.store.adapterFor('replication-mode').fetchStatus(replicationMode);
+      // unauthenticated request -- explicitly pass empty token header
+      const headers = this.api.buildHeaders({ token: '' });
+      if (replicationMode === 'dr') {
+        resp = yield this.api.sys.systemReadReplicationDrStatus(headers);
+      } else if (replicationMode === 'performance') {
+        resp = yield this.api.sys.systemReadReplicationPerformanceStatus(headers);
+      }
     } catch (e) {
       // do not handle error
     } finally {
-      this.reindexingDetails = resp;
+      this.reindexingDetails = resp.data;
     }
   }
   get isSummaryDashboard() {

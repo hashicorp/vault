@@ -23,7 +23,6 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/osutil"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -55,6 +54,8 @@ type Config struct {
 	ServiceRegistration *ServiceRegistration `hcl:"-"`
 
 	Experiments []string `hcl:"experiments"`
+
+	EnableUnauthenticatedAccess []string `hcl:"enable_unauthenticated_access"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
@@ -109,6 +110,9 @@ type Config struct {
 	DisableSentinelTrace    bool        `hcl:"-"`
 	DisableSentinelTraceRaw interface{} `hcl:"disable_sentinel_trace,alias:DisableSentinelTrace"`
 
+	DisableGoroutineTraceDump    bool        `hcl:"-"`
+	DisableGoroutineTraceDumpRaw interface{} `hcl:"disable_goroutine_trace_dump"`
+
 	EnableResponseHeaderHostname    bool        `hcl:"-"`
 	EnableResponseHeaderHostnameRaw interface{} `hcl:"enable_response_header_hostname"`
 
@@ -132,6 +136,9 @@ type Config struct {
 	PostUnsealTraceDir    string `hcl:"post_unseal_trace_directory"`
 
 	ReportingScanDirectory string `hcl:"reporting_scan_directory"`
+
+	DenySlashInTemplatedPaths bool        `hcl:"deny_slash_in_templated_paths"`
+	UISettings                *UISettings `hcl:"-"`
 }
 
 const (
@@ -148,6 +155,9 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	}
 	for _, l := range c.Listeners {
 		results = append(results, l.Validate(sourceFilePath)...)
+	}
+	if c.UISettings != nil {
+		results = append(results, c.UISettings.Validate(sourceFilePath)...)
 	}
 	results = append(results, entValidateConfig(c, sourceFilePath)...)
 	return results
@@ -257,6 +267,28 @@ func (b *Storage) GoString() string {
 	return fmt.Sprintf("*%#v", *b)
 }
 
+// UISettings holds configuration for the Vault UI, parsed from the
+// `ui_settings` stanza. It is available in both CE and Enterprise builds and is
+// surfaced to the UI via the sys/internal/ui/settings endpoint.
+type UISettings struct {
+	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
+
+	// UITelemetry gates whether the UI may collect anonymous usage analytics.
+	UITelemetry bool `hcl:"-"`
+	// UITelemetrySet distinguishes an explicit `ui_telemetry = false` from the
+	// field being unset, so that merging multiple config files does not let an
+	// unset value clobber a previously-configured one.
+	UITelemetrySet bool `hcl:"-"`
+	// UITelemetryRaw holds the unparsed HCL value; it is normalized into
+	// UITelemetry/UITelemetrySet during parsing and then cleared.
+	UITelemetryRaw interface{} `hcl:"ui_telemetry"`
+}
+
+// Validate checks for any unused keys in the UISettings configuration.
+func (uiSettings *UISettings) Validate(sourceFilePath string) []configutil.ConfigError {
+	return configutil.ValidateUnusedFields(uiSettings.UnusedKeys, sourceFilePath)
+}
+
 // ServiceRegistration is the optional service discovery for the server.
 type ServiceRegistration struct {
 	UnusedKeys configutil.UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -322,6 +354,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableSentinelTrace = c2.DisableSentinelTrace
 	}
 
+	result.DisableGoroutineTraceDump = c.DisableGoroutineTraceDump
+	if c2.DisableGoroutineTraceDump {
+		result.DisableGoroutineTraceDump = c2.DisableGoroutineTraceDump
+	}
+
 	result.DisablePrintableCheck = c.DisablePrintableCheck
 	if c2.DisablePrintableCheckRaw != nil {
 		result.DisablePrintableCheck = c2.DisablePrintableCheck
@@ -361,6 +398,18 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.EnableIntrospectionEndpoint = c.EnableIntrospectionEndpoint
 	if c2.EnableIntrospectionEndpoint {
 		result.EnableIntrospectionEndpoint = c2.EnableIntrospectionEndpoint
+	}
+
+	result.UISettings = c.UISettings
+	if c2.UISettings != nil {
+		if result.UISettings == nil {
+			result.UISettings = c2.UISettings
+		} else if c2.UISettings.UITelemetrySet {
+			mergedUISettings := *result.UISettings
+			mergedUISettings.UITelemetry = c2.UISettings.UITelemetry
+			mergedUISettings.UITelemetrySet = true
+			result.UISettings = &mergedUISettings
+		}
 	}
 
 	result.APIAddr = c.APIAddr
@@ -516,9 +565,24 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
 	}
 
+	result.OperatorNamespacePath = c.OperatorNamespacePath
+	if c2.OperatorNamespacePath != "" {
+		result.OperatorNamespacePath = c2.OperatorNamespacePath
+	}
+
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
 
 	result.Experiments = mergeExperiments(c.Experiments, c2.Experiments)
+
+	result.EnableUnauthenticatedAccess = c.EnableUnauthenticatedAccess
+	if len(c2.EnableUnauthenticatedAccess) > 0 {
+		result.EnableUnauthenticatedAccess = c2.EnableUnauthenticatedAccess
+	}
+
+	result.DenySlashInTemplatedPaths = c.DenySlashInTemplatedPaths
+	if c2.DenySlashInTemplatedPaths {
+		result.DenySlashInTemplatedPaths = c2.DenySlashInTemplatedPaths
+	}
 
 	return result
 }
@@ -526,18 +590,12 @@ func (c *Config) Merge(c2 *Config) *Config {
 // LoadConfig loads the configuration at the given path, regardless if
 // it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
-	cfg, _, err := LoadConfigCheckDuplicate(path)
-	return cfg, err
-}
-
-// LoadConfigCheckDuplicate is the same as the above function but also checks for duplicate attributes
-// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfig once deprecation is complete
-func LoadConfigCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
+	var cfg *Config
 	if fi.IsDir() {
 		// check permissions on the config directory
 		var enableFilePermissionsCheck bool
@@ -545,35 +603,34 @@ func LoadConfigCheckDuplicate(path string) (cfg *Config, duplicate bool, err err
 			var err error
 			enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
 			if err != nil {
-				return nil, false, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
 		f, err := os.Open(path)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
 		defer f.Close()
 
 		if enableFilePermissionsCheck {
 			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
-				return nil, false, err
+				return nil, err
 			}
 		}
 
-		cfg, duplicate, err = LoadConfigDirCheckDuplicate(path)
+		cfg, err = LoadConfigDir(path)
 		if err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	} else {
-		cfg, duplicate, err = LoadConfigFileCheckDuplicate(path)
+		cfg, err = LoadConfigFile(path)
 		if err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
-	cfg, err = CheckConfig(cfg)
-	return cfg, duplicate, err
+	return CheckConfig(cfg)
 }
 
 func CheckConfig(c *Config) (*Config, error) {
@@ -599,28 +656,21 @@ func CheckConfig(c *Config) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
-	cfg, _, err := LoadConfigFileCheckDuplicate(path)
-	return cfg, err
-}
-
-// LoadConfigFileCheckDuplicate is the same as the above function but also checks for duplicate attributes
-// TODO (HCL_DUP_KEYS_DEPRECATION): keep only ParseConfig once deprecation is complete
-func LoadConfigFileCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
 	// Open the file
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	defer f.Close()
 	// Read the file
 	d, err := io.ReadAll(f)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	conf, duplicate, err := ParseConfigCheckDuplicate(string(d), path)
+	conf, err := ParseConfig(string(d), path)
 	if err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
 
 	var enableFilePermissionsCheck bool
@@ -628,7 +678,7 @@ func LoadConfigFileCheckDuplicate(path string) (cfg *Config, duplicate bool, err
 		var err error
 		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
 		if err != nil {
-			return nil, duplicate, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+			return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 		}
 	}
 
@@ -636,166 +686,157 @@ func LoadConfigFileCheckDuplicate(path string) (cfg *Config, duplicate bool, err
 		// check permissions of the config file
 		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 		// check permissions of the plugin directory
 		if conf.PluginDirectory != "" {
 
 			err = osutil.OwnerPermissionsMatch(conf.PluginDirectory, conf.PluginFileUid, conf.PluginFilePermissions)
 			if err != nil {
-				return nil, duplicate, err
+				return nil, err
 			}
 		}
 	}
-	return conf, duplicate, nil
+	return conf, nil
 }
 
 func ParseConfig(d, source string) (*Config, error) {
-	cfg, _, err := ParseConfigCheckDuplicate(d, source)
-	return cfg, err
-}
-
-// TODO (HCL_DUP_KEYS_DEPRECATION): keep only ParseConfig once deprecation is complete
-func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, err error) {
 	// Parse!
-	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(d)
+	obj, err := hcl.Parse(d)
 	if err != nil {
-		if strings.Contains(err.Error(), "was already set. Each argument can only be defined once") {
-			knownPossibleAttributeDupErrors := []string{"retry_join", "transform", "listener"}
-			for _, s := range knownPossibleAttributeDupErrors {
-				if strings.Contains(err.Error(), fmt.Sprintf("The argument %q at", s)) {
-					return nil, duplicate, fmt.Errorf("%w (if using the attribute syntax %s = [...], change it to the block syntax %s { ... })", err, s, s)
-				}
-			}
-		}
-		return nil, duplicate, err
+		return nil, err
 	}
 
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
 
 	if rendered, err := configutil.ParseSingleIPTemplate(result.APIAddr); err != nil {
-		return nil, duplicate, err
+		return nil, err
 	} else {
 		result.APIAddr = rendered
 	}
 	if rendered, err := configutil.ParseSingleIPTemplate(result.ClusterAddr); err != nil {
-		return nil, duplicate, err
+		return nil, err
 	} else {
 		result.ClusterAddr = rendered
 	}
 
-	sharedConfig, dup, err := configutil.ParseConfigCheckDuplicate(d)
+	sharedConfig, err := configutil.ParseConfig(d)
 	if err != nil {
-		return nil, duplicate, err
+		return nil, err
 	}
-	duplicate = duplicate || dup
 	result.SharedConfig = sharedConfig
 
 	if result.MaxLeaseTTLRaw != nil {
 		if result.MaxLeaseTTL, err = parseutil.ParseDurationSecond(result.MaxLeaseTTLRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 	if result.DefaultLeaseTTLRaw != nil {
 		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.RemoveIrrevocableLeaseAfterRaw != nil {
 		if result.RemoveIrrevocableLeaseAfter, err = parseutil.ParseDurationSecond(result.RemoveIrrevocableLeaseAfterRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.EnableUIRaw != nil {
 		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.DisableCacheRaw != nil {
 		if result.DisableCache, err = parseutil.ParseBool(result.DisableCacheRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.DisablePrintableCheckRaw != nil {
 		if result.DisablePrintableCheck, err = parseutil.ParseBool(result.DisablePrintableCheckRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.EnableRawEndpointRaw != nil {
 		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.EnableIntrospectionEndpointRaw != nil {
 		if result.EnableIntrospectionEndpoint, err = parseutil.ParseBool(result.EnableIntrospectionEndpointRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.DisableClusteringRaw != nil {
 		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.PluginFilePermissionsRaw != nil {
 		octalPermissionsString, err := parseutil.ParseString(result.PluginFilePermissionsRaw)
 		if err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 		pluginFilePermissions, err := strconv.ParseInt(octalPermissionsString, 8, 64)
 		if err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 		if pluginFilePermissions < math.MinInt || pluginFilePermissions > math.MaxInt {
-			return nil, duplicate, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
+			return nil, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
 		}
 		result.PluginFilePermissions = int(pluginFilePermissions)
 	}
 
 	if result.DisableSentinelTraceRaw != nil {
 		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
+		}
+	}
+
+	if result.DisableGoroutineTraceDumpRaw != nil {
+		if result.DisableGoroutineTraceDump, err = parseutil.ParseBool(result.DisableGoroutineTraceDumpRaw); err != nil {
+			return nil, err
 		}
 	}
 
 	if result.DisablePerformanceStandbyRaw != nil {
 		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.AllowAuditLogPrefixingRaw != nil {
 		if result.AllowAuditLogPrefixing, err = parseutil.ParseBool(result.AllowAuditLogPrefixingRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.DisableSealWrapRaw != nil {
 		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.DisableIndexingRaw != nil {
 		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	if result.EnableResponseHeaderHostnameRaw != nil {
 		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
@@ -806,27 +847,27 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
 		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
-			return nil, duplicate, err
+			return nil, err
 		}
 	}
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, duplicate, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "storage")
 		if err := ParseStorage(result, o, "storage"); err != nil {
-			return nil, duplicate, fmt.Errorf("error parsing 'storage': %w", err)
+			return nil, fmt.Errorf("error parsing 'storage': %w", err)
 		}
 		result.found(result.Storage.Type, result.Storage.Type)
 	} else {
 		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := ParseStorage(result, o, "backend"); err != nil {
-				return nil, duplicate, fmt.Errorf("error parsing 'backend': %w", err)
+				return nil, fmt.Errorf("error parsing 'backend': %w", err)
 			}
 		}
 	}
@@ -834,13 +875,13 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "ha_storage")
 		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
-			return nil, duplicate, fmt.Errorf("error parsing 'ha_storage': %w", err)
+			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
 			delete(result.UnusedKeys, "ha_backend")
 			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
-				return nil, duplicate, fmt.Errorf("error parsing 'ha_backend': %w", err)
+				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
 		}
 	}
@@ -849,16 +890,23 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 	if o := list.Filter("service_registration"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
-			return nil, duplicate, fmt.Errorf("error parsing 'service_registration': %w", err)
+			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
+		}
+	}
+
+	if o := list.Filter("ui_settings"); len(o.Items) > 0 {
+		delete(result.UnusedKeys, "ui_settings")
+		if err := parseUISettings(result, o, "ui_settings"); err != nil {
+			return nil, fmt.Errorf("error parsing 'ui_settings': %w", err)
 		}
 	}
 
 	if err := validateExperiments(result.Experiments); err != nil {
-		return nil, duplicate, fmt.Errorf("error validating experiment(s) from config: %w", err)
+		return nil, fmt.Errorf("error validating experiment(s) from config: %w", err)
 	}
 
 	if err := result.parseConfig(list, source); err != nil {
-		return nil, duplicate, fmt.Errorf("error parsing enterprise config: %w", err)
+		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
 	// Remove all unused keys from Config that were satisfied by SharedConfig.
@@ -870,7 +918,7 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 		}
 	}
 
-	return result, duplicate, nil
+	return result, nil
 }
 
 func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []string) error {
@@ -939,25 +987,18 @@ func mergeExperiments(left, right []string) []string {
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
 func LoadConfigDir(dir string) (*Config, error) {
-	cfg, _, err := LoadConfigDirCheckDuplicate(dir)
-	return cfg, err
-}
-
-// LoadConfigDirCheckDuplicate is the same as the above but checks for duplciate HCL attributes
-// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigDir once deprecation is complete
-func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err error) {
 	f, err := os.Open(dir)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	if !fi.IsDir() {
-		return nil, false, fmt.Errorf("configuration path must be a directory: %q", dir)
+		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -966,7 +1007,7 @@ func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err e
 		var fis []os.FileInfo
 		fis, err = f.Readdir(128)
 		if err != nil && err != io.EOF {
-			return nil, false, err
+			return nil, err
 		}
 
 		for _, fi := range fis {
@@ -994,11 +1035,10 @@ func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err e
 
 	result := NewConfig()
 	for _, f := range files {
-		config, dup, err := LoadConfigFileCheckDuplicate(f)
+		config, err := LoadConfigFile(f)
 		if err != nil {
-			return nil, duplicate, fmt.Errorf("error loading %q: %w", f, err)
+			return nil, fmt.Errorf("error loading %q: %w", f, err)
 		}
-		duplicate = duplicate || dup
 
 		if result == nil {
 			result = config
@@ -1007,7 +1047,7 @@ func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err e
 		}
 	}
 
-	return result, duplicate, nil
+	return result, nil
 }
 
 // isTemporaryFile returns true or false depending on whether the
@@ -1356,6 +1396,29 @@ func parseServiceRegistration(result *Config, list *ast.ObjectList, name string)
 	return nil
 }
 
+func parseUISettings(result *Config, list *ast.ObjectList, name string) error {
+	if len(list.Items) > 1 {
+		return fmt.Errorf("only one %q block is permitted", name)
+	}
+
+	var uiSettings UISettings
+	if err := hcl.DecodeObject(&uiSettings, list.Items[0].Val); err != nil {
+		return multierror.Prefix(err, fmt.Sprintf("%s:", name))
+	}
+	if uiSettings.UITelemetryRaw != nil {
+		enabled, err := parseutil.ParseBool(uiSettings.UITelemetryRaw)
+		if err != nil {
+			return multierror.Prefix(err, fmt.Sprintf("%s.ui_telemetry:", name))
+		}
+		uiSettings.UITelemetry = enabled
+		uiSettings.UITelemetrySet = true
+		uiSettings.UITelemetryRaw = nil
+	}
+
+	result.UISettings = &uiSettings
+	return nil
+}
+
 // Sanitized returns a copy of the config with all values that are considered
 // sensitive stripped. It also strips all `*Raw` values that are mainly
 // used for parsing.
@@ -1373,10 +1436,11 @@ func (c *Config) Sanitized() map[string]interface{} {
 	}
 	sharedResult := c.SharedConfig.Sanitized()
 	result := map[string]interface{}{
-		"cache_size":              c.CacheSize,
-		"disable_sentinel_trace":  c.DisableSentinelTrace,
-		"disable_cache":           c.DisableCache,
-		"disable_printable_check": c.DisablePrintableCheck,
+		"cache_size":                   c.CacheSize,
+		"disable_sentinel_trace":       c.DisableSentinelTrace,
+		"disable_cache":                c.DisableCache,
+		"disable_goroutine_trace_dump": c.DisableGoroutineTraceDump,
+		"disable_printable_check":      c.DisablePrintableCheck,
 
 		"enable_ui": c.EnableUI,
 
@@ -1415,12 +1479,16 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"log_requests_level": c.LogRequestsLevel,
 		"experiments":        c.Experiments,
 
+		"enable_unauthenticated_access": c.EnableUnauthenticatedAccess,
+
 		"detect_deadlocks": c.DetectDeadlocks,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 
 		"enable_post_unseal_trace":    c.EnablePostUnsealTrace,
 		"post_unseal_trace_directory": c.PostUnsealTraceDir,
+
+		"deny_slash_in_templated_paths": c.DenySlashInTemplatedPaths,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -1483,6 +1551,14 @@ func (c *Config) Sanitized() map[string]interface{} {
 		result["service_registration"] = sanitizedServiceRegistration
 	}
 
+	// Sanitize ui_settings stanza. These values are non-sensitive, so they are
+	// surfaced as-is to aid operators in confirming their configuration.
+	if c.UISettings != nil {
+		result["ui_settings"] = map[string]interface{}{
+			"ui_telemetry": c.UISettings.UITelemetry,
+		}
+	}
+
 	entConfigResult := c.entConfig.Sanitized()
 	for k, v := range entConfigResult {
 		result[k] = v
@@ -1503,6 +1579,9 @@ func (c *Config) Prune() {
 	if c.Telemetry != nil {
 		c.Telemetry.FoundKeys = nil
 		c.Telemetry.UnusedKeys = nil
+	}
+	if c.UISettings != nil {
+		c.UISettings.UnusedKeys = nil
 	}
 }
 

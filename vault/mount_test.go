@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMount_ReadOnlyViewDuringMount(t *testing.T) {
@@ -60,8 +61,8 @@ func TestLogicalMountMetrics(t *testing.T) {
 	loadMetric, ok := mountMetrics.Load(mountKeyName)
 	var numEntriesMetric metricsutil.GaugeMetric = loadMetric.(metricsutil.GaugeMetric)
 
-	// 3 default nonlocal logical backends
-	if !ok || numEntriesMetric.Value != 3 {
+	// 4 default nonlocal logical backends
+	if !ok || numEntriesMetric.Value != 4 {
 		t.Fatalf("Auth values should be: %+v", numEntriesMetric)
 	}
 	me := &MountEntry{
@@ -76,9 +77,9 @@ func TestLogicalMountMetrics(t *testing.T) {
 	mountMetrics = &c.metricsHelper.LoopMetrics.Metrics
 	loadMetric, ok = mountMetrics.Load(mountKeyName)
 	numEntriesMetric = loadMetric.(metricsutil.GaugeMetric)
-	if !ok || numEntriesMetric.Value != 4 {
-		t.Fatalf("mount metrics for num entries do not match true values")
-	}
+	require.True(t, ok)
+	require.NotNil(t, numEntriesMetric)
+	require.Equal(t, float32(5), numEntriesMetric.Value)
 	if len(numEntriesMetric.Key) != 3 ||
 		numEntriesMetric.Key[0] != "core" ||
 		numEntriesMetric.Key[1] != "mount_table" ||
@@ -116,7 +117,7 @@ func TestLogicalMountMetrics(t *testing.T) {
 
 func TestCore_DefaultMountTable(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	verifyDefaultTable(t, c.mounts, 4, c.mountsLock)
+	verifyDefaultTable(t, c.mounts, 5, c.mountsLock)
 
 	// Start a second core with same physical
 	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
@@ -283,7 +284,7 @@ func TestCore_Mount_kv_generic(t *testing.T) {
 func TestCore_Mount_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	c.mounts = &MountTable{
+	mounts := &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
 			{
@@ -309,6 +310,10 @@ func TestCore_Mount_Local(t *testing.T) {
 		},
 	}
 
+	c.mountsLock.Lock()
+	c.mounts = mounts
+	c.mountsLock.Unlock()
+
 	// Both should set up successfully
 	err := c.setupMounts(namespace.RootContext(nil))
 	if err != nil {
@@ -333,8 +338,11 @@ func TestCore_Mount_Local(t *testing.T) {
 		t.Fatalf("expected only cubbyhole entry in local mount table, got %#v", localMountsTable)
 	}
 
+	c.mountsLock.Lock()
 	c.mounts.Entries[1].Local = true
-	if err := c.persistMounts(context.Background(), c.mounts, nil); err != nil {
+	err = c.persistMounts(context.Background(), c.mounts, nil)
+	c.mountsLock.Unlock()
+	if err != nil {
 		t.Fatal(err)
 	}
 
@@ -361,6 +369,7 @@ func TestCore_Mount_Local(t *testing.T) {
 	if err := c.loadMounts(context.Background()); err != nil {
 		t.Fatal(err)
 	}
+	c.mountsLock.Lock()
 	compEntries := c.mounts.Entries[:0]
 	// Filter out required mounts
 	for _, v := range c.mounts.Entries {
@@ -369,6 +378,7 @@ func TestCore_Mount_Local(t *testing.T) {
 		}
 	}
 	c.mounts.Entries = compEntries
+	c.mountsLock.Unlock()
 
 	if diffs := deep.Equal(oldMounts, c.mounts); len(diffs) != 0 {
 		t.Fatalf("expected\n%#v\ngot\n%#v:\nDiffs: %v", oldMounts, c.mounts, diffs)
@@ -386,7 +396,7 @@ func TestCore_FindOps(t *testing.T) {
 	path1 := "kv1"
 	path2 := "kv2"
 
-	c.mounts = &MountTable{
+	mounts := &MountTable{
 		Type: mountTableType,
 		Entries: []*MountEntry{
 			{
@@ -411,6 +421,10 @@ func TestCore_FindOps(t *testing.T) {
 			},
 		},
 	}
+
+	c.mountsLock.Lock()
+	c.mounts = mounts
+	c.mountsLock.Unlock()
 
 	// Both should set up successfully
 	if err := c.setupMounts(namespace.RootContext(nil)); err != nil {
@@ -730,7 +744,7 @@ func TestCore_Remount_Protected(t *testing.T) {
 func TestDefaultMountTable(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	table := c.defaultMountTable()
-	verifyDefaultTable(t, table, 3, c.mountsLock)
+	verifyDefaultTable(t, table, 4, c.mountsLock)
 }
 
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
@@ -945,7 +959,7 @@ func TestSingletonMountTableFunc(t *testing.T) {
 
 	mounts, auth := c.singletonMountTables()
 
-	if len(mounts.Entries) != 2 {
+	if len(mounts.Entries) != 3 {
 		t.Fatalf("length of mounts is wrong; expected 2, got %d", len(mounts.Entries))
 	}
 
@@ -953,6 +967,7 @@ func TestSingletonMountTableFunc(t *testing.T) {
 		switch entry.Type {
 		case "system":
 		case "identity":
+		case "agent_registry":
 		default:
 			t.Fatalf("unknown type %s", entry.Type)
 		}
@@ -1006,7 +1021,7 @@ func TestCore_MountInitialize(t *testing.T) {
 			return backend, nil
 		}
 
-		c.mounts = &MountTable{
+		mounts := &MountTable{
 			Type: mountTableType,
 			Entries: []*MountEntry{
 				{
@@ -1021,6 +1036,10 @@ func TestCore_MountInitialize(t *testing.T) {
 				},
 			},
 		}
+
+		c.mountsLock.Lock()
+		c.mounts = mounts
+		c.mountsLock.Unlock()
 
 		err := c.setupMounts(namespace.RootContext(nil))
 		if err != nil {

@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { paginate } from 'core/utils/paginate-list';
-import { KmipListRolesListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiKmipListRolesListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -41,7 +41,7 @@ export default class KmipScopeRolesRoute extends Route {
       const { keys } = await this.api.secrets.kmipListRoles(
         scope as string,
         currentPath,
-        KmipListRolesListEnum.TRUE
+        SecretsApiKmipListRolesListEnum.TRUE
       );
       const roles = keys ? paginate(keys, { page: Number(page) || 1, filter: pageFilter }) : [];
       // fetch capabilities for filtered scopes

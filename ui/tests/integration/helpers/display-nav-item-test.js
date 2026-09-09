@@ -4,12 +4,12 @@
  */
 
 import { computeNavBar, NavSection, RouteName } from 'core/helpers/display-nav-item';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { module, test } from 'qunit';
 import Service from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import sinon from 'sinon';
-import { ROOT_NAMESPACE } from 'vault/services/namespace';
+import { ROOT_NAMESPACE } from 'vault/utils/constants/namespace';
 
 class PermissionsService extends Service {
   @tracked globPaths = null;

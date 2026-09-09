@@ -1,0 +1,60 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container class="has-top-padding-l has-bottom-padding-s">
+  {{#if @title}}
+    <Hds::Text::Display @tag="h1" @size="400">
+      {{@title}}
+    </Hds::Text::Display>
+  {{/if}}
+
+  <Hds::Form::RadioCard::Group @name="implementation-method" @alignment="center" class="has-top-padding-l" as |G|>
+    {{#each this.methodOptions as |option|}}
+      <G.RadioCard
+        @alignment="left"
+        @checked={{eq option.label this.selectedMethod}}
+        {{on "change" (fn this.onChange option)}}
+        data-test-radio-card={{option.label}}
+        as |R|
+      >
+        <R.Icon @name={{option.icon}} />
+        <R.Label>{{option.label}}</R.Label>
+        {{#if (eq option.label @recommendedOption)}}
+          <R.Badge @color="highlight" @text="Recommended" />
+        {{/if}}
+        <R.Description>{{option.description}}</R.Description>
+      </G.RadioCard>
+    {{/each}}
+  </Hds::Form::RadioCard::Group>
+</Hds::Card::Container>
+
+<Hds::Card::Container class="has-top-padding-s has-bottom-padding-l">
+  {{#each this.displaySteps as |step index|}}
+    <Hds::Text::Display
+      @tag="p"
+      @size="300"
+      @weight="semibold"
+      class="{{if (gt index 0) 'has-top-padding-l'}} has-bottom-padding-m"
+      data-test-text-display={{index}}
+    >
+      {{#if (gt this.displaySteps.length 1)}}
+        {{step.number}}.
+      {{/if}}
+      {{step.title}}
+    </Hds::Text::Display>
+    <CodeGenerator::AutomationSnippets
+      @tfvpArgs={{step.config.terraform}}
+      @cliArgs={{step.config.cli}}
+      @apiArgs={{step.config.api}}
+    />
+  {{/each}}
+</Hds::Card::Container>
+
+<Hds::Button
+  @text="View configuration documentation"
+  @icon="external-link"
+  @iconPosition="trailing"
+  @href={{doc-link "/vault/api-docs/secret/pki-external-ca"}}
+/>

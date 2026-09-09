@@ -6,8 +6,10 @@ package pki
 import (
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"software.sslmate.com/src/go-pkcs12"
 )
 
 const (
@@ -22,7 +24,7 @@ const (
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
 // and signing
-func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+func addIssueAndSignCommonFields(fields map[string]*framework.FieldSchema, allowedFormats []string) map[string]*framework.FieldSchema {
 	fields["exclude_cn_from_sans"] = &framework.FieldSchema{
 		Type:    framework.TypeBool,
 		Default: false,
@@ -34,15 +36,25 @@ Defaults to false (CN is included).`,
 		},
 	}
 
+	formatDescription := `Format for returned data. Can be "pem", "der" or
+	"pem_bundle". If "pem_bundle", any private
+	key and issuing cert will be appended to the
+	certificate pem. If "der", the value will be
+	base64 encoded. Defaults to "pem".`
+
+	if strutil.StrListContains(allowedFormats, "pkcs12_bundle") && strutil.StrListContains(allowedFormats, "jks_bundle") {
+		formatDescription = `Format for returned data. Can be "pem", "der",
+	"pem_bundle", "pkcs12_bundle" or "jks_bundle". If "pem_bundle", any private
+	key and issuing cert will be appended to the
+	certificate pem. Formats "der", "pkcs12_bundle" or "jks_bundle" are
+	base64 encoded. Defaults to "pem".`
+	}
+
 	fields["format"] = &framework.FieldSchema{
-		Type:    framework.TypeString,
-		Default: "pem",
-		Description: `Format for returned data. Can be "pem", "der",
-or "pem_bundle". If "pem_bundle", any private
-key and issuing cert will be appended to the
-certificate pem. If "der", the value will be
-base64 encoded. Defaults to "pem".`,
-		AllowedValues: []interface{}{"pem", "der", "pem_bundle"},
+		Type:          framework.TypeString,
+		Default:       "pem",
+		Description:   formatDescription,
+		AllowedValues: strutil.StringListToInterfaceList(allowedFormats),
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "pem",
 		},
@@ -61,6 +73,47 @@ pkcs8 instead. Defaults to "der".`,
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "der",
 		},
+	}
+
+	if strutil.StrListContains(allowedFormats, "pkcs12_bundle") {
+		fields["pkcs12_encoder"] = &framework.FieldSchema{
+			Type:    framework.TypeString,
+			Default: "modern2026",
+			Description: `Encoder profile to use for PKCS#12 archives when 
+format is set to "pkcs12_bundle". Valid values are "modern2026" and 
+"modern2023". Defaults to "modern2026", which uses the newer PKCS#12 
+integrity format (PBMAC1).`,
+			AllowedValues: []interface{}{"modern2026", "modern2023"},
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "PKCS#12 encoder profile",
+			},
+		}
+
+		fields["pkcs12_password"] = &framework.FieldSchema{
+			Type:    framework.TypeString,
+			Default: pkcs12.DefaultPassword,
+			Description: `Password for encrypting the PKCS#12 
+		archive when format is set to "pkcs12_bundle". If not provided, 
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "PKCS#12 password",
+			},
+		}
+	}
+
+	if strutil.StrListContains(allowedFormats, "jks_bundle") {
+		fields["jks_password"] = &framework.FieldSchema{
+			Type:    framework.TypeString,
+			Default: pkcs12.DefaultPassword,
+			Description: `Password for encrypting the Java keystore
+		when format is set to "jks_bundle". If not provided, 
+		defaults to "changeit". It is recommended to use the default password
+		and protect the file using other means or use a high-entropy password.`,
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name: "Java keystore password",
+			},
+		}
 	}
 
 	fields["ip_sans"] = &framework.FieldSchema{
@@ -96,7 +149,7 @@ comma-delimited list.`,
 // addNonCACommonFields adds fields with help text specific to non-CA
 // certificate issuing and signing
 func addNonCACommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields = addIssueAndSignCommonFields(fields)
+	fields = addIssueAndSignCommonFields(fields, supportedFormats(true))
 
 	fields["role"] = &framework.FieldSchema{
 		Type: framework.TypeString,
@@ -181,8 +234,8 @@ Any values are added with OID 0.9.2342.19200300.100.1.1.`,
 
 // addCACommonFields adds fields with help text specific to CA
 // certificate issuing and signing
-func addCACommonFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
-	fields = addIssueAndSignCommonFields(fields)
+func addCACommonFields(fields map[string]*framework.FieldSchema, allowedFormats []string) map[string]*framework.FieldSchema {
+	fields = addIssueAndSignCommonFields(fields, allowedFormats)
 
 	fields["alt_names"] = &framework.FieldSchema{
 		Type: framework.TypeString,
@@ -741,6 +794,23 @@ usages (not extended key usages). Valid values can be found
 at https://golang.org/pkg/crypto/x509/#KeyUsage -- simply 
 drop the "KeyUsage" part of the name.  If not set, key 
 usage will not appear on the CSR.`,
+	}
+
+	return fields
+}
+
+func addJKSPrivateKeyAlias(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["jks_private_key_alias"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "1",
+		Description: `The entry alias in the Java keystore (JKS) when format is set to "jks_bundle"
+		and bundle contains a single PrivateKeyEntry. This field is case-sensitive, but relying
+		on case-only differences for unique aliases is not recommended. Defaults to "1".
+		This parameter is ignored by endpoints that return TrustedCertificateEntry values
+		(trust stores), and instead entries are assigned incrementing numeric strings aliases starting at "1".`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "Java keystore alias",
+		},
 	}
 
 	return fields

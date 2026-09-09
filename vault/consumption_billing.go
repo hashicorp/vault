@@ -6,14 +6,22 @@ package vault
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
+	uberAtomic "go.uber.org/atomic"
 )
 
-var ErrCouldNotGetBillingSubView = fmt.Errorf("could not get billing sub view")
+var (
+	ErrCouldNotGetBillingSubView        = fmt.Errorf("could not get billing sub view")
+	ErrConsumptionBillingNotInitialized = fmt.Errorf("consumption billing is not initialized")
+	getParentNamespaceID                = func(*Core, string) string { return "" }
+)
 
 func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	// We need replication (post unseal) to start before we run the consumption billing metrics worker
@@ -23,13 +31,56 @@ func (c *Core) setupConsumptionBilling(ctx context.Context) error {
 	c.AddLogger(logger)
 	c.consumptionBilling = &billing.ConsumptionBilling{
 		BillingConfig: c.billingConfig,
-		DataProtectionCallCounts: billing.DataProtectionCallCounts{
-			Transit:   &atomic.Uint64{},
-			Transform: &atomic.Uint64{},
+		ParentNamespaceIDFunc: func(nsPath string) string {
+			return getParentNamespaceID(c, nsPath)
+		},
+		SecretEngineCounts: billing.SecretEngineCounts{
+			Transit: billing.DataProtectionEngineCounts{
+				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			Transform: billing.DataProtectionEngineCounts{
+				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			GcpKms: billing.DataProtectionEngineCounts{
+				MonthlyCount: &atomic.Uint64{},
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			Oidc: billing.CredentialUnits{
+				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			Spiffe: billing.CredentialUnits{
+				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
+			ExternalCa: billing.CredentialUnits{
+				MonthlyUnits: uberAtomic.NewFloat64(0),
+				AttributionTracker: billing.AttributionTracker{
+					MountAttribution: make(map[string]logical.MountAttribution),
+				},
+			},
 		},
 		Logger: logger,
 	}
+	if c.systemBarrierView != nil {
+		c.consumptionBillingSubView = c.systemBarrierView.SubView(billing.BillingSubPath)
+	} else {
+		c.consumptionBilling.Logger.Error("system barrier view is not initialized, consumption billing view is not initialized")
+	}
 	c.consumptionBillingLock.Unlock()
+
 	c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 		c.consumptionBillingMetricsWorker(ctx)
 		// Start the perf standby plugin counts worker if this is a perf standby
@@ -71,23 +122,36 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 			}
 			return d
 		}
-		endOfMonth := clock.NewTimer(untilNextMonth(clock.Now()))
+		endOfMonth := clock.NewTimer(untilNextMonth(clock.Now().UTC()))
 		for {
 			select {
 			case <-ticker.C:
-				if err := c.updateBillingMetrics(ctx, clock.Now()); err != nil {
+				now := clock.Now().UTC()
+				if err := c.updateBillingMetrics(ctx, now); err != nil {
 					c.logger.Error("error updating billing metrics", "error", err)
+				}
+				// If active node, also send metrics to the control hub
+				if state := c.HAStateWithLock(); state == consts.Active {
+					if err := c.sendBillingMetrics(ctx, now); err != nil {
+						c.logger.Error("error sending billing metrics", "error", err)
+					}
 				}
 			case <-ctx.Done():
 				return
 			case <-endOfMonth.C:
 				// Reset the timer for the next month
-				currentMonth := clock.Now()
+				currentMonth := clock.Now().UTC()
 				c.logger.Debug("reached end of month, resetting timer", "currentMonth", currentMonth)
 				previousMonth := timeutil.StartOfPreviousMonth(currentMonth)
 				// On month boundary, we need to flush the current in-memory counts to storage
 				if err := c.updateBillingMetrics(ctx, previousMonth); err != nil {
 					c.logger.Error("error updating billing metrics at month boundary", "error", err)
+				}
+				// Send the month's final counts and attributions to control hub
+				if state := c.HAStateWithLock(); state == consts.Active {
+					if err := c.sendBillingMetrics(ctx, previousMonth); err != nil {
+						c.logger.Error("error sending billing metrics", "error", err)
+					}
 				}
 				c.HandleStartOfMonth(ctx, currentMonth)
 				endOfMonth.Reset(untilNextMonth(currentMonth))
@@ -98,41 +162,136 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 }
 
 // HandleStartOfMonth cleans up monthly billing data from
-// n-2 months ago, and also resets all in memory billing metrics when the start of the month is reached.
+// n-BillingRetentionMonths ago (keeping BillingRetentionMonths of data), and also resets all in memory billing metrics when the start of the month is reached.
 func (c *Core) HandleStartOfMonth(ctx context.Context, currentMonth time.Time) {
 	c.logger.Info("handling start of month operations", "currentMonth", currentMonth)
-	// We only delete n-2 month billing metrics on the active node
+	// We only delete data older than retention months on the active node
 	if standby, _ := c.Standby(); !standby && !c.PerfStandby() {
-		if err := c.deletePreviousMonthBillingMetrics(ctx, currentMonth); err != nil {
-			c.logger.Error("error deleting historical month billing metrics", "error", err)
+		if err := c.DeleteExpiredBillingMetrics(ctx, currentMonth); err != nil {
+			c.logger.Error("error deleting expired billing metrics", "error", err)
+		}
+
+		if err := c.DeleteExpiredAttributionData(ctx, currentMonth); err != nil {
+			c.logger.Error("error deleting expired attribution data")
 		}
 	}
 	if err := c.resetInMemoryBillingMetrics(); err != nil {
 		c.logger.Error("error resetting in memory billing metrics", "error", err)
 	}
+	// Reset the metrics last update time to zero time to indicate new month data hasn't been updated yet
+	c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Time{})
 }
 
-func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMonth time.Time) error {
-	twoMonthsAgo := timeutil.StartOfPreviousMonth(currentMonth).AddDate(0, -1, 0)
-	// Delete billing metrics from both replicated and local prefixes
+func (c *Core) DeleteExpiredBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+	// Get the configured retention period
+	retentionMonths, err := c.GetBillingRetentionMonths(ctx)
+	if err != nil {
+		c.logger.Warn("failed to get billing retention configuration, using default")
+		retentionMonths = billing.DefaultBillingRetentionMonths
+	}
+
+	// Delete data from retentionMonths ago (keeping current month + previous (retentionMonths - 1) months = retentionMonths total)
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths, 0)
+
+	// attributionOnly=false: delete root billing data, skipping attribution/
+	return c.deleteExpiredDataAtPath(ctx, monthToDelete, false)
+}
+
+// DeleteExpiredAttributionData deletes attribution data older than the configured retention period.
+// If attribution is disabled (retention = 0), all attribution data is wiped.
+func (c *Core) DeleteExpiredAttributionData(ctx context.Context, currentMonth time.Time) error {
+	retentionMonths, err := c.GetAttributionRetentionMonths(ctx)
+	if err != nil {
+		c.logger.Warn("failed to get attribution retention configuration, using default")
+		retentionMonths = billing.DefaultAttributionRetentionMonths
+	}
+
+	if retentionMonths == billing.MinAttributionRetentionMonths {
+		// Attribution disabled: wipe all existing attribution data by iterating
+		// over every month within the maximum possible retention window and deleting
+		// the attribution subtree for each.
+		start := timeutil.StartOfMonth(currentMonth)
+		for i := 0; i <= billing.MaxAttributionRetentionMonths; i++ {
+			month := start.AddDate(0, -i, 0)
+			if err := c.deleteExpiredDataAtPath(ctx, month, true); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// Delete attribution data older than the configured retention period
+	monthToDelete := timeutil.StartOfMonth(currentMonth).AddDate(0, -retentionMonths, 0)
+
+	// attributionOnly=true: delete only the attribution/ subtree
+	return c.deleteExpiredDataAtPath(ctx, monthToDelete, true)
+}
+
+// IsAttributionDisabled reports whether attribution storage is currently disabled (retention = 0).
+func (c *Core) IsAttributionDisabled(ctx context.Context) bool {
+	retentionMonths, err := c.GetAttributionRetentionMonths(ctx)
+	if err != nil {
+		return false
+	}
+	return retentionMonths == billing.MinAttributionRetentionMonths
+}
+
+// deleteExpiredDataAtPath is a helper function that deletes billing data at a specific path.
+// When attributionOnly is true, only the "attribution/maximum/" subtree is deleted (used for
+// attribution retention). When false, the entire monthly billing path is deleted except for
+// "attribution/maximum/", which has its own separate retention policy.
+func (c *Core) deleteExpiredDataAtPath(ctx context.Context, monthToDelete time.Time, attributionOnly bool) error {
+	// Delete data from both replicated and local prefixes
 	for _, pathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 		// If we are not the primary, then do not delete replicate metrics
 		if !c.isPrimary() && pathPrefix == billing.ReplicatedPrefix {
 			continue
 		}
-		billingPath := billing.GetMonthlyBillingPath(pathPrefix, twoMonthsAgo)
+
+		basePath := billing.GetMonthlyBillingPath(pathPrefix, monthToDelete)
+		if attributionOnly {
+			basePath += billing.AttributionMaxPrefix
+		}
 		view, ok := c.GetBillingSubView()
 		if !ok {
 			return ErrCouldNotGetBillingSubView
 		}
-		metricPaths, err := view.List(ctx, billingPath)
+
+		segments, err := view.List(ctx, basePath)
 		if err != nil {
+			// If path doesn't exist (common for attribution), that's fine - nothing to delete
+			if err == logical.ErrNotFound {
+				continue
+			}
 			return err
 		}
-		for _, segment := range metricPaths {
-			err = view.Delete(ctx, billingPath+segment)
-			if err != nil {
-				c.logger.Error("error deleting previous month billing metric", "error", err, "metricPath", billingPath+segment)
+
+		for _, segment := range segments {
+			// Skip attribution directory when deleting billing metrics (it has its own retention policy)
+			if !attributionOnly && strings.Contains(segment, billing.AttributionMaxPrefix) {
+				continue
+			}
+
+			fullPath := basePath + segment
+			// If the segment ends with / - recursively delete its contents
+			if len(segment) > 0 && segment[len(segment)-1] == '/' {
+				subPaths, err := view.List(ctx, fullPath)
+				if err != nil {
+					c.logger.Error("error listing path for deletion", "path", fullPath)
+					continue
+				}
+				for _, subSegment := range subPaths {
+					err = view.Delete(ctx, fullPath+subSegment)
+					if err != nil {
+						c.logger.Error("error deleting data", "path", fullPath+subSegment)
+					}
+				}
+			} else {
+				// It's a file, delete it directly
+				err = view.Delete(ctx, fullPath)
+				if err != nil {
+					c.logger.Error("error deleting data", "path", fullPath)
+				}
 			}
 		}
 	}
@@ -140,15 +299,48 @@ func (c *Core) deletePreviousMonthBillingMetrics(ctx context.Context, currentMon
 }
 
 func (c *Core) resetInMemoryBillingMetrics() error {
-	// Reset Transit/Tranform DP counts
+	// Reset Transit/Transform DP counts and SPIFFE JWT identity counts
 	c.logger.Info("resetting in memory billing metrics")
-	c.consumptionBilling.DataProtectionCallCounts.Transit.Store(0)
-	c.consumptionBilling.DataProtectionCallCounts.Transform.Store(0)
+	c.consumptionBillingLock.Lock()
+	defer c.consumptionBillingLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.Transit.MonthlyCount.Store(0)
+	c.consumptionBilling.SecretEngineCounts.Transform.MonthlyCount.Store(0)
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MonthlyCount.Store(0)
+	c.consumptionBilling.SecretEngineCounts.Oidc.MonthlyUnits.Store(0)
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MonthlyUnits.Store(0)
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MonthlyUnits.Store(0)
 	c.consumptionBilling.KmipSeenEnabledThisMonth.Store(false)
+
+	c.consumptionBilling.SecretEngineCounts.Transit.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Transit.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Transform.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.GcpKms.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.ExternalCa.MountAttributionLock.Unlock()
+
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Lock()
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttribution = make(map[string]logical.MountAttribution)
+	c.consumptionBilling.SecretEngineCounts.Spiffe.MountAttributionLock.Unlock()
+
 	return nil
 }
 
-func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+// updateBillingMetricsLocked must be called with stateLock already held.
+func (c *Core) updateBillingMetricsLocked(ctx context.Context, currentMonth time.Time) error {
 	// Check if systemBarrierView is initialized
 	c.mountsLock.RLock()
 	initialized := c.systemBarrierView != nil
@@ -157,37 +349,58 @@ func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time)
 	if !initialized {
 		return nil
 	}
-	if c.PerfStandby() {
+	if c.perfStandby {
 		// We do not update billing metrics on performance standbys
 		// Instead we send any in memory counts to the primary. This doesn't apply
 		// to role counts, but will be used for other metrics
-	} else if standby, _ := c.Standby(); standby {
+	} else if c.standby {
 		// Do nothing if we are a standby. All requests get forwarded anyway
 	} else {
+		// Collect all mount metrics and attribution data in a single pass through the mount table
+		metrics, err := c.CountMetricsSecretMounts(true, true)
+		if err != nil {
+			c.logger.Error("error collecting mount metrics", "error", err)
+			return err
+		}
+
 		// The active node will need to flush max role counts to storage
 		if c.isPrimary() {
-			c.UpdateReplicatedHWMMetrics(ctx, currentMonth)
+			c.UpdateReplicatedHWMMetrics(ctx, currentMonth, metrics)
 		}
-		c.UpdateLocalHWMMetrics(ctx, currentMonth)
+		c.UpdateLocalHWMMetrics(ctx, currentMonth, metrics)
 		if err := c.UpdateLocalAggregatedMetrics(ctx, currentMonth); err != nil {
 			c.logger.Error("error updating cluster data protection call counts", "error", err)
 		} else {
 			c.logger.Info("updated cluster data protection call counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 		}
 
+		// Store the last metrics update time. This is used to determine the freshness of the billing data.
+		// We store this on the active node only, since this is the node that updates the billing metrics.
+		// The standby nodes will replicate this value, so it will be available on all nodes, but we avoid
+		// having all nodes write to this value to avoid write conflicts.
+		c.UpdateMetricsLastUpdateTime(ctx, currentMonth, time.Now().UTC())
 	}
 	return nil
 }
 
-func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	_, err := c.UpdateMaxRoleCounts(ctx, billing.ReplicatedPrefix, currentMonth)
+func (c *Core) updateBillingMetrics(ctx context.Context, currentMonth time.Time) error {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	return c.updateBillingMetricsLocked(ctx, currentMonth)
+}
+
+func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time.Time, metrics *MountMetrics) error {
+	// Update role and managed key counts using pre-collected billing metric counts and attribution
+	_, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedRoleCounts, metrics.ReplicatedManagedKeys, metrics.ReplicatedRoleAttribution, metrics.ReplicatedManagedKeyAttribution)
 	if err != nil {
-		c.logger.Error("error updating replicated max role counts", "error", err)
+		c.logger.Error("error updating replicated max role and managed key counts", "error", err)
 		// We won't return an error. Instead we will log the errors and attempt to continue
 	} else {
-		c.logger.Info("updated replicated hwm role counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
+		c.logger.Info("updated replicated hwm role and managed key counts", "prefix", billing.ReplicatedPrefix, "currentMonth", currentMonth)
 	}
-	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth); err != nil {
+
+	// Update KV counts and attribution using pre-collected KV mounts
+	if _, err = c.UpdateMaxKvCounts(ctx, billing.ReplicatedPrefix, currentMonth, metrics.ReplicatedKvCounts, metrics.ReplicatedKvAttribution); err != nil {
 		// We won't return an error. Instead we will log the errors and attempt to continue
 		c.logger.Error("error updating replicated max kv counts", "error", err)
 	} else {
@@ -196,13 +409,16 @@ func (c *Core) UpdateReplicatedHWMMetrics(ctx context.Context, currentMonth time
 	return nil
 }
 
-func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time) error {
-	if _, err := c.UpdateMaxRoleCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
-		c.logger.Error("error updating local max role counts", "error", err)
+func (c *Core) UpdateLocalHWMMetrics(ctx context.Context, currentMonth time.Time, metrics *MountMetrics) error {
+	// Update role and managed key counts using pre-collected billing metric counts and attribution
+	if _, _, err := c.UpdateMaxRoleAndManagedKeyCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalRoleCounts, metrics.LocalManagedKeys, metrics.LocalRoleAttribution, metrics.LocalManagedKeyAttribution); err != nil {
+		c.logger.Error("error updating local max role and managed key counts", "error", err)
 	} else {
-		c.logger.Info("updated local max role counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
+		c.logger.Info("updated local max role and managed key counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
 	}
-	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth); err != nil {
+
+	// Update KV counts and attribution using pre-collected KV mounts
+	if _, err := c.UpdateMaxKvCounts(ctx, billing.LocalPrefix, currentMonth, metrics.LocalKvCounts, metrics.LocalKvAttribution); err != nil {
 		c.logger.Error("error updating local max kv counts", "error", err)
 	} else {
 		c.logger.Info("updated local max kv counts", "prefix", billing.LocalPrefix, "currentMonth", currentMonth)
@@ -232,5 +448,42 @@ func (c *Core) UpdateLocalAggregatedMetrics(ctx context.Context, currentMonth ti
 	if _, err := c.UpdateTransformCallCounts(ctx, currentMonth); err != nil {
 		return fmt.Errorf("could not store transform data protection call counts: %w", err)
 	}
+	if err := c.UpdateOidcDurationAdjustedCount(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store OIDC duration-adjusted token count: %w", err)
+	}
+	if _, err := c.UpdateSpiffeJwtTokenUnits(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store SPIFFE JWT token units: %w", err)
+	}
+	if _, err := c.UpdateGcpKmsCallCounts(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store GCP KMS data protection call counts: %w", err)
+	}
+	if _, err := c.UpdateExternalCaCertUnits(ctx, currentMonth); err != nil {
+		return fmt.Errorf("could not store external CA certificate units: %w", err)
+	}
+
+	// Note: this metric is always aggregated; the snapshot of the current month is always the
+	// same as the billable value for the current month. This differs from HWM metrics where the snapshot
+	// could contain a different value from the billable value.
+	if !c.IsAttributionDisabled(ctx) {
+		if err := c.UpdateTransitAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store transit mount breakdown: %w", err)
+		}
+		if err := c.UpdateTransformAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store transform mount breakdown: %w", err)
+		}
+		if err := c.UpdateOidcAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store OIDC mount breakdown: %w", err)
+		}
+		if err := c.UpdateGcpKmsAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store gcpkms mount breakdown: %w", err)
+		}
+		if err := c.UpdateExternalCaAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store external ca mount breakdown: %w", err)
+		}
+		if err := c.UpdateSpiffeAttribution(ctx, currentMonth); err != nil {
+			return fmt.Errorf("could not store spiffe mount breakdown: %w", err)
+		}
+	}
+
 	return nil
 }

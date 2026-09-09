@@ -8,19 +8,22 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"sync"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	internal_awsutilv2 "github.com/hashicorp/vault/internal/awsutil/v2"
 )
 
 const (
@@ -48,9 +51,10 @@ type awsMethod struct {
 	headerValue string
 	region      string
 
-	// These are used to share the latest creds safely across goroutines.
-	credLock  sync.Mutex
-	lastCreds *credentials.Credentials
+	// These are used to share the latest AWS config (with credentials) safely
+	// across goroutines.
+	credLock sync.Mutex
+	lastCfg  *aws.Config
 
 	// Notifies the outer environment that it should call Authenticate again.
 	credsFound chan struct{}
@@ -165,13 +169,39 @@ func NewAWSAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 			}
 		}
 
-		// Do an initial population of the creds because we want to err right away if we can't
-		// even get a first set.
-		creds, err := awsutil.RetrieveCreds(accessKey, secretKey, sessionToken, a.logger)
+		// Load the AWS config up front. For static credentials, values are set directly on the config.
+		// For dynamic credentials (IMDS/ECS/env), the chain is probed immediately to preserve the
+		// v1 fail-fast behavior; credentials are then refreshed by the poller.
+
+		cfgOpts := []func(*config.LoadOptions) error{}
+		if a.region != "" {
+			cfgOpts = append(cfgOpts, config.WithRegion(a.region))
+		}
+		cfg, err := config.LoadDefaultConfig(context.Background(), cfgOpts...)
 		if err != nil {
 			return nil, err
 		}
-		a.lastCreds = creds
+
+		if accessKey != "" && secretKey != "" {
+			cfg.Credentials = aws.NewCredentialsCache(
+				credentials.NewStaticCredentialsProvider(
+					accessKey,
+					secretKey,
+					sessionToken,
+				),
+			)
+		} else {
+			// fail-fast: probe the dynamic credential chain (env vars,
+			// shared config, IMDS/ECS) at startup so a misconfigured instance fails
+			// immediately rather than on the first Authenticate call.
+			initCtx, initCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer initCancel()
+			if _, err := cfg.Credentials.Retrieve(initCtx); err != nil {
+				return nil, fmt.Errorf("failed to retrieve initial credentials: %w", err)
+			}
+		}
+
+		a.lastCfg = &cfg
 
 		go a.pollForCreds(accessKey, secretKey, sessionToken, credentialPollIntervalSec)
 	}
@@ -183,33 +213,46 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 	a.logger.Trace("beginning authentication")
 
 	data := make(map[string]interface{})
-	sess, err := session.NewSession()
-	if err != nil {
-		retErr = fmt.Errorf("error creating session: %w", err)
-		return
-	}
-	metadataSvc := ec2metadata.New(sess)
 
 	switch a.authType {
 	case typeEC2:
+		metadataSvc := imds.New(imds.Options{})
+
 		// Fetch document
 		{
-			doc, err := metadataSvc.GetDynamicData("/instance-identity/document")
+			docOutput, err := metadataSvc.GetDynamicData(ctx, &imds.GetDynamicDataInput{
+				Path: "instance-identity/document",
+			})
 			if err != nil {
 				retErr = fmt.Errorf("error requesting doc: %w", err)
 				return
 			}
-			data["identity"] = base64.StdEncoding.EncodeToString([]byte(doc))
+			defer docOutput.Content.Close()
+			doc, err := io.ReadAll(docOutput.Content)
+			if err != nil {
+				retErr = fmt.Errorf("error reading doc response: %w", err)
+				return
+			}
+			data["identity"] = base64.StdEncoding.EncodeToString(doc)
 		}
 
 		// Fetch signature
 		{
-			signature, err := metadataSvc.GetDynamicData("/instance-identity/signature")
+			signatureOutput, err := metadataSvc.GetDynamicData(ctx, &imds.GetDynamicDataInput{
+				Path: "instance-identity/signature",
+			})
 			if err != nil {
 				retErr = fmt.Errorf("error requesting signature: %w", err)
 				return
 			}
-			data["signature"] = signature
+
+			defer signatureOutput.Content.Close()
+			signature, err := io.ReadAll(signatureOutput.Content)
+			if err != nil {
+				retErr = fmt.Errorf("error reading signature response: %w", err)
+				return
+			}
+			data["signature"] = string(signature)
 		}
 
 		// Add the reauthentication value, if we have one
@@ -229,7 +272,7 @@ func (a *awsMethod) Authenticate(ctx context.Context, client *api.Client) (retTo
 		defer a.credLock.Unlock()
 
 		var err error
-		data, err = awsutil.GenerateLoginData(a.lastCreds, a.headerValue, a.region, a.logger)
+		data, err = internal_awsutilv2.GenerateLoginDataV2(ctx, a.lastCfg, a.headerValue, a.region, a.logger)
 		if err != nil {
 			retErr = fmt.Errorf("error creating login value: %w", err)
 			return
@@ -248,8 +291,9 @@ func (a *awsMethod) NewCreds() chan struct{} {
 func (a *awsMethod) CredSuccess() {}
 
 func (a *awsMethod) Shutdown() {
-	close(a.credsFound)
 	close(a.stopCh)
+	// Note: credsFound is not closed to avoid panic if poller tries to send during shutdown.
+	// The select statement in checkCreds handles shutdown coordination via stopCh.
 }
 
 func (a *awsMethod) pollForCreds(accessKey, secretKey, sessionToken string, frequencySeconds int) {
@@ -271,31 +315,51 @@ func (a *awsMethod) pollForCreds(accessKey, secretKey, sessionToken string, freq
 func (a *awsMethod) checkCreds(accessKey, secretKey, sessionToken string) error {
 	a.credLock.Lock()
 	defer a.credLock.Unlock()
-
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	a.logger.Trace("checking for new credentials")
-	currentCreds, err := awsutil.RetrieveCreds(accessKey, secretKey, sessionToken, a.logger)
+
+	// When no static credentials are provided, don't force the shared "default"
+	// profile. In SDK v2, setting the shared profile makes credential resolution
+	// short-circuit to that profile and skip the environment and IMDS/ECS
+	// providers; leaving it unset lets the default chain (env vars, shared config,
+	// IMDS/ECS) resolve naturally, matching the v1 SDK behavior.
+	var credOpts []awsutil.Option
+	if accessKey == "" && secretKey == "" {
+		credOpts = append(credOpts, awsutil.WithSharedCredentials(false))
+	}
+
+	currentConfig, err := awsutil.RetrieveCreds(ctx, accessKey, secretKey, sessionToken, a.logger, credOpts...)
 	if err != nil {
 		return err
 	}
 
-	currentVal, err := currentCreds.Get()
+	currentVal, err := currentConfig.Credentials.Retrieve(ctx)
 	if err != nil {
 		return err
 	}
-	lastVal, err := a.lastCreds.Get()
+	lastVal, err := a.lastCfg.Credentials.Retrieve(ctx)
 	if err != nil {
 		return err
 	}
 
 	// These will always have different pointers regardless of whether their
 	// values are identical, hence the use of DeepEqual.
-	if !a.lastCreds.IsExpired() && reflect.DeepEqual(currentVal, lastVal) {
+	if !lastVal.Expired() && reflect.DeepEqual(currentVal, lastVal) {
 		a.logger.Trace("credentials are unchanged and still valid")
 		return nil
 	}
 
-	a.lastCreds = currentCreds
+	// Only update the credentials, preserving region and other options set during initialization.
+	a.lastCfg.Credentials = currentConfig.Credentials
 	a.logger.Trace("new credentials detected, triggering Authenticate")
-	a.credsFound <- struct{}{}
+
+	// Use select to avoid panic if stopCh is closed during shutdown
+	select {
+	case a.credsFound <- struct{}{}:
+	case <-a.stopCh:
+		a.logger.Trace("shutdown detected, skipping credential notification")
+	default:
+	}
 	return nil
 }

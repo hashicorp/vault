@@ -1,0 +1,40 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Layout::Flex class="has-top-margin-l" @align="center">
+  <Hds::Dropdown @isInline={{true}} as |D|>
+    <D.ToggleButton
+      @text="{{date-format this.selectedDate.month 'MMMM yyyy'}}"
+      @color="secondary"
+      data-test-dropdown="Date range"
+    />
+    {{#each this.dateDropdownOptions as |option|}}
+      <D.Checkmark
+        @selected={{eq option.value this.selectedDate.month}}
+        {{on "click" (fn this.updateSelectedDropdownOption option.value)}}
+        data-test-popup-menu={{option.value}}
+      >
+        {{option.label}}
+      </D.Checkmark>
+    {{/each}}
+  </Hds::Dropdown>
+  <Hds::Text::Body
+    @tag="p"
+    @size="200"
+    @color="foreground-primary"
+    class="has-left-margin-s"
+    data-test-text-body="Last updated date time"
+  >
+    {{#if @isSelectedDateInvalid}}
+      No data available.
+    {{else}}
+      {{#if @isCurrentMonth}}
+        Values update every 10 minutes.
+      {{/if}}
+      Last updated:
+      {{date-format @selectedDateOption.updated_at "MMMM d, yyyy, hh:mm:ss aaa" withTimeZone=true}}
+    {{/if}}
+  </Hds::Text::Body>
+</Hds::Layout::Flex>

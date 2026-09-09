@@ -1,0 +1,33 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Dropdown
+  data-test-vault-reporting-namespace-picker
+  class="ssu-namespace-picker"
+  @height="300px"
+  @listPosition="bottom-left"
+  as |D|
+>
+  <D.ToggleButton @color="secondary" @text={{this.selectedNamespace}} />
+  <D.Header class="ssu-namespace-picker__header" @hasDivider={{true}}>
+    <Hds::Form::TextInput::Field
+      data-test-vault-reporting-namespace-search
+      @type="search"
+      placeholder="Search"
+      @value={{this.search}}
+      {{on "input" this.handleSearchInput}}
+    />
+  </D.Header>
+
+  {{#each this.filteredNamespaces as |namespace|}}
+    <D.Checkmark
+      data-test-vault-reporting-namespace-menu-item={{namespace}}
+      @selected={{eq namespace this.selectedNamespace}}
+      {{on "click" (fn this.handleNamespaceSelection namespace D.close)}}
+    >
+      {{namespace}}
+    </D.Checkmark>
+  {{/each}}
+</Hds::Dropdown>

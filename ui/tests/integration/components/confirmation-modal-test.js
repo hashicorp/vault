@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import sinon from 'sinon';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';

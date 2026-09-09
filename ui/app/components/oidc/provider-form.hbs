@@ -3,48 +3,28 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="{{if @model.isNew 'Create' 'Edit'}} Provider">
+<Page::Header @title="{{if @form.isNew 'Create' 'Edit'}} Provider">
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
 </Page::Header>
 
-<form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
+<form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.errorBanner}} />
-    {{! name field }}
-    <FormField
-      data-test-field={{true}}
-      @attr={{get @model.formFields "0"}}
-      @model={{@model}}
-      @modelValidations={{this.modelValidations}}
-    />
-    {{#let (get @model.formFields "1") as |attr|}}
-      <FormFieldLabel
-        for={{attr.name}}
-        @label="Issuer"
-        @helpText={{attr.options.helpText}}
-        @subText={{attr.options.subText}}
-        @docLink={{attr.options.docLink}}
+    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}}>
+      {{! scopes are fetched in route and passed into select component }}
+      <SearchSelect
+        @id="oidc-provider-form-scope-select"
+        @options={{@scopes}}
+        @selectLimit="1"
+        @disallowNewItems={{true}}
+        @fallbackComponent="string-list"
+        @onChange={{fn (mut @form.data.scopes_supported)}}
+        @inputValue={{if @form.data.scopes_supported (array @form.data.scopes_supported)}}
+        class="is-marginless"
       />
-      <Input
-        data-test-field={{true}}
-        data-test-input={{attr.name}}
-        id={{attr.name}}
-        autocomplete="off"
-        spellcheck="false"
-        @value={{@model.issuer}}
-        class="input {{if this.validationError 'has-error-border'}}"
-        placeholder={{attr.options.placeholderText}}
-      />
-    {{/let}}
-    {{! scopesSupported field }}
-    <FormField
-      data-test-field={{true}}
-      @attr={{get @model.formFields "2"}}
-      @model={{@model}}
-      @modelValidations={{this.modelValidations}}
-    />
+    </FormFieldGroups>
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
   <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
@@ -70,16 +50,18 @@
       />
     </div>
     {{#if (eq this.radioCardGroupValue "limited")}}
+      {{! clients are fetched in route and passed into select component }}
       <SearchSelect
-        @id="allowedClientIds"
+        @id="oidc-provider-form-client-select"
         @label="Application name"
-        @models={{array "oidc/client"}}
-        @inputValue={{@model.allowedClientIds}}
+        @options={{@clients}}
+        @parentManageSelected={{this.selectedClients}}
         @onChange={{this.handleClientSelection}}
         @disallowNewItems={{true}}
         @fallbackComponent="string-list"
         @passObject={{true}}
-        @objectKeys={{array "clientId"}}
+        @objectKeys={{array "client_id"}}
+        @shouldRenderName={{true}}
         @renderTooltip={{this.renderTooltip}}
       />
     {{/if}}
@@ -87,7 +69,7 @@
   <div class="field box is-fullwidth is-bottomless">
     <div class="control">
       <Hds::Button
-        @text={{if @model.isNew "Create" "Update"}}
+        @text={{if @form.isNew "Create" "Update"}}
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}
@@ -98,7 +80,7 @@
         @color="secondary"
         class="has-left-margin-s"
         disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
+        {{on "click" @onCancel}}
         data-test-oidc-provider-cancel
       />
     </div>

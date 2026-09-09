@@ -20,7 +20,7 @@ import (
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2"
-	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v4"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/huaweicloudkms/v2"
@@ -30,7 +30,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -186,9 +185,7 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 
 func ParseKMSes(d string) ([]*KMS, error) {
 	// Parse!
-	// TODO (HCL_DUP_KEYS_DEPRECATION): return to hcl.Parse once deprecation is done. For now just ignore duplicates on
-	// this unused function
-	obj, _, err := random.ParseAndCheckForDuplicateHclAttributes(d)
+	obj, err := hcl.Parse(d)
 	if err != nil {
 		return nil, err
 	}

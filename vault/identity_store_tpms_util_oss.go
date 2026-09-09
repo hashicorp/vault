@@ -1,0 +1,17 @@
+// Copyright IBM Corp. 2016, 2026
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build !enterprise
+
+package vault
+
+import (
+	"context"
+)
+
+// loadTPMs is a no-op for OSS builds
+func (i *IdentityStore) loadTPMs(ctx context.Context) error {
+	return nil
+}
+
+func (i *IdentityStore) invalidateTPMBucket(ctx context.Context, key string) {}

@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
@@ -101,8 +101,6 @@ func (c *Core) fetchEntityAndDerivedPolicies(ctx context.Context, tokenNS *names
 
 	policies := make(map[string][]string)
 	if !skipDeriveEntityPolicies {
-		// c.logger.Debug("entity successfully fetched; adding entity policies to token's policies to create ACL")
-
 		// Attach the policies on the entity
 		if len(entity.Policies) != 0 {
 			policies[entity.NamespaceID] = append(policies[entity.NamespaceID], entity.Policies...)
@@ -228,7 +226,10 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 
 func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Request) (*ACL, *logical.TokenEntry, *identity.Entity, map[string][]string, error) {
 	defer metrics.MeasureSince([]string{"core", "fetch_acl_and_token"}, time.Now())
-
+	if req == nil {
+		c.logger.Error("fetchACLTokenEntryAndEntity called with nil request")
+		return nil, nil, nil, nil, ErrInternalError
+	}
 	// Ensure there is a client token
 	if req.ClientToken == "" {
 		return nil, nil, nil, nil, logical.ErrPermissionDenied
@@ -239,6 +240,42 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
+	var actorEntity *identity.Entity
+	if IsOAuthJwt(req.ClientToken) && !req.OAuthJwtValidated {
+		isValidEnterpriseJwt, tokenMetadataContainer, entity, jwtActor, chosenProfile, err := c.validateOAuthJwtAndFetchEntity(ctx, req.ClientToken)
+		if err != nil {
+			c.logger.Error("failed to validate jwt", "error", err)
+		}
+
+		if !isValidEnterpriseJwt {
+			// currently only internal error and error missing from agent registration required have dedicated
+			// error body and http code, everything else gets normalize into "permission denied" with http code 403
+			// when reaching back to client
+			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) {
+				return nil, nil, nil, nil, err
+			}
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
+		req.JwtUniqueId, err = getJwtUniqueIDFromProfile(tokenMetadataContainer, chosenProfile)
+		if err != nil {
+			c.logger.Error("failed to extract unique ID from JWT", "error", err)
+			return nil, nil, nil, nil, fmt.Errorf("invalid JWT: %w", err)
+		}
+		req.JwtIssuer = getJwtIssuer(tokenMetadataContainer)
+		req.JwtTransactionClaim = getJwtTransaction(tokenMetadataContainer)
+		req.JwtAudienceClaim = getJwtAudience(tokenMetadataContainer)
+		_, req.JwtAuthorizationDetailsClaimPresent = tokenMetadataContainer["authorization_details"]
+		req.JwtAuthorizationDetails = getJwtAuthorizationDetails(tokenMetadataContainer)
+		actorEntity = jwtActor
+		err = c.createAndStoreOAuthJwtTokenEntry(ctx, req, tokenMetadataContainer, entity, jwtActor, chosenProfile)
+		if err != nil {
+			if c.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+				return nil, nil, nil, nil, logical.ErrPerfStandbyPleaseForward
+			}
+			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing jwt"))
+		}
+		req.OAuthJwtValidated = true
+	}
 	// Resolve the token policy
 	var te *logical.TokenEntry
 	switch req.TokenEntry() {
@@ -260,9 +297,23 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, multierror.Append(logical.ErrPermissionDenied, logical.ErrInvalidToken)
 	}
 
+	if actorEntity != nil {
+		if req.Auth == nil {
+			req.Auth = &logical.Auth{}
+		}
+		req.Auth.ActorEntityID = actorEntity.ID
+		req.Auth.ActorEntityName = actorEntity.Name
+	}
+
 	// CIDR checks bind all tokens except non-expiring root tokens
 	if te.TTL != 0 && len(te.BoundCIDRs) > 0 {
 		var valid bool
+
+		// Validate req for connection on CIDR
+		if req.Connection == nil || req.Connection.RemoteAddr == "" {
+			c.logger.Warn("token bound CIDRs found but no connection information available for validation")
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
 		remoteSockAddr, err := sockaddr.NewSockAddr(req.Connection.RemoteAddr)
 		if err != nil {
 			if c.Logger().IsDebug() {
@@ -304,6 +355,20 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		policyNames[nsID] = policyutil.SanitizePolicies(append(policyNames[nsID], nsPolicies...), false)
 	}
 
+	var actorEntityPolicyNames map[string][]string
+	if actorEntity != nil {
+		c.logger.Debug("building separate ACL for actor entity", "entity_id", actorEntity.ID)
+		actorEntityPolicyNames = make(map[string][]string)
+		actorEntityIdentityPolicies, err := c.fetchCeilingPolicies(ctx, actorEntity)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		// Store second entity policies separately - do NOT merge with primary entity's policies
+		for nsID, nsPolicies := range actorEntityIdentityPolicies {
+			actorEntityPolicyNames[nsID] = policyutil.SanitizePolicies(nsPolicies, false)
+		}
+	}
+
 	// Attach token's namespace information to the context. Wrapping tokens by
 	// should be able to be used anywhere, so we also special case behavior.
 	var tokenCtx context.Context
@@ -325,13 +390,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// Add the inline policy if it's set
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
-		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
-		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy)
+		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
-		}
-		if duplicate {
-			c.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 	}
@@ -344,7 +405,80 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 
+	if actorEntity != nil {
+		req.ActorEntityID = actorEntity.ID
+		newAcl, err := c.performDelegationTokenChecks(tokenCtx, acl, actorEntity, actorEntityPolicyNames)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		acl = newAcl
+	}
+
 	return acl, te, entity, identityPolicies, nil
+}
+
+// restoreForwardingTokenHeaders restores client token headers so forwarded
+// requests preserve the caller's original token representation on the active
+// node. It prefers Request.InboundSSCToken (captured before any token
+// normalization) and falls back to Request.ClientToken when no inbound value is
+// available.
+func restoreForwardingTokenHeaders(req *logical.Request) {
+	if req == nil {
+		return
+	}
+	tokenToForward := req.InboundSSCToken
+	if tokenToForward == "" {
+		tokenToForward = req.ClientToken
+	}
+	if tokenToForward == "" {
+		return
+	}
+	if req.Headers == nil {
+		req.Headers = make(map[string][]string)
+	}
+	switch req.ClientTokenSource {
+	case logical.ClientTokenFromVaultHeader:
+		req.Headers[consts.AuthHeaderName] = []string{tokenToForward}
+	case logical.ClientTokenFromAuthzHeader:
+		req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", tokenToForward))
+	}
+}
+
+// requiresMaterializedTokenState reports whether the request path needs a
+// storage-backed token entry for enterprise token authentication flows.
+//
+// Token renew/revoke paths are intentionally excluded because token store
+// handlers reject enterprise tokens for those operations.
+func requiresMaterializedTokenState(path string) bool {
+	if path == "sys/leases/count" || path == "sys/leases" ||
+		path == "sys/leases/lookup" || strings.HasPrefix(path, "sys/leases/lookup/") {
+		return true
+	}
+	switch path {
+	case "auth/token/lookup-self", "auth/token/lookup":
+		return true
+	}
+	if strings.HasPrefix(path, "cubbyhole/") {
+		return true
+	}
+	// The UI paths below are unauthenticated but re-fetch the token entry
+	// inside their handlers to build ACL context for hasMountAccess /
+	// entPathInternalUINamespacesRead. Non-storage-backed JWT tokens must be
+	// materialized before routing so the handler can look them up by ID.
+	//
+	// sys/internal/ui/mounts (exact) — pathInternalUIMountsRead: lists all
+	// mounts visible to the caller; called by the Vault UI sidebar after login.
+	//
+	// sys/internal/ui/mounts/* (prefix) — pathInternalUIMountRead: used by the
+	// CLI preflight request issued by `vault kv put/get`.
+	//
+	// sys/internal/ui/namespaces (exact) — entPathInternalUINamespacesRead:
+	// lists namespaces accessible to the caller; called by the Vault UI
+	// namespace picker after login.
+	if path == "sys/internal/ui/mounts" || path == "sys/internal/ui/namespaces" {
+		return true
+	}
+	return strings.HasPrefix(path, "sys/internal/ui/mounts/")
 }
 
 // CheckTokenWithLock calls CheckToken after grabbing the internal stateLock,
@@ -467,7 +601,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	switch {
 	case req.ClientTokenSource == logical.ClientTokenFromVaultHeader:
 		delete(req.Headers, consts.AuthHeaderName)
-	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && !unauth && te == nil:
+	case req.ClientTokenSource == logical.ClientTokenFromAuthzHeader && (!unauth || te != nil):
 		if headers, ok := req.Headers["Authorization"]; ok {
 			retHeaders := make([]string, 0, len(headers))
 			for _, v := range headers {
@@ -521,6 +655,13 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		req.ClientID = clientID
 	}
 
+	if req.Auth != nil {
+		auth.ActorEntityID = req.Auth.ActorEntityID
+		auth.ActorEntityName = req.Auth.ActorEntityName
+	}
+	// Copy authorization details from the request to auth so plugins can access them.
+	auth.AuthorizationDetails = req.JwtAuthorizationDetails
+
 	twoStepRecover := req.Operation == logical.RecoverOperation && req.RecoverSourcePath != "" && req.RecoverSourcePath != req.Path
 	var alternateRecoverCapability *logical.Operation
 	if twoStepRecover {
@@ -563,12 +704,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		// forward this request properly to the active node.
 		if retErr.ErrorOrNil() != nil && checkErrControlGroupTokenNeedsCreated(retErr) &&
 			c.perfStandby && len(req.ClientToken) != 0 {
-			switch req.ClientTokenSource {
-			case logical.ClientTokenFromVaultHeader:
-				req.Headers[consts.AuthHeaderName] = []string{req.ClientToken}
-			case logical.ClientTokenFromAuthzHeader:
-				req.Headers["Authorization"] = append(req.Headers["Authorization"], fmt.Sprintf("Bearer %s", req.ClientToken))
-			}
+			restoreForwardingTokenHeaders(req)
 			// We also return the appropriate error so that the caller can forward the
 			// request to the active node
 			return auth, te, logical.ErrPerfStandbyPleaseForward
@@ -592,7 +728,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	c.activityLogLock.RUnlock()
 	// If it is an authenticated ( i.e. with vault token ) request, increment client count
 	if !unauth && activityLog != nil {
-		err := activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		err := activityLog.HandleUsage(ctx, te, clientID, isTWE, auth.ActorEntityID)
 		if err != nil {
 			return auth, te, err
 		}
@@ -803,8 +939,11 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			}
 			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
-			requestBodyToken = token.(string)
-			if IsSSCToken(token.(string)) {
+			requestBodyToken, ok = token.(string)
+			if !ok {
+				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
+			}
+			if IsSSCToken(token.(string)) && !IsOAuthJwt(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
 				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
 				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
@@ -878,7 +1017,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth {
+	if c.isLoginRequest(ctx, req) && req.ClientTokenSource != logical.ClientTokenFromInternalAuth && !(IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
@@ -1096,12 +1235,51 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		return
 	}
 
-	// Validate the token
-	auth, te, ctErr := c.CheckToken(ctx, req, false)
-	if ctErr == logical.ErrRelativePath {
+	var auth *logical.Auth
+	var te *logical.TokenEntry
+	var ctErr error
+
+	// Normalize identity group/entity name paths to lowercase before the ACL
+	// check. The identity store resolves names case-insensitively but ACL paths
+	// are matched case-sensitively, allowing deny policies to be bypassed by
+	// altering the case of the name segment. The original path is restored
+	// after the ACL check so downstream handlers receive the caller's original
+	// casing.
+	originalPath := req.Path
+	for _, prefix := range []string{
+		"identity/group/name/",
+		"identity/entity/name/",
+	} {
+		if strings.HasPrefix(req.Path, prefix) {
+			req.Path = prefix + strings.ToLower(req.Path[len(prefix):])
+			break
+		}
+	}
+
+	// Validate the token. OAuth JWT requests on unauthenticated paths that
+	// require a materialized token entry (sys/internal/ui/mounts,
+	// sys/internal/ui/namespaces) are routed here rather than to
+	// handleLoginRequest so that the full JWT validation and materialization
+	// flow runs. For those requests we preserve the "unauth" semantics — ACL
+	// policy enforcement is skipped just as it would be in handleLoginRequest,
+	// because the path is publicly accessible and pathInternalUIMountRead
+	// performs its own hasMountAccess check.
+	//
+	// Using requiresMaterializedTokenState rather than isActiveOAuthJwt here
+	// means the routing decision is path-driven rather than flag-driven. This
+	// avoids the activation-flag read lock on the hot path and correctly
+	// handles the case where a SPIFFE JWT arrives with the OAuth flag enabled:
+	// auth/spiffe/login is not in requiresMaterializedTokenState, so it still
+	// routes to handleLoginRequest as intended.
+	unauth := c.isLoginRequest(ctx, req) && IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)
+	auth, te, ctErr = c.CheckToken(ctx, req, unauth)
+	// Restore the original path so downstream handlers (and audit logs) see
+	// the caller's original casing, not the normalized form.
+	req.Path = originalPath
+	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
-	if ctErr == logical.ErrPerfStandbyPleaseForward {
+	if errors.Is(ctErr, logical.ErrPerfStandbyPleaseForward) {
 		return nil, nil, ctErr
 	}
 
@@ -1118,46 +1296,73 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
+	// Some request paths require a token store entry (for example token lookup
+	// endpoints and cubbyhole paths). Materialize token state on-demand for
+	// these requests.
+	if ctErr == nil && te != nil && te.Type == logical.TokenTypeEnt && !te.IsStorageBacked() &&
+		requiresMaterializedTokenState(req.Path) {
+		materializedReq, matErr := c.materializeOAuthJwtForUsage(ctx, req, auth, c.perfStandby)
+		if matErr != nil {
+			if errors.Is(matErr, logical.ErrPerfStandbyPleaseForward) {
+				restoreForwardingTokenHeaders(req)
+				return nil, nil, matErr
+			}
+			c.logger.Error("failed to materialize jwt for token endpoint", "request_path", req.Path, "error", matErr)
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+
+		// Preserve the returned request's token identity fields so downstream
+		// routing (notably cubbyhole) is keyed by the materialized token ID.
+		req.ClientToken = materializedReq.ClientToken
+		req.ClientTokenAccessor = materializedReq.ClientTokenAccessor
+		req.ClientTokenRemainingUses = materializedReq.ClientTokenRemainingUses
+		req.SetTokenEntry(materializedReq.TokenEntry())
+		te = req.TokenEntry()
+	}
+
 	// We run this logic first because we want to decrement the use count even
 	// in the case of an error (assuming we can successfully look up; if we
 	// need to forward, we exit before now)
 	if te != nil && !isControlGroupRun(req) {
-		// Attempt to use the token (decrement NumUses)
-		var err error
-		te, err = c.tokenStore.UseToken(ctx, te)
-		if err != nil {
-			c.logger.Error("failed to use token", "error", err)
-			retErr = multierror.Append(retErr, ErrInternalError)
-			return nil, nil, retErr
-		}
-		if te == nil {
-			// Token has been revoked by this point
-			retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
-			return nil, nil, retErr
-		}
-		if te.NumUses == tokenRevocationPending {
-			// We defer a revocation until after logic has run, since this is a
-			// valid request (this is the token's final use). We pass the ID in
-			// directly just to be safe in case something else modifies te later.
-			defer func(id string) {
-				nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
-				leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
-				if err == nil {
-					err = c.expiration.LazyRevoke(ctx, leaseID)
-				}
-				if err != nil {
-					c.logger.Error("failed to revoke token", "error", err)
-					retResp = nil
-					retAuth = nil
-					retErr = multierror.Append(retErr, ErrInternalError)
-				}
-				if retResp != nil && retResp.Secret != nil &&
-					// Some backends return a TTL even without a Lease ID
-					retResp.Secret.LeaseID != "" {
-					retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
-					return
-				}
-			}(te.ID)
+		if te.IsStorageBacked() {
+			// Attempt to use the token (decrement NumUses)
+			var err error
+			te, err = c.tokenStore.UseToken(ctx, te)
+			if err != nil {
+				c.logger.Error("failed to use token", "request_path", req.Path, "error", err)
+				retErr = multierror.Append(retErr, ErrInternalError)
+				return nil, nil, retErr
+			}
+			if te == nil {
+				// Token has been revoked by this point
+				retErr = multierror.Append(retErr, logical.ErrPermissionDenied, logical.ErrInvalidToken)
+				return nil, nil, retErr
+			}
+			if te.NumUses == tokenRevocationPending {
+				// We defer a revocation until after logic has run, since this is a
+				// valid request (this is the token's final use). We pass the ID in
+				// directly just to be safe in case something else modifies te later.
+				defer func(id string) {
+					nsActiveCtx := namespace.ContextWithNamespace(c.activeContext, ns)
+					leaseID, err := c.expiration.CreateOrFetchRevocationLeaseByToken(nsActiveCtx, te)
+					if err == nil {
+						err = c.expiration.LazyRevoke(ctx, leaseID)
+					}
+					if err != nil {
+						c.logger.Error("failed to revoke token", "request_path", req.Path, "error", err)
+						retResp = nil
+						retAuth = nil
+						retErr = multierror.Append(retErr, ErrInternalError)
+					}
+					if retResp != nil && retResp.Secret != nil &&
+						// Some backends return a TTL even without a Lease ID
+						retResp.Secret.LeaseID != "" {
+						retResp = logical.ErrorResponse("Secret cannot be returned; token had one use left, so leased credentials were immediately revoked.")
+						return
+					}
+				}(te.ID)
+			}
 		}
 	}
 
@@ -1391,6 +1596,20 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 
 		if registerLease {
+			registerReq := req
+			if te := req.TokenEntry(); te != nil && !te.IsStorageBacked() {
+				registerReq, err = c.materializeOAuthJwtForUsage(ctx, req, auth, c.perfStandby)
+				if err != nil {
+					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) {
+						restoreForwardingTokenHeaders(req)
+						return nil, nil, err
+					}
+					c.logger.Error("failed to materialize jwt for lease", "request_path", req.Path, "error", err)
+					retErr = multierror.Append(retErr, ErrInternalError)
+					return nil, auth, retErr
+				}
+			}
+
 			if req.IsSnapshotReadOrList() {
 				return logical.ErrorResponse("cannot register lease for snapshot read or list"), nil, ErrInternalError
 			}
@@ -1415,7 +1634,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 				return nil, auth, retErr
 			}
 
-			leaseID, err := registerFunc(ctx, req, resp, "")
+			leaseID, err := registerFunc(ctx, registerReq, resp, "")
 			if err != nil {
 				c.logger.Error("failed to register lease", "request_path", req.Path, "error", err)
 				retErr = multierror.Append(retErr, ErrInternalError)
@@ -1488,7 +1707,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
-			case logical.TokenTypeService:
+			case logical.TokenTypeService, logical.TokenTypeSCIM:
 				if !c.perfStandby {
 					registeredTokenEntry := &logical.TokenEntry{
 						TTL:         auth.TTL,
@@ -2545,6 +2764,49 @@ func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig, en
 	return mfaAny, nil
 }
 
+func (c *Core) registerAuthLeaseForToken(ctx context.Context, te *logical.TokenEntry, auth *logical.Auth, role string) error {
+	// Populate the client token, accessor, and TTL
+	auth.ClientToken = te.ID
+	auth.Accessor = te.Accessor
+	auth.TTL = te.TTL
+	auth.Orphan = te.Parent == ""
+
+	switch auth.TokenType {
+	case logical.TokenTypeBatch:
+		// Ensure it's not marked renewable since it isn't
+		auth.Renewable = false
+	case logical.TokenTypeService, logical.TokenTypeEnt, logical.TokenTypeSCIM:
+		if auth.TokenType == logical.TokenTypeEnt {
+			// Ensure it's not marked renewable since enterprise tokens are not renewable
+			auth.Renewable = false
+		}
+		// Register with the expiration manager
+		if err := c.expiration.RegisterAuth(ctx, te, auth, role); err != nil {
+			return err
+		}
+		if te.ExternalID != "" {
+			auth.ClientToken = te.ExternalID
+		}
+		// Successful login, remove any entry from userFailedLoginInfo map
+		// if it exists. This is done for service tokens only.
+		if auth.TokenType == logical.TokenTypeService && auth.Alias != nil {
+			loginUserInfoKey := FailedLoginUser{
+				aliasName:     auth.Alias.Name,
+				mountAccessor: auth.Alias.MountAccessor,
+			}
+
+			// We don't need to try to delete the lockedUsers storage entry, since we're
+			// processing a login request. If a login attempt is allowed, it means the user is
+			// unlocked and we only add storage entry when the user gets locked.
+			if err := updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // RegisterAuth uses a logical.Auth object to create a token entry in the token
 // store, and registers a corresponding token lease to the expiration manager.
 // role is the login role used as part of the creation of the token entry. If not
@@ -2586,46 +2848,12 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 		c.logger.Error("failed to create token", "error", err)
 		return possiblyWrapOverloadedError("failed to create token", err)
 	}
-
-	// Populate the client token, accessor, and TTL
-	auth.ClientToken = te.ID
-	auth.Accessor = te.Accessor
-	auth.TTL = te.TTL
-	auth.Orphan = te.Parent == ""
-
-	switch auth.TokenType {
-	case logical.TokenTypeBatch:
-		// Ensure it's not marked renewable since it isn't
-		auth.Renewable = false
-	case logical.TokenTypeService:
-		// Register with the expiration manager
-		if err := c.expiration.RegisterAuth(ctx, &te, auth, role); err != nil {
-			if err := c.tokenStore.revokeOrphan(ctx, te.ID); err != nil {
-				c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", err)
-			}
-			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
-			return possiblyWrapOverloadedError("failed to register token lease during login request", err)
+	if err := c.registerAuthLeaseForToken(ctx, &te, auth, role); err != nil {
+		if revokeErr := c.tokenStore.revokeOrphan(ctx, te.ID); revokeErr != nil {
+			c.logger.Warn("failed to clean up token lease during login request", "request_path", path, "error", revokeErr)
 		}
-		if te.ExternalID != "" {
-			auth.ClientToken = te.ExternalID
-		}
-		// Successful login, remove any entry from userFailedLoginInfo map
-		// if it exists. This is done for service tokens (for oss) here.
-		// For ent it is taken care by registerAuth RPC calls.
-		if auth.Alias != nil {
-			loginUserInfoKey := FailedLoginUser{
-				aliasName:     auth.Alias.Name,
-				mountAccessor: auth.Alias.MountAccessor,
-			}
-
-			// We don't need to try to delete the lockedUsers storage entry, since we're
-			// processing a login request. If a login attempt is allowed, it means the user is
-			// unlocked and we only add storage entry when the user gets locked.
-			err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true)
-			if err != nil {
-				return err
-			}
-		}
+		c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
+		return possiblyWrapOverloadedError("failed to register token lease during login request", err)
 	}
 	return nil
 }
@@ -2693,7 +2921,7 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 
 // PopulateTokenEntry looks up req.ClientToken in the token store and uses
 // it to set other fields in req.  Does nothing if ClientToken is empty
-// or a JWT token, or for service tokens that don't exist in the token store.
+// or an Enterprise token, or for service tokens that don't exist in the token store.
 // Should be called with read stateLock held.
 func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) error {
 	if req.ClientToken == "" {
@@ -2704,7 +2932,7 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	// doesn't exist because the request may be to an unauthenticated
 	// endpoint/login endpoint where a bad current token doesn't matter, or
 	// a token from a Vault version pre-accessors. We ignore errors for
-	// JWTs.
+	// Enterprise tokens.
 	token := req.ClientToken
 	var err error
 	req.InboundSSCToken = token
@@ -2754,8 +2982,6 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 		if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
 			return err
 		}
-		// If we have two dots but the second char is a dot it's a vault
-		// token of the form s.SOMETHING.nsid, not a JWT
 		if !IsJWT(token) {
 			return fmt.Errorf("error performing token check: %w", err)
 		}
@@ -2813,11 +3039,12 @@ func DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return nil, fmt.Errorf("not service token")
 	}
 
-	// Consider the suffix of the token only when unmarshalling
+	// Consider the suffix of the token only when unmarshalling.
+	// Both "hvs." and "scm." are 4 characters, so token[4:] strips either prefix.
 	suffixToken := token[4:]
 
 	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
@@ -2842,7 +3069,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	// Skip batch and old style service tokens. These can have the prefix "b.",
 	// "s." (for old tokens) or "hvb."
-	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+	if !IsServiceToken(token) {
 		return token, nil
 	}
 	// Check token length to guess if this is an server side consistent token or not.
@@ -2884,6 +3111,18 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 
 	// Disregard SSCT on perf-standbys for non-raft storage
 	if c.perfStandby && c.getRaftBackend() == nil {
+		return plainToken.Random, nil
+	}
+
+	// Performance primary service tokens are not valid on performance secondaries.
+	// SSCT does not encode token-origin cluster, so on performance secondary active
+	// nodes we should not require the token's encoded local_index to be satisfied by
+	// the secondary's local WAL before normal token lookup runs. Let normal token
+	// lookup/ACL evaluation return the expected 403.
+	//
+	// Keep perf standby behavior unchanged so missing local state can still use the
+	// existing 412/forwarding semantics.
+	if c.IsPerfSecondary() && !c.perfStandby && !isPerfStandby {
 		return plainToken.Random, nil
 	}
 

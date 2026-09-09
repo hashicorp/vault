@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 scenario "smoke_sdk" {
@@ -42,7 +42,7 @@ scenario "smoke_sdk" {
     config_mode     = global.config_modes
     consul_edition  = global.consul_editions
     consul_version  = global.consul_versions
-    distro          = global.distros
+    distro          = global.distros_aws
     edition         = global.editions
     ip_version      = global.ip_versions
     seal            = global.seals
@@ -70,6 +70,11 @@ scenario "smoke_sdk" {
       ip_version = ["6"]
       backend    = ["consul"]
     }
+
+    // smoke_sdk scenario cannot be run in CE
+    exclude {
+      edition = ["ce"]
+    }
   }
 
   terraform_cli = terraform_cli.default
@@ -77,7 +82,8 @@ scenario "smoke_sdk" {
   providers = [
     provider.aws.default,
     provider.enos.ec2_user,
-    provider.enos.ubuntu
+    provider.enos.ubuntu,
+    provider.time.default,
   ]
 
   locals {
@@ -173,11 +179,12 @@ scenario "smoke_sdk" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
-      cluster_tag_key = global.vault_tag_key
-      common_tags     = global.tags
-      instance_count  = 1
-      vpc_id          = step.create_vpc.id
+      ami_id           = step.ec2_info.ami_ids["arm64"]["ubuntu"]["26.04"]
+      cluster_tag_key  = global.vault_tag_key
+      common_tags      = global.tags
+      instance_count   = 1
+      root_volume_size = 64
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -231,7 +238,7 @@ scenario "smoke_sdk" {
     variables {
       hosts      = step.create_external_integration_target.hosts
       ip_version = matrix.ip_version
-      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
+      packages   = concat(global.packages, global.distro_packages["ubuntu"]["26.04"], ["podman", "podman-docker"])
       ports      = global.integration_host_ports
     }
   }
@@ -405,45 +412,44 @@ scenario "smoke_sdk" {
     }
   }
 
-  // Define smoke test suite
   locals {
-    smoke_tests = [
-      "TestStepdownAndLeaderElection",
-      "TestSecretsEngineCreate",
-      "TestUnsealedStatus",
-      "TestVaultVersion",
-      "TestSecretsEngineRead",
-      "TestReplicationStatus",
-      "TestUIAssets",
-      "TestSecretsEngineDelete"
-    ]
+    // Default test packages for smoke_sdk scenario
+    // Note: isolated/verify tests require special environment variables (EXPECTED_STATE, TIMEOUT_SECONDS, RETRY_INTERVAL)
+    // and should be run in dedicated scenarios, not smoke_sdk
+    default_test_packages = ["isolated/secrets", "isolated/auth", "scenario/raft"]
 
-    // Add backend-specific tests
-    smoke_tests_with_backend = concat(
-      local.smoke_tests,
-      matrix.backend == "raft" ? [
-        "TestRaftVoters",
-        "TestNodeRemovalAndRejoin"
-      ] : []
-    )
+    // Determine if filter contains test names (starts with "Test") or package names
+    is_test_name_filter = length(var.blackbox_test_filter) > 0 && length([for t in var.blackbox_test_filter : t if can(regex("^Test", t))]) > 0
+
+    // Convert package names to directory paths, or use defaults
+    test_packages = length(var.blackbox_test_filter) > 0 && !local.is_test_name_filter ? [
+      for pkg in var.blackbox_test_filter : "./vault/external_tests/blackbox/${pkg}/..."
+      ] : [
+      for pkg in local.default_test_packages : "./vault/external_tests/blackbox/${pkg}/..."
+    ]
   }
 
-  // Run all blackbox SDK smoke tests
+  // Run all blackbox SDK smoke tests using directory-based organization
   step "run_blackbox_tests" {
-    description = "Run blackbox SDK smoke tests: ${join(", ", local.smoke_tests_with_backend)}"
+    description = local.is_test_name_filter ? "Run specific blackbox tests: ${join(", ", var.blackbox_test_filter)}" : "Run blackbox SDK tests from packages: ${join(", ", length(var.blackbox_test_filter) > 0 ? var.blackbox_test_filter : local.default_test_packages)}"
     module      = module.vault_run_blackbox_test
-    depends_on  = [step.get_vault_cluster_ips]
+    depends_on  = [step.get_vault_cluster_ips, step.set_up_external_integration_target]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      leader_host      = step.get_vault_cluster_ips.leader_host
-      leader_public_ip = step.get_vault_cluster_ips.leader_public_ip
-      vault_root_token = step.create_vault_cluster.root_token
-      test_names       = local.smoke_tests_with_backend
-      test_package     = "./vault/external_tests/blackbox"
+      leader_host            = step.get_vault_cluster_ips.leader_host
+      leader_public_ip       = step.get_vault_cluster_ips.leader_public_ip
+      vault_root_token       = step.create_vault_cluster.root_token
+      test_names             = local.is_test_name_filter ? var.blackbox_test_filter : null
+      test_package           = local.is_test_name_filter ? "./vault/external_tests/blackbox" : join(" ", local.test_packages)
+      integration_host_state = step.set_up_external_integration_target.state
+      vault_edition          = matrix.edition
+      vault_product_version  = matrix.artifact_source == "local" ? step.get_local_metadata.version : var.vault_product_version
+      vault_revision         = matrix.artifact_source == "local" ? step.get_local_metadata.revision : var.vault_revision
+      vault_build_date       = matrix.artifact_source == "local" ? step.get_local_metadata.build_date : var.vault_build_date
     }
   }
 
@@ -501,5 +507,10 @@ scenario "smoke_sdk" {
   output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
+  }
+
+  output "smoke_test_results" {
+    description = "Results from smoke blackbox tests"
+    value       = step.run_blackbox_tests.test_results_summary
   }
 }

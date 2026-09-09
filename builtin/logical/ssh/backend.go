@@ -18,10 +18,11 @@ const operationPrefixSSH = "ssh"
 
 type backend struct {
 	*framework.Backend
-	view        logical.Storage
-	salt        *salt.Salt
-	saltMutex   sync.RWMutex
-	backendUUID string
+	view                  logical.Storage
+	salt                  *salt.Salt
+	saltMutex             sync.RWMutex
+	backendUUID           string
+	sshCertificateCounter logical.CertificateCounter
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -82,6 +83,12 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 
 		Invalidate:  b.invalidate,
 		BackendType: logical.TypeLogical,
+	}
+
+	if sshCertCounterSysView, ok := conf.System.(logical.CertificateCountSystemView); ok {
+		b.sshCertificateCounter = sshCertCounterSysView.GetCertificateCounter()
+	} else {
+		b.sshCertificateCounter = logical.NewNullCertificateCounter()
 	}
 
 	b.backendUUID = conf.BackendUUID

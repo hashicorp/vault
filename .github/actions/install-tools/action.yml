@@ -69,7 +69,7 @@ runs:
           echo "VAULT_TOOLS_CACHE_KEY=${cache_key}"
         } | tee -a "$GITHUB_ENV"
     - id: cache-tools
-      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         lookup-only: ${{ inputs.no-restore }}
         path: ${{ env.VAULT_TOOLS_PATH }}
@@ -78,7 +78,6 @@ runs:
       name: Install tools
       shell: bash
       env:
-        GOPRIVATE: github.com/hashicorp/*
         # `go install` to our vault tool cache
         GOBIN: ${{ env.VAULT_TOOLS_PATH }}
         # Don't use the global mod cache because we don't want to pollute it

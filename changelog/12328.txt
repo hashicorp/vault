@@ -1,0 +1,3 @@
+```release-note:improvement
+consumption-billing: Adds a new `sys/billing/overview` endpoint that returns current and previous month consumption billing metrics. Accessible via API client method `client.Sys().BillingOverview()`.
+```

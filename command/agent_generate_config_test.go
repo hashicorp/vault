@@ -10,15 +10,51 @@ import (
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/stretchr/testify/require"
 )
 
-// TestConstructTemplates tests the construcTemplates helper function
+// TestConstructTemplates tests the constructTemplates helper function
 func TestConstructTemplates(t *testing.T) {
 	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelContextFunc()
 
-	client, closer := testVaultServerWithSecrets(ctx, t)
-	defer closer()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().Mount("kv-v1/", &api.MountInput{
+		Type: "kv-v1",
+	})
+	require.NoError(t, err)
+
+	// enable kv-v2 backend
+	err = client.Sys().Mount("kv-v2/", &api.MountInput{
+		Type: "kv-v2",
+	})
+
+	require.NoError(t, err)
+
+	// populate dummy secrets
+	for _, path := range []string{
+		"foo",
+		"app-1/foo",
+		"app-1/bar",
+		"app-1/nested/baz",
+	} {
+		err = client.KVv1("kv-v1").Put(ctx, path, map[string]interface{}{
+			"user":     "test",
+			"password": "Hashi123",
+		})
+		require.NoError(t, err)
+
+		_, err = client.KVv2("kv-v2").Put(ctx, path, map[string]interface{}{
+			"user":     "test",
+			"password": "Hashi123",
+		})
+		require.NoError(t, err)
+	}
 
 	cases := map[string]struct {
 		paths         []string
@@ -153,8 +189,40 @@ func TestGenerateConfiguration(t *testing.T) {
 	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelContextFunc()
 
-	client, closer := testVaultServerWithSecrets(ctx, t)
-	defer closer()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().Mount("kv-v1/", &api.MountInput{
+		Type: "kv-v1",
+	})
+	require.NoError(t, err)
+
+	// enable kv-v2 backend
+	err = client.Sys().Mount("kv-v2/", &api.MountInput{
+		Type: "kv-v2",
+	})
+
+	require.NoError(t, err)
+
+	// populate dummy secrets
+	for _, path := range []string{
+		"foo",
+		"app-1/foo",
+		"app-1/bar",
+		"app-1/nested/baz",
+	} {
+		err = client.KVv1("kv-v1").Put(ctx, path, map[string]interface{}{
+			"user":     "test",
+			"password": "Hashi123",
+		})
+		require.NoError(t, err)
+
+		_, err = client.KVv2("kv-v2").Put(ctx, path, map[string]interface{}{
+			"user":     "test",
+			"password": "Hashi123",
+		})
+		require.NoError(t, err)
+	}
 
 	cases := map[string]struct {
 		flagExec      string

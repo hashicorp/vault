@@ -1,7 +1,20 @@
 version: 2
 
+# We manage dependabot update/alerts via vault-enterprise so there's no need to
+# to open these on the community edition repository.
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "yearly"
+    open-pull-requests-limit: 0
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "yearly"
+    open-pull-requests-limit: 0
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "yearly"
+    open-pull-requests-limit: 0

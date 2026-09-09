@@ -90,6 +90,12 @@ type Auth struct {
 	// matching groups, the entity ID of the user will be added.
 	GroupAliases []*Alias `json:"group_aliases" mapstructure:"group_aliases" structs:"group_aliases"`
 
+	// ActorEntityID is the entity ID of the actor performing the request.
+	ActorEntityID string `json:"actor_entity_id,omitempty" mapstructure:"actor_entity_id" structs:"actor_entity_id"`
+
+	// ActorEntityName is the name of the actor entity performing the request.
+	ActorEntityName string `json:"actor_entity_name,omitempty" mapstructure:"actor_entity_name" structs:"actor_entity_name"`
+
 	// The set of CIDRs that this token can be used with
 	BoundCIDRs []*sockaddr.SockAddrMarshaler `json:"bound_cidrs"`
 
@@ -118,6 +124,13 @@ type Auth struct {
 	// HTTPRequestPriority contains potential information about the request
 	// priority based on required path capabilities
 	HTTPRequestPriority *uint8 `json:"http_request_priority"`
+
+	// AuthorizationDetails holds fine-grained authorization constraints for the request.
+	// Each element is a JSON object with at minimum a "type" field.
+	// It is nil when the token does not carry authorization details.
+	// It is not included in plugin RPC serialization because it is only needed at request-routing
+	// time and not during plugin Renew or Revoke operations.
+	AuthorizationDetails []AuthorizationDetail `json:"authorization_details,omitempty"`
 }
 
 func (a *Auth) GoString() string {

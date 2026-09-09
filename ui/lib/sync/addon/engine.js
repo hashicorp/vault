@@ -27,7 +27,14 @@ export default class SyncEngine extends Engine {
       'current-cluster',
       'namespace',
     ],
-    externalRoutes: ['kvSecretOverview', 'clientCountOverview', 'vault', 'secrets', 'sync'],
+    externalRoutes: [
+      'kvSecretOverview',
+      'databaseStaticRoleOverview',
+      'clientCountOverview',
+      'vault',
+      'secrets',
+      'sync',
+    ],
   };
 }
 

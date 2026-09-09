@@ -9,17 +9,17 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module TotpEdit
  * `TotpEdit` is a component that allows you to create, view or delete a TOTP key.
  * When creating a key if `generate` and `exported` are true then after a successful save the UI renders a QR code for the generated key.
  * @example
- *   <TotpEdit @model={{this.model}} @mode={{this.mode}} />
+ *   <TotpEdit @form={{this.form}} @mode={{this.mode}} @capabilities={{this.capabilities}} />
  *
- * @param {object} model - The totp key ember data model.
+ * @param {object} form - The TotpKeyForm instance.
  * @param {string} mode - The mode to render. Either 'create' or 'show'.
+ * @param {object} capabilities - Capabilities object with canDelete, canRead flags.
  */
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -27,12 +27,38 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class TotpEdit extends Component {
   @service router;
   @service flashMessages;
+  @service api;
 
   @tracked hasGenerated = false;
   @tracked invalidFormAlert = '';
   @tracked modelValidations;
+  @tracked key;
 
-  successCallback;
+  constructor(owner, args) {
+    super(owner, args);
+    // In show mode, the route fetches the key and passes it via @form
+    // This stores it in our tracked property for consistent data source
+    if (args.mode === 'show') {
+      this.key = args.form.data;
+    }
+  }
+
+  displayFields = [
+    { field: 'account_name', label: 'Account name' },
+    { field: 'algorithm', label: 'Algorithm' },
+    { field: 'digits', label: 'Digits' },
+    { field: 'issuer', label: 'Issuer' },
+    { field: 'period', label: 'Period' },
+  ];
+
+  generatedFields = [{ field: 'url', label: 'URL' }];
+
+  breadcrumbs = [
+    { label: 'Vault', text: 'Vault', icon: 'vault', path: 'vault.cluster.dashboard' },
+    { text: 'Secrets engines', path: 'vault.cluster.secrets.backends' },
+    this.args.root,
+    { label: this.title, text: this.title },
+  ];
 
   get title() {
     if (this.args.mode === 'create') {
@@ -43,29 +69,7 @@ export default class TotpEdit extends Component {
 
   get subtitle() {
     if (this.args.mode === 'create') return '';
-
-    return this.args.model.id;
-  }
-
-  get defaultKeyFormFields() {
-    const shared = ['name', 'generate', 'issuer', 'accountName'];
-    const generated = [...shared, 'exported'];
-    const nonGenerated = [...shared, 'url', 'key'];
-    return this.args.model.generate ? generated : nonGenerated;
-  }
-
-  get groups() {
-    const { generate } = this.args.model;
-
-    const groups = {
-      'TOTP Code Options': ['algorithm', 'digits', 'period'],
-    };
-
-    if (generate) {
-      groups['Provider Options'] = ['keySize', 'skew', 'qrSize'];
-    }
-
-    return groups;
+    return this.args.form.data.name;
   }
 
   transitionToRoute() {
@@ -74,52 +78,49 @@ export default class TotpEdit extends Component {
 
   @action
   reset() {
-    const { name } = this.args.model;
-    this.args.model.unloadRecord();
+    const { name } = this.args.form.data;
     this.transitionToRoute(SHOW_ROUTE, name);
   }
 
   @action
   async deleteKey() {
     try {
-      const { id } = this.args.model;
-      await this.args.model.destroyRecord();
+      const { name, backend } = this.args.form.data;
+      await this.api.secrets.totpDeleteKey(name, backend);
       this.transitionToRoute(LIST_ROOT_ROUTE);
-      this.flashMessages.success(`${id} was successfully deleted.`);
+      this.flashMessages.success(`${name} was successfully deleted.`);
     } catch (err) {
-      this.flashMessages.danger(errorMessage(err));
+      const { message } = await this.api.parseError(err);
+      this.flashMessages.danger(message);
     }
   }
 
   createKey = task(
     waitFor(async (event) => {
       event.preventDefault();
-      const { isValid, state, invalidFormMessage } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage, data } = this.args.form.toJSON();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
 
       if (!isValid) return;
       try {
-        const allFields = [...this.defaultKeyFormFields, ...Object.values(this.groups).flat()];
-        await this.args.model.save({
-          adapterOptions: {
-            keyFormFields: allFields,
-          },
-        });
-        const { generate, exported } = this.args.model;
+        const { name, backend, generate, exported } = this.args.form.data;
+        const resp = await this.api.secrets.totpCreateKey(name, backend, data);
 
         if (generate && exported) {
           // stay in this template and show QR code returned from response
+          if (resp?.data) {
+            this.key = resp.data;
+          }
           this.hasGenerated = true;
         } else {
-          // nothing is returned from response, transition to key details route
-          this.transitionToRoute(SHOW_ROUTE, this.args.model.name);
+          this.transitionToRoute(SHOW_ROUTE, name);
         }
+        this.flashMessages.success('Successfully created key.');
       } catch (err) {
-        // err will display via model state
-        return;
+        const { message } = await this.api.parseError(err);
+        this.flashMessages.danger(message);
       }
-      this.flashMessages.success('Successfully created key.');
     })
   );
 }

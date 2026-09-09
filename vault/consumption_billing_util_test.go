@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
@@ -23,6 +24,8 @@ import (
 	logicalDatabase "github.com/hashicorp/vault/builtin/logical/database"
 	logicalNomad "github.com/hashicorp/vault/builtin/logical/nomad"
 	logicalRabbitMQ "github.com/hashicorp/vault/builtin/logical/rabbitmq"
+	"github.com/hashicorp/vault/builtin/logical/ssh"
+	"github.com/hashicorp/vault/builtin/logical/totp"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -125,8 +128,10 @@ func TestStoreAndGetMaxRoleCounts(t *testing.T) {
 			require.Equal(t, tc.roleCounts.GCPImpersonatedAccounts, retrievedCounts.GCPImpersonatedAccounts)
 			require.Equal(t, tc.roleCounts.OpenLDAPDynamicRoles, retrievedCounts.OpenLDAPDynamicRoles)
 			require.Equal(t, tc.roleCounts.OpenLDAPStaticRoles, retrievedCounts.OpenLDAPStaticRoles)
+			require.Equal(t, tc.roleCounts.OpenLDAPLibrarySets, retrievedCounts.OpenLDAPLibrarySets)
 			require.Equal(t, tc.roleCounts.LDAPDynamicRoles, retrievedCounts.LDAPDynamicRoles)
 			require.Equal(t, tc.roleCounts.LDAPStaticRoles, retrievedCounts.LDAPStaticRoles)
+			require.Equal(t, tc.roleCounts.LDAPLibrarySets, retrievedCounts.LDAPLibrarySets)
 			require.Equal(t, tc.roleCounts.DatabaseDynamicRoles, retrievedCounts.DatabaseDynamicRoles)
 			require.Equal(t, tc.roleCounts.DatabaseStaticRoles, retrievedCounts.DatabaseStaticRoles)
 			require.Equal(t, tc.roleCounts.GCPRolesets, retrievedCounts.GCPRolesets)
@@ -219,6 +224,11 @@ func TestHWMRoleCounts(t *testing.T) {
 			key:          "static-role/",
 			numberOfKeys: 5,
 		},
+		"LDAP Library Sets": {
+			mount:        pluginconsts.SecretEngineLDAP,
+			key:          "library/",
+			numberOfKeys: 5,
+		},
 		"OpenLDAP Dynamic Roles": {
 			mount:        pluginconsts.SecretEngineOpenLDAP,
 			key:          "role/",
@@ -227,6 +237,11 @@ func TestHWMRoleCounts(t *testing.T) {
 		"OpenLDAP Static Roles": {
 			mount:        pluginconsts.SecretEngineOpenLDAP,
 			key:          "static-role/",
+			numberOfKeys: 5,
+		},
+		"OpenLDAP Library Sets": {
+			mount:        pluginconsts.SecretEngineOpenLDAP,
+			key:          "library/",
 			numberOfKeys: 5,
 		},
 		"Alicloud Dynamic Roles": {
@@ -278,7 +293,8 @@ func TestHWMRoleCounts(t *testing.T) {
 	firstCounts := core.GetRoleCounts()
 	verifyExpectedRoleCounts(t, firstCounts, 5)
 
-	counts, err := core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys, roleAttribution, keyAttribution := core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err := core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -294,7 +310,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 2)
 	}
 
-	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys, roleAttribution, keyAttribution = core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 5)
@@ -310,7 +327,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 8)
 	}
 
-	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys, roleAttribution, keyAttribution = core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -326,7 +344,8 @@ func TestHWMRoleCounts(t *testing.T) {
 		addRoleToStorage(t, core, tc.mount, tc.key, 5)
 	}
 
-	counts, err = core.UpdateMaxRoleCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+	roles, keys, roleAttribution, keyAttribution = core.GetRoleAndManagedKeyCountsAndAttribution(billing.ReplicatedPrefix)
+	counts, _, err = core.UpdateMaxRoleAndManagedKeyCounts(context.Background(), billing.ReplicatedPrefix, time.Now(), roles, keys, roleAttribution, keyAttribution)
 	require.NoError(t, err)
 
 	verifyExpectedRoleCounts(t, counts, 8)
@@ -398,9 +417,171 @@ func TestHWMKvSecretsCounts(t *testing.T) {
 	require.Equal(t, 5, counts)
 }
 
+// TestStoreAndGetMetricsLastUpdateTimeLocked tests the store/get helpers
+// that operate under the BillingStorageLock
+func TestStoreAndGetMetricsLastUpdateTimeLocked(t *testing.T) {
+	coreConfig := &CoreConfig{}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	ctx := namespace.RootContext(context.Background())
+	month := time.Now()
+	updateTime := time.Now().UTC().Truncate(time.Second)
+
+	// Acquire billing storage lock as required by the helper contract
+	core.consumptionBilling.BillingStorageLock.Lock()
+	defer core.consumptionBilling.BillingStorageLock.Unlock()
+
+	// Store under local prefix and verify
+	err := core.storeMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, month, updateTime)
+	require.NoError(t, err)
+
+	got, err := core.getMetricsLastUpdateTimeLocked(ctx, billing.LocalPrefix, month)
+	require.NoError(t, err)
+	require.Equal(t, updateTime.Format(time.RFC3339), got.Format(time.RFC3339))
+
+	// Ensure other prefix returns zero when not set
+	gotReplicated, err := core.getMetricsLastUpdateTimeLocked(ctx, billing.ReplicatedPrefix, month)
+	require.NoError(t, err)
+	require.True(t, gotReplicated.IsZero(), "replicated prefix should have no stored timestamp")
+}
+
+// TestUpdateAndGetMetricsLastUpdateTime tests the public Update/Get helpers for the metrics last update time
+func TestUpdateAndGetMetricsLastUpdateTime(t *testing.T) {
+	coreConfig := &CoreConfig{}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	ctx := namespace.RootContext(context.Background())
+	month := time.Now()
+	updateTime := time.Now().UTC().Truncate(time.Second)
+
+	err := core.UpdateMetricsLastUpdateTime(ctx, month, updateTime)
+	require.NoError(t, err)
+
+	got, err := core.GetMetricsLastUpdateTime(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, updateTime.Format(time.RFC3339), got.Format(time.RFC3339))
+}
+
+// TestStoreAndGetMaxTotpKeyCounts verifies that we can store and retrieve the HWM totp key counts correctly
+func TestStoreAndGetMaxTotpKeyCounts(t *testing.T) {
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			pluginconsts.AuthTypeUserpass: userpass.Factory,
+		},
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	testCases := []struct {
+		description     string
+		localPathPrefix string
+		monthOffset     int
+		keyCounts       int
+	}{
+		{
+			description:     "Local storage, current month",
+			localPathPrefix: billing.LocalPrefix,
+			monthOffset:     0,
+			keyCounts:       10,
+		},
+		{
+			description:     "Replicated storage, previous month",
+			localPathPrefix: billing.ReplicatedPrefix,
+			monthOffset:     -1,
+			keyCounts:       5,
+		},
+		{
+			description:     "Replicated storage, current month",
+			localPathPrefix: billing.ReplicatedPrefix,
+			monthOffset:     0,
+			keyCounts:       15,
+		},
+		{
+			description:     "Local storage, previous month",
+			localPathPrefix: billing.LocalPrefix,
+			monthOffset:     -1,
+			keyCounts:       4,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			month := time.Now().AddDate(0, tc.monthOffset, 0)
+			err := core.storeMaxTotpKeyCountsLocked(context.Background(), tc.keyCounts, tc.localPathPrefix, month)
+			require.NoError(t, err)
+
+			retrievedCounts, err := core.GetStoredHWMTotpCounts(context.Background(), tc.localPathPrefix, month)
+			require.NoError(t, err)
+
+			require.Equal(t, tc.keyCounts, retrievedCounts)
+		})
+	}
+}
+
+// TestHWMTotpKeyCounts tests that we correctly store and track the HWM totp key counts.
+func TestHWMTotpKeyCounts(t *testing.T) {
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"totp": totp.Factory,
+		},
+		BillingConfig: billing.BillingConfig{
+			MetricsUpdateCadence: 3 * time.Second,
+		},
+	}
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Add 2 totp mounts in root namespace
+	for _, mount := range []string{"totp", "totp2"} {
+		req := logical.TestRequest(t, logical.CreateOperation, fmt.Sprintf("sys/mounts/%v", mount))
+		req.Data["type"] = pluginconsts.SecretEngineTOTP
+		req.ClientToken = root
+		ctx := namespace.RootContext(context.Background())
+
+		_, err := core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+	}
+
+	// Add two keys to each totp mount
+	for _, mount := range []string{"totp", "totp2"} {
+		for i := 0; i < 2; i++ {
+			keyName := fmt.Sprintf("my-key-%d", i)
+			addTotpKeyToStorage(t, namespace.RootContext(context.Background()), core, mount, root, keyName)
+		}
+	}
+
+	// verify if the keys have been added to storage
+	for _, mount := range []string{"totp", "totp2"} {
+		verifyTotpKeysInStorage(t, namespace.RootContext(context.Background()), core, mount, root, 2)
+	}
+
+	// Verify that the max totp key counts are as expected
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredHWMTotpCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+		return err == nil && counts == 4
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Add one more key to the totp mount
+	addTotpKeyToStorage(t, namespace.RootContext(context.Background()), core, "totp", root, "my-key-3")
+	verifyTotpKeysInStorage(t, namespace.RootContext(context.Background()), core, "totp", root, 3)
+
+	// Verify that the max totp key counts are updated
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredHWMTotpCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+		return err == nil && counts == 5
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// Now delete one secret from the totp mount
+	deleteTotpKeyFromStorage(t, namespace.RootContext(context.Background()), core, "totp", root, "my-key-3")
+	verifyTotpKeysInStorage(t, namespace.RootContext(context.Background()), core, "totp", root, 2)
+
+	// Verify that the max totp key counts are still the same
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredHWMTotpCounts(context.Background(), billing.ReplicatedPrefix, time.Now())
+		return err == nil && counts == 5
+	}, 5*time.Second, 100*time.Millisecond)
+}
+
 // TestTransitDataProtectionCallCounts tests that we correctly store and track the transit data protection call counts
 func TestTransitDataProtectionCallCounts(t *testing.T) {
-	t.Parallel()
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"transit": transit.Factory,
@@ -645,6 +826,273 @@ func TestTransitDataProtectionCallCounts(t *testing.T) {
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts(), "Counter should still be 0")
 }
 
+// TestSSHCertCounts tests that we correctly store and track the SSH certificate counts
+func TestSSHCertCounts(t *testing.T) {
+	standardDuration := 730.0
+	validityHours := float64(60*60*24) / 3600.0
+	units := validityHours / standardDuration
+	// Round to 4 decimal places
+	expectedCertUnit := math.Round(units*10000) / 10000
+
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": ssh.Factory,
+		},
+	}
+
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Mount SSH backend
+	req := logical.TestRequest(t, logical.CreateOperation, "sys/mounts/ssh")
+	req.Data["type"] = "ssh"
+	req.ClientToken = root
+	ctx := namespace.RootContext(context.Background())
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Create a certificate
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/ca")
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/roles/test")
+	req.ClientToken = root
+	req.Data["key_type"] = "ca"
+	req.Data["allow_user_certificates"] = true
+	req.Data["allow_empty_principals"] = true
+	req.Data["ttl"] = "1d"
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/issue/test")
+	req.ClientToken = root
+	resp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedCertUnit, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Test sign endpoint
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/sign/test")
+	req.Data["public_key"] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJBp4mozY/snvG/+pkgv4xYifIFB2ov3gAvAqXgFqNpj vault-enterprise-key"
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedCertUnit*2, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Now test persisting the summed counts - store and retrieve counts
+	// First, update the SSH cert counts (this will sum current counter with stored value)
+	currentCount := core.certCountManager.GetCounts().SSHIssuedCerts
+	core.certCountManager.StopConsumerJob()
+
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedCerts, "Counter should be reset after update")
+
+	// Retrieve the stored counts
+	storedCounts, err := core.GetStoredSSHDurationAdjustedCertCount(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, currentCount, storedCounts)
+
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
+
+	// Perform more operations to increase the counter
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/issue/test")
+	req.ClientToken = root
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Counter should now be 1 cert
+	require.Equal(t, expectedCertUnit, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Update counts again - should sum the new count with the stored count
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedCerts, "Counter should be reset after update")
+
+	// Verify stored counts are now the sum
+	summedCounts, err := core.GetStoredSSHDurationAdjustedCertCount(ctx, time.Now())
+	require.NoError(t, err)
+
+	expectedSum := currentCount + expectedCertUnit
+	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
+
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
+
+	// Add more operations without manually resetting
+	for i := 0; i < 3; i++ {
+		req = logical.TestRequest(t, logical.UpdateOperation, "ssh/sign/test")
+		req.Data["public_key"] = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJBp4mozY/snvG/+pkgv4xYifIFB2ov3gAvAqXgFqNpj vault-enterprise-key"
+		req.ClientToken = root
+		resp, err = core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.Nil(t, resp.Error())
+	}
+
+	// Counter should be 3 certs
+	require.Equal(t, expectedCertUnit*3, core.certCountManager.GetCounts().SSHIssuedCerts)
+
+	// Update counts - should sum 3 with the previous stored sum
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedCerts, "Counter should be reset after update")
+
+	// Verify stored counts
+	storedCounts, err = core.GetStoredSSHDurationAdjustedCertCount(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum += expectedCertUnit * 3
+	require.Equal(t, expectedSum, storedCounts)
+}
+
+// TestSSHOTPCounts tests that we correctly store and track the SSH OTP counts
+func TestSSHOTPCounts(t *testing.T) {
+	expectedOTPUnit := 0.0014
+
+	coreConfig := &CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": ssh.Factory,
+		},
+	}
+
+	core, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+
+	// Mount SSH backend
+	req := logical.TestRequest(t, logical.CreateOperation, "sys/mounts/ssh")
+	req.Data["type"] = "ssh"
+	req.ClientToken = root
+	ctx := namespace.RootContext(context.Background())
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	// Create a certificate
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/ca")
+	req.ClientToken = root
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/roles/test")
+	req.ClientToken = root
+	req.Data["key_type"] = "otp"
+	req.Data["default_user"] = "user"
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.CreateOperation, "ssh/config/zeroaddress")
+	req.ClientToken = root
+	req.Data["roles"] = "test"
+	_, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+	req.ClientToken = root
+	req.Data["ip"] = "1.2.3.4"
+	resp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedOTPUnit, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+	req.ClientToken = root
+	req.Data["ip"] = "1.2.3.4"
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Verify that the SSH counter is incremented
+	require.Equal(t, expectedOTPUnit*2, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	// Now test persisting the summed counts - store and retrieve counts
+	// First, update the SSH cert counts (this will sum current counter with stored value)
+	currentCount := core.certCountManager.GetCounts().SSHIssuedOTPs
+	core.certCountManager.StopConsumerJob()
+
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+
+	// Retrieve the stored counts
+	storedCounts, err := core.GetStoredSSHOTPCount(ctx, time.Now())
+	require.NoError(t, err)
+	require.Equal(t, currentCount, storedCounts)
+
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
+
+	// Perform more operations to increase the counter
+	req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+	req.ClientToken = root
+	req.Data["ip"] = "1.2.3.4"
+	resp, err = core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.Nil(t, resp.Error())
+
+	// Counter should now be 1 unit
+	require.Equal(t, expectedOTPUnit, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	// Update counts again - should sum the new count with the stored count
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+
+	// Verify stored counts are now the sum
+	summedCounts, err := core.GetStoredSSHOTPCount(ctx, time.Now())
+	require.NoError(t, err)
+
+	expectedSum := currentCount + expectedOTPUnit
+	require.Equal(t, expectedSum, summedCounts, "Count should be sum of stored and current")
+
+	core.certCountManager.StartConsumerJob(func(count logical.CertCount) {
+		core.ConsumeCertCounts(count, true)
+	})
+
+	// Add more operations without manually resetting
+	for i := 0; i < 3; i++ {
+		req = logical.TestRequest(t, logical.UpdateOperation, "ssh/creds/test")
+		req.ClientToken = root
+		req.Data["ip"] = "1.2.3.4"
+		resp, err = core.HandleRequest(ctx, req)
+		require.NoError(t, err)
+		require.Nil(t, resp.Error())
+	}
+
+	// Counter should be 3 units
+	require.Equal(t, expectedOTPUnit*3, core.certCountManager.GetCounts().SSHIssuedOTPs)
+
+	// Update counts - should sum 3 with the previous stored sum
+	core.certCountManager.StopConsumerJob()
+	time.Sleep(20 * time.Millisecond)
+
+	// Verify the counter was reset after update
+	require.Equal(t, float64(0), core.certCountManager.GetCounts().SSHIssuedOTPs, "Counter should be reset after update")
+
+	// Verify stored counts
+	storedCounts, err = core.GetStoredSSHOTPCount(ctx, time.Now())
+	require.NoError(t, err)
+	expectedSum += 3 * expectedOTPUnit
+	require.Equal(t, expectedSum, storedCounts)
+}
+
 func addRoleToStorage(t *testing.T, core *Core, mount string, key string, numberOfKeys int) {
 	raw, ok := core.router.root.Get(mount + "/")
 	if !ok {
@@ -659,9 +1107,14 @@ func addRoleToStorage(t *testing.T, core *Core, mount string, key string, number
 	for i := 0; i < numberOfKeys; i++ {
 		roleKey := fmt.Sprintf("%srole-%d", key, i)
 		// Create a role with a unique key
+		value := []byte("foo")
+		// LDAP & OpenLDAP return count of 0 with invalid JSON
+		if mount == pluginconsts.SecretEngineLDAP || mount == pluginconsts.SecretEngineOpenLDAP {
+			value = []byte("{}")
+		}
 		err := storageView.Put(context.Background(), &logical.StorageEntry{
 			Key:   roleKey,
-			Value: []byte("foo"),
+			Value: value,
 		})
 		require.NoError(t, err)
 	}
@@ -729,4 +1182,554 @@ func deleteKvSecretFromStorage(t *testing.T, ctx context.Context, core *Core, mo
 	req.ClientToken = token
 	_, err := core.HandleRequest(ctx, req)
 	require.NoError(t, err)
+}
+
+func addTotpKeyToStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, keyName string) {
+	var req *logical.Request
+	req = logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("%v/keys/%s", mount, keyName))
+	req.Data["generate"] = true
+	req.Data["issuer"] = "hashicorp"
+	req.Data["account_name"] = "vault"
+
+	req.ClientToken = token
+	writeResp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, writeResp)
+}
+
+func verifyTotpKeysInStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, expectedKeys int) {
+	req := logical.TestRequest(t, logical.ListOperation, fmt.Sprintf("%v/keys", mount))
+	req.ClientToken = token
+	listResp, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+	require.NotNil(t, listResp.Data)
+	keys := listResp.Data["keys"].([]string)
+	require.Len(t, keys, expectedKeys)
+}
+
+func deleteTotpKeyFromStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, keyName string) {
+	var req *logical.Request
+	req = logical.TestRequest(t, logical.DeleteOperation, fmt.Sprintf("%v/keys/%s", mount, keyName))
+	req.ClientToken = token
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+}
+
+func addTransitKeyToStorage(t *testing.T, ctx context.Context, core *Core, mount string, token string, keyName string) {
+	req := logical.TestRequest(t, logical.CreateOperation, fmt.Sprintf("%v/keys/%s", mount, keyName))
+	req.ClientToken = token
+	_, err := core.HandleRequest(ctx, req)
+	require.NoError(t, err)
+}
+
+// TestGetStoredOidcDurationAdjustedCount tests reading OIDC duration-adjusted token counts from storage
+func TestGetStoredOidcDurationAdjustedCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		storedData    map[time.Time]float64 // month -> duration-adjusted token count to store before test
+		queryMonth    time.Time
+		expectedCount float64
+	}{
+		{
+			name:          "returns zero when no data exists",
+			storedData:    nil,
+			queryMonth:    time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 0,
+		},
+		{
+			name: "returns stored count when data exists",
+			storedData: map[time.Time]float64{
+				time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC): 42.5,
+			},
+			queryMonth:    time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 42.5,
+		},
+		{
+			name: "returns correct count for first month when multiple months exist",
+			storedData: map[time.Time]float64{
+				time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC): 10.5,
+				time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC): 20.5,
+			},
+			queryMonth:    time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 10.5,
+		},
+		{
+			name: "returns correct count for second month when multiple months exist",
+			storedData: map[time.Time]float64{
+				time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC): 10.5,
+				time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC): 20.5,
+			},
+			queryMonth:    time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 20.5,
+		},
+		{
+			name:          "returns zero for non-existent month",
+			storedData:    nil,
+			queryMonth:    time.Date(2027, 12, 1, 0, 0, 0, 0, time.UTC),
+			expectedCount: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create fresh core instance for test isolation
+			core, _, _ := TestCoreUnsealed(t)
+			ctx := context.Background()
+
+			// Store test data if provided
+			for month, count := range tt.storedData {
+				err := core.storeOidcDurationAdjustedCountLocked(ctx, month, count)
+				require.NoError(t, err)
+			}
+
+			// Execute test and verify
+			count, err := core.GetStoredOidcDurationAdjustedCount(ctx, tt.queryMonth)
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedCount, count)
+		})
+	}
+}
+
+// TestUpdateOidcDurationAdjustedCount tests storing and incrementing OIDC duration-adjusted token counts
+func TestUpdateOidcDurationAdjustedCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		month         time.Time
+		increments    []float64 // sequence of increments to apply
+		expectedCount float64   // expected final duration-adjusted token count
+		errorContains string
+		delta         float64 // delta value for InDelta
+	}{
+		{
+			name:          "stores initial count",
+			month:         time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{15.5},
+			expectedCount: 15.5,
+		},
+		{
+			name:          "increments existing count",
+			month:         time.Date(2026, 4, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{10.0, 5.5},
+			expectedCount: 15.5,
+		},
+		{
+			name:          "handles multiple increments",
+			month:         time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{1.5, 2.5, 3.0, 4.5},
+			expectedCount: 11.5,
+		},
+		{
+			name:          "rejects negative increments",
+			month:         time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{100.0, -25.5},
+			expectedCount: 100.0,
+			errorContains: "must be non-negative",
+		},
+		{
+			name:          "handles zero increment",
+			month:         time.Date(2026, 7, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{30.0, 0.0},
+			expectedCount: 30.0,
+		},
+		{
+			name:          "handles fractional increments accurately",
+			month:         time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{0.1, 0.2, 0.3},
+			expectedCount: 0.6,
+			// This uses a larger delta because adding small decimals like 0.1, 0.2, 0.3 can introduce floating-point rounding errors
+			// The expected result is 0.6, but due to binary floating-point representation, the actual sum might be 0.5999999999999999 or 0.6000000000000001
+			delta: 0.0001,
+		},
+		{
+			name:          "updates count through public method",
+			month:         time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{25.5},
+			expectedCount: 25.5,
+		},
+		{
+			name:          "handles minimum increment of 0.0001",
+			month:         time.Date(2026, 11, 1, 0, 0, 0, 0, time.UTC),
+			increments:    []float64{1.0, 0.0001},
+			expectedCount: 1.0001,
+			// This uses a smaller, more precise delta because:
+			// 1.0 is exactly representable in binary floating-point
+			// 0.0001 is the minimum precision we support (4 decimal places)
+			// The sum 1.0001 should be very close to exact
+			// We need to verify that the 4-decimal precision is maintained, so we use a tighter tolerance (0.00001)
+			delta: 0.00001,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			core, _, _ := TestCoreUnsealed(t)
+			ctx := context.Background()
+
+			// Apply increments sequentially
+			var lastErr error
+			for _, increment := range tt.increments {
+				err := core.storeOidcDurationAdjustedCountLocked(ctx, tt.month, increment)
+				if err != nil {
+					lastErr = err
+					break
+				}
+			}
+
+			// Verify error expectations
+			if tt.errorContains != "" {
+				require.ErrorContains(t, lastErr, tt.errorContains)
+			} else {
+				require.NoError(t, lastErr)
+			}
+
+			// Verify the final count
+			count, err := core.GetStoredOidcDurationAdjustedCount(ctx, tt.month)
+			require.NoError(t, err)
+
+			if tt.delta > 0 {
+				require.InDelta(t, tt.expectedCount, count, tt.delta)
+			} else {
+				require.Equal(t, tt.expectedCount, count)
+			}
+		})
+	}
+}
+
+// TestIncrementOidcTokenCount tests incrementing in-memory OIDC token counts.
+// MonthlyUnits stores pre-normalized duration-adjusted units (DurationAdjustedTokenCount
+// applied per-token at increment time) so the scalar stays in sync with per-mount attribution.
+func TestIncrementOidcTokenCount(t *testing.T) {
+	tests := []struct {
+		name                         string
+		durations                    []float64 // sequence of token durations in seconds to increment
+		expectedInMemTokenCount      uint64
+		expectedInMemNormalizedUnits float64
+	}{
+		{
+			name:                         "increments single token",
+			durations:                    []float64{3600.0}, // 1 hour → 1/730 ≈ 0.0014
+			expectedInMemTokenCount:      1,
+			expectedInMemNormalizedUnits: 0.0014,
+		},
+		{
+			name:                         "increments multiple tokens",
+			durations:                    []float64{3600.0, 7200.0, 1800.0}, // 1h+2h+30m → 1/3600 + 1/7200 + 1/1800 -> 0.0014+0.0027+0.0007
+			expectedInMemTokenCount:      3,
+			expectedInMemNormalizedUnits: 0.0048,
+		},
+		{
+			name:                         "handles zero duration",
+			durations:                    []float64{3600.0, 0.0, 1800.0}, // 0s contributes 0 units
+			expectedInMemTokenCount:      3,
+			expectedInMemNormalizedUnits: 0.0021,
+		},
+		{
+			name:                         "handles fractional durations",
+			durations:                    []float64{100.5, 200.3, 300.7}, // all sub-threshold → MinBillableUnits each
+			expectedInMemTokenCount:      3,
+			expectedInMemNormalizedUnits: 0.0003,
+		},
+		{
+			name:                         "handles very small durations",
+			durations:                    []float64{0.001, 0.002, 0.003}, // all below minimum → MinBillableUnits each
+			expectedInMemTokenCount:      3,
+			expectedInMemNormalizedUnits: 0.0003,
+		},
+		{
+			name:                         "handles large number of increments",
+			durations:                    []float64{60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0, 60.0}, // 10 tokens of 1 min → MinBillableUnits each
+			expectedInMemTokenCount:      10,
+			expectedInMemNormalizedUnits: 0.001,
+		},
+		{
+			name: "handles mixed duration values",
+			// 1.5s→0.0001, 3600.5s→0.0014, 0.5s→0.0001, 7200.25s→0.0027, 86400.75s→0.0329
+			durations:                    []float64{1.5, 3600.5, 0.5, 7200.25, 86400.75},
+			expectedInMemTokenCount:      5,
+			expectedInMemNormalizedUnits: 0.0372,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Create fresh core instance for test isolation
+			core, _, _ := TestCoreUnsealed(t)
+
+			// Apply increments sequentially
+			for _, duration := range tt.durations {
+				core.IncrementOidcTokenCount(duration, logical.MountAttribution{})
+			}
+
+			// Verify in-memory counters
+			core.consumptionBillingLock.RLock()
+			actualTotalDuration := core.consumptionBilling.SecretEngineCounts.Oidc.MonthlyUnits.Load()
+			core.consumptionBillingLock.RUnlock()
+			require.InDelta(t, tt.expectedInMemNormalizedUnits, actualTotalDuration, 1e-9)
+		})
+	}
+}
+
+// TestDurationAdjustedTokenCount tests the duration-adjusted token count calculation
+func TestDurationAdjustedTokenCount(t *testing.T) {
+	tests := []struct {
+		name          string
+		tokenDuration float64 // duration in seconds
+		expectedUnits float64 // expected billing units
+	}{
+		{
+			name:          "zero duration returns zero",
+			tokenDuration: 0.0,
+			expectedUnits: 0.0,
+		},
+		{
+			name:          "very small duration returns minimum 0.0001 (MinBillableUnits)",
+			tokenDuration: 1.0, // 1 second
+			expectedUnits: MinBillableUnits,
+		},
+		{
+			name:          "one hour token",
+			tokenDuration: time.Hour.Seconds(), // 1 hour
+			expectedUnits: 0.0014,              // 1/730 rounded to 4 decimals
+		},
+		{
+			name:          "one day token",
+			tokenDuration: 24 * time.Hour.Seconds(), // 24 hours
+			expectedUnits: 0.0329,                   // 24/730 rounded to 4 decimals
+		},
+		{
+			name:          "one week token",
+			tokenDuration: 7 * 24 * time.Hour.Seconds(), // 168 hours
+			expectedUnits: 0.2301,                       // 168/730 rounded to 4 decimals
+		},
+		{
+			name:          "30 day token",
+			tokenDuration: 30 * 24 * time.Hour.Seconds(), // 720 hours
+			expectedUnits: 0.9863,                        // 720/730 rounded to 4 decimals
+		},
+		{
+			name:          "standard duration token (730 hours)",
+			tokenDuration: DurationAdjustedStandardDuration * time.Hour.Seconds(), // 730 hours in seconds
+			expectedUnits: 1.0,
+		},
+		{
+			name:          "90 day token",
+			tokenDuration: 90 * 24 * time.Hour.Seconds(), // 2160 hours
+			expectedUnits: 2.9589,                        // 2160/730 rounded to 4 decimals
+		},
+		{
+			name:          "one year token",
+			tokenDuration: 365 * 24 * time.Hour.Seconds(), // 8760 hours
+			expectedUnits: 12.0,                           // 8760/730 = 12
+		},
+		{
+			name:          "fractional hour token",
+			tokenDuration: 1800.0, // 0.5 hours
+			expectedUnits: 0.0007, // 0.5/730 rounded to 4 decimals
+		},
+		{
+			name:          "rounds to 4 decimal places",
+			tokenDuration: 3650.0, // ~1.014 hours
+			expectedUnits: 0.0014, // 1.014/730 = 0.00138904... rounds to 0.0014
+		},
+		{
+			name:          "minimum non-zero value",
+			tokenDuration: 100.0,  // very small duration
+			expectedUnits: 0.0001, // rounds to 0 but returns minimum 0.0001
+		},
+		{
+			name:          "large duration value",
+			tokenDuration: 315360000.0, // 10 years in seconds
+			expectedUnits: 120.0,       // 87600/730 = 120
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := DurationAdjustedTokenCount(tt.tokenDuration)
+			require.Equal(t, tt.expectedUnits, result)
+		})
+	}
+}
+
+// TestConcurrentOidcDurationAdjustedCount tests concurrent updates to OIDC duration-adjusted counts
+func TestConcurrentOidcDurationAdjustedCount(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	month := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	numGoroutines := 10
+	incrementPerGoroutine := 1.0
+
+	// Launch concurrent updates
+	done := make(chan bool, numGoroutines)
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			// Acquire lock before calling the locked function
+			core.consumptionBilling.BillingStorageLock.Lock()
+			err := core.storeOidcDurationAdjustedCountLocked(ctx, month, incrementPerGoroutine)
+			core.consumptionBilling.BillingStorageLock.Unlock()
+			require.NoError(t, err)
+			done <- true
+		}()
+	}
+
+	// Wait for all goroutines to complete
+	for i := 0; i < numGoroutines; i++ {
+		<-done
+	}
+
+	// Verify the total count
+	count, err := core.GetStoredOidcDurationAdjustedCount(ctx, month)
+	require.NoError(t, err)
+	require.Equal(t, float64(numGoroutines)*incrementPerGoroutine, count)
+}
+
+// TestGcpKmsDataProtectionCallCounts tests that we correctly store and track the GCP KMS data protection call counts
+func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
+	t.Parallel()
+
+	coreConfig := &CoreConfig{
+		BillingConfig: billing.BillingConfig{
+			MetricsUpdateCadence: 3 * time.Second,
+		},
+	}
+	core, _, _, _ := TestCoreUnsealedWithMetricsAndConfig(t, coreConfig)
+
+	ctx := context.Background()
+	currentMonth := time.Now()
+
+	// Simulate GCP KMS plugin writing billing data (this is what the plugin does when operations occur)
+	// In a real scenario, this would be triggered by actual encrypt/decrypt/sign/verify operations
+	err := core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
+	})
+	require.NoError(t, err)
+
+	// Verify that the GCP KMS counter is incremented
+	require.Equal(t, uint64(1), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Wait until the data protection calls are updated and verify that the value in storage is correct
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredGcpKmsCallCounts(ctx, currentMonth)
+		return err == nil && counts == 1
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// The in memory counter should be reset after the update
+	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Simulate more operations
+	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
+	})
+	require.NoError(t, err)
+	err = core.consumptionBilling.WriteBillingData(ctx, "gcpkms", map[string]interface{}{
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-aware-uuid",
+		"mountRunningVersion": "v1.0.0",
+	})
+	require.NoError(t, err)
+
+	// Verify that the GCP KMS counter is incremented
+	require.Equal(t, uint64(2), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Wait until the data protection calls are updated and verify that the value in storage is correct
+	require.Eventually(t, func() bool {
+		counts, err := core.GetStoredGcpKmsCallCounts(ctx, currentMonth)
+		return err == nil && counts == 3
+	}, 5*time.Second, 100*time.Millisecond)
+
+	// The in memory counter should be reset after the update
+	require.Equal(t, uint64(0), core.GetInMemoryGcpKmsDataProtectionCallCounts())
+
+	// Run update again and make sure the value in storage is still 3
+	counts, err := core.UpdateGcpKmsCallCounts(ctx, currentMonth)
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), counts)
+
+	// Verify the value in storage is still 3
+	counts, err = core.GetStoredGcpKmsCallCounts(ctx, currentMonth)
+	require.NoError(t, err)
+	require.Equal(t, uint64(3), counts)
+}
+
+// TestCore_BillingRetentionMonths tests the GetBillingRetentionMonths and UpdateBillingRetentionMonths methods.
+func TestCore_BillingRetentionMonths(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(context.Background())
+
+	// When no configuration is stored, should return default value
+	retentionMonths, err := core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, billing.DefaultBillingRetentionMonths, retentionMonths)
+
+	// Update to minimum value and verify
+	err = core.UpdateBillingRetentionMonths(ctx, billing.MinBillingRetentionMonths)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, billing.MinBillingRetentionMonths, retentionMonths)
+
+	// Update to maximum value and verify
+	err = core.UpdateBillingRetentionMonths(ctx, billing.MaxBillingRetentionMonths)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, billing.MaxBillingRetentionMonths, retentionMonths)
+
+	// Update to custom value and verify persistence
+	customRetention := 48
+	err = core.UpdateBillingRetentionMonths(ctx, customRetention)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, customRetention, retentionMonths)
+
+	// Update to a different custom value and verify persistence
+	newRetention := 60
+	err = core.UpdateBillingRetentionMonths(ctx, newRetention)
+	require.NoError(t, err)
+	retentionMonths, err = core.GetBillingRetentionMonths(ctx)
+	require.NoError(t, err)
+	require.Equal(t, newRetention, retentionMonths)
+}
+
+func verifyMountAttributionBreakdowns(t *testing.T, expected logical.MountAttribution, actual logical.MountAttribution) {
+	t.Helper()
+	require.Equal(t, expected.MountAccessor, actual.MountAccessor, "MountAccessor mismatch")
+	require.Equal(t, expected.MountPath, actual.MountPath, "MountPath mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.MountType, actual.MountType, "MountType mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.NamespaceID, actual.NamespaceID, "NamespaceID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.NamespacePath, actual.NamespacePath, "NamespacePath mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.ParentNamespaceID, actual.ParentNamespaceID, "ParentNamespaceID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.BackendAwareUUID, actual.BackendAwareUUID, "BackendAwareUUID mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.MountRunningVersion, actual.MountRunningVersion, "MountRunningVersion mismatch for %s", expected.MountAccessor)
+	var actualCount, expectedCount float64
+	if _, err := fmt.Sscanf(fmt.Sprintf("%v", actual.Count), "%g", &actualCount); err != nil {
+		t.Fatalf("failed to parse actual count %v: %v", actual.Count, err)
+	}
+	if _, err := fmt.Sscanf(fmt.Sprintf("%v", expected.Count), "%g", &expectedCount); err != nil {
+		t.Fatalf("failed to parse expected count %v: %v", expected.Count, err)
+	}
+	require.InDelta(t, expectedCount, actualCount, 1e-9, "Count mismatch for %s", expected.MountAccessor)
+	require.Equal(t, expected.IsExternal, actual.IsExternal)
 }

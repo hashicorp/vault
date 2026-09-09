@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -424,7 +424,7 @@ type kvMount struct {
 // or externally compiled KV mounts that are still of type KV.
 // It's a simple function that's slightly reimplemented to prevent needing a context
 // in findKvMounts.
-func (c *Core) findOfficialKvMounts(ctx context.Context) []*kvMount {
+func (c *Core) findOfficialKvMounts(ctx context.Context, includeLocal, includeReplicated bool, kvVersion string) []*kvMount {
 	mounts := make([]*kvMount, 0)
 
 	c.mountsLock.RLock()
@@ -438,10 +438,21 @@ func (c *Core) findOfficialKvMounts(ctx context.Context) []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
+		if !includeLocal && entry.Local {
+			continue
+		}
+		if !includeReplicated && !entry.Local {
+			continue
+		}
+
 		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
 			version, ok := entry.Options["version"]
 			if !ok || version == "" {
 				version = "1"
+			}
+
+			if kvVersion != "0" && version != kvVersion {
+				continue
 			}
 
 			pluginName := getAdjustedPluginType(entry)
@@ -473,7 +484,8 @@ func (c *Core) findOfficialKvMounts(ctx context.Context) []*kvMount {
 	return mounts
 }
 
-func (c *Core) findKvMounts() []*kvMount {
+// findKvMounts finds all KV mounts. If kvVersion is "0", all versions of KV are included.
+func (c *Core) findKvMounts(includeLocal, includeReplicated bool, kvVersion string) []*kvMount {
 	mounts := make([]*kvMount, 0)
 
 	c.mountsLock.RLock()
@@ -487,11 +499,24 @@ func (c *Core) findKvMounts() []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
+		if !includeLocal && entry.Local {
+			continue
+		}
+		if !includeReplicated && !entry.Local {
+			continue
+		}
+
 		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
 			version, ok := entry.Options["version"]
 			if !ok || version == "" {
 				version = "1"
 			}
+
+			// If kvVersion is "0", all versions of KV are included.
+			if kvVersion != "0" && version != kvVersion {
+				continue
+			}
+
 			mounts = append(mounts, &kvMount{
 				Namespace:            entry.namespace,
 				MountPoint:           entry.Path,
@@ -658,7 +683,7 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 
 func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	// Find all KV mounts
-	mounts := c.findKvMounts()
+	mounts := c.findKvMounts(true, true, "0")
 	results := make([]metricsutil.GaugeLabelValues, len(mounts))
 
 	// Use a root namespace, so include namespace path
@@ -831,8 +856,10 @@ type RoleCounts struct {
 	GCPImpersonatedAccounts    int `json:"gcp_impersonated_accounts"`
 	LDAPDynamicRoles           int `json:"ldap_dynamic_roles"`
 	LDAPStaticRoles            int `json:"ldap_static_roles"`
+	LDAPLibrarySets            int `json:"ldap_library_sets"`
 	OpenLDAPDynamicRoles       int `json:"openldap_dynamic_roles"`
 	OpenLDAPStaticRoles        int `json:"openldap_static_roles"`
+	OpenLDAPLibrarySets        int `json:"openldap_library_sets"`
 	AlicloudDynamicRoles       int `json:"alicloud_dynamic_roles"`
 	RabbitMQDynamicRoles       int `json:"rabbitmq_dynamic_roles"`
 	ConsulDynamicRoles         int `json:"consul_dynamic_roles"`
@@ -840,149 +867,69 @@ type RoleCounts struct {
 	KubernetesDynamicRoles     int `json:"kubernetes_dynamic_roles"`
 	MongoDBAtlasDynamicRoles   int `json:"mongodb_atlas_dynamic_roles"`
 	TerraformCloudDynamicRoles int `json:"terraformcloud_dynamic_roles"`
+	OSLocalAccountRoles        int `json:"os_local_account_static_roles"`
+	TransformRoles             int `json:"transform_roles"`
+	SSHOTPRoles                int `json:"ssh_otp_roles"`
+	SSHCARoles                 int `json:"ssh_ca_roles"`
+	SpiffeRoles                int `json:"spiffe_roles"`
 }
 
-// getRoleCountsInternal gets the role counts for plugins.
-// includeLocal determines if local mounts are included
-// includeReplicated determines if replicated mounts are included
-// officialPluginsOnly determines if this function should include only plugins that are official,
-// which would exclude, for example, a custom built version of these plugins.
-func (c *Core) getRoleCountsInternal(includeLocal bool, includeReplicated bool, officialPluginsOnly bool) *RoleCounts {
-	if c.Sealed() {
-		c.logger.Debug("core is sealed, cannot access mounts table")
+type ManagedKeyCounts struct {
+	TotpKeys    int `json:"totp_keys"`
+	KmseKeys    int `json:"kmse_keys"`
+	TransitKeys int `json:"transit_keys"`
+}
+
+// SecretEngineResourceCounts holds counts of secret engine resources for product
+// usage telemetry. "Resource" is a catch-all for countable items that aren't keys
+// or roles (tracked by ManagedKeyCounts and RoleCounts), e.g. Transform
+// transformations/templates/alphabets/stores and KMIP scopes/scope roles/CAs.
+type SecretEngineResourceCounts struct {
+	TransformTransformations int `json:"transform_transformations"`
+	TransformTemplates       int `json:"transform_templates"`
+	TransformAlphabets       int `json:"transform_alphabets"`
+	TransformStores          int `json:"transform_stores"`
+	KmipScopes               int `json:"kmip_scopes"`
+	KmipScopeRoles           int `json:"kmip_scope_roles"`
+	KmipCas                  int `json:"kmip_cas"`
+}
+
+// GetRoleCountsForCluster returns the total role counts across all mounts for a primary or secondary cluster
+// For use in tests only
+func (c *Core) GetRoleCountsForCluster() *RoleCounts {
+	m, err := c.CountMetricsSecretMounts(false, false)
+	if err != nil {
 		return nil
 	}
-
-	ctx := namespace.RootContext(c.activeContext)
-	apiList := func(entry *MountEntry, apiPath string) []string {
-		listRequest := &logical.Request{
-			Operation: logical.ListOperation,
-			Path:      entry.namespace.Path + entry.Path + apiPath,
-		}
-
-		resp, err := c.router.Route(ctx, listRequest)
-		if err != nil || resp == nil {
-			return nil
-		}
-		rawKeys, ok := resp.Data["keys"]
-		if !ok {
-			return nil
-		}
-		keys, ok := rawKeys.([]string)
-		if !ok {
-			return nil
-		}
-		return keys
+	if c.isPrimary() {
+		return combineRoleCounts(m.LocalRoleCounts, m.ReplicatedRoleCounts)
 	}
-
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
-
-	var roles RoleCounts
-	for _, entry := range c.mounts.Entries {
-		if !entry.Local && !includeReplicated {
-			continue
-		}
-		if entry.Local && !includeLocal {
-			continue
-		}
-
-		pluginName := getAdjustedPluginType(entry)
-		if pluginName == "" {
-			continue
-		}
-
-		pluginVersion := entry.RunningVersion
-
-		if officialPluginsOnly {
-			runner, err := c.pluginCatalog.Get(ctx, pluginName, consts.PluginTypeSecrets, pluginVersion)
-			if err != nil {
-				continue
-			}
-
-			if !(isOfficialOrBuiltin(runner)) {
-				continue
-			}
-		}
-
-		switch pluginName {
-		case pluginconsts.SecretEngineAWS:
-			dynamicRoles := apiList(entry, "roles")
-			roles.AWSDynamicRoles += len(dynamicRoles)
-			staticRoles := apiList(entry, "static-roles")
-			roles.AWSStaticRoles += len(staticRoles)
-
-		case pluginconsts.SecretEngineAzure:
-			dynamicRoles := apiList(entry, "roles")
-			roles.AzureDynamicRoles += len(dynamicRoles)
-			staticRoles := apiList(entry, "static-roles")
-			roles.AzureStaticRoles += len(staticRoles)
-
-		case pluginconsts.SecretEngineDatabase:
-			dynamicRoles := apiList(entry, "roles")
-			roles.DatabaseDynamicRoles += len(dynamicRoles)
-			staticRoles := apiList(entry, "static-roles")
-			roles.DatabaseStaticRoles += len(staticRoles)
-
-		case pluginconsts.SecretEngineGCP:
-			rolesets := apiList(entry, "rolesets")
-			roles.GCPRolesets += len(rolesets)
-			staticAccounts := apiList(entry, "static-accounts")
-			roles.GCPStaticAccounts += len(staticAccounts)
-			impersonatedAccounts := apiList(entry, "impersonated-accounts")
-			roles.GCPImpersonatedAccounts += len(impersonatedAccounts)
-
-		case pluginconsts.SecretEngineLDAP:
-			dynamicRoles := apiList(entry, "role")
-			roles.LDAPDynamicRoles += len(dynamicRoles)
-			staticRoles := apiList(entry, "static-role")
-			roles.LDAPStaticRoles += len(staticRoles)
-
-		case pluginconsts.SecretEngineOpenLDAP:
-			dynamicRoles := apiList(entry, "role")
-			roles.OpenLDAPDynamicRoles += len(dynamicRoles)
-			staticRoles := apiList(entry, "static-role")
-			roles.OpenLDAPStaticRoles += len(staticRoles)
-
-		case pluginconsts.SecretEngineAlicloud:
-			dynamicRoles := apiList(entry, "role")
-			roles.AlicloudDynamicRoles += len(dynamicRoles)
-
-		case pluginconsts.SecretEngineRabbitMQ:
-			dynamicRoles := apiList(entry, "roles")
-			roles.RabbitMQDynamicRoles += len(dynamicRoles)
-
-		case pluginconsts.SecretEngineConsul:
-			dynamicRoles := apiList(entry, "roles")
-			roles.ConsulDynamicRoles += len(dynamicRoles)
-
-		case pluginconsts.SecretEngineNomad:
-			dynamicRoles := apiList(entry, "role")
-			roles.NomadDynamicRoles += len(dynamicRoles)
-
-		case pluginconsts.SecretEngineKubernetes:
-			dynamicRoles := apiList(entry, "roles")
-			roles.KubernetesDynamicRoles += len(dynamicRoles)
-
-		case pluginconsts.SecretEngineMongoDBAtlas:
-			dynamicRoles := apiList(entry, "roles")
-			roles.MongoDBAtlasDynamicRoles += len(dynamicRoles)
-
-		case pluginconsts.SecretEngineTerraform:
-			dynamicRoles := apiList(entry, "role")
-			roles.TerraformCloudDynamicRoles += len(dynamicRoles)
-		}
-	}
-
-	return &roles
+	return m.LocalRoleCounts
 }
 
-func (c *Core) GetRoleCounts() *RoleCounts {
-	return c.getRoleCountsInternal(true, true, false)
+// GetManagedKeyCountsForCluster returns the total managed key counts across all mounts
+func (c *Core) GetManagedKeyCountsForCluster() *ManagedKeyCounts {
+	m, err := c.CountMetricsSecretMounts(false, false)
+	if err != nil {
+		return nil
+	}
+	if c.isPrimary() {
+		return combineManagedKeyCounts(m.LocalManagedKeys, m.ReplicatedManagedKeys)
+	}
+	return m.LocalManagedKeys
 }
 
-func (c *Core) GetRoleCountsForCluster() *RoleCounts {
-	return c.getRoleCountsInternal(true, c.isPrimary(), false)
+// GetSecretEngineResourceCountsForCluster returns the total secret engine resource counts across all mounts for a primary or secondary cluster.
+// On performance secondaries, only local mounts are counted.
+func (c *Core) GetSecretEngineResourceCountsForCluster() *SecretEngineResourceCounts {
+	m, err := c.CountMetricsSecretMounts(false, false)
+	if err != nil {
+		return nil
+	}
+	if c.isPrimary() {
+		return combineSecretEngineResourceCounts(m.LocalSecretEngineResourceCounts, m.ReplicatedSecretEngineResourceCounts)
+	}
+	return m.LocalSecretEngineResourceCounts
 }
 
 // GetKvUsageMetrics returns a map of namespace paths to KV secret counts.
@@ -992,32 +939,18 @@ func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[str
 
 // GetKvUsageMetricsByNamespace returns a map of namespace paths to KV secret counts within a specific namespace.
 func (c *Core) GetKvUsageMetricsByNamespace(ctx context.Context, kvVersion string, nsPath string, includeLocal bool, includeReplicated bool, includeUnofficial bool) (map[string]int, error) {
-	mounts := c.findKvMounts()
+	if kvVersion != "0" && kvVersion != "1" && kvVersion != "2" {
+		return nil, fmt.Errorf("kv version %s not supported, must be 0, 1, or 2", kvVersion)
+	}
+	var mounts []*kvMount
 	if !includeUnofficial {
-		mounts = c.findOfficialKvMounts(ctx)
+		mounts = c.findOfficialKvMounts(ctx, includeLocal, includeReplicated, kvVersion)
+	} else {
+		mounts = c.findKvMounts(includeLocal, includeReplicated, kvVersion)
 	}
 	results := make(map[string]int)
 
-	if kvVersion == "1" || kvVersion == "2" {
-		var newMounts []*kvMount
-		for _, mount := range mounts {
-			if mount.Version == kvVersion {
-				newMounts = append(newMounts, mount)
-			}
-		}
-		mounts = newMounts
-	} else if kvVersion != "0" {
-		return results, fmt.Errorf("kv version %s not supported, must be 0, 1, or 2", kvVersion)
-	}
-
 	for _, m := range mounts {
-		if !includeLocal && m.Local {
-			continue
-		}
-		if !includeReplicated && !m.Local {
-			continue
-		}
-
 		if nsPath != "" && !strings.HasPrefix(m.Namespace.Path, nsPath) {
 			continue
 		}

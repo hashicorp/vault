@@ -55,10 +55,13 @@
 
                     <:emptyState>
                       {{#if (and (eq tabName "Secret sync") (not this.flags.secretsSyncIsActivated))}}
-                        <Hds::ApplicationState @align="center" as |A|>
-                          <A.Header @title="No secret sync clients" @titleTag="h2" />
-                          <A.Body @text="No data is available because Secrets Sync has not been activated." />
-                          <A.Footer as |F|>
+                        <Hds::ApplicationState class="is-marginless" as |A|>
+                          <A.Header @title="No secret sync clients" @titleTag="h2" data-test-empty-state-title />
+                          <A.Body
+                            @text="No data is available because Secrets Sync has not been activated."
+                            data-test-empty-state-message
+                          />
+                          <A.Footer data-test-empty-state-actions as |F|>
                             <F.LinkStandalone
                               @icon="chevron-right"
                               @iconPosition="trailing"
@@ -68,14 +71,15 @@
                           </A.Footer>
                         </Hds::ApplicationState>
                       {{else}}
-                        <Hds::ApplicationState @align="center" as |A|>
-                          <A.Header @title="No data found" @titleTag="h2" />
+                        <Hds::ApplicationState class="is-marginless" as |A|>
+                          <A.Header @title="No data found" @titleTag="h2" data-test-empty-state-title />
                           <A.Body
                             @text="Select another client type {{if
                               this.filtersAreApplied
                               'or update filters'
                               ''
                             }} to view client count data."
+                            data-test-empty-state-message
                           />
                         </Hds::ApplicationState>
                       {{/if}}
@@ -90,7 +94,7 @@
     </:table>
   </Clients::CountsCard>
 {{else}}
-  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
     <A.Header data-test-empty-state-title @title="No data found" @titleTag="h2" />
     <A.Body data-test-empty-state-message @text="No data to export in provided time range." />
   </Hds::ApplicationState>

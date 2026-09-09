@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -12,14 +12,26 @@
 {{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if @model.updatePath.canDelete}}
-        <Hds::Button @text="Delete template" @color="secondary" class="toolbar-button" {{on "click" this.onDelete}} />
+      {{#if @capabilities.canDelete}}
+        <Hds::Button
+          @text="Delete template"
+          @color="secondary"
+          class="toolbar-button"
+          data-test-delete
+          {{on "click" this.onDelete}}
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if @model.updatePath.canUpdate}}
-        <ToolbarLink @route="vault.cluster.secrets.backend.edit" @model={{concat "template/" @model.id}} data-test-edit-link>
+      {{#if @capabilities.canUpdate}}
+        <ToolbarSecretLink
+          @secret={{concat "template/" @form.data.name}}
+          @backend={{@form.data.backend}}
+          @mode="edit"
+          @replace={{true}}
+          data-test-edit-link
+        >
           Edit template
-        </ToolbarLink>
+        </ToolbarSecretLink>
       {{/if}}
     </ToolbarActions>
   </Toolbar>
@@ -30,29 +42,33 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <NamespaceReminder @mode={{@mode}} @noun="transform template" />
       <MessageError @errorMessage={{this.errorMessage}} />
-      {{#each @model.writeAttrs as |attr|}}
-        {{#if (and (eq attr.name "name") (eq @mode "edit"))}}
-          <label for={{attr.name}} class="is-label">
-            {{attr.options.label}}
-          </label>
-          {{#if attr.options.subText}}
-            <p class="sub-text">{{attr.options.subText}}</p>
+      {{#each @form.formFields as |field|}}
+        {{#if (and (not-eq field.name "encode_format") (not-eq field.name "decode_formats"))}}
+          {{#if (eq field.name "alphabet")}}
+            <TransformAdvancedTemplating @model={{@form}} />
+            <div class="form-section">
+              <SearchSelect
+                @id="alphabet"
+                @label={{field.options.label}}
+                @labelClass="title is-4"
+                @subText={{field.options.subText}}
+                @options={{this.alphabets}}
+                @inputValue={{@form.data.alphabet}}
+                @onChange={{fn (mut @form.alphabet)}}
+                @fallbackComponent="string-list"
+                @selectLimit={{1}}
+                data-test-field
+              />
+            </div>
+          {{else}}
+            <FormField
+              data-test-field
+              @attr={{field}}
+              @model={{@form}}
+              @mode={{@mode}}
+              @modelValidations={{this.modelValidations}}
+            />
           {{/if}}
-          <input
-            data-test-input={{attr.name}}
-            id={{attr.name}}
-            autocomplete="off"
-            spellcheck="false"
-            value={{or (get @model attr.name) attr.options.defaultValue}}
-            readonly={{true}}
-            class="field input is-readOnly"
-            type={{attr.type}}
-          />
-        {{else}}
-          {{#if (eq attr.name "alphabet")}}
-            <TransformAdvancedTemplating @model={{@model}} />
-          {{/if}}
-          <FormField data-test-field @attr={{attr}} @model={{@model}} />
         {{/if}}
       {{/each}}
     </div>
@@ -64,7 +80,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.list-root"
-            @model={{@model.backend}}
+            @model={{@form.data.backend}}
             @query={{hash tab="template"}}
           />
         {{else}}
@@ -72,8 +88,7 @@
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.show"
-            @models={{array @model.backend (concat "template/" @model.id)}}
-            @query={{hash tab="template"}}
+            @models={{array @form.data.backend (concat "template/" @form.data.name)}}
           />
         {{/if}}
       </Hds::ButtonSet>
@@ -81,13 +96,13 @@
   </form>
 {{else}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each @model.readAttrs as |attr|}}
-      {{#let (capitalize (or attr.options.label (humanize (dasherize attr.name)))) as |label|}}
-        {{#if (eq attr.name "decodeFormats")}}
-          {{#if (not (is-empty-value @model.decodeFormats))}}
+    {{#each @form.formFields as |field|}}
+      {{#let (capitalize (or field.options.label (humanize (dasherize field.name)))) as |label|}}
+        {{#if (eq field.name "decode_formats")}}
+          {{#if (not (is-empty-value (get @form.data field.name)))}}
             <InfoTableRow @label={{label}}>
               <div>
-                {{#each-in @model.decodeFormats as |key value|}}
+                {{#each-in (get @form.data field.name) as |key value|}}
                   <div class="transform-decode-formats">
                     <p class="is-label has-text-grey-light">{{key}}</p>
                     <p>{{value}}</p>
@@ -99,8 +114,8 @@
         {{else}}
           <InfoTableRow
             @label={{label}}
-            @value={{get @model attr.name}}
-            class={{if (eq attr.name "pattern") "transform-pattern-text"}}
+            @value={{get @form.data field.name}}
+            class={{if (eq field.name "pattern") "transform-pattern-text"}}
           />
         {{/if}}
       {{/let}}

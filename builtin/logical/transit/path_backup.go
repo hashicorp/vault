@@ -37,11 +37,15 @@ func (b *backend) pathBackup() *framework.Path {
 }
 
 func (b *backend) pathBackupRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	backup, err := b.lm.BackupPolicy(ctx, req.Storage, d.Get("name").(string))
+	name := d.Get("name").(string)
+	backup, err := b.lm.BackupPolicy(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyBackup, map[string]interface{}{
+		"key_name": name,
+	})
 	return &logical.Response{
 		Data: map[string]interface{}{
 			"backup": backup,

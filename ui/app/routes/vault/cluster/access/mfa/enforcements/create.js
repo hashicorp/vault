@@ -5,11 +5,15 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { fetchMfaMethods } from 'vault/utils/mfa-login-enforcement-helpers';
+
+import MfaLoginEnforcementForm from 'vault/forms/mfa/login-enforcement';
 
 export default class MfaLoginEnforcementCreateRoute extends Route {
-  @service store;
+  @service api;
 
-  model() {
-    return this.store.createRecord('mfa-login-enforcement');
+  async model() {
+    const methods = await fetchMfaMethods(this.api);
+    return { form: new MfaLoginEnforcementForm({}, { isNew: true }), methods };
   }
 }

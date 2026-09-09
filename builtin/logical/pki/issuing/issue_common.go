@@ -32,16 +32,10 @@ const (
 )
 
 var (
-	// labelRegex is a single label from a valid domain name and was extracted
+	// labelPattern is a single label from a valid domain name and was extracted
 	// from hostnameRegex below for use in leftWildLabelRegex, without any
 	// label separators (`.`).
-	labelRegex = `([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])`
-
-	// A note on hostnameRegex: although we set the StrictDomainName option
-	// when doing the idna conversion, this appears to only affect output, not
-	// input, so it will allow e.g. host^123.example.com straight through. So
-	// we still need to use this to check the output.
-	hostnameRegex = regexp.MustCompile(`^(\*\.)?(` + labelRegex + `\.)*` + labelRegex + `\.?$`)
+	labelPattern = `([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])`
 
 	// Left Wildcard Label Regex is equivalent to a single domain label
 	// component from hostnameRegex above, but with additional wildcard
@@ -51,11 +45,20 @@ var (
 	//  2. Wildcard exists at the start,
 	//  3. Wildcard exists at the end,
 	//  4. Wildcard exists in the middle.
-	allWildRegex       = `\*`
-	startWildRegex     = `\*` + labelRegex
-	endWildRegex       = labelRegex + `\*`
-	middleWildRegex    = labelRegex + `\*` + labelRegex
-	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
+	allWildPattern    = `\*`
+	startWildPattern  = `\*` + labelPattern
+	endWildPattern    = labelPattern + `\*`
+	middleWildPattern = labelPattern + `\*` + labelPattern
+
+	leftWildLabelPattern = fmt.Sprintf(`(%s|%s|%s|%s)`, allWildPattern, startWildPattern, endWildPattern, middleWildPattern)
+	hostnamePattern      = fmt.Sprintf(`(%s\.)*%s\.?$`, labelPattern, labelPattern)
+	wildHostnamePattern  = fmt.Sprintf(`^(%s\.)?%s`, leftWildLabelPattern, hostnamePattern)
+
+	// A note on hostnameRegex: although we set the StrictDomainName option
+	// when doing the idna conversion, this appears to only affect output, not
+	// input, so it will allow e.g. host^123.example.com straight through. So
+	// we still need to use this to check the output.
+	wildHostnameRegex = regexp.MustCompile(wildHostnamePattern)
 )
 
 type EntityInfo struct {
@@ -145,15 +148,11 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 			} else {
 				// Only add to dnsNames if it's actually a DNS name but convert
 				// idn first
-				p := idna.New(
-					idna.StrictDomainName(true),
-					idna.VerifyDNSLength(true),
-				)
-				converted, err := p.ToASCII(cn)
+				converted, err := idnaToASCII(cn)
 				if err != nil {
 					return nil, nil, errutil.UserError{Err: err.Error()}
 				}
-				if hostnameRegex.MatchString(converted) {
+				if wildHostnameRegex.MatchString(converted) {
 					dnsNames = append(dnsNames, converted)
 				}
 			}
@@ -169,16 +168,14 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 					} else {
 						// Only add to dnsNames if it's actually a DNS name but
 						// convert idn first
-						p := idna.New(
-							idna.StrictDomainName(true),
-							idna.VerifyDNSLength(true),
-						)
-						converted, err := p.ToASCII(v)
+						converted, err := idnaToASCII(v)
 						if err != nil {
 							return nil, nil, errutil.UserError{Err: err.Error()}
 						}
-						if hostnameRegex.MatchString(converted) {
+						if wildHostnameRegex.MatchString(converted) {
 							dnsNames = append(dnsNames, converted)
+						} else {
+							return nil, nil, errutil.UserError{Err: fmt.Sprintf("subject alternate name %s is not a valid DNS name and cannot be included as a SAN", v)}
 						}
 					}
 				}
@@ -481,6 +478,33 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 	return creation, warnings, nil
 }
 
+// idnaProfile is the IDNA profile used for DNS name conversion throughout this
+// package. Constructed once and reused.
+var idnaProfile = idna.New(
+	idna.StrictDomainName(true),
+	idna.VerifyDNSLength(true),
+)
+
+// idnaToASCII converts a domain name to its ASCII (Punycode) representation.
+// It handles FQDNs with trailing dots by stripping the dot before IDNA
+// conversion and re-appending it afterward, since Unicode 16 IDNA rules
+// (golang.org/x/net v0.58+) reject domains with trailing dots when DNS
+// length validation is enabled.
+func idnaToASCII(domain string) (string, error) {
+	fqdn := strings.HasSuffix(domain, ".")
+	if fqdn {
+		domain = domain[:len(domain)-1]
+	}
+	out, err := idnaProfile.ToASCII(domain)
+	if err != nil {
+		return "", err
+	}
+	if fqdn {
+		out += "."
+	}
+	return out, nil
+}
+
 // Given a set of requested names for a certificate, verifies that all of them
 // match the various toggles set in the role for controlling issuance.
 // If one does not pass, it is returned in the string argument.
@@ -544,6 +568,9 @@ func ValidateNames(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo,
 			return name
 		}
 
+		// At this point, we know reducedName does not have an '*'. If isWildcard is true,
+		// the '*' is in wildcardLabel
+
 		// AllowAnyName is checked after this because EnforceHostnames still
 		// applies when allowing any name. Also, we check the reduced name to
 		// ensure that we are not either checking a full email address or a
@@ -552,23 +579,20 @@ func ValidateNames(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo,
 			if reducedName != "" {
 				// See note above about splitLabels having only one segment
 				// and setting reducedName to the empty string.
-				p := idna.New(
-					idna.StrictDomainName(true),
-					idna.VerifyDNSLength(true),
-				)
-				converted, err := p.ToASCII(reducedName)
+				// Use idnaToASCII to handle trailing dots correctly; newer
+				// versions of golang.org/x/text/idna reject labels with them.
+				converted, err := idnaToASCII(reducedName)
 				if err != nil {
 					return name
 				}
-				if !hostnameRegex.MatchString(converted) {
+				if isWildcard {
+					// When a wildcard is specified, we additionally need to validate
+					// the label with the wildcard is correctly formed.
+					converted = wildcardLabel + "." + converted
+				}
+				if !wildHostnameRegex.MatchString(converted) {
 					return name
 				}
-			}
-
-			// When a wildcard is specified, we additionally need to validate
-			// the label with the wildcard is correctly formed.
-			if isWildcard && !leftWildLabelRegex.MatchString(wildcardLabel) {
-				return name
 			}
 		}
 
@@ -617,6 +641,7 @@ func ValidateNames(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo,
 			}
 		}
 
+		// Deprecated: AllowTokenDisplayName is retained for backward compatibility but has not been writeable since v0.4.0
 		if role.AllowTokenDisplayName {
 			if name == entityInfo.DisplayName {
 				continue
@@ -998,6 +1023,12 @@ func GetCertificateNotAfter(b logical.SystemView, role *RoleEntry, input CertNot
 		notAfter, err = time.Parse(time.RFC3339, notAfterAlt)
 		if err != nil {
 			return notAfter, warnings, errutil.UserError{Err: err.Error()}
+		}
+
+		requestedTTL := time.Until(notAfter)
+		if role.MaxTTL > 0 && requestedTTL > maxTTL {
+			warnings = append(warnings, fmt.Sprintf("not_after %q results in a lifetime %q which is longer than permitted maxTTL %q, so maxTTL is being used", notAfterAlt, requestedTTL, maxTTL))
+			notAfter = time.Now().Add(maxTTL)
 		}
 	} else {
 		notAfter = time.Now().Add(ttl)

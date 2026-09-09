@@ -1,0 +1,3 @@
+```release-note:bug
+database/mssql: Fix "sysadmin" requirement during lease revocation by replacing the undocumented `sp_msloginmappings` procedure with a granular metadata query. This allows the plugin to function with `VIEW ANY DEFINITION` instead of full `sysadmin` privileges.
+```

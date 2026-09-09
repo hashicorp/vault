@@ -4,12 +4,15 @@
  */
 
 import Route from '@ember/routing/route';
-import { service } from '@ember/service';
+import OidcAssignmentForm from 'vault/forms/oidc/assignment';
 
 export default class OidcAssignmentsCreateRoute extends Route {
-  @service store;
-
   model() {
-    return this.store.createRecord('oidc/assignment');
+    const { entities, groups } = this.modelFor('vault.cluster.access.oidc.assignments');
+    return {
+      form: new OidcAssignmentForm({}, { isNew: true }),
+      entities,
+      groups,
+    };
   }
 }

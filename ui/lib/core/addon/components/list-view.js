@@ -14,7 +14,10 @@ import { pluralize } from 'ember-inflector';
  * @example
  * <ListView @items={{hash meta=(hash currentPage=1 total=1 pageSize=1)}} @itemNoun="role" @paginationRouteName="vault" as |list|>
  *   {{#if list.empty}}
- *     <list.empty @title="No roles here" />
+ *     <list.empty data-test-list-view-empty-state as |A|>
+ *       <A.Header @title={{list.emptyTitle}} @titleTag="h2" />
+ *       <A.Body @text={{list.emptyMessage}} />
+ *     </list.empty>
  *   {{else}}
  *     <div>
  *       my item
@@ -28,7 +31,8 @@ import { pluralize } from 'ember-inflector';
  * @param {string} [paginationRouteName] - The link used in the ListPagination component.
  * @yields {object} Yields the current item in the loop.
  * @yields If there are no objects in items, then `empty` will be yielded - this is an instance of
- * the EmptyState component.
+ * `Hds::ApplicationState`.
+ * @yields `emptyTitle` and `emptyMessage` are yielded for convenience when rendering the `empty` block.
  * @yields If `item` or `empty` isn't present on the object, the component can still yield a block - this is
  * useful for showing states where there are items but there may be a filter applied that returns an
  * empty set.

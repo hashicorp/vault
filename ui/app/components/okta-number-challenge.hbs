@@ -19,10 +19,10 @@
         {{@correctAnswer}}
       </h1>
     {{else}}
-      <div class="has-top-margin-l has-bottom-margin-m is-flex-row">
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="8" class="has-top-margin-l has-bottom-margin-m">
         <Hds::Icon @name="loading" @isInline={{true}} />
-        <p class="has-left-margin-xs" data-test-loading>Please wait...</p>
-      </div>
+        <p data-test-loading>Please wait...</p>
+      </Hds::Layout::Flex>
     {{/if}}
   </div>
   <Hds::Button

@@ -7,6 +7,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { fetchMfaLoginEnforcements } from 'vault/utils/mfa-login-enforcement-helpers';
+import MfaLoginEnforcementForm from 'vault/forms/mfa/login-enforcement';
 
 /**
  * @module MfaLoginEnforcementHeader
@@ -27,7 +29,7 @@ import { action } from '@ember/object';
  */
 
 export default class MfaLoginEnforcementHeaderComponent extends Component {
-  @service store;
+  @service api;
 
   constructor() {
     super(...arguments);
@@ -36,29 +38,31 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
     }
   }
 
-  @tracked enforcements = [];
+  breadcrumbs = [
+    {
+      label: 'Vault',
+      route: 'vault.cluster.dashboard',
+      icon: 'vault',
+    },
+    {
+      label: 'Multi-factor authentication',
+      route: 'vault.cluster.access.mfa.methods.index',
+    },
+    {
+      label: 'Enforcements',
+      route: 'vault.cluster.access.mfa.enforcements.index',
+    },
+    {
+      label: this.args.heading,
+    },
+  ];
 
-  get breadcrumbs() {
-    return [
-      {
-        label: 'Vault',
-        route: 'vault.cluster.dashboard',
-        icon: 'vault',
-      },
-      {
-        label: 'Enforcements',
-        route: 'vault.cluster.access.mfa.enforcements.index',
-      },
-      {
-        label: this.args.heading,
-      },
-    ];
-  }
+  @tracked enforcements = [];
 
   async fetchEnforcements() {
     try {
       // cache initial values for lookup in select handler
-      this._enforcements = await this.store.query('mfa-login-enforcement', {});
+      this._enforcements = await fetchMfaLoginEnforcements(this.api);
       this.enforcements = [...this._enforcements];
     } catch (error) {
       this.enforcements = [];
@@ -68,7 +72,12 @@ export default class MfaLoginEnforcementHeaderComponent extends Component {
   @action
   onEnforcementSelect([name]) {
     // search select returns array of strings, in this case enforcement name
-    // lookup model and pass to callback
-    this.args.onEnforcementSelect(this._enforcements.find((enf) => enf.name === name));
+    // lookup enforcement data and wrap in form instance
+    const enforcementData = this._enforcements.find((enf) => enf.id === name);
+    if (enforcementData) {
+      // Create a form instance from the API data
+      const enforcementForm = new MfaLoginEnforcementForm(enforcementData, { isNew: false });
+      this.args.onEnforcementSelect(enforcementForm);
+    }
   }
 }

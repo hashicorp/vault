@@ -11,11 +11,12 @@ import { getOwner } from '@ember/owner';
 import { findDestination, syncDestinations } from 'core/helpers/sync-destinations';
 import { next } from '@ember/runloop';
 import apiMethodResolver from 'sync/utils/api-method-resolver';
+import { DestinationType } from 'sync/utils/constants';
 
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { CapabilitiesMap, EngineOwner } from 'vault/app-types';
-import type { DestinationName, DestinationType, ListDestination } from 'vault/sync';
+import type { DestinationName, ListDestination } from 'vault/sync';
 import type Transition from '@ember/routing/transition';
 import type { PaginatedMetadata } from 'core/utils/paginate-list';
 import type ApiService from 'vault/services/api';

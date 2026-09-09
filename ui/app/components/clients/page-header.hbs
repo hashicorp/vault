@@ -9,21 +9,6 @@
       @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Client usage")}}
     />
   </:breadcrumbs>
-  <:subtitle>
-    {{#if @activityTimestamp}}
-      Dashboard last updated:
-      {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
-      <Hds::Button
-        @color="tertiary"
-        @icon="reload"
-        @isIconOnly={{true}}
-        @size="small"
-        @text="Refresh page"
-        data-test-button="Refresh page"
-        {{on "click" this.refreshRoute}}
-      />
-    {{/if}}
-  </:subtitle>
   <:description>
     {{#if (and this.version.isEnterprise @billingStartTime)}}
       {{! Enterprise should always have a @billingStartTime but as a fallback allow the user to query dates manually. }}
@@ -56,11 +41,32 @@
         </Hds::Text::Body>
       </div>
     {{/if}}
+
+    View the number and source of active Vault clients on the cluster to track license compliance.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/client-count"}}>
+      Learn more
+    </Hds::Link::Inline>
+
+    {{#if @activityTimestamp}}
+      <Hds::Text::Body @tag="p" @color="faint">
+        Dashboard last updated:
+        {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+        <Hds::Button
+          @color="tertiary"
+          @icon="reload"
+          @isIconOnly={{true}}
+          @size="small"
+          @text="Refresh page"
+          data-test-button="Refresh page"
+          {{on "click" this.refreshRoute}}
+        />
+      </Hds::Text::Body>
+    {{/if}}
   </:description>
   <:actions>
     {{#if this.showExportButton}}
       <Hds::Button
-        class="has-font-weight-normal align-items-end align-self-end"
+        class="has-font-weight-normal"
         data-test-export-button
         @text="Export activity data"
         @color="secondary"

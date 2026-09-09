@@ -51,17 +51,15 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		name := d.Get("name").(string)
 
 		p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
-			Storage: req.Storage,
-			Name:    name,
+			Storage:     req.Storage,
+			Name:        name,
+			WriteLocked: true,
 		}, b.GetRandomReader())
 		if err != nil {
 			return nil, err
 		}
 		if p == nil {
 			return logical.ErrorResponse("invalid key name"), logical.ErrInvalidRequest
-		}
-		if !b.System().CachingDisabled() {
-			p.Lock(true)
 		}
 		defer p.Unlock()
 
@@ -100,7 +98,9 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 			return nil, err
 		}
 
-		return b.formatKeyPolicy(p, nil)
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyTrim, b.keyPolicyObservationMetadata(p))
+
+		return b.formatKeyPolicy(ctx, p, nil)
 	}
 }
 

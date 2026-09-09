@@ -182,19 +182,6 @@ module('Integration | Component | clients/date-range', function (hooks) {
         .hasAttribute('aria-expanded', 'false', 'it closes dropdown after selection');
     });
 
-    test('it renders billing period text', async function (assert) {
-      await this.renderComponent();
-      assert
-        .dom(this.element)
-        .hasText('Change billing period January 2018', 'it renders billing related text');
-    });
-
-    test('it renders data period text for HVD managed clusters', async function (assert) {
-      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-      await this.renderComponent();
-      assert.dom(this.element).hasText('Change data period January 2018');
-    });
-
     test('it should send an empty string for start_time when selecting current period', async function (assert) {
       await this.renderComponent();
 

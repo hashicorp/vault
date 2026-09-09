@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: when in common criteria mode, don't allow upload of certificates without a chain of trust.
+```

@@ -3,16 +3,17 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Unwrap data">
+<Page::Header
+  @title="Unwrap data"
+  @description="Retrieve the original secret data from a wrapping token and automatically invalidate the token."
+>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
   </:breadcrumbs>
 </Page::Header>
 
 {{#if this.unwrapData}}
-  <Hds::Tabs as |T|>
-    <T.Tab data-test-tab="data">Data</T.Tab>
-    <T.Tab data-test-tab="details">Wrap Details</T.Tab>
+  <Page::Tabs @tabs={{array (hash key="data" label="Data") (hash key="details" label="Wrap Details")}} as |T|>
     <T.Panel>
       <JsonEditor
         class="has-top-padding-m"
@@ -28,7 +29,7 @@
         {{/each-in}}
       </div>
     </T.Panel>
-  </Hds::Tabs>
+  </Page::Tabs>
   <Hds::ButtonSet class="has-top-padding-m">
     <Hds::Copy::Button
       @text="Copy unwrapped data"
@@ -40,7 +41,7 @@
   </Hds::ButtonSet>
 {{else}}
   <form {{on "submit" this.handleSubmit}}>
-    <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="box is-fullwidth is-marginless">
       <NamespaceReminder @mode="perform" @noun="unwrap" />
       <MessageError @errorMessage={{this.errorMessage}} />
       <div class="field">

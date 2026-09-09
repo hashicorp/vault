@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render, settled, triggerEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -13,6 +13,7 @@ import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/form-selectors';
+import PolicyForm from 'vault/forms/policy';
 
 async function setEditorValue(value) {
   await waitFor('.cm-editor');
@@ -26,20 +27,25 @@ module('Integration | Component | policy-form', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     // Set model here with "ACL" policy type for so PolicyForm component consistently has a @model arg
-    this.model = this.store.createRecord('policy/acl');
+    this.form = new PolicyForm(
+      {
+        enforcementLevel: 'hard-mandatory',
+      },
+      { isNew: true }
+    );
+    this.form.policyType = 'acl';
     this.onSave = sinon.spy();
     this.onCancel = sinon.spy();
     this.isCompact = undefined;
-    this.server.put('/sys/policies/acl/:name', (_, req) => {
+    this.server.post('/sys/policies/acl/:name', (_, req) => {
       if (req.params.name === 'bad-policy') {
         return overrideResponse(400, { errors: ['An error occurred'] });
       }
       return overrideResponse(204);
     });
-    this.server.put('/sys/policies/rgp/:name', () => overrideResponse(204));
-    this.server.put('/sys/policies/egp/:name', () => overrideResponse(204));
+    this.server.post('/sys/policies/rgp/:name', () => overrideResponse(204));
+    this.server.post('/sys/policies/egp/:name', () => overrideResponse(204));
 
     this.assertNoVisualEditor = (assert, msg = 'it does not render visual policy builder') => {
       assert.dom(GENERAL.radioByAttr()).doesNotExist('it does not render radio options');
@@ -50,7 +56,7 @@ module('Integration | Component | policy-form', function (hooks) {
     this.renderComponent = () => {
       return render(
         hbs`<PolicyForm
-          @model={{this.model}}
+          @form={{this.form}}
           @onCancel={{this.onCancel}}
           @onSave={{this.onSave}}
           @isCompact={{this.isCompact}}
@@ -122,52 +128,93 @@ module('Integration | Component | policy-form', function (hooks) {
     `;
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('name'), 'Foo');
-    assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+    assert.strictEqual(this.form.name, 'foo', 'Input sets name on model to lowercase input');
     await click(GENERAL.radioByAttr('code'));
     await setEditorValue(policy);
-    assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
+    assert.strictEqual(this.form.policy, policy, 'Policy editor sets policy on policy form class');
 
     await click(GENERAL.cancelButton);
     assert.true(this.onSave.notCalled, 'onSave is not called yet');
     assert.true(this.onCancel.calledOnce, 'Form calls onCancel');
   });
 
-  test('it does not save edits when the cancel button is clicked', async function (assert) {
-    this.model.name = 'foo';
-    this.model.policy = 'some policy content';
-    this.model.save();
+  test('it shows the error message on form when save returns an API error', async function (assert) {
+    this.form.name = 'bad-policy';
+    this.form.policy = 'some policy content';
     await this.renderComponent();
-    await setEditorValue('updated');
-    assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
-    await click(GENERAL.cancelButton);
-    assert.true(this.onSave.notCalled, 'onSave is not called yet');
-    assert.true(this.onCancel.calledOnce, 'Form calls onCancel');
-
-    await this.renderComponent();
-    assert.strictEqual(
-      this.model.policy,
-      'some policy content',
-      'Policy editor shows original policy content, meaning that onCancel worked successfully'
-    );
-  });
-
-  test('it shows the error message on form when save fails', async function (assert) {
-    this.model.name = 'bad-policy';
-    this.model.policy = 'some policy content';
-    await this.renderComponent();
+    // Change editors so we don't trigger visual editor validations
+    await click(GENERAL.radioByAttr('code'));
     await click(GENERAL.submitButton);
     assert.true(this.onSave.notCalled, 'onSave is not called yet');
     assert.dom(GENERAL.messageError).includesText('An error occurred');
   });
+
+  test('it does not save a policy when the name is only whitespace', async function (assert) {
+    const requests = [];
+    this.server.post('/sys/policies/acl/:name', (_, req) => {
+      requests.push(req.params.name);
+      return overrideResponse(204);
+    });
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '    ');
+    // Change editors so we don't trigger visual editor validations
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('name'))
+      .hasText('Policy name cannot be empty or whitespace-only.', 'it renders inline name validation');
+    assert.dom(GENERAL.messageError).includesText('There is an error with this form.');
+    assert.strictEqual(requests.length, 0, 'it does not make a request to save the policy');
+    assert.true(this.onSave.notCalled, 'onSave is not called');
+  });
+
+  test('it clears the name validation error when the name is updated', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '  ');
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error renders');
+
+    await fillIn(GENERAL.inputByAttr('name'), 'my-policy');
+    assert.dom(GENERAL.validationErrorByAttr('name')).doesNotExist('validation error is cleared');
+
+    await click(GENERAL.submitButton);
+    assert.true(this.onSave.calledOnce, 'onSave is called after the name is corrected');
+  });
+
+  test('it trims leading and trailing whitespace from the policy name on save', async function (assert) {
+    const requests = [];
+    this.server.post('/sys/policies/acl/:name', (_, req) => {
+      requests.push(req.params.name);
+      return overrideResponse(204);
+    });
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), '  My-Policy  ');
+    await click(GENERAL.radioByAttr('code'));
+    await setEditorValue('path "secret/*" { capabilities = ["read"] }');
+    await click(GENERAL.submitButton);
+
+    assert.deepEqual(requests, ['my-policy'], 'it saves the trimmed, lowercased name');
+    assert.strictEqual(this.form.name, 'my-policy', 'form data holds the trimmed name');
+  });
+
   // End shared functionality tests
 
   module('ACL', function (hooks) {
     hooks.beforeEach(function () {
-      this.model = this.store.createRecord('policy/acl');
+      this.form = new PolicyForm(
+        {
+          enforcementLevel: 'hard-mandatory',
+        },
+        { isNew: true }
+      );
+      this.form.policyType = 'acl';
       this.policy = `path "secret/*" {
       capabilities = [ "create", "read", "update", "list" ]
-    }
-    `;
+    }`;
     });
 
     test('it renders the form for new ACL policy', async function (assert) {
@@ -186,32 +233,41 @@ module('Integration | Component | policy-form', function (hooks) {
     test('it saves a new ACL policy using the code editor', async function (assert) {
       await this.renderComponent();
       await fillIn(GENERAL.inputByAttr('name'), 'Foo');
-      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      assert.strictEqual(this.form.name, 'foo', 'Input sets name on model to lowercase input');
       await click(GENERAL.radioByAttr('code'));
       await setEditorValue(this.policy);
-      assert.strictEqual(this.model.policy, this.policy, 'Policy editor sets policy on model');
+      assert.strictEqual(this.form.policy, this.policy, 'Policy editor sets policy on model');
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
       await click(GENERAL.submitButton);
-      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.true(this.onSave.calledOnce, 'onSave is called');
       const [actual] = this.onSave.lastCall.args;
       assert.strictEqual(actual.policy, this.policy, 'onSave is called with expected policy');
     });
 
     test('it renders the form to edit existing ACL policy', async function (assert) {
-      this.model.name = 'bar';
-      this.model.policy = this.policy;
-      this.model.save();
+      this.form.name = 'bar';
+      this.form.policy = this.policy;
+      this.form.isNew = false;
       await this.renderComponent();
       assert.dom(GENERAL.inputByAttr('name')).doesNotExist('Name input is not rendered');
       assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
       this.assertNoVisualEditor(assert, 'it does not render visual editor when editing an ACL policy');
 
+      assert
+        .dom(GENERAL.accordionButton('Automation snippets'))
+        .exists('Automation snippets are still visible when editing an existing ACL policy');
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert.dom(GENERAL.hdsTab('terraform')).exists();
+      assert.dom(GENERAL.hdsTab('cli')).exists();
+
       await setEditorValue('updated');
-      assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
+      assert.strictEqual(this.form.policy, 'updated', 'Policy editor updates policy value on model');
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
       assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
       await click(GENERAL.submitButton);
-      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.true(this.onSave.calledOnce, 'onSave is called');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, this.form.policy, 'onSave is called with expected policy');
     });
 
     test('it renders the correct title for ACL example for the policy example modal', async function (assert) {
@@ -231,7 +287,7 @@ module('Integration | Component | policy-form', function (hooks) {
       assert.dom(GENERAL.codemirror).doesNotExist('JSON editor does not render by default');
       assert
         .dom(GENERAL.fieldByAttr('visual editor'))
-        .hasTextContaining('Rule Show preview')
+        .hasTextContaining('Path Show preview')
         .exists('it renders visual policy editor by default');
       // Select Code editor
       await click(GENERAL.radioByAttr('code'));
@@ -246,7 +302,7 @@ module('Integration | Component | policy-form', function (hooks) {
       assert.dom(GENERAL.codemirror).doesNotExist();
       assert
         .dom(GENERAL.fieldByAttr('visual editor'))
-        .hasTextContaining('Rule Show preview')
+        .hasTextContaining('Path Show preview')
         .exists('Visual editor renders after selecting radio');
     });
 
@@ -259,7 +315,7 @@ path "second/path" {
 }`;
       await this.renderComponent();
       await fillIn(GENERAL.inputByAttr('name'), 'Foo');
-      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      assert.strictEqual(this.form.name, 'foo', 'Input sets name on model to lowercase input');
       // Set up first rule
       await fillIn(GENERAL.inputByAttr('path'), 'first/path');
       await click(GENERAL.checkboxByAttr('read'));
@@ -268,12 +324,40 @@ path "second/path" {
       await fillIn(`${GENERAL.cardContainer('1')} ${GENERAL.inputByAttr('path')}`, 'second/path');
       await click(`${GENERAL.cardContainer('1')} ${GENERAL.checkboxByAttr('update')}`);
       // Save policy
-      assert.strictEqual(this.model.policy, expectedPolicy, 'Policy editor sets policy on model');
+      assert.strictEqual(this.form.policy, expectedPolicy, 'Policy editor sets policy on model');
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
       await click(GENERAL.submitButton);
-      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.true(this.onSave.calledOnce, 'onSave is called');
       const [actual] = this.onSave.lastCall.args;
-      assert.strictEqual(actual.policy, expectedPolicy, 'save is called with expected policy');
+      assert.strictEqual(actual.policy, expectedPolicy, 'onSave is called with expected policy');
+    });
+
+    test('it shows validation errors for invalid policy stanzas (empty path)', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+      await click(GENERAL.submitButton);
+
+      assert.true(this.onSave.notCalled, 'onSave is not called');
+      assert
+        .dom(GENERAL.messageError)
+        .exists()
+        .hasText('Error There is an error with this form. Invalid policy content.');
+      assert.dom(GENERAL.validationErrorByAttr('path-0')).hasText('Path is required.');
+      assert
+        .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+        .doesNotExist('capabilities do not block save');
+    });
+
+    test('it still saves from the code editor when visual stanzas are invalid', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.submitButton);
+      assert.true(this.onSave.calledOnce, 'onSave is called');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, this.policy, 'onSave is called with expected policy');
+      assert.dom(GENERAL.messageError).doesNotExist('validation banner does not render in code editor');
     });
 
     // Automation snippets are only supported for "ACL" policy types at this time
@@ -285,7 +369,7 @@ path "second/path" {
       assert.dom(GENERAL.hdsTab('cli')).exists().hasAttribute('aria-selected', 'false');
       const expectedTfvp = `resource "vault_policy" "<local identifier>" {
       name = "<policy name>"
-    
+
       policy = <<EOT
       path "" {
         capabilities = []
@@ -325,6 +409,105 @@ EOT
 }
 EOT`;
       assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
+    });
+
+    test('it updates snippets from the code editor', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'my-simple-policy');
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.accordionButton('Automation snippets'));
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+  name = "my-simple-policy"
+
+  policy = <<EOT
+${this.policy}
+EOT
+}`;
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasText(expectedTfvp, 'terraform snippet renders policy from the code editor');
+      const expectedCli = `vault policy write my-simple-policy - <<EOT
+${this.policy}
+EOT`;
+      assert
+        .dom(GENERAL.fieldByAttr('cli'))
+        .hasText(expectedCli, 'cli snippet renders policy from the code editor');
+    });
+
+    test('it updates snippets when the code editor changes after using the visual editor', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('name'), 'my-secure-policy');
+      // Build a policy using the visual editor first
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      await click(GENERAL.checkboxByAttr('patch'));
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('capabilities = ["patch"]', 'snippet renders visual editor stanzas');
+      // Switching to the code editor and editing should update the snippets
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining(
+          'capabilities = [ "create", "read", "update", "list" ]',
+          'terraform snippet updates from the code editor'
+        );
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .doesNotIncludeText('"patch"', 'terraform snippet no longer renders visual editor stanzas');
+      assert
+        .dom(GENERAL.fieldByAttr('cli'))
+        .hasTextContaining(
+          'capabilities = [ "create", "read", "update", "list" ]',
+          'cli snippet updates from the code editor'
+        );
+    });
+
+    test('it updates snippets after uploading a policy file', async function (assert) {
+      const file = new File([this.policy], 'test-policy.txt');
+      await this.renderComponent();
+      await click(GENERAL.toggleInput('Upload file'));
+      await triggerEvent(GENERAL.fileInput, 'change', { files: [file] });
+      await waitFor('.cm-editor');
+      await settled();
+      await click(GENERAL.accordionButton('Automation snippets'));
+      const expectedTfvp = `resource "vault_policy" "<local identifier>" {
+  name = "test-policy"
+
+  policy = <<EOT
+${this.policy}
+EOT
+}`;
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasText(expectedTfvp, 'terraform snippet renders the uploaded policy');
+      const expectedCli = `vault policy write test-policy - <<EOT
+${this.policy}
+EOT`;
+      assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli, 'cli snippet renders the uploaded policy');
+    });
+
+    test('it reverts snippets to visual editor stanzas after discarding code editor changes', async function (assert) {
+      await this.renderComponent();
+      await fillIn(GENERAL.inputByAttr('path'), 'my/super/secret/*');
+      await click(GENERAL.checkboxByAttr('patch'));
+      await click(GENERAL.radioByAttr('code'));
+      await setEditorValue(this.policy);
+      await click(GENERAL.accordionButton('Automation snippets'));
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('path "secret/*"', 'snippet renders code editor policy');
+      // Switch back to the visual editor and discard code editor changes
+      await click(GENERAL.radioByAttr('visual'));
+      await click(GENERAL.confirmButton);
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .hasTextContaining('path "my/super/secret/*"', 'snippet reverts to visual editor stanzas');
+      assert
+        .dom(GENERAL.fieldByAttr('terraform'))
+        .doesNotIncludeText('path "secret/*"', 'snippet no longer renders discarded code editor policy');
     });
 
     module('switch editors modal', function (hooks) {
@@ -423,7 +606,13 @@ capabilities = ["read"]
 
   module('RGP', function (hooks) {
     hooks.beforeEach(function () {
-      this.model = this.store.createRecord('policy/rgp');
+      this.form = new PolicyForm(
+        {
+          enforcementLevel: 'hard-mandatory',
+        },
+        { isNew: true }
+      );
+      this.form.policyType = 'rgp';
       this.policy = `import "strings"
 precond = rule {
     strings.has_prefix(request.path, "sys/policies/admin")
@@ -442,29 +631,33 @@ main = rule when precond {
       this.assertNoVisualEditor(assert, 'it hides visual editor for RGP policy types');
 
       await fillIn(GENERAL.inputByAttr('name'), 'Foo');
-      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      assert.strictEqual(this.form.name, 'foo', 'Input sets name on model to lowercase input');
       await setEditorValue(this.policy);
-      assert.strictEqual(this.model.policy, this.policy, 'Policy editor sets policy on model');
+      assert.strictEqual(this.form.policy, this.policy, 'Policy editor sets policy on model');
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
       assert.dom(GENERAL.submitButton).hasText('Create policy');
       await click(GENERAL.submitButton);
-      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.true(this.onSave.calledOnce, 'onSave is called');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, this.policy, 'onSave is called with expected policy');
     });
 
     test('it renders the form to edit existing RGP policy', async function (assert) {
-      this.model.name = 'bar';
-      this.model.policy = this.policy;
-      this.model.save();
+      this.form.name = 'bar';
+      this.form.policy = this.policy;
+      this.form.isNew = false;
       await this.renderComponent();
       assert.dom(GENERAL.inputByAttr('name')).doesNotExist('Name input is not rendered');
       assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
 
       await setEditorValue('updated');
-      assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
+      assert.strictEqual(this.form.policy, 'updated', 'Policy editor updates policy value on model');
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
       assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
       await click(GENERAL.submitButton);
-      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.true(this.onSave.calledOnce, 'onSave is called');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, this.form.policy, 'onSave is called with expected policy');
     });
 
     test('it renders the correct title for RGP example for the policy example modal', async function (assert) {
@@ -481,7 +674,13 @@ main = rule when precond {
 
   module('EGP', function (hooks) {
     hooks.beforeEach(function () {
-      this.model = this.store.createRecord('policy/egp');
+      this.form = new PolicyForm(
+        {
+          enforcementLevel: 'hard-mandatory',
+        },
+        { isNew: true }
+      );
+      this.form.policyType = 'egp';
       this.policy = `import "time"
 workdays = rule {
     time.now.weekday > 0 and time.now.weekday < 6
@@ -504,39 +703,43 @@ main = rule {
       this.assertNoVisualEditor(assert, 'it hides visual editor for EGP policy types');
 
       await fillIn(GENERAL.inputByAttr('name'), 'Foo');
-      assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+      assert.strictEqual(this.form.name, 'foo', 'Input sets name on model to lowercase input');
       await setEditorValue(this.policy);
-      assert.strictEqual(this.model.policy, this.policy, 'Policy editor sets policy on model');
+      assert.strictEqual(this.form.policy, this.policy, 'Policy editor sets policy on model');
       assert.dom(GENERAL.fieldByAttr('paths')).exists('Paths field exists');
       assert.dom(GENERAL.stringListByIdx(0)).exists('0 field exists');
       await fillIn(GENERAL.stringListByIdx(0), 'my path');
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
       assert.dom(GENERAL.submitButton).hasText('Create policy');
       await click(GENERAL.submitButton);
-      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.true(this.onSave.calledOnce, 'onSave is called');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, this.policy, 'onSave is called with expected policy');
     });
 
     test('it renders the form to edit existing EGP policy', async function (assert) {
-      this.model.name = 'bar';
-      this.model.policy = this.policy;
-      this.model.paths = ['first path'];
-      this.model.save();
+      this.form.name = 'bar';
+      this.form.policy = this.policy;
+      this.form.paths = ['first path'];
+      this.form.isNew = false;
       await this.renderComponent();
 
       assert.dom(GENERAL.inputByAttr('name')).doesNotExist('Name input is not rendered');
       assert.dom(GENERAL.toggleInput('Upload file')).doesNotExist('Upload file toggle does not exist');
       await setEditorValue('updated');
-      assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
+      assert.strictEqual(this.form.policy, 'updated', 'Policy editor updates policy value on model');
       await fillIn(GENERAL.stringListByIdx(1), 'second path');
       assert.strictEqual(
-        JSON.stringify(this.model.paths),
+        JSON.stringify(this.form.paths),
         '["first path","second path"]',
         'Second path field is updated on model'
       );
       assert.true(this.onSave.notCalled, 'onSave is not called yet');
       assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
       await click(GENERAL.submitButton);
-      assert.true(this.onSave.calledOnceWith(this.model), 'onSave is called with model');
+      assert.true(this.onSave.calledOnce, 'onSave is called');
+      const [actual] = this.onSave.lastCall.args;
+      assert.strictEqual(actual.policy, this.form.policy, 'onSave is called with expected policy');
     });
 
     test('it renders the correct title for EGP example for the policy example modal', async function (assert) {

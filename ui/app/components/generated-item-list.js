@@ -32,6 +32,11 @@ export default class GeneratedItemList extends Component {
   get breadcrumbs() {
     return [
       {
+        label: 'Vault',
+        route: 'vault.cluster.dashboard',
+        icon: 'vault',
+      },
+      {
         label: 'Auth Methods',
         route: 'vault.cluster.access.methods',
       },

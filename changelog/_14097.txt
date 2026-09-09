@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/dashboard: Reorganized dashboard widgets to improve layout and usability. Updated widgets to use HDS table components for better consistency. Enhanced the Quick Actions card with frequently used links alongside existing actions.
+```

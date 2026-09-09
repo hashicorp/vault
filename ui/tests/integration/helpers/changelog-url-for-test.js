@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { changelogUrlFor } from '../../../helpers/changelog-url-for';
 
 const CHANGELOG_URL = 'https://www.github.com/hashicorp/vault/blob/main/CHANGELOG.md#';

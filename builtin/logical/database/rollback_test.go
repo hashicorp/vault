@@ -5,6 +5,11 @@ package database
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -19,6 +24,7 @@ import (
 const (
 	databaseUser    = "postgres"
 	defaultPassword = "secret"
+	newPrivateKey   = "new-private-key-pem"
 )
 
 // Tests that the WAL rollback function rolls back the database password.
@@ -27,8 +33,7 @@ const (
 //   - Password has been altered on the database
 //   - Password has not been updated in storage
 func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -165,8 +170,7 @@ func TestBackend_RotateRootCredentials_WAL_rollback(t *testing.T) {
 //   - Password has not been altered on the database
 //   - Password has not been updated in storage
 func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -264,8 +268,7 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_1(t *testing.T) {
 //   - Password has been altered on the database
 //   - Password has been updated in storage
 func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
+	_, sys := getClusterPostgresDB(t)
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -406,5 +409,417 @@ func TestBackend_RotateRootCredentials_WAL_no_rollback_2(t *testing.T) {
 	credResp, err = lb.HandleRequest(namespace.RootContext(nil), credReq)
 	if err != nil || (credResp != nil && credResp.IsError()) {
 		t.Fatalf("err:%s resp:%v\n", err, credResp)
+	}
+}
+
+// failingInitializeDatabase is a v5.Database mock whose Initialize always
+// returns a fixed error. Used to simulate a persistent connection failure
+// (wrong credentials, network refused) without a blocking timeout.
+type failingInitializeDatabase struct {
+	err error
+}
+
+func (d *failingInitializeDatabase) Initialize(_ context.Context, _ v5.InitializeRequest) (v5.InitializeResponse, error) {
+	return v5.InitializeResponse{}, d.err
+}
+
+func (d *failingInitializeDatabase) NewUser(_ context.Context, _ v5.NewUserRequest) (v5.NewUserResponse, error) {
+	return v5.NewUserResponse{}, nil
+}
+
+func (d *failingInitializeDatabase) UpdateUser(_ context.Context, _ v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
+	return v5.UpdateUserResponse{}, nil
+}
+
+func (d *failingInitializeDatabase) DeleteUser(_ context.Context, _ v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
+	return v5.DeleteUserResponse{}, nil
+}
+func (d *failingInitializeDatabase) Type() (string, error) { return mockV5Type, nil }
+func (d *failingInitializeDatabase) Close() error          { return nil }
+
+// TestWalRollback_InitializeTimeout_SkipsRollback verifies that a transient
+// errDatabaseInitializeTimeout from GetConnection does not trigger
+// rollbackDatabaseCredentials. The timeout only means the database was slow;
+// it says nothing about whether credentials were already rotated successfully.
+func TestWalRollback_InitializeTimeout_SkipsRollback(t *testing.T) {
+	oldTimeout := databaseInitTimeout
+	databaseInitTimeout = 25 * time.Millisecond
+	defer func() { databaseInitTimeout = oldTimeout }()
+
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView:     config.System,
+		builtinFactory: newBlockingInitializeDatabase,
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			"password": "original-pass",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPassword:    "new-pass", // != "original-pass": enters the credential-verification branch
+		OldPassword:    "original-pass",
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	if !errors.Is(err, errDatabaseInitializeTimeout) {
+		t.Fatalf("expected errDatabaseInitializeTimeout to propagate, got: %v", err)
+	}
+}
+
+// TestWalRollback_ConnectionFailed_TriggersRollback verifies that a
+// non-timeout connection failure still reaches rollbackDatabaseCredentials,
+// preserving the existing behavior for genuine authentication failures.
+func TestWalRollback_ConnectionFailed_TriggersRollback(t *testing.T) {
+	connErr := errors.New("connection refused: invalid credentials")
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView: config.System,
+		builtinFactory: func() (interface{}, error) {
+			return &failingInitializeDatabase{err: connErr}, nil
+		},
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			"password": "original-pass",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPassword:    "new-pass",
+		OldPassword:    "original-pass",
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	// A non-timeout failure must not be swallowed: rollbackDatabaseCredentials is
+	// called and its error (from a second failed GetConnectionWithConfig) propagates.
+	if errors.Is(err, errDatabaseInitializeTimeout) {
+		t.Fatal("timeout sentinel must not appear for a non-timeout connection failure")
+	}
+	if err == nil {
+		t.Fatal("expected rollbackDatabaseCredentials to return an error")
+	}
+}
+
+// configuredUpdateUserDatabase is a v5.Database mock whose Initialize always
+// succeeds and whose UpdateUser returns a configurable error (nil for success).
+type configuredUpdateUserDatabase struct {
+	updateUserErr error
+}
+
+func (d *configuredUpdateUserDatabase) Initialize(_ context.Context, _ v5.InitializeRequest) (v5.InitializeResponse, error) {
+	return v5.InitializeResponse{}, nil
+}
+
+func (d *configuredUpdateUserDatabase) NewUser(_ context.Context, _ v5.NewUserRequest) (v5.NewUserResponse, error) {
+	return v5.NewUserResponse{}, nil
+}
+
+func (d *configuredUpdateUserDatabase) UpdateUser(_ context.Context, _ v5.UpdateUserRequest) (v5.UpdateUserResponse, error) {
+	return v5.UpdateUserResponse{}, d.updateUserErr
+}
+
+func (d *configuredUpdateUserDatabase) DeleteUser(_ context.Context, _ v5.DeleteUserRequest) (v5.DeleteUserResponse, error) {
+	return v5.DeleteUserResponse{}, nil
+}
+
+func (d *configuredUpdateUserDatabase) Type() (string, error) { return mockV5Type, nil }
+func (d *configuredUpdateUserDatabase) Close() error          { return nil }
+
+// generateTestRSAPrivateKeyPEM generates a 2048-bit RSA private key in
+// PKCS#8 PEM format suitable for use with derivePublicKeyFromPrivateKeyPEM.
+func generateTestRSAPrivateKeyPEM(t *testing.T) string {
+	t.Helper()
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyBytes, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: keyBytes,
+	}))
+}
+
+// TestWalRollback_PrivateKey_RotationCompleted_NoRollback verifies that when
+// the private key already stored matches the WAL new key, walRollback returns
+// nil immediately — the rotation completed and the WAL simply wasn't deleted.
+func TestWalRollback_PrivateKey_RotationCompleted_NoRollback(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{SystemView: config.System}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles: []string{"*"},
+		PluginName:   mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			// Stored key matches WAL new key: rotation completed, WAL not yet GC'd.
+			"private_key": newPrivateKey,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPrivateKey:  newPrivateKey,
+		OldPrivateKey:  "old-private-key-pem",
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	if err != nil {
+		t.Fatalf("expected no error when rotation already completed, got: %v", err)
+	}
+}
+
+// TestWalRollback_PrivateKey_ConnectionFails_ReturnsError verifies that when
+// connecting with the WAL new private key fails, the error propagates.
+func TestWalRollback_PrivateKey_ConnectionFails_ReturnsError(t *testing.T) {
+	connErr := errors.New("JWT token rejected: invalid key pair")
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView: config.System,
+		builtinFactory: func() (interface{}, error) {
+			return &failingInitializeDatabase{err: connErr}, nil
+		},
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	oldPrivateKey := generateTestRSAPrivateKeyPEM(t)
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			// Stored key does not match new key: out-of-sync, triggers rollback path.
+			"private_key": "old-private-key-pem",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPrivateKey:  "new-private-key-pem",
+		OldPrivateKey:  oldPrivateKey,
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	if err == nil {
+		t.Fatal("expected connection error to propagate, got nil")
+	}
+}
+
+// TestWalRollback_PrivateKey_UpdateUserFails_ReturnsError verifies that a
+// UpdateUser error propagates so the WAL framework can retry.
+func TestWalRollback_PrivateKey_UpdateUserFails_ReturnsError(t *testing.T) {
+	updateErr := errors.New("internal server error")
+
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView: config.System,
+		builtinFactory: func() (interface{}, error) {
+			return &configuredUpdateUserDatabase{updateUserErr: updateErr}, nil
+		},
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	oldPrivateKey := generateTestRSAPrivateKeyPEM(t)
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			"private_key": "old-private-key-pem",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPrivateKey:  "new-private-key-pem",
+		OldPrivateKey:  oldPrivateKey,
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	if err == nil {
+		t.Fatal("expected UpdateUser error to propagate, got nil")
+	}
+}
+
+// TestWalRollback_PrivateKey_RollbackSucceeds verifies the happy path: when the
+// stored key is out-of-sync with the WAL new key and UpdateUser succeeds,
+// walRollback returns nil indicating the rollback completed successfully.
+func TestWalRollback_PrivateKey_RollbackSucceeds(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView: config.System,
+		builtinFactory: func() (interface{}, error) {
+			return &configuredUpdateUserDatabase{updateUserErr: nil}, nil
+		},
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	oldPrivateKey := generateTestRSAPrivateKeyPEM(t)
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			"private_key": "old-private-key-pem",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPrivateKey:  "new-private-key-pem",
+		OldPrivateKey:  oldPrivateKey,
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	if err != nil {
+		t.Fatalf("expected successful rollback, got: %v", err)
+	}
+}
+
+// TestWalRollback_PrivateKey_SnowflakeJWTError_TreatsAsNoOp verifies the
+// crash-before-UpdateUser safety path: when UpdateUser returns a Snowflake
+// 390144 JWT error, the new private key was never registered with Snowflake,
+// so the system is already consistent with the old key. walRollback must
+// return nil to cleanly delete the WAL rather than retrying indefinitely.
+func TestWalRollback_PrivateKey_SnowflakeJWTError_TreatsAsNoOp(t *testing.T) {
+	// Simulate the error Snowflake returns when the JWT is signed with a key
+	// it has never seen. The error crosses the gRPC plugin boundary as a plain
+	// string, so it is matched via strings.Contains against the error code.
+	jwtErr := errors.New("390144 (08001): JWT token is invalid")
+
+	config := logical.TestBackendConfig()
+	config.System = &systemViewWrapper{
+		SystemView: config.System,
+		builtinFactory: func() (interface{}, error) {
+			return &configuredUpdateUserDatabase{updateUserErr: jwtErr}, nil
+		},
+	}
+	config.StorageView = &logical.InmemStorage{}
+
+	b := Backend(config)
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	oldPrivateKey := generateTestRSAPrivateKeyPEM(t)
+
+	entry, err := logical.StorageEntryJSON("config/mydb", &DatabaseConfig{
+		AllowedRoles:     []string{"*"},
+		VerifyConnection: true,
+		PluginName:       mockV5Type,
+		ConnectionDetails: map[string]interface{}{
+			// Stored key does not match new key: rollback path is entered.
+			"private_key": "old-private-key-pem",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := config.StorageView.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+
+	walEntry := &rotateRootCredentialsWAL{
+		ConnectionName: "mydb",
+		UserName:       "root",
+		NewPrivateKey:  "new-private-key-pem",
+		OldPrivateKey:  oldPrivateKey,
+	}
+	err = b.walRollback(context.Background(), &logical.Request{Storage: config.StorageView}, rotateRootWALKey, walEntry)
+	if err != nil {
+		t.Fatalf("expected 390144 JWT error to be treated as no-op (nil), got: %v", err)
 	}
 }

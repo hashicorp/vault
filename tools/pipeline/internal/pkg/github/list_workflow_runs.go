@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"sync"
 
-	gh "github.com/google/go-github/v81/github"
+	gh "github.com/google/go-github/v83/github"
 )
 
 // PerPageMax is the maximum number of entities to request for enpoints that
@@ -158,7 +158,7 @@ func (r *ListWorkflowRunsReq) getWorkflowRuns(ctx context.Context, client *gh.Cl
 		opts.CheckSuiteID = r.CheckSuiteID
 	}
 
-	return getWorkflowRuns(ctx, client, r.Owner, r.Repo, id, opts)
+	return getWorkflowRuns(ctx, client, r.Owner, r.Repo, id, 0, opts)
 }
 
 // getWorkflowCheckRuns gets the check suite runs associated with the workflow runs.

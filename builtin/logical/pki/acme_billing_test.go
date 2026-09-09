@@ -32,7 +32,6 @@ func TestACMEBilling(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	var activeCore *vault.TestClusterCore
 	{
@@ -51,7 +50,7 @@ func TestACMEBilling(t *testing.T) {
 
 	// The new root and int should have been counted, but we are not asserting that here
 	// to avoid a possible race condition with the consumer job.
-	activeCore.ResetPkiCertificateCounts()
+	baseline := activeCore.ResetPkiCertificateCounts()
 
 	// Enable custom DNS resolver for testing.
 	for _, mount := range []string{"pki", "pki2", "ns1/pki", "ns2/pki"} {
@@ -79,52 +78,52 @@ func TestACMEBilling(t *testing.T) {
 	// Unique identifier: should increase by one.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount+1, "new certificate")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// Different identifier; should increase by one.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"example.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount+1, "new certificate")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// While same identifiers, used together and so thus are unique; increase by one.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"example.dadgarcorp.com", "dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount+1, "new certificate")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// Same identifiers in different order are not unique; keep the same.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKI, []string{"dadgarcorp.com", "example.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki", expectedCount, "different order; same identifiers")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// Using a different mount shouldn't affect counts.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKI2, []string{"dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "", expectedCount, "different mount; same identifiers")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// But using a different identifier should.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKI2, []string{"pki2.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "pki2", expectedCount+1, "different mount with different identifiers")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// A new identifier in a unique namespace will affect results.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKINS1, []string{"unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "ns1/pki", expectedCount+1, "unique identifier in a namespace")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// But in a different namespace with the existing identifier will not.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKINS2, []string{"unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "", expectedCount, "existing identifier in a namespace")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	doACMEForDomainWithDNS(t, dns, acmeClientPKI2, []string{"unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "", expectedCount, "existing identifier outside of a namespace")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// Creating a unique identifier in a namespace with a mount with the
 	// same name as another namespace should increase counts as well.
 	doACMEForDomainWithDNS(t, dns, acmeClientPKINS2, []string{"very-unique.dadgarcorp.com"})
 	expectedCount = validateClientCount(t, client, "ns2/pki", expectedCount+1, "unique identifier in a different namespace")
-	activeCore.RequirePkiCertificateCounts(t, 1, 1)
+	activeCore.RequirePkiCertificateCounts(t, &baseline, 1, 1)
 
 	// Check the current fragment
 	fragment := activeCore.Core.ResetActivityLog()[0]

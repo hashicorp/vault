@@ -9,13 +9,14 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module InputSearch
- * This component renders an input that fires a callback on "keyup" containing the input's value
+ * This component renders an input that fires a callback on "keyup" or the passed change event containing the input's value
  *
  * @example
  * <InputSearch @initialValue="secret/path/" @onChange={{this.handleSearch}} @placeholder="search..." />
  *
  * @param {string} [id] - unique id for the input
  * @param {string} [initialValue] - initial search value, i.e. a secret path prefix, that pre-fills the input field
+ * @param {string} [changeEvent="keyup"] - the input change event for which to fire the onChange callback
  * @param {string} [placeholder] - placeholder text for the input
  * @param {string} [label] - label for the input
  * @param {string} [subtext] - displays below the label

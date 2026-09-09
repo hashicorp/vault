@@ -327,11 +327,6 @@ func TestLoginMFA_ListAllMFAConfigsGlobally(t *testing.T) {
 	}, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 
 	// Enable userpass authentication

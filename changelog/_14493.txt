@@ -1,0 +1,3 @@
+```release-note:security
+auth/radius: Added case_insensitive_names toggle to prevent username collisions and enable case-insensitive user handling.
+```

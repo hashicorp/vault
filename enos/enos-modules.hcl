@@ -56,6 +56,13 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "create_vpc_fyre_shim" {
+  source = "./modules/create_vpc_fyre_shim"
+
+  environment = "ci"
+  common_tags = var.tags
+}
+
 module "cloud_docker_vault_cluster" {
   source = "./modules/cloud_docker_vault_cluster"
 }
@@ -74,6 +81,10 @@ module "choose_follower_host" {
 
 module "ec2_info" {
   source = "./modules/ec2_info"
+}
+
+module "fyre_os_info" {
+  source = "./modules/fyre_os_info"
 }
 
 module "get_local_metadata" {
@@ -192,6 +203,13 @@ module "target_ec2_instances" {
   ports_ingress = values(global.ports)
   project_name  = var.project_name
   ssh_keypair   = var.aws_ssh_keypair_name
+}
+
+module "target_fyre_vms" {
+  source = "./modules/target_fyre_vms"
+
+  common_tags  = var.tags
+  project_name = var.project_name
 }
 
 // don't create instances but satisfy the module interface
@@ -369,6 +387,25 @@ module "vault_verify_secrets_engines_delete" {
   vault_install_dir = var.vault_install_dir
 }
 
+
+module "vault_verify_aws_secrets_engine_create" {
+  source = "./modules/verify_aws_secrets_engine/modules/create"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_aws_secrets_engine_read" {
+  source = "./modules/verify_aws_secrets_engine/modules/read"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_aws_secrets_engine_delete" {
+  source = "./modules/verify_aws_secrets_engine/modules/delete"
+
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_verify_default_lcq" {
   source = "./modules/vault_verify_default_lcq"
 
@@ -388,28 +425,8 @@ module "vault_verify_raft_auto_join_voter" {
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }
 
-module "vault_verify_replication" {
-  source = "./modules/vault_verify_replication"
-}
-
-module "vault_verify_ui" {
-  source = "./modules/vault_verify_ui"
-}
-
-module "vault_verify_undo_logs" {
-  source = "./modules/vault_verify_undo_logs"
-
-  vault_install_dir = var.vault_install_dir
-}
-
 module "vault_wait_for_cluster_unsealed" {
   source = "./modules/vault_wait_for_cluster_unsealed"
-
-  vault_install_dir = var.vault_install_dir
-}
-
-module "vault_verify_version" {
-  source = "./modules/vault_verify_version"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -443,5 +460,16 @@ module "vault_verify_billing_start_date" {
 
   vault_install_dir       = var.vault_install_dir
   vault_instance_count    = var.vault_instance_count
+  vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
+}
+
+module "vault_update_license_ibm" {
+  source = "./modules/vault_update_license_ibm"
+}
+
+module "vault_verify_ibm_license_update" {
+  source = "./modules/vault_verify_ibm_license_update"
+
+  vault_install_dir       = var.vault_install_dir
   vault_cluster_addr_port = global.ports["vault_cluster"]["port"]
 }

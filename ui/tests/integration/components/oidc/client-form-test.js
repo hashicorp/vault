@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { create } from 'ember-cli-page-object';
@@ -12,10 +12,13 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
-import { OIDC_BASE_URL, SELECTORS } from 'vault/tests/helpers/oidc-config';
+import { SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import OidcClientForm from 'vault/forms/oidc/client';
+import sinon from 'sinon';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 const searchSelect = create(ss);
 
@@ -25,16 +28,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
   hooks.beforeEach(function () {
     oidcConfigHandlers(this.server);
-    this.store = this.owner.lookup('service:store');
-    this.server.post('/sys/capabilities-self', () => {});
-    this.server.get('/identity/oidc/key', () => {
-      return {
-        request_id: 'key-list-id',
-        data: {
-          keys: ['default'],
-        },
-      };
-    });
     this.server.get('/identity/oidc/assignment', () => {
       return {
         request_id: 'assignment-list-id',
@@ -52,6 +45,35 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         },
       };
     });
+
+    const api = this.owner.lookup('service:api');
+    this.apiStub = sinon.stub(api.identity, 'oidcWriteClient').resolves();
+
+    this.renderComponent = (client) => {
+      const data = {
+        key: 'default',
+        id_token_ttl: '24h',
+        access_token_ttl: '24h',
+        client_type: 'confidential',
+        ...(client || {}),
+      };
+      this.form = new OidcClientForm(data, { isNew: !client });
+      this.keys = [{ id: 'default' }];
+      this.assignments = [{ id: 'assignment-1' }];
+      this.onCancel = sinon.spy();
+      this.onSave = sinon.spy();
+
+      return render(hbs`
+        <Oidc::ClientForm
+          @form={{this.form}}
+          @keys={{this.keys}}
+          @assignments={{this.assignments}}
+          @onCancel={{this.onCancel}}
+          @onSave={{this.onSave}}
+        />
+      `);
+    };
+
     setRunOptions({
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
@@ -68,20 +90,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
   test('it should save new client', async function (assert) {
     assert.expect(14);
 
-    this.server.post('/identity/oidc/client/test-app', (schema, req) => {
-      assert.ok(true, 'Request made to save client');
-      return JSON.parse(req.requestBody);
-    });
-    this.model = this.store.createRecord('oidc/client');
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-
-    await render(hbs`
-      <Oidc::ClientForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    await this.renderComponent();
     await click(GENERAL.button('More options'));
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Application', 'Form title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Create', 'Save button has correct text');
@@ -108,45 +117,27 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom(validationErrors[1]).hasText('There are 3 errors with this form.', 'Renders form error count');
 
     // fill out form with valid inputs
-    await clickTrigger();
-    await fillIn('.ember-power-select-search input', 'default');
+    await click(GENERAL.searchSelect.trigger('oidc-client-form-key-select'));
+    await fillIn(GENERAL.searchSelect.searchInput, 'default');
     await searchSelect.options.objectAt(0).click();
 
     await click('[data-test-oidc-radio="limited"]');
     assert
-      .dom('[data-test-search-select-with-modal]')
+      .dom('[data-test-search-select="assignments"]')
       .exists('Limited radio button shows assignments search select');
 
-    await clickTrigger();
-    assert.dom('li.ember-power-select-option').hasText('assignment-1', 'dropdown renders assignments');
+    await click(GENERAL.searchSelect.trigger('oidc-client-form-assignments-select'));
+    assert.dom(GENERAL.searchSelect.option()).hasText('assignment-1', 'dropdown renders assignments');
     await fillIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.clientSaveButton);
+    assert.true(this.apiStub.calledWith('test-app'), 'API called with correct parameters');
+    assert.true(this.onSave.called, 'onSave callback is called on successful save');
   });
 
   test('it should update client', async function (assert) {
     assert.expect(11);
 
-    this.server.post('/identity/oidc/client/test-app', (schema, req) => {
-      assert.ok(true, 'Request made to save client');
-      return JSON.parse(req.requestBody);
-    });
-
-    this.store.pushPayload('oidc/client', {
-      modelName: 'oidc/client',
-      name: 'test-app',
-      clientType: 'public',
-    });
-
-    this.model = this.store.peekRecord('oidc/client', 'test-app');
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-
-    await render(hbs`
-      <Oidc::ClientForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+    await this.renderComponent({ name: 'test-app', client_type: 'public' });
     await click(GENERAL.button('More options'));
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Application', 'Title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'Save button has correct text');
@@ -155,64 +146,21 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('[data-test-input="key"]').isDisabled('Signing key input is disabled');
     assert.dom('[data-test-input="key"]').hasValue('default', 'Key input populated with default');
     assert
-      .dom('[data-test-input-group="clientType"] input')
+      .dom('[data-test-input-group="client_type"] input')
       .isDisabled('client type input is disabled on edit');
     assert
-      .dom('[data-test-input-group="clientType"] input#confidential')
+      .dom('[data-test-input-group="client_type"] input#public')
       .isChecked('Correct radio button is selected');
     assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
     await click(SELECTORS.clientSaveButton);
-  });
-
-  test('it should rollback attributes or unload record on cancel', async function (assert) {
-    assert.expect(4);
-    this.model = this.store.createRecord('oidc/client');
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires');
-
-    await render(hbs`
-      <Oidc::ClientForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
-
-    await click(SELECTORS.clientCancelButton);
-    assert.true(this.model.isDestroyed, 'New model is unloaded on cancel');
-
-    this.store.pushPayload('oidc/client', {
-      modelName: 'oidc/client',
-      name: 'test-app',
-      assignments: ['allow_all'],
-      redirectUris: [],
-    });
-    this.model = this.store.peekRecord('oidc/client', 'test-app');
-
-    await render(hbs`
-      <Oidc::ClientForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
-
-    await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
-    await click('[data-test-string-list-button="add"]');
-    await click(SELECTORS.clientCancelButton);
-    assert.strictEqual(this.model.redirectUris, undefined, 'Model attributes rolled back on cancel');
+    assert.true(this.apiStub.calledWith('test-app'), 'API called with correct parameters');
+    assert.true(this.onSave.called, 'onSave callback is called on successful save');
   });
 
   test('it should show create assignment modal', async function (assert) {
     assert.expect(3);
-    this.model = this.store.createRecord('oidc/client');
 
-    await render(hbs`
-      <Oidc::ClientForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-          `);
+    await this.renderComponent();
     await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'test-new');
@@ -225,15 +173,10 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
   test('it should render fallback for search select', async function (assert) {
     assert.expect(1);
-    this.model = this.store.createRecord('oidc/client');
+
     this.server.get('/identity/oidc/assignment', () => overrideResponse(403));
-    await render(hbs`
-      <Oidc::ClientForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+
+    await this.renderComponent();
 
     await click('[data-test-oidc-radio="limited"]');
     assert
@@ -243,15 +186,10 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
-    this.model = this.store.createRecord('oidc/client');
-    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/clients'));
-    await render(hbs`
-      <Oidc::ClientForm
-        @model={{this.model}}
-        @onCancel={{this.onCancel}}
-        @onSave={{this.onSave}}
-      />
-    `);
+
+    this.apiStub.rejects(getErrorResponse());
+
+    await this.renderComponent();
     await fillIn('[data-test-input="name"]', 'test-app');
     await click(SELECTORS.clientSaveButton);
     assert

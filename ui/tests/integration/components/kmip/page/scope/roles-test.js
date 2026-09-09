@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -40,6 +40,7 @@ module('Integration | Component | kmip | Page::Scope::Roles', function (hooks) {
       pageSize: 10,
       filteredTotal: this.roles.length,
       total: this.roles.length,
+      totalItems: this.roles.length,
     };
     this.filterValue = '';
 

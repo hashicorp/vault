@@ -13,6 +13,7 @@ import { MANAGED_AUTH_BACKENDS } from 'vault/helpers/supported-managed-auth-back
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const SELECTORS = {
   createUser: '[data-test-entity-create-link="user"]',
@@ -25,6 +26,8 @@ module('Acceptance | auth backend list', function (hooks) {
 
   hooks.beforeEach(async function () {
     await login();
+    // dismiss wizard
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
   });
 
   test('userpass secret backend', async function (assert) {
@@ -36,7 +39,7 @@ module('Acceptance | auth backend list', function (hooks) {
     await runCmd([mountAuthCmd('userpass', this.path1), mountAuthCmd('userpass', this.path2)], false);
     // helper function to create a user in the specified backend
     async function createUser(backendPath, username) {
-      await click(GENERAL.linkedBlock(backendPath));
+      await click(GENERAL.linkTo(`${backendPath}/`));
       assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
       await click(SELECTORS.createUser);
       await fillIn(GENERAL.inputByAttr('username'), username);
@@ -49,7 +52,7 @@ module('Acceptance | auth backend list', function (hooks) {
     await createUser(this.path1, this.user1);
 
     // navigate back to the methods list
-    await click(GENERAL.breadcrumbAtIdx(0));
+    await click(GENERAL.breadcrumbAtIdx(1));
     assert.strictEqual(currentURL(), '/vault/access');
 
     // enable a second user in the second userpass backend
@@ -59,8 +62,8 @@ module('Acceptance | auth backend list', function (hooks) {
     assert.dom(SELECTORS.listItem).hasText(this.user2, 'user2 exists in the list');
 
     // check that switching back to the first auth method shows the first user
-    await click(GENERAL.breadcrumbAtIdx(0));
-    await click(GENERAL.linkedBlock(this.path1));
+    await click(GENERAL.breadcrumbAtIdx(1));
+    await click(GENERAL.linkTo(`${this.path1}/`));
     assert.dom(SELECTORS.listItem).hasText(this.user1, 'user1 exists in the list');
 
     await login();
@@ -94,8 +97,8 @@ module('Acceptance | auth backend list', function (hooks) {
 
           // check popup menu for auth method
           const itemCount = isTokenType ? 2 : 3;
-          const triggerSelector = `${GENERAL.linkedBlock(path)} [data-test-popup-menu-trigger]`;
-          const itemSelector = `${GENERAL.linkedBlock(path)} .hds-dropdown-list-item`;
+          const triggerSelector = `${GENERAL.listItem(`${path}/`)} ${GENERAL.menuTrigger}`;
+          const itemSelector = `${GENERAL.listItem(`${path}/`)} .hds-dropdown-list-item`;
 
           await click(triggerSelector);
 
@@ -104,7 +107,7 @@ module('Acceptance | auth backend list', function (hooks) {
             .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);
 
           // check that auth methods are linkable
-          await click(GENERAL.linkedBlock(path));
+          await click(GENERAL.linkTo(`${path}/`));
 
           if (!supportManaged.includes(type)) {
             assert.dom(GENERAL.linkTo('auth-tab')).exists({ count: 1 });
@@ -141,7 +144,7 @@ module('Acceptance | auth backend list', function (hooks) {
       await visit('/vault/access');
 
       // all auth methods should be linkable
-      await click(GENERAL.linkedBlock(path));
+      await click(GENERAL.linkTo(`${path}/`));
       assert.dom(GENERAL.linkTo('auth-tab')).exists({ count: 1 });
       assert
         .dom(GENERAL.linkTo('auth-tab'))
@@ -155,6 +158,8 @@ module('Acceptance | auth backend list', function (hooks) {
       await runCmd(createNS(ns), false);
       await settled();
       await loginNs(ns);
+      this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);
+
       // go directly to token configure route
       await visit(`/vault/settings/auth/configure/token/options?namespace=${ns}`);
       await fillIn(GENERAL.inputByAttr('description'), 'My custom description');
@@ -164,9 +169,9 @@ module('Acceptance | auth backend list', function (hooks) {
         `/vault/access?namespace=${ns}`,
         'successfully saves and navigates away'
       );
-      await click(GENERAL.linkedBlock('token'));
+      await click(GENERAL.linkTo('token/'));
       assert
-        .dom('[data-test-row-value="Description"]')
+        .dom(GENERAL.infoRowValue('Description'))
         .hasText('My custom description', 'description was saved');
       await login();
       await runCmd(`delete sys/namespaces/${ns}`);

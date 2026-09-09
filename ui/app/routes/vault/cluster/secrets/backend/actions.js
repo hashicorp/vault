@@ -30,21 +30,21 @@ export default EditBase.extend({
   setupController(controller, model) {
     this._super(...arguments);
     const { selectedAction } = this.paramsFor(this.routeName);
-    controller.set('selectedAction', selectedAction || model.secret.supportedActions[0]);
+    controller.set('selectedAction', selectedAction || model.secret.data.supportedActions[0]);
     controller.set('breadcrumbs', [
       {
         label: 'Secrets',
         route: 'vault.cluster.secrets',
       },
       {
-        label: model.secret.backend,
+        label: model.secret.data.backend,
         route: 'vault.cluster.secrets.backend.list-root',
-        model: model.secret.backend,
+        model: model.secret.data.backend,
       },
       {
-        label: model.secret.id,
+        label: model.secret.data.id,
         route: 'vault.cluster.secrets.backend.show',
-        models: [model.secret.backend, model.secret.id],
+        models: [model.secret.data.backend, model.secret.data.id],
       },
       {
         label: 'Actions',

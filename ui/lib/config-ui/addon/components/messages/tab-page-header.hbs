@@ -7,6 +7,15 @@
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
+  <:description>
+    {{#if @showTabs}}
+      Configure global banners or modal notifications to display important system updates or compliance reminders to GUI
+      users.
+      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/custom-msg"}}>
+        Learn more
+      </Hds::Link::Inline>
+    {{/if}}
+  </:description>
 </Page::Header>
 
 {{#if @showTabs}}
@@ -18,7 +27,7 @@
           <LinkTo
             class={{if @authenticated "active"}}
             @route="messages"
-            @query={{hash authenticated=true page=1}}
+            @query={{hash authenticated=true page=1 pageFilter=null status=null type=null}}
             data-test-custom-messages-tab="After user logs in"
           >
             After user logs in
@@ -28,7 +37,7 @@
           <LinkTo
             class={{unless @authenticated "active"}}
             @route="messages"
-            @query={{hash authenticated=false page=1}}
+            @query={{hash authenticated=false page=1 pageFilter=null status=null type=null}}
             data-test-custom-messages-tab="On login page"
           >
             On login page

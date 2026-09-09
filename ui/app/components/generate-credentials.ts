@@ -16,12 +16,6 @@ import type RouterService from '@ember/routing/router-service';
 import type Store from '@ember-data/store';
 
 const CREDENTIAL_TYPES = {
-  ssh: {
-    model: 'ssh-otp-credential',
-    title: 'Generate SSH Credentials',
-    formFields: ['username', 'ip'],
-    displayFields: ['username', 'ip', 'key', 'keyType', 'port'],
-  },
   aws: {
     model: 'aws-credential',
     title: 'Generate AWS Credentials',
@@ -42,7 +36,7 @@ const CREDENTIAL_TYPES = {
 interface Args {
   awsRoleType: string | undefined;
   backendPath: string;
-  backendType: 'ssh' | 'aws';
+  backendType: 'aws';
   roleName: string;
 }
 

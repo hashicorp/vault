@@ -8,10 +8,18 @@ package transit
 import (
 	"context"
 	"errors"
+
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )
 
 var errEntOnly = errors.New("managed keys are supported within enterprise edition only")
 
+var errNotAsymmetricManagedKey error = errEntOnly
+
 func GetManagedKeyUUID(ctx context.Context, b *backend, keyName string, keyId string) (uuid string, err error) {
 	return "", errEntOnly
+}
+
+func getFormattedManagedKeyPublicKey(_ context.Context, _ *backend, _ *keysutil.Policy) (map[string]map[string]interface{}, error) {
+	return nil, errEntOnly
 }

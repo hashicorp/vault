@@ -1,0 +1,3 @@
+```release-note:change
+secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
+```

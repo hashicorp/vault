@@ -156,6 +156,14 @@ vault <command> <path> metadata=key1=value1 metadata=key2=value2
 					Type:        framework.TypeString,
 					Description: "Name of the alias",
 				},
+				"external_id": {
+					Type:        framework.TypeString,
+					Description: "Unique external identifier from external IdP.",
+				},
+				"issuer": {
+					Type:        framework.TypeString,
+					Description: "Issuer name associated with this alias.",
+				},
 			},
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleAliasCreateUpdate(),

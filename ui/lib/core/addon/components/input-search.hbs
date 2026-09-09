@@ -8,14 +8,14 @@
     @type="text"
     @id={{@id}}
     @value={{this.searchInput}}
-    {{on "keyup" this.inputChanged}}
+    {{on (or @changeEvent "keyup") this.inputChanged}}
     placeholder={{@placeholder}}
     autocomplete="off"
     data-test-input-search={{@id}}
     as |F|
   >
     {{#if @label}}
-      <F.Label>{{@label}}</F.Label>
+      <F.Label data-test-form-label={{@label}}>{{@label}}</F.Label>
     {{/if}}
     {{#if @subText}}
       <F.HelperText>{{@subText}}</F.HelperText>

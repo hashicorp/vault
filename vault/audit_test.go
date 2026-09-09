@@ -152,6 +152,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
 	// Additional audit backend type that will fail.
+	c.auditLock.Lock()
 	c.auditBackends["fail"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
@@ -179,6 +180,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 			},
 		},
 	}
+	c.auditLock.Unlock()
 
 	// Both should set up successfully
 	err := c.setupAudits(context.Background())
@@ -208,6 +210,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
 	// Additional audit backend that will always fail.
+	c.auditLock.Lock()
 	c.auditBackends["fail"] = func(config *audit.BackendConfig, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
@@ -241,6 +244,7 @@ func TestCore_EnableAudit_Local(t *testing.T) {
 			},
 		},
 	}
+	c.auditLock.Unlock()
 
 	// Both should set up successfully
 	err := c.setupAudits(context.Background())
@@ -681,7 +685,6 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 // only options on a non-Enterprise version of Vault.
 func TestAudit_enableAudit(t *testing.T) {
 	cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
-	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
 
@@ -707,7 +710,6 @@ func TestAudit_enableAudit(t *testing.T) {
 // with Enterprise only options on a non-Enterprise version of Vault.
 func TestAudit_newAuditBackend(t *testing.T) {
 	cluster := NewTestCluster(t, nil, &TestClusterOptions{NumCores: 1})
-	defer cluster.Cleanup()
 
 	c := cluster.Cores[0]
 

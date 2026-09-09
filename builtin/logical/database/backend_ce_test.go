@@ -19,7 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
-	_ "github.com/jackc/pgx/v4"
+	_ "github.com/jackc/pgx/v5"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -28,9 +28,7 @@ func TestBackend_config_connection(t *testing.T) {
 	var resp *logical.Response
 	var err error
 
-	cluster, sys := getClusterPostgresDB(t)
-	defer cluster.Cleanup()
-
+	_, sys := getClusterPostgresDB(t)
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	config.System = sys
@@ -254,7 +252,6 @@ func TestBackend_connectionCrud(t *testing.T) {
 	t.Parallel()
 	dbFactory := &singletonDBFactory{}
 	cluster, sys := getClusterPostgresDBWithFactory(t, dbFactory.factory)
-	defer cluster.Cleanup()
 
 	dbFactory.sys = sys
 	client := cluster.Cores[0].Client.Logical()

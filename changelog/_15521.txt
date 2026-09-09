@@ -1,0 +1,7 @@
+```release-note:improvement
+core/identity: Adds a global `deny_slash_in_templated_path` configuration option to reject the presence of slashes in rendered identity templates in policies, defaulting to `false`.
+```
+
+```release-note:improvement
+core/acl: Adds a global `deny_slash_in_templated_path` configuration option to reject the presence of slashes in rendered identity templates in policies, defaulting to `false`.
+```

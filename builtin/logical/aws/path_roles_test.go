@@ -4,7 +4,6 @@
 package aws
 
 import (
-	"context"
 	"errors"
 	"reflect"
 	"strconv"
@@ -28,7 +27,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 	config.ObservationRecorder = or
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -47,7 +46,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 
 	for i := 1; i <= 10; i++ {
 		roleReq.Path = "roles/testrole" + strconv.Itoa(i)
-		resp, err = b.HandleRequest(context.Background(), roleReq)
+		resp, err = b.HandleRequest(t.Context(), roleReq)
 		if err != nil || (resp != nil && resp.IsError()) {
 			t.Fatalf("bad: role creation failed. resp:%#v\n err:%v", resp, err)
 		}
@@ -55,7 +54,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 
 	require.Equal(t, 10, or.NumObservationsByType(ObservationTypeAWSRoleWrite))
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(t.Context(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles",
 		Storage:   config.StorageView,
@@ -68,7 +67,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 		t.Fatalf("failed to list all 10 roles")
 	}
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err = b.HandleRequest(t.Context(), &logical.Request{
 		Operation: logical.ListOperation,
 		Path:      "roles/",
 		Storage:   config.StorageView,
@@ -234,7 +233,7 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 	or := observations.NewTestObservationRecorder()
 	config.ObservationRecorder = or
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -251,7 +250,7 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      roleData,
 	}
-	resp, err := b.HandleRequest(context.Background(), request)
+	resp, err := b.HandleRequest(t.Context(), request)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: role creation failed. resp:%#v\nerr:%v", resp, err)
 	}
@@ -263,7 +262,7 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 		Path:      "roles/" + roleName,
 		Storage:   config.StorageView,
 	}
-	resp, err = b.HandleRequest(context.Background(), request)
+	resp, err = b.HandleRequest(t.Context(), request)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: reading role failed. resp:%#v\nerr:%v", resp, err)
 	}
@@ -285,7 +284,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 	config.ObservationRecorder = or
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -300,7 +299,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 		Storage:   config.StorageView,
 		Data:      roleData,
 	}
-	resp, err := b.HandleRequest(context.Background(), request)
+	resp, err := b.HandleRequest(t.Context(), request)
 	if err == nil && (resp == nil || !resp.IsError()) {
 		t.Fatalf("bad: expected role creation to fail due to bad credential_type, but it didn't. resp:%#v\nerr:%v", resp, err)
 	}
@@ -311,7 +310,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 		"permissions_boundary_arn": "arn:aws:notiam::aws:policy/FooBar",
 	}
 	request.Data = roleData
-	resp, err = b.HandleRequest(context.Background(), request)
+	resp, err = b.HandleRequest(t.Context(), request)
 	if err == nil && (resp == nil || !resp.IsError()) {
 		t.Fatalf("bad: expected role creation to fail due to malformed permissions_boundary_arn, but it didn't. resp:%#v\nerr:%v", resp, err)
 	}
@@ -534,7 +533,7 @@ func TestRoleWriteObservationMetadata(t *testing.T) {
 	config.ObservationRecorder = or
 
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	if err := b.Setup(t.Context(), config); err != nil {
 		t.Fatal(err)
 	}
 
@@ -553,7 +552,7 @@ func TestRoleWriteObservationMetadata(t *testing.T) {
 		Data:      roleData,
 	}
 
-	resp, err := b.HandleRequest(context.Background(), request)
+	resp, err := b.HandleRequest(t.Context(), request)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: role creation failed. resp:%#v\nerr:%v", resp, err)
 	}

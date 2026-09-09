@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Add name field validation to LDAP create and edit roles forms. 
+```

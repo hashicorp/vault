@@ -237,8 +237,6 @@ func TestSignRevocationList(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
 	// Mount PKI, use this form of backend so our request is closer to reality (json parsed)
@@ -478,15 +476,7 @@ func setupResignCrlMounts(t *testing.T, b1 *backend, s1 logical.Storage, b2 *bac
 func requireExtensionOid(t *testing.T, identifier asn1.ObjectIdentifier, extensions []pkix.Extension, msgAndArgs ...interface{}) {
 	t.Helper()
 
-	found := false
-	var oidsInExtensions []string
-	for _, extension := range extensions {
-		oidsInExtensions = append(oidsInExtensions, extension.Id.String())
-		if extension.Id.Equal(identifier) {
-			found = true
-			break
-		}
-	}
+	found, _, oidsInExtensions := findExtension(identifier, extensions)
 
 	if !found {
 		msg := fmt.Sprintf("Failed to find matching asn oid %s out of %v", identifier.String(), oidsInExtensions)

@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<hr class="is-marginless has-background-gray-200" />
+<Hds::Separator @spacing="0" />
 
 <p class="has-top-margin-m has-bottom-margin-l">
   Tidying cleans up the storage backend and/or CRL by removing certificates that have expired and are past a certain buffer
@@ -71,7 +71,7 @@
     {{/each}}
   {{/if}}
 
-  <hr class="is-marginless has-background-gray-200" />
+  <Hds::Separator @spacing="0" />
   <Hds::ButtonSet class="has-top-margin-m">
     <Hds::Button
       @text={{if (eq @tidyType "manual") "Perform tidy" "Save"}}

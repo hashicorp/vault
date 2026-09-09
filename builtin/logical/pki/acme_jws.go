@@ -15,16 +15,15 @@ import (
 )
 
 var AllowedOuterJWSTypes = map[string]interface{}{
-	"RS256":  true,
-	"RS384":  true,
-	"RS512":  true,
-	"PS256":  true,
-	"PS384":  true,
-	"PS512":  true,
-	"ES256":  true,
-	"ES384":  true,
-	"ES512":  true,
-	"EdDSA2": true,
+	"RS256": true,
+	"RS384": true,
+	"RS512": true,
+	"PS256": true,
+	"PS384": true,
+	"PS512": true,
+	"ES256": true,
+	"ES384": true,
+	"ES512": true,
 }
 
 var AllowedEabJWSTypes = map[string]interface{}{

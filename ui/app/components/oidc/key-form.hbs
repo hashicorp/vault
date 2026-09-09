@@ -6,9 +6,7 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
     <MessageError @errorMessage={{this.errorBanner}} />
-    {{#each @model.formFields as |attr|}}
-      <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
-    {{/each}}
+    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} />
   </div>
   {{#unless @isModalForm}}
     {{! RADIO CARD + SEARCH SELECT }}
@@ -32,26 +30,28 @@
           @value="limited"
           @groupValue={{this.radioCardGroupValue}}
           @onChange={{this.handleClientSelection}}
-          @disabled={{@model.isNew}}
+          @disabled={{@form.isNew}}
           @tooltipMessage={{if
-            @model.isNew
+            @form.isNew
             "This option has been disabled for now. To limit access, you must first create an application that references this key."
           }}
         />
       </div>
       {{#if (eq this.radioCardGroupValue "limited")}}
+        {{! clients are fetched in route and passed into select component }}
         <SearchSelect
-          @id="allowedClientIds"
+          @id="oidc-key-form-client-select"
           @label="Application name"
           @subText="Select which applications are allowed to use this key. Only applications that currently reference this key will appear in the dropdown."
-          @models={{array "oidc/client"}}
-          @inputValue={{@model.allowedClientIds}}
+          @options={{@clients}}
+          @parentManageSelected={{this.selectedClients}}
           @onChange={{this.handleClientSelection}}
           @disallowNewItems={{true}}
           @fallbackComponent="string-list"
           @passObject={{true}}
-          @objectKeys={{array "clientId"}}
-          @queryObject={{this.filterDropdownOptions}}
+          @objectKeys={{array "client_id"}}
+          @shouldRenderName={{true}}
+          @renderTooltip={{this.renderTooltip}}
         />
       {{/if}}
     </div>
@@ -59,7 +59,7 @@
   <div class="field box is-fullwidth is-bottomless">
     <div class="control">
       <Hds::Button
-        @text={{if @model.isNew "Create" "Update"}}
+        @text={{if @form.isNew "Create" "Update"}}
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}
@@ -70,7 +70,7 @@
         @color="secondary"
         class="has-left-margin-s"
         disabled={{this.save.isRunning}}
-        {{on "click" this.cancel}}
+        {{on "click" @onCancel}}
         data-test-oidc-key-cancel
       />
     </div>

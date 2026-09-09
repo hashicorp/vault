@@ -1,0 +1,44 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.checklist-step-marker {
+  display: inline-flex;
+}
+
+.checklist-step-marker-number-wrapper {
+  display: inline-flex;
+  position: relative;
+}
+
+.checklist-step-marker-number {
+  align-items: center;
+  color: var(--token-color-foreground-primary);
+  display: inline-flex;
+  font-size: 0.625rem; // 10px — sized to fit inside the 16px hexagon icon
+  font-weight: var(--token-typography-font-weight-semibold);
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+}
+
+.checklist-step-marker-check {
+  align-items: center;
+  color: var(--token-color-palette-neutral-0);
+  display: inline-flex;
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+}
+
+.checklist-step-marker-check-icon {
+  height: 10px;
+  width: 10px;
+}
+
+.checklist-step-marker-number--focused {
+  color: var(--token-color-palette-neutral-0);
+}

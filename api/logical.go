@@ -157,7 +157,7 @@ func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secr
 		return nil, err
 	}
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, values url.Values, extraHeaders http.Header) (*Response, error) {
@@ -374,7 +374,7 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 		return nil, err
 	}
 
-	return ParseSecret(resp.Body)
+	return resp.toSecret()
 }
 
 func (c *Logical) writeRaw(ctx context.Context, request *Request) (*Response, error) {
@@ -391,6 +391,15 @@ func (c *Logical) Delete(path string) (*Secret, error) {
 
 func (c *Logical) DeleteWithContext(ctx context.Context, path string) (*Secret, error) {
 	return c.DeleteWithDataWithContext(ctx, path, nil)
+}
+
+func (c *Logical) DeleteRaw(path string) (*Response, error) {
+	return c.DeleteRawWithContext(context.Background(), path)
+}
+
+func (c *Logical) DeleteRawWithContext(ctx context.Context, path string) (*Response, error) {
+	r := c.c.NewRequest(http.MethodDelete, "/v1/"+path)
+	return c.c.RawRequestWithContext(ctx, r)
 }
 
 func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret, error) {

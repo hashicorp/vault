@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -64,13 +63,17 @@ func newGithubCheckGoModDiffCmd() *cobra.Command {
 	checkGoModCmd.PersistentFlags().BoolVar(&checkGithubGoModReq.DiffOpts.StrictDiffReplace, "strict-replace", true, "Strictly compare the replace directives in both files. When true all replaces are compared, otherwise only shared replaces are compared")
 	checkGoModCmd.PersistentFlags().BoolVar(&checkGithubGoModReq.DiffOpts.StrictDiffRetract, "strict-retract", true, "Strictly compare the retract directives in both files. When true all retracts are compared, otherwise only shared retract directives are compared")
 
+	// Explicitly exclude individual directives. Can use literal directive values or path style globs.
+	checkGoModCmd.PersistentFlags().StringArrayVar(&checkGithubGoModReq.DiffOpts.ExcludeRequire, "exclude-require", nil, "repeatable glob/literal pattern; skip matching module paths in require directives")
+	checkGoModCmd.PersistentFlags().StringArrayVar(&checkGithubGoModReq.DiffOpts.ExcludeReplace, "exclude-replace", nil, "repeatable glob/literal pattern; skip matching module paths in replace directives (old or new path)")
+
 	return checkGoModCmd
 }
 
 func runCheckGithubGoModCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := checkGithubGoModReq.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
+	res, err := checkGithubGoModReq.Run(cmd.Context(), githubCmdState.GithubV3, rootCfg.git)
 	if err != nil {
 		return err
 	}

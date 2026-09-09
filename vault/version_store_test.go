@@ -195,3 +195,77 @@ func TestVersionStore_SelfHealUTC(t *testing.T) {
 		}
 	}
 }
+
+// TestIsServiceToken validates CE service token matching logic, based on the token prefix.
+func TestIsServiceToken(t *testing.T) {
+	tests := []struct {
+		name     string
+		token    string
+		expected bool
+	}{
+		{
+			name:     "valid service token with hvs. prefix",
+			token:    "hvs.CAESIJKLMNOPQRSTUVWXYZ",
+			expected: true,
+		},
+		{
+			name:     "legacy service token with s. prefix",
+			token:    "s.CAESIJKLMNOPQRSTUVWXYZ",
+			expected: true,
+		},
+		{
+			name:     "empty string",
+			token:    "",
+			expected: false,
+		},
+		{
+			name:     "short string matching service token prefix",
+			token:    "h",
+			expected: false,
+		},
+		{
+			name:     "short string matching legacy service token prefix",
+			token:    "s",
+			expected: false,
+		},
+		{
+			name:     "batch token should not match",
+			token:    "hvb.ABCDEFGHIJKLMNOP",
+			expected: false,
+		},
+		{
+			name:     "legacy batch token should not match",
+			token:    "b.ABCDEFGHIJKLMNOP",
+			expected: false,
+		},
+		{
+			name:     "recovery token should not match",
+			token:    "hvr.ABCDEFGHIJKLMNOP",
+			expected: false,
+		},
+		{
+			name:     "recovery token should not match",
+			token:    "r.ABCDEFGHIJKLMNOP",
+			expected: false,
+		},
+		{
+			name:     "jwt token should not match",
+			token:    "jwt.test-jti",
+			expected: false,
+		},
+		{
+			name:     "random string should not match",
+			token:    "random-string-value",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := IsServiceToken(tt.token)
+			if result != tt.expected {
+				t.Errorf("IsServiceToken(%q) = %v, want %v", tt.token, result, tt.expected)
+			}
+		})
+	}
+}

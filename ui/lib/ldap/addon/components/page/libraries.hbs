@@ -28,12 +28,21 @@
   <ConfigCta />
 {{else if (not this.filteredLibraries)}}
   {{#if this.filterValue}}
-    <EmptyState @title="There are no libraries matching &quot;{{this.filterValue}}&quot;" />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        @title="There are no libraries matching &quot;{{this.filterValue}}&quot;"
+        @titleTag="h2"
+        data-test-empty-state-title
+      />
+    </Hds::ApplicationState>
   {{else}}
-    <EmptyState
-      @title="No libraries created yet"
-      @message="Use libraries to manage a set of highly privileged accounts that can be shared among a team."
-    />
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header @title="No libraries created yet" @titleTag="h2" data-test-empty-state-title />
+      <A.Body
+        @text="Use libraries to manage a set of highly privileged accounts that can be shared among a team."
+        data-test-empty-state-message
+      />
+    </Hds::ApplicationState>
   {{/if}}
 {{else}}
   <div class="has-bottom-margin-s">

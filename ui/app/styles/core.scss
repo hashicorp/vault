@@ -49,17 +49,19 @@
 @use 'helper-classes/typography';
 
 // Component specific styling
+@use 'components/about-this-engine';
 @use 'components/autocomplete-input';
 @use 'components/b64-toggle';
 @use 'components/box-label';
 @use 'components/clients-counts-card.scss';
 @use 'components/clients-date-range';
 @use 'components/cluster-banners';
+@use 'components/checklist-widget';
 @use 'components/console-ui-panel';
 @use 'components/control-group';
 @use 'components/doc-link';
-@use 'components/empty-state-component';
 @use 'components/env-banner';
+@use 'components/explore-vault';
 @use 'components/form-section';
 @use 'components/global-flash';
 @use 'components/icon';
@@ -72,6 +74,7 @@
 @use 'components/masked-input';
 @use 'components/namespace-picker';
 @use 'components/navigate-input';
+@use 'components/onboarding-card';
 @use 'components/overview-card';
 @use 'components/page-header-old';
 @use 'components/popup-menu';
@@ -102,5 +105,13 @@
 @use 'components/type-form';
 @use 'components/unseal-warning';
 @use 'components/usage-page';
+@use 'components/usage-reporting/base/title-row';
+@use 'components/usage-reporting/cluster-replication';
+@use 'components/usage-reporting/counter';
+@use 'components/usage-reporting/global-lease';
+@use 'components/usage-reporting/viz-card';
+@use 'components/usage-reporting/namespace-picker' as usage-reporting-namespace-picker;
+@use 'components/usage-reporting/secrets-sync';
+@use 'components/usage-reporting/views/dashboard';
 @use 'components/vault-loading';
 @use 'components/wizard';

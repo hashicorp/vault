@@ -50,6 +50,12 @@ export default class JsonEditorComponent extends Component {
     return this.args.title ?? 'JSON Editor';
   }
 
+  get cspNonce() {
+    // Read the CSP nonce from the meta tag injected by the server
+    const metaTag = document.querySelector('meta[name="csp-nonce"]');
+    return metaTag ? metaTag.getAttribute('content') : null;
+  }
+
   @action
   onSetup(editor) {
     this._codemirrorEditor = editor;

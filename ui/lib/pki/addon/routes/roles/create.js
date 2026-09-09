@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { PkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListIssuersListEnum } from '@hashicorp/vault-client-typescript';
 import PkiRoleForm from 'vault/forms/secrets/pki/role';
 
 export default class PkiRolesCreateRoute extends Route {
@@ -16,7 +16,7 @@ export default class PkiRolesCreateRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     let issuers = [];
     try {
-      const response = await this.api.secrets.pkiListIssuers(backend, PkiListIssuersListEnum.TRUE);
+      const response = await this.api.secrets.pkiListIssuers(backend, SecretsApiPkiListIssuersListEnum.TRUE);
       issuers = this.api.keyInfoToArray(response, 'issuer_id');
     } catch (error) {
       if (error.response.status !== 404) {

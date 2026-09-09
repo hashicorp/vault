@@ -7,8 +7,6 @@ package raft
 
 import "github.com/hashicorp/go-hclog"
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 func (b *RaftBackend) entrySizeLimitForPath(path string) uint64 {
 	return b.maxEntrySize
 }

@@ -4,8 +4,9 @@
  */
 
 import { findDestination } from 'core/helpers/sync-destinations';
+import { DestinationType } from 'sync/utils/constants';
 
-import type { DestinationType, ListDestination } from 'vault/sync';
+import type { ListDestination } from 'vault/sync';
 import type { SystemListSyncDestinationsResponse } from '@hashicorp/vault-client-typescript';
 
 // transforms the systemListSyncDestinations response to a flat array

@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 // Test wrapping functionality
@@ -20,20 +21,14 @@ func TestHTTP_Wrapping(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-
-	// make it easy to get access to the active
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
-
 	client := cores[0].Client
-	client.SetToken(cluster.RootToken)
+
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	// Write a value that we will use with wrapping for lookup
-	_, err := client.Logical().Write("secret/foo", map[string]interface{}{
+	_, err = client.Logical().Write("secret/foo", map[string]interface{}{
 		"zip": "zap",
 	})
 	if err != nil {

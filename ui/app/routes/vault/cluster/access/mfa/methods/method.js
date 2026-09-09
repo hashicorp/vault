@@ -6,27 +6,40 @@
 import Route from '@ember/routing/route';
 import { hash } from 'rsvp';
 import { service } from '@ember/service';
+import {
+  fetchMfaLoginEnforcements,
+  getMfaMethodName,
+  getMfaMethodIcon,
+} from 'vault/utils/mfa-login-enforcement-helpers';
 
 export default class MfaMethodRoute extends Route {
-  @service store;
+  @service api;
 
-  model({ id }) {
+  async model({ id }) {
+    let enforcements;
+    let method;
+    let error = [];
+
+    try {
+      method = await this.api.identity.mfaReadMethod(id);
+      method.data.displayName = getMfaMethodName(method.data.type);
+      method.data.icon = getMfaMethodIcon(method.data.type);
+
+      enforcements = await fetchMfaLoginEnforcements(this.api);
+    } catch (err) {
+      const { status } = await this.api.parseError(err);
+      if (status === 404) {
+        error = [];
+      } else {
+        throw err;
+      }
+    }
     return hash({
-      method: this.store.findRecord('mfa-method', id).then((data) => data),
-      enforcements: this.store
-        .query('mfa-login-enforcement', {})
-        .then((data) => {
-          const filteredEnforcements = data.filter((item) => {
-            const results = item.hasMany('mfa_methods').ids();
-            return results.includes(id);
-          });
-          return filteredEnforcements;
-        })
-        .catch(() => {
-          // Do nothing
-        }),
+      method: method.data || {},
+      enforcements: enforcements || error,
     });
   }
+
   setupController(controller, model) {
     controller.set('model', model);
   }

@@ -21,6 +21,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
@@ -33,9 +34,11 @@ const SELECT = {
 module('Acceptance | policies/acl', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    return login();
+    await login();
+    // dismiss wizard
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.aclPolicy);
   });
 
   test('it lists default and root acls', async function (assert) {
@@ -107,11 +110,12 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createPolicy);
 
     await fillIn(GENERAL.inputByAttr('name'), policyName);
+    // Select code editor first to bypass visual policy editor validations so we get an API error
+    await click(GENERAL.radioByAttr('code'));
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
-    await click(GENERAL.radioByAttr('code'));
     await waitFor('.cm-editor');
     const editor = codemirror();
     setCodeEditorValue(editor, policyString);

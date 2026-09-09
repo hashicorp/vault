@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, visit, currentURL } from '@ember/test-helpers';
+import { click, fillIn, visit, currentURL, currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -86,8 +86,20 @@ module('Acceptance | aws | configuration', function (hooks) {
       await enablePage.enable('aws', path);
       await click(GENERAL.dropdownToggle('Manage'));
       await click(GENERAL.menuItem('Configure'));
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.configuration.edit',
+        'dropdown navigates to new route'
+      );
+      // directly navigate to old URL
       await visit(`/vault/settings/secrets/configure/${path}`);
-      assert.dom(GENERAL.notFound).exists('shows page-error');
+      assert.dom(GENERAL.pageError.title(404)).hasText('ERROR 404 Not found');
+      assert
+        .dom(GENERAL.pageError.message)
+        .hasText(`Sorry, we were unable to find any content at settings/secrets/configure/${path}.`);
+      assert
+        .dom(GENERAL.pageError.error)
+        .hasTextContaining('Double check the URL or return to the dashboard. Go to dashboard');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -391,7 +403,6 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       test('it should show API error when AWS configuration read fails', async function (assert) {
-        assert.expect(1);
         const path = `aws-${this.uid}`;
         const type = 'aws';
         await enablePage.enable(type, path);
@@ -400,7 +411,16 @@ module('Acceptance | aws | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request'] });
         });
         await visit(`/vault/secrets-engines/${path}/configuration/edit`);
-        assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
+        assert.strictEqual(
+          currentRouteName(),
+          'vault.cluster.secrets.backend.error',
+          'it redirects to the secrets backend error route'
+        );
+        assert.dom(GENERAL.pageError.title(400)).hasText('ERROR 400 Error');
+        assert
+          .dom(GENERAL.pageError.message)
+          .hasText('A problem has occurred. Check the Vault logs or console for more details.');
+        assert.dom(GENERAL.pageError.details).hasText('bad request');
       });
     });
   });

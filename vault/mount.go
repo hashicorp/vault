@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
@@ -69,21 +70,24 @@ const (
 	// ListingVisibilityUnauth is the unauth type for listing visibility
 	ListingVisibilityUnauth ListingVisibilityType = "unauth"
 
-	mountPathSystem    = "sys/"
-	mountPathIdentity  = "identity/"
-	mountPathCubbyhole = "cubbyhole/"
+	mountPathSystem        = "sys/"
+	mountPathIdentity      = "identity/"
+	mountPathCubbyhole     = "cubbyhole/"
+	mountPathAgentRegistry = "agent-registry/"
 
-	mountTypeSystem      = "system"
-	mountTypeNSSystem    = "ns_system"
-	mountTypeIdentity    = "identity"
-	mountTypeNSIdentity  = "ns_identity"
-	mountTypeCubbyhole   = "cubbyhole"
-	mountTypePlugin      = "plugin"
-	mountTypeKV          = "kv"
-	mountTypeNSCubbyhole = "ns_cubbyhole"
-	mountTypeToken       = "token"
-	mountTypeNSToken     = "ns_token"
-	mountTypeDatabase    = "database"
+	mountTypeSystem          = "system"
+	mountTypeNSSystem        = "ns_system"
+	mountTypeIdentity        = "identity"
+	mountTypeNSIdentity      = "ns_identity"
+	mountTypeCubbyhole       = "cubbyhole"
+	mountTypePlugin          = "plugin"
+	mountTypeKV              = "kv"
+	mountTypeNSCubbyhole     = "ns_cubbyhole"
+	mountTypeToken           = "token"
+	mountTypeNSToken         = "ns_token"
+	mountTypeDatabase        = "database"
+	mountTypeAgentRegistry   = "agent_registry"
+	mountTypeNSAgentRegistry = "ns_agent_registry"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -107,11 +111,13 @@ var (
 		mountPathSystem,
 		mountPathCubbyhole,
 		mountPathIdentity,
+		mountPathAgentRegistry,
 	}
 
 	untunableMounts = []string{
 		mountPathCubbyhole,
 		mountPathSystem,
+		mountPathAgentRegistry,
 		"audit/",
 	}
 
@@ -122,6 +128,7 @@ var (
 		mountTypeSystem,
 		mountTypeToken,
 		mountTypeIdentity,
+		mountTypeAgentRegistry,
 	}
 
 	// mountAliases maps old backend names to new backend names, allowing us
@@ -149,6 +156,18 @@ func (c *Core) generateMountAccessor(entryType string) (string, error) {
 type MountTable struct {
 	Type    string        `json:"type"`
 	Entries []*MountEntry `json:"entries"`
+}
+
+func (m *MountTable) Clone() (*MountTable, error) {
+	entries := make([]*MountEntry, 0, len(m.Entries))
+	for _, entry := range m.Entries {
+		clonedEntry, err := entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, clonedEntry)
+	}
+	return &MountTable{Type: m.Type, Entries: entries}, nil
 }
 
 //go:generate enumer -type=MountMigrationStatus -trimprefix=MigrationStatus -transform=kebab
@@ -788,7 +807,14 @@ func (c *Core) mountInternalWithRequest(ctx context.Context, entry *MountEntry, 
 
 		// initialize, using the core's active context.
 		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
-		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{
+			Storage:             view,
+			MountPoint:          entry.Path,
+			MountType:           entry.Type,
+			MountAccessor:       entry.Accessor,
+			BackendUUID:         entry.BackendAwareUUID,
+			MountRunningVersion: entry.RunningVersion,
+		})
 		if err != nil {
 			return err
 		}
@@ -1354,7 +1380,17 @@ func (c *Core) loadMounts(ctx context.Context) error {
 	// If this node is a performance standby we do not want to attempt to
 	// upgrade the mount table, this will be the active node's responsibility.
 	if !c.perfStandby {
-		err := c.runMountUpdates(ctx, needPersist)
+		oldMounts, err := c.mounts.Clone()
+		if err != nil {
+			c.logger.Error("failed to clone mount table", "error", err)
+			return err
+		}
+		err = c.runMountUpdates(ctx, needPersist, true)
+		if errors.Is(err, physical.ErrValueSize) {
+			c.logger.Error("Cannot add default mounts because the mount table is too large to write to storage. If you are using integrated storage, increase the max_mount_and_namespace_table_entry_size in your Vault config file to add all default mounts to all namespaces. If you are using Consul storage, increase the txn_max_req_len in your Consul config file to add all default mounts to all namespaces. Continuing without default mounts")
+			c.mounts = oldMounts
+			err = c.runMountUpdates(ctx, needPersist, false)
+		}
 		if err != nil {
 			c.logger.Error("failed to run mount table upgrades", "error", err)
 			return err
@@ -1400,7 +1436,7 @@ func (c *Core) loadMounts(ctx context.Context) error {
 
 // Note that this is only designed to work with singletons, as it checks by
 // type only.
-func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
+func (c *Core) runMountUpdates(ctx context.Context, needPersist, tryAddingRequiredMounts bool) error {
 	// Upgrade to typed mount table
 	if c.mounts.Type == "" {
 		c.mounts.Type = mountTableType
@@ -1424,8 +1460,20 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 		// ensure this comes over. If we upgrade first, we simply don't
 		// create the mount, so we won't conflict when we sync. If this is
 		// local (e.g. cubbyhole) we do still add it.
-		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) {
+		if !foundRequired && (!c.IsPerfSecondary() || requiredMount.Local) && tryAddingRequiredMounts {
 			c.mounts.Entries = append(c.mounts.Entries, requiredMount)
+			needPersist = true
+		}
+	}
+
+	if !c.IsPerfSecondary() && tryAddingRequiredMounts {
+		var modified bool
+		var err error
+		c.mounts.Entries, modified, err = c.addRequiredNamespaceMounts(c.mounts.Entries)
+		if err != nil {
+			return err
+		}
+		if modified {
 			needPersist = true
 		}
 	}
@@ -1481,7 +1529,7 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 	// Persist both mount tables
 	if err := c.persistMounts(ctx, c.mounts, nil); err != nil {
 		c.logger.Error("failed to persist mount table", "error", err)
-		return errLoadMountsFailed
+		return errors.Join(errLoadMountsFailed, err)
 	}
 	return nil
 }
@@ -1698,7 +1746,14 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				}
 
 				nsActiveContext := namespace.ContextWithNamespace(c.activeContext, localEntry.Namespace())
-				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
+				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{
+					Storage:             view,
+					MountPoint:          localEntry.Path,
+					MountType:           localEntry.Type,
+					MountAccessor:       localEntry.Accessor,
+					BackendUUID:         localEntry.BackendAwareUUID,
+					MountRunningVersion: localEntry.RunningVersion,
+				})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
@@ -1996,6 +2051,33 @@ func (c *Core) requiredMountTable() *MountTable {
 		BackendAwareUUID: identityBackendUUID,
 		Config: MountConfig{
 			PassthroughRequestHeaders: []string{"Authorization"},
+			AllowedResponseHeaders:    []string{"Location"},
+		},
+		RunningVersion: versions.DefaultBuiltinVersion,
+	}
+
+	agentRegistryUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity mount entry UUID: %v", err))
+	}
+	agentRegistryAccessor, err := c.generateMountAccessor("agent-registry")
+	if err != nil {
+		panic(fmt.Sprintf("could not generate identity accessor: %v", err))
+	}
+	agentRegistryBackendUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		panic(fmt.Sprintf("could not create identity backend UUID: %v", err))
+	}
+	agentRegistryMount := &MountEntry{
+		Table:            mountTableType,
+		Path:             "agent-registry/",
+		Type:             "agent_registry",
+		Description:      "agent registry",
+		UUID:             agentRegistryUUID,
+		Accessor:         agentRegistryAccessor,
+		BackendAwareUUID: agentRegistryBackendUUID,
+		Config: MountConfig{
+			PassthroughRequestHeaders: []string{"Authorization"},
 		},
 		RunningVersion: versions.DefaultBuiltinVersion,
 	}
@@ -2003,6 +2085,7 @@ func (c *Core) requiredMountTable() *MountTable {
 	table.Entries = append(table.Entries, cubbyholeMount)
 	table.Entries = append(table.Entries, sysMount)
 	table.Entries = append(table.Entries, identityMount)
+	table.Entries = append(table.Entries, agentRegistryMount)
 
 	return table
 }
@@ -2048,6 +2131,12 @@ func (c *Core) setCoreBackend(entry *MountEntry, backend logical.Backend, view *
 		c.cubbyholeBackend = ch
 	case mountTypeIdentity:
 		c.identityStore = backend.(*IdentityStore)
+	case mountTypeAgentRegistry:
+		// core should only have a reference to the root namespace's
+		// agent registry
+		if entry.NamespaceID == namespace.RootNamespaceID {
+			c.agentRegistry = backend.(*AgentRegistry)
+		}
 	}
 }
 

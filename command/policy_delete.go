@@ -35,8 +35,8 @@ Usage: vault policy delete [options] NAME
 
       $ vault policy delete my-policy
 
-  Note that it is not possible to delete the "default" or "root" policies.
-  These are built-in policies.
+  Note that it is not possible to delete the "default", "default-ceiling",
+  or "root" policies. These are built-in policies.
 
 ` + c.Flags().Help()
 

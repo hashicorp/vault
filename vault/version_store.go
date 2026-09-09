@@ -199,6 +199,9 @@ func (c *Core) IsNewInstall(ctx context.Context) bool {
 	return oldestVersion == "" && newestVersion == ""
 }
 
+// IsJWT validates if a token is of JWT format, which was historically
+// a possibility for wrapping tokens, though not something we
+// encourage today.
 func IsJWT(token string) bool {
 	return len(token) > 3 && strings.Count(token, ".") == 2 &&
 		(token[3] != '.' && token[1] != '.')
@@ -206,12 +209,14 @@ func IsJWT(token string) bool {
 
 func IsSSCToken(token string) bool {
 	return len(token) > MaxNsIdLength+TokenLength+TokenPrefixLength &&
-		strings.HasPrefix(token, consts.ServiceTokenPrefix)
+		(strings.HasPrefix(token, consts.ServiceTokenPrefix) ||
+			strings.HasPrefix(token, consts.GetSCIMTokenPrefix()))
 }
 
 func IsServiceToken(token string) bool {
 	return strings.HasPrefix(token, consts.ServiceTokenPrefix) ||
-		strings.HasPrefix(token, consts.LegacyServiceTokenPrefix)
+		strings.HasPrefix(token, consts.LegacyServiceTokenPrefix) ||
+		strings.HasPrefix(token, consts.GetSCIMTokenPrefix())
 }
 
 func IsBatchToken(token string) bool {

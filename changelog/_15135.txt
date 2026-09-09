@@ -1,0 +1,6 @@
+```release-note:feature
+**AI Agent Support (Beta/Enterprise)**: Adds beta support for first-class AI agents. Adds
+an Agent Registry to register agents, and adds support for using Vault as an OAuth resource server
+for registered agent entities. When configured, allows OAuth 2.0 JWTs to be used to directly authorize
+requests to Vault, without needing a Vault token.
+```

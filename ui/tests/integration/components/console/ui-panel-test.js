@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, settled } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import uiPanel from 'vault/tests/pages/components/console/ui-panel';

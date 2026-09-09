@@ -3,46 +3,31 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { run } from '@ember/runloop';
 import { resolve } from 'rsvp';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-const storeStub = Service.extend({
-  callArgs: null,
-  adapterFor() {
-    return {
-      replicationAction() {
-        return {
-          then(cb) {
-            cb();
-          },
-        };
-      },
-    };
-  },
-});
-
-const routerService = Service.extend({
-  transitionTo: sinon.stub().returns(resolve()),
-});
-
 module('Integration | Component | replication actions', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    run(() => {
-      this.owner.register('service:router', routerService);
-      this.owner.unregister('service:store');
-      this.owner.register('service:store', storeStub);
-      this.storeService = this.owner.lookup('service:store');
-    });
+    const { sys } = this.owner.lookup('service:api');
+    sinon.stub(sys, 'systemWriteReplicationDrPrimaryDisable').resolves();
+    sinon.stub(sys, 'systemWriteReplicationDrSecondaryDisable').resolves();
+    sinon.stub(sys, 'systemWriteReplicationPerformancePrimaryDisable').resolves();
+    sinon.stub(sys, 'systemWriteReplicationPerformanceSecondaryDisable').resolves();
+    sinon.stub(sys, 'systemWriteReplicationDrPrimaryDemote').resolves();
+    sinon.stub(sys, 'systemWriteReplicationPerformancePrimaryDemote').resolves();
+    sinon.stub(sys, 'systemWriteReplicationDrSecondaryPromote').resolves();
+    sinon.stub(sys, 'systemWriteReplicationPerformanceSecondaryPromote').resolves();
+    sinon.stub(sys, 'systemWriteReplicationDrSecondaryUpdatePrimary').resolves();
+    sinon.stub(sys, 'systemWriteReplicationPerformanceSecondaryUpdatePrimary').resolves();
   });
+
   const confirmInput = (confirmText) => fillIn('[data-test-confirmation-modal-input]', confirmText);
   const testCases = [
     [
@@ -156,16 +141,14 @@ module('Integration | Component | replication actions', function (hooks) {
         );
         return resolve();
       });
-      this.set('storeService.capabilitiesReturnVal', ['root']);
+
       await render(
-        hbs`
-                <ReplicationActions
+        hbs`<ReplicationActions
           @model={{this.model}}
           @replicationMode={{this.replicationMode}}
           @selectedAction={{this.selectedAction}}
           @onSubmit={{action this.onSubmit}}
-        />
-        `
+        />`
       );
       assert
         .dom(`[data-test-${action}-replication] h3`)

@@ -12,8 +12,9 @@ import getStorage from '../../lib/token-storage';
 import localStorage from 'vault/lib/local-storage';
 import clearModelCache from 'vault/utils/shared-model-boundary';
 import { assert } from '@ember/debug';
+import config from 'vault/config/environment';
 
-import { v4 as uuidv4 } from 'uuid';
+import { getOrCreateAnalyticsUserId } from 'vault/utils/preferences';
 
 import {
   INIT,
@@ -113,7 +114,7 @@ export default class ClusterRoute extends Route {
       }
       return this.version.fetchFeatures();
     } else {
-      return reject({ httpStatus: 404, message: 'not found', path: params.cluster_name });
+      return reject({ httpStatus: 404, path: params.cluster_name });
     }
   }
 
@@ -174,7 +175,25 @@ export default class ClusterRoute extends Route {
     return this.transitionToTargetRoute(transition);
   }
 
+  // Reads the operator's ui_telemetry flag from sys/internal/ui/settings and hands
+  // it to the analytics service's consent gate.
+  async startVaultSmAnalytics() {
+    const { ANALYTICS_CONFIG } = config.APP;
+    let uiTelemetryEnabled = false;
+    try {
+      const settings = await this.api.sys.internalUiReadSettings();
+      uiTelemetryEnabled = Boolean(settings?.ui_telemetry_enabled);
+    } catch (e) {
+      uiTelemetryEnabled = false;
+    }
+    this.analytics.startVaultSmAnalytics(uiTelemetryEnabled, ANALYTICS_CONFIG);
+  }
+
   async addAnalyticsService(model) {
+    // HVD-managed clusters use PostHog, started at the application-route level.
+    // Segment is Self-Managed only.
+    if (!this.flagsService.isHvdManaged) await this.startVaultSmAnalytics();
+
     // identify user for analytics service
     if (this.analytics.activated) {
       let licenseId = '';
@@ -188,11 +207,18 @@ export default class ClusterRoute extends Route {
       }
 
       try {
-        const entity_id = this.auth.authData?.entityId;
-        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
+        // Store the raw and un-prefixed ID, the entity ID when authenticated, else a
+        // stable per-browser uuid persisted in localStorage (token-based access
+        // has no entity ID). The `vault-` realm prefix is applied only here at
+        // identify() time and is never persisted or sent as uniqueSecurityName.
+        const entityId = this.auth.authData?.entityId;
+        const uniqueSecurityName = entityId ? entityId : getOrCreateAnalyticsUserId();
 
-        this.analytics.identifyUser(entity, {
+        this.analytics.identifyUser(`vault-${uniqueSecurityName}`, {
+          realmName: 'vault',
+          uniqueSecurityName,
           licenseId: licenseId,
+          clusterId: model.id,
           licenseState: model.license?.state || 'community',
           version: model.version.version,
           storageType: model.storageType,

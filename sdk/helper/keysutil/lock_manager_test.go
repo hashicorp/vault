@@ -110,7 +110,7 @@ func TestRestorePolicy_NilPolicy(t *testing.T) {
 	// Create backup data without "policy" field (causes nil Policy)
 	invalidBackup := base64.StdEncoding.EncodeToString([]byte(`{"archived_keys": null}`))
 
-	err = lm.RestorePolicy(ctx, storage, "test-key", invalidBackup, false)
+	_, err = lm.RestorePolicy(ctx, storage, "test-key", invalidBackup, false)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "backup data does not contain a valid policy")
 }

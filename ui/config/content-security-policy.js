@@ -10,12 +10,21 @@ module.exports = function (environment) {
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
     'img-src': ["'self'", 'data:'],
-    'style-src': ["'unsafe-inline'", "'self'"],
+    'style-src': ["'self'"],
     'media-src': ["'self'"],
     'form-action': ["'none'"],
   };
 
   policy['connect-src'].push('https://eu.i.posthog.com');
+  // Segment event pipeline and integration bundle fetches
+  policy['connect-src'].push('https://api.segment.io');
+  policy['connect-src'].push('https://cdn.segment.com');
+  // Amplitude integration bundle — loaded at runtime by Segment from cdn.segment.com
+  policy['script-src'].push('https://cdn.segment.com');
+
+  if (environment === 'test' || environment === 'development') {
+    policy['style-src'].push("'unsafe-inline'");
+  }
 
   return {
     delivery: ['header', 'meta'],

@@ -45,7 +45,7 @@ type Handler interface {
 	// Handoff is used to pass the connection lifetime off to
 	// the handler
 	Handoff(context.Context, *sync.WaitGroup, chan struct{}, *tls.Conn) error
-	Stop() error
+	Stop(bool) error
 }
 
 type ClusterHook interface {
@@ -74,9 +74,10 @@ type Listener struct {
 	logger                    log.Logger
 	l                         sync.RWMutex
 	tlsConnectionLoggingLevel log.Level
+	sleepOnStop               bool
 }
 
-func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
+func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration, sleepOnStop bool) *Listener {
 	var maxStreams uint32 = math.MaxUint32
 	if override := os.Getenv("VAULT_GRPC_MAX_STREAMS"); override != "" {
 		i, err := strconv.ParseUint(override, 10, 32)
@@ -113,6 +114,7 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		cipherSuites:              cipherSuites,
 		logger:                    logger,
 		tlsConnectionLoggingLevel: log.LevelFromString(os.Getenv("VAULT_CLUSTER_TLS_SESSION_LOG_LEVEL")),
+		sleepOnStop:               sleepOnStop,
 	}
 }
 
@@ -173,7 +175,7 @@ func (cl *Listener) StopHandler(alpn string) {
 	delete(cl.handlers, alpn)
 	cl.l.Unlock()
 	if ok {
-		handler.Stop()
+		handler.Stop(cl.sleepOnStop)
 	}
 }
 
@@ -349,7 +351,15 @@ func (cl *Listener) Run(ctx context.Context) error {
 						loopDelay = maxDelay
 					}
 
-					time.Sleep(loopDelay)
+					if _, ok := cl.networkLayer.(*InmemLayer); ok {
+						select {
+						case <-time.After(loopDelay):
+						case <-localLn.(*inmemListener).stopCh:
+							return
+						}
+					} else {
+						time.Sleep(loopDelay)
+					}
 					continue
 				}
 				// No error, reset loop delay
@@ -422,6 +432,13 @@ func (cl *Listener) Stop() {
 	// Set the shutdown flag. This will cause the listeners to shut down
 	// within the deadline in clusterListenerAcceptDeadline
 	atomic.StoreUint32(cl.shutdown, 1)
+	if l, ok := cl.networkLayer.(*InmemLayer); ok {
+		l.l.Lock()
+		l.listener.Close()
+		l.listener = nil
+		l.l.Unlock()
+		cl.logger.Info("inmemlayer listener stopped")
+	}
 	cl.logger.Info("forwarding rpc listeners stopped")
 
 	// Wait for them all to shut down

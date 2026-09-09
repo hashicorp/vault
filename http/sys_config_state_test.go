@@ -148,6 +148,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				"default_max_request_duration":        json.Number("0"),
 				"disable_cache":                       false,
 				"disable_clustering":                  false,
+				"disable_goroutine_trace_dump":        false,
 				"disable_indexing":                    false,
 				"disable_mlock":                       false,
 				"disable_performance_standby":         false,
@@ -178,11 +179,14 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 				},
 				"storage":                        tc.expectedStorageOutput,
 				"administrative_namespace_path":  "",
+				"operator_namespace_path":        "",
 				"imprecise_lease_role_tracking":  false,
 				"enable_post_unseal_trace":       false,
 				"post_unseal_trace_directory":    "",
 				"remove_irrevocable_lease_after": json.Number("0"),
 				"allow_audit_log_prefixing":      false,
+				"enable_unauthenticated_access":  nil,
+				"deny_slash_in_templated_paths":  false,
 			}
 
 			if tc.expectedHAStorageOutput != nil {

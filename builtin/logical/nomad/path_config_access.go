@@ -167,8 +167,9 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 	if conf.Token == "" {
 		client, err := clientFromConfig(conf)
 		if err != nil {
-			return logical.ErrorResponse("Token not provided and failed to constuct client"), err
+			return logical.ErrorResponse("Token not provided and failed to construct client"), err
 		}
+		defer client.Close()
 		token, _, err := client.ACLTokens().Bootstrap(nil)
 		if err != nil {
 			return logical.ErrorResponse("Token not provided and failed to bootstrap ACLs"), err
@@ -187,6 +188,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		return nil, err
 	}
 
+	b.resetClient()
 	return nil, nil
 }
 
@@ -194,6 +196,7 @@ func (b *backend) pathConfigAccessDelete(ctx context.Context, req *logical.Reque
 	if err := req.Storage.Delete(ctx, configAccessKey); err != nil {
 		return nil, err
 	}
+	b.resetClient()
 	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeNomadConfigAccessDelete, nil)
 	return nil, nil
 }

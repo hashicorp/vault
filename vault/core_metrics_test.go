@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -413,8 +413,8 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 				},
 			},
 			ExpectedValues: map[string]float32{
-				// The "default" policy will always be included
-				"acl": 2,
+				// The built-in ACL policies are always included.
+				"acl": 3,
 				"egp": 0,
 				"rgp": 0,
 			},
@@ -429,8 +429,8 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 				},
 			},
 			ExpectedValues: map[string]float32{
-				// The "default" policy will always be included
-				"acl": 3,
+				// The built-in ACL policies are always included.
+				"acl": 4,
 				"egp": 0,
 				"rgp": 0,
 			},

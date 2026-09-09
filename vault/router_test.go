@@ -313,6 +313,7 @@ func TestRouter_RootPath(t *testing.T) {
 		Root: []string{
 			"root",
 			"policy/*",
+			"mounts/auth/+/tune",
 		},
 	}
 	err = r.Mount(n, "prod/aws/", &MountEntry{UUID: meUUID, Accessor: "awsaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
@@ -332,6 +333,9 @@ func TestRouter_RootPath(t *testing.T) {
 		{"prod/aws/policy", false},
 		{"prod/aws/policy/", true},
 		{"prod/aws/policy/ops", true},
+		{"prod/aws/mounts/auth/userpass/tune", true},
+		{"prod/aws/mounts/auth/userpass", false},
+		{"prod/aws/mounts/auth/userpass/roles", false},
 	}
 
 	for _, tc := range tcases {
@@ -571,7 +575,7 @@ func TestParseUnauthenticatedPaths(t *testing.T) {
 	}
 	allPaths := append(paths, wildcardPaths...)
 
-	p, err := parseUnauthenticatedPaths(allPaths)
+	p, err := parseSpecialPaths(allPaths)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -629,7 +633,7 @@ func TestParseUnauthenticatedPaths_Error(t *testing.T) {
 	}
 
 	for _, tc := range tcases {
-		_, err := parseUnauthenticatedPaths(tc.paths)
+		_, err := parseSpecialPaths(tc.paths)
 		if err == nil || err != nil && !strings.Contains(err.Error(), tc.err) {
 			t.Fatalf("bad: path: %s expect: %v got %v", tc.paths, tc.err, err)
 		}

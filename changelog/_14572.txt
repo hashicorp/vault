@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Restore re-sizable columns for secrets and namespaces tables.  
+```

@@ -1,0 +1,9 @@
+```release-note:improvement
+sdk: Expand support for docker test cluster options like seals, kms libraries, and entropy augmentation. DockerClusterNode.UpdateConfig now takes a full set of cluster options instead of just node config.
+```
+```release-note:improvement
+core (Enterprise): Sanitized config now shows kms_library config.
+```
+```release-note:Bug
+core (Enterprise): Fix parsing of kms_libary and entropy config in JSON format.
+```

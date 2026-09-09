@@ -11,9 +11,15 @@ import (
 
 // Eventually retries the function 'fn' until it returns nil or timeout occurs.
 func (s *Session) Eventually(fn func() error) {
+	s.EventuallyWithTimeout(fn, 5*time.Second)
+}
+
+// EventuallyWithTimeout retries the function 'fn' until it returns nil or timeout occurs.
+// Use this for operations that may take longer than the default 5 seconds.
+func (s *Session) EventuallyWithTimeout(fn func() error, timeout time.Duration) {
 	s.t.Helper()
 
-	timeout := time.After(5 * time.Second)
+	timeoutChan := time.After(timeout)
 	ticker := time.NewTicker(200 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -21,8 +27,8 @@ func (s *Session) Eventually(fn func() error) {
 
 	for {
 		select {
-		case <-timeout:
-			s.t.Fatalf("Eventually failed after 5s. Last error: %v", lastErr)
+		case <-timeoutChan:
+			s.t.Fatalf("Eventually failed after %v. Last error: %v", timeout, lastErr)
 		case <-ticker.C:
 			lastErr = fn()
 			if lastErr == nil {
@@ -38,6 +44,21 @@ func (s *Session) WithRootNamespace(fn func() (*api.Secret, error)) (*api.Secret
 	oldNamespace := s.Client.Namespace()
 	defer s.Client.SetNamespace(oldNamespace)
 	s.Client.ClearNamespace()
+
+	return fn()
+}
+
+// WithParentNamespace temporarily switches to the parent namespace (e.g., "admin" in HVD)
+// and executes the provided function, then restores the original namespace.
+func (s *Session) WithParentNamespace(fn func() (*api.Secret, error)) (*api.Secret, error) {
+	s.t.Helper()
+
+	oldNamespace := s.Client.Namespace()
+	defer s.Client.SetNamespace(oldNamespace)
+
+	// Get the parent namespace from environment (e.g., "admin" in HVD)
+	parentNS := s.GetParentNamespace()
+	s.Client.SetNamespace(parentNS)
 
 	return fn()
 }

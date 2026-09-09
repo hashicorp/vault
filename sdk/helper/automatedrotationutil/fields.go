@@ -1,15 +1,19 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: MPL-2.0
 
 package automatedrotationutil
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/rotation"
+	"github.com/robfig/cron/v3"
 )
 
 var (
@@ -48,47 +52,19 @@ type RotationInfoResponseParams struct {
 
 // ParseAutomatedRotationFields provides common field parsing to embedding structs.
 func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.FieldData) error {
-	rotationScheduleRaw, scheduleOk := d.GetOk("rotation_schedule")
-	rotationWindowSecondsRaw, windowOk := d.GetOk("rotation_window")
-	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
-	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
 	rotationPolicyRaw, policyOk := d.GetOk("rotation_policy")
 
-	if scheduleOk {
-		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
-			return ErrRotationMutuallyExclusiveFields
-		}
-		p.RotationSchedule = rotationScheduleRaw.(string)
-
-		// parse schedule to ensure it is valid
-		if p.RotationSchedule != "" {
-			_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
-			if err != nil {
-				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
-			}
-		}
+	// use common extraction helper
+	automatedRotationParams, err := ParseRotationConfigFromFieldData(d)
+	if err != nil {
+		return err
 	}
 
-	if windowOk {
-		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
-			return fmt.Errorf("rotation_window does not apply to period")
-		}
-		rotationWindowSeconds := rotationWindowSecondsRaw.(int)
-		p.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
-	}
-
-	if periodOk {
-		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
-		p.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
-	}
-
-	if (windowOk && rotationWindowSecondsRaw.(int) != 0) && !scheduleOk {
-		return fmt.Errorf("cannot use rotation_window without rotation_schedule")
-	}
-
-	if disableRotationOk {
-		p.DisableAutomatedRotation = disableRotation.(bool)
-	}
+	// set fields from response
+	p.RotationSchedule = automatedRotationParams.RotationSchedule
+	p.RotationWindow = automatedRotationParams.RotationWindow
+	p.RotationPeriod = automatedRotationParams.RotationPeriod
+	p.DisableAutomatedRotation = automatedRotationParams.DisableAutomatedRotation
 
 	if policyOk {
 		p.RotationPolicy = rotationPolicyRaw.(string)
@@ -97,13 +73,237 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 	return nil
 }
 
-// PopulateAutomatedRotationData adds PluginIdentityTokenParams info into the given map.
+// ParsedRotationConfig contains rotation configuration fields extracted and validated
+// from framework.FieldData. This struct represents the parsed input data, not a response.
+//
+// Use ParseRotationConfigFromFieldData to extract these fields from user input.
+// Use AutomatedRotationParams when you need the full parameter set including RotationPolicy.
+type ParsedRotationConfig struct {
+	RotationSchedule         string        `json:"rotation_schedule"`
+	RotationWindow           time.Duration `json:"rotation_window"`
+	RotationPeriod           time.Duration `json:"rotation_period"`
+	DisableAutomatedRotation bool          `json:"disable_automated_rotation"`
+
+	// parsed cron schedule
+	Scheduler *cron.SpecSchedule `json:"scheduler"`
+}
+
+// ParseRotationConfigFromFieldData extracts and validates rotation configuration from field data.
+// It performs the following validations:
+//   - Ensures rotation_schedule and rotation_period are mutually exclusive
+//   - Validates rotation_schedule is a valid CRON expression if provided
+//   - Ensures rotation_window is only used with rotation_schedule, not rotation_period
+//   - Converts duration fields from seconds to time.Duration
+//
+// Returns ParsedRotationConfig with extracted values, or an error if validation fails.
+func ParseRotationConfigFromFieldData(d *framework.FieldData) (*ParsedRotationConfig, error) {
+	rotationScheduleRaw, scheduleOk := d.GetOk("rotation_schedule")
+	rotationWindowSecondsRaw, windowOk := d.GetOk("rotation_window")
+	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
+	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
+
+	result := &ParsedRotationConfig{}
+
+	if scheduleOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
+			return nil, ErrRotationMutuallyExclusiveFields
+		}
+		result.RotationSchedule = rotationScheduleRaw.(string)
+
+		// parse schedule to ensure it is valid
+		if result.RotationSchedule != "" {
+			cronSc, err := rotation.DefaultScheduler.Parse(result.RotationSchedule)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+			}
+
+			result.Scheduler = cronSc
+			// Explicitly set the rotation period to 0 when using a schedule.
+			if result.RotationSchedule != "" {
+				result.RotationPeriod = time.Duration(0)
+			}
+		}
+	}
+
+	if windowOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
+			return nil, fmt.Errorf("rotation_window does not apply to rotation_period")
+		}
+		rotationWindowSeconds := rotationWindowSecondsRaw.(int)
+		result.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
+	}
+
+	if periodOk {
+		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
+		result.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+		// Explicitly set the rotation schedule to empty when using a period.
+		if result.RotationPeriod != 0 {
+			result.RotationSchedule = ""
+		}
+	}
+
+	if (windowOk && rotationWindowSecondsRaw.(int) != 0) && (!scheduleOk || rotationScheduleRaw.(string) == "") {
+		return nil, fmt.Errorf("cannot use rotation_window without rotation_schedule")
+	}
+
+	if disableRotationOk {
+		result.DisableAutomatedRotation = disableRotation.(bool)
+	}
+
+	return result, nil
+}
+
+type RotationJobOperationResponse struct {
+	OperationPerformed string
+	Logger             hclog.Logger
+	RotationInfo       *rotation.RotationInfo
+}
+
+type (
+	RegisterErrorHandler   func(error) error
+	DeregisterErrorHandler func(error) error
+)
+
+type ErrorHandlers struct {
+	RegisterErrorHandler   RegisterErrorHandler
+	DeregisterErrorHandler DeregisterErrorHandler
+}
+
+// HandleRotationJob is a helper method for registering or deregistering rotation jobs.
+// This wraps the two individual reegister and deregister methods and determines which to call based
+// on the request parameters provided.
+// Returns a formatted error based on the operation that failed.
+// Use this method unless there is a specific need to handle the individual operations independently
+// or in a nonstandard way.
+func (p *AutomatedRotationParams) HandleRotationJob(ctx context.Context, b *framework.Backend, fieldData *framework.FieldData, req *logical.Request) (RotationJobOperationResponse, error) {
+	return p.HandleRotationJobWithErrorHandlers(ctx, b, fieldData, req, &ErrorHandlers{})
+}
+
+// HandleRotationJobWithErrorHandlers is the same as HandleRotationJob but allows callers to provide custom error handlers for errors returned from either the register or deregister operations.
+func (p *AutomatedRotationParams) HandleRotationJobWithErrorHandlers(ctx context.Context, b *framework.Backend, fieldData *framework.FieldData, req *logical.Request, errorHandlers *ErrorHandlers) (RotationJobOperationResponse, error) {
+	resp := RotationJobOperationResponse{
+		Logger: b.Logger(),
+	}
+
+	if err := p.ParseAutomatedRotationFields(fieldData); err != nil {
+		return resp, err
+	}
+
+	if p.ShouldDeregisterRotationJob() {
+		resp.OperationPerformed = rotation.PerformedDeregistration
+		if err := p.HandleDeregisterRotationJob(ctx, b, req); err != nil {
+			if errorHandlers.DeregisterErrorHandler != nil {
+				err = errorHandlers.DeregisterErrorHandler(err)
+			}
+			return resp, fmt.Errorf("failed to deregister rotation job: %w", err)
+		}
+	} else if p.ShouldRegisterRotationJob() {
+		resp.OperationPerformed = rotation.PerformedRegistration
+		registerResp, err := p.HandleRegisterRotationJob(ctx, b, req)
+		if err != nil {
+			if errorHandlers.RegisterErrorHandler != nil {
+				err = errorHandlers.RegisterErrorHandler(err)
+			}
+			return resp, fmt.Errorf("failed to register rotation job: %w", err)
+		}
+		resp.RotationInfo = registerResp
+	}
+
+	return resp, nil
+}
+
+// HandleStorageErrorAfterRotationJob is a helper method to log and wrap errors from storage operations
+// and should only be used after performing rotation job operations.
+// The caller is responsible for determining when it is appropriate to call this method.
+func (r *RotationJobOperationResponse) HandleStorageErrorAfterRotationJob(req *logical.Request, err error) error {
+	if err != nil {
+		if r.OperationPerformed != "" {
+			// Write to storage failed but a rotation job operation succeeded beforehand, return this as an error.
+			msg := "write to storage failed but the rotation operation still succeeded; this may cause next_vault_rotation and last_vault_rotation values to be out-of-sync with the actual rotation schedule"
+			r.Logger.Error(msg,
+				"operation", r.OperationPerformed, "mount", req.MountPoint, "path", req.Path, "error", err.Error())
+			return fmt.Errorf("%s; operation=%s, mount=%s, path=%s, error=%s", msg, r.OperationPerformed, req.MountPoint, req.Path, err)
+		} else {
+			// There was no rotation operation performed, so just return the storage error.
+			return err
+		}
+	}
+
+	return nil
+}
+
+// HandleRegisterRotationJob is a helper method to register rotation jobs from a plugin.
+// Use HandleRotationJob or HandleRotationJobWithErrorHandlers instead when possible.
+// Returns the raw system error.
+// Callers are responsible for validating when to register a RotationJob.
+// Callers are responsible for performing cleanup or storage rollbacks if necessary.
+func (p *AutomatedRotationParams) HandleRegisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) (*rotation.RotationInfo, error) {
+	registerReq := &rotation.RotationJobConfigureRequest{
+		MountPoint:       req.MountPoint,
+		ReqPath:          req.Path,
+		RotationSchedule: p.RotationSchedule,
+		RotationWindow:   p.RotationWindow,
+		RotationPeriod:   p.RotationPeriod,
+		RotationPolicy:   p.RotationPolicy,
+	}
+
+	b.Logger().Debug("Registering rotation job", "mount", req.MountPoint, "path", req.Path)
+	resp, err := b.System().RegisterRotationJobWithResponse(ctx, registerReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// HandleDeregisterRotationJob is a helper method to deregister rotation jobs from a plugin.
+// Use HandleRotationJob or HandleRotationJobWithErrorHandlers instead when possible.
+// Returns the raw system error.
+// Callers are responsible for validating when to deregister a RotationJob.
+// Callers are responsible for performing cleanup or storage rollbacks if necessary.
+func (p *AutomatedRotationParams) HandleDeregisterRotationJob(ctx context.Context, b *framework.Backend, req *logical.Request) error {
+	deregisterReq := &rotation.RotationJobDeregisterRequest{
+		MountPoint: req.MountPoint,
+		ReqPath:    req.Path,
+	}
+
+	b.Logger().Debug("Deregistering rotation job", "mount", req.MountPoint, "path", req.Path)
+	if err := b.System().DeregisterRotationJob(ctx, deregisterReq); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Use PopulateSetAutomatedRotationData instead, *unless* all these
+// fields are necessary to maintain backwards compatibility with the plugin's pre-existing response API.
+// PopulateAutomatedRotationData adds AutomatedRotationParams info into the given map.
 func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]interface{}) {
 	m["rotation_schedule"] = p.RotationSchedule
 	m["rotation_window"] = p.RotationWindow.Seconds()
 	m["rotation_period"] = p.RotationPeriod.Seconds()
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
 	m["rotation_policy"] = p.RotationPolicy
+}
+
+// PopulateSetAutomatedRotationData adds AutomatedRotationParams info into the given map, based
+// on which fields were set for rotation. Setting a rotation schedule will not return a rotation
+// period, and setting a rotation period will not return a rotation schedule or rotation window.
+func (p *AutomatedRotationParams) PopulateSetAutomatedRotationData(m map[string]interface{}) {
+	// Always set these even if they are zero values, to avoid confusion.
+	m["disable_automated_rotation"] = p.DisableAutomatedRotation
+	m["rotation_policy"] = p.RotationPolicy
+
+	// Set both of these if a schedule is set.
+	if p.RotationSchedule != "" {
+		m["rotation_schedule"] = p.RotationSchedule
+		m["rotation_window"] = p.RotationWindow.Seconds()
+	}
+
+	// Set this if a period is set.
+	if p.RotationPeriod != 0 {
+		m["rotation_period"] = p.RotationPeriod.Seconds()
+	}
 }
 
 // PopulateRotationInfo adds RotationInfoResponseParams info into the given map.
@@ -164,13 +364,13 @@ func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
 }
 
 func (p *AutomatedRotationParams) ShouldDeregisterRotationJob() bool {
-	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0)
+	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0 && p.RotationPolicy == "")
 }
 
 // HasNonzeroRotationValues returns true if either of the primary rotation values (RotationSchedule or RotationPeriod)
 // are not the zero value.
 func (p *AutomatedRotationParams) HasNonzeroRotationValues() bool {
-	return p.RotationSchedule != "" || p.RotationPeriod != 0
+	return p.RotationSchedule != "" || p.RotationPeriod != 0 || p.RotationPolicy != ""
 }
 
 // AddAutomatedRotationFieldsWithGroup adds rotation fields to the given field schema map
@@ -227,4 +427,10 @@ func AddAutomatedRotationFieldsWithGroup(m map[string]*framework.FieldSchema, gr
 // future utils that define fields should include a group parameter
 func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 	AddAutomatedRotationFieldsWithGroup(m, "default")
+}
+
+// Equals returns true if the automated rotation parameters match the other instance.
+// Useful for detecting configuration changes after parsing new field data.
+func (p *AutomatedRotationParams) Equals(other AutomatedRotationParams) bool {
+	return *p == other
 }

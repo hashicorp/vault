@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"os"
 	"testing"
 	"time"
 
@@ -201,11 +200,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
-
 	activeClient := cores[0].Client
 	standbyClient := cores[1].Client
 
@@ -238,11 +233,8 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	}
 
 	// Set up env vars for agent consumption
-	origEnvVaultAddress := os.Getenv(api.EnvVaultAddress)
-	os.Setenv(api.EnvVaultAddress, clienToUse.Address())
-
-	origEnvVaultCACert := os.Getenv(api.EnvVaultCACert)
-	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
+	t.Setenv(api.EnvVaultAddress, clienToUse.Address())
+	t.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -322,10 +314,6 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	cleanup := func() {
 		// We wait for a tiny bit for things such as agent renewal to exit properly
 		time.Sleep(50 * time.Millisecond)
-
-		cluster.Cleanup()
-		os.Setenv(api.EnvVaultAddress, origEnvVaultAddress)
-		os.Setenv(api.EnvVaultCACert, origEnvVaultCACert)
 		listener.Close()
 	}
 

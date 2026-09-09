@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test } from 'qunit';
-import { setupApplicationTest } from 'ember-qunit';
-import { setupMirage } from 'ember-cli-mirage/test-support';
-import { v4 as uuidv4 } from 'uuid';
-import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
-import ldapHandlers from 'vault/mirage/handlers/ldap';
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, fillIn, waitFor } from '@ember/test-helpers';
-import { assertURL, isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setupApplicationTest } from 'ember-qunit';
+import { module, test } from 'qunit';
+import sinon from 'sinon';
+import { v4 as uuidv4 } from 'uuid';
+import ldapHandlers from 'vault/mirage/handlers/ldap';
+import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { assertURL, isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
 
 module('Acceptance | ldap | roles', function (hooks) {
@@ -165,6 +166,38 @@ module('Acceptance | ldap | roles', function (hooks) {
       await click('[data-test-tab="libraries"]');
       await click('[data-test-tab="roles"]');
       assert.dom('[data-test-filter-input]').hasNoValue('Roles page filter value cleared on route exit');
+    });
+
+    test('it calls API with correct parameter order for hierarchical paths', async function (assert) {
+      // Get the API service and stub the SDK methods
+      const owner = this.owner;
+      const apiService = owner.lookup('service:api');
+      const ldapListStaticRolePathStub = sinon.stub(apiService.secrets, 'ldapListStaticRolePath');
+      const ldapListRolePathStub = sinon.stub(apiService.secrets, 'ldapListRolePath');
+
+      // Configure stubs to return empty lists
+      ldapListStaticRolePathStub.resolves({ keys: [] });
+      ldapListRolePathStub.resolves({ keys: [] });
+
+      // Navigate to static role subdirectory
+      await visitURL('roles/static/subdirectory/admin/', this.backend);
+
+      // Verify static role API was called with correct parameter order
+      assert.true(ldapListStaticRolePathStub.calledOnce, 'ldapListStaticRolePath was called');
+      const [staticPath, staticMount] = ldapListStaticRolePathStub.firstCall.args;
+      assert.strictEqual(staticPath, 'admin/', 'First parameter is the hierarchical path');
+      assert.strictEqual(staticMount, this.backend, 'Second parameter is the mount path');
+
+      // Navigate to dynamic role subdirectory
+      await visitURL('roles/dynamic/subdirectory/admin/', this.backend);
+
+      // Verify dynamic role API was called with correct parameter order
+      const [dynamicPath] = ldapListRolePathStub.firstCall.args;
+      assert.strictEqual(dynamicPath, 'admin/', 'First parameter is the hierarchical path for dynamic roles');
+
+      // Restore stubs
+      ldapListStaticRolePathStub.restore();
+      ldapListRolePathStub.restore();
     });
   });
 });

@@ -1,0 +1,3 @@
+```release-note:improvement
+consumption-billing: Float64 values returned by `sys/billing/overview` are now rounded to 4 decimal places.
+```

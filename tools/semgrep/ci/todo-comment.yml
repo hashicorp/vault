@@ -1,0 +1,15 @@
+# Copyright IBM Corp. 2016, 2026
+# SPDX-License-Identifier: BUSL-1.1
+
+rules:
+  - id: todo-comment
+    languages: [go, bash, hcl, yaml, proto]
+    severity: WARNING
+    message: >
+      TODO comment found in this PR's diff. Please resolve this TODO before
+      merging, or confirm it is intentional work to be tracked separately.
+    pattern-regex: '(?i)\bTODO\b'
+    paths:
+      exclude:
+        - tools/semgrep/ci/todo-comment.yml
+        - .github/workflows/code-checker.yml

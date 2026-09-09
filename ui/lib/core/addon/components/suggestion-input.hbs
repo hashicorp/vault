@@ -1,0 +1,33 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<div ...attributes {{did-update this.updateSuggestions @mountPath}}>
+  {{#if @label}}
+    <FormFieldLabel for={{this.inputId}} @label={{@label}} @subText={{@subText}} />
+  {{/if}}
+  <FilterInput
+    @id={{this.inputId}}
+    placeholder={{this.placeholder}}
+    @value={{@value}}
+    aria-label={{unless @label "Secret input"}}
+    disabled={{not @mountPath}}
+    @onInput={{this.onInput}}
+    {{on "click" this.onInputClick}}
+    data-test-suggestion-input={{@type}}
+  />
+  <PowerSelect
+    @eventType="click"
+    @options={{this.suggestions}}
+    @onChange={{this.onSuggestionSelect}}
+    @renderInPlace={{true}}
+    @disabled={{not @mountPath}}
+    @registerAPI={{fn (mut this.powerSelectAPI)}}
+    @triggerClass="is-hidden"
+    @noMatchesMessage={{this.noMatchesMessage}}
+    data-test-suggestion-select={{@type}}
+    as |item|
+  >
+    {{item}}
+  </PowerSelect>
+</div>

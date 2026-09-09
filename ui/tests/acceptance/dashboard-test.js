@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { visit, currentURL } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import Sinon from 'sinon';
 
@@ -39,7 +38,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     const nsStub = Sinon.stub(this.namespace, 'inRootNamespace').get(() => false);
     await login();
     await visit('/vault/dashboard');
-    assert.dom(DASHBOARD.cardName('configuration-details')).doesNotExist();
+    assert.dom(GENERAL.widget('cluster configuration')).doesNotExist();
     nsStub.restore();
   });
 });

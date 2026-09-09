@@ -27,6 +27,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -45,7 +46,7 @@ import (
 func TestAcmeBasicWorkflow(t *testing.T) {
 	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
+
 	cases := []struct {
 		name      string
 		prefixUrl string
@@ -358,7 +359,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
+
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -477,8 +478,7 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 // based on the
 func TestAcmeNonce(t *testing.T) {
 	t.Parallel()
-	cluster, client, pathConfig := setupAcmeBackend(t)
-	defer cluster.Cleanup()
+	_, client, pathConfig := setupAcmeBackend(t)
 
 	cases := []struct {
 		name         string
@@ -535,8 +535,7 @@ func TestAcmeNonce(t *testing.T) {
 // TestAcmeClusterPathNotConfigured basic testing of the ACME error handler.
 func TestAcmeClusterPathNotConfigured(t *testing.T) {
 	t.Parallel()
-	cluster, client := setupTestPkiCluster(t)
-	defer cluster.Cleanup()
+	_, client := setupTestPkiCluster(t)
 
 	// Go sneaky, sneaky and update the acme configuration through sys/raw to bypass config/cluster path checks
 	pkiMount := findStorageMountUuid(t, client, "pki")
@@ -590,7 +589,6 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 	t.Parallel()
 	cluster, _, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	baseAcmeURL := "/v1/pki/acme/"
 	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
@@ -619,7 +617,6 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 func TestAcmeEabCrossingDirectoryPath(t *testing.T) {
 	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	// Enable EAB
 	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
@@ -656,7 +653,6 @@ func TestAcmeDisabledWithEnvVar(t *testing.T) {
 	// Setup a cluster with the configuration set to not-required, initially as the
 	// configuration will validate if the environment var is set
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	// Seal setup the environment variable, and unseal which now means we have a cluster
 	// with ACME configuration saying it is enabled with a bad EAB policy.
@@ -681,8 +677,7 @@ func TestAcmeDisabledWithEnvVar(t *testing.T) {
 // TestAcmeConfigChecksPublicAcmeEnv verifies certain EAB policy values can not be set if ENV var is enabled
 func TestAcmeConfigChecksPublicAcmeEnv(t *testing.T) {
 	t.Setenv("VAULT_DISABLE_PUBLIC_ACME", "true")
-	cluster, client := setupTestPkiCluster(t)
-	defer cluster.Cleanup()
+	_, client := setupTestPkiCluster(t)
 
 	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/cluster", map[string]interface{}{
 		"path": "https://dadgarcorp.com/v1/pki",
@@ -717,7 +712,6 @@ func TestAcmeHonorsAlwaysEnforceErr(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -797,7 +791,6 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -887,7 +880,6 @@ func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -991,7 +983,6 @@ func TestIssuerRoleDirectoryAssociations(t *testing.T) {
 	// roles (test-role, acme) that we can use with various directory
 	// configurations.
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	// Setup DNS for validations.
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -1126,7 +1117,6 @@ func TestACMESubjectFieldsAndExtensionsIgnored(t *testing.T) {
 	// roles (test-role, acme) that we can use with various directory
 	// configurations.
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	// Setup DNS for validations.
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
@@ -1175,7 +1165,6 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -1507,7 +1496,6 @@ func testAcmeCertSignedByCa(t *testing.T, client *api.Client, derCerts [][]byte,
 func TestAcmeValidationError(t *testing.T) {
 	t.Parallel()
 	cluster, _, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -1616,7 +1604,7 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 	t.Parallel()
 
 	cluster, vaultClient, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
+
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -1696,12 +1684,62 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
 }
 
+// TestAcmeRevokeReasonCode verifies that ACME certificate revocation correctly forwards the
+// reason code to Vault's revocation engine. A valid reason code (keyCompromise=1) must be
+// stored in the revocation entry, while an invalid reason code (7, which is
+// reserved/unused in RFC 5280) must be rejected with a badRevocationReason ACME error.
+func TestAcmeRevokeReasonCode(t *testing.T) {
+	t.Parallel()
+
+	cluster, vaultClient, _ := setupAcmeBackend(t)
+
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Issue two certs under the same account: one for the invalid-reason test, one for
+	// the valid-reason test.
+	acct, leafKey, certs := doACMEWorkflow(t, vaultClient, acmeClient)
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert bytes")
+
+	_, badCerts := doACMEOrderWorkflow(t, vaultClient, acmeClient, acct)
+
+	// Revoke with an invalid reason code (7 is unused/reserved per RFC 5280).
+	err = acmeClient.RevokeCert(testCtx, leafKey, badCerts[0], acme.CRLReasonCode(7))
+	require.Error(t, err, "expected error revoking with invalid reason code 7")
+	acmeErr, ok := err.(*acme.Error)
+	require.True(t, ok, "expected *acme.Error, got %T: %v", err, err)
+	require.Equal(t, "urn:ietf:params:acme:error:badRevocationReason", acmeErr.ProblemType)
+
+	// Revoke with a valid reason code: keyCompromise (1).
+	err = acmeClient.RevokeCert(testCtx, leafKey, certs[0], acme.CRLReasonKeyCompromise)
+	require.NoError(t, err, "failed to revoke certificate with keyCompromise reason")
+
+	// Verify the reason code was stored in the revocation entry via sys/raw.
+	pkiMount := findStorageMountUuid(t, vaultClient, "pki")
+	rawPath := path.Join("sys/raw/logical/", pkiMount, "revoked/", normalizeSerial(serialFromCert(acmeCert)))
+	rawResp, err := vaultClient.WithNamespace("").Logical().ReadWithContext(testCtx, rawPath)
+	require.NoError(t, err, "failed reading raw revocation entry")
+	require.NotNil(t, rawResp, "raw revocation entry was nil")
+	require.NotEmpty(t, rawResp.Data["value"], "raw revocation entry value was empty")
+
+	var revInfo revocation.RevocationInfo
+	err = jsonutil.DecodeJSON([]byte(rawResp.Data["value"].(string)), &revInfo)
+	require.NoError(t, err, "failed decoding raw revocation entry")
+	require.Equal(t, 1, revInfo.ReasonCode, "expected ReasonCode to be 1 (keyCompromise)")
+}
+
 // TestAcmeMaxTTL verify that we can update the ACME configuration's max_ttl value and
 // get a certificate that has a higher notAfter beyond the 90 day original limit
 func TestAcmeMaxTTL(t *testing.T) {
 	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
@@ -1786,7 +1824,7 @@ func TestAcmeMaxTTL(t *testing.T) {
 func TestVaultOperatorACMEDisableWorkflow(t *testing.T) {
 	t.Parallel()
 	cluster, vaultClient, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
+
 	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
@@ -1927,14 +1965,13 @@ func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
 	client := cluster.Cores[0].Client
 	mountPKIEndpoint(t, client, "pki")
 	return cluster, client
 }
 
 func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl string, key crypto.Signer) *acme.Client {
-	coreAddr := cluster.Cores[0].Listeners[0].Address
+	coreAddr := cluster.Cores[0].APIAddress()
 	tlsConfig := cluster.Cores[0].TLSConfig()
 
 	transport := cleanhttp.DefaultPooledTransport()
@@ -1986,7 +2023,6 @@ func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte
 
 func TestACMEClientRequestLimits(t *testing.T) {
 	cluster, client, _ := setupAcmeBackend(t)
-	defer cluster.Cleanup()
 
 	cases := []struct {
 		name           string

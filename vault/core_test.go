@@ -192,7 +192,7 @@ func TestNewCore_configureLogicalBackends(t *testing.T) {
 
 			core := &Core{}
 			require.Len(t, core.logicalBackends, 0)
-			core.configureLogicalBackends(tc.backends, corehelpers.NewTestLogger(t), tc.adminNamespacePath)
+			core.configureLogicalBackends(tc.backends, corehelpers.NewTestLogger(t))
 			require.GreaterOrEqual(t, len(core.logicalBackends), tc.expectedNonEntBackends)
 			require.Contains(t, core.logicalBackends, mountTypeKV)
 			require.Contains(t, core.logicalBackends, mountTypeCubbyhole)
@@ -3010,7 +3010,7 @@ path "secret/*" {
 `
 
 	ps := c.policyStore
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, secretWritingPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, secretWritingPolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	if err := ps.SetPolicy(namespace.RootContext(nil), policy); err != nil {
 		t.Fatal(err)
 	}
@@ -3649,7 +3649,7 @@ func TestSetSeals(t *testing.T) {
 		Generation:   1,
 	})
 	testCore := TestCoreWithSeal(t, oldSeal, false)
-	_, keys, _ := TestCoreInitClusterWrapperSetup(t, testCore, nil)
+	_, keys, _ := TestCoreInitClusterWrapperSetup(t, testCore)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(testCore, key); err != nil {
 			t.Fatalf("error unsealing core: %s", err)
@@ -3798,7 +3798,7 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 			core: &Core{
 				replicationState: uint32Ptr(uint32(0)),
 			},
-			expectedLength: 28,
+			expectedLength: 32,
 		},
 		{
 			name: "dr secondary core",
@@ -3898,5 +3898,5 @@ func Test_administrativeNamespacePath(t *testing.T) {
 		AdministrativeNamespacePath: adminNamespacePath,
 	}
 	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
-	require.Equal(t, core.administrativeNamespacePath(), adminNamespacePath)
+	require.Equal(t, core.AdministrativeNamespacePath(), adminNamespacePath)
 }

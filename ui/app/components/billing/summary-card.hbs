@@ -1,0 +1,43 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container class="has-padding-m" @level="mid" @hasBorder={{true}} data-test-card-container="Summary">
+  <Hds::Text::Display @tag="h2" @size="400" @weight="medium" class="has-bottom-margin-m">
+    {{@title}}
+  </Hds::Text::Display>
+  <Hds::Layout::Flex @direction="column" @gap="16">
+    {{#each this.summaryMetricKeys as |cardKey|}}
+      {{#let (this.summaryMetric cardKey) as |summaryInfo|}}
+        <Hds::Layout::Flex @direction="row" @gap="16" @alignItems="center">
+          <Hds::Layout::Flex::Item @basis="65%" @grow={{true}}>
+            {{#if summaryInfo.tooltipText}}
+              <Hds::Text::Display @size="200" @weight="semibold" @color="foreground-primary">
+                {{summaryInfo.label}}
+                <Hds::TooltipButton @text={{summaryInfo.tooltipText}} aria-label={{summaryInfo.label}}>
+                  <Hds::Icon @name="info" />
+                </Hds::TooltipButton>
+              </Hds::Text::Display>
+            {{else}}
+              <Hds::Text::Display @color="foreground-primary">
+                {{summaryInfo.label}}
+              </Hds::Text::Display>
+            {{/if}}
+          </Hds::Layout::Flex::Item>
+          <Hds::Layout::Flex::Item @basis="35%" @grow={{false}}>
+            {{#if summaryInfo.showBadge}}
+              <Hds::Badge
+                @text={{if summaryInfo.total "Enabled" "Not enabled"}}
+                @color={{if summaryInfo.total "success" "neutral"}}
+                @size="small"
+              />
+            {{else}}
+              <Hds::Text::Body>{{summaryInfo.total}}</Hds::Text::Body>
+            {{/if}}
+          </Hds::Layout::Flex::Item>
+        </Hds::Layout::Flex>
+      {{/let}}
+    {{/each}}
+  </Hds::Layout::Flex>
+</Hds::Card::Container>

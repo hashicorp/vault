@@ -31,7 +31,8 @@ scenario "ui" {
   terraform     = terraform.default
   providers = [
     provider.aws.default,
-    provider.enos.ubuntu
+    provider.enos.ubuntu,
+    provider.time.default,
   ]
 
   locals {

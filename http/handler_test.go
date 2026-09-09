@@ -491,6 +491,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":               json.Number("0"),
 					"force_no_cache":              false,
 					"passthrough_request_headers": []interface{}{"Authorization"},
+					"allowed_response_headers":    []interface{}{"Location"},
 				},
 				"local":                  false,
 				"seal_wrap":              false,
@@ -498,6 +499,23 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"plugin_version":         "",
 				"running_sha256":         "",
 				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
+			},
+			"agent-registry/": map[string]interface{}{
+				"description":             "agent registry",
+				"type":                    "agent_registry",
+				"external_entropy_access": false,
+				"config": map[string]interface{}{
+					"default_lease_ttl":           json.Number("0"),
+					"max_lease_ttl":               json.Number("0"),
+					"force_no_cache":              false,
+					"passthrough_request_headers": []interface{}{"Authorization"},
+				},
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.DefaultBuiltinVersion,
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -515,6 +533,23 @@ func TestSysMounts_headerAuth(t *testing.T) {
 			"plugin_version":         "",
 			"running_sha256":         "",
 			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
+		},
+		"agent-registry/": map[string]interface{}{
+			"description":             "agent registry",
+			"type":                    "agent_registry",
+			"external_entropy_access": false,
+			"config": map[string]interface{}{
+				"default_lease_ttl":           json.Number("0"),
+				"max_lease_ttl":               json.Number("0"),
+				"force_no_cache":              false,
+				"passthrough_request_headers": []interface{}{"Authorization"},
+			},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 		"sys/": map[string]interface{}{
 			"description":             "system endpoints used for control, policy and debugging",
@@ -558,6 +593,7 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":               json.Number("0"),
 				"force_no_cache":              false,
 				"passthrough_request_headers": []interface{}{"Authorization"},
+				"allowed_response_headers":    []interface{}{"Location"},
 			},
 			"local":                  false,
 			"seal_wrap":              false,
@@ -860,14 +896,12 @@ func testNonPrintable(t *testing.T, disable bool) {
 func TestHandler_Parse_Form(t *testing.T) {
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
+		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-
-	core := cores[0].Core
-	vault.TestWaitActive(t, core)
+	client := cores[0].Client
+	err := client.Sys().Mount("secret", &api.MountInput{Type: "kv"})
+	require.NoError(t, err)
 
 	c := cleanhttp.DefaultClient()
 	c.Transport = &http.Transport{
@@ -890,21 +924,14 @@ func TestHandler_Parse_Form(t *testing.T) {
 	req.Header.Set("x-vault-token", cluster.RootToken)
 	req.Header.Set("content-type", "application/x-www-form-urlencoded")
 	resp, err := c.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	if resp.StatusCode != 204 {
 		t.Fatalf("bad response: %#v\nrequest was: %#v\nurl was: %#v", *resp, *req, req.URL)
 	}
 
-	client := cores[0].Client
-	client.SetToken(cluster.RootToken)
-
 	apiResp, err := client.Logical().Read("secret/foo")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	if apiResp == nil {
 		t.Fatal("api resp is nil")
 	}
@@ -931,8 +958,6 @@ func TestHandler_MaxRequestSize(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 	_, err := client.KVv2("secret").Put(context.Background(), "foo", map[string]interface{}{
@@ -1167,8 +1192,6 @@ func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
 					},
 				},
 			})
-			cluster.Start()
-			defer cluster.Cleanup()
 
 			client := cluster.Cores[0].Client
 			client.SetToken(cluster.RootToken)
@@ -1207,25 +1230,4 @@ func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
 			require.NotNil(t, resp)
 		})
 	}
-}
-
-// TestAutoSnapshotLoadForwarded tests that a request to load from a cloud
-// snapshot is forwarded to the active node, rather than being redirected
-func TestAutoSnapshotLoadForwarded(t *testing.T) {
-	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
-		NumCores:    2,
-		HandlerFunc: Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	client := cluster.Cores[1].Client
-	client.SetToken(cluster.RootToken)
-
-	_, err := client.Logical().Write("sys/storage/raft/snapshot-auto/snapshot-load/cfg1", nil)
-	// the request will fail, but all that we care about is that the error
-	// doesn't indicate a redirect
-	require.Error(t, err)
-	require.NotContains(t, err.Error(), "redirects not allowed in these tests")
 }

@@ -189,20 +189,19 @@ func (m *MSSQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) 
 
 	merr := &multierror.Error{}
 
-	// Execute each query
+	// Execute each command string as a single batch rather than splitting on
+	// semicolons. Splitting on ";" destroys the batch boundary, causing subsequent
+	// statements (e.g. DROP USER) to run in the wrong database context and fail.
 	for _, stmt := range req.Statements.Commands {
-		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
-			query = strings.TrimSpace(query)
-			if len(query) == 0 {
-				continue
-			}
+		if strings.TrimSpace(stmt) == "" {
+			continue
+		}
 
-			m := map[string]string{
-				"name": req.Username,
-			}
-			if err := dbtxn.ExecuteDBQueryDirect(ctx, db, m, query); err != nil {
-				merr = multierror.Append(merr, err)
-			}
+		m := map[string]string{
+			"name": req.Username,
+		}
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, m, stmt); err != nil {
+			merr = multierror.Append(merr, err)
 		}
 	}
 
@@ -272,12 +271,17 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 		revokeStmts = append(revokeStmts, fmt.Sprintf("KILL %d;", sessionID))
 	}
 
-	// Query for database users using undocumented stored procedure for now since
-	// it is the easiest way to get this information;
-	// we need to drop the database users before we can drop the login and the role
-	// This isn't done in a transaction because even if we fail along the way,
-	// we want to remove as much access as possible
-	stmt, err := db.PrepareContext(ctx, "EXEC master.dbo.sp_msloginmappings @p1;")
+	// selectUserSQL identifies database-level users associated with a server login.
+	// We use a join on sys.server_principals and sys.database_principals instead
+	// of the undocumented sp_msloginmappings procedure. This allows revocation
+	// to function with 'VIEW ANY DEFINITION' instead of 'sysadmin' privileges,
+	// supporting "Least Privilege" security models.
+	//
+	// Note: This identifies users within the current database context. We must
+	// drop these database users before the server-level login can be removed.
+	// We execute this outside of a transaction to ensure we revoke as much
+	// access as possible, even if a single DROP statement fails.
+	stmt, err := db.PrepareContext(ctx, selectUserSQL)
 	if err != nil {
 		return err
 	}
@@ -442,4 +446,14 @@ ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}'
 
 const alterUserContainedSQL = `
 ALTER USER [{{username}}] WITH PASSWORD = '{{password}}'
+`
+
+const selectUserSQL = ` SELECT
+    l.name AS LoginName,
+    DB_NAME() AS DBName,
+    u.name AS UserName,
+    'Member' AS UserOrAlias
+	FROM sys.server_principals l
+	JOIN sys.database_principals u ON l.sid = u.sid
+	WHERE l.name = @p1;
 `

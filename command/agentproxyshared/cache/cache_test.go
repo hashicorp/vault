@@ -62,8 +62,6 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
@@ -151,12 +149,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
-	client := cores[0].Client
+	client := cluster.Cores[0].Client
 
 	cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -975,6 +968,15 @@ func TestCache_Caching_LeaseResponse(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		// Only the cached response was held by the cache, so only it reports an
+		// age; the secret the two carry is otherwise identical. The age itself
+		// is reported in whole seconds, so it rounds to zero on a fast enough
+		// hit and cannot be asserted on here.
+		if proxiedResp.Age != 0 {
+			t.Fatalf("expected proxied response to report no age, got %s", proxiedResp.Age)
+		}
+		cachedResp.Age = 0
 
 		if diff := deep.Equal(proxiedResp, cachedResp); diff != nil {
 			t.Fatal(diff)

@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Set pagination size to 10 for custom messages list view and toggle the "Apply filters" button visibility based on filter selection.
+```

@@ -133,3 +133,11 @@ export type Activity = {
   by_month: ByMonthClients[];
   by_namespace: ByNamespaceClients[];
 };
+
+export type ActivityData = {
+  by_namespace: NamespaceObject[];
+  end_time: string;
+  start_time: string;
+  total: TotalClients;
+  by_month: ActivityMonthBlock[];
+};

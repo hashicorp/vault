@@ -94,7 +94,7 @@ func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 
 func verifyExportsCorrectVersion(t *testing.T, exportType, keyType, parameterSet, ecKeyType string) {
 	t.Run(keyType+":"+ecKeyType, func(t *testing.T) {
-		b, storage := createBackendWithSysView(t)
+		b, storage, obsRecorder := createBackendWithObservationRecorder(t)
 
 		// First create a key, v1
 		req := &logical.Request{
@@ -110,7 +110,11 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType, parameterSet
 			req.Data["parameter_set"] = parameterSet
 		}
 		if ecKeyType != "" {
-			req.Data["hybrid_key_type_pqc"] = "ml-dsa"
+			pqcKeyType := "ml-dsa"
+			if strings.HasPrefix(parameterSet, "slh-dsa") {
+				pqcKeyType = "slh-dsa"
+			}
+			req.Data["hybrid_key_type_pqc"] = pqcKeyType
 			req.Data["hybrid_key_type_ec"] = ecKeyType
 		}
 		if keyType == "hmac" {
@@ -161,6 +165,10 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType, parameterSet
 					t.Fatalf("expected version %q, received version %q", strconv.Itoa(expectedVersion), k)
 				}
 			}
+			obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyExport)
+			require.NotNil(t, obs)
+			require.Equal(t, obs.Data["key_name"], "foo")
+			require.Equal(t, obs.Data["export_version"], expectedVersion)
 		}
 
 		verifyVersion("v1", 1)
@@ -522,12 +530,7 @@ func TestTransit_Export_CertificateChain(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
 	// Mount transit backend

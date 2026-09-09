@@ -1,0 +1,3 @@
+```release-note:improvement
+scim: The SCIM Group PATCH handler now supports the path field in the form members[value eq "id"] on remove operations.
+```

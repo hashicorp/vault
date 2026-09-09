@@ -1,0 +1,95 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Stepper::Nav
+  @currentStep={{this.currentStepIndex}}
+  @ariaLabel="{{this.config.title}} wizard"
+  @onStepChange={{this.onStepChange}}
+  ...attributes
+  as |S|
+>
+  {{#each @config.steps as |step|}}
+    <S.Step>
+      <:title>{{step.title}}</:title>
+      <:description>{{step.description}}</:description>
+    </S.Step>
+
+    <S.Panel>
+      {{#if step.heading}}
+        <h3>{{step.heading}}</h3>
+      {{/if}}
+      {{#if step.description}}
+        <p>{{step.description}}</p>
+      {{/if}}
+
+      {{! Delegate to Form::V2 component with wizard callbacks }}
+      <Form::V2
+        @form={{this.currentForm}}
+        @onSuccess={{this.onStepSuccess}}
+        @onError={{this.onStepError}}
+        as |Form submitTask|
+      >
+        {{! Custom wizard navigation buttons }}
+        <Form.Section>
+          <Hds::ButtonSet class="is-flex-center is-flex-between">
+            {{#unless this.isFirstStep}}
+              <Hds::Button @text="Back" @color="tertiary" @icon="chevron-left" {{on "click" this.previousStep}} />
+            {{/unless}}
+
+            <div class="margin-left-auto">
+              {{#if @config.applyChanges}}
+                <Hds::Button
+                  @text="Continue"
+                  @color="primary"
+                  type="submit"
+                  disabled={{or (not this.currentForm.isValid) submitTask.isRunning}}
+                  {{on "click" (perform submitTask)}}
+                />
+              {{else}}
+
+                <Hds::Button
+                  @text={{if this.isLastStep "Complete" "Continue"}}
+                  @color="primary"
+                  type="submit"
+                  disabled={{or (not this.currentForm.isValid) submitTask.isRunning}}
+                  class="margin-left-auto"
+                  {{on "click" (perform submitTask)}}
+                />
+              {{/if}}
+            </div>
+          </Hds::ButtonSet>
+        </Form.Section>
+      </Form::V2>
+    </S.Panel>
+  {{/each}}
+
+  {{!
+    * Optional apply changes step defined in WizardConfig
+    * The Form::V2 component still handles submission, validation, error handling etc.
+    * The renderer bypasses rendering the form fields when the applyChanges block is present 
+   }}
+  {{#if this.config.applyChanges}}
+    <S.Step>
+      <:title>Apply changes</:title>
+    </S.Step>
+
+    <S.Panel>
+      <Form::V2
+        @form={{this.currentForm}}
+        @hideFields={{true}}
+        @onSuccess={{@onSuccess}}
+        @onError={{this.onStepError}}
+        as |Form submitTask|
+      >
+        <Form::V2::Apply
+          @form={{this.currentForm}}
+          @onBack={{this.previousStep}}
+          @onApply={{perform submitTask}}
+          @onDone={{@onCancel}}
+        />
+      </Form::V2>
+    </S.Panel>
+  {{/if}}
+</Hds::Stepper::Nav>

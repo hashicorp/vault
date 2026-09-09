@@ -1,0 +1,3 @@
+```release-note:improvement
+consumption-billing: Add a new `sys/billing/config` endpoint to allow configuration of billing data retention (min 13 months, max 6 years).
+```

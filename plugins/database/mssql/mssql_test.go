@@ -405,6 +405,75 @@ func TestMSSQLDeleteUserContainedDB(t *testing.T) {
 	assertContainedDBCredsDoNotExist(t, connURL, dbUser)
 }
 
+// TestMSSQLDeleteUserWithBatch verifies that USE database context switches work correctly when statements are executed as a single batch.
+func TestMSSQLDeleteUserWithBatch(t *testing.T) {
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	dbUser := "vaultuser"
+	initPassword := "p4$sw0rd"
+
+	// Create a test database
+	setupDB, err := sql.Open("mssql", connURL)
+	if err != nil {
+		t.Fatalf("Failed to open connection for setup: %s", err)
+	}
+	defer setupDB.Close()
+
+	_, err = setupDB.ExecContext(context.Background(), "CREATE DATABASE testdb")
+	if err != nil {
+		t.Fatalf("Failed to create test database: %s", err)
+	}
+
+	// Create login in master and user in testdb
+	createSQL := `
+CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
+USE [testdb];
+CREATE USER [{{name}}] FOR LOGIN [{{name}}];`
+
+	err = createTestMSSQLUser(connURL, dbUser, initPassword, createSQL)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
+	}
+
+	assertCredsExist(t, connURL, dbUser, initPassword)
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
+
+	deleteReq := dbplugin.DeleteUserRequest{
+		Username: dbUser,
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`USE [testdb]; DROP USER [{{name}}]; USE [master]; DROP LOGIN [{{name}}];`,
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	deleteResp, err := db.DeleteUser(ctx, deleteReq)
+	if err != nil {
+		t.Fatalf("Failed to delete user with batch statement: %s", err)
+	}
+
+	expectedResp := dbplugin.DeleteUserResponse{}
+	if !reflect.DeepEqual(deleteResp, expectedResp) {
+		t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
+	}
+
+	assertCredsDoNotExist(t, connURL, dbUser, initPassword)
+}
+
 func TestMSSQLContainedDBSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()

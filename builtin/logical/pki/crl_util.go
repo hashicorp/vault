@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"fmt"
 	"math/big"
 	"strings"
@@ -43,6 +44,7 @@ const (
 
 type revocationRequest struct {
 	RequestedAt time.Time `json:"requested_at"`
+	ReasonCode  int       `json:"reason_code"`
 }
 
 type revocationConfirmed struct {
@@ -782,8 +784,13 @@ func (cb *CrlBuilder) processRevocationQueue(sc *storageContext) error {
 			cb.revQueue.Remove(req)
 			continue
 		}
+		var revokeRequest revocationRequest
+		err = entry.DecodeJSON(&revokeRequest)
+		if err != nil {
+			return fmt.Errorf("failed to decode revocation request: %w", err)
+		}
 
-		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial)
+		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial, revokeRequest.ReasonCode)
 		if err == nil && resp != nil && !resp.IsError() && resp.Data != nil && resp.Data["state"].(string) == "revoked" {
 			if isNotPerfPrimary {
 				// Write a revocation queue removal entry.
@@ -897,7 +904,12 @@ func (cb *CrlBuilder) processCrossClusterRevocations(sc *storageContext) error {
 			continue
 		}
 
-		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial)
+		var unifiedRevocationEntry revocation.UnifiedRevocationEntry
+		if err = entry.DecodeJSON(&unifiedRevocationEntry); err != nil {
+			return fmt.Errorf("failed to decode unifed revocation entry: %w", err)
+		}
+
+		resp, err := tryRevokeCertBySerial(sc, crlConfig, req.Serial, unifiedRevocationEntry.ReasonCode)
 		if err == nil && resp != nil && !resp.IsError() && resp.Data != nil && resp.Data["state"].(string) == "revoked" {
 			// We could theoretically save ourselves from writing a global
 			// revocation entry during the above certificate revocation, as
@@ -917,7 +929,7 @@ func (cb *CrlBuilder) processCrossClusterRevocations(sc *storageContext) error {
 
 // Revoke a certificate from a given serial number if it is present in local
 // storage.
-func tryRevokeCertBySerial(sc *storageContext, config *pki_backend.CrlConfig, serial string) (*logical.Response, error) {
+func tryRevokeCertBySerial(sc *storageContext, config *pki_backend.CrlConfig, serial string, reasonCode int) (*logical.Response, error) {
 	// revokeCert requires us to hold these locks before calling it.
 	sc.GetRevokeStorageLock().Lock()
 	defer sc.GetRevokeStorageLock().Unlock()
@@ -941,11 +953,11 @@ func tryRevokeCertBySerial(sc *storageContext, config *pki_backend.CrlConfig, se
 		return nil, fmt.Errorf("error parsing certificate: %w", err)
 	}
 
-	return revokeCert(sc, config, cert)
+	return revokeCert(sc, config, cert, reasonCode)
 }
 
 // Revokes a cert, and tries to be smart about error recovery
-func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Certificate) (*logical.Response, error) {
+func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Certificate, reasonCode int) (*logical.Response, error) {
 	// As this backend is self-contained and this function does not hook into
 	// third parties to manage users or resources, if the mount is tainted,
 	// revocation doesn't matter anyways -- the CRL that would be written will
@@ -1006,6 +1018,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 		CertificateBytes:  cert.Raw,
 		RevocationTime:    currTime.Unix(),
 		RevocationTimeUTC: currTime.UTC(),
+		ReasonCode:        reasonCode,
 	}
 
 	// We may not find an issuer with this certificate; that's fine so
@@ -1045,6 +1058,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 			CertExpiration:    cert.NotAfter,
 			RevocationTimeUTC: revInfo.RevocationTimeUTC,
 			CertificateIssuer: revInfo.CertificateIssuer,
+			ReasonCode:        reasonCode,
 		}
 
 		ignoreErr := revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)
@@ -1946,6 +1960,22 @@ func getLocalRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuing.
 			newRevCert.RevocationTime = time.Unix(revInfo.RevocationTime, 0).UTC()
 		}
 
+		if revInfo.ReasonCode != 0 {
+			val, err := asn1.Marshal(asn1.RawValue{
+				Class: asn1.ClassUniversal,
+				Tag:   asn1.TagEnum,
+				Bytes: []byte{byte(revInfo.ReasonCode)},
+			})
+			if err != nil {
+				return nil, nil, errutil.InternalError{Err: fmt.Sprintf("failed to marshal reason code: %d with err: %s", revInfo.ReasonCode, err)}
+			}
+			newRevCert.Extensions = append(newRevCert.Extensions, pkix.Extension{
+				Id:       certutil.ReasonCodeOid,
+				Value:    val,
+				Critical: false,
+			})
+		}
+
 		// If we have a CertificateIssuer field on the revocation entry,
 		// prefer it to manually checking each issuer signature, assuming it
 		// appears valid. It's highly unlikely for two different issuers
@@ -2059,6 +2089,21 @@ func getUnifiedRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuin
 			}
 
 			revEntry.RevocationTime = xRevEntry.RevocationTimeUTC
+			if xRevEntry.ReasonCode != 0 {
+				ext, err := asn1.Marshal(asn1.RawValue{
+					Class: asn1.ClassUniversal,
+					Tag:   asn1.TagEnum,
+					Bytes: []byte{byte(xRevEntry.ReasonCode)},
+				})
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed to encode reason code for CRL building: %w", err)
+				}
+				revEntry.Extensions = append(revEntry.Extensions, pkix.Extension{
+					Id:       certutil.ReasonCodeOid,
+					Value:    ext,
+					Critical: false,
+				})
+			}
 
 			if found, inFoundMap := foundSerials[normalizeSerial(serial)]; found && inFoundMap {
 				// Serial has already been added to the CRL.
@@ -2160,6 +2205,12 @@ WRITE:
 		ext, err := certutil.CreateDeltaCRLIndicatorExt(lastCompleteNumber)
 		if err != nil {
 			return nil, fmt.Errorf("could not create crl delta indicator extension: %w", err)
+		}
+		extensions = []pkix.Extension{ext}
+	} else if crlInfo.EnableDelta && signingBundle.URLs != nil && len(signingBundle.URLs.DeltaCRLDistributionPoints) > 0 {
+		ext, err := certutil.CreateDeltaCRLExtension(signingBundle.URLs.DeltaCRLDistributionPoints)
+		if err != nil {
+			return nil, fmt.Errorf("could not create freshest crl extension: %w", err)
 		}
 		extensions = []pkix.Extension{ext}
 	}

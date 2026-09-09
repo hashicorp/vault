@@ -21,11 +21,13 @@ export default class KmipConfigurationRoute extends Route {
 
     try {
       const { currentPath } = this.secretMountPath;
-      const { data } = await this.api.secrets.kmipReadConfiguration(currentPath);
+      // the spec changed and now the operation ids are the same for reading both the config and ca pem
+      const { data } = await this.api.secrets.kmipReadConfiguration_1(currentPath);
       const config = data as Record<string, unknown>;
       const { secretsEngine } = this.modelFor('application') as KmipApplicationModel;
       try {
-        const { data } = await this.api.secrets.kmipReadCaPem(currentPath);
+        // this method now calls the same endpoint as the former kmipReadCaPem
+        const { data } = await this.api.secrets.kmipReadConfiguration(currentPath);
         const ca = data as Record<string, unknown>;
         return { config: { ...config, ...ca }, secretsEngine };
       } catch (error) {

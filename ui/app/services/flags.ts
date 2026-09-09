@@ -7,7 +7,7 @@ import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { keepLatestTask } from 'ember-concurrency';
 import { macroCondition, isDevelopingApp } from '@embroider/macros';
-import { ADMINISTRATIVE_NAMESPACE } from 'vault/services/namespace';
+import { ADMINISTRATIVE_NAMESPACE } from 'vault/utils/constants/namespace';
 
 import type VersionService from 'vault/services/version';
 import type ApiService from 'vault/services/api';

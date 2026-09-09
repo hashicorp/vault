@@ -86,7 +86,8 @@ locals {
     "ecdsa-sha2-nistp521" = "P521"
   }
 
-  rsa_bit_options = [2048, 3072, 4096, 7680, 15360]
+  // NOTE: We cannot use >8192: https://github.com/golang/crypto/commit/890731877d85f71cfdc9554e7a27fec4684fc4c4
+  rsa_bit_options = [2048, 3072, 4096, 6144, 8192]
   rsa_bits        = local.rsa_bit_options[random_integer.rsa_bits_idx.result]
 
   # Extract the corresponding algorithm and curve

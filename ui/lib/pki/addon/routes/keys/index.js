@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
-import { PkiListKeysListEnum } from '@hashicorp/vault-client-typescript';
+import { SecretsApiPkiListKeysListEnum } from '@hashicorp/vault-client-typescript';
 import { paginate } from 'core/utils/paginate-list';
 
 @withConfig()
@@ -22,21 +22,24 @@ export default class PkiKeysIndexRoute extends Route {
     },
   };
 
-  async fetchCapabilities(keyId) {
+  async fetchCapabilities(keys) {
     const { pathFor } = this.capabilities;
     const backend = this.secretMountPath.currentPath;
+    const keyPathsById = this.keyPathsById(backend, keys);
     const pathMap = {
       import: pathFor('pkiKeysImport', { backend }),
       generate: pathFor('pkiKeysGenerate', { backend }),
-      key: pathFor('pkiKey', { backend, keyId }),
+      ...keyPathsById,
     };
-    const perms = await this.capabilities.fetch(Object.values(pathMap));
 
+    const apiPaths = Object.values(pathMap);
+    const perms = await this.capabilities.fetch(apiPaths, {
+      routeForCache: 'vault.cluster.secrets.backend.pki.keys',
+    });
     return {
       canImportKeys: perms[pathMap.import].canUpdate,
       canGenerateKeys: perms[pathMap.generate].canUpdate,
-      canRead: perms[pathMap.key].canRead,
-      canEdit: perms[pathMap.key].canUpdate,
+      keyPermsById: this.keyCapabilitiesById(keyPathsById, perms),
     };
   }
 
@@ -50,10 +53,10 @@ export default class PkiKeysIndexRoute extends Route {
     try {
       const response = await this.api.secrets.pkiListKeys(
         this.secretMountPath.currentPath,
-        PkiListKeysListEnum.TRUE
+        SecretsApiPkiListKeysListEnum.TRUE
       );
       const keys = this.api.keyInfoToArray(response, 'key_id');
-      const capabilities = await this.fetchCapabilities(keys[0].key_id);
+      const capabilities = await this.fetchCapabilities(keys);
       Object.assign(model, { ...capabilities, keys: paginate(keys, { page }) });
     } catch (e) {
       if (e.response.status === 404) {
@@ -81,5 +84,21 @@ export default class PkiKeysIndexRoute extends Route {
     if (isExiting) {
       controller.set('page', undefined);
     }
+  }
+
+  keyPathsById(backend, keys) {
+    // Construct API path for each key in the list
+    return Object.fromEntries(
+      keys.map(({ key_id: keyId }) => [keyId, this.capabilities.pathFor('pkiKey', { backend, keyId })])
+    );
+  }
+
+  keyCapabilitiesById(keyPathsById, perms) {
+    // Iterate over key ids and return an object with Capabilities as their value
+    return Object.fromEntries(
+      Object.entries(keyPathsById)
+        .filter(([, apiPath]) => apiPath in perms)
+        .map(([keyId, apiPath]) => [keyId, perms[apiPath]])
+    );
   }
 }

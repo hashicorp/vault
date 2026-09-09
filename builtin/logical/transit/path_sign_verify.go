@@ -398,9 +398,6 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	if p == nil {
 		return logical.ErrorResponse("signing key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs); err != nil {
@@ -492,7 +489,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
 		b.Logger().Error("failed to track transit sign request count", "error", err.Error())
 	}
 
@@ -510,11 +507,12 @@ func (b *backend) getPolicySignArgs(ctx context.Context, p *keysutil.Policy, arg
 		return policySignArgs{}, fmt.Errorf("unable to decode input: %s", err)
 	}
 
-	if p.Type.HashSignatureInput() && !args.prehashed {
-		hf := keysutil.HashFuncMap[args.hashAlgorithm]()
+	if p.KeyVersionType(args.keyVersion).HashSignatureInput() && !args.prehashed {
+		hf := keysutil.HashFuncMap[args.hashAlgorithm]
 		if hf != nil {
-			hf.Write(input)
-			input = hf.Sum(nil)
+			h := hf()
+			h.Write(input)
+			input = h.Sum(nil)
 		}
 	}
 
@@ -689,9 +687,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if p == nil {
 		return logical.ErrorResponse("signature verification key not found"), logical.ErrInvalidRequest
 	}
-	if !b.System().CachingDisabled() {
-		p.Lock(false)
-	}
 	defer p.Unlock()
 
 	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs); err != nil {
@@ -751,7 +746,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		}
 	}
 
-	if err = b.incrementBillingCounts(ctx, uint64(successfulRequests)); err != nil {
+	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
 		b.Logger().Error("failed to track transit sign verify request count", "error", err.Error())
 	}
 
@@ -822,11 +817,17 @@ func (b *backend) getPolicyVerifyArgs(ctx context.Context, p *keysutil.Policy, a
 		return policyVerifyArgs{}, fmt.Errorf("failed to parse signature as a string: %s", err)
 	}
 
-	if p.Type.HashSignatureInput() && !apiArgs.prehashed {
-		hf := keysutil.HashFuncMap[apiArgs.hashAlgorithm]()
+	sigVer, err := getSignatureVersion(sig)
+	if err != nil {
+		return policyVerifyArgs{}, fmt.Errorf("failed to parse version from signature: %s", err)
+	}
+
+	if p.KeyVersionType(sigVer).HashSignatureInput() && !apiArgs.prehashed {
+		hf := keysutil.HashFuncMap[apiArgs.hashAlgorithm]
 		if hf != nil {
-			hf.Write(input)
-			input = hf.Sum(nil)
+			h := hf()
+			h.Write(input)
+			input = h.Sum(nil)
 		}
 	}
 
@@ -862,6 +863,28 @@ func numBooleansTrue(bools ...bool) int {
 		}
 	}
 	return numSet
+}
+
+func getSignatureVersion(sig string) (int, error) {
+	if !strings.HasPrefix(sig, "vault:v") {
+		return 0, fmt.Errorf("prefix is not vault:v")
+	}
+
+	splitVerification := strings.SplitN(strings.TrimPrefix(sig, "vault:v"), ":", 2)
+	if len(splitVerification) != 2 {
+		return 0, fmt.Errorf("wrong number of fields delimited by ':', got %d expected 2", len(splitVerification))
+	}
+
+	ver, err := strconv.Atoi(splitVerification[0])
+	if err != nil {
+		return 0, fmt.Errorf("key version number %s count not be decoded", splitVerification[0])
+	}
+
+	if ver < 1 {
+		return 0, fmt.Errorf("key version less than 1 are invalid got: %d", ver)
+	}
+
+	return ver, nil
 }
 
 const pathSignHelpSyn = `Generate a signature for input data using the named key`

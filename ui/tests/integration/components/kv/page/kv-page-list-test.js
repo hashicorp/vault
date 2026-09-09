@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { render, click, fillIn, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -25,6 +25,7 @@ module('Integration | Component | kv-v2 | Page::List', function (hooks) {
       prevPage: 1,
       total: 5,
       filteredTotal: 5,
+      totalItems: 5,
       pageSize: 3,
     };
     this.secrets = ['secret-1', 'my-path/', 'secret-2'];

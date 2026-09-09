@@ -1,0 +1,3 @@
+```release-note:security
+core: Validate both `path` and `file_path` cannot be empty for requests to `sys/audit/{path}`
+```

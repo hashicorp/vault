@@ -6,6 +6,9 @@ package configutil
 import (
 	"testing"
 
+	armonmetrics "github.com/armon/go-metrics"
+	hclog "github.com/hashicorp/go-hclog"
+	hcmetrics "github.com/hashicorp/go-metrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -99,3 +102,200 @@ func TestNormalizeTelemetryAddresses(t *testing.T) {
 		})
 	}
 }
+
+// TestConvertLabels proves that convertLabels produces a hcmetrics.Label slice
+// with identical Name/Value fields to the input armonmetrics.Label slice, and
+// that an empty input yields an empty (not nil) output.
+func TestConvertLabels(t *testing.T) {
+	t.Parallel()
+
+	tests := map[string]struct {
+		in       []armonmetrics.Label
+		expected []hcmetrics.Label
+	}{
+		"nil input": {
+			in:       nil,
+			expected: []hcmetrics.Label{},
+		},
+		"single label": {
+			in:       []armonmetrics.Label{{Name: "region", Value: "us-east-1"}},
+			expected: []hcmetrics.Label{{Name: "region", Value: "us-east-1"}},
+		},
+		"multiple labels": {
+			in: []armonmetrics.Label{
+				{Name: "region", Value: "us-east-1"},
+				{Name: "cluster", Value: "primary"},
+			},
+			expected: []hcmetrics.Label{
+				{Name: "region", Value: "us-east-1"},
+				{Name: "cluster", Value: "primary"},
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			assert.Equal(t, tc.expected, convertLabels(tc.in))
+		})
+	}
+}
+
+// recordingSink is a hcmetrics.MetricSink that records every call made to it so
+// tests can assert that hcSinkAdapter forwards each method correctly.
+type recordingSink struct {
+	gauges          [][]string
+	gaugesWithLabel [][]string
+	gaugeLabels     [][]hcmetrics.Label
+	keys            [][]string
+	counters        [][]string
+	countersLabeled [][]string
+	counterLabels   [][]hcmetrics.Label
+	samples         [][]string
+	samplesLabeled  [][]string
+	sampleLabels    [][]hcmetrics.Label
+}
+
+func (r *recordingSink) SetGauge(key []string, _ float32) { r.gauges = append(r.gauges, key) }
+func (r *recordingSink) SetGaugeWithLabels(key []string, _ float32, labels []hcmetrics.Label) {
+	r.gaugesWithLabel = append(r.gaugesWithLabel, key)
+	r.gaugeLabels = append(r.gaugeLabels, labels)
+}
+func (r *recordingSink) EmitKey(key []string, _ float32)     { r.keys = append(r.keys, key) }
+func (r *recordingSink) IncrCounter(key []string, _ float32) { r.counters = append(r.counters, key) }
+func (r *recordingSink) IncrCounterWithLabels(key []string, _ float32, labels []hcmetrics.Label) {
+	r.countersLabeled = append(r.countersLabeled, key)
+	r.counterLabels = append(r.counterLabels, labels)
+}
+func (r *recordingSink) AddSample(key []string, _ float32) { r.samples = append(r.samples, key) }
+func (r *recordingSink) AddSampleWithLabels(key []string, _ float32, labels []hcmetrics.Label) {
+	r.samplesLabeled = append(r.samplesLabeled, key)
+	r.sampleLabels = append(r.sampleLabels, labels)
+}
+
+// TestHcSinkAdapter proves that every method on hcSinkAdapter delegates to the
+// underlying hcmetrics.MetricSink and that label conversion is applied on the
+// WithLabels variants.
+func TestHcSinkAdapter(t *testing.T) {
+	t.Parallel()
+
+	key := []string{"vault", "core", "requests"}
+	armonLabels := []armonmetrics.Label{
+		{Name: "namespace", Value: "root"},
+		{Name: "mount", Value: "secret"},
+	}
+	wantHCLabels := []hcmetrics.Label{
+		{Name: "namespace", Value: "root"},
+		{Name: "mount", Value: "secret"},
+	}
+
+	tests := []struct {
+		name       string
+		call       func(*hcSinkAdapter)
+		gotKeys    func(*recordingSink) [][]string
+		gotLabels  func(*recordingSink) [][]hcmetrics.Label
+		wantLabels [][]hcmetrics.Label
+	}{
+		{
+			name:      "SetGauge",
+			call:      func(a *hcSinkAdapter) { a.SetGauge(key, 1.0) },
+			gotKeys:   func(r *recordingSink) [][]string { return r.gauges },
+			gotLabels: nil,
+		},
+		{
+			name:       "SetGaugeWithLabels",
+			call:       func(a *hcSinkAdapter) { a.SetGaugeWithLabels(key, 1.0, armonLabels) },
+			gotKeys:    func(r *recordingSink) [][]string { return r.gaugesWithLabel },
+			gotLabels:  func(r *recordingSink) [][]hcmetrics.Label { return r.gaugeLabels },
+			wantLabels: [][]hcmetrics.Label{wantHCLabels},
+		},
+		{
+			name:      "EmitKey",
+			call:      func(a *hcSinkAdapter) { a.EmitKey(key, 1.0) },
+			gotKeys:   func(r *recordingSink) [][]string { return r.keys },
+			gotLabels: nil,
+		},
+		{
+			name:      "IncrCounter",
+			call:      func(a *hcSinkAdapter) { a.IncrCounter(key, 1.0) },
+			gotKeys:   func(r *recordingSink) [][]string { return r.counters },
+			gotLabels: nil,
+		},
+		{
+			name:       "IncrCounterWithLabels",
+			call:       func(a *hcSinkAdapter) { a.IncrCounterWithLabels(key, 1.0, armonLabels) },
+			gotKeys:    func(r *recordingSink) [][]string { return r.countersLabeled },
+			gotLabels:  func(r *recordingSink) [][]hcmetrics.Label { return r.counterLabels },
+			wantLabels: [][]hcmetrics.Label{wantHCLabels},
+		},
+		{
+			name:      "AddSample",
+			call:      func(a *hcSinkAdapter) { a.AddSample(key, 1.0) },
+			gotKeys:   func(r *recordingSink) [][]string { return r.samples },
+			gotLabels: nil,
+		},
+		{
+			name:       "AddSampleWithLabels",
+			call:       func(a *hcSinkAdapter) { a.AddSampleWithLabels(key, 1.0, armonLabels) },
+			gotKeys:    func(r *recordingSink) [][]string { return r.samplesLabeled },
+			gotLabels:  func(r *recordingSink) [][]hcmetrics.Label { return r.sampleLabels },
+			wantLabels: [][]hcmetrics.Label{wantHCLabels},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rec := &recordingSink{}
+			tc.call(&hcSinkAdapter{sink: rec})
+			require.Equal(t, [][]string{key}, tc.gotKeys(rec))
+			if tc.gotLabels != nil {
+				assert.Equal(t, tc.wantLabels, tc.gotLabels(rec))
+			}
+		})
+	}
+}
+
+// TestSetupTelemetry_LoggerWired proves that SetupTelemetry accepts a Logger on
+// the opts struct and does not error when statsd/statsite addresses are omitted.
+// It also verifies that providing a non-nil logger with no sink addresses still
+// initialises the in-memory sink successfully.
+func TestSetupTelemetry_LoggerWired(t *testing.T) {
+	tests := map[string]struct {
+		logger hclog.Logger
+	}{
+		"nil logger": {
+			logger: nil,
+		},
+		"named logger": {
+			logger: hclog.NewNullLogger().Named("telemetry"),
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			inmem, clusterSink, _, err := SetupTelemetry(&SetupTelemetryOpts{
+				Config:      &Telemetry{},
+				Ui:          noopUI{},
+				ServiceName: "vault",
+				DisplayName: "Vault",
+				Logger:      tc.logger,
+			})
+			require.NoError(t, err)
+			assert.NotNil(t, inmem)
+			assert.NotNil(t, clusterSink)
+		})
+	}
+}
+
+// noopUI satisfies the cli.Ui interface with no-op implementations so
+// SetupTelemetry can be called in tests without a real terminal.
+type noopUI struct{}
+
+func (noopUI) Ask(_ string) (string, error)       { return "", nil }
+func (noopUI) AskSecret(_ string) (string, error) { return "", nil }
+func (noopUI) Output(_ string)                    {}
+func (noopUI) Info(_ string)                      {}
+func (noopUI) Error(_ string)                     {}
+func (noopUI) Warn(_ string)                      {}

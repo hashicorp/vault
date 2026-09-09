@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module OidcKeyForm
@@ -26,72 +27,87 @@ import { task } from 'ember-concurrency';
  */
 
 export default class OidcKeyForm extends Component {
-  @service store;
+  @service api;
   @service flashMessages;
+
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked modelValidations;
-  @tracked radioCardGroupValue =
-    // If "*" is provided, all clients are allowed: https://developer.hashicorp.com/vault/api-docs/secret/identity/oidc-provider#parameters
-    !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
-      ? 'allow_all'
-      : 'limited';
+  @tracked radioCardGroupValue = 'limited';
+  @tracked selectedClients = [];
 
-  get filterDropdownOptions() {
-    // query object sent to search-select so only clients that reference this key appear in dropdown
-    return { paramKey: 'key', filterFor: [this.args.model.name] };
+  constructor() {
+    super(...arguments);
+    // If "*" is provided, all clients are allowed: https://developer.hashicorp.com/vault/api-docs/secret/identity/oidc-provider#parameters
+    const { allowed_client_ids } = this.args.form.data;
+    if (!allowed_client_ids || allowed_client_ids.includes('*')) {
+      this.radioCardGroupValue = 'allow_all';
+    }
+    // initialize selectedClients for SearchSelect component with allowed_client_ids from form data
+    this.updateSelectedClients();
+  }
+
+  // function passed to search select
+  renderTooltip(selection, dropdownOptions) {
+    // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)
+    const clientExists = !!dropdownOptions.find((opt) => opt.client_id === selection);
+    return !clientExists ? 'The application associated with this client_id no longer exists' : false;
+  }
+
+  updateSelectedClients() {
+    const { data } = this.args.form;
+    this.selectedClients = data.allowed_client_ids?.map((clientId) =>
+      this.args.clients.find((client) => client.client_id === clientId)
+    );
   }
 
   @action
   handleClientSelection(selection) {
-    // if array then coming from search-select component, set selection as model clients
+    const { data } = this.args.form;
+    // when triggered from search-select component an array is passed
+    // set selection as clients
     if (Array.isArray(selection)) {
-      this.args.model.allowedClientIds = selection.map((client) => client.clientId);
+      data.allowed_client_ids = selection.map((client) => client.client_id);
     } else {
       // otherwise update radio button value and reset clients so
       // UI always reflects a user's selection (including when no clients are selected)
       this.radioCardGroupValue = selection;
-      this.args.model.allowedClientIds = [];
+      data.allowed_client_ids = [];
     }
+    // update selectedClients which appear in SearchSelect
+    this.updateSelectedClients();
   }
 
-  @action
-  cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
-    this.args.onCancel();
-  }
+  save = task(
+    waitFor(async (event) => {
+      event.preventDefault();
+      try {
+        const { isNew } = this.args.form;
+        const { isValid, state, invalidFormMessage, data } = this.args.form.toJSON();
+        this.modelValidations = isValid ? null : state;
+        this.invalidFormAlert = invalidFormMessage;
 
-  @task
-  *save(event) {
-    event.preventDefault();
-    try {
-      const { isValid, state, invalidFormMessage } = this.args.model.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
-      if (isValid) {
-        const { isNew, name } = this.args.model;
-        if (this.radioCardGroupValue === 'allow_all') {
-          this.args.model.allowedClientIds = ['*'];
+        if (isValid) {
+          if (this.radioCardGroupValue === 'allow_all') {
+            data.allowed_client_ids = ['*'];
+          }
+          // if TTL components are toggled off, set to default lease duration
+          const { rotation_period, verification_ttl } = data;
+          // value returned from API is a number, and string when from form action
+          if (Number(rotation_period) === 0) data.rotation_period = '24h';
+          if (Number(verification_ttl) === 0) data.verification_ttl = '24h';
+
+          const { name, ...payload } = data;
+          await this.api.identity.oidcWriteKey(name, payload);
+          this.flashMessages.success(`Successfully ${isNew ? 'created' : 'updated'} the key ${name}.`);
+          // this form is sometimes used in a modal, passing the form notifies the parent the save was successful
+          this.args.onSave(this.args.form);
         }
-        // if TTL components are toggled off, set to default lease duration
-        const { rotationPeriod, verificationTtl } = this.args.model;
-        // value returned from API is a number, and string when from form action
-        if (Number(rotationPeriod) === 0) this.args.model.rotationPeriod = '24h';
-        if (Number(verificationTtl) === 0) this.args.model.verificationTtl = '24h';
-        yield this.args.model.save();
-        this.flashMessages.success(
-          `Successfully ${isNew ? 'created' : 'updated'} the key
-          ${name}.`
-        );
-        // this form is sometimes used in a modal, passing the model notifies
-        // the parent if the save was successful
-        this.args.onSave(this.args.model);
+      } catch (error) {
+        const { message } = await this.api.parseError(error);
+        this.errorBanner = message;
+        this.invalidFormAlert = 'There was an error submitting this form.';
       }
-    } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.errorBanner = message;
-      this.invalidFormAlert = 'There was an error submitting this form.';
-    }
-  }
+    })
+  );
 }

@@ -1,0 +1,65 @@
+# Copyright IBM Corp. 2016, 2025
+# SPDX-License-Identifier: BUSL-1.1
+
+terraform {
+  required_providers {
+    enos = {
+      source = "registry.terraform.io/hashicorp-forge/enos"
+    }
+  }
+}
+
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The Vault cluster instances that were created"
+}
+
+variable "create_state" {
+  description = "The state of the secrets engines from the 'create' module"
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
+}
+
+variable "vault_install_dir" {
+  type        = string
+  description = "The directory where the Vault binary will be installed"
+}
+
+variable "vault_root_token" {
+  type        = string
+  description = "The Vault root token"
+  default     = null
+}
+
+# Verify AWS Engine
+resource "enos_remote_exec" "aws_verify_new_creds" {
+  for_each = var.hosts
+
+  environment = {
+    AWS_REGION              = var.create_state.region
+    MOUNT                   = var.create_state.mount
+    AWS_USER_NAME           = var.create_state.aws_user_name
+    AWS_ACCESS_KEY_ID       = var.create_state.aws_access_key
+    AWS_SECRET_ACCESS_KEY   = var.create_state.aws_secret_key
+    VAULT_AWS_ROLE          = var.create_state.vault_aws_role
+    VAULT_ADDR              = var.vault_addr
+    VAULT_TOKEN             = var.vault_root_token
+    VAULT_INSTALL_DIR       = var.vault_install_dir
+    VERIFY_AWS_ENGINE_CERTS = true
+  }
+
+  scripts = [abspath("${path.module}/../../scripts/aws-verify-new-creds.sh")]
+
+  transport = {
+    ssh = {
+      host = each.value.public_ip
+    }
+  }
+}

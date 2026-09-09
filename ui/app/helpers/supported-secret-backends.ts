@@ -18,6 +18,7 @@ export enum SupportedSecretBackendsEnum {
   KV = 'kv',
   LDAP = 'ldap',
   PKI = 'pki',
+  PKI_EXTERNAL = 'pki-external-ca',
   SSH = 'ssh',
   TRANSFORM = 'transform',
   TRANSIT = 'transit',

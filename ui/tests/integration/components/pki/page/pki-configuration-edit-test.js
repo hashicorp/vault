@@ -9,6 +9,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_CONFIG_EDIT } from 'vault/tests/helpers/pki/pki-selectors';
 import { configCapabilities } from 'vault/tests/helpers/pki/pki-helpers';
 import PkiConfigClusterForm from 'vault/forms/secrets/pki/config/cluster';
@@ -306,25 +307,17 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     await this.renderComponent();
 
     assert
-      .dom(`${PKI_CONFIG_EDIT.configEditSection} [data-test-component="empty-state"]`)
-      .hasText(
-        "You do not have permission to set this mount's the cluster config Ask your administrator if you think you should have access to: POST /pki-engine/config/cluster"
-      );
+      .dom(`${PKI_CONFIG_EDIT.configEditSection} ${GENERAL.emptyStateTitle}`)
+      .hasText("You do not have permission to set this mount's the cluster config");
     assert
-      .dom(`${PKI_CONFIG_EDIT.acmeEditSection} [data-test-component="empty-state"]`)
-      .hasText(
-        "You do not have permission to set this mount's ACME config Ask your administrator if you think you should have access to: POST /pki-engine/config/acme"
-      );
+      .dom(`${PKI_CONFIG_EDIT.acmeEditSection} ${GENERAL.emptyStateTitle}`)
+      .hasText("You do not have permission to set this mount's ACME config");
     assert
-      .dom(`${PKI_CONFIG_EDIT.urlsEditSection} [data-test-component="empty-state"]`)
-      .hasText(
-        "You do not have permission to set this mount's URLs Ask your administrator if you think you should have access to: POST /pki-engine/config/urls"
-      );
+      .dom(`${PKI_CONFIG_EDIT.urlsEditSection} ${GENERAL.emptyStateTitle}`)
+      .hasText("You do not have permission to set this mount's URLs");
     assert
-      .dom(`${PKI_CONFIG_EDIT.crlEditSection} [data-test-component="empty-state"]`)
-      .hasText(
-        "You do not have permission to set this mount's revocation configuration Ask your administrator if you think you should have access to: POST /pki-engine/config/crl"
-      );
+      .dom(`${PKI_CONFIG_EDIT.crlEditSection} ${GENERAL.emptyStateTitle}`)
+      .hasText("You do not have permission to set this mount's revocation configuration");
   });
 
   test('it renders alert banner and endpoint respective error', async function (assert) {

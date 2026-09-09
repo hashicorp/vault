@@ -27,6 +27,7 @@ locals {
       "ubuntu" = {
         "22.04" = data.aws_ami.ubuntu_2204["arm64"].id
         "24.04" = data.aws_ami.ubuntu_2404["arm64"].id
+        "26.04" = data.aws_ami.ubuntu_2604["arm64"].id
       }
     }
     "amd64" = {
@@ -46,6 +47,7 @@ locals {
       "ubuntu" = {
         "22.04" = data.aws_ami.ubuntu_2204["x86_64"].id
         "24.04" = data.aws_ami.ubuntu_2404["x86_64"].id
+        "26.04" = data.aws_ami.ubuntu_2604["x86_64"].id
       }
     }
   }
@@ -66,6 +68,10 @@ data "aws_ami" "amzn_2" {
   }
 
   owners = [local.amazon_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "amzn_2023" {
@@ -83,6 +89,10 @@ data "aws_ami" "amzn_2023" {
   }
 
   owners = [local.amazon_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "rhel_8" {
@@ -105,6 +115,10 @@ data "aws_ami" "rhel_8" {
   }
 
   owners = [local.redhat_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "rhel_9" {
@@ -127,6 +141,10 @@ data "aws_ami" "rhel_9" {
   }
 
   owners = [local.redhat_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "rhel_10" {
@@ -149,6 +167,10 @@ data "aws_ami" "rhel_10" {
   }
 
   owners = [local.redhat_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "sles_15" {
@@ -166,6 +188,10 @@ data "aws_ami" "sles_15" {
   }
 
   owners = [local.suse_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "sles_16" {
@@ -183,6 +209,10 @@ data "aws_ami" "sles_16" {
   }
 
   owners = [local.suse_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "ubuntu_2204" {
@@ -205,6 +235,10 @@ data "aws_ami" "ubuntu_2204" {
   }
 
   owners = [local.canonical_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_ami" "ubuntu_2404" {
@@ -227,6 +261,36 @@ data "aws_ami" "ubuntu_2404" {
   }
 
   owners = [local.canonical_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
+}
+
+data "aws_ami" "ubuntu_2604" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-resolute-26.04-*-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.canonical_owner_id]
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 data "aws_region" "current" {}
@@ -238,6 +302,10 @@ data "aws_availability_zones" "available" {
     name   = "zone-name"
     values = ["*"]
   }
+
+  timeouts {
+    read = "5m"
+  }
 }
 
 output "ami_ids" {
@@ -245,7 +313,7 @@ output "ami_ids" {
 }
 
 output "current_region" {
-  value = data.aws_region.current
+  value = data.aws_region.current.region
 }
 
 output "availability_zones" {

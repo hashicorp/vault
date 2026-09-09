@@ -1,0 +1,158 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="dashboard" ...attributes data-test-usage-dashboard-container>
+  <Hds::PageHeader as |PH|>
+    <PH.Title>
+      Vault usage
+      <Hds::Badge class="dashboard__badge" @size="medium" @icon="org" @color="neutral" @text={{this.namespace}} />
+    </PH.Title>
+
+    <PH.Description class="dashboard__description">
+      {{#if this.lastUpdatedTime}}
+        <Hds::Text::Body @tag="p" @size="200" @color="faint">
+          Updated today at
+          {{this.lastUpdatedTime}}.
+        </Hds::Text::Body>
+      {{/if}}
+
+      <Hds::Text::Body @tag="p" @size="200" @color="primary">
+        Monitor real-time telemetry and performance data for the current cluster.
+        <DocLink @path="/vault/docs/internals/telemetry">
+          Learn more
+        </DocLink>
+      </Hds::Text::Body>
+    </PH.Description>
+
+    <PH.Actions>
+      <UsageReporting::Dashboard::Export @data={{this.data}} />
+    </PH.Actions>
+  </Hds::PageHeader>
+
+  {{#if this.error}}
+    <Hds::Alert data-test-vault-reporting-dashboard-error @type="inline" @color="critical" class="dashboard__error" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description data-test-vault-reporting-dashboard-error-description>
+        An error occurred, please try again.
+      </A.Description>
+    </Hds::Alert>
+  {{/if}}
+
+  {{#if this.data}}
+    <Hds::Card::Container @hasBorder={{true}} class="dashboard__namespace-section">
+      <div class="dashboard__section-inner">
+        <Hds::Text::Display @size="400" class="dashboard__section-title dashboard__section-title--with-dropdown">
+          Namespace usage
+
+          {{#if (get this.namespaceData "keys.length")}}
+            <UsageReporting::NamespacePicker
+              @namespaces={{get this.namespaceData "keys"}}
+              @onNamespaceChange={{this.handleNamespaceChange}}
+            />
+          {{/if}}
+        </Hds::Text::Display>
+
+        <Hds::Card::Container
+          @hasBorder={{true}}
+          @background="neutral-secondary"
+          class="dashboard__counters"
+          data-test-vault-reporting-dashboard-counters
+        >
+          {{#each this.counters as |counter|}}
+            <UsageReporting::Counter
+              @title={{counter.title}}
+              @tooltipMessage={{counter.tooltipMessage}}
+              @count={{counter.data}}
+              @icon={{counter.icon}}
+              @suffix={{counter.suffix}}
+              @link={{counter.link}}
+              @emptyText={{counter.emptyText}}
+              @emptyLink={{counter.emptyLink}}
+            />
+          {{/each}}
+        </Hds::Card::Container>
+
+        {{#each (array this.chartLayerRenderKey)}}
+          <div class="dashboard__viz-blocks" data-test-vault-reporting-dashboard-viz-blocks>
+            <UsageReporting::VizCard
+              @data={{this.getBarChartData this.data.authMethods}}
+              @title="Authentication methods"
+              @description="Enabled authentication methods for this cluster."
+              @linkRoute="vault.cluster.access"
+              class="dashboard__viz-block"
+              data-test-vault-reporting-dashboard-auth-methods
+            />
+
+            <UsageReporting::VizCard
+              @data={{this.getBarChartData this.data.leasesByAuthMethod}}
+              @title="Leases by authentication methods"
+              @description="Active leases issued per authentication method."
+              @linkUrl="https://developer.hashicorp.com/vault/docs/concepts/auth#auth-leases"
+              @linkText="Documentation"
+              @linkIcon="docs-link"
+              @linkTarget="_blank"
+              class="dashboard__viz-block"
+              data-test-vault-reporting-dashboard-leases-by-auth-method
+            >
+              <:empty as |A|>
+                <A.Body
+                  @text="Leases are created when clients authenticate. Add an authentication method to monitor leases across this namespace."
+                />
+                <A.Footer as |F|>
+                  <F.LinkStandalone
+                    @icon="docs-link"
+                    @text="Authentication leases"
+                    @href="https://developer.hashicorp.com/vault/docs/concepts/auth#auth-leases"
+                  />
+                </A.Footer>
+              </:empty>
+            </UsageReporting::VizCard>
+
+            <UsageReporting::VizCard
+              @data={{this.getBarChartData this.data.secretEngines (array "system" "identity")}}
+              @title="Secret engines"
+              @description="Enabled secret engines for this cluster."
+              @linkRoute="vault.cluster.secrets"
+              class="dashboard__viz-block"
+              data-test-vault-reporting-dashboard-secret-engines
+            />
+          </div>
+        {{/each}}
+      </div>
+    </Hds::Card::Container>
+
+    {{#each (array this.chartLayerRenderKey)}}
+      <Hds::Card::Container @hasBorder={{true}} class="dashboard__cluster-section">
+        <div class="dashboard__section-inner">
+          <Hds::Text::Display @size="400" class="dashboard__section-title">
+            Cluster-level usage
+          </Hds::Text::Display>
+
+          <div class="dashboard__viz-blocks" data-test-vault-reporting-dashboard-cluster-viz-blocks>
+            <UsageReporting::ClusterReplication
+              @disasterRecoveryState={{this.data.replicationStatus.drState}}
+              @performanceState={{this.data.replicationStatus.prState}}
+              @isVaultDedicated={{this.isVaultDedicated}}
+              data-test-vault-reporting-dashboard-cluster-replication
+            />
+
+            <UsageReporting::GlobalLease
+              @count={{this.data.leaseCountQuotas.globalLeaseCountQuota.count}}
+              @quota={{this.data.leaseCountQuotas.globalLeaseCountQuota.capacity}}
+              class="dashboard__viz-block"
+              data-test-vault-reporting-dashboard-lease-count
+            />
+
+            <UsageReporting::SecretsSync
+              @totalDestinations={{this.data.secretSync.totalDestinations}}
+              @destinations={{this.data.secretSync.destinations}}
+              data-test-vault-reporting-dashboard-secrets-sync
+            />
+          </div>
+        </div>
+      </Hds::Card::Container>
+    {{/each}}
+  {{/if}}
+</div>

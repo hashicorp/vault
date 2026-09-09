@@ -9,3 +9,30 @@
   padding: size_variables.$spacing-24;
   line-height: initial;
 }
+
+.dashboard-header-with-gradient {
+  &::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: linear-gradient(
+      315deg,
+      #f22f2f 0%,
+      #f58a25 15%,
+      #7061a3 30%,
+      #ffaa42 45%,
+      #ffc011 60%,
+      #fff940 75%,
+      #f58a25 85%,
+      #7230ff 100%
+    );
+    opacity: 0.18;
+    filter: blur(60px);
+    pointer-events: none;
+    z-index: -1;
+  }
+}

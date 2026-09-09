@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
@@ -32,6 +32,54 @@ module('Integration | Component | auth | form | base', function (hooks) {
     };
   });
 
+  module('cert', function (hooks) {
+    hooks.beforeEach(function () {
+      this.setup('cert', 'certLogin');
+      this.assertSubmit = (assert, loginRequestArgs, loginData) => {
+        const [path, { name }] = loginRequestArgs;
+        // if path is included in loginData, a custom path was submitted
+        const expectedPath = loginData?.path || this.authType;
+        assert.strictEqual(path, expectedPath, 'it calls certLogin with expected path');
+        assert.strictEqual(name, loginData.name, 'it calls certLogin with name');
+      };
+      this.renderComponent = ({ yieldBlock = false } = {}) => {
+        if (yieldBlock) {
+          return render(hbs`
+            <Auth::Form::Cert
+              @authType={{this.authType}}
+              @cluster={{this.cluster}}
+              @onError={{this.onError}}
+              @handleAuthResponse={{this.handleAuthResponse}}
+            >
+             <:advancedSettings>
+             <label for="path">Mount path</label>
+             <input data-test-input="path" id="path" name="path" type="text" />
+             </:advancedSettings>
+            </Auth::Form::Cert>`);
+        }
+        return render(hbs`
+          <Auth::Form::Cert
+            @authType={{this.authType}}
+            @cluster={{this.cluster}}
+            @onError={{this.onError}}
+            @handleAuthResponse={{this.handleAuthResponse}}
+          />`);
+      };
+    });
+
+    hooks.afterEach(function () {
+      this.authenticateStub.restore();
+    });
+
+    authFormTestHelper(test);
+
+    test('it renders custom label', async function (assert) {
+      await this.renderComponent();
+      const id = find(GENERAL.inputByAttr('name')).id;
+      assert.dom(`#label-${id}`).hasText('Role name');
+    });
+  });
+
   module('github', function (hooks) {
     hooks.beforeEach(function () {
       this.setup('github', 'githubLogin');
@@ -45,20 +93,20 @@ module('Integration | Component | auth | form | base', function (hooks) {
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {
           return render(hbs`
-            <Auth::Form::Github 
-              @authType={{this.authType}} 
+            <Auth::Form::Github
+              @authType={{this.authType}}
               @cluster={{this.cluster}}
               @onError={{this.onError}}
               @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
              <label for="path">Mount path</label>
-             <input data-test-input="path" id="path" name="path" type="text" /> 
+             <input data-test-input="path" id="path" name="path" type="text" />
              </:advancedSettings>
             </Auth::Form::Github>`);
         }
         return render(hbs`
-          <Auth::Form::Github       
+          <Auth::Form::Github
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
@@ -94,20 +142,20 @@ module('Integration | Component | auth | form | base', function (hooks) {
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {
           return render(hbs`
-            <Auth::Form::Ldap 
-              @authType={{this.authType}} 
+            <Auth::Form::Ldap
+              @authType={{this.authType}}
               @cluster={{this.cluster}}
               @onError={{this.onError}}
               @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
              <label for="path">Mount path</label>
-             <input data-test-input="path" id="path" name="path" type="text" /> 
+             <input data-test-input="path" id="path" name="path" type="text" />
              </:advancedSettings>
             </Auth::Form::Ldap>`);
         }
         return render(hbs`
-          <Auth::Form::Ldap       
+          <Auth::Form::Ldap
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
@@ -137,20 +185,20 @@ module('Integration | Component | auth | form | base', function (hooks) {
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {
           return render(hbs`
-            <Auth::Form::Radius 
-              @authType={{this.authType}} 
+            <Auth::Form::Radius
+              @authType={{this.authType}}
               @cluster={{this.cluster}}
               @onError={{this.onError}}
               @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
               <label for="path">Mount path</label>
-              <input data-test-input="path" id="path" name="path" type="text" /> 
+              <input data-test-input="path" id="path" name="path" type="text" />
              </:advancedSettings>
             </Auth::Form::Radius>`);
         }
         return render(hbs`
-          <Auth::Form::Radius       
+          <Auth::Form::Radius
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
@@ -176,20 +224,20 @@ module('Integration | Component | auth | form | base', function (hooks) {
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {
           return render(hbs`
-            <Auth::Form::Token 
-              @authType={{this.authType}} 
+            <Auth::Form::Token
+              @authType={{this.authType}}
               @cluster={{this.cluster}}
               @onError={{this.onError}}
               @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
                 <label for="path">Mount path</label>
-                <input data-test-input="path" id="path" name="path" type="text" /> 
+                <input data-test-input="path" id="path" name="path" type="text" />
              </:advancedSettings>
             </Auth::Form::Token>`);
         }
         return render(hbs`
-          <Auth::Form::Token       
+          <Auth::Form::Token
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}
@@ -219,20 +267,20 @@ module('Integration | Component | auth | form | base', function (hooks) {
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {
           return render(hbs`
-            <Auth::Form::Userpass 
-              @authType={{this.authType}} 
+            <Auth::Form::Userpass
+              @authType={{this.authType}}
               @cluster={{this.cluster}}
               @onError={{this.onError}}
               @handleAuthResponse={{this.handleAuthResponse}}
             >
              <:advancedSettings>
               <label for="path">Mount path</label>
-              <input data-test-input="path" id="path" name="path" type="text" /> 
+              <input data-test-input="path" id="path" name="path" type="text" />
              </:advancedSettings>
             </Auth::Form::Userpass>`);
         }
         return render(hbs`
-          <Auth::Form::Userpass       
+          <Auth::Form::Userpass
             @authType={{this.authType}}
             @cluster={{this.cluster}}
             @onError={{this.onError}}

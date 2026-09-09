@@ -55,6 +55,13 @@ cat >> "$HOME/.hashicorp/vault-radar/ignore.yaml" << EOF
   - "hmac-sha256:*"
 EOF
 
+# If we have an IBM license customer ID, add it to the ignore rules since it is expected to be present in the audit log and we don't want to fail on it.
+if [[ "$VAULT_IBM_LICENSE_CUSTOMER_ID" != "" ]]; then
+  cat >> "$HOME/.hashicorp/vault-radar/ignore.yaml" << EOF
+  - "$VAULT_IBM_LICENSE_CUSTOMER_ID"
+EOF
+fi
+
 # Scan the audit log for known secrets via the audit log and other secrets using radars built-in
 # secret types.
 if ! out=$("$radar_bin_path" scan file --offline --disable-ui -p audit.log --index-file index.jsonl -f json -o audit-secrets.json 2>&1); then

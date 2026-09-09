@@ -6,48 +6,46 @@
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @errorMessage={{this.errorBanner}} />
-    <FormFieldLabel for="name" @label="Name" />
-    <input
-      autocomplete="off"
-      spellcheck="false"
-      value={{@model.name}}
-      disabled={{not @model.isNew}}
-      class="input field {{if this.modelValidations.name.errors 'has-error-border'}}"
-      {{on "input" this.handleOperation}}
-      data-test-input="name"
-      id="name"
-    />
-    {{#if this.modelValidations.name.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.modelValidations.name.errors}} />
+
+    <FormFieldGroups @model={{@form}} @groupName="formFieldGroups" @modelValidations={{this.modelValidations}} as |field|>
+      {{#if (eq field.name "entity_ids")}}
+        <SearchSelect
+          @id="entities"
+          @placeholder="Search"
+          @options={{@entities}}
+          @inputValue={{@form.data.entity_ids}}
+          @shouldRenderName={{true}}
+          @onChange={{fn (mut @form.data.entity_ids)}}
+          @disallowNewItems={{true}}
+          @fallbackComponent="string-list"
+          data-test-search-select="entities"
+        />
+      {{else if (eq field.name "group_ids")}}
+        <SearchSelect
+          @id="groups"
+          @placeholder="Search"
+          @options={{@groups}}
+          @inputValue={{@form.data.group_ids}}
+          @shouldRenderName={{true}}
+          @onChange={{fn (mut @form.data.group_ids)}}
+          @disallowNewItems={{true}}
+          @fallbackComponent="string-list"
+          data-test-search-select="groups"
+        />
+      {{/if}}
+    </FormFieldGroups>
+    {{#if this.modelValidations.targets.errors}}
+      <AlertInline
+        @type="danger"
+        @message={{this.modelValidations.targets.errors}}
+        class="has-top-padding-s"
+        data-test-validation-error="target"
+      />
     {{/if}}
-    <SearchSelect
-      @id="entities"
-      @label="Entities"
-      @placeholder="Search"
-      @models={{array "identity/entity"}}
-      @inputValue={{@model.entityIds}}
-      @shouldRenderName={{true}}
-      @onChange={{this.onEntitiesSelect}}
-      @disallowNewItems={{true}}
-      @fallbackComponent="string-list"
-      data-test-search-select="entities"
-    />
-    <SearchSelect
-      @id="groups"
-      @label="Groups"
-      @placeholder="Search"
-      @models={{array "identity/group"}}
-      @inputValue={{@model.groupIds}}
-      @shouldRenderName={{true}}
-      @onChange={{this.onGroupsSelect}}
-      @disallowNewItems={{true}}
-      @fallbackComponent="string-list"
-      data-test-search-select="groups"
-    />
   </div>
   <div class="has-top-padding-s">
     <Hds::Button
-      @text={{if @model.isNew "Create" "Update"}}
+      @text={{if @form.isNew "Create" "Update"}}
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}
@@ -58,11 +56,18 @@
       @color="secondary"
       class="has-left-margin-s"
       disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" (fn @onCancel undefined)}}
       data-test-oidc-assignment-cancel
     />
-    {{#if this.modelValidations.targets.errors}}
-      <AlertInline @type="danger" @message={{join ", " this.modelValidations.targets.errors}} class="has-top-padding-s" />
+    {{#if this.invalidFormMessage}}
+      <div class="control">
+        <AlertInline
+          @type="danger"
+          class="has-top-padding-s"
+          @message={{this.invalidFormMessage}}
+          data-test-invalid-form-alert
+        />
+      </div>
     {{/if}}
   </div>
 </form>

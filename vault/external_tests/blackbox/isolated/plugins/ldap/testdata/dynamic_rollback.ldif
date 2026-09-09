@@ -1,0 +1,5 @@
+dn: uid={{.Username}},ou=users,dc=enos,dc=com
+changetype: delete
+
+dn: cn={{.Username}},ou=users,dc=enos,dc=com
+changetype: delete

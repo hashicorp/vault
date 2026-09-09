@@ -41,19 +41,19 @@ path "secret/sample" {
 }
 `
 	// Create the above policies
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, policy1)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, policy1, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	err = c.policyStore.SetPolicy(ctx, policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	policy, _ = ParseACLPolicy(namespace.RootNamespace, policy2)
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, policy2, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	err = c.policyStore.SetPolicy(ctx, policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	policy, _ = ParseACLPolicy(namespace.RootNamespace, policy3)
+	policy, _ = ParseACLPolicy(namespace.RootNamespace, policy3, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	err = c.policyStore.SetPolicy(ctx, policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -172,7 +172,7 @@ func TestCapabilities_TemplatedPolicies(t *testing.T) {
 	}
 	for _, tCase := range tCases {
 		// Create the above policies
-		policy, err := ParseACLPolicy(namespace.RootNamespace, tCase.policy)
+		policy, err := ParseACLPolicy(namespace.RootNamespace, tCase.policy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -205,7 +205,7 @@ func TestCapabilities(t *testing.T) {
 	}
 
 	// Create a policy
-	policy, _ := ParseACLPolicy(namespace.RootNamespace, aclPolicy)
+	policy, _ := ParseACLPolicy(namespace.RootNamespace, aclPolicy, WithDenySlashInTemplatedPaths(c.denySlashInTemplatedPolicyPaths))
 	err = c.policyStore.SetPolicy(namespace.RootContext(nil), policy)
 	if err != nil {
 		t.Fatalf("err: %v", err)

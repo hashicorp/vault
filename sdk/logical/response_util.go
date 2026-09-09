@@ -4,6 +4,7 @@
 package logical
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -196,24 +197,38 @@ func AdjustErrorStatusCode(status *int, err error) {
 	}
 }
 
+type errorResponse struct {
+	Errors []string `json:"errors"`
+}
+
+// GenerateNonLogicalErrorResponse returns a struct that can be serialized to
+// JSON as part of reporting an error to callers.  It is used by some older APIs
+// that live in the http layer which don't use logical.Response, as well as by
+// some that do but are emulating the older ones.
+func GenerateNonLogicalErrorResponse(status int, err error) *errorResponse {
+	resp := &errorResponse{Errors: make([]string, 0, 1)}
+	if err != nil {
+		resp.Errors = append(resp.Errors, err.Error())
+	}
+
+	return resp
+}
+
 func RespondError(w http.ResponseWriter, status int, err error) {
 	AdjustErrorStatusCode(&status, err)
 
 	defer IncrementResponseStatusCodeMetric(status)
 
+	var b bytes.Buffer
+	enc := json.NewEncoder(&b)
+	enc.Encode(GenerateNonLogicalErrorResponse(status, err))
+	RespondWithBody(w, status, b.String())
+}
+
+func RespondWithBody(w http.ResponseWriter, status int, body string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-
-	type ErrorResponse struct {
-		Errors []string `json:"errors"`
-	}
-	resp := &ErrorResponse{Errors: make([]string, 0, 1)}
-	if err != nil {
-		resp.Errors = append(resp.Errors, err.Error())
-	}
-
-	enc := json.NewEncoder(w)
-	enc.Encode(resp)
+	w.Write([]byte(body))
 }
 
 func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, err error) {

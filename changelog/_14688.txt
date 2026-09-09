@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: add validations to the ACL visual policy editor to prevent it from saving policies with empty paths or capabilities.
+```

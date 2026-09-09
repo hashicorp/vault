@@ -11,8 +11,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/identity"
@@ -35,6 +35,9 @@ const (
 
 	// defaultPolicyName is the name of the default policy
 	defaultPolicyName = "default"
+
+	// defaultCeilingPolicyName is the name of the default ceiling policy.
+	defaultCeilingPolicyName = "default-ceiling"
 
 	// responseWrappingPolicyName is the name of the fixed policy
 	responseWrappingPolicyName = "response-wrapping"
@@ -160,6 +163,22 @@ path "identity/oidc/provider/+/authorize" {
     capabilities = ["read", "update"]
 }
 `
+
+	// defaultCeilingPolicy is the default ceiling policy.
+	defaultCeilingPolicy = `
+# Allow an entity to inspect its own registration information
+path "agent-registry/registration/entity-id/{{identity.entity.id}}" {
+  capabilities = ["read"]
+}
+
+# Allow an entity to read the default policies
+path "policy/default" {
+  capabilities = ["read"]
+}
+path "policy/default-ceiling" {
+  capabilities = ["read"]
+}
+`
 )
 
 var (
@@ -278,6 +297,10 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 
 	// Ensure that the default policy exists, and if not, create it
 	if err := c.policyStore.loadACLPolicy(ctx, defaultPolicyName, defaultPolicy); err != nil {
+		return err
+	}
+	// Ensure that the default ceiling policy exists, and if not, create it
+	if err := c.policyStore.loadACLPolicy(ctx, defaultCeilingPolicyName, defaultCeilingPolicy); err != nil {
 		return err
 	}
 	// Ensure that the response wrapping policy exists
@@ -644,12 +667,9 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	switch policyEntry.Type {
 	case PolicyTypeACL:
 		// Parse normally
-		p, duplicate, err := ParseACLPolicyCheckDuplicates(ns, policyEntry.Raw)
+		p, err := ParseACLPolicy(ns, policyEntry.Raw, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse policy: %w", err)
-		}
-		if duplicate {
-			ps.logger.Warn("HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", policy.namespace.Path)
 		}
 		policy.Paths = p.Paths
 
@@ -835,8 +855,8 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 			if strutil.StrListContains(immutablePolicies, name) {
 				return fmt.Errorf("cannot delete %q policy", name)
 			}
-			if name == "default" {
-				return fmt.Errorf("cannot delete default policy")
+			if name == defaultPolicyName || name == defaultCeilingPolicyName {
+				return fmt.Errorf("cannot delete %s policy", name)
 			}
 		}
 
@@ -955,12 +975,9 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 					groups = append(directGroups, inheritedGroups...)
 				}
 			}
-			p, duplicate, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
+			p, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups, parseACLPolicyOptions{denySlashInTemplatedPaths: ps.core.denySlashInTemplatedPolicyPaths})
 			if err != nil {
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
-			}
-			if duplicate {
-				ps.logger.Warn("HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", policy.namespace.Path)
 			}
 			p.Name = policy.Name
 			allPolicies[i] = p
@@ -1001,7 +1018,7 @@ func (ps *PolicyStore) loadACLPolicyInternal(ctx context.Context, policyName, po
 		}
 	}
 
-	policy, err = ParseACLPolicy(ns, policyText)
+	policy, err = ParseACLPolicy(ns, policyText, WithDenySlashInTemplatedPaths(ps.core.denySlashInTemplatedPolicyPaths))
 	if err != nil {
 		return fmt.Errorf("error parsing %s policy: %w", policyName, err)
 	}

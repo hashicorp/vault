@@ -53,6 +53,12 @@ export const CHARTS = {
   yAxis: '[data-test-y-axis]',
   xAxisLabel: '[data-test-x-axis] text',
   plotPoint: '[data-test-plot-point]',
+
+  // Carbon Charts selectors — scoped to a chart container by title
+  carbonLegendLabel: (title: string) => `[data-test-chart="${title}"] .legend-item p`,
+  carbonXAxisTick: (title: string) =>
+    `[data-test-chart="${title}"] g.axis.bottom g.ticks:not(.invisible) g.tick text`,
+  carbonBar: (title: string) => `[data-test-chart="${title}"] path.bar`,
 };
 
 export const FILTERS = {

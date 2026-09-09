@@ -14,10 +14,10 @@ import clientsHandler, {
 } from 'vault/mirage/handlers/clients';
 import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
-import { visit, click, findAll, fillIn, currentURL } from '@ember/test-helpers';
+import { visit, click, fillIn, currentURL, findAll } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CHARTS, CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CLIENT_COUNT, CHARTS, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import timestamp from 'core/utils/timestamp';
 import {
   ACTIVITY_EXPORT_STUB,
@@ -44,11 +44,19 @@ module('Acceptance | clients | overview', function (hooks) {
 
     await login();
     await visit('/vault/clients/counts/overview');
-    assert.dom(CLIENT_COUNT.statLegendValue('Secret sync clients')).doesNotExist();
-    assert.dom(CLIENT_COUNT.statLegendValue('Entity clients')).exists('other stats are still visible');
+    const donutLegendLabels = findAll(CHARTS.carbonLegendLabel('Client count and type distribution')).map(
+      (el) => el.textContent?.trim()
+    );
+    assert.notOk(
+      donutLegendLabels.includes('Secret sync clients'),
+      'donut legend does not include Secret sync clients'
+    );
+    assert.ok(donutLegendLabels.includes('Entity clients'), 'other stats are still visible');
 
     await click(GENERAL.inputByAttr('toggle view'));
-    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients ACME clients');
+    assert
+      .dom('[data-test-chart="Client usage by month (stacked)"]')
+      .exists('stacked chart container renders');
   });
 
   test('it should render charts', async function (assert) {
@@ -70,9 +78,8 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.card('Client usage trends'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(`${CLIENT_COUNT.card('Client usage trends')} ${CHARTS.xAxisLabel}`)
-      .hasText('7/23', 'x-axis labels start with billing start date');
-    assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
+      .dom('[data-test-chart="Client usage by month (simple)"]')
+      .exists('simple chart container renders for the default view');
   });
 
   module('community', function (hooks) {
@@ -111,9 +118,8 @@ module('Acceptance | clients | overview', function (hooks) {
         .dom(CLIENT_COUNT.card('Client usage trends'))
         .exists('Shows running totals with monthly breakdown charts');
       assert
-        .dom(`${CLIENT_COUNT.card('Client usage trends')} ${CHARTS.xAxisLabel}`)
-        .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
-      assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
+        .dom('[data-test-chart="Client usage by month (simple)"]')
+        .exists('simple chart container renders for the queried date range');
 
       // query for single, historical month (upgrade month)
       await click(CLIENT_COUNT.dateRange.edit);
@@ -125,9 +131,11 @@ module('Acceptance | clients | overview', function (hooks) {
         .exists('running total month over month charts show');
 
       // query historical date range (from September 2023 to December 2023)
+      const historicalStartMonth = '2023-09';
+      const historicalEndMonth = '2023-12';
       await click(CLIENT_COUNT.dateRange.edit);
-      await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-09');
-      await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
+      await fillIn(CLIENT_COUNT.dateRange.editDate('start'), historicalStartMonth);
+      await fillIn(CLIENT_COUNT.dateRange.editDate('end'), historicalEndMonth);
       await click(GENERAL.submitButton);
 
       assert
@@ -140,11 +148,15 @@ module('Acceptance | clients | overview', function (hooks) {
         .dom(CLIENT_COUNT.card('Client usage trends'))
         .exists('Shows running totals with monthly breakdown charts');
 
-      assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
-      const xAxisLabels = findAll(CHARTS.xAxisLabel);
       assert
-        .dom(xAxisLabels[xAxisLabels.length - 1])
-        .hasText('12/23', 'x-axis labels end with queried end month');
+        .dom('[data-test-chart="Client usage by month (simple)"]')
+        .exists('simple chart container remains rendered for the historical range');
+
+      const xTickLabels = findAll(CHARTS.carbonXAxisTick('Client usage by month (simple)'))
+        .map((el) => el.textContent?.trim())
+        .filter(Boolean);
+      const expectedStartTick = parseAPITimestamp(`${historicalStartMonth}-01T00:00:00Z`, 'M/yy');
+      assert.true(xTickLabels.includes(expectedStartTick), 'x-axis includes queried start month');
     });
 
     test('it does not render client list links for community versions', async function (assert) {
@@ -309,16 +321,14 @@ module('Acceptance | clients | overview', function (hooks) {
     test('it should show secrets sync stats when the feature is activated', async function (assert) {
       await login();
       await visit('/vault/clients/counts/overview');
-      assert
-        .dom(CLIENT_COUNT.statLegendValue('Secret sync clients'))
-        .exists('shows secret sync data on overview');
+      const donutLegendLabels = findAll(CHARTS.carbonLegendLabel('Client count and type distribution')).map(
+        (el) => el.textContent?.trim()
+      );
+      assert.ok(donutLegendLabels.includes('Secret sync clients'), 'shows secret sync data on overview');
       await click(GENERAL.inputByAttr('toggle view'));
       assert
-        .dom(CHARTS.legend)
-        .hasText(
-          'Entity clients Non-entity clients ACME clients Secret sync clients',
-          'it renders legend in order that matches the stacked bar data'
-        );
+        .dom('[data-test-chart="Client usage by month (stacked)"]')
+        .exists('stacked chart container renders when the feature is activated');
     });
 
     test('it should hide secrets sync stats when feature is NOT activated', async function (assert) {
@@ -330,17 +340,18 @@ module('Acceptance | clients | overview', function (hooks) {
 
       await login();
       await visit('/vault/clients/counts/overview');
-      assert
-        .dom(CLIENT_COUNT.statLegendValue('Secret sync clients'))
-        .doesNotExist('stat is hidden because feature is not activated');
-      assert.dom(CLIENT_COUNT.statLegendValue('Entity clients')).exists('other stats are still visible');
+      const donutLegendLabels = findAll(CHARTS.carbonLegendLabel('Client count and type distribution')).map(
+        (el) => el.textContent?.trim()
+      );
+      assert.notOk(
+        donutLegendLabels.includes('Secret sync clients'),
+        'stat is hidden because feature is not activated'
+      );
+      assert.ok(donutLegendLabels.includes('Entity clients'), 'other stats are still visible');
       await click(GENERAL.inputByAttr('toggle view'));
       assert
-        .dom(CHARTS.legend)
-        .hasText(
-          'Entity clients Non-entity clients ACME clients',
-          'it renders legend in order that matches the stacked bar data and does not include secret sync'
-        );
+        .dom('[data-test-chart="Client usage by month (stacked)"]')
+        .exists('stacked chart container renders without secret sync in the stats view');
     });
   });
 });

@@ -11,6 +11,7 @@ import { validate } from 'vault/utils/forms/validate';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import routerLookup from 'core/utils/router-lookup';
+import { sysPoliciesAclNameMapping } from 'vault/utils/terraform-mappings/sys-policies-acl-name-mapping';
 
 import type { HTMLElementEvent } from 'vault/forms';
 import type { PolicyData } from './builder';
@@ -36,14 +37,22 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
 
   validations: Validations = {
     name: [{ type: 'presence', message: 'Name is required.' }],
+    stanzas: [
+      {
+        validator: ({ stanzas }) =>
+          stanzas.length > 0 && stanzas.every((stanza: PolicyStanza) => stanza.isValid),
+        message: 'Path is required for each rule.',
+      },
+    ],
   };
 
+  @tracked errorDetails: string[] = [];
   @tracked errorMessage = '';
-  @tracked policyContent = '';
   @tracked policyName = '';
   @tracked showFlyout = false;
   @tracked stanzas: PolicyStanza[] = this.defaultStanzas;
   @tracked validationErrors: ValidationMap | null = null;
+  @tracked warningMessage = '';
 
   get router(): RouterService {
     return routerLookup(this);
@@ -61,9 +70,13 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   }
 
   @action
-  handlePolicyChange({ policy, stanzas }: PolicyData) {
-    this.policyContent = policy;
+  handlePolicyChange({ stanzas }: PolicyData) {
     this.stanzas = stanzas;
+    this.checkCapabilities();
+  }
+
+  get policyContent() {
+    return formatStanzas(this.stanzas);
   }
 
   get snippetArgs() {
@@ -72,15 +85,26 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
     return policySnippetArgs(policyName, policy);
   }
 
+  get terraformSnippet() {
+    const policyName = this.policyName;
+    const policies = formatStanzas(this.stanzas);
+    return sysPoliciesAclNameMapping({ name: policyName, policy: policies });
+  }
+
   @task
   *onSave(event: HTMLElementEvent<HTMLFormElement>) {
     event.preventDefault();
     this.resetErrors();
 
-    const { isValid, state, invalidFormMessage } = validate({ name: this.policyName }, this.validations);
+    const { isValid, state } = validate({ name: this.policyName, stanzas: this.stanzas }, this.validations);
+
     if (!isValid) {
       this.validationErrors = state;
-      this.errorMessage = invalidFormMessage;
+      this.errorDetails = Object.values(state).flatMap((s) => s.errors);
+      // Render general error message instead of exact count from validate() because
+      // stanzas (which are validated as a single input) can have up to 2 errors each.
+      const msg = this.errorDetails.length > 1 ? 'are errors' : 'is an error';
+      this.errorMessage = `There ${msg} with this form.`;
       return;
     }
 
@@ -93,7 +117,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
           models: ['acl', this.policyName],
         },
       });
-      this.showFlyout = false;
+      this.closeFlyout();
       this.resetFlyoutState();
     } catch (e) {
       const { message } = yield this.api.parseError(e);
@@ -112,6 +136,7 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
     if (noChanges) {
       const presetStanzas = this.computePolicyPaths();
       this.stanzas = presetStanzas ? presetStanzas : this.stanzas;
+      this.checkCapabilities();
     }
   }
 
@@ -125,11 +150,12 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
   resetErrors() {
     this.validationErrors = null;
     this.errorMessage = '';
+    this.errorDetails = [];
+    this.warningMessage = '';
   }
 
   resetFlyoutState() {
     this.policyName = '';
-    this.policyContent = '';
     this.stanzas = [new PolicyStanza()];
   }
 
@@ -146,6 +172,15 @@ export default class CodeGeneratorPolicyFlyout extends Component<Args> {
 
     const routePolicyPaths = this.capabilities.lookupRoutePaths(currentRouteName);
     return routePolicyPaths ? this.presetStanzas(Array.from(routePolicyPaths)) : null;
+  }
+
+  checkCapabilities() {
+    const hasNoCapabilities = this.stanzas.every((stanza) => stanza.capabilities.size === 0);
+    if (hasNoCapabilities) {
+      this.warningMessage = 'No capabilities selected. The policy will have no permissions.';
+    } else {
+      this.warningMessage = '';
+    }
   }
 
   presetStanzas(paths: string[]) {

@@ -1,0 +1,3 @@
+```release-note:bug
+identity/scim (enterprise): Fix SCIM `meta.location` and `Location` response header returning an internal cluster address instead of the address used by the client. Location URLs are now derived from the incoming request's `Host` header, ensuring correct values when Vault is accessed through a load balancer or reverse proxy such as HVD.
+```

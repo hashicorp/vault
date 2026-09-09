@@ -42,9 +42,9 @@ module('Acceptance | mfa-login', function (hooks) {
   };
 
   const didLogin = async (assert) => {
-    await waitFor('[data-test-dashboard-card-header]', {
+    await waitFor(GENERAL.textDisplay('Secrets engines'), {
       timeout: 5000,
-      timeoutMessage: 'timed out waiting for dashboard title to render',
+      timeoutMessage: 'timed out waiting for dashboard secrets engines card to render',
     });
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'Route transitions after login');
   };

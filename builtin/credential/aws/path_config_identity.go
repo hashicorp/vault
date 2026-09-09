@@ -6,6 +6,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -81,15 +82,31 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: pathConfigIdentityRead,
+				Summary:  "Return the AWS identity integration configuration.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "identity-integration-configuration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"iam_alias":    {Type: framework.TypeString, Description: "How IAM principals are mapped to identity aliases."},
+							"iam_metadata": {Type: framework.TypeSlice, Description: "Metadata fields to include on IAM auth tokens."},
+							"ec2_alias":    {Type: framework.TypeString, Description: "How EC2 instances are mapped to identity aliases."},
+							"ec2_metadata": {Type: framework.TypeSlice, Description: "Metadata fields to include on EC2 auth tokens."},
+						},
+					}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: pathConfigIdentityUpdate,
+				Summary:  "Configure the AWS identity integration settings.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb:   "configure",
 					OperationSuffix: "identity-integration",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
 				},
 			},
 		},

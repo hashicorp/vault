@@ -4,21 +4,16 @@
  */
 
 import Model, { attr, belongsTo } from '@ember-data/model';
-import { computed } from '@ember/object'; // eslint-disable-line
-import { equal } from '@ember/object/computed'; // eslint-disable-line
-import { withModelValidations } from 'vault/decorators/model-validations';
+import { ALL_ENGINES, isAddonEngine } from 'core/utils/all-engines-metadata';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { ALL_ENGINES, isAddonEngine } from 'vault/utils/all-engines-metadata';
-import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { withModelValidations } from 'vault/decorators/model-validations';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { INTERNAL_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 const LINKED_BACKENDS = supportedSecretBackends();
-
-// identity will be managed separately and the inclusion
-// of the system backend is an implementation detail
-const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const validations = {
   path: [
@@ -63,7 +58,7 @@ export default class SecretEngineModel extends Model {
   @attr('number', {
     label: 'Version',
     helpText:
-      'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine the allows for storing of static key/value pairs. Version 2 added more features including data versioning, TTLs, and check and set.',
+      'The KV Secrets Engine can operate in different modes. Version 1 is the original generic Secrets Engine that allows for the storage of static key/value pairs. Version 2 added more features, including data versioning, TTLs, and check-and-set.',
     possibleValues: [2, 1],
     // This shouldn't be defaultValue because if no version comes back from API we should assume it's v1
     defaultFormValue: 2, // Set the form to 2 by default
@@ -136,7 +131,7 @@ export default class SecretEngineModel extends Model {
   }
 
   get shouldIncludeInList() {
-    return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
+    return !INTERNAL_ENGINE_TYPES.includes(this.engineType);
   }
 
   get isSupportedBackend() {
@@ -274,14 +269,5 @@ export default class SecretEngineModel extends Model {
         'Method Options': optionFields,
       },
     ];
-  }
-
-  /* ACTIONS */
-  saveZeroAddressConfig() {
-    return this.save({
-      adapterOptions: {
-        adapterMethod: 'saveZeroAddressConfig',
-      },
-    });
   }
 }

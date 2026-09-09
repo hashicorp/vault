@@ -5,10 +5,10 @@
 
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
-import { capitalize } from '@ember/string';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
+import OidcKeyForm from 'vault/forms/oidc/key';
 
 import type Router from '@ember/routing/router';
 import type FlashMessagesService from 'ember-cli-flash/services/flash-messages';
@@ -16,11 +16,21 @@ import type SecretsEngineForm from 'vault/forms/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type VersionService from 'vault/services/version';
-import { isAddonEngine } from 'vault/utils/all-engines-metadata';
-import { getExternalPluginNameFromBuiltin } from 'vault/utils/external-plugin-helpers';
+import { isAddonEngine, VERSIONED_ENGINE_TYPES } from 'vault/utils/all-engines-metadata';
+import {
+  supportedSecretBackends,
+  SupportedSecretBackendsEnum,
+} from 'vault/helpers/supported-secret-backends';
+import engineDisplayData from 'vault/helpers/engines-display-data';
+import {
+  getEffectiveEngineType,
+  getExternalPluginNameFromBuiltin,
+} from 'vault/utils/external-plugin-helpers';
 import type { EngineVersionInfo } from 'vault/utils/plugin-catalog-helpers';
 import { sortVersions } from 'vault/utils/version-utils';
+import { SECRET_ENGINE_CREATED } from 'vault/utils/analytic-events';
 import type { ValidationMap } from 'vault/vault/app-types';
+import type AnalyticsService from 'vault/services/analytics';
 
 // Extended config interface for plugin mounting
 interface ExtendedMountConfig {
@@ -41,8 +51,8 @@ interface Args {
     hasUnversionedPlugins?: boolean;
     pinnedVersion?: string | null;
   };
-  onMountSuccess?: (type: string, path: string, useEngineRoute: boolean) => void;
 }
+const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 /**
  * @module Mount::SecretsEngineForm
@@ -56,10 +66,11 @@ interface Args {
  *
  * @example
  * ```hbs
- * <Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />
+ * <Mount::SecretsEngineForm @model={{this.model}} />
  * ```
  */
 export default class MountSecretsEngineFormComponent extends Component<Args> {
+  @service declare analytics: AnalyticsService;
   @service declare flashMessages: FlashMessagesService;
   @service declare api: ApiService;
   @service declare capabilities: CapabilitiesService;
@@ -71,6 +82,8 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
   @tracked errorMessage: string | string[] = '';
   @tracked pluginRegistrationType: 'builtin' | 'external' = PluginRegistrationType.BUILTIN;
   @tracked selectedPluginVersion = '';
+  @tracked oidcKeys: { id: string }[] = [];
+  @tracked oidcKeyForm: OidcKeyForm | null = null;
 
   _originalBuiltinType = '';
 
@@ -85,6 +98,10 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
 
     // Initialize plugin version
     this.configObject.plugin_version = '';
+  }
+
+  get normalizedType(): string {
+    return this.args.model.form.normalizedType ?? '';
   }
 
   // Helper to get config object with proper typing
@@ -106,14 +123,31 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     const breadcrumbs: { label: string; route?: string; icon?: string }[] = [
       { label: 'Vault', route: 'vault.cluster', icon: 'vault' },
       { label: 'Secrets engines', route: 'vault.cluster.secrets.backends' },
-      { label: 'Enable secrets engine', route: 'vault.cluster.secrets.enable' },
+      { label: 'Create a new secrets engine', route: 'vault.cluster.secrets.enable' },
     ];
 
     if (this.args?.model?.form?.normalizedType) {
-      breadcrumbs.push({ label: capitalize(this.args?.model?.form?.normalizedType) });
+      breadcrumbs.push({ label: this.pageTitle });
     }
 
     return breadcrumbs;
+  }
+
+  get pageTitle() {
+    const normalizedType = this.args?.model?.form?.normalizedType;
+    const displayName = normalizedType ? engineDisplayData(normalizedType).displayName : '';
+    return `Create a ${displayName} secrets engine`;
+  }
+
+  get engineDocPath(): string | null {
+    const normalizedType = this.args.model.form.normalizedType;
+    if (!normalizedType) return null;
+    const DOC_PATH_OVERRIDES: Record<string, string> = {
+      database: '/vault/docs/secrets/databases',
+      keymgmt: '/vault/docs/secrets/key-management',
+      'pki-external-ca': '/vault/docs/secrets/pki',
+    };
+    return DOC_PATH_OVERRIDES[normalizedType] ?? `/vault/docs/secrets/${normalizedType}`;
   }
 
   get pluginTypeOptions() {
@@ -219,6 +253,16 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     return externalVersions.map((version) => version.version);
   }
 
+  // `object` carries the engine type, suffixed with the version when one applies (e.g. "kv-v2")
+  private trackSecretsCreationEvent(type: string, successFlag: boolean, version?: number) {
+    this.analytics.trackEvent(SECRET_ENGINE_CREATED, {
+      objectType: 'secrets-engine',
+      object: version ? `${type}-v${version}` : type,
+      process: 'UI',
+      successFlag,
+    });
+  }
+
   // Check if the currently selected version differs from the pinned version
   get shouldShowPinWarning(): boolean {
     if (!this.isExternalPlugin) {
@@ -273,7 +317,8 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
   async saveKvConfig(path: string, formData: SecretsEngineForm['data']) {
     const { options, kv_config = {} } = formData;
     const { max_versions, cas_required, delete_version_after } = kv_config;
-    const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.args.model.form.normalizedType);
+    const isKvV2 =
+      options?.version === 2 && VERSIONED_ENGINE_TYPES.includes(this.args.model.form.normalizedType);
     const hasConfig = max_versions || cas_required || delete_version_after;
 
     if (isKvV2 && hasConfig) {
@@ -332,6 +377,13 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     // Only submit form if validations pass
     const { isValid, state, invalidFormMessage, data } = mountModel.toJSON();
 
+    // hold options to tune external kv version after mounting
+    let options;
+    if (type === 'vault-plugin-secrets-kv') {
+      options = data.options;
+      delete data.options;
+    }
+
     if (!isValid) {
       this.formValidations = state;
       this.invalidFormAlert = invalidFormMessage;
@@ -342,6 +394,9 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     this.formValidations = null;
     this.invalidFormAlert = null;
 
+    // Derived before the request so analytics can report it on failure too
+    const version = options ? options.version : data.options?.version;
+
     try {
       // Mount the secrets engine
       yield this.api.sys.mountsEnableSecretsEngine(path, data);
@@ -351,24 +406,22 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
 
       this.flashMessages.success(`Successfully mounted the ${mountModel.type} secrets engine at ${path}.`);
 
+      // external versions of KV doesn't allow version to be set when mounting, so we need to tune to the selected version after
+      if (type === 'vault-plugin-secrets-kv') {
+        yield this.api.sys.mountsTuneConfigurationParameters(path, {
+          options,
+        });
+      }
+
       // Determine if we should use engine routes
-      const version = data.options?.version;
       const useEngineRoute = isAddonEngine(mountModel.normalizedType, Number(version));
 
-      // Call success callback or navigate
-      if (this.args.onMountSuccess) {
-        this.args.onMountSuccess(type, path, useEngineRoute);
-      } else {
-        // Default navigation
-        if (useEngineRoute) {
-          this.router.transitionTo('vault.cluster.secrets.backend.index', path);
-        } else {
-          this.router.transitionTo('vault.cluster.secrets.backend.list-root', path);
-        }
-      }
+      this.trackSecretsCreationEvent(type, true, version);
+      this.onMountSuccess(type, path, useEngineRoute);
     } catch (error) {
+      this.trackSecretsCreationEvent(type, false, version);
       const { status, response, message } = yield this.api.parseError(error);
-      this.onMountError(status, response.errors, message);
+      this.onMountError(status, response?.errors, message);
     }
   }
 
@@ -448,5 +501,39 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
     if (this.args.model.availableVersions) {
       this.args.model.form.handlePluginVersionChange(this.args.model.availableVersions);
     }
+  }
+
+  @action
+  onMountSuccess(type: string, path: string, useEngineRoute = false) {
+    let transition;
+    const engineInfo = engineDisplayData(type);
+    const effectiveType = getEffectiveEngineType(type);
+
+    if (engineInfo && SUPPORTED_BACKENDS.includes(effectiveType as SupportedSecretBackendsEnum)) {
+      if (useEngineRoute && engineInfo.engineRoute) {
+        transition = this.router.transitionTo(
+          `vault.cluster.secrets.backend.${engineInfo.engineRoute}`,
+          path
+        );
+      } else {
+        // For keymgmt, we need to land on provider tab by default using query params
+        const queryParams = effectiveType === 'keymgmt' ? { tab: 'provider' } : {};
+        transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, { queryParams });
+      }
+    } else if (engineInfo) {
+      // transitions recognized but unsupported engines to general settings configuration page
+      transition = this.router.transitionTo(
+        'vault.cluster.secrets.backend.configuration.general-settings',
+        path
+      );
+    } else {
+      transition = this.router.transitionTo('vault.cluster.secrets.backends');
+    }
+    return transition?.followRedirects();
+  }
+
+  @action
+  onCreateOidcKey(name: string) {
+    this.oidcKeyForm = new OidcKeyForm({ name }, { isNew: true });
   }
 }

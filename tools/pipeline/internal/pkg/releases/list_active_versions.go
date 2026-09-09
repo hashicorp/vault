@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package releases
@@ -6,47 +6,29 @@ package releases
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"maps"
-	"os"
-	"path/filepath"
 	"slices"
+	"strings"
 
-	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/hashicorp/hcl/v2/hclparse"
+	libgitclient "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
 	"github.com/jedib0t/go-pretty/v6/table"
-	slogctx "github.com/veqryn/slog-context"
-	"github.com/zclconf/go-cty/cty"
-	"github.com/zclconf/go-cty/cty/gocty"
-)
-
-type (
-	VersionsConfig struct {
-		Schema        int            `json:"schema" cty:"schema" hcl:"schema,optional"`
-		ActiveVersion *ActiveVersion `json:"active_versions" cty:"active_versions" hcl:"active_versions"`
-	}
-	ActiveVersion struct {
-		Versions map[string]*Version `json:"versions"`
-	}
-	Version struct {
-		CEActive bool `json:"ce_active"`
-		LTS      bool `json:"lts"`
-	}
 )
 
 // ListActiveVersionsReq is a request to list the active branch versions from the
 // .release/metadata file
 type ListActiveVersionsReq struct {
-	// ReleaseVersionConfigPath is the path to the .release/versions.hcl file
-	ReleaseVersionConfigPath string
-	// The depth to recursively search backwards for a .release/versions.hcl file
-	Recurse uint
+	// VersionsDecodeRes is the result of decoding .release/versions.hcl. If we
+	// auto-loaded it during our command initialization then we can return the
+	// contents.
+	VersionsDecodeRes *DecodeRes
 	// Write the active versions to $GITHUB_OUTPUT
 	WriteToGithubOutput bool
+	// Include 'main' branch in output
+	IncludeMain bool
+	// Prefix to add to CE branches (e.g., 'ce' for 'ce/release/<version>')
+	CEPrefix string
 }
 
 // ListActiveVersionsRes are the active versions and associated metadata for the repo
@@ -54,46 +36,33 @@ type ListActiveVersionsRes struct {
 	VersionsConfig *VersionsConfig `json:"versions_config,omitempty"`
 }
 
-// ListActiveVersionsGithubOutput is our GITHUB_OUTPUT type. While ListActiveVersionsReq is designed to match the schema of the releases source file, this type
-// is designed for maximal utility in Github Actions workflows and their associated built-in functions.
-type ListActiveVersionsGithubOutput struct {
-	VersionsConfig   *VersionsConfig `json:"versions_config,omitempty"`
-	Versions         []string        `json:"versions,omitempty"`
-	CEActiveVersions []string        `json:"ce_active_versions,omitempty"`
-	LTSVersions      []string        `json:"lts_versions,omitempty"`
+// ActiveVersionMatrixEntry represents a single active version with metadata.
+// The idea is to render this as JSON to make building matrices for Github
+// Actions easy.
+type ActiveVersionMatrixEntry struct {
+	Branch  string `json:"branch"`  // Full branch name (e.g., "main", "release/1.19.x+ent", "ce/release/2.0.x")
+	Version string `json:"version"` // Version number (e.g., "1.19.x", "2.0.x", "main")
+	Edition string `json:"edition"` // "ce" or "ent", derived solely based on ce_active. No other editions metadata (ent.hsm etc.) is available
+	LTS     bool   `json:"lts"`     // Whether this is an LTS version
 }
 
-var v1Schema = hcldec.ObjectSpec{
-	"schema": &hcldec.AttrSpec{
-		Name:     "schema",
-		Type:     cty.Number,
-		Required: false,
-	},
-	"active_versions": &hcldec.BlockSpec{
-		TypeName: "active_versions",
-		Nested: hcldec.ObjectSpec{
-			"version": &hcldec.BlockMapSpec{
-				TypeName:   "version",
-				LabelNames: []string{"name"},
-				Nested: hcldec.ObjectSpec{
-					"ce_active": &hcldec.AttrSpec{
-						Name:     "ce_active",
-						Type:     cty.Bool,
-						Required: false,
-					},
-					"lts": &hcldec.AttrSpec{
-						Name:     "lts",
-						Type:     cty.Bool,
-						Required: false,
-					},
-				},
-			},
-		},
-	},
+// ListActiveVersionsGithubOutput is our GITHUB_OUTPUT type optimized for GitHub Actions workflows.
+type ListActiveVersionsGithubOutput struct {
+	VersionsConfig          *VersionsConfig             `json:"versions_config,omitempty"`            // Full config from .release/versions.hcl
+	Versions                []string                    `json:"versions,omitempty"`                   // e.g., ["1.19.x", "1.20.x", "1.21.x", "2.0.x"]
+	CEActiveVersions        []string                    `json:"ce_active_versions,omitempty"`         // e.g., ["2.0.x"] (versions with ce_active: true)
+	LTSVersions             []string                    `json:"lts_versions,omitempty"`               // e.g., ["1.19.x"] (versions with lts: true)
+	ActiveBranches          []string                    `json:"active_branches,omitempty"`            // e.g., ["release/1.19.x+ent", "release/1.20.x+ent"]
+	CEActiveBranches        []string                    `json:"ce_active_branches,omitempty"`         // e.g., ["ce/release/2.0.x"] (with --include-ce-prefix ce)
+	LTSActiveBranches       []string                    `json:"lts_active_branches,omitempty"`        // e.g., ["release/1.19.x+ent"]
+	AllActiveBranches       []string                    `json:"all_active_branches,omitempty"`        // ENT + CE branches combined
+	ActiveVersionsMatrix    []*ActiveVersionMatrixEntry `json:"active_versions_matrix,omitempty"`     // ENT only: [{branch:"main",version:"main",edition:"ent",lts:false}, ...]
+	CEActiveVersionsMatrix  []*ActiveVersionMatrixEntry `json:"ce_active_versions_matrix,omitempty"`  // CE only: [{branch:"ce/main",version:"main",edition:"ce",lts:false}, ...]
+	AllActiveVersionsMatrix []*ActiveVersionMatrixEntry `json:"all_active_versions_matrix,omitempty"` // Both: ENT + CE entries combined
 }
 
 // Run runs the dynamic configuration request
-func (l *ListActiveVersionsReq) Run(ctx context.Context) (*ListActiveVersionsRes, error) {
+func (l *ListActiveVersionsReq) Run(ctx context.Context, git *libgitclient.Client) (*ListActiveVersionsRes, error) {
 	if l == nil {
 		return nil, fmt.Errorf("list active versions request is uninitialized")
 	}
@@ -104,218 +73,202 @@ func (l *ListActiveVersionsReq) Run(ctx context.Context) (*ListActiveVersionsRes
 	default:
 	}
 
-	var err error
-	res := &ListActiveVersionsRes{}
-
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("list active release versions: %w", err)
-		}
-	}()
-
 	slog.Default().DebugContext(ctx, "running list active versions request")
-
-	file, err := l.openReleaseVersions(ctx)
-	if err != nil {
+	if err := l.VersionsDecodeRes.Validate(ctx); err != nil {
 		return nil, err
 	}
 
-	var bytes []byte
-	bytes, err = io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
+	return &ListActiveVersionsRes{VersionsConfig: l.VersionsDecodeRes.Config}, nil
+}
 
-	res.VersionsConfig, err = l.unmarshalConfig(ctx, bytes)
+// ActiveVersionWithMetadata represents a version with its associated branch names
+type ActiveVersionWithMetadata struct {
+	Version          string `json:"version"`
+	CEActive         bool   `json:"ce_active"`
+	LTS              bool   `json:"lts"`
+	EnterpriseBranch string `json:"enterprise_branch"`
+	CEBranch         string `json:"ce_branch,omitempty"`
+}
 
-	return res, err
+// ListActiveVersionsJSONOutput is the JSON output structure
+type ListActiveVersionsJSONOutput struct {
+	VersionsConfig *VersionsConfig             `json:"versions_config,omitempty"`
+	Versions       []ActiveVersionWithMetadata `json:"versions,omitempty"`
 }
 
 // ToJSON marshals the response to JSON.
-func (l *ListActiveVersionsRes) ToJSON() ([]byte, error) {
-	b, err := json.Marshal(l)
+func (l *ListActiveVersionsRes) ToJSON(cePrefix string) ([]byte, error) {
+	output := &ListActiveVersionsJSONOutput{
+		VersionsConfig: l.VersionsConfig,
+		Versions:       []ActiveVersionWithMetadata{},
+	}
+
+	for _, version := range slices.Sorted(maps.Keys(l.VersionsConfig.ActiveVersion.Versions)) {
+		cfg := l.VersionsConfig.ActiveVersion.Versions[version]
+		vwb := ActiveVersionWithMetadata{
+			Version:          version,
+			CEActive:         cfg.CEActive,
+			LTS:              cfg.LTS,
+			EnterpriseBranch: EnterpriseReleaseBranchForVersion(version),
+		}
+
+		if cfg.CEActive {
+			vwb.CEBranch = CEReleaseBranchForVersion(version, cePrefix)
+		}
+
+		output.Versions = append(output.Versions, vwb)
+	}
+
+	b, err := json.Marshal(output)
 	if err != nil {
-		return nil, fmt.Errorf("marshaling list changed files to JSON: %w", err)
+		return nil, fmt.Errorf("marshaling list active versions to JSON: %w", err)
 	}
 
 	return b, nil
 }
 
 // ToTable marshals the response to a text table.
-func (l *ListActiveVersionsRes) ToTable() string {
+func (l *ListActiveVersionsRes) ToTable(cePrefix string) string {
 	t := table.NewWriter()
 	t.Style().Options.DrawBorder = false
 	t.Style().Options.SeparateColumns = false
 	t.Style().Options.SeparateFooter = false
 	t.Style().Options.SeparateHeader = false
 	t.Style().Options.SeparateRows = false
-	t.AppendHeader(table.Row{"version", "ce active", "lts"})
+	t.AppendHeader(table.Row{"version", "ce active", "lts", "enterprise branch", "ce branch"})
 	for _, version := range slices.Sorted(maps.Keys(l.VersionsConfig.ActiveVersion.Versions)) {
 		values := l.VersionsConfig.ActiveVersion.Versions[version]
-		t.AppendRow(table.Row{version, values.CEActive, values.LTS})
+		entBranch := EnterpriseReleaseBranchForVersion(version)
+		ceBranch := ""
+
+		// If CE active, show CE branch
+		if values.CEActive {
+			ceBranch = CEReleaseBranchForVersion(version, cePrefix)
+		}
+
+		t.AppendRow(table.Row{version, values.CEActive, values.LTS, entBranch, ceBranch})
 	}
 	return t.Render()
-}
-
-// unmarshalConfig unmarshals the bytes of version.hcl into a *VersionsConfig
-func (l *ListActiveVersionsReq) unmarshalConfig(ctx context.Context, bytes []byte) (*VersionsConfig, error) {
-	var err error
-	slog.Default().DebugContext(ctx, "unmarshaling versions.hcl")
-
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("unmarhsal versions.hcl bytes: %w", err)
-		}
-	}()
-
-	parser := hclparse.NewParser()
-	var file *hcl.File
-	var diags hcl.Diagnostics
-	file, diags = parser.ParseHCL(bytes, "versions.hcl")
-	if diags != nil && diags.HasErrors() {
-		for _, diag := range diags {
-			err = errors.Join(err, errors.New(diag.Error()))
-		}
-
-		return nil, err
-	}
-
-	val, moreDiags := hcldec.Decode(file.Body, v1Schema, nil)
-	if moreDiags != nil && moreDiags.HasErrors() {
-		for _, diag := range moreDiags {
-			err = errors.Join(err, errors.New(diag.Error()))
-		}
-		return nil, err
-	}
-
-	res := &VersionsConfig{ActiveVersion: &ActiveVersion{Versions: map[string]*Version{}}}
-	if !val.IsWhollyKnown() || !val.CanIterateElements() {
-		err = fmt.Errorf("unexpected version type: %s", val.Type().GoString())
-		return nil, err
-	}
-
-	schema, ok := val.AsValueMap()["schema"]
-	if ok && schema.IsWhollyKnown() && schema.Type().Equals(cty.Number) {
-		err = gocty.FromCtyValue(schema, &res.Schema)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	av, ok := val.AsValueMap()["active_versions"]
-	if !ok {
-		err = errors.New("no active_versions stanza found in decoded value")
-	}
-
-	for _, versions := range av.AsValueSlice() {
-		for version, versionVal := range versions.AsValueMap() {
-			v := &Version{}
-
-			for attr, val := range versionVal.AsValueMap() {
-				switch attr {
-				case "ce_active":
-					v.CEActive = val.True()
-				case "lts":
-					v.LTS = val.True()
-				default:
-					err = fmt.Errorf("unknown value: %s", attr)
-					return nil, err
-				}
-			}
-
-			res.ActiveVersion.Versions[version] = v
-		}
-	}
-
-	return res, err
-}
-
-// openReleaseVersions searches the current path and optionally recursively for
-// .release/versions.hcl and returns a file handle to it.
-func (l *ListActiveVersionsReq) openReleaseVersions(ctx context.Context) (*os.File, error) {
-	var err error
-	var file *os.File
-	var path string
-
-	defer func() {
-		if err != nil {
-			err = fmt.Errorf("open release versions: %w", err)
-		}
-	}()
-
-	if l == nil {
-		err = errors.New("uninitialized")
-		return nil, err
-	}
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-
-	slog.Default().DebugContext(ctx, "open .release/versions.hcl")
-	if l.ReleaseVersionConfigPath != "" {
-		slog.Default().DebugContext(
-			slogctx.Append(ctx, slog.String("path", l.ReleaseVersionConfigPath)),
-			"attempting to open versions.hcl",
-		)
-
-		path, err = filepath.Abs(l.ReleaseVersionConfigPath)
-		if err != nil {
-			return nil, err
-		}
-
-		file, err = os.Open(path)
-		return file, err
-	}
-
-	path, err = os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	for depth := uint(0); path != string(os.PathSeparator) && depth <= l.Recurse; depth++ {
-		path = filepath.Join(path, ".release", "versions.hcl")
-		slog.Default().DebugContext(
-			slogctx.Append(ctx, slog.String("path", path), slog.Uint64("recurse", uint64(depth))),
-			"attempting to open versions.hcl",
-		)
-		file, err = os.Open(path)
-		if err == nil {
-			return file, nil
-		}
-		path, err = filepath.Abs(filepath.Dir(filepath.Dir(filepath.Dir(path))))
-		if err != nil {
-			return nil, err
-		}
-	}
-	err = errors.New("unable to locate .release/versions.hcl")
-
-	return nil, err
 }
 
 // ToGithubOutput writes a JSON encoded versions of ListActiveVersionsRes to
 // $GITHUB_OUTPUT. We use an intermediate type to structure the data in a more
 // suitable fashion to make usage within Github Actions easier.
-func (r ListActiveVersionsRes) ToGithubOutput() ([]byte, error) {
+func (l ListActiveVersionsRes) ToGithubOutput(includeMain bool, cePrefix string) ([]byte, error) {
 	res := &ListActiveVersionsGithubOutput{
-		VersionsConfig:   r.VersionsConfig,
-		Versions:         slices.Sorted(maps.Keys(r.VersionsConfig.ActiveVersion.Versions)),
-		CEActiveVersions: []string{},
-		LTSVersions:      []string{},
+		VersionsConfig:          l.VersionsConfig,
+		Versions:                slices.Sorted(maps.Keys(l.VersionsConfig.ActiveVersion.Versions)),
+		CEActiveVersions:        []string{},
+		LTSVersions:             []string{},
+		ActiveBranches:          []string{},
+		CEActiveBranches:        []string{},
+		LTSActiveBranches:       []string{},
+		AllActiveBranches:       []string{},
+		ActiveVersionsMatrix:    []*ActiveVersionMatrixEntry{}, // ENT only (for backward compatibility)
+		CEActiveVersionsMatrix:  []*ActiveVersionMatrixEntry{}, // CE only
+		AllActiveVersionsMatrix: []*ActiveVersionMatrixEntry{}, // Both CE and ENT
 	}
 
-	for version, cfg := range r.VersionsConfig.ActiveVersion.Versions {
+	// Generate branch names from versions
+	for version, cfg := range l.VersionsConfig.ActiveVersion.Versions {
+		// Enterprise branch (all versions)
+		entBranch := EnterpriseReleaseBranchForVersion(version)
+		res.ActiveBranches = append(res.ActiveBranches, entBranch)
+		res.AllActiveBranches = append(res.AllActiveBranches, entBranch)
+
+		// CE branch (only if ce_active: true)
 		if cfg.CEActive {
 			res.CEActiveVersions = append(res.CEActiveVersions, version)
+			ceBranch := CEReleaseBranchForVersion(version, cePrefix)
+			res.CEActiveBranches = append(res.CEActiveBranches, ceBranch)
+			res.AllActiveBranches = append(res.AllActiveBranches, ceBranch)
 		}
+
+		// LTS branch (only if lts: true)
 		if cfg.LTS {
 			res.LTSVersions = append(res.LTSVersions, version)
+			ltsBranch := EnterpriseReleaseBranchForVersion(version)
+			res.LTSActiveBranches = append(res.LTSActiveBranches, ltsBranch)
+		}
+
+		// NEW: Generate active version matrix entries (always)
+		// Enterprise entry (always included)
+		entEntry := &ActiveVersionMatrixEntry{
+			Branch:  entBranch,
+			Version: version,
+			Edition: "ent",
+			LTS:     cfg.LTS,
+		}
+		res.ActiveVersionsMatrix = append(res.ActiveVersionsMatrix, entEntry)
+		res.AllActiveVersionsMatrix = append(res.AllActiveVersionsMatrix, entEntry)
+
+		// CE entry (only if ce_active: true)
+		if cfg.CEActive {
+			ceEntry := &ActiveVersionMatrixEntry{
+				Branch:  CEReleaseBranchForVersion(version, cePrefix),
+				Version: version,
+				Edition: "ce",
+				LTS:     cfg.LTS,
+			}
+			res.CEActiveVersionsMatrix = append(res.CEActiveVersionsMatrix, ceEntry)
+			res.AllActiveVersionsMatrix = append(res.AllActiveVersionsMatrix, ceEntry)
 		}
 	}
+
+	// Handle --include-main flag
+	if includeMain {
+		res.ActiveBranches = append(res.ActiveBranches, "main")
+
+		ceMain := "main"
+		if cePrefix != "" {
+			ceMain = fmt.Sprintf("%s/main", cePrefix)
+		}
+		res.CEActiveBranches = append(res.CEActiveBranches, ceMain)
+
+		// Add both to all_active_branches
+		res.AllActiveBranches = append(res.AllActiveBranches, "main")
+		if cePrefix != "" {
+			res.AllActiveBranches = append(res.AllActiveBranches, ceMain)
+		}
+
+		// Enterprise main
+		entMainEntry := &ActiveVersionMatrixEntry{
+			Branch:  "main",
+			Version: "main",
+			Edition: "ent",
+			LTS:     false,
+		}
+		res.ActiveVersionsMatrix = append(res.ActiveVersionsMatrix, entMainEntry)
+		res.AllActiveVersionsMatrix = append(res.AllActiveVersionsMatrix, entMainEntry)
+
+		// CE main (if prefix specified)
+		if cePrefix != "" {
+			ceMainEntry := &ActiveVersionMatrixEntry{
+				Branch:  ceMain,
+				Version: "main",
+				Edition: "ce",
+				LTS:     false,
+			}
+			res.CEActiveVersionsMatrix = append(res.CEActiveVersionsMatrix, ceMainEntry)
+			res.AllActiveVersionsMatrix = append(res.AllActiveVersionsMatrix, ceMainEntry)
+		}
+	}
+
+	// Sort all slices
 	slices.Sort(res.CEActiveVersions)
 	slices.Sort(res.LTSVersions)
+	slices.Sort(res.ActiveBranches)
+	slices.Sort(res.CEActiveBranches)
+	slices.Sort(res.LTSActiveBranches)
+	slices.Sort(res.AllActiveBranches)
+
+	// Sort active version matrices by branch name
+	byBranch := func(a, b *ActiveVersionMatrixEntry) int {
+		return slices.Compare([]byte(a.Branch), []byte(b.Branch))
+	}
+	slices.SortFunc(res.ActiveVersionsMatrix, byBranch)
+	slices.SortFunc(res.CEActiveVersionsMatrix, byBranch)
+	slices.SortFunc(res.AllActiveVersionsMatrix, byBranch)
 
 	b, err := json.Marshal(res)
 	if err != nil {
@@ -323,4 +276,27 @@ func (r ListActiveVersionsRes) ToGithubOutput() ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+// EnterpriseReleaseBranchForVersion returns the enterprise release branch name for a version.
+// Example: "1.19.x" -> "release/1.19.x+ent"
+func EnterpriseReleaseBranchForVersion(version string) string {
+	return fmt.Sprintf("release/%s+ent", version)
+}
+
+// CEReleaseBranchForVersion returns the CE release branch name for a version with optional prefix.
+// Example: "1.19.x" -> "release/1.19.x"
+// With prefix "ce": "1.19.x" -> "ce/release/1.19.x"
+func CEReleaseBranchForVersion(version string, prefix string) string {
+	branch := fmt.Sprintf("release/%s", version)
+	if prefix != "" {
+		return fmt.Sprintf("%s/%s", prefix, branch)
+	}
+	return branch
+}
+
+// IsEnterpriseRepo returns true if the repository name indicates an enterprise repository.
+// Enterprise repositories follow the pattern: <name>-enterprise (e.g., vault-enterprise, consul-enterprise)
+func IsEnterpriseRepo(repo string) bool {
+	return strings.HasSuffix(repo, "-enterprise")
 }

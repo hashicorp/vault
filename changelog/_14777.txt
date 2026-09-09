@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix PKI certificate issuance not_after time to respect max TTL.
+```

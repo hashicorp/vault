@@ -11,8 +11,6 @@ import (
 	"testing"
 )
 
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
-
 // entIdentityStoreDeterminismSupportsSecondary is a hack to drop duplicate
 // tests in CE where the secondary param will only cause the no-op methods below
 // to run which is functionally the same. It would be cleaner to define

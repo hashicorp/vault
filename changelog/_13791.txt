@@ -1,0 +1,6 @@
+```release-note:security
+core: Update go.opentelemetry.io/otel/sdk to fix CVE-2026-39883.
+```
+```release-note:security
+api/auth/gcp: Update go.opentelemetry.io/otel/sdk to fix CVE-2026-39883.
+```

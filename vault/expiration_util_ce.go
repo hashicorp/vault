@@ -7,6 +7,7 @@ package vault
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -34,4 +35,8 @@ func (m *ExpirationManager) collectLeases() (map[*namespace.Namespace][]string, 
 
 func (m *ExpirationManager) removeIrrevocableLeasesEnabled(c *Core) bool {
 	return false
+}
+
+func deriveExpireTimeFromEntToken(_ *logical.TokenEntry) time.Time {
+	return time.Time{}
 }

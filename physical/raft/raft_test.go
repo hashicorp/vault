@@ -950,6 +950,20 @@ func TestRaft_Backend_Performance(t *testing.T) {
 		if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
 			t.Fatalf("bad config: %v", localConfig)
 		}
+
+		b.conf = map[string]string{
+			"path":                   dir,
+			"performance_multiplier": "0",
+		}
+
+		localConfig = raft.DefaultConfig()
+		err = ApplyConfigSettings(b.logger, b.conf, localConfig)
+		if err == nil {
+			t.Fatal("expected error for performance_multiplier=0")
+		}
+		if !strings.Contains(err.Error(), "performance_multiplier") {
+			t.Fatalf("expected error to mention performance_multiplier, got: %v", err)
+		}
 	})
 }
 

@@ -41,11 +41,16 @@ export default class OidcConfigureController extends Controller {
   get breadcrumbs() {
     // we check parent for the name as the currentRoute is always "index"
     const route = this.router.currentRoute.parent.localName ?? '';
-    const isDefaultRoute = route === 'clients';
+    const isDefaultRoute = route === 'clients' || route == 'oidc';
+    const showApplications = route !== 'oidc' ? ': Applications' : '';
 
     const baseCrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
-      { label: 'Auth Oidc', route: 'vault.cluster.access.oidc', current: isDefaultRoute },
+      {
+        label: `OIDC provider${showApplications}`,
+        route: 'vault.cluster.access.oidc',
+        current: isDefaultRoute,
+      },
     ];
 
     // clients is the default view, so in order to match current patterns, we do not include it as a breadcrumb

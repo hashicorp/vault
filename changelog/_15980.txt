@@ -1,0 +1,3 @@
+```release-note:security
+identity/scim (enterprise): The `identity/entity/merge` endpoint now rejects requests that involve any SCIM-managed entity, preventing privileged operators from bypassing SCIM ownership guardrails to transfer aliases, group memberships, or policies across SCIM boundaries.
+```

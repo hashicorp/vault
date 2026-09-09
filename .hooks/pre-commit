@@ -70,6 +70,11 @@ backend_lint() {
 
   # Only run check-fmt on staged files
   ./scripts/go-helper.sh check-fmt "${staged}" || block "Backend linting failed; run 'make fmt' to fix."
+
+  if [ -f tools/add-enterprise-tag/main.go ]; then
+    echo Checking for missing enterprise tags...
+    go run ./tools/add-enterprise-tag -dry-run
+  fi
 }
 
 for CHECK in $CHECKS; do

@@ -1,0 +1,32 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="ssu-title-row" data-test-vault-reporting-dashboard-card-title-row>
+  <div class="ssu-title-row__container">
+    <Hds::Text::Display data-test-vault-reporting-dashboard-card-title @size="300">
+      {{@title}}
+    </Hds::Text::Display>
+
+    {{#if (or this.hasExternalLink this.hasInternalLink)}}
+      <Hds::Link::Standalone
+        data-test-vault-reporting-dashboard-card-title-link
+        class="ssu-title-row__container__link"
+        @text={{this.linkText}}
+        @href={{if this.hasExternalLink this.linkUrl}}
+        @route={{if this.hasInternalLink this.linkRoute}}
+        @icon={{this.linkIcon}}
+        target={{this.linkTarget}}
+        rel={{if this.hasExternalLink "noopener noreferrer"}}
+        @iconPosition="trailing"
+      />
+    {{/if}}
+  </div>
+
+  {{#if @description}}
+    <Hds::Text::Body class="ssu-title-row__description" data-test-vault-reporting-dashboard-card-description>
+      {{@description}}
+    </Hds::Text::Body>
+  {{/if}}
+</div>

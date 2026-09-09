@@ -15,11 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/go-test/deep"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/docker"
@@ -32,7 +31,8 @@ func TestDynamoDBBackend(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
-	creds, err := svccfg.Credentials.Get()
+	ctx := t.Context()
+	creds, err := svccfg.Credentials.Retrieve(ctx)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -42,22 +42,18 @@ func TestDynamoDBBackend(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	awsSession, err := session.NewSession(&aws.Config{
+	conn := dynamodb.NewFromConfig(aws.Config{
 		Credentials: svccfg.Credentials,
-		Endpoint:    aws.String(svccfg.URL().String()),
-		Region:      aws.String(region),
+		Region:      region,
+	}, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(svccfg.URL().String())
 	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	conn := dynamodb.New(awsSession)
 
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
 
 	defer func() {
-		conn.DeleteTable(&dynamodb.DeleteTableInput{
+		conn.DeleteTable(ctx, &dynamodb.DeleteTableInput{
 			TableName: aws.String(table),
 		})
 	}()
@@ -95,7 +91,7 @@ func TestDynamoDBBackend(t *testing.T) {
 			Value: inputEntry.Value,
 		}
 
-		item, err := dynamodbattribute.ConvertToMap(record)
+		item, err := attributevalue.MarshalMap(record)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -104,11 +100,13 @@ func TestDynamoDBBackend(t *testing.T) {
 			Item:      item,
 			TableName: &table,
 		}
-		conn.PutItem(request)
+		if _, err := conn.PutItem(ctx, request); err != nil {
+			t.Fatalf("err: %s", err)
+		}
 
 		// Read back the data using the normal interface which should
 		// handle the old marshalling format gracefully
-		entry, err := b.Get(context.Background(), path)
+		entry, err := b.Get(ctx, path)
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -122,7 +120,8 @@ func TestDynamoDBHABackend(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
-	creds, err := svccfg.Credentials.Get()
+	ctx := t.Context()
+	creds, err := svccfg.Credentials.Retrieve(ctx)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -132,22 +131,18 @@ func TestDynamoDBHABackend(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	awsSession, err := session.NewSession(&aws.Config{
+	conn := dynamodb.NewFromConfig(aws.Config{
 		Credentials: svccfg.Credentials,
-		Endpoint:    aws.String(svccfg.URL().String()),
-		Region:      aws.String(region),
+		Region:      region,
+	}, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(svccfg.URL().String())
 	})
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	conn := dynamodb.New(awsSession)
 
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
 
 	defer func() {
-		conn.DeleteTable(&dynamodb.DeleteTableInput{
+		conn.DeleteTable(ctx, &dynamodb.DeleteTableInput{
 			TableName: aws.String(table),
 		})
 	}()
@@ -183,7 +178,8 @@ func TestDynamoDBBackendPayPerRequest(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
-	creds, err := svccfg.Credentials.Get()
+	ctx := t.Context()
+	creds, err := svccfg.Credentials.Retrieve(ctx)
 	require.NoError(t, err)
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
@@ -191,20 +187,18 @@ func TestDynamoDBBackendPayPerRequest(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	awsSession, err := session.NewSession(&aws.Config{
+	conn := dynamodb.NewFromConfig(aws.Config{
 		Credentials: svccfg.Credentials,
-		Endpoint:    aws.String(svccfg.URL().String()),
-		Region:      aws.String(region),
+		Region:      region,
+	}, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(svccfg.URL().String())
 	})
-	require.NoError(t, err)
-
-	conn := dynamodb.New(awsSession)
 
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
 
 	defer func() {
-		conn.DeleteTable(&dynamodb.DeleteTableInput{
+		conn.DeleteTable(ctx, &dynamodb.DeleteTableInput{
 			TableName: aws.String(table),
 		})
 	}()
@@ -222,11 +216,11 @@ func TestDynamoDBBackendPayPerRequest(t *testing.T) {
 	}, logger)
 	require.NoError(t, err)
 
-	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
+	dynamoTable, err := conn.DescribeTable(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
 	require.NoError(t, err)
-	billingMode := *(dynamoTable.Table.BillingModeSummary.BillingMode)
+	billingMode := string(dynamoTable.Table.BillingModeSummary.BillingMode)
 	require.Equal(t, "PAY_PER_REQUEST", billingMode)
 
 	physical.ExerciseBackend(t, b)
@@ -239,7 +233,8 @@ func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
-	creds, err := svccfg.Credentials.Get()
+	ctx := t.Context()
+	creds, err := svccfg.Credentials.Retrieve(ctx)
 	require.NoError(t, err)
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
@@ -247,20 +242,18 @@ func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	awsSession, err := session.NewSession(&aws.Config{
+	conn := dynamodb.NewFromConfig(aws.Config{
 		Credentials: svccfg.Credentials,
-		Endpoint:    aws.String(svccfg.URL().String()),
-		Region:      aws.String(region),
+		Region:      region,
+	}, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(svccfg.URL().String())
 	})
-	require.NoError(t, err)
-
-	conn := dynamodb.New(awsSession)
 
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
 
 	defer func() {
-		conn.DeleteTable(&dynamodb.DeleteTableInput{
+		conn.DeleteTable(ctx, &dynamodb.DeleteTableInput{
 			TableName: aws.String(table),
 		})
 	}()
@@ -277,7 +270,7 @@ func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 	}, logger)
 	require.NoError(t, err)
 
-	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
+	dynamoTable, err := conn.DescribeTable(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
 	require.NoError(t, err)
@@ -298,11 +291,11 @@ func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
 	}, logger)
 	require.NoError(t, err)
 
-	dynamoTable, err = conn.DescribeTable(&dynamodb.DescribeTableInput{
+	dynamoTable, err = conn.DescribeTable(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
 	require.NoError(t, err)
-	newBillingMode := *(dynamoTable.Table.BillingModeSummary.BillingMode)
+	newBillingMode := string(dynamoTable.Table.BillingModeSummary.BillingMode)
 	require.Equal(t, "PAY_PER_REQUEST", newBillingMode)
 
 	physical.ExerciseBackend(t, b)
@@ -315,7 +308,8 @@ func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 	cleanup, svccfg := prepareDynamoDBTestContainer(t)
 	defer cleanup()
 
-	creds, err := svccfg.Credentials.Get()
+	ctx := t.Context()
+	creds, err := svccfg.Credentials.Retrieve(ctx)
 	require.NoError(t, err)
 
 	region := os.Getenv("AWS_DEFAULT_REGION")
@@ -323,20 +317,18 @@ func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 		region = "us-east-1"
 	}
 
-	awsSession, err := session.NewSession(&aws.Config{
+	conn := dynamodb.NewFromConfig(aws.Config{
 		Credentials: svccfg.Credentials,
-		Endpoint:    aws.String(svccfg.URL().String()),
-		Region:      aws.String(region),
+		Region:      region,
+	}, func(o *dynamodb.Options) {
+		o.BaseEndpoint = aws.String(svccfg.URL().String())
 	})
-	require.NoError(t, err)
-
-	conn := dynamodb.New(awsSession)
 
 	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
 
 	defer func() {
-		conn.DeleteTable(&dynamodb.DeleteTableInput{
+		conn.DeleteTable(ctx, &dynamodb.DeleteTableInput{
 			TableName: aws.String(table),
 		})
 	}()
@@ -353,7 +345,7 @@ func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 	}, logger)
 	require.NoError(t, err)
 
-	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
+	dynamoTable, err := conn.DescribeTable(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
 	require.NoError(t, err)
@@ -378,7 +370,7 @@ func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
 	}, logger)
 	require.NoError(t, err)
 
-	dynamoTable, err = conn.DescribeTable(&dynamodb.DescribeTableInput{
+	dynamoTable, err = conn.DescribeTable(ctx, &dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
 	require.NoError(t, err)
@@ -584,7 +576,7 @@ func testDynamoDBLockRenewal(t *testing.T, ha physical.HABackend) {
 
 type Config struct {
 	docker.ServiceURL
-	Credentials *credentials.Credentials
+	Credentials aws.CredentialsProvider
 }
 
 var _ docker.ServiceConfig = &Config{}
@@ -602,7 +594,12 @@ func prepareDynamoDBTestContainer(t *testing.T) (func(), *Config) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return func() {}, &Config{*s, credentials.NewEnvCredentials()}
+		envCreds := credentials.NewStaticCredentialsProvider(
+			os.Getenv("AWS_ACCESS_KEY_ID"),
+			os.Getenv("AWS_SECRET_ACCESS_KEY"),
+			os.Getenv("AWS_SESSION_TOKEN"),
+		)
+		return func() {}, &Config{*s, envCreds}
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
@@ -615,7 +612,7 @@ func prepareDynamoDBTestContainer(t *testing.T) (func(), *Config) {
 		t.Fatalf("Could not start local DynamoDB: %s", err)
 	}
 
-	svc, err := runner.StartService(context.Background(), connectDynamoDB)
+	svc, err := runner.StartService(t.Context(), connectDynamoDB)
 	if err != nil {
 		t.Fatalf("Could not start local DynamoDB: %s", err)
 	}
@@ -638,6 +635,6 @@ func connectDynamoDB(ctx context.Context, host string, port int) (docker.Service
 
 	return &Config{
 		ServiceURL:  *docker.NewServiceURL(u),
-		Credentials: credentials.NewStaticCredentials("fake", "fake", ""),
+		Credentials: credentials.NewStaticCredentialsProvider("fake", "fake", ""),
 	}, nil
 }

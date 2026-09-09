@@ -20,7 +20,6 @@ func TestSysMonitorUnknownLogLevel(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 	request := client.NewRequest("GET", "/v1/sys/monitor")
@@ -46,7 +45,6 @@ func TestSysMonitorUnknownLogFormat(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 	request := client.NewRequest("GET", "/v1/sys/monitor")
@@ -72,7 +70,6 @@ func TestSysMonitorStreamingLogs(t *testing.T) {
 		HandlerFunc: Handler,
 		NumCores:    1,
 	})
-	defer cluster.Cleanup()
 
 	client := cluster.Cores[0].Client
 	stopCh := testhelpers.GenerateDebugLogs(t, client)

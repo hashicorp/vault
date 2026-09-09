@@ -157,6 +157,7 @@ locals {
     ubuntu = {
       "22.04" = local.release_path_deb,
       "24.04" = local.release_path_deb,
+      "26.04" = local.release_path_deb,
     }
   }
   release_paths = local.release_path_distro[var.distro]

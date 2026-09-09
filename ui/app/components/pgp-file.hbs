@@ -34,20 +34,10 @@
 <div class="field">
   {{#if this.key.enterAsText}}
     <div class="control">
-      <textarea
-        class="textarea"
-        oninput={{action "updateData"}}
-        data-test-pgp-file-textarea={{true}}
-        aria-labelledby={{concat "pgpFileTextarea-" this.elementId}}
-      >{{this.key.value}}</textarea>
+      <Hds::Form::Textarea::Field name="pgp-key" @value={{this.key.value}} as |F|>
+        <F.HelperText>{{or this.textareaHelpText "Enter a base64-encoded key"}}</F.HelperText>
+      </Hds::Form::Textarea::Field>
     </div>
-    <p class="help has-text-grey" id={{concat "pgpFileTextarea-" this.elementId}}>
-      {{#if this.textareaHelpText}}
-        {{this.textareaHelpText}}
-      {{else}}
-        Enter a base64-encoded key
-      {{/if}}
-    </p>
   {{else}}
     <div class="control is-expanded">
       <div class="file">

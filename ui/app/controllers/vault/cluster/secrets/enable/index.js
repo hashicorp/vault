@@ -6,11 +6,6 @@
 import { service } from '@ember/service';
 import Controller from '@ember/controller';
 import { action } from '@ember/object';
-import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import engineDisplayData from 'vault/helpers/engines-display-data';
-import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
-
-const SUPPORTED_BACKENDS = supportedSecretBackends();
 
 export default class SecretEnableController extends Controller {
   @service router;
@@ -18,29 +13,5 @@ export default class SecretEnableController extends Controller {
   @action
   setMountType(type) {
     this.router.transitionTo('vault.cluster.secrets.enable.create', type);
-  }
-
-  @action
-  onMountSuccess(type, path, useEngineRoute = false) {
-    let transition;
-
-    const effectiveType = getEffectiveEngineType(type);
-    const engineInfo = engineDisplayData(type);
-
-    if (SUPPORTED_BACKENDS.includes(effectiveType)) {
-      if (useEngineRoute && engineInfo?.engineRoute) {
-        transition = this.router.transitionTo(
-          `vault.cluster.secrets.backend.${engineInfo.engineRoute}`,
-          path
-        );
-      } else {
-        // For keymgmt, we need to land on provider tab by default using query params
-        const queryParams = effectiveType === 'keymgmt' ? { tab: 'provider' } : {};
-        transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, { queryParams });
-      }
-    } else {
-      transition = this.router.transitionTo('vault.cluster.secrets.backends');
-    }
-    return transition.followRedirects();
   }
 }

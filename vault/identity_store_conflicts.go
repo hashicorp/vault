@@ -17,6 +17,8 @@ import (
 
 var errDuplicateIdentityName = errors.New("duplicate identity name")
 
+const duplicateCanonicalIDMetadataKey = "duplicate_of_canonical_id"
+
 // ConflictResolver defines the interface for resolving conflicts between
 // entities, groups, and aliases. All methods should implement a check for
 // existing=nil. This is an intentional design choice to allow the caller to
@@ -419,7 +421,7 @@ func (r *renameResolver) ResolveEntities(ctx context.Context, existing, duplicat
 	if duplicate.Metadata == nil {
 		duplicate.Metadata = make(map[string]string)
 	}
-	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+	duplicate.Metadata[duplicateCanonicalIDMetadataKey] = existing.ID
 
 	r.logger.Warn("renaming entity with duplicate name",
 		"namespace_id", duplicate.NamespaceID,
@@ -453,7 +455,7 @@ func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate 
 	if duplicate.Metadata == nil {
 		duplicate.Metadata = make(map[string]string)
 	}
-	duplicate.Metadata["duplicate_of_canonical_id"] = existing.ID
+	duplicate.Metadata[duplicateCanonicalIDMetadataKey] = existing.ID
 	r.logger.Warn("renaming group with duplicate name",
 		"namespace_id", duplicate.NamespaceID,
 		"group_id", duplicate.ID,

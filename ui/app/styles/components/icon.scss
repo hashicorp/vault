@@ -22,14 +22,6 @@
   color: var(--token-color-foreground-action);
 }
 
-.hds-icon {
-  &.hds-icon--is-inline {
-    vertical-align: middle;
-    margin-left: size_variables.$spacing-4;
-    margin-right: size_variables.$spacing-4;
-  }
-}
-
 .hs-icon {
   flex: 0 0 auto;
   display: inline-flex;

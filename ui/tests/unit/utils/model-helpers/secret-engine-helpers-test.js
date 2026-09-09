@@ -86,6 +86,21 @@ module('Unit | Utility | model-helpers/secret-engine-helpers', function () {
         'transform/alphabet',
         'returns transform/alphabet when tab is alphabet'
       );
+      assert.strictEqual(
+        getModelTypeForEngine('transform', { itemType: 'alphabet' }),
+        'transform/alphabet',
+        'returns transform/alphabet when itemType is alphabet'
+      );
+      assert.strictEqual(
+        getModelTypeForEngine('transform', { itemType: 'role' }),
+        'transform/role',
+        'returns transform/role when itemType is role'
+      );
+      assert.strictEqual(
+        getModelTypeForEngine('transform', { itemType: 'template' }),
+        'transform/template',
+        'returns transform/template when itemType is template'
+      );
 
       // Test precedence: secret name should override query params
       assert.strictEqual(

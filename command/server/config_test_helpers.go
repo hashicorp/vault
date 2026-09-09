@@ -16,7 +16,6 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/stretchr/testify/require"
 )
@@ -53,26 +52,14 @@ func testConfigRaftRetryJoin(t *testing.T) {
 	}{
 		"attributes_duplicate_error": {
 			configFile:    "./test-fixtures/raft_retry_join_attr.hcl",
-			errorContains: "The argument \"retry_join\" at 11:3 was already set. Each argument can only be defined once (if using the attribute syntax retry_join = [...], change it to the block syntax retry_join { ... })",
-		},
-		"attributes_allowed_with_env_var": {
-			configFile: "./test-fixtures/raft_retry_join_attr.hcl",
-			envVars: map[string]string{
-				random.AllowHclDuplicatesEnvVar: "true",
-			},
+			errorContains: "The argument \"retry_join\" at 11:3 was already set. Each argument can only be defined once",
 		},
 		"blocks": {
 			configFile: "./test-fixtures/raft_retry_join_block.hcl",
 		},
 		"mixed_duplicate_error": {
 			configFile:    "./test-fixtures/raft_retry_join_mixed.hcl",
-			errorContains: "The argument \"retry_join\" at 14:3 was already set. Each argument can only be defined once (if using the attribute syntax retry_join = [...], change it to the block syntax retry_join { ... })",
-		},
-		"mixed_allowed_with_env_var": {
-			configFile: "./test-fixtures/raft_retry_join_mixed.hcl",
-			envVars: map[string]string{
-				random.AllowHclDuplicatesEnvVar: "true",
-			},
+			errorContains: "The argument \"retry_join\" at 14:3 was already set. Each argument can only be defined once",
 		},
 	}
 
@@ -330,11 +317,13 @@ func testLoadConfigFile_json2(t *testing.T, entropy *configutil.Entropy) {
 
 func testParseEntropy(t *testing.T, oss bool) {
 	tests := []struct {
+		name       string
 		inConfig   string
 		outErr     error
 		outEntropy configutil.Entropy
 	}{
 		{
+			name: "good",
 			inConfig: `entropy "seal" {
 				mode = "augmentation"
 				}`,
@@ -342,18 +331,21 @@ func testParseEntropy(t *testing.T, oss bool) {
 			outEntropy: configutil.Entropy{Mode: configutil.EntropyAugmentation},
 		},
 		{
+			name: "bad mode",
 			inConfig: `entropy "seal" {
 				mode = "a_mode_that_is_not_supported"
 				}`,
 			outErr: fmt.Errorf("the specified entropy mode %q is not supported", "a_mode_that_is_not_supported"),
 		},
 		{
+			name: "bad device",
 			inConfig: `entropy "device_that_is_not_supported" {
 				mode = "augmentation"
 				}`,
 			outErr: fmt.Errorf("only the %q type of external entropy is supported", "seal"),
 		},
 		{
+			name: "duplicate section",
 			inConfig: `entropy "seal" {
 				mode = "augmentation"
 				}
@@ -362,6 +354,15 @@ func testParseEntropy(t *testing.T, oss bool) {
 				}`,
 			outErr: fmt.Errorf("only one %q block is permitted", "entropy"),
 		},
+		{
+			name: "json",
+			inConfig: `{
+              "entropy": {
+                 "seal": {"mode": "augmentation"}
+              }`,
+			outErr:     nil,
+			outEntropy: configutil.Entropy{Mode: configutil.EntropyAugmentation},
+		},
 	}
 
 	config := Config{
@@ -369,25 +370,27 @@ func testParseEntropy(t *testing.T, oss bool) {
 	}
 
 	for _, test := range tests {
-		obj, _ := hcl.Parse(strings.TrimSpace(test.inConfig))
-		list, _ := obj.Node.(*ast.ObjectList)
-		objList := list.Filter("entropy")
-		err := configutil.ParseEntropy(config.SharedConfig, objList, "entropy")
-		// validate the error, both should be nil or have the same Error()
-		switch {
-		case oss:
-			if config.Entropy != nil {
-				t.Fatalf("parsing Entropy should not be possible in oss but got a non-nil config.Entropy: %#v", config.Entropy)
-			}
-		case err != nil && test.outErr != nil:
-			if err.Error() != test.outErr.Error() {
+		t.Run(test.name, func(t *testing.T) {
+			obj, _ := hcl.Parse(strings.TrimSpace(test.inConfig))
+			list, _ := obj.Node.(*ast.ObjectList)
+			objList := list.Filter("entropy")
+			err := configutil.ParseEntropy(config.SharedConfig, objList, "entropy")
+			// validate the error, both should be nil or have the same Error()
+			switch {
+			case oss:
+				if config.Entropy != nil {
+					t.Fatalf("parsing Entropy should not be possible in oss but got a non-nil config.Entropy: %#v", config.Entropy)
+				}
+			case err != nil && test.outErr != nil:
+				if err.Error() != test.outErr.Error() {
+					t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
+				}
+			case err != test.outErr:
 				t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
+			case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
+				t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 			}
-		case err != test.outErr:
-			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
-		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
-		}
+		})
 	}
 }
 
@@ -640,25 +643,9 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
-// TODO (HCL_DUP_KEYS_DEPRECATION): remove warning test once deprecation is completed
 func testDuplicateKeyValidationHcl(t *testing.T) {
-	t.Run("env unset", func(t *testing.T) {
-		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-		require.Error(t, err)
-	})
-
-	t.Run("env set to false", func(t *testing.T) {
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
-		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-		require.Error(t, err)
-	})
-
-	t.Run("env set to true", func(t *testing.T) {
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-		_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-		require.NoError(t, err)
-		require.True(t, duplicate)
-	})
+	_, err := LoadConfigFile("./test-fixtures/invalid_config_duplicate_key.hcl")
+	require.Error(t, err)
 }
 
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
@@ -938,11 +925,15 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_mount_point_rollback_metrics":       false,
 		},
 		"administrative_namespace_path":  "admin/",
+		"operator_namespace_path":        "",
 		"imprecise_lease_role_tracking":  false,
 		"enable_post_unseal_trace":       true,
 		"post_unseal_trace_directory":    "/tmp",
 		"remove_irrevocable_lease_after": (30 * 24 * time.Hour) / time.Second,
 		"allow_audit_log_prefixing":      false,
+		"enable_unauthenticated_access":  []string(nil),
+		"deny_slash_in_templated_paths":  false,
+		"disable_goroutine_trace_dump":   false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})

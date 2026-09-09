@@ -1,0 +1,3 @@
+```release-note:security
+core: Use constant-time recovery token comparison
+```

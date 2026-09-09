@@ -1,0 +1,51 @@
+{{!
+  Copyright IBM Corp. 2025, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Card::Container
+  data-test-vault-reporting-cluster-replication
+  @hasBorder={{true}}
+  class="ssu-cluster-replication"
+  ...attributes
+>
+  <UsageReporting::Base::TitleRow
+    @title="Cluster replication"
+    @description={{this.description}}
+    @linkRoute={{this.linkRoute}}
+  />
+
+  <Hds::Text::Body
+    @size="300"
+    class="ssu-cluster-replication__list-row__title"
+    data-test-vault-reporting-cluster-replication-dr-row
+  >
+    Disaster recovery
+    <Hds::Badge
+      class="ssu-cluster-replication__list-row__badge"
+      data-test-vault-reporting-cluster-replication-dr-badge
+      @icon={{this.getIcon @disasterRecoveryState}}
+      @text={{this.getState @disasterRecoveryState}}
+      @color={{this.getColor @disasterRecoveryState}}
+      @type="outlined"
+      @size="small"
+    />
+  </Hds::Text::Body>
+
+  <Hds::Text::Body
+    @size="300"
+    class="ssu-cluster-replication__list-row__title"
+    data-test-vault-reporting-cluster-replication-perf-row
+  >
+    Performance
+    <Hds::Badge
+      class="ssu-cluster-replication__list-row__badge"
+      data-test-vault-reporting-cluster-replication-perf-badge
+      @icon={{this.getIcon @performanceState}}
+      @text={{this.getState @performanceState}}
+      @color={{this.getColor @performanceState}}
+      @type="outlined"
+      @size="small"
+    />
+  </Hds::Text::Body>
+</Hds::Card::Container>

@@ -93,6 +93,7 @@
           name={{@attr.name}}
           @id={{@attr.name}}
           @isInvalid={{this.validationError}}
+          disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           {{on "change" this.onChangeWithEvent}}
           data-test-input={{@attr.name}}
           as |F|
@@ -116,11 +117,26 @@
                 Select one
               </option>
             {{/if}}
-            {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-              <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
-                {{or val.displayName val}}
-              </option>
-            {{/each}}
+            {{#if (has-option-groups (path-or-array @attr.options.possibleValues @model))}}
+              {{#each (path-or-array @attr.options.possibleValues @model) as |groupData|}}
+                <optgroup label={{groupData.group}}>
+                  {{#each groupData.options as |val|}}
+                    <option
+                      selected={{loose-equal (get @model this.valuePath) (or val.value val)}}
+                      value={{or val.value val}}
+                    >
+                      {{or val.displayName val.value val}}
+                    </option>
+                  {{/each}}
+                </optgroup>
+              {{/each}}
+            {{else}}
+              {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
+                <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+                  {{or val.displayName val.value val}}
+                </option>
+              {{/each}}
+            {{/if}}
           </F.Options>
           {{#if this.validationError}}
             <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
@@ -157,6 +173,124 @@
           {{/if}}
         </Hds::Form::TextInput::Field>
 
+      {{else if (eq @attr.options.editType "keyValueInputs")}}
+        {{! HDS Key Value Inputs }}
+        <Hds::Form::KeyValueInputs
+          @data={{this.keyValueRows}}
+          @isRequired={{@attr.options.isRequired}}
+          @isOptional={{@attr.options.isOptional}}
+          data-test-input={{@attr.name}}
+        >
+          <:header as |H|>
+            <H.Legend data-test-form-field-label>{{this.labelString}}</H.Legend>
+            {{#if this.helpTextString}}
+              <H.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</H.HelperText>
+            {{/if}}
+            {{#if @attr.options.subText}}
+              <H.HelperText data-test-help-text={{@attr.options.subText}}>
+                {{@attr.options.subText}}
+                {{#if @attr.options.docLink}}
+                  <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                  for help.
+                {{/if}}
+              </H.HelperText>
+            {{/if}}
+          </:header>
+          <:row as |R|>
+            {{#each this.keyValueFields as |field|}}
+              <R.Field @width={{field.width}} @isRequired={{field.isRequired}} @isOptional={{field.isOptional}} as |F|>
+                <F.Label>{{field.label}}</F.Label>
+                {{#if field.helpText}}
+                  <F.HelperText>{{field.helpText}}</F.HelperText>
+                {{/if}}
+                {{#if (eq field.type "select")}}
+                  <F.Select
+                    disabled={{this.keyValueEditDisabled}}
+                    {{on "change" (fn this.updateKeyValueRow R.rowIndex field.name)}}
+                    data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
+                  >
+                    {{#if field.noDefault}}
+                      <option value="">
+                        Select one
+                      </option>
+                    {{/if}}
+                    {{#if (has-option-groups field.possibleValues)}}
+                      {{#each field.possibleValues as |groupData|}}
+                        <optgroup label={{groupData.group}}>
+                          {{#each groupData.options as |opt|}}
+                            <option
+                              value={{or opt.value opt}}
+                              selected={{loose-equal (get R.rowData field.name) (or opt.value opt)}}
+                            >
+                              {{or opt.displayName opt.label opt.value opt}}
+                            </option>
+                          {{/each}}
+                        </optgroup>
+                      {{/each}}
+                    {{else}}
+                      {{#each field.possibleValues as |opt|}}
+                        <option
+                          value={{or opt.value opt}}
+                          selected={{loose-equal (get R.rowData field.name) (or opt.value opt)}}
+                        >
+                          {{or opt.displayName opt.label opt.value opt}}
+                        </option>
+                      {{/each}}
+                    {{/if}}
+                  </F.Select>
+                {{else if (eq field.type "textarea")}}
+                  <F.Textarea
+                    @value={{get R.rowData field.name}}
+                    placeholder={{field.placeholder}}
+                    disabled={{this.keyValueEditDisabled}}
+                    {{on "input" (fn this.updateKeyValueRow R.rowIndex field.name)}}
+                    data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
+                  />
+                {{else if (eq field.type "masked")}}
+                  <F.MaskedInput
+                    @value={{get R.rowData field.name}}
+                    disabled={{this.keyValueEditDisabled}}
+                    {{on "input" (fn this.updateKeyValueRow R.rowIndex field.name)}}
+                    data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
+                  />
+                {{else if (eq field.type "file")}}
+                  <F.FileInput
+                    disabled={{this.keyValueEditDisabled}}
+                    {{on "change" (fn this.updateKeyValueRowFile R.rowIndex field.name)}}
+                    data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
+                  />
+                {{else}}
+                  <F.TextInput
+                    @value={{get R.rowData field.name}}
+                    placeholder={{field.placeholder}}
+                    disabled={{this.keyValueEditDisabled}}
+                    {{on "input" (fn this.updateKeyValueRow R.rowIndex field.name)}}
+                    data-test-kv-field="{{field.name}}-{{R.rowIndex}}"
+                  />
+                {{/if}}
+              </R.Field>
+            {{/each}}
+            {{#unless (or this.hasFieldValuePaths this.keyValueEditDisabled)}}
+              <R.DeleteRowButton @onClick={{this.deleteKeyValueRow}} />
+            {{/unless}}
+          </:row>
+          <:footer as |F|>
+            {{#unless (or this.hasFieldValuePaths this.keyValueEditDisabled)}}
+              {{#if (and @attr.options.maxRows (not (lt this.keyValueRows.length @attr.options.maxRows)))}}
+                <F.Alert as |A|>
+                  <A.Description>
+                    {{or @attr.options.maxRowsText "You have reached the maximum number of rows."}}
+                  </A.Description>
+                </F.Alert>
+              {{else}}
+                <F.AddRowButton @text={{@attr.options.addRowButtonText}} @onClick={{this.addKeyValueRow}} />
+              {{/if}}
+            {{/unless}}
+            {{#if this.validationError}}
+              <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
+            {{/if}}
+          </:footer>
+        </Hds::Form::KeyValueInputs>
       {{else if (or (eq @attr.type "number") (eq @attr.type "string"))}}
         {{#if (eq @attr.options.editType "password")}}
           <Hds::Form::TextInput::Field

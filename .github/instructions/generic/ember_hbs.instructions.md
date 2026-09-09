@@ -11,7 +11,7 @@ This document provides Handlebars template coding standards for HashiCorp Ember.
 
 ## Template Best Practices
 - Check truthiness of arrays directly instead of using `.length` property
-- Use string interpolation `"prefix/{{value}}"` instead of `{{concat}}` helper  
+- Use string interpolation `"prefix/{{value}}"` instead of `{{concat}}` helper
 - Remove unnecessary quotes around dynamic component arguments
 - Use `Hds::Link::Inline` for external documentation links instead of `<button>` elements
 - Make `selected` attributes dynamic rather than static values - warn if static values are used
@@ -19,6 +19,7 @@ This document provides Handlebars template coding standards for HashiCorp Ember.
 - Avoid inline `style` attributes and `{{style ...}}` helpers - define CSS classes in `.scss` files instead
 - Place `data-test-*` selectors as the last attribute on elements
 - Remove quotes around dynamic data attributes: `data-test-id={{value}}` not `data-test-id="{{value}}"`
+- **Avoid shadowed elements**: Avoid HTML element names (like `option`, `input`, `select`, etc.) as block parameter names in `{{#each}}` loops to prevent `no-shadowed-elements` lint errors and broken functionality.
 
 Examples:
 ```handlebars
@@ -64,6 +65,20 @@ Examples:
 
 {{!-- Bad: unnecessary quotes --}}
 <div data-test-namespace-link="{{option.label}}">
+
+{{!-- Good: avoid shadowed elements by using descriptive block parameter names --}}
+{{#each @field.options as |opt|}}
+  <option selected={{eq @value opt.value}} value={{opt.value}}>
+    {{opt.label}}
+  </option>
+{{/each}}
+
+{{!-- Bad: using HTML element name as block parameter causes lint error --}}
+{{#each @field.options as |option|}}
+  <option selected={{eq @value option.value}} value={{option.value}}>
+    {{option.label}}
+  </option>
+{{/each}}
 ```
 
 ---

@@ -4,20 +4,19 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+
+import MfaCreateTotpMethodForm from 'vault/forms/mfa/method/totp';
 
 module('Integration | Component | mfa-method-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.model = this.store.createRecord('mfa-method');
-    this.model.type = 'totp';
-    this.model.id = 'some-id';
+    this.form = new MfaCreateTotpMethodForm({}, { isNew: true });
   });
 
   test('it should render correct fields', async function (assert) {
@@ -25,7 +24,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
 
     await render(hbs`
       <Mfa::MethodForm
-        @model={{this.model}}
+        @form={{this.form}}
         @hasActions="true"
       />
           `);
@@ -48,12 +47,16 @@ module('Integration | Component | mfa-method-form', function (hooks) {
       assert.ok(true, 'edit request sent to server');
       return {};
     });
+    this.form = new MfaCreateTotpMethodForm({ id: 'some-id' }, { isNew: false });
+    this.onSave = () => {
+      this.didSave = true;
+    };
 
     await render(hbs`
-      <Mfa::MethodForm
+       <Mfa::MethodForm
+        @form={{this.form}}
         @hasActions="true"
-        @model={{this.model}}
-        @onSave={{fn (mut this.didSave) true}}
+        @onSave={{this.onSave}}
       />
           `);
 
@@ -62,20 +65,22 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     await fillIn('[data-test-confirmation-modal-input="Edit totp configuration?"]', 'totp');
     await click('[data-test-confirm-button="Edit totp configuration?"]');
     assert.true(this.didSave, 'onSave callback triggered');
-    assert.strictEqual(this.model.issuer, 'Vault', 'Issuer property set on model');
+    assert.strictEqual(this.form.issuer, 'Vault', 'Issuer property set on form');
   });
 
   test('it should populate form fields with model data', async function (assert) {
     assert.expect(3);
 
-    this.model.issuer = 'Vault';
-    this.model.period = '30s';
-    this.model.algorithm = 'SHA512';
+    this.form = new MfaCreateTotpMethodForm(
+      { issuer: 'Vault', period: '30s', algorithm: 'SHA512' },
+      { isNew: false }
+    );
 
     await render(hbs`
-      <Mfa::MethodForm
+       <Mfa::MethodForm
+        @form={{this.form}}
         @hasActions="true"
-        @model={{this.model}}
+        @onSave={{this.onSave}}
       />
           `);
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');

@@ -21,13 +21,13 @@
         </LinkTo>
       </InfoTableRow>
       <InfoTableRow @label="Certificate">
-        <CertificateCard @data={{this.signedIntermediate.certificate}} />
+        <EncodedDataCard @data={{this.signedIntermediate.certificate}} />
       </InfoTableRow>
       <InfoTableRow @label="Issuing CA">
-        <CertificateCard @data={{this.signedIntermediate.issuing_ca}} />
+        <EncodedDataCard @data={{this.signedIntermediate.issuing_ca}} />
       </InfoTableRow>
       <InfoTableRow @label="CA Chain">
-        <CertificateCard @data={{this.signedIntermediate.ca_chain}} />
+        <EncodedDataCard @data={{this.signedIntermediate.ca_chain}} />
       </InfoTableRow>
 
       <ParsedCertificateInfoRows @model={{this.parsedCertificate}} />

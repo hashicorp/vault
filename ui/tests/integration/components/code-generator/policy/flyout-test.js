@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, fillIn, typeIn, waitUntil, find } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -113,21 +113,30 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
 
   // This test is to demonstrate how to implement closing the dropdown when the flyout trigger is a dropdown element
   test('it closes dropdown if custom trigger is a dropdown item', async function (assert) {
+    this.showPolicyFlyout = false;
     await render(hbs`<Hds::Dropdown as |D|>
       <D.ToggleButton @text="Toolbox" data-test-dropdown="Toolbox" />
-      <CodeGenerator::Policy::Flyout @onClose={{D.close}} >
-        <:customTrigger as |openFlyout|>
-          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-button="Make me a policy!">
-            Make me a policy!
-          </D.Interactive>
-        </:customTrigger>
-      </CodeGenerator::Policy::Flyout>
+      <D.Interactive @icon="shield-check" {{on "click" (fn (mut this.showPolicyFlyout) true)}} data-test-button="Make me a policy!">
+        Make me a policy!
+      </D.Interactive>
       <D.Interactive @icon="wand" data-test-button="Magic stuff">Magic stuff</D.Interactive>
-    </Hds::Dropdown>`);
+    </Hds::Dropdown>
+    <CodeGenerator::Policy::Flyout @onClose={{(fn (mut this.showPolicyFlyout) false)}}>
+      <:customTrigger as |openFlyout|>
+        {{#if this.showPolicyFlyout}}
+          <div {{did-insert openFlyout}}/>
+        {{/if}}
+      </:customTrigger>
+    </CodeGenerator::Policy::Flyout>
+    `);
+
     await click(GENERAL.dropdownToggle('Toolbox'));
     assert.dom(GENERAL.dropdownToggle('Toolbox')).hasAttribute('aria-expanded', 'true');
     await click(GENERAL.button('Make me a policy!'));
     assert.dom(GENERAL.flyout).exists('flyout is open');
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.messageError).exists();
     await click(GENERAL.cancelButton);
     assert.dom(GENERAL.flyout).doesNotExist('flyout is closed');
     const dropdown = find(GENERAL.dropdownToggle('Toolbox'));
@@ -139,20 +148,18 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
 
   test('it does not render yielded custom trigger component on community', async function (assert) {
     this.version.type = 'community';
-    await this.renderComponent({ open: false });
-    await render(hbs`<Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Toolbox" data-test-dropdown="Toolbox" />
-      <CodeGenerator::Policy::Flyout>
-        <:customTrigger as |openFlyout|>
-          <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-button="Make me a policy!">
-            Make me a policy!
-          </D.Interactive>
-        </:customTrigger>
-      </CodeGenerator::Policy::Flyout>
-      <D.Interactive @icon="wand" data-test-button="Magic stuff">Magic stuff</D.Interactive>
-    </Hds::Dropdown>`);
-    await click(GENERAL.dropdownToggle('Toolbox'));
-    assert.dom(GENERAL.button('Magic stuff')).exists('dropdown opens');
+    await render(hbs`
+    <CodeGenerator::Policy::Flyout>
+      <:customTrigger>
+        <Hds::Button
+          @icon="shield-check"
+          @text="Make me a policy!"
+          @color="secondary"
+          data-test-button="Make me a policy!"
+        />
+      </:customTrigger>
+    </CodeGenerator::Policy::Flyout>
+    `);
     assert.dom(GENERAL.button('Make me a policy!')).doesNotExist();
   });
 
@@ -201,15 +208,6 @@ EOT`;
     assert.dom(GENERAL.inputByAttr('name')).hasValue('mypolicy', 'name is converted to lowercase');
   });
 
-  test('it does not submit default stanza templates as policy payload', async function (assert) {
-    assert.expect(3);
-    const expectedPolicy = '';
-    this.assertSaveRequest(assert, expectedPolicy, 'policy payload is empty when visual editor is untouched');
-    await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
-    await click(GENERAL.submitButton);
-  });
-
   test('it saves a policy', async function (assert) {
     assert.expect(7);
     const flashSuccessSpy = Sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
@@ -239,7 +237,7 @@ EOT`;
   });
 
   test('it resets after saving a policy', async function (assert) {
-    assert.expect(11);
+    assert.expect(8);
     const expectedPolicy = `path "secret/data/*" {\n    capabilities = ["read"]\n}`;
     this.assertSaveRequest(assert, expectedPolicy);
     await this.renderComponent();
@@ -270,20 +268,18 @@ EOT
 }
 EOT`;
     assert.dom(GENERAL.fieldByAttr('cli')).hasText(expectedCli);
-    // Fill in name and save again to make sure policyContent is reset
-    this.assertSaveRequest(assert, '', 'policy content is empty after a successful save');
-    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
-    await click(GENERAL.submitButton);
   });
 
-  test('it displays error message when save fails', async function (assert) {
+  test('it displays API error message when save fails', async function (assert) {
     this.server.post('/sys/policies/acl/:name', () => {
-      return overrideResponse(400, { errors: ["'policy' parameter not supplied or empty"] });
+      return overrideResponse(400, { errors: ['something went very wrong'] });
     });
     await this.renderComponent();
-    await fillIn(GENERAL.inputByAttr('name'), 'empty-policy');
+    await fillIn(GENERAL.inputByAttr('name'), 'failed-policy');
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/data/*');
+    await click(GENERAL.checkboxByAttr('read'));
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText("Error 'policy' parameter not supplied or empty");
+    assert.dom(GENERAL.messageError).exists().hasText('Error something went very wrong');
     assert.dom(GENERAL.flyout).exists('flyout remains open after error');
   });
 
@@ -319,22 +315,74 @@ EOT`;
     await click(GENERAL.submitButton);
   });
 
-  test('it renders validation errors', async function (assert) {
+  test('it renders validation errors for missing path', async function (assert) {
     await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    // Submit without filling in path (missing path, capabilities are optional)
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText('Error There is an error with this form.');
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There is an error with this form. Path is required for each rule.');
+    assert.dom(SELECTORS.pathByContainer(0)).hasClass('hds-form-text-input--is-invalid');
+    assert.dom(GENERAL.validationErrorByAttr('path-0')).exists().hasText('Path is required.');
+    assert
+      .dom(GENERAL.validationErrorByAttr('capabilities-0'))
+      .doesNotExist('capabilities error does not block save');
+  });
+
+  test('it renders validation errors for empty path in a second rule', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/*');
+    // Add a second rule and leave path empty
+    await click(GENERAL.button('Add rule'));
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There is an error with this form. Path is required for each rule.');
+    assert.dom(SELECTORS.pathByContainer(1)).hasClass('hds-form-text-input--is-invalid');
+    assert.dom(GENERAL.validationErrorByAttr('path-1')).hasText('Path is required.');
+    assert.dom('[data-test-validation-error]').exists({ count: 1 }, 'only one validation error renders');
+  });
+
+  test('it saves a policy with a path but no capabilities selected', async function (assert) {
+    assert.expect(4);
+    const expectedPolicy = `path "secret/data/*" {\n    capabilities = []\n}`;
+    this.assertSaveRequest(assert, expectedPolicy);
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/data/*');
+    // Intentionally do not select any capabilities
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.flyout).doesNotExist('flyout closes after successful save');
+  });
+
+  test('it renders validation error for empty policy name', async function (assert) {
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('path'), 'secret/*');
+    await click(GENERAL.checkboxByAttr('read'));
+    await click(GENERAL.submitButton);
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There is an error with this form. Name is required.');
     assert.dom(GENERAL.inputByAttr('name')).hasClass('hds-form-text-input--is-invalid');
     assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required.');
   });
 
-  test('it resets errors after saving', async function (assert) {
+  test('it resets validation errors after saving', async function (assert) {
     const expectedPolicy = `path "secret/*" {\n    capabilities = ["read"]\n}`;
     this.assertSaveRequest(assert, expectedPolicy);
     await this.renderComponent();
 
-    // First attempt without name
+    // First attempt without name (path is also empty so stanzas are invalid too)
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText('Error There is an error with this form.');
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There are errors with this form. Name is required. Path is required for each rule.');
     assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error shows');
 
     // Second attempt with name
@@ -349,11 +397,14 @@ EOT`;
     assert.dom(GENERAL.validationErrorByAttr('name')).doesNotExist('validation error is cleared');
   });
 
-  test('it resets errors if flyout is closed and policy is NOT saved', async function (assert) {
+  test('it resets validation errors if flyout is closed and policy is NOT saved', async function (assert) {
     await this.renderComponent();
     // Attempt to save
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).exists().hasText('Error There is an error with this form.');
+    assert
+      .dom(GENERAL.messageError)
+      .exists()
+      .hasText('Error There are errors with this form. Name is required. Path is required for each rule.');
     assert.dom(GENERAL.validationErrorByAttr('name')).exists('validation error shows');
     // Cancel and close flyout
     await click(GENERAL.cancelButton);
@@ -486,14 +537,16 @@ EOT`;
         assert.dom(SELECTORS.pathByContainer(1)).hasValue('new/path/*', 'user added path still exists');
       });
 
-      test('it does not save prepopulated paths as policy content', async function (assert) {
-        assert.expect(3);
+      test('prepopulated paths save successfully without capabilities selected', async function (assert) {
+        assert.expect(4);
+        const expectedPolicy = `path "path/one" {\n    capabilities = []\n}\npath "path/two" {\n    capabilities = []\n}`;
+        this.assertSaveRequest(assert, expectedPolicy);
         this.cacheCapabilityPaths('vault.cluster.secrets.secret', ['path/one', 'path/two']);
         await this.renderComponent();
-        // Fill in name and save to make sure policyContent is empty
-        this.assertSaveRequest(assert, '', 'policy content is empty despite pre-filled paths');
+        // Only fill in name — capabilities are optional so save should succeed
         await fillIn(GENERAL.inputByAttr('name'), 'test-policy');
         await click(GENERAL.submitButton);
+        assert.dom(GENERAL.flyout).doesNotExist('flyout closes after successful save');
       });
     });
   });

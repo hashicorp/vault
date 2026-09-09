@@ -12,7 +12,6 @@ import (
 
 func TestHCPLinkConnected(t *testing.T) {
 	cluster := getTestCluster(t, 2)
-	defer cluster.Cleanup()
 
 	vaultHCPLink, _ := TestClusterWithHCPLinkEnabled(t, cluster, false, false)
 	defer vaultHCPLink.Cleanup()
@@ -25,9 +24,7 @@ func TestHCPLinkConnected(t *testing.T) {
 func TestHCPLinkNotConfigured(t *testing.T) {
 	t.Parallel()
 	cluster := getTestCluster(t, 2)
-	defer cluster.Cleanup()
 
-	cluster.Start()
 	core := cluster.Cores[0].Core
 	vault.TestWaitActive(t, core)
 

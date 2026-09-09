@@ -10,8 +10,8 @@
   @encode={{true}}
   @queryParams={{secret-query-params @backendType @item.type}}
 >
-  <div class="columns is-mobile">
-    <div class="column is-10">
+  <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+    <LF.Item @grow={{true}} @shrink={{true}}>
       <LinkTo
         @route={{concat "vault.cluster.secrets.backend.show"}}
         @model={{if this.keyTypeValue (concat "role/" @item.id) @item.id}}
@@ -26,8 +26,8 @@
           {{/if}}
         </div>
       </LinkTo>
-    </div>
-    <div class="column has-text-right">
+    </LF.Item>
+    <LF.Item>
       <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
         <dd.ToggleIcon
           @icon="more-horizontal"
@@ -73,6 +73,6 @@
           >Rotate root credentials</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>
-    </div>
-  </div>
+    </LF.Item>
+  </Hds::Layout::Flex>
 </LinkedBlock>

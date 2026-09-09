@@ -12,14 +12,14 @@ import (
 	"testing"
 	"time"
 
+	triton "github.com/TritonDataCenter/triton-go/v2"
+	"github.com/TritonDataCenter/triton-go/v2/authentication"
+	tt "github.com/TritonDataCenter/triton-go/v2/errors"
+	"github.com/TritonDataCenter/triton-go/v2/storage"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-	triton "github.com/joyent/triton-go"
-	"github.com/joyent/triton-go/authentication"
-	tt "github.com/joyent/triton-go/errors"
-	"github.com/joyent/triton-go/storage"
 )
 
 func TestMantaBackend(t *testing.T) {

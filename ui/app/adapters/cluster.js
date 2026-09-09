@@ -193,10 +193,20 @@ export default ApplicationAdapter.extend({
       // progress the operation
       url += 'update';
     }
-    return this.ajax(url, verb, {
+
+    const ajaxOptions = {
       data,
       unauthenticated: true,
-    });
+    };
+
+    // If a token is provided, use it for authentication
+    if (options?.token) {
+      ajaxOptions.headers = {
+        'X-Vault-Token': options.token,
+      };
+    }
+
+    return this.ajax(url, verb, ajaxOptions);
   },
 
   replicationAction(action, replicationMode, clusterMode, data) {

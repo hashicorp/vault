@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	raftlib "github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -544,10 +544,23 @@ func AwaitLeader(t testing.TB, cluster *vault.TestCluster) (int, error) {
 	return 0, fmt.Errorf("timeout waiting leader")
 }
 
+// GenerateDebugLogs repeatedly mounts and unmounts a KV engine to produce Vault
+// audit/log traffic. Call close(stopCh) on the returned channel to stop it.
 func GenerateDebugLogs(t testing.TB, client *api.Client) chan struct{} {
 	t.Helper()
 
 	stopCh := make(chan struct{})
+
+	// stopped reports whether the caller has signalled us to stop.
+	// Used to suppress t.Fatal after the test has already finished.
+	stopped := func() bool {
+		select {
+		case <-stopCh:
+			return true
+		default:
+			return false
+		}
+	}
 
 	go func() {
 		ticker := time.NewTicker(time.Second)
@@ -557,18 +570,13 @@ func GenerateDebugLogs(t testing.TB, client *api.Client) chan struct{} {
 			case <-stopCh:
 				return
 			case <-ticker.C:
-				err := client.Sys().Mount("foo", &api.MountInput{
-					Type: "kv",
-					Options: map[string]string{
-						"version": "1",
-					},
-				})
-				if err != nil {
+				if err := client.Sys().Mount("foo", &api.MountInput{
+					Type:    "kv",
+					Options: map[string]string{"version": "1"},
+				}); err != nil && !stopped() {
 					t.Fatal(err)
 				}
-
-				err = client.Sys().Unmount("foo")
-				if err != nil {
+				if err := client.Sys().Unmount("foo"); err != nil && !stopped() {
 					t.Fatal(err)
 				}
 			}

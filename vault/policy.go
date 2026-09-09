@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -113,6 +112,20 @@ type Policy struct {
 	Type      PolicyType
 	Templated bool
 	namespace *namespace.Namespace
+}
+
+type parseACLPolicyOptions struct {
+	denySlashInTemplatedPaths bool
+}
+
+// ParseACLPolicyOption configures ParseACLPolicy behavior.
+type ParseACLPolicyOption func(*parseACLPolicyOptions)
+
+// WithDenySlashInTemplatedPaths rejects template substitutions that contain '/'.
+func WithDenySlashInTemplatedPaths(deny bool) ParseACLPolicyOption {
+	return func(o *parseACLPolicyOptions) {
+		o.denySlashInTemplatedPaths = deny
+	}
 }
 
 // ShallowClone returns a shallow clone of the policy. This should not be used
@@ -292,33 +305,35 @@ func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy,
 // ParseACLPolicy is used to parse the specified ACL rules into an
 // intermediary set of policies, before being compiled into
 // the ACL
-func ParseACLPolicy(ns *namespace.Namespace, rules string) (*Policy, error) {
-	p, _, err := parseACLPolicyWithTemplating(ns, rules, false, nil, nil)
-	return p, err
+func ParseACLPolicy(ns *namespace.Namespace, rules string, opts ...ParseACLPolicyOption) (*Policy, error) {
+	return parseACLPolicyWithTemplating(ns, rules, false, nil, nil, applyParseACLPolicyOptions(opts))
 }
 
-// ParseACLPolicyCheckDuplicates is the same as the above but checks for duplicate attributes in the HCL policy
-// TODO (HCL_DUP_KEYS_DEPRECATION): remove this function once deprecation is done
-func ParseACLPolicyCheckDuplicates(ns *namespace.Namespace, rules string) (p *Policy, duplicate bool, err error) {
-	return parseACLPolicyWithTemplating(ns, rules, false, nil, nil)
+// applyParseACLPolicyOptions applies the given options to a default
+// parseACLPolicyOptions struct and returns it.
+func applyParseACLPolicyOptions(opts []ParseACLPolicyOption) parseACLPolicyOptions {
+	var o parseACLPolicyOptions
+	for _, opt := range opts {
+		opt(&o)
+	}
+	return o
 }
 
 // parseACLPolicyWithTemplating performs the actual work and checks whether we
 // should perform substitutions. If performTemplating is true we know that it
 // is templated so we don't check again, otherwise we check to see if it's a
 // templated policy.
-func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group) (p *Policy, duplicate bool, err error) {
+func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group, opts parseACLPolicyOptions) (*Policy, error) {
 	// Parse the rules
-	// TODO (HCL_DUP_KEYS_DEPRECATION): go back to a simple hcl.Parse and remove duplicate return value once deprecation is done
-	root, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(rules)
+	root, err := hcl.Parse(rules)
 	if err != nil {
-		return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Top-level item should be the object list
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, duplicate, fmt.Errorf("failed to parse policy: does not contain a root object")
+		return nil, fmt.Errorf("failed to parse policy: does not contain a root object")
 	}
 
 	// Check for invalid top-level keys
@@ -327,29 +342,29 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		"path",
 	}
 	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
-		return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Create the initial policy and store the raw text of the rules
-	p = &Policy{
+	p := Policy{
 		Raw:       rules,
 		Type:      PolicyTypeACL,
 		namespace: ns,
 	}
 	if err := hcl.DecodeObject(&p, list); err != nil {
-		return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
-		if err := parsePaths(p, o, performTemplating, entity, groups); err != nil {
-			return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
+		if err := parsePaths(&p, o, performTemplating, entity, groups, opts); err != nil {
+			return nil, fmt.Errorf("failed to parse policy: %w", err)
 		}
 	}
 
-	return p, duplicate, nil
+	return &p, nil
 }
 
-func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group) error {
+func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group, opts parseACLPolicyOptions) error {
 	paths := make([]*PathRules, 0, len(list.Items))
 	for _, item := range list.Items {
 		key := "path"
@@ -360,11 +375,12 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		// Check the path
 		if performTemplating {
 			_, templated, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
-				Mode:        identitytpl.ACLTemplating,
-				String:      key,
-				Entity:      identity.ToSDKEntity(entity),
-				Groups:      identity.ToSDKGroups(groups),
-				NamespaceID: result.namespace.ID,
+				Mode:                      identitytpl.ACLTemplating,
+				String:                    key,
+				Entity:                    identity.ToSDKEntity(entity),
+				Groups:                    identity.ToSDKGroups(groups),
+				NamespaceID:               result.namespace.ID,
+				DenySlashInTemplatedPaths: opts.denySlashInTemplatedPaths,
 			})
 			if err != nil {
 				continue
@@ -372,9 +388,10 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			key = templated
 		} else {
 			hasTemplating, _, err := identitytpl.PopulateString(identitytpl.PopulateStringInput{
-				Mode:              identitytpl.ACLTemplating,
-				ValidityCheckOnly: true,
-				String:            key,
+				Mode:                      identitytpl.ACLTemplating,
+				ValidityCheckOnly:         true,
+				String:                    key,
+				DenySlashInTemplatedPaths: opts.denySlashInTemplatedPaths,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to validate policy templating: %w", err)

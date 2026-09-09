@@ -116,7 +116,7 @@ module('Unit | Service | api', function (hooks) {
 
   test('it should show warnings', async function (assert) {
     const warnings = JSON.stringify({ warnings: ['warning1', 'warning2'] });
-    const response = new Response(warnings, { headers: { 'Content-Length': warnings.length } });
+    const response = new Response(warnings, { headers: { 'Content-Type': 'application/json' } });
 
     await this.apiService.showWarnings({ response });
 
@@ -131,7 +131,7 @@ module('Unit | Service | api', function (hooks) {
   });
 
   test('it should check for control group', async function (assert) {
-    const headers = new Headers({ 'Content-Length': '100', 'X-Vault-Wrap-TTL': 1800 });
+    const headers = new Headers({ 'Content-Type': 'application/json', 'X-Vault-Wrap-TTL': 1800 });
     const body = { data: null, wrap_info: this.wrapInfo };
     const init = { headers: new Headers({ 'X-Vault-Token': this.wrapInfo.token }) };
     const apiResponse = new Response(JSON.stringify(body), { headers });
@@ -204,11 +204,11 @@ module('Unit | Service | api', function (hooks) {
 
   module('Error parsing', function () {
     test('it should correctly parse message from error', async function (assert) {
-      let e = await this.apiService.parseError(getErrorResponse());
+      let e = await this.apiService.parseError(getErrorResponse(undefined, 400));
       assert.strictEqual(e.message, 'first error, second error', 'Builds message from errors');
 
       e = await this.apiService.parseError(
-        getErrorResponse({ errors: [], message: 'there were some errors' })
+        getErrorResponse({ errors: [], message: 'there were some errors' }, 400)
       );
       assert.strictEqual(e.message, 'there were some errors', 'Returns message when errors are empty');
 
@@ -239,7 +239,7 @@ module('Unit | Service | api', function (hooks) {
         errors: ['something bad happened', 'something else bad too'],
         message: 'all bad things occurred',
       };
-      const { response } = await this.apiService.parseError(getErrorResponse(error));
+      const { response } = await this.apiService.parseError(getErrorResponse(error, 400));
       assert.deepEqual(response, error, 'Returns the original error response');
     });
 

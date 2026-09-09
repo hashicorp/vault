@@ -3,32 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { findAll } from '@ember/test-helpers';
-import { CHARTS } from './client-count-selectors';
-
-export function assertBarChart(assert, chartName, byMonthData, isStacked = false) {
-  // assertion count is byMonthData.length, plus 2
-  const chart = CHARTS.chart(chartName);
-  const dataBars = findAll(`${chart} ${CHARTS.verticalBar}`).filter(
-    (b) => b.hasAttribute('height') && b.getAttribute('height') !== '0'
-  );
-  const xAxisLabels = findAll(`${chart} ${CHARTS.xAxisLabel}`);
-
-  let count = byMonthData.filter((m) => m.clients).length;
-  if (isStacked) count = count * 2;
-
-  assert.strictEqual(dataBars.length, count, `${chartName}: it renders bars for each non-zero month`);
-  assert.strictEqual(
-    xAxisLabels.length,
-    byMonthData.length,
-    `${chartName}: it renders a label for each month`
-  );
-
-  xAxisLabels.forEach((e, i) => {
-    assert.dom(e).hasText(`${byMonthData[i].month}`, `renders x-axis label: ${byMonthData[i].month}`);
-  });
-}
-
 export const ACTIVITY_RESPONSE_STUB = {
   start_time: '2023-06-01T00:00:00Z',
   end_time: '2023-09-30T23:59:59Z', // is always the last day and hour of the month queried

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, fillIn } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, fillIn } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -226,7 +226,16 @@ module('Acceptance | GCP | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request'] });
         });
         await enablePage.enable(this.type, this.path);
-        assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
+        assert.strictEqual(
+          currentRouteName(),
+          'vault.cluster.secrets.backend.error',
+          'it redirects to the secrets backend error route'
+        );
+        assert.dom(GENERAL.pageError.title(400)).hasText('ERROR 400 Error');
+        assert
+          .dom(GENERAL.pageError.message)
+          .hasText('A problem has occurred. Check the Vault logs or console for more details.');
+        assert.dom(GENERAL.pageError.details).hasText('bad request');
       });
     });
   });

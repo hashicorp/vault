@@ -1,0 +1,152 @@
+/**
+ * Copyright IBM Corp. 2016, 2025
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { module, test } from 'qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
+import { render } from '@ember/test-helpers';
+import { hbs } from 'ember-cli-htmlbars';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
+module('Integration | Component | dashboard/widgets/secrets-engines', function (hooks) {
+  setupRenderingTest(hooks);
+
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
+    this.store.pushPayload('secret-engine', {
+      modelName: 'secret-engine',
+      data: {
+        accessor: 'kubernetes_f3400dee',
+        path: 'kubernetes-test/',
+        type: 'kubernetes',
+      },
+    });
+  });
+
+  test('it should hide show all button', async function (assert) {
+    this.secretsEngines = this.store.peekAll('secret-engine', {});
+
+    await render(hbs`<Dashboard::Widgets::SecretsEngines @secretsEngines={{this.secretsEngines}} />`);
+
+    // verify truncate class style exists on secret engine path text
+    assert
+      .dom(SES.secretPath('kubernetes-test/'))
+      .hasClass('truncate-first-line', 'secret engine name has truncate class to handle overflow');
+
+    assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
+  });
+
+  test('it disables unsupported secret engines', async function (assert) {
+    this.store.pushPayload('secret-engine', {
+      modelName: 'secret-engine',
+      data: {
+        accessor: 'nomad_f3400dee',
+        path: 'nomad-test/',
+        type: 'nomad',
+      },
+    });
+    this.secretsEngines = this.store.peekAll('secret-engine', {});
+
+    await render(hbs`<Dashboard::Widgets::SecretsEngines @secretsEngines={{this.secretsEngines}} />`);
+    assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
+    assert.dom(SES.secretPath('nomad-test/')).hasClass('has-text-grey');
+  });
+
+  module('secrets engines with 5 or more enabled', function (hooks) {
+    hooks.beforeEach(function () {
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'kubernetes_f3400dee',
+          path: 'kubernetes-test/',
+          type: 'kubernetes',
+        },
+      });
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'pki_i1234dd',
+          path: 'pki-test/',
+          type: 'pki',
+        },
+      });
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'secrets_j2350ii',
+          path: 'secrets-test/',
+          type: 'kv',
+        },
+      });
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'nomad_123hh',
+          path: 'nomad/',
+          type: 'nomad',
+        },
+      });
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'pki_f3400dee',
+          path: 'pki-0-test/',
+          type: 'pki',
+        },
+      });
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'pki_i1234dd',
+          path: 'pki-1-test/',
+          description: 'pki-1-path-description',
+          type: 'pki',
+        },
+      });
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'secrets_j2350ii',
+          path: 'secrets-1-test/',
+          type: 'kv',
+        },
+      });
+
+      this.secretsEngines = this.store.peekAll('secret-engine', {});
+
+      this.renderComponent = () => {
+        return render(hbs`<Dashboard::Widgets::SecretsEngines @secretsEngines={{this.secretsEngines}} />`);
+      };
+    });
+
+    test('it should display only five secrets engines and show help text for more than 5 engines', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.textDisplay('Secrets engines')).hasText('Secrets engines');
+      assert.dom(`${GENERAL.table('Secrets engines')} tr`).exists({ count: 6 });
+    });
+
+    test('it should display the secrets engines accessor and path', async function (assert) {
+      await this.renderComponent();
+      assert.dom(GENERAL.textDisplay('Secrets engines')).hasText('Secrets engines');
+      assert.dom(`${GENERAL.table('Secrets engines')} tr`).exists({ count: 6 });
+
+      this.secretsEngines.slice(0, 5).forEach((engine) => {
+        assert
+          .dom(GENERAL.tableRow(engine.id))
+          .hasText(`${engine.type} type backend ${engine.path} ${engine.type} ${engine.accessor}`);
+      });
+    });
+
+    test('it adds disabled css styling to unsupported secret engines', async function (assert) {
+      await this.renderComponent();
+      assert
+        .dom(SES.secretPath('secrets-test/'))
+        .hasClass('has-text-black', 'does not apply disabled class to supported secret engine');
+      assert
+        .dom(SES.secretPath('nomad/'))
+        .hasClass('has-text-grey', 'nomad is not a supported secret engine and has disabled class');
+    });
+  });
+});

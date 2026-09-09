@@ -5,32 +5,47 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { allowAllCapabilitiesStub, capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | oidc/provider-list', function (hooks) {
   setupRenderingTest(hooks);
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.createRecord('oidc/provider', { name: 'first-provider', issuer: 'foobar' });
-    this.store.createRecord('oidc/provider', { name: 'second-provider', issuer: 'foobar' });
-    this.model = this.store.peekAll('oidc/provider');
+    this.renderComponent = (isLimited) => {
+      const providers = [
+        { name: 'first-provider', issuer: 'foobar' },
+        { name: 'second-provider', issuer: 'foobar' },
+      ];
+
+      const capabilities = providers.reduce((capabilities, provider) => {
+        const path = this.owner.lookup('service:capabilities').pathFor('oidcProvider', provider);
+        const isFirstProvider = provider.name === 'first-provider';
+        const canRead = isLimited ? isFirstProvider : true;
+        const canUpdate = !isLimited;
+        capabilities[path] = { canRead, canUpdate };
+        return capabilities;
+      }, {});
+
+      this.model = {
+        providers,
+        capabilities,
+      };
+      return render(hbs`<Oidc::ProviderList @model={{this.model}} />`);
+    };
   });
 
   test('it renders list of providers', async function (assert) {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'update']));
-    await render(hbs`<Oidc::ProviderList @model={{this.model}} />`);
+    await this.renderComponent(false);
 
-    assert.dom('[data-test-oidc-provider-linked-block]').exists({ count: 2 }, 'Two clients are rendered');
-    assert.dom('[data-test-oidc-provider-linked-block="first-provider"]').exists('First client is rendered');
+    assert.dom('[data-test-oidc-provider-linked-block]').exists({ count: 2 }, 'Two providers are rendered');
+    assert
+      .dom('[data-test-oidc-provider-linked-block="first-provider"]')
+      .exists('First provider is rendered');
     assert
       .dom('[data-test-oidc-provider-linked-block="second-provider"]')
-      .exists('Second client is rendered');
+      .exists('Second provider is rendered');
 
     await click('[data-test-oidc-provider-linked-block="first-provider"] [data-test-popup-menu-trigger]');
     assert.dom('[data-test-oidc-provider-menu-link="details"]').exists('Details link is rendered');
@@ -38,15 +53,7 @@ module('Integration | Component | oidc/provider-list', function (hooks) {
   });
 
   test('it renders popup menu based on permissions', async function (assert) {
-    this.server.post('/sys/capabilities-self', (schema, req) => {
-      const { paths } = JSON.parse(req.requestBody);
-      if (paths[0] === 'identity/oidc/provider/first-provider') {
-        return capabilitiesStub('identity/oidc/provider/first-provider', ['read']);
-      } else {
-        return capabilitiesStub('identity/oidc/provider/second-provider', ['deny']);
-      }
-    });
-    await render(hbs`<Oidc::ProviderList @model={{this.model}} />`);
+    await this.renderComponent(true);
     assert.dom('[data-test-popup-menu-trigger]').exists({ count: 1 }, 'Only one popup menu is rendered');
     await click(GENERAL.menuTrigger);
     assert.dom('[data-test-oidc-provider-menu-link="details"]').exists('Details link is rendered');

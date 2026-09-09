@@ -1,0 +1,4 @@
+```release-note:bug
+consumption-billing: Fixes LDAP and OpenLDAP dynamic and static role counting in use-case billing 
+to use dedicated count endpoints (role-count, static-role-count) instead of LIST-based counting, which was undercounting roles.
+```

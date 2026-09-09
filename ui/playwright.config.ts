@@ -67,6 +67,7 @@ export default defineConfig<UserSetupOptions>({
           storageState: fs.existsSync(sessionFile) ? sessionFile : undefined,
           // start at port 8204 and increment for each project to allow them to run concurrently without conflicts
           baseURL: getURL(index),
+          permissions: ['clipboard-read', 'clipboard-write'],
         },
       };
     }),

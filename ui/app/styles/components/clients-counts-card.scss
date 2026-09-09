@@ -49,3 +49,13 @@
     }
   }
 }
+
+.chart-container {
+  position: relative;
+}
+
+.chart-container-toggle {
+  position: absolute;
+  right: 24px;
+  z-index: 2;
+}

@@ -8,9 +8,10 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
+import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import AuthMethodResource from 'vault/resources/auth/method';
+import { prepareTargets } from 'vault/utils/mfa-login-enforcement-helpers';
 
 /**
  * @module MfaLoginEnforcementForm
@@ -22,7 +23,7 @@ import AuthMethodResource from 'vault/resources/auth/method';
  * ```
  * @callback onSave
  * @callback onClose
- * @param {Object} model - login enforcement model
+ * @param {Object} model - login enforcement form model
  * @param {Object} [isInline] - toggles inline display of form -- method selector and actions are hidden and should be handled externally
  * @param {Object} [modelErrors] - model validations state object if handling actions externally when displaying inline
  * @param {onSave} [onSave] - triggered on save success
@@ -30,16 +31,16 @@ import AuthMethodResource from 'vault/resources/auth/method';
  */
 
 export default class MfaLoginEnforcementForm extends Component {
-  @service store;
   @service flashMessages;
   @service api;
 
   targetTypes = [
     { label: 'Authentication mount', type: 'accessor', key: 'auth_method_accessors' },
     { label: 'Authentication method', type: 'method', key: 'auth_method_types' },
-    { label: 'Group', type: 'identity/group', key: 'identity_groups' },
-    { label: 'Entity', type: 'identity/entity', key: 'identity_entities' },
+    { label: 'Group', type: 'identity/group', key: 'identity_group_ids' },
+    { label: 'Entity', type: 'identity/entity', key: 'identity_entity_ids' },
   ];
+
   searchSelectOptions = null;
 
   @tracked name;
@@ -67,12 +68,12 @@ export default class MfaLoginEnforcementForm extends Component {
   }
 
   async flattenTargets() {
-    for (const { label, key } of this.targetTypes) {
-      const targetArray = await this.args.model[key];
-      const targets = targetArray.map((value) => ({ label, key, value }));
-      this.targets = addManyToArray(this.targets, targets);
-    }
+    const preparedTargets = await prepareTargets(this.args.form, this.api, {
+      includeFormFields: true,
+    });
+    this.targets = preparedTargets;
   }
+
   async resetTargetState() {
     this.selectedTargetValue = null;
     const options = this.searchSelectOptions || {};
@@ -80,7 +81,9 @@ export default class MfaLoginEnforcementForm extends Component {
       const types = ['identity/group', 'identity/entity'];
       for (const type of types) {
         try {
-          options[type] = await this.store.query(type, {});
+          const apiMethod = type === 'identity/group' ? 'groupListById' : 'entityListById';
+          const response = await this.api.identity[apiMethod](true);
+          options[type] = this.api.keyInfoToArray(response);
         } catch (error) {
           options[type] = [];
         }
@@ -103,32 +106,57 @@ export default class MfaLoginEnforcementForm extends Component {
   }
 
   async fetchMfaMethods() {
-    // mfa_methods is a hasMany on the model, thus returning a PromiseProxyArray. Before it can be accessed on the template we need to resolve it first.
-    this.mfaMethods = await this.args.model.mfa_methods;
+    // @methods now contains API response data (plain objects) instead of Ember Data models
+    const methods = this.args.methods || [];
+
+    // If the form already has mfa_methods set (e.g., editing existing enforcement),
+    // filter to show only the selected methods
+    if (this.args.form.mfa_methods && this.args.form.mfa_methods.length > 0) {
+      this.mfaMethods = methods.filter((method) => this.args.form.mfa_methods.includes(method.id));
+    } else {
+      // For new enforcements, start with empty selection
+      this.mfaMethods = [];
+    }
   }
 
   get selectedTarget() {
     return this.targetTypes.find((tt) => tt.type === this.selectedTargetType);
   }
+
   get errors() {
     return this.args.modelErrors || this.modelErrors;
   }
 
   updateModelForKey(key) {
-    const newValue = this.targets.filter((t) => t.key === key).map((t) => t.value);
-    this.args.model[key] = newValue;
+    // For identity entities and groups, extract IDs from the model objects
+    if (key === 'identity_entity_ids' || key === 'identity_group_ids') {
+      const newValue = this.targets.filter((t) => t.key === key).map((t) => t.value.id);
+      this.args.form[key] = newValue;
+    } else {
+      const newValue = this.targets.filter((t) => t.key === key).map((t) => t.value);
+      this.args.form[key] = newValue;
+    }
   }
 
   @task
   *save() {
     this.modelErrors = {};
     // check validity state first and abort if invalid
-    const { isValid, state } = this.args.model.validate();
+    const { data, isValid, state } = this.args.form.toJSON();
+
     if (!isValid) {
       this.modelErrors = state;
     } else {
       try {
-        yield this.args.model.save();
+        const { name, mfa_methods, ...enforcementData } = data;
+        yield this.api.identity.mfaWriteLoginEnforcement(name, {
+          ...enforcementData,
+          auth_method_accessors: enforcementData.auth_method_accessors || [],
+          auth_method_types: enforcementData.auth_method_types || [],
+          identity_entity_ids: enforcementData.identity_entity_ids || [],
+          identity_group_ids: enforcementData.identity_group_ids || [],
+          mfa_method_ids: mfa_methods || [],
+        });
         this.args.onSave();
       } catch (error) {
         const message = error.errors ? error.errors.join('. ') : error.message;
@@ -139,18 +167,12 @@ export default class MfaLoginEnforcementForm extends Component {
 
   @action
   async onMethodChange(selectedIds) {
-    // first make sure the async relationship is loaded
-    const methods = await this.args.model.mfa_methods;
-    // then remove items that are no longer selected
-    const updatedList = methods.filter((model) => {
-      return selectedIds.includes(model.id);
-    });
-    // then add selected items that don't exist in the list already
-    const modelIds = updatedList.map((model) => model.id);
-    const toAdd = selectedIds
-      .filter((id) => !modelIds.includes(id))
-      .map((id) => this.store.peekRecord('mfa-method', id));
-    this.args.model.mfa_methods = addManyToArray(updatedList, toAdd);
+    // Update the form's mfa_methods field with the selected IDs
+    this.args.form.mfa_methods = selectedIds;
+
+    // Update mfaMethods to reflect the current selection for the SearchSelect component
+    const methods = this.args.methods || [];
+    this.mfaMethods = methods.filter((method) => selectedIds.includes(method.id));
   }
 
   @action
@@ -162,8 +184,9 @@ export default class MfaLoginEnforcementForm extends Component {
   setTargetValue(selected) {
     const { type } = this.selectedTarget;
     if (type.includes('identity')) {
-      // for identity groups and entities grab model from store as value
-      this.selectedTargetValue = this.store.peekRecord(type, selected[0]);
+      // Find the selected item from the already-fetched options
+      const selectedItem = this.searchSelectOptions[type].find((item) => item.id === selected[0]);
+      this.selectedTargetValue = selectedItem;
     } else {
       this.selectedTargetValue = selected;
     }
@@ -188,7 +211,6 @@ export default class MfaLoginEnforcementForm extends Component {
   @action
   cancel() {
     // revert model changes
-    this.args.model.rollbackAttributes();
     this.args.onClose();
   }
 }

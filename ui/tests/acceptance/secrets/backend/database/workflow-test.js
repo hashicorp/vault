@@ -335,7 +335,7 @@ module('Acceptance | database workflow', function (hooks) {
         .hasText('generated-password', 'Password is generated');
       assert
         .dom(GENERAL.infoRowValue('Lease Duration'))
-        .hasText('3600', 'shows lease duration from response');
+        .hasText('1 hour', 'shows lease duration from response');
       assert
         .dom(GENERAL.infoRowValue('Lease ID'))
         .hasText(`database/creds/${roleName}/abcd`, 'shows lease ID from response');

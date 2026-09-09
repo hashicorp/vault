@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -39,6 +39,7 @@ module('Integration | Component | kmip | Page::Credentials', function (hooks) {
       pageSize: 10,
       filteredTotal: this.credentials.length,
       total: this.credentials.length,
+      totalItems: this.credentials.length,
     };
     this.filterValue = '';
     this.capabilities = { canDelete: true };

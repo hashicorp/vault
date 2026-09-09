@@ -4,6 +4,8 @@
  */
 
 import { typeOf } from '@ember/utils';
+import { sanitizePath } from '../sanitize-path';
+import { formatArgsFromPayload } from './formatters';
 
 // Yes, this seems silly but pretty formatting these snippets was a...journey.
 // Hopefully these consts make it easier for whoever comes next.
@@ -75,9 +77,31 @@ ${formattedContent.join('\n')}
 }`;
 };
 
+// if specific resource cannot be determined the generic endpoint resource can be used with the API path
+export const terraformGenericResourceTemplate = (
+  path: string,
+  resourceArgs: Record<string, unknown> = {},
+  localId = '<local identifier>',
+  namespace?: string
+) => {
+  const formattedContent = formatTerraformArgs(resourceArgs);
+  const ns = namespace ? `namespace = "${namespace}"\n` : '';
+
+  return `resource "vault_generic_endpoint" "${localId}" {
+  path = "${sanitizePath(path)}"
+  ${ns}
+  data_json = jsonencode({
+  ${formattedContent.join(`\n${TWO_SPACES}`)}
+  })
+}`;
+};
+
 export const formatTerraformArgs = (resourceArgs: Record<string, unknown> = {}) => {
+  // strip empty values before formatting
+  // focus on empty strings, objects and arrays, as well as undefined values, but this can be expanded as needed
+  const filteredArgs = formatArgsFromPayload(resourceArgs);
   const formattedArgs = [];
-  for (const [key, value] of Object.entries(resourceArgs)) {
+  for (const [key, value] of Object.entries(filteredArgs)) {
     // Handle nested objects (like "options" above)
     if (typeOf(value) === 'object') {
       const formattedValue = formatNestedObject(key, value as Record<string, unknown>);

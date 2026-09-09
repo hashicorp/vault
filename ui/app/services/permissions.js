@@ -115,12 +115,15 @@ const API_PATHS = {
   monitoring: {
     'utilization-report': 'sys/utilization-report',
   },
+  billing: {
+    overview: 'sys/billing/overview',
+  },
 };
 
 // API_PATHS_TO_ROUTE_PARAMS is used to resolve route params for that path when checking permissions for the nav item.
 const API_PATHS_TO_ROUTE_PARAMS = {
-  'identity/entity/id': { route: 'vault.cluster.access.identity', models: ['entities'] },
-  'identity/group/id': { route: 'vault.cluster.access.identity', models: ['groups'] },
+  'identity/entity/id': { route: 'vault.cluster.access.identity.entities.index', models: [] },
+  'identity/group/id': { route: 'vault.cluster.access.identity.groups.index', models: [] },
   'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
   'identity/oidc/client': { route: 'vault.cluster.access.oidc', models: [] },
   'sys/auth': { route: 'vault.cluster.access.methods', models: [] },

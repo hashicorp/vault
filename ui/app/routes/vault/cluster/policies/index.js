@@ -6,34 +6,63 @@
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ListRoute from 'core/mixins/list-route';
+import { paginate } from 'core/utils/paginate-list';
 
 export default Route.extend(ListRoute, {
   pagination: service(),
+  api: service(),
   version: service(),
+  capabilities: service(),
 
   shouldReturnEmptyModel(policyType, version) {
     return policyType !== 'acl' && (version.isCommunity || !version.hasSentinel);
   },
 
-  model(params) {
+  async model(params) {
     const policyType = this.policyType();
     if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }
-    return this.pagination
-      .lazyPaginatedQuery(`policy/${policyType}`, {
+    try {
+      const { keys } = await this.getPolicies(policyType);
+      const paginated = paginate(keys, {
         page: params.page,
-        pageFilter: params.pageFilter,
-        responsePath: 'data.keys',
-      })
-      .catch((err) => {
-        // acls will never be empty, but sentinel policies can be
-        if (err.httpStatus === 404 && this.policyType() !== 'acl') {
-          return [];
-        } else {
-          throw err;
-        }
+        filter: params.pageFilter,
       });
+
+      const paths = paginated.map((id) =>
+        this.capabilities.pathFor('policy', { policyType: this.policyType(), id })
+      );
+      const capabilities = paths ? await this.capabilities.fetch(paths) : {};
+
+      const policies = paginated.map((name, i) => {
+        return {
+          name,
+          capabilities: capabilities[paths[i]] || null,
+          policyType,
+        };
+      });
+      policies.meta = paginated.meta;
+      return policies;
+    } catch (err) {
+      const { status } = await this.api.parseError(err);
+      // acls will never be empty, but sentinel policies can be
+      if (status === 404 && policyType !== 'acl') {
+        return [];
+      } else {
+        throw err;
+      }
+    }
+  },
+
+  async getPolicies(policyType) {
+    if (policyType === 'rgp') {
+      return this.api.sys.systemListPoliciesRgp(true);
+    } else if (policyType === 'egp') {
+      return this.api.sys.systemListPoliciesEgp(true);
+    } else {
+      return this.api.sys.policiesListAclPolicies(true);
+    }
   },
 
   setupController(controller, model) {

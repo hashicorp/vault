@@ -29,7 +29,7 @@ import { get } from '@ember/object';
  *  label: "To do task", // custom label to be shown, otherwise attr.name will be displayed
  *  defaultValue: "", // default value to display if model value is not present
  *  fieldValue: "toDo", // used for value lookup on model over attr.name
- *  editType: "boolean", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
+ *  editType: "boolean", type of field to use. List of editTypes:boolean, file, json, keyValueInputs, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
  *  helpText: "This will be in a tooltip",
  *  readOnly: true
  *  },
@@ -70,6 +70,7 @@ export default class FormFieldComponent extends Component {
   @tracked codemirrorEditor;
   @tracked showToggleTextInput = false;
   @tracked toggleInputEnabled = false;
+  @tracked keyValueRows = [];
 
   radioValue = (item) => (isEmpty(item.value) ? item : item.value);
 
@@ -86,6 +87,11 @@ export default class FormFieldComponent extends Component {
     const modelValue = get(model, valuePath);
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
+    if (attr.options?.editType === 'keyValueInputs') {
+      this.keyValueRows = this.hasFieldValuePaths
+        ? [this.rowFromFieldValuePaths()]
+        : this.rowsFromValue(modelValue);
+    }
   }
 
   // ---------------------------------------------------------------
@@ -103,7 +109,7 @@ export default class FormFieldComponent extends Component {
     if (options?.possibleValues?.length > 0) {
       return true;
     } else {
-      if (options?.editType === 'dateTimeLocal') {
+      if (options?.editType === 'dateTimeLocal' || options?.editType === 'keyValueInputs') {
         return true;
       } else if (
         options?.editType === 'searchSelect' ||
@@ -180,7 +186,7 @@ export default class FormFieldComponent extends Component {
   }
 
   get isReadOnly() {
-    const readonly = this.args.attr.options?.readOnly || false;
+    const readonly = this.args.attr.options?.readOnly || this.args.attr.options?.editDisabled || false;
     return readonly && this.args.mode === 'edit';
   }
 
@@ -234,6 +240,126 @@ export default class FormFieldComponent extends Component {
     // we want to read the original value instead of `event.target.value` so we have `false` (boolean) and not `"false"` (string)
     const valueToSet = this.radioValue(item);
     this.setAndBroadcast(valueToSet);
+  }
+  // supports either a flat `{ key: value }` object (see isKeyValueMap) or an array of row objects
+  rowsFromValue(value) {
+    if (Array.isArray(value)) {
+      // clone each row so editing it doesn't mutate the model's array in place before it's broadcast
+      return value.length ? value.map((row) => ({ ...row })) : [this.emptyKeyValueRow()];
+    }
+    if (value && typeof value === 'object') {
+      const rows = Object.entries(value).map(([key, val]) => ({ key, value: val }));
+      return rows.length ? rows : [this.emptyKeyValueRow()];
+    }
+    return [this.emptyKeyValueRow()];
+  }
+  // defaults to a simple key/value pair for backwards compatibility; see `KeyValueField` for the shape of `attr.options.keyValueFields`
+  get keyValueFields() {
+    const options = this.args.attr.options || {};
+    if (Array.isArray(options.keyValueFields) && options.keyValueFields.length) {
+      return options.keyValueFields;
+    }
+    return [
+      {
+        name: 'key',
+        label: 'Key',
+        type: options.keyInputType || 'text',
+        placeholder: options.keyPlaceholder || 'key',
+        possibleValues: options.keyPossibleValues || [],
+      },
+      {
+        name: 'value',
+        label: 'Value',
+        type: options.valueInputType || 'text',
+        placeholder: options.valuePlaceholder || 'value',
+        possibleValues: options.valuePossibleValues || [],
+      },
+    ];
+  }
+  // a flat `{ key: value }` object is only representable when there are exactly two fields, named `key` and `value`
+  get isKeyValueMap() {
+    const [first, second] = this.keyValueFields;
+    return (
+      this.args.attr.type === 'object' &&
+      this.keyValueFields.length === 2 &&
+      first.name === 'key' &&
+      second.name === 'value'
+    );
+  }
+  // a flat `{ key: "" }` object (keys only, no meaningful value) is representable when there is a single field named `key`
+  get isKeyOnlyMap() {
+    const [first] = this.keyValueFields;
+    return this.args.attr.type === 'object' && this.keyValueFields.length === 1 && first.name === 'key';
+  }
+  // true when a field binds directly to its own model attribute via `valuePath`, e.g. combining a
+  // "region" select and a "kms_key_id" text input into one fixed row with no add/delete controls
+  get hasFieldValuePaths() {
+    return this.keyValueFields.some((field) => field.valuePath);
+  }
+
+  get keyValueEditDisabled() {
+    return !!(this.args.attr.options?.editDisabled && !this.args.model.isNew);
+  }
+  rowFromFieldValuePaths() {
+    const { model } = this.args;
+    return this.keyValueFields.reduce((row, field) => {
+      row[field.name] = (field.valuePath && get(model, field.valuePath)) || '';
+      return row;
+    }, {});
+  }
+  emptyKeyValueRow() {
+    return this.keyValueFields.reduce((row, field) => ({ ...row, [field.name]: '' }), {});
+  }
+  broadcastKeyValueRows() {
+    let value;
+    if (this.isKeyValueMap || this.isKeyOnlyMap) {
+      // isKeyOnlyMap rows never have a `value` property, so it's always treated as an empty string
+      value = this.keyValueRows.reduce((obj, row) => {
+        if (row.key || row.value) {
+          obj[row.key] = row.value || '';
+        }
+        return obj;
+      }, {});
+    } else {
+      value = this.keyValueRows.filter((row) => this.keyValueFields.some((field) => row[field.name]));
+    }
+    this.setAndBroadcast(value);
+  }
+  @action
+  addKeyValueRow() {
+    this.keyValueRows = [...this.keyValueRows, this.emptyKeyValueRow()];
+  }
+  @action
+  deleteKeyValueRow(rowData) {
+    this.keyValueRows = this.keyValueRows.filter((row) => row !== rowData);
+    if (!this.keyValueRows.length) {
+      this.keyValueRows = [this.emptyKeyValueRow()];
+    }
+    this.broadcastKeyValueRows();
+  }
+  @action
+  updateKeyValueRow(index, fieldName, event) {
+    const { value } = event.target;
+    this.keyValueRows[index][fieldName] = value;
+    this.keyValueRows = [...this.keyValueRows];
+    this.broadcastOrSetField(fieldName, value);
+  }
+  @action
+  updateKeyValueRowFile(index, fieldName, event) {
+    const file = event.target.files?.[0] || '';
+    this.keyValueRows[index][fieldName] = file;
+    this.keyValueRows = [...this.keyValueRows];
+    this.broadcastOrSetField(fieldName, file);
+  }
+  // sets the field's own `valuePath` on the model if it has one, otherwise broadcasts the combined row(s)
+  broadcastOrSetField(fieldName, value) {
+    const field = this.keyValueFields.find((f) => f.name === fieldName);
+    if (field?.valuePath) {
+      this.args.model.set(field.valuePath, value);
+      this.onChange(field.valuePath, value);
+    } else {
+      this.broadcastKeyValueRows();
+    }
   }
   @action
   setAndBroadcastTtl(value) {

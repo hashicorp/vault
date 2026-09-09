@@ -33,7 +33,6 @@ func testStatusCommand(tb testing.TB) (*cli.MockUi, *StatusCommand) {
 func TestStatusCommand_RaftCluster(t *testing.T) {
 	t.Parallel()
 	cluster := testVaultRaftCluster(t)
-	defer cluster.Cleanup()
 
 	toRemove := cluster.Cores[1]
 	expectRemovedFromCluster := func(expectCode int, removed bool) {

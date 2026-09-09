@@ -17,6 +17,11 @@ const DEFAULT_EXTERNAL_PLUGIN_GLYPH = '';
  * Plugin categories used throughout the application
  */
 export const PLUGIN_CATEGORIES = {
+  COMMON: 'common engines',
+  IDENTITY: 'identity and access',
+  CRYPTO: 'cryptography and data protection',
+  CLOUD_PLUS: 'cloud and infrastructure',
+  // the categories below are still used by auth methods catalog
   GENERIC: 'generic',
   CLOUD: 'cloud',
   INFRA: 'infra',

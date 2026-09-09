@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -35,7 +37,6 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 	}
 	var githubAccessor string
 	for k, v := range mounts {
-		t.Logf("key: %v\nmount: %#v", k, *v)
 		if k == "github/" {
 			githubAccessor = v.Accessor
 			break
@@ -103,7 +104,6 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 		if info["canonical_id"].(string) == testAliasCanonicalID {
 			currName = "testaliasname"
 		}
-		t.Logf("alias info: %#v", info)
 		switch {
 		case info["name"].(string) != currName:
 			t.Fatalf("bad name: %v", info["name"].(string))
@@ -123,14 +123,24 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 		t.Fatalf("bad: length of entity IDs listed; expected: 2, actual: %d", len(keys))
 	}
 
+	expectedEntityIDs := []string{entityID, testAliasCanonicalID}
+	actualEntityIDs := make([]string, 0, len(keys))
+	for _, keyRaw := range keys {
+		actualEntityIDs = append(actualEntityIDs, keyRaw.(string))
+	}
+	sort.Strings(expectedEntityIDs)
+	sort.Strings(actualEntityIDs)
+	if !reflect.DeepEqual(expectedEntityIDs, actualEntityIDs) {
+		t.Fatalf("bad: listed entity IDs; expected: %#v\n actual: %#v\n", expectedEntityIDs, actualEntityIDs)
+	}
+
 	entityInfoRaw, ok := resp.Data["key_info"]
 	if !ok {
 		t.Fatal("expected key_info map in response")
 	}
 
 	// This is basically verifying that the entity has the alias in key_info
-	// that we expect to be tied to it, plus tests a value further down in it
-	// for fun
+	// that we expect to be tied to it, plus validates nested alias metadata.
 	entityInfo := entityInfoRaw.(map[string]interface{})
 	for _, keyRaw := range keys {
 		key := keyRaw.(string)
@@ -139,7 +149,16 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 			t.Fatal("expected key info")
 		}
 		info := infoRaw.(map[string]interface{})
-		t.Logf("entity info: %#v", info)
+
+		switch {
+		case info["creation_time"].(string) == "":
+			t.Fatal("expected entity creation_time")
+		case info["last_update_time"].(string) == "":
+			t.Fatal("expected entity last_update_time")
+		case info["disabled"].(bool):
+			t.Fatal("expected entity disabled to be false")
+		}
+
 		currAliasID := entityAliasAliasID
 		if key == testAliasCanonicalID {
 			currAliasID = testAliasAliasID
@@ -159,6 +178,10 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 				t.Fatalf("bad mount path: %v", curr["mount_path"])
 			case curr["mount_type"].(string) != "github":
 				t.Fatalf("bad mount type: %v", curr["mount_type"])
+			case curr["creation_time"].(string) == "":
+				t.Fatal("expected alias creation_time")
+			case curr["last_update_time"].(string) == "":
+				t.Fatal("expected alias last_update_time")
 			}
 		}
 	}

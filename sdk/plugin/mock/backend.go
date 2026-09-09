@@ -59,6 +59,7 @@ func Backend() *backend {
 			[]*framework.Path{
 				pathConfig(&b),
 				pathInternal(&b),
+				pathInitReq(&b),
 				pathSpecial(&b),
 				pathRaw(&b),
 				pathEnv(&b),
@@ -91,6 +92,17 @@ type backend struct {
 
 	// internal is used to test invalidate and reloads.
 	internal string
+
+	// lastInitReq captures the most recent InitializationRequest received by
+	// Initialize, allowing tests to assert on mount metadata propagation.
+	lastInitReq *logical.InitializationRequest
+}
+
+// Initialize overrides framework.Backend's no-op so tests can inspect the
+// InitializationRequest fields forwarded over the gRPC wire.
+func (b *backend) Initialize(_ context.Context, req *logical.InitializationRequest) error {
+	b.lastInitReq = req
+	return nil
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {

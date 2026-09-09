@@ -26,55 +26,57 @@
     @path={{@model.secretsEngine.id}}
   />
 {{/let}}
-{{#if this.saveGeneralSettings.isRunning}}
-  {{! TODO: Fix loading state styles }}
-  <Hds::Layout::Flex @gap="24" @direction="column" @justify="center" @align="center">
-    <div class="one-fourth-width">
-      <Hds::Icon @name="loading-static" @size="24" @stretched={{true}} />
-    </div>
-    <Hds::Text::Display @tag="h2">Saving configuration...</Hds::Text::Display>
-  </Hds::Layout::Flex>
-{{else}}
-  <form
-    method="POST"
-    {{on "submit" (perform this.saveGeneralSettings)}}
-    aria-label="general settings form"
-    id="general-settings-form"
-  >
-    <Hds::Text::Body @tag="p" class="has-top-margin-xs">
-      Mount parameters that you can tune to fit required engine behavior.
-    </Hds::Text::Body>
+<form
+  method="POST"
+  {{on "submit" (perform this.saveGeneralSettings)}}
+  aria-label="general settings form"
+  id="general-settings-form"
+>
+  <Hds::Text::Body @tag="p" class="has-top-margin-xs">
+    Mount parameters that you can tune to fit required engine behavior.
+  </Hds::Text::Body>
 
-    <MessageError @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
+  <MessageError @errorMessage={{this.errorMessage}} @errors={{this.errors}} />
 
-    <Hds::Layout::Grid @columnMinWidth="32%" @gap="32" as |LG|>
-      <LG.Item @colspan={{1}}>
-        <SecretEngine::Card::Version @model={{@model}} class="is-fullwidth" />
-        <SecretEngine::Card::Metadata @model={{@model}} class="is-fullwidth" />
-      </LG.Item>
-      <LG.Item @colspan={{1}}>
-        <SecretEngine::Card::SecretsDuration
-          @model={{@model}}
-          @defaultLeaseUnit={{this.defaultLeaseUnit}}
-          @maxLeaseUnit={{this.maxLeaseUnit}}
-          class="is-fullwidth"
-        />
-        <SecretEngine::Card::Security @model={{@model}} class="is-fullwidth" />
-      </LG.Item>
-    </Hds::Layout::Grid>
-    <div class="field is-grouped has-top-bottom-margin">
-      <Hds::ButtonSet>
-        <Hds::Button @text="Save changes" type="submit" disabled={{this.saveGeneralSettings.isRunning}} data-test-submit />
-        <Hds::Button
-          @text="Discard"
-          @color="secondary"
-          {{on "click" (fn this.unsavedChanges.transition "vault.cluster.secrets.backend.configuration.general-settings")}}
-          data-test-cancel
-        />
-      </Hds::ButtonSet>
-    </div>
-  </form>
-{{/if}}
+  <Hds::Layout::Grid @columnMinWidth="32%" @gap="32" as |LG|>
+    <LG.Item @colspan={{1}}>
+      <SecretEngine::Card::Version
+        @model={{this.versionModel}}
+        @onReload={{this.handleVersionReload}}
+        class="is-fullwidth"
+      />
+      <SecretEngine::Card::Metadata @model={{@model}} class="is-fullwidth" />
+    </LG.Item>
+    <LG.Item @colspan={{1}}>
+      <SecretEngine::Card::SecretsDuration
+        @model={{@model}}
+        @defaultLeaseUnit={{this.defaultLeaseUnit}}
+        @maxLeaseUnit={{this.maxLeaseUnit}}
+        class="is-fullwidth"
+      />
+      <SecretEngine::Card::Security @model={{@model}} class="is-fullwidth" />
+    </LG.Item>
+  </Hds::Layout::Grid>
+  <div class="field is-grouped has-top-bottom-margin">
+    <Hds::ButtonSet>
+      <Hds::Button
+        @text="Save changes"
+        @icon={{if this.saveGeneralSettings.isRunning "loading"}}
+        @isIconOnly={{false}}
+        type="submit"
+        disabled={{this.saveGeneralSettings.isRunning}}
+        data-test-submit
+      />
+      <Hds::Button
+        @text="Discard"
+        @color="secondary"
+        disabled={{this.saveGeneralSettings.isRunning}}
+        {{on "click" (fn this.unsavedChanges.transition "vault.cluster.secrets.backend.configuration.general-settings")}}
+        data-test-cancel
+      />
+    </Hds::ButtonSet>
+  </div>
+</form>
 
 <UnsavedChangesModal
   @onSave={{this.saveGeneralSettings}}

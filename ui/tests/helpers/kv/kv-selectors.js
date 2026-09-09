@@ -19,10 +19,6 @@ export const PAGE = {
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   popup: '[data-test-popup-menu-trigger]',
-  error: {
-    title: '[data-test-page-error] h1',
-    message: '[data-test-page-error] p',
-  },
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
   secretRow: '[data-test-component="info-table-row"]', // replace with infoRow

@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
+import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncHandler from 'vault/mirage/handlers/sync';
@@ -49,19 +49,16 @@ module(
 
     test('it should render empty list state', async function (assert) {
       this.set('associations.meta.filteredTotal', 0);
-      assert.dom(PAGE.emptyStateTitle).hasText('No synced secrets yet', 'Empty state title renders');
+      assert.dom(PAGE.emptyStateTitle).hasText('No secrets synced yet', 'Empty state title renders');
       assert
         .dom(PAGE.emptyStateMessage)
-        .hasText(
-          'Select secrets from existing KV version 2 engines and sync them to the destination.',
-          'Empty state message renders'
-        );
+        .hasText('Select secrets to sync to this destination', 'Empty state message renders');
       assert.dom(PAGE.emptyStateActions).hasText('Sync secrets', 'Empty state action renders');
     });
 
     test('it should render list item details', async function (assert) {
       const { list } = PAGE.associations;
-      assert.dom(list.name).hasText('my-secret', 'Association mount/secret renders as name');
+      assert.dom(list.name).hasText('kv/my-secret', 'Association mount/secret renders as name');
       assert.dom(list.status).hasText('Synced', 'Association status renders');
       assert
         .dom(list.updated)

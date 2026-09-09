@@ -53,9 +53,11 @@ Vagrantfile
 *.hcl
 !.copywrite.hcl
 !.release/ci.hcl
+!.release/pipeline.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl
 !enos/**/*.hcl
+!**/fixtures/*.hcl
 !**/test-fixtures/**/*.hcl
 !**/testdata/*.hcl
 
@@ -64,9 +66,13 @@ Vagrantfile
 enos-local.vars.hcl
 enos/**/support
 enos/**/kubeconfig
-.terraform
-.terraform.lock.hcl
-.tfstate.*
+enos/modules/**/plan.yml
+enos/sarif**.json
+**/.terraform/*
+**.terraform.lock.hcl
+**terraform.tfstate
+**.tfstate.*
+**.terraform.tfstate.lock.info
 
 .DS_Store
 .idea
@@ -137,9 +143,6 @@ tools/pipeline/.bin
 tools/pipeline/pipeline
 .ci-bootstrap
 
-# Ignore stubmaker outputs on ent so they don't get checked in
-*_stubs_ent.go
-
 # scratch directory holding random stuff
 scratch
 
@@ -148,3 +151,4 @@ scratch
 
 # bob
 .bob/notes
+.bob/tmp

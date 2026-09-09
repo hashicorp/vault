@@ -37,16 +37,14 @@ func TestKVv2_UpgradePaths(t *testing.T) {
 			"kv": logicalKv.Factory,
 		},
 		EnableRaw: true,
-		Logger:    logger,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+		Logger:      logger,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
 
 	core := cluster.Cores[0]
-	vault.TestWaitActive(t, core.Core)
 	client := core.Client
 
 	// Enable KVv2

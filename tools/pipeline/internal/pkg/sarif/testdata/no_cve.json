@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "TestScanner",
+          "version": "1.0.0",
+          "rules": [
+            {
+              "id": "CWE-79",
+              "name": "Cross-site Scripting (XSS)",
+              "shortDescription": {
+                "text": "Improper Neutralization of Input During Web Page Generation"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "79",
+                    "toolComponent": {
+                      "name": "CWE"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "id": "CWE-89",
+              "name": "SQL Injection",
+              "shortDescription": {
+                "text": "Improper Neutralization of Special Elements used in an SQL Command"
+              },
+              "relationships": [
+                {
+                  "target": {
+                    "id": "89",
+                    "toolComponent": {
+                      "name": "CWE"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-79",
+          "message": {
+            "text": "Potential XSS vulnerability detected"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/web.go"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "CWE-89",
+          "message": {
+            "text": "Potential SQL injection vulnerability detected"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "src/database.go"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

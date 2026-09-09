@@ -81,10 +81,7 @@ module('Acceptance | auth config form', function (hooks) {
         'root_password_ttl',
         'tenant_id',
       ];
-      // until the vault-plugin-auth-azure changes are released, these fields will be in the default group
-      // this test should then fail and the following line can be removed and the next line uncommented
-      this.configFields.push('client_id', 'client_secret');
-      // this.configToggles = { 'Azure Options': ['client_id', 'client_secret'] };
+      this.configToggles = { 'Azure Options': ['client_id', 'client_secret'] };
       await login();
       return visit('/vault/settings/auth/enable');
     });

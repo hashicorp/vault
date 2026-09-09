@@ -493,11 +493,7 @@ func TestLDAPAiaCrlUrls(t *testing.T) {
 		NumCores:    1,
 		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-	singleCore := cluster.Cores[0]
-	vault.TestWaitActive(t, singleCore.Core)
-	client := singleCore.Client
+	client := cluster.Cores[0].Client
 
 	mountPKIEndpoint(t, client, "pki")
 
@@ -572,9 +568,6 @@ func TestIntegrationOCSPClientWithPKI(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
 	cores := cluster.Cores
 	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client

@@ -31,6 +31,8 @@ func (p7 *PKCS7) Decrypt(cert *x509.Certificate, pkey crypto.PrivateKey) ([]byte
 	if recipient.EncryptedKey == nil {
 		return nil, errors.New("pkcs7: no enveloped recipient for provided certificate")
 	}
+
+	// Try first with direct rsa.PrivateKeys, we support OAEP with it
 	switch pkey := pkey.(type) {
 	case *rsa.PrivateKey:
 		var contentKey []byte
@@ -53,6 +55,28 @@ func (p7 *PKCS7) Decrypt(cert *x509.Certificate, pkey crypto.PrivateKey) ([]byte
 		}
 		return data.EncryptedContentInfo.decrypt(contentKey)
 	}
+
+	// Next try to use crypto.Decrypter interface (support for managed keys)
+	if decrypter, ok := pkey.(crypto.Decrypter); ok {
+		var contentKey []byte
+		var err error
+
+		if _, ok := decrypter.Public().(*rsa.PublicKey); !ok {
+			return nil, fmt.Errorf("decrypter public key is not an RSA key: %w", ErrUnsupportedAlgorithm)
+		}
+
+		switch {
+		case recipient.KeyEncryptionAlgorithm.Algorithm.Equal(OIDEncryptionAlgorithmRSAOAEP):
+			return nil, fmt.Errorf("RSA OAEP decryption algorithm is not supported for decrypter interfaces")
+		default:
+			contentKey, err = decrypter.Decrypt(rand.Reader, recipient.EncryptedKey, nil)
+			if err != nil {
+				return nil, fmt.Errorf("failed PKCS1v15 decryption of content key using decrypter interface: %w", err)
+			}
+		}
+		return data.EncryptedContentInfo.decrypt(contentKey)
+	}
+
 	return nil, ErrUnsupportedAlgorithm
 }
 
