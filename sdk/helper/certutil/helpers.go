@@ -109,6 +109,9 @@ var ExtendedKeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 37})
 // OID for Freshest CRL (aka Delta CRL Distribution Point) from RFC 5280: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.15
 var FreshestCrlOid = asn1.ObjectIdentifier([]int{2, 5, 29, 46})
 
+// OID for ReasonCode from RFC 2459
+var ReasonCodeOid = asn1.ObjectIdentifier([]int{2, 5, 29, 21})
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {

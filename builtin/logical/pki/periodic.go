@@ -331,6 +331,7 @@ func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 		CertExpiration:    cert.NotAfter,
 		RevocationTimeUTC: revocationTime,
 		CertificateIssuer: revInfo.CertificateIssuer,
+		ReasonCode:        revInfo.ReasonCode,
 	}
 
 	return revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)

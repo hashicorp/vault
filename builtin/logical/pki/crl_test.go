@@ -5,6 +5,7 @@ package pki
 
 import (
 	"context"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/json"
 	"fmt"
@@ -1762,4 +1763,104 @@ func TestCRLOpenSSLVerifyFreshestExtension(t *testing.T) {
 	out, err = exec.Command(opensslCmd, args...).CombinedOutput()
 	require.NoError(t, err, "failed running command %s with args: %v\n%s", opensslCmd, args, string(out))
 	require.NotContains(t, string(out), "X509v3 Freshest CRL")
+}
+
+// TestCRL_ReasonCodeExtension verifies that revoking a certificate with a
+// revocation_reason causes the reason code extension to appear. Omitting the
+// reason code should default to 0 (unspecified)
+func TestCRL_ReasonCodeExtension(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Set up a root CA and a role.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root example.com",
+		"key_type":    "ec",
+		"ttl":         "40h",
+	})
+	require.NoError(t, err)
+
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
+		"allow_any_name":    true,
+		"enforce_hostnames": false,
+		"key_type":          "ec",
+		"ttl":               "1h",
+	})
+	require.NoError(t, err)
+
+	// Issue three leaf certs: one to revoke with a reason, one without, one with an invalid reason code.
+	resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "with-reason.example.com",
+	})
+	require.NoError(t, err)
+	serialWithReason := resp.Data["serial_number"].(string)
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "without-reason.example.com",
+	})
+	require.NoError(t, err)
+	serialWithoutReason := resp.Data["serial_number"].(string)
+
+	resp, err = CBWrite(b, s, "issue/test", map[string]interface{}{
+		"common_name": "invalid-reason.example.com",
+	})
+	require.NoError(t, err)
+	serialInvalidReason := resp.Data["serial_number"].(string)
+
+	// Revoke the first cert with keyCompromise (1).
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number":     serialWithReason,
+		"revocation_reason": 1,
+	})
+	require.NoError(t, err)
+
+	// Revoke the second cert with no reason.
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number": serialWithoutReason,
+	})
+	require.NoError(t, err)
+
+	// Revoke the third cert with an invalid reason code, this should throw an error.
+	_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+		"serial_number":     serialInvalidReason,
+		"revocation_reason": -1,
+	})
+	require.Error(t, err)
+
+	// Fetch and parse the CRL.
+	crlResp := requestCrlFromBackend(t, s, b)
+	crl := parseCrlPemBytes(t, crlResp.Data["http_raw_body"].([]byte))
+
+	// Find each serial in the CRL and check its per-entry extensions.
+	var entryWithReason, entryWithoutReason *pkix.RevokedCertificate
+	for i, entry := range crl.RevokedCertificates {
+		serial := certutil.GetHexFormatted(entry.SerialNumber.Bytes(), ":")
+		switch serial {
+		case serialWithReason:
+			entryWithReason = &crl.RevokedCertificates[i]
+		case serialWithoutReason:
+			entryWithoutReason = &crl.RevokedCertificates[i]
+		}
+	}
+
+	require.NotNil(t, entryWithReason, "cert revoked with reason not found in CRL")
+	require.NotNil(t, entryWithoutReason, "cert revoked without reason not found in CRL")
+
+	// The entry revoked with keyCompromise must have the reason code extension.
+	foundReason, reasonExt, _ := findExtension(certutil.ReasonCodeOid, entryWithReason.Extensions)
+	require.True(t, foundReason, "reason code extension (OID 2.5.29.21) missing from CRL entry revoked with keyCompromise")
+	require.False(t, reasonExt.Critical, "reason code extension must not be marked critical per RFC 5280")
+
+	// Decode the ENUMERATED value and verify it equals 1 (keyCompromise).
+	var reasonVal asn1.RawValue
+	_, err = asn1.Unmarshal(reasonExt.Value, &reasonVal)
+	require.NoError(t, err, "failed to unmarshal reason code extension value")
+	require.Equal(t, asn1.TagEnum, reasonVal.Tag, "reason code extension must use ENUMERATED ASN.1 tag")
+	require.Len(t, reasonVal.Bytes, 1, "reason code value should be a single byte for codes 0-10")
+	require.Equal(t, byte(1), reasonVal.Bytes[0], "expected keyCompromise (1) reason code")
+
+	// The entry revoked without a reason must have no reason code extension.
+	foundReason, _, _ = findExtension(certutil.ReasonCodeOid, entryWithoutReason.Extensions)
+	require.False(t, foundReason, "reason code extension should not be present when no reason was specified")
 }
