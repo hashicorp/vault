@@ -308,6 +308,12 @@ func (c *LoginCommand) Run(args []string) int {
 		// Store the token in the local client
 		if err := tokenHelper.Store(token); err != nil {
 			c.UI.Error(fmt.Sprintf("Error storing token: %s", err))
+			if c.flagNoPrint {
+				// -no-print exists specifically so the token never hits stdout
+				// (CI logs, Cloud Logging). Do not dump the secret as a
+				// consolation prize when persistence fails (#32089).
+				return 2
+			}
 			c.UI.Error(wrapAtLength(
 				"Authentication was successful, but the token was not persisted. The "+
 					"resulting token is shown below for your records.") + "\n")
