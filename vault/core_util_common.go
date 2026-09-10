@@ -93,8 +93,12 @@ func (c *Core) GetCertCountManager() cert_count.CertificateCountManager {
 }
 
 func (c *Core) GetConsumptionBillingManager() logical.ConsumptionBillingManager {
-	if c.consumptionBilling == nil {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
 		return nil
 	}
-	return c.consumptionBilling
+	return cb
 }

@@ -130,10 +130,10 @@ func (c *Core) consumptionBillingMetricsWorker(ctx context.Context) {
 				if err := c.updateBillingMetrics(ctx, now); err != nil {
 					c.logger.Error("error updating billing metrics", "error", err)
 				}
-				// If active node, also send metrics to the control hub
+				// If active node, also send metrics to the secure hub
 				if state := c.HAStateWithLock(); state == consts.Active {
 					if err := c.sendBillingMetrics(ctx, now); err != nil {
-						c.logger.Error("error sending billing metrics", "error", err)
+						c.logger.Error("error sending consumption billing metrics to secure hub", "error", err)
 					}
 				}
 			case <-ctx.Done():

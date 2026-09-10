@@ -1001,12 +1001,16 @@ func (c *Core) UpdatePkiDurationAdjustedCount(ctx context.Context, inc float64, 
 		return fmt.Errorf("PKI duration-adjusted increment must be non-negative, got %f", inc)
 	}
 
-	if c.consumptionBilling == nil {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
 		return errors.New("consumption billing is not initialized")
 	}
 
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	return c.storePkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth, inc)
 }
