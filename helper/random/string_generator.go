@@ -79,6 +79,11 @@ type StringGenerator struct {
 	// Rules the generated strings must adhere to.
 	Rules serializableRules `mapstructure:"-" json:"rule"` // This is "rule" in JSON so it matches the HCL property type
 
+	// ConsecutiveCharsAllowed controls whether the same character may appear in adjacent positions. The comparison is
+	// exact, so when this is false "aa" is rejected but "aA" is not. A nil value means true so that generators
+	// constructed directly (rather than parsed from HCL) keep the historical behavior.
+	ConsecutiveCharsAllowed *bool `mapstructure:"consecutive-chars-allowed" json:"consecutive-chars-allowed,omitempty"`
+
 	// CharsetRule to choose runes from. This is computed from the rules, not directly configurable
 	charset     runes
 	charsetLock sync.RWMutex
@@ -135,8 +140,27 @@ func (g *StringGenerator) generate(rng io.Reader) (str string, err error) {
 		}
 	}
 
+	if !g.AllowsConsecutiveChars() && hasConsecutiveChars(candidate) {
+		return "", nil
+	}
+
 	// Passed all rules
 	return string(candidate), nil
+}
+
+// AllowsConsecutiveChars returns the effective value of ConsecutiveCharsAllowed, defaulting to true when unset.
+func (g *StringGenerator) AllowsConsecutiveChars() bool {
+	return g.ConsecutiveCharsAllowed == nil || *g.ConsecutiveCharsAllowed
+}
+
+// hasConsecutiveChars returns true if any two adjacent runes are identical.
+func hasConsecutiveChars(value []rune) bool {
+	for i := 1; i < len(value); i++ {
+		if value[i] == value[i-1] {
+			return true
+		}
+	}
+	return false
 }
 
 const (
@@ -253,6 +277,12 @@ func (g *StringGenerator) validateConfig() (err error) {
 				break
 			}
 		}
+	}
+
+	// A charset with a single character can never produce a string longer than 1 without repeating that character.
+	// The charset is already de-duplicated by getChars. Anything more subtle than this is left to the generation timeout.
+	if !g.AllowsConsecutiveChars() && g.Length > 1 && len(g.charset) == 1 {
+		merr = multierror.Append(merr, fmt.Errorf("consecutive characters are not allowed but the charset contains only one character"))
 	}
 	return merr.ErrorOrNil()
 }

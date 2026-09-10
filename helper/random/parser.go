@@ -106,8 +106,9 @@ func (p PolicyParser) ParsePolicy(raw string) (sg StringGenerator, err error) {
 	}
 
 	gen = StringGenerator{
-		Length: gen.Length,
-		Rules:  rules,
+		Length:                  gen.Length,
+		Rules:                   rules,
+		ConsecutiveCharsAllowed: gen.ConsecutiveCharsAllowed,
 	}
 
 	err = gen.validateConfig()

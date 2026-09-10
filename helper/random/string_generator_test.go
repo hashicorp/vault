@@ -105,6 +105,128 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 	}
 }
 
+func TestStringGenerator_Generate_consecutiveChars(t *testing.T) {
+	type testCase struct {
+		generator *StringGenerator
+	}
+
+	// A small charset makes adjacent repeats very likely, so if the restriction wasn't being enforced these tests
+	// would fail almost immediately.
+	tests := map[string]testCase{
+		"disallowed": {
+			generator: &StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("aAbBcC"),
+					},
+				},
+			},
+		},
+		"disallowed with charset rules": {
+			generator: &StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				Rules: []Rule{
+					CharsetRule{
+						Charset:  []rune("abc"),
+						MinChars: 3,
+					},
+					CharsetRule{
+						Charset:  []rune("ABC"),
+						MinChars: 3,
+					},
+					CharsetRule{
+						Charset:  []rune("123"),
+						MinChars: 3,
+					},
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			for i := 0; i < 100; i++ {
+				actual, err := test.generator.Generate(ctx, nil)
+				if err != nil {
+					t.Fatalf("no error expected, but got: %s", err)
+				}
+				if len([]rune(actual)) != test.generator.Length {
+					t.Fatalf("expected length %d, got %d: %q", test.generator.Length, len([]rune(actual)), actual)
+				}
+				if hasConsecutiveChars([]rune(actual)) {
+					t.Fatalf("generated string contains consecutive characters: %q", actual)
+				}
+				for _, rule := range test.generator.Rules {
+					if !rule.Pass([]rune(actual)) {
+						t.Fatalf("generated string failed rule %s: %q", rule.Type(), actual)
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestStringGenerator_Generate_consecutiveCharsAllowedByDefault(t *testing.T) {
+	// With a single-character charset every generated string necessarily repeats that character, which proves the
+	// restriction is off unless explicitly disabled.
+	gen := &StringGenerator{
+		Length: 5,
+		Rules: []Rule{
+			CharsetRule{
+				Charset: []rune("a"),
+			},
+		},
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	actual, err := gen.Generate(ctx, nil)
+	if err != nil {
+		t.Fatalf("no error expected, but got: %s", err)
+	}
+	if actual != "aaaaa" {
+		t.Fatalf("expected %q, got %q", "aaaaa", actual)
+	}
+}
+
+func TestHasConsecutiveChars(t *testing.T) {
+	tests := map[string]struct {
+		value    string
+		expected bool
+	}{
+		"empty":                     {value: "", expected: false},
+		"single char":               {value: "a", expected: false},
+		"no repeats":                {value: "abcdef", expected: false},
+		"repeat separated":          {value: "aba", expected: false},
+		"lowercase repeat":          {value: "abccd", expected: true},
+		"uppercase repeat":          {value: "ABBC", expected: true},
+		"different case is allowed": {value: "abaAd", expected: false},
+		"repeat at start":           {value: "aab", expected: true},
+		"repeat at end":             {value: "baa", expected: true},
+		"digit repeat":              {value: "a11b", expected: true},
+		"symbol repeat":             {value: "a--b", expected: true},
+		"accented char is distinct": {value: "aá", expected: false},
+		"non-ascii repeat":          {value: "éé", expected: true},
+		"non-ascii different case":  {value: "éÉ", expected: false},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual := hasConsecutiveChars([]rune(test.value))
+			if actual != test.expected {
+				t.Fatalf("hasConsecutiveChars(%q) = %t, expected %t", test.value, actual, test.expected)
+			}
+		})
+	}
+}
+
 func TestStringGenerator_Generate_errors(t *testing.T) {
 	type testCase struct {
 		timeout   time.Duration
@@ -619,6 +741,46 @@ func TestValidate(t *testing.T) {
 				},
 			},
 			expectErr: true,
+		},
+		"consecutive chars disallowed with single character": {
+			generator: &StringGenerator{
+				Length:                  5,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("a"),
+			},
+			expectErr: true,
+		},
+		"consecutive chars disallowed with same letter in both cases": {
+			generator: &StringGenerator{
+				Length:                  5,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("aA"),
+			},
+			expectErr: false,
+		},
+		"consecutive chars disallowed with single character and length 1": {
+			generator: &StringGenerator{
+				Length:                  1,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("a"),
+			},
+			expectErr: false,
+		},
+		"consecutive chars disallowed with multiple characters": {
+			generator: &StringGenerator{
+				Length:                  5,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("ab"),
+			},
+			expectErr: false,
+		},
+		"consecutive chars allowed with single character": {
+			generator: &StringGenerator{
+				Length:                  5,
+				ConsecutiveCharsAllowed: boolPtr(true),
+				charset:                 []rune("a"),
+			},
+			expectErr: false,
 		},
 	}
 
