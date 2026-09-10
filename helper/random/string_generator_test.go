@@ -13,6 +13,7 @@ import (
 	MRAND "math/rand"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 )
@@ -108,12 +109,49 @@ func TestStringGenerator_Generate_successful(t *testing.T) {
 func TestStringGenerator_Generate_consecutiveChars(t *testing.T) {
 	type testCase struct {
 		generator *StringGenerator
+		// mustContain is a substring that every generated string must include. Empty means no requirement.
+		mustContain string
 	}
 
-	// A small charset makes adjacent repeats very likely, so if the restriction wasn't being enforced these tests
-	// would fail almost immediately.
+	// Every case runs under a short budget. With rejection sampling the two-character charsets would time out, since
+	// almost every random candidate contains an adjacent repeat, so this also proves the string is built constructively.
 	tests := map[string]testCase{
-		"disallowed": {
+		"two character charset": {
+			generator: &StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("ab"),
+					},
+				},
+			},
+		},
+		"two character charset long": {
+			generator: &StringGenerator{
+				Length:                  100,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("ab"),
+					},
+				},
+			},
+		},
+		"same letter in both cases": {
+			// The comparison is exact, so "aA" is legal. With only these two characters the string must alternate.
+			generator: &StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("aA"),
+					},
+				},
+			},
+			mustContain: "aA",
+		},
+		"mixed charset": {
 			generator: &StringGenerator{
 				Length:                  20,
 				ConsecutiveCharsAllowed: boolPtr(false),
@@ -124,7 +162,7 @@ func TestStringGenerator_Generate_consecutiveChars(t *testing.T) {
 				},
 			},
 		},
-		"disallowed with charset rules": {
+		"with charset rules": {
 			generator: &StringGenerator{
 				Length:                  20,
 				ConsecutiveCharsAllowed: boolPtr(false),
@@ -148,7 +186,7 @@ func TestStringGenerator_Generate_consecutiveChars(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
 
 			for i := 0; i < 100; i++ {
@@ -162,6 +200,9 @@ func TestStringGenerator_Generate_consecutiveChars(t *testing.T) {
 				if hasConsecutiveChars([]rune(actual)) {
 					t.Fatalf("generated string contains consecutive characters: %q", actual)
 				}
+				if test.mustContain != "" && !strings.Contains(actual, test.mustContain) {
+					t.Fatalf("generated string %q does not contain %q", actual, test.mustContain)
+				}
 				for _, rule := range test.generator.Rules {
 					if !rule.Pass([]rune(actual)) {
 						t.Fatalf("generated string failed rule %s: %q", rule.Type(), actual)
@@ -170,6 +211,162 @@ func TestStringGenerator_Generate_consecutiveChars(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRandomRunesNoConsecutive_successful(t *testing.T) {
+	type testCase struct {
+		charset []rune // Assumes no duplicate runes
+		length  int
+	}
+
+	tests := map[string]testCase{
+		"two characters": {
+			charset: []rune("ab"),
+			length:  20,
+		},
+		"small charset": {
+			charset: []rune("abcde"),
+			length:  20,
+		},
+		"common charset": {
+			charset: AlphaNumericShortSymbolRuneset,
+			length:  20,
+		},
+		"length 1 with single character": {
+			charset: []rune("a"),
+			length:  1,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			runeset := map[rune]bool{}
+			runesFound := []rune{}
+
+			for i := 0; i < 10000; i++ {
+				actual, err := randomRunesNoConsecutive(rand.Reader, test.charset, test.length)
+				if err != nil {
+					t.Fatalf("no error expected, but got: %s", err)
+				}
+				if len(actual) != test.length {
+					t.Fatalf("expected length %d, got %d: %q", test.length, len(actual), string(actual))
+				}
+				if hasConsecutiveChars(actual) {
+					t.Fatalf("string contains consecutive characters: %q", string(actual))
+				}
+				for _, r := range actual {
+					if runeset[r] {
+						continue
+					}
+					runeset[r] = true
+					runesFound = append(runesFound, r)
+				}
+			}
+
+			sort.Sort(runes(runesFound))
+
+			// Sort the input too just to ensure that they can be compared
+			sort.Sort(runes(test.charset))
+
+			// Every rune must be reachable, including the last one which is only selected via the index shift
+			if !reflect.DeepEqual(runesFound, test.charset) {
+				t.Fatalf("Didn't find all characters from the charset\nActual  : [%s]\nExpected: [%s]", string(runesFound), string(test.charset))
+			}
+		})
+	}
+}
+
+func TestRandomRunesNoConsecutive_deterministic(t *testing.T) {
+	// Pins the index shift: with charset "ab" every string must strictly alternate, and with a larger charset the
+	// seeded output proves the shifted index is applied relative to the previous rune.
+	type testCase struct {
+		rngSeed  int64
+		charset  string
+		length   int
+		expected string
+	}
+
+	tests := map[string]testCase{
+		"two characters": {
+			rngSeed:  1585593298447807000,
+			charset:  "ab",
+			length:   10,
+			expected: "babababababa"[:10],
+		},
+		"small charset": {
+			rngSeed:  1585593298447807000,
+			charset:  "abcde",
+			length:   20,
+			expected: "dadaebadbdbdaebdcecb",
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			rng := MRAND.New(MRAND.NewSource(test.rngSeed))
+			actual, err := randomRunesNoConsecutive(rng, []rune(test.charset), test.length)
+			if err != nil {
+				t.Fatalf("Expected no error, but found: %s", err)
+			}
+			if string(actual) != test.expected {
+				t.Fatalf("Actual: %s  Expected: %s", string(actual), test.expected)
+			}
+		})
+	}
+}
+
+func TestRandomRunesNoConsecutive_errors(t *testing.T) {
+	type testCase struct {
+		charset []rune
+		length  int
+		rng     io.Reader
+	}
+
+	tests := map[string]testCase{
+		"nil charset": {
+			charset: nil,
+			length:  20,
+			rng:     rand.Reader,
+		},
+		"single character with length > 1": {
+			charset: []rune("a"),
+			length:  2,
+			rng:     rand.Reader,
+		},
+		"zero length": {
+			charset: []rune("ab"),
+			length:  0,
+			rng:     rand.Reader,
+		},
+		"bad RNG reader": {
+			charset: []rune("ab"),
+			length:  20,
+			rng:     badReader{},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			actual, err := randomRunesNoConsecutive(test.rng, test.charset, test.length)
+			if err == nil {
+				t.Fatalf("Expected error but none found")
+			}
+			if actual != nil {
+				t.Fatalf("Expected nil result but found: %q", string(actual))
+			}
+		})
+	}
+}
+
+// hasConsecutiveChars returns true if any two adjacent runes are identical. Test helper only: production code builds
+// strings so that this can never be true rather than checking after the fact.
+func hasConsecutiveChars(value []rune) bool {
+	for i := 1; i < len(value); i++ {
+		if value[i] == value[i-1] {
+			return true
+		}
+	}
+	return false
 }
 
 func TestStringGenerator_Generate_consecutiveCharsAllowedByDefault(t *testing.T) {

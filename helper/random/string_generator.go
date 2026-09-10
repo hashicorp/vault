@@ -129,7 +129,15 @@ func (g *StringGenerator) generate(rng io.Reader) (str string, err error) {
 	g.charsetLock.RLock()
 	charset := g.charset
 	g.charsetLock.RUnlock()
-	candidate, err := randomRunes(rng, charset, g.Length)
+
+	var candidate []rune
+	if g.AllowsConsecutiveChars() {
+		candidate, err = randomRunes(rng, charset, g.Length)
+	} else {
+		// Built so that no two adjacent runes are identical, rather than drawing a full candidate and rejecting it.
+		// Rejection would time out on small charsets where almost every candidate contains a repeat.
+		candidate, err = randomRunesNoConsecutive(rng, charset, g.Length)
+	}
 	if err != nil {
 		return "", fmt.Errorf("unable to generate random characters: %w", err)
 	}
@@ -140,10 +148,6 @@ func (g *StringGenerator) generate(rng io.Reader) (str string, err error) {
 		}
 	}
 
-	if !g.AllowsConsecutiveChars() && hasConsecutiveChars(candidate) {
-		return "", nil
-	}
-
 	// Passed all rules
 	return string(candidate), nil
 }
@@ -151,16 +155,6 @@ func (g *StringGenerator) generate(rng io.Reader) (str string, err error) {
 // AllowsConsecutiveChars returns the effective value of ConsecutiveCharsAllowed, defaulting to true when unset.
 func (g *StringGenerator) AllowsConsecutiveChars() bool {
 	return g.ConsecutiveCharsAllowed == nil || *g.ConsecutiveCharsAllowed
-}
-
-// hasConsecutiveChars returns true if any two adjacent runes are identical.
-func hasConsecutiveChars(value []rune) bool {
-	for i := 1; i < len(value); i++ {
-		if value[i] == value[i-1] {
-			return true
-		}
-	}
-	return false
 }
 
 const (
@@ -173,14 +167,80 @@ const (
 // could be expanded if needed. Expanding the maximum charset size will decrease performance because it will need to
 // combine bytes into a larger integer using binary.BigEndian.Uint16() function.
 func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, err error) {
+	if err := validateCharsetAndLength(charset, length); err != nil {
+		return nil, err
+	}
+
+	indexes, err := randomIndexes(rng, len(charset), length)
+	if err != nil {
+		return nil, err
+	}
+
+	candidate = make([]rune, length)
+	for i, index := range indexes {
+		candidate[i] = charset[index]
+	}
+	return candidate, nil
+}
+
+// randomRunesNoConsecutive creates a random string based on the provided charset where no two adjacent runes are
+// identical. The first rune is chosen uniformly from the whole charset. Every later rune is chosen uniformly from the
+// charset with the previous rune removed: an index is drawn from [0, len(charset)-1) and shifted up by one if it lands
+// on or after the previous index, so each of the remaining runes is equally likely. The comparison is exact, so a
+// charset containing both "a" and "A" may produce "aA".
+func randomRunesNoConsecutive(rng io.Reader, charset []rune, length int) (candidate []rune, err error) {
+	if err := validateCharsetAndLength(charset, length); err != nil {
+		return nil, err
+	}
+	if length == 1 {
+		return randomRunes(rng, charset, length)
+	}
+	if len(charset) < 2 {
+		return nil, fmt.Errorf("charset must contain at least 2 characters when consecutive characters are not allowed")
+	}
+
+	first, err := randomIndexes(rng, len(charset), 1)
+	if err != nil {
+		return nil, err
+	}
+	rest, err := randomIndexes(rng, len(charset)-1, length-1)
+	if err != nil {
+		return nil, err
+	}
+
+	candidate = make([]rune, 0, length)
+	prev := first[0]
+	candidate = append(candidate, charset[prev])
+	for _, index := range rest {
+		if index >= prev {
+			index++
+		}
+		candidate = append(candidate, charset[index])
+		prev = index
+	}
+	return candidate, nil
+}
+
+func validateCharsetAndLength(charset []rune, length int) error {
 	if len(charset) == 0 {
-		return nil, fmt.Errorf("no charset specified")
+		return fmt.Errorf("no charset specified")
 	}
 	if len(charset) > maxCharsetLen {
-		return nil, fmt.Errorf("charset is too long: limited to %d characters", math.MaxUint8)
+		return fmt.Errorf("charset is too long: limited to %d characters", math.MaxUint8)
 	}
 	if length <= 0 {
-		return nil, fmt.Errorf("unable to generate a zero or negative length runeset")
+		return fmt.Errorf("unable to generate a zero or negative length runeset")
+	}
+	return nil
+}
+
+// randomIndexes draws count indexes uniformly from [0, n) using the provided RNG. n must be in [1, maxCharsetLen].
+func randomIndexes(rng io.Reader, n int, count int) (indexes []int, err error) {
+	if n <= 0 || n > maxCharsetLen {
+		return nil, fmt.Errorf("index range must be between 1 and %d", maxCharsetLen)
+	}
+	if count < 0 {
+		return nil, fmt.Errorf("unable to generate a negative number of indexes")
 	}
 
 	// This can't always select indexes from [0-maxCharsetLen) because it could introduce bias to the character selection.
@@ -196,7 +256,7 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 	//   Trunc(4.06) => 4
 	// Multiply by the charset length
 	// Subtract 1 to account for 0-based counting and you get the max index value: 251
-	maxAllowedRNGValue := (maxCharsetLen/len(charset))*len(charset) - 1
+	maxAllowedRNGValue := (maxCharsetLen/n)*n - 1
 
 	// rngBufferMultiplier increases the size of the RNG buffer to account for lost
 	// indexes due to the maxAllowedRNGValue
@@ -213,19 +273,20 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 		rng = rand.Reader
 	}
 
-	charsetLen := byte(len(charset))
+	// n == maxCharsetLen overflows a byte, which is why the modulo below is skipped in that case
+	nByte := byte(n)
 
-	runes := make([]rune, 0, length)
+	indexes = make([]int, 0, count)
 
-	for len(runes) < length {
+	for len(indexes) < count {
 		// Generate a bunch of indexes
-		data := make([]byte, int(float64(length)*rngBufferMultiplier))
+		data := make([]byte, int(float64(count)*rngBufferMultiplier))
 		numBytes, err := rng.Read(data)
 		if err != nil {
 			return nil, err
 		}
 
-		// Append characters until either we're out of indexes or the length is long enough
+		// Append indexes until either we're out of bytes or we have enough
 		for i := 0; i < numBytes; i++ {
 			// Be careful to ensure that maxAllowedRNGValue isn't >= 256 as it will overflow and this
 			// comparison will prevent characters from being selected from the charset
@@ -234,19 +295,18 @@ func randomRunes(rng io.Reader, charset []rune, length int) (candidate []rune, e
 			}
 
 			index := data[i]
-			if len(charset) != maxCharsetLen {
-				index = index % charsetLen
+			if n != maxCharsetLen {
+				index = index % nByte
 			}
-			r := charset[index]
-			runes = append(runes, r)
+			indexes = append(indexes, int(index))
 
-			if len(runes) == length {
+			if len(indexes) == count {
 				break
 			}
 		}
 	}
 
-	return runes, nil
+	return indexes, nil
 }
 
 // validateConfig of the generator to ensure that we can successfully generate a string.
