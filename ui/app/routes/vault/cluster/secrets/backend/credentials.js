@@ -66,8 +66,7 @@ export default Route.extend({
 
   async getAwsRole(backend, id) {
     try {
-      const { data } = await this.api.secrets.awsReadRole(id, backend);
-      return data;
+      return await this.api.secrets.awsReadRole(id, backend);
     } catch (e) {
       // swallow error, non-essential data
       return;

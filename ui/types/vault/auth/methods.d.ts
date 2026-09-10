@@ -67,10 +67,6 @@ export interface JwtOidcAuthUrlResponse extends ApiResponse {
   data: { auth_url: string };
 }
 
-export interface OktaVerifyApiResponse extends ApiResponse {
-  data: { correct_answer: number };
-}
-
 export interface SamlLoginApiResponse extends ApiResponse {
   auth: AuthResponseAuthKey;
 }
