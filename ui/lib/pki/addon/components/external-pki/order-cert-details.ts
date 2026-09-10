@@ -84,11 +84,11 @@ export default class ExternalPkiOrderCertDetailsComponent extends Component<Args
     const challenges = this.args.order?.details?.challenges as Record<string, Challenge[]> | undefined;
     if (!challenges) return [];
     return Object.entries(challenges).map(([identifier, challenges]) => {
-      // At least one challenge has to be valid for the identifier's authorization to be valid
+      const challengeStatus = this.computeChallengeStatus(challenges);
       const validChallenges = challenges.filter((c) => c.challenge_status === 'valid');
       return {
         identifier,
-        challenge_status: validChallenges.length ? 'valid' : 'pending',
+        challenge_status: challengeStatus,
         challenge_type: validChallenges.map((c) => c.challenge_type.toUpperCase()).join(', '),
         isOpen: true,
         children: challenges.map((challenge) => ({
@@ -100,4 +100,17 @@ export default class ExternalPkiOrderCertDetailsComponent extends Component<Args
       };
     });
   }
+
+  // Returns 'valid' if any challenge is valid, 'invalid' only if the order errored and
+  // an invalid challenge exists, otherwise 'pending'.
+  computeChallengeStatus = (challenges: Challenge[]): string => {
+    if (challenges.some((c) => c.challenge_status === 'valid')) {
+      return 'valid';
+    }
+    const errored = this.args.order?.details?.order_status === 'error';
+    if (errored && challenges.some((c) => c.challenge_status === 'invalid')) {
+      return 'invalid';
+    }
+    return 'pending';
+  };
 }
