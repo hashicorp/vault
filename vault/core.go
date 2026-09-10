@@ -678,6 +678,8 @@ type Core struct {
 	pendingRaftPeers *lru.Cache[string, *raftBootstrapChallenge]
 	// holds the lock for modifying pendingRaftPeers
 	pendingRaftPeersLock sync.RWMutex
+	// Limits the number of concurrent retrying raft join background workers.
+	raftJoinRetryLimiter chan struct{}
 
 	// rawConfig stores the config as-is from the provided server configuration.
 	rawConfig *atomic.Value
@@ -1169,6 +1171,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		postUnsealStarted:               new(uint32),
 		raftInfo:                        new(atomic.Value),
 		raftJoinDoneCh:                  make(chan struct{}),
+		raftJoinRetryLimiter:            make(chan struct{}, raftMaxConcurrentRetryJoins),
 		clusterHeartbeatInterval:        clusterHeartbeatInterval,
 		activityLogConfig:               conf.ActivityLogConfig,
 		billingConfig:                   conf.BillingConfig,
@@ -1181,6 +1184,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		enableResponseHeaderRaftNodeID:  conf.EnableResponseHeaderRaftNodeID,
 		mountMigrationTracker:           &sync.Map{},
 		disableSSCTokens:                conf.DisableSSCTokens,
+		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
 		effectiveSDKVersion:             effectiveSDKVersion,
 		userFailedLoginInfo:             make(map[FailedLoginUser]*FailedLoginInfo),
 		experiments:                     conf.Experiments,
@@ -1195,11 +1199,10 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		activeNodeClockSkewMillis:       uberAtomic.NewInt64(0),
 		periodicLeaderRefreshInterval:   conf.PeriodicLeaderRefreshInterval,
 		rpcLastSuccessfulHeartbeat:      new(atomic.Value),
-		reportingScanDirectory:          conf.ReportingScanDirectory,
 		enableUnauthRekey:               new(atomic.Bool),
 		enableUnauthGenerateRoot:        new(atomic.Bool),
 		enableUnauthDROperationToken:    new(atomic.Bool),
-		denySlashInTemplatedPolicyPaths: conf.DenySlashInTemplatedPolicyPaths,
+		reportingScanDirectory:          conf.ReportingScanDirectory,
 	}
 
 	c.certCountManager = cert_count.InitCertificateCountManager(c.logger)
