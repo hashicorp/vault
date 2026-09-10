@@ -1674,3 +1674,115 @@ func TestLeaseCacheRestore_expired(t *testing.T) {
 	assert.Equal(t, "autoauthtoken", afterDB[0].Token)
 	assert.Equal(t, cacheboltdb.TokenType, afterDB[0].Type)
 }
+
+func TestLeaseCache_RegisterAutoAuthToken_CancelsPreviousToken(t *testing.T) {
+	// A lease obtained with the previous auto-auth token must stop being
+	// renewed once auto-auth re-authenticates. Vault revokes the lease along
+	// with its parent token, so every later renewal can only be denied.
+	responses := []*SendResponse{
+		newTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "lease_duration": 600, "data": {"value": "foo"}}`),
+	}
+
+	lc := testNewLeaseCache(t, responses)
+	require.NoError(t, lc.RegisterAutoAuthToken("firsttoken"))
+
+	sendReq := &SendRequest{
+		Token:   "firsttoken",
+		Request: httptest.NewRequest("GET", "http://example.com/v1/sample/api", strings.NewReader(`{"value": "input"}`)),
+	}
+	if _, err := lc.Send(context.Background(), sendReq); err != nil {
+		t.Fatal(err)
+	}
+
+	firstIndex, err := lc.db.Get(cachememdb.IndexNameToken, "firsttoken")
+	require.NoError(t, err)
+	require.NotNil(t, firstIndex.RenewCtxInfo)
+	previousCtx := firstIndex.RenewCtxInfo.Ctx
+
+	leaseIndex, err := lc.db.Get(cachememdb.IndexNameLease, "foo")
+	require.NoError(t, err)
+	require.NotNil(t, leaseIndex.RenewCtxInfo)
+	leaseCtx := leaseIndex.RenewCtxInfo.Ctx
+
+	// Auto-auth re-authenticates and hands the cache a different token.
+	require.NoError(t, lc.RegisterAutoAuthToken("secondtoken"))
+
+	select {
+	case <-previousCtx.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("context of the previous auto-auth token was not cancelled")
+	}
+
+	// Cancelling the token's context must cascade to the leases derived from
+	// it, which is what stops them being renewed against a dead token.
+	select {
+	case <-leaseCtx.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("context of the lease derived from the previous auto-auth token was not cancelled")
+	}
+
+	// The replacement token is registered and left alone.
+	secondIndex, err := lc.db.Get(cachememdb.IndexNameToken, "secondtoken")
+	require.NoError(t, err)
+	require.NotNil(t, secondIndex)
+	require.NoError(t, secondIndex.RenewCtxInfo.Ctx.Err())
+}
+
+func TestLeaseCache_RegisterAutoAuthToken_CancelsAfterRestore(t *testing.T) {
+	// After a restart with a persistent cache, restoreTokens puts the previous
+	// auto-auth token back into the cache before auto-auth registers it again.
+	// That registration takes the "already cached" path, which must still
+	// record the token, otherwise the next re-authentication has nothing to
+	// cancel and the stale lease watchers survive.
+	lc := testNewLeaseCache(t, nil)
+
+	restored := &cachememdb.Index{
+		ID:          "restored-index",
+		Token:       "restoredtoken",
+		Namespace:   "root/",
+		RequestPath: "/v1/auth/token/lookup-self",
+		Type:        cacheboltdb.TokenType,
+	}
+	restored.RenewCtxInfo = lc.createCtxInfo(nil)
+	require.NoError(t, lc.db.Set(restored))
+
+	// Auto-auth hands back the token that was just restored.
+	require.NoError(t, lc.RegisterAutoAuthToken("restoredtoken"))
+
+	index, err := lc.db.Get(cachememdb.IndexNameToken, "restoredtoken")
+	require.NoError(t, err)
+	restoredCtx := index.RenewCtxInfo.Ctx
+	require.NoError(t, restoredCtx.Err(), "restored token must not be cancelled by its own registration")
+
+	// The first re-authentication after the restart must cancel it.
+	require.NoError(t, lc.RegisterAutoAuthToken("freshtoken"))
+
+	select {
+	case <-restoredCtx.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("context of the restored auto-auth token was not cancelled on re-authentication")
+	}
+}
+
+func TestLeaseCache_RegisterAutoAuthToken_IgnoresEmptyToken(t *testing.T) {
+	// The sink can be handed an empty token while auto-auth is shutting down.
+	// That must not cancel the live token's context.
+	lc := testNewLeaseCache(t, nil)
+	require.NoError(t, lc.RegisterAutoAuthToken("livetoken"))
+
+	index, err := lc.db.Get(cachememdb.IndexNameToken, "livetoken")
+	require.NoError(t, err)
+	liveCtx := index.RenewCtxInfo.Ctx
+
+	require.NoError(t, lc.RegisterAutoAuthToken(""))
+	require.NoError(t, liveCtx.Err(), "an empty token write must not cancel the live auto-auth token")
+
+	// It must also leave the tracked token in place, otherwise the next real
+	// re-authentication would find nothing to cancel.
+	require.NoError(t, lc.RegisterAutoAuthToken("nexttoken"))
+	select {
+	case <-liveCtx.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("empty token write cleared the tracked auto-auth token")
+	}
+}
