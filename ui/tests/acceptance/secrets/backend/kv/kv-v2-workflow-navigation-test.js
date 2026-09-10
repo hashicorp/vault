@@ -80,9 +80,9 @@ const assertDetailTabs = (assert, current, hidden = []) => {
 };
 // patchLatest is only available for enterprise so it's not included here
 const DETAIL_TOOLBARS = ['delete', 'destroy', 'copy', 'versionDropdown', 'createNewVersion'];
-// `copy` renders an <Hds::Dropdown> toggle rather than a .toolbar-link/.toolbar-button,
-// so it has to be counted with its own selector.
-const DETAIL_TOOLBAR_DROPDOWNS = ['copy'];
+// `copy` and `versionDropdown` render <Hds::Dropdown> toggles rather than
+// .toolbar-link/.toolbar-button, so they have to be counted with their own selector.
+const DETAIL_TOOLBAR_DROPDOWNS = ['copy', 'versionDropdown'];
 const assertDetailsToolbar = (assert, expected = DETAIL_TOOLBARS) => {
   const expectedDropdowns = expected.filter((t) => DETAIL_TOOLBAR_DROPDOWNS.includes(t));
   const expectedActions = expected.filter((t) => !DETAIL_TOOLBAR_DROPDOWNS.includes(t));
@@ -492,7 +492,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/${secretPathUrlEncoded}/details?version=1`,
@@ -1231,7 +1231,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .hasText('You do not have permission to read this secret', 'Shows empty state on secret detail');
 
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/${secretPathUrlEncoded}/details?version=1`,

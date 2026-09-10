@@ -117,7 +117,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::VersionDiff', 
   });
 
   test('it renders compared data of the two versions and shows icons for deleted, destroyed and current', async function (assert) {
-    assert.expect(12);
+    assert.expect(11);
 
     this.fetchStub.onFirstCall().resolves({ data: { hello: 'world' } }); // version 1
     this.fetchStub.onSecondCall().resolves({ data: { foo: 'bar' } }); // version 4 (current version)
@@ -146,8 +146,5 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::VersionDiff', 
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
-    assert
-      .dom(`${PAGE.detail.version('1')} button`)
-      .hasClass('is-active', 'correctly shows the selected version 1 as active.');
   });
 });
