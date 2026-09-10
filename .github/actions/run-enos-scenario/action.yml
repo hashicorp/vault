@@ -106,7 +106,7 @@ runs:
 
     - if: inputs.setup-enos == 'true'
       name: Setup Enos
-      uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
+      uses: hashicorp/action-setup-enos@bfd47bdf7d118b9372acfaab048bcb9967026747 # v1.54
 
     - id: prepare-artifacts
       name: Prepare artifacts and debug directory
