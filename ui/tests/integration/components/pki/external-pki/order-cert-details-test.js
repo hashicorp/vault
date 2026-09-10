@@ -233,6 +233,57 @@ module('Integration | Component | ExternalPki::OrderCertDetails', function (hook
       .hasText('', 'displays empty challenge type when no valid challenges');
   });
 
+  test('it shows invalid status when order errored and a challenge is invalid', async function (assert) {
+    this.order = {
+      details: {
+        order_status: 'error',
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'invalid',
+              challenge_type: 'http-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
+      },
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom(GENERAL.tableData(0, 'challenge_status'))
+      .hasText('Invalid', 'displays invalid status when order errored and challenge is invalid');
+    assert
+      .dom(GENERAL.tableData(0, 'challenge_type'))
+      .hasText('', 'no challenge type shown for invalid status');
+  });
+
+  test('it shows pending status when a challenge is invalid but order has not errored', async function (assert) {
+    this.order = {
+      details: {
+        order_status: 'awaiting-challenge-fulfillment',
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'invalid',
+              challenge_type: 'http-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
+      },
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom(GENERAL.tableData(0, 'challenge_status'))
+      .hasText('Pending', 'shows pending when order has not errored even if challenge is invalid');
+  });
+
   test('it formats challenge types to uppercase', async function (assert) {
     this.order = {
       details: {
