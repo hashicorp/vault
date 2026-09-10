@@ -80,8 +80,7 @@ type StringGenerator struct {
 	Rules serializableRules `mapstructure:"-" json:"rule"` // This is "rule" in JSON so it matches the HCL property type
 
 	// ConsecutiveCharsAllowed controls whether the same character may appear in adjacent positions. The comparison is
-	// exact, so when this is false "aa" is rejected but "aA" is not. A nil value means true so that generators
-	// constructed directly (rather than parsed from HCL) keep the historical behavior.
+	// exact, so when this is false "aa" is rejected but "aA" is not. A nil value is treated as true.
 	ConsecutiveCharsAllowed *bool `mapstructure:"consecutive-chars-allowed" json:"consecutive-chars-allowed,omitempty"`
 
 	// CharsetRule to choose runes from. This is computed from the rules, not directly configurable
@@ -134,8 +133,6 @@ func (g *StringGenerator) generate(rng io.Reader) (str string, err error) {
 	if g.AllowsConsecutiveChars() {
 		candidate, err = randomRunes(rng, charset, g.Length)
 	} else {
-		// Built so that no two adjacent runes are identical, rather than drawing a full candidate and rejecting it.
-		// Rejection would time out on small charsets where almost every candidate contains a repeat.
 		candidate, err = randomRunesNoConsecutive(rng, charset, g.Length)
 	}
 	if err != nil {
@@ -339,8 +336,8 @@ func (g *StringGenerator) validateConfig() (err error) {
 		}
 	}
 
-	// A charset with a single character can never produce a string longer than 1 without repeating that character.
-	// The charset is already de-duplicated by getChars. Anything more subtle than this is left to the generation timeout.
+	// A single-character charset cannot produce a string longer than 1 without repeating that character. The charset
+	// has already been de-duplicated by getChars.
 	if !g.AllowsConsecutiveChars() && g.Length > 1 && len(g.charset) == 1 {
 		merr = multierror.Append(merr, fmt.Errorf("consecutive characters are not allowed but the charset contains only one character"))
 	}

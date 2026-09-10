@@ -113,8 +113,8 @@ func TestStringGenerator_Generate_consecutiveChars(t *testing.T) {
 		mustContain string
 	}
 
-	// Every case runs under a short budget. With rejection sampling the two-character charsets would time out, since
-	// almost every random candidate contains an adjacent repeat, so this also proves the string is built constructively.
+	// Two-character charsets have exactly one legal rune at every position after the first, so running them under a
+	// short budget proves generation does not rely on retries.
 	tests := map[string]testCase{
 		"two character charset": {
 			generator: &StringGenerator{
@@ -358,8 +358,7 @@ func TestRandomRunesNoConsecutive_errors(t *testing.T) {
 	}
 }
 
-// hasConsecutiveChars returns true if any two adjacent runes are identical. Test helper only: production code builds
-// strings so that this can never be true rather than checking after the fact.
+// hasConsecutiveChars returns true if any two adjacent runes are identical.
 func hasConsecutiveChars(value []rune) bool {
 	for i := 1; i < len(value); i++ {
 		if value[i] == value[i-1] {
