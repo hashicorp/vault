@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"maps"
+	"net/http"
 	"strconv"
 	"strings"
 	"testing"
@@ -1208,5 +1209,76 @@ func TestSignVerify_CachingDisabled(t *testing.T) {
 
 			require.True(t, valid.(bool))
 		})
+	}
+}
+
+func TestTransit_Sign_StatusCodes(t *testing.T) {
+	b, storage := createBackendWithSysView(t)
+
+	// Create an ed25519 key for signing
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test",
+		Data: map[string]interface{}{
+			"type": "ed25519",
+		},
+	}
+	_, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Test 1: UserError (negative key version) should return 400, not 500
+	req = &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "sign/test",
+		Data: map[string]interface{}{
+			"key_version": -1,
+			"input":       "aGVsbG8K", // base64 "hello\n"
+		},
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil || resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected HTTP 400 for UserError, got: %v", resp)
+	}
+
+	// Test 2: key_version beyond latest should also return 400
+	req2 := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "sign/test",
+		Data: map[string]interface{}{
+			"key_version": 999,
+			"input":       "aGVsbG8K",
+		},
+	}
+	resp2, err := b.HandleRequest(context.Background(), req2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp2 == nil || resp2.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected HTTP 400 for UserError (version beyond latest), got: %v", resp2)
+	}
+
+	// Test 3: Valid signing should return 200
+	req3 := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "sign/test",
+		Data: map[string]interface{}{
+			"input": "aGVsbG8K",
+		},
+	}
+	resp3, err := b.HandleRequest(context.Background(), req3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp3 == nil || resp3.StatusCode != http.StatusOK {
+		t.Fatalf("expected HTTP 200 for valid sign, got: %v", resp3)
 	}
 }
