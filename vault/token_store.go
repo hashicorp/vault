@@ -2676,6 +2676,10 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 	}
 
 	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
+	if te.Type == logical.TokenTypeEnt {
+		return ts.revokeCommonJWT(revokeCtx, req, te.ID)
+	}
+
 	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(revokeCtx, te)
 	if err != nil {
 		return nil, err
