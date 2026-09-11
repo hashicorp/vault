@@ -1713,7 +1713,12 @@ func TestCore_BillingRetentionMonths(t *testing.T) {
 	require.Equal(t, newRetention, retentionMonths)
 }
 
-func verifyMountAttributionBreakdowns(t *testing.T, expected logical.MountAttribution, actual logical.MountAttribution) {
+// assertMountAttribution verifies that a MountAttribution has the expected field values.
+// Count is compared with a small epsilon (1e-9) to handle 1-ULP floating-point rounding
+// differences that arise when counts are accumulated via toFloat64 function calls. The
+// Count field may be a json.Number after a storage round-trip, so it is parsed via its
+// string representation before comparison.
+func assertMountAttribution(t *testing.T, actual logical.MountAttribution, expected logical.MountAttribution) {
 	t.Helper()
 	require.Equal(t, expected.MountAccessor, actual.MountAccessor, "MountAccessor mismatch")
 	require.Equal(t, expected.MountPath, actual.MountPath, "MountPath mismatch for %s", expected.MountAccessor)
