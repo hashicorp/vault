@@ -305,11 +305,11 @@ module('Acceptance | recovery | snapshot-manage', function (hooks) {
 
       await click(GENERAL.button('Type'));
       // First select a different type to ensure input resets as expected
-      await click(GENERAL.radioByAttr('database'));
+      await click(GENERAL.radioByAttr('Database'));
       await fillIn(GENERAL.inputByAttr('manual-mount-path'), 'bad-path');
       // Now select type we actually want to use
       await click(GENERAL.button('Type'));
-      await click(GENERAL.radioByAttr('kv'));
+      await click(GENERAL.radioByAttr('KV v1'));
       assert.dom(GENERAL.inputByAttr('manual-mount-path')).hasValue('', 'input clears when type changes');
       await fillIn(GENERAL.inputByAttr('manual-mount-path'), customMountPath);
       await fillIn(GENERAL.inputByAttr('resourcePath'), `kvv1-recovered-data`);
@@ -349,11 +349,11 @@ module('Acceptance | recovery | snapshot-manage', function (hooks) {
 
       await click(GENERAL.button('Type'));
       // First select a different type to ensure input resets as expected
-      await click(GENERAL.radioByAttr('kv'));
+      await click(GENERAL.radioByAttr('KV v1'));
       await fillIn(GENERAL.inputByAttr('manual-mount-path'), 'bad-path');
       // Now select type we actually want to use
       await click(GENERAL.button('Type'));
-      await click(GENERAL.radioByAttr('database'));
+      await click(GENERAL.radioByAttr('Database'));
       assert.dom(GENERAL.inputByAttr('manual-mount-path')).hasValue('', 'input clears when type changes');
       await fillIn(GENERAL.inputByAttr('manual-mount-path'), customMountPath);
       await fillIn(GENERAL.inputByAttr('resourcePath'), `database-recovered-data`);

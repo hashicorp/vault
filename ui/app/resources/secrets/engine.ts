@@ -16,7 +16,7 @@ import type { Mount } from 'vault/mount';
 
 export const SUPPORTS_RECOVERY = [
   SupportedSecretBackendsEnum.CUBBYHOLE,
-  SupportedSecretBackendsEnum.KV, // only kv v1
+  SupportedSecretBackendsEnum.KV, //both kv v1 and kv v2
   SupportedSecretBackendsEnum.DATABASE,
 ] as const;
 
@@ -100,10 +100,6 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
   get supportsRecovery() {
     if (!SUPPORTS_RECOVERY.includes(this.effectiveEngineType as RecoverySupportedEngines)) {
       return false;
-    }
-
-    if (this.effectiveEngineType === SupportedSecretBackendsEnum.KV) {
-      return !this.isV2KV;
     }
 
     return true;
