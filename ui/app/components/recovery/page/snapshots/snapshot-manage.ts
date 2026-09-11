@@ -5,10 +5,12 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { debounce } from '@ember/runloop';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { restartableTask } from 'ember-concurrency';
 import { sanitizePath } from 'core/utils/sanitize-path';
+import { dump } from 'js-yaml';
 import SecretsEngineResource, { RecoverySupportedEngines } from 'vault/resources/secrets/engine';
 import { SupportedSecretBackendsEnum } from 'vault/helpers/supported-secret-backends';
 import { ROOT_NAMESPACE } from 'vault/utils/constants/namespace';
@@ -27,12 +29,18 @@ interface Args {
 
 type SecretData = { [key: string]: unknown };
 
+enum SecretReadFormat {
+  'UI' = 'ui',
+  'JSON' = 'json',
+  'YAML' = 'yaml',
+}
+
 type RecoveryData = {
   models: string[];
   query?: { [key: string]: string };
 };
 
-type MountOption = { type: RecoverySupportedEngines; path: string };
+type MountOption = { type: RecoverySupportedEngines; path: string; label: string };
 type GroupedOption = { groupName: string; options: MountOption[] };
 
 export default class SnapshotManage extends Component<Args> {
@@ -54,18 +62,28 @@ export default class SnapshotManage extends Component<Args> {
   @tracked bannerError = '';
 
   @tracked showReadModal = false;
-  @tracked showJson = false;
+  @tracked selectedSecretReadFormat: SecretReadFormat = SecretReadFormat.UI;
   @tracked recoveryData?: RecoveryData;
   @tracked recoverMethod = 'original';
 
   @tracked snapshotStatus: string | null = null;
+
+  format = Object.values(SecretReadFormat);
 
   private pollingController: { start: () => Promise<void>; cancel: () => void } | null = null;
 
   recoverySupportedEngines = {
     [SupportedSecretBackendsEnum.DATABASE]: 'Database',
     [SupportedSecretBackendsEnum.CUBBYHOLE]: 'Cubbyhole',
-    [SupportedSecretBackendsEnum.KV]: 'KV v1',
+    [SupportedSecretBackendsEnum.KV]: 'KV',
+  };
+
+  // display label: engine type
+  manualRecoveryOptions = {
+    Database: SupportedSecretBackendsEnum.DATABASE,
+    Cubbyhole: SupportedSecretBackendsEnum.CUBBYHOLE,
+    'KV v1': SupportedSecretBackendsEnum.KV,
+    'KV v2': SupportedSecretBackendsEnum.KV,
   };
 
   recoverMethods = [
@@ -93,6 +111,10 @@ export default class SnapshotManage extends Component<Args> {
     if (this.pollingController) {
       this.pollingController.cancel();
     }
+  }
+
+  get showAdvancedMode() {
+    return this.selectedSecretReadFormat !== SecretReadFormat.UI;
   }
 
   get hasValidationErrors() {
@@ -130,6 +152,10 @@ export default class SnapshotManage extends Component<Args> {
     }));
   }
 
+  get getSecretsDataInYAML() {
+    return dump(this.modelForData.secretData, { noRefs: true });
+  }
+
   get badge() {
     // Use polled status if available, otherwise fall back to initial model status
     const status = this.snapshotStatus || this.args.model.snapshot?.status;
@@ -164,8 +190,11 @@ export default class SnapshotManage extends Component<Args> {
         if (this.currentCluster?.performance?.isSecondary && !eng.local) return [];
 
         // Use `engineType` as it is the normalized version of `type`
+        const label =
+          eng.type === SupportedSecretBackendsEnum.KV ? (eng.isV2KV ? 'kv v2' : 'kv v1') : eng.type;
+
         return eng.supportsRecovery
-          ? [{ path: sanitizePath(eng.path), type: eng.engineType } as MountOption]
+          ? [{ path: sanitizePath(eng.path), type: eng.type, label } as MountOption]
           : [];
       });
 
@@ -207,9 +236,13 @@ export default class SnapshotManage extends Component<Args> {
 
   @action
   handlePathInput({ target }: { target: HTMLInputElement }) {
+    debounce(this, this.updatePathInput, target.value, 500);
+  }
+
+  private updatePathInput(path: string) {
     if (this.selectedMount) {
-      const { type } = this.selectedMount;
-      this.selectedMount = { type, path: target.value };
+      const { label, type } = this.selectedMount;
+      this.selectedMount = { label, type, path };
     }
   }
 
@@ -233,9 +266,13 @@ export default class SnapshotManage extends Component<Args> {
 
   @action
   handleSelectRadio(close: CallableFunction, { target }: { target: HTMLInputElement }) {
+    const type = this.manualRecoveryOptions[
+      target.name as keyof typeof this.manualRecoveryOptions
+    ] as RecoverySupportedEngines;
     const selection: MountOption = {
-      type: target.name as RecoverySupportedEngines,
+      label: target.name,
       path: '', // reset path to an empty string whenever an engine type is selected
+      type,
     };
     this.handleSelectMount(selection);
     close();
@@ -271,19 +308,18 @@ export default class SnapshotManage extends Component<Args> {
       this.recoveryData = undefined;
 
       const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
-      const mountType = this.selectedMount?.type;
+      const mountLabel = this.selectedMount?.label;
       const mountPath = this.selectedMount?.path as string;
+      const mountType = this.selectedMount?.type;
       const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
       const headers = this.api.buildHeaders({ namespace });
 
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
-          const { data } = await this.api.secrets.kvV1Read(
-            this.resourcePath,
-            mountPath,
-            snapshot_id,
-            headers
-          );
+          const isKVV2 = mountLabel?.toLowerCase() === 'kv v2';
+          const { data } = await (isKVV2
+            ? this.api.secrets.kvV2Read(this.resourcePath, mountPath, snapshot_id, headers)
+            : this.api.secrets.kvV1Read(this.resourcePath, mountPath, snapshot_id, headers));
           this.secretData = data as SecretData;
           break;
         }
@@ -325,14 +361,18 @@ export default class SnapshotManage extends Component<Args> {
       this.bannerError = '';
       const { snapshot_id } = this.args.model.snapshot as { snapshot_id: string };
       const namespace = this.selectedNamespace === 'root' ? ROOT_NAMESPACE : this.selectedNamespace;
-      const mountType = this.selectedMount?.type;
+      const mountLabel = this.selectedMount?.label;
       const mountPath = this.selectedMount?.path as string;
+      const mountType = this.selectedMount?.type;
       // if recovering to a copy, the new path (the copy path input) becomes the target path
       // and the original path (the resource path input) becomes the source path header
       const targetPath = this.recoverToCopy ? this.copyPath : this.resourcePath;
+      const isKVV2 = mountLabel?.toLowerCase() === 'kv v2';
       const recoverSourcePath =
         mountType === SupportedSecretBackendsEnum.DATABASE
           ? mountPath + '/static-roles/' + this.resourcePath
+          : isKVV2
+          ? mountPath + '/data/' + this.resourcePath
           : mountPath + '/' + this.resourcePath;
 
       const headers = this.api.buildHeaders({
@@ -352,7 +392,7 @@ export default class SnapshotManage extends Component<Args> {
 
       switch (mountType) {
         case SupportedSecretBackendsEnum.KV: {
-          await this.recoverKvv1(targetPath, mountPath, headers);
+          await this.recoverKv(targetPath, mountPath, headers, isKVV2);
           break;
         }
         case SupportedSecretBackendsEnum.CUBBYHOLE: {
@@ -388,8 +428,8 @@ export default class SnapshotManage extends Component<Args> {
   }
 
   @action
-  toggleJson(event: { target: { checked: boolean } }) {
-    this.showJson = event.target.checked;
+  updateSecretReadFormat(format: SecretReadFormat) {
+    this.selectedSecretReadFormat = format;
   }
 
   @action
@@ -424,8 +464,12 @@ export default class SnapshotManage extends Component<Args> {
     await this.api.secrets.cubbyholeWrite(targetPath, {}, undefined, undefined, undefined, headers);
   }
 
-  private async recoverKvv1(targetPath: string, mountPath: string, headers: object) {
-    await this.api.secrets.kvV1Write(targetPath, mountPath, {}, undefined, undefined, undefined, headers);
+  private async recoverKv(targetPath: string, mountPath: string, headers: object, isKVV2: boolean) {
+    if (isKVV2) {
+      await this.api.secrets.kvV2Write(targetPath, mountPath, {}, undefined, undefined, undefined, headers);
+    } else {
+      await this.api.secrets.kvV1Write(targetPath, mountPath, {}, undefined, undefined, undefined, headers);
+    }
   }
 
   private async recoverDatabaseStaticRoles(targetPath: string, mountPath: string, headers: object) {
