@@ -100,7 +100,7 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 					Count:               1,
 					MountAccessor:       entry.Accessor,
 					MountPath:           entry.Path,
-					MountType:           entry.Type,
+					MountType:           getAdjustedPluginType(entry),
 					MountRunningVersion: entry.RunningVersion,
 					NamespaceID:         entry.NamespaceID,
 					NamespacePath:       namespacePath,
