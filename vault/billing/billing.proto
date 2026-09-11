@@ -36,4 +36,5 @@ message MountBreakdown {
   string parent_namespace_id = 7;
   double count = 8;
   string backend_aware_uuid = 9;
+  bool is_external = 10;
 }

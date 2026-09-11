@@ -6,7 +6,6 @@ package command
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -37,7 +36,7 @@ func (m mockUi) Error(s string)  { m.t.Log(s) }
 func (m mockUi) Warn(s string)   { m.t.Log(s) }
 
 func TestJsonFormatter(t *testing.T) {
-	os.Setenv(EnvVaultFormat, "json")
+	t.Setenv(EnvVaultFormat, "json")
 	var output string
 	ui := mockUi{t: t, SampleData: "something", outputData: &output}
 	if err := outputWithFormat(ui, nil, ui); err != 0 {
@@ -55,7 +54,7 @@ func TestJsonFormatter(t *testing.T) {
 }
 
 func TestYamlFormatter(t *testing.T) {
-	os.Setenv(EnvVaultFormat, "yaml")
+	t.Setenv(EnvVaultFormat, "yaml")
 	var output string
 	ui := mockUi{t: t, SampleData: "something", outputData: &output}
 	if err := outputWithFormat(ui, nil, ui); err != 0 {
@@ -74,7 +73,7 @@ func TestYamlFormatter(t *testing.T) {
 }
 
 func TestTableFormatter(t *testing.T) {
-	os.Setenv(EnvVaultFormat, "table")
+	t.Setenv(EnvVaultFormat, "table")
 	var output string
 	ui := mockUi{t: t, outputData: &output}
 
@@ -95,7 +94,7 @@ func TestTableFormatter(t *testing.T) {
 func TestStatusFormat(t *testing.T) {
 	var output string
 	ui := mockUi{t: t, outputData: &output}
-	os.Setenv(EnvVaultFormat, "table")
+	t.Setenv(EnvVaultFormat, "table")
 
 	statusHA := getMockStatusData(false)
 	statusOmitEmpty := getMockStatusData(true)
@@ -239,10 +238,8 @@ func getMockStatusData(emptyFields bool) SealStatusOutput {
 }
 
 func Test_Format_Parsing(t *testing.T) {
-	defer func() {
-		os.Setenv(EnvVaultCLINoColor, "")
-		os.Setenv(EnvVaultFormat, "")
-	}()
+	t.Setenv(EnvVaultCLINoColor, "")
+	t.Setenv(EnvVaultFormat, "")
 
 	cases := []struct {
 		name string

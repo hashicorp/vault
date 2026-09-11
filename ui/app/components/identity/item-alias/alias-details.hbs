@@ -7,8 +7,8 @@
 <InfoTableRow @label="ID" @value={{@model.id}} @addCopyButton={{true}} />
 <InfoTableRow @label={{if (eq @model.itemType "entity-alias") "Entity ID" "Group ID"}} @value={{this.model.canonical_id}}>
   <LinkTo
-    @route="vault.cluster.access.identity.show"
-    @models={{array (if (eq @model.itemType "entity-alias") "entities" "groups") @model.canonical_id "details"}}
+    @route={{concat "vault.cluster.access.identity." (if (eq @model.itemType "entity-alias") "entities" "groups") ".show"}}
+    @models={{array @model.canonical_id "details"}}
   >
     {{@model.canonical_id}}
   </LinkTo>

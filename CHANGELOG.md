@@ -3,6 +3,77 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 2.1.0
+### September 01, 2026
+
+SECURITY:
+
+* core: Update go.etcd.io/etcd/client/pkg/v3 to v3.7.1 to fix security vulnerability GO-2026-6107.
+* core: Update software.sslmate.com/src/go-pkcs12 to v0.7.2 to fix security vulnerability GO-2026-5052.
+
+CHANGES:
+
+* License: Add Agentic IAM terms to client licensing model and update terms for Vault Platform licensing model.
+* core: Bump Go version to 1.26.7.
+* oauth-resource-server (enterprise): Prevent issuer_id from being mutated after OAuth Resource Server profile creation. Operators must delete and recreate profiles to change the issuer_id.
+* oauth-resource-server (enterprise): Prevent unique_id_claim from being mutated after OAuth Resource Server profile creation. Operators must delete and recreate profiles to change the unique_id_claim.
+* oauth-resource-server (enterprise): The OAuth Resource Server feature no longer requires activation via the `sys/activation-flags/oauth-resource-server/activate` endpoint.
+* oauth-resource-server (enterprise): Update OAuth Resource Server config to include custom claim options for the token's unique identifier and actor.
+* secrets/openldap (enterprise): Update plugin to [v0.18.4+ent](https://github.com/hashicorp/vault-plugin-secrets-openldap/releases/tag/v0.18.4+ent)
+
+FEATURES:
+
+* **Agent Registry UI (enterprise)**: Adds a new Agentic Security section to the primary navigation with an Agent Registry page where operators can view, search, and manage registered AI agents, their associated Vault entities and aliases, assigned policies, and operational status.
+* **Automatic DNS-01 Challenge Fulfillment for PKI External CA**: Integrate with the following DNS providers for automatic DNS-01 challenge fulfillment: AWS Route53, Azure DNS, Google Cloud DNS, and BIND and other RFC2136-compliant servers.
+* **PKI PKCS#12 and JKS Support**: Adds support for PKCS#12 (PFX) and Java keytool (JKS) certificate bundles to relevant PKI endpoints. Bundles are returned as base64-encoded, password-protected files.
+* **SLH-DSA support for Hybrid sign/verify in Transit engine (enterprise)**: Add support for SLH-DSA as the PQC component for Hybrid sign/verify operations. This is compatible with both ECDSA (p-256, P-384, P-521) and Ed25519.
+* secrets/pki-external-ca (enterprise): Add support for handling dns-01 challenges for Azure, AWS, GCP, and rfc2136 DNS.
+
+IMPROVEMENTS:
+
+* agent-registry (enterprise): Removed the restriction that disallowed the use of 'deny' in ceiling policies, resulting in request errors.
+* agent/pkiexternalca: Replace go.uber.org/atomic with sync/atomic (stdlib) for atomic boolean operations in the pkiexternalca package.
+* auth/token: Add global denylist for revoking OAuth JWTs to prevent authorization of specific tokens across all namespaces.
+* core/seal (enterprise): Update Oracle Cloud library to enable seal integration with newer regions.
+* ui: Bump `dompurify` from `3.4.6` to `3.4.13`.
+* ui: Bump shell-quote from 1.8.4 to 1.9.0.
+* ui: Exposing the RSA Private Key field in the UI when generating credentials with the snowflake database secrets engine. Previously, this field was only shown in the cli.
+* ui: Secrets engine delete confirmation modal now requires typing `delete-engine` to confirm, displays the engine name, secret count (KV engines only), and a list of what will be permanently deleted. ConfirmModal has now been updated to include a optional type-to-confirm.
+
+BUG FIXES:
+
+* agent/pki-external-ca: Fix CA chain extraction from Vault PKI API responses where `ca_chain` field was always empty in templates due to incorrect type handling of array responses
+* api: Account for the HTTP Age header when calculating a lease's remaining lifetime, so that leases read or renewed through a caching proxy such as Vault Agent are renewed before they expire.
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core (enterprise): Fix panic in `collectOperatorImportMetrics` when `router.Route` returns a nil response with no error during KVv2 metadata reads on performance secondary nodes. This condition occurs during the WAL-stream partial-sync phase of an initial join.
+* core/login: Fix panic on malformed login requests. Vault now returns an error for malformed login payloads instead of dropping the client connection (no data loss).
+* core/metrics: Fixed a bug where log_format = "json" had no effect on telemetry sink errors from statsd and statsite backends.
+* core/wrapping: sys/wrapping/wrap now enforces uuid-format wrapping tokens, ignoring any caller-requested wrap format.
+* core: Fix `vault operator migrate -start` command when migrating to raft integrated storage.
+* core: vault kv put/get now works with external OAuth tokens.
+* cubbyhole: Fix cubbyhole writes for JWT tokens in non-root namespaces
+* default-auth: Fix issue with legacy default-auth configs that would break as part of upgrading to a newer version of Vault.
+* identity: Fixed entity alias creation failing with "mount accessor namespace does not match request namespace" when using a synthetic mount accessor in a namespaced context
+* oauth-resource-server (enterprise): Fix issue where `optional_authorization_details` was incorrectly ignored for delegated (OBO) workflows when the subject has no agent registration, resulting in RAR not being mandatory in those requests.
+* plugins: Reading a versioned-only plugin without specifying `-version` now auto-selects it when only one version exists, or returns an error listing available versions, instead of a silent 404.
+* proxy/cache (enterprise): Fixed a bug in the static secret cache where `GET` requests with `?list=true` were incorrectly cached and served stale.
+* sdk/rotation: Subsequent calls will no longer allow both the `rotation_period` and `rotation_schedule` fields to be set simultaneously. The SDK now explicitly empties the opposing field to guarantee mutual-exclusion.
+* secret/pki: Fix ACME order finalize race condition where concurrent requests could double-issue certificates and orphan one from order-keyed tracking
+* secret/pki: prevent key rename from accepting a name already held by a different key.
+* secrets/database: Sanitize the caller-controlled DisplayName before it is used in generated usernames to prevent SQL injection via username templates. Adds a configuration warning when a username_template references DisplayName without a truncate function.
+* secrets/ldap: manually rotating a static role password will restart the rotation TTL once again, matching the behavior prior to v2.0.0
+* secrets/nomad: Fix connection exhaustion under high concurrency by introducing a shared, pooled HTTP client with a per-host connection cap. Previously, a new TCP connection was opened for every credential request, causing Nomad to return HTTP 429 "too many concurrent connections" errors when more than 100 leases were generated simultaneously.
+* serviceregistration/consul: Fixed an issue where Vault would permanently deregister itself from the Consul service catalog when a SIGHUP/reload signal was sent and the configuration used Consul as the storage backend without an explicit `service_registration` stanza.
+* ui/secrets/pki: Fix issuers list page failing to load when issuer count exceeds 10
+* ui: Fix 403 error on auth method Configure page for policies that grant read on sys/auth* but not sys/auth/*.
+* ui: Fix Kubernetes auth method not saving `token_reviewer_jwt` — the wrong OpenAPI schema key (`KubernetesConfigureRequest`) was used instead of `KubernetesConfigureAuthRequest`, causing the JWT field to be omitted from the form and API payload on save.
+* ui: Fix border clipping on dashboard widget tables by applying overflow-hidden styling.
+* ui: Fix open redirect bug in OIDC provider route.
+* ui: Fix policy generator flyout rejecting saves when no capabilities are selected for a rule.
+* ui: add totalItems property to fix filtered list pagination showing incorrect total page count
+* ui: fix spurious "No access" banner when navigating to Vault UI with `?namespace=root` in the URL
+
 ## 2.0.4
 ### August 04, 2026
 
@@ -486,6 +557,48 @@ BUG FIXES:
 * ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
 * ui: fix renew token button rendering for denied renew-self.
 * ui: remove unnecessary 'credential type' form input when generating AWS secrets
+
+## 1.21.10 Enterprise
+### September 01, 2026
+
+SECURITY:
+
+* core: Update go.etcd.io/etcd/client/pkg/v3 to v3.6.14 to fix security vulnerability GO-2026-6107.
+
+CHANGES:
+
+* core: Bump Go version to 1.25.14.
+* secrets/azure: Update plugin to [v0.25.5+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.25.5+ent)
+
+IMPROVEMENTS:
+
+* core/seal (enterprise): Update Oracle Cloud library to enable seal integration with newer regions.
+* core: Automatically write a goroutine dump to a temp directory on shutdown (SIGTERM/SIGINT). The output directory can be overridden with `VAULT_STACKTRACE_FILE_PATH`, and the dump can be suppressed with the config field `disable_goroutine_trace_dump`.
+* ui: Bump `dompurify` from `3.4.6` to `3.4.13`.
+* ui: Bump shell-quote from 1.8.4 to 1.9.0.
+* ui: Exposing the RSA Private Key field in the UI when generating credentials with the snowflake database secrets engine. Previously, this field was only shown in the cli.
+
+BUG FIXES:
+
+* api: Account for the HTTP Age header when calculating a lease's remaining lifetime, so that leases read or renewed through a caching proxy such as Vault Agent are renewed before they expire.
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core (enterprise): Fix panic in `collectOperatorImportMetrics` when `router.Route` returns a nil response with no error during KVv2 metadata reads on performance secondary nodes. This condition occurs during the WAL-stream partial-sync phase of an initial join.
+* core/login: Fix panic on malformed login requests. Vault now returns an error for malformed login payloads instead of dropping the client connection (no data loss).
+* core/metrics: Fixed a bug where log_format = "json" had no effect on telemetry sink errors from statsd and statsite backends.
+* core/wrapping: sys/wrapping/wrap now enforces uuid-format wrapping tokens, ignoring any caller-requested wrap format.
+* core: Fix `vault operator migrate -start` command when migrating to raft integrated storage.
+* core: Standby clusters now populate the `cluster:` field when `sys/metrics` is called.
+* default-auth: Fix issue with legacy default-auth configs that would break as part of upgrading to a newer version of Vault.
+* plugins: Reading a versioned-only plugin without specifying `-version` now auto-selects it when only one version exists, or returns an error listing available versions, instead of a silent 404.
+* proxy/cache (enterprise): Fixed a bug in the static secret cache where `GET` requests with `?list=true` were incorrectly cached and served stale.
+* secret/pki: Fix ACME order finalize race condition where concurrent requests could double-issue certificates and orphan one from order-keyed tracking
+* secret/pki: prevent key rename from accepting a name already held by a different key.
+* secrets/database: Sanitize the caller-controlled DisplayName before it is used in generated usernames to prevent SQL injection via username templates. Adds a configuration warning when a username_template references DisplayName without a truncate function.
+* serviceregistration/consul: Fixed an issue where Vault would permanently deregister itself from the Consul service catalog when a SIGHUP/reload signal was sent and the configuration used Consul as the storage backend without an explicit `service_registration` stanza.
+* ui: Fix open redirect bug in OIDC provider route.
+* ui: add totalItems property to fix filtered list pagination showing incorrect total page count
+* ui: fix spurious "No access" banner when navigating to Vault UI with `?namespace=root` in the URL
 
 ## 1.21.9 Enterprise
 ### August 04, 2026
@@ -1060,6 +1173,45 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.15 Enterprise
+### September 01, 2026
+
+SECURITY:
+
+* core: Update go.etcd.io/etcd/client/pkg/v3 to v3.6.14 to fix security vulnerability GO-2026-6107.
+
+CHANGES:
+
+* core/raft: Limited concurrent retry-join workers to 20. Any further retry-join attempts while 20 are in progress will result in an error (`too many concurrent raft retry joins in progress`).
+* core: Bump Go version to 1.25.14.
+
+IMPROVEMENTS:
+
+* core/seal (enterprise): Update Oracle Cloud library to enable seal integration with newer regions.
+* core: Automatically write a goroutine dump to a temp directory on shutdown (SIGTERM/SIGINT). The output directory can be overridden with `VAULT_STACKTRACE_FILE_PATH`, and the dump can be suppressed with the config field `disable_goroutine_trace_dump`.
+* ui: Exposing the RSA Private Key field in the UI when generating credentials with the snowflake database secrets engine. Previously, this field was only shown in the cli.
+
+BUG FIXES:
+
+* api: Account for the HTTP Age header when calculating a lease's remaining lifetime, so that leases read or renewed through a caching proxy such as Vault Agent are renewed before they expire.
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core (enterprise): Fix panic in `collectOperatorImportMetrics` when `router.Route` returns a nil response with no error during KVv2 metadata reads on performance secondary nodes. This condition occurs during the WAL-stream partial-sync phase of an initial join.
+* core/login: Fix panic on malformed login requests. Vault now returns an error for malformed login payloads instead of dropping the client connection (no data loss).
+* core/metrics: Fixed a bug where log_format = "json" had no effect on telemetry sink errors from statsd and statsite backends.
+* core/wrapping: sys/wrapping/wrap now enforces uuid-format wrapping tokens, ignoring any caller-requested wrap format.
+* core: Fix `vault operator migrate -start` command when migrating to raft integrated storage.
+* core: Standby clusters now populate the `cluster:` field when `sys/metrics` is called.
+* default-auth: Fix issue with legacy default-auth configs that would break as part of upgrading to a newer version of Vault.
+* plugins: Reading a versioned-only plugin without specifying `-version` now auto-selects it when only one version exists, or returns an error listing available versions, instead of a silent 404.
+* secret/pki: Fix ACME order finalize race condition where concurrent requests could double-issue certificates and orphan one from order-keyed tracking
+* secret/pki: prevent key rename from accepting a name already held by a different key.
+* secrets/database: Sanitize the caller-controlled DisplayName before it is used in generated usernames to prevent SQL injection via username templates. Adds a configuration warning when a username_template references DisplayName without a truncate function.
+* serviceregistration/consul: Fixed an issue where Vault would permanently deregister itself from the Consul service catalog when a SIGHUP/reload signal was sent and the configuration used Consul as the storage backend without an explicit `service_registration` stanza.
+* ui: Fix open redirect bug in OIDC provider route.
+* ui: add totalItems property to fix filtered list pagination showing incorrect total page count
+* ui: fix spurious "No access" banner when navigating to Vault UI with `?namespace=root` in the URL
 
 ## 1.20.14 Enterprise
 ### August 04, 2026
@@ -1718,6 +1870,45 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.21 Enterprise
+### September 01, 2026
+
+SECURITY:
+
+* core: Update go.etcd.io/etcd/client/pkg/v3 to v3.6.14 to fix security vulnerability GO-2026-6107.
+* identity: entity/name updates now reject mismatched id or external_id selectors to prevent retargeting updates to a different entity
+
+CHANGES:
+
+* core/raft: Limited concurrent retry-join workers to 20. Any further retry-join attempts while 20 are in progress will result in an error (`too many concurrent raft retry joins in progress`).
+* core: Bump Go version to 1.25.14.
+
+IMPROVEMENTS:
+
+* core/seal (enterprise): Update Oracle Cloud library to enable seal integration with newer regions.
+* core: Automatically write a goroutine dump to a temp directory on shutdown (SIGTERM/SIGINT). The output directory can be overridden with `VAULT_STACKTRACE_FILE_PATH`, and the dump can be suppressed with the config field `disable_goroutine_trace_dump`.
+* ui: Exposing the RSA Private Key field in the UI when generating credentials with the snowflake database secrets engine. Previously, this field was only shown in the cli.
+
+BUG FIXES:
+
+* api: Account for the HTTP Age header when calculating a lease's remaining lifetime, so that leases read or renewed through a caching proxy such as Vault Agent are renewed before they expire.
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core (enterprise): Fix a data race and potential panic during seal/unseal
+* core/login: Fix panic on malformed login requests. Vault now returns an error for malformed login payloads instead of dropping the client connection (no data loss).
+* core/metrics: Fixed a bug where log_format = "json" had no effect on telemetry sink errors from statsd and statsite backends.
+* core/wrapping: sys/wrapping/wrap now enforces uuid-format wrapping tokens, ignoring any caller-requested wrap format.
+* core: Fix `vault operator migrate -start` command when migrating to raft integrated storage.
+* core: Standby clusters now populate the `cluster:` field when `sys/metrics` is called.
+* plugins: Reading a versioned-only plugin without specifying `-version` now auto-selects it when only one version exists, or returns an error listing available versions, instead of a silent 404.
+* proxy/cache (enterprise): Fixed a bug in the static secret cache where `GET` requests with `?list=true` were incorrectly cached and served stale.
+* secret/pki: Fix ACME order finalize race condition where concurrent requests could double-issue certificates and orphan one from order-keyed tracking
+* secret/pki: prevent key rename from accepting a name already held by a different key.
+* secrets/database: Sanitize the caller-controlled DisplayName before it is used in generated usernames to prevent SQL injection via username templates. Adds a configuration warning when a username_template references DisplayName without a truncate function.
+* serviceregistration/consul: Fixed an issue where Vault would permanently deregister itself from the Consul service catalog when a SIGHUP/reload signal was sent and the configuration used Consul as the storage backend without an explicit `service_registration` stanza.
+* ui: Fix open redirect bug in OIDC provider route.
+* ui: add totalItems property to fix filtered list pagination showing incorrect total page count
+* ui: fix spurious "No access" banner when navigating to Vault UI with `?namespace=root` in the URL
 
 ## 1.19.20 Enterprise
 ### August 04, 2026

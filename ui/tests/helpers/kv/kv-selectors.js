@@ -21,6 +21,8 @@ export const PAGE = {
   popup: '[data-test-popup-menu-trigger]',
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
+  // Hds::Dropdown toggles are toolbar actions too, but carry HDS's own class
+  toolbarDropdown: 'nav.toolbar-actions .hds-dropdown-toggle-button',
   secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
   metadata: {

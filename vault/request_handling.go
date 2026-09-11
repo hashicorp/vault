@@ -246,7 +246,14 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		if err != nil {
 			c.logger.Error("failed to validate jwt", "error", err)
 		}
+
 		if !isValidEnterpriseJwt {
+			// currently only internal error and error missing from agent registration required have dedicated
+			// error body and http code, everything else gets normalize into "permission denied" with http code 403
+			// when reaching back to client
+			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) {
+				return nil, nil, nil, nil, err
+			}
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		req.JwtUniqueId, err = getJwtUniqueIDFromProfile(tokenMetadataContainer, chosenProfile)
@@ -269,17 +276,12 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		}
 		req.OAuthJwtValidated = true
 	}
-
 	// Resolve the token policy
 	var te *logical.TokenEntry
 	switch req.TokenEntry() {
 	case nil:
 		var err error
-		if IsOAuthJwt(req.ClientToken) {
-			te, err = c.tokenStore.Lookup(ctx, getOAuthJwtId(req.JwtUniqueId))
-		} else {
-			te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
-		}
+		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
@@ -1236,6 +1238,24 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	var auth *logical.Auth
 	var te *logical.TokenEntry
 	var ctErr error
+
+	// Normalize identity group/entity name paths to lowercase before the ACL
+	// check. The identity store resolves names case-insensitively but ACL paths
+	// are matched case-sensitively, allowing deny policies to be bypassed by
+	// altering the case of the name segment. The original path is restored
+	// after the ACL check so downstream handlers receive the caller's original
+	// casing.
+	originalPath := req.Path
+	for _, prefix := range []string{
+		"identity/group/name/",
+		"identity/entity/name/",
+	} {
+		if strings.HasPrefix(req.Path, prefix) {
+			req.Path = prefix + strings.ToLower(req.Path[len(prefix):])
+			break
+		}
+	}
+
 	// Validate the token. OAuth JWT requests on unauthenticated paths that
 	// require a materialized token entry (sys/internal/ui/mounts,
 	// sys/internal/ui/namespaces) are routed here rather than to
@@ -1253,6 +1273,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// routes to handleLoginRequest as intended.
 	unauth := c.isLoginRequest(ctx, req) && IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)
 	auth, te, ctErr = c.CheckToken(ctx, req, unauth)
+	// Restore the original path so downstream handlers (and audit logs) see
+	// the caller's original casing, not the normalized form.
+	req.Path = originalPath
 	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}

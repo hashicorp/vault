@@ -1921,12 +1921,8 @@ func TestLoadConfigFile_Disable_Idle_Conns_Empty(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Idle_Conns_Env(t *testing.T) {
-	err := os.Setenv(DisableIdleConnsEnv, "auto-auth,caching,templating")
-	defer os.Unsetenv(DisableIdleConnsEnv)
+	t.Setenv(DisableIdleConnsEnv, "auto-auth,caching,templating")
 
-	if err != nil {
-		t.Fatal(err)
-	}
 	config, err := LoadConfigFile("./test-fixtures/config-disable-idle-connections-empty.hcl")
 	if err != nil {
 		t.Fatal(err)
@@ -2298,12 +2294,8 @@ func TestLoadConfigFile_Disable_Keep_Alives_Empty(t *testing.T) {
 }
 
 func TestLoadConfigFile_Disable_Keep_Alives_Env(t *testing.T) {
-	err := os.Setenv(DisableKeepAlivesEnv, "auto-auth,caching,templating")
-	defer os.Unsetenv(DisableKeepAlivesEnv)
+	t.Setenv(DisableKeepAlivesEnv, "auto-auth,caching,templating")
 
-	if err != nil {
-		t.Fatal(err)
-	}
 	config, err := LoadConfigFile("./test-fixtures/config-disable-keep-alives-empty.hcl")
 	if err != nil {
 		t.Fatal(err)

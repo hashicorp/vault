@@ -72,6 +72,12 @@ func TestPopulate_Basic(t *testing.T) {
 		},
 
 		{
+			name:  "invalid_mode",
+			mode:  -1,
+			input: "path foobar {",
+			err:   errors.New("unknown mode -1"),
+		},
+		{
 			name:   "no_templating",
 			input:  "path foobar {",
 			output: "path foobar {",

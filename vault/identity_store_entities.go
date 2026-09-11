@@ -260,8 +260,9 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                  i.pathEntityMergeID(),
-					ForwardPerformanceStandby: true,
+					Callback:                    i.pathEntityMergeID(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 
@@ -269,6 +270,20 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(entityHelp["entity-merge-id"][1]),
 		},
 	}
+}
+
+// operatorNamespaceID returns the namespace ID of the configured operator namespace, or an empty string if no operator namespace is configured.
+func (i *IdentityStore) operatorNamespaceID() string {
+	path := namespace.Canonicalize(i.localNode.OperatorNamespacePath())
+	if path == "" {
+		return ""
+	}
+	for _, ns := range i.namespacer.ListNamespaces(false) {
+		if ns.Path == path {
+			return ns.ID
+		}
+	}
+	return ""
 }
 
 // pathEntityMergeID merges two or more entities into a single entity
@@ -448,9 +463,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["local"] = alias.Local
 		aliasMap["custom_metadata"] = alias.CustomMetadata
 
-		if i.scimEnabled {
-			aliasMap["scim_client_id"] = alias.ScimClientID
-		}
+		aliasMap["scim_client_id"] = alias.ScimClientID
 
 		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
@@ -464,9 +477,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	// formats
 	respData["aliases"] = aliasesToReturn
 
-	if i.scimEnabled {
-		respData["scim_client_id"] = entity.ScimClientID
-	}
+	respData["scim_client_id"] = entity.ScimClientID
 
 	addExtraEntityDataToResponse(entity, respData)
 
@@ -625,6 +636,9 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 				if entity == nil {
 					continue
 				}
+				if opNsID := i.operatorNamespaceID(); opNsID != "" && entity.NamespaceID == opNsID && ns.ID != opNsID {
+					return fmt.Errorf("cannot delete operator namespace entity %s from outside its own namespace", entity.ID)
+				}
 				if entity.NamespaceID != ns.ID {
 					continue
 				}
@@ -670,6 +684,9 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
+	}
+	if opNsID := i.operatorNamespaceID(); opNsID != "" && entity.NamespaceID == opNsID && ns.ID != opNsID {
+		return errors.New("cannot delete operator namespace entity from outside its own namespace")
 	}
 	if entity.NamespaceID != ns.ID {
 		return nil
@@ -1345,7 +1362,8 @@ func (i *entityIntegrityCheck) deleteDuplicateAliasInstances(log hclog.Logger, a
 	if aliasToKeep == nil {
 		return errors.New("no identity aliases to keep in deduplication")
 	}
-	log.Trace("deleting all but one duplicate identity alias instance",
+	log.Trace(
+		"deleting all but one duplicate identity alias instance",
 		"num_to_delete", len(aliases)-1,
 		"alias_to_keep", aliasToKeep,
 	)
@@ -1395,7 +1413,8 @@ func (i *entityIntegrityCheck) resolveAndAssociateDanglingEntityAlias(log hclog.
 	// Update our entity ID with the correct entity ID while also including our
 	// prior ID in the aliases merged from field.
 	resolveAliasID := func() {
-		log.Warn("associating dangling identity alias with entity",
+		log.Warn(
+			"associating dangling identity alias with entity",
 			"alias_id", alias.ID,
 			"dangling_canonical_id", alias.CanonicalID,
 			"new_canonical_id", i.entity.ID,
@@ -1424,7 +1443,8 @@ func (i *entityIntegrityCheck) resolveAndAssociateDanglingEntityAlias(log hclog.
 		alias.Metadata["dangling_prior_name"] = oldName
 		alias.LastUpdateTime = now
 
-		log.Warn("renamed dangling duplicate identity alias",
+		log.Warn(
+			"renamed dangling duplicate identity alias",
 			"alias_id", alias.ID,
 			"name", alias.Name,
 			"old_name", oldName,

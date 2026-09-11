@@ -72,10 +72,10 @@ export default class KvSecretDetails extends Component {
   }
 
   @action
-  closeVersionMenu(dropdown) {
+  closeVersionMenu(close) {
     // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
     // closing dropdown in next tick of run loop fixes it
-    next(() => dropdown.actions.close());
+    next(() => close());
   }
 
   @action

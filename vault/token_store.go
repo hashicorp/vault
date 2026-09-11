@@ -1165,8 +1165,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 
 		// Attach namespace ID for tokens that are not belonging to the root
-		// namespace
-		if tokenNS.ID != namespace.RootNamespaceID {
+		// namespace. JWT tokens (TokenTypeEnt) pre-compute the qualified ID in
+		// createAndStoreJwtTokenEntryJIT, so skip appending for them.
+		if tokenNS.ID != namespace.RootNamespaceID && entry.Type != logical.TokenTypeEnt {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
@@ -2827,19 +2828,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// SCIM tokens are a superset of service tokens: they go through the
 		// full service-token creation path but with additional pre-issuance
 		// checks and post-issuance fixups applied below.
-		var scimResp *logical.Response
-		var scimErr error
-		scimClientID, scimMaxTTL, scimMaxActiveTokens, scimResp, scimErr = ts.VerifySCIMTokenCreation(ctx, req, renewable, orphan)
-		if scimErr != nil || scimResp != nil {
-			return scimResp, scimErr
-		}
-		if scimClientID == "" {
-			return logical.ErrorResponse("SCIM token issuance not supported for non-SCIM client entities"), logical.ErrInvalidRequest
-		}
-		// Force the invariants that verifySCIMTokenCreation checked above so
-		// the rest of handleCreateCommon enforces them on the entry as well.
-		renewable = false
-		orphan = true
 		tokenType = logical.TokenTypeSCIM
 	default:
 		return logical.ErrorResponse("invalid 'token_type' value"), logical.ErrInvalidRequest
@@ -2909,6 +2897,19 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 		// Set new entity id
 		explicitEntityID = entity.ID
+	}
+
+	// For SCIM tokens, resolve the effective entity (entity_alias takes
+	// precedence over the caller's own entity) and verify it is a registered
+	// SCIM client.  This must run after the entity_alias block above so that
+	// explicitEntityID is fully resolved.
+	if tokenType == logical.TokenTypeSCIM {
+		var scimResp *logical.Response
+		var scimErr error
+		scimClientID, scimMaxTTL, scimMaxActiveTokens, scimResp, scimErr = ts.VerifySCIMTokenCreation(ctx, req, renewable, orphan || (role != nil && role.Orphan), explicitEntityID)
+		if scimErr != nil || scimResp != nil {
+			return scimResp, scimErr
+		}
 	}
 
 	// GetOk is used here solely to preserve the distinction between an absent/nil map and an empty map, to match the
@@ -3492,6 +3493,7 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	if err != nil {
 		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 	}
+
 	if IsOAuthJwtId(normalizedID) {
 		return logical.ErrorResponse("JWTs cannot be revoked"), nil
 	}
@@ -3534,20 +3536,11 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 	if IsOAuthJwt(id) {
-		// If the token specified in the request body is different from the caller's
-		// token, resolve the token ID based on the body token's claims (JTI) instead
-		// of req.JwtUniqueId, otherwise we may silently return the caller's
-		// own token entry or fail for non-Enterprise token callers.
-		if id == req.ClientToken {
-			id = getOAuthJwtId(req.JwtUniqueId)
-		} else {
-			// For raw JWTs, validate to get the correct profile and unique ID claim
-			resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
-			if err != nil {
-				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
-			}
-			id = resolvedID
+		resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+		if err != nil {
+			return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 		}
+		id = resolvedID
 	}
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()

@@ -198,7 +198,7 @@ export const RESPONSE_STUBS = {
   },
   okta: {
     ...BASE_REQUEST_DATA,
-    data: {}, // empty object instead of null
+    data: null,
     auth: {
       client_token: 'hvs.myvaultgeneratedoktatoken',
       accessor: 'bnCp5tEioxHJXgSXbKowYoZj',

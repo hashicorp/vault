@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div {{did-insert this.setElement}} ...attributes>
+<div {{did-insert this.setElement}} {{on "focusout" this.onFocusOut}} ...attributes>
   {{#if @label}}
     <FormFieldLabel @label={{@label}} @subText={{@subText}} for={{dasherize @label}} />
   {{/if}}
@@ -17,14 +17,19 @@
       {{on "input" this.onInput}}
       id={{dasherize @label}}
     />
-    <BasicDropdown @registerAPI={{this.setDropdownAPI}} @renderInPlace={{true}} as |D|>
-      <D.Content @defaultClass="autocomplete-input">
+    {{#if this.showOptions}}
+      <div class="autocomplete-input">
         {{#each @options as |option|}}
-          <div class="autocomplete-input-option" role="button" {{on "click" (fn this.selectOption option.value)}}>
+          <div
+            class="autocomplete-input-option"
+            role="button"
+            tabindex="0"
+            {{on "click" (fn this.selectOption option.value)}}
+          >
             {{option.label}}
           </div>
         {{/each}}
-      </D.Content>
-    </BasicDropdown>
+      </div>
+    {{/if}}
   </div>
 </div>

@@ -309,7 +309,7 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, 
 		if err != nil {
 			return nil, err
 		}
-		mountInfo := issuing.MountAttributionFromRequest(ac.sc.Context, r, b.backendUUID)
+		mountInfo := issuing.MountAttributionFromRequest(ac.sc.Context, r, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
 		b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(true, signedCertBundle.Certificate)
 	}
 	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)

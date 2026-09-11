@@ -17,12 +17,12 @@
 <nav class="tabs" aria-label="navigation for entities">
   <ul>
     <li>
-      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize @identityType}}>
+      <LinkTo @route={{concat "vault.cluster.access.identity." (pluralize @identityType) ".index"}}>
         {{capitalize (pluralize @identityType)}}
       </LinkTo>
     </li>
     <li>
-      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize @identityType}}>
+      <LinkTo @route={{concat "vault.cluster.access.identity." (pluralize @identityType) ".aliases.index"}}>
         Aliases
       </LinkTo>
     </li>
@@ -37,18 +37,13 @@
   {{/if}}
   <ToolbarActions>
     {{#if (eq @identityType "entity")}}
-      <ToolbarLink
-        @route={{"vault.cluster.access.identity.merge"}}
-        @model={{pluralize @identityType}}
-        data-test-entity-merge-link={{true}}
-      >
+      <ToolbarLink @route="vault.cluster.access.identity.entities.merge" data-test-entity-merge-link={{true}}>
         Merge
         {{pluralize @identityType}}
       </ToolbarLink>
     {{/if}}
     <ToolbarLink
-      @route="vault.cluster.access.identity.create"
-      @model={{pluralize @identityType}}
+      @route={{concat "vault.cluster.access.identity." (pluralize @identityType) ".create"}}
       @type="add"
       data-test-entity-create-link={{true}}
     >

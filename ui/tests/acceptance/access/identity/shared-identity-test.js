@@ -138,7 +138,8 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
 
       await visit(`/vault/access/identity/${itemType}`);
 
-      const rowSelector = `[data-test-identity-row="${name}"]`;
+      const rowSelector =
+        itemType === 'groups' ? `[data-test-identity-row="${name}"]` : GENERAL.listItem(name);
       const menuTriggerSelector = `${rowSelector} ${GENERAL.menuTrigger}`;
 
       assert.dom(rowSelector).exists(`${itemType}: is in the list view`);

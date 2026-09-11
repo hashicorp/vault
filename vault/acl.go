@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -69,6 +70,7 @@ type ACLResults struct {
 	CapabilitiesBitmap  uint32
 	GrantingPolicies    []logical.PolicyInfo
 	SubscribeEventTypes []string
+	DeniedReason        string
 }
 
 type SentinelResults struct {
@@ -989,6 +991,10 @@ func (c *Core) performPolicyChecksSinglePath(ctx context.Context, acl *ACL, te *
 			return ret
 		}
 		if !ret.ACLResults.Allowed {
+			if ret.ACLResults.DeniedReason != "" {
+				ret.DeniedError = true
+				ret.Error = multierror.Append(ret.Error, errors.New(ret.ACLResults.DeniedReason))
+			}
 			c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 			return ret
 		}

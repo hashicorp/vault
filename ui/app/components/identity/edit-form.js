@@ -47,21 +47,28 @@ export default class IdentityEditFormComponent extends Component {
     const { model, mode } = this.args;
     const identityType = model?.identityType;
     const isAlias = model?.form?.identityFormType === 'alias';
+    const pluralType = identityType === 'group' ? 'groups' : 'entities';
 
     if (mode === 'merge') {
-      return 'vault.cluster.access.identity';
+      return 'vault.cluster.access.identity.entities.index';
     }
 
     if (mode === 'create') {
-      return isAlias ? 'vault.cluster.access.identity.aliases' : 'vault.cluster.access.identity';
+      return isAlias
+        ? `vault.cluster.access.identity.${pluralType}.aliases.index`
+        : `vault.cluster.access.identity.${pluralType}.index`;
     }
 
     if (mode === 'edit') {
-      return isAlias ? 'vault.cluster.access.identity.aliases.show' : 'vault.cluster.access.identity.show';
+      return isAlias
+        ? `vault.cluster.access.identity.${pluralType}.aliases.show`
+        : `vault.cluster.access.identity.${pluralType}.show`;
     }
 
     // Fallback route in unexpected modes.
-    return identityType ? 'vault.cluster.access.identity.show' : 'vault.cluster.access.identity';
+    return identityType
+      ? `vault.cluster.access.identity.${pluralType}.show`
+      : `vault.cluster.access.identity.${pluralType}.index`;
   }
 
   get cancelModelId() {

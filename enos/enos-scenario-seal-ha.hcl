@@ -1020,11 +1020,31 @@ scenario "seal_ha" {
     }
   }
 
+  // Make sure we unsealed
+  step "verify_vault_unsealed_after_migration" {
+    module     = module.vault_wait_for_cluster_unsealed
+    depends_on = [step.wait_for_leader_after_migration]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+    }
+  }
+
   // Since we've restarted our cluster we might have a new leader and followers. Get the new IPs.
+  // We depend on verify_vault_unsealed_after_migration here to ensure every node is unsealed before
+  // we attempt to resolve cluster IPs. A node that is still mid-restart can return stale addresses,
+  // causing forwarded write requests to fail with "connection refused" in the subsequent read
+  // verification step.
   step "get_cluster_ips_after_migration" {
     description = global.description.get_vault_cluster_ip_addresses
     module      = module.vault_get_cluster_ips
-    depends_on  = [step.wait_for_leader_after_migration]
+    depends_on  = [step.verify_vault_unsealed_after_migration]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -1042,22 +1062,6 @@ scenario "seal_ha" {
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
-
-  // Make sure we unsealed
-  step "verify_vault_unsealed_after_migration" {
-    module     = module.vault_wait_for_cluster_unsealed
-    depends_on = [step.wait_for_leader_after_migration]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
     }
   }
 

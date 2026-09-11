@@ -20,6 +20,7 @@ func (ts *TokenStore) VerifySCIMTokenCreation(
 	_ *logical.Request,
 	_ bool,
 	_ bool,
+	_ string,
 ) (string, time.Duration, int32, *logical.Response, error) {
 	return "", 0, 0, nil, nil
 }

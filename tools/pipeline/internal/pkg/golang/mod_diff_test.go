@@ -70,7 +70,7 @@ func Test_DiffModFiles_Equal(t *testing.T) {
 	} {
 		t.Run(desc, func(t *testing.T) {
 			t.Parallel()
-			diff, err := DiffModFiles(test.as, test.bs, test.opts)
+			diff, _, _, err := DiffModFiles(test.as, test.bs, test.opts)
 			require.NoError(t, err)
 			require.Nil(t, diff, "expected no diff, got:\n%v", printModDiff(diff))
 		})
@@ -413,7 +413,7 @@ func Test_DiffModFiles_Diff(t *testing.T) {
 	} {
 		t.Run(desc, func(t *testing.T) {
 			t.Parallel()
-			diff, err := DiffModFiles(as, bs, test.opts)
+			diff, _, _, err := DiffModFiles(as, bs, test.opts)
 			require.NoError(t, err)
 			require.NotNil(t, diff, "expected a module diff")
 			test.condition(t, diff)
@@ -499,6 +499,178 @@ func getDiffsForDirective(dir Directive, diff ModDiff) []*Diff {
 	}
 
 	return diffs
+}
+
+func Test_DiffModFiles_ExcludeRequire(t *testing.T) {
+	t.Parallel()
+
+	modA, err := os.ReadFile("./fixtures/go.moda")
+	require.NoError(t, err)
+
+	modB, err := os.ReadFile("./fixtures/go.modb")
+	require.NoError(t, err)
+
+	as := &ModSource{Name: "moda", Data: modA}
+	bs := &ModSource{Name: "modb", Data: modB}
+
+	for desc, test := range map[string]struct {
+		opts          *DiffOpts
+		expectNoDiff  []string // module paths that must NOT appear in require diffs
+		expectHasDiff []string // module paths that MUST appear in require diffs
+	}{
+		"literal exclude suppresses exact require diff": {
+			opts: &DiffOpts{
+				Require:           true,
+				StrictDiffRequire: true,
+				ExcludeRequire:    []string{"github.com/99designs/keyring"},
+			},
+			expectNoDiff:  []string{"github.com/99designs/keyring"},
+			expectHasDiff: []string{},
+		},
+		"glob exclude suppresses matching require diffs": {
+			opts: &DiffOpts{
+				Require:           true,
+				StrictDiffRequire: true,
+				ExcludeRequire:    []string{"github.com/99designs/*"},
+			},
+			expectNoDiff:  []string{"github.com/99designs/keyring", "github.com/99designs/go-keychain"},
+			expectHasDiff: []string{},
+		},
+		"non-matching exclude does not suppress require diff": {
+			opts: &DiffOpts{
+				Require:           true,
+				StrictDiffRequire: true,
+				ExcludeRequire:    []string{"github.com/unrelated/module"},
+			},
+			expectNoDiff: []string{},
+			expectHasDiff: []string{
+				"github.com/99designs/keyring",
+				"github.com/gsterjov/go-libsecret",
+			},
+		},
+	} {
+		t.Run(desc, func(t *testing.T) {
+			t.Parallel()
+			diff, _, _, err := DiffModFiles(as, bs, test.opts)
+			require.NoError(t, err)
+
+			for _, path := range test.expectNoDiff {
+				for _, d := range diff {
+					if d == nil || d.Directive != DirectiveRequire {
+						continue
+					}
+					txt := d.UnifiedText()
+					require.NotContains(t, txt, path,
+						"expected require diff for %q to be excluded, but found it in:\n%s", path, printModDiff(diff))
+				}
+			}
+
+			for _, path := range test.expectHasDiff {
+				found := false
+				for _, d := range diff {
+					if d == nil || d.Directive != DirectiveRequire {
+						continue
+					}
+					if strings.Contains(d.UnifiedText(), path) {
+						found = true
+						break
+					}
+				}
+				require.True(t, found,
+					"expected require diff for %q to be present, but not found in:\n%s", path, printModDiff(diff))
+			}
+		})
+	}
+}
+
+func Test_DiffModFiles_ExcludeReplace(t *testing.T) {
+	t.Parallel()
+
+	modA, err := os.ReadFile("./fixtures/go.moda")
+	require.NoError(t, err)
+
+	modB, err := os.ReadFile("./fixtures/go.modb")
+	require.NoError(t, err)
+
+	as := &ModSource{Name: "moda", Data: modA}
+	bs := &ModSource{Name: "modb", Data: modB}
+
+	for desc, test := range map[string]struct {
+		opts          *DiffOpts
+		expectNoDiff  []string // paths that must NOT appear in replace diffs
+		expectHasDiff []string // paths that MUST appear in replace diffs
+	}{
+		"literal exclude on old path suppresses replace diff": {
+			opts: &DiffOpts{
+				Replace:           true,
+				StrictDiffReplace: true,
+				ExcludeReplace:    []string{"github.com/99designs/keyring"},
+			},
+			expectNoDiff:  []string{"github.com/99designs/keyring"},
+			expectHasDiff: []string{},
+		},
+		"literal exclude on new path suppresses replace diff": {
+			opts: &DiffOpts{
+				Replace:           true,
+				StrictDiffReplace: true,
+				ExcludeReplace:    []string{"github.com/Jeffail/keyring"},
+			},
+			expectNoDiff:  []string{"github.com/Jeffail/keyring", "github.com/99designs/keyring"},
+			expectHasDiff: []string{},
+		},
+		"glob exclude on old path suppresses replace diff": {
+			opts: &DiffOpts{
+				Replace:           true,
+				StrictDiffReplace: true,
+				ExcludeReplace:    []string{"github.com/99designs/*"},
+			},
+			expectNoDiff:  []string{"github.com/99designs/keyring"},
+			expectHasDiff: []string{},
+		},
+		"non-matching exclude does not suppress replace diff": {
+			opts: &DiffOpts{
+				Replace:           true,
+				StrictDiffReplace: true,
+				ExcludeReplace:    []string{"github.com/unrelated/module"},
+			},
+			expectNoDiff: []string{},
+			expectHasDiff: []string{
+				"github.com/99designs/keyring",
+			},
+		},
+	} {
+		t.Run(desc, func(t *testing.T) {
+			t.Parallel()
+			diff, _, _, err := DiffModFiles(as, bs, test.opts)
+			require.NoError(t, err)
+
+			for _, path := range test.expectNoDiff {
+				for _, d := range diff {
+					if d == nil || d.Directive != DirectiveReplace {
+						continue
+					}
+					txt := d.UnifiedText()
+					require.NotContains(t, txt, path,
+						"expected replace diff for %q to be excluded, but found it in:\n%s", path, printModDiff(diff))
+				}
+			}
+
+			for _, path := range test.expectHasDiff {
+				found := false
+				for _, d := range diff {
+					if d == nil || d.Directive != DirectiveReplace {
+						continue
+					}
+					if strings.Contains(d.UnifiedText(), path) {
+						found = true
+						break
+					}
+				}
+				require.True(t, found,
+					"expected replace diff for %q to be present, but not found in:\n%s", path, printModDiff(diff))
+			}
+		})
+	}
 }
 
 func unifiedTextMatches(diff *Diff, matches []string) bool {

@@ -25,6 +25,30 @@ export async function fetchIdentityItems({ identityType, api }) {
 }
 
 /**
+ * Fetches the identity lists needed to resolve related item names.
+ * Failed list requests are ignored so related IDs remain available as a fallback.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The identity model containing related IDs
+ * @param {Array} params.relations - Related identity list definitions
+ * @returns {Promise<Object>} Related identity lists keyed by model property
+ */
+export async function fetchRelatedIdentityItems({ api, model, relations }) {
+  const requestedRelations = relations.filter(({ idKeys }) =>
+    idKeys.some((key) => model[key]?.length)
+  );
+  const results = await Promise.allSettled(
+    requestedRelations.map(({ identityType }) => fetchIdentityItems({ identityType, api }))
+  );
+
+  return requestedRelations.reduce((related, { modelKey }, index) => {
+    const result = results[index];
+    related[modelKey] = result.status === 'fulfilled' ? result.value : [];
+    return related;
+  }, {});
+}
+
+/**
  * Fetches identity items (entities or groups) with their capabilities attached
  * @param {Object} params - Parameters object
  * @param {string} params.identityType - The type of identity ('entity' or 'group')

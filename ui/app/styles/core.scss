@@ -49,6 +49,7 @@
 @use 'helper-classes/typography';
 
 // Component specific styling
+@use 'components/about-this-engine';
 @use 'components/autocomplete-input';
 @use 'components/b64-toggle';
 @use 'components/box-label';
@@ -67,6 +68,7 @@
 @use 'components/info-table-row';
 @use 'components/kmip-role-edit';
 @use 'components/known-secondaries-card.scss';
+@use 'components/kv-version-dropdown.scss';
 @use 'components/linked-block';
 @use 'components/list-item-row';
 @use 'components/loader';

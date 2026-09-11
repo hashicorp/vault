@@ -19,16 +19,19 @@ func newSarifUploadUSTArchiveCmd() *cobra.Command {
 		Short: "Upload a SARIF file to UST",
 		Args:  cobra.ExactArgs(1),
 		RunE:  runSarifUploadUSTCmd,
-		Long: `Convert a SARIF file to Concert format and publish it to the UST
-(Unified Security Tracking) destination Git repository via a push.
+		Long: `Convert a SARIF file to Concert format and push it to the UST
+(Unified Security Tracking) destination Git repository.
 
-Authentication uses a pre-minted GitHub token supplied via the GITHUB_TOKEN or
-GH_TOKEN environment variable. In a GitHub Actions workflow, use
-actions/create-github-app-token to mint a short-lived installation token and
-set GH_TOKEN to its output before invoking this command.
+The command reads a GitHub token from GITHUB_TOKEN or GH_TOKEN. In a GitHub
+Actions workflow, use actions/create-github-app-token to mint a short-lived
+installation token and export it via one of those variables before running
+this command.
 
-The Concert JSON is packaged as a dynamic-scan archive and pushed to the
-results/<product-id>/<squad-id>/ path on the destination branch.
+The Concert JSON is packaged as a dynamic-scan archive and committed to
+results/<product-id>/<squad-id>/ on the destination branch. Since the upload
+step will push to the same branch, if you're running several of these in
+parallel you'll likely have jobs win and lose the push race. Use the
+--upload-retries flag to gracefully retry the upload.
 
 Examples:
   # Upload a ZAP SARIF file to UST (token provided via environment)
@@ -58,7 +61,7 @@ Examples:
 	cmd.Flags().StringVar(&uploadUSTReq.GitName, "git-name", "hc-github-team-secure-vault-core", "Git committer name")
 	cmd.Flags().StringVar(&uploadUSTReq.GitEmail, "git-email", "github-team-secure-vault-core@hashicorp.com", "Git committer email")
 	cmd.Flags().StringVarP(&uploadUSTReq.ConcertOutPath, "out", "o", "", "Optional: also write Concert JSON to this path")
-	cmd.Flags().IntVar(&uploadUSTReq.PushRetries, "push-retries", 1, "Number of pull-rebase+push retries after a push conflict")
+	cmd.Flags().IntVar(&uploadUSTReq.UploadRetries, "upload-retries", 1, "Max retry attempts for the pull-rebase+push loop when jobs race to push")
 
 	var err error
 	for _, f := range []string{

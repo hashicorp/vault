@@ -493,7 +493,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID)
+	mountInfo := issuing.MountAttributionFromRequest(ctx, req, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
 	b.pkiCertificateCounter.Increment().WithMountInfo(mountInfo).AddIssuedCertificate(!role.NoStore, parsedBundle.Certificate)
 
 	if useCSR {

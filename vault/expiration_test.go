@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -2835,9 +2834,8 @@ func TestExpiration_FairsharingEnvVar(t *testing.T) {
 		},
 	}
 
-	defer os.Unsetenv(fairshareWorkersOverrideVar)
 	for _, tc := range testCases {
-		os.Setenv(fairshareWorkersOverrideVar, tc.set)
+		t.Setenv(fairshareWorkersOverrideVar, tc.set)
 		exp := mockExpiration(t)
 
 		if fairshare.GetNumWorkers(exp.jobManager) != tc.expected {

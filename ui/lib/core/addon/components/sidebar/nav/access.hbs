@@ -106,12 +106,11 @@
       />
     {{/if}}
     {{#if (has-permission "access" routeParams="groups")}}
-      <Nav.Link @route="vault.cluster.access.identity" @model="groups" @text="Groups" data-test-sidebar-nav-link="Groups" />
+      <Nav.Link @route="vault.cluster.access.identity.groups.index" @text="Groups" data-test-sidebar-nav-link="Groups" />
     {{/if}}
     {{#if (has-permission "access" routeParams="entities")}}
       <Nav.Link
-        @route="vault.cluster.access.identity"
-        @model="entities"
+        @route="vault.cluster.access.identity.entities.index"
         @text="Entities"
         data-test-sidebar-nav-link="Entities"
       />

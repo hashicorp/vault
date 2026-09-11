@@ -1,0 +1,33 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Flyout id="identity-entities-flyout" @onClose={{@onClose}} @size="large" data-test-flyout as |F|>
+  <F.Header @icon="user">
+    {{or @data.entity.name "Loading..."}}
+  </F.Header>
+  <F.Body>
+    {{#if @data}}
+      <Page::Tabs @tabs={{this.tabs}} @selectedTabIndex={{this.selectedTabIndex}} @onClickTab={{this.onClickTab}} as |T|>
+        {{#each this.tabs as |tab|}}
+          <T.Panel @key={{tab.key}} class="has-top-bottom-margin-24" data-test-panel={{tab.key}}>
+            {{component
+              (concat "details/" tab.key)
+              entity=@data.entity
+              aliasId=@data.aliasId
+              groups=@data.groups
+              aggregatePolicy=@data.aggregatePolicy
+              isParentVisible=(eq tab.key this.selectedTab)
+            }}
+          </T.Panel>
+        {{/each}}
+      </Page::Tabs>
+    {{else}}
+      <LayoutLoading />
+    {{/if}}
+  </F.Body>
+  <F.Footer>
+    <Hds::Button @color="secondary" @text="Close details" {{on "click" @onClose}} data-test-button="Close details" />
+  </F.Footer>
+</Hds::Flyout>

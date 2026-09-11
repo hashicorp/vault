@@ -109,8 +109,8 @@ export async function prepareTargets(enforcement, api, options = {}) {
                 value: item,
               }),
               icon: 'user',
-              link: 'vault.cluster.access.identity.show',
-              linkModels: [linkType, id, 'details'],
+              link: `vault.cluster.access.identity.${linkType}.show`,
+              linkModels: [id, 'details'],
               title: item.name,
               subTitle: id,
             });

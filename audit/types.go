@@ -72,6 +72,7 @@ type response struct {
 
 type auth struct {
 	Accessor                  string              `json:"accessor,omitempty"`
+	AuthorizationDetails      []any               `json:"authorization_details,omitempty"`
 	ClientToken               string              `json:"client_token,omitempty"`
 	DisplayName               string              `json:"display_name,omitempty"`
 	EntityCreated             bool                `json:"entity_created,omitempty"`

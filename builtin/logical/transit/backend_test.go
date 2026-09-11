@@ -453,9 +453,8 @@ func TestBackend_datakey(t *testing.T) {
 }
 
 func TestBackend_rotation(t *testing.T) {
-	defer os.Setenv("TRANSIT_ACC_KEY_TYPE", "")
 	testBackendRotation(t)
-	os.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
+	t.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
 	testBackendRotation(t)
 }
 

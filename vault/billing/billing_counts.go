@@ -32,6 +32,16 @@ const (
 	// DefaultAttributionRetentionMonths is the default number of months of attribution data to retain.
 	DefaultAttributionRetentionMonths = 37
 
+	// MinAttributionRetentionMonths is the minimum allowed attribution retention period.
+	// A value of 0 disables attribution storage entirely and wipes all existing attribution data.
+	MinAttributionRetentionMonths = 0
+
+	// MaxAttributionRetentionMonths is the maximum allowed attribution retention period (72 months = 6 years).
+	MaxAttributionRetentionMonths = 72
+
+	// AttributionConfigPath is the storage key for the attribution retention configuration.
+	AttributionConfigPath = "attribution_config"
+
 	BillingWriteInterval = 10 * time.Minute
 	// pluginCountsSendTimeout is the timeout for sending plugin counts to the active node
 	PluginCountsSendTimeout = 30 * time.Second
@@ -104,10 +114,10 @@ type ConsumptionBilling struct {
 	// BillingStorageLock controls access to the billing storage paths
 	BillingStorageLock sync.RWMutex
 
-	BillingConfig        BillingConfig
-	SecretEngineCounts   SecretEngineCounts
-	Logger               log.Logger
-	GetParentNamespaceID func(string) string
+	BillingConfig         BillingConfig
+	SecretEngineCounts    SecretEngineCounts
+	Logger                log.Logger
+	ParentNamespaceIDFunc func(string) string
 
 	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
 	// This is used to avoid scanning all mounts every 10 minutes for KMIP billing detection.
@@ -232,9 +242,11 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 	if !ok {
 		return fmt.Errorf("invalid value type for backendAwareUUID")
 	}
-	// NEED TO FIX: MAKE mountRunningVersion REQUIRED AS PART OF VAULT-48738
-	mountRunningVersion, _ := data["mountRunningVersion"].(string)
-
+	mountRunningVersion, ok := data["mountRunningVersion"].(string)
+	if !ok {
+		return fmt.Errorf("invalid value type for mountRunningVersion")
+	}
+	isExternal, _ := data["isExternal"].(bool)
 	d.MountAttributionLock.Lock()
 	var prev float64
 	if existing, exists := d.MountAttribution[mountAccessor]; exists {
@@ -249,12 +261,13 @@ func (d *AttributionTracker) AccumulateMountAttributions(ctx context.Context, da
 		MountPath:           mountPath,
 		MountAccessor:       mountAccessor,
 		MountType:           mountType,
-		MountRunningVersion: mountRunningVersion,
 		NamespaceID:         namespaceID,
 		NamespacePath:       namespacePath,
 		ParentNamespaceID:   parentNamespaceID,
 		BackendAwareUUID:    backendAwareUUID,
 		Count:               prev + count,
+		MountRunningVersion: mountRunningVersion,
+		IsExternal:          isExternal,
 	}
 	d.MountAttributionLock.Unlock()
 
@@ -275,7 +288,7 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.Transit.MonthlyCount.Add(val)
-		if err := s.SecretEngineCounts.Transit.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+		if err := s.SecretEngineCounts.Transit.AccumulateMountAttributions(ctx, data, float64(val), s.ParentNamespaceIDFunc); err != nil {
 			return err
 		}
 	case MountTypeTransform:
@@ -286,7 +299,7 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.Transform.MonthlyCount.Add(val)
-		if err := s.SecretEngineCounts.Transform.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+		if err := s.SecretEngineCounts.Transform.AccumulateMountAttributions(ctx, data, float64(val), s.ParentNamespaceIDFunc); err != nil {
 			return err
 		}
 	case MountTypeSpiffe:
@@ -298,7 +311,7 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.Spiffe.MonthlyUnits.Add(val)
-		if err := s.SecretEngineCounts.Spiffe.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+		if err := s.SecretEngineCounts.Spiffe.AccumulateMountAttributions(ctx, data, float64(val), s.ParentNamespaceIDFunc); err != nil {
 			return err
 		}
 	case MountTypeGcpKms:
@@ -309,7 +322,7 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.GcpKms.MonthlyCount.Add(val)
-		if err := s.SecretEngineCounts.GcpKms.AccumulateMountAttributions(ctx, data, float64(val), s.GetParentNamespaceID); err != nil {
+		if err := s.SecretEngineCounts.GcpKms.AccumulateMountAttributions(ctx, data, float64(val), s.ParentNamespaceIDFunc); err != nil {
 			return err
 		}
 	case MountTypeExCa:
@@ -321,7 +334,7 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		}
 
 		s.SecretEngineCounts.ExternalCa.MonthlyUnits.Add(val)
-		if err := s.SecretEngineCounts.ExternalCa.AccumulateMountAttributions(ctx, data, val, s.GetParentNamespaceID); err != nil {
+		if err := s.SecretEngineCounts.ExternalCa.AccumulateMountAttributions(ctx, data, val, s.ParentNamespaceIDFunc); err != nil {
 			return err
 		}
 	default:
@@ -329,4 +342,13 @@ func (s *ConsumptionBilling) WriteBillingData(ctx context.Context, mountType str
 		return err
 	}
 	return nil
+}
+
+// GetParentNamespaceID implements ConsumptionBillingManager by delegating to the
+// injected ParentNamespaceIDFunc. Returns "" when the function is not set (OSS).
+func (s *ConsumptionBilling) GetParentNamespaceID(nsPath string) string {
+	if s.ParentNamespaceIDFunc == nil {
+		return ""
+	}
+	return s.ParentNamespaceIDFunc(nsPath)
 }

@@ -225,6 +225,8 @@ func testAccPreCheck(t *testing.T) {
 	initSetup.Do(func() {
 		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 			log.Println("[INFO] Test: Using us-west-2 as test region")
+			// nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- runs inside sync.Once, shared across every test in
+			// the binary; t.Setenv would tie the restore to whichever test triggers it first and break the rest.
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
 	})

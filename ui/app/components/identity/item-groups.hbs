@@ -7,14 +7,14 @@
   (or (not (is-empty @model.group_ids)) (not (is-empty @model.direct_group_ids)) (not (is-empty @model.inherited_group_ids)))
 }}
   {{#each @model.direct_group_ids as |gid|}}
-    <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="list-item-row">
+    <LinkTo @route="vault.cluster.access.identity.groups.show" @models={{array gid "details"}} class="list-item-row">
       <Icon @name="folder" class="has-text-grey-light" />
       <Identity::ItemName @id={{gid}} @items={{@model.groups}} />
     </LinkTo>
   {{/each}}
   {{#each @model.inherited_group_ids as |gid|}}
-    <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid "details"}} class="list-item-row">
-      <LinkTo @route="vault.cluster.access.identity.show" @models={{array "groups" gid "details"}} class="has-text-black">
+    <LinkedBlock @params={{array "vault.cluster.access.identity.groups.show" gid "details"}} class="list-item-row">
+      <LinkTo @route="vault.cluster.access.identity.groups.show" @models={{array gid "details"}} class="has-text-black">
         <Icon @name="folder" class="has-text-grey-light" />
         <Identity::ItemName @id={{gid}} @items={{@model.groups}} />
       </LinkTo>

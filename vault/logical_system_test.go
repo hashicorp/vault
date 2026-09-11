@@ -1433,6 +1433,70 @@ func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_remount_leadingSlashInPaths verifies that a leading '/' in
+// the 'from' or 'to' path is silently stripped and the remount succeeds. A
+// leading slash would otherwise cause the namespace lookup to fall back to root
+// (because the radix tree stores paths without a leading slash), placing the
+// mount in the wrong namespace.
+func TestSystemBackend_remount_leadingSlashInPaths(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		from string
+		to   string
+	}{
+		{
+			name: "leading slash in to path",
+			from: "secret",
+			to:   "/foo",
+		},
+		{
+			name: "leading slash in from path",
+			from: "/secret",
+			to:   "foo",
+		},
+		{
+			name: "leading slash in both paths",
+			from: "/secret",
+			to:   "/foo",
+		},
+		{
+			name: "multiple leading slashes",
+			from: "secret",
+			to:   "///foo",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			b := testSystemBackend(t)
+
+			req := logical.TestRequest(t, logical.UpdateOperation, "remount")
+			req.Data["from"] = tc.from
+			req.Data["to"] = tc.to
+			req.Data["config"] = structs.Map(MountConfig{})
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			corehelpers.RetryUntil(t, 5*time.Second, func() error {
+				statusReq := logical.TestRequest(t, logical.ReadOperation, fmt.Sprintf("remount/status/%s", resp.Data["migration_id"]))
+				statusResp, err := b.HandleRequest(namespace.RootContext(nil), statusReq)
+				if err != nil {
+					return fmt.Errorf("status request failed: %w", err)
+				}
+				migrationInfo := statusResp.Data["migration_info"].(*MountMigrationInfo)
+				if migrationInfo.MigrationStatus != MigrationStatusSuccess.String() {
+					return fmt.Errorf("expected migration status to be successful, got %q", migrationInfo.MigrationStatus)
+				}
+				return nil
+			})
+		})
+	}
+}
+
 func TestSystemBackend_leases(t *testing.T) {
 	coreConfig := &CoreConfig{
 		LogicalBackends: map[string]logical.Factory{

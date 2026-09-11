@@ -1,0 +1,11 @@
+This directory holds per-commit markers written by the Bob Review VS Code
+extension (bob-review, see hashicorp/vault-tools) after it posts a review
+for that commit. Files are named by full commit SHA.
+
+Its presence here is also what bobReview.ciArtifact="auto" checks for to
+decide whether to write a marker at all — a repo without this directory
+sees no behavior change from the extension.
+
+Unlike vault-tools, the review gate in this repo (bob-review-gate.yml) only
+enforces on PRs carrying the `require-bob-review` label — it's silent by
+default so non-adopters see no failing check.

@@ -33,6 +33,13 @@ func newUnifiedTransferStatus() *UnifiedTransferStatus {
 	return &UnifiedTransferStatus{}
 }
 
+func shouldSkipUnifiedTransfer(forceRerun bool, lastRun time.Time) bool {
+	if lastRun.IsZero() {
+		return false
+	}
+	return !forceRerun && time.Since(lastRun) < minUnifiedTransferDelay
+}
+
 // runUnifiedTransfer meant to run as a background, this will process all and
 // send all missing local revocation entries to the unified space if the feature
 // is enabled.
@@ -73,13 +80,8 @@ func runUnifiedTransfer(sc *storageContext) {
 
 	// Because access to lastRun is not locked, we need to delay this check
 	// until after we grab the isRunning CAS lock.
-	if !status.lastRun.IsZero() {
-		// We have run before, we only run again if we have
-		// been requested to forceRerun, and we haven't run since our
-		// minimum delay.
-		if !(status.forceRerun.Load() && time.Since(status.lastRun) < minUnifiedTransferDelay) {
-			return
-		}
+	if shouldSkipUnifiedTransfer(status.forceRerun.Load(), status.lastRun) {
+		return
 	}
 
 	// Reset our flag before we begin, we do this before we start as
@@ -89,7 +91,7 @@ func runUnifiedTransfer(sc *storageContext) {
 	// periodic function call that passes our min delay.
 	status.forceRerun.Store(false)
 
-	err = doUnifiedTransferMissingLocalSerials(sc, clusterId)
+	wroteSerials, err := doUnifiedTransferMissingLocalSerials(sc, clusterId)
 	if err != nil {
 		sc.Logger().Error("an error occurred running unified transfer", "error", err.Error())
 		status.forceRerun.Store(true)
@@ -103,39 +105,52 @@ func runUnifiedTransfer(sc *storageContext) {
 		}
 	}
 
+	if wroteSerials {
+		// New entries were written to unified storage. Schedule a CRL rebuild
+		// so the unified CRL reflects them on the next periodic tick.
+		sc.Backend.CrlBuilder().requestRebuildIfActiveNode(sc.Backend)
+	}
+
 	status.lastRun = time.Now()
 }
 
-func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) error {
+// doUnifiedTransferMissingLocalSerials copies any locally-revoked certificates
+// that are absent from this cluster's unified-revocation storage into that
+// storage.  It returns true if at least one entry was successfully written, so
+// the caller can decide whether a CRL rebuild is warranted.
+func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) (bool, error) {
 	localRevokedSerialNums, err := sc.listRevokedCerts()
 	if err != nil {
-		return err
+		return false, err
 	}
 	if len(localRevokedSerialNums) == 0 {
 		// No local certs to transfer, no further work to do.
-		return nil
+		return false, nil
 	}
 
 	unifiedSerials, err := listClusterSpecificUnifiedRevokedCerts(sc, clusterId)
 	if err != nil {
-		return err
+		return false, err
 	}
 	unifiedCertLookup := sliceToMapKey(unifiedSerials)
 
 	errCount := 0
+	wroteCount := 0
 	for i, serialNum := range localRevokedSerialNums {
 		if i%25 == 0 {
 			config, _ := sc.CrlBuilder().GetConfigWithUpdate(sc)
 			if config != nil && !config.UnifiedCRL {
-				return errors.New("unified crl has been disabled after we started, stopping")
+				return wroteCount > 0, errors.New("unified crl has been disabled after we started, stopping")
 			}
 		}
 		if _, ok := unifiedCertLookup[serialNum]; !ok {
-			err := readRevocationEntryAndTransfer(sc, serialNum)
+			written, err := readRevocationEntryAndTransfer(sc, serialNum)
 			if err != nil {
 				errCount++
 				sc.Logger().Error("Failed transferring local revocation to unified space",
 					"serial", serialNum, "error", err)
+			} else if written {
+				wroteCount++
 			}
 		}
 	}
@@ -144,7 +159,7 @@ func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) 
 		sc.Logger().Warn(fmt.Sprintf("Failed transfering %d local serials to unified storage", errCount))
 	}
 
-	return nil
+	return wroteCount > 0, nil
 }
 
 func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId string) error {
@@ -293,26 +308,26 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 	return nil
 }
 
-func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
+func readRevocationEntryAndTransfer(sc *storageContext, serial string) (bool, error) {
 	hyphenSerial := normalizeSerial(serial)
 	revInfo, err := fetchRevocationInfo(sc, hyphenSerial)
 	if err != nil {
-		return fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
+		return false, fmt.Errorf("failed loading revocation entry for serial: %s: %w", serial, err)
 	}
 	if revInfo == nil {
 		sc.Logger().Debug("no certificate revocation entry for serial", "serial", serial)
-		return nil
+		return false, nil
 	}
 	cert, err := x509.ParseCertificate(revInfo.CertificateBytes)
 	if err != nil {
 		sc.Logger().Debug("failed parsing certificate stored in revocation entry for serial",
 			"serial", serial, "error", err)
-		return nil
+		return false, nil
 	}
 	if revInfo.CertificateIssuer == "" {
 		// No certificate issuer assigned to this serial yet, just drop it for now,
 		// as a crl rebuild/tidy needs to happen
-		return nil
+		return false, nil
 	}
 
 	revocationTime := revInfo.RevocationTimeUTC
@@ -323,7 +338,7 @@ func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 
 	if time.Now().After(cert.NotAfter) {
 		// ignore transferring this entry as it has already expired.
-		return nil
+		return false, nil
 	}
 
 	entry := &revocation.UnifiedRevocationEntry{
@@ -331,7 +346,11 @@ func readRevocationEntryAndTransfer(sc *storageContext, serial string) error {
 		CertExpiration:    cert.NotAfter,
 		RevocationTimeUTC: revocationTime,
 		CertificateIssuer: revInfo.CertificateIssuer,
+		ReasonCode:        revInfo.ReasonCode,
 	}
 
-	return revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry)
+	if err := revocation.WriteUnifiedRevocationEntry(sc.GetContext(), sc.GetStorage(), entry); err != nil {
+		return false, err
+	}
+	return true, nil
 }

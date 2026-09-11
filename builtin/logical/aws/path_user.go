@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -58,14 +59,42 @@ func pathUser(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCredsRead,
+				Summary:  "Generate AWS credentials for a given role.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "credentials|sts-credentials",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"access_key":     {Type: framework.TypeString, Description: "AWS access key ID."},
+							"secret_key":     {Type: framework.TypeString, Description: "AWS secret access key."},
+							"security_token": {Type: framework.TypeString, Description: "AWS security token for STS credentials. Deprecated; use session_token."},
+							"session_token":  {Type: framework.TypeString, Description: "AWS session token for STS credentials."},
+							"arn":            {Type: framework.TypeString, Description: "ARN of the assumed role (only set for assumed_role credential type)."},
+							"ttl":            {Type: framework.TypeInt, Description: "TTL of the credentials in seconds (only set for STS credential types)."},
+						},
+					}},
 				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCredsRead,
+				Summary:  "Generate AWS credentials for a given role.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationSuffix: "credentials-with-parameters|sts-credentials-with-parameters",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"access_key":     {Type: framework.TypeString, Description: "AWS access key ID."},
+							"secret_key":     {Type: framework.TypeString, Description: "AWS secret access key."},
+							"security_token": {Type: framework.TypeString, Description: "AWS security token for STS credentials. Deprecated; use session_token."},
+							"session_token":  {Type: framework.TypeString, Description: "AWS session token for STS credentials."},
+							"arn":            {Type: framework.TypeString, Description: "ARN of the assumed role (only set for assumed_role credential type)."},
+							"ttl":            {Type: framework.TypeInt, Description: "TTL of the credentials in seconds (only set for STS credential types)."},
+						},
+					}},
 				},
 			},
 		},

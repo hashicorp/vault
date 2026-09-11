@@ -19,6 +19,7 @@ type MountAttribution struct {
 	ParentNamespaceID   string      `json:"parent_namespace_id"`   // Parent namespace identifier
 	Count               interface{} `json:"count"`                 // Count of a specific metric under this mount (int or float64)
 	BackendAwareUUID    string      `json:"backend_aware_uuid"`    // A stable identifier that is unique across clusters
+	IsExternal          bool        `json:"is_external"`           // Is unofficial or external plugin
 }
 
 // MetricTypeAttribution holds mount attribution data for a specific metric type (e.g., "kv", "aws_static").
@@ -31,6 +32,11 @@ type MetricTypeAttribution struct {
 // billing.ConsumptionBillingManager is an implementation of this interface that the backend can use to write billing data.
 type ConsumptionBillingManager interface {
 	WriteBillingData(ctx context.Context, pluginType string, data map[string]interface{}) error
+
+	// GetParentNamespaceID returns the ID of the parent namespace for the given
+	// namespace path. Returns an empty string when the path has no parent (root
+	// namespace) or when namespace resolution is unavailable (e.g. OSS).
+	GetParentNamespaceID(nsPath string) string
 }
 
 // ================================
@@ -45,4 +51,8 @@ type nullConsumptionBillingManager struct{}
 
 func (n *nullConsumptionBillingManager) WriteBillingData(ctx context.Context, pluginType string, data map[string]interface{}) error {
 	return nil
+}
+
+func (n *nullConsumptionBillingManager) GetParentNamespaceID(_ string) string {
+	return ""
 }

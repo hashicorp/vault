@@ -129,7 +129,7 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return nil, nil, errors.New("error marshaling signed certificate")
 	}
 
-	mountInfo := sshMountAttribution(ctx, req, b.backendUUID)
+	mountInfo := sshMountAttribution(ctx, req, b.backendUUID, b.ConsumptionBillingManager.GetParentNamespaceID)
 	b.sshCertificateCounter.Increment().WithMountInfo(mountInfo).AddSSHCertificate(ttl)
 
 	response := &logical.Response{
@@ -606,7 +606,7 @@ func (b *backend) getCASigner(ctx context.Context, s logical.Storage) (ssh.Signe
 
 // sshMountAttribution builds a MountAttribution from the current request context.
 // The Count field is left as nil/zero — it is filled in by AddSSHCertificate or AddSSHOTP.
-func sshMountAttribution(ctx context.Context, req *logical.Request, backendUUID string) logical.MountAttribution {
+func sshMountAttribution(ctx context.Context, req *logical.Request, backendUUID string, getParentNsID func(string) string) logical.MountAttribution {
 	attr := logical.MountAttribution{
 		NamespaceID: namespace.RootNamespaceID,
 	}
@@ -615,10 +615,13 @@ func sshMountAttribution(ctx context.Context, req *logical.Request, backendUUID 
 		attr.MountPath = req.MountPoint
 		attr.MountType = req.MountType
 		attr.BackendAwareUUID = backendUUID
+		attr.MountRunningVersion = req.MountRunningVersion()
+		attr.IsExternal = req.MountIsExternalPlugin()
 	}
 	if ns, err := namespace.FromContext(ctx); err == nil {
 		attr.NamespaceID = ns.ID
 		attr.NamespacePath = ns.Path
+		attr.ParentNamespaceID = getParentNsID(ns.Path)
 	}
 	return attr
 }
