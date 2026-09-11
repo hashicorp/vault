@@ -9,6 +9,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -81,19 +82,28 @@ func verifyCIDRRoleSecretIDSubset(secretIDCIDRs []string, roleBoundCIDRList []st
 		// If there are no CIDR blocks on the role, then the subset
 		// requirement would be satisfied
 		if len(roleBoundCIDRList) != 0 {
-			// Address blocks with /32 mask do not get stored with the CIDR mask
-			// Check if there are any /32 addresses and append CIDR mask
-			for i, block := range roleBoundCIDRList {
+			// IPV6 addresses with a /128 mask and IPV4 addresses with a /32 mask
+			//  do not get stored with the CIDR mask so we will append it manually.
+			roleBoundCIDRs := append([]string(nil), roleBoundCIDRList...)
+			for i, block := range roleBoundCIDRs {
 				if !strings.Contains(block, "/") {
-					roleBoundCIDRList[i] = fmt.Sprint(block, "/32")
+					maskLen := 128
+					ip := net.ParseIP(block)
+					if ip == nil {
+						return fmt.Errorf("failed to parse role CIDR block %q", block)
+					}
+					if ip.To4() != nil {
+						maskLen = 32
+					}
+					roleBoundCIDRs[i] = fmt.Sprintf("%s/%d", block, maskLen)
 				}
 			}
 
-			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRList, secretIDCIDRs)
+			subset, err := cidrutil.SubsetBlocks(roleBoundCIDRs, secretIDCIDRs)
 			if !subset || err != nil {
 				return fmt.Errorf(
 					"failed to verify subset relationship between CIDR blocks on the role %q and CIDR blocks on the secret ID %q: %w",
-					roleBoundCIDRList,
+					roleBoundCIDRs,
 					secretIDCIDRs,
 					err,
 				)

@@ -593,6 +593,53 @@ func TestAppRole_TokenBoundCIDRSubset32Mask(t *testing.T) {
 	}
 }
 
+// TestAppRole_TokenBoundCIDRSubset128Mask verifies that an IPv6 host token CIDR
+// on a SecretID must remain within the role's exact IPv6 host token CIDR.
+func TestAppRole_TokenBoundCIDRSubset128Mask(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, storage := createBackendWithStorage(t)
+
+	roleData := map[string]interface{}{
+		"role_id":           "role-id-456",
+		"policies":          "a,b",
+		"token_bound_cidrs": "2001:db8::1/128",
+	}
+
+	roleReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "role/testrole2",
+		Storage:   storage,
+		Data:      roleData,
+	}
+
+	resp = b.requestNoErr(t, roleReq)
+
+	secretIDReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Path:      "role/testrole2/secret-id",
+		Data: map[string]interface{}{
+			"token_bound_cidrs": "2001:db8::1/128",
+		},
+	}
+
+	resp = b.requestNoErr(t, secretIDReq)
+
+	secretIDReq.Data = map[string]interface{}{
+		"token_bound_cidrs": "2001:db8:0:1::99/128",
+	}
+
+	resp, err = b.HandleRequest(context.Background(), secretIDReq)
+	if resp != nil {
+		t.Fatalf("expected nil resp, got: %#v", resp)
+	}
+	if err == nil {
+		t.Fatal("expected an error for non-subset IPv6 /128 token_bound_cidrs, got nil")
+	}
+}
+
 func TestAppRole_RoleConstraints(t *testing.T) {
 	var resp *logical.Response
 	var err error
