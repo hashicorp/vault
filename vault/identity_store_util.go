@@ -3150,7 +3150,9 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 
 			i.logger.Debug("adding member entity ID to external group", "member_entity_id", entityID, "group_id", group.ID)
 
-			group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
+			if !strutil.StrListContains(group.MemberEntityIDs, entityID) {
+				group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
+			}
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, true)
 			if errors.Is(err, logical.ErrReadOnly) {
