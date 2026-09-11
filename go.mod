@@ -155,7 +155,7 @@ require (
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
-	github.com/hashicorp/vault-plugin-auth-alicloud v0.23.1
+	github.com/hashicorp/vault-plugin-auth-alicloud v0.23.2-0.20260901003208-60ce8cab899e
 	github.com/hashicorp/vault-plugin-auth-azure v0.24.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.23.1
 	github.com/hashicorp/vault-plugin-auth-gcp v0.23.1
@@ -183,7 +183,7 @@ require (
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.25.2-0.20260728192902-8feb2fb893c7
+	github.com/hashicorp/vault/sdk v0.25.2-0.20260824170943-679d2ec11639
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/instana/go-sensor v1.68.0
