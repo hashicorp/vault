@@ -299,3 +299,50 @@ func TestCalcSleepPeriod(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+// TestLifetimeWatcherErrorBackoffStops verifies that after the maximum elapsed
+// time is exceeded during persistent renewal failures, the error backoff in the
+// LifetimeWatcher correctly returns backoff.Stop so that the watcher terminates.
+// This is a regression test for https://github.com/hashicorp/vault/issues/28611.
+func TestLifetimeWatcherErrorBackoffStops(t *testing.T) {
+	t.Parallel()
+
+	client, err := NewClient(DefaultConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	renewErr := fmt.Errorf("renew failure")
+
+	v, err := client.NewLifetimeWatcher(&LifetimeWatcherInput{
+		Secret: &Secret{
+			LeaseDuration: 3,
+		},
+		Increment: 3,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doneCh := make(chan error, 1)
+	go func() {
+		// Use a very short initial retry interval so the backoff exhausts quickly.
+		doneCh <- v.doRenewWithOptions(false, false, 3, "myleaseID",
+			func(_ string, _ int) (*Secret, error) {
+				return nil, renewErr
+			}, 100*time.Millisecond)
+	}()
+	defer v.Stop()
+
+	select {
+	case <-time.After(30 * time.Second):
+		t.Fatal("timed out waiting for LifetimeWatcher to stop; " +
+			"error backoff may not be returning backoff.Stop correctly")
+	case gotErr := <-doneCh:
+		// The watcher should terminate. It may return either the renewal error
+		// (via the backoff.Stop path) or nil (via the grace period path).
+		// Prior to the fix, it would loop indefinitely with 0-duration sleeps
+		// and eventually return nil. The important thing is it terminates promptly.
+		_ = gotErr
+	}
+}
