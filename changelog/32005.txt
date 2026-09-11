@@ -1,0 +1,3 @@
+```release-note:bug
+docker: skip ownership and capability setup in the development entrypoint when running as a non-root user
+```
