@@ -978,6 +978,105 @@ func TestValidate(t *testing.T) {
 			},
 			expectErr: false,
 		},
+		"consecutive chars disallowed with single character rule over half the length": {
+			generator: &StringGenerator{
+				Length:                  4,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("ab"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset:  []rune("a"),
+						MinChars: 3,
+					},
+					CharsetRule{
+						Charset: []rune("b"),
+					},
+				},
+			},
+			expectErr: true,
+		},
+		"consecutive chars disallowed with single character rule at exactly half the length": {
+			generator: &StringGenerator{
+				Length:                  4,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("ab"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset:  []rune("a"),
+						MinChars: 2,
+					},
+					CharsetRule{
+						Charset: []rune("b"),
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"consecutive chars disallowed with single character rule at ceiling of odd length": {
+			generator: &StringGenerator{
+				Length:                  5,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("ab"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset:  []rune("a"),
+						MinChars: 3,
+					},
+					CharsetRule{
+						Charset: []rune("b"),
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"consecutive chars disallowed with duplicated single character rule over half the length": {
+			generator: &StringGenerator{
+				Length:                  4,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("ab"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset:  []rune("aa"),
+						MinChars: 3,
+					},
+					CharsetRule{
+						Charset: []rune("b"),
+					},
+				},
+			},
+			expectErr: true,
+		},
+		"consecutive chars disallowed with multi character rule requiring full length": {
+			generator: &StringGenerator{
+				Length:                  4,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("ab"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset:  []rune("ab"),
+						MinChars: 4,
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"consecutive chars allowed with single character rule over half the length": {
+			generator: &StringGenerator{
+				Length:                  4,
+				ConsecutiveCharsAllowed: boolPtr(true),
+				charset:                 []rune("ab"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset:  []rune("a"),
+						MinChars: 3,
+					},
+					CharsetRule{
+						Charset: []rune("b"),
+					},
+				},
+			},
+			expectErr: false,
+		},
 	}
 
 	for name, test := range tests {

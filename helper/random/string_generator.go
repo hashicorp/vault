@@ -336,12 +336,42 @@ func (g *StringGenerator) validateConfig() (err error) {
 		}
 	}
 
-	// A single-character charset cannot produce a string longer than 1 without repeating that character. The charset
-	// has already been de-duplicated by getChars.
-	if !g.AllowsConsecutiveChars() && g.Length > 1 && len(g.charset) == 1 {
-		merr = multierror.Append(merr, fmt.Errorf("consecutive characters are not allowed but the charset contains only one character"))
+	if !g.AllowsConsecutiveChars() && g.Length > 1 {
+		// A single-character charset cannot produce a string longer than 1 without repeating that character. The
+		// charset has already been de-duplicated by getChars.
+		if len(g.charset) == 1 {
+			merr = multierror.Append(merr, fmt.Errorf("consecutive characters are not allowed but the charset contains only one character"))
+		}
+
+		// A character that cannot be adjacent to itself fits in at most every other position, so a rule whose charset
+		// is a single character cannot require more than ceil(length / 2) of it.
+		maxSingleChar := (g.Length + 1) / 2
+		for _, r := range g.Rules {
+			if minChars, chars, ok := singleCharRequirement(r); ok && minChars > maxSingleChar {
+				merr = multierror.Append(merr, fmt.Errorf("consecutive characters are not allowed but rule requires %d of %q in %d characters (maximum %d)", minChars, string(chars), g.Length, maxSingleChar))
+			}
+		}
 	}
 	return merr.ErrorOrNil()
+}
+
+// singleCharRequirement returns the minimum count and charset of a rule whose charset is a single character, using the
+// optional interfaces `MinLength() int` and `Chars() []rune`. ok is false for any other rule.
+func singleCharRequirement(rule Rule) (minChars int, chars []rune, ok bool) {
+	type singleCharProvider interface {
+		MinLength() int
+		Chars() []rune
+	}
+
+	scp, isProvider := rule.(singleCharProvider)
+	if !isProvider {
+		return 0, nil, false
+	}
+	chars = deduplicateRunes(scp.Chars())
+	if len(chars) != 1 {
+		return 0, nil, false
+	}
+	return scp.MinLength(), chars, true
 }
 
 // getMinLength from the rules using the optional interface: `MinLength() int`

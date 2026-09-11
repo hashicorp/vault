@@ -250,6 +250,21 @@ func TestParser_ParsePolicy(t *testing.T) {
 			expected:  StringGenerator{},
 			expectErr: true,
 		},
+		"consecutive chars disallowed with single character rule over half the length": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+				length = 4
+				consecutive-chars-allowed = false
+				rule "charset" {
+					charset = "a"
+					min-chars = 3
+				}
+				rule "charset" {
+					charset = "b"
+				}`,
+			expected:  StringGenerator{},
+			expectErr: true,
+		},
 		"consecutive chars not a bool": {
 			registry: defaultRuleNameMapping,
 			rawConfig: `
