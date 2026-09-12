@@ -199,6 +199,83 @@ func TestParser_ParsePolicy(t *testing.T) {
 			expected:  StringGenerator{},
 			expectErr: true,
 		},
+		"consecutive chars explicitly allowed": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+				length = 20
+				consecutive-chars-allowed = true
+				rule "charset" {
+					charset = "abcde"
+				}`,
+			expected: StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(true),
+				charset:                 []rune("abcde"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("abcde"),
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"consecutive chars disallowed": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+				length = 20
+				consecutive-chars-allowed = false
+				rule "charset" {
+					charset = "abcde"
+				}`,
+			expected: StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("abcde"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("abcde"),
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"consecutive chars disallowed with single character": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+				length = 20
+				consecutive-chars-allowed = false
+				rule "charset" {
+					charset = "a"
+				}`,
+			expected:  StringGenerator{},
+			expectErr: true,
+		},
+		"consecutive chars disallowed with single character rule over half the length": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+				length = 4
+				consecutive-chars-allowed = false
+				rule "charset" {
+					charset = "a"
+					min-chars = 3
+				}
+				rule "charset" {
+					charset = "b"
+				}`,
+			expected:  StringGenerator{},
+			expectErr: true,
+		},
+		"consecutive chars not a bool": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+				length = 20
+				consecutive-chars-allowed = "nope"
+				rule "charset" {
+					charset = "abcde"
+				}`,
+			expected:  StringGenerator{},
+			expectErr: true,
+		},
 
 		// /////////////////////////////////////////////////
 		// JSON data
@@ -275,6 +352,29 @@ func TestParser_ParsePolicy(t *testing.T) {
 					CharsetRule{
 						Charset:  []rune("abcde"),
 						MinChars: 2,
+					},
+				},
+			},
+			expectErr: false,
+		},
+		"JSONified HCL with consecutive chars disallowed": {
+			registry: defaultRuleNameMapping,
+			rawConfig: toJSON(t, StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("abcde"),
+					},
+				},
+			}),
+			expected: StringGenerator{
+				Length:                  20,
+				ConsecutiveCharsAllowed: boolPtr(false),
+				charset:                 []rune("abcde"),
+				Rules: []Rule{
+					CharsetRule{
+						Charset: []rune("abcde"),
 					},
 				},
 			},
@@ -587,4 +687,8 @@ func toJSON(t *testing.T, val interface{}) string {
 		t.Fatalf("unable to marshal to JSON: %s", err)
 	}
 	return string(b)
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
