@@ -717,6 +717,7 @@ func (c *Client) CloneConfig() *Config {
 	newConfig.CloneToken = c.config.CloneToken
 	newConfig.ReadYourWrites = c.config.ReadYourWrites
 	newConfig.clientTLSConfig = c.config.clientTLSConfig
+	newConfig.DisableRedirects = c.config.DisableRedirects
 
 	// we specifically want a _copy_ of the client here, not a pointer to the original one
 	newClient := *c.config.HttpClient
