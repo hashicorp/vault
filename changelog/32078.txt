@@ -1,0 +1,3 @@
+```release-note:improvement
+telemetry: Added a telemetry configuration `add_mount_point_database_metrics` which, when set to true, causes the database secrets engine to attach `namespace`, `mount_point`, and `connection_name` labels to its metrics, allowing them to be broken down per namespace, mount, and configured connection. Metric names are unchanged and the labels are omitted by default.
+```

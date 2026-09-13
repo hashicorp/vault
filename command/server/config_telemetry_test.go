@@ -74,3 +74,35 @@ func TestRollbackMountPointMetricsConfig(t *testing.T) {
 		})
 	}
 }
+
+// TestDatabaseMountPointMetricsConfig verifies that the
+// add_mount_point_database_metrics config option is parsed correctly when set to
+// true, and that it defaults to false.
+func TestDatabaseMountPointMetricsConfig(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name           string
+		configFile     string
+		wantMountPoint bool
+	}{
+		{
+			name:           "include mount point",
+			configFile:     "./test-fixtures/telemetry/database_mount_point.hcl",
+			wantMountPoint: true,
+		},
+		{
+			name:           "exclude mount point",
+			configFile:     "./test-fixtures/telemetry/valid_prefix_filter.hcl",
+			wantMountPoint: false,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			config, err := LoadConfigFile(tc.configFile)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantMountPoint, config.Telemetry.DatabaseMetricsIncludeMountPoint)
+		})
+	}
+}

@@ -132,16 +132,66 @@ type databaseMetricsMiddleware struct {
 	next Database
 
 	typeStr string
+
+	// namespace, mountPoint and connectionName identify the mount that this
+	// instance serves. When set, they are attached to emitted metrics as
+	// labels. All are empty unless the operator opted in, in which case emission
+	// is unlabeled and therefore identical to the behavior before these fields
+	// existed.
+	namespace      string
+	mountPoint     string
+	connectionName string
+}
+
+// labels builds the telemetry labels identifying this plugin instance, or nil
+// when the operator has not opted in to per-mount metrics.
+//
+// A fresh slice is returned on every call because go-metrics appends to the
+// slice it is handed, so a shared slice could be mutated by an earlier
+// emission.
+func (mw databaseMetricsMiddleware) labels() []metrics.Label {
+	if mw.namespace == "" && mw.mountPoint == "" && mw.connectionName == "" {
+		return nil
+	}
+
+	labels := make([]metrics.Label, 0, 3)
+	if mw.namespace != "" {
+		labels = append(labels, metrics.Label{Name: "namespace", Value: mw.namespace})
+	}
+	if mw.mountPoint != "" {
+		labels = append(labels, metrics.Label{Name: "mount_point", Value: mw.mountPoint})
+	}
+	if mw.connectionName != "" {
+		labels = append(labels, metrics.Label{Name: "connection_name", Value: mw.connectionName})
+	}
+	return labels
+}
+
+// incrOperation counts an attempted operation, both across all database plugins
+// and for this plugin type.
+func (mw databaseMetricsMiddleware) incrOperation(operation string) {
+	metrics.IncrCounterWithLabels([]string{"database", operation}, 1, mw.labels())
+	metrics.IncrCounterWithLabels([]string{"database", mw.typeStr, operation}, 1, mw.labels())
+}
+
+// incrOperationError counts a failed operation.
+func (mw databaseMetricsMiddleware) incrOperationError(operation string) {
+	metrics.IncrCounterWithLabels([]string{"database", operation, "error"}, 1, mw.labels())
+	metrics.IncrCounterWithLabels([]string{"database", mw.typeStr, operation, "error"}, 1, mw.labels())
+}
+
+// measureOperationSince records how long an operation took.
+func (mw databaseMetricsMiddleware) measureOperationSince(operation string, start time.Time) {
+	metrics.MeasureSinceWithLabels([]string{"database", operation}, start, mw.labels())
+	metrics.MeasureSinceWithLabels([]string{"database", mw.typeStr, operation}, start, mw.labels())
 }
 
 func (mw databaseMetricsMiddleware) PluginVersion() logical.PluginVersion {
-	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"database", "PluginVersion"}, now)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "PluginVersion"}, now)
+	defer func(start time.Time) {
+		mw.measureOperationSince("PluginVersion", start)
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "PluginVersion"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "PluginVersion"}, 1)
+	mw.incrOperation("PluginVersion")
 
 	if versioner, ok := mw.next.(logical.PluginVersioner); ok {
 		return versioner.PluginVersion()
@@ -150,66 +200,54 @@ func (mw databaseMetricsMiddleware) PluginVersion() logical.PluginVersion {
 }
 
 func (mw databaseMetricsMiddleware) Initialize(ctx context.Context, req InitializeRequest) (resp InitializeResponse, err error) {
-	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"database", "Initialize"}, now)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "Initialize"}, now)
+	defer func(start time.Time) {
+		mw.measureOperationSince("Initialize", start)
 
 		if err != nil {
-			metrics.IncrCounter([]string{"database", "Initialize", "error"}, 1)
-			metrics.IncrCounter([]string{"database", mw.typeStr, "Initialize", "error"}, 1)
+			mw.incrOperationError("Initialize")
 		}
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "Initialize"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "Initialize"}, 1)
+	mw.incrOperation("Initialize")
 	return mw.next.Initialize(ctx, req)
 }
 
 func (mw databaseMetricsMiddleware) NewUser(ctx context.Context, req NewUserRequest) (resp NewUserResponse, err error) {
 	defer func(start time.Time) {
-		metrics.MeasureSince([]string{"database", "NewUser"}, start)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "NewUser"}, start)
+		mw.measureOperationSince("NewUser", start)
 
 		if err != nil {
-			metrics.IncrCounter([]string{"database", "NewUser", "error"}, 1)
-			metrics.IncrCounter([]string{"database", mw.typeStr, "NewUser", "error"}, 1)
+			mw.incrOperationError("NewUser")
 		}
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "NewUser"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "NewUser"}, 1)
+	mw.incrOperation("NewUser")
 	return mw.next.NewUser(ctx, req)
 }
 
 func (mw databaseMetricsMiddleware) UpdateUser(ctx context.Context, req UpdateUserRequest) (resp UpdateUserResponse, err error) {
-	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"database", "UpdateUser"}, now)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "UpdateUser"}, now)
+	defer func(start time.Time) {
+		mw.measureOperationSince("UpdateUser", start)
 
 		if err != nil {
-			metrics.IncrCounter([]string{"database", "UpdateUser", "error"}, 1)
-			metrics.IncrCounter([]string{"database", mw.typeStr, "UpdateUser", "error"}, 1)
+			mw.incrOperationError("UpdateUser")
 		}
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "UpdateUser"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "UpdateUser"}, 1)
+	mw.incrOperation("UpdateUser")
 	return mw.next.UpdateUser(ctx, req)
 }
 
 func (mw databaseMetricsMiddleware) DeleteUser(ctx context.Context, req DeleteUserRequest) (resp DeleteUserResponse, err error) {
-	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"database", "DeleteUser"}, now)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "DeleteUser"}, now)
+	defer func(start time.Time) {
+		mw.measureOperationSince("DeleteUser", start)
 
 		if err != nil {
-			metrics.IncrCounter([]string{"database", "DeleteUser", "error"}, 1)
-			metrics.IncrCounter([]string{"database", mw.typeStr, "DeleteUser", "error"}, 1)
+			mw.incrOperationError("DeleteUser")
 		}
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "DeleteUser"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "DeleteUser"}, 1)
+	mw.incrOperation("DeleteUser")
 	return mw.next.DeleteUser(ctx, req)
 }
 
@@ -218,18 +256,15 @@ func (mw databaseMetricsMiddleware) Type() (string, error) {
 }
 
 func (mw databaseMetricsMiddleware) Close() (err error) {
-	defer func(now time.Time) {
-		metrics.MeasureSince([]string{"database", "Close"}, now)
-		metrics.MeasureSince([]string{"database", mw.typeStr, "Close"}, now)
+	defer func(start time.Time) {
+		mw.measureOperationSince("Close", start)
 
 		if err != nil {
-			metrics.IncrCounter([]string{"database", "Close", "error"}, 1)
-			metrics.IncrCounter([]string{"database", mw.typeStr, "Close", "error"}, 1)
+			mw.incrOperationError("Close")
 		}
 	}(time.Now())
 
-	metrics.IncrCounter([]string{"database", "Close"}, 1)
-	metrics.IncrCounter([]string{"database", mw.typeStr, "Close"}, 1)
+	mw.incrOperation("Close")
 	return mw.next.Close()
 }
 

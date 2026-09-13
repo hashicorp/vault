@@ -143,8 +143,28 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
 	b.schedule = &schedule.DefaultSchedule{}
+	b.mountNamespace = conf.MountNamespace
+	b.mountPoint = conf.MountPath
+	b.includeMountPointInMetrics = conf.IncludeMountPointInMetrics
 
 	return &b
+}
+
+// metricsLabelsForConnection returns the telemetry labels to attach to metrics
+// emitted on behalf of the named connection.
+//
+// When the operator has not opted in, it returns the zero value, which leaves
+// metrics unlabeled so they keep aggregating across mounts as they always have.
+func (b *databaseBackend) metricsLabelsForConnection(name string) databaseWrapperMetricsLabels {
+	if !b.includeMountPointInMetrics {
+		return databaseWrapperMetricsLabels{}
+	}
+
+	return databaseWrapperMetricsLabels{
+		namespace:      b.mountNamespace,
+		mountPoint:     b.mountPoint,
+		connectionName: name,
+	}
 }
 
 func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
@@ -164,7 +184,18 @@ func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]m
 	}
 	var gauges []metricsutil.GaugeLabelValues
 	for k, v := range counts {
-		gauges = append(gauges, metricsutil.GaugeLabelValues{Labels: []metricsutil.Label{{Name: "dbType", Value: k}}, Value: float32(v)})
+		labels := []metricsutil.Label{{Name: "dbType", Value: k}}
+		if b.includeMountPointInMetrics {
+			// Guard each label so we never emit an empty-valued dimension,
+			// matching how the plugin metrics middleware builds its labels.
+			if b.mountNamespace != "" {
+				labels = append(labels, metricsutil.Label{Name: "namespace", Value: b.mountNamespace})
+			}
+			if b.mountPoint != "" {
+				labels = append(labels, metricsutil.Label{Name: "mount_point", Value: b.mountPoint})
+			}
+		}
+		gauges = append(gauges, metricsutil.GaugeLabelValues{Labels: labels, Value: float32(v)})
 	}
 	return gauges, nil
 }
@@ -198,6 +229,20 @@ type databaseBackend struct {
 	gaugeCollectionProcessStop sync.Once
 
 	schedule schedule.Scheduler
+
+	// mountNamespace is the telemetry-normalized namespace the backend is
+	// mounted in ("root" for the root namespace). It is empty when the backend
+	// is constructed outside of a mount, such as in unit tests.
+	mountNamespace string
+
+	// mountPoint is the path this backend is mounted at, used only to label
+	// telemetry. It is empty when the backend is constructed outside of a mount,
+	// such as in unit tests.
+	mountPoint string
+
+	// includeMountPointInMetrics reflects the add_mount_point_database_metrics
+	// telemetry setting.
+	includeMountPointInMetrics bool
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

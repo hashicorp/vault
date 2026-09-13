@@ -115,6 +115,23 @@ type BackendConfig struct {
 	// ObservationsRecorder provides a mechanism to interact with the
 	// Vault Observation System.
 	ObservationRecorder ObservationRecorder
+
+	// MountPath is the path this backend is mounted at, including the trailing
+	// slash, e.g. "database/". It is informational only: it must not be used to
+	// build storage keys, because a mount can be moved without the backend
+	// being reconstructed.
+	MountPath string
+
+	// MountNamespace is the namespace the backend is mounted in, normalized for
+	// telemetry ("root" for the root namespace). It is informational only, and
+	// pairs with MountPath to disambiguate mounts that share a path across
+	// namespaces.
+	MountNamespace string
+
+	// IncludeMountPointInMetrics reports whether the operator has opted in to
+	// telemetry labels that identify the individual mount. It is off by default
+	// because such labels multiply the number of exported time series.
+	IncludeMountPointInMetrics bool
 }
 
 // Factory is the factory function to create a logical backend.
