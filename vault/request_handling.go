@@ -583,6 +583,14 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		return nil, te, logical.ErrPermissionDenied
 	}
 
+	// Enforce the SCIM token path allowlist before policy evaluation.
+	// SCIM tokens (identified by scimClientIDMeta stamped at token issuance) may only
+	// reach the SCIM protocol endpoints and the self-service token paths.
+	if te != nil && te.InternalMeta[scimClientIDMeta] != "" && !isSCIMAllowedPath(req.Path) {
+		c.logger.Warn("permission denied: SCIM token attempted access to non-SCIM path", "path", req.Path)
+		return nil, te, logical.ErrPermissionDenied
+	}
+
 	// Check if this is a root protected path
 	rootPath := c.router.RootPath(ctx, req.Path)
 
