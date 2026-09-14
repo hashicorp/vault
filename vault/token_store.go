@@ -3184,6 +3184,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		if role == nil {
 			te.BoundCIDRs = parent.BoundCIDRs
 		}
+	case scimClientID != "":
+		// SCIM tokens are orphans but must carry the issuing entity ID so
+		// that entity policies apply and the SCIM handler can resolve the client.
+		te.EntityID = parent.EntityID
 	}
 
 	var explicitMaxTTLToUse time.Duration

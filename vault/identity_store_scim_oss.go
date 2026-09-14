@@ -30,3 +30,10 @@ func (i *IdentityStore) enqueueSCIMCleanup(clientID string, namespaceID string) 
 func scimPaths(_ *IdentityStore) []*framework.Path {
 	return []*framework.Path{}
 }
+
+// scimClientIDMeta is the InternalMeta key used by the SCIM token guard.
+// Empty in OSS builds; the guard check is a no-op when this is "".
+const scimClientIDMeta = ""
+
+// isSCIMAllowedPath always returns true in OSS builds where SCIM is not available.
+func isSCIMAllowedPath(_ string) bool { return true }
