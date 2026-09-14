@@ -54,6 +54,7 @@ func newCreateGithubBackportCmd() *cobra.Command {
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Owner, "owner", "o", "hashicorp", "The Github organization")
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Repo, "repo", "r", "vault-enterprise", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
 	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
+	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.BackportFailedLabel, "backport-failed-label", "", "The label to apply to the original pull request when one or more backport attempts fail. Set to a string to enable")
 
 	// NOTE: The following are technically flags but they only for testing testing
 	// the command before we cut over to new utility.
