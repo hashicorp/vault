@@ -1,0 +1,193 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Toolbar class="top-margin-16 has-bottom-margin-s">
+  {{! TODO: To be replaced with HDS::FilterBar once HDS is upgraded to 6.0+ - Per VAULT-49391}}
+  {{! ^Filter by entity status & created/updated item range  }}
+  <ToolbarFilters>
+    <FilterInput
+      name="entities filter"
+      aria-label="Filter entities table"
+      placeholder="Search"
+      @value={{this.filterValue}}
+      @wait={{200}}
+      @onInput={{fn (mut this.filterValue)}}
+    />
+  </ToolbarFilters>
+</Toolbar>
+
+{{#if this.data}}
+  <ListTable @data={{this.data}} @columns={{this.columns}}>
+    <:customTableItem as |data column|>
+      {{#let (get data column.key) as |value|}}
+        {{#if value}}
+          {{#if (eq column.key "entityName")}}
+            {{#if data.isAlias}}
+              <Hds::Text::Body @weight="semibold" @tag="p">Alias:</Hds::Text::Body>
+              <Hds::Interactive
+                class="text-button has-text-info is-underline"
+                {{on "click" (fn @onClickAlias data.entity data.alias)}}
+                data-test-button="alias {{value}}"
+              >
+                {{value}}
+              </Hds::Interactive>
+            {{else}}
+              <Hds::Interactive
+                class="text-button has-text-info is-underline"
+                {{on "click" (fn @onClickEntity data.entity)}}
+                data-test-button="entity {{value}}"
+              >
+                {{value}}
+              </Hds::Interactive>
+              {{#if (gte data.children.length 1)}}
+                <Hds::Text::Body @tag="p">
+                  {{concat data.children.length (if (eq data.children.length 1) " alias" " aliases")}}
+                </Hds::Text::Body>
+              {{/if}}
+            {{/if}}
+          {{else if (eq column.key "entityAliasId")}}
+            <Hds::Copy::Button
+              @text={{value}}
+              @textToCopy={{value}}
+              @isIconOnly={{true}}
+              @size="small"
+              @onError={{(fn
+                (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+              )}}
+              class="transparent"
+              data-test-copy-button
+            />
+            {{value}}
+          {{else if (eq column.key "entityStatus")}}
+            <Hds::Badge
+              @text={{value}}
+              @icon={{if (eq value "Enabled") "running-static" "alert-triangle"}}
+              @color={{if (eq value "Disabled") "warning"}}
+              @size="small"
+            />
+          {{else if (eq column.key "authMethod")}}
+            {{value}}
+            {{#if (eq value "OAuth")}}
+              <Hds::Interactive
+                class="text-button has-text-info is-underline is-block"
+                {{! TODO: check this, 'has link to agent registry for oauth method is vague?' }}
+                @route="vault.cluster.agents.registry.index"
+                data-test-button="view agent registry oauth"
+              >
+                View agent registry
+              </Hds::Interactive>
+            {{/if}}
+          {{/if}}
+        {{else if (not-eq column.key "entityName")}}
+          /
+        {{/if}}
+      {{/let}}
+    </:customTableItem>
+
+    <:popupMenu as |data|>
+      {{#if data.isAlias}}
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          {{#if data.entity.canEdit}}
+            <dd.Interactive
+              data-test-popup-menu="edit alias"
+              @route="vault.cluster.access.identity.entities.aliases.edit"
+              @models={{array data.entityAliasId}}
+              @icon="edit"
+            >Edit alias</dd.Interactive>
+            <dd.Separator />
+          {{/if}}
+          <dd.Interactive
+            @color="critical"
+            @icon="trash"
+            {{on "click" (fn (mut this.aliasToDelete) data.entityAliasId)}}
+            data-test-popup-menu="delete"
+          >
+            Delete alias
+          </dd.Interactive>
+        </Hds::Dropdown>
+      {{else}}
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          {{#if data.entity.canEdit}}
+            <dd.Interactive
+              data-test-popup-menu="edit"
+              @route="vault.cluster.access.identity.entities.edit"
+              @model={{data.entity.id}}
+              @icon="edit"
+            >Edit entity</dd.Interactive>
+          {{/if}}
+          {{#if data.entity.canAddAlias}}
+            {{! entities can always add aliases, internal groups cannot have any and external groups can only have one }}
+            <dd.Interactive
+              data-test-popup-menu="create alias"
+              @route="vault.cluster.access.identity.entities.aliases.add"
+              @models={{array data.entity.id}}
+              @icon="plus-circle"
+            >Create alias</dd.Interactive>
+          {{/if}}
+          <dd.Separator />
+          {{#if (eq data.entityStatus "Disabled")}}
+            <dd.Interactive
+              @icon="reload"
+              {{on "click" (fn this.toggleEntity data.entity.id false)}}
+              data-test-popup-menu="enable"
+            >
+              Enable entity
+            </dd.Interactive>
+          {{else}}
+            <dd.Interactive
+              @color="critical"
+              @icon="skip"
+              {{on "click" (fn (mut this.entityToDisable) data.entity.id)}}
+              data-test-popup-menu="disable"
+            >
+              Disable entity
+            </dd.Interactive>
+          {{/if}}
+          <dd.Interactive
+            @color="critical"
+            @icon="trash"
+            {{on "click" (fn (mut this.entityToDelete) data.entity.id)}}
+            data-test-popup-menu="delete"
+          >
+            Delete entity
+          </dd.Interactive>
+        </Hds::Dropdown>
+      {{/if}}
+    </:popupMenu>
+  </ListTable>
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header @title="No entities found" @titleTag="h2" data-test-empty-state-title />
+  </Hds::ApplicationState>
+{{/if}}
+
+{{#if this.entityToDisable}}
+  <ConfirmModal
+    @confirmMessage="Associated tokens will not be revoked, but cannot be used."
+    @confirmTitle="Disable this entity?"
+    @onConfirm={{fn this.toggleEntity this.entityToDisable true}}
+    @onClose={{fn (mut this.entityToDisable) null}}
+  />
+{{/if}}
+
+{{#if this.entityToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete this entity?"
+    @onConfirm={{this.deleteEntity}}
+    @onClose={{fn (mut this.entityToDelete) null}}
+  />
+{{/if}}
+
+{{#if this.aliasToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete this alias?"
+    @onConfirm={{this.deleteAlias}}
+    @onClose={{fn (mut this.aliasToDelete) null}}
+  />
+{{/if}}

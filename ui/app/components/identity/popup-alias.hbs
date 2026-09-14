@@ -12,13 +12,13 @@
       data-test-popup-menu={{@item.name}}
     />
     <dd.Interactive
-      @route="vault.cluster.access.identity.aliases.show"
-      @models={{array (pluralize @identityType) @item.id "details"}}
+      @route={{concat "vault.cluster.access.identity." (pluralize @identityType) ".aliases.show"}}
+      @models={{array @item.id "details"}}
     >Details</dd.Interactive>
     {{#if @item.canEdit}}
       <dd.Interactive
-        @route="vault.cluster.access.identity.aliases.edit"
-        @models={{array (pluralize @identityType) @item.id}}
+        @route={{concat "vault.cluster.access.identity." (pluralize @identityType) ".aliases.edit"}}
+        @models={{array @item.id}}
       >Edit</dd.Interactive>
     {{/if}}
     {{#if @item.canDelete}}

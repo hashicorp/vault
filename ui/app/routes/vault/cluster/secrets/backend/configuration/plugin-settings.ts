@@ -87,17 +87,13 @@ export default class SecretsBackendConfigurationPluginSettingsRoute extends Rout
       const error = await this.parseApiError(e);
       if (error.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
-        return {};
+        return undefined;
       }
       throw error;
     };
 
-    const { data: configRoot } = (await this.api.secrets
-      .awsReadRootIamCredentialsConfiguration(path)
-      .catch(handleError)) as Record<string, unknown>;
-    const { data: configLease } = (await this.api.secrets
-      .awsReadLeaseConfiguration(path)
-      .catch(handleError)) as Record<string, unknown>;
+    const configRoot = await this.api.secrets.awsReadRootIamCredentialsConfiguration(path).catch(handleError);
+    const configLease = await this.api.secrets.awsReadLeaseConfiguration(path).catch(handleError);
 
     const WIF_FIELDS = ['role_arn', 'identity_token_audience', 'identity_token_ttl'];
     const issuer = await this.checkIssuer(configRoot, WIF_FIELDS);

@@ -1,0 +1,129 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Identity::EntityNav @identityType={{this.identityType}} @model={{this.model}} />
+{{#if this.model.meta.total}}
+  {{#each this.model as |item|}}
+    <LinkedBlock
+      @params={{array "vault.cluster.access.identity.groups.show" item.id "details"}}
+      class="list-item-row"
+      data-test-identity-row={{item.name}}
+    >
+      <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
+        <LF.Item @grow={{true}} @shrink={{true}}>
+          <LinkTo
+            @route="vault.cluster.access.identity.groups.show"
+            @models={{array item.id "details"}}
+            class="is-block has-text-black has-text-weight-semibold"
+            data-test-identity-link={{true}}
+          >
+            <Icon @name="user" class="has-text-grey-light" />
+            <span class="has-text-weight-semibold">{{item.name}}</span>
+          </LinkTo>
+          <div class="has-text-grey is-size-8">
+            {{item.id}}
+          </div>
+        </LF.Item>
+        <LF.Item class="is-hidden-mobile has-right-margin-l">
+          {{#if item.aliases.length}}
+            {{pluralize item.aliases.length "alias"}}
+          {{/if}}
+        </LF.Item>
+        <LF.Item>
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Identity management options"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger
+            />
+            <dd.Interactive
+              @route="vault.cluster.access.identity.groups.show"
+              @models={{array item.id "details"}}
+            >Details</dd.Interactive>
+            {{#if item.canAddAlias}}
+              {{! entities can always add aliases, internal groups cannot have any and external groups can only have one }}
+              {{#if (or (eq this.identityType "entity") (eq item.type "external"))}}
+                <dd.Interactive
+                  data-test-popup-menu="create alias"
+                  @route="vault.cluster.access.identity.groups.aliases.add"
+                  @models={{array item.id}}
+                >Create alias</dd.Interactive>
+              {{/if}}
+            {{/if}}
+            {{#if item.canEdit}}
+              <dd.Interactive
+                data-test-popup-menu="edit"
+                @route="vault.cluster.access.identity.groups.edit"
+                @model={{item.id}}
+              >Edit</dd.Interactive>
+              {{#if item.disabled}}
+                <dd.Interactive {{on "click" (action "toggleDisabled" item)}}>Enable</dd.Interactive>
+              {{else if (eq this.identityType "entity")}}
+                <dd.Interactive
+                  @color="critical"
+                  {{on "click" (fn (mut this.entityToDisable) item)}}
+                >Disable</dd.Interactive>
+              {{/if}}
+            {{/if}}
+            {{#if item.canDelete}}
+              <dd.Interactive
+                @color="critical"
+                {{on "click" (fn (mut this.itemToDelete) item)}}
+                data-test-popup-menu="delete"
+              >Delete</dd.Interactive>
+            {{/if}}
+          </Hds::Dropdown>
+        </LF.Item>
+      </Hds::Layout::Flex>
+    </LinkedBlock>
+  {{/each}}
+
+  <Hds::Pagination::Numbered
+    @currentPage={{this.model.meta.currentPage}}
+    @currentPageSize={{this.model.meta.pageSize}}
+    @route="vault.cluster.access.identity.groups.index"
+    @showSizeSelector={{false}}
+    @totalItems={{this.model.meta.totalItems}}
+    @queryFunction={{this.paginationQueryParams}}
+  />
+
+{{else}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header data-test-empty-state-title @title="No {{pluralize this.identityType}} yet" @titleTag="h2" />
+    <A.Body
+      data-test-empty-state-message
+      @text="A list of {{pluralize
+        this.identityType
+      }} in this namespace will be listed here. Create your first {{this.identityType}} to get started."
+    />
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @text="Identity: entities and groups tutorial"
+        @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+        @icon="learn-link"
+        @iconPosition="trailing"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
+{{/if}}
+
+{{#if this.entityToDisable}}
+  <ConfirmModal
+    @confirmMessage="Associated tokens will not be revoked, but cannot be used."
+    @confirmTitle="Disable this entity?"
+    @onConfirm={{action "toggleDisabled" this.entityToDisable}}
+    @onClose={{fn (mut this.entityToDisable) null}}
+  />
+{{/if}}
+
+{{#if this.itemToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete this {{this.identityType}}?"
+    @onConfirm={{action "delete" this.itemToDelete}}
+    @onClose={{fn (mut this.itemToDelete) null}}
+  />
+{{/if}}

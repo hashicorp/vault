@@ -214,6 +214,10 @@ module('Integration | Component | auth | page | method authentication', function
       this.tokenName = 'vault-okta☃1';
       this.stubRequests = () => {
         this.server.post(`/auth/${this.path}/login/${this.loginData.username}`, () => this.response);
+        // pollForOktaNumberChallenge loops until /verify returns a correct_answer.
+        // Without this stub the polling task never exits, holding the test waiter open
+        // and causing the test to hang indefinitely.
+        this.server.get(`/auth/${this.path}/verify/:nonce`, () => ({ data: { correct_answer: 23 } }));
       };
     });
 

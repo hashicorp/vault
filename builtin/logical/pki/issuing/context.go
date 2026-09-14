@@ -29,7 +29,7 @@ func NewIssuerRoleContext(ctx context.Context, issuer *IssuerEntry, role *RoleEn
 // MountAttributionFromRequest builds a MountAttribution from a logical.Request and
 // the context it was dispatched in. The Count field is left zero — callers set it
 // to the per-certificate billable units via WithMountInfo on CertCountIncrementer.
-func MountAttributionFromRequest(ctx context.Context, req *logical.Request, backendUUID string) logical.MountAttribution {
+func MountAttributionFromRequest(ctx context.Context, req *logical.Request, backendUUID string, getParentNsID func(string) string) logical.MountAttribution {
 	attr := logical.MountAttribution{
 		NamespaceID: namespace.RootNamespaceID,
 	}
@@ -44,6 +44,7 @@ func MountAttributionFromRequest(ctx context.Context, req *logical.Request, back
 	if ns, err := namespace.FromContext(ctx); err == nil {
 		attr.NamespaceID = ns.ID
 		attr.NamespacePath = ns.Path
+		attr.ParentNamespaceID = getParentNsID(ns.Path)
 	}
 	return attr
 }

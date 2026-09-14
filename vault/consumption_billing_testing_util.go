@@ -352,6 +352,8 @@ func (c *Core) GetInMemorySpiffeAttribution() map[string]logical.MountAttributio
 // GetConsumptionBillingManagerConcrete returns the underlying *billing.ConsumptionBilling,
 // available to tests outside the vault package that need to inspect or manipulate raw state.
 func (c *Core) GetCoreConsumptionBillingManager() *billing.ConsumptionBilling {
+	c.consumptionBillingLock.RLock()
+	defer c.consumptionBillingLock.RUnlock()
 	return c.consumptionBilling
 }
 

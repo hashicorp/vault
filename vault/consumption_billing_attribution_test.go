@@ -172,11 +172,11 @@ func TestTransitUpdateAndGetAttribution(t *testing.T) {
 
 	retrieved1, ok := retrievedAttribution.Mounts[mountAccessor]
 	require.True(t, ok, "Should find breakdown for first mount accessor")
-	verifyMountAttributionBreakdowns(t, testBreakdown1, retrieved1)
+	assertMountAttribution(t, retrieved1, testBreakdown1)
 
 	retrieved2, ok := retrievedAttribution.Mounts[mountAccessor2]
 	require.True(t, ok, "Should find breakdown for transit-accessor-2")
-	verifyMountAttributionBreakdowns(t, testBreakdown2, retrieved2)
+	assertMountAttribution(t, retrieved2, testBreakdown2)
 
 	// Test Case 2: Update with no mounts (empty map) - should keep existing counts
 	t.Log("Test Case 2: Update with no mounts (empty map)")

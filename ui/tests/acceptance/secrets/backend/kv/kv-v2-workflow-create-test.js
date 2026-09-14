@@ -269,7 +269,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,
@@ -822,7 +822,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets-engines/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 2');
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/app%2Ffirst/details?version=1`,

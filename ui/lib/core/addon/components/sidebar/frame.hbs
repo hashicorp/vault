@@ -33,8 +33,8 @@
           {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
           {{on "click" this.trackReplToggle}}
         />
-        <Hds::Dropdown @enableCollisionDetection={{true}} data-test-dropdown="help menu" as |dd|>
-          <dd.ToggleIcon @icon="help" @text="help menu" />
+        <Hds::Dropdown @enableCollisionDetection={{true}} as |dd|>
+          <dd.ToggleIcon @icon="help" @text="help menu" data-test-dropdown="help menu" />
           <dd.Title @text="Help & Support" />
           <dd.Interactive @href="https://developer.hashicorp.com/vault/docs">Documentation</dd.Interactive>
           <dd.Interactive @href="https://developer.hashicorp.com/vault/tutorials">Tutorials</dd.Interactive>
@@ -42,6 +42,7 @@
           <dd.Interactive @href="https://github.com/hashicorp/vault/blob/main/CHANGELOG.md">Changelog</dd.Interactive>
           <dd.Separator />
           <dd.Interactive @href="https://support.hashicorp.com/hc/en-us/requests/new">Create support ticket</dd.Interactive>
+          <dd.Interactive @href={{this.feedbackSurveyUrl}} data-test-help-menu-item="feedback">Submit feedback</dd.Interactive>
         </Hds::Dropdown>
 
         <Sidebar::UserMenu />
@@ -59,6 +60,17 @@
     >
       {{! this block is where the Hds::AppSideNav::Portal components render into }}
       <Hds::AppSideNav::Portal::Target data-test-portal />
+
+      <Hds::Button
+        @text="Submit feedback"
+        @icon="external-link"
+        @iconPosition="trailing"
+        @color="secondary"
+        @isFullWidth={{true}}
+        @href={{this.feedbackSurveyUrl}}
+        class="has-top-margin-xs"
+        data-test-sidebar-feedback-button
+      />
 
       <EnvBanner />
 

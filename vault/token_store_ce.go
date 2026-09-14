@@ -13,8 +13,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func getOAuthJwtId(_ string) string {
-	return ""
+func getOAuthJwtId(_ context.Context, _ string) (string, error) {
+	return "", nil
 }
 
 func normalizeOAuthJwtToId(token string) string {

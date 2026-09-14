@@ -54,21 +54,25 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
     }[method.methodType];
   }
 
-  fetchConfig(type: string, section: string, path: string) {
+  fetchConfig(type: string, section: string, path: string): Promise<{ data: unknown }> {
+    // there is a mix of VoidResponse and specific response schemas
+    // normalize the responses to always return a data object
+    const normalize = (data: unknown) => ({ data });
+
     switch (type) {
       case 'aws': {
         switch (section) {
           case 'client':
-            return this.api.auth.awsReadClientConfiguration(path);
+            return this.api.auth.awsReadClientConfiguration(path).then(normalize);
           case 'identity-accesslist':
-            return this.api.auth.awsReadIdentityAccessListTidySettings(path);
+            return this.api.auth.awsReadIdentityAccessListTidySettings(path).then(normalize);
           case 'roletag-denylist':
-            return this.api.auth.awsReadRoleTagDenyListTidySettings(path);
+            return this.api.auth.awsReadRoleTagDenyListTidySettings(path).then(normalize);
         }
         break;
       }
       case 'azure':
-        return this.api.auth.azureReadAuthConfiguration(path);
+        return this.api.auth.azureReadAuthConfiguration(path).then((data) => ({ data }));
       case 'github':
         return this.api.auth.githubReadConfiguration(path);
       case 'gcp':
@@ -81,7 +85,7 @@ export default class ClusterSettingsAuthConfigureRoute extends Route {
       case 'ldap':
         return this.api.auth.ldapReadAuthConfiguration(path);
       case 'okta':
-        return this.api.auth.oktaReadConfiguration(path);
+        return this.api.auth.oktaReadConfiguration(path).then(normalize);
       case 'radius':
         return this.api.auth.radiusReadConfiguration(path);
     }

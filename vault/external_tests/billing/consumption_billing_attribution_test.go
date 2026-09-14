@@ -196,6 +196,7 @@ func TestStoreCertAttribution_PKI(t *testing.T) {
 	require.Len(t, got.Mounts, 1)
 	require.Equal(t, "pki_aaa", got.Mounts["pki_aaa"].MountAccessor)
 	require.Equal(t, "1", fmt.Sprintf("%v", got.Mounts["pki_aaa"].Count))
+	require.Equal(t, "version1", got.Mounts["pki_aaa"].MountRunningVersion, "MountRunningVersion should be stored from first flush")
 	requireAttrCountEqualsMountSum(t, got)
 
 	// Second flush: mount1 (1.5 additional units) + mount2 (2.0 units).

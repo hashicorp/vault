@@ -55,6 +55,8 @@ const (
 
 	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
+
+	exportKeyPrefix = "export/"
 )
 
 func ToURLEntries(sc *storageContext, issuer issuing.IssuerID, c *issuing.AiaConfigEntry) (*certutil.URLEntries, error) {

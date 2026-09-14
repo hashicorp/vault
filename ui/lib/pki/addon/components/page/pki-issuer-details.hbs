@@ -35,57 +35,29 @@
         Sign Intermediate
       </ToolbarLink>
     {{/if}}
-    <BasicDropdown
-      @class="popup-menu"
-      @horizontalPosition="auto-right"
-      @verticalPosition="below"
-      @renderInPlace={{true}}
-      as |D|
-    >
-      <D.Trigger
-        class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-        @htmlTag="button"
-        data-test-issuer-download
-        data-test-popup-menu-trigger
-      >
-        Download
-        <Chevron @direction={{if D.isOpen "up" "down"}} @isButton={{true}} />
-      </D.Trigger>
-      <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu" aria-label="snapshots actions">
-          <ul class="menu-list">
-            {{#if @pem}}
-              {{! should never be null, but if it is we don't want to let users download an empty file }}
-              <li>
-                <DownloadButton
-                  class="link"
-                  @filename={{@issuer.issuer_id}}
-                  @data={{@pem}}
-                  @extension="pem"
-                  data-test-issuer-download-type="pem"
-                  @text="PEM format"
-                  @hideIcon={{true}}
-                />
-              </li>
-            {{/if}}
-            {{#if @der}}
-              {{! should never be null, but if it is we don't want to let users download an empty file }}
-              <li>
-                <DownloadButton
-                  class="link"
-                  @filename={{@issuer.issuer_id}}
-                  @data={{@der}}
-                  @extension="der"
-                  data-test-issuer-download-type="der"
-                  @text="DER format"
-                  @hideIcon={{true}}
-                />
-              </li>
-            {{/if}}
-          </ul>
-        </nav>
-      </D.Content>
-    </BasicDropdown>
+    <Hds::Dropdown as |D|>
+      <D.ToggleButton @text="Download" @color="secondary" data-test-issuer-download data-test-popup-menu-trigger />
+      {{#if @pem}}
+        {{! should never be null, but if it is we don't want to let users download an empty file }}
+        <D.Interactive
+          @icon="download"
+          {{on "click" (fn this.downloadIssuer "pem" D.close)}}
+          data-test-issuer-download-type="pem"
+        >
+          PEM format
+        </D.Interactive>
+      {{/if}}
+      {{#if @der}}
+        {{! should never be null, but if it is we don't want to let users download an empty file }}
+        <D.Interactive
+          @icon="download"
+          {{on "click" (fn this.downloadIssuer "der" D.close)}}
+          data-test-issuer-download-type="der"
+        >
+          DER format
+        </D.Interactive>
+      {{/if}}
+    </Hds::Dropdown>
 
     {{#if @canConfigure}}
       <ToolbarLink @route="issuers.issuer.edit" @models={{array @backend @issuer.issuer_id}} data-test-pki-issuer-configure>

@@ -149,7 +149,7 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 	case QuotedTemplating:
 		p.templateHandler = quotedTemplateHandler
 	default:
-		return false, "", fmt.Errorf("unknown mode %q", p.Mode)
+		return false, "", fmt.Errorf("unknown mode %d", p.Mode)
 	}
 
 	var subst bool

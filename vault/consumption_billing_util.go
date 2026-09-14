@@ -100,10 +100,11 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 					Count:               1,
 					MountAccessor:       entry.Accessor,
 					MountPath:           entry.Path,
-					MountType:           entry.Type,
+					MountType:           getAdjustedPluginType(entry),
 					MountRunningVersion: entry.RunningVersion,
 					NamespaceID:         entry.NamespaceID,
 					NamespacePath:       namespacePath,
+					ParentNamespaceID:   getParentNamespaceID(c, namespacePath),
 					BackendAwareUUID:    entry.BackendAwareUUID,
 					IsExternal:          true, // all third party plugins are external
 				}
@@ -1000,12 +1001,16 @@ func (c *Core) UpdatePkiDurationAdjustedCount(ctx context.Context, inc float64, 
 		return fmt.Errorf("PKI duration-adjusted increment must be non-negative, got %f", inc)
 	}
 
-	if c.consumptionBilling == nil {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
 		return errors.New("consumption billing is not initialized")
 	}
 
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	return c.storePkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth, inc)
 }
