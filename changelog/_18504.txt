@@ -1,3 +1,0 @@
-```release-note:change
-auth/cf: Update plugin to [v0.24.0](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.24.0)
-```
