@@ -85,7 +85,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
       .dom(GENERAL.validationErrorByAttr('bindpass'))
       .hasText('Administrator password is required.', 'Validation message renders for bindpass');
     assert
-      .dom('[data-test-invalid-form-message]')
+      .dom(GENERAL.invalidFormMessage)
       .hasText('There are 2 errors with this form.', 'Invalid form message renders');
   });
 

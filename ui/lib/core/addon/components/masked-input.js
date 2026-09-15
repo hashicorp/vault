@@ -19,6 +19,8 @@ import autosize from 'autosize';
  * @param {string} value - The value to display in the input.
  * @param {string} name - The key correlated to the value. Used for the download file name.
  * @param {function} [onChange=Callback] - Callback triggered on change, sends new value. Must set the value of @value
+ * @param {function} [onKeyUp] - Callback triggered on keyup, sends the name and the current value.
+ * @param {function} [onToggle] - Callback triggered when the mask is toggled, before the value is revealed or hidden. Useful for lazily fetching the value.
  * @param {boolean} [allowCopy=false]  - Whether or not the input should render with a copy button.
  * @param {boolean} [allowDownload=false]  - Renders a download button that prompts a confirmation modal to download the secret value
  * @param {boolean} [displayOnly=false]  - Whether or not to display the value as a display only `pre` element or as an input.
@@ -48,7 +50,6 @@ export default class MaskedInputComponent extends Component {
   }
 
   @action handleKeyUp(name, evt) {
-    this.updateSize();
     const { value } = evt.target;
     if (this.args.onKeyUp) {
       this.args.onKeyUp(name, value);
@@ -56,6 +57,9 @@ export default class MaskedInputComponent extends Component {
   }
 
   @action toggleMask() {
+    if (this.args.onToggle) {
+      this.args.onToggle();
+    }
     this.showValue = !this.showValue;
   }
 
