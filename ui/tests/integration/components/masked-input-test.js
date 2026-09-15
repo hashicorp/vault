@@ -99,6 +99,49 @@ module('Integration | Component | masked input', function (hooks) {
     assert.true(keyupSpy.thirdCall.calledWithExactly('foo', 'baz'));
   });
 
+  test('it calls onToggle before revealing the value', async function (assert) {
+    const toggleSpy = sinon.spy();
+    this.set('onToggle', toggleSpy);
+    this.set('value', 'hello');
+    await render(hbs`<MaskedInput @value={{this.value}} @onToggle={{this.onToggle}} />`);
+
+    assert.dom('textarea').hasClass('masked-font', 'value starts masked');
+
+    await click(GENERAL.button('toggle-masked'));
+    assert.true(toggleSpy.calledOnce, 'onToggle fires when the value is revealed');
+    assert.dom('textarea').doesNotHaveClass('masked-font', 'value is revealed');
+
+    await click(GENERAL.button('toggle-masked'));
+    assert.true(toggleSpy.calledTwice, 'onToggle fires again when the value is re-masked');
+  });
+
+  test('it toggles without error when onToggle is omitted', async function (assert) {
+    this.set('value', 'hello');
+    await render(hbs`<MaskedInput @value={{this.value}} />`);
+
+    await click(GENERAL.button('toggle-masked'));
+    assert.dom('textarea').doesNotHaveClass('masked-font', 'toggling works when onToggle is not passed');
+  });
+
+  // The autosize fix: handleKeyUp previously called updateSize() with no argument, so
+  // autosize(undefined) ran on every keystroke and the textarea never grew.
+  test('it resizes the textarea as the value grows', async function (assert) {
+    this.set('value', '');
+    await render(hbs`<MaskedInput @name="foo" @value={{this.value}} @onChange={{fn (mut this.value)}} />`);
+
+    const textarea = document.querySelector('textarea');
+    const initialHeight = textarea.style.height;
+
+    await fillIn('textarea', 'a\nb\nc\nd\ne\nf');
+    await triggerKeyEvent('textarea', 'keyup', 'Enter');
+
+    assert.notStrictEqual(
+      textarea.style.height,
+      initialHeight,
+      'autosize receives the textarea and adjusts its height'
+    );
+  });
+
   test('it does not remove value on tab', async function (assert) {
     this.set('value', 'hello');
     await render(hbs`<MaskedInput @value={{this.value}} />`);

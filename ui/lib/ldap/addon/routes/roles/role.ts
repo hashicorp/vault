@@ -12,6 +12,7 @@ import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type { LdapStaticRole, LdapDynamicRole } from 'vault/secrets/ldap';
+import type { LdapApplicationModel } from '../application';
 
 export type LdapRolesRoleRouteModel = ModelFrom<LdapRolesRoleRoute>;
 
@@ -45,6 +46,8 @@ export default class LdapRolesRoleRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const { name, type } = params;
 
+    const { config } = this.modelFor('application') as LdapApplicationModel;
+
     const [capabilities] = await fetchRoleCapabilities(this.capabilities, backend, [
       { name, completeRoleName: name, type },
     ]);
@@ -60,6 +63,6 @@ export default class LdapRolesRoleRoute extends Route {
       ...(data || {}),
     } as LdapStaticRole | LdapDynamicRole;
 
-    return { capabilities, role };
+    return { capabilities, role, config };
   }
 }
