@@ -870,8 +870,8 @@ github.com/hashicorp/vault-plugin-database-redis v0.9.0 h1:PUbtbTBgXymGxd3U4kQXg
 github.com/hashicorp/vault-plugin-database-redis v0.9.0/go.mod h1:FqP7g+BIpTVMbvCqLRDO1K76DOVRxeY66/770cBsdfw=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.2-0.20260706104900-570a9d5344b1 h1:gnI8EBAQN3wFLELcxMjBpB4+5gGhUa+vChByBFxx5tw=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.2-0.20260706104900-570a9d5344b1/go.mod h1:F5ZdDTj0bIZcUD58PjUv+zKk1htqH5joI/PUiheaa30=
-github.com/hashicorp/vault-plugin-database-snowflake v0.16.0 h1:gBUs6aFEsb1bnSf3Z7AtBdhA1BM4nHGT49fBANlv0F4=
-github.com/hashicorp/vault-plugin-database-snowflake v0.16.0/go.mod h1:eDg8zleyoTyrEzdqXq6xN+WGjAQISSyuyrOQRyHA31c=
+github.com/hashicorp/vault-plugin-database-snowflake v0.17.0 h1:vEhilT+XTH/0ewRvpTUn3zAmDgCK3xisy5pkX/R38m4=
+github.com/hashicorp/vault-plugin-database-snowflake v0.17.0/go.mod h1:vhLg0wFGHLoS3YhIpVCynZorwzeND0UR+AKpPAPxwQU=
 github.com/hashicorp/vault-plugin-secrets-ad v0.22.1 h1:Wqp6I0gSOI3kf3TK3JJeylDC0NNjrZoE+hJC6iVthvk=
 github.com/hashicorp/vault-plugin-secrets-ad v0.22.1/go.mod h1:xERfc+dNwlLEefQDcjhhhHPTJLs9komReccRKMsDoAs=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1 h1:6JvSoeYU+tRSnc0eGNz+1ttFK8gfIqw/sXHme4h6CRY=

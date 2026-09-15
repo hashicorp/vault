@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.26.4
+go 1.27.1
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -168,7 +168,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.0
 	github.com/hashicorp/vault-plugin-database-redis v0.9.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.2-0.20260706104900-570a9d5344b1
-	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.17.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.25.1
