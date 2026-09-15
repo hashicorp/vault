@@ -25,9 +25,11 @@
     data-test-telemetry-consent-decline
     {{on "click" (fn this.recordConsent "decline")}}
   />
-  {{! TODO: JIRA: https://hashicorp.atlassian.net/browse/VAULT-49016
-  Link is missing as the doc does not yet exist. This is fine as the banner
-  will not appear unless the ui_telemetry field is configured in vault config
-  file }}
-  <AL.LinkStandalone @color="primary" @icon="docs-link" @text="Learn more about the data we collect" @href="#" />
+  <AL.LinkStandalone
+    @color="primary"
+    @icon="docs-link"
+    @text="Learn more about the data we collect"
+    @href="https://developer.hashicorp.com/vault/docs/internals/telemetry/metrics/ui-telemetry-events"
+    data-test-telemetry-consent-learn-more
+  />
 </Hds::Alert>
