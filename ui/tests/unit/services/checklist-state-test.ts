@@ -75,15 +75,29 @@ module('Unit | Service | checklist-state', function (hooks) {
       );
     });
 
-    test('throws a descriptive error when the API response shape is unexpected', async function (assert) {
+    test('falls back to empty state when the API response shape is unexpected', async function (assert) {
       this.server.get(CHECKLIST_ENDPOINT, () => ({
         data: { 'cluster-startup': 'not-an-object' },
       }));
 
-      await assert.rejects(
-        this.service.fetchState.perform(),
-        /unexpected format/,
-        'Rejects with a message describing the shape mismatch'
+      await this.service.fetchState.perform();
+
+      assert.true(this.service.isAvailable, 'isAvailable remains true after unexpected shape');
+      assert.false(
+        this.service.isStepCompleted('cluster-startup', 'create-admin'),
+        'All steps are false when state falls back to empty'
+      );
+    });
+
+    test('falls back to empty state when the API returns null data', async function (assert) {
+      this.server.get(CHECKLIST_ENDPOINT, () => ({ data: null }));
+
+      await this.service.fetchState.perform();
+
+      assert.true(this.service.isAvailable, 'isAvailable remains true after null data');
+      assert.false(
+        this.service.isStepCompleted('cluster-startup', 'create-admin'),
+        'All steps are false when state falls back to empty'
       );
     });
 
@@ -179,13 +193,24 @@ module('Unit | Service | checklist-state', function (hooks) {
       );
     });
 
-    test('throws a descriptive error when the update response shape is unexpected', async function (assert) {
-      this.server.post(CHECKLIST_ENDPOINT, () => ({ data: null }));
+    test('retains in-memory state when the update response shape is unexpected', async function (assert) {
+      // Pre-populate state so we can assert it is preserved.
+      this.server.get(CHECKLIST_ENDPOINT, () => ({
+        data: { 'cluster-startup': { 'create-admin': true } },
+      }));
+      await this.service.fetchState.perform();
 
-      await assert.rejects(
-        this.service.updateStep.perform('cluster-startup', 'create-admin', true),
-        /unexpected format/,
-        'Rejects with a message describing the shape mismatch'
+      // Server returns null — should silently retain the prior in-memory state.
+      this.server.post(CHECKLIST_ENDPOINT, () => ({ data: null }));
+      await this.service.updateStep.perform('cluster-startup', 'enable-ui', true);
+
+      assert.true(
+        this.service.isStepCompleted('cluster-startup', 'create-admin'),
+        'Prior state is preserved when update response shape is unexpected'
+      );
+      assert.false(
+        this.service.isStepCompleted('cluster-startup', 'enable-ui'),
+        'Unconfirmed step remains false when update response is null'
       );
     });
 
