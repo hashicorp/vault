@@ -2920,6 +2920,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
 		},
+		func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2974,6 +2978,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			if c.agentRegistry == nil {
