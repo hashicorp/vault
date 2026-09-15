@@ -157,16 +157,16 @@ require (
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.23.1
 	github.com/hashicorp/vault-plugin-auth-azure v0.24.0
-	github.com/hashicorp/vault-plugin-auth-cf v0.23.1
+	github.com/hashicorp/vault-plugin-auth-cf v0.24.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.23.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.26.3
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.17.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.21.1
 	github.com/hashicorp/vault-plugin-database-couchbase v0.16.1
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.20.1
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.17.1
-	github.com/hashicorp/vault-plugin-database-redis v0.8.1
+	github.com/hashicorp/vault-plugin-database-redis v0.9.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.2-0.20260706104900-570a9d5344b1
 	github.com/hashicorp/vault-plugin-database-snowflake v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
