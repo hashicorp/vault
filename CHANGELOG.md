@@ -3,6 +3,45 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 2.1.1
+### September 16, 2026
+
+SECURITY:
+
+* core: Update github.com/apache/thrift to v0.24.0 to fix security vulnerability ghsa-8wv5-x4w7-5gww.
+* core: Update golang.org/x/crypto to v0.56.0 to fix security vulnerabilities GO-2026-6354 and GO-2026-6355.
+* core: Update google.golang.org/grpc to v1.83.2 to fix security vulnerability GHSA-2v4p-qf9q-27wj.
+
+CHANGES:
+
+* auth/jwt: Added Okta provider with group fetching from Admin API when fetch_groups=true and truncation is detected.
+* auth/jwt: Update plugin to [v0.26.4](https://github.com/hashicorp/vault-plugin-auth-jwt/releases/tag/v0.26.4)
+* core/raft: Limited concurrent retry-join workers to 20. Any further retry-join attempts while 20 are in progress will result in an error (`too many concurrent raft retry joins in progress`).
+* core: Bump Go version to 1.26.8
+
+IMPROVEMENTS:
+
+* secrets import: Add `allowed_ipv4_cidrs` to `source_aws` and `source_azure` Secrets Import blocks to allow private CIDR exemptions for SSRF-safe connectivity.
+* secrets/pki: add an additional field to include an RFC 5280 revocation reason for (/pki/revoke) and (/pki/revoke-with-key).
+* ui: Bump dompurify to 3.4.15 to address SECVULN advisories
+
+BUG FIXES:
+
+* Secrets Recovery (enterprise): Fixing Vault panic in cli when running `vault recover` without a path.
+* auth/jwt: Fixed incorrect HTTP status codes returned during agent ceiling policy evaluation.
+* auth/token: Fixed a bug where `auth/token/lookup` and `auth/token/lookup-self` returned 403 for JWT tokens in a non-root namespace.
+* consumption-billing: Fix OIDC identity token billing units being computed incorrectly across periodic flush cycles. The billing scalar now applies per-token duration adjustment, so the reported scalar and the per-mount attribution breakdown are always consistent.
+* core/activitylog (enterprise): Fix a panic in CensusReport ACL policy metrics collection by safely handling transient missing policies and nil policy path/permission data while policies are changing.
+* core/mounts: Fixed `vault secrets move` (and `vault auth move`) incorrectly placing a mount in the root namespace when the destination path has a leading slash.
+* oauth-resource-server (enterprise): Fix issue where RAR enforcement was skipped when the token's `iss` claim had cosmetic differences (e.g. different casing or trailing slash) compared to the issuer stored in the resource server profile.
+* plugins: Fix issue with `vault plugin reload -mounts` command when run in the root namespace
+* secrets-sync (enterprise): Fix `LIST /v1/sys/sync/associations` intermittently returning zero associations/secrets by forwarding the request to the active node instead of allowing it to be served locally by a performance standby or performance secondary.
+* secrets/pki (enterprise): Fix panic in CMPv2 sentinel field parsing when cert request messages are empty.
+* secrets/pki (enterprise): Fix unified CRL not being rebuilt after the background transfer copies locally-revoked certificates into unified storage.
+* ui: Fix agent registry ceiling policies not displaying due to incorrect property name
+* ui: Fix total secrets count binding on secrets sync overview page to match the API response key.
+* ui: Resolve the flickering on the login page when a trailing slash is added to the namespace in the field.
+
 ## 2.1.0
 ### September 01, 2026
 
@@ -557,6 +596,40 @@ BUG FIXES:
 * ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
 * ui: fix renew token button rendering for denied renew-self.
 * ui: remove unnecessary 'credential type' form input when generating AWS secrets
+
+## 1.21.11 Enterprise
+### September 16, 2026
+
+SECURITY:
+
+* core: Update github.com/apache/thrift to v0.24.0 to fix security vulnerability ghsa-8wv5-x4w7-5gww.
+* core: Update golang.org/x/crypto to v0.56.0 to fix security vulnerabilities GO-2026-6354 and GO-2026-6355.
+* core: Update google.golang.org/grpc to v1.83.2 to fix security vulnerability GHSA-2v4p-qf9q-27wj.
+
+CHANGES:
+
+* core/raft: Limited concurrent retry-join workers to 20. Any further retry-join attempts while 20 are in progress will result in an error (`too many concurrent raft retry joins in progress`).
+* core: Bump Go version to 1.26.8.
+
+IMPROVEMENTS:
+
+* core: Add a `ui_settings` configuration stanza with a `ui_telemetry` option, surfaced to the UI via the `sys/internal/ui/settings` endpoint, that gates anonymous UI usage telemetry.
+* secrets/pki: Add `extra_subject_names_oids` field to roles to allow specifying additional OID subject name components.
+* secrets/pki: add an additional field to include a RFC 5280 revocation reason for (/pki/revoke) and (/pki/revoke-with-key).
+* ui: Bump dompurify to 3.4.15 to address SECVULN advisories
+
+BUG FIXES:
+
+* Secrets Recovery (enterprise): Fixing Vault panic in cli when running `vault recover` without a path.
+* auth/approle: Fix `token_bound_cidrs` validation when using /128 blocks for role and secret ID
+* core/activitylog (enterprise): Fix a panic in CensusReport ACL policy metrics collection by safely handling transient missing policies and nil policy path/permission data while policies are changing.
+* core/mounts: Fixed `vault secrets move` (and `vault auth move`) incorrectly placing a mount in the root namespace when the destination path has a leading slash.
+* plugins: Fix issue with `vault plugin reload -mounts` command when run in the root namespace
+* secrets-sync (enterprise): Fix `LIST /v1/sys/sync/associations` intermittently returning zero associations/secrets by forwarding the request to the active node instead of allowing it to be served locally by a performance standby or performance secondary.
+* secrets/pki (enterprise): Fix panic in CMPv2 sentinel field parsing when cert request messages is empty.
+* secrets/pki (enterprise): Fix unified CRL not being rebuilt after the background transfer copies locally-revoked certificates into unified storage.
+* ui: Fix total secrets count binding on secrets sync overview page to match the API response key.
+* ui: Resolve the flickering on the login page when a trailing slash is added to the namespace in the field.
 
 ## 1.21.10 Enterprise
 ### September 01, 2026
@@ -1173,6 +1246,34 @@ BUG FIXES:
 * ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("")
 * ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value
 * ui: Fixes permissions for hiding and showing sidebar navigation items for policies that include special characters: `+`, `*`
+
+## 1.20.16 Enterprise
+### September 16, 2026
+
+SECURITY:
+
+* core: Update github.com/apache/thrift to v0.24.0 to fix security vulnerability ghsa-8wv5-x4w7-5gww.
+* core: Update golang.org/x/crypto to v0.56.0 to fix security vulnerabilities GO-2026-6354 and GO-2026-6355.
+* core: Update google.golang.org/grpc to v1.83.2 to fix security vulnerability GHSA-2v4p-qf9q-27wj.
+
+CHANGES:
+
+* core: Bump Go version to 1.26.8.
+
+IMPROVEMENTS:
+
+* core: Add a `ui_settings` configuration stanza with a `ui_telemetry` option, surfaced to the UI via the `sys/internal/ui/settings` endpoint, that gates anonymous UI usage telemetry.
+* secrets/pki: add an additional field to include a RFC 5280 revocation reason for (/pki/revoke) and (/pki/revoke-with-key).
+* ui: Add pnpm.overrides entry for markdown-it (14.1.1) to fix security vulnerability SECVULN-37952.
+* ui: Bump dompurify to 3.4.15 to address SECVULN advisories
+
+BUG FIXES:
+
+* auth/approle: Fix `token_bound_cidrs` validation when using /128 blocks for role and secret ID
+* core/mounts: Fixed `vault secrets move` (and `vault auth move`) incorrectly placing a mount in the root namespace when the destination path has a leading slash.
+* plugins: Fix issue with `vault plugin reload -mounts` command when run in the root namespace
+* secrets-sync (enterprise): Fix `LIST /v1/sys/sync/associations` intermittently returning zero associations/secrets by forwarding the request to the active node instead of allowing it to be served locally by a performance standby or performance secondary.
+* secrets/pki (enterprise): Fix panic in CMPv2 sentinel field parsing when cert request messages is empty.
 
 ## 1.20.15 Enterprise
 ### September 01, 2026
@@ -1870,6 +1971,33 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.22 Enterprise
+### September 16, 2026
+
+SECURITY:
+
+* core: Update github.com/apache/thrift to v0.24.0 to fix security vulnerability ghsa-8wv5-x4w7-5gww.
+* core: Update golang.org/x/crypto to v0.56.0 to fix security vulnerabilities GO-2026-6354 and GO-2026-6355.
+* core: Update google.golang.org/grpc to v1.83.2 to fix security vulnerability GHSA-2v4p-qf9q-27wj.
+
+CHANGES:
+
+* core: Bump Go version to 1.26.8.
+
+IMPROVEMENTS:
+
+* core: Add a `ui_settings` configuration stanza with a `ui_telemetry` option, surfaced to the UI via the `sys/internal/ui/settings` endpoint, that gates anonymous UI usage telemetry.
+* secrets/pki: add an additional field to include a RFC 5280 revocation reason for (/pki/revoke) and (/pki/revoke-with-key).
+* ui: Add pnpm.overrides entry for markdown-it (14.1.1) to fix security vulnerability SECVULN-37952.
+* ui: Bump dompurify to 3.4.15 to address SECVULN advisories
+
+BUG FIXES:
+
+* core/mounts: Fixed `vault secrets move` (and `vault auth move`) incorrectly placing a mount in the root namespace when the destination path has a leading slash.
+* plugins: Fix issue with `vault plugin reload -mounts` command when run in the root namespace
+* secrets-sync (enterprise): Fix `LIST /v1/sys/sync/associations` intermittently returning zero associations/secrets by forwarding the request to the active node instead of allowing it to be served locally by a performance standby or performance secondary.
+* secrets/pki (enterprise): Fix panic in CMPv2 sentinel field parsing when cert request messages is empty.
 
 ## 1.19.21 Enterprise
 ### September 01, 2026
