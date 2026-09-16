@@ -272,11 +272,19 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			}
 		}
 
-		// Get external_id if provided
-		externalID := d.Get("external_id").(string)
+		// Get external_id if provided; GetOk avoids panicking on deprecated
+		// paths whose field schema does not declare external_id.
+		var externalID string
+		if data, ok := d.GetOk("external_id"); ok {
+			externalID = data.(string)
+		}
 
-		// Get issuer if provided
-		issuer := d.Get("issuer").(string)
+		// Get issuer if provided; GetOk avoids panicking on deprecated paths
+		// whose field schema does not declare issuer.
+		var issuer string
+		if data, ok := d.GetOk("issuer"); ok {
+			issuer = data.(string)
+		}
 
 		// normalize the issuer
 		issuer = jwt.NormalizeIssuer(issuer)
