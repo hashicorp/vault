@@ -39,10 +39,10 @@ replace github.com/TritonDataCenter/triton-go/v2 => github.com/ryancragun/triton
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.21.0
-	cloud.google.com/go/monitoring v1.26.0
-	cloud.google.com/go/spanner v1.89.0
+	cloud.google.com/go/monitoring v1.30.0
+	cloud.google.com/go/spanner v1.91.0
 	cloud.google.com/go/storage v1.62.0
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.23.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.1
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/Azure/go-autorest/autorest v0.11.30
@@ -179,7 +179,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.24.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.13.1
 	github.com/hashicorp/vault-plugin-secrets-kv v0.26.3-0.20260626165612-824fb96aa7a8
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.17.1
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.15.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.4
@@ -201,7 +201,7 @@ require (
 	github.com/mattn/go-colorable v0.1.15
 	github.com/mattn/go-isatty v0.0.24
 	github.com/michaelklishin/rabbit-hole/v2 v2.12.0
-	github.com/miekg/dns v1.1.72
+	github.com/miekg/dns v1.1.73
 	github.com/mikesmitty/edkey v0.0.0-20170222072505-3356ea4e686a
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
@@ -232,7 +232,7 @@ require (
 	github.com/sasha-s/go-deadlock v0.3.5
 	github.com/sethvargo/go-limiter v0.7.1
 	github.com/shirou/gopsutil/v3 v3.22.6
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/tink-crypto/tink-go/v2 v2.7.0
 	go.etcd.io/bbolt v1.4.3
 	go.etcd.io/etcd/client/pkg/v3 v3.7.1
@@ -248,14 +248,14 @@ require (
 	golang.org/x/crypto v0.57.0
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597
 	golang.org/x/net v0.59.0
-	golang.org/x/oauth2 v0.36.0
+	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.23.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.46.0
 	golang.org/x/text v0.42.0
 	golang.org/x/time v0.15.0
 	golang.org/x/tools v0.49.0
-	google.golang.org/api v0.279.0
+	google.golang.org/api v0.297.0
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
@@ -267,12 +267,12 @@ require (
 require (
 	cel.dev/expr v0.25.2 // indirect
 	cloud.google.com/go v0.123.0 // indirect
-	cloud.google.com/go/auth v0.20.0 // indirect
+	cloud.google.com/go/auth v0.23.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	cloud.google.com/go/iam v1.8.0 // indirect
-	cloud.google.com/go/kms v1.31.0 // indirect
-	cloud.google.com/go/longrunning v0.9.0 // indirect
+	cloud.google.com/go/iam v1.12.0 // indirect
+	cloud.google.com/go/kms v1.32.0 // indirect; indirect\
+	cloud.google.com/go/longrunning v1.2.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
@@ -426,8 +426,8 @@ require (
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.15 // indirect
-	github.com/googleapis/gax-go/v2 v2.22.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.20 // indirect
+	github.com/googleapis/gax-go/v2 v2.24.0 // indirect
 	github.com/gophercloud/gophercloud v1.14.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
@@ -517,7 +517,6 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.22 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
-	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
@@ -569,7 +568,7 @@ require (
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/genproto v0.0.0-20260406210006-6f92a3bedf2d // indirect
+	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260908043556-f8649ddbbfe6 // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
