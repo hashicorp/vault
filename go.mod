@@ -159,10 +159,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.24.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.24.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.23.1
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.18.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.27.1
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.17.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.1
-	github.com/hashicorp/vault-plugin-auth-oci v0.21.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.22.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.17.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.0
@@ -420,7 +420,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/gammazero/deque v1.2.1 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.8 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
