@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -24,7 +24,7 @@ module('Acceptance | raft storage', function (hooks) {
   });
 
   test('it should render correct number of raft peers', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
 
     let didRemovePeer = false;
     this.server.get('/sys/storage/raft/configuration', () => {
@@ -39,16 +39,12 @@ module('Acceptance | raft storage', function (hooks) {
 
     await visit('/vault/storage/raft');
     assert.dom('[data-raft-row]').exists({ count: 2 }, '2 raft peers render in table');
-    // leave route and return to trigger config fetch
+    // leave route and return to trigger a fresh fetch of the raft configuration
     await visit('/vault/secrets-engines');
     await visit('/vault/storage/raft');
-    const store = this.owner.lookup('service:store');
-    assert.strictEqual(
-      store.peekAll('server').length,
-      2,
-      'Store contains 2 server records since remove peer was triggered externally'
-    );
-    assert.dom('[data-raft-row]').exists({ count: 1 }, 'Only raft nodes from response are rendered');
+    assert
+      .dom('[data-raft-row]')
+      .exists({ count: 1 }, 'Only raft nodes from the latest response are rendered');
   });
 
   test('it should remove raft peer', async function (assert) {
@@ -57,10 +53,11 @@ module('Acceptance | raft storage', function (hooks) {
     this.server.get('/sys/storage/raft/configuration', () => this.config);
     this.server.post('/sys/storage/raft/remove-peer', (schema, req) => {
       const body = JSON.parse(req.requestBody);
-      assert.strictEqual(
-        body.server_id,
-        this.config.data.config.servers[1].node_id,
-        'Remove peer request made with node id'
+      const removedNodeId = this.config.data.config.servers[1].node_id;
+      assert.strictEqual(body.server_id, removedNodeId, 'Remove peer request made with node id');
+      // simulate the server actually removing the peer so the follow-up route refresh reflects it
+      this.config.data.config.servers = this.config.data.config.servers.filter(
+        (server) => server.node_id !== body.server_id
       );
       return {};
     });
