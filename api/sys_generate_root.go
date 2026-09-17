@@ -129,7 +129,7 @@ func (c *Sys) generateRootCancelCommonWithContext(ctx context.Context, path stri
 	r := c.c.NewRequest(http.MethodDelete, path)
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
