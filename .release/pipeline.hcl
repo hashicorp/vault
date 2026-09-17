@@ -330,6 +330,9 @@ changed_files {
         ".opencode",
         ".agents",
         joinpath("ui", ".agents"),
+        // Symlinks into .agents/ for GitHub Copilot and other AI tooling
+        joinpath(".github", "agents"),
+        joinpath(".github", "instructions"),
       ]
     }
 
