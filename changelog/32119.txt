@@ -1,0 +1,3 @@
+```release-note:improvement
+command: Add new health endpoint showing status, replication, and tls for all linked clusters
+```
