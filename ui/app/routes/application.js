@@ -78,21 +78,14 @@ export default class ApplicationRoute extends Route {
   }
 
   afterModel() {
-    const { environment, APP } = config;
-    const { ANALYTICS_CONFIG } = APP;
+    const { ANALYTICS_CONFIG } = config.APP;
 
-    // if the app is built for dev  -> attempt to start the analytics service based on the config setting
-    // if the app is built for prod -> attempt to start the analytics service based on the config setting AND HVD ownership
-    // if the app is built for test -> don't start the analytics service
-    if (environment === 'development') {
-      // Vault SM (Segment) is started via the consent gate in the cluster route
-      // so it can prompt for consent before activating. So Segment is the provider
-      // wait until consent gate is presented
-      if (ANALYTICS_CONFIG.provider !== 'segment') {
-        this.analytics.start(ANALYTICS_CONFIG.provider, ANALYTICS_CONFIG);
-      }
-    } else if (environment === 'production' && this.flagsService.isHvdManaged) {
-      this.analytics.start('posthog', ANALYTICS_CONFIG);
+    // HVD (managed) clusters start capturing analytics immediately, with no
+    // consent gate. Self-managed clusters are started later via the consent gate
+    // in the cluster route so they can prompt for consent before activating.
+    if (this.flagsService.isHvdManaged) {
+      // Pass the HVD hint so the provider classifies productPlanType as HVD or SM
+      this.analytics.start(ANALYTICS_CONFIG.provider, { ...ANALYTICS_CONFIG, isHvdManaged: true });
     }
   }
 }

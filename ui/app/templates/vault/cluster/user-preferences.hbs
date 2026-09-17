@@ -21,4 +21,8 @@
   </:breadcrumbs>
 </Page::Header>
 
-<UserPreferences::DataPrivacy />
+<UserPreferences::Persona />
+
+{{#unless @model.isHvdManaged}}
+  <UserPreferences::DataPrivacy />
+{{/unless}}

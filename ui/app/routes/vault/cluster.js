@@ -190,8 +190,8 @@ export default class ClusterRoute extends Route {
   }
 
   async addAnalyticsService(model) {
-    // HVD-managed clusters use PostHog, started at the application-route level.
-    // Segment is Self-Managed only.
+    // HVD-managed clusters start Segment at the application-route level, with no
+    // consent gate. The consent-gated Segment start is Self-Managed only.
     if (!this.flagsService.isHvdManaged) await this.startVaultSmAnalytics();
 
     // identify user for analytics service
@@ -224,6 +224,7 @@ export default class ClusterRoute extends Route {
           storageType: model.storageType,
           replicationMode: model.replicationMode,
           isEnterprise: Boolean(model.license),
+          isHvdManaged: this.flagsService.isHvdManaged,
         });
       } catch (e) {
         console.error('unable to start analytics', e);
