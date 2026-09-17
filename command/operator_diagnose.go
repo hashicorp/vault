@@ -273,7 +273,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 			}
 
 			// If any Stackdriver setting is present but we're missing the basic fields...
-			if coalesce(t.StackdriverNamespace, t.StackdriverLocation, t.StackdriverDebugLogs, t.StackdriverNamespace) != nil {
+			if coalesce(t.StackdriverNamespace, t.StackdriverLocation, t.StackdriverNamespace) != nil || t.StackdriverDebugLogs {
 				if t.StackdriverProjectID == "" {
 					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_project_id")
 				}
