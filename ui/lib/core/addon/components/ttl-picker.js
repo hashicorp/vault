@@ -23,6 +23,7 @@
  * @param {string} initialValue=null - InitialValue is the duration value which will be shown when the component is loaded. If it can't be parsed, will default to 0.
  * @param {boolean} changeOnInit=false - if true, calls the onChange hook when component is initialized
  * @param {boolean} hideToggle=false - set this value if you'd like to hide the toggle and just leverage the input field
+ * @param {boolean} emptyMeansZero=false - treat an empty input as 0 instead of showing a required error, for fields where 0 is meaningful
  */
 
 import Component from '@glimmer/component';
@@ -143,6 +144,12 @@ export default class TtlPickerComponent extends Component {
     this.errorMessage = '';
     const parsedTime = parseInt(newTime, 10);
     if (!newTime) {
+      if (this.args.emptyMeansZero) {
+        // Leave the input empty but report zero, so clearing the field saves the same value as typing 0.
+        this.time = '';
+        this.handleChange();
+        return;
+      }
       this.errorMessage = 'This field is required';
       return;
     } else if (Number.isNaN(parsedTime)) {

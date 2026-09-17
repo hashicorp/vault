@@ -301,6 +301,22 @@ module('Integration | Component | secret-engines/catalog', function (hooks) {
     assert.dom(GENERAL.cardContainer('kv')).doesNotExist('KV card hidden when description does not match');
   });
 
+  test('keyword tag is removed when search input is cleared', async function (assert) {
+    assert.expect(3);
+    await render(hbs`<SecretEngines::Catalog
+      @setMountType={{this.setMountType}}
+      @pluginCatalogData={{this.pluginCatalogData}}
+      @pluginCatalogError={{this.pluginCatalogError}}
+    />`);
+
+    await fillIn(SELECTORS.searchInput, 'transit');
+    assert.dom(SELECTORS.keywordTag).exists('keyword filter tag appears after typing a search term');
+
+    await fillIn(SELECTORS.searchInput, '');
+    assert.dom(SELECTORS.keywordTag).doesNotExist('keyword tag removed once search input is only whitespace');
+    assert.dom(GENERAL.cardContainer('kv')).exists('KV engine visible again after keyword filter cleared');
+  });
+
   // --- Secret type filter ---
 
   test('secret type filter - encryption keys shows only engines with that secretType', async function (assert) {

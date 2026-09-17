@@ -81,7 +81,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-      - uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
+      - uses: hashicorp/action-setup-enos@bfd47bdf7d118b9372acfaab048bcb9967026747 # v1.54
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set Up Node
@@ -91,7 +91,7 @@ jobs:
           cache: pnpm
           cache-dependency-path: ui/pnpm-lock.yaml
       - name: Install PNPM
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           package_json_file: './ui/package.json'
       - name: Set Up Terraform
@@ -117,12 +117,12 @@ jobs:
           sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
       - name: Install Chrome
         if: steps.chrome-check.outputs.chrome-version == 'not-installed'
-        uses: browser-actions/setup-chrome@2e1d749697dd1612b833dba4a722266286fbefcd # v2.1.2
+        uses: browser-actions/setup-chrome@48ad923757ca74d66703209fe939badbdf80f2f4 # v2.2.0
       - name: Installed Chrome Version
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
       - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}

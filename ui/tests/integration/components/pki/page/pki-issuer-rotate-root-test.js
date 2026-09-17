@@ -12,7 +12,11 @@ import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
-import { PKI_CONFIGURE_CREATE, PKI_CONFIG_EDIT } from 'vault/tests/helpers/pki/pki-selectors';
+import {
+  PKI_CONFIGURE_CREATE,
+  PKI_CONFIG_EDIT,
+  PKI_ISSUER_DETAILS,
+} from 'vault/tests/helpers/pki/pki-selectors';
 
 const SELECTORS = {
   nextSteps: '[data-test-rotate-next-steps]',
@@ -226,5 +230,20 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
 
     await click(SELECTORS.doneButton);
     assert.ok(this.onComplete.calledOnce, 'clicking done fires @onComplete from parent');
+  });
+
+  test('it renders both download options when the dropdown is opened', async function (assert) {
+    this.rotateStub.resolves(this.returnedData);
+
+    await this.renderComponent();
+    await this.customizeAndSubmit();
+
+    assert
+      .dom(PKI_ISSUER_DETAILS.downloadPem)
+      .doesNotExist('dropdown items are not rendered until the menu is opened');
+
+    await click(SELECTORS.toolbarDownload);
+    assert.dom(PKI_ISSUER_DETAILS.downloadPem).hasText('PEM format');
+    assert.dom(PKI_ISSUER_DETAILS.downloadDer).hasText('DER format');
   });
 });

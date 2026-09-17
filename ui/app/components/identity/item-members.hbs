@@ -5,12 +5,12 @@
 
 {{#if (or (not (is-empty @model.member_group_ids)) (not (is-empty @model.member_entity_ids)))}}
   {{#each @model.member_group_ids as |gid|}}
-    <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
+    <LinkedBlock @params={{array "vault.cluster.access.identity.groups.show" gid "details"}} class="list-item-row">
       <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
         <LF.Item @grow={{true}} @shrink={{true}}>
           <LinkTo
-            @route="vault.cluster.access.identity.show"
-            @models={{array "groups" gid "details"}}
+            @route="vault.cluster.access.identity.groups.show"
+            @models={{array gid "details"}}
             class="is-block has-text-black has-text-weight-semibold"
           >
             <Icon @name="folder" class="has-text-grey-light" />{{gid}}
@@ -25,12 +25,12 @@
     </LinkedBlock>
   {{/each}}
   {{#each @model.member_entity_ids as |gid|}}
-    <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">
+    <LinkedBlock @params={{array "vault.cluster.access.identity.entities.show" gid "details"}} class="list-item-row">
       <Hds::Layout::Flex @direction="row" @align="center" @gap="16" as |LF|>
         <LF.Item @grow={{true}} @shrink={{true}}>
           <LinkTo
-            @route="vault.cluster.access.identity.show"
-            @models={{array "entities" gid "details"}}
+            @route="vault.cluster.access.identity.entities.show"
+            @models={{array gid "details"}}
             class="is-block has-text-black has-text-weight-semibold"
           >
             <Icon @name="user" class="has-text-grey-light" />{{gid}}

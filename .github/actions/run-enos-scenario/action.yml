@@ -106,7 +106,7 @@ runs:
 
     - if: inputs.setup-enos == 'true'
       name: Setup Enos
-      uses: hashicorp/action-setup-enos@3817610f3f8dc74a8dbe15bc23c6dc3164f9b224 # v1.53
+      uses: hashicorp/action-setup-enos@bfd47bdf7d118b9372acfaab048bcb9967026747 # v1.54
 
     - id: prepare-artifacts
       name: Prepare artifacts and debug directory
@@ -160,11 +160,19 @@ runs:
       name: Retry Enos scenario
       shell: bash
       run: |
-        if ! output=$(enos scenario launch \
+        set +e
+        stderr_file=$(mktemp)
+        enos scenario launch \
           --timeout ${{ inputs.retry-timeout }} \
           ${{ inputs.retry-extra-args }} \
           --chdir ${{ inputs.working-directory }} \
-          ${{ inputs.scenario-filter }} 2>&1); then
+          ${{ inputs.scenario-filter }} 2> >(tee "${stderr_file}" >&2)
+        launch_exit=$?
+        wait  # drain the tee subprocess before reading the file
+        set -e
+        if [ "${launch_exit}" -ne 0 ]; then
+          output=$(cat "${stderr_file}")
+          rm -f "${stderr_file}"
           if [ "${{ inputs.show-state-on-retry }}" = "true" ]; then
             echo "::group::Scenario state after retry"
             enos scenario exec --cmd show \
@@ -178,7 +186,6 @@ runs:
             echo "::endgroup::"
           fi
           echo "::group::Scenario retry failure"
-          echo "$output" >&2
           {
             echo "# Enos Scenario Failed!"
             echo 'See the [workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more information'
@@ -189,6 +196,7 @@ runs:
           echo "::endgroup::"
           exit 1
         fi
+        rm -f "${stderr_file}"
 
     - id: determine-launch-outcome
       name: Determine launch outcome

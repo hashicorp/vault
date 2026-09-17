@@ -239,6 +239,18 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/autopilot/state")
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/configuration")
 		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/remove-peer")
+		b.Backend.PathsSpecial.Unauthenticated = append(b.Backend.PathsSpecial.Unauthenticated, "storage/raft/snapshot-auto/*")
+
+		// snapshot-auto/config/* is declared Root (requiring sudo) on a primary,
+		// but on a DR secondary it must be accessible via DR operation token.
+		// A path cannot be both Root and Unauthenticated, so strip it from Root.
+		filteredRoot := make([]string, 0, len(b.Backend.PathsSpecial.Root))
+		for _, p := range b.Backend.PathsSpecial.Root {
+			if !strings.HasPrefix(p, "storage/raft/snapshot-auto/") {
+				filteredRoot = append(filteredRoot, p)
+			}
+		}
+		b.Backend.PathsSpecial.Root = filteredRoot
 	}
 
 	b.Backend.Invalidate = sysInvalidate(b)

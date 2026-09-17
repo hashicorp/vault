@@ -80,6 +80,14 @@ module.exports = {
       },
     },
     {
+      // e2e files are plain Playwright/Node tests, not Ember code — this rule false-positives on
+      // Playwright's fixture-tuple syntax, mistaking it for an Ember object literal default.
+      files: ['e2e/**/*.{js,ts}'],
+      rules: {
+        'ember/avoid-leaking-state-in-ember-objects': 'off',
+      },
+    },
+    {
       files: ['**/*.ts'],
       extends: ['plugin:@typescript-eslint/recommended'],
     },

@@ -89,6 +89,7 @@ func TestStoreAndGetAttributionData(t *testing.T) {
 	require.Equal(t, "", m1.ParentNamespaceID)
 	require.Equal(t, "kv_5d4f8f1c", m1.MountAccessor)
 	require.Equal(t, "5", fmt.Sprintf("%v", m1.Count))
+	require.False(t, m1.IsExternal)
 	require.Equal(t, "version1", m1.MountRunningVersion)
 
 	// Overwrite with new data — second store must replace, not merge.
@@ -171,11 +172,11 @@ func TestTransitUpdateAndGetAttribution(t *testing.T) {
 
 	retrieved1, ok := retrievedAttribution.Mounts[mountAccessor]
 	require.True(t, ok, "Should find breakdown for first mount accessor")
-	verifyMountAttributionBreakdowns(t, testBreakdown1, retrieved1)
+	assertMountAttribution(t, retrieved1, testBreakdown1)
 
 	retrieved2, ok := retrievedAttribution.Mounts[mountAccessor2]
 	require.True(t, ok, "Should find breakdown for transit-accessor-2")
-	verifyMountAttributionBreakdowns(t, testBreakdown2, retrieved2)
+	assertMountAttribution(t, retrieved2, testBreakdown2)
 
 	// Test Case 2: Update with no mounts (empty map) - should keep existing counts
 	t.Log("Test Case 2: Update with no mounts (empty map)")

@@ -81,6 +81,8 @@ export const PKI_ISSUER_DETAILS = {
   crossSign: '[data-test-pki-issuer-cross-sign]',
   defaultGroup: '[data-test-details-group="default"]',
   download: '[data-test-issuer-download]',
+  downloadPem: '[data-test-issuer-download-type="pem"]',
+  downloadDer: '[data-test-issuer-download-type="der"]',
   groupTitle: '[data-test-group-title]',
   parsingAlertBanner: '[data-test-parsing-error-alert-banner]',
   rotateModal: '#pki-rotate-root-modal',

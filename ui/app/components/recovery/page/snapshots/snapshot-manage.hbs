@@ -19,7 +19,7 @@
   <Hds::Card::Container
     @level="mid"
     @hasBorder={{true}}
-    class="has-padding-m has-top-margin-s has-bottom-margin-m one-half-width"
+    class="has-padding-16 top-margin-12 bottom-margin-16 one-half-width"
   >
     <div class="flex space-between">
       <Hds::Text::Display @tag="h2">Snapshot</Hds::Text::Display>
@@ -38,9 +38,9 @@
   </Hds::Card::Container>
 {{/let}}
 
-<Hds::Text::Display @tag="h3" class="has-top-padding-m has-bottom-margin-l">Recover or read data</Hds::Text::Display>
+<Hds::Text::Display @tag="h3" class="top-padding-16 bottom-margin-24">Recover or read data</Hds::Text::Display>
 {{#if this.recoveryData}}
-  <Hds::Alert @type="inline" @color="success" class="has-top-margin-m has-bottom-margin-m" data-test-inline-alert as |A|>
+  <Hds::Alert @type="inline" @color="success" class="top-margin-16 bottom-margin-16" data-test-inline-alert as |A|>
     <A.Title>Success</A.Title>
     {{#let
       this.recoveryData.query.namespace (get this.recoveryData.models 0) (get this.recoveryData.models 1)
@@ -61,7 +61,7 @@
 {{/if}}
 
 {{#if this.bannerError}}
-  <div class="has-top-padding-m has-bottom-padding-m">
+  <div class="top-padding-16 bottom-padding-16">
     <Hds::Alert @type="inline" @color="critical" data-test-inline-alert as |A|>
       <A.Title>Error</A.Title>
       <A.Description>{{this.bannerError}}</A.Description>
@@ -69,7 +69,7 @@
   </div>
 {{/if}}
 
-<Hds::Layout::Flex @gap="24" @align="start" class="has-bottom-padding-m">
+<Hds::Layout::Flex @gap="24" @align="start" class="bottom-padding-16">
   {{! Selecting a namespace is only available in root, otherwise the namespace context 
   is assumed as the current namespace for requesting the list of mount options }}
   {{#if this.namespace.inRootNamespace}}
@@ -112,7 +112,7 @@
           <div data-test-option={{option.path}}>
             <strong>{{option.path}}</strong>
           </div>
-          {{option.type}}
+          {{option.label}}
         {{/let}}
       </F.Options>
       {{#if this.mountError}}
@@ -127,16 +127,16 @@
           <SG.Dropdown @listPosition="bottom-left" as |D|>
             <D.ToggleButton
               @color="secondary"
-              @text={{or (get this.recoverySupportedEngines this.selectedMount.type) "Type"}}
+              @text={{or this.selectedMount.label "Type"}}
               class="white-space-nowrap"
               data-test-button="Type"
             />
-            {{#each-in this.recoverySupportedEngines as |type displayName|}}
+            {{#each-in this.manualRecoveryOptions as |displayName|}}
               <D.Radio
-                name={{type}}
-                checked={{eq this.selectedMount.type type}}
+                name={{displayName}}
+                checked={{eq this.selectedMount.label displayName}}
                 {{on "change" (fn this.handleSelectRadio D.close)}}
-                data-test-radio={{type}}
+                data-test-radio={{displayName}}
               >
                 {{displayName}}
               </D.Radio>
@@ -188,7 +188,7 @@
   </div>
 </Hds::Layout::Flex>
 
-<Hds::Layout::Flex @align="start" class="has-bottom-padding-m">
+<Hds::Layout::Flex @align="start" class="bottom-padding-16">
   <Hds::Form::Radio::Group @name="recover-method" as |G|>
     <G.Legend>Recover options</G.Legend>
     {{#each this.recoverMethods as |method|}}
@@ -206,7 +206,7 @@
 </Hds::Layout::Flex>
 
 {{#if (eq this.recoverMethod "copy")}}
-  <Hds::Layout::Flex @align="start" class="has-bottom-padding-m">
+  <Hds::Layout::Flex @align="start" class="bottom-padding-16">
     <Hds::Form::TextInput::Field
       @value={{this.copyPath}}
       @isInvalid={{this.copyPathError}}
@@ -228,7 +228,7 @@
 
 <Hds::Separator />
 
-<Hds::ButtonSet class="has-top-padding-m">
+<Hds::ButtonSet class="top-padding-16">
   <Hds::Button
     @text="Recover"
     type="submit"
@@ -251,19 +251,25 @@
       Read secrets
     </M.Header>
     <M.Body>
-      <div class="has-bottom-padding-m">
-        <Hds::Form::Toggle::Field
-          checked={{this.showJson}}
-          {{on "change" this.toggleJson}}
-          data-test-toggle-input="snapshot-read-secrets"
-          as |F|
-        >
-          <F.Label>JSON</F.Label>
-          <F.HelperText>Please use the toggle to see your secret value in JSON.</F.HelperText>
-        </Hds::Form::Toggle::Field>
-      </div>
-
-      <SecretFormShow @showAdvancedMode={{this.showJson}} @modelForData={{this.modelForData}} />
+      <Hds::Form::Radio::Group @layout="horizontal" @name="secret-view-format" class="bottom-padding-16" as |G|>
+        <G.Legend>Secret format</G.Legend>
+        {{#each this.format as |format|}}
+          <G.RadioField
+            checked={{eq format this.selectedSecretReadFormat}}
+            {{on "change" (fn this.updateSecretReadFormat format)}}
+            data-test-input={{format}}
+            as |F|
+          >
+            <F.Label>{{uppercase format}}</F.Label>
+          </G.RadioField>
+        {{/each}}
+      </Hds::Form::Radio::Group>
+      <SecretFormShow
+        @editorFormat={{this.selectedSecretReadFormat}}
+        @showAdvancedMode={{this.showAdvancedMode}}
+        @modelForData={{this.modelForData}}
+        @yamlSecretData={{this.getSecretsDataInYAML}}
+      />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button type="button" @text="Close" {{on "click" F.close}} data-test-button="close" />

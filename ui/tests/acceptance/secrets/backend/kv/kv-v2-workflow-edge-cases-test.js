@@ -456,14 +456,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     // View the first version and make sure the secret data is correct
     await click(PAGE.secretTab('Secret'));
     await click(PAGE.detail.versionDropdown);
-    await click(`${PAGE.detail.version(1)} a`);
+    await click(`${PAGE.detail.version(1)}`);
     assert
       .dom(GENERAL.codeBlock('secret-data'))
       .hasText(`Version data ${expectedDataV1}`, 'Version one data is displayed');
 
     // Navigate back the second version and make sure the secret data is correct
     await click(PAGE.detail.versionDropdown);
-    await click(`${PAGE.detail.version(2)} a`);
+    await click(`${PAGE.detail.version(2)}`);
     assert
       .dom(GENERAL.codeBlock('secret-data'))
       .hasText(`Version data ${expectedDataV2}`, 'Version two data is displayed');

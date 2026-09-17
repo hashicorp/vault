@@ -1,0 +1,25 @@
+## {{ if .Ticket }}[{{ .Ticket }}] {{ end }}go: sync go.mod from {{ .AOwner }}/{{ .ARepo }}/{{ .ABranch }} to {{ .BBranch }}
+
+{{ if .HasErrors }}
+:rotating_light:
+> **Warning** one or more go.mod files encountered errors during sync or tidy.
+> See the details below. Manual intervention may be required.
+{{ end }}
+
+### Changes
+
+{{ range .PathResults }}
+{{ if .SyncModRes }}
+#### `{{ .SyncModRes.Path }}`
+{{ if .SyncModRes.Changes }}
+| directive | module | old version | new version | action |
+|-----------|--------|-------------|-------------|--------|
+{{ range .SyncModRes.Changes }}| {{ .Directive }} | {{ .Module }} | {{ .OldVersion }} | {{ .NewVersion }} | {{ .Action }} |
+{{ end }}
+{{ else }}
+No changes.
+{{ end }}
+{{ if .SyncModRes.Error }}> :warning: Error: {{ .SyncModRes.Error }}{{ end }}
+{{ end }}
+{{ if .TidyError }}> :warning: Tidy error: {{ .TidyError }}{{ end }}
+{{ end }}

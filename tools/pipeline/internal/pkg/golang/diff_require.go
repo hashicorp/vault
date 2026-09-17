@@ -11,17 +11,17 @@ import (
 	"golang.org/x/mod/modfile"
 )
 
-func diffRequire(a *modfile.File, b *modfile.File, strictDiff bool) []*Diff {
+func diffRequire(a *modfile.File, b *modfile.File, strictDiff bool, excludeRequire []string) []*Diff {
 	if (a == nil && b == nil) || (len(a.Require) == 0 && len(b.Require) == 0) {
 		return nil
 	}
 
 	var diffs []*Diff
 	if strictDiff {
-		diffs = append(diffRequireFindMissing(a, b), diffRequireFindMissing(b, a)...)
+		diffs = append(diffRequireFindMissing(a, b, excludeRequire), diffRequireFindMissing(b, a, excludeRequire)...)
 	}
-	versionDiffsA := diffRequireFindDifferent(a, b)
-	versionDiffsB := diffRequireFindDifferent(b, a)
+	versionDiffsA := diffRequireFindDifferent(a, b, excludeRequire)
+	versionDiffsB := diffRequireFindDifferent(b, a, excludeRequire)
 	maps.Copy(versionDiffsB, versionDiffsA)
 
 	return slices.DeleteFunc(
@@ -30,10 +30,14 @@ func diffRequire(a *modfile.File, b *modfile.File, strictDiff bool) []*Diff {
 	)
 }
 
-func diffRequireFindMissing(a, b *modfile.File) []*Diff {
+func diffRequireFindMissing(a, b *modfile.File, excludeRequire []string) []*Diff {
 	diffs := []*Diff{}
 	for _, needle := range a.Require {
 		if needle == nil {
+			continue
+		}
+
+		if matchesAnyExcludePattern(excludeRequire, needle.Mod.Path) {
 			continue
 		}
 
@@ -61,10 +65,14 @@ func diffRequireFindMissing(a, b *modfile.File) []*Diff {
 	return diffs
 }
 
-func diffRequireFindDifferent(a, b *modfile.File) map[string]*Diff {
+func diffRequireFindDifferent(a, b *modfile.File, excludeRequire []string) map[string]*Diff {
 	diffs := map[string]*Diff{}
 	for _, needle := range a.Require {
 		if needle == nil {
+			continue
+		}
+
+		if matchesAnyExcludePattern(excludeRequire, needle.Mod.Path) {
 			continue
 		}
 

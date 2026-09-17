@@ -17,6 +17,7 @@ type UnifiedRevocationEntry struct {
 	CertExpiration    time.Time        `json:"certificate_expiration_utc"`
 	RevocationTimeUTC time.Time        `json:"revocation_time_utc"`
 	CertificateIssuer issuing.IssuerID `json:"issuer_id"`
+	ReasonCode        int              `json:"reason_code"`
 }
 
 const (

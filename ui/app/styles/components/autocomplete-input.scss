@@ -4,6 +4,10 @@
  */
 
 .autocomplete-input {
+  // Previously supplied by .ember-basic-dropdown-content so
+  // the panel overlays the content below it
+  position: absolute;
+  z-index: 1000;
   background: hsl(0, 0%, 100%) !important;
   border: 1px solid var(--token-color-palette-neutral-300);
   box-sizing: border-box;

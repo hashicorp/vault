@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 
 import type { LdapStaticRoleCredentials, LdapDynamicRoleCredentials } from 'vault/secrets/ldap';
-import { Breadcrumb } from 'vault/vault/app-types';
+import type { Breadcrumb } from 'vault/vault/app-types';
 import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 interface Args {

@@ -64,7 +64,7 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
   rotationTypes = [
     { label: 'Static credentials', capability: 'static' },
     { label: 'Dynamic credentials', capability: 'dynamic' },
-    { label: 'Rotation-enabled', capability: 'rotating' },
+    { label: 'Rotating credentials', capability: 'rotating' },
   ];
 
   platforms = [
@@ -273,6 +273,8 @@ export default class SecretEnginesCatalogComponent extends Component<Args> {
       if (target.value.trim()) {
         this.keywords = target.value;
         this.clearSelectedEngine();
+      } else {
+        this.keywords = '';
       }
     }
   }

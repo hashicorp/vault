@@ -7,11 +7,13 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
+import { assert } from '@ember/debug';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
-import { LdapRolesCreateRouteModel } from 'ldap/routes/roles/create';
-import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
+import type { LdapRolesCreateRouteModel } from 'ldap/routes/roles/create';
+import type { LdapRoleEditRouteModel } from 'ldap/routes/roles/role/edit';
+import type { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type Owner from '@ember/owner';
@@ -22,8 +24,10 @@ import type {
   LdapWriteDynamicRoleRequest,
 } from '@hashicorp/vault-client-typescript';
 
+// Shared between the create route, which supplies both form types, and the edit route,
+// which supplies only the form matching the role being edited.
 interface Args {
-  model: LdapRolesCreateRouteModel;
+  model: LdapRolesCreateRouteModel | LdapRoleEditRouteModel;
   breadcrumbs: Array<Breadcrumb>;
 }
 interface RoleTypeOption {
@@ -60,6 +64,15 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
     }
   }
 
+  get isSelfManaged(): boolean {
+    return this.args.model.isSelfManaged === true;
+  }
+
+  get pageTitle(): string {
+    if (!this.isNew) return 'Edit Role';
+    return this.isSelfManaged ? 'Create static role' : 'Create Role';
+  }
+
   get roleTypeOptions(): Array<RoleTypeOption> {
     return [
       {
@@ -79,7 +92,7 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
 
   get fields() {
     if (this.roleType === 'static') {
-      return ['name', 'username', 'dn', 'rotation_period'];
+      return ['name', 'dn', 'username', 'password', 'rotation_period'];
     }
     return [
       'name',
@@ -94,7 +107,11 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
 
   get form() {
     const { staticForm, dynamicForm } = this.args.model;
-    return this.roleType === 'static' ? staticForm : dynamicForm;
+    const form = this.roleType === 'static' ? staticForm : dynamicForm;
+    // The constructor sets roleType from whichever form the route supplied, so the matching form
+    // is always present. TypeScript cannot see that correlation, hence the assertion.
+    assert(`LDAP ${this.roleType} role form is missing from the route model`, form);
+    return form;
   }
 
   save = task(

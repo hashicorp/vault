@@ -10,6 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { FEEDBACK_SURVEY_URL } from 'vault/utils/constants/links';
 
 module('Integration | Component | sidebar-frame', function (hooks) {
   setupRenderingTest(hooks);
@@ -89,6 +90,47 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     assert.dom(GENERAL.dropdownToggle('help menu')).exists('Help menu renders');
     await click('[data-test-console-toggle]');
     assert.dom('.panel-open').doesNotExist('Console ui panel closes');
+  });
+
+  test('it should render a submit feedback link in the help menu', async function (assert) {
+    setRunOptions({
+      rules: {
+        'aria-prohibited-attr': { enabled: false },
+        'nested-interactive': { enabled: false },
+        label: { enabled: false },
+      },
+    });
+
+    await render(hbs`
+      <Sidebar::Frame @showSidebar={{true}} />
+    `);
+
+    await click(GENERAL.dropdownToggle('help menu'));
+    assert
+      .dom('[data-test-help-menu-item="feedback"]')
+      .hasAttribute('href', FEEDBACK_SURVEY_URL)
+      .hasAttribute('target', '_blank');
+  });
+
+  test('it should render a submit feedback button in the sidebar that persists regardless of edition', async function (assert) {
+    const version = this.owner.lookup('service:version');
+    version.type = 'community';
+
+    await render(hbs`
+      <Sidebar::Frame @showSidebar={{true}} />
+    `);
+
+    assert
+      .dom('[data-test-sidebar-feedback-button]')
+      .exists('Submit feedback button renders in the sidebar for community edition')
+      .hasAttribute('href', FEEDBACK_SURVEY_URL)
+      .hasAttribute('target', '_blank');
+
+    version.type = 'enterprise';
+    await settled();
+    assert
+      .dom('[data-test-sidebar-feedback-button]')
+      .exists('Submit feedback button renders in the sidebar for enterprise edition');
   });
 
   test('it renders the telemetry consent banner only when a consent prompt is needed', async function (assert) {

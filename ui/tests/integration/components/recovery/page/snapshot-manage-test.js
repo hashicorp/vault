@@ -54,16 +54,16 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
       path: 'nested/my-path',
     },
     {
-      engine: 'KV',
+      engine: 'KV v1',
       namespace: 'root',
       mount: 'kv',
       path: 'my-path',
     },
     {
-      engine: 'Cubbyhole',
+      engine: 'KV v2',
       namespace: 'root',
-      mount: 'cubbyhole',
-      path: 'nested/my-path',
+      mount: 'kv-v2',
+      path: 'my-path',
     },
     {
       engine: 'Database',
@@ -138,7 +138,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     await click(GENERAL.button('Type'));
     assert.dom(GENERAL.button('Type')).hasAttribute('aria-expanded', 'true');
     // Select kv
-    await click(GENERAL.radioByAttr('kv'));
+    await click(GENERAL.radioByAttr('KV v1'));
     assert
       .dom(GENERAL.button('Type'))
       .hasAttribute('aria-expanded', 'false', 'toggle closes after selecting type');
@@ -149,7 +149,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     await fillIn(GENERAL.inputByAttr('manual-mount-path'), 'kv-mount');
     // Select cubbyhole
     await click(GENERAL.button('Type'));
-    await click(GENERAL.radioByAttr('cubbyhole'));
+    await click(GENERAL.radioByAttr('Cubbyhole'));
     assert
       .dom(GENERAL.inputByAttr('manual-mount-path'))
       .hasAttribute('readonly', '', 'cubbyhole input is readonly')
@@ -157,7 +157,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     assert.dom(GENERAL.button('Type')).hasText('Cubbyhole');
     // Select database
     await click(GENERAL.button('Type'));
-    await click(GENERAL.radioByAttr('database'));
+    await click(GENERAL.radioByAttr('Database'));
     assert
       .dom(GENERAL.inputByAttr('manual-mount-path'))
       .hasValue('', 'input clears when selecting a new type');
@@ -213,7 +213,7 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     assert.dom(GENERAL.inlineAlert).containsText('Error', 'shows error alert');
   });
 
-  test('it toggles JSON view in read modal', async function (assert) {
+  test('it toggles between views in read modal', async function (assert) {
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('resourcePath'), 'test-secret');
     await click(GENERAL.selectByAttr('mount'));
@@ -222,8 +222,20 @@ module('Integration | Component | recovery/snapshots/snapshot-manage', function 
     await waitFor('[data-test-read-secrets]');
 
     assert.dom('[data-test-read-secrets]').exists('read modal opens');
+    await click(GENERAL.inputByAttr('json'));
+    assert
+      .dom('.hds-code-block')
+      .containsText(
+        'Secret Data { "credential_type": "password", "db_name": "test-db", "rotation_period": 86400, "rotation_statements": [], "skip_import_rotation": true, "username": "super-user" }',
+        'displays JSON view'
+      );
 
-    await click(GENERAL.toggleInput('snapshot-read-secrets'));
-    assert.dom('.hds-code-block').exists('renders JSON view');
+    await click(GENERAL.inputByAttr('yaml'));
+    assert
+      .dom('.hds-code-block')
+      .containsText(
+        'Secret Data credential_type: password db_name: test-db rotation_period: 86400 rotation_statements: [] skip_import_rotation: true username: super-user',
+        'displays YAML format'
+      );
   });
 });

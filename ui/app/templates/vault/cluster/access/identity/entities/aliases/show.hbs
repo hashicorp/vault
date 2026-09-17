@@ -1,0 +1,44 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title={{this.model.name}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" icon="vault" route="vault.cluster.dashboard")
+        (hash
+          label=(capitalize (pluralize (humanize this.model.identityType)))
+          route="vault.cluster.access.identity.entities.index"
+        )
+        (hash label=this.model.name)
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs sub-nav" aria-label="navigation for managing identity alias">
+    <ul>
+      {{#each (tabs-for-identity-show this.model.identityType "alias") as |tab|}}
+        <LinkTo @route="vault.cluster.access.identity.entities.aliases.show" @models={{array this.model.id tab}}>
+          {{capitalize tab}}
+        </LinkTo>
+      {{/each}}
+    </ul>
+  </nav>
+</div>
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink
+      @route="vault.cluster.access.identity.entities.aliases.edit"
+      @model={{this.model.id}}
+      data-test-alias-edit-link
+    >
+      Edit
+      {{lowercase (humanize this.model.identityType)}}
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+{{component (concat "identity/item-alias/alias-" this.section) model=this.model}}

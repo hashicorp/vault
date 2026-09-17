@@ -94,7 +94,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
       .dom(GENERAL.validationErrorByAttr('service_account_names'))
       .hasText('At least one service account is required.', 'Service account name validation error renders');
     assert
-      .dom('[data-test-invalid-form-message]')
+      .dom(GENERAL.invalidFormMessage)
       .hasText('There are 2 errors with this form.', 'Invalid form message renders');
   });
 

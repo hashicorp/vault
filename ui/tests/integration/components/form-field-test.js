@@ -16,6 +16,7 @@ import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import AuthMethodForm from 'vault/forms/auth/method';
+import Form from 'vault/forms/form';
 
 const component = create(formFields);
 
@@ -1355,6 +1356,23 @@ module('Integration | Component | form field', function (hooks) {
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
 
+  test('it renders: editType=password / type=string - with Required badge when options.isRequired', async function (assert) {
+    await setup.call(this, createAttr('myfield', 'string', { editType: 'password', isRequired: true }));
+    assert.dom('.hds-form-indicator').hasText('Required', 'renders the HDS Required badge');
+    assert
+      .dom(GENERAL.inputByAttr('myfield'))
+      .hasAttribute('aria-required', 'true', 'conveys requiredness to assistive tech')
+      .doesNotHaveAttribute('required', 'native constraint validation stays suppressed');
+  });
+
+  test('it renders: editType=password / type=string - without Required badge by default', async function (assert) {
+    await setup.call(this, createAttr('myfield', 'string', { editType: 'password' }));
+    assert.dom('.hds-form-indicator').doesNotExist('does not render the Required badge');
+    assert
+      .dom(GENERAL.inputByAttr('myfield'))
+      .doesNotHaveAttribute('aria-required', 'does not set aria-required');
+  });
+
   // ––––– editType === 'textarea' –––––
 
   test('it renders: editType=textarea / type=string - as Hds::Form::Textarea', async function (assert) {
@@ -1681,5 +1699,100 @@ module('Integration | Component | form field', function (hooks) {
       .dom(GENERAL.validationWarningByAttr('myfield'))
       .exists('Validation warning renders')
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
+  test('it renders: editType=undefined - with Required badge when options.isRequired', async function (assert) {
+    await setup.call(this, createAttr('myfield', 'string', { isRequired: true }));
+    assert.dom('.hds-form-indicator').hasText('Required', 'renders the HDS Required badge');
+    assert
+      .dom(GENERAL.inputByAttr('myfield'))
+      .hasAttribute('aria-required', 'true', 'conveys requiredness to assistive tech')
+      .doesNotHaveAttribute('required', 'native constraint validation stays suppressed');
+  });
+
+  test('it renders: editType=undefined - without Required badge by default', async function (assert) {
+    await setup.call(this, createAttr('myfield', 'string'));
+    assert.dom('.hds-form-indicator').doesNotExist('does not render the Required badge');
+    assert
+      .dom(GENERAL.inputByAttr('myfield'))
+      .doesNotHaveAttribute('aria-required', 'does not set aria-required');
+  });
+
+  // ––––– options.isRequired submit regression –––––
+
+  // HDS @isRequired sets native "required", which cancels submit so Vault's own errors never render.
+  const requiredFieldSubmitSetup = async function (attr) {
+    const model = new Form(
+      { myfield: '' },
+      {},
+      { myfield: [{ type: 'presence', message: 'Myfield is required.' }] }
+    );
+    const submitted = sinon.spy();
+    this.setProperties({
+      attr,
+      model,
+      modelValidations: null,
+      invalidFormMessage: null,
+      onChange: () => {},
+      onSubmit: (event) => {
+        event.preventDefault();
+        submitted();
+        const { isValid, state, invalidFormMessage } = this.model.toJSON();
+        this.setProperties({
+          modelValidations: state,
+          invalidFormMessage: isValid ? null : invalidFormMessage,
+        });
+      },
+    });
+
+    await render(hbs`
+      <form {{on "submit" this.onSubmit}}>
+        <FormField
+          @attr={{this.attr}}
+          @model={{this.model}}
+          @modelValidations={{this.modelValidations}}
+          @onChange={{this.onChange}}
+        />
+        {{#if this.invalidFormMessage}}
+          <p data-test-invalid-form-message>{{this.invalidFormMessage}}</p>
+        {{/if}}
+        <button type="submit" data-test-submit>Save</button>
+      </form>
+    `);
+    return submitted;
+  };
+
+  test('it submits and renders Vault validation for an empty required field: editType=undefined', async function (assert) {
+    const submitted = await requiredFieldSubmitSetup.call(
+      this,
+      createAttr('myfield', 'string', { isRequired: true })
+    );
+
+    await click(GENERAL.submitButton);
+    assert.true(submitted.calledOnce, 'submit is not cancelled by native constraint validation');
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Vault inline validation error renders')
+      .hasText('Myfield is required.', 'renders the validation message from the form');
+    assert
+      .dom(GENERAL.invalidFormMessage)
+      .hasText('There is an error with this form.', 'invalid form message renders');
+  });
+
+  test('it submits and renders Vault validation for an empty required field: editType=password', async function (assert) {
+    const submitted = await requiredFieldSubmitSetup.call(
+      this,
+      createAttr('myfield', 'string', { editType: 'password', isRequired: true })
+    );
+
+    await click(GENERAL.submitButton);
+    assert.true(submitted.calledOnce, 'submit is not cancelled by native constraint validation');
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Vault inline validation error renders')
+      .hasText('Myfield is required.', 'renders the validation message from the form');
+    assert
+      .dom(GENERAL.invalidFormMessage)
+      .hasText('There is an error with this form.', 'invalid form message renders');
   });
 });

@@ -24,7 +24,16 @@ export default class ClientsRoute extends Route {
       .versionHistory(SystemApiVersionHistoryListEnum.TRUE)
       .catch(() => undefined);
     const versionHistory = response ? this.api.keyInfoToArray(response, 'version') : [];
-    const config = await this.api.sys.internalClientActivityReadConfiguration().catch(() => ({}));
+    // sys/internal/counters/config is root-namespace only; explicitly clear the namespace
+    // header or this 404s when viewed from a child namespace (VAULT-45847)
+    const config = await this.api.sys
+      .internalClientActivityReadConfiguration(
+        undefined,
+        undefined,
+        undefined,
+        this.api.buildHeaders({ namespace: '' })
+      )
+      .catch(() => ({}));
     return { canReadConfig, canUpdateConfig, versionHistory, config };
   }
 }

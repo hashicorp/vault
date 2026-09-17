@@ -88,6 +88,14 @@ hyphen-separated octal`,
 				Description: `Certificate to revoke in PEM format; must be
 signed by an issuer in this mount.`,
 			},
+			"revocation_reason": {
+				Type: framework.TypeInt,
+				Description: `Reason code identifying the reason for certificate revocation.
+A set of reason codes are specified in RFC 5280: https://datatracker.ietf.org/doc/html/rfc5280#section-5.3.1.
+Omitting this field sets a reason code of 0 corresponding with "unspecified"
+				`,
+				Required: false,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -152,6 +160,12 @@ signed by an issuer in this mount.`,
 				Type: framework.TypeString,
 				Description: `Key to use to verify revocation permission; must
 be in PEM format.`,
+			},
+			"revocation_reason": {
+				Type: framework.TypeInt,
+				Description: `Reason code identifying the reason for certificate revocation.
+A set of reason codes are specified in RFC 5280: https://datatracker.ietf.org/doc/html/rfc5280#section-5.3.1.
+Omitting this field sets a reason code of 0 corresponding with "unspecified"`,
 			},
 		},
 
@@ -500,7 +514,7 @@ func validatePublicKeyMatchesCert(verifier crypto.PublicKey, certReference *x509
 	return nil
 }
 
-func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *pki_backend.CrlConfig, serial string, havePrivateKey bool) (*logical.Response, error) {
+func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *pki_backend.CrlConfig, serial string, havePrivateKey bool, reasonCode int) (*logical.Response, error) {
 	if !config.UseGlobalQueue {
 		return logical.ErrorResponse(fmt.Sprintf("certificate with serial %s not found.", serial)), nil
 	}
@@ -516,6 +530,7 @@ func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *pki_backen
 	nSerial := normalizeSerial(serial)
 	queueReq := revocationRequest{
 		RequestedAt: currTime,
+		ReasonCode:  reasonCode,
 	}
 	path := crossRevocationPath + nSerial
 
@@ -540,12 +555,22 @@ func (b *backend) maybeRevokeCrossCluster(sc *storageContext, config *pki_backen
 func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, data *framework.FieldData, _ *issuing.RoleEntry) (*logical.Response, error) {
 	rawSerial, haveSerial := data.GetOk("serial_number")
 	rawCertificate, haveCert := data.GetOk("certificate")
+	rawReasonCode, hasCode := data.GetOk("revocation_reason")
 	sc := b.makeStorageContext(ctx, req.Storage)
+	var reasonCode int
 
 	if !haveSerial && !haveCert {
 		return logical.ErrorResponse("The serial number or certificate to revoke must be provided."), nil
 	} else if haveSerial && haveCert {
 		return logical.ErrorResponse("Must provide either the certificate or the serial to revoke; not both."), nil
+	}
+
+	if hasCode {
+		reasonCode = rawReasonCode.(int)
+		// valid reason codes are 0-10 excluding 7
+		if err := verifyReasonCode(reasonCode); err != nil {
+			return logical.ErrorResponse("Invalid reason code provided, see RFC 5280 for valid codes."), nil
+		}
 	}
 
 	var keyPem string
@@ -620,7 +645,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 			}
 		}
 
-		return b.maybeRevokeCrossCluster(sc, config, serial, keyPem != "")
+		return b.maybeRevokeCrossCluster(sc, config, serial, keyPem != "", reasonCode)
 	}
 
 	// Before we write the certificate, we've gotta verify the request in
@@ -671,7 +696,7 @@ func (b *backend) pathRevokeWrite(ctx context.Context, req *logical.Request, dat
 		observe.NewAdditionalPKIMetadata("serial_number", serialNumber),
 	)
 
-	return revokeCert(sc, config, cert)
+	return revokeCert(sc, config, cert, reasonCode)
 }
 
 func (b *backend) pathRotateCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {

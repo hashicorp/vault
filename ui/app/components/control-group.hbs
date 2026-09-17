@@ -29,8 +29,8 @@
       <div data-test-requestor-text>
         {{#if this.model.requestEntity.canRead}}
           <LinkTo
-            @route="vault.cluster.access.identity.show"
-            @models={{array "entities" this.model.requestEntity.id "details"}}
+            @route="vault.cluster.access.identity.entities.show"
+            @models={{array this.model.requestEntity.id "details"}}
           >
             {{this.requestorName}}
           </LinkTo>
@@ -77,7 +77,7 @@
           Already approved by
           {{#each this.model.authorizations as |authorization index|}}
             {{~#if authorization.canRead~}}
-              <LinkTo @route="vault.cluster.access.identity.show" @models={{array "entities" authorization.id "details"}}>
+              <LinkTo @route="vault.cluster.access.identity.entities.show" @models={{array authorization.id "details"}}>
                 {{authorization.name}}
               </LinkTo>
             {{~else~}}

@@ -90,7 +90,16 @@ export default class DashboardClientCountCard extends Component<object> {
         }
       } catch (error) {
         // used for rendering the "No data" empty state, swallow any errors requesting config data
-        this.activityConfig = await this.api.sys.internalClientActivityReadConfiguration().catch(() => null);
+        // sys/internal/counters/config is root-namespace only; explicitly clear the namespace
+        // header or this 404s when viewed from a child namespace (VAULT-45847)
+        this.activityConfig = await this.api.sys
+          .internalClientActivityReadConfiguration(
+            undefined,
+            undefined,
+            undefined,
+            this.api.buildHeaders({ namespace: '' })
+          )
+          .catch(() => null);
         // Clients::NoData needs to know if the user can update the config
         const { canUpdate } = await this.capabilities.for('clientsConfig');
         this.canUpdateActivityConfig = canUpdate;

@@ -22,7 +22,7 @@ func (r *DiffModReq) Run(ctx context.Context) (*DiffModRes, error) {
 	res := &DiffModRes{}
 	var err error
 
-	res.ModDiff, err = DiffModFiles(r.A, r.B, r.Opts)
+	res.ModDiff, _, _, err = DiffModFiles(r.A, r.B, r.Opts)
 
 	return res, err
 }

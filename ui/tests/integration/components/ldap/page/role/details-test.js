@@ -126,4 +126,80 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
       });
     }
   });
+
+  test('it should show password row when canReadCreds is true and hide it when false', async function (assert) {
+    assert.expect(2);
+
+    // canReadCreds: true (set in beforeEach) — password row should be visible
+    await this.renderComponent('static');
+    assert.dom('[data-test-row-label="Password"]').exists('Password row renders when canReadCreds is true');
+
+    // canReadCreds: false — password row should be hidden
+    this.model.capabilities.canReadCreds = false;
+    await this.renderComponent('static');
+    assert
+      .dom('[data-test-row-label="Password"]')
+      .doesNotExist('Password row is hidden when canReadCreds is false');
+  });
+
+  // The credential is fetched only when the user asks to see it, so simply opening the details
+  // page never pulls a secret the user did not request.
+  test('it should fetch the password only on the first reveal', async function (assert) {
+    const credsStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'ldapRequestStaticRoleCredentials')
+      .resolves({ data: { password: 'super-secret' } });
+
+    await this.renderComponent('static');
+    assert.false(credsStub.called, 'no credential request is made on render');
+
+    await click(GENERAL.button('toggle-masked'));
+    assert.true(credsStub.calledOnce, 'the credential is fetched when the value is revealed');
+    assert.true(
+      credsStub.calledWith(this.model.role.name, this.backend),
+      'the request targets the role on the current mount'
+    );
+    assert.dom(GENERAL.maskedInput).hasText('super-secret', 'the password is displayed');
+
+    // re-mask and reveal again — the cached value is reused
+    await click(GENERAL.button('toggle-masked'));
+    await click(GENERAL.button('toggle-masked'));
+    assert.true(credsStub.calledOnce, 'the cached password is reused rather than refetched');
+  });
+
+  // The edit form seeds itself from this same role model, so a password stored there would
+  // pre-fill the edit page's password field with the real secret.
+  test('it should not write the password onto the shared route model', async function (assert) {
+    sinon
+      .stub(this.owner.lookup('service:api').secrets, 'ldapRequestStaticRoleCredentials')
+      .resolves({ data: { password: 'super-secret' } });
+
+    await this.renderComponent('static');
+    await click(GENERAL.button('toggle-masked'));
+
+    assert.notOk(this.model.role.password, 'the role model carries no plaintext password');
+  });
+
+  test('it should render the minus icon when the role has no password', async function (assert) {
+    sinon
+      .stub(this.owner.lookup('service:api').secrets, 'ldapRequestStaticRoleCredentials')
+      .resolves({ data: { password: '' } });
+
+    await this.renderComponent('static');
+    await click(GENERAL.button('toggle-masked'));
+
+    assert
+      .dom(`${GENERAL.maskedInput} .hds-icon-minus`)
+      .exists('an empty password renders as a minus icon rather than a blank row');
+  });
+
+  test('it should render an inline error when the credential request fails', async function (assert) {
+    sinon
+      .stub(this.owner.lookup('service:api').secrets, 'ldapRequestStaticRoleCredentials')
+      .rejects({ status: 403 });
+
+    await this.renderComponent('static');
+    await click(GENERAL.button('toggle-masked'));
+
+    assert.dom(GENERAL.inlineAlert).exists('an inline alert renders when the request fails');
+  });
 });

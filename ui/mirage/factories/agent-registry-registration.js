@@ -12,7 +12,7 @@ export default Factory.extend({
   entity_id: () => uuidv4(),
   description: (i) => `Description for agent ${i + 1}`,
   owner: (i) => `owner-${i + 1}@example.com`,
-  ceiling_policy: () => ['default', 'agent-policy'],
+  ceiling_policies: () => ['default', 'agent-policy'],
   no_default_ceiling_policy: () => Math.random() < 0.5,
   creation_time: () => new Date().toISOString(),
   last_updated_time: () => new Date().toISOString(),
