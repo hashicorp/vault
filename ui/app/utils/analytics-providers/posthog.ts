@@ -5,8 +5,8 @@
 
 import posthog from 'posthog-js/dist/module.no-external';
 
-import type { AnalyticsProvider } from 'vault/vault/analytics';
 import type { CaptureResult } from 'posthog-js/dist/module.no-external';
+import type { AnalyticsEventName, AnalyticsProvider } from 'vault/vault/analytics';
 
 interface PostHogConfig {
   enabled: boolean;
@@ -154,7 +154,7 @@ export class PostHogProvider implements AnalyticsProvider {
     }
   }
 
-  trackEvent(eventName: string, metadata: Record<string, unknown> = {}) {
+  trackEvent(eventName: AnalyticsEventName, metadata: Record<string, unknown> = {}) {
     // use licenseId as a grouping for this cluster
     if (this.licenseId) {
       this.client.capture(eventName, {

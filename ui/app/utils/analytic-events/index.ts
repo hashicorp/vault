@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -23,6 +23,12 @@ const CTA_CLICKED = 'CTA Clicked';
 const CREATED_OBJECT = 'Created Object';
 
 export const TOGGLE_WEB_REPL = buildEventName('core', 'web-repl', 'toggle');
+
+export type AnalyticsEventName =
+  | typeof UI_INTERACTION
+  | typeof CTA_CLICKED
+  | typeof CREATED_OBJECT
+  | typeof TOGGLE_WEB_REPL;
 
 // Side navigation — cluster level
 export const NAV_DASHBOARD = UI_INTERACTION;
@@ -77,3 +83,6 @@ export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
 
 // Intro reopen — re-opening a dismissed intro from a resource list page
 export const INTRO_REOPEN_CLICKED = UI_INTERACTION;
+
+// User preferences
+export const USER_PREFERENCES_PERSONA_SET = UI_INTERACTION;

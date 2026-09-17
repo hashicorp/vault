@@ -14,7 +14,39 @@ module('Integration | Component | user-preferences', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
+    this.flags = this.owner.lookup('service:flags');
     window.localStorage.clear();
+  });
+
+  module('data-privacy HVD visibility', function () {
+    test('it renders the Data & Privacy section for non-HVD clusters', async function (assert) {
+      // Verifies the section is visible when the cluster is not HVD-managed.
+      this.set('model', { isHvdManaged: false });
+      await render(hbs`
+        {{#unless this.model.isHvdManaged}}
+          <UserPreferences::DataPrivacy />
+        {{/unless}}
+      `);
+
+      assert
+        .dom('[data-test-data-privacy-section]')
+        .exists('Data & Privacy section renders for non-HVD clusters');
+    });
+
+    test('it hides the Data & Privacy section for HVD-managed clusters', async function (assert) {
+      // Verifies the section is suppressed when the cluster is HVD-managed, because
+      // HVD telemetry uses PostHog and the Segment toggle is meaningless for those users.
+      this.set('model', { isHvdManaged: true });
+      await render(hbs`
+        {{#unless this.model.isHvdManaged}}
+          <UserPreferences::DataPrivacy />
+        {{/unless}}
+      `);
+
+      assert
+        .dom('[data-test-data-privacy-section]')
+        .doesNotExist('Data & Privacy section is hidden for HVD-managed clusters');
+    });
   });
 
   module('data-privacy', function () {

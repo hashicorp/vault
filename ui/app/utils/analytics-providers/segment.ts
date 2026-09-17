@@ -5,8 +5,8 @@
 
 import { AnalyticsBrowser } from '@segment/analytics-next';
 
-import type { AnalyticsProvider } from 'vault/vault/analytics';
 import type { MiddlewareFunction } from '@segment/analytics-next';
+import type { AnalyticsEventName, AnalyticsProvider } from 'vault/vault/analytics';
 
 interface SegmentConfig {
   enabled: boolean;
@@ -39,6 +39,7 @@ const ALLOWED_PROPERTIES = new Set([
   'location',
   'objectType',
   'object',
+  'resultValue',
   'process',
   'successFlag',
   'quantity',
@@ -174,7 +175,7 @@ export class SegmentProvider implements AnalyticsProvider {
     this.client.page(undefined, routeName, this.ibmProperties);
   }
 
-  trackEvent(eventName: string, metadata?: Record<string, unknown>) {
+  trackEvent(eventName: AnalyticsEventName, metadata?: Record<string, unknown>) {
     const ibmEventName = IBM_EVENT_NAME_MAP[eventName] ?? eventName;
     this.client.track(ibmEventName, { ...this.ibmProperties, ...metadata });
   }
