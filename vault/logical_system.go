@@ -4400,6 +4400,19 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 		}
 	}
 
+	// The shuffled test password above may place identical characters next to each other even when the policy is
+	// satisfiable, so it can't be used to judge the consecutive character restriction. Run the real generator with a
+	// bounded timeout instead; it will fail if no valid password can be produced.
+	if !policy.AllowsConsecutiveChars() {
+		genCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
+		defer cancel()
+
+		if _, err := policy.Generate(genCtx, nil); err != nil {
+			return nil, logical.CodedError(http.StatusBadRequest,
+				fmt.Sprintf("unable to generate a password from the provided policy with consecutive characters disallowed: are the rules impossible? (%s)", err))
+		}
+	}
+
 	cfg := passwordPolicyConfig{
 		HCLPolicy:     rawPolicy,
 		EntropySource: entropySource,
