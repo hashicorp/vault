@@ -3,32 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export const PREFIX = 'vault_ui';
-
-/*
-  buildEventName is a helper to build conformant analytics event names.
-
-  While event names are not strictly controlled in the data warehouse, consistent
-    naming helps find things predictably.
-
-
-*/
-const buildEventName = (category: string, resource: string, action: string) =>
-  `${PREFIX}_${category}_${resource}_${action}`;
-
 // IBM Tracking Plan generic event names; the specifics (namespace, elementId,
 // action, CTA, object, etc.) are carried as event properties.
 const UI_INTERACTION = 'UI Interaction';
 const CTA_CLICKED = 'CTA Clicked';
 const CREATED_OBJECT = 'Created Object';
 
-export const TOGGLE_WEB_REPL = buildEventName('core', 'web-repl', 'toggle');
+export type AnalyticsEventName = typeof UI_INTERACTION | typeof CTA_CLICKED | typeof CREATED_OBJECT;
 
-export type AnalyticsEventName =
-  | typeof UI_INTERACTION
-  | typeof CTA_CLICKED
-  | typeof CREATED_OBJECT
-  | typeof TOGGLE_WEB_REPL;
+// WEB_REPL toggle
+export const TOGGLE_WEB_REPL = UI_INTERACTION;
 
 // Side navigation — cluster level
 export const NAV_DASHBOARD = UI_INTERACTION;

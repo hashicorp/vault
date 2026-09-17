@@ -35,7 +35,8 @@ module('Integration | Component | user-preferences', function (hooks) {
 
     test('it hides the Data & Privacy section for HVD-managed clusters', async function (assert) {
       // Verifies the section is suppressed when the cluster is HVD-managed, because
-      // HVD telemetry uses PostHog and the Segment toggle is meaningless for those users.
+      // HVD telemetry runs without user consent, so the consent toggle is meaningless
+      // for those users.
       this.set('model', { isHvdManaged: true });
       await render(hbs`
         {{#unless this.model.isHvdManaged}}

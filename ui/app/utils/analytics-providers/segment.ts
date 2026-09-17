@@ -11,6 +11,7 @@ import type { AnalyticsEventName, AnalyticsProvider } from 'vault/vault/analytic
 interface SegmentConfig {
   enabled: boolean;
   write_key: string;
+  isHvdManaged?: boolean;
 }
 
 // Allowlist of properties we intentionally send. Mirrors the PostHog redactEvent approach.
@@ -29,7 +30,7 @@ const ALLOWED_PROPERTIES = new Set([
   'productPlanName',
   'productPlanType',
   'instanceId', // clusterId
-  'subscriptionId', // licenseId, empty if community
+  'subscriptionId', // licenseId, empty if community or HVD cluster
   'elementId',
   'namespace',
   'channel',
@@ -87,27 +88,23 @@ const redactMiddleware: MiddlewareFunction = ({ payload, next }) => {
 };
 
 // Static IBM instrumentation properties required on every event.
-// instanceId and subscriptionId are dynamically set at identify() time.
+// instanceId, subscriptionId, and productPlanType are set dynamically at identify() time.
 const IBM_STATIC_PROPERTIES = {
   productTitle: 'HASHICORP VAULT',
   productCode: '5621IJC',
   productCodeType: 'PID',
   UT30: '30GKT',
-  productPlanType: 'internal',
   platformTitle: 'HashiCorp Vault',
 };
 
-// Map Vault-specific descriptive event names (sent as-is to PostHog for HVD) to
-// the IBM Tracking Plan's generic event names for Segment. Event names not listed
-// here are already IBM-conformant and pass through unchanged.
-// Once HVD is fully instrumented, we can remove this mapping and send the IBM
-// event names directly.
-const IBM_EVENT_NAME_MAP: Record<string, string> = {
-  'vault_ui_core_web-repl_toggle': 'UI Interaction',
+// productPlanType classifies the deployment model. Set dynamically at identify()
+// from the isHvdManaged trait.
+const PRODUCT_PLAN_TYPE = {
+  HVD: 'Vault dedicated',
+  SELF_MANAGED: 'Vault self-managed',
 };
 
 export const PROVIDER_NAME = 'segment';
-
 export class SegmentProvider implements AnalyticsProvider {
   name = PROVIDER_NAME;
 
@@ -118,10 +115,15 @@ export class SegmentProvider implements AnalyticsProvider {
   // Distinguishes enterprise from community clusters. Defaults to 'community'
   // until identify() runs; a cluster is only 'enterprise' once confirmed.
   productPlanName = 'community';
+  // Deployment model (Vault dedicated vs self-managed).
+  productPlanType = PRODUCT_PLAN_TYPE.SELF_MANAGED;
   instanceId = '';
 
   start(config: unknown) {
-    const { enabled, write_key } = config as SegmentConfig;
+    const { enabled, write_key, isHvdManaged } = config as SegmentConfig;
+
+    // Seed the deployment classification before any events fire.
+    this.productPlanType = isHvdManaged ? PRODUCT_PLAN_TYPE.HVD : PRODUCT_PLAN_TYPE.SELF_MANAGED;
 
     if (enabled && write_key) {
       this.client.load({ writeKey: write_key });
@@ -139,6 +141,7 @@ export class SegmentProvider implements AnalyticsProvider {
     return {
       ...IBM_STATIC_PROPERTIES,
       productPlanName: this.productPlanName,
+      productPlanType: this.productPlanType,
       ...(this.instanceId ? { instanceId: this.instanceId } : {}),
       ...(this.licenseId ? { subscriptionId: this.licenseId } : {}),
       ...this.viewportProperties,
@@ -163,12 +166,25 @@ export class SegmentProvider implements AnalyticsProvider {
   }
 
   identify(identifier: string, traits: Record<string, unknown>) {
+    const isHvd = Boolean(traits['isHvdManaged']);
     this.userId = identifier;
-    this.licenseId = (traits['licenseId'] as string) || '';
+    // HVD clusters have no customer subscription id available to the UI yet,
+    // so omit subscriptionId for HVD rather than send the internal Vault license
+    // id. Self-managed continues to use the license id.
+    this.licenseId = isHvd ? '' : (traits['licenseId'] as string) || '';
     this.clusterId = (traits['clusterId'] as string) || '';
     this.instanceId = this.clusterId;
     this.productPlanName = traits['isEnterprise'] ? 'enterprise' : 'community';
-    this.client.identify(identifier, { ...this.ibmProperties, ...traits });
+    this.productPlanType = isHvd ? PRODUCT_PLAN_TYPE.HVD : PRODUCT_PLAN_TYPE.SELF_MANAGED;
+
+    // Identify traits bypass the ALLOWED_PROPERTIES redaction (that only filters
+    // track/page payloads), so for HVD strip the internal Vault license id from the
+    // outbound traits.
+    const outboundTraits = { ...traits };
+    if (isHvd) {
+      delete outboundTraits['licenseId'];
+    }
+    this.client.identify(identifier, { ...this.ibmProperties, ...outboundTraits });
   }
 
   trackPageView(routeName: string) {
@@ -176,7 +192,6 @@ export class SegmentProvider implements AnalyticsProvider {
   }
 
   trackEvent(eventName: AnalyticsEventName, metadata?: Record<string, unknown>) {
-    const ibmEventName = IBM_EVENT_NAME_MAP[eventName] ?? eventName;
-    this.client.track(ibmEventName, { ...this.ibmProperties, ...metadata });
+    this.client.track(eventName, { ...this.ibmProperties, ...metadata });
   }
 }

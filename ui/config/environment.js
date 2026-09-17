@@ -62,15 +62,6 @@ module.exports = function (environment) {
       };
     }
 
-    if (process.env.ENABLE_POSTHOG) {
-      ENV.APP.ANALYTICS_CONFIG = {
-        provider: 'posthog',
-        enabled: true,
-        project_id: 'phc_zPQ9fPlFj4ZTYKJmThG1C8AE4J4RgPQx8dJJ7agg4SG',
-        api_host: 'https://eu.i.posthog.com',
-      };
-    }
-
     if (process.env.ENABLE_SEGMENT && process.env.SEGMENT_WRITE_KEY) {
       ENV.APP.ANALYTICS_CONFIG = {
         provider: 'segment',
@@ -102,9 +93,8 @@ module.exports = function (environment) {
   if (environment === 'production') {
     ENV.APP.ANALYTICS_CONFIG = {
       enabled: true,
-      project_id: 'phc_pIw6t5numW5jDram4dnJjSnwDOorf9IGd1MmlFp0dHh', // PostHog (HVD)
-      api_host: 'https://eu.i.posthog.com', // PostHog (HVD)
-      write_key: 'a3CIuUGMSQs6JCeNfiguoXqGi95XvpDz', // Segment (Vault SM)
+      provider: 'segment',
+      write_key: 'a3CIuUGMSQs6JCeNfiguoXqGi95XvpDz', // Segment
     };
   }
 

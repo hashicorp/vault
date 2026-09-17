@@ -7,10 +7,6 @@ import Service, { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 import { DummyProvider, PROVIDER_NAME as DummyProviderName } from 'vault/utils/analytics-providers/dummy';
-import {
-  PostHogProvider,
-  PROVIDER_NAME as PostHogProviderName,
-} from 'vault/utils/analytics-providers/posthog';
 
 import {
   SegmentProvider,
@@ -76,9 +72,6 @@ export default class AnalyticsService extends Service {
       switch (provider) {
         case DummyProviderName:
           this.provider = new DummyProvider();
-          break;
-        case PostHogProviderName:
-          this.provider = new PostHogProvider();
           break;
         case SegmentProviderName:
           this.provider = new SegmentProvider();

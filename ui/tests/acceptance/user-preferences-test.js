@@ -71,8 +71,9 @@ module('Acceptance | user-preferences', function (hooks) {
   });
 
   test('HVD-managed clusters show the preferences page but hide the Data & Privacy section', async function (assert) {
-    // The telemetry toggle is Segment-only and meaningless for HVD (which uses PostHog).
-    // The page itself remains accessible so HVD users can still manage other preferences.
+    // HVD telemetry runs without user consent, so the consent toggle is meaningless
+    // for HVD users. The page itself remains accessible so they can still manage
+    // other preferences.
     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
     await visit('/vault/user-preferences');
