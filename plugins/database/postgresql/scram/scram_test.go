@@ -18,10 +18,10 @@ func TestScram(t *testing.T) {
 
 	for name, tc := range tcs {
 		t.Run(name, func(t *testing.T) {
-			got, err := Hash(tc.Password)
+			got, err := Hash(tc.Password, 10)
 			assert.NoError(t, err)
-			assert.True(t, strings.HasPrefix(got, "SCRAM-SHA-256$4096:"))
-			assert.Len(t, got, 133)
+			assert.True(t, strings.HasPrefix(got, "SCRAM-SHA-256$10:"))
+			assert.Len(t, got, 131)
 		})
 	}
 }
