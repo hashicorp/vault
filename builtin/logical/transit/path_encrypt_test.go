@@ -953,6 +953,29 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			dest:              []BatchRequestItem{},
 			wantErrContains:   "missing ciphertext",
 		},
+		{
+			name: "src_padding_scheme-dest",
+			src:  []interface{}{map[string]interface{}{"padding_scheme": "oaep"}},
+			dest: []BatchRequestItem{},
+		},
+		{
+			name:            "src_padding_scheme_invalid-dest",
+			src:             []interface{}{map[string]interface{}{"padding_scheme": 3}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
+		},
+		// hash_algorithm field
+		{
+			name: "src_hash_algorithm-dest",
+			src:  []interface{}{map[string]interface{}{"hash_algorithm": "sha2-256"}},
+			dest: []BatchRequestItem{},
+		},
+		{
+			name:            "src_hash_algorithm_invalid-dest",
+			src:             []interface{}{map[string]interface{}{"hash_algorithm": 8}},
+			dest:            []BatchRequestItem{},
+			wantErrContains: "expected type 'string', got unconvertible type 'int'",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

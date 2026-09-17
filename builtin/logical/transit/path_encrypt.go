@@ -36,6 +36,9 @@ type BatchRequestItem struct {
 	// PaddingScheme for encryption/decryption
 	PaddingScheme string `json:"padding_scheme" structs:"padding_scheme" mapstructure:"padding_scheme"`
 
+	// HashAlgorithm for encryption/decryption (currently only applies to RSA managed keys)
+	HashAlgorithm string `json:"hash_algorithm" structs:"hash_algorithm" mapstructure:"hash_algorithm"`
+
 	// Nonce to be used when v1 convergent encryption is used
 	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 
@@ -115,8 +118,14 @@ func (b *backend) pathEncrypt() *framework.Path {
 
 			"padding_scheme": {
 				Type: framework.TypeString,
-				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
-Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+				Description: `The padding scheme to use for encryption. Currently only applies to RSA key types.
+	Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
+			"hash_algorithm": {
+				Type: framework.TypeString,
+				Description: `The hash algorithm to use for encryption. Currently only applies to RSA key types.
+	Options are 'sha1', 'sha2-224', 'sha2-256', 'sha2-384', 'sha2-512', 'sha3-224', 'sha3-256', 'sha3-384', 'sha3-512'. Defaults to 'sha2-256'.`,
 			},
 
 			"context": {
@@ -287,6 +296,14 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 			}
 		}
 
+		if v, has := item["hash_algorithm"]; has {
+			if casted, ok := v.(string); ok {
+				(*dst)[i].HashAlgorithm = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].hash_algorithm' expected type 'string', got unconvertible type '%T'", i, item["hash_algorithm"]))
+			}
+		}
+
 		if v, has := item["nonce"]; has {
 			if !reflect.ValueOf(v).IsValid() {
 			} else if casted, ok := v.(string); ok {
@@ -400,6 +417,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 				batchInputItems[0].PaddingScheme = ps
 			} else {
 				return logical.ErrorResponse("padding_scheme was not a string"), logical.ErrInvalidRequest
+			}
+		}
+		if haRaw, ok := d.GetOk("hash_algorithm"); ok {
+			if ha, ok := haRaw.(string); ok {
+				batchInputItems[0].HashAlgorithm = ha
+			} else {
+				return logical.ErrorResponse("hash_algorithm was not a string"), logical.ErrInvalidRequest
 			}
 		}
 	}
@@ -545,13 +569,26 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 
 		var factories []any
+		var parsedPaddingScheme keysutil.PaddingScheme
 		if item.PaddingScheme != "" {
-			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.PaddingScheme)
+			var err error
+			parsedPaddingScheme, err = parsePaddingSchemeArg(p.Type, item.PaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].padding_scheme' invalid: %s", i, err.Error())
 				continue
 			}
-			factories = append(factories, paddingScheme)
+			factories = append(factories, parsedPaddingScheme)
+		}
+
+		var parsedHashAlgorithm keysutil.HashType
+		if item.HashAlgorithm != "" {
+			var err error
+			parsedHashAlgorithm, err = parseHashAlgorithmArg(p.Type, item.HashAlgorithm)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].hash_algorithm' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, parsedHashAlgorithm)
 		}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {
