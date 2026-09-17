@@ -229,7 +229,7 @@ func (i *IdentityStore) activateDeduplication() error {
 		// If we fail to load from storage, we'll end up with a broken
 		// IdentityStore, so we're better of just sealing and letting another node
 		// take over!
-		if err := i.loadArtifacts(reloadCtx, i.localNode.HAState() == consts.Active); err != nil {
+		if err := i.loadArtifacts(reloadCtx, i.localNode.HAStateWithLock() == consts.Active); err != nil {
 			i.logger.Error("failed to activate identity deduplication, shutting down")
 			i.activationErrorHandler.Shutdown()
 			return

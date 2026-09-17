@@ -160,6 +160,7 @@ type casesensitivity struct {
 type LocalNode interface {
 	ReplicationState() consts.ReplicationState
 	HAState() consts.HAState
+	HAStateWithLock() consts.HAState
 	OperatorNamespacePath() string
 }
 
