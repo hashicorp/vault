@@ -1905,6 +1905,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, err
 	}
 
+	// A nil metricSink is possible on some test-constructed cores; NewCore
+	// normally defaults it to a blackhole sink.
+	includeMountPointInMetrics := c.metricSink != nil &&
+		c.metricSink.TelemetryConsts.DatabaseMetricsIncludeMountPoint
+
 	config := &logical.BackendConfig{
 		StorageView:         view,
 		Logger:              backendLogger,
@@ -1913,6 +1918,15 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		BackendUUID:         entry.BackendAwareUUID,
 		EventsSender:        pluginEventSender,
 		ObservationRecorder: pluginObservationRecorder,
+		MountPath:           entry.Path,
+		MountNamespace:      metricsutil.NamespaceLabel(entry.namespace).Value,
+		// IncludeMountPointInMetrics is a generic opt-in signal, but today it is
+		// sourced solely from the database-specific add_mount_point_database_metrics
+		// setting and is only read by the database secrets engine. A future engine
+		// wanting per-mount labels should resolve its own opt-in rather than
+		// reusing this value, which would otherwise silently inherit the database
+		// flag.
+		IncludeMountPointInMetrics: includeMountPointInMetrics,
 	}
 
 	ctx = namespace.ContextWithNamespace(ctx, entry.namespace)
