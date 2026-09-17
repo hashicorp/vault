@@ -170,7 +170,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.0
 	github.com/hashicorp/vault-plugin-database-redis v0.9.0
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.9.2-0.20260706104900-570a9d5344b1
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.17.0
 	github.com/hashicorp/vault-plugin-secrets-ad v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.0
