@@ -446,6 +446,9 @@ type Core struct {
 	// the rotation manager handles periodic rotation of credentials
 	rotationManager *RotationManager
 
+	// the healthCheck manager handles all health check operations
+	healthCheckManager *HealthCheckManager
+
 	// rollback manager is used to run rollbacks periodically
 	rollback *RollbackManager
 
@@ -3193,6 +3196,10 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		// starts, which happens in the post-unseal functions above.
 		sysActivityLogReporting(c.systemBackend)
 	}
+
+	// initialize the HealthCheckManager
+	c.healthCheckManager = NewHealthCheckManager(c)
+
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
