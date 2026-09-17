@@ -4,8 +4,11 @@
 package api
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -108,6 +111,64 @@ func TestLogical_addExtraHeaders(t *testing.T) {
 				return
 			}
 			assert.Equalf(t, tt.wantHeaders, tt.r.Headers, "Headers after addExtraHeaders(%v, %v)", tt.r, tt.headers)
+		})
+	}
+}
+
+// TestWriteRawWithContextBodyReadable verifies that WriteRawWithContext and
+// PatchRawWithContext return a *Response whose body remains readable after the
+// call returns. Previously, both methods routed through writeRaw which installed
+// a withConfiguredTimeout cancel and deferred it, cancelling the context (and
+// thus the response body) before the caller had a chance to read it.
+func TestWriteRawWithContextBodyReadable(t *testing.T) {
+	t.Parallel()
+
+	const responseBody = `{"data":"hello"}`
+
+	for _, tc := range []struct {
+		name   string
+		invoke func(l *Logical, path string, data []byte) (*Response, error)
+	}{
+		{
+			name: "WriteRawWithContext",
+			invoke: func(l *Logical, path string, data []byte) (*Response, error) {
+				return l.WriteRawWithContext(context.Background(), path, data)
+			},
+		},
+		{
+			name: "PatchRawWithContext",
+			invoke: func(l *Logical, path string, data []byte) (*Response, error) {
+				return l.PatchRawWithContext(context.Background(), path, data)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(responseBody))
+			})
+
+			config, ln := testHTTPServer(t, handler)
+			defer ln.Close()
+
+			client, err := NewClient(config)
+			require.NoError(t, err)
+			client.SetToken("test-token")
+
+			resp, err := tc.invoke(client.Logical(), "secret/test", []byte(`{}`))
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			defer resp.Body.Close()
+
+			// Body must be readable after the call returns — this was broken
+			// when writeRaw deferred cancelFunc() before the caller could read.
+			got, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			assert.True(t, strings.Contains(string(got), "hello"),
+				"expected response body to contain 'hello', got: %s", string(got))
 		})
 	}
 }
