@@ -1,0 +1,8 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#let (find-by "id" @id @items) as |item|}}
+  <span title={{if item.name @id}} data-test-identity-item-name={{@id}}>{{or item.name @id}}</span>
+{{/let}}
