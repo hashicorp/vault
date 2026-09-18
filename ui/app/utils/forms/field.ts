@@ -54,6 +54,8 @@ export interface FieldOptions {
   noDefault?: boolean;
   isSectionHeader?: boolean;
   hideToggle?: boolean;
+  // for editType "ttl": treat an empty input as 0 rather than a required-field error
+  emptyMeansZero?: boolean;
   labelDisabled?: string;
   mapToBoolean?: string;
   isOppositeValue?: boolean;

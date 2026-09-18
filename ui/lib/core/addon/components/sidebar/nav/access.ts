@@ -7,6 +7,8 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { NAV_AUTH_METHODS, NAV_ACL_POLICIES, NAV_NAMESPACES } from 'vault/utils/analytic-events';
+
+import type { AnalyticsEventName } from 'vault/utils/analytic-events';
 import type AnalyticsService from 'vault/services/analytics';
 
 export default class SidebarNavAccessComponent extends Component {
@@ -19,7 +21,7 @@ export default class SidebarNavAccessComponent extends Component {
   };
 
   @action
-  trackNavClick(eventName: string, elementId: string, cta: string) {
+  trackNavClick(eventName: AnalyticsEventName, elementId: string, cta: string) {
     this.analytics.trackEvent(eventName, {
       namespace: 'nav',
       action: 'clicked',

@@ -446,6 +446,9 @@ type Core struct {
 	// the rotation manager handles periodic rotation of credentials
 	rotationManager *RotationManager
 
+	// the healthCheck manager handles all health check operations
+	healthCheckManager *HealthCheckManager
+
 	// rollback manager is used to run rollbacks periodically
 	rollback *RollbackManager
 
@@ -2920,6 +2923,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
 		},
+		func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2974,6 +2981,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			if c.agentRegistry == nil {
@@ -3185,6 +3196,10 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		// starts, which happens in the post-unseal functions above.
 		sysActivityLogReporting(c.systemBackend)
 	}
+
+	// initialize the HealthCheckManager
+	c.healthCheckManager = NewHealthCheckManager(c)
+
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }

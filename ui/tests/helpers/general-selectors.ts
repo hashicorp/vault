@@ -164,6 +164,7 @@ export const GENERAL = {
   messageDescription: '[data-test-message-error-description]',
   validationErrorByAttr: (attr: string) => `[data-test-validation-error="${attr}"]`,
   validationWarningByAttr: (attr: string) => `[data-test-validation-warning="${attr}"]`,
+  invalidFormMessage: '[data-test-invalid-form-message]',
 
   pageError: {
     error: '[data-test-page-error]',

@@ -13,6 +13,7 @@ const SELECTOR = {
   banner: '[data-test-telemetry-consent-banner]',
   accept: '[data-test-telemetry-consent-accept]',
   decline: '[data-test-telemetry-consent-decline]',
+  docs: '[data-test-telemetry-consent-learn-more]',
 };
 
 module('Integration | Component | page-banners/telemetry-consent', function (hooks) {
@@ -32,6 +33,7 @@ module('Integration | Component | page-banners/telemetry-consent', function (hoo
     assert.dom(SELECTOR.banner).exists('the banner renders');
     assert.dom(SELECTOR.accept).exists('the Accept action renders');
     assert.dom(SELECTOR.decline).exists('the Decline action renders');
+    assert.dom(SELECTOR.decdocsline).exists('the documentation link exists');
   });
 
   test('clicking Accept records consent as accepted', async function (assert) {

@@ -9,7 +9,7 @@ import { ldapBreadcrumbs, roleRoutes } from 'ldap/utils/ldap-breadcrumbs';
 import LdapStaticRoleForm from 'vault/forms/secrets/ldap/roles/static';
 import LdapDynamicRoleForm from 'vault/forms/secrets/ldap/roles/dynamic';
 
-import { ModelFrom } from 'vault/route';
+import { ModelFrom } from 'vault/vault/route';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type SecretMountPath from 'vault/services/secret-mount-path';
@@ -17,7 +17,7 @@ import type { LdapRolesRoleRouteModel } from '../role';
 
 export type LdapRoleEditRouteModel = ModelFrom<LdapRoleEditRoute>;
 
-interface RouteController extends Controller {
+interface LdapRoleEditController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRoleEditRouteModel;
 }
@@ -26,16 +26,17 @@ export default class LdapRoleEditRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
   model() {
-    const { role } = this.modelFor('roles.role') as LdapRolesRoleRouteModel;
+    const { role, config } = this.modelFor('roles.role') as LdapRolesRoleRouteModel;
+    const isSelfManaged = config?.self_managed === true;
     if (role.type === 'static') {
-      const staticForm = new LdapStaticRoleForm(role, { isNew: false });
-      return { staticForm };
+      const staticForm = new LdapStaticRoleForm(role, { isNew: false, isSelfManaged });
+      return { staticForm, isSelfManaged };
     }
     const dynamicForm = new LdapDynamicRoleForm(role, { isNew: false });
-    return { dynamicForm };
+    return { dynamicForm, isSelfManaged };
   }
 
-  setupController(controller: RouteController, resolvedModel: LdapRoleEditRouteModel) {
+  setupController(controller: LdapRoleEditController, resolvedModel: LdapRoleEditRouteModel) {
     super.setupController(controller, resolvedModel);
 
     const currentPath = this.secretMountPath.currentPath;

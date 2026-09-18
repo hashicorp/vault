@@ -15,7 +15,14 @@ export default class ConfigRoute extends Route {
 
   async model() {
     const capabilities = await this.capabilities.for('clientsConfig');
-    const config = await this.api.sys.internalClientActivityReadConfiguration();
+    // sys/internal/counters/config is root-namespace only; explicitly clear the namespace
+    // header or this 404s when viewed from a child namespace (VAULT-45847)
+    const config = await this.api.sys.internalClientActivityReadConfiguration(
+      undefined,
+      undefined,
+      undefined,
+      this.api.buildHeaders({ namespace: '' })
+    );
     return { capabilities, config };
   }
 }

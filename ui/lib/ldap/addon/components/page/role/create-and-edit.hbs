@@ -2,7 +2,7 @@
   Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-<Page::Header @title={{if this.isNew "Create Role" "Edit Role"}}>
+<Page::Header @title={{this.pageTitle}}>
   <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
@@ -13,24 +13,27 @@
 <form {{on "submit" (perform this.save)}} class="has-top-margin-m">
   <MessageError @errorMessage={{this.error}} />
 
-  <label class="is-label">
-    Role type
-  </label>
-  <Hds::Form::RadioCard::Group @name="role type options" class="has-bottom-margin-m" as |RadioGroup|>
-    {{#each this.roleTypeOptions as |option|}}
-      <RadioGroup.RadioCard
-        @checked={{eq option.value this.roleType}}
-        @disabled={{not this.isNew}}
-        {{on "change" (fn this.onTypeChange option)}}
-        data-test-radio-card={{option.value}}
-        as |Card|
-      >
-        <Card.Icon @name={{option.icon}} />
-        <Card.Label>{{option.title}}</Card.Label>
-        <Card.Description>{{option.description}}</Card.Description>
-      </RadioGroup.RadioCard>
-    {{/each}}
-  </Hds::Form::RadioCard::Group>
+  {{! Self-managed mounts support static roles only, so the choice is not offered. }}
+  {{#unless this.isSelfManaged}}
+    <label class="is-label">
+      Role type
+    </label>
+    <Hds::Form::RadioCard::Group @name="role type options" class="has-bottom-margin-m" as |RadioGroup|>
+      {{#each this.roleTypeOptions as |option|}}
+        <RadioGroup.RadioCard
+          @checked={{eq option.value this.roleType}}
+          @disabled={{not this.isNew}}
+          {{on "change" (fn this.onTypeChange option)}}
+          data-test-radio-card={{option.value}}
+          as |Card|
+        >
+          <Card.Icon @name={{option.icon}} />
+          <Card.Label>{{option.title}}</Card.Label>
+          <Card.Description>{{option.description}}</Card.Description>
+        </RadioGroup.RadioCard>
+      {{/each}}
+    </Hds::Form::RadioCard::Group>
+  {{/unless}}
 
   {{#each this.fields as |field|}}
     {{! display section heading ahead of ldif fields }}
@@ -38,11 +41,16 @@
       <Hds::Separator />
       <h2 class="title is-4 has-top-margin-xl">LDIF Statements</h2>
     {{/if}}
-    <FormField
-      @attr={{find-by "name" field this.form.formFields}}
-      @model={{this.form}}
-      @modelValidations={{this.modelValidations}}
-    />
+    {{#let (find-by "name" field this.form.formFields) as |attr|}}
+      {{#if (and (eq attr.options.editType "password") (not this.isNew))}}
+        {{! Edit mode: password fields are locked behind an "Edit" button. }}
+        <EnableInput data-test-enable-field={{attr.name}} class="field" @attr={{attr}}>
+          <FormField @attr={{attr}} @model={{this.form}} @modelValidations={{this.modelValidations}} />
+        </EnableInput>
+      {{else}}
+        <FormField @attr={{attr}} @model={{this.form}} @modelValidations={{this.modelValidations}} />
+      {{/if}}
+    {{/let}}
   {{/each}}
 
   <Hds::Separator class="has-top-margin-l" />

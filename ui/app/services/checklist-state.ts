@@ -51,13 +51,20 @@ function isChecklistStateData(value: unknown): value is ChecklistStateData {
 
 /**
  * Returns true for HTTP responses that should degrade gracefully rather than
- * surface as errors in the UI: 403 Forbidden (insufficient permissions),
- * 404 Not Found (endpoint not yet deployed or CE cluster), and any 5xx server error.
+ * surface as errors in the UI:
+ * - 403 Forbidden (insufficient permissions)
+ * - 404 Not Found (endpoint not yet deployed or CE cluster)
+ * - any 5xx server error
+ * - TypeError (network failure, connection refused, connection dropped)
+ * - SyntaxError (non-JSON body, e.g. panic response without a proper error payload)
  */
 function isNonBlockingError(error: unknown): boolean {
   if (error instanceof ResponseError) {
     const { status } = error.response;
     return status === 403 || status === 404 || status >= 500;
+  }
+  if (error instanceof TypeError || error instanceof SyntaxError) {
+    return true;
   }
   return false;
 }
@@ -218,7 +225,8 @@ export default class ChecklistStateService extends Service {
    * Fetches the full checklist state from the API and updates the in-memory state.
    * Cancels any in-flight fetch when a newer call is made.
    * Sets isAvailable to false on 403/5xx so the UI can degrade gracefully.
-   * Throws for unexpected response shapes or non-permission errors.
+   * Falls back to an empty state when the response body is null or has an
+   * unexpected shape — this is the correct starting state for a fresh cluster.
    */
   fetchState = keepLatestTask(async () => {
     try {
@@ -226,11 +234,11 @@ export default class ChecklistStateService extends Service {
       const body = (await response.json()) as ApiResponse;
       const data = body?.data;
 
-      if (!isChecklistStateData(data)) {
-        throw new Error('Received checklist state in an unexpected format');
-      }
-
-      this._state = data;
+      // Treat a null/undefined/unexpected shape as an empty state. This
+      // happens on the very first request to a fresh cluster where no
+      // checklist progress has been written yet. An empty object is the
+      // correct starting state and can be updated via the UI.
+      this._state = isChecklistStateData(data) ? data : {};
       this.isAvailable = true;
       return this._state;
     } catch (error) {
@@ -247,7 +255,8 @@ export default class ChecklistStateService extends Service {
    * The server performs a deep merge, so other checklist entries are preserved.
    * Updates in-memory state with the full merged result returned by the server.
    * Silently absorbs 403/5xx errors so a transient failure does not disrupt the UI.
-   * Throws for unexpected response shapes or non-permission errors.
+   * Retains the current in-memory state when the response body is null or has
+   * an unexpected shape so a transient body issue does not wipe local state.
    */
   updateStep = task(async (checklistId: string, stepId: string, completed: boolean) => {
     try {
@@ -257,11 +266,12 @@ export default class ChecklistStateService extends Service {
       const body = (await response.json()) as ApiResponse;
       const data = body?.data;
 
-      if (!isChecklistStateData(data)) {
-        throw new Error('Received checklist state in an unexpected format after update');
+      // Fall back to current in-memory state when the server returns a
+      // null or unexpected shape so a transient body issue does not wipe
+      // the locally-known state.
+      if (isChecklistStateData(data)) {
+        this._state = data;
       }
-
-      this._state = data;
       return this._state;
     } catch (error) {
       if (isNonBlockingError(error)) {

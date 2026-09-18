@@ -300,6 +300,10 @@
             @hasVisibilityToggle={{false}}
             @value={{get @model this.valuePath}}
             @isInvalid={{this.validationError}}
+            @isRequired={{@attr.options.isRequired}}
+            {{! Native "required" would cancel submit before Vault validation runs; aria-required keeps the a11y semantics }}
+            required={{false}}
+            aria-required={{if @attr.options.isRequired "true"}}
             placeholder={{@attr.options.placeholder}}
             {{! Prevents browsers from auto-filling }}
             autocomplete="new-password"
@@ -359,6 +363,10 @@
             @id={{@attr.name}}
             @value={{get @model this.valuePath}}
             @isInvalid={{this.validationError}}
+            @isRequired={{@attr.options.isRequired}}
+            {{! Native "required" would cancel submit before Vault validation runs; aria-required keeps the a11y semantics }}
+            required={{false}}
+            aria-required={{if @attr.options.isRequired "true"}}
             readonly={{this.isReadOnly}}
             disabled={{and @attr.options.editDisabled (not @model.isNew)}}
             autocomplete="off"
@@ -510,6 +518,7 @@
             @initialValue={{initialValue}}
             @initialEnabled={{if (eq initialValue "0s") false initialValue}}
             @hideToggle={{@attr.options.hideToggle}}
+            @emptyMeansZero={{@attr.options.emptyMeansZero}}
           />
         {{/let}}
       </div>

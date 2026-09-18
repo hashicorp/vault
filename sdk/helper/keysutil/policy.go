@@ -317,7 +317,7 @@ func (kt KeyType) ImportPublicKeySupported() bool {
 
 func (kt KeyType) PaddingSchemesSupported() bool {
 	switch kt {
-	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	default:
 		return false
@@ -1222,11 +1222,12 @@ func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factor
 		}
 		key := keyEntry.RSAKey
 
+		hashFn := HashFuncMap[getHashType(factories)]
 		switch paddingScheme {
 		case PaddingScheme_PKCS1v15:
 			plain, err = rsa.DecryptPKCS1v15(rand.Reader, key, decoded)
 		case PaddingScheme_OAEP:
-			plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
+			plain, err = rsa.DecryptOAEP(hashFn(), rand.Reader, key, decoded, nil)
 		default:
 			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
 		}
@@ -1256,7 +1257,7 @@ func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad, factories)
 		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, wrappingOpts...)
 		if err != nil {
 			return "", err
@@ -2399,11 +2400,12 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 		} else {
 			publicKey = keyEntry.RSAPublicKey
 		}
+		hashFn := HashFuncMap[getHashType(factories)]
 		switch paddingScheme {
 		case PaddingScheme_PKCS1v15:
 			ciphertext, err = rsa.EncryptPKCS1v15(rand.Reader, publicKey, plaintext)
 		case PaddingScheme_OAEP:
-			ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
+			ciphertext, err = rsa.EncryptOAEP(hashFn(), rand.Reader, publicKey, plaintext, nil)
 		default:
 			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
 		}
@@ -2435,7 +2437,7 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad, factories)
 		if opts.Raw {
 			wrappingOpts = append(wrappingOpts, wrapping.WithoutEnvelope(true))
 		}
@@ -2461,7 +2463,31 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 	return encoded, nil
 }
 
-func buildManagedKeyOpts(opts EncryptionOptions, aad []byte) []wrapping.Option {
+// getRsaEncryptionPadding extracts the PaddingScheme and HashType that were
+// injected into factories and returns them as an getRsaEncryptionPadding.
+func getRsaEncryptionPadding(factories []any) wrapping.RSAEncryptionPadding {
+	ps, _ := getPaddingScheme(factories)
+
+	ht := getHashType(factories)
+
+	switch ps {
+	case PaddingScheme_PKCS1v15:
+		return wrapping.RSAEncryptionPadding_Pkcs1v15
+	case PaddingScheme_OAEP:
+		switch ht {
+		case HashTypeSHA2256:
+			return wrapping.RSAEncryptionPadding_OaepSha256
+		case HashTypeSHA1:
+			return wrapping.RSAEncryptionPadding_OaepSha1
+		}
+	}
+
+	return wrapping.RSAEncryptionPadding_Unknown_RSAEncryptionPadding
+}
+
+// buildManagedKeyOpts constructs the wrapping options for a managed key
+// encrypt/decrypt call.
+func buildManagedKeyOpts(opts EncryptionOptions, aad []byte, factories []any) []wrapping.Option {
 	wrappingOpts := []wrapping.Option{wrapping.WithoutEnvelope(true)}
 	if len(opts.IV) > 0 {
 		wrappingOpts = append(wrappingOpts, wrapping.WithIV(opts.IV))
@@ -2469,6 +2495,9 @@ func buildManagedKeyOpts(opts EncryptionOptions, aad []byte) []wrapping.Option {
 	if len(aad) > 0 {
 		wrappingOpts = append(wrappingOpts, wrapping.WithAad(aad))
 	}
+
+	wrappingOpts = append(wrappingOpts, wrapping.WithRsaEncryptionPadding(getRsaEncryptionPadding(factories)))
+
 	return wrappingOpts
 }
 
@@ -2529,6 +2558,20 @@ func getPaddingScheme(factories []any) (PaddingScheme, error) {
 		}
 	}
 	return PaddingScheme_OAEP, nil
+}
+
+func getHashType(factories []any) HashType {
+	for _, rawFactory := range factories {
+		if rawFactory == nil {
+			continue
+		}
+
+		if ht, ok := rawFactory.(HashType); ok && ht != HashTypeNone {
+			return ht
+		}
+	}
+
+	return HashTypeSHA2256
 }
 
 func (p *Policy) KeyVersionCanBeUpdated(keyVersion int, isPrivateKey bool) error {

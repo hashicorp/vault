@@ -17,6 +17,7 @@ import (
 	auth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIdentityStore_ListAlias(t *testing.T) {
@@ -185,6 +186,54 @@ func TestIdentityStore_ListAlias(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestIdentityStore_DeprecatedIdentityAliasEndpoint_NoPanic verifies that updating
+// an alias's name through the deprecated identity/alias/id/{id} endpoint
+// succeeds instead of panicking and returning a 503 error.
+func TestIdentityStore_DeprecatedIdentityAliasEndpoint_NoPanic(t *testing.T) {
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	err := client.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	require.NoError(t, err)
+
+	mounts, err := client.Sys().ListAuth()
+	require.NoError(t, err)
+	mountAccessor := mounts["userpass/"].Accessor
+
+	entityResp, err := client.Logical().Write("identity/entity", nil)
+	require.NoError(t, err)
+	require.NotNil(t, entityResp)
+	entityID := entityResp.Data["id"].(string)
+
+	// creating the alias so we can later test the deprecated endpoint
+	aliasResp, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+		"name":           "testUser",
+		"mount_accessor": mountAccessor,
+		"canonical_id":   entityID,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, aliasResp)
+	aliasID := aliasResp.Data["id"].(string)
+
+	// Prior to the fix, this write panicked (returned as a 500) because
+	// handleAliasCreateUpdate read external_id/issuer via d.Get regardless of
+	// which path's schema was matched.
+	updateResp, err := client.Logical().Write("identity/alias/id/"+aliasID, map[string]interface{}{
+		"name": "testUser_2",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, updateResp)
+	require.Equal(t, aliasID, updateResp.Data["id"])
+
+	readResp, err := client.Logical().Read("identity/alias/id/" + aliasID)
+	require.NoError(t, err)
+	require.NotNil(t, readResp)
+	require.Equal(t, "testUser_2", readResp.Data["name"])
 }
 
 // TestIdentityStore_RenameAlias_CannotMergeEntity verifies that an error is
