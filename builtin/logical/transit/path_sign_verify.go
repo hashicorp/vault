@@ -8,10 +8,11 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-securestdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -431,22 +432,32 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	response := make([]batchResponseSignItem, len(batchInputItems))
+	userErrorInBatch := false
+	internalErrorInBatch := false
 	for i, item := range batchInputItems {
 		psa, err := b.getPolicySignArgs(ctx, p, apiArgs, item)
 		if err != nil {
 			response[i].Error = err.Error()
 			response[i].err = logical.ErrInvalidRequest
+			userErrorInBatch = true
 			continue
 		}
 
 		sig, err := p.SignWithOptions(psa.keyVersion, psa.keyContext, psa.input, &psa.options)
 		if err != nil {
+			switch err.(type) {
+			case errutil.InternalError:
+				internalErrorInBatch = true
+			default:
+				userErrorInBatch = true
+			}
 			if batchInputRaw != nil {
 				response[i].Error = err.Error()
 			}
 			response[i].err = err
 		} else if sig == nil {
 			response[i].err = fmt.Errorf("signature could not be computed")
+			userErrorInBatch = true
 		} else {
 			keyVersion := apiArgs.keyVersion
 			if keyVersion == 0 {
@@ -473,10 +484,18 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	} else {
 		if response[0].Error != "" || response[0].err != nil {
 			if response[0].Error != "" {
-				return logical.ErrorResponse(response[0].Error), response[0].err
+				return logical.RespondWithStatusCode(
+					logical.ErrorResponse(response[0].Error),
+					req,
+					http.StatusBadRequest)
 			}
 
-			return nil, response[0].err
+			switch response[0].err.(type) {
+			case errutil.UserError:
+				return logical.RespondWithStatusCode(nil, req, http.StatusBadRequest)
+			default:
+				return nil, response[0].err
+			}
 		}
 
 		resp.Data = map[string]interface{}{
@@ -487,6 +506,17 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		if len(response[0].PublicKey) > 0 {
 			resp.Data["public_key"] = response[0].PublicKey
 		}
+	}
+
+	// Depending on the errors in the batch, different status codes should be returned. User errors
+	// will return a 400 and precede internal errors which return a 500. The reasoning behind this is
+	// that user errors are non-retryable without making changes to the request, and should be surfaced
+	// to the user first.
+	switch {
+	case userErrorInBatch:
+		return logical.RespondWithStatusCode(resp, req, http.StatusBadRequest)
+	case internalErrorInBatch:
+		return logical.RespondWithStatusCode(resp, req, http.StatusInternalServerError)
 	}
 
 	if err = b.incrementBillingCounts(ctx, req, uint64(successfulRequests)); err != nil {
