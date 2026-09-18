@@ -3497,13 +3497,10 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
-	if err != nil {
-		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
-	}
-
-	if IsOAuthJwtId(normalizedID) {
-		return logical.ErrorResponse("JWTs cannot be revoked"), nil
+	// Because JWT Tokens are unable to create child tokens, there are no
+	// orphans to worry about. Delegate to the shared JWT revocation path.
+	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
 	}
 
 	// Do a lookup. Among other things, that will ensure that this is either
