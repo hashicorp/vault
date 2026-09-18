@@ -1181,36 +1181,75 @@ func isControlGroupRun(req *logical.Request) bool {
 	return req.ControlGroup != nil
 }
 
+func wrapForwardingError(fwdErr, err error) error {
+	if !errors.Is(err, logical.ErrReadOnly) {
+		// When handling the request locally, we got an error that
+		// contained ErrReadOnly, but had additional information.
+		// Since we've now forwarded this request and got _another_
+		// error, we should tell the user about both errors, so
+		// they know about both.
+		//
+		// When there is no error from forwarding, the request
+		// succeeded and so no additional context is necessary. When
+		// the initial error here was only ErrReadOnly, it's likely
+		// the plugin authors intended to forward this request
+		// remotely anyway.
+		repErr, ok := fwdErr.(*logical.ReplicationCodedError)
+		if ok {
+			fwdErr = &logical.ReplicationCodedError{
+				Msg:  fmt.Sprintf("errors from both primary and secondary; primary error was %s; secondary errors follow: %s", repErr.Error(), err.Error()),
+				Code: repErr.Code,
+			}
+		} else {
+			fwdErr = multierror.Append(fwdErr, err)
+		}
+	}
+
+	return fwdErr
+}
+
 func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// If we're replicating and we get a read-only error from a backend, need to forward to primary
 	resp, err := c.router.Route(ctx, req)
 	if shouldForward(c, resp, err) {
 		fwdResp, fwdErr := forward(ctx, c, req)
-		if fwdErr != nil && err != logical.ErrReadOnly {
-			// When handling the request locally, we got an error that
-			// contained ErrReadOnly, but had additional information.
-			// Since we've now forwarded this request and got _another_
-			// error, we should tell the user about both errors, so
-			// they know about both.
-			//
-			// When there is no error from forwarding, the request
-			// succeeded and so no additional context is necessary. When
-			// the initial error here was only ErrReadOnly, it's likely
-			// the plugin authors intended to forward this request
-			// remotely anyway.
-			repErr, ok := fwdErr.(*logical.ReplicationCodedError)
-			if ok {
-				fwdErr = &logical.ReplicationCodedError{
-					Msg:  fmt.Sprintf("errors from both primary and secondary; primary error was %s; secondary errors follow: %s", repErr.Error(), err.Error()),
-					Code: repErr.Code,
-				}
-			} else {
-				fwdErr = multierror.Append(fwdErr, err)
-			}
+		if fwdErr != nil {
+			fwdErr = wrapForwardingError(fwdErr, err)
 		}
 		return fwdResp, fwdErr
 	}
 	return resp, err
+}
+
+const (
+	healthCheckExecSuffix = "/health-check/exec"
+	healthCheckLastSuffix = "/health-check/last"
+)
+
+// handleHealthCheckRequest checks whether req.Path matches a health-check suffix.
+// If it matches, it trims the suffix, sets req.Path to the target path, and executes
+// the appropriate health check handler. Returns whether the request was handled, the response, and any error.
+func (c *Core) handleHealthCheckRequest(ctx context.Context, req *logical.Request) (bool, *logical.Response, error) {
+	switch {
+	case strings.HasSuffix(req.Path, healthCheckExecSuffix):
+		targetPath := strings.TrimSuffix(req.Path, healthCheckExecSuffix)
+		if targetPath == "" {
+			return true, nil, fmt.Errorf("health check path must not be empty")
+		}
+		req.Path = targetPath
+		resp, err := c.handleExecHealthCheck(ctx, req)
+		return true, resp, err
+	case strings.HasSuffix(req.Path, healthCheckLastSuffix):
+		targetPath := strings.TrimSuffix(req.Path, healthCheckLastSuffix)
+		if targetPath == "" {
+			return true, nil, fmt.Errorf("health check path must not be empty")
+		}
+		req.Path = targetPath
+		resp, err := c.handleReadLastHealthCheck(ctx, req)
+		return true, resp, err
+	default:
+		return false, nil, nil
+	}
 }
 
 func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
@@ -1503,6 +1542,40 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		req.Path = originalPath
 		req.Data = resp.Data
 		ctx = logical.CreateContextWithSnapshotID(ctx, "")
+	}
+
+	// Passthrough if this request does not match the suffix
+	if strings.HasSuffix(req.Path, healthCheckExecSuffix) || strings.HasSuffix(req.Path, healthCheckLastSuffix) {
+		if strings.HasSuffix(req.Path, healthCheckExecSuffix) && c.perfStandby {
+			// healthCheckManager writes are only allowed on the active node
+			// route the request to the active node if this is a standby
+			c.logger.Debug("healthcheck: standby node is enabled, forwarding to active node to execute health check")
+			restoreForwardingTokenHeaders(req)
+			return nil, auth, logical.ErrPerfStandbyPleaseForward
+		}
+
+		pathWithSuffix := req.Path
+		_, healthCheckResp, healthCheckErr := c.handleHealthCheckRequest(ctx, req)
+
+		// if we get a read-only storage error on a performance secondary,
+		// forward this request to the primary cluster
+		if shouldForward(c, healthCheckResp, healthCheckErr) {
+			c.logger.Debug("healthcheck: encountered read-only storage on a secondary; forwarding to primary cluster")
+			// restore the original input path so we re-route this to the primary cluster with the relevant suffix
+			req.Path = pathWithSuffix
+			fwdResp, fwdErr := forward(ctx, c, req)
+			if fwdErr != nil {
+				fwdErr = wrapForwardingError(fwdErr, healthCheckErr)
+			}
+			return fwdResp, auth, fwdErr
+		}
+
+		if healthCheckErr != nil {
+			retErr = multierror.Append(retErr, healthCheckErr)
+		}
+
+		// successfully routed to HealthChecks, do not need to continue below
+		return healthCheckResp, auth, retErr
 	}
 
 	// Route the request
