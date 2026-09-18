@@ -44,7 +44,7 @@ module('Acceptance | enterprise | pki | external | certificates | certificate ro
 
     await visit(this.certificateURL);
 
-    assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText('View order');
+    assert.dom(GENERAL.hdsPageHeaderTitle).exists().hasText('View certificate');
     assert.dom(GENERAL.breadcrumb).exists({ count: 4 });
     assert.dom(GENERAL.breadcrumbs).hasText(`Vault Secrets engines ${this.mountPath} ${this.serialNumber}`);
     ['Overview', 'Roles', 'Recent orders', 'DNS providers', 'ACME accounts'].forEach((t) => {
@@ -70,7 +70,7 @@ module('Acceptance | enterprise | pki | external | certificates | certificate ro
       'navigated to certificate route'
     );
     assert.true(this.certLookupStub.calledOnce, 'cert lookup called once');
-    assert.dom('h1').hasText('View order', 'page title is displayed');
+    assert.dom('h1').hasText('View certificate', 'page title is displayed');
     assert.dom(GENERAL.textBody('Last refreshed')).hasTextContaining('Last refreshed July 20, 2026');
   });
 
