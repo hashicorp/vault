@@ -2961,6 +2961,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
 		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupHealthCheckManager()
+		})
 		setupFunctions = append(setupFunctions, c.loadAudits)
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
 		setupFunctions = append(setupFunctions, c.setupAudits)
@@ -3196,9 +3199,6 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		// starts, which happens in the post-unseal functions above.
 		sysActivityLogReporting(c.systemBackend)
 	}
-
-	// initialize the HealthCheckManager
-	c.healthCheckManager = NewHealthCheckManager(c)
 
 	c.logger.Info("post-unseal setup complete")
 	return nil
