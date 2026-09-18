@@ -4293,6 +4293,7 @@ func (b *SystemBackend) handlePoliciesDelete(policyType PolicyType) framework.Op
 type passwordPolicyConfig struct {
 	HCLPolicy     string `json:"policy"`
 	EntropySource string `json:"entropy_source,omitempty"`
+	Prefix        string `json:"prefix,omitempty"`
 }
 
 func getPasswordPolicyKey(policyName string) string {
@@ -4397,6 +4398,7 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 	cfg := passwordPolicyConfig{
 		HCLPolicy:     rawPolicy,
 		EntropySource: entropySource,
+		Prefix:        data.Get("prefix").(string),
 	}
 	entry, err := logical.StorageEntryJSON(getPasswordPolicyKey(policyName), cfg)
 	if err != nil {
@@ -4435,6 +4437,9 @@ func (*SystemBackend) handlePoliciesPasswordGet(ctx context.Context, req *logica
 
 	if cfg.EntropySource != "" {
 		resp.Data["entropy_source"] = cfg.EntropySource
+	}
+	if cfg.Prefix != "" {
+		resp.Data["prefix"] = cfg.Prefix
 	}
 
 	return resp, nil
@@ -4504,6 +4509,10 @@ func (b *SystemBackend) handlePoliciesPasswordGenerate(ctx context.Context, req 
 	if err != nil {
 		return nil, logical.CodedError(http.StatusInternalServerError,
 			fmt.Sprintf("failed to generate password from policy: %s", err))
+	}
+
+	if cfg.Prefix != "" {
+		password = cfg.Prefix + password
 	}
 
 	resp := &logical.Response{
