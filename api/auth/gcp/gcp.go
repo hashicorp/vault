@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/compute/metadata"
@@ -79,7 +80,7 @@ func (a *GCPAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 	}
 	switch a.authType {
 	case gceType:
-		jwt, err := a.getJWTFromMetadataService(client.Address())
+		jwt, err := a.getJWTFromMetadataService(ctx, client.Address())
 		if err != nil {
 			return nil, fmt.Errorf("unable to retrieve JWT from GCE metadata service: %w", err)
 		}
@@ -157,14 +158,20 @@ func (a *GCPAuth) signJWT() (*credentialspb.SignJwtResponse, error) {
 	return jwtResp, nil
 }
 
-func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error) {
+func (a *GCPAuth) getJWTFromMetadataService(ctx context.Context, vaultAddress string) (string, error) {
 	if !metadata.OnGCE() {
 		return "", fmt.Errorf("GCE metadata service not available")
 	}
 
-	// build request to metadata server
-	c := &http.Client{}
-	req, err := http.NewRequest(http.MethodGet, identityMetadataURL, nil)
+	return a.requestIdentityToken(ctx, &http.Client{}, identityMetadataURL, vaultAddress)
+}
+
+// requestIdentityToken asks the metadata server for an identity token scoped
+// to the vault role and returns the signed jwt from the response body. a
+// response other than 200 is reported as an error carrying the status and
+// body, so a refused token is not handed to vault as if it were a jwt.
+func (a *GCPAuth) requestIdentityToken(ctx context.Context, c *http.Client, metadataURL, vaultAddress string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, metadataURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("error creating http request: %w", err)
 	}
@@ -180,12 +187,14 @@ func (a *GCPAuth) getJWTFromMetadataService(vaultAddress string) (string, error)
 	}
 	defer resp.Body.Close()
 
-	// get jwt from response
 	body, err := io.ReadAll(resp.Body)
-	jwt := string(body)
 	if err != nil {
 		return "", fmt.Errorf("error reading response from metadata service: %w", err)
 	}
 
-	return jwt, nil
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("metadata service returned %s requesting an identity token: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+
+	return string(body), nil
 }
