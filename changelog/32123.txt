@@ -1,0 +1,3 @@
+```release-note:bug
+agent: close and remove the temp token file when changing its ownership fails, instead of leaking the file descriptor and leaving the file behind.
+```
