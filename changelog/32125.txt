@@ -1,0 +1,3 @@
+```release-note:bug
+api/auth/gcp: report a failed identity token request from the gce metadata server with its status and body instead of sending the error body to vault as the jwt, and honor the login context for that request.
+```
