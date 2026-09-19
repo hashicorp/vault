@@ -4,6 +4,9 @@
 package ldaputil
 
 import (
+	"errors"
+	"io"
+	"net/url"
 	"testing"
 
 	"github.com/hashicorp/go-hclog"
@@ -149,4 +152,42 @@ func TestClient_renderUserSearchFilter(t *testing.T) {
 			assert.Equal(t, tc.want, f)
 		})
 	}
+}
+
+// TestDialLDAP_ErrorWrapsCause checks that a failure to parse or reach a
+// url is reported with the underlying error wrapped in, not with a stray
+// errwrap placeholder and a %!(EXTRA ...) marker from fmt.Errorf.
+func TestDialLDAP_ErrorWrapsCause(t *testing.T) {
+	ldapClient := Client{
+		Logger: hclog.NewNullLogger(),
+		LDAP:   NewLDAP(),
+	}
+
+	// a control character makes url.Parse fail; the unreachable port makes the dial fail
+	ce := &ConfigEntry{
+		Url:            "ldap://bad\x7fhost,ldap://localhost:384654786",
+		RequestTimeout: 3,
+	}
+	_, err := ldapClient.DialLDAP(ce)
+	require.Error(t, err)
+
+	msg := err.Error()
+	assert.NotContains(t, msg, "{{err}}")
+	assert.NotContains(t, msg, "%!(EXTRA")
+
+	var urlErr *url.Error
+	assert.True(t, errors.As(err, &urlErr), "expected the url parse error to be reachable with errors.As, got: %s", msg)
+}
+
+// TestSIDBytesToString_ErrorWrapsCause checks that a truncated sid reports
+// the read error wrapped in, without the errwrap placeholder.
+func TestSIDBytesToString_ErrorWrapsCause(t *testing.T) {
+	// revision and count are present, the identifier authority is cut short
+	_, err := sidBytesToString([]byte{0x01, 0x01, 0x00, 0x00})
+	require.Error(t, err)
+
+	msg := err.Error()
+	assert.NotContains(t, msg, "{{err}}")
+	assert.NotContains(t, msg, "%!(EXTRA")
+	assert.True(t, errors.Is(err, io.ErrUnexpectedEOF), "expected io.ErrUnexpectedEOF to be reachable with errors.Is, got: %s", msg)
 }
