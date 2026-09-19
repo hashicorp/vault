@@ -6,6 +6,7 @@ package file
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"syscall"
 	"testing"
 
@@ -196,4 +197,61 @@ func TestFileSinkMode_Ownership(t *testing.T) {
 	if string(fileBytes) != uuidStr {
 		t.Fatalf("expected %s, got %s", uuidStr, string(fileBytes))
 	}
+}
+
+// TestFileSink_ChownFailureCleansUp checks that a failed ownership change in
+// WriteToken closes and removes the temp file instead of leaking the
+// descriptor and leaving the file behind.
+func TestFileSink_ChownFailureCleansUp(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can hand a file to any owner, so the chown failure cannot be triggered")
+	}
+
+	log := logging.NewVaultLogger(hclog.Trace)
+	tmpDir := t.TempDir()
+	path := filepath.Join(tmpDir, "token")
+
+	config := &sink.SinkConfig{
+		Logger: log.Named("sink.file"),
+		Config: map[string]interface{}{
+			"path": path,
+			// an unprivileged process cannot give a file away to another user
+			"owner": os.Geteuid() + 1,
+		},
+	}
+
+	before := openDescriptorCount(t)
+
+	// the constructor runs a write check, which is the first call to WriteToken
+	if _, err := NewFileSink(config); err == nil {
+		t.Fatal("expected an error when the owner cannot be changed")
+	}
+
+	if after := openDescriptorCount(t); after != before {
+		t.Fatalf("descriptor leaked: %d open before the write, %d after", before, after)
+	}
+
+	leftovers, err := filepath.Glob(filepath.Join(tmpDir, "token.tmp.*"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(leftovers) != 0 {
+		t.Fatalf("temp files left behind after a failed write: %v", leftovers)
+	}
+}
+
+// openDescriptorCount returns how many descriptors the process has open, or
+// zero on platforms without procfs so the comparison is a no-op there.
+func openDescriptorCount(t *testing.T) int {
+	t.Helper()
+
+	if runtime.GOOS != "linux" {
+		return 0
+	}
+
+	entries, err := os.ReadDir("/proc/self/fd")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(entries)
 }
