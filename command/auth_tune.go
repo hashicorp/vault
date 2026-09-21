@@ -42,6 +42,7 @@ type AuthTuneCommand struct {
 	flagUserLockoutDisable              bool
 	flagIdentityTokenKey                string
 	flagTrimRequestTrailingSlashes      BoolPtr
+	flagSealWrap                        BoolPtr
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -217,6 +218,12 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameSealWrap,
+		Target: &c.flagSealWrap,
+		Usage:  "Enterprise only. Whether critical security parameters (CSPs) are seal wrapped in this mount",
+	})
+
 	return set
 }
 
@@ -343,6 +350,10 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			tuneMountInput.PluginVersion = &c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameSealWrap {
+			tuneMountInput.SealWrap = c.flagSealWrap.v
 		}
 
 		if fl.Name == flagNameOverridePinnedVersion && c.flagOverridePinnedVersion.IsSet() {

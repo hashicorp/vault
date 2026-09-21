@@ -39,6 +39,7 @@ type SecretsTuneCommand struct {
 	flagDelegatedAuthAccessors     []string
 	flagIdentityTokenKey           string
 	flagTrimRequestTrailingSlashes BoolPtr
+	flagSealWrap                   BoolPtr
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -168,6 +169,12 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 		Usage:  "Enterprise only. Specified plugin-version will override the pinned plugin version.",
 	})
 
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameSealWrap,
+		Target: &c.flagSealWrap,
+		Usage:  "Enterprise only. Whether critical security parameters (CSPs) are seal wrapped in this mount",
+	})
+
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameDelegatedAuthAccessors,
 		Target: &c.flagDelegatedAuthAccessors,
@@ -272,6 +279,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameSealWrap {
+			mountConfigInput.SealWrap = c.flagSealWrap.v
 		}
 
 		if fl.Name == flagNameOverridePinnedVersion && c.flagOverridePinnedVersion.IsSet() {

@@ -161,19 +161,15 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 // forceReloadBackend reloads any backend, even a singleton. It does not update the cache. Most users
 // should use reloadBackendCommon.
 func (c *Core) forceReloadBackend(ctx context.Context, entry *MountEntry, isAuth bool) error {
-	path := entry.Path
-
-	if isAuth {
-		path = credentialRoutePrefix + path
+	re, err := c.getRouteEntryForMount(entry, isAuth)
+	if err != nil {
+		return err
 	}
 
-	// Fast-path out if the backend doesn't exist
-	raw, ok := c.router.root.Get(entry.Namespace().Path + path)
-	if !ok {
+	// Backend doesn't exist
+	if re == nil {
 		return nil
 	}
-
-	re := raw.(*routeEntry)
 
 	// Grab the lock, this allows requests to drain before we cleanup the
 	// client.
@@ -290,6 +286,23 @@ func (c *Core) forceReloadBackend(ctx context.Context, entry *MountEntry, isAuth
 	}
 
 	return nil
+}
+
+func (c *Core) getRouteEntryForMount(entry *MountEntry, isAuth bool) (*routeEntry, error) {
+	path := entry.Path
+
+	if isAuth {
+		path = credentialRoutePrefix + path
+	}
+
+	// Fast-path out if the backend doesn't exist
+	raw, ok := c.router.root.Get(entry.Namespace().Path + path)
+	if !ok {
+		return nil, logical.ErrNotFound
+	}
+
+	re := raw.(*routeEntry)
+	return re, nil
 }
 
 // reloadBackendCommon is a generic method to reload a backend provided a

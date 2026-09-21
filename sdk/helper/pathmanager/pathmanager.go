@@ -35,8 +35,8 @@ func (p *PathManager) AddPaths(paths []string) {
 		}
 
 		var exception bool
-		if strings.HasPrefix(prefix, "!") {
-			prefix = strings.TrimPrefix(prefix, "!")
+		if after, ok := strings.CutPrefix(prefix, "!"); ok {
+			prefix = after
 			exception = true
 		}
 

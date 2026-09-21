@@ -353,7 +353,6 @@ type MountEntry struct {
 	Tainted               bool              `json:"tainted,omitempty"`                 // Set as a Write-Ahead flag for unmount/remount
 	MountState            string            `json:"mount_state,omitempty"`             // The current mount state.  The only non-empty mount state right now is "unmounting"
 	NamespaceID           string            `json:"namespace_id"`
-
 	// namespace contains the populated namespace
 	namespace *namespace.Namespace
 
@@ -364,9 +363,10 @@ type MountEntry struct {
 	synthesizedConfigCache sync.Map
 
 	// version info
-	Version        string `json:"plugin_version,omitempty"`         // The configured semantic version of the mounted plugin, e.g. v1.2.3. May be overridden by a pinned version.
-	RunningVersion string `json:"running_plugin_version,omitempty"` // The semantic version of the currently running mounted plugin.
-	RunningSha256  string `json:"running_sha256,omitempty"`
+	Version         string `json:"plugin_version,omitempty"`         // The configured semantic version of the mounted plugin, e.g. v1.2.3. May be overridden by a pinned version.
+	RunningVersion  string `json:"running_plugin_version,omitempty"` // The semantic version of the currently running mounted plugin.
+	RunningSha256   string `json:"running_sha256,omitempty"`
+	NeedsSealRewrap bool   `json:"needs_seal_rewrap,omitempty"`
 }
 
 // MountConfig is used to hold settable options
@@ -1757,6 +1757,8 @@ func (c *Core) setupMounts(ctx context.Context) error {
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
+
+				c.postMountInitialize(localEntry, postUnsealLogger)
 			})
 		}
 
