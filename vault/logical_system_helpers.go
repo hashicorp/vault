@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-memdb"
@@ -432,7 +431,7 @@ type pluginReloadRequest struct {
 }
 
 // tuneMount is used to set config on a mount point
-func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration) error {
+func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration, tuneDeferred *tuneDefers) error {
 	zero := time.Duration(0)
 
 	switch {
@@ -457,22 +456,10 @@ func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *Moun
 	me.Config.MaxLeaseTTL = newMax
 	me.Config.DefaultLeaseTTL = newDefault
 
-	// Update the mount table
-	var err error
-	switch {
-	case strings.HasPrefix(path, credentialRoutePrefix):
-		err = b.Core.persistAuth(ctx, b.Core.auth, &me.Local)
-	default:
-		err = b.Core.persistMounts(ctx, b.Core.mounts, &me.Local)
-	}
-	if err != nil {
+	tuneDeferred.addRevert("leases", func() {
 		me.Config.MaxLeaseTTL = origMax
 		me.Config.DefaultLeaseTTL = origDefault
-		return fmt.Errorf("failed to update mount table, rolling back TTL changes: %w", err)
-	}
-	if b.Core.logger.IsInfo() {
-		b.Core.logger.Info("mount tuning of leases successful", "path", path)
-	}
+	})
 
 	return nil
 }

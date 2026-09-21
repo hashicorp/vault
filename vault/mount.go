@@ -1804,6 +1804,20 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	return nil
 }
 
+// persistMountLocked persists the mount be it a secret or auth mount.  The mount table lock
+// must be held.
+func (c *Core) persistMountLocked(ctx context.Context, path string, mountEntry *MountEntry) error {
+	// Update the mount table
+	var err error
+	switch {
+	case strings.HasPrefix(path, "auth/"):
+		err = c.persistAuth(ctx, c.auth, &mountEntry.Local)
+	default:
+		err = c.persistMounts(ctx, c.mounts, &mountEntry.Local)
+	}
+	return err
+}
+
 // newLogicalBackend is used to create and configure a new logical backend by name.
 func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView logical.SystemView, view logical.Storage) (logical.Backend, error) {
 	t := entry.Type
