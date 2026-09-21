@@ -59,11 +59,11 @@ runs:
           RELEASE_ARCH="x86_64"
         fi
         
+        TARBALL="gvisor-${RELEASE_ARCH}.tar.zstd"
+        
         if [ "${{ inputs.version }}" = "latest" ]; then
-          TARBALL="gvisor.tar.zstd"
           URL="https://storage.googleapis.com/gvisor/releases/release/latest/${RELEASE_ARCH}/${TARBALL}"
         else
-          TARBALL="gvisor-${RELEASE_ARCH}.tar.zstd"
           URL="https://github.com/google/gvisor/releases/download/${{ inputs.version }}/${TARBALL}"
         fi
         
