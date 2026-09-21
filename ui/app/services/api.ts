@@ -15,6 +15,7 @@ import {
   HTTPQuery,
   HTTPRequestInit,
   RequestOpts,
+  RequiredError,
   ResponseError,
 } from '@hashicorp/vault-client-typescript';
 import config from 'vault/config/environment';
@@ -226,6 +227,13 @@ export default class ApiService extends Service {
       // log out generic error for ease of debugging in dev env
       if (config.environment === 'development') {
         console.error('API Error:', e);
+      }
+
+      // RequiredError indicates a client-side bug, not something actionable by the user, so log it
+      // for debugging but return the generic fallback instead of its raw internal message.
+      if (e instanceof RequiredError) {
+        console.error(e);
+        return { message: fallbackMessage };
       }
 
       return {

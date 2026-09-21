@@ -94,6 +94,40 @@ export async function fetchIdentityItemsWithCapabilities({ identityType, api, ca
 }
 
 /**
+ * Attach canEdit/canDelete capabilities to one or more identity aliases
+ * @param {Object} params - Parameters object
+ * @param {Object|Object[]} params.aliases - A single alias object or an array of alias objects
+ * @param {string} params.identityType - The type of the parent identity ('entity' or 'group')
+ * @param {Object} params.capabilities - The capabilities service instance
+ * @returns {Promise<Object|Object[]>} The alias(es) with canEdit/canDelete attached, matching the input shape
+ */
+export async function attachAliasCapabilities({ aliases, identityType, capabilities }) {
+  if (!aliases) return aliases;
+
+  const isSingle = !Array.isArray(aliases);
+  const aliasList = isSingle ? [aliases] : aliases;
+  // Avoid an API call guaranteed to fail: the capabilities-self endpoint requires at least one path.
+  if (!aliasList.length) return aliases;
+
+  const capabilityPaths = aliasList.map((alias) =>
+    capabilities.pathFor('identityCapabilities', { identityType, id: alias.id })
+  );
+  const capabilitiesMap = await capabilities.fetch(capabilityPaths);
+
+  const aliasesWithCapabilities = aliasList.map((alias, index) => {
+    const aliasCapabilities = capabilitiesMap[capabilityPaths[index]];
+
+    return {
+      ...alias,
+      canDelete: aliasCapabilities?.canDelete || false,
+      canEdit: aliasCapabilities?.canUpdate || false,
+    };
+  });
+
+  return isSingle ? aliasesWithCapabilities[0] : aliasesWithCapabilities;
+}
+
+/**
  * Build request parameters for group operations
  * @param {Object} data - Form data
  * @returns {Object} Request parameters for group API calls
@@ -186,7 +220,7 @@ export async function handleAliasCreate({ api, model, data }) {
 export async function handleAliasUpdate({ api, model, data }) {
   const params = buildAliasRequestParams(data);
   const method = model.identityType === 'group' ? 'groupUpdateAliasById' : 'entityUpdateAliasById';
-  return await api.identity[method](params);
+  return await api.identity[method](data.id, params);
 }
 
 /**
@@ -198,8 +232,9 @@ export async function handleAliasUpdate({ api, model, data }) {
  * @returns {Promise<Object>} API response
  */
 export async function handleUpdate({ api, model, data }) {
-  const params = buildGroupRequestParams(data);
-  const method = model.identityType === 'group' ? 'groupUpdateById' : 'entityUpdateById';
+  const isGroup = model.identityType === 'group';
+  const params = isGroup ? buildGroupRequestParams(data) : buildEntityRequestParams(data);
+  const method = isGroup ? 'groupUpdateById' : 'entityUpdateById';
   return await api.identity[method](model.itemId, params);
 }
 
