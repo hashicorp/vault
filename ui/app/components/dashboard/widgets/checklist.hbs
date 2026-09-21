@@ -30,6 +30,7 @@
       <A.Item
         @isOpen={{eq step.id this.openStepId}}
         @onClickToggle={{fn this.handleItemToggle step.id}}
+        data-test-accordion={{step.id}}
         data-test-checklist-step={{step.id}}
       >
         <:toggle>
