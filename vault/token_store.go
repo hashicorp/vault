@@ -2914,6 +2914,11 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		if scimErr != nil || scimResp != nil {
 			return scimResp, scimErr
 		}
+		// SCIM tokens are orphans, so preserve the effective entity resolved during
+		// validation instead of relying on the parent token when stamping the entry.
+		if explicitEntityID == "" {
+			explicitEntityID = req.EntityID
+		}
 	}
 
 	// GetOk is used here solely to preserve the distinction between an absent/nil map and an empty map, to match the
