@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/tools/pipeline
 
-go 1.26.0
+go 1.26.8
 
 // We have test modules in here but they ought to be completely ignored
 ignore internal/pkg/golang/fixtures
@@ -11,7 +11,8 @@ require (
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/google/go-github/v83 v83.0.0
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/hashicorp/releases-api v0.4.5
+	github.com/hashicorp/releases-api v0.4.14
+	github.com/hasura/go-graphql-client v0.16.0
 	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/owenrumney/go-sarif/v3 v3.3.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
