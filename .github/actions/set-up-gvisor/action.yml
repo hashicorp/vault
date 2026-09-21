@@ -14,6 +14,9 @@ inputs:
   version:
     description: "gVisor release version to install (default: latest)"
     default: "latest"
+  github-token:
+    description: "GitHub token for downloading releases (avoids rate limits)"
+    default: ${{ github.token }}
 
 runs:
   using: composite
@@ -47,8 +50,10 @@ runs:
         key: ${{ env.GVISOR_CACHE_KEY }}
     
     - if: steps.cache-gvisor.outputs.cache-hit != 'true'
-      name: Download gVisor from GitHub releases
+      name: Download gVisor
       shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
       run: |
         set -e
         INSTALL_DIR="${{ inputs.destination }}"
@@ -59,15 +64,19 @@ runs:
           RELEASE_ARCH="x86_64"
         fi
         
-        TARBALL="gvisor-${RELEASE_ARCH}.tar.zstd"
-        
         if [ "${{ inputs.version }}" = "latest" ]; then
+          # Google Storage for latest
+          TARBALL="gvisor.tar.zstd"
           URL="https://storage.googleapis.com/gvisor/releases/release/latest/${RELEASE_ARCH}/${TARBALL}"
+          wget --quiet "${URL}"
         else
-          URL="https://github.com/google/gvisor/releases/download/${{ inputs.version }}/${TARBALL}"
+          # GitHub releases for pinned versions (uses gh for auth)
+          TARBALL="gvisor-${RELEASE_ARCH}.tar.zstd"
+          gh release download "${{ inputs.version }}" \
+            --repo google/gvisor \
+            --pattern "${TARBALL}"
         fi
         
-        wget --quiet "${URL}"
         sudo mkdir -p "${INSTALL_DIR}"
         sudo tar --zstd -xf "${TARBALL}" -C "${INSTALL_DIR}"
         rm -f "${TARBALL}"
