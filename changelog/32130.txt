@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add an opt-in local API to request fresh certificates for a selected pkiCert template without restarting the runner or reauthenticating.
+```
