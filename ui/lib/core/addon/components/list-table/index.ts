@@ -60,6 +60,14 @@ interface Args {
   page?: number; // optional page number to set current page, needed to keep pagination sync with url query param
   pageSize?: number; // optional page size, needed to keep pagination sync with url query param & keep page size
   hidePagination?: boolean; // when true, pagination controls are not rendered
+  /**
+   * When provided, overrides @data.length as the total item count passed to
+   * Hds::Pagination::Numbered. Use this when the parent (e.g. Page::ListView)
+   * has already sliced @data to a single page — the pagination control still
+   * needs to know the true unsliced total to render page buttons correctly.
+   * When absent, @data.length is used as before (self-contained pagination).
+   */
+  totalItems?: number;
   onSelectionChange?: OnSelectionChange;
   onPageChange?: CallableFunction;
   onPageSizeChange?: CallableFunction;
@@ -91,12 +99,23 @@ export default class ListTable extends Component<Args> {
     return !this.args.data.some((item) => item['children']);
   }
 
+  /**
+   * When the parent supplies @totalItems the data is already pre-sliced to one
+   * page, so pass it straight through. Otherwise paginate internally as before.
+   */
   get paginatedTableData() {
-    const paginated = paginate(this.args.data, {
+    if (this.args.totalItems !== undefined) {
+      return this.args.data;
+    }
+    return paginate(this.args.data, {
       page: this.currentPage,
       pageSize: this.pageSize,
     });
-    return paginated;
+  }
+
+  /** True total for Hds::Pagination::Numbered — use external value when supplied. */
+  get paginationTotalItems() {
+    return this.args.totalItems ?? this.args.data.length;
   }
 
   @action
@@ -116,8 +135,14 @@ export default class ListTable extends Component<Args> {
 
   @action
   async resetPagination() {
+    // When the parent drives pagination externally (@totalItems is set), it
+    // owns the page state via the URL query param — do not reset currentPage
+    // here or it fights the URL. Still toggle renderPagination so
+    // Hds::Pagination::Numbered picks up the new @currentPageSize.
+    if (this.args.totalItems === undefined) {
+      this.currentPage = 1;
+    }
     this.renderPagination = false;
-    this.currentPage = 1;
     //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
     next(() => {
       this.renderPagination = true;

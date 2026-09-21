@@ -1,0 +1,57 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::ListView @config={{@model.listViewConfig}} @model={{@model.policies}} @page={{@page}} @pageSize={{@pageSize}}>
+  <:customTableItem as |rowData column|>
+    {{#if (eq column.key "name")}}
+      <Hds::Link::Inline
+        @route="vault.cluster.policy.show"
+        @models={{array "rgp" rowData.name}}
+        @color="secondary"
+        class="has-text-weight-semibold"
+        data-test-policy-link={{rowData.name}}
+      >{{rowData.name}}</Hds::Link::Inline>
+    {{/if}}
+  </:customTableItem>
+
+  <:popupMenu as |rowData|>
+    <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+      <dd.ToggleIcon @icon="more-horizontal" @text="Policy options" @hasChevron={{false}} data-test-popup-menu-trigger />
+      {{#if rowData.capabilities.canRead}}
+        <dd.Interactive
+          @route="vault.cluster.policy.show"
+          @models={{array "rgp" rowData.name}}
+          data-test-popup-menu="view-policy"
+        >View policy</dd.Interactive>
+      {{/if}}
+      {{#if rowData.capabilities.canUpdate}}
+        <dd.Interactive
+          @route="vault.cluster.policy.edit"
+          @models={{array "rgp" rowData.name}}
+          data-test-popup-menu="edit-policy"
+        >Edit policy</dd.Interactive>
+      {{/if}}
+      <dd.Interactive {{on "click" (fn this.downloadPolicy rowData)}} data-test-popup-menu="download-policy">Download policy</dd.Interactive>
+      {{#if rowData.capabilities.canDelete}}
+        <dd.Interactive
+          @color="critical"
+          {{on "click" (fn this.setPolicyToDelete rowData)}}
+          data-test-popup-menu="delete-policy"
+        >Delete policy</dd.Interactive>
+      {{/if}}
+    </Hds::Dropdown>
+  </:popupMenu>
+</Page::ListView>
+
+{{#if this.policyToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete policy?"
+    @confirmMessage="This will permanently delete this policy and may affect access to some data."
+    @onClose={{fn (mut this.policyToDelete) null}}
+    @onConfirm={{fn this.deletePolicy this.policyToDelete}}
+    data-test-confirm-modal="delete-policy"
+  />
+{{/if}}

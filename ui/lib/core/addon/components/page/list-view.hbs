@@ -1,0 +1,170 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title={{@config.title}} class="has-bottom-margin-l">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@config.breadcrumbs}} />
+  </:breadcrumbs>
+  <:badges>
+    {{#if @config.badge}}
+      <Hds::Badge @icon={{@config.badgeIcon}} @text={{@config.badge}} />
+    {{/if}}
+  </:badges>
+  <:description>{{@config.description}}</:description>
+  <:actions>
+    {{#if @config.primaryAction}}
+      <Hds::Button
+        @color="primary"
+        @icon={{@config.primaryAction.icon}}
+        @text={{@config.primaryAction.label}}
+        @route={{@config.primaryAction.route}}
+        data-test-button={{@config.primaryAction.label}}
+      />
+    {{/if}}
+    {{yield to="headerActions"}}
+  </:actions>
+</Page::Header>
+
+{{#if (has-block "tabs")}}
+  {{yield to="tabs"}}
+{{/if}}
+
+{{#if (or @config.filter (has-block "toolbarFilters") (has-block "toolbarActions"))}}
+  <div class="has-top-padding-s has-bottom-padding-s">
+    {{#if (has-block "toolbarFilters")}}
+      {{yield to="toolbarFilters"}}
+    {{else if @config.filter}}
+      <FilterInput
+        @value={{this.pageFilter}}
+        @onInput={{this.onFilterChange}}
+        placeholder={{@config.filter.placeholder}}
+        class={{if (has-block "toolbarActions") "one-half-width" "one-fourth-width"}}
+      />
+    {{/if}}
+    {{#if (has-block "toolbarActions")}}
+      {{yield to="toolbarActions"}}
+    {{/if}}
+  </div>
+{{/if}}
+
+{{#if this.isNoData}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header data-test-empty-state-title @title={{@config.noDataTitle}} @titleTag="h2" />
+    {{#if @config.noDataDescription}}
+      <A.Body data-test-empty-state-message @text={{@config.noDataDescription}} />
+    {{/if}}
+  </Hds::ApplicationState>
+
+{{else if this.isFilteredEmpty}}
+  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+    <A.Header
+      data-test-empty-state-title
+      @title={{concat @config.filteredEmptyTitle ' "' this.pageFilter '"'}}
+      @titleTag="h2"
+    />
+  </Hds::ApplicationState>
+
+{{else}}
+  <ListTable
+    @columns={{this.normalizedColumns}}
+    @data={{this.filteredData}}
+    @childrenKey={{@config.childrenKey}}
+    @page={{@page}}
+    @pageSize={{this.pageSize}}
+    @totalItems={{this.filteredData.meta.totalItems}}
+    @onPageChange={{this.onPageChange}}
+    @onPageSizeChange={{this.onPageSizeChange}}
+  >
+    <:customTableItem as |rowData column value|>
+      {{yield rowData column value to="customTableItem"}}
+    </:customTableItem>
+    <:popupMenu as |rowData|>
+      {{#if (has-block "popupMenu")}}
+        {{yield rowData to="popupMenu"}}
+      {{else if @config.rowActions}}
+        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+          <dd.ToggleIcon
+            @icon="more-horizontal"
+            @text="Options"
+            @hasChevron={{false}}
+            data-test-popup-menu-trigger={{rowData.id}}
+          />
+          {{#each @config.rowActions as |action|}}
+            {{#if (eq action.kind "route")}}
+              <dd.Interactive
+                @route={{or (get rowData action.routeKey) action.route}}
+                @model={{get rowData (or action.modelKey "id")}}
+                @color={{action.color}}
+                data-test-popup-menu={{action.dataTest}}
+              >{{action.label}}</dd.Interactive>
+            {{else if (eq action.kind "modal")}}
+              <dd.Interactive
+                @color={{action.color}}
+                {{on "click" (fn this.openModal action.modal rowData)}}
+                data-test-popup-menu={{action.dataTest}}
+              >{{action.label}}</dd.Interactive>
+            {{else}}
+              <dd.Interactive
+                @color={{action.color}}
+                {{on "click" (fn (get this action.actionName) rowData)}}
+                data-test-popup-menu={{action.dataTest}}
+              >{{action.label}}</dd.Interactive>
+            {{/if}}
+          {{/each}}
+        </Hds::Dropdown>
+      {{/if}}
+    </:popupMenu>
+  </ListTable>
+{{/if}}
+
+{{#if (has-block "confirmModal")}}
+  {{yield this.activeModalItem this.activeModalConfig this.closeModal to="confirmModal"}}
+{{else if (and this.activeModalConfig this.activeModalItem)}}
+  <ConfirmModal
+    @color={{or this.activeModalConfig.color "critical"}}
+    @confirmTitle={{if
+      this.activeModalConfig.titleItemDisplayKey
+      (concat this.activeModalConfig.title " " (get this.activeModalItem this.activeModalConfig.titleItemDisplayKey) "?")
+      this.activeModalConfig.title
+    }}
+    @confirmButtonText={{or
+      this.activeModalConfig.confirmButtonText
+      (if (eq this.activeModalConfig.color "critical") "Delete" "Confirm")
+    }}
+    @confirmText={{this.activeModalConfig.confirmText}}
+    @confirmLabel={{this.activeModalConfig.confirmLabel}}
+    @onClose={{this.closeModal}}
+    @onConfirm={{this.confirmDelete}}
+  >
+    <:body>
+      {{this.activeModalConfig.body}}
+      {{#if this.activeModalConfig.bodyItems}}
+        <ul class="bullet">
+          {{#each this.activeModalConfig.bodyItems as |item index|}}
+            <li>
+              {{#if (and (eq index 0) this.activeModalConfig.itemDisplayKey)}}
+                <Hds::Text::Display @weight="semibold">
+                  {{get this.activeModalItem this.activeModalConfig.itemDisplayKey}}
+                </Hds::Text::Display>
+              {{/if}}
+              {{item}}
+            </li>
+          {{/each}}
+        </ul>
+      {{else if this.activeModalConfig.itemDisplayKey}}
+        <Hds::Text::Display @weight="semibold">
+          {{get this.activeModalItem this.activeModalConfig.itemDisplayKey}}
+        </Hds::Text::Display>
+      {{/if}}
+      {{#if this.activeModalConfig.bodySubtext}}
+        <Hds::Text::Body
+          @color="faint"
+          @tag="p"
+          class="has-top-margin-xs is-size-8"
+        >{{this.activeModalConfig.bodySubtext}}</Hds::Text::Body>
+      {{/if}}
+    </:body>
+  </ConfirmModal>
+{{/if}}

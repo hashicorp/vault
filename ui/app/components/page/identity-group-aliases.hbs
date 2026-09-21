@@ -1,0 +1,85 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::ListView @config={{@model.listViewConfig}} @model={{this.aliases}} @page={{@page}} @pageSize={{@pageSize}}>
+  <:tabs>
+    <nav class="tabs" aria-label="navigation for groups">
+      <ul>
+        <li>
+          <LinkTo @route="vault.cluster.access.identity.groups.index" data-test-tab="Groups">
+            Groups
+          </LinkTo>
+        </li>
+        <li>
+          <LinkTo @route="vault.cluster.access.identity.groups.aliases.index" data-test-tab="Aliases">
+            Aliases
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </:tabs>
+
+  <:customTableItem as |rowData column|>
+    {{#if (eq column.key "name")}}
+      <Hds::Link::Inline
+        @route="vault.cluster.access.identity.groups.aliases.show"
+        @models={{array rowData.id "details"}}
+        @color="secondary"
+        class="has-text-weight-semibold"
+        data-test-identity-link={{rowData.id}}
+      >{{rowData.name}}</Hds::Link::Inline>
+    {{else if (eq column.key "mount_type")}}
+      {{#if rowData.mount_type}}
+        <Hds::Badge @text={{rowData.mount_type}} class="has-right-margin-8" />
+      {{/if}}
+      <span class="has-text-grey is-size-8">{{rowData.mount_accessor}}</span>
+    {{/if}}
+  </:customTableItem>
+
+  <:popupMenu as |rowData|>
+    <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+      <dd.ToggleIcon
+        @icon="more-horizontal"
+        @text="Alias options"
+        @hasChevron={{false}}
+        data-test-popup-menu={{rowData.name}}
+      />
+      <dd.Interactive
+        @route="vault.cluster.access.identity.groups.aliases.show"
+        @models={{array rowData.id "details"}}
+        @icon="eye"
+        data-test-popup-menu="view-details"
+      >View details</dd.Interactive>
+      {{#if rowData.canEdit}}
+        <dd.Interactive
+          @route="vault.cluster.access.identity.groups.aliases.edit"
+          @model={{rowData.id}}
+          @icon="edit"
+          data-test-popup-menu="edit-details"
+        >Edit details</dd.Interactive>
+      {{/if}}
+      {{#if rowData.canDelete}}
+        <dd.Interactive
+          @color="critical"
+          @icon="trash"
+          {{on "click" (fn this.setAliasToDelete rowData)}}
+          data-test-popup-menu="delete"
+        >Remove alias</dd.Interactive>
+      {{/if}}
+    </Hds::Dropdown>
+  </:popupMenu>
+</Page::ListView>
+
+{{#if this.aliasToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Remove this alias"
+    @confirmMessage="All data in this alias will be permanently deleted. You will not be able to recover it later."
+    @confirmButtonText="Confirm removal"
+    @onClose={{fn (mut this.aliasToDelete) null}}
+    @onConfirm={{fn this.deleteAlias this.aliasToDelete}}
+    data-test-confirm-modal="remove-alias"
+  />
+{{/if}}

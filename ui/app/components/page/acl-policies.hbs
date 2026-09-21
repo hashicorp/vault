@@ -1,0 +1,80 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::ListView @config={{@model.listViewConfig}} @model={{@model.policies}} @page={{@page}} @pageSize={{@pageSize}}>
+  <:headerActions>
+    {{#if this.showIntroButton}}
+      <Hds::Button
+        @color="secondary"
+        @icon="bulb"
+        @text="New to ACL policies?"
+        data-test-button="intro"
+        {{on "click" this.showIntroPage}}
+      />
+    {{/if}}
+  </:headerActions>
+
+  <:customTableItem as |rowData column|>
+    {{#if (eq column.key "name")}}
+      {{#if (eq rowData.name "root")}}
+        <span data-test-policy-name>{{rowData.name}}</span>
+      {{else}}
+        <Hds::Link::Inline
+          @route="vault.cluster.policy.show"
+          @models={{array "acl" rowData.name}}
+          @color="secondary"
+          class="has-text-weight-semibold"
+          data-test-policy-link={{rowData.name}}
+        >{{rowData.name}}</Hds::Link::Inline>
+      {{/if}}
+    {{/if}}
+  </:customTableItem>
+
+  <:popupMenu as |rowData|>
+    {{#unless (eq rowData.name "root")}}
+      <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+        <dd.ToggleIcon @icon="more-horizontal" @text="Policy options" @hasChevron={{false}} data-test-popup-menu-trigger />
+        {{#if rowData.capabilities.canRead}}
+          <dd.Interactive
+            @route="vault.cluster.policy.show"
+            @models={{array "acl" rowData.name}}
+            data-test-popup-menu="view-policy"
+          >View policy</dd.Interactive>
+        {{/if}}
+        {{#if rowData.capabilities.canUpdate}}
+          <dd.Interactive
+            @route="vault.cluster.policy.edit"
+            @models={{array "acl" rowData.name}}
+            data-test-popup-menu="edit-policy"
+          >Edit policy</dd.Interactive>
+        {{/if}}
+        <dd.Interactive {{on "click" (fn this.downloadPolicy rowData)}} data-test-popup-menu="download-policy">Download
+          policy</dd.Interactive>
+        {{#if (and rowData.capabilities.canDelete (not-eq rowData.name "default") (not-eq rowData.name "default-ceiling"))}}
+          <dd.Interactive
+            @color="critical"
+            {{on "click" (fn this.setPolicyToDelete rowData)}}
+            data-test-popup-menu="delete-policy"
+          >Delete policy</dd.Interactive>
+        {{/if}}
+      </Hds::Dropdown>
+    {{/unless}}
+  </:popupMenu>
+</Page::ListView>
+
+{{#if this.showWizard}}
+  <Wizard::AclPolicies::AclWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshRoute}} />
+{{/if}}
+
+{{#if this.policyToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete policy?"
+    @confirmMessage="This will permanently delete this policy and may affect access to some data."
+    @onClose={{fn (mut this.policyToDelete) null}}
+    @onConfirm={{fn this.deletePolicy this.policyToDelete}}
+    data-test-confirm-modal="delete-policy"
+  />
+{{/if}}

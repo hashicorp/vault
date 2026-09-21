@@ -19,23 +19,23 @@ module('Acceptance | policies', function (hooks) {
 
   test('it redirects from plural policies route with unknown policy type', async function (assert) {
     await visit('/vault/policies/foo');
-    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.acl.index');
     assert.strictEqual(currentURL(), '/vault/policies/acl');
   });
 
   test('it redirects from singular policy route with unknown policy type', async function (assert) {
     await visit('/vault/policy/foo/default');
-    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.acl.index');
     assert.strictEqual(currentURL(), '/vault/policies/acl');
 
     await visit('/vault/policy/foo/default/edit');
-    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.acl.index');
     assert.strictEqual(currentURL(), '/vault/policies/acl');
   });
 
   test('it redirects to policies/acl on index navigation', async function (assert) {
     await visit('/vault/policy/acl');
-    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.index');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.policies.acl.index');
     assert.strictEqual(currentURL(), '/vault/policies/acl');
   });
 
@@ -44,8 +44,8 @@ module('Acceptance | policies', function (hooks) {
     this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.aclPolicy);
     await click(GENERAL.navLink('Access control'));
     assert.strictEqual(currentURL(), '/vault/policies/acl', 'currentURL is /vault/policies/acl');
-    await waitFor('[data-test-component="navigate-input"]');
-    await fillIn('[data-test-component="navigate-input"]', 'default'); // filter for the policy in case there are many on this view and the default policy is on the second page
+    await waitFor(GENERAL.filterInput);
+    await fillIn(GENERAL.filterInput, 'default'); // filter for the policy in case there are many on this view and the default policy is on the second page
     await click('[data-test-policy-link="default"]');
     assert.strictEqual(currentURL(), '/vault/policy/acl/default');
     await click(GENERAL.navLink('Back to main navigation'));
