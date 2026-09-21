@@ -1,0 +1,82 @@
+# Copyright IBM Corp. 2026
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up gVisor
+description: |
+  Install gVisor runtime for container testing. Downloads from GitHub releases
+  and caches binaries weekly to avoid API rate limits.
+
+inputs:
+  destination:
+    description: "Where to install gVisor binaries (default: /usr/local/bin)"
+    default: "/usr/local/bin"
+  version:
+    description: "gVisor release version to install (default: latest)"
+    default: "latest"
+
+runs:
+  using: composite
+  steps:
+    - id: metadata
+      shell: bash
+      run: |
+        ARCH="$(uname -m)"
+        # Use aarch64 naming for arm64 to match GitHub release assets
+        if [ "$ARCH" = "aarch64" ]; then
+          RELEASE_ARCH="aarch64"
+        else
+          RELEASE_ARCH="x86_64"
+        fi
+        
+        # Use weekly cache key to avoid burning GitHub API requests
+        WEEK="$(date +%Y-W%U)"
+        CACHE_KEY="gvisor-${RELEASE_ARCH}-${WEEK}"
+        
+        {
+          echo "GVISOR_ARCH=${ARCH}"
+          echo "GVISOR_RELEASE_ARCH=${RELEASE_ARCH}"
+          echo "GVISOR_CACHE_KEY=${CACHE_KEY}"
+          echo "GVISOR_INSTALL_DIR=${{ inputs.destination }}"
+        } | tee -a "$GITHUB_ENV"
+    
+    - id: cache-gvisor
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ env.GVISOR_INSTALL_DIR }}/gvisor-bin
+        key: ${{ env.GVISOR_CACHE_KEY }}
+    
+    - if: steps.cache-gvisor.outputs.cache-hit != 'true'
+      name: Download gVisor from GitHub releases
+      shell: bash
+      run: |
+        set -e
+        TARBALL="gvisor-${GVISOR_RELEASE_ARCH}.tar.zstd"
+        
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          URL="https://storage.googleapis.com/gvisor/releases/release/latest/${GVISOR_RELEASE_ARCH}/${TARBALL}"
+        else
+          URL="https://github.com/google/gvisor/releases/download/${{ inputs.version }}/${TARBALL}"
+        fi
+        
+        wget --quiet "${URL}"
+        sudo mkdir -p "${GVISOR_INSTALL_DIR}"
+        sudo tar --zstd -xf "${TARBALL}" -C "${GVISOR_INSTALL_DIR}"
+        rm -f "${TARBALL}"
+    
+    - name: Configure Docker for gVisor
+      shell: bash
+      run: |
+        sudo tee /etc/docker/daemon.json <<EOF
+        {
+          "runtimes": {
+            "runsc": {
+              "path": "${{ inputs.destination }}/runsc",
+              "runtimeArgs": [
+                "--host-uds=create"
+              ]
+            }
+          }
+        }
+        EOF
+        sudo systemctl reload docker
