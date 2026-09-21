@@ -51,17 +51,25 @@ runs:
       shell: bash
       run: |
         set -e
-        TARBALL="gvisor-${GVISOR_RELEASE_ARCH}.tar.zstd"
+        INSTALL_DIR="${{ inputs.destination }}"
+        ARCH="$(uname -m)"
+        if [ "$ARCH" = "aarch64" ]; then
+          RELEASE_ARCH="aarch64"
+        else
+          RELEASE_ARCH="x86_64"
+        fi
+        
+        TARBALL="gvisor-${RELEASE_ARCH}.tar.zstd"
         
         if [ "${{ inputs.version }}" = "latest" ]; then
-          URL="https://storage.googleapis.com/gvisor/releases/release/latest/${GVISOR_RELEASE_ARCH}/${TARBALL}"
+          URL="https://storage.googleapis.com/gvisor/releases/release/latest/${RELEASE_ARCH}/${TARBALL}"
         else
           URL="https://github.com/google/gvisor/releases/download/${{ inputs.version }}/${TARBALL}"
         fi
         
         wget --quiet "${URL}"
-        sudo mkdir -p "${GVISOR_INSTALL_DIR}"
-        sudo tar --zstd -xf "${TARBALL}" -C "${GVISOR_INSTALL_DIR}"
+        sudo mkdir -p "${INSTALL_DIR}"
+        sudo tar --zstd -xf "${TARBALL}" -C "${INSTALL_DIR}"
         rm -f "${TARBALL}"
     
     - name: Configure Docker for gVisor
