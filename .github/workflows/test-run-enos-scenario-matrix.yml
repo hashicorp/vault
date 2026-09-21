@@ -255,6 +255,8 @@ jobs:
           sudo apt-get install -y ldap-utils
 
       - uses: ./.github/actions/install-tools
+        with:
+          no-save: true
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4

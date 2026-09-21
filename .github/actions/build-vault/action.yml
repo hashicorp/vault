@@ -114,7 +114,8 @@ runs:
       uses: hashicorp-forge/actions-pao-tool/select-license@0409050df899ec0612745ca17e47c0fba18b7c10 # v1.1.0
       with:
         arch: ${{ inputs.goarch }}
-    - if: inputs.cgo-enabled == '0'
+    # *NEVER* set GOPRIVATE or inject git credentials for community builds.
+    - if: inputs.cgo-enabled == '0' && inputs.vault-edition == 'ce'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:
         CGO_ENABLED: 0
@@ -123,10 +124,26 @@ runs:
         GOARM: ${{ inputs.goarm }}
         GOOS: ${{ inputs.goos }}
         GOEXPERIMENT: ${{ inputs.goexperiment }}
-        # *NEVER* set GOPRIVATE for community builds
-        GOPRIVATE: ${{ inputs.vault-edition != 'ce' && 'github.com/hashicorp/*' || '' }}
         VERSION: ${{ inputs.vault-version }}
-        VERSION_METADATA: ${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}
+        VERSION_METADATA: ""
+      shell: bash
+      run: make ci-build
+    - if: inputs.cgo-enabled == '0' && inputs.vault-edition != 'ce'
+      name: ${{ steps.metadata.outputs.build-step-name }}
+      env:
+        CGO_ENABLED: 0
+        GO_TAGS: ${{ inputs.go-tags }}
+        GOARCH: ${{ inputs.goarch }}
+        GOARM: ${{ inputs.goarm }}
+        GOOS: ${{ inputs.goos }}
+        GOEXPERIMENT: ${{ inputs.goexperiment }}
+        GOPRIVATE: github.com/hashicorp/*
+        VERSION: ${{ inputs.vault-version }}
+        VERSION_METADATA: ${{ inputs.vault-edition }}
+        # Authenticate module downloads on cache misses without poisoning the runner's git config.
+        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token }}@github.com.insteadOf
+        GIT_CONFIG_VALUE_0: https://github.com
       shell: bash
       run: make ci-build
     # CGO builds use a sandboxed container builder to cross-compile with the correct version of
