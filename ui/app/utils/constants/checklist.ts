@@ -3,8 +3,27 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/** localStorage key for the set of checklist IDs the user has hidden. */
-export const HIDDEN_CHECKLISTS_KEY = 'vault:checklist-hidden';
+/**
+ * localStorage key for browser-local checklist preferences (never sent to the
+ * backend). Nested by checklist ID to mirror the `checklist_state` request
+ * payload shape used by the sys/config/ui/checklist-state API, e.g.
+ * { 'cluster-startup': { hidden: true, lastView: 'checklist' } }.
+ */
+export const CHECKLIST_LOCAL_STATE_KEY = 'vault:checklist-state';
+
+/** Which panel was last shown for a completed checklist. */
+export type ChecklistView = 'checklist' | 'complete-banner';
+
+/** Browser-local (never sent to backend) preferences for a single checklist. */
+export interface ChecklistLocalState {
+  /** Whether the user has dismissed this checklist in the current browser. */
+  hidden?: boolean;
+  /** Which panel (checklist vs. completion) was last shown for this checklist. */
+  lastView?: ChecklistView;
+}
+
+/** Browser-local checklist preferences keyed by checklist ID. */
+export type ChecklistLocalStateData = Record<string, ChecklistLocalState>;
 
 /** Internal key for known checklist detector implementations. */
 export type DetectorKey = 'namespaces' | 'policy' | 'auth' | 'kv';
