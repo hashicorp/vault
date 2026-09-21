@@ -36,6 +36,8 @@ jobs:
   get-metadata:
     name: Get metadata
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      contents: read
     outputs:
       is-ent-branch: ${{ steps.metadata.outputs.is-ent-branch }}
       is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
@@ -65,7 +67,9 @@ jobs:
     name: Run UI Tests
     needs: get-metadata
     runs-on: ${{ fromJSON(needs.get-metadata.outputs.runs-on) }}
-    permissions: write-all
+    permissions:
+      contents: read
+      id-token: write
     timeout-minutes: 90
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -121,13 +125,29 @@ jobs:
       - name: Installed Chrome Version
         run: |
           echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
+      - if: needs.get-metadata.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: needs.get-metadata.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/aws access-key-id_070182026 | AWS_ACCESS_KEY_ID_CI_070182026;
+            kv/data/github/${{ github.repository }}/aws secret-access-key_070182026 | AWS_SECRET_ACCESS_KEY_CI_070182026;
+            kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
       - name: Configure AWS credentials from Test account
         uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
+          aws-access-key-id: ${{ needs.get-metadata.outputs.is-ent-repo == 'true' && steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_070182026 || secrets.AWS_ACCESS_KEY_ID_CI_070182026 }}
+          aws-secret-access-key: ${{ needs.get-metadata.outputs.is-ent-repo == 'true' && steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_070182026 || secrets.AWS_SECRET_ACCESS_KEY_CI_070182026 }}
           aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
+          role-to-assume: ${{ needs.get-metadata.outputs.is-ent-repo == 'true' && steps.vault-secrets.outputs.AWS_ROLE_ARN_CI || secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
       - name: Set Up Cluster
