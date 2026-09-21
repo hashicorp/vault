@@ -134,6 +134,30 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
   });
 
+  test('it sends the disabled field when disabling an entity from the edit form', async function (assert) {
+    server.get('/identity/entity/id', () => ({
+      data: {
+        key_info: { test: { name: 'foo' } },
+        keys: ['test'],
+      },
+    }));
+    server.get('/identity/entity/id/test', () => ({ data: { name: 'foo', disabled: false } }));
+
+    let requestBody;
+    server.post('/identity/entity/id/test', (schema, request) => {
+      requestBody = JSON.parse(request.requestBody);
+      return new Response(200, {}, {});
+    });
+
+    await page.visit({ item_type: 'entities' });
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuItem('edit')}`);
+    await click(GENERAL.inputByAttr('disabled'));
+    await click(GENERAL.submitButton);
+
+    assert.true(requestBody.disabled, 'the disabled field is sent to the API when saving the entity');
+  });
+
   test('it should render correct flash message on entity edit success', async function (assert) {
     server.get('/identity/entity/id', () => ({
       data: {

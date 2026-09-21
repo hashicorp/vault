@@ -15,7 +15,12 @@ import {
   SystemApiPoliciesListAclPoliciesListEnum,
   SystemApiSystemListPoliciesRgpListEnum,
 } from '@hashicorp/vault-client-typescript';
-import { performSaveOperation, extractSavedId } from 'vault/utils/identity-helpers';
+import {
+  performSaveOperation,
+  extractSavedId,
+  findDuplicateNameError,
+  findDuplicateAliasError,
+} from 'vault/utils/identity-helpers';
 
 export default class IdentityEditFormComponent extends Component {
   @service flashMessages;
@@ -54,9 +59,7 @@ export default class IdentityEditFormComponent extends Component {
     }
 
     if (mode === 'create') {
-      return isAlias
-        ? `vault.cluster.access.identity.${pluralType}.aliases.index`
-        : `vault.cluster.access.identity.${pluralType}.index`;
+      return `vault.cluster.access.identity.${pluralType}.index`;
     }
 
     if (mode === 'edit') {
@@ -104,6 +107,13 @@ export default class IdentityEditFormComponent extends Component {
     waitFor(async () => {
       const { model, mode, onSave } = this.args;
       const { data } = model.form.toJSON();
+
+      const duplicateNameError =
+        findDuplicateNameError({ model, mode, data }) || findDuplicateAliasError({ model, mode, data });
+      if (duplicateNameError) {
+        this.errorBanner = duplicateNameError;
+        return;
+      }
 
       try {
         const response = await performSaveOperation({

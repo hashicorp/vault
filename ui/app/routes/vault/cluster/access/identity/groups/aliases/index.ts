@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { IdentityApiGroupListAliasesByIdListEnum } from '@hashicorp/vault-client-typescript';
 import { accessIdentityGroupAliasesListViewConfig } from 'vault/utils/constants/list-view-config/access-identity-group-aliases';
+import { attachAliasCapabilities } from 'vault/utils/identity-helpers';
 
 import type ApiService from 'vault/services/api';
 import type Controller from '@ember/controller';
@@ -64,24 +65,11 @@ export default class IdentityGroupAliasesIndexRoute extends Route {
       );
       const items = this.api.keyInfoToArray<AliasKeyInfo>(response);
 
-      const capabilityPaths = items.map((item) =>
-        this.capabilities.pathFor('identityCapabilities', { identityType: 'group', id: item.id })
-      );
-
-      const capabilitiesMap = capabilityPaths.length ? await this.capabilities.fetch(capabilityPaths) : {};
-
-      const aliases = items.map((item) => {
-        const capPath = this.capabilities.pathFor('identityCapabilities', {
-          identityType: 'group',
-          id: item.id,
-        });
-        const itemCapabilities = capabilitiesMap[capPath];
-        return {
-          ...item,
-          canDelete: itemCapabilities?.canDelete || false,
-          canEdit: itemCapabilities?.canUpdate || false,
-        };
-      }) as GroupAliasListItem[];
+      const aliases = (await attachAliasCapabilities({
+        aliases: items,
+        identityType: 'group',
+        capabilities: this.capabilities,
+      })) as GroupAliasListItem[];
 
       return {
         aliases,

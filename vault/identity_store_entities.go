@@ -1040,11 +1040,18 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if err != nil {
 				return nil, err, nil
 			}
-			// If true, we need to handle conflicts (conflict = both aliases share the same mount accessor)
+
+			// keepFromAlias keeps track of whether or not fromAlias should be migrated into toEntity (survivor).
+			// It starts true (no conflict, or conflict resolved by keeping fromAlias) and
+			// is set to false only when the toAlias is chosen over fromAlias.
+			keepFromAlias := true
+
+			// If there are toEntity aliases with the same mount accessor as fromAlias, we
+			// have a conflict and must resolve which alias to keep.
 			if toAliasIds, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
 				for _, toAliasId := range toAliasIds {
 					// When forceMergeAliases is true (as part of the merge-during-upsert case), we make the decision
-					// for the user, and keep the from_entity alias
+					// for the user, and keep the from_entity alias over to_entity alias.
 					// This case's code is the same as when the user selects to keep the from_entity alias
 					// but is kept separate for clarity.
 					if forceMergeAliases {
@@ -1056,17 +1063,18 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						// Remove the alias from the entity's list in memory too!
 						toEntity.DeleteAliasByID(toAliasId)
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
+						// User chose to keep the toAlias so we delete fromAlias and don't migrate it.
 						i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, fromAlias.ID, false)
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", fromAlias.ID, toEntity.ID, err), nil
 						}
-						// Don't need to alter toEntity aliases since we it never contained
-						// the alias we're deleting.
-
-						// Continue to next alias, as there's no alias to merge left in the from_entity
-						continue
+						keepFromAlias = false
+						// Break out of the inner loop because there is nothing left to do for this fromAlias
+						// after deleting it, and nothing to do with toEntity.
+						break
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, fromAlias.ID) {
+						// User chose to keep the fromAlias so delete toAlias so fromAlias can be migrated.
 						i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
 						if err != nil {
@@ -1078,6 +1086,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", fromAlias.ID, toAliasId), nil, nil
 					}
 				}
+			}
+
+			// when fromAlias was dropped from MemDB in favour of the toAlias, don't migrate it to toEntity.
+			// Otherwise, update its canonical ID and attach it to toEntity.
+			if !keepFromAlias {
+				continue
 			}
 
 			// Set the desired canonical ID
