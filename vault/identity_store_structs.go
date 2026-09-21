@@ -108,8 +108,8 @@ type IdentityStore struct {
 	// buckets
 	tpmgroupPacker *storagepacker.StoragePacker
 
-	// disableLowerCaseNames indicates whether or not identity artifacts are
-	// operated case insensitively
+	// disableLowerCaseNames: if true, Vault will NOT automatically resolve all entity names to lowercase,
+	// meaning the Vault Identity Store is operating in case sensitive mode.
 	disableLowerCasedNames bool
 
 	router                          *Router

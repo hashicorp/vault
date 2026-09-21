@@ -54,6 +54,13 @@ func (i *IdentityStore) GetDisableLowerCasedNames() bool {
 	return i.disableLowerCasedNames
 }
 
+// SetDisableLowerCasedNames sets that value to true for external tests to access. It is false by default
+func (i *IdentityStore) SetDisableLowerCasedNames() {
+	i.lock.Lock()
+	i.disableLowerCasedNames = true
+	i.lock.Unlock()
+}
+
 // resetDB callers must hold the write lock on i.lock before calling, to ensure
 // that no other goroutine is reading from or writing to the database while it
 // gets reset.
@@ -1487,7 +1494,8 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 		1,
 		[]metrics.Label{
 			nsLabel,
-		})
+		},
+	)
 
 	return entity.Clone()
 }
@@ -1611,7 +1619,8 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 				nsLabel,
 				{"auth_method", newAlias.MountType},
 				{"mount_point", newAlias.MountPath},
-			})
+			},
+		)
 		entityCreated = true
 	}
 
