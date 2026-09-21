@@ -6,6 +6,7 @@
 import {
   IdentityApiEntityListByIdListEnum,
   IdentityApiGroupListByIdListEnum,
+  IdentityApiAliasListByIdListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 /**
@@ -22,6 +23,25 @@ export async function fetchIdentityItems({ identityType, api }) {
   const response = await api.identity[methodType](listEnum.TRUE);
 
   return api.keyInfoToArray(response);
+}
+
+/**
+ * Fetches all aliases for a given identity type (entity or group)
+ * @param {Object} params - Parameters object
+ * @param {string} params.identityType - The type of the parent identity ('entity' or 'group')
+ * @param {Object} params.api - The API service instance
+ * @returns {Promise<Array>} Array of alias items, or an empty array if none exist
+ */
+export async function fetchAliases({ identityType, api }) {
+  const method = identityType === 'group' ? 'groupListAliasesById' : 'entityListAliasesById';
+  try {
+    const response = await api.identity[method](IdentityApiAliasListByIdListEnum.TRUE);
+    return api.keyInfoToArray(response);
+  } catch (err) {
+    const { status } = await api.parseError(err);
+    if (status === 404) return [];
+    throw err;
+  }
 }
 
 /**
@@ -251,6 +271,55 @@ export async function handleCreate({ api, model, data }) {
   const method = isGroup ? 'groupCreate' : 'entityCreate';
   const params = isGroup ? buildGroupRequestParams(data) : buildEntityRequestParams(data);
   return await api.identity[method](params);
+}
+
+/**
+ * Checks whether a name being submitted to create a new entity or group already exists. Vault
+ * silently updates the existing item instead of erroring, so the UI must catch this before submitting.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.model - The model object (expects `identityType`, `entities`, `groups`)
+ * @param {string} params.mode - The operation mode ('create', 'edit', 'merge')
+ * @param {Object} params.data - Form data
+ * @returns {string|null} A user-facing error message if the name is already taken, otherwise null
+ */
+export function findDuplicateNameError({ model, mode, data }) {
+  const isAlias = model.form.identityFormType === 'alias';
+  if (mode !== 'create' || isAlias) return null;
+
+  const { identityType } = model;
+  const existingItems = identityType === 'group' ? model.groups : model.entities;
+  const name = data?.name?.trim().toLowerCase();
+  if (!name || !existingItems?.length) return null;
+
+  const isDuplicate = existingItems.some((item) => item.name?.toLowerCase() === name);
+  return isDuplicate
+    ? `A ${identityType} named "${data.name}" already exists. Please choose a different name.`
+    : null;
+}
+
+/**
+ * Checks whether an alias name already exists on the same auth mount. Vault silently reassigns the
+ * existing alias to the new entity/group instead of erroring, so the UI must catch this before submitting.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.model - The model object (expects `form.identityFormType`, `aliases`)
+ * @param {string} params.mode - The operation mode ('create', 'edit', 'merge')
+ * @param {Object} params.data - Form data
+ * @returns {string|null} A user-facing error message if the alias already exists, otherwise null
+ */
+export function findDuplicateAliasError({ model, mode, data }) {
+  const isAlias = model.form.identityFormType === 'alias';
+  if (mode !== 'create' || !isAlias) return null;
+
+  const name = data?.name?.trim().toLowerCase();
+  const mountAccessor = data?.mount_accessor;
+  if (!name || !mountAccessor || !model.aliases?.length) return null;
+
+  const isDuplicate = model.aliases.some(
+    (alias) => alias.name?.toLowerCase() === name && alias.mount_accessor === mountAccessor
+  );
+  return isDuplicate
+    ? `An alias named "${data.name}" already exists on this auth mount. Please choose a different name or auth backend.`
+    : null;
 }
 
 /**

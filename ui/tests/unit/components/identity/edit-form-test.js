@@ -32,7 +32,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
       label: 'entity-alias',
       model: { identityType: 'entity', form: { identityFormType: 'alias' } },
       mode: 'create',
-      expected: 'vault.cluster.access.identity.entities.aliases.index',
+      expected: 'vault.cluster.access.identity.entities.index',
     },
     {
       label: 'entity-alias',
@@ -56,7 +56,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
       label: 'group-alias',
       model: { identityType: 'group', form: { identityFormType: 'alias' } },
       mode: 'create',
-      expected: 'vault.cluster.access.identity.groups.aliases.index',
+      expected: 'vault.cluster.access.identity.groups.index',
     },
     {
       label: 'group-alias',

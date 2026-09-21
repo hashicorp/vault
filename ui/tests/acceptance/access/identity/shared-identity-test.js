@@ -93,6 +93,90 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
     });
 
+    test(`${itemType}: cancel on the create alias page navigates to the entities/groups list, not the legacy aliases list`, async function (assert) {
+      const name = `${itemType}-${uuidv4()}`;
+      const itemGeneratedId = await createEntityOrGroup(itemType, name);
+
+      await visit(`/vault/access/identity/${itemType}/aliases/add/${itemGeneratedId}`);
+      await click('[data-test-cancel-link]');
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access/identity/${itemType}`,
+        `${itemType}: cancel navigates to the entities/groups list`
+      );
+    });
+
+    test(`${itemType}: it blocks creating an alias with a name already used on the same mount instead of silently reassigning it`, async function (assert) {
+      const name1 = `${itemType}-${uuidv4()}`;
+      const name2 = `${itemType}-${uuidv4()}`;
+      const itemId1 = await createEntityOrGroup(itemType, name1);
+      const itemId2 = await createEntityOrGroup(itemType, name2);
+
+      const aliasName = `alias-${uuidv4()}`;
+      const aliasId = await createAlias(itemType, itemId1, aliasName);
+      this.flashSuccessSpy.resetHistory();
+
+      // Vault's alias create endpoint treats (name, mount_accessor) as a unique key and silently
+      // reassigns an existing alias to a different entity/group instead of erroring.
+      await visit(`/vault/access/identity/${itemType}/aliases/add/${itemId2}`);
+      await fillIn(GENERAL.inputByAttr('name'), aliasName);
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access/identity/${itemType}/aliases/add/${itemId2}`,
+        `${itemType}: stays on the add alias page instead of navigating`
+      );
+      assert
+        .dom(GENERAL.messageError)
+        .exists(`${itemType}: shows an error banner instead of a raw router error`);
+      assert
+        .dom(GENERAL.messageError)
+        .includesText(aliasName, `${itemType}: error message references the duplicate alias name`);
+      assert.true(
+        this.flashSuccessSpy.notCalled,
+        `${itemType}: no success flash is shown when the create is blocked`
+      );
+
+      // confirm the original alias still belongs to the first entity/group, unaffected
+      await visit(`/vault/access/identity/${itemType}/aliases/${aliasId}/details`);
+      assert
+        .dom(GENERAL.infoRowValue(itemType === 'groups' ? 'Group ID' : 'Entity ID'))
+        .hasText(itemId1, `${itemType}: alias still belongs to the original ${singularize(itemType)}`);
+    });
+
+    test(`${itemType}: it blocks create with a name that already exists instead of silently updating it`, async function (assert) {
+      const name = `${itemType}-${uuidv4()}`;
+      await createEntityOrGroup(itemType, name);
+      this.flashSuccessSpy.resetHistory();
+
+      // Vault's create-by-name endpoints silently update an existing item of the same name rather
+      // than erroring, so the UI must catch this case before submitting.
+      await visit(`/vault/access/identity/${itemType}/create`);
+      if (itemType === 'groups') {
+        await fillIn(GENERAL.inputByAttr('type'), 'external');
+      }
+      await fillIn(GENERAL.inputByAttr('name'), name);
+      await click(GENERAL.submitButton);
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access/identity/${itemType}/create`,
+        `${itemType}: stays on the create page instead of navigating with a missing id`
+      );
+      assert
+        .dom(GENERAL.messageError)
+        .exists(`${itemType}: shows an error banner instead of a raw router error`);
+      assert
+        .dom(GENERAL.messageError)
+        .includesText(name, `${itemType}: error message references the duplicate name`);
+      assert.true(
+        this.flashSuccessSpy.notCalled,
+        `${itemType}: no success flash is shown when the create is blocked`
+      );
+    });
+
     test(`${itemType}: it shows alias management options on the aliases tab of the item details page`, async function (assert) {
       const name = `${itemType}-${uuidv4()}`;
       const itemGeneratedId = await createEntityOrGroup(itemType, name);
