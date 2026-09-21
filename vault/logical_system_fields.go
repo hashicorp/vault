@@ -64,6 +64,10 @@ func authTuneRequestFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeString,
 			Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 		},
+		"seal_wrap": {
+			Type:        framework.TypeBool,
+			Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
+		},
 		"token_type": {
 			Type:        framework.TypeString,
 			Description: strings.TrimSpace(sysHelp["token_type"][0]),
@@ -356,6 +360,10 @@ func secretsTuneRequestFields() map[string]*framework.FieldSchema {
 		"plugin_version": {
 			Type:        framework.TypeString,
 			Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
+		},
+		"seal_wrap": {
+			Type:        framework.TypeBool,
+			Description: strings.TrimSpace(sysHelp["seal_wrap"][0]),
 		},
 		"token_type": {
 			Type:        framework.TypeString,

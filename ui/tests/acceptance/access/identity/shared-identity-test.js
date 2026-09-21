@@ -59,7 +59,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       const itemGeneratedId = await createEntityOrGroup(itemType, name);
 
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${singularize(capitalize(itemType))}.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved ${singularize(capitalize(itemType))}: ${name}.`),
         `${itemType}: shows a flash message on create`
       );
 
@@ -138,13 +138,18 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       await visit(`/vault/access/identity/${itemType}`);
 
       const rowSelector =
-        itemType === 'groups' ? `[data-test-identity-row="${name}"]` : GENERAL.listItem(name);
-      const menuTriggerSelector = `${rowSelector} ${GENERAL.menuTrigger}`;
+        itemType === 'groups' ? `[data-test-identity-link="${name}"]` : GENERAL.listItem(name);
+      const menuTriggerSelector =
+        itemType === 'groups'
+          ? `[data-test-popup-menu-trigger="${name}"]`
+          : `${rowSelector} ${GENERAL.menuTrigger}`;
+      const deleteItemSelector =
+        itemType === 'groups' ? GENERAL.menuItem('delete-group') : GENERAL.menuItem('delete');
 
       assert.dom(rowSelector).exists(`${itemType}: is in the list view`);
 
       await click(menuTriggerSelector);
-      await click(GENERAL.menuItem('delete'));
+      await click(deleteItemSelector);
       await click(GENERAL.confirmButton);
       assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
     });

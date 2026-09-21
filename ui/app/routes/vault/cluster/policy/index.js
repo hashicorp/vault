@@ -10,6 +10,6 @@ export default class PolicyIndexRouter extends Route {
   @service router;
 
   beforeModel() {
-    return this.router.transitionTo('vault.cluster.policies', 'acl');
+    return this.router.transitionTo('vault.cluster.policies.acl');
   }
 }

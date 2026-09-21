@@ -87,7 +87,11 @@
         {{/if}}
       {{/if}}
       <ToolbarActions>
-        <ToolbarLink @route="vault.cluster.policies.create" @type="add" data-test-policy-create-link>
+        <ToolbarLink
+          @route={{concat "vault.cluster.policies." @policyType ".create"}}
+          @type="add"
+          data-test-policy-create-link
+        >
           Create
           {{uppercase @policyType}}
           policy
@@ -179,7 +183,7 @@
         <Hds::Pagination::Numbered
           @currentPage={{@model.meta.currentPage}}
           @currentPageSize={{@model.meta.pageSize}}
-          @route="vault.cluster.policies.index"
+          @route={{concat "vault.cluster.policies." @policyType ".index"}}
           @showSizeSelector={{false}}
           @totalItems={{@model.meta.totalItems}}
           @queryFunction={{this.paginationQueryParams}}

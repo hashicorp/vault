@@ -91,7 +91,7 @@ export const CLUSTER_STARTUP_CHECKLIST: ChecklistConfig = {
       navPermission: ['policies', 'acl'],
       completion: 'inferred',
       detector: 'policy',
-      ctas: [{ text: 'ACL policies', route: 'vault.cluster.policies.index', models: ['acl'] }],
+      ctas: [{ text: 'ACL policies', route: 'vault.cluster.policies.acl.index' }],
     },
     auth: {
       label: 'Set up authentication',

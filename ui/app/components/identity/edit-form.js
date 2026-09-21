@@ -83,9 +83,10 @@ export default class IdentityEditFormComponent extends Component {
   getMessage(model, isDelete = false) {
     const mode = this.args.mode;
     const typeDisplay = humanize([model.identityType]);
+    const name = model.form?.data?.name;
 
     if (isDelete) {
-      return `Successfully deleted ${typeDisplay}.`;
+      return name ? `Successfully deleted ${typeDisplay}: ${name}.` : `Successfully deleted ${typeDisplay}.`;
     }
     if (mode === 'merge') {
       return 'Successfully merged entities';
@@ -93,9 +94,8 @@ export default class IdentityEditFormComponent extends Component {
     if (model.form.identityFormType === 'alias') {
       return `Successfully saved ${typeDisplay} alias.`;
     }
-    const id = model.itemId || model.id;
-    if (id) {
-      return `Successfully saved ${typeDisplay} ${id}.`;
+    if (name) {
+      return `Successfully saved ${typeDisplay}: ${name}.`;
     }
     return `Successfully saved ${typeDisplay}.`;
   }
@@ -113,14 +113,13 @@ export default class IdentityEditFormComponent extends Component {
           data,
         });
 
-        const message = this.getMessage(model);
-        this.flashMessages.success(message);
-
         await onSave({
           saveType: 'save',
           model,
           id: extractSavedId({ mode, data, response, model }),
         });
+
+        this.flashMessages.success(this.getMessage(model));
       } catch (err) {
         const { message } = await this.api.parseError(err);
         this.errorBanner = message;

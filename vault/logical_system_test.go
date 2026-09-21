@@ -6049,7 +6049,7 @@ func WalkLogicalStorage(ctx context.Context, store logical.Storage, walker walkF
 				if subkey == "" {
 					continue
 				}
-				subkey = fmt.Sprintf("%s%s", key, subkey)
+				subkey = key + subkey
 				keys = append(keys, subkey)
 			}
 		}
