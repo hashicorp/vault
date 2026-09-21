@@ -101,7 +101,7 @@ data "aws_ami" "rhel_8" {
 
   filter {
     name   = "name"
-    values = ["RHEL-8.10*HVM_GA-20*"]
+    values = ["RHEL-8.10*HVM-20*"]
   }
 
   filter {
@@ -127,7 +127,7 @@ data "aws_ami" "rhel_9" {
 
   filter {
     name   = "name"
-    values = ["RHEL-9.7*HVM_GA-20*"]
+    values = ["RHEL-9.7*HVM-20*"]
   }
 
   filter {
@@ -153,7 +153,7 @@ data "aws_ami" "rhel_10" {
 
   filter {
     name   = "name"
-    values = ["RHEL-10.1*HVM_GA-20*"]
+    values = ["RHEL-10.1*HVM-20*"]
   }
 
   filter {
