@@ -850,8 +850,8 @@ github.com/hashicorp/vault-plugin-auth-azure v0.24.0 h1:RSzUR9g3HjaIVxJhwnSxGtcE
 github.com/hashicorp/vault-plugin-auth-azure v0.24.0/go.mod h1:myKdKk/DooAtMT7sKady3NNqod/y6OoYfGL5+E83AqA=
 github.com/hashicorp/vault-plugin-auth-cf v0.24.0 h1:oAMWya0vOWQkhPPEEkQYnSToperWjNdGba20SxZ1gxQ=
 github.com/hashicorp/vault-plugin-auth-cf v0.24.0/go.mod h1:AdUn2SLjxDo87sCp33EAYQ/7iXkA0seXW90PTI7jXjU=
-github.com/hashicorp/vault-plugin-auth-gcp v0.23.1 h1:E13iJgR6bGAULjrAhstuQH2PxVTZdrWivT75J7RY5Tw=
-github.com/hashicorp/vault-plugin-auth-gcp v0.23.1/go.mod h1:7eXqptuyLNtPLdvwia0Bc139bMGlCgYJZqyhKmR4RWE=
+github.com/hashicorp/vault-plugin-auth-gcp v0.24.1 h1:jS8nrgSuCHd5DaLBYsM/Iu+adWKzfqYMMfU7nJ1sQXs=
+github.com/hashicorp/vault-plugin-auth-gcp v0.24.1/go.mod h1:ZNVDIwKVxUxePEAjpn2pcKmB8joMYgDr0DUM3ZmsYzY=
 github.com/hashicorp/vault-plugin-auth-jwt v0.27.1 h1:2yAEPUpyhel4cgBNFhN+QNk0FV8QH3gp0Ucud+s/NTU=
 github.com/hashicorp/vault-plugin-auth-jwt v0.27.1/go.mod h1:R8bQwOcNCam3rQBWGMUhddF5Dse6+fvbuS19j5eFM9I=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.18.0 h1:Y3Yf8+b+m+rMBEirb/ofXNrkdiLBfuq4rZGvmH380aE=
@@ -1691,8 +1691,8 @@ google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d h1:C9v1o0/4quuhOAf
 google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d/go.mod h1:Wz2wFJntZFmLGo7pLDXZ3wYk5hyc0Mb+SkHhDDXT+lU=
 google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 h1:ax2KzoSRIZU/M0cIxri3pKxy99vniH1PVxWC6si/eZI=
 google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688/go.mod h1:1RJ9BQGyNdZwkGc1eTqkErfRZ6RJyYPHZo73BZ1vQqI=
-google.golang.org/genproto/googleapis/rpc v0.0.0-20260908043556-f8649ddbbfe6 h1:ieEbjQ6lzbvntOXUB9nMx9uH+yIU/HbgkNDjnk/mJuk=
-google.golang.org/genproto/googleapis/rpc v0.0.0-20260908043556-f8649ddbbfe6/go.mod h1:DjtHYE8FKJLivXcBEjGwndXfIC23G0VpXiXKqG179uA=
+google.golang.org/genproto/googleapis/rpc v0.0.0-20260911204522-f61a6ca850bd h1:29LZPNIJg+GEmJwZXruJJRwqy/wnWAYZXDtROToV/aQ=
+google.golang.org/genproto/googleapis/rpc v0.0.0-20260911204522-f61a6ca850bd/go.mod h1:DjtHYE8FKJLivXcBEjGwndXfIC23G0VpXiXKqG179uA=
 google.golang.org/grpc v1.19.0/go.mod h1:mqu4LbDTu4XGKhr4mRzUsmM4RtVoemTSY81AxZiDr8c=
 google.golang.org/grpc v1.21.0/go.mod h1:oYelfM1adQP15Ek0mdvEgi9Df8B9CZIaU1084ijfRaM=
 google.golang.org/grpc v1.22.0/go.mod h1:Y5yQAOtifL1yxbo5wqy6BxZv8vAUGQwXBOALyacEbxg=
