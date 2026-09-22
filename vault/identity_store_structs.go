@@ -211,6 +211,21 @@ type MountLister interface {
 
 var _ MountLister = &Core{}
 
+// resolvedProfileRef describes the OAuth Resource Server profile that an alias
+// profile reference ('profile_name', 'config_id' or a synthetic 'mount_accessor')
+// resolved to.
+type resolvedProfileRef struct {
+	// Accessor is the profile's synthetic mount accessor.
+	Accessor string
+	// Issuer is the profile's configured issuer, normalized the same way a
+	// caller-supplied issuer is. Aliases must record it because OAuth RS
+	// authentication resolves entities by (issuer, external_id). It is empty for
+	// profiles stored before issuer_id became a required field.
+	Issuer string
+	// Local is true when the backing profile has Local=true.
+	Local bool
+}
+
 type SyntheticAliasAccessorValidator interface {
 	// validateSyntheticAliasAccessor returns (valid, isLocal, err).
 	// valid is true when the accessor is a known synthetic OAuth RS accessor.
@@ -219,6 +234,24 @@ type SyntheticAliasAccessorValidator interface {
 	// generateSyntheticAliasAccessor returns (accessor, isLocal, err).
 	// isLocal is true when the backing profile has Local=true.
 	generateSyntheticAliasAccessor(context.Context, string) (string, bool, error)
+	// resolveProfileNameToAccessor looks up an OAuth RS profile by name. ok is
+	// false (and err is nil) when no profile with that name exists. On CE builds
+	// it returns errProfileRefUnsupported, which callers surface as a request
+	// error rather than a failure.
+	resolveProfileNameToAccessor(ctx context.Context, profileName string) (ref resolvedProfileRef, ok bool, err error)
+	// resolveConfigIDToAccessor looks up an OAuth RS profile by config ID. ok is
+	// false (and err is nil) when no profile with that config ID exists. It
+	// returns errInvalidProfileConfigID when configID is malformed, and
+	// errProfileRefUnsupported on CE builds; callers surface both as request
+	// errors rather than failures.
+	resolveConfigIDToAccessor(ctx context.Context, configID string) (ref resolvedProfileRef, ok bool, err error)
+	// resolveAccessorToProfileRef looks up the OAuth RS profile that a synthetic
+	// mount accessor refers to. ok is false (and err is nil) when mountAccessor is
+	// not a synthetic OAuth RS accessor, or names no profile in the request
+	// namespace; both are ordinary outcomes for a caller-supplied accessor, so
+	// neither is reported as an error. It always reports not-found on CE builds,
+	// where synthetic accessors do not exist.
+	resolveAccessorToProfileRef(ctx context.Context, mountAccessor string) (ref resolvedProfileRef, ok bool, err error)
 }
 
 var _ SyntheticAliasAccessorValidator = &Core{}
