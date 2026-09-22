@@ -62,6 +62,7 @@ type BaseCommand struct {
 	flagWrapTTL           time.Duration
 	flagUnlockKey         string
 	flagTPMStateDir       string
+	flagTPMDevicePath     string
 
 	flagFormat           string
 	flagField            string
@@ -577,13 +578,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default: false,
 				Usage:   "When set true, prevents asking the user for input via the terminal.",
 			})
-			f.StringVar(&StringVar{
-				Name:    "tpm-state-dir",
-				Target:  &c.flagTPMStateDir,
-				Default: ".",
-				Usage:   "Sets where to write the cert and associated files. Default is working directory",
-			})
-
+			c.setupTPMFlags(f)
 		}
 
 		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed) != 0 {
@@ -684,6 +679,12 @@ func (f *FlagSets) NewFlagSet(name string) *FlagSet {
 // Completions returns the completions for this flag set.
 func (f *FlagSets) Completions() complete.Flags {
 	return f.completions
+}
+
+// Lookup returns the named flag from the underlying flag set, or nil if not
+// found. This satisfies the FlagLookup interface used by LoginHandlerWithFlags.
+func (f *FlagSets) Lookup(name string) *flag.Flag {
+	return f.mainSet.Lookup(name)
 }
 
 type (

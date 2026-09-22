@@ -10,16 +10,32 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/posener/complete"
 )
 
-// LoginHandler is the interface that any auth handlers must implement to enable
-// auth via the CLI.
+// LoginHandler is the base interface that any auth handler must implement to enable
+// auth or help via the CLI.
 type LoginHandler interface {
-	Auth(*api.Client, map[string]string) (*api.Secret, error)
 	Help() string
 }
 
+// LoginHandlerWithFlags is implemented by auth handlers that want access to the
+// parsed CLI flags on the login command. AuthWithFlags allows the handler to read
+// flags like -tpm-state-dir directly rather than requiring them as k=v arguments.
+//
+// The pluginutil.FlagLookup interface is used to avoid an import cycle between
+// vault-enterprise and external auth plugins: both sides import vault/sdk,
+// neither needs to import the other.
+type LoginHandlerWithFlags interface {
+	AuthWithFlags(*api.Client, map[string]string, pluginutil.FlagLookup) (*api.Secret, error)
+}
+
+// LoginHandlerWithAuth is implemented by auth handlers that use the traditional Auth method
+// accepting only the k=v configuration map.
+type LoginHandlerWithAuth interface {
+	Auth(*api.Client, map[string]string) (*api.Secret, error)
+}
 type LoginCommand struct {
 	*BaseCommand
 
@@ -224,8 +240,18 @@ func (c *LoginCommand) Run(args []string) int {
 		client.SetToken("")
 	}
 
-	// Authenticate delegation to the auth handler
-	secret, err := authHandler.Auth(client, config)
+	// Authenticate delegation to the auth handler. If the handler implements
+	// LoginHandlerWithFlags it receives the parsed flag set so it can read
+	// flags like -tpm-state-dir directly.
+	var secret *api.Secret
+	if h, ok := authHandler.(LoginHandlerWithFlags); ok {
+		secret, err = h.AuthWithFlags(client, config, f)
+	} else if h, ok := authHandler.(LoginHandlerWithAuth); ok {
+		secret, err = h.Auth(client, config)
+	} else {
+		c.UI.Error(fmt.Sprintf("Auth handler for %q does not implement Auth or AuthWithFlags", authMethod))
+		return 1
+	}
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error authenticating: %s", err))
 		return 2
