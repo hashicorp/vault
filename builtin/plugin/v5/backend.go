@@ -5,6 +5,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"net/rpc"
 	"sync"
 
@@ -14,6 +15,14 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin"
 	bplugin "github.com/hashicorp/vault/sdk/plugin"
 )
+
+const pluginReloadInProgressErr = "plugin reload in progress"
+
+func (b *backend) pluginReloadInProgressError() error {
+	pluginName := b.config.Config["plugin_name"]
+	pluginVersion := b.config.Config["plugin_version"]
+	return logical.CodedError(503, fmt.Sprintf("%s: %s (version=%s)", pluginReloadInProgressErr, pluginName, pluginVersion))
+}
 
 // Backend returns an instance of the backend, either as a plugin if external
 // or as a concrete implementation if builtin, casted as logical.Backend.
@@ -105,6 +114,10 @@ func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	// and is returned as plugin.BasicError type.
 	if err != nil &&
 		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
+		if reloadingBackend, ok := b.Backend.(interface{ IsReloading() bool }); ok && reloadingBackend.IsReloading() {
+			return nil, b.pluginReloadInProgressError()
+		}
+
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
@@ -137,6 +150,10 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 	b.mu.RUnlock()
 	if err != nil &&
 		(err.Error() == rpc.ErrShutdown.Error() || err == bplugin.ErrPluginShutdown) {
+		if reloadingBackend, ok := b.Backend.(interface{ IsReloading() bool }); ok && reloadingBackend.IsReloading() {
+			return false, false, b.pluginReloadInProgressError()
+		}
+
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
