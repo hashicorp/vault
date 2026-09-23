@@ -3178,10 +3178,14 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return token, nil
 	}
 	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
+	if err != nil {
+		c.logger.Debug("unable to calculate token signature", "error", err)
+		return token, nil
+	}
 	if !hmac.Equal(hm, signedToken.Hmac) {
 		// As above, don't return an error so that the request is handled like normal,
 		// and handled by the node that received it.
-		c.logger.Debug("token mac is incorrect", "token", signedToken.Token)
+		c.logger.Debug("token mac is incorrect")
 		return token, nil
 	}
 
@@ -3205,6 +3209,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// Keep perf standby behavior unchanged so missing local state can still use the
 	// existing 412/forwarding semantics.
 	if c.IsPerfSecondary() && !c.perfStandby && !isPerfStandby {
+		c.logger.Debug("skipping server-side consistency check for performance primary service token on performance secondary")
 		return plainToken.Random, nil
 	}
 
