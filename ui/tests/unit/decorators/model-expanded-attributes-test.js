@@ -1,11 +1,12 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import sinon from 'sinon';
+import Model, { attr } from '@ember-data/model';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 
 module('Unit | Decorators | model-expanded-attributes', function (hooks) {
@@ -29,7 +30,13 @@ module('Unit | Decorators | model-expanded-attributes', function (hooks) {
 
   test('it adds allByKey value to model', function (assert) {
     assert.expect(1);
-    const model = this.store.modelFor('namespace');
+    // register a minimal model here so the decorator is exercised independently of any app model
+    @withExpandedAttributes()
+    class ExpandedAttrsModel extends Model {
+      @attr('string') path;
+    }
+    this.owner.register('model:test-expanded-attrs', ExpandedAttrsModel);
+    const model = this.store.modelFor('test-expanded-attrs');
     assert.deepEqual(
       model.prototype.allByKey,
       {

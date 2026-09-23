@@ -4,6 +4,66 @@
 }}
 
 {{#if (has-feature "Namespaces")}}
+  {{#if this.showSetupAlert}}
+    <Hds::Alert @type="inline" class="top-margin-32" as |A|>
+      <A.Title>Your current setup is 1 namespace.</A.Title>
+      <A.Description>Based on your answer about your security policy in the Guided start, no new namespaces are required.</A.Description>
+    </Hds::Alert>
+  {{/if}}
+  <Page::ListView
+    @config={{@model.listViewConfig}}
+    @model={{@model.namespaces}}
+    @page={{@model.page}}
+    @pageSize={{@model.pageSize}}
+    @wizardShown={{this.showWizard}}
+  >
+    <:headerActions>
+      {{#if this.showIntroButton}}
+        <Hds::Button
+          @color="secondary"
+          @icon="bulb"
+          @text="New to Namespaces?"
+          {{on "click" this.showIntroPage}}
+          data-test-button="guided-start"
+        />
+      {{/if}}
+    </:headerActions>
+    <:toolbarActions>
+      <Hds::Button
+        @color="secondary"
+        @icon="reload"
+        @iconPosition="trailing"
+        @text="Refresh list"
+        {{on "click" this.refreshNamespaceList}}
+        data-test-button="refresh-namespace-list"
+      />
+    </:toolbarActions>
+    <:popupMenu as |rowData|>
+      <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+        <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+        {{#let (concat this.namespace.path (if this.namespace.path "/") rowData.id) as |targetNamespace|}}
+          {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
+            <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch to
+              namespace</dd.Interactive>
+          {{/if}}
+        {{/let}}
+        <dd.Interactive
+          @color="critical"
+          {{on "click" (fn (mut this.nsToDelete) rowData.id)}}
+          data-test-popup-menu="delete"
+        >Delete</dd.Interactive>
+      </Hds::Dropdown>
+      {{#if (eq this.nsToDelete rowData.id)}}
+        <ConfirmModal
+          @color="critical"
+          @onClose={{fn (mut this.nsToDelete) null}}
+          @onConfirm={{fn this.deleteNamespace rowData.id}}
+          @confirmTitle="Delete this namespace?"
+          @confirmMessage="Any engines or mounts in this namespace will also be removed."
+        />
+      {{/if}}
+    </:popupMenu>
+  </Page::ListView>
   {{#if this.showWizard}}
     <Wizard::Namespaces::NamespaceWizard
       @isIntroModal={{this.shouldRenderIntroModal}}
@@ -11,69 +71,6 @@
       @onRefresh={{this.refreshNamespaceList}}
     />
   {{/if}}
-
-  {{#if this.showContent}}
-    {{#if this.showSetupAlert}}
-      <Hds::Alert @type="inline" class="top-margin-32" as |A|>
-        <A.Title>Your current setup is 1 namespace.</A.Title>
-        <A.Description>Based on your answer about your security policy in the Guided start, no new namespaces are required.</A.Description>
-      </Hds::Alert>
-    {{/if}}
-    <Page::ListView
-      @config={{@model.listViewConfig}}
-      @model={{@model.namespaces}}
-      @page={{@model.page}}
-      @pageSize={{@model.pageSize}}
-    >
-      <:headerActions>
-        {{#if this.showIntroButton}}
-          <Hds::Button
-            @color="secondary"
-            @icon="bulb"
-            @text="New to Namespaces?"
-            {{on "click" this.showIntroPage}}
-            data-test-button="guided-start"
-          />
-        {{/if}}
-      </:headerActions>
-      <:toolbarActions>
-        <Hds::Button
-          @color="secondary"
-          @icon="reload"
-          @iconPosition="trailing"
-          @text="Refresh list"
-          {{on "click" this.refreshNamespaceList}}
-          data-test-button="refresh-namespace-list"
-        />
-      </:toolbarActions>
-      <:popupMenu as |rowData|>
-        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-          <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-          {{#let (concat this.namespace.path (if this.namespace.path "/") rowData.id) as |targetNamespace|}}
-            {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
-              <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch
-                to namespace</dd.Interactive>
-            {{/if}}
-          {{/let}}
-          <dd.Interactive
-            @color="critical"
-            {{on "click" (fn (mut this.nsToDelete) rowData.id)}}
-            data-test-popup-menu="delete"
-          >Delete</dd.Interactive>
-        </Hds::Dropdown>
-        {{#if (eq this.nsToDelete rowData.id)}}
-          <ConfirmModal
-            @color="critical"
-            @onClose={{fn (mut this.nsToDelete) null}}
-            @onConfirm={{fn this.deleteNamespace rowData.id}}
-            @confirmTitle="Delete this namespace?"
-            @confirmMessage="Any engines or mounts in this namespace will also be removed."
-          />
-        {{/if}}
-      </:popupMenu>
-    </Page::ListView>
-  {{/if}}
-
 {{else}}
   <UpgradePage @title="Namespaces" @minimumEdition="Vault Enterprise Pro" />
 {{/if}}

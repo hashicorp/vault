@@ -3,16 +3,68 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
+
+// The persona session stores its Vault token in localStorage. Reading it lets the test verify
+// backend state through its own request instead of trusting the UI's rendering of its own call.
+const readToken = (page: Page) =>
+  page.evaluate(() => {
+    const key = Object.keys(localStorage).find((k) => k.startsWith('vault-token'));
+    return key ? (JSON.parse(localStorage.getItem(key) as string).token as string) : '';
+  });
+
+const readNamespaceKeys = async (page: Page) => {
+  const response = await page.request.get('/v1/sys/namespaces?list=true', {
+    headers: { 'X-Vault-Token': await readToken(page) },
+  });
+  // Vault returns 404 rather than an empty list when no namespaces exist.
+  if (response.status() === 404) return [];
+  await expect(response).toBeOK();
+  const { data } = await response.json();
+  return (data?.keys ?? []) as string[];
+};
 
 test('namespace workflow', async ({ page }) => {
   await test.step('create namespace', async () => {
     await page.goto('dashboard');
     await page.getByRole('link', { name: 'Access control' }).click();
     await page.getByRole('link', { name: 'Namespaces' }).click();
+    expect(await readNamespaceKeys(page)).not.toContain('testNamespace/');
     await page.getByRole('link', { name: 'Create namespace' }).click();
     await page.getByRole('textbox', { name: 'Path' }).fill('testNamespace');
+    const responsePromise = page.waitForResponse(
+      (response) =>
+        response.url().endsWith('/v1/sys/namespaces/testNamespace') && response.request().method() === 'POST'
+    );
     await page.getByRole('button', { name: 'Save' }).click();
+    const response = await responsePromise;
+    expect(response.ok()).toBe(true);
+    // Vault takes the namespace path from the URL, so the request body carries no meaningful
+    // contract. Attach it as diagnostic context rather than asserting on it.
+    await test.info().attach('create-request-payload', {
+      body: JSON.stringify({
+        method: response.request().method(),
+        url: response.url(),
+        status: response.status(),
+        body: response.request().postData(),
+      }),
+      contentType: 'application/json',
+    });
+    // Anchor the match so it waits for the post-save transition rather than passing
+    // immediately on the /access/namespaces/create URL we are submitting from.
+    await expect(page).toHaveURL(/\/access\/namespaces(\?.*)?$/);
+    await expect
+      .poll(() => readNamespaceKeys(page), { message: 'the created namespace is persisted' })
+      .toContain('testNamespace/');
+  });
+
+  await test.step('the created namespace survives a reload of the list', async () => {
+    await page.reload();
+    await expect(page.getByRole('row').filter({ hasText: 'testNamespace' })).toHaveCount(1);
+    await test.info().attach('namespaces-after-create', {
+      body: JSON.stringify(await readNamespaceKeys(page)),
+      contentType: 'application/json',
+    });
   });
 
   await test.step('should display the new namespace in the namespace picker and switch to it', async () => {
@@ -32,6 +84,51 @@ test('namespace workflow', async ({ page }) => {
     await page.getByRole('button', { name: 'More options' }).click();
     await page.getByRole('button', { name: 'Delete' }).click();
     await page.getByRole('button', { name: 'Confirm' }).click();
+    await expect
+      .poll(() => readNamespaceKeys(page), { message: 'the deleted namespace is gone from the backend' })
+      .not.toContain('testNamespace/');
+    await page.reload();
+    await expect(page.getByRole('row').filter({ hasText: 'testNamespace' })).toHaveCount(0);
+  });
+});
+
+test('namespace path validation blocks invalid submissions', async ({ page }) => {
+  const writes: string[] = [];
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().includes('/v1/sys/namespaces/')) {
+      writes.push(request.url());
+    }
+  });
+
+  await page.goto('dashboard');
+  await page.getByRole('link', { name: 'Access control' }).click();
+  await page.getByRole('link', { name: 'Namespaces' }).click();
+  const before = await readNamespaceKeys(page);
+  await page.getByRole('link', { name: 'Create namespace' }).click();
+
+  const pathInput = page.getByRole('textbox', { name: 'Path' });
+  const validationError = page.locator('[data-test-validation-error="path"]');
+
+  await test.step('rejects a blank path', async () => {
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(validationError).toHaveText("Path can't be blank.");
+  });
+
+  await test.step('rejects a path ending in a forward slash', async () => {
+    await pathInput.fill('invalid-namespace/');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(validationError).toHaveText("Path can't end in forward slash '/'.");
+  });
+
+  await test.step('rejects a path containing whitespace', async () => {
+    await pathInput.fill('invalid namespace');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect(validationError).toHaveText("Path can't contain whitespace.");
+  });
+
+  await test.step('no invalid submission reached the backend', async () => {
+    expect(writes).toEqual([]);
+    expect(await readNamespaceKeys(page)).toEqual(before);
   });
 });
 

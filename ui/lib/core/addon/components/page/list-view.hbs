@@ -31,93 +31,97 @@
   {{yield to="tabs"}}
 {{/if}}
 
-{{#if (or @config.filter (has-block "toolbarFilters") (has-block "toolbarActions"))}}
-  <div class="has-top-padding-s has-bottom-padding-s">
-    {{#if (has-block "toolbarFilters")}}
-      {{yield to="toolbarFilters"}}
-    {{else if @config.filter}}
-      <FilterInput
-        @value={{this.pageFilter}}
-        @onInput={{this.onFilterChange}}
-        placeholder={{@config.filter.placeholder}}
-        class={{if (has-block "toolbarActions") "one-half-width" "one-fourth-width"}}
-      />
-    {{/if}}
-    {{#if (has-block "toolbarActions")}}
-      {{yield to="toolbarActions"}}
-    {{/if}}
-  </div>
-{{/if}}
-
-{{#if this.isNoData}}
-  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
-    <A.Header data-test-empty-state-title @title={{@config.noDataTitle}} @titleTag="h2" />
-    {{#if @config.noDataDescription}}
-      <A.Body data-test-empty-state-message @text={{@config.noDataDescription}} />
-    {{/if}}
-  </Hds::ApplicationState>
-
-{{else if this.isFilteredEmpty}}
-  <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
-    <A.Header
-      data-test-empty-state-title
-      @title={{concat @config.filteredEmptyTitle ' "' this.pageFilter '"'}}
-      @titleTag="h2"
-    />
-  </Hds::ApplicationState>
-
-{{else}}
-  <ListTable
-    @columns={{this.normalizedColumns}}
-    @data={{this.filteredData}}
-    @childrenKey={{@config.childrenKey}}
-    @page={{@page}}
-    @pageSize={{this.pageSize}}
-    @totalItems={{this.filteredData.meta.totalItems}}
-    @onPageChange={{this.onPageChange}}
-    @onPageSizeChange={{this.onPageSizeChange}}
-  >
-    <:customTableItem as |rowData column value|>
-      {{yield rowData column value to="customTableItem"}}
-    </:customTableItem>
-    <:popupMenu as |rowData|>
-      {{#if (has-block "popupMenu")}}
-        {{yield rowData to="popupMenu"}}
-      {{else if @config.rowActions}}
-        <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-          <dd.ToggleIcon
-            @icon="more-horizontal"
-            @text="Options"
-            @hasChevron={{false}}
-            data-test-popup-menu-trigger={{rowData.id}}
-          />
-          {{#each @config.rowActions as |action|}}
-            {{#if (eq action.kind "route")}}
-              <dd.Interactive
-                @route={{or (get rowData action.routeKey) action.route}}
-                @model={{get rowData (or action.modelKey "id")}}
-                @color={{action.color}}
-                data-test-popup-menu={{action.dataTest}}
-              >{{action.label}}</dd.Interactive>
-            {{else if (eq action.kind "modal")}}
-              <dd.Interactive
-                @color={{action.color}}
-                {{on "click" (fn this.openModal action.modal rowData)}}
-                data-test-popup-menu={{action.dataTest}}
-              >{{action.label}}</dd.Interactive>
-            {{else}}
-              <dd.Interactive
-                @color={{action.color}}
-                {{on "click" (fn (get this action.actionName) rowData)}}
-                data-test-popup-menu={{action.dataTest}}
-              >{{action.label}}</dd.Interactive>
-            {{/if}}
-          {{/each}}
-        </Hds::Dropdown>
+{{#unless @wizardShown}}
+  {{#if (or @config.filter (has-block "toolbarFilters") (has-block "toolbarActions"))}}
+    <div class="has-top-padding-s has-bottom-padding-s">
+      {{#if (has-block "toolbarFilters")}}
+        {{yield to="toolbarFilters"}}
+      {{else if @config.filter}}
+        <FilterInput
+          @value={{this.pageFilter}}
+          @onInput={{this.onFilterChange}}
+          placeholder={{@config.filter.placeholder}}
+          class={{if (has-block "toolbarActions") "one-half-width" "one-fourth-width"}}
+        />
       {{/if}}
-    </:popupMenu>
-  </ListTable>
-{{/if}}
+      {{#if (has-block "toolbarActions")}}
+        {{yield to="toolbarActions"}}
+      {{/if}}
+    </div>
+  {{/if}}
+{{/unless}}
+
+{{#unless @wizardShown}}
+  {{#if this.isNoData}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header data-test-empty-state-title @title={{@config.noDataTitle}} @titleTag="h2" />
+      {{#if @config.noDataDescription}}
+        <A.Body data-test-empty-state-message @text={{@config.noDataDescription}} />
+      {{/if}}
+    </Hds::ApplicationState>
+
+  {{else if this.isFilteredEmpty}}
+    <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
+      <A.Header
+        data-test-empty-state-title
+        @title={{concat @config.filteredEmptyTitle ' "' this.pageFilter '"'}}
+        @titleTag="h2"
+      />
+    </Hds::ApplicationState>
+
+  {{else}}
+    <ListTable
+      @columns={{this.normalizedColumns}}
+      @data={{this.filteredData}}
+      @childrenKey={{@config.childrenKey}}
+      @page={{@page}}
+      @pageSize={{this.pageSize}}
+      @totalItems={{this.filteredData.meta.totalItems}}
+      @onPageChange={{this.onPageChange}}
+      @onPageSizeChange={{this.onPageSizeChange}}
+    >
+      <:customTableItem as |rowData column value|>
+        {{yield rowData column value to="customTableItem"}}
+      </:customTableItem>
+      <:popupMenu as |rowData|>
+        {{#if (has-block "popupMenu")}}
+          {{yield rowData to="popupMenu"}}
+        {{else if @config.rowActions}}
+          <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="Options"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger={{rowData.id}}
+            />
+            {{#each @config.rowActions as |action|}}
+              {{#if (eq action.kind "route")}}
+                <dd.Interactive
+                  @route={{or (get rowData action.routeKey) action.route}}
+                  @model={{get rowData (or action.modelKey "id")}}
+                  @color={{action.color}}
+                  data-test-popup-menu={{action.dataTest}}
+                >{{action.label}}</dd.Interactive>
+              {{else if (eq action.kind "modal")}}
+                <dd.Interactive
+                  @color={{action.color}}
+                  {{on "click" (fn this.openModal action.modal rowData)}}
+                  data-test-popup-menu={{action.dataTest}}
+                >{{action.label}}</dd.Interactive>
+              {{else}}
+                <dd.Interactive
+                  @color={{action.color}}
+                  {{on "click" (fn (get this action.actionName) rowData)}}
+                  data-test-popup-menu={{action.dataTest}}
+                >{{action.label}}</dd.Interactive>
+              {{/if}}
+            {{/each}}
+          </Hds::Dropdown>
+        {{/if}}
+      </:popupMenu>
+    </ListTable>
+  {{/if}}
+{{/unless}}
 
 {{#if (has-block "confirmModal")}}
   {{yield this.activeModalItem this.activeModalConfig this.closeModal to="confirmModal"}}
