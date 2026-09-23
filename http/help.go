@@ -5,9 +5,11 @@ package http
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -42,7 +44,14 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	}
 	path := trimPath(ns, r.URL.Path)
 
+	requestId, err := uuid.GenerateUUID()
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err))
+		return
+	}
+
 	req := &logical.Request{
+		ID:         requestId,
 		Operation:  logical.HelpOperation,
 		Path:       path,
 		Connection: getConnection(r),
