@@ -275,6 +275,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing jwt"))
 		}
 		req.OAuthJwtValidated = true
+		extractValidatedProfileDetailsIntoRequest(chosenProfile, req)
 	}
 	// Resolve the token policy
 	var te *logical.TokenEntry
