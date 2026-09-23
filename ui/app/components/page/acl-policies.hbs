@@ -3,7 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::ListView @config={{@model.listViewConfig}} @model={{@model.policies}} @page={{@page}} @pageSize={{@pageSize}}>
+<Page::ListView
+  @config={{@model.listViewConfig}}
+  @model={{@model.policies}}
+  @page={{@page}}
+  @pageSize={{@pageSize}}
+  @wizardShown={{this.showWizard}}
+>
   <:headerActions>
     {{#if this.showIntroButton}}
       <Hds::Button
