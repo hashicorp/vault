@@ -27,6 +27,16 @@ import (
 // is not found in memdb, and should be preferred in new code.
 var ErrNoAliasFound = errors.New("no alias found")
 
+// errInvalidProfileConfigID is returned when a config_id supplied to the alias API
+// is malformed rather than merely absent. It lets the handler distinguish bad input
+// (a 400) from a storage failure (a 500).
+var errInvalidProfileConfigID = errors.New("'config_id' is not a valid OAuth RS profile config ID")
+
+// errProfileRefUnsupported is returned by the community edition stubs, where OAuth
+// Resource Server profiles do not exist, so that callers get an explicit
+// not-supported message instead of one implying no such profile was configured.
+var errProfileRefUnsupported = errors.New("'profile_name' and 'config_id' require Vault Enterprise")
+
 // aliasPaths returns the API endpoints to operate on aliases.
 // Following are the paths supported:
 // entity-alias - To register/modify an alias
@@ -92,6 +102,17 @@ This field is deprecated, use canonical_id.`,
 				"issuer": {
 					Type:        framework.TypeString,
 					Description: "Issuer name associated with this alias.",
+				},
+				// Declared so the creation-only guard in handleAliasCreateUpdate can
+				// read them and reject them with a clear error. Omitting them makes
+				// FieldData.Get panic, since it panics on fields absent from the schema.
+				"profile_name": {
+					Type:        framework.TypeString,
+					Description: "(Rejected) Valid only when creating an alias, not when updating one by ID.",
+				},
+				"config_id": {
+					Type:        framework.TypeString,
+					Description: "(Rejected) Valid only when creating an alias, not when updating one by ID.",
 				},
 			},
 
@@ -229,7 +250,36 @@ This field is deprecated, use canonical_id.`,
 			Type:        framework.TypeString,
 			Description: "Issuer name associated with this alias.",
 		},
+		"profile_name": {
+			Type: framework.TypeString,
+			Description: "Name of an OAuth Resource Server profile. When provided with " +
+				"external_id and without mount_accessor, Vault resolves the profile to its " +
+				"mount accessor automatically. Mutually exclusive with config_id.",
+		},
+		"config_id": {
+			Type: framework.TypeString,
+			Description: "Config ID of an OAuth Resource Server profile. When provided with " +
+				"external_id and without mount_accessor, Vault resolves the profile to its " +
+				"mount accessor automatically. Mutually exclusive with profile_name.",
+		},
 	}
+}
+
+// aliasProfileRefFromData reads the profile reference fields supplied to the alias
+// API. handleAliasCreateUpdate is shared by the entity-alias paths, which declare
+// these fields, and the deprecated alias paths, which do not. FieldData.Get panics
+// on any field absent from the schema, so these are read through GetOk, which
+// reports absent-from-schema as simply unset. Callers hitting a path that does not
+// declare them already receive a framework warning naming them as ignored
+// parameters.
+func aliasProfileRefFromData(d *framework.FieldData) (profileName, configID string) {
+	if raw, ok := d.GetOk("profile_name"); ok {
+		profileName, _ = raw.(string)
+	}
+	if raw, ok := d.GetOk("config_id"); ok {
+		configID, _ = raw.(string)
+	}
+	return profileName, configID
 }
 
 // handleAliasCreateUpdate is used to create or update an alias
@@ -310,6 +360,11 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				if !customMetadataExists {
 					customMetadata = alias.CustomMetadata
 				}
+				if profileName, configID := aliasProfileRefFromData(d); profileName != "" {
+					return logical.ErrorResponse("'profile_name' is valid only on alias creation, not on updates by ID"), nil
+				} else if configID != "" {
+					return logical.ErrorResponse("'config_id' is valid only on alias creation, not on updates by ID"), nil
+				}
 				if issuer != "" {
 					if alias.Issuer != issuer {
 						return logical.ErrorResponse("changes to issuer after alias creation are prohibited"), nil
@@ -351,10 +406,102 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 			return logical.ErrorResponse("'name' must be provided"), nil
 		}
 
-		// Create synthetic alias accessor if necessary
+		profileName, configID := aliasProfileRefFromData(d)
+
+		// profile_name, config_id and mount_accessor are three spellings of one
+		// decision — which profile the alias belongs to — so supplying more than one
+		// is refused outright rather than settled by a precedence rule, even when
+		// they agree. 'issuer' is not part of that group: it describes an attribute
+		// of whichever profile was chosen rather than choosing one, so it is checked
+		// for agreement with that profile instead of being refused alongside it.
+		if profileName != "" && configID != "" {
+			return logical.ErrorResponse("'profile_name' and 'config_id' are mutually exclusive; provide only one"), nil
+		}
+
+		// profileRefField names whichever profile reference the caller supplied so
+		// errors can quote the field they actually used. It is empty when neither
+		// was supplied.
+		profileRefField := ""
+		switch {
+		case profileName != "":
+			profileRefField = "profile_name"
+		case configID != "":
+			profileRefField = "config_id"
+		}
+
+		// A profile reference exists to derive the mount accessor, so honouring one
+		// while ignoring the other would leave the caller unable to tell which took
+		// effect. An alias's mount accessor is fixed at creation, so that mistake is
+		// not recoverable by a follow-up update.
+		if profileRefField != "" && mountAccessor != "" {
+			return logical.ErrorResponse("'%s' and 'mount_accessor' are mutually exclusive; provide only one", profileRefField), nil
+		}
+
+		// Recorded before the synthesis below overwrites mountAccessor with a value
+		// derived from issuer, which agrees with the alias by construction and so has
+		// nothing to cross-check.
+		callerSuppliedAccessor := mountAccessor != ""
+
+		// Create synthetic alias accessor if necessary.
+		// profileMountEntry is set when a profile reference (profile_name or
+		// config_id) resolved the accessor, so that the redundant
+		// validateAliasMountAccessor call (which would do a second storage read
+		// for the same profile) can be skipped.
+		var profileMountEntry *MountEntry
 		if mountAccessor == "" {
-			// Only create synthetic alias accessor if issuer and external_id are both present
-			if issuer != "" && externalID != "" {
+			switch {
+			case profileRefField != "" && externalID == "":
+				return logical.ErrorResponse("'%s' requires 'external_id' to also be provided", profileRefField), nil
+
+			case profileRefField != "":
+				// Profile reference shortcut: look up the profile and derive the accessor.
+				// Both resolvers scope the lookup to the request namespace, so the
+				// namespace-mismatch check below is always satisfied; we build the
+				// MountEntry directly to avoid a second storage read.
+				var (
+					ref   resolvedProfileRef
+					found bool
+					err   error
+				)
+				if configID != "" {
+					ref, found, err = i.syntheticAliasAccessorValidator.resolveConfigIDToAccessor(ctx, configID)
+				} else {
+					ref, found, err = i.syntheticAliasAccessorValidator.resolveProfileNameToAccessor(ctx, profileName)
+				}
+				switch {
+				case errors.Is(err, errInvalidProfileConfigID), errors.Is(err, errProfileRefUnsupported):
+					return logical.ErrorResponse(err.Error()), nil
+				case err != nil:
+					return nil, err
+				case !found && configID != "":
+					return logical.ErrorResponse("no OAuth RS profile with config_id %q found in this namespace", configID), nil
+				case !found:
+					return logical.ErrorResponse("no OAuth RS profile named %q found in this namespace", profileName), nil
+				}
+
+				// OAuth RS authentication resolves entities by (issuer, external_id),
+				// and aliases with an empty issuer are absent from that index entirely,
+				// so an alias that omits the issuer is created successfully and then
+				// never matches a request. Adopt the resolved profile's issuer.
+				switch {
+				case ref.Issuer == "":
+					// Only reachable for profiles stored before issuer_id became a
+					// required field; the caller must name the issuer themselves.
+					return logical.ErrorResponse(
+						"the profile named by '%s' has no issuer configured; provide 'issuer' explicitly", profileRefField), nil
+				case issuer == "":
+					issuer = ref.Issuer
+				case issuer != ref.Issuer:
+					return logical.ErrorResponse(
+						"'issuer' %q does not match issuer %q of the profile named by '%s'",
+						issuer, ref.Issuer, profileRefField), nil
+				}
+
+				mountAccessor = ref.Accessor
+				profileMountEntry = &MountEntry{NamespaceID: ns.ID, Local: ref.Local}
+
+			case issuer != "" && externalID != "":
+				// Only create synthetic alias accessor if issuer and external_id are both present
 				syntheticAccessor, _, err := i.syntheticAliasAccessorValidator.generateSyntheticAliasAccessor(ctx, issuer)
 				if err != nil {
 					return logical.ErrorResponse(err.Error()), nil
@@ -363,17 +510,52 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				// locality is carried back through validateAliasMountAccessor
 				// below: it returns MountEntry.Local=true for local profiles,
 				// which flows into localMount and then handleAliasCreate.
-			} else {
-				return logical.ErrorResponse("'mount_accessor' or both 'issuer' and 'external_id' must be provided"), nil
+
+			default:
+				return logical.ErrorResponse("'mount_accessor', 'profile_name' or 'config_id' with 'external_id', or both 'issuer' and 'external_id' must be provided"), nil
 			}
 		}
 
-		mountEntry, err := i.validateAliasMountAccessor(ctx, mountAccessor)
-		if err != nil {
-			return logical.ErrorResponse(err.Error()), nil
+		var mountEntry *MountEntry
+		if profileMountEntry != nil {
+			// Accessor and locality already validated by the profile resolver.
+			mountEntry = profileMountEntry
+		} else {
+			var err error
+			mountEntry, err = i.validateAliasMountAccessor(ctx, mountAccessor)
+			if err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
 		}
 		if mountEntry != nil && mountEntry.NamespaceID != ns.ID {
 			return logical.ErrorResponse("matching mount is in a different namespace than request"), logical.ErrPermissionDenied
+		}
+
+		// A mount_accessor that names an OAuth RS profile is a profile reference in
+		// its own right, so it is held to the same agreement rule as profile_name and
+		// config_id: an issuer that contradicts the profile is refused rather than
+		// stored. Both fields are fixed at creation, so the resulting alias — carrying
+		// one profile's accessor and another profile's issuer — could not be corrected
+		// afterwards. It would not fail visibly either: OAuth RS authentication
+		// resolves entities by (issuer, external_id) alone, so the alias binds the
+		// issuer it names and the accessor is never consulted.
+		//
+		// A nil validator needs no handling here: validateAliasMountAccessor above
+		// already rejects every accessor it cannot match to a real mount in that case,
+		// and a real mount has no profile to disagree with.
+		if callerSuppliedAccessor && issuer != "" && i.syntheticAliasAccessorValidator != nil {
+			profileRef, isProfileAccessor, err := i.syntheticAliasAccessorValidator.resolveAccessorToProfileRef(ctx, mountAccessor)
+			if err != nil {
+				return nil, err
+			}
+			// A profile with no issuer has nothing to disagree with. That is only
+			// reachable for profiles stored before issuer_id became a required field.
+			if isProfileAccessor && profileRef.Issuer != "" && profileRef.Issuer != issuer {
+				return logical.ErrorResponse(
+					"'issuer' %q does not match issuer %q of the OAuth RS profile named by 'mount_accessor'; "+
+						"supply 'profile_name' or 'config_id' instead to name a single profile and have both derived from it",
+					issuer, profileRef.Issuer), nil
+			}
 		}
 
 		localMount := mountEntry != nil && mountEntry.Local

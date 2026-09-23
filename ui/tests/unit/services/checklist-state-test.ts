@@ -8,7 +8,7 @@ import { setupTest } from 'ember-qunit';
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import localStorage from 'vault/lib/local-storage';
-import { HIDDEN_CHECKLISTS_KEY } from 'vault/utils/constants/checklist';
+import { CHECKLIST_LOCAL_STATE_KEY } from 'vault/utils/constants/checklist';
 
 import type { Server } from 'miragejs';
 import { Response as MirageResponse } from 'miragejs';
@@ -327,13 +327,59 @@ module('Unit | Service | checklist-state (local concerns)', function (hooks) {
   hooks.beforeEach(function () {
     getItemStub = sinon.stub(localStorage, 'getItem');
     setItemStub = sinon.stub(localStorage, 'setItem');
-    // Default: no pre-existing hidden checklists in localStorage
-    getItemStub.withArgs(HIDDEN_CHECKLISTS_KEY).returns(null);
-    this.service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+    sinon.stub(localStorage, 'removeItem');
+    getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).returns(null);
+    let service: ChecklistStateService | undefined;
+    Object.defineProperty(this, 'service', {
+      configurable: true,
+      get: () => (service ??= this.owner.lookup('service:checklist-state') as ChecklistStateService),
+    });
   });
 
   hooks.afterEach(function () {
     sinon.restore();
+  });
+
+  module('#getLastView / #setLastView', function () {
+    test('getLastView defaults to complete-banner when no preference has been recorded', function (assert) {
+      assert.strictEqual(
+        this.service.getLastView('cluster-startup'),
+        'complete-banner',
+        'Defaults to the completion panel'
+      );
+    });
+
+    test('setLastView persists the view and getLastView reflects it', function (assert) {
+      this.service.setLastView('cluster-startup', 'checklist');
+
+      assert.strictEqual(this.service.getLastView('cluster-startup'), 'checklist');
+      assert.true(
+        setItemStub.calledWith(CHECKLIST_LOCAL_STATE_KEY, {
+          'cluster-startup': { lastView: 'checklist' },
+        }),
+        'Saves the last view nested under the checklist ID'
+      );
+    });
+
+    test('loads pre-existing last-view data from localStorage on service creation', function (assert) {
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).returns({
+        'cluster-startup': { lastView: 'checklist' },
+      });
+      const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+
+      assert.strictEqual(service.getLastView('cluster-startup'), 'checklist');
+    });
+
+    test('ignores malformed localStorage data without breaking page load', function (assert) {
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).throws(new SyntaxError('Invalid JSON'));
+      const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+
+      assert.strictEqual(
+        service.getLastView('cluster-startup'),
+        'complete-banner',
+        'Falls back gracefully to the default view'
+      );
+    });
   });
 
   module('#isHidden / #hideChecklist / #showChecklist', function () {
@@ -341,51 +387,105 @@ module('Unit | Service | checklist-state (local concerns)', function (hooks) {
       assert.false(this.service.isHidden('cluster-startup'), 'Returns false when no hidden state exists');
     });
 
-    test('hideChecklist persists the checklist ID to localStorage', function (assert) {
+    test('hideChecklist persists the checklist as hidden, nested under its ID', function (assert) {
       this.service.hideChecklist('cluster-startup');
 
       assert.true(this.service.isHidden('cluster-startup'), 'isHidden returns true after hiding');
       assert.true(
-        setItemStub.calledWith(HIDDEN_CHECKLISTS_KEY, ['cluster-startup']),
-        'Saves updated hidden list to localStorage'
+        setItemStub.calledWith(CHECKLIST_LOCAL_STATE_KEY, {
+          'cluster-startup': { hidden: true },
+        }),
+        'Saves updated local state to localStorage'
       );
     });
 
-    test('hideChecklist does not duplicate an already-hidden checklist', function (assert) {
+    test('hideChecklist persists repeated hidden-state patches', function (assert) {
       this.service.hideChecklist('cluster-startup');
       this.service.hideChecklist('cluster-startup');
 
-      assert.deepEqual(
-        this.service['_hiddenChecklists'],
-        ['cluster-startup'],
-        'Hidden list contains the checklist only once'
-      );
-      assert.strictEqual(setItemStub.callCount, 1, 'localStorage is only written once');
+      assert.true(this.service.isHidden('cluster-startup'));
+      assert.strictEqual(setItemStub.callCount, 2, 'Each call still persists (idempotent patch)');
     });
 
-    test('showChecklist removes the checklist from the hidden list', function (assert) {
+    test('showChecklist marks the checklist as not hidden', function (assert) {
       this.service.hideChecklist('cluster-startup');
       this.service.showChecklist('cluster-startup');
 
       assert.false(this.service.isHidden('cluster-startup'), 'isHidden returns false after showing');
       assert.true(
-        setItemStub.calledWith(HIDDEN_CHECKLISTS_KEY, []),
-        'Saves empty hidden list to localStorage'
+        setItemStub.calledWith(CHECKLIST_LOCAL_STATE_KEY, {
+          'cluster-startup': { hidden: false },
+        }),
+        'Saves updated local state to localStorage'
       );
     });
 
     test('loads pre-existing hidden checklists from localStorage on service creation', function (assert) {
-      getItemStub.withArgs(HIDDEN_CHECKLISTS_KEY).returns(['cluster-startup']);
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).returns({ 'cluster-startup': { hidden: true } });
       const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
 
       assert.true(service.isHidden('cluster-startup'), 'Pre-existing hidden state is loaded');
     });
 
-    test('ignores non-array localStorage data without breaking page load', function (assert) {
-      getItemStub.withArgs(HIDDEN_CHECKLISTS_KEY).returns('corrupted-string');
+    test('ignores unparseable localStorage data without breaking page load', function (assert) {
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).throws(new SyntaxError('Invalid JSON'));
       const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
 
       assert.false(service.isHidden('cluster-startup'), 'Falls back gracefully to no hidden checklists');
+    });
+
+    test('ignores a localStorage value that is a plain string instead of an object', function (assert) {
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).returns('not-an-object');
+      const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+
+      assert.false(service.isHidden('cluster-startup'), 'String-typed storage value is discarded');
+    });
+
+    test('ignores a localStorage value that is an array instead of an object', function (assert) {
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).returns(['cluster-startup']);
+      const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+
+      assert.false(service.isHidden('cluster-startup'), 'Array-typed storage value is discarded');
+    });
+
+    test('ignores a localStorage entry whose hidden field is a non-boolean string', function (assert) {
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).returns({ 'cluster-startup': { hidden: 'yes' } });
+      const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+
+      assert.false(service.isHidden('cluster-startup'), 'Entry with string hidden value is discarded');
+    });
+
+    test('ignores a localStorage entry whose lastView field is an unrecognised value', function (assert) {
+      getItemStub
+        .withArgs(CHECKLIST_LOCAL_STATE_KEY)
+        .returns({ 'cluster-startup': { lastView: 'unknown-view' } });
+      const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+
+      // The whole stored object is rejected by isChecklistLocalStateData, so
+      // _localState falls back to {}, and getLastView returns its default.
+      assert.strictEqual(
+        service.getLastView('cluster-startup'),
+        'complete-banner',
+        'Entry with unrecognised lastView is discarded and falls back to default'
+      );
+    });
+
+    test('preserves other checklists and preferences when patching a single checklist', function (assert) {
+      getItemStub.withArgs(CHECKLIST_LOCAL_STATE_KEY).returns({
+        'other-checklist': { hidden: true },
+        'cluster-startup': { lastView: 'checklist' },
+      });
+      const service = this.owner.lookup('service:checklist-state') as ChecklistStateService;
+
+      service.hideChecklist('cluster-startup');
+
+      assert.true(service.isHidden('other-checklist'), 'Unrelated checklist is untouched');
+      assert.strictEqual(
+        service.getLastView('cluster-startup'),
+        'checklist',
+        'Existing preference for the patched checklist is preserved'
+      );
+      assert.true(service.isHidden('cluster-startup'), 'New preference for the patched checklist is applied');
     });
   });
 

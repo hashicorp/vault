@@ -668,6 +668,8 @@ func (ts *TokenStore) paths() []*framework.Path {
 	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
 	p = append(p, rolesPath)
 
+	p = append(p, ts.entPaths()...)
+
 	return p
 }
 
@@ -4425,6 +4427,7 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
 	tokenRevokeHelp          = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp      = `This endpoint will delete the token used to call it and all of its child tokens.`
+	tokenRevokeOAuthHelp     = `This endpoint revokes an external OAuth token identified by its issuer and unique ID.`
 	tokenRevokeOrphanHelp    = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRenewHelp           = `This endpoint will renew the given token and prevent expiration.`
 	tokenRenewSelfHelp       = `This endpoint will renew the token used to call it and prevent expiration.`

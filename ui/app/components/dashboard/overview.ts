@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -86,22 +86,29 @@ export default class OverviewComponent extends Component<Args> {
    * Allows users to temporarily return to the checklist after completion
    * without mutating completion state.
    */
-  get shouldShowChecklistInPlaceOfCongrats(): boolean {
+  get isShowingCompletedChecklist(): boolean {
     return this.checklistLifecycleState === 'complete' && this.showSetupGuideInCompleteState;
   }
 
   /** True when the checklist widget should be rendered in the left column. */
   get shouldShowChecklist(): boolean {
-    return this.checklistLifecycleState === 'active' || this.shouldShowChecklistInPlaceOfCongrats;
+    return this.checklistLifecycleState === 'active' || this.isShowingCompletedChecklist;
   }
 
   @action hideChecklist() {
+    // Remember whether the checklist or the completion panel was showing so
+    // restoring later (from the Explore Vault card) returns to the same view.
+    this.checklistState.setLastView(
+      this.startupChecklist.id,
+      this.shouldShowChecklist ? 'checklist' : 'complete-banner'
+    );
     this.showSetupGuideInCompleteState = false;
     this.checklistState.hideChecklist(this.startupChecklist.id);
   }
 
   @action restoreChecklist() {
-    this.showSetupGuideInCompleteState = false;
+    const lastView = this.checklistState.getLastView(this.startupChecklist.id);
+    this.showSetupGuideInCompleteState = lastView === 'checklist';
     this.checklistState.showChecklist(this.startupChecklist.id);
   }
 

@@ -54,3 +54,6 @@ func (c *Core) performDelegationTokenChecks(_ context.Context, _ *ACL, _ *identi
 func (c *Core) fetchCeilingPolicies(ctx context.Context, entity *identity.Entity) (map[string][]string, error) {
 	return nil, errors.New("not implemented")
 }
+
+func extractValidatedProfileDetailsIntoRequest(chosenProfile *OAuthResourceServerConfigProfile, req *logical.Request) {
+}

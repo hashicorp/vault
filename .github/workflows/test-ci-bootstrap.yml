@@ -23,7 +23,9 @@ on:
 jobs:
   bootstrap-ci:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
-    permissions: write-all
+    permissions:
+      contents: read
+      id-token: write
     env:
       TF_WORKSPACE: "${{ github.event.repository.name }}-ci-enos-bootstrap"
       TF_VAR_repository: ${{ github.event.repository.name }}
@@ -35,13 +37,29 @@ jobs:
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_wrapper: false
+      - if: github.repository != 'hashicorp/vault'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: github.repository != 'hashicorp/vault'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/aws access-key-id_070182026 | AWS_ACCESS_KEY_ID_CI_070182026;
+            kv/data/github/${{ github.repository }}/aws secret-access-key_070182026 | AWS_SECRET_ACCESS_KEY_CI_070182026;
+            kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
+          aws-access-key-id: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_ACCESS_KEY_ID_CI_070182026 || steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_070182026 }}
+          aws-secret-access-key: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_SECRET_ACCESS_KEY_CI_070182026 || steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_070182026 }}
           aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
+          role-to-assume: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_ROLE_ARN_CI || steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
       - name: Init Terraform

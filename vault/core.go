@@ -2956,7 +2956,7 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.migrateProfilesByIssuerIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
-			return c.populateIssuerNamespacesIndex(ctx)
+			return c.setupOAuthResourceServerConfigManager(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()

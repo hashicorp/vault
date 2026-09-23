@@ -161,10 +161,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.23.1
 	github.com/hashicorp/vault-plugin-auth-azure v0.24.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.24.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.23.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.24.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.27.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.18.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.24.1
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.22.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.17.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0
@@ -570,7 +570,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260908043556-f8649ddbbfe6 // indirect; indirect\
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260911204522-f61a6ca850bd // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.1 // indirect
