@@ -9,8 +9,10 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -483,5 +485,167 @@ func assertEquals(t *testing.T, actual, expected int) {
 	t.Helper()
 	if actual != expected {
 		t.Fatalf("Actual: %d Expected: %d", actual, expected)
+	}
+}
+
+// newTestMetricsSink installs a fresh in-memory sink as the global metrics sink
+// and returns it, so a test can inspect exactly what the middleware emitted.
+//
+// The global sink is process-wide, so tests using this must not run in
+// parallel with each other.
+func newTestMetricsSink(t *testing.T) *metrics.InmemSink {
+	t.Helper()
+
+	sink := metrics.NewInmemSink(time.Hour, 2*time.Hour)
+
+	// An empty service name keeps the emitted keys unprefixed, so assertions
+	// can name the metric exactly as the middleware produces it.
+	config := metrics.DefaultConfig("")
+	config.EnableHostname = false
+	config.EnableTypePrefix = false
+	config.EnableRuntimeMetrics = false
+
+	if _, err := metrics.NewGlobal(config, sink); err != nil {
+		t.Fatalf("failed to install test metrics sink: %s", err)
+	}
+	return sink
+}
+
+// labelsForMetric returns the labels attached to the named metric. It reports
+// whether the metric was emitted at all.
+func labelsForMetric(sink *metrics.InmemSink, name string) ([]metrics.Label, bool) {
+	for _, interval := range sink.Data() {
+		interval.RLock()
+		for _, counter := range interval.Counters {
+			if counter.Name == name {
+				labels := counter.Labels
+				interval.RUnlock()
+				return labels, true
+			}
+		}
+		for _, sample := range interval.Samples {
+			if sample.Name == name {
+				labels := sample.Labels
+				interval.RUnlock()
+				return labels, true
+			}
+		}
+		interval.RUnlock()
+	}
+	return nil, false
+}
+
+func TestMetricsMiddleware_OperationLabels(t *testing.T) {
+	type testCase struct {
+		namespace      string
+		mountPoint     string
+		connectionName string
+		expectedLabels []metrics.Label
+	}
+
+	tests := map[string]testCase{
+		"no metadata emits unlabeled metrics": {
+			expectedLabels: nil,
+		},
+		"namespace, mount point and connection name are all emitted in order": {
+			namespace:      "team-a",
+			mountPoint:     "database/",
+			connectionName: "prod-primary",
+			expectedLabels: []metrics.Label{
+				{Name: "namespace", Value: "team-a"},
+				{Name: "mount_point", Value: "database/"},
+				{Name: "connection_name", Value: "prod-primary"},
+			},
+		},
+		"mount point and connection name are both emitted": {
+			mountPoint:     "database/",
+			connectionName: "prod-primary",
+			expectedLabels: []metrics.Label{
+				{Name: "mount_point", Value: "database/"},
+				{Name: "connection_name", Value: "prod-primary"},
+			},
+		},
+		"mount point alone is emitted": {
+			mountPoint: "database/",
+			expectedLabels: []metrics.Label{
+				{Name: "mount_point", Value: "database/"},
+			},
+		},
+		"connection name alone is emitted": {
+			connectionName: "prod-primary",
+			expectedLabels: []metrics.Label{
+				{Name: "connection_name", Value: "prod-primary"},
+			},
+		},
+		"namespace alone is emitted": {
+			namespace: "team-a",
+			expectedLabels: []metrics.Label{
+				{Name: "namespace", Value: "team-a"},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			sink := newTestMetricsSink(t)
+
+			mw := databaseMetricsMiddleware{
+				next:           &recordingDatabase{},
+				typeStr:        "pgx",
+				namespace:      test.namespace,
+				mountPoint:     test.mountPoint,
+				connectionName: test.connectionName,
+			}
+
+			if _, err := mw.NewUser(context.Background(), NewUserRequest{}); err != nil {
+				t.Fatalf("Expected no error, but got: %s", err)
+			}
+
+			// Both the aggregate metric and the per-plugin-type metric must
+			// carry the labels.
+			for _, metricName := range []string{"database.NewUser", "database.pgx.NewUser"} {
+				labels, found := labelsForMetric(sink, metricName)
+				if !found {
+					t.Fatalf("metric %q was not emitted", metricName)
+				}
+				if !reflect.DeepEqual(labels, test.expectedLabels) {
+					t.Fatalf("metric %q labels: actual: %#v expected: %#v", metricName, labels, test.expectedLabels)
+				}
+			}
+		})
+	}
+}
+
+// TestMetricsMiddleware_MetricNamesUnchanged guards the compatibility promise
+// that opting in adds labels without renaming any metric, so existing queries
+// keep working.
+func TestMetricsMiddleware_MetricNamesUnchanged(t *testing.T) {
+	sink := newTestMetricsSink(t)
+
+	mw := databaseMetricsMiddleware{
+		next: &recordingDatabase{
+			next: fakeDatabase{
+				closeErr: errors.New("close failed"),
+			},
+		},
+		typeStr:        "pgx",
+		mountPoint:     "database/",
+		connectionName: "prod-primary",
+	}
+
+	if err := mw.Close(); err == nil {
+		t.Fatal("Expected an error from Close, but got none")
+	}
+
+	expectedNames := []string{
+		"database.Close",
+		"database.pgx.Close",
+		"database.Close.error",
+		"database.pgx.Close.error",
+	}
+	for _, metricName := range expectedNames {
+		if _, found := labelsForMetric(sink, metricName); !found {
+			t.Errorf("metric %q was not emitted", metricName)
+		}
 	}
 }

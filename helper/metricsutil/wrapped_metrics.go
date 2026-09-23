@@ -41,6 +41,7 @@ type TelemetryConstConfig struct {
 	NumLeaseMetricsTimeBuckets       int
 	LeaseMetricsNameSpaceLabels      bool
 	RollbackMetricsIncludeMountPoint bool
+	DatabaseMetricsIncludeMountPoint bool
 }
 
 type Metrics interface {
