@@ -1741,10 +1741,13 @@ func formatPKCS8ParsingError(key []byte, err error) error {
 }
 
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
-	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader)
+	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader, p.KeyVersionType(p.LatestVersion))
 }
 
-func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader) error {
+func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader, keyType KeyType) error {
+	if err := p.isCompatibleKeyType(keyType); err != nil {
+		return err
+	}
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
@@ -1763,7 +1766,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		}
 	}
 
-	if p.Type != KeyType_HMAC {
+	if keyType != KeyType_HMAC {
 		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 		if err != nil {
 			return err
@@ -1771,20 +1774,20 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		entry.HMACKey = hmacKey
 	}
 
-	if p.Type == KeyType_ED25519 && p.Derived && !isPrivateKey {
+	if keyType == KeyType_ED25519 && p.Derived && !isPrivateKey {
 		return fmt.Errorf("unable to import only public key for derived Ed25519 key: imported key should not be an Ed25519 key pair but is instead an HKDF key")
 	}
 
-	if ((p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES128_CBC) && len(key) != 16) ||
-		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES256_CBC) && len(key) != 32) ||
-		(p.Type == KeyType_AES192_CMAC && len(key) != 24) ||
-		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
-		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
+	if ((keyType == KeyType_AES128_GCM96 || keyType == KeyType_AES128_CMAC || keyType == KeyType_AES128_CBC) && len(key) != 16) ||
+		((keyType == KeyType_AES256_GCM96 || keyType == KeyType_ChaCha20_Poly1305 || keyType == KeyType_AES256_CMAC || keyType == KeyType_AES256_CBC) && len(key) != 32) ||
+		(keyType == KeyType_AES192_CMAC && len(key) != 24) ||
+		(keyType == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
+		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), keyType)
 	}
 
-	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES192_CMAC || p.Type == KeyType_AES128_CBC || p.Type == KeyType_AES256_CBC {
+	if keyType == KeyType_AES128_GCM96 || keyType == KeyType_AES256_GCM96 || keyType == KeyType_ChaCha20_Poly1305 || keyType == KeyType_HMAC || keyType == KeyType_AES128_CMAC || keyType == KeyType_AES256_CMAC || keyType == KeyType_AES192_CMAC || keyType == KeyType_AES128_CBC || keyType == KeyType_AES256_CBC {
 		entry.Key = key
-		if p.Type == KeyType_HMAC {
+		if keyType == KeyType_HMAC {
 			p.KeySize = len(key)
 			entry.HMACKey = key
 		}
@@ -1826,7 +1829,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 			}
 		}
 
-		err = entry.parseFromKey(p.Type, parsedKey)
+		err = entry.parseFromKey(keyType, parsedKey)
 		if err != nil {
 			return err
 		}
@@ -1839,6 +1842,9 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		// don't need to call migrate here because if we've called getPolicy to
 		// get the policy in the first place it will have been run.
 		p.Keys = keyEntryMap{}
+	}
+	if p.Type != keyType {
+		entry.Algorithm = &keyType
 	}
 	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
@@ -2580,7 +2586,7 @@ func (p *Policy) KeyVersionCanBeUpdated(keyVersion int, isPrivateKey bool) error
 		return err
 	}
 
-	if !p.Type.ImportPublicKeySupported() {
+	if !p.KeyVersionType(keyVersion).ImportPublicKeySupported() {
 		return errors.New("provided type does not support importing key versions")
 	}
 
@@ -2656,7 +2662,7 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 		}
 	}
 
-	err = keyEntry.parseFromKey(p.Type, parsedPrivateKey)
+	err = keyEntry.parseFromKey(p.KeyVersionType(keyVersion), parsedPrivateKey)
 	if err != nil {
 		return err
 	}
