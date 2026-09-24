@@ -98,6 +98,11 @@ const (
 )
 
 var (
+	// ErrFullJWTRequired is returned by auth/token/revoke and
+	// auth/token/revoke-orphan when given the internal stored JWT ID form
+	// instead of the full JWT.
+	ErrFullJWTRequired = errors.New("OAuth JWTs must be revoked using the full JWT, not the internal Vault storage ID. Provide full JWT or use auth/token/revoke-oauth")
+
 	// displayNameSanitize is used to sanitize a display name given to a token.
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
 
@@ -2677,11 +2682,12 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, namespace.ErrNoNamespace
 	}
 
-	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
+	// Reject JWTs
 	if te.Type == logical.TokenTypeEnt {
-		return ts.revokeCommonJWT(revokeCtx, req, te.ID)
+		return logical.ErrorResponse("OAuth JWTs cannot be revoked via revoke-accessor"), logical.ErrInvalidRequest
 	}
 
+	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
 	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(revokeCtx, te)
 	if err != nil {
 		return nil, err
@@ -3437,6 +3443,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if IsOAuthJwt(req.ClientToken) || IsOAuthJwtId(req.ClientToken) {
+		return logical.ErrorResponse("OAuth JWTs cannot be revoked via revoke-self. Use auth/token/revoke or auth/token/revoke-oauth"), logical.ErrInvalidRequest
+	}
 	return ts.revokeCommon(ctx, req, data, req.ClientToken)
 }
 
@@ -3449,6 +3458,15 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	// Prevent revocation of internal representation (JWT ID)
+	if IsOAuthJwtId(id) {
+		return logical.ErrorResponse(ErrFullJWTRequired.Error()), logical.ErrInvalidRequest
+	}
+
+	if IsOAuthJwt(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
+	}
+
 	if resp, err := ts.revokeCommon(ctx, req, data, id); resp != nil || err != nil {
 		return resp, err
 	}
@@ -3457,9 +3475,6 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
-	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
-		return ts.revokeCommonJWT(ctx, req, id)
-	}
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -3504,9 +3519,14 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	// Prevent revocation of internal representation (JWT ID)
+	if IsOAuthJwtId(id) {
+		return logical.ErrorResponse(ErrFullJWTRequired.Error()), logical.ErrInvalidRequest
+	}
+
 	// Because JWT Tokens are unable to create child tokens, there are no
 	// orphans to worry about. Delegate to the shared JWT revocation path.
-	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
+	if IsOAuthJwt(id) {
 		return ts.revokeCommonJWT(ctx, req, id)
 	}
 
