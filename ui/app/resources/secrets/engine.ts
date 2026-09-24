@@ -44,7 +44,6 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
 
   get icon() {
     const engineData = engineDisplayData(this.engineType);
-
     return engineData?.glyph || 'lock';
   }
 

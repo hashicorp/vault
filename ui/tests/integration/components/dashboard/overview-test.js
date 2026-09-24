@@ -328,6 +328,30 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       .doesNotExist('feature spotlight card is not shown for community');
   });
 
+  test('it uses the dark image for the feature spotlight in dark mode', async function (assert) {
+    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
+    const theme = this.owner.lookup('service:theme');
+    sinon.stub(theme, 'isDarkMode').value(true);
+    await this.renderComponent();
+
+    assert
+      .dom(`${GENERAL.cardContainer('feature-spotlight')} img`)
+      .hasAttribute('src', '/ui/images/agent-registry-dashboard-dark.png');
+  });
+
+  test('it uses the light image for the feature spotlight in light mode', async function (assert) {
+    this.version.version = '1.13.1+ent';
+    this.version.type = 'enterprise';
+    const theme = this.owner.lookup('service:theme');
+    sinon.stub(theme, 'isDarkMode').value(false);
+    await this.renderComponent();
+
+    assert
+      .dom(`${GENERAL.cardContainer('feature-spotlight')} img`)
+      .hasAttribute('src', '/ui/images/agent-registry-dashboard.png');
+  });
+
   test('it shows the learn more card on community', async function (assert) {
     this.version.version = '1.13.1';
     this.version.type = 'community';

@@ -25,6 +25,6 @@
 </Hds::Layout::Flex>
 
 <Hds::Layout::Flex @direction="column" class={{@imageClass}} data-test-intro-content-image-container>
-  <img src={{@imageSrc}} alt={{@imageAlt}} class={{@imageClass}} data-test-intro-content-image />
+  <img src={{this.introPageImgSrc}} alt={{@imageAlt}} class={{@imageClass}} data-test-intro-content-image />
   <Hds::Text::Body @align="left" @color="faint" @size="100" @tag="p">{{@imageCaption}}</Hds::Text::Body>
 </Hds::Layout::Flex>

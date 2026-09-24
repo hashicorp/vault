@@ -11,6 +11,7 @@ import { CLUSTER_STARTUP_CHECKLIST } from 'vault/utils/constants/checklist';
 
 import type ChecklistStateService from 'vault/services/checklist-state';
 import NamespaceService from 'vault/services/namespace';
+import type ThemeService from 'vault/services/theme';
 
 export type Args = {
   isRootNamespace: boolean;
@@ -24,7 +25,14 @@ export type Args = {
 export default class OverviewComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
   @service('checklist-state') declare readonly checklistState: ChecklistStateService;
+  @service declare readonly theme: ThemeService;
   @tracked showSetupGuideInCompleteState = false;
+
+  /** Returns the dark-mode variant of the agent registry dashboard image when dark mode is active. */
+  get featureSpotlightImageSrc(): string {
+    const base = '/ui/images/agent-registry-dashboard.png';
+    return this.theme.isDarkMode ? '/ui/images/agent-registry-dashboard-dark.png' : base;
+  }
 
   get startupChecklist() {
     return CLUSTER_STARTUP_CHECKLIST;
