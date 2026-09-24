@@ -42,6 +42,26 @@ export interface EngineDisplayData {
 }
 
 /**
+ * Returns the glyph icon name appropriate for the current theme.
+ * Glyphs ending in `-color` are color variants intended for light mode.
+ * In dark mode the `-color` suffix is stripped so the monochrome variant is
+ * used instead (e.g. `aws-color` → `aws`).
+ *
+ * Dark mode is detected from `document.documentElement`'s `data-theme` attribute,
+ * which is written by the ThemeService. This keeps the function free of Ember
+ * service injection so it is safe to call from plain resource constructors that
+ * may not have a container.
+ *
+ * @param glyph - The glyph name from engine metadata (may or may not end in `-color`).
+ * @returns The resolved glyph name to pass to `<Icon @name>`.
+ */
+export function resolveGlyph(glyph: string | undefined): string | undefined {
+  if (!glyph) return glyph;
+  const isDarkMode = document.documentElement.getAttribute('data-theme') === 'dark';
+  return isDarkMode && glyph.endsWith('-color') ? glyph.slice(0, -'-color'.length) : glyph;
+}
+
+/**
  * @param mountCategory - Given mount category to filter by, e.g., 'auth' or 'secret'.
  * @param isEnterprise - Optional boolean to indicate if enterprise engines should be included in the results.
  * @returns Filtered array of engines that match the given mount category
@@ -53,11 +73,12 @@ export function filterEnginesByMountCategory({
   mountCategory: 'auth' | 'secret';
   isEnterprise: boolean;
 }) {
-  return isEnterprise
+  const filtered = isEnterprise
     ? ALL_ENGINES.filter((engine) => engine.mountCategory.includes(mountCategory))
     : ALL_ENGINES.filter(
         (engine) => engine.mountCategory.includes(mountCategory) && !engine.requiresEnterprise
       );
+  return filtered.map((engine) => ({ ...engine, glyph: resolveGlyph(engine.glyph) }));
 }
 
 export function isAddonEngine(type: string, version: number) {

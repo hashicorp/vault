@@ -1,0 +1,732 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/*
+ * Component-level dark mode overrides.
+ * These target elements that hard-code raw hex values instead of HDS tokens.
+ * Applied inside html[data-theme='dark'] via index.scss.
+ */
+
+@mixin dark-mode-app-header-override {
+  /* stylelint-disable selector-class-pattern */
+  .hds-app-header {
+    color: var(--token-color-palette-neutral-700);
+    background: var(--token-color-palette-neutral-0);
+    border-bottom-color: var(--token-color-palette-neutral-200);
+
+    .hds-app-header__logo,
+    .hds-app-header__actions {
+      background-color: var(--token-color-palette-neutral-0);
+    }
+
+    &.hds-app-header--is-mobile.hds-app-header--menu-is-open .hds-app-header__actions {
+      background-color: var(--token-color-palette-neutral-0);
+    }
+
+    // HomeLink: no visible border in default/focus state (border is transparent by HDS default).
+    .hds-app-header__home-link {
+      color: var(--token-color-foreground-high-contrast);
+      background-color: #0c0c0e; // neutral-700 original dark value
+      border-color: transparent;
+
+      &:hover {
+        background-color: #3b3d45; // neutral-600 original dark value
+        border-color: transparent;
+      }
+
+      &:active {
+        background-color: #656a76; // neutral-500 original dark value
+      }
+
+      &:focus {
+        background-color: #0c0c0e;
+        border-color: transparent;
+      }
+    }
+
+    // Buttons and dropdown toggles: keep the visible border.
+    .hds-button,
+    .hds-dropdown-toggle-button,
+    .hds-dropdown-toggle-icon,
+    .hds-app-header__menu-button {
+      color: var(--token-color-foreground-high-contrast);
+      background-color: #0c0c0e; // neutral-700 original dark value
+      border-color: #656a76; // neutral-500 original dark value
+
+      &:hover {
+        background-color: #3b3d45; // neutral-600 original dark value
+        border-color: #656a76;
+      }
+
+      &:active {
+        background-color: #656a76; // neutral-500 original dark value
+        border-color: #8c909c; // neutral-400 original dark value
+      }
+
+      &:focus {
+        background-color: #0c0c0e;
+      }
+    }
+  }
+  /* stylelint-enable selector-class-pattern */
+}
+
+@mixin dark-mode-app-side-nav-override {
+  /* stylelint-disable selector-class-pattern */
+  .hds-app-side-nav {
+    // The side nav surface token defaults to --token-color-surface-faint which
+    // after the palette flip is too light. Pin explicitly to the desired dark value.
+    --token-app-side-nav-color-surface-primary: #15181e;
+  }
+
+  .hds-app-side-nav__wrapper {
+    .hds-app-side-nav__overlay {
+      background-color: #15181e;
+    }
+
+    .hds-app-side-nav__list-title {
+      color: var(--token-color-foreground-faint);
+    }
+
+    .hds-app-side-nav__list-item-link.active {
+      &::after {
+        background-color: var(--token-color-palette-blue-400);
+      }
+
+      .hds-app-side-nav__list-item-icon-leading,
+      .hds-app-side-nav__list-item-text {
+        color: var(--token-color-palette-blue-400);
+      }
+    }
+  }
+  /* stylelint-enable selector-class-pattern */
+}
+
+@mixin dark-mode-console-override {
+  // In dark mode the console panel background switches from the hardcoded
+  // neutral-700 palette value (near-white in dark mode) to surface-primary
+  // (#030303). This gives a consistent near-black surface that semantic
+  // foreground tokens read against correctly.
+  .console-ui-panel {
+    background-color: var(--token-color-surface-primary);
+  }
+
+  // foreground-faint (neutral-500, #8c8c8c) on surface-primary (#030303) = 6.13:1 ✅
+  .console-ui-panel-content {
+    color: var(--token-color-foreground-faint);
+    border-top: 1px solid var(--token-color-palette-neutral-200);
+
+    .console-ui-panel-intro {
+      color: var(--token-color-foreground-faint);
+    }
+  }
+
+  // foreground-faint (#8c8c8c) on surface-primary (#030303) = 6.13:1 ✅
+  /* stylelint-disable selector-class-pattern */
+  .console-ui-input input {
+    color: var(--token-color-foreground-faint);
+    caret-color: var(--token-color-foreground-faint);
+  }
+
+  .console-ui-panel .hds-side-nav__icon-button {
+    background-color: var(--token-color-surface-strong);
+    border-color: var(--token-color-border-primary);
+    color: var(--token-color-foreground-high-contrast);
+  }
+  /* stylelint-enable selector-class-pattern */
+}
+
+@mixin dark-mode-swagger-override {
+  /* stylelint-disable selector-class-pattern */
+  .swagger-ember .swagger-ui .wrapper {
+    // ── Info / title block ──────────────────────────────────────────────────
+    .info {
+      // API name heading ("HashiCorp Vault API")
+      .title {
+        color: var(--token-color-foreground-strong);
+
+        // Version pill ("2.1.0") — give it a visible surface on the dark page
+        small {
+          background-color: var(--token-color-surface-strong);
+          color: var(--token-color-foreground-primary);
+        }
+
+        // OAS version stamp ("OAS 3.0") — rendered in a green-300 (#00ae4e) badge.
+        // foreground-high-contrast (#f1f2f3) on green-300 = ~3.5:1 FAIL.
+        // Use near-black (neutral-0 = #030303): 5.1:1 on green-300 ✅.
+        .version-stamp {
+          background-color: var(--token-color-palette-green-300);
+          color: var(--token-color-palette-neutral-0);
+
+          pre {
+            color: var(--token-color-palette-neutral-0);
+          }
+        }
+      }
+
+      // Description body text
+      p {
+        color: var(--token-color-foreground-primary);
+      }
+
+      // Inline code spans (e.g. /v1/) — foreground-highlight (purple-200,
+      // #aa3fff) on surface-highlight (purple-50, #2f1543) = only ~3.8:1 FAIL.
+      // Use purple-500 (#dda5ff) for ~10:1 on the same surface.
+      code {
+        color: var(--token-color-palette-purple-500);
+        background-color: var(--token-color-surface-highlight);
+      }
+
+      // Links ("Learn more", license)
+      a {
+        color: var(--token-color-foreground-action);
+      }
+    }
+
+    // ── Operation block rows ────────────────────────────────────────────────
+    .opblock {
+      background-color: var(--token-color-palette-green-50);
+      border-color: var(--token-color-palette-neutral-400);
+
+      .opblock-summary {
+        border-color: var(--token-color-palette-neutral-400);
+      }
+
+      .opblock-summary-path,
+      .opblock-summary-description,
+      .opblock-summary-path__deprecated {
+        color: var(--token-color-palette-neutral-600);
+      }
+    }
+
+    // Method badges
+    // POST/PATCH: green-300 (#00ae4e) background; neutral-600 (#dedfe3) only
+    // achieves ~4.2:1 — use neutral-0 (#030303) for 5.2:1 instead.
+    .opblock-post,
+    .opblock-patch {
+      .opblock-summary-method {
+        background-color: var(--token-color-palette-green-300);
+        color: var(--token-color-palette-neutral-0);
+      }
+    }
+
+    // GET: swagger-ui sets background:#61affe (bright blue). Our dark color-only
+    // rule gives neutral-600 (#dedfe3) on #61affe = ~1.7:1 FAIL because we never
+    // overrode the background. Set bg to #000 (dark) and keep white text: 10:1 ✅.
+    // DELETE: swagger-ui uses background:#f93e3e (red). neutral-600 on red = ~1.6:1
+    // FAIL. Same fix — dark background, white text.
+    .opblock-get,
+    .opblock-delete {
+      .opblock-summary-method {
+        background-color: var(--token-color-palette-neutral-0);
+        color: var(--token-color-foreground-high-contrast);
+      }
+    }
+
+    // ── Section tag headings ─────────────────────────────────────────────────
+    .opblock-tag {
+      color: var(--token-color-foreground-primary);
+      border-color: var(--token-color-border-primary);
+    }
+  }
+  /* stylelint-enable selector-class-pattern */
+}
+
+@mixin dark-mode-box-label-override {
+  // .box-label extends .box which hard-codes background-color: hsl(0,0%,100%) and uses
+  // box-shadow (not border) for its outline. Both must be overridden explicitly.
+  .box-label {
+    background-color: var(--token-color-surface-interactive-disabled) !important;
+    // Replace the box-shadow ring with a faint neutral outline
+    box-shadow: 0 0 0 1px var(--token-color-palette-neutral-400) !important;
+
+    .box-label-header {
+      color: var(--token-color-foreground-strong);
+    }
+
+    // Unselected radio dot
+    input[type='radio'] + label {
+      border-color: var(--token-color-palette-neutral-400);
+      background: var(--token-color-surface-interactive-disabled);
+    }
+
+    // Selected state
+    &.is-selected {
+      background-color: var(--token-color-surface-primary) !important;
+      // Blue outline ring + elevation mid shadow
+      box-shadow:
+        0 0 0 1px var(--token-color-palette-blue-300),
+        0 2px 3px 0 var(--token-color-palette-alpha-100),
+        0 8px 16px -10px var(--token-color-palette-alpha-200) !important;
+
+      .box-label-header {
+        color: var(--token-color-foreground-strong);
+      }
+    }
+
+    // Selected radio dot
+    input[type='radio']:checked + label {
+      background: var(--token-color-palette-blue-200);
+      border-color: var(--token-color-palette-blue-300);
+      box-shadow: inset 0 0 0 0.15rem var(--token-color-foreground-high-contrast);
+    }
+  }
+}
+
+@mixin dark-mode-radio-card-override {
+  // ── Unselected card ──────────────────────────────────────────────────────
+  .radio-card {
+    background: var(--token-color-surface-interactive-disabled);
+    border-color: var(--token-color-palette-neutral-400);
+    box-shadow: none;
+
+    .radio-card-message-title {
+      color: var(--token-color-foreground-disabled);
+    }
+
+    .radio-card-message-body {
+      color: var(--token-color-foreground-disabled);
+    }
+
+    .radio-card-icon {
+      color: var(--token-color-foreground-disabled);
+    }
+
+    .radio-card-radio-row {
+      background: var(--token-color-surface-interactive-disabled);
+      border-top-color: var(--token-color-palette-neutral-400);
+    }
+
+    // Unselected radio dot
+    input[type='radio'] + span.dot {
+      border-color: var(--token-color-palette-neutral-400);
+      background: var(--token-color-surface-interactive-disabled);
+    }
+  }
+
+  // ── Selected card ────────────────────────────────────────────────────────
+  .is-selected.radio-card {
+    background: var(--token-color-surface-primary);
+    border-color: var(--token-color-palette-blue-300);
+    box-shadow:
+      0 2px 3px 0 var(--token-color-palette-alpha-100),
+      0 8px 16px -10px var(--token-color-palette-alpha-200);
+
+    .radio-card-message-title {
+      color: var(--token-color-foreground-strong);
+    }
+
+    .radio-card-message-body {
+      color: var(--token-color-foreground-primary);
+    }
+
+    .radio-card-icon {
+      color: var(--token-color-foreground-primary);
+    }
+
+    .radio-card-radio-row {
+      background: var(--token-color-surface-action);
+      border-top-color: var(--token-color-border-action);
+    }
+
+    // Selected radio dot
+    input[type='radio']:checked + span.dot {
+      background: var(--token-color-palette-blue-200);
+      border-color: var(--token-color-palette-blue-300);
+    }
+  }
+}
+
+@mixin dark-mode-button-overrides {
+  // hds-button--color-primary and hds-dropdown-toggle-button--color-primary both use
+  // --token-color-palette-blue-200 directly for their background. In dark mode that
+  // token resolves to #0073fb — a mid-blue. The dark-mode foreground-high-contrast
+  // token is #f1f2f3 (not pure #ffffff), which gives only ~4.0:1 on #0073fb (FAIL).
+  // Fix: override the background to #0055cc (#f1f2f3 on #0055cc ≈ 6.6:1 PASS) and
+  // set color to pure #ffffff for maximum margin. Also use !important on background
+  // so this wins over any more-specific light-mode selector in the compiled bundle.
+  //
+  // Exclusion: elements inside .hds-app-header already receive the correct neutral
+  // dark treatment from dark-mode-app-header-override (they should look like the
+  // help and user-menu toggles, not a primary-blue button). The :not() guard
+  // prevents this mixin from re-tinting the Console toggle and NamespacePicker.
+  /* stylelint-disable selector-class-pattern */
+  .hds-button--color-primary:not(.hds-app-header *),
+  .hds-button--color-primary:focus:not(.hds-app-header *),
+  .hds-button--color-primary.mock-focus:not(.hds-app-header *),
+  .hds-dropdown-toggle-button--color-primary:not(.hds-app-header *),
+  .hds-dropdown-toggle-button--color-primary:focus:not(.hds-app-header *),
+  .hds-dropdown-toggle-button--color-primary.mock-focus:not(.hds-app-header *) {
+    // stylelint-disable-next-line declaration-no-important
+    background-color: #0055cc !important;
+    border-color: #0046d1;
+    color: #ffffff;
+  }
+
+  .hds-button--color-primary:hover:not(.hds-app-header *),
+  .hds-button--color-primary.mock-hover:not(.hds-app-header *),
+  .hds-dropdown-toggle-button--color-primary:hover:not(.hds-app-header *),
+  .hds-dropdown-toggle-button--color-primary.mock-hover:not(.hds-app-header *) {
+    // stylelint-disable-next-line declaration-no-important
+    background-color: #0046d1 !important;
+    border-color: #0037ad;
+    color: #ffffff;
+  }
+
+  .hds-button--color-primary:active:not(.hds-app-header *),
+  .hds-button--color-primary.mock-active:not(.hds-app-header *),
+  .hds-dropdown-toggle-button--color-primary:active:not(.hds-app-header *),
+  .hds-dropdown-toggle-button--color-primary.mock-active:not(.hds-app-header *) {
+    // stylelint-disable-next-line declaration-no-important
+    background-color: #0040bf !important;
+    border-color: #0040bf;
+    color: #ffffff;
+  }
+  /* stylelint-enable selector-class-pattern */
+}
+
+@mixin dark-mode-component-overrides {
+  // ── HDS form label: hardcoded foreground token ────────────────────────────
+  // --token-form-label-foreground-color is set to #0c0c0e (near-black) in the
+  // HDS tokens stylesheet — it is NOT a reference to --token-color-foreground-primary.
+  // In dark mode #0c0c0e on the #030303 container background is essentially
+  // invisible. Override via both the custom property (for global cascade) and a
+  // direct class rule (belt-and-suspenders for Ember engine / scoped contexts
+  // where the custom property may not cascade reliably, e.g. KMIP RoleForm).
+  /* stylelint-disable selector-class-pattern */
+  --token-form-label-foreground-color: var(--token-color-foreground-primary);
+  .hds-form-label {
+    color: var(--token-color-foreground-primary);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  .hds-dialog-primitive__overlay {
+    background-color: var(--token-color-palette-neutral-300);
+    opacity: 0.8;
+  }
+
+  .hds-badge--color-highlight.hds-badge--type-filled {
+    background-color: var(--token-color-palette-purple-100);
+    color: var(--token-color-palette-purple-500);
+  }
+  .hds-badge--color-warning.hds-badge--type-filled {
+    background-color: var(--token-color-palette-amber-100);
+    color: var(--token-color-palette-amber-500);
+  }
+  .hds-badge--color-success.hds-badge--type-filled {
+    background-color: var(--token-color-palette-green-100);
+    color: var(--token-color-palette-green-500);
+  }
+  .hds-badge--color-critical.hds-badge--type-filled {
+    background-color: var(--token-color-palette-red-100);
+    color: var(--token-color-palette-red-500);
+  }
+
+  .hds-button.toolbar-button {
+    color: var(--token-color-foreground-primary);
+  }
+
+  .hds-card__container {
+    background-color: var(--token-color-surface-primary);
+    color: var(--token-color-foreground-primary);
+    border: 1px solid var(--token-color-palette-neutral-400);
+  }
+
+  .sticky-footer {
+    border-top: 1px solid var(--token-color-palette-neutral-200);
+    box-shadow: none;
+  }
+
+  // Force all .box surfaces and selectors that extend .box to the dark page
+  // background. Sass copies .box declarations into the extending selectors, so
+  // targeting .box alone does not override their hardcoded white background.
+  .box,
+  .sticky-footer,
+  .control-group,
+  .control-group-success,
+  .kmip-role-allowed-operations {
+    // stylelint-disable-next-line declaration-no-important
+    background-color: var(--token-color-surface-primary) !important;
+  }
+
+  .input,
+  .textarea {
+    background-color: var(--token-form-control-base-surface-color-default);
+    border-color: var(--token-form-control-base-border-color-default);
+    box-shadow: none;
+
+    &::placeholder {
+      color: var(--token-color-palette-neutral-400);
+      opacity: 1;
+    }
+
+    &:focus,
+    &:active,
+    &.is-active,
+    &:focus-visible {
+      background-color: var(--token-form-control-base-surface-color-default);
+    }
+
+    &:hover {
+      border-color: var(--token-form-control-base-border-color-hover);
+    }
+  }
+
+  .input[disabled],
+  .textarea[disabled] {
+    background-color: var(--token-form-control-disabled-surface-color);
+    border-color: var(--token-form-control-disabled-border-color);
+  }
+
+  .ember-basic-dropdown-content,
+  .ember-power-select-options {
+    background-color: var(--token-form-control-base-surface-color-default);
+  }
+
+  /* stylelint-disable selector-class-pattern */
+  // ember-power-select search input: the browser resets background to white on
+  // focus. Override all states so the input stays on the dark surface color.
+  .ember-power-select-search-input {
+    // stylelint-disable-next-line declaration-no-important
+    background-color: var(--token-form-control-base-surface-color-default) !important;
+    color: var(--token-color-foreground-primary);
+    border-color: var(--token-form-control-base-border-color-default);
+
+    &:focus,
+    &:focus-visible {
+      // stylelint-disable-next-line declaration-no-important
+      background-color: var(--token-form-control-base-surface-color-default) !important;
+      color: var(--token-color-foreground-primary);
+    }
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ember-power-select option text and background.
+  //
+  // popup-menu.scss sets `background-color: hsl(0,0%,100%)` on
+  // `.ember-power-select-option` inside `.popup-menu-content` / `.search-select
+  // .ember-power-select-options` with (0,3,0) specificity — higher than a plain
+  // `html[data-theme='dark'] .ember-power-select-option` override (0,2,0).
+  // The !important on background-color is intentional (same pattern as .box):
+  // it is the minimum needed to guarantee the dark surface wins regardless of
+  // cascade order in the compiled bundle.
+  //
+  // Covers all variants: plain options, search-message ("Type to search"),
+  // and hovered/current options.
+  /* stylelint-disable selector-class-pattern */
+  .ember-power-select-option,
+  .ember-power-select-option--search-message {
+    // stylelint-disable-next-line declaration-no-important
+    background-color: var(--token-form-control-base-surface-color-default) !important;
+    color: var(--token-color-foreground-primary);
+  }
+
+  // ember-power-select highlighted option: the global light-mode rule uses
+  // surface-interactive-hover; that token flips to near-black in dark mode
+  // which keeps foreground-primary (near-white) readable.
+  .ember-power-select-option[aria-current='true'] {
+    // stylelint-disable-next-line declaration-no-important
+    background-color: var(--token-color-surface-interactive-hover) !important;
+    color: var(--token-color-foreground-primary);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ── Carbon Charts: all chart holders ─────────────────────────────────────
+  // Carbon Charts hard-codes light-mode CDS tokens. Override the ones that
+  // control the chart background and text so they match the page surface.
+  // Targeting .cds--chart-holder broadly covers all chart wrapper classes used
+  // across usage-reporting, clients, and other dashboard components.
+  .ssu-horizontal-bar-chart__carbon-chart .cds--chart-holder {
+    --cds-grid-bg: var(--token-color-surface-primary); // SVG plot area fill
+    --cds-background: var(--token-color-surface-primary); // tooltip + label bg
+    --cds-layer-01: var(--token-color-surface-primary); // chart holder bg
+    --cds-text-secondary: var(--token-color-foreground-faint); // axis tick labels
+    --cds-text-primary: var(--token-color-foreground-primary); // legend text
+  }
+
+  // ── Carbon Charts: legend text ────────────────────────────────────────────
+  // The legend items use inline CDS classes (.cds--cc--legend) with hardcoded
+  // light-mode palette colors for text. Override the legend item color directly.
+  /* stylelint-disable selector-class-pattern */
+  .cds--cc--legend {
+    .cds--cc--legend-item--name,
+    p {
+      color: var(--token-color-foreground-primary);
+    }
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  .title {
+    color: var(--token-color-foreground-primary);
+  }
+
+  // .title.is-7 is used by KMIP operations section headings. The `.title`
+  // rule above sets the color but `.is-7` can add specificity from Bulma
+  // modifiers that override it. The !important ensures this wins regardless
+  // of cascade order in the compiled bundle.
+  /* stylelint-disable selector-class-pattern */
+  .title.is-7 {
+    // stylelint-disable-next-line declaration-no-important
+    color: var(--token-color-foreground-primary) !important;
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  .list-item-row {
+    background-color: var(--token-color-page-primary);
+  }
+
+  .has-text-black {
+    color: var(--token-color-foreground-strong) !important;
+  }
+
+  // ── HDS badge neutral: hardcoded palette token not covered by token-mappings ──
+  /* stylelint-disable selector-class-pattern */
+  .hds-badge--color-neutral.hds-badge--type-filled {
+    --token-badge-foreground-color-neutral-filled: var(--token-color-foreground-strong);
+    --token-badge-surface-color-neutral-filled: var(--token-color-surface-strong);
+  }
+
+  .hds-badge--color-neutral.hds-badge--type-outlined {
+    --token-badge-foreground-color-neutral-outlined: var(--token-color-foreground-primary);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ── HDS alert: warning/critical foreground tokens are hardcoded light values ──
+  // In dark mode, alert surfaces flip to near-black (e.g. amber-50 = #2e1b06,
+  // red-50 = #3f0d07). The HDS stylesheet hard-codes foreground-warning-on-surface
+  // (#9e4b00) and foreground-critical-on-surface (#c00005) as dark-on-light values.
+  // Override with light palette tokens so they remain readable on dark surfaces.
+  // Contrast ratios against their respective dark surfaces:
+  //   red-300 (#f9381e) on red-50 (#3f0d07) = 4.41:1 — FAILS, use red-500 instead
+  //   red-500 (#ff8c7c) on red-50 (#3f0d07) = 7.31:1 — PASS
+  //   amber-300 (#fda219) on amber-50 (#2e1b06) = 8.12:1 — PASS
+  //   purple-300 (#b14fff) on purple-50 (#2f1543) = 4.15:1 — FAILS, use purple-500 instead
+  //   purple-500 (#dda5ff) on purple-50 (#2f1543) = 8.33:1 — PASS
+  //   green-300 (#00ae4e) on green-50 (#042d16) = 5.15:1 — PASS
+  --token-color-foreground-warning-on-surface: var(--token-color-palette-amber-300);
+  --token-color-foreground-critical-on-surface: var(--token-color-palette-red-500);
+  --token-color-foreground-highlight-on-surface: var(--token-color-palette-purple-500);
+  --token-color-foreground-success-on-surface: var(--token-color-palette-green-300);
+
+  // ── HDS link-standalone / link-inline on dark alert surfaces ─────────────────
+  // The global foreground-action token is blue-300 (#4d9fff), which gives ~7.6:1 on
+  // the dark page background (passes AAA). On near-black alert surfaces (red-50, amber-50,
+  // purple-50) blue-300 gives 5.9–6.1:1 (passes AA). blue-400 (#5fbcff) gives 7.7–8.0:1
+  // on those surfaces (passes AAA) — use it scoped to alerts for a stronger margin.
+  /* stylelint-disable selector-class-pattern */
+  .hds-alert .hds-link-standalone,
+  .hds-alert .hds-link-inline {
+    --token-color-foreground-action: var(--token-color-palette-blue-400);
+    --token-color-foreground-action-hover: var(--token-color-palette-blue-500);
+    --token-color-foreground-action-active: var(--token-color-palette-blue-300);
+  }
+
+  // ── Links on colored surface rows (about-this-engine) ──────────────────────
+  // blue-300 (#4d9fff) on surface-highlight (purple-50 #2f1543) = 5.9:1 PASS
+  // blue-300 (#4d9fff) on surface-warning (amber-50 #2e1b06)  = 6.1:1 PASS
+  // blue-400 (#5fbcff) gives 7.7:1 and 7.9:1 respectively — used for a stronger margin.
+  .has-background-surface-highlight .hds-link-inline,
+  .has-background-surface-warning .hds-link-inline {
+    --token-color-foreground-action: var(--token-color-palette-blue-400);
+    --token-color-foreground-action-hover: var(--token-color-palette-blue-500);
+    --token-color-foreground-action-active: var(--token-color-palette-blue-300);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ── control-group: code, pre, p, label, status divs, and plain text ──────
+  // Both .control-group and .control-group-success use .box as their surface
+  // (now dark via the .box !important override), but child elements are
+  // targeted by browser-default or light-mode rules that produce dark-on-dark
+  // text. Override all child element types explicitly for both containers.
+  // The [data-test-requestor-text] div contains bare text (not wrapped in <p>)
+  // so we also target .control-group div directly.
+  /* stylelint-disable selector-class-pattern */
+  .control-group,
+  .control-group div,
+  .control-group code,
+  .control-group pre,
+  .control-group p,
+  .control-group .is-label,
+  .control-group-success,
+  .control-group-success code,
+  .control-group-success pre,
+  .control-group-success p,
+  .control-group-success .is-label,
+  .authorizations {
+    color: var(--token-color-foreground-primary);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ── autocomplete-input: text inside the now-dark surface ─────────────────
+  .autocomplete-input-option {
+    color: var(--token-color-foreground-primary);
+  }
+
+  // ── b64-toggle button ─────────────────────────────────────────────────────
+  // .b64-toggle extends .button which hard-codes a light-mode color.
+  /* stylelint-disable selector-class-pattern */
+  .b64-toggle {
+    color: var(--token-color-foreground-primary);
+    background-color: var(--token-color-surface-interactive);
+    border-color: var(--token-color-border-primary);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ── search-select-list-key <small> ────────────────────────────────────────
+  // The <small> ID label in search-select dropdowns uses faint text. In dark
+  // mode the dropdown background is dark so foreground-faint still needs to be
+  // explicitly set to ensure sufficient contrast.
+  /* stylelint-disable selector-class-pattern */
+  .search-select-list-key {
+    color: var(--token-color-foreground-faint);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ── jsondiffpatch: property names and pre content ─────────────────────────
+  // jsondiffpatch renders diff views with hard-coded dark-on-white colors.
+  // Override to use foreground tokens so they read on the dark surface.
+  /* stylelint-disable selector-class-pattern */
+  .jsondiffpatch-property-name,
+  .jsondiffpatch-value pre {
+    color: var(--token-color-foreground-primary);
+  }
+  /* stylelint-enable selector-class-pattern */
+
+  // ── Open API Explorer supplemental overrides ─────────────────────────────
+  // The swagger-ui override in dark-mode-swagger-override already handles most
+  // of the OAS explorer. These additional rules cover opblock-summary-operation-id
+  // (the route name), the pre.version OAS version stamp, and inline code.
+  /* stylelint-disable selector-class-pattern */
+  .swagger-ember .swagger-ui {
+    .parameters,
+    .col_header,
+    .table-container {
+      color: var(--token-color-palette-neutral-700);
+    }
+
+    .opblock-summary-operation-id {
+      color: var(--token-color-foreground-primary);
+    }
+
+    // .info pre.version — may appear on green-300 (OAS stamp, #00ae4e) or
+    // surface-strong (version pill, #121214). foreground-high-contrast
+    // (neutral-700 = #f1f2f3) gives 4.68:1 on green-300 and 16:1 on #121214.
+    .info pre.version {
+      color: var(--token-color-foreground-high-contrast);
+    }
+
+    // .info code — purple-500 (#dda5ff) on surface-highlight (#2f1543) ~10:1.
+    .info code {
+      color: var(--token-color-palette-purple-500);
+      background-color: var(--token-color-surface-highlight);
+    }
+
+    // Catch-all for method badges not covered by the swagger override mixin.
+    .opblock-summary-method {
+      color: var(--token-color-foreground-high-contrast);
+    }
+  }
+  /* stylelint-enable selector-class-pattern */
+}

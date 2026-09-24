@@ -1,0 +1,34 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+@use 'variables' as vars;
+@use 'overrides' as overrides;
+@use '../token-mappings' as mappings;
+
+@mixin dark-theme {
+  color-scheme: dark;
+
+  @include vars.dark-variables;
+  @include mappings.dark-token-mappings;
+  @include overrides.dark-mode-app-header-override;
+  @include overrides.dark-mode-app-side-nav-override;
+  @include overrides.dark-mode-console-override;
+  @include overrides.dark-mode-swagger-override;
+  @include overrides.dark-mode-box-label-override;
+  @include overrides.dark-mode-radio-card-override;
+  @include overrides.dark-mode-button-overrides;
+  @include overrides.dark-mode-component-overrides;
+}
+
+// System default: apply when OS is dark and no explicit theme is set.
+// Explicit: user has selected dark mode in the app.
+html[data-theme='dark'] {
+  @include dark-theme;
+}
+
+html[data-theme='dark'] body {
+  background-color: var(--token-color-page-primary);
+  color: var(--token-color-foreground-primary);
+}

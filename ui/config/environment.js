@@ -84,6 +84,8 @@ module.exports = function (environment) {
       enabled: false,
     };
     ENV.APP.ANALYTICS_CONFIG = { enabled: false };
+    // Set DARK_THEME_AUDIT=true to enable the dark-theme audit setup in test-helper.js.
+    ENV.APP.DARK_THEME_AUDIT = process.env.DARK_THEME_AUDIT === 'true';
   }
 
   if (environment !== 'production') {

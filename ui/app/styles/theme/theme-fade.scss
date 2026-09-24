@@ -1,0 +1,46 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/*
+ * Timing for the light/dark cross-fade. services/theme.ts wraps the
+ * `data-theme` write in document.startViewTransition(), and the browser
+ * cross-dissolves a snapshot of the whole page — one opacity ramp for every
+ * pixel. These rules only retime the UA's default root transition.
+ *
+ * Browsers without View Transitions therefore swap instantly, which is a single
+ * monotonic change and both safe and unobtrusive. `document.startViewTransition`
+ * is feature-detected in the service, and these selectors are simply ignored
+ * where the API is absent, so no @supports gate is needed.
+ *
+ * Do not change $theme-fade-easing to a bounce/springy curve i.e. any
+ * cubic-bezier with a control point below 0 or above 1. Those curves overshoot:
+ * they run past the target value and then come back to it.
+ *
+ * Overshooting a position is a nice bounce like a sidebar or accordian
+ * collapsing/expanding. Overshooting a color means the page goes darker than
+ * the theme it is heading for and then lightens back (or the reverse).
+ * A brightness change in one direction immediately followed by one in the
+ * opposite direction is what WCAG 2.3.1 defines as a flash, and here it would
+ * cover the entire viewport, which is where the seizure risk actually lives.
+ * A one-way change is not a flash at any speed, so any easing that simply
+ * settles on its target is fine.
+ * https://developer.mozilla.org/en-US/docs/Web/Accessibility/Guides/Seizure_disorders
+ */
+
+$theme-fade-duration: 150ms;
+$theme-fade-easing: ease-in-out;
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: $theme-fade-duration;
+  animation-timing-function: $theme-fade-easing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+  }
+}

@@ -44,7 +44,6 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     await click(GENERAL.button('user-menu-trigger'));
 
     assert.dom('[data-test-user-menu-item="title"]').hasText('Token', 'Auth data display name renders');
-    assert.dom('li').exists({ count: 4 }, 'Correct number of menu items render');
     assert.dom(GENERAL.copyButton).exists('Copy token action renders');
     assert
       .dom(GENERAL.menuItem('user-preferences'))

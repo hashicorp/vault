@@ -27,7 +27,7 @@ $console-close-height: 35px;
 }
 
 .console-ui-panel-content {
-  color: hsl(0, 0%, 100%);
+  color: var(--token-color-palette-neutral-0);
   display: flex;
   flex-direction: column;
   font-size: size_variables.$size-7;
@@ -48,6 +48,9 @@ $console-close-height: 35px;
 
   .console-ui-panel-intro {
     color: var(--token-color-palette-neutral-400);
+    a {
+      color: #f1f2f3;
+    }
   }
 }
 
@@ -58,9 +61,9 @@ $console-close-height: 35px;
   input {
     background-color: rgba(hsl(0, 0%, 4%), 0.5);
     border: 1px solid var(--token-color-palette-neutral-500);
-    border-radius: var(--token-border-radius-small);
-    caret-color: hsl(0, 0%, 100%);
-    color: hsl(0, 0%, 100%);
+    border-radius: var(--token-side-nav-body-list-item-border-radius);
+    caret-color: var(--token-color-palette-neutral-0);
+    color: var(--token-color-palette-neutral-0);
     flex: 1 1 auto;
     font-family: var(--token-typography-font-stack-code);
     font-size: var(--token-typography-body-300-font-size);
@@ -101,6 +104,20 @@ $console-close-height: 35px;
 
   &.console-ui-alert--error {
     color: color.adjust(#e52228, $lightness: 20%);
+
+    // Raw <a> links are injected as HTML (e.g. control group accessor URLs).
+    // The console panel is always a dark surface (neutral-700 light = #0c0c0e;
+    // dark-mode override pins it to #1f2633). Palette blue tokens flip between
+    // themes and give poor contrast on this surface in light mode, so pin to
+    // the dark-mode blue-500 value (#5fbcff) which gives ≥7:1 on both panel
+    // backgrounds.
+    a {
+      color: #5fbcff; // blue-500 dark value: 9.4:1 on #0c0c0e, 7.3:1 on #1f2633
+
+      &:hover {
+        color: #3491ff; // blue-400 dark value: still 4.8:1 on both surfaces
+      }
+    }
   }
   &.console-ui-alert--success {
     color: color.adjust(#008a22, $lightness: 20%);
@@ -148,5 +165,28 @@ $console-close-height: 35px;
 
   button {
     margin-right: size_variables.$spacing-8;
+  }
+}
+
+// The console is always a dark surface regardless of theme. Pin the icon
+// buttons to neutral palette tokens so the dark-mode palette flip doesn't
+// invert them to near-white.
+.console-ui-panel .hds-side-nav__icon-button {
+  background-color: var(--token-color-palette-neutral-700);
+  border-color: var(--token-color-palette-neutral-500);
+  color: var(--token-color-palette-neutral-0);
+
+  &:hover {
+    background-color: var(--token-color-palette-neutral-600);
+    border-color: var(--token-color-palette-neutral-500);
+  }
+
+  &:active {
+    background-color: var(--token-color-palette-neutral-500);
+    border-color: var(--token-color-palette-neutral-400);
+  }
+
+  &:focus {
+    background-color: var(--token-color-palette-neutral-700);
   }
 }

@@ -15,7 +15,6 @@
       @type="page"
       @color="highlight"
       @onDismiss={{fn (mut @showMessagePreviewModal) false}}
-      class="has-bottom-margin-s"
       data-test-custom-alert={{@message.title}}
       as |A|
     >
@@ -40,10 +39,7 @@
       {{/unless}}
 
     </Hds::Alert>
-    <img
-      src={{img-path (if @message.authenticated "~/custom-messages-dashboard.png" "~/custom-messages-login.png")}}
-      alt={{if @message.authenticated "dashboard page preview" "login page preview"}}
-    />
+    <img src={{img-path this.imageSrc}} alt={{if @message.authenticated "dashboard page preview" "login page preview"}} />
   </M.Body>
   <M.Footer as |F|>
     <Hds::Button @text="Close preview" {{on "click" F.close}} data-test-button="Close preview" />

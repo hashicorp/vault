@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 // Two stub engines that should appear in the list (shouldIncludeInList = true for non-internal types)
 const STUB_ENGINES = {
@@ -164,5 +165,54 @@ module('Acceptance | secrets backends list view', function (hooks) {
     await visit('/vault/dashboard');
     await visit('/vault/secrets-engines');
     assert.false(currentURL().includes('page=2'), 'page param was reset');
+  });
+
+  // ── Dark mode icon resolution ─────────────────────────────────────────────
+
+  module('engine type dropdown icons in dark mode', function (hooks) {
+    hooks.beforeEach(function () {
+      this.theme = this.owner.lookup('service:theme');
+    });
+
+    hooks.afterEach(function () {
+      this.theme.setTheme('light');
+    });
+
+    test('engine type dropdown shows monochrome icons in dark mode', async function (assert) {
+      // Verify that -color glyphs are stripped for aws and kv engine types.
+      const awsGlyph = engineDisplayData('aws')?.glyph ?? 'lock';
+      const kvGlyph = engineDisplayData('kv')?.glyph ?? 'lock';
+
+      this.theme.setTheme('dark');
+      await visit('/vault/secrets-engines');
+      await click(GENERAL.toggleInput('filter-by-engine-type'));
+
+      // In dark mode the -color suffix should be stripped.
+      const expectedAws = awsGlyph.replace(/-color$/, '');
+      const expectedKv = kvGlyph.replace(/-color$/, '');
+
+      assert
+        .dom(`[data-test-checkbox="aws"] [data-test-icon="${expectedAws}"]`)
+        .exists(`aws engine uses monochrome icon "${expectedAws}" in dark mode`);
+      assert
+        .dom(`[data-test-checkbox="kv"] [data-test-icon="${expectedKv}"]`)
+        .exists(`kv engine uses monochrome icon "${expectedKv}" in dark mode`);
+    });
+
+    test('engine type dropdown shows colour icons in light mode', async function (assert) {
+      const awsGlyph = engineDisplayData('aws')?.glyph ?? 'lock';
+      const kvGlyph = engineDisplayData('kv')?.glyph ?? 'lock';
+
+      this.theme.setTheme('light');
+      await visit('/vault/secrets-engines');
+      await click(GENERAL.toggleInput('filter-by-engine-type'));
+
+      assert
+        .dom(`[data-test-checkbox="aws"] [data-test-icon="${awsGlyph}"]`)
+        .exists(`aws engine uses colour icon "${awsGlyph}" in light mode`);
+      assert
+        .dom(`[data-test-checkbox="kv"] [data-test-icon="${kvGlyph}"]`)
+        .exists(`kv engine uses colour icon "${kvGlyph}" in light mode`);
+    });
   });
 });
