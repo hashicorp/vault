@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	"github.com/hashicorp/vault/command/server"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 )

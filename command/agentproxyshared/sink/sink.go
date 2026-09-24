@@ -15,7 +15,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/dhutil"
+	"github.com/hashicorp/vault/internalshared/dhutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 

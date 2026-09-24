@@ -451,6 +451,7 @@ jobs:
           export VAULT_TEST_LOG_DIR
           mkdir -p "$VAULT_TEST_LOG_DIR"
           unset VAULT_ADDR
+          export GOWORK=off
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
             gotestsum --format=short-verbose \
@@ -654,7 +655,7 @@ jobs:
           cepackages=$(go list -e -json -tags testonly ${packages} |
             jq -r 'select(.TestGoFiles|length>0) | select(.Module.Path == "github.com/hashicorp/vault") | .Dir')
           # shellcheck disable=SC2086 # can't quote cepackages
-          go test -o /dev/null -c ${cepackages}
+          GOWORK=off go test -o /dev/null -c ${cepackages}
 
   status:
     # Perform final data aggregation and determine overall status

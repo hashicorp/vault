@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/internalshared/useragent"
 )
 
 // mockProxier is a mock implementation of the Proxier interface, used for testing purposes.

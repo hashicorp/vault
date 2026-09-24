@@ -37,7 +37,8 @@ jobs:
       - name: update plugin
         run: |
           go get "github.com/$PLUGIN_REPO@$PLUGIN_BRANCH"
-          go mod tidy
+          GOWORK=off go mod tidy
+          go work sync
 
       - name: detect changes
         id: changes

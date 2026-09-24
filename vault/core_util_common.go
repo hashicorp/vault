@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/server"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cert_count"
 )

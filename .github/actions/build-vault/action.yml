@@ -248,6 +248,11 @@ runs:
         # GitHub rate limits when downloading nfpm. This is safe for CE and Ent as
         # the token is only used for nfpm.
         GH_TOKEN: ${{ inputs.github-token || github.token }}
+        # The action builds an nfpm_template binary via `go build .` from a
+        # subdirectory that is not part of the workspace.  Disable workspace
+        # mode so Go resolves against that subdirectory's own module rather
+        # than failing to find the package in the root module.
+        GOWORK: "off"
       with:
         name: ${{ inputs.package-name }}
         description: Vault is a tool for secrets management, encryption as a service, and privileged access management.

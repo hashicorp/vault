@@ -1,0 +1,19 @@
+go 1.27.1
+
+use (
+	.
+	./api
+	./api/auth/approle
+	./api/auth/aws
+	./api/auth/azure
+	./api/auth/cert
+	./api/auth/gcp
+	./api/auth/kubernetes
+	./api/auth/ldap
+	./api/auth/userpass
+	./internalshared
+	./sdk
+	./tools/pipeline
+	./vault/hcp_link/proto
+	./version
+)

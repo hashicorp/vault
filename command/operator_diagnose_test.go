@@ -39,7 +39,7 @@ func generateTLSConfigOk(t *testing.T, ca pkihelper.LeafWithIntermediary) string
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "tls_config_ok.hcl")
 
-	templateFile := "./server/test-fixtures/tls_config_ok.hcl"
+	templateFile := "../helper/serverconfig/test-fixtures/tls_config_ok.hcl"
 	contents, err := os.ReadFile(templateFile)
 	if err != nil {
 		t.Fatalf("failed to read file %s: %v", templateFile, err)
@@ -60,7 +60,7 @@ func generateTransitTLSCheck(t *testing.T, ca pkihelper.LeafWithIntermediary) st
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "diagnose_seal_transit_tls_check.hcl")
 
-	templateFile := "./server/test-fixtures/diagnose_seal_transit_tls_check.hcl"
+	templateFile := "../helper/serverconfig/test-fixtures/diagnose_seal_transit_tls_check.hcl"
 	contents, err := os.ReadFile(templateFile)
 	if err != nil {
 		t.Fatalf("failed to read file %s: %v", templateFile, err)
@@ -91,7 +91,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_ok",
 			[]string{
-				"-config", "./server/test-fixtures/config_diagnose_ok_singleseal.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/config_diagnose_ok_singleseal.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -226,7 +226,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_ok_multiseal",
 			[]string{
-				"-config", "./server/test-fixtures/config_diagnose_ok.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/config_diagnose_ok.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -358,7 +358,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_raft_problems",
 			[]string{
-				"-config", "./server/test-fixtures/config_raft.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/config_raft.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -386,7 +386,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_invalid_storage",
 			[]string{
-				"-config", "./server/test-fixtures/nostore_config.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/nostore_config.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -421,7 +421,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_invalid_https_storage",
 			[]string{
-				"-config", "./server/test-fixtures/config_bad_https_storage.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/config_bad_https_storage.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -451,7 +451,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_invalid_https_hastorage",
 			[]string{
-				"-config", "./server/test-fixtures/config_diagnose_hastorage_bad_https.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/config_diagnose_hastorage_bad_https.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -526,7 +526,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_invalid_https_sr",
 			[]string{
-				"-config", "./server/test-fixtures/diagnose_bad_https_consul_sr.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/diagnose_bad_https_consul_sr.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -555,7 +555,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_direct_storage_access",
 			[]string{
-				"-config", "./server/test-fixtures/diagnose_ok_storage_direct_access.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/diagnose_ok_storage_direct_access.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -584,7 +584,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_raft_no_folder_backend",
 			[]string{
-				"-config", "./server/test-fixtures/diagnose_raft_no_bolt_folder.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/diagnose_raft_no_bolt_folder.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -604,7 +604,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_telemetry_partial_circonus",
 			[]string{
-				"-config", "./server/test-fixtures/diagnose_bad_telemetry1.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/diagnose_bad_telemetry1.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -617,7 +617,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_telemetry_partial_dogstats",
 			[]string{
-				"-config", "./server/test-fixtures/diagnose_bad_telemetry2.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/diagnose_bad_telemetry2.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -630,7 +630,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_telemetry_partial_stackdriver",
 			[]string{
-				"-config", "./server/test-fixtures/diagnose_bad_telemetry3.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/diagnose_bad_telemetry3.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -643,7 +643,7 @@ func TestOperatorDiagnoseCommand_Run(t *testing.T) {
 		{
 			"diagnose_telemetry_default",
 			[]string{
-				"-config", "./server/test-fixtures/config4.hcl",
+				"-config", "../helper/serverconfig/test-fixtures/config4.hcl",
 			},
 			[]*diagnose.Result{
 				{
@@ -742,8 +742,8 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 	}
 
 	// Remove raft file if it exists
-	os.Remove("./server/test-fixtures/vault.db")
-	os.RemoveAll("./server/test-fixtures/raft")
+	os.Remove("../helper/serverconfig/test-fixtures/vault.db")
+	os.RemoveAll("../helper/serverconfig/test-fixtures/raft")
 
 	return nil
 }

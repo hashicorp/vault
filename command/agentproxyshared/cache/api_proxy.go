@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/namespace"
 )
 
 //go:generate enumer -type=EnforceConsistency -trimprefix=EnforceConsistency

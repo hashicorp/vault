@@ -62,6 +62,11 @@ fi
 echo "All required dependencies are available."
 pushd "$root_dir" > /dev/null
 
+# Disable workspace mode so tests resolve against the module's own go.mod
+# rather than the workspace, ensuring deps are resolvable without private
+# workspace credentials.
+export GOWORK=off
+
 # Create unique output files for test results
 timestamp="$(date +%s)_$$"
 json_output="/tmp/vault_test_results_${timestamp}.json"
@@ -310,7 +315,7 @@ cmd_lines=()
 for line in "${env_lines[@]}"; do
     cmd_lines+=("  ${line} \\")
 done
-cmd_lines+=("  go test -count=1 -timeout=${test_timeout} \\")
+cmd_lines+=("  GOWORK=off go test -count=1 -timeout=${test_timeout} \\")
 [[ -n "${tags}" ]]       && cmd_lines+=("    ${tags} \\")
 [[ -n "${run_filter}" ]] && cmd_lines+=("    ${run_filter} \\")
 # Last line: package with no trailing backslash

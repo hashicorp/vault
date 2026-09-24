@@ -12,7 +12,7 @@ listener "tcp" {
 }
 
 storage "raft" {
-  path = "./server/test-fixtures/"
+  path = "../helper/serverconfig/test-fixtures/"
   node_id = "raft_node_1"
 }
 cluster_addr = "http://127.0.0.1:8201"
