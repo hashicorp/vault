@@ -264,8 +264,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		req.JwtIssuer = getJwtIssuer(tokenMetadataContainer)
 		req.JwtTransactionClaim = getJwtTransaction(tokenMetadataContainer)
 		req.JwtAudienceClaim = getJwtAudience(tokenMetadataContainer)
-		_, req.JwtAuthorizationDetailsClaimPresent = tokenMetadataContainer["authorization_details"]
-		req.JwtAuthorizationDetails = getJwtAuthorizationDetails(tokenMetadataContainer)
+		authorizationDetailsClaim := getAuthorizationDetailsClaim(chosenProfile)
+		_, req.JwtAuthorizationDetailsClaimPresent = tokenMetadataContainer[authorizationDetailsClaim]
+		req.JwtAuthorizationDetails = getJwtAuthorizationDetails(tokenMetadataContainer, chosenProfile)
 		actorEntity = jwtActor
 		err = c.createAndStoreOAuthJwtTokenEntry(ctx, req, tokenMetadataContainer, entity, jwtActor, chosenProfile)
 		if err != nil {
