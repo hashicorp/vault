@@ -723,6 +723,11 @@ func (c *AgentCommand) Run(args []string) int {
 		if "metrics_only" != lnConfig.Role {
 			mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 			mux.Handle(consts.AgentPathQuit, c.handleQuit(quitEnabled))
+			rotationHandler := ts.PKIRotationHandler(lnConfig.AgentAPI != nil && lnConfig.AgentAPI.EnablePKIRotate)
+			if lnConfig.RequireRequestHeader {
+				rotationHandler = verifyRequestHeader(rotationHandler)
+			}
+			mux.Handle("/agent/v1/templates/rotate", rotationHandler)
 			mux.Handle("/", muxHandler)
 		}
 

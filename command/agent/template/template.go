@@ -68,8 +68,9 @@ type Server struct {
 	config *ServerConfig
 
 	// runner is the consul-template runner
-	runner        *manager.Runner
-	runnerStarted *atomic.Bool
+	runner         *manager.Runner
+	runnerStarted  *atomic.Bool
+	rotateRequests chan pkiRotationRequest
 
 	// Templates holds the parsed Consul Templates
 	Templates []*ctconfig.TemplateConfig
@@ -89,9 +90,10 @@ type Server struct {
 // NewServer returns a new configured server
 func NewServer(conf *ServerConfig) *Server {
 	ts := Server{
-		DoneCh:        make(chan struct{}),
-		stopped:       atomic.NewBool(false),
-		runnerStarted: atomic.NewBool(false),
+		DoneCh:         make(chan struct{}),
+		stopped:        atomic.NewBool(false),
+		runnerStarted:  atomic.NewBool(false),
+		rotateRequests: make(chan pkiRotationRequest),
 
 		logger:        conf.Logger,
 		config:        conf,
@@ -209,6 +211,13 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				ts.runnerStarted.CAS(false, true)
 				go ts.runner.Start()
 			}
+
+		case request := <-ts.rotateRequests:
+			count := 0
+			if request.ctx.Err() == nil && ts.runnerStarted.Load() && ts.runner != nil {
+				count = ts.runner.ForcePKIRefresh(request.destination)
+			}
+			request.result <- count
 
 		case <-certIssuedCh:
 			// A PKI external CA issued or renewed a certificate; restart the runner

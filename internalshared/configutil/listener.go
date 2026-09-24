@@ -193,7 +193,8 @@ type Listener struct {
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
 type AgentAPI struct {
-	EnableQuit bool `hcl:"enable_quit"`
+	EnableQuit      bool `hcl:"enable_quit"`
+	EnablePKIRotate bool `hcl:"enable_pki_rotate"`
 }
 
 // ProxyAPI allows users to select which parts of the Vault Proxy API they want enabled.
