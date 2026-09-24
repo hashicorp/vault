@@ -39,7 +39,11 @@ func getJwtAudience(_ map[string]interface{}) []string {
 	return nil
 }
 
-func getJwtAuthorizationDetails(_ map[string]interface{}) []logical.AuthorizationDetail {
+func getAuthorizationDetailsClaim(_ *OAuthResourceServerConfigProfile) string {
+	return "authorization_details"
+}
+
+func getJwtAuthorizationDetails(_ map[string]interface{}, _ *OAuthResourceServerConfigProfile) []logical.AuthorizationDetail {
 	return nil
 }
 
