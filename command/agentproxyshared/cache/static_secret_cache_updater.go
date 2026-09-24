@@ -24,7 +24,7 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/internalshared/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/exp/maps"
 )

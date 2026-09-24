@@ -8,7 +8,7 @@ package diagnose
 import (
 	"io/fs"
 
-	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/internalshared/osutil"
 )
 
 // IsOwnedByRoot checks if a file is owned by root

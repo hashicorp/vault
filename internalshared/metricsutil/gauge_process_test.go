@@ -15,7 +15,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	metrics "github.com/hashicorp/go-metrics/compat"
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 )
 
 // SimulatedTime maintains a virtual clock so the test isn't

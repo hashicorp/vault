@@ -24,8 +24,8 @@ do
 		cd $plugin
 		rm -rf vendor
 		go get github.com/hashicorp/vault/api${API_BRANCH}
-		go mod tidy
-		go mod vendor
+		GOWORK=off go mod tidy
+		GOWORK=off go mod vendor
 		git add .
 		git commit --allow-empty -m "Updating vault dep"
 		if [ ! -z $PUSH_COMMITS ]
@@ -40,9 +40,10 @@ do
 done
 
 cd vault
-go mod tidy
+GOWORK=off go mod tidy
+go work sync
 rm -rf vendor
-go mod vendor
+GOWORK=off go mod vendor
 git add .
 git commit --allow-empty -m "Updating plugin deps"
 if [ ! -z $PUSH_VAULT_COMMIT ]

@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 )
@@ -1432,7 +1432,7 @@ func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, current
 // - Example: 1-year cert (8760 hours) = 12.0000 units
 // - Example: 1-day cert (24 hours) = 0.0329 units
 func DurationAdjustedTokenCount(tokenDurationSeconds float64) float64 {
-	validityHours := tokenDurationSeconds / (time.Hour.Seconds())
+	validityHours := tokenDurationSeconds / time.Hour.Seconds()
 	units := validityHours / DurationAdjustedStandardDuration
 	// Round to 4 decimal places
 	ret := math.Round(units*DecimalPrecisionMultiplier) / DecimalPrecisionMultiplier

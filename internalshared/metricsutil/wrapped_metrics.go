@@ -9,7 +9,7 @@ import (
 	"time"
 
 	metrics "github.com/hashicorp/go-metrics/compat"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 )
 
 // ClusterMetricSink serves as a shim around go-metrics

@@ -18,7 +18,7 @@ import (
 func RunGoModTidy(ctx context.Context, path string) error {
 	cmd := exec.CommandContext(ctx, "go", "mod", "tidy")
 	cmd.Dir = filepath.Dir(path)
-	cmd.Env = os.Environ()
+	cmd.Env = append(os.Environ(), "GOWORK=off")
 	slog.Default().DebugContext(ctx, "running go mod tidy",
 		slog.String("dir", cmd.Dir),
 	)

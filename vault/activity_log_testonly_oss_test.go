@@ -12,9 +12,9 @@ import (
 	"time"
 
 	metrics "github.com/hashicorp/go-metrics/compat"
-	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/stretchr/testify/require"
 )

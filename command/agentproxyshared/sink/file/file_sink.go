@@ -13,7 +13,7 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/internalshared/osutil"
 )
 
 // fileSink is a Sink implementation that writes a token to a file

@@ -12,9 +12,9 @@ import (
 	"time"
 
 	metrics "github.com/hashicorp/go-metrics/compat"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -466,7 +466,7 @@ func (c *Core) findOfficialKvMounts(ctx context.Context, includeLocal, includeRe
 				continue
 			}
 
-			if !(isOfficialOrBuiltin(runner)) {
+			if !isOfficialOrBuiltin(runner) {
 				continue
 			}
 

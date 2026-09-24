@@ -20,7 +20,7 @@ import (
 	metrics "github.com/hashicorp/go-metrics/compat"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/internalshared/useragent"
 	"github.com/hashicorp/vault/sdk/physical"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
