@@ -266,12 +266,14 @@ func wrapWithEC(pub *ecdsa.PublicKey, plaintext []byte) ([]byte, error) {
 	// Generate an ephemeral key on the same curve as the recipient key.
 	var ephPriv *ecdh.PrivateKey
 	switch pub.Curve {
+	case elliptic.P256():
+		ephPriv, err = ecdh.P256().GenerateKey(rand.Reader)
 	case elliptic.P384():
 		ephPriv, err = ecdh.P384().GenerateKey(rand.Reader)
 	case elliptic.P521():
 		ephPriv, err = ecdh.P521().GenerateKey(rand.Reader)
-	default: // P-256
-		ephPriv, err = ecdh.P256().GenerateKey(rand.Reader)
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported EC curve %v", pub.Curve.Params().Name)}
 	}
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("failed to generate ephemeral EC key: %v", err)}

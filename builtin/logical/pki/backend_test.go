@@ -15,6 +15,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
@@ -4026,6 +4027,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"issuer_ref":                         "default",
 		"cn_validations":                     []interface{}{"email", "hostname"},
 		"allowed_user_ids":                   []interface{}{},
+		"csr_extra_names_oids":               []interface{}{},
 	}
 
 	if issuing.MetadataPermitted {
@@ -6755,11 +6757,13 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "robot")
 
-	// 6. Use a glob.
+	// 6. Use a glob; also enable csr_extra_names_oids so the sign/ sub-test below
+	// can read the userID from the CSR subject.
 	resp, err = CBWrite(b, s, "roles/testing", map[string]interface{}{
-		"allowed_user_ids": "human*",
-		"key_type":         "ec",
-		"use_csr_sans":     true, // setup for further testing.
+		"allowed_user_ids":     "human*",
+		"csr_extra_names_oids": certutil.SubjectPilotUserIDAttributeOID.String(),
+		"key_type":             "ec",
+		"use_csr_sans":         true, // setup for further testing.
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed setting up role")
 
@@ -6830,6 +6834,148 @@ func TestUserIDsInLeafCerts(t *testing.T) {
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed issuing leaf cert")
 	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "humanoid")
+}
+
+// TestCsrExtraNamesOIDsOnSignEndpoint verifies csr_extra_names_oids behaviour on
+// the REST sign/:role endpoint for the userID OID.
+//
+// Cases covered:
+//   - OID listed + value permitted by allowed_user_ids → userID appears in cert
+//   - OID listed + value NOT permitted by allowed_user_ids → request rejected
+//   - OID not listed → userID silently dropped (current behaviour preserved)
+func TestCsrExtraNamesOIDsOnSignEndpoint(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Vault Root CA",
+		"key_type":    "ec",
+		"ttl":         "7200h",
+	})
+	require.NoError(t, err)
+
+	userIDOID := certutil.SubjectPilotUserIDAttributeOID
+
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{Type: userIDOID, Value: "alice"},
+			},
+		},
+	}
+	_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+	// 1. OID listed, value permitted — userID must appear in the issued cert.
+	resp, err := CBWrite(b, s, "roles/with-oid", map[string]interface{}{
+		"allow_any_name":       true,
+		"allowed_user_ids":     "alice",
+		"csr_extra_names_oids": userIDOID.String(),
+		"key_type":             "ec",
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/with-oid", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected sign to succeed")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "alice")
+
+	// 2. OID listed, value NOT permitted — request must be rejected.
+	resp, err = CBWrite(b, s, "roles/restricted", map[string]interface{}{
+		"allow_any_name":       true,
+		"allowed_user_ids":     "bob",
+		"csr_extra_names_oids": userIDOID.String(),
+		"key_type":             "ec",
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/restricted", map[string]interface{}{
+		"csr": csrPem,
+	})
+	require.Error(t, err, "expected rejection for disallowed userID")
+	require.True(t, resp.IsError())
+	require.Contains(t, resp.Data["error"].(string), "is not allowed by this role")
+
+	// 3. OID NOT listed — userID from the CSR must be silently dropped.
+	// The sign still succeeds; the userID is simply not present in the cert.
+	resp, err = CBWrite(b, s, "roles/no-oid", map[string]interface{}{
+		"allow_any_name":   true,
+		"allowed_user_ids": "alice",
+		"key_type":         "ec",
+		// csr_extra_names_oids deliberately omitted
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/no-oid", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected sign to succeed even without OID listed")
+	requireSubjectUserIDAttr(t, resp.Data["certificate"].(string), "" /* dropped — OID not in csr_extra_names_oids */)
+}
+
+// TestCsrExtraNamesOIDsUnrelatedOID verifies that a non-userID OID listed in
+// csr_extra_names_oids passes through to the issued certificate, and that an
+// OID not in the list is silently dropped.
+//
+// OIDs are under the id-on arc (1.3.6.1.5.5.7.13) following the convention
+// used for test OIDs in this package.
+func TestCsrExtraNamesOIDsUnrelatedOID(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Vault Root CA",
+		"key_type":    "ec",
+		"ttl":         "7200h",
+	})
+	require.NoError(t, err)
+
+	// Test OIDs under the id-on arc (1.3.6.1.5.5.7.13).
+	listedOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 1}
+	unlistedOID := asn1.ObjectIdentifier{1, 3, 6, 1, 5, 5, 7, 13, 2}
+
+	csrTemplate := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "test.example.com",
+			ExtraNames: []pkix.AttributeTypeAndValue{
+				{Type: listedOID, Value: "listed-value"},
+				{Type: unlistedOID, Value: "unlisted-value"},
+			},
+		},
+	}
+	_, _, csrPem := generateCSR(t, csrTemplate, "ec", 256)
+
+	resp, err := CBWrite(b, s, "roles/custom-oid", map[string]interface{}{
+		"allow_any_name":       true,
+		"csr_extra_names_oids": listedOID.String(), // only the first OID
+		"key_type":             "ec",
+	})
+	require.NoError(t, err)
+	require.False(t, resp.IsError())
+
+	resp, err = CBWrite(b, s, "sign/custom-oid", map[string]interface{}{
+		"csr": csrPem,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected sign to succeed")
+
+	cert := parseCert(t, resp.Data["certificate"].(string))
+
+	var foundListed, foundUnlisted bool
+	for _, attr := range cert.Subject.Names {
+		switch {
+		case attr.Type.Equal(listedOID):
+			foundListed = true
+			require.Equal(t, "listed-value", attr.Value, "listed OID value mismatch")
+		case attr.Type.Equal(unlistedOID):
+			foundUnlisted = true
+		}
+	}
+	require.True(t, foundListed, "listed OID must appear in issued certificate subject")
+	require.False(t, foundUnlisted, "unlisted OID must NOT appear in issued certificate subject")
 }
 
 // TestStandby_Operations test proper forwarding for PKI requests from a standby node to the
