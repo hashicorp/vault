@@ -1,0 +1,3 @@
+```release-note:improvement
+core/password-policies: Add an optional top-level `consecutive-chars-allowed` setting to password policies. When set to `false`, generated passwords will not contain the same character in adjacent positions. Defaults to `true`.
+```

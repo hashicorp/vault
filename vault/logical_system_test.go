@@ -5170,6 +5170,9 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 
 		storage *logical.InmemStorage
 
+		// timeout for the request context. Defaults to 100ms when unset.
+		timeout time.Duration
+
 		expectedResp  *logical.Response
 		expectErr     bool
 		expectedStore map[string]*logical.StorageEntry
@@ -5332,11 +5335,102 @@ func TestHandlePoliciesPasswordSet(t *testing.T) {
 					"	charset=\"abcdefghij\"\n"+
 					"}", "seal")),
 		},
+		"consecutive chars disallowed": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"consecutive-chars-allowed = false\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"abcdefghij\"\n" +
+					"}",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp: &logical.Response{
+				Data: map[string]interface{}{
+					logical.HTTPContentType: "application/json",
+					logical.HTTPStatusCode:  http.StatusNoContent,
+				},
+			},
+			expectedStore: makeStorageMap(storageEntry(t, "testpolicy",
+				"length = 20\n"+
+					"consecutive-chars-allowed = false\n"+
+					"rule \"charset\" {\n"+
+					"	charset=\"abcdefghij\"\n"+
+					"}", "")),
+		},
+		"consecutive chars disallowed with single character charset": {
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"consecutive-chars-allowed = false\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"a\"\n" +
+					"}",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"consecutive chars disallowed with rules that force repeats": {
+			// Three 'a's in four characters cannot be arranged without two of them being adjacent.
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": "length = 4\n" +
+					"consecutive-chars-allowed = false\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"a\"\n" +
+					"	min-chars = 3\n" +
+					"}\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"b\"\n" +
+					"}",
+			}),
+
+			storage: new(logical.InmemStorage),
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
+		"consecutive chars disallowed with rules that cannot be generated in time": {
+			// Ten 'a's in twenty characters is possible only in strictly alternating positions, which the generator
+			// will not produce from a large charset within its time bound. Static validation passes, so this
+			// exercises the generation check in the handler. The handler gives generation up to a second before
+			// giving up, so this case needs a longer request context.
+			inputData: passwordPoliciesFieldData(map[string]interface{}{
+				"name": "testpolicy",
+				"policy": "length = 20\n" +
+					"consecutive-chars-allowed = false\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"a\"\n" +
+					"	min-chars = 10\n" +
+					"}\n" +
+					"rule \"charset\" {\n" +
+					"	charset=\"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789\"\n" +
+					"}",
+			}),
+
+			storage: new(logical.InmemStorage),
+			timeout: 5 * time.Second,
+
+			expectedResp:  nil,
+			expectErr:     true,
+			expectedStore: map[string]*logical.StorageEntry{},
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			timeout := test.timeout
+			if timeout == 0 {
+				timeout = 100 * time.Millisecond
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
 
 			req := &logical.Request{
