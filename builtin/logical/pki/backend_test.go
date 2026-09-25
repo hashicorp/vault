@@ -8367,6 +8367,117 @@ func TestBackend_IDNWithWildcards_AltNames(t *testing.T) {
 	}
 }
 
+// TestBackend_EnforceHostnames_UnderscoreAltNames verifies that a role with
+// enforce_hostnames=false accepts underscores in dns sans and the cn, while a
+// role with enforce_hostnames=true keeps rejecting them, and that names which
+// are not plausible dns names are rejected either way.
+func TestBackend_EnforceHostnames_UnderscoreAltNames(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root CA",
+		"ttl":         "40h",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	for _, enforce := range []bool{true, false} {
+		_, err = CBWrite(b, s, fmt.Sprintf("roles/enforce-%t", enforce), map[string]interface{}{
+			"allow_any_name":              true,
+			"allow_wildcard_certificates": true,
+			"enforce_hostnames":           enforce,
+			"max_ttl":                     "2h",
+			"key_type":                    "ec",
+		})
+		require.NoError(t, err)
+	}
+
+	testCases := []struct {
+		name             string
+		enforceHostnames bool
+		commonName       string
+		altNames         string
+		expectDNSNames   []string
+		expectError      string
+	}{
+		{
+			name:             "underscore in alt_names rejected when enforced",
+			enforceHostnames: true,
+			commonName:       "test.example.com",
+			altNames:         "with-hyphen.example.com,with_underscore.example.com",
+			expectError:      "subject alternate name with_underscore.example.com is not a valid DNS name",
+		},
+		{
+			name:             "underscore in alt_names allowed when not enforced",
+			enforceHostnames: false,
+			commonName:       "test.example.com",
+			altNames:         "with-hyphen.example.com,with_underscore.example.com",
+			expectDNSNames:   []string{"test.example.com", "with-hyphen.example.com", "with_underscore.example.com"},
+		},
+		{
+			name:             "leading underscore label and wildcard allowed when not enforced",
+			enforceHostnames: false,
+			commonName:       "test.example.com",
+			altNames:         "_acme-challenge.example.com,*.with_underscore.example.com",
+			expectDNSNames:   []string{"test.example.com", "_acme-challenge.example.com", "*.with_underscore.example.com"},
+		},
+		{
+			name:             "underscore in common name copied to SANs when not enforced",
+			enforceHostnames: false,
+			commonName:       "with_underscore.example.com",
+			altNames:         "",
+			expectDNSNames:   []string{"with_underscore.example.com"},
+		},
+		{
+			name:             "underscore in common name not copied to SANs when enforced",
+			enforceHostnames: true,
+			commonName:       "with_underscore.example.com",
+			altNames:         "",
+			expectError:      "common name with_underscore.example.com not allowed by this role",
+		},
+		{
+			name:             "space in alt_names rejected when not enforced",
+			enforceHostnames: false,
+			commonName:       "test.example.com",
+			altNames:         "with space.example.com",
+			expectError:      "is not a valid DNS name",
+		},
+		{
+			name:             "caret in alt_names rejected when not enforced",
+			enforceHostnames: false,
+			commonName:       "test.example.com",
+			altNames:         "host^123.example.com",
+			expectError:      "is not a valid DNS name",
+		},
+		{
+			name:             "empty label in alt_names rejected when not enforced",
+			enforceHostnames: false,
+			commonName:       "test.example.com",
+			altNames:         "with_underscore..example.com",
+			expectError:      "invalid label",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp, err := CBWrite(b, s, fmt.Sprintf("issue/enforce-%t", tc.enforceHostnames), map[string]interface{}{
+				"common_name": tc.commonName,
+				"alt_names":   tc.altNames,
+			})
+			if tc.expectError != "" {
+				require.ErrorContains(t, err, tc.expectError)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+
+			cert := parseCert(t, resp.Data["certificate"].(string))
+			require.ElementsMatch(t, tc.expectDNSNames, cert.DNSNames)
+		})
+	}
+}
+
 func stringSliceContainsAny(sl []string, substr string) bool {
 	return slices.ContainsFunc(sl, func(s string) bool { return strings.Contains(s, substr) })
 }
