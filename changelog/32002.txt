@@ -1,0 +1,3 @@
+```release-note:bug
+agent/cache: Vault Agent now re-triggers auto-auth when a request is made with a revoked or otherwise invalid auto-auth token, instead of hanging.
+```
