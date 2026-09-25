@@ -40,6 +40,41 @@ func TestPopulate_Basic(t *testing.T) {
 		now                 time.Time
 		denySlash           bool
 	}{
+		// json templates: a "}}" that closes nested objects is part of the
+		// document, not an unbalanced directive
+		{
+			mode:   JSONTemplating,
+			name:   "json_nested_object_without_directive",
+			input:  `{"name":"my-test-service","notifications":{"topics":["test-topic"]}}`,
+			output: `{"name":"my-test-service","notifications":{"topics":["test-topic"]}}`,
+		},
+		{
+			mode:       JSONTemplating,
+			name:       "json_nested_object_after_directive",
+			input:      `{"name":{{identity.entity.name}},"notifications":{"topics":["test-topic"]}}`,
+			entityName: "my-test-service",
+			output:     `{"name":"my-test-service","notifications":{"topics":["test-topic"]}}`,
+		},
+		{
+			mode:       JSONTemplating,
+			name:       "json_directive_closing_nested_objects",
+			input:      `{"a":{"b":{{identity.entity.name}}}}`,
+			entityName: "ent",
+			output:     `{"a":{"b":"ent"}}`,
+		},
+		{
+			mode:       JSONTemplating,
+			name:       "json_nested_object_before_directive",
+			input:      `{"a":{"b":{"c":1}},"d":{{identity.entity.name}}}`,
+			entityName: "ent",
+			output:     `{"a":{"b":{"c":1}},"d":"ent"}`,
+		},
+		{
+			mode:  JSONTemplating,
+			name:  "json_unclosed_directive",
+			input: `{"name":{{identity.entity.name}`,
+			err:   ErrUnbalancedTemplatingCharacter,
+		},
 		// time.* tests. Keep tests with time.Now() at the front to avoid false
 		// positives due to the second changing during the test
 		{
