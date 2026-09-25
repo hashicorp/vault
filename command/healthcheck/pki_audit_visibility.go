@@ -18,6 +18,7 @@ var VisibleReqParams = []string{
 	"other_sans",
 	"ip_sans",
 	"uri_sans",
+	"user_ids",
 	"ttl",
 	"not_after",
 	"serial_number",

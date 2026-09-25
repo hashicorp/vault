@@ -1979,12 +1979,25 @@ func ParseCsrToFields(csr x509.CertificateRequest) (map[string]interface{}, erro
 		return nil, err
 	}
 
+	var userIDs []string
+	for _, attr := range csr.Subject.Names {
+		if attr.Type.Equal(SubjectPilotUserIDAttributeOID) {
+			switch v := attr.Value.(type) {
+			case string:
+				userIDs = append(userIDs, v)
+			case []byte:
+				userIDs = append(userIDs, string(v))
+			}
+		}
+	}
+
 	templateData := map[string]interface{}{
 		"common_name":          csr.Subject.CommonName,
 		"alt_names":            MakeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
 		"ip_sans":              MakeIpAddressCommaSeparatedString(csr.IPAddresses),
 		"uri_sans":             MakeUriCommaSeparatedString(csr.URIs),
 		"other_sans":           otherSans,
+		"user_ids":             strings.Join(userIDs, ","),
 		"signature_bits":       FindSignatureBits(csr.SignatureAlgorithm),
 		"exclude_cn_from_sans": DetermineExcludeCnFromCsrSans(csr),
 		"ou":                   makeCommaSeparatedString(csr.Subject.OrganizationalUnit),
