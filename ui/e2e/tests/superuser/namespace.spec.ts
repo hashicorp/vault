@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
+import { test } from '../../fixtures/demo';
 
 // The persona session stores its Vault token in localStorage. Reading it lets the test verify
 // backend state through its own request instead of trusting the UI's rendering of its own call.
