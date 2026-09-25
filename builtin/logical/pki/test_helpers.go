@@ -38,17 +38,29 @@ import (
 )
 
 // Setup helpers
+
+// CreateBackendWithStorage creates a backend wired to an in-memory storage view
+// with the PKI migration mark already set, ready for use in unit tests.
 func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
+	t.Helper()
+	return CreateBackendWithStorageAndLogger(t, nil)
+}
+
+// CreateBackendWithStorageAndLogger is like CreateBackendWithStorage but allows
+// the caller to inject a custom logger (e.g. one backed by a bytes.Buffer) so
+// that log output can be asserted in tests. Pass nil to use the default logger.
+func CreateBackendWithStorageAndLogger(t testing.TB, logger hclog.Logger) (*backend, logical.Storage) {
 	t.Helper()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	if logger != nil {
+		config.Logger = logger
+	}
 
-	var err error
 	b := Backend(config)
 	b.pkiCertificateCounter = &testingPkiCertificateCounter{}
-	err = b.Setup(context.Background(), config)
-	if err != nil {
+	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
 	// Assume for our tests we have performed the migration already.
