@@ -85,7 +85,9 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*fileBa
 				return nil, fmt.Errorf("invalid mode: %s", mode)
 			}
 			if m&0o111 != 0 {
-				return nil, fmt.Errorf("file mode may not be executable: %s", mode)
+				m = uint64(int64(m) & ^0o111)
+				conf.Config[optionMode] = fmt.Sprintf("%04o", m)
+				conf.Logger.Warn("configured file mode contained executable bits, clearing", "configured_mode", mode, "new_mode", conf.Config[optionMode])
 			}
 		}
 		sinkOpts = append(sinkOpts, event.WithFileMode(mode))
