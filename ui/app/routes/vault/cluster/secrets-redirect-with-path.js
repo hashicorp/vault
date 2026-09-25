@@ -16,8 +16,12 @@ export default class SecretsRedirectWithPathRoute extends Route {
     const path = params?.path;
 
     if (path) {
-      // Construct the new URL with full path including /vault/secrets-engines/*path
-      const newUrl = `/vault/secrets-engines/${path}`;
+      // Construct the new URL with full path including /vault/secrets-engines/*path,
+      // carrying over the original query string (e.g. ?version=1) so deep links to a
+      // specific KV secret version keep pointing at that version after the redirect.
+      const queryParams = transition.to.queryParams;
+      const queryString = Object.keys(queryParams).length ? `?${new URLSearchParams(queryParams)}` : '';
+      const newUrl = `/vault/secrets-engines/${path}${queryString}`;
       this.router.replaceWith(newUrl);
     } else {
       // If no path, just redirect to the base secrets page
