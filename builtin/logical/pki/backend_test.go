@@ -7110,6 +7110,7 @@ func TestProperAuthing(t *testing.T) {
 	serial := resp.Data["serial_number"].(string)
 	eabKid := "13b80844-e60d-42d2-b7e9-152a8e834b90"
 	acmeKeyId := "hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="
+	caKeyUUID := "deadbeef-cafe-4000-8000-000000000000"
 	paths := map[string]pathAuthChecker{
 		"acme/mgmt/account/keyid/":               shouldBeAuthed,
 		"acme/mgmt/account/keyid/" + acmeKeyId:   shouldBeAuthed,
@@ -7201,6 +7202,7 @@ func TestProperAuthing(t *testing.T) {
 		"keys/generate/exported":                 shouldBeAuthed,
 		"keys/generate/kms":                      shouldBeAuthed,
 		"keys/import":                            shouldBeAuthed,
+		"keys/" + caKeyUUID + "/export":          shouldBeAuthed,
 		"ocsp":                                   shouldBeUnauthedWriteOnly,
 		"ocsp/dGVzdAo=":                          shouldBeUnauthedReadList,
 		"revoke":                                 shouldBeAuthed,
@@ -7320,6 +7322,9 @@ func TestProperAuthing(t *testing.T) {
 		}
 		if strings.Contains(raw_path, "external-policy/") && strings.Contains(raw_path, "{policy}") {
 			raw_path = strings.ReplaceAll(raw_path, "{policy}", "a-policy")
+		}
+		if strings.Contains(raw_path, "{ca_key_uuid}") {
+			raw_path = strings.ReplaceAll(raw_path, "{ca_key_uuid}", caKeyUUID)
 		}
 
 		raw_path = entProperAuthingPathReplacer(raw_path)

@@ -104,6 +104,10 @@ const (
 	ObservationTypePKIExportKeyDelete = "pki/export-key/delete"
 	ObservationTypePKIExportKeyList   = "pki/export-key/list"
 
+	// ObservationTypePKICAKeyExport is emitted when a CA private key is securely
+	// wrapped and exported via WRITE /pki/keys/:ca-key-uuid/export.
+	ObservationTypePKICAKeyExport = "pki/keys/export"
+
 	// ---
 	// OCSP Related Observations
 	// Note that statuses are kept to their values as per https://datatracker.ietf.org/doc/html/rfc6960 and
