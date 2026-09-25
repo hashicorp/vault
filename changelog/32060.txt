@@ -1,0 +1,3 @@
+```release-note:bug
+agent/proxy: cancel the context of the previous auto-auth token when re-authenticating, so lease renewals derived from it stop instead of repeatedly retrying against a token Vault has already expired
+```
