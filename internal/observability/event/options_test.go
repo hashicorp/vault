@@ -107,6 +107,9 @@ func TestOptions_Default(t *testing.T) {
 	require.Equal(t, "AUTH", opts.withFacility)
 	require.Equal(t, "vault", opts.withTag)
 	require.Equal(t, 2*time.Second, opts.withMaxDuration)
+	require.Equal(t, 0, opts.withMaxFiles)
+	require.Equal(t, int64(0), opts.withMaxBytes)
+	require.Equal(t, 24*time.Hour, opts.withMaxDurationFile)
 }
 
 // TestOptions_Opts exercises getOpts with various Option values.
@@ -357,6 +360,160 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 			default:
 				require.NoError(t, err)
 				require.Equal(t, tc.ExpectedValue, opts.withMaxDuration)
+			}
+		})
+	}
+}
+
+// TestOptions_WithMaxFiles exercises WithMaxFiles Option to ensure it performs as expected.
+func TestOptions_WithMaxFiles(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		ExpectedValue        int
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+	}{
+		"empty-gives-default": {
+			Value: "",
+		},
+		"whitespace-give-default": {
+			Value: "    ",
+		},
+		"bad-value": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse max files: invalid configuration",
+		},
+		"bad-spacey-value": {
+			Value:                "   juan   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse max files: invalid configuration",
+		},
+		"maxFiles-2": {
+			Value:         "2",
+			ExpectedValue: 2,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithMaxFiles(tc.Value)
+			err := applyOption(opts)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, opts.withMaxFiles)
+			}
+		})
+	}
+}
+
+// TestOptions_WithMaxBytes exercises WithMaxBytes Option to ensure it performs as expected.
+func TestOptions_WithMaxBytes(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		ExpectedValue        int64
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+	}{
+		"empty-gives-default": {
+			Value: "",
+		},
+		"whitespace-give-default": {
+			Value: "    ",
+		},
+		"bad-value": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse max file bytes: invalid configuration",
+		},
+		"bad-spacey-value": {
+			Value:                "   juan   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse max file bytes: invalid configuration",
+		},
+		"maxBytes-2": {
+			Value:         "2",
+			ExpectedValue: 2,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithMaxBytes(tc.Value)
+			err := applyOption(opts)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, opts.withMaxBytes)
+			}
+		})
+	}
+}
+
+// TestOptions_WithMaxDurationFile exercises WithMaxDurationFile Option to ensure it performs as expected.
+func TestOptions_WithMaxDurationFile(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		ExpectedValue        time.Duration
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+	}{
+		"empty-gives-default": {
+			Value: "",
+		},
+		"whitespace-give-default": {
+			Value: "    ",
+		},
+		"bad-value": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse max file duration: invalid configuration: time: invalid duration \"juan\"",
+		},
+		"bad-spacey-value": {
+			Value:                "   juan   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse max file duration: invalid configuration: time: invalid duration \"juan\"",
+		},
+		"duration-2s": {
+			Value:         "2s",
+			ExpectedValue: 2 * time.Second,
+		},
+		"duration-2m": {
+			Value:         "2m",
+			ExpectedValue: 2 * time.Minute,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			opts := &options{}
+			applyOption := WithMaxDurationFile(tc.Value)
+			err := applyOption(opts)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, opts.withMaxDurationFile)
 			}
 		})
 	}
