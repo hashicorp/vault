@@ -11,7 +11,7 @@ import (
 
 	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 

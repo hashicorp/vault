@@ -15,7 +15,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/keymanager"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	bolt "go.etcd.io/bbolt"

@@ -23,9 +23,8 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cacheboltdb"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/internalshared/namespace"
 	nshelper "github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -965,9 +964,9 @@ func computeIndexID(req *SendRequest) (string, error) {
 	var b bytes.Buffer
 
 	cloned := req.Request.Clone(context.Background())
-	cloned.Header.Del(vaulthttp.VaultIndexHeaderName)
-	cloned.Header.Del(vaulthttp.VaultForwardHeaderName)
-	cloned.Header.Del(vaulthttp.VaultInconsistentHeaderName)
+	cloned.Header.Del(api.HeaderIndex)
+	cloned.Header.Del(api.HeaderForward)
+	cloned.Header.Del(api.HeaderInconsistent)
 	// Serialize the request
 	if err := cloned.Write(&b); err != nil {
 		return "", fmt.Errorf("failed to serialize request: %v", err)

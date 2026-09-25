@@ -9,8 +9,8 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/stretchr/testify/require"
 )

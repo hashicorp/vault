@@ -10,7 +10,6 @@ import (
 	"net"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -36,7 +35,7 @@ func tcpListenerFactory(l *configutil.Listener, _ io.Writer, ui cli.Ui) (net.Lis
 		return nil, nil, nil, err
 	}
 
-	ln = TCPKeepAliveListener{ln.(*net.TCPListener)}
+	ln = listenerutil.TCPKeepAliveListener{TCPListener: ln.(*net.TCPListener)}
 
 	ln, err = listenerWrapProxy(ln, l)
 	if err != nil {
@@ -83,24 +82,4 @@ func tcpListenerFactory(l *configutil.Listener, _ io.Writer, ui cli.Ui) (net.Lis
 	}
 
 	return ln, props, reloadFunc, nil
-}
-
-// TCPKeepAliveListener sets TCP keep-alive timeouts on accepted
-// connections. It's used by ListenAndServe and ListenAndServeTLS so
-// dead TCP connections (e.g. closing laptop mid-download) eventually
-// go away.
-//
-// This is copied directly from the Go source code.
-type TCPKeepAliveListener struct {
-	*net.TCPListener
-}
-
-func (ln TCPKeepAliveListener) Accept() (c net.Conn, err error) {
-	tc, err := ln.AcceptTCP()
-	if err != nil {
-		return
-	}
-	tc.SetKeepAlive(true)
-	tc.SetKeepAlivePeriod(3 * time.Minute)
-	return tc, nil
 }

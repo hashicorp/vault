@@ -12,9 +12,12 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/namespace"
 )
+
+// vaultInconsistentForward is the value sent to Vault when requesting
+// forwarding to the active node on an inconsistent read.
+const vaultInconsistentForward = "forward-active-node"
 
 //go:generate enumer -type=EnforceConsistency -trimprefix=EnforceConsistency
 type EnforceConsistency int
@@ -130,9 +133,9 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 
 	var newState string
 	manageState := ap.enforceConsistency == EnforceConsistencyAlways &&
-		req.Request.Header.Get(http.VaultIndexHeaderName) == "" &&
-		req.Request.Header.Get(http.VaultForwardHeaderName) == "" &&
-		req.Request.Header.Get(http.VaultInconsistentHeaderName) == ""
+		req.Request.Header.Get(api.HeaderIndex) == "" &&
+		req.Request.Header.Get(api.HeaderForward) == "" &&
+		req.Request.Header.Get(api.HeaderInconsistent) == ""
 
 	if manageState {
 		client = client.WithResponseCallbacks(api.RecordState(&newState))
@@ -151,7 +154,7 @@ func (ap *APIProxy) Send(ctx context.Context, req *SendRequest) (*SendResponse, 
 				// internally.  This is the default api.Client behaviour so
 				// we needn't do anything.
 			case WhenInconsistentForward:
-				fwReq.Headers.Set(http.VaultInconsistentHeaderName, http.VaultInconsistentForward)
+				fwReq.Headers.Set(api.HeaderInconsistent, vaultInconsistentForward)
 			}
 		}
 	}
