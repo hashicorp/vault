@@ -1372,7 +1372,15 @@ func (b *SystemBackend) handleCapabilities(ctx context.Context, req *logical.Req
 	}
 
 	for _, path := range paths {
-		pathCap, err := b.Core.Capabilities(ctx, token, path)
+		var pathCap []string
+		var err error
+		if strings.HasSuffix(req.Path, "capabilities-self") {
+			capReq := *req
+			capReq.Path = path
+			pathCap, _, err = b.Core.capabilitiesAndSubscribeEventTypesForRequest(ctx, &capReq)
+		} else {
+			pathCap, err = b.Core.Capabilities(ctx, token, path)
+		}
 		if err != nil {
 			if !strings.HasSuffix(req.Path, "capabilities-self") && errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 				return nil, &logical.StatusBadRequest{Err: "invalid token"}

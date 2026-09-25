@@ -35,6 +35,7 @@ func TestRequiresMaterializedTokenState(t *testing.T) {
 	}{
 		{name: "token lookup self", path: "auth/token/lookup-self", want: true},
 		{name: "token lookup", path: "auth/token/lookup", want: true},
+		{name: "capabilities self", path: "sys/capabilities-self", want: true},
 		{name: "leases lookup", path: "sys/leases/lookup", want: true},
 		{name: "leases lookup prefix", path: "sys/leases/lookup/secret/foo", want: true},
 		{name: "leases count", path: "sys/leases/count", want: true},

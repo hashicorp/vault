@@ -241,6 +241,16 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	var actorEntity *identity.Entity
+	var err error
+	if req.OAuthJwtValidated && req.ActorEntityID != "" {
+		actorEntity, err = c.identityStore.MemDBEntityByID(req.ActorEntityID, true)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		if actorEntity == nil {
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
+	}
 	if IsOAuthJwt(req.ClientToken) && !req.OAuthJwtValidated {
 		isValidEnterpriseJwt, tokenMetadataContainer, entity, jwtActor, chosenProfile, err := c.validateOAuthJwtAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
@@ -458,6 +468,8 @@ func requiresMaterializedTokenState(path string) bool {
 	}
 	switch path {
 	case "auth/token/lookup-self", "auth/token/lookup":
+		return true
+	case "sys/capabilities-self":
 		return true
 	}
 	if strings.HasPrefix(path, "cubbyhole/") {

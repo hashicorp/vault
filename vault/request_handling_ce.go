@@ -59,5 +59,9 @@ func (c *Core) fetchCeilingPolicies(ctx context.Context, entity *identity.Entity
 	return nil, errors.New("not implemented")
 }
 
+func (c *Core) filterOAuthJWTCapabilities(_ context.Context, _ *logical.Request, capabilities, eventTypes []string) ([]string, []string) {
+	return capabilities, eventTypes
+}
+
 func extractValidatedProfileDetailsIntoRequest(chosenProfile *OAuthResourceServerConfigProfile, req *logical.Request) {
 }
