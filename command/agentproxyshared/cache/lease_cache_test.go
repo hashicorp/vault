@@ -1674,3 +1674,119 @@ func TestLeaseCacheRestore_expired(t *testing.T) {
 	assert.Equal(t, "autoauthtoken", afterDB[0].Token)
 	assert.Equal(t, cacheboltdb.TokenType, afterDB[0].Type)
 }
+
+// TestIsRenewalRequest verifies that lease- and token-renewal endpoints are
+// detected across namespaced, lease-ID-suffixed, and legacy-alias forms, and
+// that unrelated paths (including revocation and lookup) are not matched.
+func TestIsRenewalRequest(t *testing.T) {
+	cases := []struct {
+		path string
+		want bool
+	}{
+		{"/v1/sys/leases/renew", true},
+		{"/v1/sys/leases/renew/aws/creds/my-role/abc123", true},
+		{"/v1/ns1/sys/leases/renew", true},
+		{"/v1/ns1/ns2/sys/leases/renew/database/creds/r/xyz", true},
+		{"/v1/sys/renew", true},
+		{"/v1/sys/renew/my-lease-id", true},
+		{"/v1/ns1/sys/renew", true},
+		{"/v1/auth/token/renew", true},
+		{"/v1/auth/token/renew-self", true},
+		{"/v1/ns1/auth/token/renew", true},
+		{"/v1/sys/leases/revoke", false},
+		{"/v1/sys/leases/lookup", false},
+		{"/v1/auth/token/lookup", false},
+		{"/v1/auth/token/create", false},
+		{"/v1/secret/data/foo", false},
+	}
+	for _, tc := range cases {
+		req := httptest.NewRequest(http.MethodPut, "http://example.com"+tc.path, nil)
+		if got := isRenewalRequest(req); got != tc.want {
+			t.Errorf("isRenewalRequest(%q) = %v, want %v", tc.path, got, tc.want)
+		}
+	}
+}
+
+// TestLeaseCache_SendNonCacheableLeaseRenewal verifies that responses to lease
+// renewal requests are never cached, even when the requesting token is managed
+// by the cache. Caching them would feed a proxied client's lifetime watcher a
+// stale, non-decreasing TTL and let the lease expire before refreshing. See
+// https://github.com/hashicorp/vault/issues/19684.
+func TestLeaseCache_SendNonCacheableLeaseRenewal(t *testing.T) {
+	// Two distinct (renewable, leased) responses that would otherwise be cached.
+	// Distinct status codes let us tell a cache hit from a pass-through.
+	responses := []*SendResponse{
+		newTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
+		newTestSendResponse(http.StatusAccepted, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
+	}
+
+	lc := testNewLeaseCache(t, responses)
+	// Register the token so the lease would be considered cacheable absent the
+	// renewal-path exclusion.
+	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+	newReq := func() *SendRequest {
+		return &SendRequest{
+			Token:   "autoauthtoken",
+			Request: httptest.NewRequest(http.MethodPut, "http://example.com/v1/sys/leases/renew", strings.NewReader(`{"lease_id": "foo"}`)),
+		}
+	}
+
+	// First renewal is proxied and returns the first response.
+	resp, err := lc.Send(context.Background(), newReq())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+
+	// An identical renewal must be proxied again (returns the second response),
+	// not served from the cache. If it were cached, we would get StatusOK again.
+	resp, err = lc.Send(context.Background(), newReq())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusAccepted, resp.Response.StatusCode)
+
+	// The renewed lease must not have been stored in the cache.
+	entry, err := lc.db.Get(cachememdb.IndexNameLease, "foo")
+	require.Nil(t, entry)
+	require.Error(t, err)
+}
+
+// TestLeaseCache_SendNonCacheableTokenRenewal verifies that responses to token
+// renewal requests are never cached, even when the requesting token is managed
+// by the cache. As with leases, a cached renewal response would feed a proxied
+// client's lifetime watcher a stale, non-decreasing TTL. See
+// https://github.com/hashicorp/vault/issues/19684.
+func TestLeaseCache_SendNonCacheableTokenRenewal(t *testing.T) {
+	// Two distinct (renewable) auth responses that would otherwise be cached.
+	// Distinct status codes let us tell a cache hit from a pass-through.
+	responses := []*SendResponse{
+		newTestSendResponse(http.StatusOK, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
+		newTestSendResponse(http.StatusAccepted, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
+	}
+
+	lc := testNewLeaseCache(t, responses)
+	// Register the token so the renewed token would be considered cacheable
+	// absent the renewal-path exclusion.
+	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+	newReq := func() *SendRequest {
+		return &SendRequest{
+			Token:   "autoauthtoken",
+			Request: httptest.NewRequest(http.MethodPut, "http://example.com/v1/auth/token/renew-self", strings.NewReader(`{}`)),
+		}
+	}
+
+	// First renewal is proxied and returns the first response.
+	resp, err := lc.Send(context.Background(), newReq())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+
+	// An identical renewal must be proxied again (returns the second response),
+	// not served from the cache. If it were cached, we would get StatusOK again.
+	resp, err = lc.Send(context.Background(), newReq())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusAccepted, resp.Response.StatusCode)
+
+	// The renewed token must not have been stored in the cache.
+	entry, err := lc.db.Get(cachememdb.IndexNameToken, "testtoken")
+	require.Nil(t, entry)
+	require.Error(t, err)
+}
