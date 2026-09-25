@@ -3114,6 +3114,9 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 
 		var newGroups []*identity.Group
 		var validAliases []*logical.Alias
+
+		// seenGroupIDs prevents duplicate group objects when a JWT/OIDC token carries repeated group-name entries.
+		seenGroupIDs := make(map[string]struct{})
 		for _, alias := range groupAliases {
 			aliasByFactors, err := i.MemDBAliasByFactorsInTxn(txn, alias.MountAccessor, alias.Name, true, true)
 			if err != nil {
@@ -3130,6 +3133,10 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 				return false, nil, fmt.Errorf("group unavailable for a valid alias ID %q", aliasByFactors.ID)
 			}
 
+			if _, alreadySeen := seenGroupIDs[mappingGroup.ID]; alreadySeen {
+				continue
+			}
+			seenGroupIDs[mappingGroup.ID] = struct{}{}
 			newGroups = append(newGroups, mappingGroup)
 			validAliases = append(validAliases, alias)
 		}
@@ -3150,7 +3157,11 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 
 			i.logger.Debug("adding member entity ID to external group", "member_entity_id", entityID, "group_id", group.ID)
 
-			group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
+			// Guard against duplicates even if newGroups was somehow not
+			// deduplicated upstream (e.g. concurrent writes on a standby).
+			if !strutil.StrListContains(group.MemberEntityIDs, entityID) {
+				group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
+			}
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, true)
 			if errors.Is(err, logical.ErrReadOnly) {
