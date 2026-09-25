@@ -13,9 +13,9 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	token_file "github.com/hashicorp/vault/command/agentproxyshared/auth/token-file"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )

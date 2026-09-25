@@ -22,10 +22,9 @@ import (
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
-	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cacheboltdb"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cachememdb"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/keymanager"
 	"github.com/hashicorp/vault/internalshared/useragent"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
@@ -129,9 +128,9 @@ func TestCache_ComputeIndexID(t *testing.T) {
 						Path: "test",
 					},
 					Header: http.Header{
-						vaulthttp.VaultIndexHeaderName:        []string{"foo"},
-						vaulthttp.VaultInconsistentHeaderName: []string{"foo"},
-						vaulthttp.VaultForwardHeaderName:      []string{"foo"},
+						api.HeaderIndex:        []string{"foo"},
+						api.HeaderInconsistent: []string{"foo"},
+						api.HeaderForward:      []string{"foo"},
 					},
 				},
 			},

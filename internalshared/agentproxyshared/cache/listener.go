@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
-	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 )
@@ -43,7 +42,7 @@ func StartListener(lnConfig *configutil.Listener) (*ListenerBundle, error) {
 		if err != nil {
 			return nil, err
 		}
-		ln = &server.TCPKeepAliveListener{ln.(*net.TCPListener)}
+		ln = listenerutil.TCPKeepAliveListener{ln.(*net.TCPListener)}
 
 	case "unix":
 		var uConfig *listenerutil.UnixSocketsConfig
