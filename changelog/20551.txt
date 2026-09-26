@@ -1,0 +1,3 @@
+```release-note:bug
+storage/mysql: Hold the HA lock on a dedicated session so GET_LOCK and IS_USED_LOCK share one connection, preventing the lock from being released when the server reaps the session at wait_timeout
+```
