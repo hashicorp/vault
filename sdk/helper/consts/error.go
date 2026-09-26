@@ -3,7 +3,10 @@
 
 package consts
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 var (
 	// ErrSealed is returned if an operation is performed on a sealed barrier.
@@ -29,3 +32,23 @@ var (
 	// ErrOverloaded indicates the Vault server is at capacity.
 	ErrOverloaded = errors.New("overloaded, try again later")
 )
+
+// PathContainsParentReferences checks whether a path contains ".." as an
+// actual parent directory reference (i.e., a complete path segment), as
+// opposed to ".." appearing as a substring of a longer segment like "...".
+//
+// For example:
+//   - "foo/../bar"  => true  (parent reference)
+//   - "foo/.."      => true  (parent reference)
+//   - "../foo"      => true  (parent reference)
+//   - ".."          => true  (parent reference)
+//   - "foo/.../bar" => false (three dots, not a parent reference)
+//   - "test_..."    => false (dots are part of a longer name)
+func PathContainsParentReferences(path string) bool {
+	for _, segment := range strings.Split(path, "/") {
+		if segment == ".." {
+			return true
+		}
+	}
+	return false
+}

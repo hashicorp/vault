@@ -1757,7 +1757,7 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 		return errors.New("cannot register an auth lease with an empty token")
 	}
 
-	if strings.Contains(te.Path, "..") {
+	if consts.PathContainsParentReferences(te.Path) {
 		return consts.ErrPathContainsParentReferences
 	}
 
@@ -2544,7 +2544,7 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(ctx context.Cont
 			},
 		}
 
-		if strings.Contains(te.Path, "..") {
+		if consts.PathContainsParentReferences(te.Path) {
 			return "", consts.ErrPathContainsParentReferences
 		}
 
