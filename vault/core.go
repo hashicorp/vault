@@ -44,16 +44,16 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/osutil"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/helper/trace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/osutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -446,6 +446,9 @@ type Core struct {
 	// the rotation manager handles periodic rotation of credentials
 	rotationManager *RotationManager
 
+	// the healthCheck manager handles all health check operations
+	healthCheckManager *HealthCheckManager
+
 	// rollback manager is used to run rollbacks periodically
 	rollback *RollbackManager
 
@@ -816,15 +819,15 @@ type Core struct {
 	// started.
 	synctest bool
 
-	// ControlHubManager holds information regarding the node's connection to the control hub.
+	// SecureHubManager holds information regarding the node's connection to the secure hub.
 	// It will be initialized to a no-op structure on CE. Access it through
-	// GetControlHubManager/SetControlHubManager, which take controlHubManagerLock.
-	ControlHubManager *ControlHubManager
+	// GetSecureHubManager/SetSecureHubManager, which take secureHubManagerLock.
+	SecureHubManager *SecureHubManager
 
-	// controlHubManagerLock protects the ControlHubManager pointer. It does not
+	// secureHubManagerLock protects the SecureHubManager pointer. It does not
 	// protect the manager's own in-memory state, which is guarded by the
 	// manager's internal locks.
-	controlHubManagerLock sync.RWMutex
+	secureHubManagerLock sync.RWMutex
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -1509,8 +1512,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	// Initialize ControlHubManager after barrier is set up
-	c.SetControlHubManager(NewControlHubManager(c))
+	// Initialize SecureHubManager after barrier is set up
+	c.SetSecureHubManager(NewSecureHubManager(c))
 
 	// Events
 	eventsLogger := conf.Logger.Named("events")
@@ -2920,6 +2923,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
 		},
+		func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2949,10 +2956,13 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.migrateProfilesByIssuerIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
-			return c.populateIssuerNamespacesIndex(ctx)
+			return c.setupOAuthResourceServerConfigManager(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupHealthCheckManager()
 		})
 		setupFunctions = append(setupFunctions, c.loadAudits)
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
@@ -2974,6 +2984,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return c.EntSetupUIDefaultAuth(ctx)
+		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			c.EntSetupUIChecklistState()
+			return nil
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			if c.agentRegistry == nil {
@@ -3185,6 +3199,7 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		// starts, which happens in the post-unseal functions above.
 		sysActivityLogReporting(c.systemBackend)
 	}
+
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }

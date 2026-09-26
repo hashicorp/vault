@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 	"github.com/stretchr/testify/require"
@@ -191,6 +191,23 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 			}, localPathPrefix, month)
 			core.storeMaxKvCountsLocked(context.Background(), 10, localPathPrefix, month)
 
+			// Add KV HWM attribution data
+			err := core.StoreAttributionData(context.Background(), localPathPrefix, month, billing.KvHWMCountsHWM, &logical.MetricTypeAttribution{
+				Count:       10,
+				LastUpdated: month,
+				Mounts: map[string]logical.MountAttribution{
+					"kv_accessor_1": {
+						MountAccessor: "kv_accessor_1",
+						MountPath:     "secret/",
+						MountType:     "kv",
+						NamespaceID:   "root",
+						NamespacePath: "",
+						Count:         10,
+					},
+				},
+			})
+			require.NoError(t, err)
+
 			// Transit, third-party plugins, ssh credential count and OIDC are local aggregated metrics
 			// and should only be stored under LocalPrefix
 			if localPathPrefix == billing.LocalPrefix {
@@ -199,6 +216,23 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 				core.storeThirdPartyPluginCountsLocked(context.Background(), localPathPrefix, month, 10)
 				core.storeOidcDurationAdjustedCountLocked(context.Background(), month, 10)
 				core.storeSSHOTPCountLocked(context.Background(), localPathPrefix, month, 10)
+
+				// Add transit attribution data (local-only metric)
+				err = core.StoreAttributionData(context.Background(), localPathPrefix, month, billing.TransitDataProtectionCallCountsPrefix, &logical.MetricTypeAttribution{
+					Count:       10,
+					LastUpdated: month,
+					Mounts: map[string]logical.MountAttribution{
+						"transit_accessor_1": {
+							MountAccessor: "transit_accessor_1",
+							MountPath:     "transit/",
+							MountType:     "transit",
+							NamespaceID:   "root",
+							NamespacePath: "",
+							Count:         10,
+						},
+					},
+				})
+				require.NoError(t, err)
 			}
 
 			// List the data paths to verify that the billing metrics have been stored
@@ -206,9 +240,9 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 			require.True(t, ok)
 			paths, err := view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, month))
 			require.NoError(t, err)
-			expectedPaths := 2 // ReplicatedPrefix has roles and kv
+			expectedPaths := 3 // ReplicatedPrefix has roles, kv, and kv attribution (attribution/ is one directory entry)
 			if localPathPrefix == billing.LocalPrefix {
-				expectedPaths = 7 // LocalPrefix has roles, kv, transit, gcp kms, third-party plugins, ssh and OIDC
+				expectedPaths = 8 // LocalPrefix has roles, kv, transit, gcp kms, third-party plugins, ssh, OIDC, and attribution/ (one directory entry for both kv and transit attribution)
 			}
 			require.Equal(t, expectedPaths, len(paths))
 		}
@@ -225,16 +259,63 @@ func TestHandleEndOfMonthMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 0, len(paths), "data from billing.DefaultBillingRetentionMonths ago should be deleted")
 
+		// Attribution for monthToDelete must also be gone — HandleStartOfMonth calls
+		// DeleteExpiredAttributionData which uses the DefaultAttributionRetentionMonths, which has the same duration window as DefaultBillingRetentionMonths.
+		deletedKvAttr, err := core.GetStoredAttributionData(context.Background(), localPathPrefix, monthToDelete, billing.KvHWMCountsHWM)
+		require.NoError(t, err)
+		require.Empty(t, deletedKvAttr.Mounts, "KV HWM attribution for monthToDelete should be deleted after HandleStartOfMonth")
+
 		// (billing.DefaultBillingRetentionMonths - 1) months ago should still have the billing metrics (kept)
 		view, ok = core.GetBillingSubView()
 		require.True(t, ok)
 		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(localPathPrefix, oldestRetainedMonth))
 		require.NoError(t, err)
-		expectedPaths := 2 // ReplicatedPrefix has roles and kv
+		expectedPaths := 3 // ReplicatedPrefix has roles, kv, and attribution/ (one directory entry)
 		if localPathPrefix == billing.LocalPrefix {
-			expectedPaths = 7 // LocalPrefix has roles, kv, transit, gcp kms, third-party plugins, ssh and OIDC
+			expectedPaths = 8 // LocalPrefix has roles, kv, transit, gcp kms, third-party plugins, ssh, OIDC, and attribution/ (one directory entry)
 		}
 		require.Equal(t, expectedPaths, len(paths))
+
+		// Verify retained KV HWM attribution has the expected timestamp, namespace, and mount fields.
+		kvAttr, err := core.GetStoredAttributionData(context.Background(), localPathPrefix, oldestRetainedMonth, billing.KvHWMCountsHWM)
+		require.NoError(t, err)
+		require.NotNil(t, kvAttr)
+		require.False(t, kvAttr.LastUpdated.IsZero(), "KV HWM attribution LastUpdated must not be zero for retained month")
+		require.Equal(t, oldestRetainedMonth.UTC().Truncate(time.Second), kvAttr.LastUpdated.UTC().Truncate(time.Second),
+			"KV HWM attribution LastUpdated should match the month it was stored for")
+		require.Len(t, kvAttr.Mounts, 1)
+		kvMount, ok := kvAttr.Mounts["kv_accessor_1"]
+		require.True(t, ok)
+		require.Equal(t, "kv_accessor_1", kvMount.MountAccessor)
+		require.Equal(t, "secret/", kvMount.MountPath)
+		require.Equal(t, "kv", kvMount.MountType)
+		require.Equal(t, "root", kvMount.NamespaceID)
+		require.Equal(t, "", kvMount.NamespacePath)
+		require.Equal(t, "10", fmt.Sprintf("%v", kvMount.Count))
+
+		// Transit attribution is local-only; verify timestamp, namespace, and mount fields for LocalPrefix.
+		if localPathPrefix == billing.LocalPrefix {
+			// Verify transit attribution for monthToDelete is also gone.
+			deletedTransitAttr, err := core.GetStoredAttributionData(context.Background(), localPathPrefix, monthToDelete, billing.TransitDataProtectionCallCountsPrefix)
+			require.NoError(t, err)
+			require.Empty(t, deletedTransitAttr.Mounts, "transit attribution for monthToDelete should be deleted after HandleStartOfMonth")
+
+			transitAttr, err := core.GetStoredAttributionData(context.Background(), localPathPrefix, oldestRetainedMonth, billing.TransitDataProtectionCallCountsPrefix)
+			require.NoError(t, err)
+			require.NotNil(t, transitAttr)
+			require.False(t, transitAttr.LastUpdated.IsZero(), "transit attribution LastUpdated must not be zero for retained month")
+			require.Equal(t, oldestRetainedMonth.UTC().Truncate(time.Second), transitAttr.LastUpdated.UTC().Truncate(time.Second),
+				"transit attribution LastUpdated should match the month it was stored for")
+			require.Len(t, transitAttr.Mounts, 1)
+			transitMount, ok := transitAttr.Mounts["transit_accessor_1"]
+			require.True(t, ok)
+			require.Equal(t, "transit_accessor_1", transitMount.MountAccessor)
+			require.Equal(t, "transit/", transitMount.MountPath)
+			require.Equal(t, "transit", transitMount.MountType)
+			require.Equal(t, "root", transitMount.NamespaceID)
+			require.Equal(t, "", transitMount.NamespacePath)
+			require.Equal(t, "10", fmt.Sprintf("%v", transitMount.Count))
+		}
 	}
 
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts())
@@ -321,6 +402,23 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
+
+			// Add KV HWM mount/namespace attribution data
+			err = core.StoreAttributionData(context.Background(), pathPrefix, month, billing.KvHWMCountsHWM, &logical.MetricTypeAttribution{
+				Count:       20,
+				LastUpdated: month,
+				Mounts: map[string]logical.MountAttribution{
+					"kv_accessor_1": {
+						MountAccessor: "kv_accessor_1",
+						MountPath:     "secret/",
+						MountType:     "kv",
+						NamespaceID:   "root",
+						NamespacePath: "",
+						Count:         20,
+					},
+				},
+			})
+			require.NoError(t, err)
 		}
 		// Store updatedAtTimestamp for each month
 		testUpdateTime := time.Date(month.Year(), month.Month(), 15, 12, 0, 0, 0, time.UTC)
@@ -371,6 +469,12 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		entry, err = view.Get(context.Background(), externalCaBreakdownPath)
 		require.NoError(t, err)
 		require.NotNil(t, entry, "External CA mount breakdown should exist before deletion")
+
+		// Verify KV HWM mount breakdown exists
+		kvBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.KvHWMCountsHWM)
+		entry, err = view.Get(context.Background(), kvBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "KV HWM mount breakdown should exist before deletion")
 	}
 
 	// Verify updatedAtTimestamp exists for all months before deletion
@@ -428,6 +532,12 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, entry, "ExternalCA attribution should NOT be deleted by deleteExpiredBillingMetrics (independent retention)")
 
+		// Verify KV HWM attribution data is NOT deleted by deleteExpiredBillingMetrics
+		kvBreakdownPath := billing.GetAttributionMaxPath(pathPrefix, monthToDelete, billing.KvHWMCountsHWM)
+		entry, err = view.Get(context.Background(), kvBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "KV HWM attribution should NOT be deleted by deleteExpiredBillingMetrics (independent retention)")
+
 		// Oldest retained month should still have data
 		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, oldestRetainedMonth))
 		require.NoError(t, err)
@@ -462,6 +572,12 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, entry, "External CA mount breakdown should be kept for oldest retained month")
 
+		// Verify KV HWM mount breakdown is kept for oldest retained month
+		kvBreakdownPath = billing.GetAttributionMaxPath(pathPrefix, oldestRetainedMonth, billing.KvHWMCountsHWM)
+		entry, err = view.Get(context.Background(), kvBreakdownPath)
+		require.NoError(t, err)
+		require.NotNil(t, entry, "KV HWM mount breakdown should be kept for oldest retained month")
+
 		// Current month should still have data
 		paths, err = view.List(context.Background(), billing.GetMonthlyBillingPath(pathPrefix, currentMonth))
 		require.NoError(t, err)
@@ -486,7 +602,10 @@ func TestDeleteExpiredBillingMetrics(t *testing.T) {
 }
 
 // TestConsumptionBillingMetricsWorkerWithCustomClock tests that we correctly delete data older than billing.DefaultBillingRetentionMonths
-// and reset the in memory billing metrics when the clock is overridden for testing purposes
+// and reset the in memory billing metrics when the clock is overridden for testing purposes.
+// It also verifies that mount/namespace attribution accumulated during the ending month is flushed
+// to storage with the correct timestamps, namespace IDs/paths, and mount fields at the month cutover,
+// and that in-memory attribution maps are cleared after the boundary is crossed.
 func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	// 10 seconds until a new month (leave buffer for require.Eventually timeout)
 	now := time.Date(2021, 1, 31, 23, 59, 50, 0, time.UTC)
@@ -504,6 +623,7 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 	// which will be the next month once we cross the boundary. So the months should be
 	// calculated relative to that boundary.
 	currentMonthAtBoundary := timeutil.StartOfNextMonth(now)
+	endingMonth := timeutil.StartOfMonth(now)
 	oldestRetainedMonth := timeutil.StartOfMonth(currentMonthAtBoundary).AddDate(0, -(billing.DefaultBillingRetentionMonths - 1), 0)
 	monthToDelete := timeutil.StartOfMonth(currentMonthAtBoundary).AddDate(0, -billing.DefaultBillingRetentionMonths, 0)
 	view, ok := core.GetBillingSubView()
@@ -564,6 +684,41 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 		verifyMonthlyBillingMetrics(month, billing.ReplicatedPrefix)
 	}
 
+	// Seed in-memory transit attribution for the ending month (January 2021).
+	// The periodic worker will flush these to storage before HandleStartOfMonth clears them.
+	cb := core.GetCoreConsumptionBillingManager()
+	require.NotNil(t, cb)
+
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Lock()
+	cb.SecretEngineCounts.Transit.MountAttribution["transit_accessor_1"] = logical.MountAttribution{
+		MountAccessor: "transit_accessor_1",
+		MountPath:     "transit/",
+		MountType:     "transit",
+		NamespaceID:   "root",
+		NamespacePath: "",
+		Count:         float64(42),
+	}
+	cb.SecretEngineCounts.Transit.MountAttributionLock.Unlock()
+
+	// Seed KV HWM attribution for the ending month (January 2021) directly, since KV has no in-memory tracker.
+	for _, localPathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
+		err := core.StoreAttributionData(context.Background(), localPathPrefix, endingMonth, billing.KvHWMCountsHWM, &logical.MetricTypeAttribution{
+			Count:       10,
+			LastUpdated: endingMonth,
+			Mounts: map[string]logical.MountAttribution{
+				"kv_accessor_1": {
+					MountAccessor: "kv_accessor_1",
+					MountPath:     "secret/",
+					MountType:     "kv",
+					NamespaceID:   "root",
+					NamespacePath: "",
+					Count:         10,
+				},
+			},
+		})
+		require.NoError(t, err)
+	}
+
 	for _, localPathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
 		// billing.DefaultBillingRetentionMonths ago should eventually have no billing metrics (deleted)
 		require.Eventually(t, func() bool {
@@ -587,6 +742,42 @@ func TestConsumptionBillingMetricsWorkerWithCustomClock(t *testing.T) {
 
 		// (billing.DefaultBillingRetentionMonths - 1) months ago should still have the billing metrics (kept)
 		verifyMonthlyBillingMetrics(oldestRetainedMonth, localPathPrefix)
+	}
+
+	// After the cutover, verify that transit attribution for the ending month was flushed to
+	// storage with the correct timestamp, namespace, and mount fields.
+	transitAttr, err := core.GetStoredAttributionData(context.Background(), billing.LocalPrefix, endingMonth, billing.TransitDataProtectionCallCountsPrefix)
+	require.NoError(t, err)
+	require.NotNil(t, transitAttr, "transit attribution should be stored for the ending month after cutover")
+	require.False(t, transitAttr.LastUpdated.IsZero(), "transit attribution LastUpdated must not be zero after cutover")
+	require.Equal(t, endingMonth.UTC(), transitAttr.LastUpdated.UTC(),
+		"transit attribution LastUpdated should equal the ending month timestamp")
+	require.Len(t, transitAttr.Mounts, 1, "transit attribution should have one mount entry after cutover")
+	transitMount, ok := transitAttr.Mounts["transit_accessor_1"]
+	require.True(t, ok, "transit attribution should be keyed by transit_accessor_1")
+	require.Equal(t, "transit_accessor_1", transitMount.MountAccessor)
+	require.Equal(t, "transit/", transitMount.MountPath)
+	require.Equal(t, "transit", transitMount.MountType)
+	require.Equal(t, "root", transitMount.NamespaceID)
+	require.Equal(t, "", transitMount.NamespacePath)
+
+	// Verify in-memory transit attribution is cleared after the cutover.
+	require.Empty(t, core.GetInMemoryTransitAttribution(), "transit in-memory attribution should be cleared after cutover")
+
+	// Verify KV HWM attribution for the ending month is present under both prefixes.
+	// KV attribution is stored directly (no in-memory tracker), so it should survive the cutover untouched.
+	for _, localPathPrefix := range []string{billing.ReplicatedPrefix, billing.LocalPrefix} {
+		kvAttr, err := core.GetStoredAttributionData(context.Background(), localPathPrefix, endingMonth, billing.KvHWMCountsHWM)
+		require.NoError(t, err)
+		require.NotNil(t, kvAttr, "KV HWM attribution should be stored for the ending month under %s", localPathPrefix)
+		require.Len(t, kvAttr.Mounts, 1, "KV HWM attribution should have one mount entry under %s", localPathPrefix)
+		kvMount, ok := kvAttr.Mounts["kv_accessor_1"]
+		require.True(t, ok, "KV HWM attribution should be keyed by kv_accessor_1 under %s", localPathPrefix)
+		require.Equal(t, "kv_accessor_1", kvMount.MountAccessor)
+		require.Equal(t, "secret/", kvMount.MountPath)
+		require.Equal(t, "kv", kvMount.MountType)
+		require.Equal(t, "root", kvMount.NamespaceID)
+		require.Equal(t, "", kvMount.NamespacePath)
 	}
 
 	require.Equal(t, uint64(0), core.GetInMemoryTransitDataProtectionCallCounts())

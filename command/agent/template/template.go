@@ -25,7 +25,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agent/config"
 	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/internalshared/useragent"
 	"github.com/hashicorp/vault/sdk/helper/backoff"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"

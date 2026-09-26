@@ -66,6 +66,34 @@ module('Acceptance | sync | overview', function (hooks) {
       await visit('/vault/sync/secrets/overview');
     });
 
+    test('total_secrets from the associations response renders in the Total secrets card', async function (assert) {
+      // confirms total_secrets from /sys/sync/associations reaches the rendered Total secrets card
+      syncScenario(this.server);
+      this.server.get('/sys/sync/associations', () => ({
+        data: { key_info: {}, keys: [], total_associations: 3, total_secrets: 5 },
+      }));
+
+      await visit('/vault/sync/secrets/overview');
+
+      assert
+        .dom(GENERAL.overviewCard.content('Total secrets'))
+        .hasText('5', 'Total secrets card renders the value from total_secrets in the API response');
+    });
+
+    test('Total secrets card shows "None" when associations endpoint returns no data', async function (assert) {
+      // confirms the card falls back to "None" when total_secrets is 0 (falsy)
+      syncScenario(this.server);
+      this.server.get('/sys/sync/associations', () => ({
+        data: { key_info: {}, keys: [], total_associations: 0, total_secrets: 0 },
+      }));
+
+      await visit('/vault/sync/secrets/overview');
+
+      assert
+        .dom(GENERAL.overviewCard.content('Total secrets'))
+        .hasText('None', 'Total secrets card shows "None" when total_secrets is 0 (falsy)');
+    });
+
     test('it should transition to correct routes when performing actions', async function (assert) {
       syncScenario(this.server);
       await click(GENERAL.navLink('Secrets'));

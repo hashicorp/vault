@@ -26,7 +26,7 @@ const (
 	RequestForwarding_ForwardRequest_FullMethodName                    = "/vault.RequestForwarding/ForwardRequest"
 	RequestForwarding_Echo_FullMethodName                              = "/vault.RequestForwarding/Echo"
 	RequestForwarding_PerformanceStandbyElectionRequest_FullMethodName = "/vault.RequestForwarding/PerformanceStandbyElectionRequest"
-	RequestForwarding_SendControlHubCredentials_FullMethodName         = "/vault.RequestForwarding/SendControlHubCredentials"
+	RequestForwarding_SendSecureHubCredentials_FullMethodName          = "/vault.RequestForwarding/SendSecureHubCredentials"
 )
 
 // RequestForwardingClient is the client API for RequestForwarding service.
@@ -36,7 +36,7 @@ type RequestForwardingClient interface {
 	ForwardRequest(ctx context.Context, in *forwarding.Request, opts ...grpc.CallOption) (*forwarding.Response, error)
 	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoReply, error)
 	PerformanceStandbyElectionRequest(ctx context.Context, in *PerfStandbyElectionInput, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PerfStandbyElectionResponse], error)
-	SendControlHubCredentials(ctx context.Context, in *SendControlHubCredentialsRequest, opts ...grpc.CallOption) (*SendControlHubCredentialsResponse, error)
+	SendSecureHubCredentials(ctx context.Context, in *SendSecureHubCredentialsRequest, opts ...grpc.CallOption) (*SendSecureHubCredentialsResponse, error)
 }
 
 type requestForwardingClient struct {
@@ -86,10 +86,10 @@ func (c *requestForwardingClient) PerformanceStandbyElectionRequest(ctx context.
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type RequestForwarding_PerformanceStandbyElectionRequestClient = grpc.ServerStreamingClient[PerfStandbyElectionResponse]
 
-func (c *requestForwardingClient) SendControlHubCredentials(ctx context.Context, in *SendControlHubCredentialsRequest, opts ...grpc.CallOption) (*SendControlHubCredentialsResponse, error) {
+func (c *requestForwardingClient) SendSecureHubCredentials(ctx context.Context, in *SendSecureHubCredentialsRequest, opts ...grpc.CallOption) (*SendSecureHubCredentialsResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SendControlHubCredentialsResponse)
-	err := c.cc.Invoke(ctx, RequestForwarding_SendControlHubCredentials_FullMethodName, in, out, cOpts...)
+	out := new(SendSecureHubCredentialsResponse)
+	err := c.cc.Invoke(ctx, RequestForwarding_SendSecureHubCredentials_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ type RequestForwardingServer interface {
 	ForwardRequest(context.Context, *forwarding.Request) (*forwarding.Response, error)
 	Echo(context.Context, *EchoRequest) (*EchoReply, error)
 	PerformanceStandbyElectionRequest(*PerfStandbyElectionInput, grpc.ServerStreamingServer[PerfStandbyElectionResponse]) error
-	SendControlHubCredentials(context.Context, *SendControlHubCredentialsRequest) (*SendControlHubCredentialsResponse, error)
+	SendSecureHubCredentials(context.Context, *SendSecureHubCredentialsRequest) (*SendSecureHubCredentialsResponse, error)
 	mustEmbedUnimplementedRequestForwardingServer()
 }
 
@@ -123,8 +123,8 @@ func (UnimplementedRequestForwardingServer) Echo(context.Context, *EchoRequest) 
 func (UnimplementedRequestForwardingServer) PerformanceStandbyElectionRequest(*PerfStandbyElectionInput, grpc.ServerStreamingServer[PerfStandbyElectionResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method PerformanceStandbyElectionRequest not implemented")
 }
-func (UnimplementedRequestForwardingServer) SendControlHubCredentials(context.Context, *SendControlHubCredentialsRequest) (*SendControlHubCredentialsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendControlHubCredentials not implemented")
+func (UnimplementedRequestForwardingServer) SendSecureHubCredentials(context.Context, *SendSecureHubCredentialsRequest) (*SendSecureHubCredentialsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendSecureHubCredentials not implemented")
 }
 func (UnimplementedRequestForwardingServer) mustEmbedUnimplementedRequestForwardingServer() {}
 func (UnimplementedRequestForwardingServer) testEmbeddedByValue()                           {}
@@ -194,20 +194,20 @@ func _RequestForwarding_PerformanceStandbyElectionRequest_Handler(srv interface{
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type RequestForwarding_PerformanceStandbyElectionRequestServer = grpc.ServerStreamingServer[PerfStandbyElectionResponse]
 
-func _RequestForwarding_SendControlHubCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SendControlHubCredentialsRequest)
+func _RequestForwarding_SendSecureHubCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendSecureHubCredentialsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(RequestForwardingServer).SendControlHubCredentials(ctx, in)
+		return srv.(RequestForwardingServer).SendSecureHubCredentials(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: RequestForwarding_SendControlHubCredentials_FullMethodName,
+		FullMethod: RequestForwarding_SendSecureHubCredentials_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RequestForwardingServer).SendControlHubCredentials(ctx, req.(*SendControlHubCredentialsRequest))
+		return srv.(RequestForwardingServer).SendSecureHubCredentials(ctx, req.(*SendSecureHubCredentialsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -228,8 +228,8 @@ var RequestForwarding_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _RequestForwarding_Echo_Handler,
 		},
 		{
-			MethodName: "SendControlHubCredentials",
-			Handler:    _RequestForwarding_SendControlHubCredentials_Handler,
+			MethodName: "SendSecureHubCredentials",
+			Handler:    _RequestForwarding_SendSecureHubCredentials_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

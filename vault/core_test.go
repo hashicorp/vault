@@ -23,10 +23,10 @@ import (
 	"github.com/hashicorp/vault/audit"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/namespace"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -3798,14 +3798,14 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 			core: &Core{
 				replicationState: uint32Ptr(uint32(0)),
 			},
-			expectedLength: 32,
+			expectedLength: 35,
 		},
 		{
 			name: "dr secondary core",
 			core: &Core{
 				replicationState: uint32Ptr(uint32(consts.ReplicationDRSecondary)),
 			},
-			expectedLength: 15,
+			expectedLength: 16,
 		},
 	} {
 		funcs := buildUnsealSetupFunctionSlice(testcase.core, true)

@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -260,8 +260,9 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                  i.pathEntityMergeID(),
-					ForwardPerformanceStandby: true,
+					Callback:                    i.pathEntityMergeID(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 
@@ -269,6 +270,20 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: strings.TrimSpace(entityHelp["entity-merge-id"][1]),
 		},
 	}
+}
+
+// operatorNamespaceID returns the namespace ID of the configured operator namespace, or an empty string if no operator namespace is configured.
+func (i *IdentityStore) operatorNamespaceID() string {
+	path := namespace.Canonicalize(i.localNode.OperatorNamespacePath())
+	if path == "" {
+		return ""
+	}
+	for _, ns := range i.namespacer.ListNamespaces(false) {
+		if ns.Path == path {
+			return ns.ID
+		}
+	}
+	return ""
 }
 
 // pathEntityMergeID merges two or more entities into a single entity
@@ -448,9 +463,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 		aliasMap["local"] = alias.Local
 		aliasMap["custom_metadata"] = alias.CustomMetadata
 
-		if i.scimEnabled {
-			aliasMap["scim_client_id"] = alias.ScimClientID
-		}
+		aliasMap["scim_client_id"] = alias.ScimClientID
 
 		if mountValidationResp := i.router.ValidateMountByAccessor(alias.MountAccessor); mountValidationResp != nil {
 			aliasMap["mount_type"] = mountValidationResp.MountType
@@ -464,9 +477,7 @@ func (i *IdentityStore) handleEntityReadCommon(ctx context.Context, entity *iden
 	// formats
 	respData["aliases"] = aliasesToReturn
 
-	if i.scimEnabled {
-		respData["scim_client_id"] = entity.ScimClientID
-	}
+	respData["scim_client_id"] = entity.ScimClientID
 
 	addExtraEntityDataToResponse(entity, respData)
 
@@ -625,6 +636,9 @@ func (i *IdentityStore) handleEntityBatchDelete() framework.OperationFunc {
 				if entity == nil {
 					continue
 				}
+				if opNsID := i.operatorNamespaceID(); opNsID != "" && entity.NamespaceID == opNsID && ns.ID != opNsID {
+					return fmt.Errorf("cannot delete operator namespace entity %s from outside its own namespace", entity.ID)
+				}
 				if entity.NamespaceID != ns.ID {
 					continue
 				}
@@ -670,6 +684,9 @@ func (i *IdentityStore) handleEntityDeleteCommon(ctx context.Context, txn *memdb
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return err
+	}
+	if opNsID := i.operatorNamespaceID(); opNsID != "" && entity.NamespaceID == opNsID && ns.ID != opNsID {
+		return errors.New("cannot delete operator namespace entity from outside its own namespace")
 	}
 	if entity.NamespaceID != ns.ID {
 		return nil
@@ -1023,11 +1040,18 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 			if err != nil {
 				return nil, err, nil
 			}
-			// If true, we need to handle conflicts (conflict = both aliases share the same mount accessor)
+
+			// keepFromAlias keeps track of whether or not fromAlias should be migrated into toEntity (survivor).
+			// It starts true (no conflict, or conflict resolved by keeping fromAlias) and
+			// is set to false only when the toAlias is chosen over fromAlias.
+			keepFromAlias := true
+
+			// If there are toEntity aliases with the same mount accessor as fromAlias, we
+			// have a conflict and must resolve which alias to keep.
 			if toAliasIds, ok := toEntityAccessors[fromAlias.MountAccessor]; ok {
 				for _, toAliasId := range toAliasIds {
 					// When forceMergeAliases is true (as part of the merge-during-upsert case), we make the decision
-					// for the user, and keep the from_entity alias
+					// for the user, and keep the from_entity alias over to_entity alias.
 					// This case's code is the same as when the user selects to keep the from_entity alias
 					// but is kept separate for clarity.
 					if forceMergeAliases {
@@ -1039,17 +1063,18 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						// Remove the alias from the entity's list in memory too!
 						toEntity.DeleteAliasByID(toAliasId)
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, toAliasId) {
+						// User chose to keep the toAlias so we delete fromAlias and don't migrate it.
 						i.logger.Info("Deleting from_entity alias during entity merge", "from_entity", fromEntityID, "deleted_alias", fromAlias.ID)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, fromAlias.ID, false)
 						if err != nil {
 							return nil, fmt.Errorf("aborting entity merge - failed to delete orphaned alias %q during merge into entity %q: %w", fromAlias.ID, toEntity.ID, err), nil
 						}
-						// Don't need to alter toEntity aliases since we it never contained
-						// the alias we're deleting.
-
-						// Continue to next alias, as there's no alias to merge left in the from_entity
-						continue
+						keepFromAlias = false
+						// Break out of the inner loop because there is nothing left to do for this fromAlias
+						// after deleting it, and nothing to do with toEntity.
+						break
 					} else if strutil.StrListContains(conflictingAliasIDsToKeep, fromAlias.ID) {
+						// User chose to keep the fromAlias so delete toAlias so fromAlias can be migrated.
 						i.logger.Info("Deleting to_entity alias during entity merge", "to_entity", toEntity.ID, "deleted_alias", toAliasId)
 						err := i.MemDBDeleteAliasByIDInTxn(txn, toAliasId, false)
 						if err != nil {
@@ -1061,6 +1086,12 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 						return fmt.Errorf("conflicting mount accessors in following alias IDs and neither were present in conflicting_alias_ids_to_keep: %s, %s", fromAlias.ID, toAliasId), nil, nil
 					}
 				}
+			}
+
+			// when fromAlias was dropped from MemDB in favour of the toAlias, don't migrate it to toEntity.
+			// Otherwise, update its canonical ID and attach it to toEntity.
+			if !keepFromAlias {
+				continue
 			}
 
 			// Set the desired canonical ID
@@ -1345,7 +1376,8 @@ func (i *entityIntegrityCheck) deleteDuplicateAliasInstances(log hclog.Logger, a
 	if aliasToKeep == nil {
 		return errors.New("no identity aliases to keep in deduplication")
 	}
-	log.Trace("deleting all but one duplicate identity alias instance",
+	log.Trace(
+		"deleting all but one duplicate identity alias instance",
 		"num_to_delete", len(aliases)-1,
 		"alias_to_keep", aliasToKeep,
 	)
@@ -1395,7 +1427,8 @@ func (i *entityIntegrityCheck) resolveAndAssociateDanglingEntityAlias(log hclog.
 	// Update our entity ID with the correct entity ID while also including our
 	// prior ID in the aliases merged from field.
 	resolveAliasID := func() {
-		log.Warn("associating dangling identity alias with entity",
+		log.Warn(
+			"associating dangling identity alias with entity",
 			"alias_id", alias.ID,
 			"dangling_canonical_id", alias.CanonicalID,
 			"new_canonical_id", i.entity.ID,
@@ -1424,7 +1457,8 @@ func (i *entityIntegrityCheck) resolveAndAssociateDanglingEntityAlias(log hclog.
 		alias.Metadata["dangling_prior_name"] = oldName
 		alias.LastUpdateTime = now
 
-		log.Warn("renamed dangling duplicate identity alias",
+		log.Warn(
+			"renamed dangling duplicate identity alias",
 			"alias_id", alias.ID,
 			"name", alias.Name,
 			"old_name", oldName,

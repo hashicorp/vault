@@ -54,17 +54,19 @@ jobs:
           no-restore: true
           no-save: true
 
-      - id: configure-git
-        name: Configure git
-        run: |
-          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          git config user.name hc-github-team-secure-vault-ecosystem
-          git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
-
       - name: Update plugin
+        env:
+          GIT_CONFIG_COUNT: "3"
+          GIT_CONFIG_KEY_0: url.https://user:${{ secrets.ELEVATED_GITHUB_TOKEN }}@github.com.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com
+          GIT_CONFIG_KEY_1: user.name
+          GIT_CONFIG_VALUE_1: hc-github-team-secure-vault-ecosystem
+          GIT_CONFIG_KEY_2: user.email
+          GIT_CONFIG_VALUE_2: hc-github-team-secure-vault-ecosystem@users.noreply.github.com
         run: |
           go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}"
-          go mod tidy
+          GOWORK=off go mod tidy
+          go work sync
 
       - name: Detect changes
         run: |
@@ -75,8 +77,14 @@ jobs:
           fi
 
       - name: Commit and push
+        env:
+          GIT_CONFIG_COUNT: "2"
+          GIT_CONFIG_KEY_0: user.name
+          GIT_CONFIG_VALUE_0: hc-github-team-secure-vault-ecosystem
+          GIT_CONFIG_KEY_1: user.email
+          GIT_CONFIG_VALUE_1: hc-github-team-secure-vault-ecosystem@users.noreply.github.com
         run: |
-          git add ./\*go.mod ./\*go.sum
+          git add ./\*go.mod ./\*go.sum go.work go.work.sum
           git commit -m "Update ${{ inputs.plugin }} to v${{ inputs.version }}"
           git push -f origin ${{ inputs.base-branch }}:"$VAULT_BRANCH"
 
@@ -103,6 +111,12 @@ jobs:
 
       - name: Add changelog
         if: steps.pr.outputs.vault_pr_num != ''
+        env:
+          GIT_CONFIG_COUNT: "2"
+          GIT_CONFIG_KEY_0: user.name
+          GIT_CONFIG_VALUE_0: hc-github-team-secure-vault-ecosystem
+          GIT_CONFIG_KEY_1: user.email
+          GIT_CONFIG_VALUE_1: hc-github-team-secure-vault-ecosystem@users.noreply.github.com
         run: |
           PLUGIN="${{ inputs.plugin }}"
 

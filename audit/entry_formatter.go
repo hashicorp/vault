@@ -16,7 +16,7 @@ import (
 	"github.com/go-jose/go-jose/v3/jwt"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
-	nshelper "github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -368,8 +368,17 @@ func newAuth(input *logical.Auth, tokenRemainingUses int) (*auth, error) {
 			metadataForAudit[k] = v
 		}
 	}
+	var authorizationDetails []any
+	if len(input.AuthorizationDetails) > 0 {
+		authorizationDetails = make([]any, len(input.AuthorizationDetails))
+		for i, detail := range input.AuthorizationDetails {
+			authorizationDetails[i] = detail
+		}
+	}
+
 	return &auth{
 		Accessor:                  input.Accessor,
+		AuthorizationDetails:      authorizationDetails,
 		ClientToken:               input.ClientToken,
 		DisplayName:               input.DisplayName,
 		EntityCreated:             input.EntityCreated,

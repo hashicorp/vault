@@ -84,6 +84,13 @@ module(
       assert.true(this.fetchStub.calledOnce, 'API was called once');
       assert.dom(GENERAL.cardContainer('Certificate details')).exists();
       assert.dom(GENERAL.infoRowValue('Serial number')).exists().hasText(CERT_RESPONSE.serial_number);
+
+      // Clicking back clears cert card
+      await click(GENERAL.button('Back'));
+      assert.dom(GENERAL.cardContainer('Certificate details'));
+      assert
+        .dom(GENERAL.overviewCard.container('Retrieve cached certificate'))
+        .exists('fetch form renders after clicking "Back"');
     });
 
     test('it calls pkiExternalCaReadRoleCached with the correct role name and engine id', async function (assert) {

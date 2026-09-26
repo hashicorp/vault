@@ -7,11 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-memdb"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -301,7 +300,7 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 		}
 
 		b.Core.certCountManager.StartConsumerJob(func(increment logical.CertCount) {
-			b.Core.ConsumeCertCounts(increment)
+			b.Core.ConsumeCertCounts(increment, true)
 		})
 		return nil
 	}
@@ -309,24 +308,16 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 
 // ConsumeCertCounts updates the certificate counts in storage if we are
 // running on the active node; otherwise it forwards them to the active node.
-func (c *Core) ConsumeCertCounts(inc logical.CertCount) {
-	haState := c.HAStateWithLock()
+func (c *Core) ConsumeCertCounts(inc logical.CertCount, isActive bool) {
 	if inc.IsZero() {
 		return
 	}
 
 	unconsumed := inc
-	switch haState {
-	case consts.Standby:
-		// nothing to do
-	case consts.PerfStandby:
-		if forwardCertCounts(c, inc) {
-			unconsumed = logical.CertCount{}
-		}
-	case consts.Active:
+	if isActive {
 		unconsumed = c.consumeCertCountsOnActive(inc)
-	default:
-		c.logger.Error("Unexpected HA state when consuming certificate counts", "ha_state", haState)
+	} else if forwardCertCounts(c, inc) {
+		unconsumed = logical.CertCount{}
 	}
 	// Add any unconsumed counts to the in-memory count so they can be included in the next increment
 	c.certCountManager.AddCount(unconsumed)
@@ -360,7 +351,7 @@ func (c *Core) consumeCertCountsOnActive(inc logical.CertCount) logical.CertCoun
 		attrDelta := flushedDelta
 		if attrDelta == 0 {
 			for _, a := range attributions {
-				attrDelta += toFloat64(a.Count)
+				attrDelta += ToFloat64(a.Count)
 			}
 		}
 		if attrDelta <= 0 {
@@ -440,7 +431,7 @@ type pluginReloadRequest struct {
 }
 
 // tuneMount is used to set config on a mount point
-func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration) error {
+func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *MountEntry, newDefault, newMax time.Duration, tuneDeferred *tuneDefers) error {
 	zero := time.Duration(0)
 
 	switch {
@@ -465,22 +456,10 @@ func (b *SystemBackend) tuneMountTTLs(ctx context.Context, path string, me *Moun
 	me.Config.MaxLeaseTTL = newMax
 	me.Config.DefaultLeaseTTL = newDefault
 
-	// Update the mount table
-	var err error
-	switch {
-	case strings.HasPrefix(path, credentialRoutePrefix):
-		err = b.Core.persistAuth(ctx, b.Core.auth, &me.Local)
-	default:
-		err = b.Core.persistMounts(ctx, b.Core.mounts, &me.Local)
-	}
-	if err != nil {
+	tuneDeferred.addRevert("leases", func() {
 		me.Config.MaxLeaseTTL = origMax
 		me.Config.DefaultLeaseTTL = origDefault
-		return fmt.Errorf("failed to update mount table, rolling back TTL changes: %w", err)
-	}
-	if b.Core.logger.IsInfo() {
-		b.Core.logger.Info("mount tuning of leases successful", "path", path)
-	}
+	})
 
 	return nil
 }

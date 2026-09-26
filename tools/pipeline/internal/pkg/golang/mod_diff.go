@@ -32,6 +32,11 @@ type DiffOpts struct {
 	StrictDiffExclude bool
 	StrictDiffReplace bool
 	StrictDiffRetract bool
+
+	// ExcludeRequire is matched against the require module path.
+	// ExcludeReplace is matched against the replace old path OR new path.
+	ExcludeRequire []string
+	ExcludeReplace []string
 }
 
 func DefaultDiffOpts() *DiffOpts {
@@ -105,14 +110,15 @@ func (d Directive) Explanation() string {
 	return fmt.Sprintf("The '%s' directives do not match", d)
 }
 
-// DiffModFiles diffs two go.mod "files" and returns a ModDiff.
-func DiffModFiles(as *ModSource, bs *ModSource, opts *DiffOpts) (ModDiff, error) {
+// DiffModFiles diffs two go.mod "files" and returns a ModDiff along with the
+// parsed modfile.File objects for A and B.
+func DiffModFiles(as *ModSource, bs *ModSource, opts *DiffOpts) (ModDiff, *modfile.File, *modfile.File, error) {
 	if as == nil {
-		return nil, errors.New("missing a mod source")
+		return nil, nil, nil, errors.New("missing a mod source")
 	}
 
 	if bs == nil {
-		return nil, errors.New("missing b mod source")
+		return nil, nil, nil, errors.New("missing b mod source")
 	}
 
 	var af *modfile.File
@@ -121,26 +127,31 @@ func DiffModFiles(as *ModSource, bs *ModSource, opts *DiffOpts) (ModDiff, error)
 	if opts.ParseLax {
 		af, err = modfile.ParseLax(as.Name, as.Data, nil)
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s contents: %w", as.Name, err)
+			return nil, nil, nil, fmt.Errorf("parsing %s contents: %w", as.Name, err)
 		}
 
 		bf, err = modfile.ParseLax(bs.Name, bs.Data, nil)
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s contents: %w", bs.Name, err)
+			return nil, nil, nil, fmt.Errorf("parsing %s contents: %w", bs.Name, err)
 		}
 	} else {
 		af, err = modfile.Parse(as.Name, as.Data, nil)
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s contents: %w", as.Name, err)
+			return nil, nil, nil, fmt.Errorf("parsing %s contents: %w", as.Name, err)
 		}
 
 		bf, err = modfile.Parse(bs.Name, bs.Data, nil)
 		if err != nil {
-			return nil, fmt.Errorf("parsing %s contents: %w", bs.Name, err)
+			return nil, nil, nil, fmt.Errorf("parsing %s contents: %w", bs.Name, err)
 		}
 	}
 
-	return diffModFiles(af, bf, opts)
+	diff, err := diffModFiles(af, bf, opts)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return diff, af, bf, nil
 }
 
 func diffModFiles(a *modfile.File, b *modfile.File, opts *DiffOpts) (ModDiff, error) {
@@ -165,16 +176,16 @@ func diffModFiles(a *modfile.File, b *modfile.File, opts *DiffOpts) (ModDiff, er
 	if opts.Godebug {
 		diff = append(diff, diffGodebug(a, b)...)
 	}
-	if opts.Require || opts.StrictDiffRequire {
-		diff = append(diff, diffRequire(a, b, opts.StrictDiffRequire)...)
+	if opts.Require {
+		diff = append(diff, diffRequire(a, b, opts.StrictDiffRequire, opts.ExcludeRequire)...)
 	}
-	if opts.Exclude || opts.StrictDiffExclude {
+	if opts.Exclude {
 		diff = append(diff, diffExclude(a, b, opts.StrictDiffExclude)...)
 	}
-	if opts.Replace || opts.StrictDiffReplace {
-		diff = append(diff, diffReplace(a, b, opts.StrictDiffReplace)...)
+	if opts.Replace {
+		diff = append(diff, diffReplace(a, b, opts.StrictDiffReplace, opts.ExcludeReplace)...)
 	}
-	if opts.Retract || opts.StrictDiffRetract {
+	if opts.Retract {
 		diff = append(diff, diffRetract(a, b, opts.StrictDiffRetract)...)
 	}
 	if opts.Tool {

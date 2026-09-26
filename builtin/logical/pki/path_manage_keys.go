@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -213,6 +214,14 @@ func pathImportKey(b *backend) *framework.Path {
 				Type:        framework.TypeString,
 				Description: `PEM-format, unencrypted secret key`,
 			},
+			"wrapped_key": {
+				Type:        framework.TypeString,
+				Description: `Base64-encoded wrapped key blob produced by the secure export endpoint. Must be supplied together with export_key_hmac.`,
+			},
+			"export_key_hmac": {
+				Type:        framework.TypeString,
+				Description: `The export key HMAC identifier used to identify the export key for unwrapping. Must be supplied together with wrapped_key.`,
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -269,47 +278,76 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 
 	sc := b.makeStorageContext(ctx, req.Storage)
 	pemBundle := data.Get("pem_bundle").(string)
+	wrappedKey := data.Get("wrapped_key").(string)
+	exportKeyHMAC := data.Get("export_key_hmac").(string)
+
+	hasPem := pemBundle != ""
+	hasWrapped := wrappedKey != "" || exportKeyHMAC != ""
+
+	if !hasPem && !hasWrapped {
+		return logical.ErrorResponse("either pem_bundle or (wrapped_key and export_key_hmac) must be provided"), nil
+	}
+	if hasPem && hasWrapped {
+		return logical.ErrorResponse("cannot provide both pem_bundle and wrapped_key/export_key_hmac"), nil
+	}
+	if hasWrapped && (wrappedKey == "" || exportKeyHMAC == "") {
+		return logical.ErrorResponse("both wrapped_key and export_key_hmac must be provided together"), nil
+	}
+
 	keyName, err := getKeyName(sc, data)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	if len(pemBundle) < 64 {
-		// It is almost nearly impossible to store a complete key in
-		// less than 64 bytes. It is definitely impossible to do so when PEM
-		// encoding has been applied. Detect this and give a better warning
-		// than "provided PEM block contained no data" in this case. This is
-		// because the PEM headers contain 5*4 + 6 + 4 + 2 + 2 = 34 characters
-		// minimum (five dashes, "BEGIN" + space + at least one character
-		// identifier, "END" + space + at least one character identifier, and
-		// a pair of new lines). That would leave 30 bytes for Base64 data,
-		// meaning at most a 22-byte DER key. Even with a 128-bit key, 6 bytes
-		// is not sufficient for the required ASN.1 structure and OID encoding.
-		//
-		// However, < 64 bytes is probably a good length for a file path so
-		// suggest that is the case.
-		return logical.ErrorResponse("provided data for import was too short; perhaps a path was passed to the API rather than the contents of a PEM file"), nil
-	}
-
-	pemBytes := []byte(pemBundle)
-	var pemBlock *pem.Block
-
-	var keys []string
-	for len(bytes.TrimSpace(pemBytes)) > 0 {
-		pemBlock, pemBytes = pem.Decode(pemBytes)
-		if pemBlock == nil {
-			return logical.ErrorResponse("provided PEM block contained no data"), nil
+	var keyPEM string
+	if hasWrapped {
+		unwrappedPEM, err := b.unwrapAndImportKey(ctx, req.Storage, wrappedKey, exportKeyHMAC)
+		if err != nil {
+			if _, ok := err.(errutil.UserError); ok {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			return nil, err
+		}
+		keyPEM = unwrappedPEM
+	} else {
+		if len(pemBundle) < 64 {
+			// It is almost nearly impossible to store a complete key in
+			// less than 64 bytes. It is definitely impossible to do so when PEM
+			// encoding has been applied. Detect this and give a better warning
+			// than "provided PEM block contained no data" in this case. This is
+			// because the PEM headers contain 5*4 + 6 + 4 + 2 + 2 = 34 characters
+			// minimum (five dashes, "BEGIN" + space + at least one character
+			// identifier, "END" + space + at least one character identifier, and
+			// a pair of new lines). That would leave 30 bytes for Base64 data,
+			// meaning at most a 22-byte DER key. Even with a 128-bit key, 6 bytes
+			// is not sufficient for the required ASN.1 structure and OID encoding.
+			//
+			// However, < 64 bytes is probably a good length for a file path so
+			// suggest that is the case.
+			return logical.ErrorResponse("provided data for import was too short; perhaps a path was passed to the API rather than the contents of a PEM file"), nil
 		}
 
-		pemBlockString := string(pem.EncodeToMemory(pemBlock))
-		keys = append(keys, pemBlockString)
+		pemBytes := []byte(pemBundle)
+		var pemBlock *pem.Block
+
+		var keys []string
+		for len(bytes.TrimSpace(pemBytes)) > 0 {
+			pemBlock, pemBytes = pem.Decode(pemBytes)
+			if pemBlock == nil {
+				return logical.ErrorResponse("provided PEM block contained no data"), nil
+			}
+
+			pemBlockString := string(pem.EncodeToMemory(pemBlock))
+			keys = append(keys, pemBlockString)
+		}
+
+		if len(keys) != 1 {
+			return logical.ErrorResponse("only a single key can be present within the pem_bundle for importing"), nil
+		}
+		keyPEM = keys[0]
 	}
 
-	if len(keys) != 1 {
-		return logical.ErrorResponse("only a single key can be present within the pem_bundle for importing"), nil
-	}
-
-	key, existed, err := importKeyFromBytes(sc, keys[0], keyName)
+	key, existed, err := importKeyFromBytes(sc, keyPEM, keyName)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -326,12 +364,16 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		resp.AddWarning("Key already imported, use key/ endpoint to update name.")
 	}
 
-	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIKeysImport,
+	obsMeta := []observe.AdditionalPKIMetadata{
 		observe.NewAdditionalPKIMetadata("existed", existed),
 		observe.NewAdditionalPKIMetadata("key_type", key.PrivateKeyType),
 		observe.NewAdditionalPKIMetadata("key_id", key.ID),
 		observe.NewAdditionalPKIMetadata("key_name", key.Name),
-	)
+	}
+	if exportKeyHMAC != "" {
+		obsMeta = append(obsMeta, observe.NewAdditionalPKIMetadata("export_key_hmac", exportKeyHMAC))
+	}
+	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIKeysImport, obsMeta...)
 
 	return &resp, nil
 }

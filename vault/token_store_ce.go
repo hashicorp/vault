@@ -9,12 +9,17 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func getOAuthJwtId(_ string) string {
-	return ""
+func (ts *TokenStore) entPaths() []*framework.Path {
+	return nil
+}
+
+func getOAuthJwtId(_ context.Context, _ string) (string, error) {
+	return "", nil
 }
 
 func normalizeOAuthJwtToId(token string) string {

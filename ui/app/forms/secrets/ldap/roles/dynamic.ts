@@ -88,6 +88,8 @@ export default class LdapDynamicRoleForm extends Form<LdapDynamicRoleFormData> {
       { type: 'presence', message: 'Name is required' },
       {
         validator: ({ name }: LdapDynamicRoleFormData) => {
+          // Presence reports an empty name, so skip here to avoid two messages on one field.
+          if (!name) return true;
           // Allow alphanumeric, hyphens, underscores, periods, and forward slashes
           const validPattern = /^[a-z0-9\-_./]+$/;
           return validPattern.test(name);

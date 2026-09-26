@@ -106,7 +106,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       .hasTextContaining(`${enginePath}/`, 'the alicloud engine is mounted');
 
     await click(GENERAL.menuTrigger);
-    await click(GENERAL.menuItem('Delete'));
+    await click(GENERAL.menuItem('delete-engine-path'));
     await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
@@ -228,9 +228,9 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
       assert.dom(GENERAL.linkTo(`${enginePath1}/`)).exists();
       assert.dom(GENERAL.tableRow()).exists({ count: 2 }, 'only 2 secret engines are listed');
-      // Delete the engine
-      await click(`${GENERAL.listItem(`${enginePath1}/`)} ${GENERAL.menuTrigger}`);
-      await click(GENERAL.menuItem('Delete'));
+      // Delete the engine — target the specific row to avoid clicking cubbyhole/'s trigger
+      await click(`[data-test-popup-menu-trigger="${enginePath1}"]`);
+      await click(GENERAL.menuItem('delete-engine-path'));
       await fillIn(GENERAL.confirmTextInput, 'delete-engine');
       await click(GENERAL.confirmButton);
       assert.strictEqual(

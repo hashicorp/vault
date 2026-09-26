@@ -6,6 +6,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -187,15 +188,62 @@ auth_type is ec2.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathRoleCreateUpdate,
+				Summary:  "Create or update an AWS auth role.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoleCreateUpdate,
+				Summary:  "Create or update an AWS auth role.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathRoleRead,
+				Summary:  "Return the configuration for a named AWS auth role.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"auth_type":                      {Type: framework.TypeString, Description: "Auth type permitted to authenticate to this role."},
+							"bound_ami_id":                   {Type: framework.TypeSlice, Description: "AMI IDs that instances must use to authenticate."},
+							"bound_account_id":               {Type: framework.TypeSlice, Description: "AWS account IDs that instances must belong to."},
+							"bound_ec2_instance_id":          {Type: framework.TypeSlice, Description: "EC2 instance IDs that are allowed to authenticate."},
+							"bound_iam_principal_arn":        {Type: framework.TypeSlice, Description: "IAM principal ARNs bound to this role."},
+							"bound_iam_principal_id":         {Type: framework.TypeSlice, Description: "Resolved unique IDs for IAM principal ARNs."},
+							"bound_iam_role_arn":             {Type: framework.TypeSlice, Description: "IAM role ARNs that instances must match."},
+							"bound_iam_instance_profile_arn": {Type: framework.TypeSlice, Description: "IAM instance profile ARN prefixes that instances must match."},
+							"bound_region":                   {Type: framework.TypeSlice, Description: "AWS regions that instances must be in."},
+							"bound_subnet_id":                {Type: framework.TypeSlice, Description: "VPC subnet IDs that instances must be in."},
+							"bound_vpc_id":                   {Type: framework.TypeSlice, Description: "VPC IDs that instances must be in."},
+							"inferred_entity_type":           {Type: framework.TypeString, Description: "Entity type inferred from the authenticated principal."},
+							"inferred_aws_region":            {Type: framework.TypeString, Description: "AWS region used when inferring the entity type."},
+							"resolve_aws_unique_ids":         {Type: framework.TypeBool, Description: "Whether IAM ARNs are resolved to unique IDs."},
+							"role_id":                        {Type: framework.TypeString, Description: "Unique ID of the role."},
+							"role_tag":                       {Type: framework.TypeString, Description: "EC2 instance tag key for role tags."},
+							"allow_instance_migration":       {Type: framework.TypeBool, Description: "Whether instance migration is allowed."},
+							"disallow_reauthentication":      {Type: framework.TypeBool, Description: "Whether reauthentication is disallowed."},
+							"token_bound_cidrs":              {Type: framework.TypeSlice, Description: "CIDR blocks that tokens are restricted to."},
+							"token_explicit_max_ttl":         {Type: framework.TypeInt, Description: "Explicit maximum TTL for tokens."},
+							"token_max_ttl":                  {Type: framework.TypeInt, Description: "Maximum TTL for tokens."},
+							"token_no_default_policy":        {Type: framework.TypeBool, Description: "Whether the default policy is not added to tokens."},
+							"token_period":                   {Type: framework.TypeInt, Description: "Renewal period for tokens."},
+							"token_policies":                 {Type: framework.TypeSlice, Description: "Policies applied to tokens."},
+							"token_type":                     {Type: framework.TypeString, Description: "Type of tokens generated."},
+							"token_ttl":                      {Type: framework.TypeInt, Description: "TTL for tokens."},
+							"token_num_uses":                 {Type: framework.TypeInt, Description: "Maximum number of token uses."},
+						},
+					}},
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathRoleDelete,
+				Summary:  "Delete a named AWS auth role.",
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{Description: "No Content"}},
+				},
 			},
 		},
 
@@ -219,6 +267,7 @@ func (b *backend) pathListRole() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
+				Summary:  "List the configured AWS auth roles.",
 			},
 		},
 
@@ -239,6 +288,7 @@ func (b *backend) pathListRoles() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
+				Summary:  "List the configured AWS auth roles.",
 			},
 		},
 

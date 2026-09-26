@@ -423,6 +423,15 @@ func generatePartitionToRegionMap() map[string]string {
 	}
 }
 
+// tidyConfigResponseFields returns the shared OpenAPI response field schemas
+// used by the identity access-list and role-tag deny-list tidy config read operations.
+func tidyConfigResponseFields(safetyBufferDesc, disablePeriodicTidyDesc string) map[string]*framework.FieldSchema {
+	return map[string]*framework.FieldSchema{
+		"safety_buffer":         {Type: framework.TypeDurationSecond, Description: safetyBufferDesc},
+		"disable_periodic_tidy": {Type: framework.TypeBool, Description: disablePeriodicTidyDesc},
+	}
+}
+
 const backendHelp = `
 The aws auth method uses either AWS IAM credentials or AWS-signed EC2 metadata
 to authenticate clients, which are IAM principals or EC2 instances.

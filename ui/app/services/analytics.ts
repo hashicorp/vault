@@ -7,10 +7,6 @@ import Service, { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 import { DummyProvider, PROVIDER_NAME as DummyProviderName } from 'vault/utils/analytics-providers/dummy';
-import {
-  PostHogProvider,
-  PROVIDER_NAME as PostHogProviderName,
-} from 'vault/utils/analytics-providers/posthog';
 
 import {
   SegmentProvider,
@@ -19,8 +15,8 @@ import {
 
 import { getPreference, hasPreference, setPreference } from 'vault/utils/preferences';
 
-import type { AnalyticsConfig, AnalyticsProvider } from 'vault/vault/analytics';
 import type RouterService from '@ember/routing/router-service';
+import type { AnalyticsConfig, AnalyticsEventName, AnalyticsProvider } from 'vault/vault/analytics';
 
 import config from 'vault/config/environment';
 
@@ -76,9 +72,6 @@ export default class AnalyticsService extends Service {
       switch (provider) {
         case DummyProviderName:
           this.provider = new DummyProvider();
-          break;
-        case PostHogProviderName:
-          this.provider = new PostHogProvider();
           break;
         case SegmentProviderName:
           this.provider = new SegmentProvider();
@@ -194,7 +187,7 @@ export default class AnalyticsService extends Service {
 
   // Swallow provider errors as analytics is non-essential and
   // must never break navigation or interaction if the provider throws.
-  trackEvent = (eventName: string, metadata: Record<string, unknown>) => {
+  trackEvent = (eventName: AnalyticsEventName, metadata: Record<string, unknown>) => {
     try {
       this.provider.trackEvent(eventName, metadata);
       this.log('custom event', eventName, metadata);

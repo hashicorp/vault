@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/server"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/cert_count"
 )
@@ -93,5 +93,12 @@ func (c *Core) GetCertCountManager() cert_count.CertificateCountManager {
 }
 
 func (c *Core) GetConsumptionBillingManager() logical.ConsumptionBillingManager {
-	return c.consumptionBilling
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
+		return nil
+	}
+	return cb
 }

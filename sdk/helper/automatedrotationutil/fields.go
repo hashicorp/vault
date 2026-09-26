@@ -19,6 +19,7 @@ import (
 var (
 	ErrRotationMutuallyExclusiveFields = errors.New("mutually exclusive fields rotation_schedule and rotation_period were both specified; only one of them can be provided")
 	ErrRotationManagerUnsupported      = errors.New("rotation manager capabilities not supported in Vault community edition")
+	ErrRotationPolicyRequiresSet       = errors.New("rotation_policy requires one of rotation_schedule or rotation_period to be set")
 )
 
 // AutomatedRotationParams contains a set of common parameters that plugins
@@ -52,6 +53,10 @@ type RotationInfoResponseParams struct {
 
 // ParseAutomatedRotationFields provides common field parsing to embedding structs.
 func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.FieldData) error {
+	_, scheduleOk := d.GetOk("rotation_schedule")
+	_, windowOk := d.GetOk("rotation_window")
+	_, periodOk := d.GetOk("rotation_period")
+	_, disableOk := d.GetOk("disable_automated_rotation")
 	rotationPolicyRaw, policyOk := d.GetOk("rotation_policy")
 
 	// use common extraction helper
@@ -60,14 +65,25 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 		return err
 	}
 
-	// set fields from response
-	p.RotationSchedule = automatedRotationParams.RotationSchedule
-	p.RotationWindow = automatedRotationParams.RotationWindow
-	p.RotationPeriod = automatedRotationParams.RotationPeriod
-	p.DisableAutomatedRotation = automatedRotationParams.DisableAutomatedRotation
+	// Set fields from the response only when the request contains at least one of them.
+	if scheduleOk || windowOk || periodOk {
+		p.RotationSchedule = automatedRotationParams.RotationSchedule
+		p.RotationWindow = automatedRotationParams.RotationWindow
+		p.RotationPeriod = automatedRotationParams.RotationPeriod
+	}
+
+	if disableOk {
+		p.DisableAutomatedRotation = automatedRotationParams.DisableAutomatedRotation
+	}
 
 	if policyOk {
 		p.RotationPolicy = rotationPolicyRaw.(string)
+	}
+
+	// The rotation_policy is only a modifier for a valid rotation job at this time, so
+	// it must require either a rotation schedule or rotation period to be set.
+	if p.RotationPolicy != "" && !p.DisableAutomatedRotation && p.RotationSchedule == "" && p.RotationPeriod == 0 {
+		return ErrRotationPolicyRequiresSet
 	}
 
 	return nil
@@ -364,13 +380,13 @@ func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
 }
 
 func (p *AutomatedRotationParams) ShouldDeregisterRotationJob() bool {
-	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0 && p.RotationPolicy == "")
+	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0)
 }
 
 // HasNonzeroRotationValues returns true if either of the primary rotation values (RotationSchedule or RotationPeriod)
 // are not the zero value.
 func (p *AutomatedRotationParams) HasNonzeroRotationValues() bool {
-	return p.RotationSchedule != "" || p.RotationPeriod != 0 || p.RotationPolicy != ""
+	return p.RotationSchedule != "" || p.RotationPeriod != 0
 }
 
 // AddAutomatedRotationFieldsWithGroup adds rotation fields to the given field schema map

@@ -137,7 +137,7 @@ locals {
   ]
   storage_retry_join = {
     "raft" : {
-      "leader_api_addr" : [for addr in local.api_addrs : {
+      "leader_api_addr" : [for addr in local.api_addrs_internal : {
         "leader_api_addr" : addr[var.ip_version]
       }],
       "aws" : {

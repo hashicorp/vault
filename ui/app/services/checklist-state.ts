@@ -8,12 +8,13 @@ import { tracked } from '@glimmer/tracking';
 import { ResponseError } from '@hashicorp/vault-client-typescript';
 import { keepLatestTask, task } from 'ember-concurrency';
 import localStorage from 'vault/lib/local-storage';
-import { getChecklistStepConfig, HIDDEN_CHECKLISTS_KEY } from 'vault/utils/constants/checklist';
+import { CHECKLIST_LOCAL_STATE_KEY, getChecklistStepConfig } from 'vault/utils/constants/checklist';
 
 import type { ApiResponse } from 'vault/api';
 import type ApiService from 'vault/services/api';
 import type PermissionsService from 'vault/services/permissions';
 import type VersionService from 'vault/services/version';
+import type { ChecklistLocalStateData, ChecklistView } from 'vault/utils/constants/checklist';
 
 /**
  * Sparse map of checklist completion state: { checklistId: { stepId: true } }.
@@ -51,15 +52,40 @@ function isChecklistStateData(value: unknown): value is ChecklistStateData {
 
 /**
  * Returns true for HTTP responses that should degrade gracefully rather than
- * surface as errors in the UI: 403 Forbidden (insufficient permissions),
- * 404 Not Found (endpoint not yet deployed or CE cluster), and any 5xx server error.
+ * surface as errors in the UI:
+ * - 403 Forbidden (insufficient permissions)
+ * - 404 Not Found (endpoint not yet deployed or CE cluster)
+ * - any 5xx server error
+ * - TypeError (network failure, connection refused, connection dropped)
+ * - SyntaxError (non-JSON body, e.g. panic response without a proper error payload)
  */
 function isNonBlockingError(error: unknown): boolean {
   if (error instanceof ResponseError) {
     const { status } = error.response;
     return status === 403 || status === 404 || status >= 500;
   }
+  if (error instanceof TypeError || error instanceof SyntaxError) {
+    return true;
+  }
   return false;
+}
+
+/**
+ * Type guard that validates a value has the expected ChecklistLocalStateData
+ * shape: { [checklistId]: { hidden?: boolean, lastView?: 'checklist' | 'complete-banner' } }.
+ * An empty object is valid (no checklists have local preferences yet).
+ */
+function isChecklistLocalStateData(value: unknown): value is ChecklistLocalStateData {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+
+  return Object.values(value as Record<string, unknown>).every((entry) => {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return false;
+
+    const { hidden, lastView } = entry as Record<string, unknown>;
+    if (hidden !== undefined && typeof hidden !== 'boolean') return false;
+    if (lastView !== undefined && lastView !== 'checklist' && lastView !== 'complete-banner') return false;
+    return true;
+  });
 }
 
 /**
@@ -67,8 +93,9 @@ function isNonBlockingError(error: unknown): boolean {
  * storage model:
  *  - Completion state: read/written via the sys/config/ui/checklist-state API
  *    so that progress is shared across browsers and sessions.
- *  - Hidden preference: stored in localStorage so it is per-browser and is
- *    never written to the backend.
+ *  - Local preferences (hidden, last view shown): stored in localStorage,
+ *    nested by checklist ID, so they are per-browser and never written to
+ *    the backend.
  *
  * The stored completion shape is { checklistId: { stepId: true } }; a missing
  * step entry is treated as false (incomplete) by consumers.
@@ -87,15 +114,38 @@ export default class ChecklistStateService extends Service {
   @tracked isAvailable = true;
 
   /**
-   * IDs of checklists the user has chosen to hide. Backed by localStorage so
-   * the preference is per-browser and is never written to the backend.
-   * Existing localStorage data that is not a string array is silently discarded.
+   * Browser-local checklist preferences (hidden, last view), nested by
+   * checklist ID to mirror the backend's checklist_state payload shape.
+   * Backed by localStorage so preferences are per-browser and are never
+   * written to the backend. Existing localStorage data with an unexpected
+   * shape is silently discarded.
    */
-  @tracked private _hiddenChecklists: string[] = this._loadHiddenChecklists();
+  @tracked private _localState: ChecklistLocalStateData = this._loadLocalState();
 
-  private _loadHiddenChecklists(): string[] {
-    const stored = localStorage.getItem(HIDDEN_CHECKLISTS_KEY);
-    return Array.isArray(stored) ? (stored as string[]) : [];
+  private _getLocalStorageItem(key: string, removeMalformed = false): unknown {
+    try {
+      return localStorage.getItem(key);
+    } catch (error) {
+      if (error instanceof SyntaxError) {
+        if (removeMalformed) localStorage.removeItem(key);
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private _loadLocalState(): ChecklistLocalStateData {
+    const stored = this._getLocalStorageItem(CHECKLIST_LOCAL_STATE_KEY);
+    return isChecklistLocalStateData(stored) ? stored : {};
+  }
+
+  /** Merges a partial local-state patch for a single checklist and persists the result. */
+  private _patchLocalState(checklistId: string, patch: { hidden?: boolean; lastView?: ChecklistView }): void {
+    this._localState = {
+      ...this._localState,
+      [checklistId]: { ...this._localState[checklistId], ...patch },
+    };
+    localStorage.setItem(CHECKLIST_LOCAL_STATE_KEY, this._localState);
   }
 
   /**
@@ -167,14 +217,14 @@ export default class ChecklistStateService extends Service {
   }
 
   // ---------------------------------------------------------------------------
-  // Hidden preference (localStorage-backed, never written to backend)
+  // Local preferences (localStorage-backed, never written to backend)
   // ---------------------------------------------------------------------------
 
   /**
    * Returns whether the user has hidden this checklist in their current browser.
    */
   isHidden(checklistId: string): boolean {
-    return this._hiddenChecklists.includes(checklistId);
+    return this._localState[checklistId]?.hidden ?? false;
   }
 
   /**
@@ -182,18 +232,31 @@ export default class ChecklistStateService extends Service {
    * Does not affect backend completion state.
    */
   hideChecklist(checklistId: string): void {
-    if (!this._hiddenChecklists.includes(checklistId)) {
-      this._hiddenChecklists = [...this._hiddenChecklists, checklistId];
-      localStorage.setItem(HIDDEN_CHECKLISTS_KEY, this._hiddenChecklists);
-    }
+    this._patchLocalState(checklistId, { hidden: true });
   }
 
   /**
    * Restores the checklist to visible in the current browser.
    */
   showChecklist(checklistId: string): void {
-    this._hiddenChecklists = this._hiddenChecklists.filter((id) => id !== checklistId);
-    localStorage.setItem(HIDDEN_CHECKLISTS_KEY, this._hiddenChecklists);
+    this._patchLocalState(checklistId, { hidden: false });
+  }
+
+  /**
+   * Returns which panel (checklist vs. completion) was last shown for a
+   * checklist. Defaults to 'complete-banner' — the original completion panel —
+   * when no preference has been recorded yet.
+   */
+  getLastView(checklistId: string): ChecklistView {
+    return this._localState[checklistId]?.lastView ?? 'complete-banner';
+  }
+
+  /**
+   * Records which panel (checklist vs. completion) is currently shown for a
+   * checklist so it can be restored to the same view later.
+   */
+  setLastView(checklistId: string, view: ChecklistView): void {
+    this._patchLocalState(checklistId, { lastView: view });
   }
 
   // ---------------------------------------------------------------------------
@@ -218,7 +281,8 @@ export default class ChecklistStateService extends Service {
    * Fetches the full checklist state from the API and updates the in-memory state.
    * Cancels any in-flight fetch when a newer call is made.
    * Sets isAvailable to false on 403/5xx so the UI can degrade gracefully.
-   * Throws for unexpected response shapes or non-permission errors.
+   * Falls back to an empty state when the response body is null or has an
+   * unexpected shape — this is the correct starting state for a fresh cluster.
    */
   fetchState = keepLatestTask(async () => {
     try {
@@ -226,11 +290,11 @@ export default class ChecklistStateService extends Service {
       const body = (await response.json()) as ApiResponse;
       const data = body?.data;
 
-      if (!isChecklistStateData(data)) {
-        throw new Error('Received checklist state in an unexpected format');
-      }
-
-      this._state = data;
+      // Treat a null/undefined/unexpected shape as an empty state. This
+      // happens on the very first request to a fresh cluster where no
+      // checklist progress has been written yet. An empty object is the
+      // correct starting state and can be updated via the UI.
+      this._state = isChecklistStateData(data) ? data : {};
       this.isAvailable = true;
       return this._state;
     } catch (error) {
@@ -247,7 +311,8 @@ export default class ChecklistStateService extends Service {
    * The server performs a deep merge, so other checklist entries are preserved.
    * Updates in-memory state with the full merged result returned by the server.
    * Silently absorbs 403/5xx errors so a transient failure does not disrupt the UI.
-   * Throws for unexpected response shapes or non-permission errors.
+   * Retains the current in-memory state when the response body is null or has
+   * an unexpected shape so a transient body issue does not wipe local state.
    */
   updateStep = task(async (checklistId: string, stepId: string, completed: boolean) => {
     try {
@@ -257,11 +322,12 @@ export default class ChecklistStateService extends Service {
       const body = (await response.json()) as ApiResponse;
       const data = body?.data;
 
-      if (!isChecklistStateData(data)) {
-        throw new Error('Received checklist state in an unexpected format after update');
+      // Fall back to current in-memory state when the server returns a
+      // null or unexpected shape so a transient body issue does not wipe
+      // the locally-known state.
+      if (isChecklistStateData(data)) {
+        this._state = data;
       }
-
-      this._state = data;
       return this._state;
     } catch (error) {
       if (isNonBlockingError(error)) {

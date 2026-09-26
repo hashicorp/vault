@@ -37,7 +37,8 @@ jobs:
       - name: update plugin
         run: |
           go get "github.com/$PLUGIN_REPO@$PLUGIN_BRANCH"
-          go mod tidy
+          GOWORK=off go mod tidy
+          go work sync
 
       - name: detect changes
         id: changes
@@ -46,9 +47,13 @@ jobs:
 
       - name: commit/push
         if: steps.changes.outputs.count > 0
+        env:
+          GIT_CONFIG_COUNT: "2"
+          GIT_CONFIG_KEY_0: user.name
+          GIT_CONFIG_VALUE_0: hc-github-team-secure-vault-ecosystem
+          GIT_CONFIG_KEY_1: user.email
+          GIT_CONFIG_VALUE_1: hc-github-team-secure-vault-ecosystem@users.noreply.github.com
         run: |
-          git config user.name hc-github-team-secure-vault-ecosystem
-          git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
           git add .
           git commit -m "Automated dependency upgrades"
           git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"

@@ -218,7 +218,7 @@ func (r *CheckGoModDiffReq) Run(
 		}
 
 		// Diff the contents
-		diffCheck.ModDiff, err = golang.DiffModFiles(aSource, bSource, r.DiffOpts)
+		diffCheck.ModDiff, _, _, err = golang.DiffModFiles(aSource, bSource, r.DiffOpts)
 		if err != nil {
 			diffCheck.Err = fmt.Errorf("checking diff on %s: %w", path, err)
 			diffCheck.Error = diffCheck.Err.Error()

@@ -6,13 +6,11 @@
 package raft
 
 import (
-	"os"
 	"strconv"
 	"testing"
 )
 
 func Test_BoltOptions(t *testing.T) {
-	t.Parallel()
 	key := "VAULT_RAFT_INITIAL_MMAP_SIZE"
 
 	testCases := []struct {
@@ -30,9 +28,7 @@ func Test_BoltOptions(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			if tc.env != "" {
-				current := os.Getenv(key)
-				defer os.Setenv(key, current)
-				os.Setenv(key, tc.env)
+				t.Setenv(key, tc.env)
 			}
 
 			o := boltOptions("")

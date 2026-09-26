@@ -6,7 +6,7 @@ import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
 import { task } from 'ember-concurrency';
-import { sanitizePath } from 'core/utils/sanitize-path';
+import { sanitizeStart } from 'core/utils/sanitize-path';
 
 export default Controller.extend({
   vaultController: controller('vault'),
@@ -31,11 +31,11 @@ export default Controller.extend({
   unwrapTokenError: '',
 
   fullNamespaceFromInput(value) {
-    const strippedNs = sanitizePath(value);
+    const ns = sanitizeStart(value);
     if (this.hvdManagedNamespaceRoot) {
-      return `${this.hvdManagedNamespaceRoot}/${strippedNs}`;
+      return `${this.hvdManagedNamespaceRoot}/${ns}`;
     }
-    return strippedNs;
+    return ns;
   },
 
   updateNamespace: task(function* (value) {

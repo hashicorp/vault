@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	scada "github.com/hashicorp/hcp-scada-provider"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"

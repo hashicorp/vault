@@ -44,6 +44,7 @@ type ocspRespInfo struct {
 	ocspStatus        int
 	revocationTimeUTC *time.Time
 	issuerID          issuing.IssuerID
+	reasonCode        int
 }
 
 // These response variables should not be mutated, instead treat them as constants
@@ -454,6 +455,7 @@ func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage 
 		info.ocspStatus = ocsp.Revoked
 		info.revocationTimeUTC = &revEntry.RevocationTimeUTC
 		info.issuerID = revEntry.CertificateIssuer // This might be empty if the CRL hasn't been rebuilt
+		info.reasonCode = revEntry.ReasonCode
 	} else if useUnifiedStorage {
 		dashSerial := normalizeSerialFromBigInt(ocspReq.SerialNumber)
 		unifiedEntry, err := getUnifiedRevocationBySerial(sc, dashSerial)
@@ -465,6 +467,7 @@ func getOcspStatus(sc *storageContext, ocspReq *ocsp.Request, useUnifiedStorage 
 			info.ocspStatus = ocsp.Revoked
 			info.revocationTimeUTC = &unifiedEntry.RevocationTimeUTC
 			info.issuerID = unifiedEntry.CertificateIssuer
+			info.reasonCode = unifiedEntry.ReasonCode
 		}
 	}
 
@@ -633,7 +636,7 @@ func genResponse(cfg *pki_backend.CrlConfig, caBundle *certutil.ParsedCertBundle
 
 	if info.ocspStatus == ocsp.Revoked {
 		template.RevokedAt = *info.revocationTimeUTC
-		template.RevocationReason = ocsp.Unspecified
+		template.RevocationReason = info.reasonCode
 	}
 
 	byteResp, err := ocsp.CreateResponse(caBundle.Certificate, caBundle.Certificate, template, caBundle.PrivateKey)

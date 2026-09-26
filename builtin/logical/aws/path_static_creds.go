@@ -40,6 +40,7 @@ func pathStaticCredentials(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathStaticCredsRead,
+				Summary:  "Retrieve the current credentials for a named static IAM role.",
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: http.StatusText(http.StatusOK),

@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 )
@@ -86,8 +87,8 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 		return 0, err
 	}
 
-	// Collect and store attribution if HWM was updated
-	if hwmUpdated && len(currentThirdPartyPluginMounts) > 0 {
+	// Collect and store attribution if HWM was updated and attribution storage is enabled
+	if hwmUpdated && len(currentThirdPartyPluginMounts) > 0 && !c.IsAttributionDisabled(ctx) {
 		attribution := make(MountAttributionMap)
 		for _, entry := range currentThirdPartyPluginMounts {
 			if entry != nil {
@@ -100,11 +101,13 @@ func (c *Core) UpdateMaxThirdPartyPluginCounts(ctx context.Context, currentMonth
 					Count:               1,
 					MountAccessor:       entry.Accessor,
 					MountPath:           entry.Path,
-					MountType:           entry.Type,
+					MountType:           getAdjustedPluginType(entry),
 					MountRunningVersion: entry.RunningVersion,
 					NamespaceID:         entry.NamespaceID,
 					NamespacePath:       namespacePath,
+					ParentNamespaceID:   getParentNamespaceID(c, namespacePath),
 					BackendAwareUUID:    entry.BackendAwareUUID,
+					IsExternal:          true, // all third party plugins are external
 				}
 			}
 		}
@@ -307,8 +310,8 @@ func (c *Core) UpdateMaxKvCounts(ctx context.Context, localPathPrefix string, cu
 		return 0, err
 	}
 
-	// If HWM updated, store current attribution data
-	if hwmUpdated && len(attributions) > 0 {
+	// If HWM updated, store current attribution data (skip if attribution storage is disabled)
+	if hwmUpdated && len(attributions) > 0 && !c.IsAttributionDisabled(ctx) {
 		attributionData := &logical.MetricTypeAttribution{
 			Count:       maxKvCounts,
 			Mounts:      attributions,
@@ -415,9 +418,10 @@ func (c *Core) updateMaxRoleCounts(ctx context.Context, currentRoleCounts *RoleC
 	}
 
 	// Helper function to update count and store attribution if HWM updated
+	attributionDisabled := c.IsAttributionDisabled(ctx)
 	storeRoleTypeAttribution := func(roleType string, currentCount, maxCount int) (int, error) {
 		newMax, updated := c.compareCounts(currentCount, maxCount, roleType)
-		if updated && len(attribution[roleType]) > 0 {
+		if updated && len(attribution[roleType]) > 0 && !attributionDisabled {
 			attributionData := &logical.MetricTypeAttribution{
 				Count:       newMax,
 				Mounts:      attribution[roleType],
@@ -536,8 +540,8 @@ func (c *Core) updateMaxTotpKeyCounts(ctx context.Context, currentKeyCounts int,
 		return 0, err
 	}
 
-	// Store attribution if HWM was updated
-	if hwmUpdated && len(attribution) > 0 {
+	// Store attribution if HWM was updated and attribution storage is enabled
+	if hwmUpdated && len(attribution) > 0 && !c.IsAttributionDisabled(ctx) {
 		// Use the actual HWM count as the total, not sum of mounts
 		attributionData := &logical.MetricTypeAttribution{
 			Count:       maxKeyCounts,
@@ -664,6 +668,53 @@ func (c *Core) UpdateBillingRetentionMonths(ctx context.Context, retentionMonths
 	return nil
 }
 
+func (c *Core) GetAttributionRetentionMonths(ctx context.Context) (int, error) {
+	c.billingConfigLock.RLock()
+	defer c.billingConfigLock.RUnlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return billing.DefaultAttributionRetentionMonths, nil
+	}
+
+	entry, err := view.Get(ctx, billing.AttributionConfigPath)
+	if err != nil {
+		return 0, fmt.Errorf("failed to read attribution config: %w", err)
+	}
+	if entry == nil {
+		// No config stored, return default
+		return billing.DefaultAttributionRetentionMonths, nil
+	}
+
+	retentionMonths, err := strconv.Atoi(string(entry.Value))
+	if err != nil {
+		return 0, err
+	}
+
+	return retentionMonths, nil
+}
+
+func (c *Core) UpdateAttributionRetentionMonths(ctx context.Context, retentionMonths int) error {
+	c.billingConfigLock.Lock()
+	defer c.billingConfigLock.Unlock()
+
+	view, ok := c.GetBillingSubView()
+	if !ok {
+		return fmt.Errorf("billing sub view not available")
+	}
+
+	entry := &logical.StorageEntry{
+		Key:   billing.AttributionConfigPath,
+		Value: []byte(strconv.Itoa(retentionMonths)),
+	}
+
+	if err := view.Put(ctx, entry); err != nil {
+		return fmt.Errorf("failed to store attribution config: %w", err)
+	}
+
+	return nil
+}
+
 // storeTransitCallCountsLocked must be called with BillingStorageLock held
 func (c *Core) storeTransitCallCountsLocked(ctx context.Context, transitCount uint64, localPathPrefix string, month time.Time) error {
 	// Store count for each data protection type separately because they are atomic counters
@@ -694,7 +745,7 @@ func (c *Core) getStoredTransitCallCountsLocked(ctx context.Context, localPathPr
 	if entry == nil {
 		return 0, nil
 	}
-	transitCount, err := strconv.ParseUint(string(entry.Value), 10, 64)
+	transitCount, err := strconv.ParseUint(strings.TrimSpace(string(entry.Value)), 10, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -797,7 +848,7 @@ func (c *Core) getStoredGcpKmsCallCountsLocked(ctx context.Context, localPathPre
 	if entry == nil {
 		return 0, nil
 	}
-	gcpKmsCount, err := strconv.ParseUint(string(entry.Value), 10, 64)
+	gcpKmsCount, err := strconv.ParseUint(strings.TrimSpace(string(entry.Value)), 10, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -907,12 +958,14 @@ func (c *Core) UpdateKmipEnabled(ctx context.Context, currentMonth time.Time) (b
 		if err := c.storeKmipEnabledLocked(ctx, billing.LocalPrefix, currentMonth, true); err != nil {
 			return false, err
 		}
-		if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.KmipEnabledPrefix, &logical.MetricTypeAttribution{
-			Count:       1,
-			Mounts:      kmipMounts,
-			LastUpdated: currentMonth,
-		}); err != nil {
-			return false, err
+		if !c.IsAttributionDisabled(ctx) {
+			if err := storeAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, billing.KmipEnabledPrefix, &logical.MetricTypeAttribution{
+				Count:       1,
+				Mounts:      kmipMounts,
+				LastUpdated: currentMonth,
+			}); err != nil {
+				return false, err
+			}
 		}
 		// Mark KMIP as seen this month only after successfully writing both the billing
 		// flag and attribution to storage, so a future billing cycle does not skip the
@@ -949,12 +1002,16 @@ func (c *Core) UpdatePkiDurationAdjustedCount(ctx context.Context, inc float64, 
 		return fmt.Errorf("PKI duration-adjusted increment must be non-negative, got %f", inc)
 	}
 
-	if c.consumptionBilling == nil {
+	c.consumptionBillingLock.RLock()
+	cb := c.consumptionBilling
+	c.consumptionBillingLock.RUnlock()
+
+	if cb == nil {
 		return errors.New("consumption billing is not initialized")
 	}
 
-	c.consumptionBilling.BillingStorageLock.Lock()
-	defer c.consumptionBilling.BillingStorageLock.Unlock()
+	cb.BillingStorageLock.Lock()
+	defer cb.BillingStorageLock.Unlock()
 
 	return c.storePkiDurationAdjustedCountLocked(ctx, billing.LocalPrefix, currentMonth, inc)
 }
@@ -972,7 +1029,7 @@ func (c *Core) getStoredPkiDurationAdjustedCountLocked(ctx context.Context, loca
 		return 0, err
 	}
 
-	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	currentCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current PKI duration adjusted cert count: %w", err)
 	}
@@ -1111,7 +1168,7 @@ func (c *Core) getStoredSSHDurationAdjustedCertCountLocked(ctx context.Context, 
 		return 0, err
 	}
 
-	certCount, err := strconv.ParseFloat(string(se.Value), 64)
+	certCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current SSH duration adjusted cert count: %w", err)
 	}
@@ -1188,7 +1245,7 @@ func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix s
 		return 0, err
 	}
 
-	otpCount, err := strconv.ParseFloat(string(se.Value), 64)
+	otpCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current OTP cert count: %w", err)
 	}
@@ -1265,7 +1322,7 @@ func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, cur
 		return 0, err
 	}
 
-	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	currentCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current OIDC duration-adjusted token count: %w", err)
 	}
@@ -1273,10 +1330,11 @@ func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, cur
 	return currentCount, nil
 }
 
-// IncrementOidcTokenCount increments the in-memory OIDC token count and total duration hours,
-// and accumulates per-mount attribution. This is called each time an OIDC token is created.
+// IncrementOidcTokenCount increments the in-memory OIDC duration-adjusted token count and
+// accumulates per-mount attribution. This is called each time an OIDC token is created.
 // The counts and attribution are flushed to storage periodically by the consumption billing metrics worker.
-// Note: OidcTokenDuration is not normalized and is duration-adjusted during flush to storage in UpdateOidcDurationAdjustedCount.
+// durationSeconds is the raw token TTL; it is normalized to duration-adjusted units immediately
+// so that MonthlyUnits and per-mount attribution totals remain in sync across flush cycles.
 func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.MountAttribution) {
 	c.consumptionBillingLock.RLock()
 	defer c.consumptionBillingLock.RUnlock()
@@ -1287,8 +1345,9 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.Mou
 		return
 	}
 
-	// Update raw token duration
-	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(durationSeconds)
+	// Normalize to duration-adjusted units immediately so MonthlyUnits and per-mount
+	// attribution totals are always consistent (both use per-token rounding).
+	cb.SecretEngineCounts.Oidc.MonthlyUnits.Add(DurationAdjustedTokenCount(durationSeconds))
 
 	// Accumulate per-mount attribution if the accessor is set.
 	if attr.MountAccessor == "" {
@@ -1301,14 +1360,14 @@ func (c *Core) IncrementOidcTokenCount(durationSeconds float64, attr logical.Mou
 	// change (e.g. namespace move, plugin upgrade) is reflected immediately.
 	// Only the accumulated count is carried over from the previous entry.
 	if existing, ok := cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor]; ok {
-		attr.Count = toFloat64(existing.Count) + toFloat64(attr.Count)
+		attr.Count = ToFloat64(existing.Count) + ToFloat64(attr.Count)
 	}
 	cb.SecretEngineCounts.Oidc.MountAttribution[attr.MountAccessor] = attr
 	cb.SecretEngineCounts.Oidc.MountAttributionLock.Unlock()
 }
 
-// UpdateOidcDurationAdjustedCountFromMemory reads the in-memory OIDC token counts and duration,
-// normalizes them to duration-adjusted counts, and flushes them to storage.
+// UpdateOidcDurationAdjustedCount reads the in-memory OIDC duration-adjusted token count
+// and flushes it to storage.
 // This is called periodically by the consumption billing metrics worker.
 func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth time.Time) error {
 	c.consumptionBillingLock.RLock()
@@ -1322,14 +1381,12 @@ func (c *Core) UpdateOidcDurationAdjustedCount(ctx context.Context, currentMonth
 	cb.BillingStorageLock.Lock()
 	defer cb.BillingStorageLock.Unlock()
 
-	// Get in-memory raw token duration and reset value in memory
-	// Using Swap to atomically reset the value. If Vault crashes after a successful storage update but before reset, this prevents double counting.
-	totalTokenDurationSecondsFromMemory := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
+	// Swap out the accumulated duration-adjusted units (already normalized per-token in
+	// IncrementOidcTokenCount). Using Swap to atomically reset so a crash after a successful
+	// storage write does not cause double-counting on the next flush.
+	units := cb.SecretEngineCounts.Oidc.MonthlyUnits.Swap(0)
 
-	// Calculate duration-adjusted count from raw data
-	durationAdjustedCountMemory := DurationAdjustedTokenCount(totalTokenDurationSecondsFromMemory)
-
-	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, durationAdjustedCountMemory)
+	return c.storeOidcDurationAdjustedCountLocked(ctx, currentMonth, units)
 }
 
 func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, currentMonth time.Time, inc float64) error {
@@ -1375,7 +1432,7 @@ func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, current
 // - Example: 1-year cert (8760 hours) = 12.0000 units
 // - Example: 1-day cert (24 hours) = 0.0329 units
 func DurationAdjustedTokenCount(tokenDurationSeconds float64) float64 {
-	validityHours := tokenDurationSeconds / (time.Hour.Seconds())
+	validityHours := tokenDurationSeconds / time.Hour.Seconds()
 	units := validityHours / DurationAdjustedStandardDuration
 	// Round to 4 decimal places
 	ret := math.Round(units*DecimalPrecisionMultiplier) / DecimalPrecisionMultiplier

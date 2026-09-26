@@ -38,6 +38,7 @@ export const GENERAL = {
   copyButton: '[data-test-copy-button]',
   revealButton: (label: string) => `[data-test-reveal="${label}"] button`, // intended for Hds::Reveal components
   accordionButton: (label: string) => `[data-test-accordion="${label}"] button`, // intended for Hds::Accordion components
+  accordionContent: (label: string) => `[data-test-accordion="${label}"] .hds-accordion-item__content`,
   // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
@@ -54,7 +55,9 @@ export const GENERAL = {
 
   /* ────── Tables ────── */
   table: (title: string) => `[data-test-table="${title}"]`,
-  tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
+  tableRow: (idx?: number) =>
+    idx !== undefined ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]',
+  tableParentRow: '[data-test-table-parent-row]',
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
   tableDataNested: (idx: number, key: string) =>
     `[role="row"]:nth-of-type(${idx + 1}) [data-test-table-data="${key}"]`,
@@ -162,6 +165,7 @@ export const GENERAL = {
   messageDescription: '[data-test-message-error-description]',
   validationErrorByAttr: (attr: string) => `[data-test-validation-error="${attr}"]`,
   validationWarningByAttr: (attr: string) => `[data-test-validation-warning="${attr}"]`,
+  invalidFormMessage: '[data-test-invalid-form-message]',
 
   pageError: {
     error: '[data-test-page-error]',

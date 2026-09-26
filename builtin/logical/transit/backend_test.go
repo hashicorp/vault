@@ -391,6 +391,271 @@ func testTransit_RSA(t *testing.T, keyType string) {
 	}
 }
 
+// TestTransit_RSA_HashAlgorithm verifies that hash_algorithm is accepted and
+// enforced correctly for native RSA encrypt/decrypt operations.
+func TestTransit_RSA_HashAlgorithm(t *testing.T) {
+	for _, keyType := range []string{"rsa-2048", "rsa-3072", "rsa-4096"} {
+		t.Run(keyType, func(t *testing.T) {
+			testTransit_RSA_HashAlgorithm(t, keyType)
+		})
+	}
+}
+
+func testTransit_RSA_HashAlgorithm(t *testing.T, keyType string) {
+	t.Helper()
+	b, storage := createBackendWithStorage(t)
+
+	// Create the RSA key under test.
+	keyReq := &logical.Request{
+		Path:      "keys/rsa-ha",
+		Operation: logical.UpdateOperation,
+		Data:      map[string]interface{}{"type": keyType},
+		Storage:   storage,
+	}
+	resp, err := b.HandleRequest(context.Background(), keyReq)
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "key creation error: %v", resp)
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
+
+	// Round-trip each valid hash algorithm with oaep padding.
+	for _, hashAlg := range []string{"sha1", "sha2-256", "sha2-384", "sha2-512"} {
+		t.Run("oaep/"+hashAlg, func(t *testing.T) {
+			encResp, encErr := b.HandleRequest(context.Background(), &logical.Request{
+				Path:      "encrypt/rsa-ha",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"plaintext":      plaintext,
+					"padding_scheme": "oaep",
+					"hash_algorithm": hashAlg,
+				},
+			})
+			require.NoError(t, encErr)
+			require.False(t, encResp != nil && encResp.IsError(), "encrypt error for hash %s: %v", hashAlg, encResp)
+
+			ciphertext := encResp.Data["ciphertext"].(string)
+
+			decResp, decErr := b.HandleRequest(context.Background(), &logical.Request{
+				Path:      "decrypt/rsa-ha",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"ciphertext":     ciphertext,
+					"padding_scheme": "oaep",
+					"hash_algorithm": hashAlg,
+				},
+			})
+			require.NoError(t, decErr)
+			require.False(t, decResp != nil && decResp.IsError(), "decrypt error for hash %s: %v", hashAlg, decResp)
+			require.Equal(t, plaintext, decResp.Data["plaintext"].(string), "round-trip failed for hash %s", hashAlg)
+		})
+	}
+
+	// An unknown hash_algorithm string must be rejected.
+	t.Run("unknown hash_algorithm rejected", func(t *testing.T) {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-ha",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"plaintext":      plaintext,
+				"padding_scheme": "oaep",
+				"hash_algorithm": "md5",
+			},
+		})
+		require.True(t, err != nil || (resp != nil && resp.IsError()), "expected error for unknown hash_algorithm")
+	})
+}
+
+// TestTransit_HashAlgorithm_NonRSA verifies that hash_algorithm is rejected
+// for non-RSA key types (e.g. aes256-gcm96).
+func TestTransit_HashAlgorithm_NonRSA(t *testing.T) {
+	b, storage := createBackendWithStorage(t)
+
+	// Create an AES key via the upsert path.
+	_, createErr := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "encrypt/aes-key",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==",
+		},
+	})
+	require.NoError(t, createErr)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "encrypt/aes-key",
+		Operation: logical.UpdateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"plaintext":      "dGhlIHF1aWNrIGJyb3duIGZveA==",
+			"hash_algorithm": "sha2-256",
+		},
+	})
+	require.True(t, err != nil || (resp != nil && resp.IsError()), "expected error when hash_algorithm is supplied for a non-RSA key")
+}
+
+// TestTransit_RSA_BatchPaddingAndHash verifies that padding_scheme and
+// hash_algorithm are processed correctly on a per-item basis in batch
+// encrypt/decrypt requests.
+func TestTransit_RSA_BatchPaddingAndHash(t *testing.T) {
+	for _, keyType := range []string{"rsa-2048", "rsa-3072", "rsa-4096"} {
+		t.Run(keyType, func(t *testing.T) {
+			testTransit_RSA_BatchPaddingAndHash(t, keyType)
+		})
+	}
+}
+
+func testTransit_RSA_BatchPaddingAndHash(t *testing.T, keyType string) {
+	t.Helper()
+	b, storage := createBackendWithStorage(t)
+
+	// Create the RSA key under test.
+	_, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "keys/rsa-batch",
+		Operation: logical.UpdateOperation,
+		Data:      map[string]interface{}{"type": keyType},
+		Storage:   storage,
+	})
+	require.NoError(t, err)
+
+	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
+
+	// --- Encrypt batch: per-item invalid padding_scheme errors ---
+	t.Run("encrypt batch invalid padding_scheme per item", func(t *testing.T) {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"batch_input": []interface{}{
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "bad-scheme"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		results := resp.Data["batch_results"].([]EncryptBatchResponseItem)
+		require.Len(t, results, 3)
+		require.Empty(t, results[0].Error, "item 0 should succeed")
+		require.NotEmpty(t, results[1].Error, "item 1 should fail with invalid padding_scheme")
+		require.Contains(t, results[1].Error, "[1].padding_scheme")
+		require.Empty(t, results[2].Error, "item 2 should succeed")
+	})
+
+	// --- Encrypt batch: per-item invalid hash_algorithm errors ---
+	t.Run("encrypt batch invalid hash_algorithm per item", func(t *testing.T) {
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"batch_input": []interface{}{
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep", "hash_algorithm": "sha2-256"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep", "hash_algorithm": "md5"},
+					map[string]interface{}{"plaintext": plaintext, "padding_scheme": "oaep", "hash_algorithm": "sha2-512"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		results := resp.Data["batch_results"].([]EncryptBatchResponseItem)
+		require.Len(t, results, 3)
+		require.Empty(t, results[0].Error, "item 0 should succeed")
+		require.NotEmpty(t, results[1].Error, "item 1 should fail with invalid hash_algorithm")
+		require.Contains(t, results[1].Error, "[1].hash_algorithm")
+		require.Empty(t, results[2].Error, "item 2 should succeed")
+	})
+
+	// --- Full round-trip: batch encrypt then batch decrypt with matching per-item params ---
+	t.Run("batch round-trip oaep with varied hash algorithms", func(t *testing.T) {
+		hashAlgs := []string{"sha1", "sha2-256", "sha2-384", "sha2-512"}
+		encBatch := make([]interface{}, len(hashAlgs))
+		for i, ha := range hashAlgs {
+			encBatch[i] = map[string]interface{}{
+				"plaintext":      plaintext,
+				"padding_scheme": "oaep",
+				"hash_algorithm": ha,
+			}
+		}
+
+		encResp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data:      map[string]interface{}{"batch_input": encBatch},
+		})
+		require.NoError(t, err)
+		require.False(t, encResp != nil && encResp.IsError())
+		encResults := encResp.Data["batch_results"].([]EncryptBatchResponseItem)
+		require.Len(t, encResults, len(hashAlgs))
+		for i, res := range encResults {
+			require.Emptyf(t, res.Error, "encrypt item %d (%s) should succeed", i, hashAlgs[i])
+		}
+
+		decBatch := make([]interface{}, len(hashAlgs))
+		for i, ha := range hashAlgs {
+			decBatch[i] = map[string]interface{}{
+				"ciphertext":     encResults[i].Ciphertext,
+				"padding_scheme": "oaep",
+				"hash_algorithm": ha,
+			}
+		}
+
+		decResp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "decrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data:      map[string]interface{}{"batch_input": decBatch},
+		})
+		require.NoError(t, err)
+		require.False(t, decResp != nil && decResp.IsError())
+		decResults := decResp.Data["batch_results"].([]DecryptBatchResponseItem)
+		require.Len(t, decResults, len(hashAlgs))
+		for i, res := range decResults {
+			require.Emptyf(t, res.Error, "decrypt item %d (%s) should succeed", i, hashAlgs[i])
+			require.Equalf(t, plaintext, res.Plaintext, "round-trip failed for item %d (%s)", i, hashAlgs[i])
+		}
+	})
+
+	// --- Decrypt batch: per-item invalid padding_scheme errors ---
+	t.Run("decrypt batch invalid padding_scheme per item", func(t *testing.T) {
+		// First encrypt a ciphertext to use.
+		encResp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "encrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"plaintext":      plaintext,
+				"padding_scheme": "oaep",
+			},
+		})
+		require.NoError(t, err)
+		ciphertext := encResp.Data["ciphertext"].(string)
+
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Path:      "decrypt/rsa-batch",
+			Operation: logical.UpdateOperation,
+			Storage:   storage,
+			Data: map[string]interface{}{
+				"batch_input": []interface{}{
+					map[string]interface{}{"ciphertext": ciphertext, "padding_scheme": "oaep"},
+					map[string]interface{}{"ciphertext": ciphertext, "padding_scheme": "bad-scheme"},
+					map[string]interface{}{"ciphertext": ciphertext, "padding_scheme": "oaep"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		results := resp.Data["batch_results"].([]DecryptBatchResponseItem)
+		require.Len(t, results, 3)
+		require.Empty(t, results[0].Error, "item 0 should succeed")
+		require.NotEmpty(t, results[1].Error, "item 1 should fail with invalid padding_scheme")
+		require.Contains(t, results[1].Error, "[1].padding_scheme")
+		require.Empty(t, results[2].Error, "item 2 should succeed")
+	})
+}
+
 func TestBackend_basic(t *testing.T) {
 	factory, obsRecorder := factoryWithObservationRecorder(t)
 	decryptData := make(map[string]interface{})
@@ -453,9 +718,8 @@ func TestBackend_datakey(t *testing.T) {
 }
 
 func TestBackend_rotation(t *testing.T) {
-	defer os.Setenv("TRANSIT_ACC_KEY_TYPE", "")
 	testBackendRotation(t)
-	os.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
+	t.Setenv("TRANSIT_ACC_KEY_TYPE", "CHACHA")
 	testBackendRotation(t)
 }
 

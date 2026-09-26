@@ -4,7 +4,6 @@
 package pluginutil
 
 import (
-	"os"
 	"testing"
 )
 
@@ -49,10 +48,7 @@ func TestGRPCSupport(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.envVersion, func(t *testing.T) {
-			err := os.Setenv(PluginVaultVersionEnv, tc.envVersion)
-			if err != nil {
-				t.Fatal(err)
-			}
+			t.Setenv(PluginVaultVersionEnv, tc.envVersion)
 
 			result := GRPCSupport()
 

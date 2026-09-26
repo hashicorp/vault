@@ -267,8 +267,19 @@ changed_files {
         joinpath(".github", "workflows", "build-artifacts-ent.yml"),
         joinpath(".github", "workflows", "backport-automation-ent.yml"),
         joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
-        # This was accidentally merged and synced before we had bob classified as ent only
+        # These were merged and synced before we had bob/copilot/agents classified
+        # as ent only.
         joinpath(".bob", "enos-test-automation.md"),
+        joinpath(".github", "instructions", "generic", "code_comments.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_general.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_hbs.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_js.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_styles.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_tests.instructions.md"),
+        joinpath(".github", "instructions", "generic", "golang.instructions.md"),
+        joinpath(".github", "instructions", "generic", "golang_tests.instructions.md"),
+        joinpath(".github", "instructions", "generic", "testing.instructions.md"),
+        joinpath(".github", "instructions", "index.md"),
       ]
     }
 
@@ -312,6 +323,7 @@ changed_files {
     // Make sure our zap scanner is always ent only
     match {
       base_dir = [
+        joinpath(".github", "actions", "set-up-sarif-engine"),
         joinpath("enos", "modules", "zap_scan_ent")
       ]
     }
@@ -329,6 +341,9 @@ changed_files {
         ".opencode",
         ".agents",
         joinpath("ui", ".agents"),
+        // Symlinks into .agents/ for GitHub Copilot and other AI tooling
+        joinpath(".github", "agents"),
+        joinpath(".github", "instructions"),
       ]
     }
 

@@ -13,18 +13,15 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 
 	slogctx "github.com/veqryn/slog-context"
 )
 
 // Client is the local git client.
 type Client struct {
-	Token   string
-	Host    string
-	envOnce sync.Once
-	envVal  []string
-	config  map[string]string
+	Token  string
+	Host   string
+	config map[string]string
 }
 
 // OptStringer is an interface that all sub-command configuration options must
@@ -49,9 +46,8 @@ type NewClientOpt func(*Client)
 func NewClient(opts ...NewClientOpt) *Client {
 	client := &Client{
 		config: map[string]string{
+			// Disable the pager so command output is always machine-readable.
 			"core.pager": "",
-			"user.name":  "hc-github-team-secure-vault-core",
-			"user.email": "github-team-secure-vault-core@hashicorp.com",
 		},
 	}
 
@@ -102,7 +98,7 @@ func WithLoadTokenFromEnv() NewClientOpt {
 func (c *Client) Exec(ctx context.Context, subCmd string, opts OptStringer) (*ExecResponse, error) {
 	env := os.Environ()
 	res := &ExecResponse{Env: os.Environ()}
-	if c.Token != "" {
+	if c.Token != "" || len(c.config) > 0 {
 		res.Env = c.configEnv()
 		env = append(env, res.Env...)
 	}
@@ -145,47 +141,43 @@ func (e *ExecResponse) String() string {
 	return b.String()
 }
 
-// configEnv creates a slice of all git configuration as environment variables
-// to avoid:
+// configEnv builds the GIT_CONFIG_* environment variable slice from the
+// client's config map and optional token credential rewrite.
+//
+// It injects config via environment variables to avoid:
 //   - modifying local or global gitconfig
 //   - relying on preconfigured gitconfig
 //   - requiring a credstore
 //   - sensitive values like tokens being passed via flags and thus potentially
 //     bleeding into STDOUT
-//
-// As this is relatively expensive it's only done once and cached so subsequent
-// requests can reuse the same configuration.
 func (c *Client) configEnv() []string {
-	c.envOnce.Do(func() {
-		env := c.config
+	env := make(map[string]string, len(c.config))
+	maps.Copy(env, c.config)
 
-		if c.Token != "" {
-			// NOTE: This basic auth token probably only works with Github right now,
-			// which is fine because our pipeline only supports Github. Other SCM repos
-			// have different rules around the user in the auth portion of the URL.
-			// Github doesn't care what the username is but requires one to be set so
-			// we always set it to user.
-			host := c.Host
-			if host == "" {
-				host = "github.com"
-			}
-			token := url.UserPassword("user", c.Token).String()
-			env[fmt.Sprintf("url.https://%s@%s.insteadOf", token, host)] = "https://" + host
+	if c.Token != "" {
+		// NOTE: This basic auth token probably only works with Github right now,
+		// which is fine because our pipeline only supports Github. Other SCM repos
+		// have different rules around the user in the auth portion of the URL.
+		// Github doesn't care what the username is but requires one to be set so
+		// we always set it to user.
+		host := c.Host
+		if host == "" {
+			host = "github.com"
 		}
+		token := url.UserPassword("user", c.Token).String()
+		env[fmt.Sprintf("url.https://%s@%s.insteadOf", token, host)] = "https://" + host
+	}
 
-		vars := []string{fmt.Sprintf("GIT_CONFIG_COUNT=%d", len(env))}
-		count := 0
-		for k, v := range env {
-			vars = append(
-				vars,
-				fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", count, k),
-				fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", count, v),
-			)
-			count++
-		}
+	vars := []string{fmt.Sprintf("GIT_CONFIG_COUNT=%d", len(env))}
+	count := 0
+	for k, v := range env {
+		vars = append(
+			vars,
+			fmt.Sprintf("GIT_CONFIG_KEY_%d=%s", count, k),
+			fmt.Sprintf("GIT_CONFIG_VALUE_%d=%s", count, v),
+		)
+		count++
+	}
 
-		c.envVal = vars
-	})
-
-	return c.envVal
+	return vars
 }

@@ -61,9 +61,9 @@ export default class KvSecretMetadataVersionDiff extends Component {
   }
 
   @action
-  handleSelect(side, version, actions) {
+  handleSelect(side, version, close) {
     this[side] = Number(version);
-    actions.close();
+    close();
     this.createVisualDiff();
   }
 

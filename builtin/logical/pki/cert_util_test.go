@@ -13,7 +13,6 @@ import (
 	"math/big"
 	"net"
 	"net/url"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -344,10 +343,6 @@ func TestDisableVerifyCertificateEnvVar(t *testing.T) {
 		"user_ids": "humanoid,robot",
 	}
 
-	defer func() {
-		os.Unsetenv("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION")
-	}()
-
 	b, s := CreateBackendWithStorage(t)
 
 	// Create the CA
@@ -368,14 +363,14 @@ func TestDisableVerifyCertificateEnvVar(t *testing.T) {
 
 	// Try to create the cert -- should fail verification, since example.com is not allowed
 	t.Run("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION=false", func(t *testing.T) {
-		os.Setenv("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION", "false")
+		t.Setenv("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION", "false")
 		resp, err = CBWrite(b, s, "issue/test", certData)
 		require.ErrorContains(t, err, `DNS name "example.com" is not permitted by any constraint`)
 	})
 
 	// Create the cert, should succeed with the disable env var set
 	t.Run("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION=true", func(t *testing.T) {
-		os.Setenv("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION", "true")
+		t.Setenv("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION", "true")
 		resp, err = CBWrite(b, s, "issue/test", certData)
 		require.NoError(t, err)
 		require.NotNil(t, resp)
@@ -383,7 +378,7 @@ func TestDisableVerifyCertificateEnvVar(t *testing.T) {
 
 	// Invalid env var
 	t.Run("invalid VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION", func(t *testing.T) {
-		os.Setenv("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION", "invalid")
+		t.Setenv("VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION", "invalid")
 		resp, err = CBWrite(b, s, "issue/test", certData)
 		require.ErrorContains(t, err, "failed parsing environment variable VAULT_DISABLE_PKI_CONSTRAINTS_VERIFICATION")
 	})
@@ -959,6 +954,7 @@ func TestParseCsr(t *testing.T) {
 				"ip_sans":               "",
 				"uri_sans":              "",
 				"other_sans":            "",
+				"user_ids":              "",
 				"exclude_cn_from_sans":  true,
 				"key_type":              "ec",
 				"key_bits":              384,
@@ -1045,6 +1041,7 @@ func TestParseCsr(t *testing.T) {
 				"ip_sans":               "1.2.3.4,1.2.3.5",
 				"uri_sans":              "https://example.com,https://www.example.com",
 				"other_sans":            "1.3.6.1.4.1.311.20.2.3;UTF-8:caadmin@example.com",
+				"user_ids":              "",
 				"exclude_cn_from_sans":  true,
 				"key_type":              "rsa",
 				"key_bits":              2048,
@@ -1131,6 +1128,7 @@ func TestParseCsr(t *testing.T) {
 				"ip_sans":               "1.2.3.4,1.2.3.5",
 				"uri_sans":              "https://example.com,https://www.example.com",
 				"other_sans":            "1.3.6.1.4.1.311.20.2.3;UTF-8:caadmin@example.com",
+				"user_ids":              "",
 				"exclude_cn_from_sans":  true,
 				"key_type":              "rsa",
 				"key_bits":              2048,

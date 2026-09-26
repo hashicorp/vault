@@ -16,7 +16,8 @@ export default class IdentityPopupAlias extends Component {
   @tracked showConfirmModal = false;
 
   onSuccess(type, id) {
-    this.router.transitionTo('vault.cluster.access.identity.aliases');
+    const itemType = type === 'group' ? 'groups' : 'entities';
+    this.router.transitionTo(`vault.cluster.access.identity.${itemType}.aliases.index`);
     this.flashMessages.success(`Successfully deleted ${type}: ${id}`);
   }
   onError(err, type, id) {

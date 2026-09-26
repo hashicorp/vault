@@ -1,14 +1,18 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
+
+import type { AnalyticsEventName } from 'vault/utils/analytic-events';
+
+export type { AnalyticsEventName };
 
 export interface AnalyticsProvider {
   name: string;
   identify: (identifier: string, traits: Record<string, string>) => void;
   start: (config: Record<string, string | boolean>) => void;
   trackPageView: (routeName: string, metadata: Record<string, string>) => void;
-  trackEvent: (eventName: string, metadata: Record<string, unknown>) => void;
+  trackEvent: (eventName: AnalyticsEventName, metadata: Record<string, unknown>) => void;
 }
 
 export interface AnalyticsConfig extends Record<string, string | boolean> {

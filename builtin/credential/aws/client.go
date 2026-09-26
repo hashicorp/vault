@@ -17,7 +17,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
 	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	ttlcache "github.com/jellydator/ttlcache/v3"

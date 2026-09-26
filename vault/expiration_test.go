@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"sort"
 	"strings"
@@ -21,8 +20,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/fairshare"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -2807,7 +2806,7 @@ func TestExpiration_CachedPolicyIsShared(t *testing.T) {
 	}
 	ptrs := make([]*string, len(policies))
 	for i := range ptrs {
-		ptrs[i] = &((policies[0])[0])
+		ptrs[i] = &policies[0][0]
 	}
 	for i := 1; i < len(ptrs); i++ {
 		if ptrs[i-1] != ptrs[i] {
@@ -2835,9 +2834,8 @@ func TestExpiration_FairsharingEnvVar(t *testing.T) {
 		},
 	}
 
-	defer os.Unsetenv(fairshareWorkersOverrideVar)
 	for _, tc := range testCases {
-		os.Setenv(fairshareWorkersOverrideVar, tc.set)
+		t.Setenv(fairshareWorkersOverrideVar, tc.set)
 		exp := mockExpiration(t)
 
 		if fairshare.GetNumWorkers(exp.jobManager) != tc.expected {

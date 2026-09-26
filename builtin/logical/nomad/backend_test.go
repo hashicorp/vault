@@ -558,10 +558,8 @@ func TestBackend_CredsCreateEnvVar(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv("NOMAD_TOKEN", svccfg.Token)
-	defer os.Unsetenv("NOMAD_TOKEN")
-	os.Setenv("NOMAD_ADDR", svccfg.URL().String())
-	defer os.Unsetenv("NOMAD_ADDR")
+	t.Setenv("NOMAD_TOKEN", svccfg.Token)
+	t.Setenv("NOMAD_ADDR", svccfg.URL().String())
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"

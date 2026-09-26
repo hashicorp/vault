@@ -39,7 +39,7 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::Certif
 
     this.renderComponent = () =>
       render(
-        hbs`<ExternalPki::Page::Certificate @model={{this.model}} @breadcrumbs={{array (hash label="View order")}} />`,
+        hbs`<ExternalPki::Page::Certificate @model={{this.model}} @breadcrumbs={{array (hash label="View certificate")}} />`,
         { owner: this.engine }
       );
   });

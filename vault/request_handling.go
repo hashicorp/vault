@@ -25,14 +25,14 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/http/priority"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -241,12 +241,29 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	}
 
 	var actorEntity *identity.Entity
+	var err error
+	if req.OAuthJwtValidated && req.ActorEntityID != "" {
+		actorEntity, err = c.identityStore.MemDBEntityByID(req.ActorEntityID, true)
+		if err != nil {
+			return nil, nil, nil, nil, err
+		}
+		if actorEntity == nil {
+			return nil, nil, nil, nil, logical.ErrPermissionDenied
+		}
+	}
 	if IsOAuthJwt(req.ClientToken) && !req.OAuthJwtValidated {
 		isValidEnterpriseJwt, tokenMetadataContainer, entity, jwtActor, chosenProfile, err := c.validateOAuthJwtAndFetchEntity(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to validate jwt", "error", err)
 		}
+
 		if !isValidEnterpriseJwt {
+			// currently only internal error and error missing from agent registration required have dedicated
+			// error body and http code, everything else gets normalize into "permission denied" with http code 403
+			// when reaching back to client
+			if errors.Is(err, ErrInternalError) || errors.Is(err, ErrAgentRegistrationRequired) {
+				return nil, nil, nil, nil, err
+			}
 			return nil, nil, nil, nil, logical.ErrPermissionDenied
 		}
 		req.JwtUniqueId, err = getJwtUniqueIDFromProfile(tokenMetadataContainer, chosenProfile)
@@ -257,8 +274,9 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		req.JwtIssuer = getJwtIssuer(tokenMetadataContainer)
 		req.JwtTransactionClaim = getJwtTransaction(tokenMetadataContainer)
 		req.JwtAudienceClaim = getJwtAudience(tokenMetadataContainer)
-		_, req.JwtAuthorizationDetailsClaimPresent = tokenMetadataContainer["authorization_details"]
-		req.JwtAuthorizationDetails = getJwtAuthorizationDetails(tokenMetadataContainer)
+		authorizationDetailsClaim := getAuthorizationDetailsClaim(chosenProfile)
+		_, req.JwtAuthorizationDetailsClaimPresent = tokenMetadataContainer[authorizationDetailsClaim]
+		req.JwtAuthorizationDetails = getJwtAuthorizationDetails(tokenMetadataContainer, chosenProfile)
 		actorEntity = jwtActor
 		err = c.createAndStoreOAuthJwtTokenEntry(ctx, req, tokenMetadataContainer, entity, jwtActor, chosenProfile)
 		if err != nil {
@@ -268,18 +286,14 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			return nil, nil, nil, nil, multierror.Append(err, errors.New("failed in processing jwt"))
 		}
 		req.OAuthJwtValidated = true
+		extractValidatedProfileDetailsIntoRequest(chosenProfile, req)
 	}
-
 	// Resolve the token policy
 	var te *logical.TokenEntry
 	switch req.TokenEntry() {
 	case nil:
 		var err error
-		if IsOAuthJwt(req.ClientToken) {
-			te, err = c.tokenStore.Lookup(ctx, getOAuthJwtId(req.JwtUniqueId))
-		} else {
-			te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
-		}
+		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
 		if err != nil {
 			c.logger.Error("failed to lookup acl token", "error", err)
 			return nil, nil, nil, nil, ErrInternalError
@@ -455,6 +469,8 @@ func requiresMaterializedTokenState(path string) bool {
 	switch path {
 	case "auth/token/lookup-self", "auth/token/lookup":
 		return true
+	case "sys/capabilities-self":
+		return true
 	}
 	if strings.HasPrefix(path, "cubbyhole/") {
 		return true
@@ -578,6 +594,14 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 			return nil, nil, logical.ErrPerfStandbyPleaseForward
 		}
 		c.logger.Warn("permission denied as the entity on the token is invalid")
+		return nil, te, logical.ErrPermissionDenied
+	}
+
+	// Enforce the SCIM token path allowlist before policy evaluation.
+	// SCIM tokens (identified by scimClientIDMeta stamped at token issuance) may only
+	// reach the SCIM protocol endpoints and the self-service token paths.
+	if te != nil && te.InternalMeta[scimClientIDMeta] != "" && !isSCIMAllowedPath(req.Path) {
+		c.logger.Warn("permission denied: SCIM token attempted access to non-SCIM path", "path", req.Path)
 		return nil, te, logical.ErrPermissionDenied
 	}
 
@@ -1171,36 +1195,75 @@ func isControlGroupRun(req *logical.Request) bool {
 	return req.ControlGroup != nil
 }
 
+func wrapForwardingError(fwdErr, err error) error {
+	if !errors.Is(err, logical.ErrReadOnly) {
+		// When handling the request locally, we got an error that
+		// contained ErrReadOnly, but had additional information.
+		// Since we've now forwarded this request and got _another_
+		// error, we should tell the user about both errors, so
+		// they know about both.
+		//
+		// When there is no error from forwarding, the request
+		// succeeded and so no additional context is necessary. When
+		// the initial error here was only ErrReadOnly, it's likely
+		// the plugin authors intended to forward this request
+		// remotely anyway.
+		repErr, ok := fwdErr.(*logical.ReplicationCodedError)
+		if ok {
+			fwdErr = &logical.ReplicationCodedError{
+				Msg:  fmt.Sprintf("errors from both primary and secondary; primary error was %s; secondary errors follow: %s", repErr.Error(), err.Error()),
+				Code: repErr.Code,
+			}
+		} else {
+			fwdErr = multierror.Append(fwdErr, err)
+		}
+	}
+
+	return fwdErr
+}
+
 func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// If we're replicating and we get a read-only error from a backend, need to forward to primary
 	resp, err := c.router.Route(ctx, req)
 	if shouldForward(c, resp, err) {
 		fwdResp, fwdErr := forward(ctx, c, req)
-		if fwdErr != nil && err != logical.ErrReadOnly {
-			// When handling the request locally, we got an error that
-			// contained ErrReadOnly, but had additional information.
-			// Since we've now forwarded this request and got _another_
-			// error, we should tell the user about both errors, so
-			// they know about both.
-			//
-			// When there is no error from forwarding, the request
-			// succeeded and so no additional context is necessary. When
-			// the initial error here was only ErrReadOnly, it's likely
-			// the plugin authors intended to forward this request
-			// remotely anyway.
-			repErr, ok := fwdErr.(*logical.ReplicationCodedError)
-			if ok {
-				fwdErr = &logical.ReplicationCodedError{
-					Msg:  fmt.Sprintf("errors from both primary and secondary; primary error was %s; secondary errors follow: %s", repErr.Error(), err.Error()),
-					Code: repErr.Code,
-				}
-			} else {
-				fwdErr = multierror.Append(fwdErr, err)
-			}
+		if fwdErr != nil {
+			fwdErr = wrapForwardingError(fwdErr, err)
 		}
 		return fwdResp, fwdErr
 	}
 	return resp, err
+}
+
+const (
+	healthCheckExecSuffix = "/health-check/exec"
+	healthCheckLastSuffix = "/health-check/last"
+)
+
+// handleHealthCheckRequest checks whether req.Path matches a health-check suffix.
+// If it matches, it trims the suffix, sets req.Path to the target path, and executes
+// the appropriate health check handler. Returns whether the request was handled, the response, and any error.
+func (c *Core) handleHealthCheckRequest(ctx context.Context, req *logical.Request) (bool, *logical.Response, error) {
+	switch {
+	case strings.HasSuffix(req.Path, healthCheckExecSuffix):
+		targetPath := strings.TrimSuffix(req.Path, healthCheckExecSuffix)
+		if targetPath == "" {
+			return true, nil, fmt.Errorf("health check path must not be empty")
+		}
+		req.Path = targetPath
+		resp, err := c.handleExecHealthCheck(ctx, req)
+		return true, resp, err
+	case strings.HasSuffix(req.Path, healthCheckLastSuffix):
+		targetPath := strings.TrimSuffix(req.Path, healthCheckLastSuffix)
+		if targetPath == "" {
+			return true, nil, fmt.Errorf("health check path must not be empty")
+		}
+		req.Path = targetPath
+		resp, err := c.handleReadLastHealthCheck(ctx, req)
+		return true, resp, err
+	default:
+		return false, nil, nil
+	}
 }
 
 func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
@@ -1236,6 +1299,24 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	var auth *logical.Auth
 	var te *logical.TokenEntry
 	var ctErr error
+
+	// Normalize identity group/entity name paths to lowercase before the ACL
+	// check. The identity store resolves names case-insensitively but ACL paths
+	// are matched case-sensitively, allowing deny policies to be bypassed by
+	// altering the case of the name segment. The original path is restored
+	// after the ACL check so downstream handlers receive the caller's original
+	// casing.
+	originalPath := req.Path
+	for _, prefix := range []string{
+		"identity/group/name/",
+		"identity/entity/name/",
+	} {
+		if strings.HasPrefix(req.Path, prefix) {
+			req.Path = prefix + strings.ToLower(req.Path[len(prefix):])
+			break
+		}
+	}
+
 	// Validate the token. OAuth JWT requests on unauthenticated paths that
 	// require a materialized token entry (sys/internal/ui/mounts,
 	// sys/internal/ui/namespaces) are routed here rather than to
@@ -1253,6 +1334,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	// routes to handleLoginRequest as intended.
 	unauth := c.isLoginRequest(ctx, req) && IsOAuthJwt(req.ClientToken) && requiresMaterializedTokenState(req.Path)
 	auth, te, ctErr = c.CheckToken(ctx, req, unauth)
+	// Restore the original path so downstream handlers (and audit logs) see
+	// the caller's original casing, not the normalized form.
+	req.Path = originalPath
 	if errors.Is(ctErr, logical.ErrRelativePath) {
 		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
 	}
@@ -1472,6 +1556,40 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		req.Path = originalPath
 		req.Data = resp.Data
 		ctx = logical.CreateContextWithSnapshotID(ctx, "")
+	}
+
+	// Passthrough if this request does not match the suffix
+	if strings.HasSuffix(req.Path, healthCheckExecSuffix) || strings.HasSuffix(req.Path, healthCheckLastSuffix) {
+		if strings.HasSuffix(req.Path, healthCheckExecSuffix) && c.perfStandby {
+			// healthCheckManager writes are only allowed on the active node
+			// route the request to the active node if this is a standby
+			c.logger.Debug("healthcheck: standby node is enabled, forwarding to active node to execute health check")
+			restoreForwardingTokenHeaders(req)
+			return nil, auth, logical.ErrPerfStandbyPleaseForward
+		}
+
+		pathWithSuffix := req.Path
+		_, healthCheckResp, healthCheckErr := c.handleHealthCheckRequest(ctx, req)
+
+		// if we get a read-only storage error on a performance secondary,
+		// forward this request to the primary cluster
+		if shouldForward(c, healthCheckResp, healthCheckErr) {
+			c.logger.Debug("healthcheck: encountered read-only storage on a secondary; forwarding to primary cluster")
+			// restore the original input path so we re-route this to the primary cluster with the relevant suffix
+			req.Path = pathWithSuffix
+			fwdResp, fwdErr := forward(ctx, c, req)
+			if fwdErr != nil {
+				fwdErr = wrapForwardingError(fwdErr, healthCheckErr)
+			}
+			return fwdResp, auth, fwdErr
+		}
+
+		if healthCheckErr != nil {
+			retErr = multierror.Append(retErr, healthCheckErr)
+		}
+
+		// successfully routed to HealthChecks, do not need to continue below
+		return healthCheckResp, auth, retErr
 	}
 
 	// Route the request
@@ -3073,10 +3191,14 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 		return token, nil
 	}
 	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
+	if err != nil {
+		c.logger.Debug("unable to calculate token signature", "error", err)
+		return token, nil
+	}
 	if !hmac.Equal(hm, signedToken.Hmac) {
 		// As above, don't return an error so that the request is handled like normal,
 		// and handled by the node that received it.
-		c.logger.Debug("token mac is incorrect", "token", signedToken.Token)
+		c.logger.Debug("token mac is incorrect")
 		return token, nil
 	}
 
@@ -3100,6 +3222,7 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	// Keep perf standby behavior unchanged so missing local state can still use the
 	// existing 412/forwarding semantics.
 	if c.IsPerfSecondary() && !c.perfStandby && !isPerfStandby {
+		c.logger.Debug("skipping server-side consistency check for performance primary service token on performance secondary")
 		return plainToken.Random, nil
 	}
 

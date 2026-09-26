@@ -41,13 +41,33 @@
 </Page::Header>
 
 {{#each this.displayFields as |field|}}
-  {{#let (get @model.role field) as |value|}}
-    <InfoTableRow
-      data-test-filtered-field
-      @label={{this.label field}}
-      @value={{if (this.isTtl field) (format-duration value) value}}
-    />
-  {{/let}}
+  {{#if (eq field "password")}}
+    <InfoTableRow data-test-filtered-field @label={{this.label field}}>
+      {{! The spinner sits alongside MaskedInput rather than replacing it: swapping it out would
+      discard the reveal, and a blank row would otherwise look like a role with no password. }}
+      <MaskedInput
+        @name="password"
+        @value={{this.cachedPassword}}
+        @displayOnly={{true}}
+        @allowCopy={{true}}
+        @onToggle={{perform this.onPasswordToggle}}
+      />
+      {{#if this.onPasswordToggle.isRunning}}
+        <Hds::Icon @name="loading" @color="neutral" data-test-password-loading />
+      {{/if}}
+      {{#if this.passwordError}}
+        <AlertInline @type="danger" @message={{this.passwordError}} class="has-left-margin-xs" />
+      {{/if}}
+    </InfoTableRow>
+  {{else}}
+    {{#let (get @model.role field) as |value|}}
+      <InfoTableRow
+        data-test-filtered-field
+        @label={{this.label field}}
+        @value={{if (this.isTtl field) (format-duration value) value}}
+      />
+    {{/let}}
+  {{/if}}
 {{/each}}
 
 {{#if this.showConfirmDeleteModal}}

@@ -29,8 +29,8 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -98,6 +98,11 @@ const (
 )
 
 var (
+	// ErrFullJWTRequired is returned by auth/token/revoke and
+	// auth/token/revoke-orphan when given the internal stored JWT ID form
+	// instead of the full JWT.
+	ErrFullJWTRequired = errors.New("OAuth JWTs must be revoked using the full JWT, not the internal Vault storage ID. Provide full JWT or use auth/token/revoke-oauth")
+
 	// displayNameSanitize is used to sanitize a display name given to a token.
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
 
@@ -668,6 +673,8 @@ func (ts *TokenStore) paths() []*framework.Path {
 	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
 	p = append(p, rolesPath)
 
+	p = append(p, ts.entPaths()...)
+
 	return p
 }
 
@@ -1165,8 +1172,9 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 		}
 
 		// Attach namespace ID for tokens that are not belonging to the root
-		// namespace
-		if tokenNS.ID != namespace.RootNamespaceID {
+		// namespace. JWT tokens (TokenTypeEnt) pre-compute the qualified ID in
+		// createAndStoreJwtTokenEntryJIT, so skip appending for them.
+		if tokenNS.ID != namespace.RootNamespaceID && entry.Type != logical.TokenTypeEnt {
 			entry.ID = fmt.Sprintf("%s.%s", entry.ID, tokenNS.ID)
 		}
 
@@ -2674,6 +2682,11 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, namespace.ErrNoNamespace
 	}
 
+	// Reject JWTs
+	if te.Type == logical.TokenTypeEnt {
+		return logical.ErrorResponse("OAuth JWTs cannot be revoked via revoke-accessor"), logical.ErrInvalidRequest
+	}
+
 	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
 	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(revokeCtx, te)
 	if err != nil {
@@ -2827,19 +2840,6 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		// SCIM tokens are a superset of service tokens: they go through the
 		// full service-token creation path but with additional pre-issuance
 		// checks and post-issuance fixups applied below.
-		var scimResp *logical.Response
-		var scimErr error
-		scimClientID, scimMaxTTL, scimMaxActiveTokens, scimResp, scimErr = ts.VerifySCIMTokenCreation(ctx, req, renewable, orphan)
-		if scimErr != nil || scimResp != nil {
-			return scimResp, scimErr
-		}
-		if scimClientID == "" {
-			return logical.ErrorResponse("SCIM token issuance not supported for non-SCIM client entities"), logical.ErrInvalidRequest
-		}
-		// Force the invariants that verifySCIMTokenCreation checked above so
-		// the rest of handleCreateCommon enforces them on the entry as well.
-		renewable = false
-		orphan = true
 		tokenType = logical.TokenTypeSCIM
 	default:
 		return logical.ErrorResponse("invalid 'token_type' value"), logical.ErrInvalidRequest
@@ -2909,6 +2909,24 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 
 		// Set new entity id
 		explicitEntityID = entity.ID
+	}
+
+	// For SCIM tokens, resolve the effective entity (entity_alias takes
+	// precedence over the caller's own entity) and verify it is a registered
+	// SCIM client.  This must run after the entity_alias block above so that
+	// explicitEntityID is fully resolved.
+	if tokenType == logical.TokenTypeSCIM {
+		var scimResp *logical.Response
+		var scimErr error
+		scimClientID, scimMaxTTL, scimMaxActiveTokens, scimResp, scimErr = ts.VerifySCIMTokenCreation(ctx, req, renewable, orphan || (role != nil && role.Orphan), explicitEntityID)
+		if scimErr != nil || scimResp != nil {
+			return scimResp, scimErr
+		}
+		// SCIM tokens are orphans, so preserve the effective entity resolved during
+		// validation instead of relying on the parent token when stamping the entry.
+		if explicitEntityID == "" {
+			explicitEntityID = req.EntityID
+		}
 	}
 
 	// GetOk is used here solely to preserve the distinction between an absent/nil map and an empty map, to match the
@@ -3179,6 +3197,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		if role == nil {
 			te.BoundCIDRs = parent.BoundCIDRs
 		}
+	case scimClientID != "":
+		// SCIM tokens are orphans but must carry the issuing entity ID so
+		// that entity policies apply and the SCIM handler can resolve the client.
+		te.EntityID = parent.EntityID
 	}
 
 	var explicitMaxTTLToUse time.Duration
@@ -3421,6 +3443,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if IsOAuthJwt(req.ClientToken) || IsOAuthJwtId(req.ClientToken) {
+		return logical.ErrorResponse("OAuth JWTs cannot be revoked via revoke-self. Use auth/token/revoke or auth/token/revoke-oauth"), logical.ErrInvalidRequest
+	}
 	return ts.revokeCommon(ctx, req, data, req.ClientToken)
 }
 
@@ -3433,6 +3458,15 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	// Prevent revocation of internal representation (JWT ID)
+	if IsOAuthJwtId(id) {
+		return logical.ErrorResponse(ErrFullJWTRequired.Error()), logical.ErrInvalidRequest
+	}
+
+	if IsOAuthJwt(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
+	}
+
 	if resp, err := ts.revokeCommon(ctx, req, data, id); resp != nil || err != nil {
 		return resp, err
 	}
@@ -3441,9 +3475,6 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
-	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
-		return ts.revokeCommonJWT(ctx, req, id)
-	}
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -3488,12 +3519,15 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
-	if err != nil {
-		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	// Prevent revocation of internal representation (JWT ID)
+	if IsOAuthJwtId(id) {
+		return logical.ErrorResponse(ErrFullJWTRequired.Error()), logical.ErrInvalidRequest
 	}
-	if IsOAuthJwtId(normalizedID) {
-		return logical.ErrorResponse("JWTs cannot be revoked"), nil
+
+	// Because JWT Tokens are unable to create child tokens, there are no
+	// orphans to worry about. Delegate to the shared JWT revocation path.
+	if IsOAuthJwt(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
 	}
 
 	// Do a lookup. Among other things, that will ensure that this is either
@@ -3534,20 +3568,11 @@ func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, da
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 	if IsOAuthJwt(id) {
-		// If the token specified in the request body is different from the caller's
-		// token, resolve the token ID based on the body token's claims (JTI) instead
-		// of req.JwtUniqueId, otherwise we may silently return the caller's
-		// own token entry or fail for non-Enterprise token callers.
-		if id == req.ClientToken {
-			id = getOAuthJwtId(req.JwtUniqueId)
-		} else {
-			// For raw JWTs, validate to get the correct profile and unique ID claim
-			resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
-			if err != nil {
-				return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
-			}
-			id = resolvedID
+		resolvedID, err := ts.core.normalizeJwtForLookup(ctx, id)
+		if err != nil {
+			return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
 		}
+		id = resolvedID
 	}
 	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
@@ -4422,6 +4447,7 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
 	tokenRevokeHelp          = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp      = `This endpoint will delete the token used to call it and all of its child tokens.`
+	tokenRevokeOAuthHelp     = `This endpoint revokes an external OAuth token identified by its issuer and unique ID.`
 	tokenRevokeOrphanHelp    = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRenewHelp           = `This endpoint will renew the given token and prevent expiration.`
 	tokenRenewSelfHelp       = `This endpoint will renew the token used to call it and prevent expiration.`

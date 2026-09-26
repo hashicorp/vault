@@ -4,16 +4,22 @@
  */
 
 import { module, test } from 'qunit';
+import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
 import {
   PREFERENCES,
+  STRING_PREFERENCES,
   getPreference,
   hasPreference,
   setPreference,
+  getStringPreference,
+  setStringPreference,
   getOrCreateAnalyticsUserId,
 } from 'vault/utils/preferences';
 
 module('Unit | Util | preferences', function (hooks) {
+  setupTest(hooks);
+
   hooks.beforeEach(function () {
     window.localStorage.clear();
   });
@@ -108,6 +114,82 @@ module('Unit | Util | preferences', function (hooks) {
       let error = null;
       try {
         setPreference('telemetryConsent', true);
+      } catch (e) {
+        error = e;
+      }
+
+      assert.strictEqual(error, null, 'does not throw when the write fails');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // String preferences
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Tests for getStringPreference and setStringPreference. Verifies correct
+   * round-trip behaviour, default handling, and graceful storage-error handling.
+   */
+  module('string preferences', function () {
+    test('persona is registered with an empty-string default', function (assert) {
+      assert.strictEqual(STRING_PREFERENCES.persona.default, '', 'default is empty string');
+      assert.strictEqual(STRING_PREFERENCES.persona.type, 'string', 'type is string');
+      assert.strictEqual(STRING_PREFERENCES.persona.key, 'vault:prefs:persona', 'key is namespaced');
+    });
+
+    test('getStringPreference returns the default when no value is stored', function (assert) {
+      assert.strictEqual(
+        getStringPreference('persona'),
+        STRING_PREFERENCES.persona.default,
+        'returns empty string default when localStorage is empty'
+      );
+    });
+
+    test('setStringPreference persists the value under the namespaced key', function (assert) {
+      setStringPreference('persona', 'developer');
+
+      // The local-storage module JSON-serialises values via JSON.stringify, so
+      // the raw localStorage entry is the JSON-encoded string (with quotes).
+      assert.strictEqual(
+        window.localStorage.getItem(STRING_PREFERENCES.persona.key),
+        JSON.stringify('developer'),
+        'value is written under the registry key (JSON-encoded)'
+      );
+    });
+
+    test('getStringPreference returns the stored value after setStringPreference', function (assert) {
+      setStringPreference('persona', 'security-analyst');
+
+      assert.strictEqual(getStringPreference('persona'), 'security-analyst', 'round-trips the stored value');
+    });
+
+    test('getStringPreference returns the default after the key is cleared', function (assert) {
+      setStringPreference('persona', 'platform-engineer');
+      window.localStorage.removeItem(STRING_PREFERENCES.persona.key);
+
+      assert.strictEqual(
+        getStringPreference('persona'),
+        STRING_PREFERENCES.persona.default,
+        'falls back to default when the key is removed'
+      );
+    });
+
+    test('getStringPreference returns the default when reads throw', function (assert) {
+      sinon.stub(window.localStorage, 'getItem').throws(new Error('localStorage unavailable'));
+
+      assert.strictEqual(
+        getStringPreference('persona'),
+        STRING_PREFERENCES.persona.default,
+        'falls back to default instead of throwing'
+      );
+    });
+
+    test('setStringPreference is a no-op when writes throw', function (assert) {
+      sinon.stub(window.localStorage, 'setItem').throws(new Error('quota exceeded'));
+
+      let error = null;
+      try {
+        setStringPreference('persona', 'other');
       } catch (e) {
         error = e;
       }

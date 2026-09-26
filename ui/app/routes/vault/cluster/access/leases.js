@@ -7,9 +7,9 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 
 export default class LeasesRoute extends Route {
-  @service store;
+  @service capabilities;
 
   model() {
-    return this.store.findRecord('capabilities', 'sys/leases/lookup/');
+    return this.capabilities.fetchPathCapabilities('sys/leases/lookup/');
   }
 }

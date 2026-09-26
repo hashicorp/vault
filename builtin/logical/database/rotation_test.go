@@ -16,9 +16,9 @@ import (
 
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/builtin/logical/database/schedule"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
@@ -1043,15 +1043,7 @@ func TestQueueTickIntervalKeyConfig(t *testing.T) {
 
 func testBackend_StaticRole_Rotations(t *testing.T, createUser userCreator, opts map[string]interface{}) {
 	// We need to set this value for the plugin to run, but it doesn't matter what we set it to.
-	oldToken := os.Getenv(pluginutil.PluginUnwrapTokenEnv)
-	os.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
-	defer func() {
-		if oldToken != "" {
-			os.Setenv(pluginutil.PluginUnwrapTokenEnv, oldToken)
-		} else {
-			os.Unsetenv(pluginutil.PluginUnwrapTokenEnv)
-		}
-	}()
+	t.Setenv(pluginutil.PluginUnwrapTokenEnv, "...")
 
 	_, sys := getClusterPostgresDB(t)
 

@@ -6,7 +6,7 @@
 package vault
 
 import (
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 )
 
 func (i *IdentityStore) listNamespaces() []*namespace.Namespace {

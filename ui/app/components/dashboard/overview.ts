@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ import { CLUSTER_STARTUP_CHECKLIST } from 'vault/utils/constants/checklist';
 
 import type ChecklistStateService from 'vault/services/checklist-state';
 import NamespaceService from 'vault/services/namespace';
+import type ThemeService from 'vault/services/theme';
 
 export type Args = {
   isRootNamespace: boolean;
@@ -24,7 +25,14 @@ export type Args = {
 export default class OverviewComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
   @service('checklist-state') declare readonly checklistState: ChecklistStateService;
+  @service declare readonly theme: ThemeService;
   @tracked showSetupGuideInCompleteState = false;
+
+  /** Returns the dark-mode variant of the agent registry dashboard image when dark mode is active. */
+  get featureSpotlightImageSrc(): string {
+    const base = '/ui/images/agent-registry-dashboard.png';
+    return this.theme.isDarkMode ? '/ui/images/agent-registry-dashboard-dark.png' : base;
+  }
 
   get startupChecklist() {
     return CLUSTER_STARTUP_CHECKLIST;
@@ -86,22 +94,29 @@ export default class OverviewComponent extends Component<Args> {
    * Allows users to temporarily return to the checklist after completion
    * without mutating completion state.
    */
-  get shouldShowChecklistInPlaceOfCongrats(): boolean {
+  get isShowingCompletedChecklist(): boolean {
     return this.checklistLifecycleState === 'complete' && this.showSetupGuideInCompleteState;
   }
 
   /** True when the checklist widget should be rendered in the left column. */
   get shouldShowChecklist(): boolean {
-    return this.checklistLifecycleState === 'active' || this.shouldShowChecklistInPlaceOfCongrats;
+    return this.checklistLifecycleState === 'active' || this.isShowingCompletedChecklist;
   }
 
   @action hideChecklist() {
+    // Remember whether the checklist or the completion panel was showing so
+    // restoring later (from the Explore Vault card) returns to the same view.
+    this.checklistState.setLastView(
+      this.startupChecklist.id,
+      this.shouldShowChecklist ? 'checklist' : 'complete-banner'
+    );
     this.showSetupGuideInCompleteState = false;
     this.checklistState.hideChecklist(this.startupChecklist.id);
   }
 
   @action restoreChecklist() {
-    this.showSetupGuideInCompleteState = false;
+    const lastView = this.checklistState.getLastView(this.startupChecklist.id);
+    this.showSetupGuideInCompleteState = lastView === 'checklist';
     this.checklistState.showChecklist(this.startupChecklist.id);
   }
 

@@ -80,10 +80,20 @@ const assertDetailTabs = (assert, current, hidden = []) => {
 };
 // patchLatest is only available for enterprise so it's not included here
 const DETAIL_TOOLBARS = ['delete', 'destroy', 'copy', 'versionDropdown', 'createNewVersion'];
+// `copy` and `versionDropdown` render <Hds::Dropdown> toggles rather than
+// .toolbar-link/.toolbar-button, so they have to be counted with their own selector.
+const DETAIL_TOOLBAR_DROPDOWNS = ['copy', 'versionDropdown'];
 const assertDetailsToolbar = (assert, expected = DETAIL_TOOLBARS) => {
+  const expectedDropdowns = expected.filter((t) => DETAIL_TOOLBAR_DROPDOWNS.includes(t));
+  const expectedActions = expected.filter((t) => !DETAIL_TOOLBAR_DROPDOWNS.includes(t));
+
   assert
     .dom(PAGE.toolbarAction)
-    .exists({ count: expected.length }, 'correct number of toolbar actions render');
+    .exists({ count: expectedActions.length }, 'correct number of toolbar actions render');
+  assert
+    .dom(PAGE.toolbarDropdown)
+    .exists({ count: expectedDropdowns.length }, 'correct number of toolbar dropdowns render');
+
   expected.forEach((toolbar) => {
     assert.dom(PAGE.detail[toolbar]).exists(`${toolbar} action exists`);
   });
@@ -347,7 +357,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     });
     test('can access nested secret (a)', async function (assert) {
       // enterprise has "Patch latest version" in the toolbar which adds an assertion
-      const count = this.version.isEnterprise ? 52 : 51;
+      const count = this.version.isEnterprise ? 53 : 52;
       assert.expect(count);
       const backend = this.backend;
       await navToBackend(backend);
@@ -482,7 +492,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
       await click(PAGE.secretTab('Secret'));
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/${secretPathUrlEncoded}/details?version=1`,
@@ -720,7 +730,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret (dr)', async function (assert) {
-      assert.expect(25);
+      assert.expect(26);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(backend, 'title text correct');
@@ -925,7 +935,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret (dlr)', async function (assert) {
-      assert.expect(35);
+      assert.expect(36);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(backend, 'title text correct');
@@ -1127,7 +1137,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret (mm)', async function (assert) {
-      assert.expect(46);
+      assert.expect(47);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(backend, 'title text correct');
@@ -1221,7 +1231,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .hasText('You do not have permission to read this secret', 'Shows empty state on secret detail');
 
       await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version(1)} a`);
+      await click(`${PAGE.detail.version(1)}`);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets-engines/${backend}/kv/${secretPathUrlEncoded}/details?version=1`,
@@ -1363,7 +1373,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret (sc)', async function (assert) {
-      assert.expect(26);
+      assert.expect(27);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(backend, 'title text correct');
@@ -1564,7 +1574,7 @@ path "${this.backend}/subkeys/*" {
       return login(userToken);
     });
     test('can access nested secret (cg)', async function (assert) {
-      assert.expect(48);
+      assert.expect(49);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(backend, 'title text correct');

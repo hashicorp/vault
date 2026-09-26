@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/hcp-link/pkg/nodestatus"
-	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/internalshared/logging"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
 	"github.com/hashicorp/vault/vault/hcp_link/proto/node_status"

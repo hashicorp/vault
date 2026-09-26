@@ -5,11 +5,14 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 import { dateFormat } from 'core/helpers/date-format';
+
+const findAllParentRowIds = () =>
+  findAll(GENERAL.tableParentRow).map((row) => row.getAttribute('data-test-table-row'));
 
 module('Integration | Component | agents/registry-table', function (hooks) {
   setupRenderingTest(hooks);
@@ -122,37 +125,54 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it displays agent data correctly', async function (assert) {
     await this.renderComponent();
+    const parenRowIds = findAllParentRowIds();
 
     // Check first agent row
     assert
-      .dom(GENERAL.tableData(0, 'agentName'))
+      .dom(GENERAL.tableData(parenRowIds[0], 'agentName'))
       .includesText('test-agent-1 2 aliases', 'displays agent name');
-    assert.dom(GENERAL.tableData(0, 'entityAliasName')).hasText('test-entity-1', 'displays entity name');
-    assert.dom(GENERAL.tableData(0, 'entityAliasId')).includesText('entity-1', 'displays entity ID');
-    assert.dom(GENERAL.tableData(0, 'entityStatus')).hasText('Enabled', 'displays entity status');
+    assert
+      .dom(GENERAL.tableData(parenRowIds[0], 'entityAliasName'))
+      .hasText('test-entity-1', 'displays entity name');
+    assert
+      .dom(GENERAL.tableData(parenRowIds[0], 'entityAliasId'))
+      .includesText('entity-1', 'displays entity ID');
+    assert
+      .dom(GENERAL.tableData(parenRowIds[0], 'entityStatus'))
+      .hasText('Enabled', 'displays entity status');
 
     // Check second agent row (disabled entity)
-    assert.dom(GENERAL.tableData(1, 'agentName')).hasText('test-agent-2', 'displays second agent name');
-    assert.dom(GENERAL.tableData(1, 'entityStatus')).hasText('Disabled', 'displays disabled status');
+    assert
+      .dom(GENERAL.tableData(parenRowIds[1], 'agentName'))
+      .hasText('test-agent-2', 'displays second agent name');
+    assert
+      .dom(GENERAL.tableData(parenRowIds[1], 'entityStatus'))
+      .hasText('Disabled', 'displays disabled status');
 
     // Check third agent row (no entity)
-    assert.dom(GENERAL.tableData(2, 'agentName')).hasText('test-agent-3', 'displays third agent name');
-    assert.dom(GENERAL.tableData(2, 'entityAliasName')).hasText('/', 'displays slash for missing entity');
+    assert
+      .dom(GENERAL.tableData(parenRowIds[2], 'agentName'))
+      .hasText('test-agent-3', 'displays third agent name');
+    assert
+      .dom(GENERAL.tableData(parenRowIds[2], 'entityAliasName'))
+      .hasText('/', 'displays slash for missing entity');
   });
 
   test('it displays alias count when agent has aliases', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
     assert
-      .dom(GENERAL.tableData(0, 'agentName'))
+      .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
       .includesText('2 aliases', 'displays alias count for agent with aliases');
     assert
-      .dom(GENERAL.tableData(1, 'agentName'))
+      .dom(GENERAL.tableData(parentRowIds[1], 'agentName'))
       .doesNotIncludeText('aliases', 'does not display alias count when no aliases');
   });
 
   test('it formats dates correctly', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
     const expectedCreatedAt = dateFormat(['2026-01-01T10:00:00Z', 'MMM dd, yyyy hh:mm:ss a'], {
       withTimeZone: true,
@@ -162,18 +182,19 @@ module('Integration | Component | agents/registry-table', function (hooks) {
     });
 
     assert
-      .dom(GENERAL.tableData(0, 'entityCreatedAt'))
+      .dom(GENERAL.tableData(parentRowIds[0], 'entityCreatedAt'))
       .hasText(expectedCreatedAt, 'formats creation date correctly');
     assert
-      .dom(GENERAL.tableData(0, 'entityUpdatedAt'))
+      .dom(GENERAL.tableData(parentRowIds[0], 'entityUpdatedAt'))
       .hasText(expectedUpdatedAt, 'formats update date correctly');
   });
 
   test('it displays copy button for entity/alias IDs', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
     assert
-      .dom(`${GENERAL.tableData(0, 'entityAliasId')} ${GENERAL.copyButton}`)
+      .dom(`${GENERAL.tableData(parentRowIds[0], 'entityAliasId')} ${GENERAL.copyButton}`)
       .exists('copy button exists for entity ID');
   });
 
@@ -211,19 +232,24 @@ module('Integration | Component | agents/registry-table', function (hooks) {
   test('it shows popup menu for agents with entities', async function (assert) {
     await this.renderComponent();
 
+    const parentRowIds = findAllParentRowIds();
+
     // First agent (enabled entity) should have popup menu
-    assert.dom(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`).exists('popup menu exists for first agent');
+    assert
+      .dom(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`)
+      .exists('popup menu exists for first agent');
 
     // Third agent (no entity) should have popup menu
     assert
-      .dom(`${GENERAL.tableRow(2)} ${GENERAL.menuTrigger}`)
+      .dom(`${GENERAL.tableRow(parentRowIds[2])} ${GENERAL.menuTrigger}`)
       .exists('popup menu exists for agent without entity');
   });
 
   test('it shows correct menu options for enabled entity', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
 
     assert.dom(GENERAL.menuItem()).exists({ count: 2 }, 'shows both menu options');
     assert.dom(GENERAL.menuItem('disable')).containsText('Disable entity', 'shows disable option');
@@ -232,8 +258,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it shows correct menu options for disabled entity', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(1)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[1])} ${GENERAL.menuTrigger}`);
 
     assert.dom(GENERAL.menuItem()).exists({ count: 2 }, 'shows both menu options');
     assert.dom(GENERAL.menuItem('enable')).containsText('Enable entity', 'shows enable option');
@@ -242,8 +269,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it opens disable confirmation modal when clicking disable', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('disable'));
 
     assert
@@ -259,8 +287,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it calls toggleEntity when confirming disable', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('disable'));
     await click(GENERAL.confirmButton);
 
@@ -278,8 +307,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it calls toggleEntity when confirming enable', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(1)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[1])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('enable'));
 
     // For enabled entity, it should call directly without modal
@@ -299,8 +329,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
     this.entityUpdateStub.rejects(new Error('API Error'));
 
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(1)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[1])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('enable'));
 
     assert.true(this.flashDangerStub.calledOnce, 'danger flash message shown');
@@ -312,8 +343,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it opens delete confirmation modal when clicking delete', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('delete'));
 
     assert
@@ -329,8 +361,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it calls deleteAgent when confirming delete', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('delete'));
     await click(GENERAL.confirmButton);
 
@@ -351,8 +384,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
     this.registrationDeleteStub.rejects(new Error('API Error'));
 
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('delete'));
     await click(GENERAL.confirmButton);
 
@@ -365,8 +399,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it closes modal when clicking cancel on disable confirmation', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('disable'));
 
     assert.dom(GENERAL.confirmModal).exists('modal is open');
@@ -379,8 +414,9 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it closes modal when clicking cancel on delete confirmation', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
-    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.tableRow(parentRowIds[0])} ${GENERAL.menuTrigger}`);
     await click(GENERAL.menuItem('delete'));
 
     assert.dom(GENERAL.confirmModal).exists('modal is open');
@@ -429,21 +465,22 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it displays badge with correct color for entity status', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
     // Enabled entity should have no warning color
     assert
-      .dom(`${GENERAL.tableData(0, 'entityStatus')} .hds-badge`)
+      .dom(`${GENERAL.tableData(parentRowIds[0], 'entityStatus')} .hds-badge`)
       .exists('badge exists for enabled entity');
     assert
-      .dom(`${GENERAL.tableData(0, 'entityStatus')} .hds-badge`)
+      .dom(`${GENERAL.tableData(parentRowIds[0], 'entityStatus')} .hds-badge`)
       .hasClass('hds-badge--color-neutral', 'enabled entity has neutral color');
 
     // Disabled entity should have warning color
     assert
-      .dom(`${GENERAL.tableData(1, 'entityStatus')} .hds-badge`)
+      .dom(`${GENERAL.tableData(parentRowIds[1], 'entityStatus')} .hds-badge`)
       .exists('badge exists for disabled entity');
     assert
-      .dom(`${GENERAL.tableData(1, 'entityStatus')} .hds-badge`)
+      .dom(`${GENERAL.tableData(parentRowIds[1], 'entityStatus')} .hds-badge`)
       .hasClass('hds-badge--color-warning', 'disabled entity has warning color');
   });
 
@@ -460,14 +497,27 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
   test('it handles agents with no entity gracefully', async function (assert) {
     await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
 
     // Third agent has no entity
-    assert.dom(GENERAL.tableData(2, 'agentName')).hasText('test-agent-3', 'displays agent name');
-    assert.dom(GENERAL.tableData(2, 'entityAliasName')).hasText('/', 'shows slash for missing entity name');
-    assert.dom(GENERAL.tableData(2, 'entityAliasId')).hasText('/', 'shows slash for missing entity ID');
-    assert.dom(GENERAL.tableData(2, 'entityStatus')).hasText('/', 'shows slash for missing entity status');
-    assert.dom(GENERAL.tableData(2, 'entityCreatedAt')).hasText('/', 'shows slash for missing creation date');
-    assert.dom(GENERAL.tableData(2, 'entityUpdatedAt')).hasText('/', 'shows slash for missing update date');
+    assert
+      .dom(GENERAL.tableData(parentRowIds[2], 'agentName'))
+      .hasText('test-agent-3', 'displays agent name');
+    assert
+      .dom(GENERAL.tableData(parentRowIds[2], 'entityAliasName'))
+      .hasText('/', 'shows slash for missing entity name');
+    assert
+      .dom(GENERAL.tableData(parentRowIds[2], 'entityAliasId'))
+      .hasText('/', 'shows slash for missing entity ID');
+    assert
+      .dom(GENERAL.tableData(parentRowIds[2], 'entityStatus'))
+      .hasText('/', 'shows slash for missing entity status');
+    assert
+      .dom(GENERAL.tableData(parentRowIds[2], 'entityCreatedAt'))
+      .hasText('/', 'shows slash for missing creation date');
+    assert
+      .dom(GENERAL.tableData(parentRowIds[2], 'entityUpdatedAt'))
+      .hasText('/', 'shows slash for missing update date');
   });
 
   test('it handles click events for entity and alias', async function (assert) {
@@ -487,31 +537,38 @@ module('Integration | Component | agents/registry-table', function (hooks) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'test-agent-1');
+      const parentRowIds = findAllParentRowIds();
 
       // Only first agent should be visible
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows only one agent');
-      assert.dom(GENERAL.tableData(0, 'agentName')).includesText('test-agent-1', 'shows filtered agent');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows only one agent');
+      assert
+        .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
+        .includesText('test-agent-1', 'shows filtered agent');
     });
 
     test('it filters agents by entity name', async function (assert) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'test-entity-2');
+      const parentRowIds = findAllParentRowIds();
 
       // Only second agent should be visible
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows only one agent');
-      assert.dom(GENERAL.tableData(0, 'entityAliasName')).hasText('test-entity-2', 'shows filtered entity');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows only one agent');
+      assert
+        .dom(GENERAL.tableData(parentRowIds[0], 'entityAliasName'))
+        .hasText('test-entity-2', 'shows filtered entity');
     });
 
     test('it filters agents by entity ID', async function (assert) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'entity-2');
+      const parentRowIds = findAllParentRowIds();
 
-      // Only third agent should be visible
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows only one agent');
+      // Only second agent should be visible
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows only one agent');
       assert
-        .dom(GENERAL.tableData(0, 'agentName'))
+        .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
         .hasText('test-agent-2', 'shows agent with matching entity ID');
     });
 
@@ -519,21 +576,25 @@ module('Integration | Component | agents/registry-table', function (hooks) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'Disabled');
+      const parentRowIds = findAllParentRowIds();
 
       // Only second agent (disabled) should be visible
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows only one agent');
-      assert.dom(GENERAL.tableData(0, 'entityStatus')).hasText('Disabled', 'shows disabled agent');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows only one agent');
+      assert
+        .dom(GENERAL.tableData(parentRowIds[0], 'entityStatus'))
+        .hasText('Disabled', 'shows disabled agent');
     });
 
     test('it filters agents by alias name', async function (assert) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'test-alias-1');
+      const parentRowIds = findAllParentRowIds();
 
       // Only first agent should be visible (has matching alias)
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows only one agent');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows only one agent');
       assert
-        .dom(GENERAL.tableData(0, 'agentName'))
+        .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
         .includesText('test-agent-1', 'shows agent with matching alias');
     });
 
@@ -541,11 +602,12 @@ module('Integration | Component | agents/registry-table', function (hooks) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'alias-2');
+      const parentRowIds = findAllParentRowIds();
 
       // Only first agent should be visible (has matching alias ID)
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows only one agent');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows only one agent');
       assert
-        .dom(GENERAL.tableData(0, 'agentName'))
+        .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
         .includesText('test-agent-1', 'shows agent with matching alias ID');
     });
 
@@ -553,10 +615,11 @@ module('Integration | Component | agents/registry-table', function (hooks) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'TEST-AGENT-1');
+      const parentRowIds = findAllParentRowIds();
 
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows one agent with case-insensitive match');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows one agent with case-insensitive match');
       assert
-        .dom(GENERAL.tableData(0, 'agentName'))
+        .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
         .includesText('test-agent-1', 'matches case-insensitively');
     });
 
@@ -566,7 +629,7 @@ module('Integration | Component | agents/registry-table', function (hooks) {
       await fillIn(GENERAL.filterInput, 'test-agent');
 
       // All three agents match "test-agent"
-      assert.dom(GENERAL.tableRow()).exists({ count: 3 }, 'shows all matching agents');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 3 }, 'shows all matching agents');
     });
 
     test('it shows no results when filter matches nothing', async function (assert) {
@@ -585,21 +648,24 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
       // Apply filter
       await fillIn(GENERAL.filterInput, 'test-agent-1');
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows filtered results');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows filtered results');
 
       // Clear filter
       await fillIn(GENERAL.filterInput, '');
-      assert.dom(GENERAL.tableRow()).exists({ count: 3 }, 'shows all agents when filter is cleared');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 3 }, 'shows all agents when filter is cleared');
     });
 
     test('it filters by partial matches', async function (assert) {
       await this.renderComponent();
 
       await fillIn(GENERAL.filterInput, 'agent-1');
+      const parentRowIds = findAllParentRowIds();
 
       // Should match test-agent-1
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows partial match');
-      assert.dom(GENERAL.tableData(0, 'agentName')).includesText('test-agent-1', 'matches partial string');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'shows partial match');
+      assert
+        .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
+        .includesText('test-agent-1', 'matches partial string');
     });
 
     test('it filters by formatted dates', async function (assert) {
@@ -607,11 +673,12 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
       // Filter by part of the formatted date (e.g., "Jan 01" from "2026-01-01T10:00:00Z")
       await fillIn(GENERAL.filterInput, 'Jan 01');
+      const parentRowIds = findAllParentRowIds();
 
       // First agent has creation date of Jan 01, 2026
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'filters by formatted date');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 1 }, 'filters by formatted date');
       assert
-        .dom(GENERAL.tableData(0, 'agentName'))
+        .dom(GENERAL.tableData(parentRowIds[0], 'agentName'))
         .includesText('test-agent-1', 'shows agent with matching date');
     });
 
@@ -635,18 +702,18 @@ module('Integration | Component | agents/registry-table', function (hooks) {
 
       await this.renderComponent();
 
-      // Filter to agents containing "1" (should match agent-1, agent-10, agent-11, agent-12, agent-13, agent-14, agent-15)
+      // Filter to agents containing "-1" (should match agent-1, agent-10, agent-11, agent-12, agent-13, agent-14, agent-15)
       await fillIn(GENERAL.filterInput, '-1');
 
       // Should show filtered results across pages
       // With pageSize of 5, first page should show 5 results
-      assert.dom(GENERAL.tableRow()).exists({ count: 5 }, 'shows first page of filtered results');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 5 }, 'shows first page of filtered results');
 
       // Navigate to next page
       await click(GENERAL.nextPage);
 
       // Should show remaining filtered results
-      assert.dom(GENERAL.tableRow()).exists({ count: 2 }, 'shows second page of filtered results');
+      assert.dom(GENERAL.tableParentRow).exists({ count: 2 }, 'shows second page of filtered results');
     });
 
     test('it shows alias rows when parent matches filter', async function (assert) {
@@ -673,7 +740,7 @@ module('Integration | Component | agents/registry-table', function (hooks) {
       await fillIn(GENERAL.filterInput, 'test-alias-1');
 
       // Parent agent should be visible
-      assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'shows parent agent when alias matches');
+      assert.dom(GENERAL.tableRow(0)).exists({ count: 1 }, 'shows parent agent when alias matches');
       assert
         .dom(GENERAL.tableData(0, 'agentName'))
         .includesText('test-agent-1', 'shows correct parent agent');

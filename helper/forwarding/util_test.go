@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"bytes"
 	"net/http"
-	"os"
 	"reflect"
 	"testing"
 )
@@ -17,7 +16,7 @@ func Test_ForwardedRequest_GenerateParse(t *testing.T) {
 }
 
 func Benchmark_ForwardedRequest_GenerateParse_JSON(b *testing.B) {
-	os.Setenv("VAULT_MESSAGE_TYPE", "json")
+	b.Setenv("VAULT_MESSAGE_TYPE", "json")
 	var totalSize int64
 	var numRuns int64
 	for i := 0; i < b.N; i++ {
@@ -28,7 +27,7 @@ func Benchmark_ForwardedRequest_GenerateParse_JSON(b *testing.B) {
 }
 
 func Benchmark_ForwardedRequest_GenerateParse_JSON_Compressed(b *testing.B) {
-	os.Setenv("VAULT_MESSAGE_TYPE", "json_compress")
+	b.Setenv("VAULT_MESSAGE_TYPE", "json_compress")
 	var totalSize int64
 	var numRuns int64
 	for i := 0; i < b.N; i++ {
@@ -39,7 +38,7 @@ func Benchmark_ForwardedRequest_GenerateParse_JSON_Compressed(b *testing.B) {
 }
 
 func Benchmark_ForwardedRequest_GenerateParse_Proto3(b *testing.B) {
-	os.Setenv("VAULT_MESSAGE_TYPE", "proto3")
+	b.Setenv("VAULT_MESSAGE_TYPE", "proto3")
 	var totalSize int64
 	var numRuns int64
 	for i := 0; i < b.N; i++ {

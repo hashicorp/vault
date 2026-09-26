@@ -371,7 +371,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 // HandlePatchOperation acts as an abstraction for performing JSON merge patch
 // operations (see https://datatracker.ietf.org/doc/html/rfc7396) for HTTP
-// PATCH requests. It is responsible for properly processing and marshalling
+// PATCH requests. It is responsible for properly processing and marshalli ng
 // the input and existing resource prior to performing the JSON merge operation
 // using the MergePatch function from the json-patch library. The preprocessor
 // is an arbitrary func that can be provided to further process the input. The

@@ -15,9 +15,9 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentoci "github.com/hashicorp/vault/command/agentproxyshared/auth/oci"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	thutils "github.com/hashicorp/vault/sdk/helper/testhelpers/utils"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -200,17 +200,19 @@ func TestOCIEndToEnd(t *testing.T) {
 	}
 }
 
+// setOCIEnvCreds has no *testing.T; converting its os.Setenv calls to t.Setenv would require
+// threading t through every caller.
 func setOCIEnvCreds() error {
-	if err := os.Setenv(envVarOCITenancyOCID, os.Getenv(envVarOCITestTenancyOCID)); err != nil {
+	if err := os.Setenv(envVarOCITenancyOCID, os.Getenv(envVarOCITestTenancyOCID)); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	if err := os.Setenv(envVarOCIUserOCID, os.Getenv(envVarOCITestUserOCID)); err != nil {
+	if err := os.Setenv(envVarOCIUserOCID, os.Getenv(envVarOCITestUserOCID)); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	if err := os.Setenv(envVarOCIFingerprint, os.Getenv(envVarOCITestFingerprint)); err != nil {
+	if err := os.Setenv(envVarOCIFingerprint, os.Getenv(envVarOCITestFingerprint)); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	return os.Setenv(envVarOCIPrivateKeyPath, os.Getenv(envVarOCITestPrivateKeyPath))
+	return os.Setenv(envVarOCIPrivateKeyPath, os.Getenv(envVarOCITestPrivateKeyPath)) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 }
 
 func unsetOCIEnvCreds() error {

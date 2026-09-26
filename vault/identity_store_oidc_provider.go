@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -344,6 +344,23 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListClient,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of unused eab keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `EAB details keyed by the eab key id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    "List OIDC clients",
@@ -409,6 +426,23 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: i.pathOIDCListProvider,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: `A list of unused eab keys`,
+									Required:    true,
+								},
+								"key_info": {
+									Type:        framework.TypeMap,
+									Description: `EAB details keyed by the eab key id`,
+									Required:    false,
+								},
+							},
+						}},
+					},
 				},
 			},
 			HelpSynopsis:    "List OIDC providers",

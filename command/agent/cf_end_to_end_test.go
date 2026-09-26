@@ -17,9 +17,9 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentcf "github.com/hashicorp/vault/command/agentproxyshared/auth/cf"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -84,8 +84,8 @@ func TestCFEndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	os.Setenv(credCF.EnvVarInstanceCertificate, testCFCerts.PathToInstanceCertificate)
-	os.Setenv(credCF.EnvVarInstanceKey, testCFCerts.PathToInstanceKey)
+	t.Setenv(credCF.EnvVarInstanceCertificate, testCFCerts.PathToInstanceCertificate)
+	t.Setenv(credCF.EnvVarInstanceKey, testCFCerts.PathToInstanceKey)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 

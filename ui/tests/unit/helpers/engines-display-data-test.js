@@ -5,7 +5,7 @@
 
 import engineDisplayData, { unknownEngineMetadata } from 'core/helpers/engines-display-data';
 import { module, test } from 'qunit';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { ALL_ENGINES, resolveGlyph } from 'vault/utils/all-engines-metadata';
 
 module('Unit | Helper | engines-display-data', function () {
   test('it returns correct display data for known engine types', function (assert) {
@@ -116,5 +116,41 @@ module('Unit | Helper | engines-display-data', function () {
       mixedCaseUnknownMetadata.type,
       'case sensitive - KeyMgmt not recognized'
     );
+  });
+});
+
+module('Unit | Util | resolveGlyph', function (hooks) {
+  hooks.afterEach(function () {
+    // restore the DOM to light mode after each test
+    document.documentElement.removeAttribute('data-theme');
+  });
+
+  test('strips -color suffix when data-theme is dark', function (assert) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    assert.strictEqual(resolveGlyph('aws-color'), 'aws', 'aws-color → aws in dark mode');
+    assert.strictEqual(
+      resolveGlyph('kubernetes-color'),
+      'kubernetes',
+      'kubernetes-color → kubernetes in dark mode'
+    );
+    assert.strictEqual(resolveGlyph('gcp-color'), 'gcp', 'gcp-color → gcp in dark mode');
+  });
+
+  test('returns glyph unchanged when data-theme is not dark', function (assert) {
+    // no data-theme attribute = light mode
+    assert.strictEqual(resolveGlyph('aws-color'), 'aws-color', 'aws-color unchanged in light mode');
+    assert.strictEqual(resolveGlyph('lock'), 'lock', 'non-color glyph unchanged in light mode');
+  });
+
+  test('returns glyph unchanged in dark mode when it has no -color suffix', function (assert) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    assert.strictEqual(resolveGlyph('lock'), 'lock', 'lock unchanged in dark mode');
+    assert.strictEqual(resolveGlyph('database'), 'database', 'database unchanged in dark mode');
+    assert.strictEqual(resolveGlyph('key-values'), 'key-values', 'key-values unchanged in dark mode');
+  });
+
+  test('returns undefined when glyph is undefined', function (assert) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    assert.strictEqual(resolveGlyph(undefined), undefined, 'undefined glyph returns undefined');
   });
 });

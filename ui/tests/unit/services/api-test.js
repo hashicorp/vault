@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
 import config from 'vault/config/environment';
+import { RequiredError } from '@hashicorp/vault-client-typescript';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Unit | Service | api', function (hooks) {
@@ -249,6 +250,26 @@ module('Unit | Service | api', function (hooks) {
       const error = new Error('some js type error');
       await this.apiService.parseError(error);
       assert.true(consoleStub.calledWith('API Error:', error));
+      sinon.restore();
+    });
+
+    test('it should return the generic fallback message for RequiredError instead of exposing internals, while logging the real error', async function (assert) {
+      const consoleStub = sinon.stub(console, 'error');
+      const error = new RequiredError(
+        'EntityUpdateAliasByIdRequest',
+        'Required parameter "EntityUpdateAliasByIdRequest" was null or undefined when calling entityUpdateAliasById().'
+      );
+      const e = await this.apiService.parseError(error);
+      assert.strictEqual(
+        e.message,
+        'An error occurred, please try again',
+        'Returns the generic fallback instead of the raw internal error'
+      );
+      assert.true(consoleStub.calledWith(error), 'Logs the real error for debugging visibility');
+
+      const fallback = 'Something went wrong saving this item';
+      const eWithCustomFallback = await this.apiService.parseError(error, fallback);
+      assert.strictEqual(eWithCustomFallback.message, fallback, 'Returns the custom fallback when provided');
       sinon.restore();
     });
   });

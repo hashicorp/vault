@@ -12,7 +12,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -470,9 +470,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["type"] = group.Type
 	respData["namespace_id"] = group.NamespaceID
 
-	if i.scimEnabled {
-		respData["scim_client_id"] = group.ScimClientID
-	}
+	respData["scim_client_id"] = group.ScimClientID
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {

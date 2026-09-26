@@ -205,6 +205,44 @@ module('Integration | Component | ttl-picker', function (hooks) {
         .exists({ count: 1 }, 'Description tooltip icon shows when description present');
     });
 
+    test('it flags an emptied input as required by default', async function (assert) {
+      await render(hbs`
+        <TtlPicker
+          @label={{this.label}}
+          @hideToggle={{this.hideToggle}}
+          @initialValue="30s"
+          @onChange={{this.onChange}}
+        />
+      `);
+
+      await fillIn(TTL_PICKER.ttlValue, '');
+
+      assert.dom('.ttl-value-error').hasText('This field is required');
+      assert.false(this.onChange.called, 'no value is reported while the input is empty');
+    });
+
+    test('it reports an emptied input as zero when emptyMeansZero is set', async function (assert) {
+      await render(hbs`
+        <TtlPicker
+          @label={{this.label}}
+          @hideToggle={{this.hideToggle}}
+          @initialValue="30s"
+          @emptyMeansZero={{true}}
+          @onChange={{this.onChange}}
+        />
+      `);
+
+      await fillIn(TTL_PICKER.ttlValue, '');
+
+      assert.dom('.ttl-value-error').doesNotExist('an empty input is valid');
+      assert.dom(TTL_PICKER.ttlValue).hasNoValue('the input is left empty rather than snapping to 0');
+      assert.propEqual(
+        this.onChange.lastCall.args[0],
+        { enabled: true, seconds: 0, timeString: 's', goSafeTimeString: '0s' },
+        'zero seconds is reported to the consumer'
+      );
+    });
+
     test('it yields in place of label if block is present', async function (assert) {
       this.set('label', 'My Label');
       await render(hbs`

@@ -25,8 +25,8 @@ import (
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/locking"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/fairshare"
@@ -1815,8 +1815,12 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 
 	// Setup revocation timer
 	m.updatePending(&le)
-	if strings.HasPrefix(auth.ClientToken, consts.ServiceTokenPrefix) {
-		generatedTokenEntry := logical.TokenEntry{Policies: auth.Policies}
+	if IsServiceToken(auth.ClientToken) {
+		tokenType := logical.TokenTypeService
+		if strings.HasPrefix(auth.ClientToken, consts.GetSCIMTokenPrefix()) {
+			tokenType = logical.TokenTypeSCIM
+		}
+		generatedTokenEntry := logical.TokenEntry{Policies: auth.Policies, Type: tokenType}
 		tok := m.tokenStore.GenerateSSCTokenID(auth.ClientToken, logical.IndexStateFromContext(ctx), &generatedTokenEntry)
 		te.ExternalID = tok
 	}

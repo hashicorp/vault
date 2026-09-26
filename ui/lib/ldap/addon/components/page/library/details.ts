@@ -10,7 +10,7 @@ import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
 
 import type { LdapLibraryRouteModel } from 'ldap/routes/libraries/library';
-import { Breadcrumb } from 'vault/vault/app-types';
+import type { Breadcrumb } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type SecretMountPath from 'vault/services/secret-mount-path';

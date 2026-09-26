@@ -35,5 +35,8 @@
 </div>
 
 <div class="box is-fullwidth is-shadowless">
-  <img src={{img-path "~/mfa-landing.png"}} alt="MFA configure diagram" />
+  <img
+    src={{if this.theme.isDarkMode (img-path "~/mfa-landing-dark.png") (img-path "~/mfa-landing.png")}}
+    alt="MFA configure diagram"
+  />
 </div>

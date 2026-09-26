@@ -11,6 +11,7 @@ import (
 func init() {
 	testTesting = true
 
+	// nosemgrep: tools.semgrep.ci.os-setenv-in-tests -- runs in init(), no *testing.T is available here.
 	if err := os.Setenv(TestEnvVar, "1"); err != nil {
 		panic(err)
 	}
@@ -18,10 +19,7 @@ func init() {
 
 func TestTest_noEnv(t *testing.T) {
 	// Unset the variable
-	if err := os.Setenv(TestEnvVar, ""); err != nil {
-		t.Fatalf("err: %s", err)
-	}
-	defer os.Setenv(TestEnvVar, "1")
+	t.Setenv(TestEnvVar, "")
 
 	mt := new(mockT)
 	Test(mt, TestCase{

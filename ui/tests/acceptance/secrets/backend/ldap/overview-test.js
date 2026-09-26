@@ -41,7 +41,7 @@ module('Acceptance | ldap | overview', function (hooks) {
   test('it should transition to ldap overview on mount success', async function (assert) {
     const backend = 'ldap-test-mount';
     await visit('/vault/secrets-engines');
-    await click('[data-test-enable-engine]');
+    await click(GENERAL.button('Enable new engine'));
     await mountBackend('ldap', backend, true);
     assert.true(isURL('overview', backend), 'Transitions to ldap overview route on mount success');
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText(backend);
@@ -82,8 +82,8 @@ module('Acceptance | ldap | overview', function (hooks) {
     await runCmd(mountEngineCmd('ldap', this.backend));
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), this.backend);
-    await click(`${GENERAL.listItem(`${this.backend}/`)} ${GENERAL.menuTrigger}`);
-    await click(GENERAL.menuItem('Delete'));
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('delete-engine-path'));
     assert.dom('[data-test-confirm-modal]').exists('Confirm delete modal renders');
     await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click('[data-test-confirm-button]');

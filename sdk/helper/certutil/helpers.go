@@ -109,6 +109,9 @@ var ExtendedKeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 37})
 // OID for Freshest CRL (aka Delta CRL Distribution Point) from RFC 5280: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.15
 var FreshestCrlOid = asn1.ObjectIdentifier([]int{2, 5, 29, 46})
 
+// OID for ReasonCode from RFC 2459
+var ReasonCodeOid = asn1.ObjectIdentifier([]int{2, 5, 29, 21})
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -1976,12 +1979,25 @@ func ParseCsrToFields(csr x509.CertificateRequest) (map[string]interface{}, erro
 		return nil, err
 	}
 
+	var userIDs []string
+	for _, attr := range csr.Subject.Names {
+		if attr.Type.Equal(SubjectPilotUserIDAttributeOID) {
+			switch v := attr.Value.(type) {
+			case string:
+				userIDs = append(userIDs, v)
+			case []byte:
+				userIDs = append(userIDs, string(v))
+			}
+		}
+	}
+
 	templateData := map[string]interface{}{
 		"common_name":          csr.Subject.CommonName,
 		"alt_names":            MakeAltNamesCommaSeparatedString(csr.DNSNames, csr.EmailAddresses),
 		"ip_sans":              MakeIpAddressCommaSeparatedString(csr.IPAddresses),
 		"uri_sans":             MakeUriCommaSeparatedString(csr.URIs),
 		"other_sans":           otherSans,
+		"user_ids":             strings.Join(userIDs, ","),
 		"signature_bits":       FindSignatureBits(csr.SignatureAlgorithm),
 		"exclude_cn_from_sans": DetermineExcludeCnFromCsrSans(csr),
 		"ou":                   makeCommaSeparatedString(csr.Subject.OrganizationalUnit),

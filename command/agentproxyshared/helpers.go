@@ -26,10 +26,10 @@ import (
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/ldap"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth/oci"
 	token_file "github.com/hashicorp/vault/command/agentproxyshared/auth/token-file"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cacheboltdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/cachememdb"
-	"github.com/hashicorp/vault/command/agentproxyshared/cache/keymanager"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cacheboltdb"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cachememdb"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/keymanager"
 )
 
 // GetAutoAuthMethodFromConfig Calls the appropriate NewAutoAuthMethod function, initializing

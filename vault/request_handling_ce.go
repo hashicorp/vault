@@ -39,7 +39,11 @@ func getJwtAudience(_ map[string]interface{}) []string {
 	return nil
 }
 
-func getJwtAuthorizationDetails(_ map[string]interface{}) []logical.AuthorizationDetail {
+func getAuthorizationDetailsClaim(_ *OAuthResourceServerConfigProfile) string {
+	return "authorization_details"
+}
+
+func getJwtAuthorizationDetails(_ map[string]interface{}, _ *OAuthResourceServerConfigProfile) []logical.AuthorizationDetail {
 	return nil
 }
 
@@ -53,4 +57,11 @@ func (c *Core) performDelegationTokenChecks(_ context.Context, _ *ACL, _ *identi
 
 func (c *Core) fetchCeilingPolicies(ctx context.Context, entity *identity.Entity) (map[string][]string, error) {
 	return nil, errors.New("not implemented")
+}
+
+func (c *Core) filterOAuthJWTCapabilities(_ context.Context, _ *logical.Request, capabilities, eventTypes []string) ([]string, []string) {
+	return capabilities, eventTypes
+}
+
+func extractValidatedProfileDetailsIntoRequest(chosenProfile *OAuthResourceServerConfigProfile, req *logical.Request) {
 }

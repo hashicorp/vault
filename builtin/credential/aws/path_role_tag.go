@@ -10,6 +10,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -72,6 +73,16 @@ If set, the created tag can only be used by the instance with the given ID.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRoleTagUpdate,
+				Summary:  "Generate a role tag for an EC2 instance.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"tag_key":   {Type: framework.TypeString, Description: "The key to use for the role tag on the EC2 instance."},
+							"tag_value": {Type: framework.TypeString, Description: "The value to use for the role tag on the EC2 instance."},
+						},
+					}},
+				},
 			},
 		},
 

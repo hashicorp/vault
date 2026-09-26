@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/pki/pki-selectors';
@@ -43,6 +43,30 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
         `,
         { owner: this.engine }
       );
+  });
+
+  test('it renders both download options when the dropdown is opened', async function (assert) {
+    this.pem = 'pem-data';
+    this.der = new Blob(['der-data']);
+    await this.renderComponent();
+
+    assert
+      .dom(PKI_ISSUER_DETAILS.downloadPem)
+      .doesNotExist('dropdown items are not rendered until the menu is opened');
+
+    await click(PKI_ISSUER_DETAILS.download);
+    assert.dom(PKI_ISSUER_DETAILS.downloadPem).hasText('PEM format');
+    assert.dom(PKI_ISSUER_DETAILS.downloadDer).hasText('DER format');
+  });
+
+  test('it only renders download options for the formats that exist', async function (assert) {
+    this.pem = 'pem-data';
+    this.der = null;
+    await this.renderComponent();
+
+    await click(PKI_ISSUER_DETAILS.download);
+    assert.dom(PKI_ISSUER_DETAILS.downloadPem).hasText('PEM format');
+    assert.dom(PKI_ISSUER_DETAILS.downloadDer).doesNotExist('no DER option when @der is missing');
   });
 
   test('it renders with correct toolbar by default', async function (assert) {

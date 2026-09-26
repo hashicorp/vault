@@ -20,9 +20,9 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	agentalicloud "github.com/hashicorp/vault/command/agentproxyshared/auth/alicloud"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink/file"
 	thutils "github.com/hashicorp/vault/sdk/helper/testhelpers/utils"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -201,13 +201,15 @@ func setAliCloudEnvCreds() error {
 		return err
 	}
 
-	if err := os.Setenv(providers.EnvVarAccessKeyID, assumeRoleResp.Credentials.AccessKeyId); err != nil {
+	// This function has no *testing.T; converting its os.Setenv calls to t.Setenv would require
+	// threading t through every caller.
+	if err := os.Setenv(providers.EnvVarAccessKeyID, assumeRoleResp.Credentials.AccessKeyId); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	if err := os.Setenv(providers.EnvVarAccessKeySecret, assumeRoleResp.Credentials.AccessKeySecret); err != nil {
+	if err := os.Setenv(providers.EnvVarAccessKeySecret, assumeRoleResp.Credentials.AccessKeySecret); err != nil { // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 		return err
 	}
-	return os.Setenv(providers.EnvVarAccessKeyStsToken, assumeRoleResp.Credentials.SecurityToken)
+	return os.Setenv(providers.EnvVarAccessKeyStsToken, assumeRoleResp.Credentials.SecurityToken) // nosemgrep: tools.semgrep.ci.os-setenv-in-tests
 }
 
 func unsetAliCloudEnvCreds() error {

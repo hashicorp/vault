@@ -6,6 +6,7 @@ package awsauth
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	awsv2 "github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -30,6 +31,15 @@ func (b *backend) pathConfigRotateRoot() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigRotateRootUpdate,
+				Summary:  "Rotate the AWS credentials used by Vault for this auth mount.",
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"access_key": {Type: framework.TypeString, Description: "New access key ID of the rotated root IAM credential."},
+						},
+					}},
+				},
 			},
 		},
 

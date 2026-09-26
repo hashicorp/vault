@@ -98,8 +98,8 @@ export default class MfaLoginEnforcementModel extends Model {
         targets = addToArray(targets, {
           key,
           icon: 'user',
-          link: 'vault.cluster.access.identity.show',
-          linkModels: [key.split('_')[1], model.id, 'details'],
+          link: `vault.cluster.access.identity.${key.split('_')[1]}.show`,
+          linkModels: [model.id, 'details'],
           title: model.name,
           subTitle: model.id,
         });

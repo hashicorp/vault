@@ -15,7 +15,12 @@ import {
   SystemApiPoliciesListAclPoliciesListEnum,
   SystemApiSystemListPoliciesRgpListEnum,
 } from '@hashicorp/vault-client-typescript';
-import { performSaveOperation, extractSavedId } from 'vault/utils/identity-helpers';
+import {
+  performSaveOperation,
+  extractSavedId,
+  findDuplicateNameError,
+  findDuplicateAliasError,
+} from 'vault/utils/identity-helpers';
 
 export default class IdentityEditFormComponent extends Component {
   @service flashMessages;
@@ -47,21 +52,26 @@ export default class IdentityEditFormComponent extends Component {
     const { model, mode } = this.args;
     const identityType = model?.identityType;
     const isAlias = model?.form?.identityFormType === 'alias';
+    const pluralType = identityType === 'group' ? 'groups' : 'entities';
 
     if (mode === 'merge') {
-      return 'vault.cluster.access.identity';
+      return 'vault.cluster.access.identity.entities.index';
     }
 
     if (mode === 'create') {
-      return isAlias ? 'vault.cluster.access.identity.aliases' : 'vault.cluster.access.identity';
+      return `vault.cluster.access.identity.${pluralType}.index`;
     }
 
     if (mode === 'edit') {
-      return isAlias ? 'vault.cluster.access.identity.aliases.show' : 'vault.cluster.access.identity.show';
+      return isAlias
+        ? `vault.cluster.access.identity.${pluralType}.aliases.show`
+        : `vault.cluster.access.identity.${pluralType}.show`;
     }
 
     // Fallback route in unexpected modes.
-    return identityType ? 'vault.cluster.access.identity.show' : 'vault.cluster.access.identity';
+    return identityType
+      ? `vault.cluster.access.identity.${pluralType}.show`
+      : `vault.cluster.access.identity.${pluralType}.index`;
   }
 
   get cancelModelId() {
@@ -76,9 +86,10 @@ export default class IdentityEditFormComponent extends Component {
   getMessage(model, isDelete = false) {
     const mode = this.args.mode;
     const typeDisplay = humanize([model.identityType]);
+    const name = model.form?.data?.name;
 
     if (isDelete) {
-      return `Successfully deleted ${typeDisplay}.`;
+      return name ? `Successfully deleted ${typeDisplay}: ${name}.` : `Successfully deleted ${typeDisplay}.`;
     }
     if (mode === 'merge') {
       return 'Successfully merged entities';
@@ -86,9 +97,8 @@ export default class IdentityEditFormComponent extends Component {
     if (model.form.identityFormType === 'alias') {
       return `Successfully saved ${typeDisplay} alias.`;
     }
-    const id = model.itemId || model.id;
-    if (id) {
-      return `Successfully saved ${typeDisplay} ${id}.`;
+    if (name) {
+      return `Successfully saved ${typeDisplay}: ${name}.`;
     }
     return `Successfully saved ${typeDisplay}.`;
   }
@@ -98,6 +108,13 @@ export default class IdentityEditFormComponent extends Component {
       const { model, mode, onSave } = this.args;
       const { data } = model.form.toJSON();
 
+      const duplicateNameError =
+        findDuplicateNameError({ model, mode, data }) || findDuplicateAliasError({ model, mode, data });
+      if (duplicateNameError) {
+        this.errorBanner = duplicateNameError;
+        return;
+      }
+
       try {
         const response = await performSaveOperation({
           api: this.api,
@@ -106,14 +123,13 @@ export default class IdentityEditFormComponent extends Component {
           data,
         });
 
-        const message = this.getMessage(model);
-        this.flashMessages.success(message);
-
         await onSave({
           saveType: 'save',
           model,
           id: extractSavedId({ mode, data, response, model }),
         });
+
+        this.flashMessages.success(this.getMessage(model));
       } catch (err) {
         const { message } = await this.api.parseError(err);
         this.errorBanner = message;

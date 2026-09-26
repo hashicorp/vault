@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { inject as controller } from '@ember/controller';
 import { TOGGLE_WEB_REPL } from 'vault/utils/analytic-events';
+import { FEEDBACK_SURVEY_URL } from 'vault/utils/constants/links';
 
 export default class SidebarNavComponent extends Component {
   @service analytics;
@@ -14,10 +15,9 @@ export default class SidebarNavComponent extends Component {
   @service console;
   @controller('vault.cluster') clusterController;
 
+  feedbackSurveyUrl = FEEDBACK_SURVEY_URL;
+
   trackReplToggle = () => {
-    // PostHog receives the descriptive event name; the Segment provider maps it
-    // to the IBM generic 'UI Interaction', so it needs these properties to be
-    // distinguishable from every other UI Interaction event.
     this.analytics.trackEvent(TOGGLE_WEB_REPL, {
       namespace: 'nav',
       action: 'clicked',

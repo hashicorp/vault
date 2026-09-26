@@ -1,70 +1,81 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
+import { action } from '@ember/object';
 import { service } from '@ember/service';
+import { paginate } from 'core/utils/paginate-list';
+import { keyIsFolder, keyWithoutParentKey } from 'core/utils/key-utils';
+import { SystemApiLeasesLookUpListEnum } from '@hashicorp/vault-client-typescript';
 
-export default Route.extend({
-  pagination: service(),
-  store: service(),
+export default class LeasesListRoute extends Route {
+  @service api;
+  @service capabilities;
 
-  queryParams: {
+  queryParams = {
     page: {
       refreshModel: true,
     },
     pageFilter: {
       refreshModel: true,
     },
-  },
+  };
 
-  templateName: 'vault/cluster/access/leases/list',
+  templateName = 'vault/cluster/access/leases/list';
 
-  model(params) {
+  async model(params) {
     const prefix = params.prefix || '';
-    if (this.modelFor('vault.cluster.access.leases').canList) {
-      return hash({
-        leases: this.pagination
-          .lazyPaginatedQuery('lease', {
-            prefix,
-            responsePath: 'data.keys',
-            page: params.page,
-            pageFilter: params.pageFilter,
-          })
-          .then((model) => {
-            this.set('has404', false);
-            return model;
-          })
-          .catch((err) => {
-            if (err.httpStatus === 404 && prefix === '') {
-              return [];
-            } else {
-              throw err;
-            }
-          }),
-        capabilities: hash({
-          revokePrefix: this.store.findRecord('capabilities', `sys/leases/revoke-prefix/${prefix}`),
-          forceRevokePrefix: this.store.findRecord('capabilities', `sys/leases/revoke-force/${prefix}`),
-        }),
-      });
+
+    if (!this.modelFor('vault.cluster.access.leases').canList) {
+      return undefined;
     }
-  },
+
+    const leasesResult = await this.api.sys
+      .leasesLookUp(prefix, SystemApiLeasesLookUpListEnum.TRUE)
+      .then((resp) => {
+        const rawKeys = resp.keys ?? [];
+        return rawKeys.map((key) => {
+          const id = prefix ? prefix + key : key;
+          return {
+            id,
+            isFolder: keyIsFolder(id),
+            keyWithoutParent: keyWithoutParentKey(id),
+          };
+        });
+      })
+      .catch((err) => {
+        if (err.status === 404 && prefix === '') {
+          return [];
+        }
+        throw err;
+      });
+
+    const leases = paginate(leasesResult, {
+      page: params.page ? Number(params.page) : 1,
+      filter: params.pageFilter || undefined,
+    });
+
+    const capabilities = await hash({
+      revokePrefix: this.capabilities.fetchPathCapabilities(`sys/leases/revoke-prefix/${prefix}`),
+      forceRevokePrefix: this.capabilities.fetchPathCapabilities(`sys/leases/revoke-force/${prefix}`),
+    });
+
+    return { leases, capabilities };
+  }
 
   setupController(controller, model) {
     const params = this.paramsFor(this.routeName);
     const prefix = params.prefix ? params.prefix : '';
-    const has404 = this.has404;
     controller.set('hasModel', true);
     controller.setProperties({
-      model: model.leases,
-      capabilities: model.capabilities,
+      model: model?.leases,
+      capabilities: model?.capabilities,
       baseKey: { id: prefix },
-      has404,
     });
-    if (!has404) {
+    if (model?.leases) {
       const pageFilter = params.pageFilter;
       let filter;
       if (prefix) {
@@ -77,37 +88,31 @@ export default Route.extend({
         page: model.leases?.meta?.currentPage,
       });
     }
-  },
+  }
 
   resetController(controller, isExiting) {
-    this._super(...arguments);
+    super.resetController(...arguments);
     if (isExiting) {
       controller.set('filter', '');
     }
-  },
+  }
 
-  actions: {
-    error(error, transition) {
-      const { prefix } = this.paramsFor(this.routeName);
-
-      set(error, 'keyId', prefix);
-      /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const hasModel = this.controllerFor(this.routeName).hasModel;
-      // only swallow the error if we have a previous model
-      if (hasModel && error.httpStatus === 404) {
-        this.set('has404', true);
-        transition.abort();
-      } else {
-        return true;
-      }
-    },
-
-    willTransition(transition) {
-      window.scrollTo(0, 0);
-      if (transition.targetName !== this.routeName) {
-        this.pagination.clearDataset();
-      }
+  @action
+  error(error, transition) {
+    const { prefix } = this.paramsFor(this.routeName);
+    error.keyId = prefix;
+    // eslint-disable-next-line ember/no-controller-access-in-routes
+    const hasModel = this.controllerFor(this.routeName).hasModel;
+    if (hasModel && error.status === 404) {
+      transition.abort();
+    } else {
       return true;
-    },
-  },
-});
+    }
+  }
+
+  @action
+  willTransition() {
+    window.scrollTo(0, 0);
+    return true;
+  }
+}

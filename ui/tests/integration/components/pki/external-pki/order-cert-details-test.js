@@ -66,7 +66,7 @@ module('Integration | Component | ExternalPki::OrderCertDetails', function (hook
 
     await this.renderComponent();
     assert.dom(GENERAL.cardContainer('Order information')).exists();
-    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'renders one table row');
+    assert.dom(GENERAL.tableRow(0)).exists({ count: 1 }, 'renders one table row');
     assert
       .dom(GENERAL.tableData(0, 'identifier'))
       .hasText('Toggle example.com', 'displays identifier as expandable row');
@@ -113,7 +113,7 @@ module('Integration | Component | ExternalPki::OrderCertDetails', function (hook
     };
 
     await this.renderComponent();
-    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'renders one table row for identifier');
+    assert.dom(GENERAL.tableRow(0)).exists({ count: 1 }, 'renders one table row for identifier');
     assert.dom(GENERAL.tableData(0, 'identifier')).hasText('Toggle example.com', 'displays identifier');
     assert
       .dom(GENERAL.tableData(0, 'challenge_status'))
@@ -160,9 +160,15 @@ module('Integration | Component | ExternalPki::OrderCertDetails', function (hook
     };
 
     await this.renderComponent();
-    assert.dom(GENERAL.tableRow()).exists({ count: 2 }, 'renders two table rows for two identifiers');
+
+    const parentRows = findAll(GENERAL.tableParentRow);
+    assert.strictEqual(
+      parentRows.length,
+      2,
+      'renders two table rows each with parent and child rows for two identifiers'
+    );
     assert.dom(GENERAL.tableData(0, 'identifier')).hasText('Toggle example.com');
-    assert.dom(GENERAL.tableData(1, 'identifier')).hasText('Toggle test.example.com');
+    assert.dom(GENERAL.tableData(2, 'identifier')).hasText('Toggle test.example.com');
   });
 
   test('it shows valid status when multiple challenges are valid', async function (assert) {
@@ -227,6 +233,57 @@ module('Integration | Component | ExternalPki::OrderCertDetails', function (hook
       .hasText('', 'displays empty challenge type when no valid challenges');
   });
 
+  test('it shows invalid status when order errored and a challenge is invalid', async function (assert) {
+    this.order = {
+      details: {
+        order_status: 'error',
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'invalid',
+              challenge_type: 'http-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
+      },
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom(GENERAL.tableData(0, 'challenge_status'))
+      .hasText('Invalid', 'displays invalid status when order errored and challenge is invalid');
+    assert
+      .dom(GENERAL.tableData(0, 'challenge_type'))
+      .hasText('', 'no challenge type shown for invalid status');
+  });
+
+  test('it shows pending status when a challenge is invalid but order has not errored', async function (assert) {
+    this.order = {
+      details: {
+        order_status: 'awaiting-challenge-fulfillment',
+        challenges: {
+          'example.com': [
+            {
+              challenge_status: 'invalid',
+              challenge_type: 'http-01',
+              expires: '2026-07-24T21:34:36Z',
+              requires_manual_fulfillment: 'false',
+            },
+          ],
+        },
+      },
+    };
+
+    await this.renderComponent();
+
+    assert
+      .dom(GENERAL.tableData(0, 'challenge_status'))
+      .hasText('Pending', 'shows pending when order has not errored even if challenge is invalid');
+  });
+
   test('it formats challenge types to uppercase', async function (assert) {
     this.order = {
       details: {
@@ -260,12 +317,12 @@ module('Integration | Component | ExternalPki::OrderCertDetails', function (hook
     };
 
     await this.renderComponent();
+    const parentRows = findAll(GENERAL.tableParentRow);
+    assert.strictEqual(parentRows.length, 3);
 
-    assert.dom(GENERAL.tableData(0, 'challenge_type')).hasText('DNS-01', 'dns-01 formatted to DNS-01');
-    assert.dom(GENERAL.tableData(1, 'challenge_type')).hasText('HTTP-01', 'http-01 formatted to HTTP-01');
-    assert
-      .dom(GENERAL.tableData(2, 'challenge_type'))
-      .hasText('TLS-ALPN-01', 'tls-alpn-01 formatted to TLS-ALPN-01');
+    assert.dom(parentRows[0]).includesText('DNS-01', 'dns-01 formatted to DNS-01');
+    assert.dom(parentRows[1]).includesText('HTTP-01', 'http-01 formatted to HTTP-01');
+    assert.dom(parentRows[2]).includesText('TLS-ALPN-01', 'tls-alpn-01 formatted to TLS-ALPN-01');
   });
 
   // Rendering order details

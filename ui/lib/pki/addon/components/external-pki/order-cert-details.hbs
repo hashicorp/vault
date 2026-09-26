@@ -64,6 +64,19 @@
       {{/if}}
     </Hds::Text::Display>
 
+    <Hds::Text::Body @tag="p" class="has-top-margin-s bottom-margin-8">
+      Only one challenge per identifier needs to be "Valid" for an order to complete. A "Pending" status reflects the last
+      update Vault received and does not mean the challenge is still being processed. The
+      <strong>Order status</strong>
+      above reflects whether the order is still in progress. See
+      <Hds::Link::Inline
+        @isHrefExternal={{true}}
+        @href={{doc-link "/vault/docs/secrets/pki-external-ca#monitoring-and-troubleshooting"}}
+      >
+        Monitoring and Troubleshooting</Hds::Link::Inline>
+      for more details.
+    </Hds::Text::Body>
+
     {{#if this.orderCompleted}}
       <Hds::Layout::Flex class="has-top-padding-m has-bottom-padding-m" @gap="48" data-test-order-card-details as |LF|>
         <LF.Item>
@@ -93,7 +106,7 @@
 
     <Hds::AdvancedTable @columns={{this.tableColumns}} @model={{this.tableData}}>
       <:body as |B|>
-        <B.Tr data-test-table-row={{B.rowIndex}}>
+        <B.Tr data-test-table-row={{B.rowIndex}} data-test-table-parent-row={{if B.data.identifier "true"}}>
           <B.Th data-test-table-data="identifier">{{B.data.identifier}}</B.Th>
           <B.Td data-test-table-data="challenge_status">
             {{#let (map-status-badge B.data.challenge_status) as |badge|}}

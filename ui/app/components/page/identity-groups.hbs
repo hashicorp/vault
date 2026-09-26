@@ -1,0 +1,80 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::ListView @config={{@model.listViewConfig}} @model={{this.groups}} @page={{@page}} @pageSize={{@pageSize}}>
+  <:tabs>
+    <nav class="tabs" aria-label="navigation for groups">
+      <ul>
+        <li>
+          <LinkTo @route="vault.cluster.access.identity.groups.index" data-test-tab="Groups">
+            Groups
+          </LinkTo>
+        </li>
+        <li>
+          <LinkTo @route="vault.cluster.access.identity.groups.aliases.index" data-test-tab="Aliases">
+            Aliases
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </:tabs>
+
+  <:customTableItem as |rowData column|>
+    {{#if (eq column.key "name")}}
+      <Hds::Link::Inline
+        @route="vault.cluster.access.identity.groups.show"
+        @models={{array rowData.id "details"}}
+        @color="secondary"
+        class="has-text-weight-semibold"
+        data-test-identity-link={{rowData.name}}
+      >{{rowData.name}}</Hds::Link::Inline>
+    {{/if}}
+  </:customTableItem>
+
+  <:popupMenu as |rowData|>
+    <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+      <dd.ToggleIcon
+        @icon="more-horizontal"
+        @text="Group options"
+        @hasChevron={{false}}
+        data-test-popup-menu-trigger={{rowData.name}}
+      />
+      <dd.Interactive
+        @route="vault.cluster.access.identity.groups.show"
+        @models={{array rowData.id "details"}}
+        @icon="eye"
+        data-test-popup-menu="view-details"
+      >View details</dd.Interactive>
+      {{#if rowData.canEdit}}
+        <dd.Interactive
+          @route="vault.cluster.access.identity.groups.edit"
+          @model={{rowData.id}}
+          @icon="edit"
+          data-test-popup-menu="edit-details"
+        >Edit details</dd.Interactive>
+      {{/if}}
+      {{#if rowData.canDelete}}
+        <dd.Interactive
+          @color="critical"
+          @icon="trash"
+          {{on "click" (fn this.setGroupToDelete rowData)}}
+          data-test-popup-menu="delete-group"
+        >Delete group</dd.Interactive>
+      {{/if}}
+    </Hds::Dropdown>
+  </:popupMenu>
+</Page::ListView>
+
+{{#if this.groupToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @confirmTitle="Delete this group?"
+    @confirmMessage="All data in this group will be permanently deleted. You will not be able to recover it later."
+    @confirmButtonText="Confirm deletion"
+    @onClose={{fn (mut this.groupToDelete) null}}
+    @onConfirm={{fn this.deleteGroup this.groupToDelete}}
+    data-test-confirm-modal="delete-group"
+  />
+{{/if}}

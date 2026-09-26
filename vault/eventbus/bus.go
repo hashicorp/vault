@@ -23,7 +23,7 @@ import (
 	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
 	"google.golang.org/protobuf/types/known/structpb"

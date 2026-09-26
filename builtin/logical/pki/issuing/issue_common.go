@@ -381,8 +381,11 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 	if _, present := cb.IsUserIdInSchema(); present {
 		rawUserIDs := cb.GetUserIds()
 
-		// Only take UserIDs from CSR if one was not supplied via API.
-		if len(rawUserIDs) == 0 && csr != nil {
+		// Only take UserIDs from the CSR if none were supplied via the API and the
+		// role explicitly opts in by listing the userID OID in csr_extra_names_oids.
+		// Without the opt-in, a userID buried in the CSR subject would be invisible
+		// to Sentinel policies and the audit log on request, creating an audit gap.
+		if len(rawUserIDs) == 0 && csr != nil && role.CsrExtraNamesOIDsContains(certutil.SubjectPilotUserIDAttributeOID) {
 			for _, attr := range csr.Subject.Names {
 				if attr.Type.Equal(certutil.SubjectPilotUserIDAttributeOID) {
 					switch aValue := attr.Value.(type) {
@@ -407,6 +410,56 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 				subject.ExtraNames = append(subject.ExtraNames, pkix.AttributeTypeAndValue{
 					Type:  certutil.SubjectPilotUserIDAttributeOID,
 					Value: value,
+				})
+			}
+		}
+	}
+
+	// Carry non-standard subject OIDs from the CSR through to the issued
+	// certificate for any OID listed in role.CsrExtraNamesOIDs. This applies
+	// to all signing paths. For the userID OID, role validation is enforced;
+	// values already added by the IsUserIdInSchema block above are skipped to
+	// avoid duplicates.
+	if csr != nil && len(role.CsrExtraNamesOIDs) > 0 {
+		// Build a set of "oid:value" keys for entries already present in
+		// subject.ExtraNames to avoid double-adding what the userID block
+		// above already inserted.
+		already := make(map[string]bool)
+		for _, e := range subject.ExtraNames {
+			if s, ok := e.Value.(string); ok {
+				already[e.Type.String()+":"+s] = true
+			}
+		}
+
+		for _, oidStr := range role.CsrExtraNamesOIDs {
+			oid, err := x509.ParseOID(oidStr)
+			if err != nil {
+				return nil, nil, errutil.UserError{Err: fmt.Sprintf("invalid OID %q in csr_extra_names_oids: %v", oidStr, err)}
+			}
+			for _, attr := range csr.Subject.Names {
+				if !oid.EqualASN1OID(attr.Type) {
+					continue
+				}
+				var strVal string
+				switch v := attr.Value.(type) {
+				case string:
+					strVal = v
+				case []byte:
+					strVal = string(v)
+				default:
+					return nil, nil, errutil.UserError{Err: fmt.Sprintf("unknown type for OID %s attribute in CSR subject", oidStr)}
+				}
+				if already[oid.String()+":"+strVal] {
+					continue
+				}
+				if oid.EqualASN1OID(certutil.SubjectPilotUserIDAttributeOID) {
+					if !ValidateUserId(role, strVal) {
+						return nil, nil, errutil.UserError{Err: fmt.Sprintf("user_id %v is not allowed by this role", strVal)}
+					}
+				}
+				subject.ExtraNames = append(subject.ExtraNames, pkix.AttributeTypeAndValue{
+					Type:  attr.Type,
+					Value: strVal,
 				})
 			}
 		}

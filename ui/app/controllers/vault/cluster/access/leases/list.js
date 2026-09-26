@@ -10,9 +10,9 @@ import ListController from 'core/mixins/list-controller';
 import { keyIsFolder } from 'core/utils/key-utils';
 
 export default Controller.extend(ListController, {
+  api: service(),
   flashMessages: service(),
   router: service(),
-  store: service(),
   clusterController: controller('vault.cluster'),
 
   // callback from HDS pagination to set the queryParams page
@@ -59,20 +59,19 @@ export default Controller.extend(ListController, {
 
   actions: {
     revokePrefix(prefix, isForce) {
-      const adapter = this.store.adapterFor('lease');
-      const method = isForce ? 'forceRevokePrefix' : 'revokePrefix';
-      const fn = adapter[method];
-      fn.call(adapter, prefix)
+      const method = isForce ? 'leasesForceRevokeLeaseWithPrefix' : 'leasesRevokeLeaseWithPrefix';
+      this.api.sys[method](prefix, {})
         .then(() => {
           return this.router.transitionTo('vault.cluster.access.leases.list-root').then(() => {
             this.flashMessages.success(`All of the leases under ${prefix} will be revoked.`);
           });
         })
         .catch((e) => {
-          const errString = e.errors.join('.');
-          this.flashMessages.danger(
-            `There was an error attempting to revoke the prefix: ${prefix}. ${errString}.`
-          );
+          this.api.parseError(e).then(({ message }) => {
+            this.flashMessages.danger(
+              `There was an error attempting to revoke the prefix: ${prefix}. ${message}.`
+            );
+          });
         });
     },
   },

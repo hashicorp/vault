@@ -4,17 +4,12 @@
  */
 
 import Component from '@glimmer/component';
-import { service } from '@ember/service';
-
-import type FlagsService from 'vault/services/flags';
 
 interface Args {
   isActivated: boolean;
 }
 
 export default class LandingCtaComponent extends Component<Args> {
-  @service declare readonly flags: FlagsService;
-
   breadcrumbs = [
     {
       label: 'Vault',

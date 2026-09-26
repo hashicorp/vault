@@ -1,0 +1,91 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+name: Bob Review Approval Gate
+
+# Companion to bob-review-gate.yml. Where that gate requires a review to
+# have happened (only on PRs opted in via the require-bob-review label),
+# this one requires the opposite: once a review marker/receipt exists,
+# it blocks merge until a human approves the PR and adds the
+# clear-bob-receipt label.
+#
+# This gate needs no opt-in label of its own — its own check logic already
+# passes automatically when no receipt exists (see below), so it stays
+# silent by default for any PR that never used the extension, without
+# needing the same require-bob-review gating as the other workflow.
+#
+# Clearing the receipt actually deletes the marker file(s) from .bob-review/
+# (rather than just removing the label) and commits that deletion back to
+# the PR branch. Without this, the file stays in the repo forever: every
+# later push would still find a receipt present and re-require the label,
+# and the file would end up permanently merged into main.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+jobs:
+  check-bob-review-approval:
+    name: Verify Bob Review receipt has been cleared
+    # The job only actually runs its check on a labeled event if the label
+    # added was specifically clear-bob-receipt (any other label is ignored,
+    # so it doesn't cost a run); opened/synchronize/reopened always run.
+    # unlabeled always runs too (action != 'labeled' covers it) — removing
+    # any label re-checks the actual receipt state, so if clear-bob-receipt
+    # gets removed while a real receipt still exists, this flips back to
+    # failing instead of leaving a stale passing status.
+    if: github.event.action != 'labeled' || github.event.label.name == 'clear-bob-receipt'
+    runs-on: [self-hosted, ubuntu-22.04-x64]
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Verify IBM Bob Review receipt has been cleared
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_ACTION: ${{ github.event.action }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          has_receipt=0
+          if find .bob-review -maxdepth 1 -type f ! -name '.gitkeep' 2>/dev/null | grep -q .; then
+            has_receipt=1
+          fi
+
+          if [ "$has_receipt" -eq 0 ]; then
+            echo "No IBM Bob Review receipt present — nothing to clear."
+            exit 0
+          fi
+
+          if gh pr view "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --json labels --jq '.labels[].name' | grep -qx "clear-bob-receipt"; then
+            # Only actually clear the receipt on the run that was directly
+            # triggered by the label being added. Other trigger types (push,
+            # reopen, etc.) can also land here if the label happened to
+            # already be present, and if they also tried to clear it, a
+            # race between two runs could consume the label or the commit
+            # before the labeling run itself gets credit for it.
+            if [ "$EVENT_ACTION" = "labeled" ]; then
+              echo "Receipt exists and clear-bob-receipt label confirms a human cleared it. Deleting the receipt so future pushes don't need to re-clear it."
+              git config user.name "github-actions[bot]"
+              git config user.email "github-actions[bot]@users.noreply.github.com"
+              find .bob-review -maxdepth 1 -type f ! -name '.gitkeep' -delete
+              git add .bob-review
+              git commit -m "bob-review: clear receipt after human approval"
+              if git push origin "HEAD:${HEAD_REF}"; then
+                echo "Receipt deleted and pushed."
+              else
+                echo "Push failed, likely because another run already cleared it. Treating as already handled."
+              fi
+              gh pr edit "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --remove-label "clear-bob-receipt"
+            else
+              echo "Receipt still exists; clear-bob-receipt label already present. Leaving it as-is — clearing only happens on the labeling event itself."
+            fi
+            exit 0
+          fi
+
+          echo "::error::An IBM Bob Review receipt still exists in .bob-review/ on this PR."
+          echo "Once this PR has been reviewed and approved, add the 'clear-bob-receipt' label to unblock merge."
+          exit 1

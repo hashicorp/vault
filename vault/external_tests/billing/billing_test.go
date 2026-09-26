@@ -13,9 +13,9 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/billing"
@@ -42,11 +42,12 @@ func TestGcpKmsDataProtectionCallCounts(t *testing.T) {
 	// Simulate GCP KMS operations by directly calling the billing manager.
 	// Attribution fields are required now that GcpKms attribution tracking is enabled.
 	billingData := map[string]interface{}{
-		"count":            uint64(1),
-		"mountPath":        "gcpkms/",
-		"mountAccessor":    "gcpkms_accessor",
-		"mountType":        "gcpkms",
-		"backendAwareUUID": "gcpkms-backend-uuid",
+		"count":               uint64(1),
+		"mountPath":           "gcpkms/",
+		"mountAccessor":       "gcpkms_accessor",
+		"mountType":           "gcpkms",
+		"backendAwareUUID":    "gcpkms-backend-uuid",
+		"mountRunningVersion": "version1",
 	}
 
 	// Simulate encrypt operation

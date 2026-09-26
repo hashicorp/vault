@@ -36,7 +36,9 @@ jobs:
   enos-run-vault-interactive-test:
     name:  Enos run Vault interactive test
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64", "large"]') }}
-    permissions: write-all
+    permissions:
+      contents: read
+      id-token: write
     timeout-minutes: 120
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -68,8 +70,6 @@ jobs:
           no-restore: true
       # Install additional tools like gotestsum that are required for Enos scenarios
       - uses: ./.github/actions/install-tools
-      - name: Configure Git
-        run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN }}:@github.com".insteadOf "https://github.com"
       - name: Set up node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -78,16 +78,32 @@ jobs:
           cache-dependency-path: ui/pnpm-lock.yaml
 
       - name: Install PNPM
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
         with:
           package_json_file: './ui/package.json'
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+      - if: github.repository != 'hashicorp/vault'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: github.repository != 'hashicorp/vault'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/aws access-key-id_070182026 | AWS_ACCESS_KEY_ID_CI_070182026;
+            kv/data/github/${{ github.repository }}/aws secret-access-key_070182026 | AWS_SECRET_ACCESS_KEY_CI_070182026;
+            kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          aws-access-key-id: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_ACCESS_KEY_ID_CI_070182026 || steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI_070182026 }}
+          aws-secret-access-key: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_SECRET_ACCESS_KEY_CI_070182026 || steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI_070182026 }}
           aws-region: 'us-west-1'
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
+          role-to-assume: ${{ github.repository == 'hashicorp/vault' && secrets.AWS_ROLE_ARN_CI || steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
       - name: Prepare scenario dependencies

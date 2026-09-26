@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 )
 
 type LockedUsersResponse struct {
