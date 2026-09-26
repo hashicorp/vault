@@ -405,6 +405,43 @@ func TestTransit_UpdateKeyConfigWithAutorotation(t *testing.T) {
 	}
 }
 
+func TestTransit_KeyUsagesWriteWarns(t *testing.T) {
+	b, storage := createBackendWithSysView(t)
+
+	doReq := func(op logical.Operation, path string, data map[string]interface{}) *logical.Response {
+		t.Helper()
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Storage:   storage,
+			Operation: op,
+			Path:      path,
+			Data:      data,
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("unexpected error for %s %s: err=%v resp=%v", op, path, err, resp)
+		}
+		return resp
+	}
+
+	doReq(logical.UpdateOperation, "keys/testkey", map[string]interface{}{"type": "ecdsa-p256"})
+
+	// Supplying key_usages on the config write path must produce a warning:
+	// the field is declared writable but is derived from the key type, so
+	// silently accepting it would let an operator believe they restricted a
+	// key's usages when nothing changed.
+	resp := doReq(logical.UpdateOperation, "keys/testkey/config", map[string]interface{}{
+		"key_usages": []string{"digital-signature"},
+	})
+	found := false
+	for _, w := range resp.Warnings {
+		if strings.Contains(w, "key_usages is derived from the key type") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected key_usages warning, got warnings=%v", resp.Warnings)
+	}
+}
+
 func TestTransit_KeyUsagesInConfigResponse(t *testing.T) {
 	b, storage := createBackendWithSysView(t)
 
