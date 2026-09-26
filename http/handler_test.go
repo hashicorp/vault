@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -22,6 +23,8 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/namespace"
@@ -1230,4 +1233,63 @@ func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
 			require.NotNil(t, resp)
 		})
 	}
+}
+
+// TestHandler_JSONLimits_FromParsedConfig verifies that JSON size limits
+// (specifically max_json_string_value_length) configured via an HCL
+// listener stanza are actually honored at request time, rather than
+// falling back to the package defaults. This targets
+// https://github.com/hashicorp/vault/issues/31552, where the
+// max_json_string_value_length listener setting from PR #31069 was
+// reported to have no effect: values above the (undocumented) 1MB
+// default were rejected even though a much larger limit was configured.
+//
+// Unlike other JSON-limit tests in this file, which construct the
+// configutil.Listener struct literally, this test drives the value
+// through the real HCL parsing path (command/server.ParseConfig) that
+// production `vault server` configs go through, since that's the
+// reported reproduction and the part of the pipeline that had no
+// coverage.
+func TestHandler_JSONLimits_FromParsedConfig(t *testing.T) {
+	const configuredLimit = 2000
+
+	hclConfig := fmt.Sprintf(`
+listener "tcp" {
+  address                       = "127.0.0.1:8200"
+  max_json_string_value_length = %d
+}
+`, configuredLimit)
+
+	cfg, err := server.ParseConfig(hclConfig, "")
+	require.NoError(t, err)
+	require.Len(t, cfg.Listeners, 1)
+	require.EqualValues(t, configuredLimit, cfg.Listeners[0].CustomMaxJSONStringValueLength)
+
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: cfg.Listeners[0],
+		},
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[0].Client
+	client.SetToken(cluster.RootToken)
+
+	// A string above the built-in 1MB-independent default would be rejected
+	// by the fallback default, but must succeed here since it's below the
+	// configured limit.
+	underLimit := strings.Repeat("a", configuredLimit-1)
+	_, err = client.Logical().Write("secret/under-limit", map[string]interface{}{
+		"value": underLimit,
+	})
+	require.NoError(t, err)
+
+	// A string above the configured limit must still be rejected.
+	overLimit := strings.Repeat("a", configuredLimit+1)
+	_, err = client.Logical().Write("secret/over-limit", map[string]interface{}{
+		"value": overLimit,
+	})
+	require.ErrorContains(t, err, "JSON string value exceeds allowed length")
 }
