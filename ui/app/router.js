@@ -231,9 +231,21 @@ Router.map(function () {
           this.route('overview');
         });
       });
-      this.route('policies', { path: '/policies/:type' }, function () {
-        this.route('index', { path: '/' });
-        this.route('create');
+      this.route('policies', function () {
+        this.route('acl', function () {
+          this.route('index', { path: '/' });
+          this.route('create');
+        });
+        this.route('egp', function () {
+          this.route('index', { path: '/' });
+          this.route('create');
+        });
+        this.route('rgp', function () {
+          this.route('index', { path: '/' });
+          this.route('create');
+        });
+        // redirects /policies/foo to default acl list
+        this.route('index', { path: '/:type' });
       });
       this.route('policy', { path: '/policy/:type' }, function () {
         this.route('show', { path: '/:policy_name' });

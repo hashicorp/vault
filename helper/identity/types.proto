@@ -345,6 +345,17 @@ message ScimClient {
   // client. Zero means the cluster default is used.
   // @inject_tag: sentinel:"-"
   int64 max_token_ttl = 11;
+
+  // AllowUserAdoption controls whether this client may implicitly adopt a
+  // pre-existing unmanaged entity when a POST /Users userName matches an
+  // existing login alias. When false, the same condition returns 409 Conflict.
+  // @inject_tag: sentinel:"-"
+  bool allow_user_adoption = 12;
+
+  // AllowGroupAdoption indicates whether this client may adopt a group. False by default but can be toggled by the user.
+  // When false, attempts by this client to adopt a group returns 409 Conflict.
+  // @inject_tag: sentinel:"-"
+  bool allow_group_adoption = 13;
 }
 
 // Deprecated. Retained for backwards compatibility.

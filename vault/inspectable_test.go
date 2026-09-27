@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/namespace"
+	server "github.com/hashicorp/vault/helper/serverconfig"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

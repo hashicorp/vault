@@ -15,7 +15,7 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/internalshared/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 )
 

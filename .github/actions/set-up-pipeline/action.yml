@@ -44,6 +44,7 @@ runs:
       env:
         # We need to enable GOPRIVATE to access the releases-api.
         GOPRIVATE: github.com/hashicorp/*
+        GOWORK: "off"
         # Configure the Git URL override with env vars to avoid poisoning the
         # config with an elevated token.
         GIT_CONFIG_COUNT: "1"

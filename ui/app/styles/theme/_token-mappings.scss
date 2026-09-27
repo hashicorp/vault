@@ -1,0 +1,102 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+@mixin dark-token-mappings {
+  // ── Foreground ──────────────────────────────────────────────────────────
+  --token-color-foreground-strong: var(--token-color-palette-neutral-700);
+  --token-color-foreground-primary: var(--token-color-palette-neutral-600);
+  --token-color-foreground-faint: var(--token-color-palette-neutral-500);
+  --token-color-foreground-disabled: var(--token-color-palette-neutral-400);
+  // In dark mode neutral-0 is near-black; high-contrast text must use neutral-700 (near-white).
+  --token-color-foreground-high-contrast: var(--token-color-palette-neutral-700);
+  // blue-200 (#0073fb) only achieves ~4.8:1 on the dark page background (#030303).
+  // blue-300 (#4d9fff) achieves ~7.6:1 — above WCAG AAA 7:1.
+  // blue-400 (#5fbcff) achieves ~9.9:1 for hover; blue-500 (#a8dbff) ~14.0:1 for active.
+  --token-color-foreground-action: var(--token-color-palette-blue-300);
+  --token-color-foreground-action-hover: var(--token-color-palette-blue-400);
+  --token-color-foreground-action-active: var(--token-color-palette-blue-500);
+
+  // Sentiment
+  --token-color-foreground-highlight: var(--token-color-palette-purple-200);
+  --token-color-foreground-highlight-on-surface: var(--token-color-palette-purple-500);
+  --token-color-foreground-success: var(--token-color-palette-green-200);
+  --token-color-foreground-success-on-surface: var(--token-color-palette-green-500);
+  --token-color-foreground-warning: var(--token-color-palette-amber-200);
+  --token-color-foreground-warning-on-surface: var(--token-color-palette-amber-500);
+  --token-color-foreground-critical: var(--token-color-palette-red-200);
+  --token-color-foreground-critical-on-surface: var(--token-color-palette-red-500);
+
+  // ── Surface ─────────────────────────────────────────────────────────────
+  --token-color-surface-primary: var(--token-color-palette-neutral-0);
+  --token-color-surface-faint: var(--token-color-palette-neutral-50);
+  --token-color-surface-strong: var(--token-color-palette-neutral-100);
+  --token-color-surface-interactive: var(--token-color-palette-neutral-0);
+  --token-color-surface-interactive-hover: var(--token-color-palette-neutral-100);
+  --token-color-surface-interactive-active: var(--token-color-palette-neutral-200);
+  --token-color-surface-interactive-disabled: var(--token-color-palette-neutral-50);
+  --token-color-surface-action: var(--token-color-palette-blue-50);
+  --token-color-surface-highlight: var(--token-color-palette-purple-50);
+  --token-color-surface-success: var(--token-color-palette-green-50);
+  --token-color-surface-warning: var(--token-color-palette-amber-50);
+  --token-color-surface-critical: var(--token-color-palette-red-50);
+
+  // ── Border ──────────────────────────────────────────────────────────────
+  --token-color-border-primary: var(--token-color-palette-neutral-400);
+  --token-color-border-faint: var(--token-color-palette-alpha-100);
+  --token-color-border-strong: var(--token-color-palette-neutral-500);
+  --token-color-border-action: var(--token-color-palette-blue-100);
+  --token-color-border-highlight: var(--token-color-palette-purple-100);
+  --token-color-border-success: var(--token-color-palette-green-100);
+  --token-color-border-warning: var(--token-color-palette-amber-100);
+  --token-color-border-critical: var(--token-color-palette-red-100);
+
+  // ── Page ────────────────────────────────────────────────────────────────
+  --token-color-page-primary: var(--token-color-palette-neutral-0);
+  --token-color-page-faint: var(--token-color-palette-neutral-50);
+
+  // ── Tooltip ─────────────────────────────────────────────────────────────
+  --token-tooltip-color-surface-primary: var(--token-color-palette-neutral-100);
+  --token-tooltip-color-foreground-primary: var(--token-color-foreground-high-contrast);
+
+  // ── Form controls ───────────────────────────────────────────────────────
+  // Deprecated token names (still used by older HDS builds)
+  --token-form-label-color: var(--token-color-palette-neutral-700);
+  --token-form-label-foreground-color: var(--token-color-palette-neutral-600);
+  --token-form-legend-color: var(--token-color-palette-neutral-700);
+  --token-form-legend-foreground-color: var(--token-color-palette-neutral-600);
+  --token-form-helper-text-color: var(--token-color-palette-neutral-600);
+  --token-form-helper-text-foreground-color: var(--token-color-palette-neutral-600);
+  --token-form-indicator-optional-color: var(--token-color-palette-neutral-600);
+  --token-form-error-color: var(--token-color-palette-red-300);
+  // Current token names used by HDS ≥ 4.x components
+  --token-form-label-foreground-color: var(--token-color-palette-neutral-700);
+  --token-form-legend-foreground-color: var(--token-color-palette-neutral-700);
+  --token-form-helper-text-foreground-color: var(--token-color-palette-neutral-500);
+  --token-form-indicator-optional-foreground-color: var(--token-color-palette-neutral-500);
+  --token-form-character-count-foreground-color: var(--token-color-palette-neutral-500);
+  --token-form-error-foreground-color: var(--token-color-palette-red-300);
+  --token-form-control-base-foreground-value-color: var(--token-color-palette-neutral-700);
+  --token-form-control-base-foreground-placeholder-color: var(--token-color-palette-neutral-500);
+  --token-form-control-base-surface-color-default: var(--token-color-palette-neutral-0);
+  --token-form-control-base-surface-color-hover: var(--token-color-palette-neutral-100);
+  --token-form-control-base-border-color-default: var(--token-color-palette-neutral-400);
+  --token-form-control-base-border-color-hover: var(--token-color-palette-neutral-500);
+  --token-form-control-checked-foreground-color: var(--token-color-palette-neutral-0);
+  --token-form-control-checked-surface-color-default: var(--token-color-palette-blue-200);
+  --token-form-control-checked-surface-color-hover: var(--token-color-palette-blue-300);
+  --token-form-control-checked-border-color-default: var(--token-color-palette-blue-300);
+  --token-form-control-checked-border-color-hover: var(--token-color-palette-blue-400);
+  --token-form-control-invalid-border-color-default: var(--token-color-palette-red-300);
+  --token-form-control-invalid-border-color-hover: var(--token-color-palette-red-400);
+  --token-form-control-readonly-foreground-color: var(--token-color-palette-neutral-600);
+  --token-form-control-readonly-surface-color: var(--token-color-palette-neutral-100);
+  --token-form-control-readonly-border-color: var(--token-color-palette-alpha-100);
+  --token-form-control-disabled-foreground-color: var(--token-color-palette-neutral-400);
+  --token-form-control-disabled-surface-color: var(--token-color-palette-neutral-50);
+  --token-form-control-disabled-border-color: var(--token-color-palette-alpha-200);
+  --token-form-toggle-base-surface-color-default: var(
+    --token-color-palette-neutral-100
+  ); /* the toggle has a different base surface color, compared to the other controls */
+}

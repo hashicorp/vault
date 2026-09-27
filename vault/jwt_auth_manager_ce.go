@@ -11,6 +11,6 @@ func (c *Core) migrateProfilesByIssuerIndex(ctx context.Context) error {
 	return nil
 }
 
-func (c *Core) populateIssuerNamespacesIndex(ctx context.Context) error {
+func (c *Core) setupOAuthResourceServerConfigManager(ctx context.Context) error {
 	return nil
 }

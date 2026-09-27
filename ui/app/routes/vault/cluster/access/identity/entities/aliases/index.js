@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { IdentityApiAliasListByIdListEnum } from '@hashicorp/vault-client-typescript';
 import { paginate } from 'core/utils/paginate-list';
+import { attachAliasCapabilities } from 'vault/utils/identity-helpers';
 
 export default class IdentityAliasesIndexRoute extends Route {
   @service api;
@@ -25,31 +26,10 @@ export default class IdentityAliasesIndexRoute extends Route {
     try {
       const response = await this.api.identity.entityListAliasesById(IdentityApiAliasListByIdListEnum.TRUE);
       const aliases = await this.api.keyInfoToArray(response);
-
-      // Build capability paths for all aliases
-      const capabilityPaths = aliases.map((alias) =>
-        this.capabilities.pathFor('identityCapabilities', {
-          identityType: 'entity',
-          id: alias.id,
-        })
-      );
-
-      // Fetch capabilities for all aliases
-      const capabilitiesMap = await this.capabilities.fetch(capabilityPaths);
-
-      // Attach capabilities to each alias
-      const aliasesWithCapabilities = aliases.map((alias) => {
-        const aliasCapabilityPath = this.capabilities.pathFor('identityCapabilities', {
-          identityType: 'entity',
-          id: alias.id,
-        });
-        const aliasCapabilities = capabilitiesMap[aliasCapabilityPath];
-
-        return {
-          ...alias,
-          canDelete: aliasCapabilities?.canDelete || false,
-          canEdit: aliasCapabilities?.canUpdate || false,
-        };
+      const aliasesWithCapabilities = await attachAliasCapabilities({
+        aliases,
+        identityType: 'entity',
+        capabilities: this.capabilities,
       });
 
       return paginate(aliasesWithCapabilities, { page: params.page, filter: params.pageFilter });

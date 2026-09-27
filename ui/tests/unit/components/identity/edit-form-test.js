@@ -32,7 +32,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
       label: 'entity-alias',
       model: { identityType: 'entity', form: { identityFormType: 'alias' } },
       mode: 'create',
-      expected: 'vault.cluster.access.identity.entities.aliases.index',
+      expected: 'vault.cluster.access.identity.entities.index',
     },
     {
       label: 'entity-alias',
@@ -56,7 +56,7 @@ module('Unit | Component | identity/edit-form', function (hooks) {
       label: 'group-alias',
       model: { identityType: 'group', form: { identityFormType: 'alias' } },
       mode: 'create',
-      expected: 'vault.cluster.access.identity.groups.aliases.index',
+      expected: 'vault.cluster.access.identity.groups.index',
     },
     {
       label: 'group-alias',
@@ -76,6 +76,34 @@ module('Unit | Component | identity/edit-form', function (hooks) {
       const componentClass = this.owner.factoryFor('component:identity/edit-form').class;
       const component = componentManager.createComponent(componentClass, { named });
       assert.strictEqual(component.cancelLink, testCase.expected, 'cancel link is correct');
+    });
+  });
+
+  // verify success toast message is correct
+  module('getMessage', function () {
+    function makeComponent(owner, mode, model) {
+      const componentManager = owner.lookup('component-manager:glimmer');
+      const componentClass = owner.factoryFor('component:identity/edit-form').class;
+      return componentManager.createComponent(componentClass, { named: { model, mode } });
+    }
+
+    test('save uses group name instead of id in success message', function (assert) {
+      const model = {
+        identityType: 'group',
+        itemId: 'some-uuid',
+        form: { identityFormType: 'group', data: { name: 'my-group' } },
+      };
+      const component = makeComponent(this.owner, 'edit', model);
+      assert.strictEqual(component.getMessage(model), 'Successfully saved Group: my-group.');
+    });
+
+    test('delete uses group name in success message', function (assert) {
+      const model = {
+        identityType: 'group',
+        form: { identityFormType: 'group', data: { name: 'to-delete' } },
+      };
+      const component = makeComponent(this.owner, 'edit', model);
+      assert.strictEqual(component.getMessage(model, true), 'Successfully deleted Group: to-delete.');
     });
   });
 });

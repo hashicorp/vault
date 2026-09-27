@@ -380,7 +380,7 @@ a.button.disabled {
   display: inline-flex; // temporarily fixes existing button alignment until we adopt Hds::ButtonSet
   // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
-    color: hsl(0, 0%, 4%);
+    color: var(--token-color-foreground-strong);
     background: none;
     border: none;
     box-shadow: none;

@@ -93,6 +93,8 @@ const (
 	flagNameTokenType = "token-type"
 	// flagNameAllowedManagedKeys is the flag name used for auth/secrets enable
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
+	// flagNameSealWrap determines if CSPs are seal wrapped
+	flagNameSealWrap = "seal-wrap"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
 	// flagNameOverridePinnedVersion is the flag name used for allowing plugin-version to override the pinned plugin version

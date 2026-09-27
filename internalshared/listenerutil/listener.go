@@ -12,6 +12,7 @@ import (
 	"os"
 	osuser "os/user"
 	"strconv"
+	"time"
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/errwrap"
@@ -246,4 +247,21 @@ OWN:
 	}
 
 	return nil
+}
+
+// TCPKeepAliveListener sets TCP keep-alive timeouts on accepted connections.
+// Copied from helper/serverconfig; kept here so that
+// agentproxyshared/cache/listener.go does not need to import the root module.
+type TCPKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln TCPKeepAliveListener) Accept() (c net.Conn, err error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	return tc, nil
 }

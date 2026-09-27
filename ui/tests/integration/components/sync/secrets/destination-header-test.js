@@ -32,9 +32,11 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
       );
   });
 
-  test('it should render SyncHeader component', async function (assert) {
+  test('it should render the page header', async function (assert) {
     await this.renderComponent();
-    assert.dom(GENERAL.hdsPageHeaderTitle).includesText('destination-aws', 'SyncHeader component renders');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .includesText('destination-aws', 'page header renders the destination name');
   });
 
   test('it should render tabs', async function (assert) {

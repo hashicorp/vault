@@ -31,8 +31,8 @@ import (
 	"strings"
 	"time"
 
-	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/helper/certutil/x509verify"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
 
@@ -373,7 +373,7 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 // key of the certificate to the private key and checks the certificate trust
 // chain for path issues.
 func (p *ParsedCertBundle) Verify() error {
-	options := ctx509.VerifyOptions{}
+	options := x509verify.VerifyOptions{}
 	return VerifyCertificate(p, options)
 }
 

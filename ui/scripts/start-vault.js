@@ -13,6 +13,11 @@ const testHelper = require('./test-helper');
 (async function () {
   // ignore first 2 args (node and path) and extract flags to pass to test/exam command
   const args = process.argv.slice(2);
+
+  if (process.env.DARK_THEME_AUDIT === 'true') {
+    console.info('[dark-theme-audit] Dark mode audit enabled — all tests run with data-theme="dark"');
+  }
+
   // in CI use local vault binary, otherwise assume vault is in PATH
   const vaultCommand = process.env.CI ? '../bin/vault' : 'vault';
   try {

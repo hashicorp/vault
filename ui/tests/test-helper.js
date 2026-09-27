@@ -15,20 +15,27 @@ import { setupGlobalA11yHooks, setRunOptions } from 'ember-a11y-testing/test-sup
 import manifest from 'vault/config/asset-manifest';
 import setupSinon from 'ember-sinon-qunit';
 import { DISMISSED_WIZARD_KEY, WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import { setupDarkThemeAudit } from './theme-helper';
 
 preloadAssets(manifest).then(() => {
   setup(QUnit.assert);
   setApplication(Application.create(config.APP));
-  setupGlobalA11yHooks(() => true, {
-    helpers: ['render'],
-  });
-  setRunOptions({
-    runOnly: {
-      type: 'tag',
-      values: ['wcag2a'],
-    },
-  });
   setupSinon();
+  // conditional a11y testing allows for theme specific testing
+  // dark theme audit focusses specifically on the color-contrast rule
+  if (config.APP.DARK_THEME_AUDIT) {
+    setupDarkThemeAudit();
+  } else {
+    setupGlobalA11yHooks(() => true, {
+      helpers: ['render'],
+    });
+    setRunOptions({
+      runOnly: {
+        type: 'tag',
+        values: ['wcag2a'],
+      },
+    });
+  }
   // dismiss all wizards before each test to have a consistent state
   // this can be overridden in individual tests when needed
   QUnit.hooks.beforeEach(function () {

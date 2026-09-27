@@ -48,6 +48,19 @@ func (b *BackendPluginClientV5) IsExternal() bool {
 	return true
 }
 
+func (b *BackendPluginClientV5) IsReloading() bool {
+	type reloadingClient interface {
+		Reloading() bool
+	}
+
+	rc, ok := b.client.(reloadingClient)
+	if !ok {
+		return false
+	}
+
+	return rc.Reloading()
+}
+
 func (b *BackendPluginClientV5) PluginVersion() logical.PluginVersion {
 	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
 		return versioner.PluginVersion()

@@ -1,0 +1,112 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (eq @column.valueType "link")}}
+  {{#if @value}}
+    {{#let
+      (or (get @row @column.routeKey) (get @row @column.fallbackRouteKey) @column.route)
+      (or (get @row @column.iconKey) @column.icon)
+      as |resolvedRoute linkIcon|
+    }}
+      {{#if resolvedRoute}}
+        {{#if linkIcon}}
+          <Hds::Link::Standalone
+            @route={{resolvedRoute}}
+            @model={{get @row (or @column.routeModelKey "id")}}
+            @text={{@value}}
+            @icon={{linkIcon}}
+            @iconPosition="leading"
+            @color="secondary"
+            class="has-text-weight-semibold"
+            data-test-link-to={{@value}}
+          />
+        {{else}}
+          <Hds::Link::Inline
+            @route={{resolvedRoute}}
+            @model={{get @row (or @column.routeModelKey "id")}}
+            @color="secondary"
+            data-test-link-to={{@value}}
+          >{{@value}}</Hds::Link::Inline>
+        {{/if}}
+      {{else if @column.unavailableTooltip}}
+        <Hds::TooltipButton aria-label={{@column.unavailableTooltip}} @text={{@column.unavailableTooltip}} isInline={{true}}>
+          {{@value}}
+        </Hds::TooltipButton>
+      {{else}}
+        {{@value}}
+      {{/if}}
+    {{/let}}
+  {{/if}}
+
+{{else if (eq @column.valueType "icon-text")}}
+  <Hds::Layout::Flex @align="center" @gap="8">
+    {{#let (or (get @row @column.iconKey) @column.icon "lock") as |iconName|}}
+      {{#let (or (get @row @column.tooltipKey) @column.tooltip) as |tooltipText|}}
+        {{#if tooltipText}}
+          <Hds::TooltipButton aria-label={{tooltipText}} @text={{tooltipText}} isInline={{true}} class="is-v-centered">
+            <Hds::Icon @name={{iconName}} />
+          </Hds::TooltipButton>
+        {{else}}
+          <Hds::Icon @name={{iconName}} />
+        {{/if}}
+      {{/let}}
+    {{/let}}
+    <span>{{or (get @row @column.textKey) @value}}</span>
+  </Hds::Layout::Flex>
+
+{{else if (eq @column.valueType "copy")}}
+  {{#if @value}}
+    <Hds::Copy::Button
+      @text={{@value}}
+      @textToCopy={{@value}}
+      @isIconOnly={{true}}
+      @size="small"
+      @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+      class="transparent"
+      data-test-copy-button
+    />
+    {{@value}}
+  {{/if}}
+
+{{else if (eq @column.valueType "status")}}
+  {{#if @value}}
+    {{#let
+      (if @column.statusMap (get @column.statusMap @value)) (if @column.statusIconMap (get @column.statusIconMap @value))
+      as |badgeColor badgeIcon|
+    }}
+      <Hds::Badge @text={{@value}} @color={{badgeColor}} @icon={{badgeIcon}} @size="small" data-test-badge={{@value}} />
+    {{/let}}
+  {{/if}}
+
+{{else if (eq @column.valueType "date-time")}}
+  {{#if @value}}
+    <time datetime={{@value}} title={{@value}}>
+      {{date-format @value "MMM dd, yyyy h:mm a"}}
+    </time>
+  {{/if}}
+
+{{else}}
+  {{#let (if (this.isObject @value) (stringify @value) @value) as |displayValue|}}
+    {{#if (or @column.customTableItem displayValue)}}
+      <span {{did-insert this.observeCell}} {{will-destroy this.disconnectObserver}} data-test-list-table-cell-text>
+        {{#if this.isOverflowing}}
+          <Hds::TooltipButton
+            class="toolbar-icon"
+            @text={{displayValue}}
+            aria-label={{displayValue}}
+            data-test-tooltip={{displayValue}}
+          >
+            <Hds::Icon @name="info" />
+          </Hds::TooltipButton>
+        {{/if}}
+        {{#if @column.customTableItem}}
+          {{yield @row @column @value to="customTableItem"}}
+        {{else}}
+          {{displayValue}}
+        {{/if}}
+      </span>
+    {{/if}}
+  {{/let}}
+{{/if}}

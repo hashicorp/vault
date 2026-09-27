@@ -88,16 +88,12 @@ type RotationInfo struct {
 }
 
 func (s *RotationJob) Validate() error {
-	if s.MountPoint == "" {
-		return fmt.Errorf("MountPoint is required")
-	}
-
 	if s.Path == "" {
 		return fmt.Errorf("ReqPath is required")
 	}
 
-	if (s.Schedule.RotationSchedule == "" && s.Schedule.RotationPeriod.Seconds() == 0) && s.RotationPolicy == "" {
-		return fmt.Errorf("must specify one of rotation_schedule, rotation_period, or rotation_policy to register a rotation job")
+	if s.Schedule.RotationSchedule == "" && s.Schedule.RotationPeriod.Seconds() == 0 {
+		return fmt.Errorf("must specify either rotation_schedule or rotation_period to register a rotation job")
 	}
 
 	return nil

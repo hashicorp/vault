@@ -48,6 +48,8 @@ export default class MountBackendTypeForm extends Component {
       isEnterprise: !!this.version?.isEnterprise,
     });
 
+    let engines = staticEngines;
+
     // If we have plugin catalog data, merge it with static engines to add catalog info
     if (this.args.pluginCatalogData) {
       const secretEnginesDetailed =
@@ -56,10 +58,10 @@ export default class MountBackendTypeForm extends Component {
         this.args.pluginCatalogData?.detailed?.filter((plugin) => plugin?.type === PLUGIN_TYPES.DATABASE) ||
         [];
 
-      return enhanceEnginesWithCatalogData(staticEngines, secretEnginesDetailed, databasePluginsDetailed);
+      engines = enhanceEnginesWithCatalogData(staticEngines, secretEnginesDetailed, databasePluginsDetailed);
     }
 
-    return staticEngines;
+    return engines;
   }
 
   get authMethods() {

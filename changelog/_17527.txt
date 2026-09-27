@@ -1,0 +1,3 @@
+```release-note:feature
+**Dark Mode (beta)**: Added dark mode support to the Vault UI. Users can now choose between light, dark, or system-preferred themes from the Appearance section in user preferences.
+```

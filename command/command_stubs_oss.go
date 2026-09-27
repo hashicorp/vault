@@ -8,7 +8,7 @@ package command
 import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command/server"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/vault"
 )
 

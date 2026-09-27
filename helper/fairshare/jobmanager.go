@@ -14,7 +14,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	metrics "github.com/hashicorp/go-metrics/compat"
 	uuid "github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 

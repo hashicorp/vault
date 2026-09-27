@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/internalshared/pgpkeys"
 	"github.com/posener/complete"
 )
 
@@ -478,7 +478,7 @@ func (c *OperatorRekeyCommand) provide(client *api.Client, key string) int {
 		nonce = c.flagNonce
 
 		// Pull our fake stdin if needed
-		stdin := (io.Reader)(os.Stdin)
+		stdin := io.Reader(os.Stdin)
 		if c.testStdin != nil {
 			stdin = c.testStdin
 		}

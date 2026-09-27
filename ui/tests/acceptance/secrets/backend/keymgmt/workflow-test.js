@@ -126,8 +126,8 @@ module('Acceptance | Enterprise | keymgmt-configuration-workflow', function (hoo
     // navigate to secrets engines list and delete from the table row icon menu
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.inputSearch('secret-engine-path'), keymgmtType);
-    await click(`${GENERAL.listItem(`${keymgmtType}/`)} ${GENERAL.menuTrigger}`);
-    await click(GENERAL.menuItem('Delete'));
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('delete-engine-path'));
     await fillIn(GENERAL.confirmTextInput, 'delete-engine');
     await click(GENERAL.confirmButton);
 

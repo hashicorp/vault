@@ -6,6 +6,7 @@ package issuing
 import (
 	"context"
 	"crypto/x509"
+	"encoding/asn1"
 	"errors"
 	"fmt"
 	"strings"
@@ -82,6 +83,7 @@ type RoleEntry struct {
 	AllowedOtherSANs              []string      `json:"allowed_other_sans"`
 	AllowedSerialNumbers          []string      `json:"allowed_serial_numbers"`
 	AllowedUserIDs                []string      `json:"allowed_user_ids"`
+	CsrExtraNamesOIDs             []string      `json:"csr_extra_names_oids"`
 	AllowedURISANs                []string      `json:"allowed_uri_sans"`
 	AllowedURISANsTemplate        bool          `json:"allowed_uri_sans_template"`
 	PolicyIdentifiers             []string      `json:"policy_identifiers"`
@@ -94,6 +96,19 @@ type RoleEntry struct {
 	Name string `json:"-"`
 	// WasModified indicates to callers if the returned entry is different than the persisted version
 	WasModified bool `json:"-"`
+}
+
+// CsrExtraNamesOIDsContains reports whether the given OID is listed in
+// r.CsrExtraNamesOIDs. The comparison is done in dotted-decimal string form so
+// no ASN.1 parsing is required.
+func (r *RoleEntry) CsrExtraNamesOIDsContains(oid asn1.ObjectIdentifier) bool {
+	target := oid.String()
+	for _, s := range r.CsrExtraNamesOIDs {
+		if s == target {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *RoleEntry) ToResponseData() map[string]interface{} {
@@ -137,6 +152,7 @@ func (r *RoleEntry) ToResponseData() map[string]interface{} {
 		"allowed_other_sans":                 r.AllowedOtherSANs,
 		"allowed_serial_numbers":             r.AllowedSerialNumbers,
 		"allowed_user_ids":                   r.AllowedUserIDs,
+		"csr_extra_names_oids":               r.CsrExtraNamesOIDs,
 		"allowed_uri_sans":                   r.AllowedURISANs,
 		"require_cn":                         r.RequireCN,
 		"cn_validations":                     r.CNValidations,

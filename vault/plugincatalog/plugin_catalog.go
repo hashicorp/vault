@@ -68,6 +68,11 @@ type PluginCatalog struct {
 	lock    sync.RWMutex
 	wrapper pluginutil.RunnerUtil
 
+	// activeReloadOps is the number of in-flight reloadMatching* operations.
+	// While this is non-zero, mounts linked to externalPlugins entries marked
+	// reloading should fail fast instead of attempting reactive reload.
+	activeReloadOps int
+
 	runtimeCatalog *PluginRuntimeCatalog
 
 	// pluginPGPKey is the path to a PGP public key file to use for plugin
@@ -127,6 +132,14 @@ type externalPlugin struct {
 	connections map[string]*pluginClient
 
 	multiplexingSupport bool
+
+	// reloading is set to true after the shared gRPC process for a multiplexed
+	// plugin has been killed as part of a reload. It signals to subsequent
+	// reloadExternalPlugin calls (for other mounts that shared the same process)
+	// that the kill has already been performed and they should be treated as
+	// no-ops. It is cleared once the first new connection successfully completes
+	// its handshake, ending the reload window.
+	reloading bool
 }
 
 // pluginClient represents a connection to a plugin process
@@ -139,10 +152,11 @@ type pluginClient struct {
 
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
-	client      *plugin.Client
-	clientConn  grpc.ClientConnInterface
-	cleanupFunc func() error
-	reloadFunc  func() error
+	client          *plugin.Client
+	clientConn      grpc.ClientConnInterface
+	cleanupFunc     func() error
+	reloadFunc      func() error
+	isReloadingFunc func() bool
 
 	plugin.ClientProtocol
 }
@@ -273,8 +287,49 @@ func (p *pluginClient) Reload() error {
 	return p.reloadFunc()
 }
 
+// Reloading reports whether this client's external plugin key is in a
+// reloading window while at least one explicit reload operation is in progress.
+func (p *pluginClient) Reloading() bool {
+	if p.isReloadingFunc == nil {
+		return false
+	}
+
+	return p.isReloadingFunc()
+}
+
 func (c *PluginCatalog) Processes() int {
 	return len(c.externalPlugins)
+}
+
+// BeginReloadOperation marks the start of a reloadMatchingPlugin or
+// reloadMatchingPluginMounts operation.
+func (c *PluginCatalog) BeginReloadOperation() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.activeReloadOps++
+}
+
+// EndReloadOperation marks completion of a reloadMatchingPlugin or
+// reloadMatchingPluginMounts operation. Once no reload operations remain, stale
+// reloading entries are pruned from externalPlugins.
+func (c *PluginCatalog) EndReloadOperation() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.activeReloadOps == 0 {
+		return
+	}
+
+	c.activeReloadOps--
+	if c.activeReloadOps > 0 {
+		return
+	}
+
+	for key, extPlugin := range c.externalPlugins {
+		if extPlugin.reloading && len(extPlugin.connections) == 0 {
+			delete(c.externalPlugins, key)
+		}
+	}
 }
 
 // reloadExternalPlugin
@@ -294,12 +349,28 @@ func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, pluginB
 
 	pc, ok := extPlugin.connections[id]
 	if !ok {
+		// For multiplexed plugins the shared process is killed on the first
+		// reloadExternalPlugin call for a given reload cycle (see below).
+		// Subsequent mounts sharing that process will no longer find their
+		// connection ID in the already-reset entry, which means the process
+		// has already been killed on their behalf — treat this as a no-op.
+		if extPlugin.reloading {
+			return nil
+		}
 		return fmt.Errorf("%w id: %s", ErrPluginConnectionNotFound, id)
 	}
 
-	delete(c.externalPlugins, key)
+	// Kill the shared gRPC process once and install a fresh entry so that
+	// subsequent mounts' reloadExternalPlugin calls (above) become no-ops,
+	// and the next newPluginClient call spawns exactly one new process that
+	// all remaining mounts can reuse via normal multiplexing.
 	pc.client.Kill()
 	c.logger.Debug("killed external plugin process for reload", "plugin", pluginBinaryRef, "pluginID", pc.pluginID)
+	c.externalPlugins[key] = &externalPlugin{
+		connections:         make(map[string]*pluginClient),
+		multiplexingSupport: true,
+		reloading:           true,
+	}
 
 	return nil
 }
@@ -424,6 +495,15 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			defer c.lock.Unlock()
 			return c.reloadExternalPlugin(key, id, pluginRunner.BinaryReference())
 		},
+		isReloadingFunc: func() bool {
+			c.lock.RLock()
+			defer c.lock.RUnlock()
+			if c.activeReloadOps == 0 {
+				return false
+			}
+			ep, ok := c.externalPlugins[key]
+			return ok && ep.reloading
+		},
 	}
 
 	// Multiplexing support will always be false initially, but will be
@@ -496,6 +576,10 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	extPlugin.connections[id] = pc
 	extPlugin.multiplexingSupport = muxed
+	// The first successful connection to a freshly-spawned process marks the
+	// end of the reload window; clear the flag so that future out-of-band
+	// ErrPluginConnectionNotFound errors are not silently swallowed.
+	extPlugin.reloading = false
 
 	return extPlugin.connections[id], nil
 }

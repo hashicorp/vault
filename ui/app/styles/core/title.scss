@@ -14,14 +14,14 @@
 }
 
 .title {
-  color: hsl(0, 0%, 21%);
+  color: var(--token-color-foreground-strong);
   font-size: 2rem;
   font-weight: var(--token-typography-font-weight-bold);
   line-height: 1.125;
   word-break: break-word;
 
   > a {
-    color: hsl(0, 0%, 4%);
+    color: var(--token-color-foreground-strong);
     text-decoration: none;
   }
 

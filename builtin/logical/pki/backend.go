@@ -20,8 +20,8 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -139,6 +139,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			Root: []string{
 				"root",
 				"root/sign-self-issued",
+				"keys/+/export",
 			},
 
 			SealWrapStorage: []string{
@@ -218,6 +219,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathGenerateKey(&b),
 			pathImportKey(&b),
 			pathConfigKeys(&b),
+			pathSecureExportCAKey(&b),
 
 			// Fetch APIs have been lowered to favor the newer issuer API endpoints
 			pathFetchCA(&b),

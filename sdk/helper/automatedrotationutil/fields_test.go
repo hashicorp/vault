@@ -222,6 +222,71 @@ func TestParseAutomatedRotationFields(t *testing.T) {
 				DisableAutomatedRotation: false,
 			},
 		},
+		{
+			name: "preserve-existing-when-no-rotation-fields-provided",
+			data: &framework.FieldData{
+				Raw:    map[string]interface{}{},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           30 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "my-policy",
+			},
+			initialParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				RotationWindow:           30 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+				RotationPolicy:           "my-policy",
+			},
+		},
+		{
+			name: "policy-only-rejected",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_policy": "my-policy",
+				},
+				Schema: schemaMap,
+			},
+			expectedError: ErrRotationPolicyRequiresSet.Error(),
+		},
+		{
+			name: "policy-added-to-existing-period",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_policy": "my-policy",
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationPeriod: 2 * time.Minute,
+				RotationPolicy: "my-policy",
+			},
+			initialParams: &AutomatedRotationParams{
+				RotationPeriod: 2 * time.Minute,
+			},
+		},
+		{
+			name: "policy-with-disable-allowed",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"disable_automated_rotation": true,
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/15 * * * *",
+				DisableAutomatedRotation: true,
+				RotationPolicy:           "my-policy",
+			},
+			initialParams: &AutomatedRotationParams{
+				RotationSchedule: "*/15 * * * *",
+				RotationPolicy:   "my-policy",
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -399,6 +464,13 @@ func TestShouldRegisterRotationJob(t *testing.T) {
 				RotationWindow:           0,
 				RotationPeriod:           5,
 				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name:     "false-policy-only",
+			expected: false,
+			inputParams: &AutomatedRotationParams{
+				RotationPolicy: "my-policy",
 			},
 		},
 	}

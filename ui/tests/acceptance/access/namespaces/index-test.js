@@ -48,17 +48,14 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
     // Click the refresh list button on the namespace page
     await click(GENERAL.button('refresh-namespace-list'));
-    await fillIn(GENERAL.filterInputExplicit, testNS);
-    await click(GENERAL.button('Search'));
+    await fillIn(GENERAL.filterInput, testNS);
+
     assert.dom('[data-test-list-item]').hasText(testNS, 'Namespace is displayed after refreshing the list');
 
     // Delete the created namespace via the CLI
     await runCmd(deleteNS(testNS), false);
     await visit('/vault/access/namespaces');
-
-    // Search for the deleted namespace
-    await fillIn(GENERAL.filterInputExplicit, testNS);
-    await click(GENERAL.button('Search'));
+    await fillIn(GENERAL.filterInput, '');
 
     // Click the refresh list button from the namespace page
     await click(GENERAL.button('refresh-namespace-list'));
@@ -76,19 +73,22 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Verify test-create-ns does not exist in the Manage Namespace page
 
     // Create a new namespace in the UI
-    await click(GENERAL.button('create-namespace'));
+    await click(GENERAL.button('Create namespace'));
     await fillIn(GENERAL.inputByAttr('path'), testNS);
     await click(GENERAL.submitButton);
 
     // Verify test-create-ns-ui exists in the Manage Namespace page
-    await fillIn(GENERAL.filterInputExplicit, testNS);
-    await click(GENERAL.button('Search'));
+    await fillIn(GENERAL.filterInput, testNS);
+
     assert.dom('[data-test-list-item]').hasText(testNS, 'Namespace is displayed after refreshing the list');
 
     // Delete the created namespace
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('delete'));
     await click(GENERAL.confirmButton);
+
+    // Clear filter and refresh
+    await fillIn(GENERAL.filterInput, '');
     await click(GENERAL.button('refresh-namespace-list'));
 
     // Verify test-create-ns does not exist in the Manage Namespace page
@@ -104,8 +104,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.button('refresh-namespace-list'));
 
     // Search for created namespace// Enter search text
-    await fillIn(GENERAL.filterInputExplicit, testNS);
-    await click(GENERAL.button('Search'));
+    await fillIn(GENERAL.filterInput, testNS);
 
     // Verify the menu options
     await waitFor(GENERAL.menuTrigger, {
@@ -126,8 +125,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.button('refresh-namespace-list'));
 
     // Search for created namespace
-    await fillIn(GENERAL.filterInputExplicit, testNS);
-    await click(GENERAL.button('Search'));
+    await fillIn(GENERAL.filterInput, testNS);
 
     // Switch namespace
     await waitFor(GENERAL.menuTrigger);

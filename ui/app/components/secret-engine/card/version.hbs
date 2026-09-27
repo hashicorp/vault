@@ -22,7 +22,7 @@
     <LF.Item>
       <Hds::Layout::Flex @align="start" @gap="16">
         <Hds::Text::Body @tag="h3" class="hds-font-weight-semibold hds-foreground-strong one-half-width">Running version</Hds::Text::Body>
-        <Hds::Text::Body @tag="p" data-test-row-value="running-plugin-version">{{this.runningVersion}}{{if
+        <Hds::Text::Body @tag="p" class="word-wrap" data-test-row-value="running-plugin-version">{{this.runningVersion}}{{if
             (eq this.runningVersion this.pinnedVersion)
             " (Pinned)"
           }}</Hds::Text::Body>

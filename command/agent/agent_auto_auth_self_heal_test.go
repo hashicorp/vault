@@ -19,10 +19,10 @@ import (
 	"github.com/hashicorp/vault/command/agent/template"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
 	tokenfile "github.com/hashicorp/vault/command/agentproxyshared/auth/token-file"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink"
-	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/stretchr/testify/require"
 )

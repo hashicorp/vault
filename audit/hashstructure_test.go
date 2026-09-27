@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	nshelper "github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"

@@ -25,6 +25,7 @@ export default class ConfigUiEngine extends Engine {
       'custom-messages',
       'api',
       'capabilities',
+      'theme',
       // services needed for tools sidebar component
       'permissions',
       'current-cluster',

@@ -24,21 +24,6 @@
   position: absolute;
 }
 
-.checklist-step-marker-check {
-  align-items: center;
-  color: var(--token-color-palette-neutral-0);
-  display: inline-flex;
-  inset: 0;
-  justify-content: center;
-  pointer-events: none;
-  position: absolute;
-}
-
-.checklist-step-marker-check-icon {
-  height: 10px;
-  width: 10px;
-}
-
 .checklist-step-marker-number--focused {
   color: var(--token-color-palette-neutral-0);
 }

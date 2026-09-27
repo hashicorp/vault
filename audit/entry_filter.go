@@ -10,7 +10,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-bexpr"
-	nshelper "github.com/hashicorp/vault/helper/namespace"
+	nshelper "github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

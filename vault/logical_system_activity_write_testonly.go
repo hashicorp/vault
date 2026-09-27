@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"

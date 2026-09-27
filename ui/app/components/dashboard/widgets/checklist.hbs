@@ -30,22 +30,14 @@
       <A.Item
         @isOpen={{eq step.id this.openStepId}}
         @onClickToggle={{fn this.handleItemToggle step.id}}
+        data-test-accordion={{step.id}}
         data-test-checklist-step={{step.id}}
       >
         <:toggle>
           <Hds::Layout::Flex @align="center" @gap="8">
             <span class="checklist-step-marker" data-test-checklist-step-icon={{step.id}}>
               {{#if step.isComplete}}
-                {{#if (eq step.id this.openStepId)}}
-                  <span class="checklist-step-marker-number-wrapper">
-                    <Hds::Icon @name="hexagon-fill" @color="primary" />
-                    <span class="checklist-step-marker-check">
-                      <Hds::Icon @name="check" class="checklist-step-marker-check-icon" />
-                    </span>
-                  </span>
-                {{else}}
-                  <Hds::Icon @name="check-hexagon" @color="success" />
-                {{/if}}
+                <Hds::Icon @name="check-hexagon" @color="success" />
               {{else if (eq step.id this.openStepId)}}
                 <span class="checklist-step-marker-number-wrapper">
                   <Hds::Icon @name="hexagon-fill" @color="primary" />

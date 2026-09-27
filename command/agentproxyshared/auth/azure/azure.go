@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/agentproxyshared/auth"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/internalshared/useragent"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 

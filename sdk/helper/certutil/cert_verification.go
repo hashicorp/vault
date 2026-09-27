@@ -5,14 +5,19 @@ package certutil
 
 import (
 	"bytes"
+	"crypto/x509"
 	"fmt"
 	"time"
 
-	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/sdk/helper/certutil/x509verify"
 )
 
-func VerifyCertificateChain(parsedBundle *ParsedCertBundle, options ctx509.VerifyOptions, rootChainOnly bool) error {
+// VerifyCertificateChain validates the certificate chain in parsedBundle using
+// the supplied options. When rootChainOnly is true, at least one root CA must
+// be present in the chain; otherwise intermediates may serve as trust anchors
+// when no root is available.
+func VerifyCertificateChain(parsedBundle *ParsedCertBundle, options x509verify.VerifyOptions, rootChainOnly bool) error {
 	// If private key exists, check if it matches the public key of cert
 	if parsedBundle.PrivateKey != nil && parsedBundle.Certificate != nil {
 		equal, err := ComparePublicKeys(parsedBundle.Certificate.PublicKey, parsedBundle.PrivateKey.Public())
@@ -24,13 +29,17 @@ func VerifyCertificateChain(parsedBundle *ParsedCertBundle, options ctx509.Verif
 		}
 	}
 
-	rootCertPool := ctx509.NewCertPool()
-	intermediateCertPool := ctx509.NewCertPool()
+	rootCertPool := x509verify.NewCertPool()
+	intermediateCertPool := x509verify.NewCertPool()
 
-	for index, certificate := range parsedBundle.CAChain {
-		cert, err := convertCertificate(certificate.Bytes)
-		if err != nil {
-			return fmt.Errorf("could not parse certificate number %v in chain: %w", index, err)
+	for index, certBlock := range parsedBundle.CAChain {
+		cert := certBlock.Certificate
+		if cert == nil {
+			var err error
+			cert, err = x509.ParseCertificate(certBlock.Bytes)
+			if err != nil {
+				return fmt.Errorf("could not parse certificate number %v in chain: %w", index, err)
+			}
 		}
 		if index > 0 && !cert.IsCA {
 			// Sometimes the leaf certificate is contained inside the bundle
@@ -45,7 +54,7 @@ func VerifyCertificateChain(parsedBundle *ParsedCertBundle, options ctx509.Verif
 		}
 	}
 
-	if !rootChainOnly && len(rootCertPool.Subjects()) < 1 {
+	if !rootChainOnly && rootCertPool.Len() < 1 {
 		// In this case, we don't have the root CA.  In some cases systems do trust an intermediate
 		// directly, and this will work.  To accommodate those cases, we'll treat the intermediate
 		// as the root.
@@ -58,30 +67,26 @@ func VerifyCertificateChain(parsedBundle *ParsedCertBundle, options ctx509.Verif
 		rootCertPool, intermediateCertPool = intermediateCertPool, rootCertPool
 	}
 
-	// Note that we use github.com/google/certificate-transparency-go/x509 to perform certificate verification,
-	// since that library provides options to disable checks that the standard library does not.
-
 	options.Roots = rootCertPool
 	options.Intermediates = intermediateCertPool
 	options.CurrentTime = time.Now()
 
-	certificate, err := convertCertificate(parsedBundle.CertificateBytes)
-	if err != nil {
-		return err
+	cert := parsedBundle.Certificate
+	if cert == nil {
+		var err error
+		cert, err = x509.ParseCertificate(parsedBundle.CertificateBytes)
+		if err != nil {
+			return fmt.Errorf("cannot parse certificate for validation: %w", err)
+		}
 	}
 
-	_, err = certificate.Verify(options)
+	_, err := x509verify.Verify(cert, options)
 	return err
 }
 
-func VerifyCertificate(parsedBundle *ParsedCertBundle, options ctx509.VerifyOptions) error {
+// VerifyCertificate validates the certificate chain in parsedBundle using the
+// supplied options, treating intermediates as trust anchors when no root is
+// present.
+func VerifyCertificate(parsedBundle *ParsedCertBundle, options x509verify.VerifyOptions) error {
 	return VerifyCertificateChain(parsedBundle, options, false)
-}
-
-func convertCertificate(certBytes []byte) (*ctx509.Certificate, error) {
-	ret, err := ctx509.ParseCertificate(certBytes)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert certificate for validation: %w", err)
-	}
-	return ret, nil
 }

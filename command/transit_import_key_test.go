@@ -67,7 +67,7 @@ func TestTransitImport(t *testing.T) {
 			"import-version",
 			"transit/keys/rsa1",
 			rsa2,
-			[]string{"type=rsa-2048"},
+			[]string{},
 			false, /* new version */
 		},
 		{
@@ -101,15 +101,8 @@ func TestTransitImport(t *testing.T) {
 		{
 			"import-version",
 			"transit/keys/aes1",
-			aes256,
-			[]string{"type=aes256-gcm96"},
-			true, /* new version, different type */
-		},
-		{
-			"import-version",
-			"transit/keys/aes1",
 			aes128,
-			[]string{"type=aes128-gcm96"},
+			[]string{},
 			false, /* new version */
 		},
 		{

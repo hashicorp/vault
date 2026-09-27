@@ -5,7 +5,9 @@ THIS_FILE := $(lastword $(MAKEFILE_LIST))
 MAIN_PACKAGES=$$($(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
 SDK_PACKAGES=$$(cd $(CURDIR)/sdk && $(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
 API_PACKAGES=$$(cd $(CURDIR)/api && $(GO_CMD) list ./... | grep -v vendor/ )
-ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES)
+VERSION_PACKAGES=$$(cd $(CURDIR)/version && $(GO_CMD) list ./... | grep -v vendor/ )
+INTERNALSHARED_PACKAGES=$$(cd $(CURDIR)/internalshared && $(GO_CMD) list -tags enterprise ./... | grep -v vendor/ )
+ALL_PACKAGES=$(MAIN_PACKAGES) $(SDK_PACKAGES) $(API_PACKAGES) $(VERSION_PACKAGES) $(INTERNALSHARED_PACKAGES)
 TEST=$$(echo $(ALL_PACKAGES) | grep -v integ/ )
 TEST_TIMEOUT?=45m
 EXTENDED_TEST_TIMEOUT=60m
@@ -22,7 +24,8 @@ ifeq ($(shell uname -s),Darwin)
 endif
 
 GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
-GO_CMD?=go
+GO_ARCH_LOCAL=$$(go env GOARCH)
+GO_CMD?=GOWORK=off go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
 	CGO_ENABLED=1

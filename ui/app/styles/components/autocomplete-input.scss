@@ -8,7 +8,7 @@
   // the panel overlays the content below it
   position: absolute;
   z-index: 1000;
-  background: hsl(0, 0%, 100%) !important;
+  background: var(--token-color-surface-primary) !important;
   border: 1px solid var(--token-color-palette-neutral-300);
   box-sizing: border-box;
   border-radius: var(--token-form-control-border-radius);

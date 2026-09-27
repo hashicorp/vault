@@ -15,6 +15,7 @@ on:
 
 env:
   VAULT_ACC: 1
+  GOWORK: "off"
 
 jobs:
   go-test:

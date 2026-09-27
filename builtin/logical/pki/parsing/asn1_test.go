@@ -4,9 +4,9 @@
 package parsing
 
 import (
+	"encoding/asn1"
 	"testing"
 
-	"github.com/google/certificate-transparency-go/asn1"
 	"github.com/stretchr/testify/require"
 )
 

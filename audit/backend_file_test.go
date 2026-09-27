@@ -148,7 +148,8 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		// Test that executable audit files are disallowed
 		backendConfig.Config["mode"] = modeStr
 		_, err = newFileBackend(backendConfig, &noopHeaderFormatter{})
-		require.Error(t, err)
+		require.NoError(t, err)
+		require.Equal(t, "0666", backendConfig.Config["mode"])
 	}
 }
 

@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-hclog"
 	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -132,7 +132,7 @@ func (b *backend) getRootSTSConfigs(ctx context.Context, s logical.Storage, logg
 	// ensure the nil case uses defaults
 	if entry == nil {
 		ccfg := awsutil.CredentialsConfig{
-			HTTPClient: cleanhttp.DefaultClient(),
+			HTTPClient: cleanhttp.DefaultPooledClient(),
 			Logger:     logger,
 			Region:     fallbackRegion,
 		}

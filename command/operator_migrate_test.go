@@ -20,7 +20,7 @@ import (
 	"github.com/hashicorp/cli"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
-	"github.com/hashicorp/vault/command/server"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	physRaft "github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"

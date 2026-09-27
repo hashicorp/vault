@@ -32,7 +32,7 @@ export default (test, type) => {
 
       await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
       await click(GENERAL.menuTrigger);
-      await click(GENERAL.menuItem('Configure'));
+      await click(GENERAL.menuItem('view-configuration'));
       assert.strictEqual(
         currentRouteName(),
         `${BASE_ROUTE}.${this.expectedConfigEditRoute}`,
@@ -117,7 +117,7 @@ export default (test, type) => {
       await visit(`/vault/secrets-engines`);
       await fillIn(GENERAL.inputSearch('secret-engine-path'), backend);
       await click(GENERAL.menuTrigger);
-      await click(GENERAL.menuItem('Configure'));
+      await click(GENERAL.menuItem('view-configuration'));
 
       // For configurable engines, clicking "View configuration" will direct to its plugin settings route
       await waitUntil(() => currentRouteName() === `${BASE_ROUTE}.${configRoute}`);

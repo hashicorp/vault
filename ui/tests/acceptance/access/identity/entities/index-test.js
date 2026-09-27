@@ -15,10 +15,6 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
 
-const SELECTORS = {
-  listItem: (name) => `[data-test-identity-row="${name}"]`,
-};
-
 module('Acceptance | /access/identity/entities', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
@@ -65,11 +61,11 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await visit('/vault/access/identity/groups');
     assert.strictEqual(currentURL(), '/vault/access/identity/groups', 'navigates to the groups tab');
 
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuTrigger}`);
+    await click(`[data-test-popup-menu-trigger="${name}"]`);
     assert
       .dom('.hds-dropdown ul')
-      .hasText('Details Create alias Edit Delete', 'all actions render for external groups');
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuItem('delete')}`);
+      .hasText('View details Edit details Delete group', 'all actions render for external groups');
+    await click(GENERAL.menuItem('delete-group'));
     await click(GENERAL.confirmButton);
   });
 
@@ -96,22 +92,22 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     });
 
     await visit('/vault/access/identity/groups');
-    await click(`${SELECTORS.listItem(groupName)} ${GENERAL.menuTrigger}`);
+    await click(`[data-test-popup-menu-trigger="${groupName}"]`);
 
     assert
       .dom('.hds-dropdown ul')
-      .hasText('Details Edit Delete', 'no "Create alias" option for external groups with an alias');
+      .hasText('View details Edit details Delete group', 'all actions render for external groups with alias');
   });
 
   test('it renders popup menu for internal groups', async function (assert) {
     const name = `internal-${uuidv4()}`;
     await runCmd(`vault write identity/group name="${name}" policies="default" type="internal"`);
     await visit('/vault/access/identity/groups');
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuTrigger}`);
+    await click(`[data-test-popup-menu-trigger="${name}"]`);
     assert
       .dom('.hds-dropdown ul')
-      .hasText('Details Edit Delete', 'no "Create alias" option for internal groups');
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuItem('delete')}`);
+      .hasText('View details Edit details Delete group', 'all actions render for internal groups');
+    await click(GENERAL.menuItem('delete-group'));
     await click(GENERAL.confirmButton);
   });
 
@@ -138,6 +134,30 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
   });
 
+  test('it sends the disabled field when disabling an entity from the edit form', async function (assert) {
+    server.get('/identity/entity/id', () => ({
+      data: {
+        key_info: { test: { name: 'foo' } },
+        keys: ['test'],
+      },
+    }));
+    server.get('/identity/entity/id/test', () => ({ data: { name: 'foo', disabled: false } }));
+
+    let requestBody;
+    server.post('/identity/entity/id/test', (schema, request) => {
+      requestBody = JSON.parse(request.requestBody);
+      return new Response(200, {}, {});
+    });
+
+    await page.visit({ item_type: 'entities' });
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuTrigger}`);
+    await click(`${GENERAL.listItem('foo')} ${GENERAL.menuItem('edit')}`);
+    await click(GENERAL.inputByAttr('disabled'));
+    await click(GENERAL.submitButton);
+
+    assert.true(requestBody.disabled, 'the disabled field is sent to the API when saving the entity');
+  });
+
   test('it should render correct flash message on entity edit success', async function (assert) {
     server.get('/identity/entity/id', () => ({
       data: {
@@ -155,7 +175,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(`${GENERAL.listItem('foo')} ${GENERAL.menuTrigger}`);
     await click(`${GENERAL.listItem('foo')} ${GENERAL.menuItem('edit')}`);
     await click(GENERAL.submitButton);
-    const message = `Successfully saved Entity test.`;
+    const message = `Successfully saved Entity: foo.`;
     assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
   });
 

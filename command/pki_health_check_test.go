@@ -400,6 +400,11 @@ var expectedAllGood = map[string][]map[string]interface{}{
 			"status": "ok",
 		},
 	},
+	"role_use_csr_values": {
+		{
+			"status": "ok",
+		},
+	},
 	"root_issued_leaves": {
 		{
 			"status": "ok",
@@ -532,6 +537,9 @@ var expectedAllBad = map[string][]map[string]interface{}{
 		{
 			"status": "informational",
 		},
+		{
+			"status": "informational",
+		},
 	},
 	"enable_acme_issuance": {
 		{
@@ -556,6 +564,11 @@ var expectedAllBad = map[string][]map[string]interface{}{
 	"role_no_store_false": {
 		{
 			"status": "warning",
+		},
+	},
+	"role_use_csr_values": {
+		{
+			"status": "ok",
 		},
 	},
 	"root_issued_leaves": {
@@ -609,6 +622,7 @@ var expectedEmptyWithIssuer = map[string][]map[string]interface{}{
 	"role_allows_glob_wildcards": nil,
 	"role_allows_localhost":      nil,
 	"role_no_store_false":        nil,
+	"role_use_csr_values":        nil,
 	"root_issued_leaves": {
 		{
 			"status": "ok",
@@ -671,6 +685,11 @@ var expectedNoPerm = map[string][]map[string]interface{}{
 		},
 	},
 	"role_no_store_false": {
+		{
+			"status": "insufficient_permissions",
+		},
+	},
+	"role_use_csr_values": {
 		{
 			"status": "insufficient_permissions",
 		},

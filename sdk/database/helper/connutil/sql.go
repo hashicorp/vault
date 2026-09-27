@@ -36,6 +36,7 @@ const (
 
 const (
 	dbTypePostgres   = "pgx"
+	dbTypeOracle     = "oci8"
 	cloudSQLPostgres = "cloudsql-postgres"
 
 	// controls the size of the static account cache
@@ -134,7 +135,10 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 	// validate that at least one of username/password / self_managed is set
 	if !c.SelfManaged && (c.Username == "" && c.Password == "") && isTemplatedURL {
-		return nil, fmt.Errorf("must either provide username/password or set self-managed to 'true'")
+		if c.Type == dbTypePostgres || c.Type == dbTypeOracle {
+			return nil, fmt.Errorf("must either provide username/password or set self-managed to 'true'")
+		}
+		return nil, fmt.Errorf("must provide username/password")
 	}
 
 	// validate that self-managed and username/password are mutually exclusive

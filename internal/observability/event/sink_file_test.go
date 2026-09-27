@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/stretchr/testify/require"
 )
 

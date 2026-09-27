@@ -580,7 +580,7 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 		}
 	}
 
-	err = p.ImportPublicOrPrivate(ctx, req.Storage, key, req.IsPrivateKey, rand)
+	err = p.ImportPublicOrPrivate(ctx, req.Storage, key, req.IsPrivateKey, rand, p.KeyVersionType(p.LatestVersion))
 	if err != nil {
 		return fmt.Errorf("error importing key: %s", err)
 	}

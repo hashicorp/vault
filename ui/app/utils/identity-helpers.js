@@ -6,6 +6,7 @@
 import {
   IdentityApiEntityListByIdListEnum,
   IdentityApiGroupListByIdListEnum,
+  IdentityApiAliasListByIdListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 /**
@@ -22,6 +23,25 @@ export async function fetchIdentityItems({ identityType, api }) {
   const response = await api.identity[methodType](listEnum.TRUE);
 
   return api.keyInfoToArray(response);
+}
+
+/**
+ * Fetches all aliases for a given identity type (entity or group)
+ * @param {Object} params - Parameters object
+ * @param {string} params.identityType - The type of the parent identity ('entity' or 'group')
+ * @param {Object} params.api - The API service instance
+ * @returns {Promise<Array>} Array of alias items, or an empty array if none exist
+ */
+export async function fetchAliases({ identityType, api }) {
+  const method = identityType === 'group' ? 'groupListAliasesById' : 'entityListAliasesById';
+  try {
+    const response = await api.identity[method](IdentityApiAliasListByIdListEnum.TRUE);
+    return api.keyInfoToArray(response);
+  } catch (err) {
+    const { status } = await api.parseError(err);
+    if (status === 404) return [];
+    throw err;
+  }
 }
 
 /**
@@ -91,6 +111,40 @@ export async function fetchIdentityItemsWithCapabilities({ identityType, api, ca
   });
 
   return itemsWithCapabilities;
+}
+
+/**
+ * Attach canEdit/canDelete capabilities to one or more identity aliases
+ * @param {Object} params - Parameters object
+ * @param {Object|Object[]} params.aliases - A single alias object or an array of alias objects
+ * @param {string} params.identityType - The type of the parent identity ('entity' or 'group')
+ * @param {Object} params.capabilities - The capabilities service instance
+ * @returns {Promise<Object|Object[]>} The alias(es) with canEdit/canDelete attached, matching the input shape
+ */
+export async function attachAliasCapabilities({ aliases, identityType, capabilities }) {
+  if (!aliases) return aliases;
+
+  const isSingle = !Array.isArray(aliases);
+  const aliasList = isSingle ? [aliases] : aliases;
+  // Avoid an API call guaranteed to fail: the capabilities-self endpoint requires at least one path.
+  if (!aliasList.length) return aliases;
+
+  const capabilityPaths = aliasList.map((alias) =>
+    capabilities.pathFor('identityCapabilities', { identityType, id: alias.id })
+  );
+  const capabilitiesMap = await capabilities.fetch(capabilityPaths);
+
+  const aliasesWithCapabilities = aliasList.map((alias, index) => {
+    const aliasCapabilities = capabilitiesMap[capabilityPaths[index]];
+
+    return {
+      ...alias,
+      canDelete: aliasCapabilities?.canDelete || false,
+      canEdit: aliasCapabilities?.canUpdate || false,
+    };
+  });
+
+  return isSingle ? aliasesWithCapabilities[0] : aliasesWithCapabilities;
 }
 
 /**
@@ -186,7 +240,7 @@ export async function handleAliasCreate({ api, model, data }) {
 export async function handleAliasUpdate({ api, model, data }) {
   const params = buildAliasRequestParams(data);
   const method = model.identityType === 'group' ? 'groupUpdateAliasById' : 'entityUpdateAliasById';
-  return await api.identity[method](params);
+  return await api.identity[method](data.id, params);
 }
 
 /**
@@ -198,8 +252,9 @@ export async function handleAliasUpdate({ api, model, data }) {
  * @returns {Promise<Object>} API response
  */
 export async function handleUpdate({ api, model, data }) {
-  const params = buildGroupRequestParams(data);
-  const method = model.identityType === 'group' ? 'groupUpdateById' : 'entityUpdateById';
+  const isGroup = model.identityType === 'group';
+  const params = isGroup ? buildGroupRequestParams(data) : buildEntityRequestParams(data);
+  const method = isGroup ? 'groupUpdateById' : 'entityUpdateById';
   return await api.identity[method](model.itemId, params);
 }
 
@@ -216,6 +271,55 @@ export async function handleCreate({ api, model, data }) {
   const method = isGroup ? 'groupCreate' : 'entityCreate';
   const params = isGroup ? buildGroupRequestParams(data) : buildEntityRequestParams(data);
   return await api.identity[method](params);
+}
+
+/**
+ * Checks whether a name being submitted to create a new entity or group already exists. Vault
+ * silently updates the existing item instead of erroring, so the UI must catch this before submitting.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.model - The model object (expects `identityType`, `entities`, `groups`)
+ * @param {string} params.mode - The operation mode ('create', 'edit', 'merge')
+ * @param {Object} params.data - Form data
+ * @returns {string|null} A user-facing error message if the name is already taken, otherwise null
+ */
+export function findDuplicateNameError({ model, mode, data }) {
+  const isAlias = model.form.identityFormType === 'alias';
+  if (mode !== 'create' || isAlias) return null;
+
+  const { identityType } = model;
+  const existingItems = identityType === 'group' ? model.groups : model.entities;
+  const name = data?.name?.trim().toLowerCase();
+  if (!name || !existingItems?.length) return null;
+
+  const isDuplicate = existingItems.some((item) => item.name?.toLowerCase() === name);
+  return isDuplicate
+    ? `A ${identityType} named "${data.name}" already exists. Please choose a different name.`
+    : null;
+}
+
+/**
+ * Checks whether an alias name already exists on the same auth mount. Vault silently reassigns the
+ * existing alias to the new entity/group instead of erroring, so the UI must catch this before submitting.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.model - The model object (expects `form.identityFormType`, `aliases`)
+ * @param {string} params.mode - The operation mode ('create', 'edit', 'merge')
+ * @param {Object} params.data - Form data
+ * @returns {string|null} A user-facing error message if the alias already exists, otherwise null
+ */
+export function findDuplicateAliasError({ model, mode, data }) {
+  const isAlias = model.form.identityFormType === 'alias';
+  if (mode !== 'create' || !isAlias) return null;
+
+  const name = data?.name?.trim().toLowerCase();
+  const mountAccessor = data?.mount_accessor;
+  if (!name || !mountAccessor || !model.aliases?.length) return null;
+
+  const isDuplicate = model.aliases.some(
+    (alias) => alias.name?.toLowerCase() === name && alias.mount_accessor === mountAccessor
+  );
+  return isDuplicate
+    ? `An alias named "${data.name}" already exists on this auth mount. Please choose a different name or auth backend.`
+    : null;
 }
 
 /**

@@ -83,6 +83,9 @@ runs:
         # Don't use the global mod cache because we don't want to pollute it
         # with tool modules.
         GOMODCACHE: /home/runner/.cache/vault-tool-mod-cache
+        # Disable workspace mode so tool installs resolve against their own
+        # go.mod and don't attempt to fetch private workspace dependencies.
+        GOWORK: "off"
       run: |
         make tools
         du -h -d 1 ${{ env.VAULT_TOOLS_PATH }}

@@ -9,7 +9,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 )
 
 func createNamespace(_ context.Context, _ *Core, _ string, _ map[string]string) (*namespace.Namespace, error) {

@@ -1,0 +1,10 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (has-feature "Sentinel")}}
+  <Page::EgpPolicies @model={{this.model}} @page={{this.page}} @pageSize={{this.pageSize}} />
+{{else}}
+  <UpgradePage @title="Sentinel" @minimumEdition="Vault Enterprise Premium" />
+{{/if}}

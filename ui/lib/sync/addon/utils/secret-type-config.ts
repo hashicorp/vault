@@ -43,6 +43,8 @@ export interface SecretTypeConfig {
   supportsExternalLink: boolean;
   getModels: (mount: string, secretName: string) => string[];
   getQuery?: () => Record<string, string>;
+  // Normalizes a value (typed or selected from suggestions) into the secret_name expected by the sync API
+  toSecretName: (value: string) => string;
 }
 
 export const SECRET_TYPE_CONFIGS: Record<SecretType, SecretTypeConfig> = {
@@ -54,6 +56,7 @@ export const SECRET_TYPE_CONFIGS: Record<SecretType, SecretTypeConfig> = {
     route: 'kvSecretOverview',
     supportsExternalLink: true,
     getModels: (mount: string, secretName: string) => [mount, secretName],
+    toSecretName: (value: string) => value,
   },
   database: {
     placeholder: 'Static role name',
@@ -70,5 +73,7 @@ export const SECRET_TYPE_CONFIGS: Record<SecretType, SecretTypeConfig> = {
       return [mount, `role/${roleName}`];
     },
     getQuery: () => ({ type: 'static' }),
+    // The API requires the "static-roles/" prefix; add it if the user typed the role name without it
+    toSecretName: (value: string) => (value.startsWith('static-roles/') ? value : `static-roles/${value}`),
   },
 };

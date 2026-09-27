@@ -37,7 +37,7 @@ import PolicyForm from 'vault/forms/policy';
  *  <PolicyForm
  *    @form={{this.form}}
  *    @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
- *    @onCancel={{transition-to "vault.cluster.policies.index"}}
+ *    @onCancel={{transition-to "vault.cluster.policies.acl.index"}}
  *    @isCompact={{false}}
  *  />
  * ```

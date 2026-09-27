@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/go-hclog"
 	scada "github.com/hashicorp/hcp-scada-provider"
 	sdkResource "github.com/hashicorp/hcp-sdk-go/resource"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
 )

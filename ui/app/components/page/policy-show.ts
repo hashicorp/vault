@@ -25,8 +25,7 @@ export default class PagePolicyShow extends Component<Args> {
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       {
         label: `${policyType.toUpperCase()} policies`,
-        route: 'vault.cluster.policies',
-        model: policyType,
+        route: `vault.cluster.policies.${policyType}`,
       },
       { label: name },
     ];

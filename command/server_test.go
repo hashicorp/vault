@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/command/server"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
@@ -116,7 +116,7 @@ func TestServer_ReloadListener(t *testing.T) {
 	t.Parallel()
 
 	wd, _ := os.Getwd()
-	wd += "/server/test-fixtures/reload/"
+	wd += "/../helper/serverconfig/test-fixtures/reload/"
 
 	td, err := ioutil.TempDir("", "vault-test-")
 	if err != nil {

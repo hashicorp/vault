@@ -25,10 +25,6 @@ import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
-  filterBar: '[data-test-component="navigate-input"]',
-  createPolicy: '[data-test-policy-create-link]',
-  policyTitle: '[data-test-policy-name]',
-  listBreadcrumb: '[data-test-policy-list-link] a',
 };
 
 module('Acceptance | policies/acl', function (hooks) {
@@ -44,17 +40,17 @@ module('Acceptance | policies/acl', function (hooks) {
   test('it lists default and root acls', async function (assert) {
     await visit('/vault/policies/acl');
     assert.strictEqual(currentURL(), '/vault/policies/acl');
-    await fillIn(SELECT.filterBar, 'default');
+    await fillIn(GENERAL.filterInput, 'default');
     await waitFor(SELECT.policyByName('default'));
     assert.dom(SELECT.policyByName('default')).exists('default policy shown in the list');
-    await fillIn(SELECT.filterBar, 'root');
+    await fillIn(GENERAL.filterInput, 'root');
     // root isn't clickable so it has a different selector
     assert.dom('[data-test-policy-name]').hasText('root', 'root policy shown in the list');
   });
 
   test('it navigates to show when clicking on the link', async function (assert) {
     await visit('/vault/policies/acl');
-    await fillIn(SELECT.filterBar, 'default');
+    await fillIn(GENERAL.filterInput, 'default');
     await waitFor(SELECT.policyByName('default'));
     await click(SELECT.policyByName('default'));
     assert.strictEqual(currentRouteName(), 'vault.cluster.policy.show');
@@ -67,11 +63,12 @@ module('Acceptance | policies/acl', function (hooks) {
     await runCmd(`write sys/policies/acl/${policyName} policy=${window.btoa(POLICY)}`);
     await settled();
     await visit('/vault/policies/acl');
-    await fillIn(SELECT.filterBar, policyName);
+    await fillIn(GENERAL.filterInput, policyName);
     await waitFor(SELECT.policyByName(policyName));
     assert.dom(SELECT.policyByName(policyName)).exists('policy is shown in list');
-    await click(`${SELECT.policyByName(policyName)} [data-test-popup-menu-trigger]`);
-    await click(GENERAL.confirmTrigger);
+    // Open the row's popup menu, then confirm deletion via ConfirmModal.
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('delete-policy'));
     await click(GENERAL.confirmButton);
     assert.dom(SELECT.policyByName(policyName)).doesNotExist('policy is deleted successfully');
   });
@@ -83,7 +80,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await visit('/vault/policies/acl');
     // new policy creation
-    await click(SELECT.createPolicy);
+    await click(GENERAL.button('Create ACL policy'));
 
     await fillIn(GENERAL.inputByAttr('name'), policyName);
     await click(GENERAL.radioByAttr('code'));
@@ -107,7 +104,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await visit('/vault/policies/acl');
     // new policy creation
-    await click(SELECT.createPolicy);
+    await click(GENERAL.button('Create ACL policy'));
 
     await fillIn(GENERAL.inputByAttr('name'), policyName);
     // Select code editor first to bypass visual policy editor validations so we get an API error
@@ -134,7 +131,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     assert.strictEqual(currentURL(), `/vault/policies/acl`, 'navigates to policy list from breadcrumb');
     // List of policies can get long quickly -- filter for the policy to make the test more robust
-    await fillIn(SELECT.filterBar, policyLower);
+    await fillIn(GENERAL.filterInput, policyLower);
     assert
       .dom(`[data-test-policy-link="${policyLower}"]`)
       .exists({ count: 1 }, 'new policy shown in the list');

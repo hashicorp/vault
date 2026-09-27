@@ -10,24 +10,28 @@
   display: flex;
   margin-bottom: size_variables.$spacing-8;
 }
+
 .radio-card {
   box-shadow: box-shadow_variables.$box-shadow-low;
   flex: 1 1 25%;
   flex-direction: column;
   justify-content: space-between;
   margin: size_variables.$spacing-8 size_variables.$spacing-16;
-  border: box-shadow_variables.$base-border;
+  border: 1px solid var(--token-color-border-primary);
   border-radius: var(--token-form-radiocard-border-radius);
+  background: var(--token-color-surface-primary);
   transition: all ease-in-out size_variables.$speed;
   max-width: 60%;
+
   input[type='radio'] {
     position: absolute;
     z-index: 1;
     opacity: 0;
   }
 
+  // Radio dot — default (unselected) state
   input[type='radio'] + span.dot {
-    border: 1px solid var(--token-color-palette-neutral-300);
+    border: 1px solid var(--token-color-border-primary);
     border-radius: 50%;
     cursor: pointer;
     display: block;
@@ -37,20 +41,39 @@
     flex-grow: 0;
   }
 
+  // Radio dot — checked/selected state
   input[type='radio']:checked + span.dot {
     background: var(--token-color-palette-blue-200);
-    border: 1px solid var(--token-color-palette-blue-200);
-    box-shadow: inset 0 0 0 0.15rem hsl(0, 0%, 100%);
+    border: 1px solid var(--token-color-palette-blue-300);
+    box-shadow: inset 0 0 0 0.15rem var(--token-color-foreground-high-contrast);
   }
+
   input[type='radio']:focus + span.dot {
     box-shadow:
       0 0 10px 1px rgba(#1060ff, 0.4),
-      inset 0 0 0 0.15rem hsl(0, 0%, 100%);
+      inset 0 0 0 0.15rem var(--token-color-foreground-high-contrast);
   }
 
   &.is-disabled {
     opacity: 0.6;
     box-shadow: none;
+    border-color: var(--token-color-border-primary);
+    background: var(--token-color-surface-interactive-disabled);
+
+    .radio-card-message-title,
+    .radio-card-message-body {
+      color: var(--token-color-foreground-disabled);
+    }
+
+    .radio-card-radio-row {
+      background: var(--token-color-surface-interactive-disabled);
+      border-top-color: var(--token-color-border-primary);
+    }
+
+    input[type='radio'] + span.dot {
+      border-color: var(--token-color-border-primary);
+      cursor: not-allowed;
+    }
   }
 
   &.has-fixed-width {
@@ -58,25 +81,31 @@
     max-width: 368px;
   }
 }
+
 .radio-card:first-child {
   margin-left: 0;
 }
+
 .radio-card:last-child {
   margin-right: 0;
 }
+
 .radio-card-container {
   display: flex;
   flex-direction: column;
   height: 100%;
 }
+
 .radio-card-row {
   display: flex;
   flex: 1;
   padding: size_variables.$spacing-16;
 }
+
 .radio-card-icon {
-  color: var(--token-color-palette-neutral-300);
+  color: var(--token-color-foreground-faint);
 }
+
 .radio-card-message {
   margin: size_variables.$spacing-4;
 }
@@ -85,7 +114,9 @@
   font-weight: var(--token-typography-font-weight-semibold);
   font-size: size_variables.$size-7;
   margin-bottom: size_variables.$spacing-4;
+  color: var(--token-color-foreground-primary);
 }
+
 .radio-card-message-body {
   line-height: 1.2;
   color: var(--token-color-foreground-faint);
@@ -96,19 +127,32 @@
   display: flex;
   justify-content: center;
   background: var(--token-color-surface-faint);
+  border-top: 1px solid var(--token-color-border-primary);
   padding: size_variables.$spacing-8;
 }
 
+// ── Selected state ────────────────────────────────────────────────────────────
 .is-selected {
   &.radio-card {
-    border-color: var(--token-color-palette-blue-200);
-    background: var(--token-color-surface-faint);
+    border-color: var(--token-color-palette-blue-300);
+    background: var(--token-color-surface-primary);
     box-shadow: box-shadow_variables.$box-shadow-middle;
   }
-  .radio-card-icon {
-    color: hsl(0, 0%, 4%);
+
+  .radio-card-message-title {
+    color: var(--token-color-foreground-primary);
   }
+
+  .radio-card-message-body {
+    color: var(--token-color-foreground-faint);
+  }
+
+  .radio-card-icon {
+    color: var(--token-color-foreground-primary);
+  }
+
   .radio-card-radio-row {
-    background: var(--token-color-palette-blue-50);
+    background: var(--token-color-surface-action);
+    border-top-color: var(--token-color-border-action);
   }
 }

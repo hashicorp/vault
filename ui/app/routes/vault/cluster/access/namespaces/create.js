@@ -1,23 +1,21 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import UnloadModel from 'vault/mixins/unload-model-route';
+import NamespaceForm from 'vault/forms/namespace';
 
-export default Route.extend(UnloadModel, {
-  store: service(),
-  version: service(),
+export default class NamespaceCreateRoute extends Route {
+  @service version;
 
-  beforeModel() {
-    return this.version.fetchFeatures().then(() => {
-      return this._super(...arguments);
-    });
-  },
+  async beforeModel() {
+    await this.version.fetchFeatures();
+    return super.beforeModel(...arguments);
+  }
 
   model() {
-    return this.version.hasNamespaces ? this.store.createRecord('namespace') : null;
-  },
-});
+    return this.version.hasNamespaces ? new NamespaceForm({}, { isNew: true }) : null;
+  }
+}

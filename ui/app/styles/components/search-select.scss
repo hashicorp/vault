@@ -66,7 +66,7 @@
   }
 
   div > .ember-power-select-options {
-    background: hsl(0, 0%, 100%);
+    background: var(--token-color-surface-primary);
     border: box-shadow_variables.$base-border;
     box-shadow: box-shadow_variables.$box-shadow-middle;
     margin: -4px size_variables.$spacing-8 0;
@@ -80,12 +80,12 @@
     }
 
     .ember-power-select-option[aria-current='true'] {
-      background-color: var(--token-color-surface-faint);
+      background-color: var(--token-color-surface-interactive-hover);
       color: var(--token-color-foreground-primary);
     }
 
     .ember-power-select-option--no-matches-message {
-      color: var(--token-color-palette-neutral-400);
+      color: var(--token-color-foreground-faint);
       font-size: var(--token-typography-body-200-font-size);
       font-weight: var(--token-typography-font-weight-semibold);
       text-transform: uppercase;
@@ -93,7 +93,7 @@
       &:hover,
       &:focus {
         background: transparent;
-        color: var(--token-color-palette-neutral-400);
+        color: var(--token-color-foreground-faint);
       }
     }
   }
@@ -151,3 +151,13 @@
 .search-select.display-inherit {
   display: inherit;
 }
+
+// Override the vendor ember-power-select highlight (#5897fb bg / white text)
+// which fails WCAG AA contrast. Apply globally so all power-select instances
+// (not only those inside .search-select) use accessible HDS tokens.
+/* stylelint-disable selector-class-pattern */
+.ember-power-select-option[aria-current='true'] {
+  background-color: var(--token-color-surface-interactive-hover);
+  color: var(--token-color-foreground-primary);
+}
+/* stylelint-enable selector-class-pattern */

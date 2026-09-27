@@ -102,23 +102,18 @@ check_version() {
 
 # Download all the modules for all go.mod's defined in the project.
 mod_download() {
-  while IFS= read -r -d '' mod; do
-    echo "==> Downloading Go modules for $mod to $(go env GOMODCACHE)..."
-    pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
-    GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod download -x
-    GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go list ./...
-    popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
-  done < <(find . -type f -name go.mod -not -path "./tools/pipeline/*" -print0)
+  echo "==> Downloading Go modules to $(go env GOMODCACHE)..."
+  GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod download all
 }
 
 # Tidy all the go.mod's defined in the project.
 mod_tidy() {
-  while IFS= read -r -d '' mod; do
-    echo "==> Tidying $mod..."
-    pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
-    GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod tidy
+  while IFS= read -r module_dir; do
+    echo "==> Tidying $module_dir/go.mod..."
+    pushd "$module_dir" > /dev/null || (echo "failed to push into module dir" && exit 1)
+    GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp GOWORK=off go mod tidy
     popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
-  done < <(find . -type f -name go.mod ! -path '*/fixtures/*' -print0)
+  done < <(go list -m -f '{{.Dir}}')
 }
 
 main() {

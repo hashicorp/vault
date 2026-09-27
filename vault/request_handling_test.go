@@ -16,7 +16,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
@@ -35,6 +35,7 @@ func TestRequiresMaterializedTokenState(t *testing.T) {
 	}{
 		{name: "token lookup self", path: "auth/token/lookup-self", want: true},
 		{name: "token lookup", path: "auth/token/lookup", want: true},
+		{name: "capabilities self", path: "sys/capabilities-self", want: true},
 		{name: "leases lookup", path: "sys/leases/lookup", want: true},
 		{name: "leases lookup prefix", path: "sys/leases/lookup/secret/foo", want: true},
 		{name: "leases count", path: "sys/leases/count", want: true},

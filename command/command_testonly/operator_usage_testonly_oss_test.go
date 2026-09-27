@@ -14,8 +14,8 @@ import (
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/command"
-	"github.com/hashicorp/vault/helper/timeutil"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
 	"github.com/hashicorp/vault/vault"

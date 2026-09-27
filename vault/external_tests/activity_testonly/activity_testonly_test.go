@@ -18,7 +18,7 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
 	"github.com/hashicorp/vault/vault"

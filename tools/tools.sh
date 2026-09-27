@@ -15,7 +15,7 @@ go_install() {
   if [ "$(go env GOOS)" == "darwin" ]; then
     tags="netcgo"
   fi
-  if eval CGO_ENABLED=0 go install "-tags=${tags}" \"-ldflags=-w -s\" "$1"; then
+  if eval GOWORK=off CGO_ENABLED=0 go install "-tags=${tags}" \"-ldflags=-w -s\" "$1"; then
     echo "--> $1 ✔"
   else
     echo "--> $1 ✖"
@@ -124,7 +124,7 @@ check_internal() {
 install_pipeline() {
   echo "==> Installing pipeline tools..."
   pushd "$(repo_root)/tools/pipeline" &> /dev/null
-  if env GOPRIVATE=github.com/hashicorp go install ./...; then
+  if env GOWORK=off GOPRIVATE=github.com/hashicorp go install ./...; then
     echo "--> pipeline ✔"
   else
     echo "--> pipeline ✖"

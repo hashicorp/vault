@@ -8,8 +8,8 @@ import (
 	"os"
 	"strconv"
 
-	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/certutil/x509verify"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -40,9 +40,8 @@ func VerifyCertificate(issuer *IssuerEntry, system logical.SystemView, parsedBun
 		return nil
 	}
 
-	// Note that we use github.com/google/certificate-transparency-go/x509 to perform certificate verification,
-	// since that library provides options to disable checks that the standard library does not.
-	options := ctx509.VerifyOptions{
+	// x509verify.VerifyOptions provides disable flags not available in the standard crypto/x509 package.
+	options := x509verify.VerifyOptions{
 		KeyUsages:                 nil,
 		MaxConstraintComparisions: 0, // Use the library's 'sensible default'
 		DisableTimeChecks:         true,

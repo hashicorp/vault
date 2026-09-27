@@ -116,3 +116,7 @@
 @use 'components/usage-reporting/views/dashboard';
 @use 'components/vault-loading';
 @use 'components/wizard';
+
+// Theme
+@use 'theme/dark-mode/index' as dark-mode;
+@use 'theme/theme-fade.scss';

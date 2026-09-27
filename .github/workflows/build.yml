@@ -336,6 +336,8 @@ jobs:
                 -p api/auth/userpass/go.mod \
                 -p tools/pipeline/go.mod \
                 -p sdk/go.mod \
+                -p version/go.mod \
+                -p internalshared/go.mod \
                 --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
       - if: always()
         name: Upload build metric to Instana

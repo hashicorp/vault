@@ -175,6 +175,17 @@ Any valid URI is accepted, these values support globbing.`,
 			Type:        framework.TypeCommaStringSlice,
 			Description: `If set, an array of allowed user-ids to put in user system login name specified here: https://www.rfc-editor.org/rfc/rfc1274#section-9.3.1`,
 		},
+		"csr_extra_names_oids": {
+			Type:    framework.TypeCommaStringSlice,
+			Default: []string{},
+			Description: `If set, a list of OID strings in dotted-decimal notation
+(e.g. "0.9.2342.19200300.100.1.1") whose values are read from the CSR subject
+during signing operations — both the REST sign/:role endpoint and binary enrollment
+protocols (CMPv2, EST, SCEP). Values for listed OIDs are carried through to the
+issued certificate and validated against any applicable role constraints (e.g.
+allowed_user_ids for the userID OID). OIDs not in this list are silently dropped
+from the CSR subject.`,
+		},
 		"server_flag": {
 			Type:    framework.TypeBool,
 			Default: true,
@@ -556,6 +567,18 @@ Any valid URI is accepted, these values support globbing.`,
 			"allowed_user_ids": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `If set, an array of allowed user-ids to put in user system login name specified here: https://www.rfc-editor.org/rfc/rfc1274#section-9.3.1`,
+			},
+
+			"csr_extra_names_oids": {
+				Type:    framework.TypeCommaStringSlice,
+				Default: []string{},
+				Description: `If set, a list of OID strings in dotted-decimal notation
+(e.g. "0.9.2342.19200300.100.1.1") whose values are read from the CSR subject
+during signing operations — both the REST sign/:role endpoint and binary enrollment
+protocols (CMPv2, EST, SCEP). Values for listed OIDs are carried through to the
+issued certificate and validated against any applicable role constraints (e.g.
+allowed_user_ids for the userID OID). OIDs not in this list are silently dropped
+from the CSR subject.`,
 			},
 
 			"server_flag": {
@@ -1016,6 +1039,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		CNValidations:                 data.Get("cn_validations").([]string),
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
 		AllowedUserIDs:                data.Get("allowed_user_ids").([]string),
+		CsrExtraNamesOIDs:             data.Get("csr_extra_names_oids").([]string),
 		PolicyIdentifiers:             getPolicyIdentifier(data, nil),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
@@ -1272,6 +1296,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		CNValidations:                 getWithExplicitDefault(data, "cn_validations", oldEntry.CNValidations).([]string),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
 		AllowedUserIDs:                getWithExplicitDefault(data, "allowed_user_ids", oldEntry.AllowedUserIDs).([]string),
+		CsrExtraNamesOIDs:             getWithExplicitDefault(data, "csr_extra_names_oids", oldEntry.CsrExtraNamesOIDs).([]string),
 		PolicyIdentifiers:             getPolicyIdentifier(data, &oldEntry.PolicyIdentifiers),
 		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.BasicConstraintsValidForNonCA).(bool),
 		NotBeforeDuration:             getTimeWithExplicitDefault(data, "not_before_duration", oldEntry.NotBeforeDuration),

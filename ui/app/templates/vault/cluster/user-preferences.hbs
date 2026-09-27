@@ -26,3 +26,7 @@
 {{#unless @model.isHvdManaged}}
   <UserPreferences::DataPrivacy />
 {{/unless}}
+
+{{#if @model.isEnterprise}}
+  <UserPreferences::Appearance />
+{{/if}}

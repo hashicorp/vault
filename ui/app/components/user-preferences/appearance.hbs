@@ -1,0 +1,27 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<section data-test-data-appearance-section>
+  <Hds::Text::Display @tag="h2" @size="300" class="has-bottom-margin-s has-top-margin-l">Appearance</Hds::Text::Display>
+  <Hds::Text::Body @tag="p" class="has-bottom-margin-s">Choose your theme.</Hds::Text::Body>
+
+  <Hds::Form::RadioCard::Group @name="appearance-theme-radio-group" @alignment="left" as |G|>
+    <G.RadioCard @checked={{eq this.currentTheme "light"}} {{on "change" (fn this.selectTheme "light")}} as |R|>
+      <R.Icon @name="sun" />
+      <R.Label>Light</R.Label>
+      <R.Description>Vault will be displayed be in light mode.</R.Description>
+    </G.RadioCard>
+    <G.RadioCard @checked={{eq this.currentTheme "dark"}} {{on "change" (fn this.selectTheme "dark")}} as |R|>
+      <R.Icon @name="moon" />
+      <R.Label>Dark</R.Label>
+      <R.Badge @color="highlight" @text="Beta" />
+      <R.Description>Vault will be displayed in dark mode.</R.Description>
+    </G.RadioCard>
+    <G.RadioCard @checked={{eq this.currentTheme "system"}} {{on "change" (fn this.selectTheme "system")}} as |R|>
+      <R.Icon @name="hard-drive" />
+      <R.Label>System</R.Label>
+      <R.Description>Vault will follow your operating system theme.</R.Description>
+    </G.RadioCard>
+  </Hds::Form::RadioCard::Group>
+</section>

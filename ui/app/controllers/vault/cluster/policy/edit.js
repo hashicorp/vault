@@ -25,7 +25,7 @@ export default class PolicyEditController extends Controller {
       }
 
       this.flashMessages.success(`${policyType.toUpperCase()} policy "${name}" was successfully deleted.`);
-      this.router.transitionTo('vault.cluster.policies', policyType);
+      this.router.transitionTo(`vault.cluster.policies.${policyType}`);
     } catch (error) {
       const { status, message } = await this.api.parseError(error);
       if (status === 404) {

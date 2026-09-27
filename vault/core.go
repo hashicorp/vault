@@ -44,16 +44,16 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/osutil"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/helper/trace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/osutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -2956,10 +2956,13 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.migrateProfilesByIssuerIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
-			return c.populateIssuerNamespacesIndex(ctx)
+			return c.setupOAuthResourceServerConfigManager(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupHealthCheckManager()
 		})
 		setupFunctions = append(setupFunctions, c.loadAudits)
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
@@ -3196,9 +3199,6 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		// starts, which happens in the post-unseal functions above.
 		sysActivityLogReporting(c.systemBackend)
 	}
-
-	// initialize the HealthCheckManager
-	c.healthCheckManager = NewHealthCheckManager(c)
 
 	c.logger.Info("post-unseal setup complete")
 	return nil
