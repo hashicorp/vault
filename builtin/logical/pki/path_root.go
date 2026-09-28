@@ -315,7 +315,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	}
 
 	// Store it as the CA bundle
-	myIssuer, myKey, err := sc.writeCaBundle(cb, issuerName, keyName)
+	myIssuer, myKey, err := sc.writeCaBundle(cb, issuerName, keyName, genParams.role.ParameterSet)
 	if err != nil {
 		return nil, err
 	}
@@ -323,6 +323,9 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	resp.Data["issuer_name"] = myIssuer.Name
 	resp.Data["key_id"] = myKey.ID
 	resp.Data["key_name"] = myKey.Name
+	if myKey.PrivateKeyType == certutil.MLDSAPrivateKey {
+		resp.Data[parameterSetParam] = myKey.ParameterSet
+	}
 
 	// The one time that it is safe (and good) to copy the
 	// SignatureAlgorithm field off the certificate (for the purposes of

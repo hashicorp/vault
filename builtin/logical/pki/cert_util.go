@@ -609,7 +609,7 @@ func convertRespToPKCS8(resp *logical.Response) error {
 		signer, err = x509.ParsePKCS1PrivateKey(keyData)
 	case certutil.ECPrivateKey:
 		signer, err = x509.ParseECPrivateKey(keyData)
-	case certutil.Ed25519PrivateKey:
+	case certutil.Ed25519PrivateKey, certutil.MLDSAPrivateKey:
 		k, err := x509.ParsePKCS8PrivateKey(keyData)
 		if err != nil {
 			return fmt.Errorf("error converting response to pkcs8: error parsing previous key: %w", err)

@@ -4,6 +4,9 @@
 package pki
 
 import (
+	"crypto/mldsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"testing"
 
@@ -344,4 +347,141 @@ func TestSignIntermediate_PKCS12AndJKSFormat(t *testing.T) {
 			})
 		}
 	}
+}
+
+// TestSignIntermediate_MLDSA exercises the full intermediate CA workflow for ML-DSA keys:
+// an ML-DSA-44 root generates and signs an ML-DSA-65 intermediate CSR, the signed
+// intermediate is imported into a separate PKI mount, and a leaf certificate is issued
+// from the intermediate.
+func TestSignIntermediate_MLDSA(t *testing.T) {
+	t.Parallel()
+
+	// Root CA backend (ML-DSA-44).
+	bRoot, sRoot := CreateBackendWithStorage(t)
+	// Intermediate CA backend (ML-DSA-65).
+	bInt, sInt := CreateBackendWithStorage(t)
+
+	// Step 1: Generate an ML-DSA-44 root CA.
+	resp, err := CBWrite(bRoot, sRoot, "root/generate/internal", map[string]interface{}{
+		"common_name":   "ML-DSA Root CA",
+		"key_type":      "ml-dsa",
+		"parameter_set": "44",
+		"ttl":           "87600h",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed to generate ML-DSA-44 root CA")
+	rootCertPEM := resp.Data["certificate"].(string)
+	rootCert := parseCert(t, rootCertPEM)
+
+	require.True(t, rootCert.IsCA, "root certificate should be a CA")
+	require.True(t, rootCert.BasicConstraintsValid, "root certificate should have BasicConstraints")
+	// A self-signed root is signed with its own ML-DSA-44 key.
+	require.Equal(t, x509.MLDSA44, rootCert.SignatureAlgorithm,
+		"root cert should use ML-DSA-44 signature algorithm")
+	require.NotEmpty(t, rootCert.SubjectKeyId, "root certificate SubjectKeyId should be non-empty")
+
+	rootPub, ok := rootCert.PublicKey.(*mldsa.PublicKey)
+	require.True(t, ok, "root certificate public key should be *mldsa.PublicKey")
+	require.Equal(t, mldsa.MLDSA44(), rootPub.Parameters(),
+		"root certificate public key should use ML-DSA-44 parameters")
+
+	// Step 2: Generate an ML-DSA-65 intermediate CSR on the intermediate backend.
+	resp, err = CBWrite(bInt, sInt, "intermediate/generate/internal", map[string]interface{}{
+		"common_name":   "ML-DSA Intermediate CA",
+		"key_type":      "ml-dsa",
+		"parameter_set": "65",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed to generate ML-DSA-65 intermediate CSR")
+	intCSR := resp.Data["csr"].(string)
+	require.NotEmpty(t, intCSR, "intermediate CSR should be non-empty")
+
+	// Verify the CSR decodes as a valid PEM block.
+	csrBlock, rest := pem.Decode([]byte(intCSR))
+	require.NotNil(t, csrBlock, "intermediate CSR PEM should decode")
+	require.Empty(t, rest, "intermediate CSR PEM should have no trailing data")
+
+	// Step 3: Sign the intermediate CSR with the ML-DSA-44 root.
+	resp, err = CBWrite(bRoot, sRoot, "root/sign-intermediate", map[string]interface{}{
+		"common_name": "ML-DSA Intermediate CA",
+		"csr":         intCSR,
+		"ttl":         "43800h",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed to sign ML-DSA intermediate CSR with ML-DSA-44 root")
+	intCertPEM := resp.Data["certificate"].(string)
+	intCert := parseCert(t, intCertPEM)
+
+	require.True(t, intCert.IsCA, "intermediate certificate should be a CA")
+	require.True(t, intCert.BasicConstraintsValid, "intermediate certificate should have BasicConstraints")
+	require.Equal(t, x509.MLDSA44, intCert.SignatureAlgorithm,
+		"intermediate cert should carry ML-DSA-44 signature algorithm (signed by the ML-DSA-44 root)")
+	require.NotEmpty(t, intCert.SubjectKeyId, "intermediate certificate SubjectKeyId should be non-empty")
+
+	intPub, ok := intCert.PublicKey.(*mldsa.PublicKey)
+	require.True(t, ok, "intermediate certificate public key should be *mldsa.PublicKey")
+	require.Equal(t, mldsa.MLDSA65(), intPub.Parameters(),
+		"intermediate certificate public key should use ML-DSA-65 parameters")
+
+	// The intermediate's issuer should match the root's subject.
+	require.Equal(t, rootCert.RawSubject, intCert.RawIssuer,
+		"intermediate certificate issuer should match root certificate subject")
+
+	// Step 4: Import the signed intermediate (plus root chain) into the intermediate backend.
+	resp, err = CBWrite(bInt, sInt, "intermediate/set-signed", map[string]interface{}{
+		"certificate": intCertPEM + "\n" + rootCertPEM,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed to import signed ML-DSA intermediate certificate")
+
+	// Step 5: Create a role on the intermediate backend and issue a leaf certificate.
+	// The intermediate backend's default issuer is the ML-DSA-65 intermediate.
+	_, err = CBWrite(bInt, sInt, "roles/mldsa-leaf-role", map[string]interface{}{
+		"allow_any_name": true,
+		"max_ttl":        "1h",
+		"key_type":       "ml-dsa",
+		"parameter_set":  "65",
+	})
+	require.NoError(t, err, "failed to create ML-DSA leaf role")
+
+	resp, err = CBWrite(bInt, sInt, "issue/mldsa-leaf-role", map[string]interface{}{
+		"common_name": "leaf.example.com",
+		"ttl":         "1h",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "failed to issue ML-DSA leaf certificate")
+
+	leafCertPEM := resp.Data["certificate"].(string)
+	leafCert := parseCert(t, leafCertPEM)
+
+	require.False(t, leafCert.IsCA, "leaf certificate should not be a CA")
+	// The leaf is signed by the ML-DSA-65 intermediate, so its SignatureAlgorithm must
+	// be ML-DSA-65.
+	require.Equal(t, x509.MLDSA65, leafCert.SignatureAlgorithm,
+		"leaf certificate should use ML-DSA-65 signature algorithm (signed by ML-DSA-65 intermediate)")
+
+	leafPub, ok := leafCert.PublicKey.(*mldsa.PublicKey)
+	require.True(t, ok, "leaf certificate public key should be *mldsa.PublicKey")
+	require.Equal(t, mldsa.MLDSA65(), leafPub.Parameters(),
+		"leaf certificate public key should use ML-DSA-65 parameters (generated by the ML-DSA-65 role)")
+
+	// Step 6: Validate the certificate chain: leaf → intermediate → root.
+	rootPool := x509.NewCertPool()
+	rootPool.AddCert(rootCert)
+
+	intermediatePool := x509.NewCertPool()
+	intermediatePool.AddCert(intCert)
+
+	chains, err := leafCert.Verify(x509.VerifyOptions{
+		Roots:         rootPool,
+		Intermediates: intermediatePool,
+		// Use the leaf's NotBefore so test TTLs do not cause time-based failures.
+		CurrentTime: leafCert.NotBefore,
+	})
+	require.NoError(t, err, "leaf certificate chain verification failed")
+	require.NotEmpty(t, chains, "expected at least one valid certificate chain")
+
+	// The verified chain should be: leaf → intermediate → root (length 3).
+	require.Len(t, chains[0], 3, "expected chain length of 3 (leaf, intermediate, root)")
+	require.Equal(t, leafCert.SerialNumber, chains[0][0].SerialNumber,
+		"first element in chain should be the leaf")
+	require.Equal(t, intCert.SerialNumber, chains[0][1].SerialNumber,
+		"second element in chain should be the intermediate")
+	require.Equal(t, rootCert.SerialNumber, chains[0][2].SerialNumber,
+		"third element in chain should be the root")
 }

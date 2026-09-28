@@ -487,6 +487,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 			ForceAppendCaChain:            caSign != nil,
 			SKID:                          skid,
 			IgnoreCSRSignature:            cb.IgnoreCSRSignature(),
+			ParameterSet:                  role.ParameterSet,
 		},
 		SigningBundle: caSign,
 		CSR:           csr,
