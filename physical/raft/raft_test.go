@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -797,6 +798,58 @@ func TestRaft_Removed(t *testing.T) {
 		require.True(t, callbackCalled.Load())
 		require.False(t, raft1.IsRemoved())
 		require.False(t, raft2.IsRemoved())
+	})
+}
+
+func TestRaft_RemovedCheckerWaitsForFSMCatchUp(t *testing.T) {
+	t.Parallel()
+	testBothRaftBackends(t, func(t *testing.T, raftWALValue string) {
+		conf := map[string]string{
+			"trailing_logs": "100",
+			"raft_wal":      raftWALValue,
+		}
+
+		leader, _ := GetRaftWithConfig(t, true, true, conf)
+		follower, _ := GetRaftWithConfig(t, false, true, conf)
+		defer leader.TeardownCluster(nil)
+		defer follower.TeardownCluster(nil)
+
+		addPeer(t, leader, follower)
+		require.Eventually(t, func() bool {
+			removed, err := follower.IsNodeRemoved(context.Background(), follower.NodeID())
+			return err == nil && !removed
+		}, 10*time.Second, 10*time.Millisecond)
+		// Ensure the checker has recorded that this node was present before
+		// creating a committed configuration change that removes it.
+		time.Sleep(1100 * time.Millisecond)
+
+		applyStarted := make(chan struct{})
+		releaseApply := make(chan struct{})
+		var releaseOnce sync.Once
+		release := func() { releaseOnce.Do(func() { close(releaseApply) }) }
+		defer release()
+		follower.SetFSMApplyCallback(func() {
+			select {
+			case <-applyStarted:
+			default:
+				close(applyStarted)
+			}
+			<-releaseApply
+		})
+		require.NoError(t, leader.RemovePeer(context.Background(), follower.NodeID()))
+		select {
+		case <-applyStarted:
+		case <-time.After(10 * time.Second):
+			t.Fatal("timed out waiting for follower FSM to begin applying removal")
+		}
+		require.Eventually(t, func() bool {
+			return follower.raft.CommitIndex() > follower.AppliedIndex()
+		}, 5*time.Second, 10*time.Millisecond)
+
+		time.Sleep(1100 * time.Millisecond)
+		require.False(t, follower.IsRemoved(), "node must not mark itself removed before its FSM applies the removal")
+		release()
+		require.Eventually(t, follower.IsRemoved, 10*time.Second, 10*time.Millisecond)
 	})
 }
 
