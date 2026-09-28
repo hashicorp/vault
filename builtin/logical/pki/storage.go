@@ -149,7 +149,7 @@ func (sc *storageContext) deleteKey(id issuing.KeyID) (bool, error) {
 	return issuing.DeleteKey(sc.Context, sc.Storage, id)
 }
 
-func (sc *storageContext) importKey(keyValue string, keyName string, keyType certutil.PrivateKeyType) (*issuing.KeyEntry, bool, error) {
+func (sc *storageContext) importKey(keyValue string, keyName string, keyType certutil.PrivateKeyType, parameterSet certutil.ParameterSet) (*issuing.KeyEntry, bool, error) {
 	// importKey imports the specified PEM-format key (from keyValue) into
 	// the new PKI storage format. The first return field is a reference to
 	// the new key; the second is whether or not the key already existed
@@ -218,6 +218,7 @@ func (sc *storageContext) importKey(keyValue string, keyName string, keyType cer
 	result.Name = keyName
 	result.PrivateKey = keyValue
 	result.PrivateKeyType = keyType
+	result.ParameterSet = parameterSet
 
 	// Finally, we can write the key to storage.
 	if err := sc.writeKey(result); err != nil {
@@ -562,8 +563,8 @@ func (sc *storageContext) fetchCertBundleByIssuerId(id issuing.IssuerID, loadKey
 	return issuing.FetchCertBundleByIssuerId(sc.Context, sc.Storage, id, loadKey)
 }
 
-func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuing.IssuerEntry, *issuing.KeyEntry, error) {
-	myKey, _, err := sc.importKey(caBundle.PrivateKey, keyName, caBundle.PrivateKeyType)
+func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerName string, keyName string, parameterSet certutil.ParameterSet) (*issuing.IssuerEntry, *issuing.KeyEntry, error) {
+	myKey, _, err := sc.importKey(caBundle.PrivateKey, keyName, caBundle.PrivateKeyType, parameterSet)
 	if err != nil {
 		return nil, nil, err
 	}

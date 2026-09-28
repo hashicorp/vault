@@ -4028,6 +4028,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 		"cn_validations":                     []interface{}{"email", "hostname"},
 		"allowed_user_ids":                   []interface{}{},
 		"csr_extra_names_oids":               []interface{}{},
+		"parameter_set":                      "44",
 	}
 
 	if issuing.MetadataPermitted {
