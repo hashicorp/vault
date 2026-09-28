@@ -66,9 +66,6 @@ export default class ClusterModel extends Model {
   get storageType() {
     return this.leaderNode?.storageType;
   }
-  get hcpLinkStatus() {
-    return this.leaderNode?.hcpLinkStatus;
-  }
   get hasProgress() {
     return this.sealProgress >= 1;
   }
