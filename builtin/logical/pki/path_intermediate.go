@@ -205,7 +205,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		}
 	}
 
-	myKey, _, err := sc.importKey(csrb.PrivateKey, keyName, csrb.PrivateKeyType)
+	myKey, _, err := sc.importKey(csrb.PrivateKey, keyName, csrb.PrivateKeyType, genParams.role.ParameterSet)
 	if err != nil {
 		return nil, err
 	}

@@ -279,7 +279,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
       'called with correct arguments to disable'
     );
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully disabled entity'),
+      this.flashSuccessStub.calledWith('Successfully disabled entity test-entity-1'),
       'shows correct success flash'
     );
     assert.true(
@@ -300,7 +300,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
       'called with correct arguments to enable'
     );
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully enabled entity'),
+      this.flashSuccessStub.calledWith('Successfully enabled entity test-entity-2'),
       'shows correct success flash'
     );
     assert.true(
@@ -318,7 +318,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
 
     assert.true(this.flashDangerStub.calledOnce, 'danger flash message shown');
     assert.true(
-      this.flashDangerStub.calledWith('Error disabling entity: Test error message'),
+      this.flashDangerStub.calledWith('Error enabling entity: Test error message'),
       'shows correct error message'
     );
   });
@@ -340,7 +340,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
     assert.true(this.entityDeleteStub.calledOnce, 'entityDeleteById called once');
     assert.true(this.entityDeleteStub.calledWith('entity-1'), 'called with correct entity ID');
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully deleted entity entity-1'),
+      this.flashSuccessStub.calledWith('Successfully deleted entity: test-entity-1'),
       'shows correct success flash'
     );
     assert.true(
@@ -358,7 +358,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
 
     assert.true(this.flashDangerStub.calledOnce, 'danger flash message shown');
     assert.true(
-      this.flashDangerStub.calledWith('Error deleting entity entity-1: Test error message'),
+      this.flashDangerStub.calledWith('Error deleting entity test-entity-1: Test error message'),
       'shows correct error message'
     );
   });
@@ -421,7 +421,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
     assert.true(this.entityDeleteAliasStub.calledOnce, 'entityDeleteAliasById called once');
     assert.true(this.entityDeleteAliasStub.calledWith('alias-1'), 'called with correct alias ID');
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully deleted alias alias-1'),
+      this.flashSuccessStub.calledWith('Successfully deleted alias: test-alias-1'),
       'shows correct success flash'
     );
     assert.true(
@@ -441,7 +441,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
 
     assert.true(this.flashDangerStub.calledOnce, 'danger flash message shown');
     assert.true(
-      this.flashDangerStub.calledWith('Error deleting alias alias-1: Test error message'),
+      this.flashDangerStub.calledWith('Error deleting alias test-alias-1: Test error message'),
       'shows correct error message'
     );
   });
