@@ -67,7 +67,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       const aliasGeneratedId = await createAlias(itemType, itemGeneratedId, name);
 
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${singularize(capitalize(itemType))} alias.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved Alias: ${name}.`),
         `${itemType}: shows a flash message when creating an alias.`
       );
 
@@ -90,7 +90,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
       await click('[data-test-popup-menu="delete"]');
       await click(GENERAL.confirmButton);
 
-      assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
+      assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted alias: ${name}`);
     });
 
     test(`${itemType}: cancel on the create alias page navigates to the entities/groups list, not the legacy aliases list`, async function (assert) {

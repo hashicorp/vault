@@ -130,7 +130,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(`${GENERAL.listItem('foo')} ${GENERAL.menuItem('delete')}`);
     await click(GENERAL.confirmButton);
 
-    const message = `Error deleting entity null: ${error}`;
+    const message = `Error deleting entity foo: ${error}`;
     assert.true(flashSpy.calledWith(message), 'Correct flash message is shown');
   });
 

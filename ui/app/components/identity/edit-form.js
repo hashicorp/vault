@@ -83,9 +83,15 @@ export default class IdentityEditFormComponent extends Component {
     return model?.itemId || model?.id;
   }
 
+  get deleteNoun() {
+    const isAlias = this.args.model?.form?.identityFormType === 'alias';
+    return isAlias ? 'alias' : this.args.model?.identityType;
+  }
+
   getMessage(model, isDelete = false) {
     const mode = this.args.mode;
-    const typeDisplay = humanize([model.identityType]);
+    const isAlias = model.form.identityFormType === 'alias';
+    const typeDisplay = isAlias ? humanize(['alias']) : humanize([model.identityType]);
     const name = model.form?.data?.name;
 
     if (isDelete) {
@@ -93,9 +99,6 @@ export default class IdentityEditFormComponent extends Component {
     }
     if (mode === 'merge') {
       return 'Successfully merged entities';
-    }
-    if (model.form.identityFormType === 'alias') {
-      return `Successfully saved ${typeDisplay} alias.`;
     }
     if (name) {
       return `Successfully saved ${typeDisplay}: ${name}.`;
@@ -140,22 +143,27 @@ export default class IdentityEditFormComponent extends Component {
   @action
   async deleteItem(model) {
     const message = this.getMessage(model, true);
-    const flash = this.flashMessages;
-
     const formType = model.form.identityFormType;
     const identityType = model.identityType;
+    const id = this.cancelModelId;
 
-    if (formType === 'alias') {
-      const methodType = identityType === 'group' ? 'groupDeleteAliasById' : 'entityDeleteAliasById';
-      await this.api.identity[methodType](model.id);
-    } else {
-      const methodType = identityType === 'group' ? 'groupDeleteById' : 'entityDeleteById';
-      await this.api.identity[methodType](model.itemId);
+    try {
+      if (formType === 'alias') {
+        const methodType = identityType === 'group' ? 'groupDeleteAliasById' : 'entityDeleteAliasById';
+        await this.api.identity[methodType](id);
+      } else {
+        const methodType = identityType === 'group' ? 'groupDeleteById' : 'entityDeleteById';
+        await this.api.identity[methodType](id);
+      }
+
+      this.flashMessages.success(message);
+
+      return this.args.onSave({ saveType: 'delete', model });
+    } catch (err) {
+      const { message: errorMessage } = await this.api.parseError(err);
+      this.errorBanner = errorMessage;
+      return undefined;
     }
-
-    flash.success(message);
-
-    return this.args.onSave({ saveType: 'delete', model });
   }
 
   @action
