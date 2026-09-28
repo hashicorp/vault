@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -13,7 +13,6 @@ import clients from './clients';
 import customLogin from './custom-login';
 import customMessages from './custom-messages';
 import database from './database';
-import hcpLink from './hcp-link';
 import kms from './kms';
 import kubernetes from './kubernetes';
 import ldap from './ldap';
@@ -34,7 +33,6 @@ export {
   customLogin,
   customMessages,
   database,
-  hcpLink,
   kms,
   kubernetes,
   ldap,
