@@ -317,4 +317,42 @@ module('Unit | Helper | displayNavItem', function (hooks) {
       assert.false(supportsSecretsRecovery);
     });
   });
+
+  module('agent registry', function () {
+    test('it returns true when enterprise and platform-standard is licensed', function (assert) {
+      this.version.type = 'enterprise';
+      this.version.features = ['platform-standard'];
+
+      const result = computeNavBar(this, RouteName.AGENT_REGISTRY);
+
+      assert.true(result);
+    });
+
+    test('it returns true when enterprise and agentic-iam is licensed', function (assert) {
+      this.version.type = 'enterprise';
+      this.version.features = ['agentic-iam'];
+
+      const result = computeNavBar(this, RouteName.AGENT_REGISTRY);
+
+      assert.true(result);
+    });
+
+    test('it returns false when enterprise but neither platform-standard nor agentic-iam is licensed', function (assert) {
+      this.version.type = 'enterprise';
+      this.version.features = [];
+
+      const result = computeNavBar(this, RouteName.AGENT_REGISTRY);
+
+      assert.false(result);
+    });
+
+    test('it returns false for community edition clusters', function (assert) {
+      this.version.type = 'community';
+      this.version.features = [];
+
+      const result = computeNavBar(this, RouteName.AGENT_REGISTRY);
+
+      assert.false(result);
+    });
+  });
 });
