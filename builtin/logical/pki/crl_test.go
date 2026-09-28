@@ -157,24 +157,28 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		KeyType string
-		KeyBits int
-		SigBits int
-		UsePSS  bool
-		SigAlgo string
+		KeyType      string
+		KeyBits      int
+		ParameterSet string
+		SigBits      int
+		UsePSS       bool
+		SigAlgo      string
 	}
 
 	testCases := []testCase{
-		{"rsa", 2048, 256, false, "SHA256WithRSA"},
-		{"rsa", 2048, 384, false, "SHA384WithRSA"},
-		{"rsa", 2048, 512, false, "SHA512WithRSA"},
-		{"rsa", 2048, 256, true, "SHA256WithRSAPSS"},
-		{"rsa", 2048, 384, true, "SHA384WithRSAPSS"},
-		{"rsa", 2048, 512, true, "SHA512WithRSAPSS"},
-		{"ec", 256, 256, false, "ECDSAWithSHA256"},
-		{"ec", 384, 384, false, "ECDSAWithSHA384"},
-		{"ec", 521, 521, false, "ECDSAWithSHA512"},
-		{"ed25519", 0, 0, false, "Ed25519"},
+		{"rsa", 2048, "", 256, false, "SHA256WithRSA"},
+		{"rsa", 2048, "", 384, false, "SHA384WithRSA"},
+		{"rsa", 2048, "", 512, false, "SHA512WithRSA"},
+		{"rsa", 2048, "", 256, true, "SHA256WithRSAPSS"},
+		{"rsa", 2048, "", 384, true, "SHA384WithRSAPSS"},
+		{"rsa", 2048, "", 512, true, "SHA512WithRSAPSS"},
+		{"ec", 256, "", 256, false, "ECDSAWithSHA256"},
+		{"ec", 384, "", 384, false, "ECDSAWithSHA384"},
+		{"ec", 521, "", 521, false, "ECDSAWithSHA512"},
+		{"ed25519", 0, "", 0, false, "Ed25519"},
+		{"ml-dsa", 0, certutil.MLDSA44, 0, false, "MLDSA44"},
+		{"ml-dsa", 0, certutil.MLDSA65, 0, false, "MLDSA65"},
+		{"ml-dsa", 0, certutil.MLDSA87, 0, false, "MLDSA87"},
 	}
 
 	for index, tc := range testCases {
@@ -188,6 +192,7 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 			"key_bits":       tc.KeyBits,
 			"signature_bits": tc.SigBits,
 			"use_pss":        tc.UsePSS,
+			"parameter_set":  tc.ParameterSet,
 		})
 		if err != nil {
 			t.Fatalf("tc %v: %v", index, err)
@@ -413,7 +418,7 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
 	bundle := genCertBundle(t, b, s)
-	issuer, _, err := sc.writeCaBundle(bundle, "", "")
+	issuer, _, err := sc.writeCaBundle(bundle, "", "", "")
 	require.NoError(t, err)
 
 	// Just to validate, before we call the invalidate function, make sure our CRL has not been generated
@@ -438,7 +443,7 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
 	bundle := genCertBundle(t, b, s)
-	_, _, err := sc.writeCaBundle(bundle, "", "")
+	_, _, err := sc.writeCaBundle(bundle, "", "", "")
 	require.NoError(t, err)
 
 	cb := newCRLBuilder(true /* can rebuild and write CRLs */)

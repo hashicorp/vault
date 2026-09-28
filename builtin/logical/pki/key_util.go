@@ -6,6 +6,7 @@ package pki
 import (
 	"context"
 	"crypto"
+	"crypto/mldsa"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -86,9 +87,34 @@ func importKeyFromBytes(sc *storageContext, keyValue string, keyName string) (*i
 		return nil, false, errors.New("unsupported private key type within pem bundle")
 	}
 
-	key, existed, err := sc.importKey(keyValue, keyName, privateKeyType)
+	var parameterSet certutil.ParameterSet
+	if privateKeyType == certutil.MLDSAPrivateKey {
+		pub, ok := signer.Public().(*mldsa.PublicKey)
+		if !ok {
+			return nil, false, fmt.Errorf("unexpected key type %T", signer)
+		}
+		parameterSet, err = getMLDSAParameterSet(pub)
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	key, existed, err := sc.importKey(keyValue, keyName, privateKeyType, parameterSet)
 	if err != nil {
 		return nil, false, err
 	}
 	return key, existed, nil
+}
+
+func getMLDSAParameterSet(pub *mldsa.PublicKey) (certutil.ParameterSet, error) {
+	switch pub.Parameters() {
+	case mldsa.MLDSA44():
+		return certutil.MLDSA44, nil
+	case mldsa.MLDSA65():
+		return certutil.MLDSA65, nil
+	case mldsa.MLDSA87():
+		return certutil.MLDSA87, nil
+	default:
+		return "", fmt.Errorf("unsupported ML-DSA parameters: %s", pub.Parameters())
+	}
 }

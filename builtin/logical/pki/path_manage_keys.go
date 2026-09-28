@@ -37,8 +37,8 @@ func pathGenerateKey(b *backend) *framework.Path {
 				Type:    framework.TypeString,
 				Default: "rsa",
 				Description: `The type of key to use; defaults to RSA. "rsa"
-"ec" and "ed25519" are the only valid values.`,
-				AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+"ec", "ed25519", and "ml-dsa" are the only valid values.`,
+				AllowedValues: []interface{}{"rsa", "ec", "ed25519", "ml-dsa"},
 				DisplayAttrs: &framework.DisplayAttributes{
 					Value: "rsa",
 				},
@@ -62,6 +62,13 @@ is required. Ignored for other types.`,
 type is kms. When kms type is the key type, this field or managed_key_name
 is required. Ignored for other types.`,
 			},
+			parameterSetParam: {
+				Type:    framework.TypeString,
+				Default: "44",
+				Description: `The parameter set to use for ML-DSA keys; defaults to 44. Valid values are
+				44, 65, and 87.`,
+				AllowedValues: []interface{}{"44", "65", "87"},
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -84,13 +91,20 @@ is required. Ignored for other types.`,
 							"key_type": {
 								Type: framework.TypeString,
 								Description: `The type of key to use; defaults to RSA. "rsa"
-								"ec" and "ed25519" are the only valid values.`,
+								"ec", "ed25519", and "ml-dsa" are the only valid values.`,
 								Required: true,
 							},
 							"private_key": {
 								Type:        framework.TypeString,
 								Description: `The private key string`,
 								Required:    false,
+							},
+							parameterSetParam: {
+								Type:    framework.TypeString,
+								Default: "44",
+								Description: `The parameter set to use for ML-DSA keys; defaults to 44. Valid values are
+				44, 65, and 87. Only valid for ML-DSA keys.`,
+								AllowedValues: []interface{}{"44", "65", "87"},
 							},
 						},
 					}},
@@ -131,6 +145,7 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	var keyBundle certutil.KeyBundle
 	var actualPrivateKeyType certutil.PrivateKeyType
 	var keyBits int
+	var parameterSet string
 	switch {
 	case strings.HasSuffix(req.Path, "/exported"):
 		exportPrivateKey = true
@@ -138,14 +153,15 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 	case strings.HasSuffix(req.Path, "/internal"):
 		keyType := data.Get(keyTypeParam).(string)
 		keyBits = data.Get(keyBitsParam).(int)
+		parameterSet = data.Get(parameterSetParam).(string)
 
-		keyBits, err := certutil.ValidateDefaultOrValueKeyType(keyType, keyBits)
+		keyBits, err := certutil.ValidateDefaultOrValueKeyType(keyType, keyBits, parameterSet)
 		if err != nil {
-			return logical.ErrorResponse("Validation for key_type, key_bits failed: %s", err.Error()), nil
+			return logical.ErrorResponse("Validation for key_type, key_bits, parameter_set failed: %s", err.Error()), nil
 		}
 
 		// Internal key generation, stored in storage
-		keyBundle, err = certutil.CreateKeyBundle(keyType, keyBits, b.GetRandomReader())
+		keyBundle, err = certutil.CreateKeyBundle(keyType, keyBits, b.GetRandomReader(), certutil.ParameterSet(parameterSet))
 		if err != nil {
 			return nil, err
 		}
@@ -170,14 +186,15 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 
-	key, _, err := sc.importKey(privateKeyPemString, keyName, keyBundle.PrivateKeyType)
+	key, _, err := sc.importKey(privateKeyPemString, keyName, keyBundle.PrivateKeyType, certutil.ParameterSet(parameterSet))
 	if err != nil {
 		return nil, err
 	}
 	responseData := map[string]interface{}{
-		keyIdParam:   key.ID,
-		keyNameParam: key.Name,
-		keyTypeParam: string(actualPrivateKeyType),
+		keyIdParam:        key.ID,
+		keyNameParam:      key.Name,
+		keyTypeParam:      string(actualPrivateKeyType),
+		parameterSetParam: key.ParameterSet,
 	}
 	if exportPrivateKey {
 		responseData["private_key"] = privateKeyPemString
@@ -244,8 +261,12 @@ func pathImportKey(b *backend) *framework.Path {
 							"key_type": {
 								Type: framework.TypeString,
 								Description: `The type of key to use; defaults to RSA. "rsa"
-								"ec" and "ed25519" are the only valid values.`,
+								"ec", "ed25519", and "ml-dsa" are the only valid values.`,
 								Required: true,
+							},
+							parameterSetParam: {
+								Type:        framework.TypeString,
+								Description: `The parameter set for ML-DSA keys.`,
 							},
 						},
 					}},
@@ -354,9 +375,10 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 
 	resp := logical.Response{
 		Data: map[string]interface{}{
-			keyIdParam:   key.ID,
-			keyNameParam: key.Name,
-			keyTypeParam: key.PrivateKeyType,
+			keyIdParam:        key.ID,
+			keyNameParam:      key.Name,
+			keyTypeParam:      key.PrivateKeyType,
+			parameterSetParam: key.ParameterSet,
 		},
 	}
 
@@ -369,6 +391,7 @@ func (b *backend) pathImportKeyHandler(ctx context.Context, req *logical.Request
 		observe.NewAdditionalPKIMetadata("key_type", key.PrivateKeyType),
 		observe.NewAdditionalPKIMetadata("key_id", key.ID),
 		observe.NewAdditionalPKIMetadata("key_name", key.Name),
+		observe.NewAdditionalPKIMetadata("parameter_set", key.ParameterSet),
 	}
 	if exportKeyHMAC != "" {
 		obsMeta = append(obsMeta, observe.NewAdditionalPKIMetadata("export_key_hmac", exportKeyHMAC))

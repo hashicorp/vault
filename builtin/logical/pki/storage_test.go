@@ -121,14 +121,14 @@ func Test_KeysIssuerImport(t *testing.T) {
 	issuer1.ID = ""
 	issuer1.KeyID = ""
 
-	key1Ref1, existing, err := sc.importKey(key1.PrivateKey, "key1", key1.PrivateKeyType)
+	key1Ref1, existing, err := sc.importKey(key1.PrivateKey, "key1", key1.PrivateKeyType, "")
 	require.NoError(t, err)
 	require.False(t, existing)
 	require.Equal(t, strings.TrimSpace(key1.PrivateKey), strings.TrimSpace(key1Ref1.PrivateKey))
 
 	// Make sure if we attempt to re-import the same private key, no import/updates occur.
 	// So the existing flag should be set to true, and we do not update the existing Name field.
-	key1Ref2, existing, err := sc.importKey(key1.PrivateKey, "ignore-me", key1.PrivateKeyType)
+	key1Ref2, existing, err := sc.importKey(key1.PrivateKey, "ignore-me", key1.PrivateKeyType, "")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key1.PrivateKey, key1Ref1.PrivateKey)
@@ -179,7 +179,7 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, issuer2.KeyID, issuer2Ref.KeyID)
 
 	// Same double import tests as above, but make sure if the previous was created through writeKey not importKey.
-	key2Ref, existing, err := sc.importKey(key2.PrivateKey, "ignore-me", key2.PrivateKeyType)
+	key2Ref, existing, err := sc.importKey(key2.PrivateKey, "ignore-me", key2.PrivateKeyType, "")
 	require.NoError(t, err)
 	require.True(t, existing)
 	require.Equal(t, key2.PrivateKey, key2Ref.PrivateKey)
