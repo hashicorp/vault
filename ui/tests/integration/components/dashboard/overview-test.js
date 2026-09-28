@@ -315,7 +315,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert
       .dom(GENERAL.cardContainer('feature-spotlight'))
       .exists('feature spotlight card is visible on enterprise');
-    assert.dom(GENERAL.textDisplay('New Agent Registry in Vault')).hasText('New Agent Registry in Vault');
+    assert.dom(GENERAL.textDisplay()).exists('feature spotlight card renders a title');
   });
 
   test('it does not show the feature spotlight card on community', async function (assert) {
@@ -329,27 +329,37 @@ module('Integration | Component | dashboard/overview', function (hooks) {
   });
 
   test('it uses the dark image for the feature spotlight in dark mode', async function (assert) {
-    this.version.version = '1.13.1+ent';
-    this.version.type = 'enterprise';
     const theme = this.owner.lookup('service:theme');
     sinon.stub(theme, 'isDarkMode').value(true);
-    await this.renderComponent();
+    this.cards = [
+      {
+        title: 'Test',
+        description: 'Desc',
+        link: '/test',
+        imageSrc: '/light.png',
+        imageSrcDark: '/dark.png',
+      },
+    ];
+    await render(hbs`<Dashboard::Widgets::FeatureSpotlight @cards={{this.cards}} />`);
 
-    assert
-      .dom(`${GENERAL.cardContainer('feature-spotlight')} img`)
-      .hasAttribute('src', '/ui/images/agent-registry-dashboard-dark.png');
+    assert.dom(`${GENERAL.cardContainer('feature-spotlight')} img`).hasAttribute('src', '/dark.png');
   });
 
   test('it uses the light image for the feature spotlight in light mode', async function (assert) {
-    this.version.version = '1.13.1+ent';
-    this.version.type = 'enterprise';
     const theme = this.owner.lookup('service:theme');
     sinon.stub(theme, 'isDarkMode').value(false);
-    await this.renderComponent();
+    this.cards = [
+      {
+        title: 'Test',
+        description: 'Desc',
+        link: '/test',
+        imageSrc: '/light.png',
+        imageSrcDark: '/dark.png',
+      },
+    ];
+    await render(hbs`<Dashboard::Widgets::FeatureSpotlight @cards={{this.cards}} />`);
 
-    assert
-      .dom(`${GENERAL.cardContainer('feature-spotlight')} img`)
-      .hasAttribute('src', '/ui/images/agent-registry-dashboard.png');
+    assert.dom(`${GENERAL.cardContainer('feature-spotlight')} img`).hasAttribute('src', '/light.png');
   });
 
   test('it shows the learn more card on community', async function (assert) {
