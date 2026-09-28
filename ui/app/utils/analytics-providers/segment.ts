@@ -5,6 +5,8 @@
 
 import { AnalyticsBrowser } from '@segment/analytics-next';
 
+import { getStringPreference } from 'vault/utils/preferences';
+
 import type { MiddlewareFunction } from '@segment/analytics-next';
 import type { AnalyticsEventName, AnalyticsProvider } from 'vault/vault/analytics';
 
@@ -61,6 +63,7 @@ const ALLOWED_PROPERTIES = new Set([
   'viewportWidth',
   'viewportHeight',
   'viewportOrientation',
+  'viewportColorScheme',
 ]);
 
 const redactMiddleware: MiddlewareFunction = ({ payload, next }) => {
@@ -162,6 +165,7 @@ export class SegmentProvider implements AnalyticsProvider {
       viewportWidth: width,
       viewportHeight: height,
       viewportOrientation: width >= height ? 'landscape-primary' : 'portrait-primary',
+      viewportColorScheme: getStringPreference('theme'),
     };
   }
 

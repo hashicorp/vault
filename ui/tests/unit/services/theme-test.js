@@ -11,8 +11,10 @@ import ThemeService from 'vault/services/theme';
 module('Unit | Service | theme', function (hooks) {
   setupTest(hooks);
 
+  const STORAGE_KEY = 'vault:prefs:theme';
+
   hooks.beforeEach(function () {
-    window.localStorage.removeItem('vault:theme');
+    window.localStorage.removeItem(STORAGE_KEY);
     document.documentElement.removeAttribute('data-theme');
     // Destroy the cached singleton and evict it from the container cache so
     // each test's lookup() constructs a brand-new instance. unregister() alone
@@ -31,7 +33,7 @@ module('Unit | Service | theme', function (hooks) {
   hooks.afterEach(function () {
     sinon.restore();
     document.documentElement.removeAttribute('data-theme');
-    window.localStorage.removeItem('vault:theme');
+    window.localStorage.removeItem(STORAGE_KEY);
   });
 
   // --- initial theme resolution ---
@@ -59,7 +61,7 @@ module('Unit | Service | theme', function (hooks) {
   });
 
   test('stored "dark" value overrides system preference', function (assert) {
-    window.localStorage.setItem('vault:theme', 'dark');
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify('dark'));
     const stub = sinon.stub(window, 'matchMedia').returns({ matches: false });
     const service = this.owner.lookup('service:theme');
 
@@ -71,7 +73,7 @@ module('Unit | Service | theme', function (hooks) {
   });
 
   test('stored "light" value overrides system dark preference', function (assert) {
-    window.localStorage.setItem('vault:theme', 'light');
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify('light'));
     const stub = sinon.stub(window, 'matchMedia').returns({ matches: true });
     const service = this.owner.lookup('service:theme');
 
@@ -83,7 +85,7 @@ module('Unit | Service | theme', function (hooks) {
   });
 
   test('falls back to system when localStorage has invalid value', function (assert) {
-    window.localStorage.setItem('vault:theme', 'invalid-theme');
+    window.localStorage.setItem(STORAGE_KEY, 'invalid-theme');
     const stub = sinon.stub(window, 'matchMedia').returns({ matches: false });
     const service = this.owner.lookup('service:theme');
 
@@ -105,13 +107,17 @@ module('Unit | Service | theme', function (hooks) {
     assert.strictEqual(service.theme, 'dark', 'theme is dark');
     assert.true(service.isDarkMode, 'isDarkMode is true');
     assert.dom(document.documentElement).hasAttribute('data-theme', 'dark');
-    assert.strictEqual(window.localStorage.getItem('vault:theme'), 'dark', 'persisted to localStorage');
+    assert.strictEqual(
+      window.localStorage.getItem(STORAGE_KEY),
+      JSON.stringify('dark'),
+      'persisted to localStorage'
+    );
 
     stub.restore();
   });
 
   test('setTheme("light") sets light theme and persists to localStorage', function (assert) {
-    window.localStorage.setItem('vault:theme', 'dark');
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify('dark'));
     const stub = sinon.stub(window, 'matchMedia').returns({ matches: false });
     const service = this.owner.lookup('service:theme');
 
@@ -120,13 +126,17 @@ module('Unit | Service | theme', function (hooks) {
     assert.strictEqual(service.theme, 'light', 'theme is light');
     assert.false(service.isDarkMode, 'isDarkMode is false');
     assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
-    assert.strictEqual(window.localStorage.getItem('vault:theme'), 'light', 'persisted to localStorage');
+    assert.strictEqual(
+      window.localStorage.getItem(STORAGE_KEY),
+      JSON.stringify('light'),
+      'persisted to localStorage'
+    );
 
     stub.restore();
   });
 
   test('setTheme("system") defers to media query', function (assert) {
-    window.localStorage.setItem('vault:theme', 'dark');
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify('dark'));
     const stub = sinon.stub(window, 'matchMedia').returns({ matches: false });
     const service = this.owner.lookup('service:theme');
 
@@ -135,7 +145,11 @@ module('Unit | Service | theme', function (hooks) {
     assert.strictEqual(service.theme, 'system', 'theme is system');
     assert.false(service.isDarkMode, 'isDarkMode follows light media query');
     assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
-    assert.strictEqual(window.localStorage.getItem('vault:theme'), 'system', 'persisted to localStorage');
+    assert.strictEqual(
+      window.localStorage.getItem(STORAGE_KEY),
+      JSON.stringify('system'),
+      'persisted to localStorage'
+    );
 
     stub.restore();
   });

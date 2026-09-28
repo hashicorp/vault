@@ -70,6 +70,7 @@ export const INTRO_REOPEN_CLICKED = UI_INTERACTION;
 
 // User preferences
 export const USER_PREFERENCES_PERSONA_SET = UI_INTERACTION;
+export const USER_PREFERENCES_THEME_SET = UI_INTERACTION;
 
 // Dashboard feature spotlight widget
 export const DASHBOARD_FEATURE_SPOTLIGHT_LEARN_MORE = CTA_CLICKED;

@@ -65,6 +65,11 @@ export const STRING_PREFERENCES: Record<string, StringPreferenceDefinition> = {
     type: 'string',
     default: '',
   },
+  theme: {
+    key: `${NAMESPACE}:theme`,
+    type: 'string',
+    default: 'system',
+  },
 };
 
 export type StringPreferenceName = keyof typeof STRING_PREFERENCES;
