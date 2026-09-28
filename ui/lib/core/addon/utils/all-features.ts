@@ -18,6 +18,8 @@ const ALL_FEATURES = [
   'Transform Secrets Engine',
   'Secrets Sync',
   'PKI-only Secrets',
+  'platform-standard',
+  'agentic-iam',
 ];
 
 export function allFeatures() {

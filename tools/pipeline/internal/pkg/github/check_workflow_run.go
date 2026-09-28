@@ -792,7 +792,7 @@ func (r *CheckWorkflowRunReq) buildBranchResult(
 			return "Workflow run has failed jobs that prevented required jobs from running"
 		}
 		if len(eval.FailedJobs) > 0 && len(eval.MissingPatterns) > 0 {
-			return "Required jobs failed or missing"
+			return "Required jobs failed and missing"
 		}
 		if len(eval.FailedJobs) > 0 {
 			return "Required jobs failed"
