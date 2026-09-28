@@ -113,6 +113,11 @@ type ServerCommand struct {
 	reloadedCh        chan (struct{}) // for tests
 	licenseReloadedCh chan error      // for tests
 
+	// tlsReloaders holds a poller for each listener that has opted in to
+	// automatic certificate reloading via tls_reload_interval. They are
+	// populated by InitListeners and started by Run.
+	tlsReloaders []*listenerutil.TLSReloader
+
 	allLoggers []hclog.Logger
 
 	flagConfigs            []string
@@ -615,11 +620,23 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	// Initialize the listeners
 	lns := make([]listenerutil.Listener, 0, len(config.Listeners))
+	var tlsReloaders []*listenerutil.TLSReloader
 	for _, lnConfig := range config.Listeners {
-		ln, _, _, err := server.NewListener(lnConfig, c.logGate, c.UI)
+		ln, _, reloadFunc, err := server.NewListener(lnConfig, c.logGate, c.UI)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error initializing listener of type %s: %s", lnConfig.Type, err))
 			return 1
+		}
+
+		// reloadFunc is only non-nil when TLS is enabled on the listener.
+		if reloadFunc != nil && lnConfig.TLSReloadInterval > 0 {
+			tlsReloaders = append(tlsReloaders, listenerutil.NewTLSReloader(
+				lnConfig.TLSCertFile,
+				lnConfig.TLSKeyFile,
+				lnConfig.TLSReloadInterval,
+				reloadFunc,
+				c.logger.Named("listener.tls"),
+			))
 		}
 
 		lns = append(lns, listenerutil.Listener{
@@ -628,13 +645,25 @@ func (c *ServerCommand) runRecoveryMode() int {
 		})
 	}
 
+	// tlsReloadCtx bounds the lifetime of the TLS certificate reloader
+	// goroutines started below; it is cancelled alongside listener shutdown so
+	// that no polling goroutines outlive their listeners.
+	tlsReloadCtx, tlsReloadCancel := context.WithCancel(context.Background())
+
 	listenerCloseFunc := func() {
+		tlsReloadCancel()
 		for _, ln := range lns {
 			ln.Listener.Close()
 		}
 	}
 
 	defer c.cleanupGuard.Do(listenerCloseFunc)
+
+	// Recovery mode does not handle SIGHUP, so polling is the only way for a
+	// rotated certificate to be picked up while the server is running.
+	for _, reloader := range tlsReloaders {
+		go reloader.Run(tlsReloadCtx)
+	}
 
 	infoKeys = append(infoKeys, "version")
 	verInfo := version.GetVersion()
@@ -861,6 +890,7 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 	defer c.reloadFuncsLock.Unlock()
 
 	var errMsg error
+	c.tlsReloaders = nil
 	for i, lnConfig := range config.Listeners {
 		ln, props, reloadFunc, err := server.NewListener(lnConfig, c.logGate, c.UI)
 		if err != nil {
@@ -872,6 +902,17 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 			relSlice := (*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)]
 			relSlice = append(relSlice, reloadFunc)
 			(*c.reloadFuncs)[fmt.Sprintf("listener|%s", lnConfig.Type)] = relSlice
+
+			// reloadFunc is only non-nil when TLS is enabled on the listener.
+			if lnConfig.TLSReloadInterval > 0 {
+				c.tlsReloaders = append(c.tlsReloaders, listenerutil.NewTLSReloader(
+					lnConfig.TLSCertFile,
+					lnConfig.TLSKeyFile,
+					lnConfig.TLSReloadInterval,
+					reloadFunc,
+					c.logger.Named("listener.tls"),
+				))
+			}
 		}
 
 		if !disableClustering && lnConfig.Type == "tcp" {
@@ -1458,8 +1499,14 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// tlsReloadCtx bounds the lifetime of the TLS certificate reloader
+	// goroutines started below; it is cancelled alongside listener shutdown so
+	// that no polling goroutines outlive their listeners.
+	tlsReloadCtx, tlsReloadCancel := context.WithCancel(context.Background())
+
 	// Make sure we close all listeners from this point on
 	listenerCloseFunc := func() {
+		tlsReloadCancel()
 		for _, ln := range lns {
 			ln.Listener.Close()
 		}
@@ -1561,6 +1608,18 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Instantiate the wait group
 	c.WaitGroup = &sync.WaitGroup{}
+
+	// Start automatic TLS certificate reloading for any listener configured
+	// with tls_reload_interval. This lets an operator (or a Kubernetes Secret
+	// update) replace the cert/key files on disk and have Vault pick them up
+	// without a process restart or a manually triggered SIGHUP.
+	for _, reloader := range c.tlsReloaders {
+		c.WaitGroup.Add(1)
+		go func(r *listenerutil.TLSReloader) {
+			defer c.WaitGroup.Done()
+			r.Run(tlsReloadCtx)
+		}(reloader)
+	}
 
 	// If service discovery is available, run service discovery
 	err = runListeners(c, &coreConfig, config, configSR)
