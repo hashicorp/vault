@@ -20,7 +20,11 @@ replace github.com/hashicorp/vault/api/auth/kubernetes => ./api/auth/kubernetes
 
 replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
+replace github.com/hashicorp/vault/internalshared => ./internalshared
+
 replace github.com/hashicorp/vault/sdk => ./sdk
+
+replace github.com/hashicorp/vault/version => ./version
 
 // The keyring library has an outstanding bug that causes zombie dbus-daemon
 // processes on each execution. Vault has an indirect dependency on keyring via
@@ -36,6 +40,14 @@ replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v
 // the upstream when/if this is resolved.
 // See: https://github.com/TritonDataCenter/triton-go/pull/207
 replace github.com/TritonDataCenter/triton-go/v2 => github.com/ryancragun/triton-go/v2 v2.0.0-20260514164147-e8b61dd0652d
+
+// Handle super old tencentcloud-sdk-go from go-plugin.
+replace github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 => github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.83
+
+// GO-2026-6443: github.com/hashicorp/vault-plugin-secrets-pki-external-ca@v0.3.0 requires
+// google.golang.org/grpc@v1.84.0, however, that version has a CVE that we don't want
+// and a newer stable version isn't out yet. Instead, we'll force a downgrade for now.
+replace google.golang.org/grpc v1.84.0 => google.golang.org/grpc v1.83.2
 
 require (
 	cloud.google.com/go/cloudsqlconn v1.21.0
@@ -247,8 +259,8 @@ require (
 	golang.org/x/text v0.42.0
 	golang.org/x/time v0.16.0
 	golang.org/x/tools v0.49.0
-	google.golang.org/api v0.297.0
-	google.golang.org/grpc v1.83.2
+	google.golang.org/api v0.299.0
+	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
@@ -259,9 +271,9 @@ require (
 require (
 	cel.dev/expr v0.25.2 // indirect
 	cloud.google.com/go v0.123.0 // indirect
-	cloud.google.com/go/auth v0.23.2 // indirect
+	cloud.google.com/go/auth v0.23.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
-	cloud.google.com/go/compute/metadata v0.9.0 // indirect
+	cloud.google.com/go/compute/metadata v0.9.1 // indirect
 	cloud.google.com/go/iam v1.12.0 // indirect
 	cloud.google.com/go/kms v1.32.0 // indirect; indirect\
 	cloud.google.com/go/longrunning v1.2.0 // indirect
@@ -291,7 +303,7 @@ require (
 	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/DataDog/datadog-go v4.8.3+incompatible // indirect
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.6.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.33.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.34.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.56.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/internal/resourcemapping v0.56.0 // indirect
 	github.com/Jeffail/gabs/v2 v2.1.0 // indirect
@@ -415,10 +427,10 @@ require (
 	github.com/google/go-metrics-stackdriver v0.2.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/pprof v0.0.0-20250630185457-6e76a2b096b5 // indirect
-	github.com/google/s2a-go v0.1.9 // indirect
+	github.com/google/s2a-go v0.1.10 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/googleapis/enterprise-certificate-proxy v0.3.20 // indirect
-	github.com/googleapis/gax-go/v2 v2.24.0 // indirect
+	github.com/googleapis/enterprise-certificate-proxy v0.3.22 // indirect
+	github.com/googleapis/gax-go/v2 v2.24.1 // indirect
 	github.com/gophercloud/gophercloud v1.14.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
@@ -586,9 +598,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-replace github.com/hashicorp/vault/version => ./version
-
-replace github.com/hashicorp/vault/internalshared => ./internalshared
-
-replace github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 => github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.83
