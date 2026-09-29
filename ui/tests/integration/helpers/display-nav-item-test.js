@@ -321,7 +321,7 @@ module('Unit | Helper | displayNavItem', function (hooks) {
   module('agent registry', function () {
     test('it returns true when enterprise and platform-standard is licensed', function (assert) {
       this.version.type = 'enterprise';
-      this.version.features = ['platform-standard'];
+      this.version.features = ['Agentic IAM'];
 
       const result = computeNavBar(this, RouteName.AGENT_REGISTRY);
 
@@ -330,7 +330,7 @@ module('Unit | Helper | displayNavItem', function (hooks) {
 
     test('it returns true when enterprise and agentic-iam is licensed', function (assert) {
       this.version.type = 'enterprise';
-      this.version.features = ['agentic-iam'];
+      this.version.features = ['Agentic IAM'];
 
       const result = computeNavBar(this, RouteName.AGENT_REGISTRY);
 
