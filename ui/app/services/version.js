@@ -58,8 +58,8 @@ export default class VersionService extends Service {
   }
 
   // Agent Registry requires either the platform-standard or agentic-iam license module.
-  get hasAgentRegistry() {
-    return this.features.includes('platform-standard') || this.features.includes('agentic-iam');
+  get hasAgenticIam() {
+    return this.features.includes('Agentic IAM');
   }
 
   get hasSecretsSync() {
