@@ -110,6 +110,17 @@ cloud {
     client_secret = "N9JtHZyOnHrIvJZs82pqa54vd4jnkyU3xCcqhFXuQKJZZuxqxxbP1xCfBZVB82vY"
 }
 `
+
+	autoReloadHCL = `
+backend "inmem" {}
+disable_mlock = true
+listener "tcp" {
+  address             = "127.0.0.1:8204"
+  tls_cert_file       = "TMPDIR/reload_cert.pem"
+  tls_key_file        = "TMPDIR/reload_key.pem"
+  tls_reload_interval = "1s"
+}
+`
 )
 
 func TestServer_ReloadListener(t *testing.T) {
@@ -199,6 +210,100 @@ func TestServer_ReloadListener(t *testing.T) {
 	if err := testCertificateName("bar.example.com"); err != nil {
 		t.Fatalf("certificate name didn't check out: %s", err)
 	}
+
+	cmd.ShutdownCh <- struct{}{}
+
+	wg.Wait()
+}
+
+// TestServer_AutoReloadListener verifies that a listener configured with
+// tls_reload_interval picks up a replaced certificate/key pair on its own,
+// without requiring a SIGHUP or a process restart. This is the mechanism
+// that lets a Vault node absorb short-lived certificate rotations (e.g. from
+// a Kubernetes Secret update or an external rotation tool replacing files on
+// a VM) without any degradation to cluster availability.
+func TestServer_AutoReloadListener(t *testing.T) {
+	t.Parallel()
+
+	wd, _ := os.Getwd()
+	wd += "/../helper/serverconfig/test-fixtures/reload/"
+
+	td := t.TempDir()
+
+	wg := &sync.WaitGroup{}
+	// Setup initial certs
+	inBytes, err := os.ReadFile(wd + "reload_foo.pem")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(td, "reload_cert.pem"), inBytes, 0o600))
+	inBytes, err = os.ReadFile(wd + "reload_foo.key")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(td, "reload_key.pem"), inBytes, 0o600))
+
+	relhcl := strings.ReplaceAll(autoReloadHCL, "TMPDIR", td)
+	require.NoError(t, os.WriteFile(filepath.Join(td, "reload.hcl"), []byte(relhcl), 0o600))
+
+	inBytes, err = os.ReadFile(wd + "reload_ca.pem")
+	require.NoError(t, err)
+	certPool := x509.NewCertPool()
+	ok := certPool.AppendCertsFromPEM(inBytes)
+	if !ok {
+		t.Fatal("not ok when appending CA cert")
+	}
+
+	ui, cmd := testServerCommand(t)
+	_ = ui
+
+	wg.Add(1)
+	args := []string{"-config", filepath.Join(td, "reload.hcl")}
+	go func() {
+		if code := cmd.Run(args); code != 0 {
+			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+			t.Errorf("got a non-zero exit status: %s", output)
+		}
+		wg.Done()
+	}()
+
+	testCertificateName := func(cn string) error {
+		conn, err := tls.Dial("tcp", "127.0.0.1:8204", &tls.Config{
+			RootCAs: certPool,
+		})
+		if err != nil {
+			return err
+		}
+		defer conn.Close()
+		if err = conn.Handshake(); err != nil {
+			return err
+		}
+		servName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
+		if servName != cn {
+			return fmt.Errorf("expected %s, got %s", cn, servName)
+		}
+		return nil
+	}
+
+	select {
+	case <-cmd.startedCh:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timeout")
+	}
+
+	if err := testCertificateName("foo.example.com"); err != nil {
+		t.Fatalf("certificate name didn't check out: %s", err)
+	}
+
+	// Replace the cert/key on disk, simulating an external rotation (e.g. a
+	// Kubernetes Secret update or a VM-local rotation tool), without sending
+	// SIGHUP or touching the running process.
+	inBytes, err = os.ReadFile(wd + "reload_bar.pem")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(td, "reload_cert.pem"), inBytes, 0o600))
+	inBytes, err = os.ReadFile(wd + "reload_bar.key")
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(td, "reload_key.pem"), inBytes, 0o600))
+
+	require.Eventually(t, func() bool {
+		return testCertificateName("bar.example.com") == nil
+	}, 10*time.Second, 100*time.Millisecond, "listener never picked up the rotated certificate automatically")
 
 	cmd.ShutdownCh <- struct{}{}
 

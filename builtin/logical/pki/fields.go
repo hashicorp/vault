@@ -13,13 +13,14 @@ import (
 )
 
 const (
-	issuerRefParam = "issuer_ref"
-	keyNameParam   = "key_name"
-	keyRefParam    = "key_ref"
-	keyIdParam     = "key_id"
-	keyTypeParam   = "key_type"
-	keyBitsParam   = "key_bits"
-	skidParam      = "subject_key_id"
+	issuerRefParam    = "issuer_ref"
+	keyNameParam      = "key_name"
+	keyRefParam       = "key_ref"
+	keyIdParam        = "key_id"
+	keyTypeParam      = "key_type"
+	keyBitsParam      = "key_bits"
+	skidParam         = "subject_key_id"
+	parameterSetParam = "parameter_set"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
@@ -416,10 +417,17 @@ RSA key-type issuer. Defaults to false.`,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
 "ec" and "ed25519" are the only valid values.`,
-		AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+		AllowedValues: []interface{}{"rsa", "ec", "ed25519", "ml-dsa"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "rsa",
 		},
+	}
+
+	fields[parameterSetParam] = &framework.FieldSchema{
+		Type:          framework.TypeString,
+		Default:       "44",
+		Description:   `The parameter set to use for ML-DSA keys; defaults to 44. Valid values are 44, 65, and 87`,
+		AllowedValues: []interface{}{"44", "65", "87"},
 	}
 
 	fields = addKeyRefNameFields(fields)

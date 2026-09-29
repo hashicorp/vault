@@ -95,7 +95,8 @@ type RoleEntry struct {
 	// Name is only set when the role has been stored, on the fly roles have a blank name
 	Name string `json:"-"`
 	// WasModified indicates to callers if the returned entry is different than the persisted version
-	WasModified bool `json:"-"`
+	WasModified  bool                  `json:"-"`
+	ParameterSet certutil.ParameterSet `json:"parameter_set,omitempty"`
 }
 
 // CsrExtraNamesOIDsContains reports whether the given OID is listed in
@@ -161,6 +162,7 @@ func (r *RoleEntry) ToResponseData() map[string]interface{} {
 		"not_before_duration":                int64(r.NotBeforeDuration.Seconds()),
 		"not_after":                          r.NotAfter,
 		"issuer_ref":                         r.Issuer,
+		"parameter_set":                      r.ParameterSet,
 	}
 	if r.MaxPathLength != nil {
 		responseData["max_path_length"] = r.MaxPathLength

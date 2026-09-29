@@ -31,6 +31,7 @@ type KeyEntry struct {
 	Name           string                  `json:"name"`
 	PrivateKeyType certutil.PrivateKeyType `json:"private_key_type"`
 	PrivateKey     string                  `json:"private_key"`
+	ParameterSet   certutil.ParameterSet   `json:"parameter_set,omitempty"`
 }
 
 func (e KeyEntry) IsManagedPrivateKey() bool {

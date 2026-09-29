@@ -1,0 +1,3 @@
+```release-note:feature
+**ML-DSA Support in PKI**: Add support for post-quantum signatures with ML-DSA keys in the PKI secrets engine.
+```

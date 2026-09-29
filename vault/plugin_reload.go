@@ -216,8 +216,10 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, ns *namespace.Nam
 		},
 	)
 	for i := skippedFrom; i < len(results); i++ {
-		if results[i].err == nil {
-			results[i].err = ctx.Err()
+		results[i] = reloadResult{
+			mountPath: targets[i].mountPath,
+			entry:     targets[i].entry,
+			err:       ctx.Err(),
 		}
 	}
 
@@ -321,9 +323,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 				},
 			)
 			for i := skippedFrom; i < len(results); i++ {
-				if results[i].err == nil {
-					results[i].err = ctx.Err()
-				}
+				results[i] = reloadResult{entry: matchingSecretEntries[i], err: ctx.Err()}
 			}
 
 			for _, r := range results {
@@ -369,9 +369,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 				},
 			)
 			for i := skippedFrom; i < len(results); i++ {
-				if results[i].err == nil {
-					results[i].err = ctx.Err()
-				}
+				results[i] = reloadResult{entry: matchingAuthEntries[i], err: ctx.Err()}
 			}
 
 			for _, r := range results {

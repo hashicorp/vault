@@ -22,6 +22,7 @@ export enum RouteName {
   VAULT_USAGE = 'vault-usage',
   LICENSE = 'license',
   BILLING_DASHBOARD = 'billing-dashboard',
+  AGENT_REGISTRY = 'agent-registry',
 }
 
 export enum NavSection {
@@ -38,8 +39,16 @@ export default class NavBar extends Helper {
   @service declare readonly flags: FlagsService;
 
   compute([navItem]: string[]) {
-    const { SECRETS_RECOVERY, SEAL, REPLICATION, VAULT_USAGE, LICENSE, SECRETS_SYNC, BILLING_DASHBOARD } =
-      RouteName;
+    const {
+      SECRETS_RECOVERY,
+      SEAL,
+      REPLICATION,
+      VAULT_USAGE,
+      LICENSE,
+      SECRETS_SYNC,
+      BILLING_DASHBOARD,
+      AGENT_REGISTRY,
+    } = RouteName;
     const { RESILIENCE_AND_RECOVERY, REPORTING, CLIENT_COUNT } = NavSection;
 
     switch (navItem) {
@@ -68,6 +77,9 @@ export default class NavBar extends Helper {
         return this.supportsReplication;
       case RESILIENCE_AND_RECOVERY:
         return this.supportsSnapshots || this.canSeal || this.supportsReplication;
+      // agentic security nav items
+      case AGENT_REGISTRY:
+        return this.supportsAgentRegistry;
       default:
         return true;
     }
@@ -166,6 +178,11 @@ export default class NavBar extends Helper {
       isCorrectNamespace &&
       this.permissions.hasNavPermission('billing', 'overview')
     );
+  }
+
+  // Agent Registry is available only when the license includes platform-standard or agentic-iam.
+  get supportsAgentRegistry() {
+    return this.version.isEnterprise && this.version.hasAgentRegistry;
   }
 }
 

@@ -3,6 +3,6 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Header @title="Create {{titleize (humanize this.model.identityType)}} for {{this.model.canonicalId}}" />
+<Page::Header @title="Create alias for {{this.model.canonicalName}}" />
 
 <Identity::EditForm @model={{this.model}} @mode="create" @onSave={{action "navAfterSave"}} />

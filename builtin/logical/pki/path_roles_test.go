@@ -15,6 +15,7 @@ import (
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
@@ -1194,4 +1195,175 @@ func getPolicyInformationExtensionOffCertificate(resp logical.Response) ([]byte,
 		}
 	}
 	return *new([]byte), errors.New("No Policy Information Extension Found")
+}
+
+// TestRoles_MLDSA_CRUD verifies creating, reading, updating (via write and patch),
+// and deleting roles configured with ML-DSA keys across all supported parameter sets (44, 65, 87).
+func TestRoles_MLDSA_CRUD(t *testing.T) {
+	t.Parallel()
+
+	parameterSets := []string{
+		certutil.MLDSA44,
+		certutil.MLDSA65,
+		certutil.MLDSA87,
+	}
+
+	for _, paramSet := range parameterSets {
+		t.Run("mldsa-"+paramSet, func(t *testing.T) {
+			t.Parallel()
+
+			b, s := CreateBackendWithStorage(t)
+			roleName := fmt.Sprintf("role-mldsa-%s", paramSet)
+			rolePath := "roles/" + roleName
+
+			// 1. Create role with ML-DSA key_type and parameter_set
+			resp, err := CBWrite(b, s, rolePath, map[string]interface{}{
+				"allow_any_name": true,
+				"key_type":       "ml-dsa",
+				"parameter_set":  paramSet,
+				"ttl":            "1h",
+				"max_ttl":        "24h",
+			})
+			requireSuccessNonNilResponse(t, resp, err, "create ML-DSA-%s role", paramSet)
+
+			// 2. Read role and verify ML-DSA fields
+			resp, err = CBRead(b, s, rolePath)
+			requireSuccessNonNilResponse(t, resp, err, "read ML-DSA-%s role", paramSet)
+			require.Equal(t, "ml-dsa", resp.Data["key_type"], "expected key_type to be ml-dsa")
+			require.Equal(t, certutil.ParameterSet(paramSet), resp.Data["parameter_set"], "expected parameter_set to match %s", paramSet)
+			require.Equal(t, true, resp.Data["allow_any_name"], "expected allow_any_name to be true")
+
+			// 3. Update role via write (e.g. modify TTL and domains)
+			resp, err = CBWrite(b, s, rolePath, map[string]interface{}{
+				"allow_any_name":   false,
+				"allowed_domains":  []string{"example.com"},
+				"allow_subdomains": true,
+				"key_type":         "ml-dsa",
+				"parameter_set":    paramSet,
+				"ttl":              "2h",
+				"max_ttl":          "48h",
+			})
+			requireSuccessNonNilResponse(t, resp, err, "update ML-DSA-%s role via write", paramSet)
+
+			resp, err = CBRead(b, s, rolePath)
+			requireSuccessNonNilResponse(t, resp, err, "read ML-DSA-%s role after write update", paramSet)
+			require.Equal(t, "ml-dsa", resp.Data["key_type"], "expected key_type to be ml-dsa")
+			require.Equal(t, certutil.ParameterSet(paramSet), resp.Data["parameter_set"], "expected parameter_set to match %s", paramSet)
+			require.Equal(t, false, resp.Data["allow_any_name"], "expected allow_any_name to be false")
+			require.Equal(t, int64(7200), resp.Data["ttl"], "expected ttl to be updated to 2h (7200s)")
+
+			// 4. Update role via patch (e.g. patch parameter_set or other fields)
+			resp, err = CBPatch(b, s, rolePath, map[string]interface{}{
+				"ttl": "3h",
+			})
+			requireSuccessNonNilResponse(t, resp, err, "patch ML-DSA-%s role", paramSet)
+
+			resp, err = CBRead(b, s, rolePath)
+			requireSuccessNonNilResponse(t, resp, err, "read ML-DSA-%s role after patch", paramSet)
+			require.Equal(t, "ml-dsa", resp.Data["key_type"], "expected key_type to remain ml-dsa after patch")
+			require.Equal(t, certutil.ParameterSet(paramSet), resp.Data["parameter_set"], "expected parameter_set to remain %s after patch", paramSet)
+			require.Equal(t, int64(10800), resp.Data["ttl"], "expected ttl to be patched to 3h (10800s)")
+
+			// 5. Delete role
+			resp, err = CBDelete(b, s, rolePath)
+			require.NoError(t, err, "delete ML-DSA-%s role", paramSet)
+
+			// 6. Read deleted role, verify it no longer exists
+			resp, err = CBRead(b, s, rolePath)
+			require.NoError(t, err, "read deleted ML-DSA-%s role should not error", paramSet)
+			require.Nil(t, resp, "expected nil response when reading deleted ML-DSA-%s role", paramSet)
+		})
+	}
+}
+
+// TestRoles_MLDSA_UpdateParameterSet verifies that a role's ML-DSA parameter set
+// can be updated from one valid parameter set to another via patch and write operations.
+func TestRoles_MLDSA_UpdateParameterSet(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+	rolePath := "roles/mldsa-param-transition"
+
+	// Create role initially with ML-DSA-44
+	resp, err := CBWrite(b, s, rolePath, map[string]interface{}{
+		"allow_any_name": true,
+		"key_type":       "ml-dsa",
+		"parameter_set":  certutil.MLDSA44,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "create role with ML-DSA-44")
+
+	resp, err = CBRead(b, s, rolePath)
+	requireSuccessNonNilResponse(t, resp, err, "read role with ML-DSA-44")
+	require.Equal(t, certutil.ParameterSet(certutil.MLDSA44), resp.Data["parameter_set"], "expected parameter_set to be 44")
+
+	// Patch parameter_set to ML-DSA-65
+	resp, err = CBPatch(b, s, rolePath, map[string]interface{}{
+		"parameter_set": certutil.MLDSA65,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "patch role parameter_set to ML-DSA-65")
+
+	resp, err = CBRead(b, s, rolePath)
+	requireSuccessNonNilResponse(t, resp, err, "read role after patch to ML-DSA-65")
+	require.Equal(t, certutil.ParameterSet(certutil.MLDSA65), resp.Data["parameter_set"], "expected parameter_set to be 65")
+
+	// Verify that the parameter set doesn't change when other fields are updated
+	resp, err = CBPatch(b, s, rolePath, map[string]interface{}{
+		"no_store": true,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "patch role no_store to true")
+	require.Equal(t, certutil.ParameterSet(certutil.MLDSA65), resp.Data["parameter_set"], "expected parameter_set to be 65")
+
+	// Patch parameter_set to ML-DSA-87
+	resp, err = CBPatch(b, s, rolePath, map[string]interface{}{
+		"parameter_set": certutil.MLDSA87,
+	})
+	requireSuccessNonNilResponse(t, resp, err, "patch role parameter_set to ML-DSA-87")
+
+	resp, err = CBRead(b, s, rolePath)
+	requireSuccessNonNilResponse(t, resp, err, "read role after patch to ML-DSA-87")
+	require.Equal(t, certutil.ParameterSet(certutil.MLDSA87), resp.Data["parameter_set"], "expected parameter_set to be 87")
+
+	// Clean up
+	resp, err = CBDelete(b, s, rolePath)
+	require.NoError(t, err, "delete role")
+
+	resp, err = CBRead(b, s, rolePath)
+	require.NoError(t, err, "read deleted role")
+	require.Nil(t, resp, "expected nil response for deleted role")
+}
+
+// TestRoles_MLDSA_InvalidParameterSet verifies that creating or patching a role with
+// an invalid parameter set returns an error.
+func TestRoles_MLDSA_InvalidParameterSet(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	t.Run("create-invalid-parameter-set", func(t *testing.T) {
+		resp, err := CBWrite(b, s, "roles/invalid-mldsa", map[string]interface{}{
+			"allow_any_name": true,
+			"key_type":       "ml-dsa",
+			"parameter_set":  "invalid-param",
+		})
+		require.Error(t, err, "expected error creating ML-DSA role with invalid parameter set")
+		require.Contains(t, err.Error(), "invalid parameter set", "expected invalid parameter set error message")
+		_ = resp
+	})
+
+	t.Run("patch-invalid-parameter-set", func(t *testing.T) {
+		// First create valid role
+		resp, err := CBWrite(b, s, "roles/valid-mldsa-to-patch", map[string]interface{}{
+			"allow_any_name": true,
+			"key_type":       "ml-dsa",
+			"parameter_set":  certutil.MLDSA44,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "create valid ML-DSA role")
+
+		// Attempt to patch with invalid parameter set
+		resp, err = CBPatch(b, s, "roles/valid-mldsa-to-patch", map[string]interface{}{
+			"parameter_set": "999",
+		})
+		require.Error(t, err, "expected error patching ML-DSA role with invalid parameter set")
+		require.Contains(t, err.Error(), "invalid parameter set", "expected invalid parameter set error message")
+	})
 }

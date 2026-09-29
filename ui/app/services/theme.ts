@@ -8,9 +8,9 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import type Owner from '@ember/owner';
 import Ember from 'ember';
+import { getStringPreference, setStringPreference } from 'vault/utils/preferences';
 
-const STORAGE_KEY = 'vault:theme';
-
+const STORAGE_KEY = 'theme';
 export type ThemeChoice = 'dark' | 'light' | 'system';
 
 export default class ThemeService extends Service {
@@ -33,16 +33,12 @@ export default class ThemeService extends Service {
   @action
   setTheme(choice: ThemeChoice): void {
     this.theme = choice;
-    window.localStorage.setItem(STORAGE_KEY, choice);
+    setStringPreference(STORAGE_KEY, choice);
     this._applyTheme(true);
   }
 
   private _resolveInitialTheme(): ThemeChoice {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === 'dark' || stored === 'light' || stored === 'system') {
-      return stored;
-    }
-    return 'system';
+    return getStringPreference(STORAGE_KEY) as ThemeChoice;
   }
 
   /**

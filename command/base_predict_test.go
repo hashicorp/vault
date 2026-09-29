@@ -402,6 +402,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"ssh",
 				"terraform",
 				"totp",
+				"tpm",
 				"transform",
 				"transit",
 				"userpass",
@@ -420,7 +421,7 @@ func TestPredict_Plugins(t *testing.T) {
 
 				act := p.plugins()
 
-				for _, pluginName := range []string{"keymgmt", "kmip", "transform", "saml", "scep", "spiffe", "pki-external-ca"} {
+				for _, pluginName := range []string{"keymgmt", "kmip", "transform", "saml", "scep", "spiffe", "pki-external-ca", "tpm"} {
 					if !strutil.StrListContains(act, pluginName) {
 						for i, v := range tc.exp {
 							if v == pluginName {

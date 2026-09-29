@@ -6,12 +6,16 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/locking"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/stretchr/testify/require"
 )
 
 // TestRetryPersistOnOverload_SucceedsImmediately verifies that when persist
@@ -240,9 +244,7 @@ func TestDispatchReloads_EmptyEntries(t *testing.T) {
 // TestDispatchReloads_AlreadyCancelledContext verifies that if ctx is already
 // cancelled before dispatch begins, the coordinator stops dispatching as soon
 // as the select picks ctx.Done(). Because Go's select is non-deterministic when
-// multiple cases are ready, the first entry may or may not be dispatched — but
-// at most concurrentReloadWorkers entries are ever dispatched, and skippedFrom
-// is strictly less than len(entries).
+// multiple cases are ready, any number of these entries may be dispatched.
 func TestDispatchReloads_AlreadyCancelledContext(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -252,10 +254,13 @@ func TestDispatchReloads_AlreadyCancelledContext(t *testing.T) {
 	results, skippedFrom := dispatchReloads(ctx, entries,
 		func(_ context.Context, n int) int { return n * 2 },
 	)
-	// skippedFrom must be somewhere in [0, len(entries)); it cannot equal
-	// len(entries) because ctx was already cancelled before the loop started.
-	if skippedFrom >= len(entries) {
-		t.Errorf("expected skippedFrom < %d (cancellation must skip at least one), got %d", len(entries), skippedFrom)
+	if skippedFrom > len(entries) {
+		t.Errorf("skippedFrom = %d, exceeds %d entries", skippedFrom, len(entries))
+	}
+	for i := 0; i < skippedFrom; i++ {
+		if results[i] != entries[i]*2 {
+			t.Errorf("results[%d]: expected dispatched value %d, got %d", i, entries[i]*2, results[i])
+		}
 	}
 	// Entries at and after skippedFrom must hold the zero value (not dispatched).
 	for i := skippedFrom; i < len(results); i++ {
@@ -291,5 +296,45 @@ func TestDispatchReloads_SkippedFromFillPattern(t *testing.T) {
 		if !errors.Is(results[i].err, context.Canceled) {
 			t.Errorf("results[%d].err = %v; want context.Canceled", i, results[i].err)
 		}
+	}
+}
+
+// TestReloadMatchingPlugin_Cancelled preserves the mount path in errors for
+// skipped secret and auth reloads when cancellation interrupts dispatch.
+func TestReloadMatchingPlugin_Cancelled(t *testing.T) {
+	t.Parallel()
+
+	for _, pluginType := range []consts.PluginType{consts.PluginTypeSecrets, consts.PluginTypeCredential} {
+		t.Run(pluginType.String(), func(t *testing.T) {
+			t.Parallel()
+
+			entries := make([]*MountEntry, concurrentReloadWorkers+1)
+			for i := range entries {
+				entries[i] = &MountEntry{
+					Path:      fmt.Sprintf("mount-%d/", i),
+					Type:      "mock-plugin",
+					namespace: namespace.RootNamespace,
+				}
+			}
+			core := &Core{
+				router:     NewRouter(),
+				mountsLock: locking.CreateConfigurableRWMutex(nil, "mountsLock"),
+				authLock:   locking.CreateConfigurableRWMutex(nil, "authLock"),
+			}
+			if pluginType == consts.PluginTypeSecrets {
+				core.mounts = &MountTable{Entries: entries}
+			} else {
+				core.auth = &MountTable{Entries: entries}
+			}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			_, err := core.reloadMatchingPlugin(ctx, nil, pluginType, "mock-plugin")
+			require.Error(t, err)
+			require.ErrorIs(t, err, context.Canceled)
+			for _, entry := range entries {
+				require.ErrorContains(t, err, entry.Path)
+			}
+		})
 	}
 }

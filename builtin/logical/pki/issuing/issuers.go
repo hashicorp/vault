@@ -241,6 +241,11 @@ func (i IssuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
 		case x509.PureEd25519:
 			return nil
 		}
+	case x509.MLDSA:
+		switch algo {
+		case x509.MLDSA44, x509.MLDSA65, x509.MLDSA87:
+			return nil
+		}
 	}
 
 	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())

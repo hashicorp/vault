@@ -11,30 +11,46 @@
   data-test-card-container="feature-spotlight"
   ...attributes
 >
-  <Hds::Text::Display @weight="semibold" data-test-text-display={{@title}}>
-    {{@title}}
-  </Hds::Text::Display>
+  {{#if this.currentFeature}}
+    <Hds::Text::Display @weight="semibold" data-test-text-display={{this.currentFeature.title}}>
+      {{this.currentFeature.title}}
+    </Hds::Text::Display>
 
-  <Hds::Layout::Flex @align="start" @gap="16" class="has-top-margin-m has-bottom-margin-xs" as |LF|>
-    <LF.Item class="is-flex-1 is-min-width-0">
-      <Hds::Text::Body @tag="p" @size="200" @color="primary" data-test-text-body="feature-spotlight-description">
-        {{@description}}
-      </Hds::Text::Body>
-    </LF.Item>
-
-    {{#if @imageSrc}}
-      <LF.Item>
-        <img src={{@imageSrc}} alt={{@title}} width="100" />
+    <Hds::Layout::Flex @align="start" @gap="16" class="has-top-margin-m has-bottom-margin-xs" as |LF|>
+      <LF.Item class="is-flex-1 is-min-width-0">
+        <Hds::Text::Body @tag="p" @size="200" @color="primary" data-test-text-body="feature-spotlight-description">
+          {{this.currentFeature.description}}
+        </Hds::Text::Body>
       </LF.Item>
-    {{/if}}
-  </Hds::Layout::Flex>
 
-  <Hds::Link::Standalone
-    @text="Learn more"
-    @href={{doc-link @link}}
-    @icon="arrow-right"
-    @iconPosition="trailing"
-    @isHrefExternal={{true}}
-    data-test-link-to="feature-spotlight-learn-more"
-  />
+      {{#if this.currentImageSrc}}
+        <LF.Item>
+          <img src={{img-path this.currentImageSrc}} alt={{this.currentFeature.title}} width="100" />
+        </LF.Item>
+      {{/if}}
+    </Hds::Layout::Flex>
+
+    <Hds::Link::Standalone
+      @text="Learn more"
+      @href={{doc-link this.currentFeature.link}}
+      @icon="arrow-right"
+      @iconPosition="trailing"
+      @isHrefExternal={{true}}
+      {{on "click" this.trackLearnMore}}
+      data-test-link-to="feature-spotlight-learn-more"
+    />
+
+    {{#if this.hasPagination}}
+      <Hds::Layout::Flex @align="center" @justify="space-between" class="has-top-margin-m">
+        <Hds::Text::Body @tag="p" @size="200" @color="faint" data-test-feature-spotlight-page-label>
+          {{this.pageLabel}}
+        </Hds::Text::Body>
+
+        <Hds::Layout::Flex @gap="8">
+          <Hds::Button @text="Back" @color="secondary" @size="small" {{on "click" this.back}} data-test-button="back" />
+          <Hds::Button @text="Next" @color="secondary" @size="small" {{on "click" this.next}} data-test-button="next" />
+        </Hds::Layout::Flex>
+      </Hds::Layout::Flex>
+    {{/if}}
+  {{/if}}
 </Hds::Card::Container>
