@@ -781,17 +781,18 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 
-	// Request review from the PR author
+	// Request review from the PR author, or from the assignees when the PR was
+	// opened by the same account that opened the backport.
 	err = addReviewers(
 		ctx,
 		github,
 		r.Owner,
 		r.Repo,
 		int(res.PullRequest.GetNumber()),
-		[]string{pr.GetUser().GetLogin()},
+		backportReviewers(pr, res.PullRequest.GetUser().GetLogin()),
 	)
 	if err != nil {
-		res.Error = fmt.Errorf("requesting review from PR author on backport pull request %w", err)
+		res.Error = fmt.Errorf("requesting review on backport pull request %w", err)
 		return res
 	}
 
@@ -811,6 +812,28 @@ func (r *CreateBackportReq) backportRef(
 	}
 
 	return res
+}
+
+// backportReviewers returns the logins to request reviews from on a backport
+// pull request. We usually request the author of the original pull request.
+// When the original pull request was opened by the same account that opens the
+// backport, e.g. automated plugin updates, GitHub won't allow that account to
+// review its own pull request. In that case we request the people the backport
+// is assigned to instead: the original assignee and whoever merged it.
+func backportReviewers(pr *libgithub.PullRequest, backportAuthor string) []string {
+	author := pr.GetUser().GetLogin()
+	if author != backportAuthor {
+		return []string{author}
+	}
+
+	reviewers := []string{}
+	for _, login := range []string{pr.GetAssignee().GetLogin(), pr.GetMergedBy().GetLogin()} {
+		if login != "" && login != backportAuthor && !slices.Contains(reviewers, login) {
+			reviewers = append(reviewers, login)
+		}
+	}
+
+	return reviewers
 }
 
 // backportCECommitWithPatch backports a commit to the currently checked out

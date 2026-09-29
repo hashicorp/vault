@@ -830,6 +830,82 @@ func Test_filterNonBackportLabels(t *testing.T) {
 	}
 }
 
+// Test_backportReviewers tests that we request the original author unless
+// they also opened the backport, in which case we request the assignees.
+func Test_backportReviewers(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		author         string
+		assignee       string
+		mergedBy       string
+		backportAuthor string
+		expected       []string
+	}{
+		"original author": {
+			author:         "author",
+			assignee:       "assignee",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"author"},
+		},
+		"unknown backport author": {
+			author:   "author",
+			assignee: "assignee",
+			mergedBy: "merger",
+			expected: []string{"author"},
+		},
+		"bot opened with assignee and merger": {
+			author:         "bot",
+			assignee:       "assignee",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"assignee", "merger"},
+		},
+		"bot opened with same assignee and merger": {
+			author:         "bot",
+			assignee:       "assignee",
+			mergedBy:       "assignee",
+			backportAuthor: "bot",
+			expected:       []string{"assignee"},
+		},
+		"bot opened without assignee": {
+			author:         "bot",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"merger"},
+		},
+		"bot opened and assigned": {
+			author:         "bot",
+			assignee:       "bot",
+			mergedBy:       "merger",
+			backportAuthor: "bot",
+			expected:       []string{"merger"},
+		},
+		"bot opened without assignee or merger": {
+			author:         "bot",
+			backportAuthor: "bot",
+			expected:       []string{},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			pr := &libgithub.PullRequest{
+				User: &libgithub.User{Login: libgithub.Ptr(test.author)},
+			}
+			if test.assignee != "" {
+				pr.Assignee = &libgithub.User{Login: libgithub.Ptr(test.assignee)}
+			}
+			if test.mergedBy != "" {
+				pr.MergedBy = &libgithub.User{Login: libgithub.Ptr(test.mergedBy)}
+			}
+
+			require.Equal(t, test.expected, backportReviewers(pr, test.backportAuthor))
+		})
+	}
+}
+
 // Test_syncBackportFailedLabel tests that syncBackportFailedLabel applies the
 // label when runErr is non-nil, removes it when runErr is nil, and is a no-op
 // when label is empty.
