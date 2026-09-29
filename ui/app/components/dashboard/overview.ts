@@ -96,19 +96,13 @@ export default class OverviewComponent extends Component<Args> {
   }
 
   @action hideChecklist() {
-    // Remember whether the checklist or the completion panel was showing so
-    // restoring later (from the Explore Vault card) returns to the same view.
-    this.checklistState.setLastView(
-      this.startupChecklist.id,
-      this.shouldShowChecklist ? 'checklist' : 'complete-banner'
-    );
     this.showSetupGuideInCompleteState = false;
     this.checklistState.hideChecklist(this.startupChecklist.id);
   }
 
   @action restoreChecklist() {
-    const lastView = this.checklistState.getLastView(this.startupChecklist.id);
-    this.showSetupGuideInCompleteState = lastView === 'checklist';
+    // Always return to the checklist view regardless of what was showing before.
+    this.showSetupGuideInCompleteState = true;
     this.checklistState.showChecklist(this.startupChecklist.id);
   }
 
@@ -118,8 +112,6 @@ export default class OverviewComponent extends Component<Args> {
 
   @action
   handleChecklistStepCompletionChange() {
-    if (this.checklistLifecycleState !== 'complete') {
-      this.showSetupGuideInCompleteState = false;
-    }
+    this.showSetupGuideInCompleteState = false;
   }
 }
