@@ -13,11 +13,15 @@ export default class VaultClusterAccessIdentityAliasesAddRoute extends Route {
 
   async model(params) {
     const identityType = 'group';
-    const aliases = await fetchAliases({ identityType, api: this.api });
+    const [aliases, group] = await Promise.all([
+      fetchAliases({ identityType, api: this.api }),
+      this.api.identity.groupReadById(params.item_id),
+    ]);
 
     return {
       aliases,
       canonicalId: params.item_id,
+      canonicalName: group.data.name,
       form: new AliasIdentityForm({ canonical_id: params.item_id }, { isNew: true }),
       identityType,
     };

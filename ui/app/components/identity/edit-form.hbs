@@ -9,8 +9,8 @@
       <ConfirmAction
         class="toolbar-button"
         @buttonColor="secondary"
-        @buttonText="Delete {{@model.identityType}}"
-        @confirmTitle="Delete this {{@model.identityType}}?"
+        @buttonText="Delete {{this.deleteNoun}}"
+        @confirmTitle="Delete this {{this.deleteNoun}}?"
         @onConfirmAction={{action "deleteItem" @model}}
       />
     </ToolbarActions>

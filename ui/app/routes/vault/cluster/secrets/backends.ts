@@ -20,6 +20,7 @@ interface RouteParams extends Record<string, unknown> {
 interface BackendsController extends Controller {
   page: number;
   pageSize: number;
+  resetSearchText(): void;
 }
 
 export default class SecretsBackendsRoute extends Route {
@@ -68,6 +69,7 @@ export default class SecretsBackendsRoute extends Route {
     if (isExiting) {
       controller.page = 1;
       controller.pageSize = 10;
+      controller.resetSearchText();
     }
   }
 }

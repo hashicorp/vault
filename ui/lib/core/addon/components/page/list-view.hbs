@@ -64,7 +64,7 @@
     <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>
       <A.Header
         data-test-empty-state-title
-        @title={{concat @config.filteredEmptyTitle ' "' this.pageFilter '"'}}
+        @title={{concat @config.filteredEmptyTitle ' "' this.filterValue '"'}}
         @titleTag="h2"
       />
     </Hds::ApplicationState>
@@ -147,7 +147,7 @@
       {{#if this.activeModalConfig.bodyItems}}
         <ul class="bullet">
           {{#each this.activeModalConfig.bodyItems as |item index|}}
-            <li>
+            <li class="word-wrap">
               {{#if (and (eq index 0) this.activeModalConfig.itemDisplayKey)}}
                 <Hds::Text::Display @weight="semibold">
                   {{get this.activeModalItem this.activeModalConfig.itemDisplayKey}}

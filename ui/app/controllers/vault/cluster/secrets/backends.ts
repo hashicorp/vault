@@ -149,6 +149,10 @@ export default class VaultClusterSecretsBackendController extends Controller {
   clearAllFilters(): void {
     this.engineTypeFilters = [];
     this.engineVersionFilters = [];
+    this.resetSearchText();
+  }
+
+  resetSearchText(): void {
     this.pathSearchText = '';
     this.typeSearchText = '';
     this.versionSearchText = '';
