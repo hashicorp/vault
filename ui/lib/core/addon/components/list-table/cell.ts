@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { tracked } from '@glimmer/tracking';
-import { action } from '@ember/object';
 import Component from '@glimmer/component';
 
 /**
@@ -35,9 +33,7 @@ import Component from '@glimmer/component';
  * |                  |                                             | Renders nothing when value is falsy.         |
  * | "custom" /       | —                                           | Yields <:customTableItem as |row col val|>   |
  * | customTableItem  |                                             | back to the consuming template.              |
- * | (anything else)  | —                                           | Plain text, truncated when it overflows.     |
- * |                  |                                             | A tooltip button reveals the full value on   |
- * |                  |                                             | hover when the text overflows.               |
+ * | (anything else)  | —                                           | Plain text with word wrapping.               |
  *
  * @param {object} column  - Column definition from ListViewConfig.columns
  * @param {object} row     - The full row data object
@@ -52,34 +48,4 @@ interface Args {
 
 export default class ListTableCell extends Component<Args> {
   isObject = (val: unknown) => typeof val === 'object' && val !== null;
-
-  @tracked isOverflowing = false;
-
-  resizeObserver: ResizeObserver | null = null;
-  cellElement: HTMLElement | null = null;
-
-  updateOverflowState() {
-    if (this.cellElement) {
-      this.isOverflowing = this.cellElement.scrollWidth > this.cellElement.clientWidth;
-    }
-  }
-
-  @action
-  observeCell(element: HTMLElement) {
-    this.cellElement = element.parentElement ?? element;
-
-    // ResizeObserver fires once for the initial observation after the browser
-    // has completed layout, which is when scrollWidth/clientWidth are reliable.
-    this.resizeObserver = new ResizeObserver(() => {
-      this.updateOverflowState();
-    });
-    this.resizeObserver.observe(this.cellElement);
-  }
-
-  @action
-  disconnectObserver() {
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = null;
-    this.cellElement = null;
-  }
 }

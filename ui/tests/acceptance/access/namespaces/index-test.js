@@ -40,6 +40,24 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
       .hasText('Namespaces', 'Namespace breadcrumb trail is displayed correctly');
   });
 
+  test('the namespace path column sorts namespaces', async function (assert) {
+    const namespaces = ['test-sort-namespace-z', 'test-sort-namespace-a'];
+    for (const namespace of namespaces) {
+      await runCmd(createNS(namespace), false);
+    }
+
+    await click(GENERAL.button('refresh-namespace-list'));
+    await fillIn(GENERAL.filterInput, 'test-sort-namespace-');
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+
+    assert.dom(GENERAL.tableData(0, 'id')).hasText(namespaces[1], 'the first path sorts alphabetically');
+    assert.dom(GENERAL.tableData(1, 'id')).hasText(namespaces[0], 'the second path sorts alphabetically');
+
+    for (const namespace of namespaces) {
+      await runCmd(deleteNS(namespace), false);
+    }
+  });
+
   test('the route should update namespace list after create/delete WITH manual refresh in the CLI', async function (assert) {
     const testNS = 'test-refresh-ns-cli';
 

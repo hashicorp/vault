@@ -11,7 +11,7 @@ export const accessNamespacesListViewConfig: ListViewDisplayConfig = {
     'Create logically separated, multi-tenant environments so teams can manage secrets, policies, and authentication methods independently.',
   breadcrumbs: [], // set by route model() before returning
   columns: [
-    { key: 'id', label: 'Namespace' },
+    { key: 'id', label: 'Namespace', isSortable: true },
     { key: 'popupMenu', label: 'Action', width: '10%' },
   ],
   badge: '', // set by route model() before returning

@@ -12,6 +12,7 @@ interface ConfirmModalArgs {
   confirmText?: string;
   confirmLabel?: string;
   confirmButtonText?: string;
+  isRunning?: boolean;
 }
 
 /**
@@ -34,7 +35,8 @@ export default class ConfirmModal extends Component<ConfirmModalArgs> {
   @tracked showConfirmWarning = false;
 
   get isConfirmDisabled() {
-    const { confirmText } = this.args;
+    const { confirmText, isRunning } = this.args;
+    if (isRunning) return true;
     if (!confirmText) return false;
     return this.confirmInput !== confirmText;
   }
