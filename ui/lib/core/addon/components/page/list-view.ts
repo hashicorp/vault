@@ -78,9 +78,15 @@ interface Args {
   config: ListViewDisplayConfig;
   /**
    * Raw (unpaginated) data array from the route model. Page::ListView applies
-   * filtering (via config.filter.filterKey) and pagination internally.
+   * filtering (via config.filter.filterKey) and pagination internally unless
+   * the caller has already filtered the model.
    */
   model: unknown[];
+  /**
+   * Search text already applied by the caller, used to select filtered-empty
+   * state.
+   */
+  filterValue?: string;
   /** Current page number. Changes on pagination. */
   page?: number;
   /** Current page size. Comes from the controller query param so it survives route transitions. */
@@ -98,6 +104,11 @@ export default class PageListViewComponent extends Component<Args> {
   }
 
   @tracked pageFilter = '';
+
+  // Returns the effective filter value, checking the internal pageFilter state and the external filterValue argument.
+  get filterValue() {
+    return this.pageFilter || this.args.filterValue || '';
+  }
 
   get pageSize() {
     return this.args.pageSize ?? 10;
@@ -207,11 +218,11 @@ export default class PageListViewComponent extends Component<Args> {
   }
 
   get isFilteredEmpty() {
-    return !!(this.pageFilter && this.filteredData?.length === 0);
+    return !!(this.filterValue && this.filteredData?.length === 0);
   }
 
   get isNoData() {
-    return !this.pageFilter && !this.hasData;
+    return !this.filterValue && !this.hasData;
   }
 
   // ── Column normalization ────────────────────────────────────────────────────

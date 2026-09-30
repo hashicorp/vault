@@ -189,7 +189,7 @@ module('Integration | Component | manage-dropdown | Delete modal', function (hoo
     assert.dom('[data-test-confirm-action-message]').containsText('3 secrets', 'shows KV v2 secret count');
   });
 
-  test('it does not fire onConfirm when wrong text is entered', async function (assert) {
+  test('confirm button stays disabled and does not fire on wrong text', async function (assert) {
     this.model = makeModel({ type: 'ldap', id: 'ldap' });
     await render(
       hbs`<ManageDropdown @model={{this.model}} @variant="icon" @showDelete={{true}} @configRoute={{this.model.backendConfigurationLink}} />`
@@ -197,10 +197,9 @@ module('Integration | Component | manage-dropdown | Delete modal', function (hoo
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('Delete'));
     await fillIn(GENERAL.confirmTextInput, 'wrong-text');
-    await click(GENERAL.confirmButton);
+    assert.dom(GENERAL.confirmButton).isDisabled('confirm button is disabled for wrong text');
     assert.dom(CONFIRM_MODAL).exists('modal stays open');
     assert.false(this.mountDisableApiStub.called, 'disable API is not called with wrong input');
-    assert.dom(GENERAL.confirmWarning).exists('warning is shown after failed confirm attempt');
   });
 
   test('modal closes and resets on cancel', async function (assert) {

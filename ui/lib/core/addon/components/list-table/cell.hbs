@@ -19,7 +19,7 @@
             @icon={{linkIcon}}
             @iconPosition="leading"
             @color="secondary"
-            class="has-text-weight-semibold"
+            class="has-text-weight-semibold word-wrap"
             data-test-link-to={{@value}}
           />
         {{else}}
@@ -27,6 +27,7 @@
             @route={{resolvedRoute}}
             @model={{get @row (or @column.routeModelKey "id")}}
             @color="secondary"
+            class="word-wrap"
             data-test-link-to={{@value}}
           >{{@value}}</Hds::Link::Inline>
         {{/if}}
@@ -90,17 +91,7 @@
 {{else}}
   {{#let (if (this.isObject @value) (stringify @value) @value) as |displayValue|}}
     {{#if (or @column.customTableItem displayValue)}}
-      <span {{did-insert this.observeCell}} {{will-destroy this.disconnectObserver}} data-test-list-table-cell-text>
-        {{#if this.isOverflowing}}
-          <Hds::TooltipButton
-            class="toolbar-icon"
-            @text={{displayValue}}
-            aria-label={{displayValue}}
-            data-test-tooltip={{displayValue}}
-          >
-            <Hds::Icon @name="info" />
-          </Hds::TooltipButton>
-        {{/if}}
+      <span class="word-wrap" data-test-list-table-cell-text>
         {{#if @column.customTableItem}}
           {{yield @row @column @value to="customTableItem"}}
         {{else}}

@@ -159,12 +159,20 @@ module('Acceptance | secrets backends list view', function (hooks) {
     assert.true(currentURL().includes('page=2'), 'URL contains page=2 after clicking next');
   });
 
-  test('page query param resets to 1 on navigation away and back', async function (assert) {
+  test('search text and page query param reset on navigation away and back', async function (assert) {
     await visit('/vault/secrets-engines?page=2');
+    const controller = this.owner.lookup('controller:vault.cluster.secrets.backends');
+    controller.pathSearchText = 'kv/';
+    controller.typeSearchText = 'kv';
+    controller.versionSearchText = 'v0.14.0';
+
     // navigate away then back — resetController should reset page
     await visit('/vault/dashboard');
     await visit('/vault/secrets-engines');
     assert.false(currentURL().includes('page=2'), 'page param was reset');
+    assert.strictEqual(controller.pathSearchText, '', 'path search text was reset');
+    assert.strictEqual(controller.typeSearchText, '', 'type search text was reset');
+    assert.strictEqual(controller.versionSearchText, '', 'version search text was reset');
   });
 
   // ── Dark mode icon resolution ─────────────────────────────────────────────
