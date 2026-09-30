@@ -79,7 +79,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
-        cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
+        cache: "false" # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
         go-version: 'stable'
 
     - name: Set up Python

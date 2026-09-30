@@ -48,11 +48,11 @@ jobs:
         uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          no-restore: true # don't download them on a cache hit
+          cache: prime # Prime the cache for downstream jobs; don't restore to disk
       - uses: ./.github/actions/install-tools
         name: Ensure Vault tools are cached
         with:
-          no-restore: true # don't download them on a cache hit
+          cache: prime # Prime the cache for downstream jobs; don't restore to disk
       - uses: ./.github/actions/changed-files
         id: changed-files
         with:
@@ -90,8 +90,10 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ needs.setup.outputs.is-ent-branch != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          no-save: true
+          cache: fetch-only
       - uses: ./.github/actions/install-tools # for staticcheck
+        with:
+          cache: fetch-only
       - run: make ci-deprecations
         name: Check deprecations
 
@@ -128,8 +130,10 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ needs.setup.outputs.is-ent-branch != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          no-save: true
+          cache: fetch-only
       - uses: ./.github/actions/install-tools # for buf
+        with:
+          cache: fetch-only
         # Note: if there is a function we want to ignore the nilnil check for,
         # You can add 'ignore-nil-nil-function-check' somewhere in the
         # godoc for the function.
@@ -169,8 +173,10 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ needs.setup.outputs.is-ent-branch != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          no-save: true
+          cache: fetch-only
       - uses: ./.github/actions/install-tools # for buf and protoc-*
+        with:
+          cache: fetch-only
       - name: Check generate delta
         run: make prep check-proto-delta
 
@@ -205,8 +211,10 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ needs.setup.outputs.is-ent-branch != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          no-save: true
+          cache: fetch-only
       - uses: ./.github/actions/install-tools # for buf and gofumpt
+        with:
+          cache: fetch-only
       - name: Go format
         run: make prep check-go-fmt
       - name: Protobuf format
