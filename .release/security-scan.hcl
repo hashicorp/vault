@@ -47,7 +47,7 @@ binary {
         // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
         // that doesn't depend on 1.84.0 we can update all of our Go modules
         // and remove this exemption.
-        "GO-2026-6443",
+        "GO-2026-6443"
       ]
     }
   }
@@ -101,7 +101,7 @@ container {
         // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
         // that doesn't depend on 1.84.0 we can update all of our Go modules
         // and remove this exemption.
-        "GO-2026-6443",
+        "GO-2026-6443"
       ]
 
       // The OSV scanner will trip on several packages that are included in the
