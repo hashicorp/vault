@@ -33,7 +33,7 @@ module('Acceptance | user-preferences', function (hooks) {
     assert
       .dom(GENERAL.button('user-menu-trigger'))
       .hasAttribute('aria-expanded', 'false', 'the dropdown closes after navigating');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Preferences', 'the page header renders its title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('User preferences', 'the page header renders its title');
   });
 
   test('the page header states browser-only storage and does not claim entity/cross-device persistence', async function (assert) {
@@ -73,7 +73,7 @@ module('Acceptance | user-preferences', function (hooks) {
     assert.true(personaTop < privacyTop, 'Persona section appears above Data & Privacy in the DOM');
   });
 
-  test('HVD-managed clusters show the preferences page but hide the Data & Privacy section', async function (assert) {
+  test('HVD-managed clusters show the user preferences page but hide the Data & Privacy section', async function (assert) {
     // HVD telemetry runs without user consent, so the consent toggle is meaningless
     // for HVD users. The page itself remains accessible so they can still manage
     // other preferences.
@@ -82,7 +82,7 @@ module('Acceptance | user-preferences', function (hooks) {
     await visit('/vault/user-preferences');
 
     assert.strictEqual(currentURL(), '/vault/user-preferences', 'HVD users can access the preferences page');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Preferences', 'page header renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('User preferences', 'page header renders');
     assert
       .dom('[data-test-data-privacy-section]')
       .doesNotExist('Data & Privacy section is hidden for HVD-managed clusters');
