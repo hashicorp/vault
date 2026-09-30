@@ -246,8 +246,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.secrets.outputs.github-token }}
-          no-save: true
-          no-restore: true
+          cache: "false"
 
       - name: Install LDAP client tools
         run: |
@@ -256,7 +255,7 @@ jobs:
 
       - uses: ./.github/actions/install-tools
         with:
-          no-save: true
+          cache: fetch-only
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4

@@ -58,8 +58,10 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ inputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}
-          no-save: true
+          cache: fetch-only
       - uses: ./.github/actions/install-tools
+        with:
+          cache: fetch-only
       - name: build-go-dev
         env:
           GIT_CONFIG_COUNT: ${{ inputs.is-ent-repo == 'true' && '1' || '0' }}

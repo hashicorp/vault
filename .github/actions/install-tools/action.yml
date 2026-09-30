@@ -10,12 +10,14 @@ description: |
   will be added to the GITHUB_PATH.
 
 inputs:
-  no-restore:
-    description: Whether or not to restore the Go module cache on a cache hit
-    default: "false"
-  no-save:
-    description: Whether or not to create a Go module cache on cache miss
-    default: "false"
+  cache:
+    description: |
+      Cache mode for the tool cache. One of:
+        true        (default) Restore on hit; build and save on miss.
+        fetch-only  Restore on hit; build on miss; never save.
+        prime       Build and save on miss.
+        false       Completely ignore all cache actions.
+    default: "true"
   destination:
     description: "Where to install the tools (default: $HOME/bin/vault-tools)"
     default: "$HOME/bin/vault-tools"
@@ -69,12 +71,13 @@ runs:
           echo "VAULT_TOOLS_CACHE_KEY=${cache_key}"
         } | tee -a "$GITHUB_ENV"
     - id: cache-tools
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      if: inputs.cache != 'false'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        lookup-only: ${{ inputs.no-restore }}
+        lookup-only: ${{ inputs.cache == 'prime' }}
         path: ${{ env.VAULT_TOOLS_PATH }}
         key: ${{ env.VAULT_TOOLS_CACHE_KEY }}
-    - if: steps.cache-tools.outputs.cache-hit != 'true' && inputs.no-save != 'true'
+    - if: inputs.cache == 'false' || steps.cache-tools.outputs.cache-hit != 'true'
       name: Install tools
       shell: bash
       env:
@@ -89,3 +92,10 @@ runs:
       run: |
         make tools
         du -h -d 1 ${{ env.VAULT_TOOLS_PATH }}
+    - if: (inputs.cache == 'true' || inputs.cache == 'prime') && steps.cache-tools.outputs.cache-hit != 'true'
+      id: cache-tools-save
+      name: Save tools cache
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ env.VAULT_TOOLS_PATH }}
+        key: ${{ env.VAULT_TOOLS_CACHE_KEY }}

@@ -51,10 +51,11 @@ jobs:
       - if: contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'test_enos')
         uses: ./.github/actions/set-up-go
         with:
-          no-restore: true
-          no-save: true
+          cache: "false"
       - if: contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'test_enos')
         uses: ./.github/actions/install-tools
+        with:
+          cache: fetch-only
       - if: contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'test_enos')
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
