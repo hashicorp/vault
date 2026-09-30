@@ -60,6 +60,7 @@ export type ListEntity = {
     name: string;
     creation_time: string;
     last_update_time: string;
+    canDelete?: boolean;
   }[];
 };
 
