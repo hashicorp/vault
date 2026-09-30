@@ -63,6 +63,27 @@ module('Integration | Component | dashboard/widgets/feature-spotlight', function
     assert.dom(GENERAL.linkTo('feature-spotlight-learn-more')).exists().hasText('Learn more');
   });
 
+  test('it renders the Learn more link pointing to an internal route when route is provided', async function (assert) {
+    this.cards = [
+      { title: 'Preferences', description: 'Go to preferences', route: 'vault.cluster.user-preferences' },
+    ];
+    await this.renderComponent();
+    assert.dom(GENERAL.linkTo('feature-spotlight-learn-more')).exists().hasText('Learn more');
+  });
+
+  test('it renders custom linkText when provided', async function (assert) {
+    this.cards = [
+      {
+        title: 'Dark mode is here',
+        description: 'Go to preferences',
+        route: 'vault.cluster.user-preferences',
+        linkText: 'Try it out',
+      },
+    ];
+    await this.renderComponent();
+    assert.dom(GENERAL.linkTo('feature-spotlight-learn-more')).exists().hasText('Try it out');
+  });
+
   test('it renders the page label as "1/3" when starting on the first card', async function (assert) {
     // Math.random = 0 → index 0
     const orig = Math.random;
@@ -333,7 +354,8 @@ module('Integration | Component | dashboard/widgets/feature-spotlight', function
     FEATURE_SPOTLIGHT_CARDS.forEach((card, i) => {
       assert.ok(card.title, `card ${i} has a title`);
       assert.ok(card.description, `card ${i} has a description`);
-      assert.ok(card.link, `card ${i} has a link`);
+      const hasDestination = Boolean(card.link || card.route);
+      assert.true(hasDestination, `card ${i} has a link or route`);
     });
   });
 });

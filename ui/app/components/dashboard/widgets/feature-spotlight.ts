@@ -61,6 +61,10 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
     return imageSrc;
   }
 
+  get linkText(): string {
+    return this.currentFeature.linkText ?? 'Learn more';
+  }
+
   get total(): number {
     return this.cards.length;
   }
@@ -114,7 +118,7 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
   @action
   trackLearnMore(): void {
     this.analytics.trackEvent(DASHBOARD_FEATURE_SPOTLIGHT_LEARN_MORE, {
-      CTA: 'Learn more',
+      CTA: this.linkText,
       channel: 'webpage',
       location: 'dashboard',
       objectType: 'feature-spotlight-widget',
