@@ -51,8 +51,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-          no-restore: true
-          no-save: true
+          cache: "false"
 
       - name: Update plugin
         env:

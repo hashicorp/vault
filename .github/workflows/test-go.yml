@@ -144,8 +144,10 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.global-metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.github-token }}
-          no-save: true # setup is responsible for managing the module cache
+          cache: fetch-only # setup is responsible for managing the module cache
       - uses: ./.github/actions/install-tools # for gotestsum
+        with:
+          cache: fetch-only
       - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
       - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -272,7 +274,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ needs.test-matrix.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.github-token }}
-          no-save: true
+          cache: fetch-only
       - id: metadata
         name: Set up metadata
         run: |
@@ -319,6 +321,8 @@ jobs:
             echo "gotestsum-timing-events=${gotestsum_timing_events}"
           } | tee -a "$GITHUB_OUTPUT"
       - uses: ./.github/actions/install-tools
+        with:
+          cache: fetch-only
       - if: github.repository == 'hashicorp/vault-enterprise'
         name: Configure Instana for test tracing
         continue-on-error: true
