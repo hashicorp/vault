@@ -153,6 +153,26 @@ module('Integration | Component | page/list-view', function (hooks) {
       .hasText('No entities matching "zzz"', 'renders filtered empty title with filter value appended');
   });
 
+  test('it renders filtered-empty state for a caller-filtered model', async function (assert) {
+    this.model = [];
+
+    await render(hbs`
+      <Page::ListView
+        @config={{this.config}}
+        @model={{this.model}}
+        @filterValue="zzz"
+        @page={{this.page}}
+      />
+    `);
+
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText(
+        'No entities matching "zzz"',
+        'uses the caller-provided filter value in the empty-state title'
+      );
+  });
+
   // ── Test 7 — toolbar renders when toolbarActions block provided ───────────────
   test('it renders the toolbar when <:toolbarActions> is provided', async function (assert) {
     await render(hbs`
