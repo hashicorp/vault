@@ -25,7 +25,11 @@ export type EntityFlyoutData = {
 
 export type EntityFlyoutTab = 'policies' | 'entity' | 'alias';
 
-export type EntitiesRouteModel = (ListEntity & { canEdit: boolean; canAddAlias: boolean })[] &
+export type EntitiesRouteModel = (ListEntity & {
+  canEdit: boolean;
+  canAddAlias: boolean;
+  canDelete: boolean;
+})[] &
   PaginatedMetadata;
 
 interface Args {

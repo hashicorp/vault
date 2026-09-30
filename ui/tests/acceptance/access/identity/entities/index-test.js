@@ -55,6 +55,37 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(GENERAL.confirmButton);
   });
 
+  test('it hides delete and shows create alias based on the token policy', async function (assert) {
+    const name = `entity-${uuidv4()}`;
+    const policy = `
+      path "identity/entity/id" {
+        capabilities = ["list"]
+      }
+      path "identity/entity/id/*" {
+        capabilities = ["read", "update"]
+      }
+      path "identity/entity-alias" {
+        capabilities = ["create"]
+      }
+    `;
+    const restrictedToken = await runCmd([
+      `write identity/entity name=${name} policies=default`,
+      `write sys/policies/acl/entities-no-delete policy=${btoa(policy)}`,
+      'write -field=client_token auth/token/create policies=entities-no-delete',
+    ]);
+
+    await login(restrictedToken);
+    await visit('/vault/access/identity/entities');
+    await click(`${GENERAL.listItem(name)} ${GENERAL.menuTrigger}`);
+
+    assert
+      .dom(GENERAL.menuItem('create alias'))
+      .exists('create alias shows because the token can create identity/entity-alias');
+    assert
+      .dom(GENERAL.menuItem('delete'))
+      .doesNotExist('delete entity is hidden because the token has no delete capability');
+  });
+
   test('it renders popup menu for external groups', async function (assert) {
     const name = `external-${uuidv4()}`;
     await runCmd(`vault write identity/group name="${name}" policies="default" type="external"`);
