@@ -249,8 +249,8 @@ module('Integration | Component | dashboard/widgets/feature-spotlight', function
         uiElement: 'next-button',
         type: 'Button',
         action: 'clicked',
-        cardTitle: CARDS[1].title,
-        cardIndex: 1,
+        object: CARDS[1].title,
+        elementId: 'feature-spotlight-card-1',
       }),
       'trackEvent called with correct next payload'
     );
@@ -275,8 +275,8 @@ module('Integration | Component | dashboard/widgets/feature-spotlight', function
         uiElement: 'back-button',
         type: 'Button',
         action: 'clicked',
-        cardTitle: CARDS[0].title,
-        cardIndex: 0,
+        object: CARDS[0].title,
+        elementId: 'feature-spotlight-card-0',
       }),
       'trackEvent called with correct back payload'
     );
@@ -299,8 +299,8 @@ module('Integration | Component | dashboard/widgets/feature-spotlight', function
         uiElement: 'learn-more-link',
         type: 'Link',
         action: 'clicked',
-        cardTitle: CARDS[0].title,
-        cardIndex: 0,
+        object: CARDS[0].title,
+        elementId: 'feature-spotlight-card-0',
       }),
       'trackEvent called with correct learn more payload'
     );

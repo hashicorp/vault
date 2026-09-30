@@ -95,8 +95,8 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
       uiElement: 'next-button',
       type: 'Button',
       action: 'clicked',
-      cardTitle: this.currentFeature.title,
-      cardIndex: this.currentIndex,
+      object: this.currentFeature.title,
+      elementId: `feature-spotlight-card-${this.currentIndex}`,
     });
   }
 
@@ -110,8 +110,8 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
       uiElement: 'back-button',
       type: 'Button',
       action: 'clicked',
-      cardTitle: this.currentFeature.title,
-      cardIndex: this.currentIndex,
+      object: this.currentFeature.title,
+      elementId: `feature-spotlight-card-${this.currentIndex}`,
     });
   }
 
@@ -125,8 +125,8 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
       uiElement: 'learn-more-link',
       type: 'Link',
       action: 'clicked',
-      cardTitle: this.currentFeature.title,
-      cardIndex: this.currentIndex,
+      object: this.currentFeature.title,
+      elementId: `feature-spotlight-card-${this.currentIndex}`,
     });
   }
 }
