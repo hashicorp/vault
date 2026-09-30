@@ -26,6 +26,8 @@ export const PATH_MAP = {
   databaseConfig: apiPath`${'backend'}/config`,
   databaseRoles: apiPath`${'backend'}/roles`,
   databaseStaticRoles: apiPath`${'backend'}/static-roles`,
+  entityAlias: apiPath`identity/entity-alias`,
+  entityAliasById: apiPath`identity/entity-alias/id/${'id'}`,
   groupAlias: apiPath`identity/group-alias`,
   identityCapabilities: apiPath`identity/${'identityType'}/id/${'id'}`,
   keymgmtKey: apiPath`${'backend'}/key/${'name'}`,
