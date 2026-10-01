@@ -65,7 +65,7 @@ module('Integration | Component | dashboard/widgets/feature-spotlight', function
 
   test('it renders the Learn more link pointing to an internal route when route is provided', async function (assert) {
     this.cards = [
-      { title: 'Preferences', description: 'Go to preferences', route: 'vault.cluster.user-preferences' },
+      { title: 'Preferences', description: 'Go to preferences', route: 'vault.cluster.preferences' },
     ];
     await this.renderComponent();
     assert.dom(GENERAL.linkTo('feature-spotlight-learn-more')).exists().hasText('Learn more');
@@ -76,7 +76,7 @@ module('Integration | Component | dashboard/widgets/feature-spotlight', function
       {
         title: 'Dark mode is here',
         description: 'Go to preferences',
-        route: 'vault.cluster.user-preferences',
+        route: 'vault.cluster.preferences',
         linkText: 'Try it out',
       },
     ];

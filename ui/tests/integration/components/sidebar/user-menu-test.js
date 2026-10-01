@@ -45,9 +45,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
 
     assert.dom('[data-test-user-menu-item="title"]').hasText('Token', 'Auth data display name renders');
     assert.dom(GENERAL.copyButton).exists('Copy token action renders');
-    assert
-      .dom(GENERAL.menuItem('user-preferences'))
-      .hasText('User preferences', 'User preferences link renders');
+    assert.dom(GENERAL.menuItem('preferences')).hasText('Preferences', 'Preferences link renders');
     assert.dom('[data-test-user-menu-item="logout"]').hasText('Log out', 'Log out action renders');
   });
 
