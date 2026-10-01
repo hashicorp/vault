@@ -14,7 +14,7 @@ export const accessIdentityGroupsListViewConfig: ListViewDisplayConfig = {
     type: 'text',
     placeholder: 'Search by id or name',
     ariaLabel: 'Search groups by id or name',
-    filterKey: 'name',
+    filterKey: ['name', 'id'],
   },
   columns: [
     {

@@ -51,6 +51,24 @@ module('Unit | Utility | paginate-list', function (hooks) {
     assert.deepEqual(paginatedData, expected, 'returns correct number of filtered objects');
   });
 
+  test('it should match items on any key when filterKey is an array', function (assert) {
+    const data = [
+      { id: 'b21d483f-6d1b', name: 'engineering' },
+      { id: 'a990ecd4-4afa', name: 'b21d-team' },
+      { id: 'c0ffee00-0000', name: 'finance' },
+    ];
+    const filterKey = ['name', 'id'];
+
+    let paginatedData = paginate(data, { filter: 'B21D', filterKey });
+    assert.deepEqual(paginatedData, data.slice(0, 2), 'matches on id or name, case-insensitive');
+
+    paginatedData = paginate(data, { filter: 'finance', filterKey });
+    assert.deepEqual(paginatedData, [data[2]], 'matches on name');
+
+    paginatedData = paginate(data, { filter: 'nope', filterKey });
+    assert.strictEqual(paginatedData.length, 0, 'returns no items when no key matches');
+  });
+
   test('it should add meta data to returned object', function (assert) {
     const { meta } = paginate(this.items, { page: 2, pageSize: 3 });
     const expectedMeta = {

@@ -11,7 +11,7 @@ export type PaginateOptions = {
   page?: number;
   pageSize?: number;
   filter?: string;
-  filterKey?: string;
+  filterKey?: string | string[]; // when an array, an item matches if any of the keys match
 };
 export type PaginatedMetadata = {
   meta: {
@@ -35,13 +35,16 @@ export function paginate<T>(data: T[], options: PaginateOptions = {}) {
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE, filter, filterKey } = options;
 
   if (Array.isArray(data)) {
+    const filterKeys = Array.isArray(filterKey) ? filterKey : filterKey ? [filterKey] : [];
+    const matchesFilter = (value: unknown, filterText: string) =>
+      typeof value === 'string' && value.toLowerCase().includes(filterText.toLowerCase());
+
     let filteredData = filter
       ? data.filter((item) => {
-          const filterValue = filterKey ? (item as Record<string, unknown>)[filterKey] : item;
-          if (typeof filterValue === 'string') {
-            return filterValue.toLowerCase().includes(filter.toLowerCase());
+          if (!filterKeys.length) {
+            return matchesFilter(item, filter);
           }
-          return false;
+          return filterKeys.some((key) => matchesFilter((item as Record<string, unknown>)[key], filter));
         })
       : [...data];
 
