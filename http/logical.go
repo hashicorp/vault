@@ -476,8 +476,25 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 			// in this case.
 			return
 		default:
+			// For namespaced requests the URL path is rewritten to include the
+			// namespace prefix (e.g. /v1/east-1/sys/mounts/sec) before mux
+			// dispatch, so those requests never match the /v1/sys/... entries in
+			// injectDataIntoTopRoutes and land here with injectDataIntoTopLevel=false.
+			// Check the namespace-stripped trimmedPath against the same routes
+			// (with /v1/ stripped) to catch that case.
+			inject := injectDataIntoTopLevel
+			if !inject {
+				const v1Prefix = "/v1/"
+				for _, r := range injectDataIntoTopRoutes {
+					p := strings.TrimPrefix(r, v1Prefix)
+					if trimmedPath == p || strings.HasPrefix(trimmedPath, p) {
+						inject = true
+						break
+					}
+				}
+			}
 			// Build and return the proper response if everything is fine.
-			respondLogical(core, w, r, req, resp, injectDataIntoTopLevel)
+			respondLogical(core, w, r, req, resp, inject)
 			return
 		}
 	})
