@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,11 +10,6 @@ export const accessIdentityGroupAliasesListViewConfig: ListViewDisplayConfig = {
   description:
     'Create and name logical collections of entities to simplify policy management and permission scaling across your organization.',
   breadcrumbs: [], // set by route model() before returning
-  primaryAction: {
-    label: 'Create group',
-    route: 'vault.cluster.access.identity.groups.create',
-    icon: 'plus',
-  },
   filter: {
     type: 'text',
     placeholder: 'Search by alias id or name',

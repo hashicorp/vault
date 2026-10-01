@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -38,6 +38,7 @@ export type GroupAliasListItem = AliasKeyInfo & {
 export interface IdentityGroupAliasesIndexModel {
   aliases: GroupAliasListItem[];
   listViewConfig: ListViewDisplayConfig;
+  canCreateGroup: boolean;
   page: number;
   pageSize: number;
 }
@@ -58,6 +59,8 @@ export default class IdentityGroupAliasesIndexRoute extends Route {
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'Groups' },
     ];
+    // The aliases tab's header action creates a group, an update operation on identity/group.
+    const { canUpdate: canCreateGroup } = await this.capabilities.for('identityGroup');
 
     try {
       const response = await this.api.identity.groupListAliasesById(
@@ -74,13 +77,14 @@ export default class IdentityGroupAliasesIndexRoute extends Route {
       return {
         aliases,
         listViewConfig,
+        canCreateGroup,
         page: Number(page) || 1,
         pageSize: Number(pageSize) || 10,
       };
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
-        return { aliases: [], listViewConfig, page: 1, pageSize: Number(pageSize) || 10 };
+        return { aliases: [], listViewConfig, canCreateGroup, page: 1, pageSize: Number(pageSize) || 10 };
       }
       throw error;
     }

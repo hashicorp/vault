@@ -29,6 +29,11 @@ export default class PageIdentityGroupsComponent extends Component<Args> {
   // Optimistic local copy — updated on delete so the list updates without a route refresh.
   @tracked localGroups: GroupListItem[] | null = null;
 
+  // Set by the route from the token's capabilities on identity/group.
+  get canCreateGroup(): boolean {
+    return this.args.model.canCreateGroup;
+  }
+
   get groups(): GroupListItem[] {
     return this.localGroups ?? this.args.model.groups;
   }

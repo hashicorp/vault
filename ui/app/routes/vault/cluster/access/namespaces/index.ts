@@ -9,6 +9,7 @@ import { accessNamespacesListViewConfig } from 'vault/utils/constants/list-view-
 import { SystemApiSystemListNamespacesListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
+import type CapabilitiesService from 'vault/services/capabilities';
 import type Controller from '@ember/controller';
 import FlagsService from 'vault/services/flags';
 import NamespaceService from 'vault/services/namespace';
@@ -21,7 +22,7 @@ interface RouteParams extends Record<string, unknown> {
 }
 
 export interface NamespacesIndexModel {
-  namespaces: Array<{ id: string }>;
+  namespaces: Array<{ id: string; canRead: boolean; canDelete: boolean }>;
   listViewConfig: typeof accessNamespacesListViewConfig;
   page: number;
   pageSize: number;
@@ -34,6 +35,7 @@ interface RouteController extends Controller {
 
 export default class NamespacesIndexRoute extends Route {
   @service declare readonly api: ApiService;
+  @service declare readonly capabilities: CapabilitiesService;
   @service declare readonly flags: FlagsService;
   @service declare namespace: NamespaceService;
 
@@ -58,7 +60,15 @@ export default class NamespacesIndexRoute extends Route {
 
     // Strip trailing slashes to match the format used by namespace.accessibleNamespaces
     // (see services/namespace.ts → findNamespacesForUser which normalises the same way).
-    const namespaces = keys.map((key) => ({ id: key.replace(/\/$/, '') }));
+    const ids = keys.map((key) => key.replace(/\/$/, ''));
+
+    const rowPath = (id: string) => this.capabilities.pathFor('namespace', { path: id });
+    const capabilitiesMap = ids.length ? await this.capabilities.fetch(ids.map(rowPath)) : {};
+
+    const namespaces = ids.map((id) => {
+      const capabilities = capabilitiesMap[rowPath(id)];
+      return { id, canRead: capabilities?.canRead || false, canDelete: capabilities?.canDelete || false };
+    });
 
     const listViewConfig = { ...accessNamespacesListViewConfig };
     listViewConfig.breadcrumbs = [
