@@ -50,3 +50,11 @@ module "k8s_verify_write_data" {
 module "read_license" {
   source = "../modules/read_license"
 }
+
+module "k8s_deploy_client_sidecar" {
+  source = "../modules/k8s_deploy_client_sidecar"
+}
+
+module "k8s_vault_verify_client_sidecar" {
+  source = "../modules/k8s_vault_verify_client_sidecar"
+}

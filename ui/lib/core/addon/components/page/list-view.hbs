@@ -95,25 +95,27 @@
               data-test-popup-menu-trigger={{rowData.id}}
             />
             {{#each @config.rowActions as |action|}}
-              {{#if (eq action.kind "route")}}
-                <dd.Interactive
-                  @route={{or (get rowData action.routeKey) action.route}}
-                  @model={{get rowData (or action.modelKey "id")}}
-                  @color={{action.color}}
-                  data-test-popup-menu={{action.dataTest}}
-                >{{action.label}}</dd.Interactive>
-              {{else if (eq action.kind "modal")}}
-                <dd.Interactive
-                  @color={{action.color}}
-                  {{on "click" (fn this.openModal action.modal rowData)}}
-                  data-test-popup-menu={{action.dataTest}}
-                >{{action.label}}</dd.Interactive>
-              {{else}}
-                <dd.Interactive
-                  @color={{action.color}}
-                  {{on "click" (fn (get this action.actionName) rowData)}}
-                  data-test-popup-menu={{action.dataTest}}
-                >{{action.label}}</dd.Interactive>
+              {{#if (or (not action.capability) (get rowData.capabilities action.capability))}}
+                {{#if (eq action.kind "route")}}
+                  <dd.Interactive
+                    @route={{or (get rowData action.routeKey) action.route}}
+                    @model={{get rowData (or action.modelKey "id")}}
+                    @color={{action.color}}
+                    data-test-popup-menu={{action.dataTest}}
+                  >{{action.label}}</dd.Interactive>
+                {{else if (eq action.kind "modal")}}
+                  <dd.Interactive
+                    @color={{action.color}}
+                    {{on "click" (fn this.openModal action.modal rowData)}}
+                    data-test-popup-menu={{action.dataTest}}
+                  >{{action.label}}</dd.Interactive>
+                {{else}}
+                  <dd.Interactive
+                    @color={{action.color}}
+                    {{on "click" (fn (get this action.actionName) rowData)}}
+                    data-test-popup-menu={{action.dataTest}}
+                  >{{action.label}}</dd.Interactive>
+                {{/if}}
               {{/if}}
             {{/each}}
           </Hds::Dropdown>

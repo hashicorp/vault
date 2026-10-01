@@ -1,6 +1,12 @@
 # Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
+variable "client_container_image_archive" {
+  description = "The path to the location of the client container image archive to test as a sidecar"
+  type        = string
+  default     = null # If none is given we'll load client image or skip if not provided
+}
+
 variable "container_image_archive" {
   description = "The path to the location of the container image archive to test"
   type        = string

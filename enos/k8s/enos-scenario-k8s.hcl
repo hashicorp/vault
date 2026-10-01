@@ -166,6 +166,21 @@ scenario "k8s" {
     }
   }
 
+  step "load_client_docker_image" {
+    description = <<-EOF
+      Load the Vault Client container image into the kind k8s cluster for testing as a sidecar.
+    EOF
+    module      = module.load_docker_image
+    depends_on  = [step.create_kind_cluster]
+
+    variables {
+      cluster_name = step.create_kind_cluster.cluster_name
+      image        = local.repo_metadata[matrix.edition][matrix.repo].repo
+      tag          = local.repo_metadata[matrix.edition][matrix.repo].tag
+      archive      = var.client_container_image_archive != null ? var.client_container_image_archive : var.container_image_archive
+    }
+  }
+
   step "deploy_vault" {
     module = module.k8s_deploy_vault
     depends_on = [
@@ -220,6 +235,44 @@ scenario "k8s" {
       vault_root_token  = step.deploy_vault.vault_root_token
       kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
       context_name      = step.create_kind_cluster.context_name
+    }
+  }
+
+  step "deploy_client_sidecar" {
+    description = <<-EOF
+      Deploy a test application pod alongside the Vault Client container running as a sidecar.
+    EOF
+    module      = module.k8s_deploy_client_sidecar
+    depends_on = [
+      step.deploy_vault,
+      step.load_client_docker_image,
+      step.create_kind_cluster,
+    ]
+
+    variables {
+      client_image_tag        = step.load_client_docker_image.tag
+      client_image_repository = step.load_client_docker_image.repository
+      context_name            = step.create_kind_cluster.context_name
+      kubeconfig_base64       = step.create_kind_cluster.kubeconfig_base64
+      vault_root_token        = step.deploy_vault.vault_root_token
+      vault_pods              = step.deploy_vault.vault_pods
+      kind_cluster_name       = step.create_kind_cluster.cluster_name
+    }
+  }
+
+  step "verify_client_sidecar" {
+    description = <<-EOF
+      Verify that the Vault Client sidecar authenticated, populated secrets to the shared volume,
+      and proxies requests over localhost to the Vault cluster.
+    EOF
+    module      = module.k8s_vault_verify_client_sidecar
+    depends_on  = [step.deploy_client_sidecar]
+
+    variables {
+      context_name      = step.create_kind_cluster.context_name
+      kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
+      app_pod_name      = step.deploy_client_sidecar.app_pod_name
+      app_pod_namespace = step.deploy_client_sidecar.app_pod_namespace
     }
   }
 }
