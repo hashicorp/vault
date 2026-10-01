@@ -6,12 +6,14 @@ package transit
 import (
 	"context"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -256,6 +258,28 @@ func parseCsr(csrStr string) (*x509.CertificateRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// Drop extensionRequest so CreateCertificateRequest uses the pkix.Extension
+	// path, which preserves Critical. Other attributes (e.g. challengePassword) stay.
+	var filtered []pkix.AttributeTypeAndValueSET
+	for _, attr := range csr.Attributes {
+		if !attr.Type.Equal(certutil.OidExtensionRequest) {
+			filtered = append(filtered, attr)
+		}
+	}
+	csr.Attributes = filtered
+
+	// Copy extensions verbatim into ExtraExtensions so the raw SAN blob
+	// (including otherName/UPN) is preserved. CreateCertificateRequest won't
+	// auto-generate a SAN when the OID is already in ExtraExtensions, so no
+	// duplicate is emitted.
+	csr.ExtraExtensions = append(csr.ExtraExtensions, csr.Extensions...)
+
+	// Clear SAN struct fields since SAN is now carried by ExtraExtensions.
+	csr.DNSNames = nil
+	csr.EmailAddresses = nil
+	csr.IPAddresses = nil
+	csr.URIs = nil
 
 	return csr, nil
 }
