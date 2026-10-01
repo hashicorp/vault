@@ -16,4 +16,5 @@ export interface TestUserType {
 export const TEST_USERS = {
   superuser: { name: 'superuser', storage: 'inmem', policy: 'superuser' },
   raft: { name: 'raft', storage: 'raft', policy: 'superuser' },
+  readonly: { name: 'readonly', storage: 'inmem', policy: 'readonly' },
 } satisfies Record<string, TestUserType>;

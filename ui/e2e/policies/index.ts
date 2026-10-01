@@ -12,4 +12,5 @@ const readFile = (filePath: string) => {
 
 export const USER_POLICY_MAP = {
   superuser: readFile('./superuser.hcl'),
+  readonly: readFile('./readonly.hcl'),
 };
