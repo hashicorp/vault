@@ -49,7 +49,7 @@ export const secretsBackendsListViewConfig: ListViewDisplayConfig = {
     {
       key: 'popupMenu',
       label: 'Actions',
-      width: '10%',
+      width: '125px',
     },
   ],
   rowActions: [

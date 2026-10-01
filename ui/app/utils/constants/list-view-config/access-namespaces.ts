@@ -12,7 +12,7 @@ export const accessNamespacesListViewConfig: ListViewDisplayConfig = {
   breadcrumbs: [], // set by route model() before returning
   columns: [
     { key: 'id', label: 'Namespace', isSortable: true },
-    { key: 'popupMenu', label: 'Action', width: '10%' },
+    { key: 'popupMenu', label: 'Actions', width: '125px' },
   ],
   badge: '', // set by route model() before returning
   badgeIcon: 'org',

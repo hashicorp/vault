@@ -71,8 +71,8 @@ export default class PageAuthMethodsComponent extends Component<Args> {
     },
     {
       key: 'popupMenu',
-      label: 'Action',
-      width: '8%',
+      label: 'Actions',
+      width: '125px',
     },
   ];
 
