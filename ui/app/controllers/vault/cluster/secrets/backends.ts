@@ -125,6 +125,13 @@ export default class VaultClusterSecretsBackendController extends Controller {
     }
   }
 
+  // Dropdown content unmounts on close, so the input clears but tracked search text would persist.
+  @action
+  clearDropdownSearch(): void {
+    this.typeSearchText = '';
+    this.versionSearchText = '';
+  }
+
   @action
   filterByEngineType(type: string): void {
     if (this.engineTypeFilters.includes(type)) {
