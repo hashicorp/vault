@@ -12,14 +12,14 @@ import { getPreference } from 'vault/utils/preferences';
 import type AnalyticsService from 'vault/services/analytics';
 
 /**
- * UserPreferences::DataPrivacy
+ * Preferences::DataPrivacy
  *
- * "Data & Privacy" section of the User Preferences page. Renders the "Share
+ * "Data & Privacy" section of the Preferences page. Renders the "Share
  * usage metrics" telemetry-consent control and routes changes through the
  * analytics service's recordConsent, which persists the choice and applies it
  * to the current session (starts on accept, stops on decline) without a reload.
  */
-export default class UserPreferencesDataPrivacy extends Component {
+export default class PreferencesDataPrivacy extends Component {
   @service declare readonly analytics: AnalyticsService;
 
   // Initialize from storage; absent key resolves to the registry default (off).

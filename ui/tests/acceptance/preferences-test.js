@@ -10,7 +10,7 @@ import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers'
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Acceptance | user-preferences', function (hooks) {
+module('Acceptance | preferences', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -19,21 +19,21 @@ module('Acceptance | user-preferences', function (hooks) {
     await login();
   });
 
-  test('a user navigates to User Preferences from the account menu', async function (assert) {
+  test('a user navigates to Preferences from the account menu', async function (assert) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'starts on the dashboard');
 
     await click(GENERAL.button('user-menu-trigger'));
     assert
-      .dom(GENERAL.menuItem('user-preferences'))
-      .hasText('User preferences', 'the account menu shows the User preferences item');
+      .dom(GENERAL.menuItem('preferences'))
+      .hasText('Preferences', 'the account menu shows the Preferences item');
 
-    await click(GENERAL.menuItem('user-preferences'));
+    await click(GENERAL.menuItem('preferences'));
 
-    assert.strictEqual(currentURL(), '/vault/user-preferences', 'lands on the user-preferences route');
+    assert.strictEqual(currentURL(), '/vault/preferences', 'lands on the preferences route');
     assert
       .dom(GENERAL.button('user-menu-trigger'))
       .hasAttribute('aria-expanded', 'false', 'the dropdown closes after navigating');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('User preferences', 'the page header renders its title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Preferences', 'the page header renders its title');
   });
 
   test('the page header states browser-only storage and does not claim entity/cross-device persistence', async function (assert) {
@@ -42,7 +42,7 @@ module('Acceptance | user-preferences', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'starts on the dashboard');
 
     await click(GENERAL.button('user-menu-trigger'));
-    await click(GENERAL.menuItem('user-preferences'));
+    await click(GENERAL.menuItem('preferences'));
 
     assert.dom(GENERAL.hdsPageHeaderDescription).includesText('Privacy Policy');
     assert
@@ -61,7 +61,7 @@ module('Acceptance | user-preferences', function (hooks) {
     // Verifies that the Persona (Your role) section is present for all users
     // and appears before the Data & Privacy section in the DOM.
     await click(GENERAL.button('user-menu-trigger'));
-    await click(GENERAL.menuItem('user-preferences'));
+    await click(GENERAL.menuItem('preferences'));
 
     assert.dom('[data-test-persona-section]').exists('the Persona section renders');
     assert
@@ -73,16 +73,16 @@ module('Acceptance | user-preferences', function (hooks) {
     assert.true(personaTop < privacyTop, 'Persona section appears above Data & Privacy in the DOM');
   });
 
-  test('HVD-managed clusters show the user preferences page but hide the Data & Privacy section', async function (assert) {
+  test('HVD-managed clusters show the preferences page but hide the Data & Privacy section', async function (assert) {
     // HVD telemetry runs without user consent, so the consent toggle is meaningless
     // for HVD users. The page itself remains accessible so they can still manage
     // other preferences.
     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
-    await visit('/vault/user-preferences');
+    await visit('/vault/preferences');
 
-    assert.strictEqual(currentURL(), '/vault/user-preferences', 'HVD users can access the preferences page');
-    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('User preferences', 'page header renders');
+    assert.strictEqual(currentURL(), '/vault/preferences', 'HVD users can access the preferences page');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Preferences', 'page header renders');
     assert
       .dom('[data-test-data-privacy-section]')
       .doesNotExist('Data & Privacy section is hidden for HVD-managed clusters');
@@ -90,7 +90,7 @@ module('Acceptance | user-preferences', function (hooks) {
 
   test('it hides the Appearance section on community', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
-    await visit('/vault/user-preferences');
+    await visit('/vault/preferences');
     assert
       .dom('[data-test-data-appearance-section]')
       .doesNotExist('Appearance section is not rendered for community edition');
@@ -98,7 +98,7 @@ module('Acceptance | user-preferences', function (hooks) {
 
   test('it shows the Appearance section on enterprise', async function (assert) {
     this.owner.lookup('service:version').type = 'enterprise';
-    await visit('/vault/user-preferences');
+    await visit('/vault/preferences');
     assert
       .dom('[data-test-data-appearance-section]')
       .exists('Appearance section is rendered for enterprise edition');

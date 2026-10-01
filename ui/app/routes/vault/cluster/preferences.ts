@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
 
-export default class UserPreferencesRoute extends Route {
+export default class PreferencesRoute extends Route {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 

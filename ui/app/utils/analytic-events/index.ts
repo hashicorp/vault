@@ -68,9 +68,9 @@ export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
 // Intro reopen — re-opening a dismissed intro from a resource list page
 export const INTRO_REOPEN_CLICKED = UI_INTERACTION;
 
-// User preferences
-export const USER_PREFERENCES_PERSONA_SET = UI_INTERACTION;
-export const USER_PREFERENCES_THEME_SET = UI_INTERACTION;
+// Preferences
+export const PREFERENCES_PERSONA_SET = UI_INTERACTION;
+export const PREFERENCES_THEME_SET = UI_INTERACTION;
 
 // Dashboard feature spotlight widget
 export const DASHBOARD_FEATURE_SPOTLIGHT_LEARN_MORE = CTA_CLICKED;

@@ -48,7 +48,7 @@ Router.map(function () {
         this.route('edit');
       });
       this.route('usage-reporting');
-      this.route('user-preferences');
+      this.route('preferences');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
