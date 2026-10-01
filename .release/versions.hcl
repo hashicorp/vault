@@ -19,6 +19,11 @@ active_versions {
     lts       = true
   }
 
+   version "2.0.x" {
+    ce_active = false
+    lts       = true
+  }
+
   version "1.21.x" {
     ce_active = false
   }
