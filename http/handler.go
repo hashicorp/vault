@@ -187,6 +187,7 @@ var (
 		"/v1/sys/rotate",
 		"/v1/sys/wrapping/wrap",
 	}
+
 	websocketRawPaths = []string{
 		"sys/events/subscribe",
 	}
