@@ -7,11 +7,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	osuser "os/user"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/hashicorp/cli"
@@ -110,6 +110,7 @@ PASSPHRASECORRECT:
 		NextProtos:     []string{"h2", "http/1.1"},
 		ClientAuth:     tls.RequestClientCert,
 	}
+	var clientCAs *atomic.Pointer[x509.CertPool]
 
 	if l.TLSMinVersion == "" {
 		l.TLSMinVersion = "tls12"
@@ -168,16 +169,19 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 	if l.TLSRequireAndVerifyClientCert {
 		tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 		if l.TLSClientCAFile != "" {
-			caPool := x509.NewCertPool()
-			data, err := ioutil.ReadFile(l.TLSClientCAFile)
+			caPool, err := loadClientCAPool(l.TLSClientCAFile)
 			if err != nil {
-				return nil, nil, fmt.Errorf("failed to read tls_client_ca_file: %w", err)
+				return nil, nil, err
 			}
-
-			if !caPool.AppendCertsFromPEM(data) {
-				return nil, nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
-			}
+			clientCAs = &atomic.Pointer[x509.CertPool]{}
+			clientCAs.Store(caPool)
 			tlsConf.ClientCAs = caPool
+			tlsConf.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+				currentConfig := tlsConf.Clone()
+				currentConfig.GetConfigForClient = nil
+				currentConfig.ClientCAs = clientCAs.Load()
+				return currentConfig, nil
+			}
 		}
 	}
 
@@ -189,7 +193,34 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 	}
 
 	props["tls"] = "enabled"
-	return tlsConf, cg.Reload, nil
+	reload := cg.Reload
+	if clientCAs != nil {
+		reload = func() error {
+			caPool, err := loadClientCAPool(l.TLSClientCAFile)
+			if err != nil {
+				return err
+			}
+			if err := cg.Reload(); err != nil {
+				return err
+			}
+			clientCAs.Store(caPool)
+			return nil
+		}
+	}
+	return tlsConf, reload, nil
+}
+
+func loadClientCAPool(path string) (*x509.CertPool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read tls_client_ca_file: %w", err)
+	}
+
+	caPool := x509.NewCertPool()
+	if !caPool.AppendCertsFromPEM(data) {
+		return nil, fmt.Errorf("failed to parse CA certificate in tls_client_ca_file")
+	}
+	return caPool, nil
 }
 
 // setFilePermissions handles configuring ownership and permissions
