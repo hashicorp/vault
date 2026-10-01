@@ -193,4 +193,47 @@ module('Acceptance | RGP policies list view', function (hooks) {
     assert.dom(GENERAL.listItem('rgp-policy-15')).exists('rgp-policy-15 is visible on page 2');
     assert.dom(GENERAL.listItem('rgp-policy-0')).doesNotExist('rgp-policy-0 is not visible on page 2');
   });
+
+  // ── Regression: VAULT-50826 ──────────────────────────────────────────────
+
+  test('it navigates to the correct RGP policy edit page from the list', async function (assert) {
+    // Regression guard for VAULT-50826: clicking "Edit policy" on a list row must
+    // navigate to THAT policy's edit page, not the one last loaded by the show route.
+    //
+    // Root cause: policy/edit calls this.modelFor('vault.cluster.policy.show'),
+    // which returns route.currentModel — a value Ember retains on the route singleton
+    // after navigating away. When the show route was previously activated for a
+    // different policy, edit.model() blindly reuses that stale object.
+    //
+    // Minimum reproduction: show(rgp-alpha) → list → edit(rgp-beta).
+    this.server.get('sys/policies/rgp/', () => ({
+      data: { keys: ['rgp-alpha', 'rgp-beta'] },
+    }));
+    this.server.get('sys/policies/rgp/:name', (_schema, request) => ({
+      data: {
+        name: request.params.name,
+        policy: `main = rule { true }`,
+        enforcement_level: 'advisory',
+      },
+    }));
+
+    // Step 1: visit the show page for rgp-alpha so show.currentModel is set on
+    // the route singleton to { name: 'rgp-alpha', ... }.
+    await visit('/vault/policy/rgp/rgp-alpha');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('rgp-alpha', 'show page loaded for rgp-alpha');
+
+    // Step 2: navigate to the list (show deactivates, but currentModel persists).
+    await click(GENERAL.breadcrumbLink('RGP policies'));
+
+    // Step 3: click "Edit policy" on rgp-beta.
+    // show.currentModel is still rgp-alpha — the edit route must not reuse it.
+    const triggers = document.querySelectorAll(GENERAL.menuTrigger);
+    await click(triggers[1]);
+    await click(GENERAL.menuItem('edit-policy'));
+
+    assert.true(currentURL().includes('/vault/policy/rgp/rgp-beta/edit'), 'URL is for rgp-beta');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('rgp-beta', 'edit page shows rgp-beta, not the stale rgp-alpha');
+  });
 });

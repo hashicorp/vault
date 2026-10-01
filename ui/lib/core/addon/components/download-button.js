@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
-import timestamp from 'vault/utils/timestamp';
 import { tracked } from '@glimmer/tracking';
 import { assert } from '@ember/debug';
 /**
@@ -19,7 +18,7 @@ import { assert } from '@ember/debug';
  * @example
  * <DownloadButton @text="Download this stuff" @color="secondary" @data="download data" @filename="my file" />
  *
- * @param {string} [filename] - name of file that prefixes the ISO timestamp generated at download
+ * @param {string} [filename] - name of file that prefixes the ISO timestamp (applied by the download service)
  * @param {string} [data] - data to download
  * @param {function} [fetchData] - function that fetches data and returns download content
  * @param {string} [extension=txt] - file extension, the download service uses this to determine the mimetype
@@ -45,10 +44,6 @@ export default class DownloadButton extends Component {
       !hasConflictingArgs
     );
   }
-  get filename() {
-    const ts = timestamp.now().toISOString();
-    return this.args.filename ? this.args.filename + '-' + ts : ts;
-  }
 
   get content() {
     if (this.args.stringify) {
@@ -67,8 +62,8 @@ export default class DownloadButton extends Component {
       this.fetchedData = await this.args.fetchData();
     }
     try {
-      this.download.miscExtension(this.filename, this.content, this.extension);
-      this.flashMessages.info(`Downloading ${this.filename}`);
+      this.download.miscExtension(this.args.filename, this.content, this.extension);
+      this.flashMessages.info(`Downloading ${this.args.filename}`);
       if (this.args.onSuccess) {
         this.args.onSuccess();
       }
