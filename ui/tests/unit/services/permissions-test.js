@@ -303,6 +303,25 @@ module('Unit | Service | permissions', function (hooks) {
       assert.false(this.service.hasPermissionBeneath('sys/mounts', ['update']));
     });
 
+    test('ignores grants on excluded subpaths', function (assert) {
+      const excluded = ['api-lock/lock', 'api-lock/unlock'];
+      this.service.setProperties({ globPaths: { 'sys/namespaces/api-lock/lock/': update } });
+      assert.false(
+        this.service.hasPermissionBeneath('sys/namespaces', ['update'], excluded),
+        'api-lock/lock/* does not grant namespace creation'
+      );
+      this.service.setProperties({ exactPaths: { 'sys/namespaces/api-lock/unlock': update } });
+      assert.false(
+        this.service.hasPermissionBeneath('sys/namespaces', ['update'], excluded),
+        'unlock excluded'
+      );
+      this.service.setProperties({ exactPaths: { 'sys/namespaces/api-lock': update } });
+      assert.true(
+        this.service.hasPermissionBeneath('sys/namespaces', ['update'], excluded),
+        'a namespace named "api-lock" is still a genuine grant'
+      );
+    });
+
     test('allows when ACL data could not be loaded or the token is root', function (assert) {
       this.service.setProperties({ hasFallbackAccess: true });
       assert.true(this.service.hasPermissionBeneath('sys/mounts', ['update']), 'falls back to the API');

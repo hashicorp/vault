@@ -19,11 +19,6 @@ export const accessNamespacesListViewConfig: ListViewDisplayConfig = {
   noDataTitle: 'No namespaces yet',
   noDataDescription: 'Your namespaces will be listed here. Add a namespace to get started.',
   filteredEmptyTitle: 'No results for',
-  primaryAction: {
-    label: 'Create namespace',
-    route: 'vault.cluster.access.namespaces.create',
-    icon: 'plus',
-  },
   filter: {
     type: 'text',
     placeholder: 'Filter by namespace path',

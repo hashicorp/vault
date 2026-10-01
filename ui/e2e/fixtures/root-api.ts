@@ -37,3 +37,15 @@ export const ensureMount = async (api: APIRequestContext, path: string, type: st
   if ((await api.get(`/v1/sys/mounts/${path}`)).ok()) return;
   await expect(await api.post(`/v1/sys/mounts/${path}`, { data: { type } })).toBeOK();
 };
+
+/**
+ * Creates the namespace at `path` unless it already exists, for the same retry reason as
+ * {@link ensureMount}.
+ *
+ * @param api - root-token context from {@link rootApi}
+ * @param path - namespace path relative to the root namespace, e.g. "readonly-ns"
+ */
+export const ensureNamespace = async (api: APIRequestContext, path: string) => {
+  if ((await api.get(`/v1/sys/namespaces/${path}`)).ok()) return;
+  await expect(await api.post(`/v1/sys/namespaces/${path}`)).toBeOK();
+};

@@ -3,6 +3,14 @@
 
 # Auditor-style persona: can browse list and detail views but cannot create, update, or delete.
 
+path "sys/namespaces" {
+  capabilities = ["read", "list"]
+}
+
+path "sys/namespaces/*" {
+  capabilities = ["read", "list"]
+}
+
 path "sys/mounts" {
   capabilities = ["read", "list"]
 }
@@ -13,6 +21,10 @@ path "sys/mounts/*" {
 
 path "sys/internal/ui/mounts/*" {
   capabilities = ["read"]
+}
+
+path "identity/*" {
+  capabilities = ["read", "list"]
 }
 
 # Secrets engines are only listed when the token can reach them.
