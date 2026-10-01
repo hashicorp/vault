@@ -21,25 +21,27 @@ export default class PolicyEditRouter extends Route {
   }
 
   async model(params) {
-    // use existing model if edit is routed from policy/show
-    const model = this.modelFor('vault.cluster.policy.show');
-    if (model) {
-      const form = new PolicyForm(model, { isNew: false });
-      form.policyType = model.policyType;
-      form.capabilities = model.capabilities;
-      return form;
-    } else {
-      // otherwise need to fetch policy if model is not available
-      const type = this.policyType();
-      const policy = await this.fetchPolicy(params.policy_name, type);
-      const form = new PolicyForm(policy, { isNew: false });
-      form.policyType = type;
-      form.capabilities = await this.capabilities.for('policy', {
-        policyType: this.policyType(),
-        id: params.policy_name,
-      });
+    // Reuse the show route's model only when it matches the policy being edited.
+    // show.currentModel persists on the route singleton after navigation, so
+    // checking the name prevents a stale model from a previously-visited policy
+    // being served to the wrong edit form (VAULT-50826).
+    const showModel = this.modelFor('vault.cluster.policy.show');
+    if (showModel && showModel.name === params.policy_name) {
+      const form = new PolicyForm(showModel, { isNew: false });
+      form.policyType = showModel.policyType;
+      form.capabilities = showModel.capabilities;
       return form;
     }
+
+    const type = this.policyType();
+    const policy = await this.fetchPolicy(params.policy_name, type);
+    const form = new PolicyForm(policy, { isNew: false });
+    form.policyType = type;
+    form.capabilities = await this.capabilities.for('policy', {
+      policyType: this.policyType(),
+      id: params.policy_name,
+    });
+    return form;
   }
 
   async fetchPolicy(name, type) {

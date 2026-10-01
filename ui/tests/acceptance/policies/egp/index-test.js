@@ -193,4 +193,48 @@ module('Acceptance | EGP policies list view', function (hooks) {
     assert.dom(GENERAL.listItem('egp-policy-15')).exists('egp-policy-15 is visible on page 2');
     assert.dom(GENERAL.listItem('egp-policy-0')).doesNotExist('egp-policy-0 is not visible on page 2');
   });
+
+  // ── Regression: VAULT-50826 ──────────────────────────────────────────────
+
+  test('it navigates to the correct EGP policy edit page from the list', async function (assert) {
+    // Regression guard for VAULT-50826: clicking "Edit policy" on a list row must
+    // navigate to THAT policy's edit page, not the one last loaded by the show route.
+    //
+    // Root cause: policy/edit calls this.modelFor('vault.cluster.policy.show'),
+    // which returns route.currentModel — a value Ember retains on the route singleton
+    // after navigating away. When the show route was previously activated for a
+    // different policy, edit.model() blindly reuses that stale object.
+    //
+    // Minimum reproduction: show(egp-alpha) → list → edit(egp-beta).
+    this.server.get('sys/policies/egp/', () => ({
+      data: { keys: ['egp-alpha', 'egp-beta'] },
+    }));
+    this.server.get('sys/policies/egp/:name', (_schema, request) => ({
+      data: {
+        name: request.params.name,
+        policy: `main = rule { true }`,
+        enforcement_level: 'advisory',
+        paths: ['*'],
+      },
+    }));
+
+    // Step 1: visit the show page for egp-alpha so show.currentModel is set on
+    // the route singleton to { name: 'egp-alpha', ... }.
+    await visit('/vault/policy/egp/egp-alpha');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('egp-alpha', 'show page loaded for egp-alpha');
+
+    // Step 2: navigate to the list (show deactivates, but currentModel persists).
+    await click(GENERAL.breadcrumbLink('EGP policies'));
+
+    // Step 3: click "Edit policy" on egp-beta.
+    // show.currentModel is still egp-alpha — the edit route must not reuse it.
+    const triggers = document.querySelectorAll(GENERAL.menuTrigger);
+    await click(triggers[1]);
+    await click(GENERAL.menuItem('edit-policy'));
+
+    assert.true(currentURL().includes('/vault/policy/egp/egp-beta/edit'), 'URL is for egp-beta');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('egp-beta', 'edit page shows egp-beta, not the stale egp-alpha');
+  });
 });

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,6 +28,11 @@ export default class PageIdentityGroupAliasesComponent extends Component<Args> {
   @tracked aliasToDelete: GroupAliasListItem | null = null;
   // Optimistic local copy — updated on delete so the list updates without a route refresh.
   @tracked localAliases: GroupAliasListItem[] | null = null;
+
+  // Set by the route from the token's capabilities on identity/group.
+  get canCreateGroup(): boolean {
+    return this.args.model.canCreateGroup;
+  }
 
   get aliases(): GroupAliasListItem[] {
     return this.localAliases ?? this.args.model.aliases;

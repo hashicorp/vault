@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,6 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 const GROUP_ID_1 = '66638b30-a05e-560b-18cc-f43af766ce73';
 const GROUP_ID_2 = '78938b30-a85e-535b-14ac-f43af766ce73';
@@ -166,5 +167,60 @@ module('Acceptance | Identity groups list view', function (hooks) {
 
     assert.dom('[data-test-identity-link="group-15"]').exists('group-15 is visible on page 2');
     assert.dom('[data-test-identity-link="group-0"]').doesNotExist('group-0 is not visible on page 2');
+  });
+});
+
+// Read-only tokens must not see create or edit actions for groups.
+module('Acceptance | Identity groups list view | read-only token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    await login();
+    // External, so the details view would otherwise offer "Add alias".
+    this.groupId = await runCmd('write -field=id identity/group name=read-only-group type=external');
+    const token = await runCmd(
+      tokenWithPolicyCmd('groups-read-only', 'path "identity/*" { capabilities = ["read", "list"] }')
+    );
+    await login(token);
+  });
+
+  hooks.afterEach(async function () {
+    await login();
+    await runCmd('delete identity/group/name/read-only-group');
+  });
+
+  test('it hides the create action on the list view', async function (assert) {
+    await visit('/vault/access/identity/groups');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Groups', 'list view renders');
+    assert.dom('[data-test-identity-link="read-only-group"]').exists('group is listed');
+    assert.dom(GENERAL.button('Create group')).doesNotExist('create action is hidden');
+  });
+
+  test('it hides the edit and add alias actions on the group details view', async function (assert) {
+    await visit(`/vault/access/identity/groups/${this.groupId}/details`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('read-only-group', 'details view renders');
+    assert.dom('[data-test-entity-edit-link]').doesNotExist('edit action is hidden');
+    assert.dom('[data-test-entity-create-link]').doesNotExist('add alias action is hidden');
+  });
+});
+
+// Capability gating must not hide group details actions from a user who is allowed to use them.
+module('Acceptance | Identity group details | root token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    await login();
+    this.groupId = await runCmd('write -field=id identity/group name=root-external-group type=external');
+  });
+
+  hooks.afterEach(async function () {
+    await runCmd('delete identity/group/name/root-external-group');
+  });
+
+  test('it shows the edit and add alias actions on the group details view', async function (assert) {
+    await visit(`/vault/access/identity/groups/${this.groupId}/details`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('root-external-group', 'details view renders');
+    assert.dom('[data-test-entity-edit-link]').exists('edit action is shown');
+    assert.dom('[data-test-entity-create-link]').exists('add alias action is shown');
   });
 });

@@ -478,7 +478,9 @@ export default class PermissionsService extends Service {
   // whether "Enable new engine" applies under sys/mounts. capabilities-self only evaluates literal
   // paths, so probing "sys/mounts/*" is denied for a policy on "sys/mounts/team-*" even though that
   // token can enable "team-kv". Resultant-acl glob keys are prefixes ('*' stripped) and may use '+'.
-  hasPermissionBeneath(pathName, capabilities) {
+  // `excludedSubpaths` skips grants on reserved routes below the base, e.g. "api-lock/lock" under
+  // sys/namespaces, which share the prefix but do not grant the action being checked.
+  hasPermissionBeneath(pathName, capabilities, excludedSubpaths = []) {
     // Without ACL data, show the action and let the API enforce access.
     if (this.isRoot || this.hasFallbackAccess || !this.isAclLoaded) return true;
     const base = sanitizePath(this.pathNameWithNamespace(pathName));
@@ -494,7 +496,13 @@ export default class PermissionsService extends Service {
 
     // Otherwise a narrower path below the base, such as "sys/mounts/team-", can still grant access.
     const exact = Object.entries(this.exactPaths || {});
-    return [...globs, ...exact].some(([key, entry]) => this._isBeneath(key, base) && allows(entry));
+    const isExcluded = (key) => {
+      const subpath = key.split('/').slice(base.split('/').length).join('/');
+      return excludedSubpaths.some((excluded) => subpath === excluded || subpath.startsWith(`${excluded}/`));
+    };
+    return [...globs, ...exact].some(
+      ([key, entry]) => this._isBeneath(key, base) && !isExcluded(key) && allows(entry)
+    );
   }
 
   // True if every path starting with `target` also starts with the prefix `key`.

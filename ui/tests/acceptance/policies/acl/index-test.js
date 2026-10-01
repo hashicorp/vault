@@ -209,4 +209,46 @@ module('Acceptance | ACL policies list view', function (hooks) {
     assert.dom(GENERAL.listItem('policy-15')).exists('policy-15 is visible on page 2');
     assert.dom(GENERAL.listItem('policy-0')).doesNotExist('policy-0 is not visible on page 2');
   });
+
+  // ── Regression: VAULT-50826 ──────────────────────────────────────────────
+
+  test('it navigates to the correct ACL policy edit page from the list', async function (assert) {
+    // Regression guard for VAULT-50826: clicking "Edit policy" on a list row must
+    // navigate to THAT policy's edit page, not the one last loaded by the show route.
+    //
+    // Root cause: policy/edit calls this.modelFor('vault.cluster.policy.show'),
+    // which returns route.currentModel — a value Ember retains on the route singleton
+    // after navigating away. When the show route was previously activated for a
+    // different policy, edit.model() blindly reuses that stale object.
+    //
+    // Minimum reproduction: show(policy-alpha) → list → edit(policy-beta).
+    this.server.get('sys/policies/acl/', () => ({
+      data: { keys: ['policy-alpha', 'policy-beta'] },
+    }));
+    this.server.get('sys/policies/acl/:name', (_schema, request) => ({
+      data: {
+        name: request.params.name,
+        policy: `path "secret/*" { capabilities = ["read"] }`,
+      },
+    }));
+
+    // Step 1: visit the show page for policy-alpha so show.currentModel is set on
+    // the route singleton to { name: 'policy-alpha', ... }.
+    await visit('/vault/policy/acl/policy-alpha');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('policy-alpha', 'show page loaded for policy-alpha');
+
+    // Step 2: navigate to the list (show deactivates, but currentModel persists).
+    await click(GENERAL.breadcrumbLink('ACL policies'));
+
+    // Step 3: click "Edit policy" on policy-beta.
+    // show.currentModel is still policy-alpha — the edit route must not reuse it.
+    const triggers = document.querySelectorAll(GENERAL.menuTrigger);
+    await click(triggers[1]);
+    await click(GENERAL.menuItem('edit-policy'));
+
+    assert.true(currentURL().includes('/vault/policy/acl/policy-beta/edit'), 'URL is for policy-beta');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('policy-beta', 'edit page shows policy-beta, not the stale policy-alpha');
+  });
 });
