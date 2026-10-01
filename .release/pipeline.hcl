@@ -353,6 +353,7 @@ changed_files {
         "Dockerfile-ent-hsm",
         "AGENTS.md",
         "opencode.json",
+        ".mcp.json",
       ]
     }
 
