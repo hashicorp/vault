@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { formatDownloadText } from './upgrade-utils';
+import { FEEDBACK_SURVEY_URL } from 'vault/utils/constants/links';
 import { cleanVersion, compareVersions, parseVersion } from 'vault/utils/version-utils';
 
 import type ApiService from 'vault/services/api';
@@ -54,6 +55,8 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
   @service declare readonly router: RouterService;
   @service declare readonly currentCluster: CurrentClusterService;
   @service declare readonly version: VersionService;
+
+  readonly feedbackUrl = FEEDBACK_SURVEY_URL;
 
   @tracked selectedVersion: string | null = null;
   @tracked upgradeInfo: DisplayedInfo | null = null;
