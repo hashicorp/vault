@@ -97,6 +97,7 @@ export const PATH_MAP = {
   pkiExternalRoleCachedCert: apiPath`${'backend'}/role/${'roleName'}/cached`,
   policy: apiPath`sys/policies/${'policyType'}/${'id'}`,
   policies: apiPath`sys/policies`,
+  secretsEngineMount: apiPath`sys/mounts/${'path'}`,
   sshCredentials: apiPath`${'backend'}/creds/${'id'}`,
   sshRole: apiPath`${'backend'}/roles/${'id'}`,
   sshSign: apiPath`${'backend'}/sign/${'id'}`,

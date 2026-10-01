@@ -258,6 +258,59 @@ module('Unit | Service | permissions', function (hooks) {
     });
   });
 
+  module('hasPermissionBeneath', function () {
+    // Glob keys mirror sys/internal/ui/resultant-acl, which strips the trailing '*' from policy paths.
+    const update = { capabilities: ['update'] };
+    const deny = { capabilities: ['deny'] };
+
+    test('allows a policy scoped to part of the subtree', function (assert) {
+      this.service.setProperties({ globPaths: { 'sys/mounts/team-': update } });
+      assert.true(
+        this.service.hasPermissionBeneath('sys/mounts', ['update']),
+        'sys/mounts/team-* grants update'
+      );
+    });
+
+    test('allows a glob covering the whole subtree', function (assert) {
+      this.service.setProperties({ globPaths: { 'sys/': update } });
+      assert.true(this.service.hasPermissionBeneath('sys/mounts', ['update']), 'sys/* covers sys/mounts/*');
+    });
+
+    test('allows an exact path below the base', function (assert) {
+      this.service.setProperties({ exactPaths: { 'sys/mounts/kv': update } });
+      assert.true(this.service.hasPermissionBeneath('sys/mounts', ['update']), 'sys/mounts/kv grants update');
+    });
+
+    test('allows "+" segments in glob keys', function (assert) {
+      registerNs(this.owner, 'team');
+      this.service.setProperties({ globPaths: { '+/sys/mounts/': update } });
+      assert.true(
+        this.service.hasPermissionBeneath('sys/mounts', ['update']),
+        '+/sys/mounts/* matches team/'
+      );
+    });
+
+    test('denies when only other capabilities or sibling paths are granted', function (assert) {
+      this.service.setProperties({
+        exactPaths: { 'sys/mounts': update },
+        globPaths: { 'sys/mounts/': { capabilities: ['read', 'list'] }, 'sys/mountsx/': update },
+      });
+      assert.false(this.service.hasPermissionBeneath('sys/mounts', ['update']));
+    });
+
+    test('a narrower deny overrides a broader allow', function (assert) {
+      this.service.setProperties({ globPaths: { 'sys/': update, 'sys/mounts/': deny } });
+      assert.false(this.service.hasPermissionBeneath('sys/mounts', ['update']));
+    });
+
+    test('allows when ACL data could not be loaded or the token is root', function (assert) {
+      this.service.setProperties({ hasFallbackAccess: true });
+      assert.true(this.service.hasPermissionBeneath('sys/mounts', ['update']), 'falls back to the API');
+      this.service.setProperties({ hasFallbackAccess: false, isRoot: true });
+      assert.true(this.service.hasPermissionBeneath('sys/mounts', ['update']), 'root');
+    });
+  });
+
   module('pathNameWithNamespace', function () {
     test('appends the namespace to the path if there is one', function (assert) {
       registerNs(this.owner, 'marketing');

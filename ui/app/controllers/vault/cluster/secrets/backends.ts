@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 import Controller from '@ember/controller';
@@ -13,6 +13,7 @@ import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
 
 import type RouterService from '@ember/routing/router-service';
 import type AnalyticsService from 'vault/services/analytics';
+import type PermissionsService from 'vault/services/permissions';
 import type WizardService from 'vault/services/wizard';
 
 interface Engine {
@@ -34,6 +35,7 @@ interface RouteModel {
 
 export default class VaultClusterSecretsBackendController extends Controller {
   @service declare readonly analytics: AnalyticsService;
+  @service declare readonly permissions: PermissionsService;
   @service declare readonly router: RouterService;
   @service declare readonly wizard: WizardService;
 
@@ -53,6 +55,12 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked pathSearchText = '';
   @tracked typeSearchText = '';
   @tracked versionSearchText = '';
+
+  // Enabling an engine is an update on sys/mounts/:path. The path is not chosen yet, so check
+  // whether the token can update any path under sys/mounts (policies may be scoped, e.g. team-*).
+  get canCreateEngine(): boolean {
+    return this.permissions.hasPermissionBeneath('sys/mounts', ['update']);
+  }
 
   // Returns unique engine types matching the current type search text
   get secretEngineArrayByType(): { name: string; icon: string }[] {

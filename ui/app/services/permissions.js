@@ -474,6 +474,49 @@ export default class PermissionsService extends Service {
     return this._decide(full, capabilities);
   }
 
+  // True when the token holds any of `capabilities` on at least one path below `pathName`, e.g.
+  // whether "Enable new engine" applies under sys/mounts. capabilities-self only evaluates literal
+  // paths, so probing "sys/mounts/*" is denied for a policy on "sys/mounts/team-*" even though that
+  // token can enable "team-kv". Resultant-acl glob keys are prefixes ('*' stripped) and may use '+'.
+  hasPermissionBeneath(pathName, capabilities) {
+    // Without ACL data, show the action and let the API enforce access.
+    if (this.isRoot || this.hasFallbackAccess || !this.isAclLoaded) return true;
+    const base = sanitizePath(this.pathNameWithNamespace(pathName));
+    const allows = (entry) =>
+      !this.isDenied(entry) && capabilities.some((cap) => this.hasCapability(entry, cap));
+    const globs = Object.entries(this.globPaths || {}).map(([key, entry]) => [key.replace(/\*$/, ''), entry]);
+
+    // The most specific glob covering the whole subtree wins, so a narrower deny beats a broader allow.
+    const covering = globs
+      .filter(([key]) => this._prefixCovers(key, `${base}/`))
+      .sort(([a], [b]) => b.length - a.length)[0];
+    if (covering && allows(covering[1])) return true;
+
+    // Otherwise a narrower path below the base, such as "sys/mounts/team-", can still grant access.
+    const exact = Object.entries(this.exactPaths || {});
+    return [...globs, ...exact].some(([key, entry]) => this._isBeneath(key, base) && allows(entry));
+  }
+
+  // True if every path starting with `target` also starts with the prefix `key`.
+  _prefixCovers(key, target) {
+    const pattern = key
+      .split('/')
+      .map((seg) => (seg === '+' ? '[^/]+' : seg.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+      .join('/');
+    return new RegExp(`^${pattern}`).test(target);
+  }
+
+  // True if `key` names a path, or a prefix of one, strictly below `base`.
+  _isBeneath(key, base) {
+    const keySegments = key.split('/');
+    const baseSegments = base.split('/');
+    return (
+      keySegments.length > baseSegments.length &&
+      keySegments[baseSegments.length] !== '' &&
+      baseSegments.every((seg, i) => keySegments[i] === '+' || keySegments[i] === seg)
+    );
+  }
+
   // ===== capability helpers ==================================================
 
   // If a specific capability is requested, ensure it’s present.
