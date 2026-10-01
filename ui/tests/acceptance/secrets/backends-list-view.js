@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, visit, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -104,6 +104,26 @@ module('Acceptance | secrets backends list view', function (hooks) {
     await visit('/vault/secrets-engines');
     await fillIn(GENERAL.filterInput, 'nonexistent-engine-path');
     assert.dom(GENERAL.emptyStateTitle).includesText('No results for');
+  });
+
+  test('dropdown search text is cleared when a dropdown closes', async function (assert) {
+    await visit('/vault/secrets-engines');
+    const controller = this.owner.lookup('controller:vault.cluster.secrets.backends');
+    controller.versionSearchText = 'v0.14.0';
+
+    await click(GENERAL.toggleInput('filter-by-engine-type'));
+    await fillIn(GENERAL.inputSearch('engine-type'), 'kv');
+    assert.dom(GENERAL.checkboxByAttr('aws')).doesNotExist('search narrows engine type options');
+
+    // close and reopen the dropdown
+    await click(GENERAL.toggleInput('filter-by-engine-type'));
+    await click(GENERAL.toggleInput('filter-by-engine-type'));
+    await waitFor(GENERAL.checkboxByAttr('aws'));
+
+    assert.strictEqual(controller.versionSearchText, '', 'version search text is cleared on close');
+    assert.dom(GENERAL.inputSearch('engine-type')).hasValue('', 'search input is empty after reopening');
+    assert.dom(GENERAL.checkboxByAttr('aws')).exists('all engine type options render after reopening');
+    assert.dom(GENERAL.checkboxByAttr('kv')).exists('previously matching option still renders');
   });
 
   // ── Empty state ──────────────────────────────────────────────────────────

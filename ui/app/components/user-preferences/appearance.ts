@@ -7,10 +7,13 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 
+import AnalyticsService from 'vault/services/analytics';
 import { ThemeChoice } from 'vault/services/theme';
 import type ThemeService from 'vault/services/theme';
 
+import { USER_PREFERENCES_THEME_SET } from 'vault/utils/analytic-events';
 export default class Appearance extends Component {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly theme: ThemeService;
 
   get currentTheme() {
@@ -20,5 +23,14 @@ export default class Appearance extends Component {
   @action
   selectTheme(choice: ThemeChoice) {
     this.theme.setTheme(choice);
+    this.analytics.trackEvent(USER_PREFERENCES_THEME_SET, {
+      namespace: 'user-preferences',
+      action: 'theme_set',
+      elementId: 'theme-select',
+      channel: 'webpage',
+      location: 'user-preferences',
+      objectType: 'theme',
+      object: choice,
+    });
   }
 }
