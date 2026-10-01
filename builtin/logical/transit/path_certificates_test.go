@@ -7,8 +7,11 @@ import (
 	"context"
 	cryptoRand "crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
+	"net"
 	"reflect"
 	"strings"
 	"testing"
@@ -16,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -370,4 +374,434 @@ func testTransit_ImportInvalidCertChain(t *testing.T, apiClient *api.Client, key
 		"certificate_chain": certificateChain,
 	})
 	require.Error(t, err)
+}
+
+// TestTransit_Certs_CreateCsr_PreservesNonExtensionAttributes checks that
+// parseCsr strips extensionRequest from Attributes without touching other
+// attributes like challengePassword, and that challengePassword survives
+// end-to-end re-signing through Transit.
+func TestTransit_Certs_CreateCsr_PreservesNonExtensionAttributes(t *testing.T) {
+	t.Parallel()
+	for _, keyType := range []string{"rsa-2048", "ecdsa-p256", "ed25519"} {
+		keyType := keyType
+		t.Run(keyType, func(t *testing.T) {
+			t.Parallel()
+			testTransit_CreateCsr_PreservesNonExtensionAttributes(t, keyType)
+		})
+	}
+}
+
+// testTransit_CreateCsr_PreservesNonExtensionAttributes builds a template CSR
+// with a challengePassword attribute and a critical custom extension, then:
+//  1. Calls parseCsr directly: extensionRequest is gone, challengePassword unchanged.
+//  2. Re-signs via Transit: challengePassword survives, Critical flag intact, signature valid.
+func testTransit_CreateCsr_PreservesNonExtensionAttributes(t *testing.T, keyType string) {
+	t.Helper()
+	b, s := createBackendWithStorage(t)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test-key",
+		Storage:   s,
+		Data:      map[string]interface{}{"type": keyType},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
+
+	// PKCS#9 challengePassword (OID 1.2.840.113549.1.9.7) — a non-extension attribute.
+	oidChallengePassword := asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 7}
+	challengePasswordValue := "vault-challenge-secret"
+
+	// A critical extension so that extensionRequest appears in Attributes after parsing.
+	customOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+	customExtValue, err := asn1.Marshal("vault-test-extension-value")
+	require.NoError(t, err)
+
+	// Set Attributes directly so challengePassword ends up in the encoded CSR.
+	// ParseCertificateRequest will surface it back alongside the extensionRequest
+	// attribute that CreateCertificateRequest adds for the extensions.
+	templateCSR := &x509.CertificateRequest{
+		Subject: pkix.Name{CommonName: "test.example.com"},
+		Attributes: []pkix.AttributeTypeAndValueSET{
+			{
+				Type: oidChallengePassword,
+				Value: [][]pkix.AttributeTypeAndValue{
+					{{Type: oidChallengePassword, Value: challengePasswordValue}},
+				},
+			},
+		},
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       customOID,
+				Critical: true,
+				Value:    customExtValue,
+			},
+		},
+	}
+
+	throwawayKey, err := cryptoutil.GenerateRSAKey(cryptoRand.Reader, 2048)
+	require.NoError(t, err)
+
+	templateDER, err := x509.CreateCertificateRequest(cryptoRand.Reader, templateCSR, throwawayKey)
+	require.NoError(t, err)
+
+	pemTemplate := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: templateDER,
+	}))
+
+	// Confirm both attributes are present in the template before we run parseCsr.
+	verifyBlock, _ := pem.Decode([]byte(pemTemplate))
+	require.NotNil(t, verifyBlock)
+	templateParsed, err := x509.ParseCertificateRequest(verifyBlock.Bytes)
+	require.NoError(t, err)
+
+	hasChallengeInTemplate := false
+	hasExtReqInTemplate := false
+	for _, attr := range templateParsed.Attributes {
+		if attr.Type.Equal(oidChallengePassword) {
+			hasChallengeInTemplate = true
+		}
+		if attr.Type.Equal(certutil.OidExtensionRequest) {
+			hasExtReqInTemplate = true
+		}
+	}
+	require.True(t, hasChallengeInTemplate, "challengePassword must be present in template before re-signing")
+	require.True(t, hasExtReqInTemplate, "extensionRequest must be present in template (pre-condition for the filter to matter)")
+
+	// Call parseCsr directly: extensionRequest must be gone, challengePassword untouched.
+	parsedIntermediate, err := parseCsr(pemTemplate)
+	require.NoError(t, err)
+
+	hasChallengeAfterParse := false
+	for _, attr := range parsedIntermediate.Attributes {
+		require.False(t, attr.Type.Equal(certutil.OidExtensionRequest),
+			"OidExtensionRequest was not removed from Attributes by parseCsr")
+		if attr.Type.Equal(oidChallengePassword) {
+			hasChallengeAfterParse = true
+			require.Len(t, attr.Value, 1, "challengePassword attribute should have exactly one value set")
+			require.Len(t, attr.Value[0], 1, "challengePassword value set should have exactly one entry")
+			require.Equal(t, challengePasswordValue, attr.Value[0][0].Value,
+				"challengePassword value changed by parseCsr")
+		}
+	}
+	require.True(t, hasChallengeAfterParse, "challengePassword attribute missing from parseCsr output")
+
+	// Re-sign via Transit and check the output CSR.
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test-key/csr",
+		Storage:   s,
+		Data:      map[string]interface{}{"csr": pemTemplate},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "transit /csr failed: %v", resp)
+
+	pemOut, ok := resp.Data["csr"].(string)
+	require.True(t, ok, "response missing 'csr' field")
+
+	block, _ := pem.Decode([]byte(pemOut))
+	require.NotNil(t, block, "failed to PEM-decode output CSR")
+	outCSR, err := x509.ParseCertificateRequest(block.Bytes)
+	require.NoError(t, err, "output CSR is structurally invalid")
+
+	// challengePassword must still be present with its original value.
+	// (OidExtensionRequest reappears here because CreateCertificateRequest
+	// always adds it when encoding extensions; filter correctness is
+	// already covered by the parseCsr check above.)
+	var foundChallengePassword bool
+	for _, attr := range outCSR.Attributes {
+		if !attr.Type.Equal(oidChallengePassword) {
+			continue
+		}
+		foundChallengePassword = true
+		require.Len(t, attr.Value, 1, "challengePassword attribute should have exactly one value set")
+		require.Len(t, attr.Value[0], 1, "challengePassword value set should have exactly one entry")
+		require.Equal(t, challengePasswordValue, attr.Value[0][0].Value,
+			"challengePassword value changed during re-signing")
+	}
+	require.True(t, foundChallengePassword, "challengePassword attribute missing from re-signed CSR")
+
+	// Custom critical extension: value and Critical flag must survive re-signing.
+	var foundCustomExt bool
+	for _, ext := range outCSR.Extensions {
+		if !ext.Id.Equal(customOID) {
+			continue
+		}
+		foundCustomExt = true
+		require.True(t, ext.Critical,
+			"Critical flag was dropped from custom extension during re-signing")
+		require.Equal(t, customExtValue, ext.Value,
+			"extension value bytes changed during re-signing")
+	}
+	require.True(t, foundCustomExt, "custom extension %v not found in re-signed CSR", customOID)
+
+	// CSR signature must be valid.
+	require.NoError(t, outCSR.CheckSignature(),
+		"re-signed CSR has an invalid signature")
+}
+
+// TestTransit_Certs_CreateCsr_PreservesExtensions checks that re-signing a
+// template CSR preserves extension Critical flags and does not duplicate SANs.
+func TestTransit_Certs_CreateCsr_PreservesExtensions(t *testing.T) {
+	for _, keyType := range []string{"rsa-2048", "ecdsa-p256", "ed25519"} {
+		t.Run(keyType, func(t *testing.T) {
+			testTransit_CreateCsr_PreservesExtensions(t, keyType)
+		})
+	}
+}
+
+func testTransit_CreateCsr_PreservesExtensions(t *testing.T, keyType string) {
+	t.Helper()
+	b, s := createBackendWithStorage(t)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test-key",
+		Storage:   s,
+		Data:      map[string]interface{}{"type": keyType},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
+
+	// Template has SANs and a critical extension to exercise both failure paths.
+	customOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
+	customExtValue, err := asn1.Marshal("vault-test-extension-value")
+	require.NoError(t, err)
+
+	templateCSR := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:   "test.example.com",
+			Organization: []string{"Vault Test Org"},
+		},
+		DNSNames:    []string{"test.example.com", "alt.example.com"},
+		IPAddresses: []net.IP{net.ParseIP("192.168.1.1")},
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:       customOID,
+				Critical: true,
+				Value:    customExtValue,
+			},
+		},
+	}
+
+	// Throwaway key just to produce a valid PEM; Transit replaces it with its own.
+	throwawayKey, err := cryptoutil.GenerateRSAKey(cryptoRand.Reader, 2048)
+	require.NoError(t, err)
+
+	templateDER, err := x509.CreateCertificateRequest(cryptoRand.Reader, templateCSR, throwawayKey)
+	require.NoError(t, err)
+
+	pemTemplate := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: templateDER,
+	}))
+
+	// Re-sign via Transit.
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test-key/csr",
+		Storage:   s,
+		Data:      map[string]interface{}{"csr": pemTemplate},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "transit /csr failed: %v", resp)
+
+	pemOut, ok := resp.Data["csr"].(string)
+	require.True(t, ok, "response missing 'csr' field")
+
+	// A duplicate SAN block would cause "asn1: syntax error: sequence truncated" here.
+	block, _ := pem.Decode([]byte(pemOut))
+	require.NotNil(t, block, "failed to PEM-decode output CSR")
+	outCSR, err := x509.ParseCertificateRequest(block.Bytes)
+	require.NoError(t, err, "output CSR is structurally invalid (possible duplicate SAN / malformed ASN.1)")
+
+	// Subject DN preserved.
+	require.Equal(t, "test.example.com", outCSR.Subject.CommonName,
+		"Subject CommonName not preserved")
+	require.Equal(t, []string{"Vault Test Org"}, outCSR.Subject.Organization,
+		"Subject Organization not preserved")
+
+	// SANs preserved.
+	require.ElementsMatch(t, []string{"test.example.com", "alt.example.com"}, outCSR.DNSNames,
+		"DNS SANs not preserved")
+	require.Len(t, outCSR.IPAddresses, 1, "expected exactly one IP SAN")
+	require.True(t, outCSR.IPAddresses[0].Equal(net.ParseIP("192.168.1.1")),
+		"IP SAN not preserved")
+
+	// Count raw SAN entries — Go accepts duplicates silently, but openssl rejects them.
+	sanCount := 0
+	for _, ext := range outCSR.Extensions {
+		if ext.Id.Equal(certutil.OidExtensionSubjectAltName) {
+			sanCount++
+		}
+	}
+	require.Equal(t, 1, sanCount,
+		"expected exactly one SAN extension in output CSR, got %d", sanCount)
+
+	// Custom extension: Critical flag and value bytes must survive re-signing.
+	var foundCustomExt bool
+	for _, ext := range outCSR.Extensions {
+		if ext.Id.Equal(customOID) {
+			foundCustomExt = true
+			require.True(t, ext.Critical,
+				"Critical flag was dropped during re-signing")
+			require.Equal(t, customExtValue, ext.Value,
+				"extension value bytes not preserved during re-signing")
+			break
+		}
+	}
+	require.True(t, foundCustomExt,
+		"custom extension OID %v not found in output CSR", customOID)
+
+	// CSR signature must be valid.
+	require.NoError(t, outCSR.CheckSignature(),
+		"re-signed CSR has an invalid signature")
+}
+
+// TestTransit_Certs_CreateCsr_PreservesOtherNameSAN verifies that otherName/UPN
+// entries inside the SAN extension survive re-signing unchanged.
+func TestTransit_Certs_CreateCsr_PreservesOtherNameSAN(t *testing.T) {
+	for _, keyType := range []string{"rsa-2048", "ecdsa-p256", "ed25519"} {
+		t.Run(keyType, func(t *testing.T) {
+			testTransit_CreateCsr_PreservesOtherNameSAN(t, keyType)
+		})
+	}
+}
+
+func testTransit_CreateCsr_PreservesOtherNameSAN(t *testing.T, keyType string) {
+	t.Helper()
+	b, s := createBackendWithStorage(t)
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test-key",
+		Storage:   s,
+		Data:      map[string]interface{}{"type": keyType},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
+
+	// Hand-craft a SAN extension with a dNSName and an otherName/UPN (tag 0).
+	// Go's stdlib has no API for otherName so we build the raw ASN.1 directly.
+	// OtherName ::= SEQUENCE { type-id OID, value [0] EXPLICIT ANY }
+	upnOID := asn1.ObjectIdentifier{1, 3, 6, 1, 4, 1, 311, 20, 2, 3} // UPN OID
+	upnValue := "user@corp.example.com"
+
+	// UTF8String inside [0] EXPLICIT.
+	upnUTF8, err := asn1.Marshal(asn1.RawValue{
+		Tag:   asn1.TagUTF8String,
+		Bytes: []byte(upnValue),
+	})
+	require.NoError(t, err)
+
+	// Full OtherName SEQUENCE.
+	otherNameSeq, err := asn1.Marshal(struct {
+		OID   asn1.ObjectIdentifier
+		Value asn1.RawValue `asn1:"tag:0,explicit"`
+	}{
+		OID: upnOID,
+		Value: asn1.RawValue{
+			FullBytes: upnUTF8,
+		},
+	})
+	require.NoError(t, err)
+
+	// Peel the outer SEQUENCE wrapper to get the raw content bytes.
+	var otherNameParsed asn1.RawValue
+	_, err = asn1.Unmarshal(otherNameSeq, &otherNameParsed)
+	require.NoError(t, err)
+
+	// GeneralName CHOICE, context tag 0 (otherName).
+	otherNameRaw := asn1.RawValue{
+		Class:      asn1.ClassContextSpecific,
+		Tag:        0,
+		IsCompound: true,
+		Bytes:      otherNameParsed.Bytes, // content only, no outer tag+length
+	}
+
+	// dNSName GeneralName, context tag 2.
+	dnsRaw := asn1.RawValue{
+		Class: asn1.ClassContextSpecific,
+		Tag:   2,
+		Bytes: []byte("dns.corp.example.com"),
+	}
+
+	// SubjectAltName SEQUENCE wrapping both entries.
+	sanSeq, err := asn1.Marshal(asn1.RawValue{
+		Tag:        asn1.TagSequence,
+		IsCompound: true,
+		Bytes: func() []byte {
+			dns, _ := asn1.Marshal(dnsRaw)
+			other, _ := asn1.Marshal(otherNameRaw)
+			return append(dns, other...)
+		}(),
+	})
+	require.NoError(t, err)
+
+	sanExt := pkix.Extension{
+		Id:    certutil.OidExtensionSubjectAltName,
+		Value: sanSeq,
+	}
+
+	// Use ExtraExtensions so the raw SAN blob is passed verbatim.
+	templateCSR := &x509.CertificateRequest{
+		Subject:         pkix.Name{CommonName: "test.example.com"},
+		ExtraExtensions: []pkix.Extension{sanExt},
+	}
+
+	throwawayKey, err := cryptoutil.GenerateRSAKey(cryptoRand.Reader, 2048)
+	require.NoError(t, err)
+
+	templateDER, err := x509.CreateCertificateRequest(cryptoRand.Reader, templateCSR, throwawayKey)
+	require.NoError(t, err)
+
+	pemTemplate := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: templateDER,
+	}))
+
+	// Re-sign via Transit.
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/test-key/csr",
+		Storage:   s,
+		Data:      map[string]interface{}{"csr": pemTemplate},
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "transit /csr failed: %v", resp)
+
+	pemOut, ok := resp.Data["csr"].(string)
+	require.True(t, ok, "response missing 'csr' field")
+
+	outBlock, _ := pem.Decode([]byte(pemOut))
+	require.NotNil(t, outBlock, "failed to PEM-decode output CSR")
+	outCSR, err := x509.ParseCertificateRequest(outBlock.Bytes)
+	require.NoError(t, err, "output CSR is structurally invalid")
+
+	// Exactly one SAN in the output — no duplicates.
+	var outSANExt *pkix.Extension
+	for i := range outCSR.Extensions {
+		if outCSR.Extensions[i].Id.Equal(certutil.OidExtensionSubjectAltName) {
+			outSANExt = &outCSR.Extensions[i]
+		}
+	}
+	sanCount := 0
+	for _, ext := range outCSR.Extensions {
+		if ext.Id.Equal(certutil.OidExtensionSubjectAltName) {
+			sanCount++
+		}
+	}
+	require.Equal(t, 1, sanCount, "expected exactly one SAN extension in output CSR, got %d", sanCount)
+	require.NotNil(t, outSANExt, "SAN extension missing from output CSR")
+
+	// Raw SAN bytes must be identical — proves otherName was not rebuilt from struct fields.
+	require.Equal(t, sanExt.Value, outSANExt.Value,
+		"SAN extension bytes changed during re-signing: otherName/UPN may have been lost")
+
+	require.Contains(t, outCSR.DNSNames, "dns.corp.example.com",
+		"dNSName SAN not preserved")
+
+	require.NoError(t, outCSR.CheckSignature(),
+		"re-signed CSR has an invalid signature")
 }
