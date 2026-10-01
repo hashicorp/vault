@@ -97,6 +97,24 @@ module('Acceptance | Identity group aliases list view', function (hooks) {
     assert.dom(GENERAL.emptyStateTitle).includesText('No results for');
   });
 
+  test('it filters aliases by full or partial alias ID', async function (assert) {
+    await visit('/vault/access/identity/groups/aliases');
+    await fillIn(GENERAL.filterInput, ALIAS_ID_2);
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only the matching alias renders');
+    assert.dom(`[data-test-identity-link="${ALIAS_ID_2}"]`).exists('alias matching the full ID renders');
+
+    await fillIn(GENERAL.filterInput, ALIAS_ID_1.slice(0, 8));
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only the matching alias renders');
+    assert.dom(`[data-test-identity-link="${ALIAS_ID_1}"]`).exists('alias matching the partial ID renders');
+  });
+
+  test('it filters aliases by name', async function (assert) {
+    await visit('/vault/access/identity/groups/aliases');
+    await fillIn(GENERAL.filterInput, 'sample');
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only the matching alias renders');
+    assert.dom(`[data-test-identity-link="${ALIAS_ID_1}"]`).exists();
+  });
+
   // ── Empty state ──────────────────────────────────────────────────────────
 
   test('it shows the empty state when there are no group aliases', async function (assert) {

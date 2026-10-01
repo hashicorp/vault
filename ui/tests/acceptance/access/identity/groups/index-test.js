@@ -81,6 +81,24 @@ module('Acceptance | Identity groups list view', function (hooks) {
     assert.dom(GENERAL.emptyStateTitle).includesText('No results for');
   });
 
+  test('it filters groups by full or partial group ID', async function (assert) {
+    await visit('/vault/access/identity/groups');
+    await fillIn(GENERAL.filterInput, GROUP_ID_2);
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only the matching group renders');
+    assert.dom('[data-test-identity-link="Florida_design"]').exists('group matching the full ID renders');
+
+    await fillIn(GENERAL.filterInput, GROUP_ID_1.slice(0, 8));
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only the matching group renders');
+    assert.dom('[data-test-identity-link="Kochi_design"]').exists('group matching the partial ID renders');
+  });
+
+  test('it filters groups by name', async function (assert) {
+    await visit('/vault/access/identity/groups');
+    await fillIn(GENERAL.filterInput, 'kochi');
+    assert.dom(GENERAL.tableRow()).exists({ count: 1 }, 'only the matching group renders');
+    assert.dom('[data-test-identity-link="Kochi_design"]').exists();
+  });
+
   // ── Empty state ──────────────────────────────────────────────────────────
 
   test('it shows the empty state when there are no groups', async function (assert) {
