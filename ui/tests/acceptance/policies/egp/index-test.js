@@ -194,6 +194,64 @@ module('Acceptance | EGP policies list view', function (hooks) {
     assert.dom(GENERAL.listItem('egp-policy-0')).doesNotExist('egp-policy-0 is not visible on page 2');
   });
 
+  // ── Sorting ─────────────────────────────────────────────────────────────────
+
+  test('sorting descending sorts the global dataset before pagination', async function (assert) {
+    // Regression for VAULT-50816: sorting must apply to the full dataset, not
+    // just the visible page. With 20 policies (egp-policy-0..egp-policy-19) sorted Z→A
+    // with natural sorting, 'egp-policy-19' (highest numerical value) must appear on page 1.
+    const manyPolicies = Array.from({ length: 20 }, (_, i) => `egp-policy-${i}`);
+    this.server.get('sys/policies/egp/', () => ({
+      data: { keys: manyPolicies },
+      request_id: 'test',
+    }));
+
+    await visit('/vault/policies/egp');
+
+    // Two clicks: first → asc, second → desc.
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+
+    assert
+      .dom(GENERAL.listItem('egp-policy-19'))
+      .exists('egp-policy-19 is on page 1 when globally sorted Z→A');
+    assert
+      .dom(GENERAL.listItem('egp-policy-0'))
+      .doesNotExist('egp-policy-0 is not on page 1 when sorted Z→A');
+  });
+
+  test('sortBy and sortOrder query params persist across page transitions', async function (assert) {
+    // Regression for VAULT-50816: sort state must survive the model refresh
+    // triggered when the page query param changes.
+    const manyPolicies = Array.from({ length: 20 }, (_, i) => `egp-policy-${i}`);
+    this.server.get('sys/policies/egp/', () => ({
+      data: { keys: manyPolicies },
+      request_id: 'test',
+    }));
+
+    await visit('/vault/policies/egp');
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+
+    assert.true(currentURL().includes('sortBy=name'), 'sortBy=name is in the URL');
+    assert.true(currentURL().includes('sortOrder=asc'), 'sortOrder=asc is in the URL');
+
+    await click(GENERAL.nextPage);
+
+    assert.true(currentURL().includes('sortBy=name'), 'sortBy=name remains after navigating to page 2');
+    assert.true(currentURL().includes('sortOrder=asc'), 'sortOrder=asc remains after navigating to page 2');
+    assert
+      .dom('.hds-advanced-table__th:nth-child(1)')
+      .hasAttribute('aria-sort', 'ascending', 'sort indicator remains active on page 2');
+  });
+
+  test('sortBy and sortOrder query params reset on navigation away', async function (assert) {
+    await visit('/vault/policies/egp?sortBy=name&sortOrder=asc');
+    await visit('/vault/dashboard');
+    await visit('/vault/policies/egp');
+    assert.false(currentURL().includes('sortBy='), 'sortBy was reset after navigation');
+    assert.false(currentURL().includes('sortOrder='), 'sortOrder was reset after navigation');
+  });
+
   // ── Regression: VAULT-50826 ──────────────────────────────────────────────
 
   test('it navigates to the correct EGP policy edit page from the list', async function (assert) {
