@@ -11,7 +11,7 @@ import AnalyticsService from 'vault/services/analytics';
 import { ThemeChoice } from 'vault/services/theme';
 import type ThemeService from 'vault/services/theme';
 
-import { USER_PREFERENCES_THEME_SET } from 'vault/utils/analytic-events';
+import { PREFERENCES_THEME_SET } from 'vault/utils/analytic-events';
 export default class Appearance extends Component {
   @service declare readonly analytics: AnalyticsService;
   @service declare readonly theme: ThemeService;
@@ -23,12 +23,12 @@ export default class Appearance extends Component {
   @action
   selectTheme(choice: ThemeChoice) {
     this.theme.setTheme(choice);
-    this.analytics.trackEvent(USER_PREFERENCES_THEME_SET, {
-      namespace: 'user-preferences',
+    this.analytics.trackEvent(PREFERENCES_THEME_SET, {
+      namespace: 'preferences',
       action: 'theme_set',
       elementId: 'theme-select',
       channel: 'webpage',
-      location: 'user-preferences',
+      location: 'Appearance',
       objectType: 'theme',
       object: choice,
     });

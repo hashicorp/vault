@@ -31,7 +31,7 @@ export const accessIdentityGroupsListViewConfig: ListViewDisplayConfig = {
     {
       key: 'popupMenu',
       label: 'Actions',
-      width: '10%',
+      width: '125px',
     },
   ],
   noDataTitle: 'No groups yet',

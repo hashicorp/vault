@@ -108,7 +108,7 @@ export default class AnalyticsService extends Service {
     if (!uiTelemetryEnabled) return;
 
     // Cache the config on every gate run (not just when prompting) so a later
-    // accept via user preferences can start in the same session even after a reload.
+    // accept via preferences can start in the same session even after a reload.
     this.pendingConfig = config;
 
     if (this.activated) return;

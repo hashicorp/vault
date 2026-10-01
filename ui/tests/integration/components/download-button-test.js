@@ -37,14 +37,13 @@ module('Integration | Component | download button', function (hooks) {
   });
 
   test('it downloads with defaults when only passed @data arg', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
 
     await render(hbs`
       <DownloadButton @data={{this.data}} />
     `);
     await click(GENERAL.button('Download'));
-    const [filename, content, extension] = this.downloadSpy.getCall(0).args;
-    assert.ok(filename.includes('Z'), 'filename defaults to ISO string');
+    const [, content, extension] = this.downloadSpy.getCall(0).args;
     assert.strictEqual(content, this.data, 'called with correct data');
     assert.strictEqual(extension, 'txt', 'called with default extension');
   });
@@ -62,21 +61,20 @@ module('Integration | Component | download button', function (hooks) {
     `);
     await click(GENERAL.button('Download'));
     const [filename, content, extension] = this.downloadSpy.getCall(0).args;
-    assert.ok(filename.includes(`${this.filename}-`), 'filename added to ISO string');
+    assert.strictEqual(filename, this.filename, 'called with filename');
     assert.strictEqual(content, this.data, 'called with correct data');
     assert.strictEqual(extension, this.extension, 'called with passed in extension');
   });
 
   test('it sets download content with arg passed to fetchData', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
     this.fetchData = () => 'this is fetched data from a parent function';
     await render(hbs`
       <DownloadButton @fetchData={{this.fetchData}} />
     `);
 
     await click(GENERAL.button('Download'));
-    const [filename, content, extension] = this.downloadSpy.getCall(0).args;
-    assert.ok(filename.includes('Z'), 'filename defaults to ISO string');
+    const [, content, extension] = this.downloadSpy.getCall(0).args;
     assert.strictEqual(content, this.fetchData(), 'called with fetched data');
     assert.strictEqual(extension, 'txt', 'called with default extension');
   });

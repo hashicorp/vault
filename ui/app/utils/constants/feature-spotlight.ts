@@ -8,7 +8,7 @@ export interface FeatureSpotlightCard {
   description: string;
   /** Docs path (e.g. '/vault/docs/...'). Mutually exclusive with `route`. */
   link?: string;
-  /** Ember route name (e.g. 'vault.cluster.user-preferences'). Mutually exclusive with `link`. */
+  /** Ember route name (e.g. 'vault.cluster.preferences'). Mutually exclusive with `link`. */
   route?: string;
   /** Custom call-to-action link text. Defaults to 'Learn more'. */
   linkText?: string;
@@ -48,10 +48,10 @@ export const FEATURE_SPOTLIGHT_CARDS: FeatureSpotlightCard[] = [
   },
   {
     title: 'Dark mode is here',
-    description: 'Easier on your eyes, day or night. Head to User preferences to switch modes anytime.',
-    route: 'vault.cluster.user-preferences',
+    description: 'Easier on your eyes, day or night. Head to Preferences to switch modes anytime.',
+    route: 'vault.cluster.preferences',
     linkText: 'Try it out',
-    imageSrc: '~/user-preference-whats-new.png',
-    imageSrcDark: '~/user-preference-whats-new-dark.png',
+    imageSrc: '~/preferences-whats-new.png',
+    imageSrcDark: '~/preferences-whats-new-dark.png',
   },
 ];

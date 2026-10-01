@@ -6,7 +6,7 @@
 import localStorage from 'vault/lib/local-storage';
 
 /**
- * Central registry for Vault UI user preferences.
+ * Central registry for Vault UI preferences.
  *
  * This module is the single source of truth for every preference key name,
  * its type, and its default value. Consuming components MUST reference this

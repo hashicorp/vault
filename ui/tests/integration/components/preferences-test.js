@@ -10,7 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { getPreference } from 'vault/utils/preferences';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | user-preferences', function (hooks) {
+module('Integration | Component | preferences', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -24,7 +24,7 @@ module('Integration | Component | user-preferences', function (hooks) {
       this.set('model', { isHvdManaged: false });
       await render(hbs`
         {{#unless this.model.isHvdManaged}}
-          <UserPreferences::DataPrivacy />
+          <Preferences::DataPrivacy />
         {{/unless}}
       `);
 
@@ -40,7 +40,7 @@ module('Integration | Component | user-preferences', function (hooks) {
       this.set('model', { isHvdManaged: true });
       await render(hbs`
         {{#unless this.model.isHvdManaged}}
-          <UserPreferences::DataPrivacy />
+          <Preferences::DataPrivacy />
         {{/unless}}
       `);
 
@@ -52,7 +52,7 @@ module('Integration | Component | user-preferences', function (hooks) {
 
   module('data-privacy', function () {
     test('it renders the Share usage section card from HDS components', async function (assert) {
-      await render(hbs`<UserPreferences::DataPrivacy />`);
+      await render(hbs`<Preferences::DataPrivacy />`);
 
       assert.dom('[data-test-data-privacy-section]').exists('the Data & Privacy section renders');
       assert.dom(GENERAL.toggleInput('telemetry-consent')).exists('the consent toggle renders');
@@ -61,13 +61,13 @@ module('Integration | Component | user-preferences', function (hooks) {
     });
 
     test('the toggle defaults off when no consent value is stored', async function (assert) {
-      await render(hbs`<UserPreferences::DataPrivacy />`);
+      await render(hbs`<Preferences::DataPrivacy />`);
 
       assert.dom(GENERAL.toggleInput('telemetry-consent')).isNotChecked('toggle is off by default (opt-in)');
     });
 
     test('toggling on persists consent through the registry', async function (assert) {
-      await render(hbs`<UserPreferences::DataPrivacy />`);
+      await render(hbs`<Preferences::DataPrivacy />`);
 
       await click(GENERAL.toggleInput('telemetry-consent'));
 
@@ -81,7 +81,7 @@ module('Integration | Component | user-preferences', function (hooks) {
     });
 
     test('toggling off writes the off value through the registry', async function (assert) {
-      await render(hbs`<UserPreferences::DataPrivacy />`);
+      await render(hbs`<Preferences::DataPrivacy />`);
 
       await click(GENERAL.toggleInput('telemetry-consent'));
       await click(GENERAL.toggleInput('telemetry-consent'));

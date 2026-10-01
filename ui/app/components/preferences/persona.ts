@@ -8,19 +8,19 @@ import { debounce } from '@ember/runloop';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { USER_PREFERENCES_PERSONA_SET } from 'vault/utils/analytic-events';
+import { PREFERENCES_PERSONA_SET } from 'vault/utils/analytic-events';
 import { getPreference, getStringPreference, setStringPreference } from 'vault/utils/preferences';
 
 import type AnalyticsService from 'vault/services/analytics';
 
 /**
- * UserPreferences::Persona
+ * Preferences::Persona
  *
- * "Your role" section of the User Preferences page. Renders an HDS Select field
+ * "Your role" section of the Preferences page. Renders an HDS Select field
  * that lets users self-identify their role. The selection is persisted in
  * localStorage via the string preferences registry. When the user has already
  * opted into telemetry, the selection is also forwarded to Segment as a
- * `UI Interaction` event (`USER_PREFERENCES_PERSONA_SET`) so it can inform future UX decisions.
+ * `UI Interaction` event (`PREFERENCES_PERSONA_SET`) so it can inform future UX decisions.
  *
  * When "Other" is selected, a free-text field appears. The typed value is
  * stored alongside the selection (e.g. `{ value: 'other', customRole: 'DevOps / SRE' }`)
@@ -33,7 +33,7 @@ export interface PersonaPreference {
   customRole?: string;
 }
 
-export default class UserPreferencesPersona extends Component {
+export default class PreferencesPersona extends Component {
   @service declare readonly analytics: AnalyticsService;
 
   // Persona option values — the order matches the dropdown display order.
@@ -120,12 +120,12 @@ export default class UserPreferencesPersona extends Component {
         const kebab = this.toKebab(pref.customRole);
         eventValue = kebab ? `other-${kebab}` : 'other';
       }
-      this.analytics.trackEvent(USER_PREFERENCES_PERSONA_SET, {
-        namespace: 'user-preferences',
+      this.analytics.trackEvent(PREFERENCES_PERSONA_SET, {
+        namespace: 'preferences',
         action: 'persona_set',
         elementId: 'persona-select',
         channel: 'webpage',
-        location: 'user-preferences',
+        location: 'Your role',
         objectType: 'persona',
         object: eventValue,
         resultValue: eventValue,

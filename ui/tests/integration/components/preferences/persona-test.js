@@ -17,7 +17,7 @@ const SELECTOR = {
   otherInputError: '[data-test-persona-other-input-error]',
 };
 
-module('Integration | Component | user-preferences/persona', function (hooks) {
+module('Integration | Component | preferences/persona', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
@@ -33,7 +33,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
 
   test('it renders the Your role section with a select field', async function (assert) {
     // Verifies the section heading and select control render on mount.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
 
     assert.dom(SELECTOR.section).exists('the Persona section renders');
     assert.dom(SELECTOR.select).exists('the select control renders');
@@ -41,7 +41,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
 
   test('the select defaults to the placeholder option when no persona is stored', async function (assert) {
     // Verifies that an absent localStorage key leaves the placeholder selected.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
 
     assert.dom(`${SELECTOR.select} option:checked`).hasValue('', 'placeholder option is selected by default');
   });
@@ -53,7 +53,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
     // initialises from the already-stored value.
     setStringPreference('persona', JSON.stringify({ value: 'developer' }));
 
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
 
     assert
       .dom(`${SELECTOR.select} option:checked`)
@@ -62,7 +62,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
 
   test('selecting a persona persists it to localStorage as structured JSON', async function (assert) {
     // Verifies the storage write path when the user makes a selection.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
 
     await select(SELECTOR.select, 'security-analyst');
 
@@ -75,7 +75,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
 
   test('all four persona options are available', async function (assert) {
     // Verifies the complete option list matches the spec.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
 
     const options = [...document.querySelectorAll(`${SELECTOR.select} option`)].map((o) => o.value);
 
@@ -90,16 +90,16 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
     // Verifies the Segment event is emitted only when the user has opted in.
     setPreference('telemetryConsent', true);
 
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'developer');
 
     assert.true(
       this.trackEvent.calledOnceWith('UI Interaction', {
-        namespace: 'user-preferences',
+        namespace: 'preferences',
         action: 'persona_set',
         elementId: 'persona-select',
         channel: 'webpage',
-        location: 'user-preferences',
+        location: 'Your role',
         objectType: 'persona',
         object: 'developer',
         resultValue: 'developer',
@@ -113,7 +113,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
     // user has not opted into telemetry.
     setPreference('telemetryConsent', false);
 
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'platform-engineer');
 
     assert.true(this.trackEvent.notCalled, 'trackEvent is not called when telemetry consent is off');
@@ -127,7 +127,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
   test('selecting a persona does NOT fire trackEvent when consent is absent (never decided)', async function (assert) {
     // Verifies that an unrecorded consent (empty localStorage) is treated as off.
     // The user has never seen the banner so they have not opted in.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'platform-engineer');
 
     assert.true(this.trackEvent.notCalled, 'trackEvent is not called when consent has never been recorded');
@@ -141,7 +141,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
     // Verifies the text field only appears when "Other" is chosen, and that
     // selecting Other immediately persists { value: "other" } to localStorage before the
     // user has typed anything into the free-text field.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
 
     assert.dom(SELECTOR.otherInput).doesNotExist('text input is hidden before Other is selected');
 
@@ -159,7 +159,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
 
   test('typing a valid custom role in the Other field stores it in localStorage', async function (assert) {
     // Verifies valid free text is preserved with original casing in localStorage.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'other');
 
     await fillIn(SELECTOR.otherInput, 'DevOps SRE');
@@ -175,7 +175,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
     // Verifies that invalid input (containing characters outside letters, digits, spaces)
     // is not persisted — localStorage retains only { value: "other" } until a valid
     // string is entered.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'other');
 
     await fillIn(SELECTOR.otherInput, 'my ~DREAM~ role');
@@ -190,7 +190,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
   test('correcting an invalid custom role persists the new valid value', async function (assert) {
     // Verifies that after typing an invalid value and then correcting it,
     // the valid value is stored and the error is gone.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'other');
 
     await fillIn(SELECTOR.otherInput, 'bad ~value~');
@@ -207,7 +207,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
   test('clearing the Other text field stores only { value: "other" } without a customRole key', async function (assert) {
     // Verifies that an empty custom role is not serialised into localStorage so the
     // stored object stays clean rather than carrying a redundant empty-string key.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'other');
     await fillIn(SELECTOR.otherInput, 'designer');
     await fillIn(SELECTOR.otherInput, '');
@@ -223,7 +223,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
     // Verifies that returning to the page displays the exact typed string without modification.
     setStringPreference('persona', JSON.stringify({ value: 'other', customRole: 'DevOps / SRE (Cloud)' }));
 
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
 
     assert.dom(SELECTOR.otherInput).exists('text input is shown for a stored other object');
     assert.dom(SELECTOR.otherInput).hasValue('DevOps / SRE (Cloud)', 'exact customRole is displayed');
@@ -235,7 +235,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
   test('typing invalid characters in the Other field shows an inline error', async function (assert) {
     // Verifies that characters outside the allowed set (letters, digits, spaces) trigger
     // an inline error message on the field without blocking the input.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'other');
 
     await fillIn(SELECTOR.otherInput, 'my ~**DREAM**~ role');
@@ -255,7 +255,7 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
   test('correcting invalid input in the Other field clears the error', async function (assert) {
     // Verifies that once the value is brought back to a valid string the error
     // disappears, giving users clear, live feedback.
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'other');
 
     await fillIn(SELECTOR.otherInput, 'bad ~input~');
@@ -269,17 +269,17 @@ module('Integration | Component | user-preferences/persona', function (hooks) {
     // Verifies the Segment event carries the full stored value, not the raw input.
     setPreference('telemetryConsent', true);
 
-    await render(hbs`<UserPreferences::Persona />`);
+    await render(hbs`<Preferences::Persona />`);
     await select(SELECTOR.select, 'other');
     await fillIn(SELECTOR.otherInput, 'admin');
 
     assert.true(
       this.trackEvent.calledWith('UI Interaction', {
-        namespace: 'user-preferences',
+        namespace: 'preferences',
         action: 'persona_set',
         elementId: 'persona-select',
         channel: 'webpage',
-        location: 'user-preferences',
+        location: 'Your role',
         objectType: 'persona',
         object: 'other-admin',
         resultValue: 'other-admin',
