@@ -19,6 +19,9 @@ interface Args {
   model: IdentityGroupAliasesIndexModel;
   page: number;
   pageSize: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 export default class PageIdentityGroupAliasesComponent extends Component<Args> {

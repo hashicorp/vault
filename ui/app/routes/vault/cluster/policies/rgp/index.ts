@@ -36,6 +36,8 @@ export default class PoliciesRgpIndexRoute extends Route {
 
   queryParams = {
     page: { refreshModel: true },
+    sortBy: { refreshModel: false },
+    sortOrder: { refreshModel: false },
   };
 
   async model(params: RouteParams): Promise<PoliciesRgpIndexModel> {
@@ -74,10 +76,20 @@ export default class PoliciesRgpIndexRoute extends Route {
     return { policies, listViewConfig, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
   }
 
-  resetController(controller: Controller & { page: number; pageSize: number }, isExiting: boolean) {
+  resetController(
+    controller: Controller & {
+      page: number;
+      pageSize: number;
+      sortBy: string | undefined;
+      sortOrder: string | undefined;
+    },
+    isExiting: boolean
+  ) {
     if (isExiting) {
       controller.page = 1;
       controller.pageSize = 10;
+      controller.sortBy = undefined;
+      controller.sortOrder = undefined;
     }
   }
 }

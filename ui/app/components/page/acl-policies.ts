@@ -41,6 +41,9 @@ interface Args {
   model: PoliciesAclIndexModel;
   page: number;
   pageSize: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 export default class PageAclPoliciesComponent extends Component<Args> {

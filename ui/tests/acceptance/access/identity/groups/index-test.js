@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentURL, visit } from '@ember/test-helpers';
+import { click, fillIn, currentURL, visit, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -185,6 +185,86 @@ module('Acceptance | Identity groups list view', function (hooks) {
 
     assert.dom('[data-test-identity-link="group-15"]').exists('group-15 is visible on page 2');
     assert.dom('[data-test-identity-link="group-0"]').doesNotExist('group-0 is not visible on page 2');
+  });
+
+  // ── Sorting ──────────────────────────────────────────────────────────────
+
+  test('sorting by name applies to the full dataset before pagination', async function (assert) {
+    // 20 groups named group-00..group-19; ascending sort should put group-00 on page 1.
+    // Descending sort should push group-19 to page 1 and group-00 off it.
+    const manyGroups = Array.from({ length: 20 }, (_, i) => ({
+      id: `group-id-${i}`,
+      name: `group-${String(i).padStart(2, '0')}`,
+    }));
+    this.server.get('/identity/group/id', () => groupListResponse(manyGroups));
+    this.server.get('/identity/group/id/:id', (_, req) => ({
+      data: {
+        id: req.params.id,
+        name: `group-${req.params.id}`,
+        type: 'internal',
+        alias: null,
+        policies: [],
+      },
+      request_id: 'test',
+    }));
+
+    await visit('/vault/access/identity/groups');
+
+    // Click the Group name sort button (column 1) once → ascending
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+    await waitFor('[data-test-identity-link]');
+
+    assert.dom('[data-test-identity-link="group-00"]').exists('group-00 is on page 1 after ascending sort');
+    assert
+      .dom('[data-test-identity-link="group-19"]')
+      .doesNotExist('group-19 is not on page 1 after ascending sort');
+
+    // Click again → descending; group-19 should now be on page 1
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+    await waitFor('[data-test-identity-link]');
+
+    assert.dom('[data-test-identity-link="group-19"]').exists('group-19 is on page 1 after descending sort');
+    assert
+      .dom('[data-test-identity-link="group-00"]')
+      .doesNotExist('group-00 is not on page 1 after descending sort');
+  });
+
+  test('sort query params persist when navigating to a different page', async function (assert) {
+    // After sorting then changing page, sortBy and sortOrder must remain in the URL.
+    const manyGroups = Array.from({ length: 20 }, (_, i) => ({
+      id: `group-id-${i}`,
+      name: `group-${String(i).padStart(2, '0')}`,
+    }));
+    this.server.get('/identity/group/id', () => groupListResponse(manyGroups));
+    this.server.get('/identity/group/id/:id', (_, req) => ({
+      data: {
+        id: req.params.id,
+        name: `group-${req.params.id}`,
+        type: 'internal',
+        alias: null,
+        policies: [],
+      },
+      request_id: 'test',
+    }));
+
+    await visit('/vault/access/identity/groups');
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+    await click(GENERAL.nextPage);
+
+    const url = currentURL();
+    assert.true(url.includes('sortBy=name'), 'sortBy=name persists after page change');
+    assert.true(url.includes('sortOrder=asc'), 'sortOrder=asc persists after page change');
+    assert.true(url.includes('page=2'), 'page=2 is set');
+  });
+
+  test('sort query params reset when navigating away from the page', async function (assert) {
+    await visit('/vault/access/identity/groups?sortBy=name&sortOrder=asc');
+    await visit('/vault/dashboard');
+    await visit('/vault/access/identity/groups');
+
+    const url = currentURL();
+    assert.false(url.includes('sortBy='), 'sortBy param is cleared after navigation away');
+    assert.false(url.includes('sortOrder='), 'sortOrder param is cleared after navigation away');
   });
 });
 

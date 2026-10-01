@@ -79,6 +79,9 @@
       @totalItems={{this.filteredData.meta.totalItems}}
       @onPageChange={{this.onPageChange}}
       @onPageSizeChange={{this.onPageSizeChange}}
+      @sortBy={{@sortBy}}
+      @sortOrder={{@sortOrder}}
+      @onSort={{this.updateSort}}
     >
       <:customTableItem as |rowData column value|>
         {{yield rowData column value to="customTableItem"}}

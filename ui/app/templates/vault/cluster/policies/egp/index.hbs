@@ -4,7 +4,14 @@
 }}
 
 {{#if (has-feature "Sentinel")}}
-  <Page::EgpPolicies @model={{this.model}} @page={{this.page}} @pageSize={{this.pageSize}} />
+  <Page::EgpPolicies
+    @model={{this.model}}
+    @page={{this.page}}
+    @pageSize={{this.pageSize}}
+    @sortBy={{this.sortBy}}
+    @sortOrder={{this.sortOrder}}
+    @onSortChange={{this.updateSort}}
+  />
 {{else}}
   <UpgradePage @title="Sentinel" @minimumEdition="Vault Enterprise Premium" />
 {{/if}}

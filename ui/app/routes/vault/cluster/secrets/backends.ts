@@ -30,6 +30,8 @@ export default class SecretsBackendsRoute extends Route {
 
   queryParams = {
     page: { refreshModel: true },
+    sortBy: { refreshModel: false },
+    sortOrder: { refreshModel: false },
   };
 
   async model(params: RouteParams) {
@@ -85,11 +87,16 @@ export default class SecretsBackendsRoute extends Route {
     };
   }
 
-  resetController(controller: BackendsController, isExiting: boolean) {
+  resetController(
+    controller: BackendsController & { sortBy: string | undefined; sortOrder: string | undefined },
+    isExiting: boolean
+  ) {
     if (isExiting) {
       controller.page = 1;
       controller.pageSize = 10;
       controller.resetSearchText();
+      controller.sortBy = undefined;
+      controller.sortOrder = undefined;
     }
   }
 }
