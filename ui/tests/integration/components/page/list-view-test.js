@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -396,5 +396,50 @@ module('Integration | Component | page/list-view', function (hooks) {
     assert.ok(successStub.calledOnce, 'success flash was shown');
     assert.ok(refreshStub.calledOnce, 'router.refresh was called');
     assert.dom('[data-test-confirm-modal]').doesNotExist('modal is closed after confirm');
+  });
+
+  // ── Test 14 — row actions honour the per-row capability key ─────────────────
+  test('it only renders a row action when the row has the capability it requires', async function (assert) {
+    this.config = {
+      ...this.config,
+      rowActions: [
+        { label: 'View', dataTest: 'view', kind: 'action', actionName: 'closeModal' },
+        {
+          label: 'Delete',
+          dataTest: 'delete',
+          kind: 'action',
+          actionName: 'closeModal',
+          capability: 'canDelete',
+        },
+      ],
+    };
+    this.model = [
+      { id: 'aaa', name: 'alice', capabilities: { canDelete: true } },
+      { id: 'bbb', name: 'bob', capabilities: { canDelete: false } },
+    ];
+
+    await render(hbs`
+      <Page::ListView
+        @config={{this.config}}
+        @model={{this.model}}
+        @page={{this.page}}
+      />
+    `);
+
+    await click('[data-test-popup-menu-trigger="aaa"]');
+    assert
+      .dom(`${GENERAL.tableRow(0)} ${GENERAL.menuItem('view')}`)
+      .exists('ungated action renders for a permitted row');
+    assert
+      .dom(`${GENERAL.tableRow(0)} ${GENERAL.menuItem('delete')}`)
+      .exists('gated action renders when the row has the capability');
+
+    await click('[data-test-popup-menu-trigger="bbb"]');
+    assert
+      .dom(`${GENERAL.tableRow(1)} ${GENERAL.menuItem('view')}`)
+      .exists('ungated action renders for a restricted row');
+    assert
+      .dom(`${GENERAL.tableRow(1)} ${GENERAL.menuItem('delete')}`)
+      .doesNotExist('gated action is hidden when the row lacks the capability');
   });
 });

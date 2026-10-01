@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ import { secretsBackendsListViewConfig } from 'vault/utils/constants/list-view-c
 
 import type Controller from '@ember/controller';
 import type ApiService from 'vault/services/api';
+import type CapabilitiesService from 'vault/services/capabilities';
 
 interface RouteParams extends Record<string, unknown> {
   page: string;
@@ -25,6 +26,7 @@ interface BackendsController extends Controller {
 
 export default class SecretsBackendsRoute extends Route {
   @service declare readonly api: ApiService;
+  @service declare readonly capabilities: CapabilitiesService;
 
   queryParams = {
     page: { refreshModel: true },
@@ -56,13 +58,31 @@ export default class SecretsBackendsRoute extends Route {
       .filter((e) => e._resource.shouldIncludeInList)
       .map(({ _resource: _r, ...rest }) => rest);
 
+    const rowPath = (id: string) => this.capabilities.pathFor('secretsEngineMount', { path: id });
+    const capabilitiesMap = engines.length
+      ? await this.capabilities.fetch(engines.map((e) => rowPath(e.id)))
+      : {};
+
+    const enginesWithCapabilities = engines.map((engine) => ({
+      ...engine,
+      capabilities: {
+        // cubbyhole/ is a built-in per-token mount that Vault refuses to disable.
+        canDelete: engine.engineType !== 'cubbyhole' && !!capabilitiesMap[rowPath(engine.id)]?.canDelete,
+      },
+    }));
+
     const listViewConfig = { ...secretsBackendsListViewConfig };
     listViewConfig.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'Secrets engines' },
     ];
 
-    return { engines, listViewConfig, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
+    return {
+      engines: enginesWithCapabilities,
+      listViewConfig,
+      page: Number(page) || 1,
+      pageSize: Number(pageSize) || 10,
+    };
   }
 
   resetController(controller: BackendsController, isExiting: boolean) {
