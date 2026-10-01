@@ -14,7 +14,7 @@ export const accessIdentityGroupAliasesListViewConfig: ListViewDisplayConfig = {
     type: 'text',
     placeholder: 'Search by alias id or name',
     ariaLabel: 'Search group aliases by id or name',
-    filterKey: 'name',
+    filterKey: ['name', 'id'],
   },
   columns: [
     {

@@ -268,10 +268,11 @@ export interface ListViewFilter {
   /**
    * Raw API field name (snake_case) to filter on. Must exactly match the field
    * on the data object — the same value that would be passed as `filterKey` to
-   * paginate(). Required when filter is defined.
-   * e.g. "path", "name", "id"
+   * paginate(). Required when filter is defined. Pass an array to match against
+   * multiple fields.
+   * e.g. "path", "name", ["name", "id"]
    */
-  filterKey: string;
+  filterKey: string | string[];
 }
 
 export interface ListViewRoutePaths {
