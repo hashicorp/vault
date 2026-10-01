@@ -1729,6 +1729,409 @@ func TestRotateRole_BlockedUpdateUser_TimesOut(t *testing.T) {
 	require.Less(t, time.Since(start), time.Second, "rotate-role should return promptly on update timeout")
 }
 
+// configureDBMountWithRSA puts config directly into storage for a DB connection
+// that advertises support for both password and rsa_private_key credential types.
+func configureDBMountWithRSA(t *testing.T, storage logical.Storage) {
+	t.Helper()
+	entry, err := logical.StorageEntryJSON(fmt.Sprintf("config/"+mockv5), &DatabaseConfig{
+		AllowedRoles: []string{"*"},
+		ConnectionDetails: map[string]interface{}{
+			v5.SupportedCredentialTypesKey: []interface{}{
+				v5.CredentialTypePassword.String(),
+				v5.CredentialTypeRSAPrivateKey.String(),
+			},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(context.Background(), entry); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestWALCredentialTypeSetOnRotation verifies that setStaticAccount persists
+// CredentialType in the WAL for both password and rsa_private_key roles, so
+// that a resumed rotation can use credentialIsSet() correctly.
+func TestWALCredentialTypeSetOnRotation(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name            string
+		credentialType  v5.CredentialType
+		data            map[string]interface{}
+		setupMount      func(t *testing.T, storage logical.Storage)
+		credentialIsSet func(wal *setCredentialsWAL) bool
+	}{
+		{
+			name:           "password role WAL has CredentialTypePassword",
+			credentialType: v5.CredentialTypePassword,
+			data: map[string]interface{}{
+				"username":        "hashicorp",
+				"db_name":         mockv5,
+				"rotation_period": "86400s",
+			},
+			setupMount: configureDBMount,
+			credentialIsSet: func(wal *setCredentialsWAL) bool {
+				return wal.CredentialType == v5.CredentialTypePassword && wal.NewPassword != ""
+			},
+		},
+		{
+			name:           "rsa_private_key role WAL has CredentialTypeRSAPrivateKey",
+			credentialType: v5.CredentialTypeRSAPrivateKey,
+			data: map[string]interface{}{
+				"username":        "hashicorp",
+				"db_name":         mockv5,
+				"rotation_period": "86400s",
+				"credential_type": "rsa_private_key",
+			},
+			setupMount: configureDBMountWithRSA,
+			credentialIsSet: func(wal *setCredentialsWAL) bool {
+				return wal.CredentialType == v5.CredentialTypeRSAPrivateKey && len(wal.NewPublicKey) > 0
+			},
+		},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			b, storage, mockDB := getBackend(t)
+			defer b.Cleanup(ctx)
+			tc.setupMount(t, storage)
+			createRoleWithData(t, b, storage, mockDB, "hashicorp", tc.data)
+
+			// Trigger a failed rotation to produce a WAL without completing.
+			mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+				Return(v5.UpdateUserResponse{}, errors.New("forced error")).
+				Once()
+			_, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "rotate-role/hashicorp",
+				Storage:   storage,
+			})
+			require.Error(t, err, "expected error from forced UpdateUser failure")
+
+			walIDs := requireWALs(t, storage, 1)
+			wal, err := b.findStaticWAL(ctx, storage, walIDs[0])
+			require.NoError(t, err)
+			require.NotNil(t, wal, "expected WAL to exist after failed rotation")
+
+			require.True(t, tc.credentialIsSet(wal),
+				"WAL CredentialType=%v did not satisfy credentialIsSet check; NewPassword=%q NewPublicKey=%v",
+				wal.CredentialType, wal.NewPassword, wal.NewPublicKey)
+		})
+	}
+}
+
+// TestRSAWALResumesWithSameKeypair verifies that an interrupted RSA rotation
+// rolls forward using the keypair already stored in the WAL, rather than
+// discarding it and generating a new one. This guards against the zero-value
+// CredentialType bug where credentialIsSet() would misidentify an RSA WAL as
+// a password WAL with an empty password and delete it.
+func TestRSAWALResumesWithSameKeypair(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMountWithRSA(t, storage)
+
+	createRoleWithData(t, b, storage, mockDB, "hashicorp", map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         mockv5,
+		"rotation_period": "86400s",
+		"credential_type": "rsa_private_key",
+	})
+
+	// Fail one rotation to generate a WAL with an RSA keypair.
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, errors.New("forced error")).
+		Once()
+	_, err := b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-role/hashicorp",
+		Storage:   storage,
+	})
+	require.Error(t, err, "expected error from forced UpdateUser failure")
+
+	walIDs := requireWALs(t, storage, 1)
+	wal, err := b.findStaticWAL(ctx, storage, walIDs[0])
+	require.NoError(t, err)
+	require.NotNil(t, wal)
+	require.True(t, wal.credentialIsSet(), "WAL must satisfy credentialIsSet before resume; CredentialType=%v", wal.CredentialType)
+
+	// Capture the keypair from the WAL.
+	require.NotEmpty(t, wal.NewPrivateKey, "WAL must persist the private key alongside the public key")
+	originalPublicKey := make([]byte, len(wal.NewPublicKey))
+	copy(originalPublicKey, wal.NewPublicKey)
+	originalPrivateKey := make([]byte, len(wal.NewPrivateKey))
+	copy(originalPrivateKey, wal.NewPrivateKey)
+
+	// Succeed on the next rotation — this is the resume path.
+	var capturedReq v5.UpdateUserRequest
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			capturedReq = args.Get(1).(v5.UpdateUserRequest)
+		}).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+
+	resp, err := b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "rotate-role/hashicorp",
+		Storage:   storage,
+	})
+	require.NoError(t, err)
+	require.False(t, resp != nil && resp.IsError(), "unexpected error response: %v", resp)
+
+	// The resumed rotation must have used the original public key from the WAL,
+	// not a freshly generated one.
+	require.NotNil(t, capturedReq.PublicKey, "expected UpdateUser to be called with a public key")
+	require.Equal(t, originalPublicKey, capturedReq.PublicKey.NewPublicKey,
+		"resume rotation must use the WAL keypair, not a newly generated one")
+
+	// The stored role must hold the private key matching the public key sent
+	// to the database, otherwise Vault cannot return a usable credential.
+	role, err := b.StaticRole(ctx, storage, "hashicorp")
+	require.NoError(t, err)
+	require.NotNil(t, role)
+	require.Equal(t, originalPrivateKey, role.StaticAccount.PrivateKey,
+		"resumed role must store the private key from the WAL")
+
+	// WAL must be gone after successful rotation.
+	requireWALs(t, storage, 0)
+}
+
+// TestLegacyRSAWALMissingCredentialType verifies backward-compatibility: a
+// WAL written by an older Vault version, either without the credential_type
+// key or with it left at zero, decodes as CredentialTypePassword and is
+// discarded when the associated role is rsa_private_key. The rotation must
+// generate a fresh keypair rather than rolling forward with empty data or a
+// public key whose private key was never persisted.
+func TestLegacyRSAWALMissingCredentialType(t *testing.T) {
+	t.Parallel()
+
+	stalePublicKey := []byte("stale-public-key-without-private-key")
+
+	for _, tc := range []struct {
+		name    string
+		walData interface{}
+	}{
+		{
+			// Vault versions that predate the credential_type field do not
+			// write the key at all.
+			name: "credential_type key absent",
+			walData: map[string]interface{}{
+				"role_name":           "hashicorp",
+				"username":            "hashicorp",
+				"new_password":        "",
+				"last_vault_rotation": time.Now().Add(time.Hour),
+			},
+		},
+		{
+			// Vault versions that had the field but never set it write
+			// "credential_type":0 along with the public key only, since the
+			// private key was not persisted to the WAL.
+			name: "credential_type zero with public key only",
+			walData: &setCredentialsWAL{
+				RoleName:          "hashicorp",
+				Username:          "hashicorp",
+				NewPublicKey:      stalePublicKey,
+				LastVaultRotation: time.Now().Add(time.Hour),
+			},
+		},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			config := logical.TestBackendConfig()
+			storage := &logical.InmemStorage{}
+			config.StorageView = storage
+			b := Backend(config)
+			defer b.Cleanup(ctx)
+			mockDB := setupMockDB(b)
+			require.NoError(t, b.Setup(ctx, config))
+			b.credRotationQueue = queue.New()
+			b.schedule = &TestSchedule{}
+			configureDBMountWithRSA(t, storage)
+
+			createRoleWithData(t, b, storage, mockDB, "hashicorp", map[string]interface{}{
+				"username":        "hashicorp",
+				"db_name":         mockv5,
+				"rotation_period": "86400s",
+				"credential_type": "rsa_private_key",
+			})
+
+			walID, err := framework.PutWAL(ctx, storage, staticWALKey, tc.walData)
+			require.NoError(t, err)
+
+			// Legacy WALs must decode with the zero-value credential type.
+			wal, err := b.findStaticWAL(ctx, storage, walID)
+			require.NoError(t, err)
+			require.NotNil(t, wal)
+			require.Equal(t, v5.CredentialTypePassword, wal.CredentialType)
+
+			// Simulate startup: populate queue with the legacy WAL ID.
+			b.credRotationQueue = queue.New()
+			b.initQueue(ctx, config)
+
+			// The WAL should still be present (it has a future LastVaultRotation).
+			requireWALs(t, storage, 1)
+
+			// The legacy WAL decodes as a password WAL with no password, so it
+			// must be discarded and a fresh keypair generated for the RSA role.
+			var capturedReq v5.UpdateUserRequest
+			mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+				Run(func(args mock.Arguments) {
+					capturedReq = args.Get(1).(v5.UpdateUserRequest)
+				}).
+				Return(v5.UpdateUserResponse{}, nil).
+				Once()
+
+			b.rotateCredentials(ctx, storage)
+
+			// WAL must be gone after successful rotation.
+			requireWALs(t, storage, 0)
+
+			// UpdateUser must have been called with a freshly generated public key.
+			require.NotNil(t, capturedReq.PublicKey, "expected UpdateUser to be called with a public key for rsa_private_key role")
+			require.NotEmpty(t, capturedReq.PublicKey.NewPublicKey, "expected a non-empty public key after discarding legacy WAL")
+			require.NotEqual(t, stalePublicKey, capturedReq.PublicKey.NewPublicKey, "must not roll forward the legacy WAL public key")
+
+			role, err := b.StaticRole(ctx, storage, "hashicorp")
+			require.NoError(t, err)
+			require.NotNil(t, role)
+			require.NotEmpty(t, role.StaticAccount.PrivateKey, "role must store the private key for the fresh keypair")
+		})
+	}
+}
+
+// TestWALDiscardedOnCredentialTypeMismatch verifies that when the role's
+// credential_type changes between a failed rotation (which wrote a WAL) and
+// the next rotation attempt, the stale WAL is discarded and a fresh credential
+// matching the current role type is sent to the database. This guards against
+// sending an RSA public key to a password role or vice-versa.
+func TestWALDiscardedOnCredentialTypeMismatch(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name            string
+		initialData     map[string]interface{}
+		updatedData     map[string]interface{}
+		wantCredType    v5.CredentialType
+		assertUpdateReq func(t *testing.T, req v5.UpdateUserRequest)
+	}{
+		{
+			name: "RSA→password: stale RSA WAL discarded, password sent to DB",
+			initialData: map[string]interface{}{
+				"username":        "hashicorp",
+				"db_name":         mockv5,
+				"rotation_period": "86400s",
+				"credential_type": "rsa_private_key",
+			},
+			updatedData: map[string]interface{}{
+				"credential_type": "password",
+				"rotation_period": "86400s",
+			},
+			wantCredType: v5.CredentialTypePassword,
+			assertUpdateReq: func(t *testing.T, req v5.UpdateUserRequest) {
+				t.Helper()
+				require.Equal(t, v5.CredentialTypePassword, req.CredentialType,
+					"UpdateUser must be called with password credential type")
+				require.NotNil(t, req.Password, "UpdateUser must carry a new password")
+				require.NotEmpty(t, req.Password.NewPassword, "new password must not be empty")
+				require.Nil(t, req.PublicKey, "UpdateUser must not carry a public key for a password role")
+			},
+		},
+		{
+			name: "password→RSA: stale password WAL discarded, RSA key sent to DB",
+			initialData: map[string]interface{}{
+				"username":        "hashicorp",
+				"db_name":         mockv5,
+				"rotation_period": "86400s",
+			},
+			updatedData: map[string]interface{}{
+				"credential_type": "rsa_private_key",
+				"rotation_period": "86400s",
+			},
+			wantCredType: v5.CredentialTypeRSAPrivateKey,
+			assertUpdateReq: func(t *testing.T, req v5.UpdateUserRequest) {
+				t.Helper()
+				require.Equal(t, v5.CredentialTypeRSAPrivateKey, req.CredentialType,
+					"UpdateUser must be called with rsa_private_key credential type")
+				require.NotNil(t, req.PublicKey, "UpdateUser must carry a new public key")
+				require.NotEmpty(t, req.PublicKey.NewPublicKey, "new public key must not be empty")
+				require.Nil(t, req.Password, "UpdateUser must not carry a password for an RSA role")
+			},
+		},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := context.Background()
+			b, storage, mockDB := getBackend(t)
+			defer b.Cleanup(ctx)
+			configureDBMountWithRSA(t, storage)
+			createRoleWithData(t, b, storage, mockDB, "hashicorp", tc.initialData)
+
+			// Fail one rotation to leave a WAL in storage.
+			mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+				Return(v5.UpdateUserResponse{}, errors.New("forced error")).
+				Once()
+			_, err := b.HandleRequest(ctx, &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "rotate-role/hashicorp",
+				Storage:   storage,
+			})
+			require.Error(t, err, "expected error from forced UpdateUser failure")
+			walIDs := requireWALs(t, storage, 1)
+
+			// Change the role's credential_type by writing directly to storage,
+			// simulating an operator update without triggering another rotation.
+			role, err := b.StaticRole(ctx, storage, "hashicorp")
+			require.NoError(t, err)
+			require.NoError(t, role.setCredentialType(tc.updatedData["credential_type"].(string)))
+			entry, err := logical.StorageEntryJSON(databaseStaticRolePath+"hashicorp", role)
+			require.NoError(t, err)
+			require.NoError(t, storage.Put(ctx, entry))
+
+			// The WAL must still be in storage — we haven't touched it yet.
+			requireWALs(t, storage, 1)
+
+			// Now rotate. The WAL's credential type no longer matches the role.
+			// The backend must discard the WAL and generate a fresh credential.
+			var capturedReq v5.UpdateUserRequest
+			mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+				Run(func(args mock.Arguments) {
+					capturedReq = args.Get(1).(v5.UpdateUserRequest)
+				}).
+				Return(v5.UpdateUserResponse{}, nil).
+				Once()
+
+			resp, err := b.HandleRequest(ctx, &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "rotate-role/hashicorp",
+				Storage:   storage,
+			})
+			require.NoError(t, err)
+			require.False(t, resp != nil && resp.IsError(), "unexpected error response: %v", resp)
+
+			// Stale WAL must be gone; no new WAL left over.
+			requireWALs(t, storage, 0)
+
+			// Verify UpdateUser was called with the correct credential type.
+			tc.assertUpdateReq(t, capturedReq)
+
+			// Verify the queue WAL ID was cleared.
+			_ = walIDs
+		})
+	}
+}
+
 func generateWALFromFailedRotation(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
