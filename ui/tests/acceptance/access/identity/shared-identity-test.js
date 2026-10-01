@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -44,6 +44,13 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // HDS table/dropdown observers can emit a benign "ResizeObserver loop" error that QUnit fails on.
+    this._originalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
@@ -51,6 +58,7 @@ module('Acceptance | Create groups and entities alias test', function (hooks) {
   });
 
   hooks.afterEach(function () {
+    window.ResizeObserver = this._originalResizeObserver;
     this.flashSuccessSpy.restore();
   });
 
