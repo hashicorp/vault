@@ -11,6 +11,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { UPGRADE_INFO } from 'vault/constants/upgrade-info';
+import { FEEDBACK_SURVEY_URL } from 'vault/utils/constants/links';
 
 const SELECTORS = {
   cardDescription: `[data-test-card-description]`,
@@ -47,6 +48,18 @@ module('Integration | Component | Upgrade Path Analyzer', function (hooks) {
     assert
       .dom(GENERAL.cardContainer('Known issues'))
       .doesNotExist('Known issues card is not rendered during the initial state');
+  });
+
+  test('it renders a beta banner with a feedback link', async function (assert) {
+    await render(
+      hbs`<UpgradePathAnalyzer::UpgradePathAnalyzer @breadcrumbs={{this.breadcrumbs}} @onSetUpgradeInfo={{this.onSetUpgradeInfo}}/>`
+    );
+    assert.dom('[data-test-beta-banner]').exists('Beta banner is rendered');
+    assert.dom('[data-test-beta-banner]').containsText('Beta feature', 'Beta banner title is correct');
+    assert.dom('[data-test-feedback-link]').exists('Feedback link is rendered inside the beta banner');
+    assert
+      .dom('[data-test-feedback-link]')
+      .hasAttribute('href', FEEDBACK_SURVEY_URL, 'Feedback link points to the survey URL');
   });
 
   test('Analyze button is enabled on page load with the latest version pre-selected', async function (assert) {
