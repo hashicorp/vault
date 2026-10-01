@@ -32,7 +32,7 @@ export const policiesRgpListViewConfig: ListViewDisplayConfig = {
     {
       key: 'popupMenu',
       label: 'Actions',
-      width: '10%',
+      width: '125px',
     },
   ],
   noDataTitle: 'No RGP policies yet',

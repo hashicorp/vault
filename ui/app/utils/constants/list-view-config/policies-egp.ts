@@ -32,7 +32,7 @@ export const policiesEgpListViewConfig: ListViewDisplayConfig = {
     {
       key: 'popupMenu',
       label: 'Actions',
-      width: '10%',
+      width: '125px',
     },
   ],
   noDataTitle: 'No EGP policies yet',
