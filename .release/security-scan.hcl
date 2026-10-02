@@ -39,7 +39,15 @@ binary {
         // Exempt these until the scanner can handle the boringcrypto suffix for
         // the FIPS 140-3 builds.
         "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
-        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942"
+        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942",
+
+        // google.golang.org/grpc@v1.84.0
+        // This isn't actually a problem because we do a replace to a version
+        // that isn't 1.84.0, however, the scanner still trips. After we cut
+        // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
+        // that doesn't depend on 1.84.0 we can update all of our Go modules
+        // and remove this exemption.
+        "GO-2026-6443"
       ]
     }
   }
@@ -85,7 +93,15 @@ container {
         // Exempt these until the scanner can handle the boringcrypto suffix for
         // the FIPS 140-3 builds.
         "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
-        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942"
+        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942",
+
+        // google.golang.org/grpc@v1.84.0
+        // This isn't actually a problem because we do a replace to a version
+        // that isn't 1.84.0, however, the scanner still trips. After we cut
+        // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
+        // that doesn't depend on 1.84.0 we can update all of our Go modules
+        // and remove this exemption.
+        "GO-2026-6443"
       ]
 
       // The OSV scanner will trip on several packages that are included in the
