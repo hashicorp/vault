@@ -4,6 +4,7 @@
 package policyutil
 
 import (
+	"errors"
 	"sort"
 	"strings"
 
@@ -14,6 +15,32 @@ const (
 	AddDefaultPolicy      = true
 	DoNotAddDefaultPolicy = false
 )
+
+var (
+	errPolicyNameEmpty         = errors.New("policy name cannot be empty")
+	errPolicyNameDotSegment    = errors.New("policy name cannot contain '.' path segments")
+	errPolicyNameParentSegment = errors.New("policy name cannot contain '..' path segments")
+)
+
+// ValidatePolicyName validates a policy name and returns its canonical form.
+func ValidatePolicyName(name string) (string, error) {
+	canonicalName := CanonicalizePolicyName(name)
+
+	if canonicalName == "" {
+		return "", errPolicyNameEmpty
+	}
+
+	for _, segment := range strings.Split(canonicalName, "/") {
+		switch segment {
+		case ".":
+			return "", errPolicyNameDotSegment
+		case "..":
+			return "", errPolicyNameParentSegment
+		}
+	}
+
+	return canonicalName, nil
+}
 
 // ParsePolicies parses a comma-delimited list of policies.
 // The resulting collection will have no duplicate elements.

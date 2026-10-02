@@ -142,6 +142,19 @@ var (
 	}
 )
 
+func validatePolicyNameSet(policies []string, fieldName string) error {
+	for _, policy := range policies {
+		if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+			if fieldName == "" {
+				return fmt.Errorf("invalid policy name %q: %w", policy, err)
+			}
+			return fmt.Errorf("invalid policy name %q in %s: %w", policy, fieldName, err)
+		}
+	}
+
+	return nil
+}
+
 func (ts *TokenStore) paths() []*framework.Path {
 	commonFieldsForCreate := map[string]*framework.FieldSchema{
 		"display_name": {
@@ -1072,6 +1085,10 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 	if tokenNS == nil {
 		return namespace.ErrNoNamespace
+	}
+
+	if err := validatePolicyNameSet(entry.Policies, ""); err != nil {
+		return err
 	}
 
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
@@ -2746,6 +2763,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
 
 	policies := d.Get("policies").([]string)
+	if err := validatePolicyNameSet(policies, "policies"); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 
 	// If the context's namespace is different from the parent and this is an
 	// orphan token creation request, then this is an admin token generation for
@@ -3017,6 +3037,19 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	switch {
 	case role != nil && (len(role.AllowedPolicies) > 0 || len(role.DisallowedPolicies) > 0 ||
 		len(role.AllowedPoliciesGlob) > 0 || len(role.DisallowedPoliciesGlob) > 0):
+		if err := validatePolicyNameSet(role.AllowedPolicies, "allowed_policies"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if err := validatePolicyNameSet(role.DisallowedPolicies, "disallowed_policies"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if err := validatePolicyNameSet(role.AllowedPoliciesGlob, "allowed_policies_glob"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if err := validatePolicyNameSet(role.DisallowedPoliciesGlob, "disallowed_policies_glob"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+
 		// Holds the final set of policies as they get munged
 		var finalPolicies []string
 
@@ -3935,30 +3968,62 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 
 		allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
 		if ok {
-			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPolicies := allowedPoliciesRaw.([]string)
+			if err := validatePolicyNameSet(allowedPolicies, "allowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPolicies, policyutil.DoNotAddDefaultPolicy)
 		} else if req.Operation == logical.CreateOperation {
-			entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPolicies := data.Get("allowed_policies").([]string)
+			if err := validatePolicyNameSet(allowedPolicies, "allowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPolicies, policyutil.DoNotAddDefaultPolicy)
 		}
 
 		disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
 		if ok {
-			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
+			disallowedPolicies := disallowedPoliciesRaw.([]string)
+			if err := validatePolicyNameSet(disallowedPolicies, "disallowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPolicies, true)
 		} else if req.Operation == logical.CreateOperation {
-			entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
+			disallowedPolicies := data.Get("disallowed_policies").([]string)
+			if err := validatePolicyNameSet(disallowedPolicies, "disallowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPolicies, true)
 		}
 
 		allowedPoliciesGlobRaw, ok := data.GetOk("allowed_policies_glob")
 		if ok {
-			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(allowedPoliciesGlobRaw.([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPoliciesGlob := allowedPoliciesGlobRaw.([]string)
+			if err := validatePolicyNameSet(allowedPoliciesGlob, "allowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(allowedPoliciesGlob, policyutil.DoNotAddDefaultPolicy)
 		} else if req.Operation == logical.CreateOperation {
-			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(data.Get("allowed_policies_glob").([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPoliciesGlob := data.Get("allowed_policies_glob").([]string)
+			if err := validatePolicyNameSet(allowedPoliciesGlob, "allowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(allowedPoliciesGlob, policyutil.DoNotAddDefaultPolicy)
 		}
 
 		disallowedPoliciesGlobRaw, ok := data.GetOk("disallowed_policies_glob")
 		if ok {
-			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(disallowedPoliciesGlobRaw.([]string), true)
+			disallowedPoliciesGlob := disallowedPoliciesGlobRaw.([]string)
+			if err := validatePolicyNameSet(disallowedPoliciesGlob, "disallowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(disallowedPoliciesGlob, true)
 		} else if req.Operation == logical.CreateOperation {
-			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(data.Get("disallowed_policies_glob").([]string), true)
+			disallowedPoliciesGlob := data.Get("disallowed_policies_glob").([]string)
+			if err := validatePolicyNameSet(disallowedPoliciesGlob, "disallowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(disallowedPoliciesGlob, true)
 		}
 	}
 
