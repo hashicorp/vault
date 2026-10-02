@@ -1060,10 +1060,11 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 			// Only allow returning non-container external plugins if we have a plugin directory.
 			// Stored entries are not guaranteed to have passed the registration
 			// checks in Set (e.g. they may have arrived through a raft snapshot
-			// restore), so verify the command stays within the plugin directory
-			// before it is handed out for execution.
-			absCommand := filepath.Join(c.directory, entry.Command)
-			if err := c.checkCommandInPluginDirectory(absCommand); err != nil {
+			// restore), so apply the same command checks that registration
+			// applies before the command is handed out for execution. Unlike
+			// registration, a binary that does not exist yet is allowed.
+			absCommand, err := c.checkPluginCommand(entry.Name, entry.Command, c.storedPluginDir(entry), true)
+			if err != nil {
 				return nil, fmt.Errorf("refusing to use plugin %q: %w", name, err)
 			}
 			// Make the command path fully rooted.
@@ -1097,42 +1098,119 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 	return nil, nil
 }
 
-// checkCommandInPluginDirectory verifies that absCommand, which must already
-// have been joined onto the plugin directory, does not escape it. Two checks
-// are made:
+// storedPluginDir returns the directory a stored plugin's binary must be in,
+// derived from the entry the same way set derives it at registration: the
+// runtime directory for downloaded plugins, the plugin directory for a command
+// given directly in it, and the extracted artifact directory otherwise.
+func (c *PluginCatalog) storedPluginDir(entry *pluginutil.PluginRunner) string {
+	artifactDir := GetExtractedArtifactDir(entry.Name, entry.Version)
+	switch {
+	case entry.Download:
+		return filepath.Join(c.directory, ".runtime", artifactDir)
+	case filepath.Dir(filepath.Clean(entry.Command)) == ".":
+		return c.directory
+	default:
+		return filepath.Join(c.directory, artifactDir)
+	}
+}
+
+// checkPluginCommand validates a non-container plugin command and returns it
+// joined onto the plugin directory. It is shared by registration (set) and
+// lookup (get) so both apply the same rules:
 //
-//  1. Lexical: the cleaned path must still be beneath the plugin directory.
-//     filepath.Join cleans ".." segments, so a stored command such as
-//     "../../bin/sh" would otherwise silently resolve outside of the directory.
-//  2. Resolved: after following symlinks, the target must still be beneath the
-//     (also resolved) plugin directory.
+//  1. Neither the plugin name nor the command may contain "..".
+//  2. expectedDir must be inside the plugin directory, and the command must
+//     name a file directly in expectedDir.
+//  3. After resolving symlinks, the binary must be directly in expectedDir.
+//     Only the plugin directory itself may be reached through a symlink; the
+//     directories below it are compared without resolving symlinks, so a
+//     symlinked subdirectory is refused just as an escaping binary is.
 //
-// A command that does not exist on disk is not an error: entries are also read
-// for inspection (read API, metrics) and the binary may have been removed.
-// Executing a missing binary fails on its own.
-func (c *PluginCatalog) checkCommandInPluginDirectory(absCommand string) error {
-	rel, err := filepath.Rel(c.directory, absCommand)
-	if err != nil || !filepath.IsLocal(rel) {
-		return ErrPluginOutsideDirectory
+// When allowMissing is true, a binary that does not exist is not an error:
+// entries are also read for inspection (read API, metrics), and downloaded
+// plugins are looked up before their binary is extracted. The part of the
+// path that does exist is still checked; see checkMissingCommand.
+func (c *PluginCatalog) checkPluginCommand(name, command, expectedDir string, allowMissing bool) (string, error) {
+	if strings.Contains(name, "..") || strings.Contains(command, "..") {
+		return "", fmt.Errorf("%w: %w", ErrPluginOutsideDirectory, consts.ErrPathContainsParentReferences)
 	}
 
-	resolvedCommand, err := filepath.EvalSymlinks(absCommand)
+	expectedDir = filepath.Clean(expectedDir)
+	relDir, err := filepath.Rel(c.directory, expectedDir)
+	if err != nil || !filepath.IsLocal(relDir) {
+		return "", ErrPluginOutsideDirectory
+	}
+	absCommand := filepath.Join(c.directory, command)
+	if filepath.Dir(absCommand) != expectedDir {
+		return "", fmt.Errorf("%w: command must name a file in %s", ErrPluginOutsideDirectory, expectedDir)
+	}
+
+	resolvedDir, err := filepath.EvalSymlinks(c.directory)
 	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+		return "", fmt.Errorf("error while validating the plugin directory: %w", err)
+	}
+
+	resolved, err := filepath.EvalSymlinks(absCommand)
+	if err != nil {
+		if allowMissing && isNotExist(err) {
+			return absCommand, c.checkMissingCommand(absCommand, resolvedDir)
+		}
+		return "", fmt.Errorf("error while validating the command path: %w", err)
+	}
+	if filepath.Dir(resolved) != filepath.Join(resolvedDir, relDir) {
+		return "", fmt.Errorf("%w: binary must be in %s", ErrPluginOutsideDirectory, expectedDir)
+	}
+	return absCommand, nil
+}
+
+// checkMissingCommand handles a command whose binary does not exist. It finds
+// the deepest existing component of absCommand below the plugin directory and
+// requires it to be reached without following any symlink, as the binary's
+// directory must be once the binary exists.
+//
+// Without this, a broken symlink at the command, or a symlinked directory on
+// the way to it, would pass while its target is absent; whatever later
+// appears at the target would then be executed.
+func (c *PluginCatalog) checkMissingCommand(absCommand, resolvedDir string) error {
+	existing := absCommand
+	for {
+		if existing == c.directory {
+			// Nothing below the plugin directory exists; whatever is created
+			// later is created inside the directory itself.
 			return nil
+		}
+		_, err := os.Lstat(existing)
+		if err == nil {
+			break
+		}
+		if !isNotExist(err) {
+			return fmt.Errorf("error while validating the command path: %w", err)
+		}
+		parent := filepath.Dir(existing)
+		if parent == existing {
+			return ErrPluginOutsideDirectory
+		}
+		existing = parent
+	}
+
+	resolved, err := filepath.EvalSymlinks(existing)
+	if err != nil {
+		if isNotExist(err) {
+			// existing is a symlink whose target is missing, so where it will
+			// point once the target exists cannot be verified.
+			return fmt.Errorf("%w: command path contains a broken symlink", ErrPluginOutsideDirectory)
 		}
 		return fmt.Errorf("error while validating the command path: %w", err)
 	}
-	resolvedDir, err := filepath.EvalSymlinks(c.directory)
-	if err != nil {
-		return fmt.Errorf("error while validating the plugin directory: %w", err)
-	}
-
-	rel, err = filepath.Rel(resolvedDir, resolvedCommand)
-	if err != nil || !filepath.IsLocal(rel) {
+	rel, err := filepath.Rel(c.directory, existing)
+	if err != nil || resolved != filepath.Join(resolvedDir, rel) {
 		return ErrPluginOutsideDirectory
 	}
 	return nil
+}
+
+func isNotExist(err error) bool {
+	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR)
 }
 
 // Set registers a new external plugin with the catalog, or updates an existing
@@ -1216,23 +1294,11 @@ func (c *PluginCatalog) set(ctx context.Context, plugin pluginutil.SetPluginInpu
 			}
 		}
 
-		absCommand = filepath.Join(c.directory, plugin.Command)
-
-		sym, err := filepath.EvalSymlinks(absCommand)
+		// Make sure the command isn't breaking out of the configured plugin
+		// directory. get applies the same check to stored entries.
+		absCommand, err = c.checkPluginCommand(plugin.Name, plugin.Command, expectedPluginDir, false)
 		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
-
-		// Best effort check to make sure the command isn't breaking out of the
-		// configured plugin directory.
-
-		symAbs, err := filepath.Abs(filepath.Dir(sym))
-		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
-
-		if symAbs != expectedPluginDir {
-			return nil, fmt.Errorf("cannot execute files outside of configured plugin directory %s: expected %s, got %s", c.directory, expectedPluginDir, symAbs)
+			return nil, err
 		}
 	}
 
