@@ -65,6 +65,13 @@ module('Acceptance | Identity groups list view', function (hooks) {
     assert.dom(GENERAL.button('Create group')).exists();
   });
 
+  test('it disables the group type field when editing a group', async function (assert) {
+    await visit(`/vault/access/identity/groups/edit/${GROUP_ID_1}`);
+
+    assert.dom(GENERAL.inputByAttr('type')).isDisabled('group type cannot be changed after creation');
+    assert.dom(GENERAL.inputByAttr('type')).hasValue('internal', 'existing group type is displayed');
+  });
+
   // ── Table columns ────────────────────────────────────────────────────────
 
   test('it renders the Group name and Group ID column headers', async function (assert) {
