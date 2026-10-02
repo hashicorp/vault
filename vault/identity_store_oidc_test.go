@@ -27,6 +27,50 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestOIDC_mergeJSONTemplates verifies that claims with a null or empty string
+// value are omitted from merged OIDC templates, while claims with a meaningful
+// value (including empty lists and objects) are preserved.
+func TestOIDC_mergeJSONTemplates(t *testing.T) {
+	template := `{
+		"name": "Brian Candler",
+		"organization": "",
+		"nickname": null,
+		"groups": [],
+		"metadata": {},
+		"login_count": 0,
+		"active": false
+	}`
+
+	output := map[string]interface{}{
+		"sub": "entity-id",
+	}
+
+	if err := mergeJSONTemplates(hclog.NewNullLogger(), output, template); err != nil {
+		t.Fatalf("unexpected error merging templates: %v", err)
+	}
+
+	// Claims with a null or empty string value must be omitted.
+	for _, claim := range []string{"organization", "nickname"} {
+		if _, ok := output[claim]; ok {
+			t.Errorf("expected claim %q to be omitted, but it was present", claim)
+		}
+	}
+
+	// Claims with a meaningful value, including empty lists and objects, must
+	// be preserved.
+	expected := map[string]interface{}{
+		"sub":         "entity-id",
+		"name":        "Brian Candler",
+		"groups":      []interface{}{},
+		"metadata":    map[string]interface{}{},
+		"login_count": float64(0),
+		"active":      false,
+	}
+	if diff := deep.Equal(output, expected); diff != nil {
+		t.Errorf("unexpected merged claims: %v", diff)
+	}
+}
+
 // TestOIDC_Path_OIDC_RoleNoKeyParameter tests that a role cannot be created
 // without a key parameter
 func TestOIDC_Path_OIDC_RoleNoKeyParameter(t *testing.T) {
