@@ -8,6 +8,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"strings"
 	"testing"
@@ -54,6 +55,45 @@ func TestExportCrypto_ReversibleUnwrap(t *testing.T) {
 			unwrapped, err := unwrapCAPrivateKey(wrappedJSON, privPEM)
 			require.NoError(t, err)
 			require.Equal(t, caPrivKeyPEM, unwrapped)
+		})
+	}
+}
+
+// TestExportCrypto_TamperedCiphertextRejected verifies that flipping a single byte in the
+// AES-GCM ciphertext causes unwrapCAPrivateKey to return an "AES-GCM" error, confirming
+// the authentication tag check fires and is not silently suppressed.
+func TestExportCrypto_TamperedCiphertextRejected(t *testing.T) {
+	t.Parallel()
+
+	caPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	caDER, err := x509.MarshalPKCS8PrivateKey(caPriv)
+	require.NoError(t, err)
+	caPrivKeyPEM := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: caDER})))
+
+	keyTypes := []string{"rsa-2048", "ec-p256", "ml-kem-768"}
+
+	for _, kt := range keyTypes {
+		kt := kt
+		t.Run(kt, func(t *testing.T) {
+			t.Parallel()
+
+			privPEM, pubPEM, _, err := generateExportKeypair(kt)
+			require.NoError(t, err)
+
+			validJSON, err := wrapCAPrivateKey(caPrivKeyPEM, pubPEM)
+			require.NoError(t, err)
+
+			var blob wrappedKeyBlob
+			require.NoError(t, json.Unmarshal(validJSON, &blob))
+			require.NotEmpty(t, blob.Ciphertext, "ciphertext must be non-empty before tampering (key_type=%s)", kt)
+			blob.Ciphertext[len(blob.Ciphertext)/2] ^= 0xFF
+			tamperedJSON, err := json.Marshal(&blob)
+			require.NoError(t, err)
+
+			_, err = unwrapCAPrivateKey(tamperedJSON, privPEM)
+			require.Error(t, err, "unwrapCAPrivateKey must return an error for a tampered ciphertext (key_type=%s)", kt)
+			require.Contains(t, err.Error(), "AES-GCM", "error must come from AES-GCM decryption (key_type=%s)", kt)
 		})
 	}
 }
