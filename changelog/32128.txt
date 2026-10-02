@@ -1,0 +1,3 @@
+```release-note:bug
+identity/oidc: role and scope templates can now contain nested json objects, whose closing braces were rejected as unbalanced templating characters.
+```
