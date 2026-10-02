@@ -113,7 +113,7 @@ func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	tokenRespRaw, err := client.Logical().Write("auth/token/create", map[string]interface{}{
 		"ttl":              "10s",
 		"explicit-max-ttl": "15s",
-		"policies":         []string{""},
+		"policies":         []string{"default"},
 	})
 	if err != nil {
 		t.Fatal(err)

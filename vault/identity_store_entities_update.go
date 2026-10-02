@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -130,15 +131,24 @@ func (b *EntityBuilder) WithPolicies(policies []string) *EntityBuilder {
 	if b.err != nil {
 		return b
 	}
-	if strutil.StrListContainsCaseInsensitive(policies, "root") {
+	validatedPolicies := make([]string, 0, len(policies))
+	for _, policy := range policies {
+		canonicalPolicy, err := policyutil.ValidatePolicyName(policy)
+		if err != nil {
+			b.err = fmt.Errorf("invalid policy name %q: %w", policy, err)
+			return b
+		}
+		validatedPolicies = append(validatedPolicies, canonicalPolicy)
+	}
+	if strutil.StrListContainsCaseInsensitive(validatedPolicies, "root") {
 		b.err = fmt.Errorf("policies cannot contain root")
 		return b
 	}
-	dedupedPolicies := strutil.RemoveDuplicates(policies, false)
+	dedupedPolicies := strutil.RemoveDuplicates(validatedPolicies, false)
 	if !strutil.EquivalentSlices(b.entity.Policies, dedupedPolicies) {
 		b.modifiedFields = append(b.modifiedFields, "policies")
 	}
-	b.entity.Policies = strutil.RemoveDuplicates(policies, false)
+	b.entity.Policies = dedupedPolicies
 	return b
 }
 

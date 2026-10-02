@@ -16,6 +16,7 @@ import (
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/credential/approle"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -384,6 +385,130 @@ func TestRequestHandling_Login_PeriodicToken(t *testing.T) {
 	if diff := deep.Equal(resp.Data, exp); diff != nil {
 		t.Fatal(diff)
 	}
+}
+
+// TestLoginCreateToken_SkipsLegacyInvalidTokenPolicyNames verifies token
+// creation skips malformed legacy token policy names instead of failing login.
+//
+// This test intentionally calls LoginCreateToken directly so it can inject a
+// legacy malformed policy value into logical.Response.Auth. The public API
+// validates policy names during normal writes and login flows, so it cannot
+// create this legacy input state.
+func TestLoginCreateToken_SkipsLegacyInvalidTokenPolicyNames(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}, nil)
+	core := cluster.Cores[0].Core
+	ctx := namespace.RootContext(t.Context())
+
+	resp, err := core.HandleRequest(ctx, &logical.Request{
+		Path:        "sys/auth/userpass",
+		ClientToken: cluster.RootToken,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": "userpass",
+		},
+		Connection: &logical.Connection{},
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	loginResp := &logical.Response{
+		Auth: &logical.Auth{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Minute,
+			},
+			DisplayName: "legacy-token-policy-user",
+			Policies:    []string{"default", "team/../read"},
+			TokenType:   logical.TokenTypeService,
+		},
+	}
+
+	leaseGenerated, resp, err := core.LoginCreateToken(
+		ctx,
+		namespace.RootNamespace,
+		"auth/userpass/login/legacy-token-policy-user",
+		"auth/userpass/",
+		"",
+		loginResp,
+	)
+	require.NoError(t, err)
+	require.True(t, leaseGenerated)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Auth)
+	require.ElementsMatch(t, []string{"default"}, resp.Auth.TokenPolicies)
+	require.ElementsMatch(t, []string{"default"}, resp.Auth.Policies)
+}
+
+// TestLoginCreateToken_SkipsLegacyInvalidIdentityPolicyNames verifies token
+// creation skips malformed legacy identity policy names instead of failing login.
+//
+// This test must inject legacy malformed identity policy values directly into
+// identity storage before LoginCreateToken runs. The public API rejects these
+// malformed policy names, so it cannot construct this legacy policy state.
+func TestLoginCreateToken_SkipsLegacyInvalidIdentityPolicyNames(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}, nil)
+	core := cluster.Cores[0].Core
+	ctx := namespace.RootContext(t.Context())
+
+	resp, err := core.HandleRequest(ctx, &logical.Request{
+		Path:        "sys/auth/userpass",
+		ClientToken: cluster.RootToken,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"type": "userpass",
+		},
+		Connection: &logical.Connection{},
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	entityID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	require.NoError(t, core.identityStore.upsertEntity(ctx, &identity.Entity{
+		ID:          entityID,
+		Name:        "legacy-identity-policy-user",
+		NamespaceID: namespace.RootNamespaceID,
+		BucketKey:   core.identityStore.entityPacker.BucketKey(entityID),
+		Policies:    []string{" Team-Read ", "team/../read"},
+	}, nil, true))
+
+	loginResp := &logical.Response{
+		Auth: &logical.Auth{
+			LeaseOptions: logical.LeaseOptions{
+				TTL: time.Minute,
+			},
+			DisplayName: "legacy-identity-policy-user",
+			EntityID:    entityID,
+			Policies:    []string{"default"},
+			TokenType:   logical.TokenTypeService,
+		},
+	}
+
+	leaseGenerated, resp, err := core.LoginCreateToken(
+		ctx,
+		namespace.RootNamespace,
+		"auth/userpass/login/legacy-identity-policy-user",
+		"auth/userpass/",
+		"",
+		loginResp,
+	)
+	require.NoError(t, err)
+	require.True(t, leaseGenerated)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Auth)
+	require.ElementsMatch(t, []string{"team-read"}, resp.Auth.IdentityPolicies)
+	require.ElementsMatch(t, []string{"default", "team-read"}, resp.Auth.Policies)
 }
 
 func labelsMatch(actual, expected map[string]string) bool {
@@ -936,6 +1061,390 @@ func TestRequestHandling_fetchACLTokenEntryAndEntity_NonExpiring_RootIgnoresCIDR
 	require.NotNil(t, acl)
 	require.NotNil(t, te)
 	require.Equal(t, time.Duration(0), te.TTL)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_LegacyInvalidTokenPoliciesNotApplied
+// verifies invalid legacy token policy names are ignored at request time even
+// when they exist in storage, policyTypeMap, and cache.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_LegacyInvalidTokenPoliciesNotApplied(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		invalidPolicyName string
+		primeCache        bool
+	}{
+		{
+			name:              "cached sibling target",
+			invalidPolicyName: "sibling/./admin",
+			primeCache:        true,
+		},
+		{
+			name:              "uncached root target",
+			invalidPolicyName: "root/./admin",
+			primeCache:        false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cluster := NewTestCluster(t, nil, nil)
+			core := cluster.Cores[0].Core
+			ctx := namespace.RootContext(t.Context())
+
+			validPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/allowed" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+			require.NoError(t, err)
+			validPolicy.Name = "legacy-token-valid"
+			validPolicy.namespace = namespace.RootNamespace
+			require.NoError(t, core.policyStore.SetPolicy(ctx, validPolicy))
+
+			legacyInvalidPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/forbidden" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+			require.NoError(t, err)
+			legacyInvalidPolicy.Name = tc.invalidPolicyName
+			legacyInvalidPolicy.namespace = namespace.RootNamespace
+			require.NoError(t, core.policyStore.setPolicyInternal(ctx, legacyInvalidPolicy, nil))
+
+			invalidKey := policyCacheKey(namespace.RootNamespaceID, core.policyStore.sanitizeName(tc.invalidPolicyName))
+			_, found := core.policyStore.policyTypeMap.Load(invalidKey)
+			require.True(t, found)
+			storedEntry, err := core.policyStore.getACLView(namespace.RootNamespace).Get(ctx, tc.invalidPolicyName)
+			require.NoError(t, err)
+			require.NotNil(t, storedEntry)
+			if !tc.primeCache {
+				core.policyStore.tokenPoliciesLRU.Remove(invalidKey)
+			}
+
+			tokenID, err := uuid.GenerateUUID()
+			require.NoError(t, err)
+			legacyToken := &logical.TokenEntry{
+				ID:       tokenID,
+				Path:     "auth/token/create",
+				Policies: []string{"legacy-token-valid"},
+				TTL:      time.Hour,
+			}
+			testMakeTokenDirectly(t, core.tokenStore, legacyToken)
+
+			legacyToken.Policies = []string{"legacy-token-valid", tc.invalidPolicyName}
+			require.NoError(t, core.tokenStore.store(ctx, legacyToken))
+
+			acl, returnedTE, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, &logical.Request{
+				ClientToken: tokenID,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, acl)
+			require.NotNil(t, returnedTE)
+
+			allowed := acl.AllowOperation(ctx, &logical.Request{
+				Path:      "secret/data/allowed",
+				Operation: logical.ReadOperation,
+			}, false)
+			require.True(t, allowed.Allowed)
+
+			forbidden := acl.AllowOperation(ctx, &logical.Request{
+				Path:      "secret/data/forbidden",
+				Operation: logical.ReadOperation,
+			}, false)
+			require.False(t, forbidden.Allowed)
+		})
+	}
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_BackslashAndSlashPolicyNamesRemainDistinct
+// verifies request-time ACL construction treats slash and backslash policy names
+// as distinct, independently resolvable entries.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_BackslashAndSlashPolicyNamesRemainDistinct(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, nil, nil)
+	core := cluster.Cores[0].Core
+	ctx := namespace.RootContext(t.Context())
+
+	slashPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/slash" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+	require.NoError(t, err)
+	slashPolicy.Name = "team/read"
+	slashPolicy.namespace = namespace.RootNamespace
+	require.NoError(t, core.policyStore.SetPolicy(ctx, slashPolicy))
+
+	backslashPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/backslash" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+	require.NoError(t, err)
+	backslashPolicy.Name = `team\read`
+	backslashPolicy.namespace = namespace.RootNamespace
+	require.NoError(t, core.policyStore.SetPolicy(ctx, backslashPolicy))
+
+	tokenBackslashID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	testMakeTokenDirectly(t, core.tokenStore, &logical.TokenEntry{
+		ID:       tokenBackslashID,
+		Path:     "auth/token/create",
+		Policies: []string{`team\read`},
+		TTL:      time.Hour,
+	})
+
+	backslashACL, returnedBackslashTE, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, &logical.Request{
+		ClientToken: tokenBackslashID,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, backslashACL)
+	require.NotNil(t, returnedBackslashTE)
+
+	backslashAllowed := backslashACL.AllowOperation(ctx, &logical.Request{
+		Path:      "secret/data/backslash",
+		Operation: logical.ReadOperation,
+	}, false)
+	require.True(t, backslashAllowed.Allowed)
+
+	slashDeniedFromBackslashToken := backslashACL.AllowOperation(ctx, &logical.Request{
+		Path:      "secret/data/slash",
+		Operation: logical.ReadOperation,
+	}, false)
+	require.False(t, slashDeniedFromBackslashToken.Allowed)
+
+	tokenSlashID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	testMakeTokenDirectly(t, core.tokenStore, &logical.TokenEntry{
+		ID:       tokenSlashID,
+		Path:     "auth/token/create",
+		Policies: []string{"team/read"},
+		TTL:      time.Hour,
+	})
+
+	slashACL, returnedSlashTE, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, &logical.Request{
+		ClientToken: tokenSlashID,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, slashACL)
+	require.NotNil(t, returnedSlashTE)
+
+	slashAllowed := slashACL.AllowOperation(ctx, &logical.Request{
+		Path:      "secret/data/slash",
+		Operation: logical.ReadOperation,
+	}, false)
+	require.True(t, slashAllowed.Allowed)
+
+	backslashDeniedFromSlashToken := slashACL.AllowOperation(ctx, &logical.Request{
+		Path:      "secret/data/backslash",
+		Operation: logical.ReadOperation,
+	}, false)
+	require.False(t, backslashDeniedFromSlashToken.Allowed)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_LegacyParentTraversalTokenPoliciesNotApplied
+// verifies parent-traversal token policy names are ignored during ACL
+// construction, even when cache and type-map entries exist.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_LegacyParentTraversalTokenPoliciesNotApplied(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, nil, nil)
+	core := cluster.Cores[0].Core
+	ctx := namespace.RootContext(t.Context())
+
+	validPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/allowed" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+	require.NoError(t, err)
+	validPolicy.Name = "legacy-token-valid"
+	validPolicy.namespace = namespace.RootNamespace
+	require.NoError(t, core.policyStore.SetPolicy(ctx, validPolicy))
+
+	const invalidPolicyName = "team/../admin"
+	invalidKey := policyCacheKey(namespace.RootNamespaceID, core.policyStore.sanitizeName(invalidPolicyName))
+	core.policyStore.policyTypeMap.Store(invalidKey, PolicyTypeACL)
+	require.NotNil(t, core.policyStore.tokenPoliciesLRU)
+	core.policyStore.tokenPoliciesLRU.Add(invalidKey, &Policy{
+		Name:      invalidPolicyName,
+		Type:      PolicyTypeACL,
+		Raw:       `path "secret/data/forbidden" { capabilities = ["read"] }`,
+		namespace: namespace.RootNamespace,
+	})
+
+	tokenID, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	legacyToken := &logical.TokenEntry{
+		ID:       tokenID,
+		Path:     "auth/token/create",
+		Policies: []string{"legacy-token-valid"},
+		TTL:      time.Hour,
+	}
+	testMakeTokenDirectly(t, core.tokenStore, legacyToken)
+
+	legacyToken.Policies = []string{"legacy-token-valid", invalidPolicyName}
+	require.NoError(t, core.tokenStore.store(ctx, legacyToken))
+
+	acl, returnedTE, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, &logical.Request{
+		ClientToken: tokenID,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, acl)
+	require.NotNil(t, returnedTE)
+
+	allowed := acl.AllowOperation(ctx, &logical.Request{
+		Path:      "secret/data/allowed",
+		Operation: logical.ReadOperation,
+	}, false)
+	require.True(t, allowed.Allowed)
+
+	forbidden := acl.AllowOperation(ctx, &logical.Request{
+		Path:      "secret/data/forbidden",
+		Operation: logical.ReadOperation,
+	}, false)
+	require.False(t, forbidden.Allowed)
+}
+
+// TestRequestHandling_fetchACLTokenEntryAndEntity_LegacyInvalidIdentityPoliciesNotApplied
+// verifies invalid legacy identity policy names are ignored at request time
+// even when they exist in storage, policyTypeMap, and cache.
+//
+// This test intentionally uses core.HandleRequest for auth enable/user creation
+// and login setup. In this in-package harness, using client.Logical().Write for
+// these calls can fail JSON decoding into api.Secret, while HandleRequest
+// exercises the same logical paths without HTTP client decoding behavior.
+func TestRequestHandling_fetchACLTokenEntryAndEntity_LegacyInvalidIdentityPoliciesNotApplied(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		invalidPolicyName string
+		primeCache        bool
+	}{
+		{
+			name:              "cached sibling target",
+			invalidPolicyName: "sibling/./admin",
+			primeCache:        true,
+		},
+		{
+			name:              "uncached root target",
+			invalidPolicyName: "root/./admin",
+			primeCache:        false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cluster := NewTestCluster(t, &CoreConfig{
+				CredentialBackends: map[string]logical.Factory{
+					"userpass": credUserpass.Factory,
+				},
+			}, nil)
+			core := cluster.Cores[0].Core
+			ctx := namespace.RootContext(t.Context())
+
+			req := &logical.Request{
+				Path:        "sys/auth/userpass",
+				ClientToken: cluster.RootToken,
+				Operation:   logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"type": "userpass",
+				},
+				Connection: &logical.Connection{},
+			}
+			resp, err := core.HandleRequest(ctx, req)
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			req.Path = "auth/userpass/users/legacy-identity-user"
+			req.Data = map[string]interface{}{
+				"password": "testpassword",
+			}
+			resp, err = core.HandleRequest(ctx, req)
+			require.NoError(t, err)
+			require.Nil(t, resp)
+
+			validPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/allowed" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+			require.NoError(t, err)
+			validPolicy.Name = "legacy-identity-valid"
+			validPolicy.namespace = namespace.RootNamespace
+			require.NoError(t, core.policyStore.SetPolicy(ctx, validPolicy))
+
+			legacyInvalidPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/forbidden" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(core.denySlashInTemplatedPolicyPaths))
+			require.NoError(t, err)
+			legacyInvalidPolicy.Name = tc.invalidPolicyName
+			legacyInvalidPolicy.namespace = namespace.RootNamespace
+			require.NoError(t, core.policyStore.setPolicyInternal(ctx, legacyInvalidPolicy, nil))
+
+			invalidKey := policyCacheKey(namespace.RootNamespaceID, core.policyStore.sanitizeName(tc.invalidPolicyName))
+			_, found := core.policyStore.policyTypeMap.Load(invalidKey)
+			require.True(t, found)
+			if !tc.primeCache {
+				core.policyStore.tokenPoliciesLRU.Remove(invalidKey)
+			}
+
+			loginResp, err := core.HandleRequest(ctx, &logical.Request{
+				Path:      "auth/userpass/login/legacy-identity-user",
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"password": "testpassword",
+				},
+				Connection: &logical.Connection{},
+			})
+			require.NoError(t, err)
+			require.NotNil(t, loginResp)
+			require.NotNil(t, loginResp.Auth)
+			tokenEntry, err := core.tokenStore.Lookup(ctx, loginResp.Auth.ClientToken)
+			require.NoError(t, err)
+			require.NotNil(t, tokenEntry)
+			require.NotEmpty(t, tokenEntry.EntityID)
+
+			var getErr error
+			core.identityStore.lock.Lock()
+			entity, getErr := core.identityStore.MemDBEntityByID(tokenEntry.EntityID, true)
+			if getErr == nil {
+				if entity == nil {
+					getErr = errors.New("entity not found")
+				}
+			}
+			if getErr == nil {
+				entity.Policies = []string{"legacy-identity-valid", tc.invalidPolicyName}
+				getErr = core.identityStore.upsertEntity(ctx, entity, nil, true)
+			}
+			core.identityStore.lock.Unlock()
+			require.NoError(t, getErr)
+
+			acl, returnedTE, _, _, err := core.fetchACLTokenEntryAndEntity(ctx, &logical.Request{
+				ClientToken: loginResp.Auth.ClientToken,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, acl)
+			require.NotNil(t, returnedTE)
+
+			allowed := acl.AllowOperation(ctx, &logical.Request{
+				Path:      "secret/data/allowed",
+				Operation: logical.ReadOperation,
+			}, false)
+			require.True(t, allowed.Allowed)
+
+			forbidden := acl.AllowOperation(ctx, &logical.Request{
+				Path:      "secret/data/forbidden",
+				Operation: logical.ReadOperation,
+			}, false)
+			require.False(t, forbidden.Allowed)
+		})
+	}
 }
 
 // TestRequestHandling_handleCancelableTestNumericToken tests that if a token

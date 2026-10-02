@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -266,7 +267,15 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		dedupedPolicies := strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
+		validatedPolicies := make([]string, 0, len(policiesRaw.([]string)))
+		for _, policy := range policiesRaw.([]string) {
+			canonicalPolicy, err := policyutil.ValidatePolicyName(policy)
+			if err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("invalid policy name %q: %s", policy, err)), nil
+			}
+			validatedPolicies = append(validatedPolicies, canonicalPolicy)
+		}
+		dedupedPolicies := strutil.RemoveDuplicatesStable(validatedPolicies, false)
 		if !strutil.EquivalentSlices(dedupedPolicies, group.Policies) {
 			modifiedFields = append(modifiedFields, "policies")
 		}
