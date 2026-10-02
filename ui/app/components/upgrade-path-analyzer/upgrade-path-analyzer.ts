@@ -230,6 +230,7 @@ export default class UpgradePathAnalyzer extends Component<UpgradePathAnalyzerAr
       return [
         'Create backup of Primary cluster via command vault operator raft snapshot save primary.snap on that cluster',
         'Stop Vault on the current instance.',
+        'Ensure your cluster configuration file is saved in its pre-upgrade state',
         `Install Vault ${this.selectedVersion} over the existing instance.`,
         'Start Vault.',
         'Unseal Vault if required.',

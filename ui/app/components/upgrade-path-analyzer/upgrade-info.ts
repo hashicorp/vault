@@ -156,8 +156,8 @@ export default class UpgradeInfoComponent extends Component<UpgradeInfoArgs> {
 
   private formatKnownIssues(issues: KnownIssue[]) {
     return issues.map((data) => {
-      const isFixed = data.fixed !== 'No';
-      const hasWorkaround = data.workaround === 'Yes';
+      const isFixed = data.fixed.toLocaleLowerCase() !== 'no';
+      const hasWorkaround = data.workaround.toLocaleLowerCase() !== 'no';
 
       return {
         badges: [
