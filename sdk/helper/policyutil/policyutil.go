@@ -40,6 +40,15 @@ func ParsePolicies(policiesRaw interface{}) []string {
 	return SanitizePolicies(policies, false)
 }
 
+// CanonicalizePolicyName returns the canonical form of a single policy name.
+// Policy names are compared and stored case-insensitively and without
+// surrounding whitespace, so canonicalization trims leading and trailing
+// whitespace (including tabs, newlines, and Unicode space characters, per
+// unicode.IsSpace) and lowercases the result.
+func CanonicalizePolicyName(policy string) string {
+	return strings.ToLower(strings.TrimSpace(policy))
+}
+
 // SanitizePolicies performs the common input validation tasks
 // which are performed on the list of policies across Vault.
 // The resulting collection will have no duplicate elements.
@@ -51,7 +60,7 @@ func ParsePolicies(policiesRaw interface{}) []string {
 func SanitizePolicies(policies []string, addDefault bool) []string {
 	defaultFound := false
 	for i, p := range policies {
-		policies[i] = strings.ToLower(strings.TrimSpace(p))
+		policies[i] = CanonicalizePolicyName(p)
 		// Eliminate unnamed policies.
 		if policies[i] == "" {
 			continue
