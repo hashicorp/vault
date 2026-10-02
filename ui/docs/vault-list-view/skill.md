@@ -167,11 +167,14 @@ The skill follows these list-view conventions:
 
 - Use `Page::ListView` directly; do not create a wrapper page component.
 - Keep display behavior in a stable imported `ListViewConfig` object.
-- Keep filtering and pagination client-side in the controller getter.
-- Use `page` and `pageFilter` as route query parameters. The controller holds only these two tracked properties plus `listViewConfig` — no filtered getter and no action handlers.
-- `Page::ListView` receives `@model` (raw array) and computes filtering and pagination internally using `config.filter.filterKey`, `@pageFilter`, and `@page`.
-- `Page::ListView` handles the router transition when the filter input changes and owns the try/catch, flash message, and `router.refresh()` for modal deletions. Supply the API call as `deleteAction: (item) => ...` in the modal config.
-- Use `.ts` for routes and `.js` for controllers and acceptance tests.
+- Keep filtering, sorting, and pagination client-side in the controller.
+- Use `page`, `pageSize`, `sortBy`, and `sortOrder` as route query parameters. `page` uses `refreshModel: true`; `sortBy` and `sortOrder` use `refreshModel: false` so sorting never triggers an API re-fetch.
+- The controller holds `@tracked page = 1`, `@tracked pageSize = 10`, `@tracked sortBy: string | undefined`, `@tracked sortOrder: 'asc' | 'desc' | undefined`, and an `updateSort` action. No filtered getter, no `pageFilter`, no `onFilterChange`.
+- `Page::ListView` receives `@model` (raw array), `@sortBy`, `@sortOrder`, and `@onSortChange`. It sorts the full dataset first, then paginates — so sorting always operates on the complete list, not just the current page.
+- The template must wire all three sort args: `@sortBy={{this.sortBy}} @sortOrder={{this.sortOrder}} @onSortChange={{this.updateSort}}` whenever any column has `isSortable: true`. Omitting these causes the sort indicator to reset whenever the page changes (VAULT-50816).
+- `resetController` clears all four QPs: `controller.page = 1`, `controller.pageSize = 10`, `controller.sortBy = undefined`, `controller.sortOrder = undefined`.
+- `Page::ListView` handles the router transition when the filter input changes and owns the try/catch, flash message, and `router.refresh()` for modal deletions. Supply the API call as `apiCall: { service, method, argKey }` in the modal config.
+- Use `.ts` for routes and controllers; `.js` for acceptance tests.
 - Use raw API field names for `filterKey` (inside `config.filter`) and column keys.
 - Configure popup menus and confirmation modals declaratively.
 - For nested rows, omit sortable columns, selection, and striped-table behavior.
@@ -203,6 +206,12 @@ ember test --filter "<ResourceName>"
 ```
 
 The generated test should verify the page title, breadcrumbs, configured column headers, applicable filter behavior, empty states, row actions, confirmation modals, and pagination.
+
+When any column in the `ListViewConfig` has `isSortable: true`, the test must also include three sort regression tests:
+
+1. **Global sort before pagination** — build 20 zero-padded items so the sort order is lexicographically predictable, click the sort button, assert the first and last items appear on the correct page after ascending then descending sort.
+2. **Sort QPs survive page navigation** — after sorting, click next page, assert `currentURL()` contains `sortBy=<key>`, `sortOrder=asc`, and `page=2`.
+3. **Sort QPs reset on navigation away** — visit the route with `?sortBy=<key>&sortOrder=asc`, navigate to the dashboard and back, assert the URL no longer contains `sortBy=` or `sortOrder=`.
 
 ## Supporting references
 

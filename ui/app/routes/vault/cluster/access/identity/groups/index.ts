@@ -50,6 +50,8 @@ export default class IdentityGroupsIndexRoute extends Route {
 
   queryParams = {
     page: { refreshModel: true },
+    sortBy: { refreshModel: false },
+    sortOrder: { refreshModel: false },
   };
 
   async model(params: RouteParams) {
@@ -125,10 +127,15 @@ export default class IdentityGroupsIndexRoute extends Route {
     }
   }
 
-  resetController(controller: RouteController, isExiting: boolean) {
+  resetController(
+    controller: RouteController & { sortBy: string | undefined; sortOrder: string | undefined },
+    isExiting: boolean
+  ) {
     if (isExiting) {
       controller.page = 1;
       controller.pageSize = 10;
+      controller.sortBy = undefined;
+      controller.sortOrder = undefined;
     }
   }
 
