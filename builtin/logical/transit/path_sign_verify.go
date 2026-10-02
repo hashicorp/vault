@@ -32,6 +32,7 @@ type policyVerifyArgs struct {
 	input      []byte
 	options    keysutil.SigningOptions
 	sig        string
+	keyVersion int
 }
 
 type commonSignVerifyApiArgs struct {
@@ -400,7 +401,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	defer p.Unlock()
 
-	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs); err != nil {
+	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs, apiArgs.keyVersion); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
@@ -539,13 +540,13 @@ func (b *backend) getPolicySignArgs(ctx context.Context, p *keysutil.Policy, arg
 	return psa, nil
 }
 
-func validateCommonSignVerifyApiArgs(p *keysutil.Policy, apiArgs commonSignVerifyApiArgs) error {
+func validateCommonSignVerifyApiArgs(p *keysutil.Policy, apiArgs commonSignVerifyApiArgs, ver int) error {
 	if !p.Type.SigningSupported() {
 		return fmt.Errorf("key type %v does not support signing", p.Type)
 	}
 
 	// Perform Vault version specific checks (CE vs ENT)
-	return validateSignApiArgsVersionSpecific(p, apiArgs)
+	return validateSignApiArgsVersionSpecific(p, apiArgs, ver)
 }
 
 func getSignApiArgs(d *framework.FieldData) (signApiArgs, error) {
@@ -689,10 +690,6 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	}
 	defer p.Unlock()
 
-	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs); err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
 	response := make([]batchResponseVerifyItem, len(batchInputItems))
 
 	successfulRequests := 0
@@ -817,9 +814,13 @@ func (b *backend) getPolicyVerifyArgs(ctx context.Context, p *keysutil.Policy, a
 		return policyVerifyArgs{}, fmt.Errorf("failed to parse signature as a string: %s", err)
 	}
 
-	sigVer, err := getSignatureVersion(sig)
+	sigVer, err := getVersion(sig)
 	if err != nil {
 		return policyVerifyArgs{}, fmt.Errorf("failed to parse version from signature: %s", err)
+	}
+
+	if err := validateCommonSignVerifyApiArgs(p, apiArgs.commonSignVerifyApiArgs, sigVer); err != nil {
+		return policyVerifyArgs{}, err
 	}
 
 	if p.KeyVersionType(sigVer).HashSignatureInput() && !apiArgs.prehashed {
@@ -846,6 +847,7 @@ func (b *backend) getPolicyVerifyArgs(ctx context.Context, p *keysutil.Policy, a
 			SaltLength:    apiArgs.saltLength,
 			SigAlgorithm:  apiArgs.sigAlgorithm,
 		},
+		keyVersion: sigVer,
 	}
 
 	if err := b.populateEntPolicyVerifyOptions(ctx, p, apiArgs, item, &vsa); err != nil {
@@ -863,28 +865,6 @@ func numBooleansTrue(bools ...bool) int {
 		}
 	}
 	return numSet
-}
-
-func getSignatureVersion(sig string) (int, error) {
-	if !strings.HasPrefix(sig, "vault:v") {
-		return 0, fmt.Errorf("prefix is not vault:v")
-	}
-
-	splitVerification := strings.SplitN(strings.TrimPrefix(sig, "vault:v"), ":", 2)
-	if len(splitVerification) != 2 {
-		return 0, fmt.Errorf("wrong number of fields delimited by ':', got %d expected 2", len(splitVerification))
-	}
-
-	ver, err := strconv.Atoi(splitVerification[0])
-	if err != nil {
-		return 0, fmt.Errorf("key version number %s count not be decoded", splitVerification[0])
-	}
-
-	if ver < 1 {
-		return 0, fmt.Errorf("key version less than 1 are invalid got: %d", ver)
-	}
-
-	return ver, nil
 }
 
 const pathSignHelpSyn = `Generate a signature for input data using the named key`

@@ -6,9 +6,9 @@ import (
 	"fmt"
 )
 
-const _DefaultDirectoryPolicyTypeName = "ForbidSignVerbatimRoleExternalPolicy"
+const _DefaultDirectoryPolicyTypeName = "ForbidSignVerbatimRoleExternalPolicySignVerbatimUnsafe"
 
-var _DefaultDirectoryPolicyTypeIndex = [...]uint8{0, 6, 18, 22, 36}
+var _DefaultDirectoryPolicyTypeIndex = [...]uint8{0, 6, 18, 22, 36, 54}
 
 func (i DefaultDirectoryPolicyType) String() string {
 	if i < 0 || i >= DefaultDirectoryPolicyType(len(_DefaultDirectoryPolicyTypeIndex)-1) {
@@ -17,13 +17,14 @@ func (i DefaultDirectoryPolicyType) String() string {
 	return _DefaultDirectoryPolicyTypeName[_DefaultDirectoryPolicyTypeIndex[i]:_DefaultDirectoryPolicyTypeIndex[i+1]]
 }
 
-var _DefaultDirectoryPolicyTypeValues = []DefaultDirectoryPolicyType{0, 1, 2, 3}
+var _DefaultDirectoryPolicyTypeValues = []DefaultDirectoryPolicyType{0, 1, 2, 3, 4}
 
 var _DefaultDirectoryPolicyTypeNameToValueMap = map[string]DefaultDirectoryPolicyType{
 	_DefaultDirectoryPolicyTypeName[0:6]:   0,
 	_DefaultDirectoryPolicyTypeName[6:18]:  1,
 	_DefaultDirectoryPolicyTypeName[18:22]: 2,
 	_DefaultDirectoryPolicyTypeName[22:36]: 3,
+	_DefaultDirectoryPolicyTypeName[36:54]: 4,
 }
 
 // DefaultDirectoryPolicyTypeString retrieves an enum value from the enum constants string name.

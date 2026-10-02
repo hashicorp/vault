@@ -568,6 +568,8 @@ func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateReq
 	}
 }
 
+// issueCertFromCsr signs a certificate for the given ACME order CSR using the
+// role and issuer on ac.
 func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuing.IssuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
@@ -598,6 +600,26 @@ func issueCertFromCsr(b *backend, ac *acmeContext, csr *x509.CertificateRequest)
 	// Note that if set to certutil.AlwaysEnforceErr we will error out
 	if signingBundle.LeafNotAfterBehavior == certutil.ErrNotAfterBehavior {
 		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+	}
+
+	if ac.rejectUnverifiedSANs {
+		// sign-verbatim has no role to constrain SANs, and ACME challenges only
+		// verify DNS names and IP addresses. Reject CSRs that contain URI SANs,
+		// email SANs, or Other SANs so the client gets a clear error rather than
+		// a certificate missing SANs it requested.
+		if len(csr.URIs) > 0 {
+			return nil, "", fmt.Errorf("%w: CSR contains URI SANs which are not validated by ACME; use sign-verbatim-unsafe to allow", ErrBadCSR)
+		}
+		if len(csr.EmailAddresses) > 0 {
+			return nil, "", fmt.Errorf("%w: CSR contains email SANs which are not validated by ACME; use sign-verbatim-unsafe to allow", ErrBadCSR)
+		}
+		otherSANs, err := certutil.GetOtherSANsFromX509Extensions(csr.Extensions)
+		if err != nil {
+			return nil, "", fmt.Errorf("%w: CSR contains an unparseable Other SAN extension: %v", ErrBadCSR, err)
+		}
+		if len(otherSANs) > 0 {
+			return nil, "", fmt.Errorf("%w: CSR contains Other SANs which are not validated by ACME; use sign-verbatim-unsafe to allow", ErrBadCSR)
+		}
 	}
 
 	input := &inputBundle{
