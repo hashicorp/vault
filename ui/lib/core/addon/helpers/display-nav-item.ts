@@ -182,7 +182,7 @@ export default class NavBar extends Helper {
 
   // Agent Registry is available only when the license includes platform-standard or agentic-iam.
   get supportsAgentRegistry() {
-    return this.version.isEnterprise && this.version.hasAgentRegistry;
+    return this.version.isEnterprise && this.version.hasAgenticIam;
   }
 }
 
