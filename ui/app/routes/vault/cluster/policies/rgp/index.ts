@@ -26,6 +26,7 @@ export interface PoliciesRgpIndexModel {
     capabilities: Capabilities | null;
   }>;
   listViewConfig: typeof policiesRgpListViewConfig;
+  canCreate: boolean;
   page: number;
   pageSize: number;
 }
@@ -67,13 +68,15 @@ export default class PoliciesRgpIndexRoute extends Route {
       };
     });
 
+    const { canCreate } = await this.capabilities.for('policiesRgp');
+
     const listViewConfig = { ...policiesRgpListViewConfig };
     listViewConfig.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'RGP policies' },
     ];
 
-    return { policies, listViewConfig, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
+    return { policies, listViewConfig, canCreate, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
   }
 
   resetController(

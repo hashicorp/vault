@@ -11,11 +11,6 @@ export const policiesRgpListViewConfig: ListViewDisplayConfig = {
   description:
     'Use Sentinel to specify policies as code that apply to tokens, entities, groups and enforce organizational compliance standards.',
   breadcrumbs: [], // set by route model() before returning
-  primaryAction: {
-    label: 'Create RGP policy',
-    route: 'vault.cluster.policies.rgp.create',
-    icon: 'plus',
-  },
   filter: {
     type: 'text',
     placeholder: 'Filter policies',
