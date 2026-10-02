@@ -180,18 +180,32 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 	if tokenNS.Path == policyNS.Path {
 		// Same namespace - add all and continue
 		for _, policyName := range nsPolicies {
-			filteredPolicies = append(filteredPolicies, policyName)
+			validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+			if err != nil {
+				c.Logger().Debug("skipping invalid group policy name during ACL construction")
+				continue
+			}
+			filteredPolicies = append(filteredPolicies, validatedPolicyName)
+		}
+		if len(filteredPolicies) == 0 {
+			return nil, ErrNoApplicablePolicies
 		}
 		return filteredPolicies, nil
 	}
 
 	for _, policyName := range nsPolicies {
-		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, policyName)
+		validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+		if err != nil {
+			c.Logger().Debug("skipping invalid group policy name during ACL construction")
+			continue
+		}
+
+		t, err := c.policyStore.GetNonEGPPolicyType(policyNS.ID, validatedPolicyName)
 		if err != nil && errors.Is(err, ErrPolicyNotExistInTypeMap) {
 			// When we attempt to get a non-EGP policy type, and receive an
 			// explicit error that it doesn't exist (in the type map) we log the
 			// ns/policy and continue without error.
-			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, policyName).Error())
+			c.Logger().Debug(fmt.Errorf("%w: %v/%v", err, policyNS.ID, validatedPolicyName).Error())
 			continue
 		}
 		if err != nil || t == nil {
@@ -201,18 +215,18 @@ func (c *Core) getApplicableGroupPolicies(ctx context.Context, tokenNS *namespac
 		switch *t {
 		case PolicyTypeRGP:
 			if tokenNS.HasParent(policyNS) {
-				filteredPolicies = append(filteredPolicies, policyName)
+				filteredPolicies = append(filteredPolicies, validatedPolicyName)
 			}
 		case PolicyTypeACL:
 			if policyApplicationMode != groupPolicyApplicationModeWithinNamespaceHierarchy {
 				// Group policy application mode isn't set to enforce
 				// the namespace hierarchy, so apply all the ACLs,
 				// regardless of their namespaces.
-				filteredPolicies = append(filteredPolicies, policyName)
+				filteredPolicies = append(filteredPolicies, validatedPolicyName)
 				continue
 			}
 			if policyNS.HasParent(tokenNS) {
-				filteredPolicies = append(filteredPolicies, policyName)
+				filteredPolicies = append(filteredPolicies, validatedPolicyName)
 			}
 		default:
 			return nil, fmt.Errorf("unexpected policy type: %v", t)
@@ -2661,10 +2675,54 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 		resp.AddWarning(warning)
 	}
 
+	// LoginCreateToken skips malformed legacy policy names instead of failing
+	// authentication. We drop only malformed names and continue with remaining
+	// valid policy names (plus the default policy when enabled), so stale stored
+	// policy data does not block login.
+	validatedTokenPolicies := make([]string, 0, len(auth.Policies))
+	for _, policyName := range auth.Policies {
+		validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+		if err != nil {
+			c.Logger().Debug(
+				"skipping invalid token policy name during token creation",
+				"policy_name", policyName,
+				"error", err,
+			)
+			continue
+		}
+		validatedTokenPolicies = append(validatedTokenPolicies, validatedPolicyName)
+	}
+	auth.Policies = validatedTokenPolicies
+
+	// LoginCreateToken skips malformed legacy policy names instead of failing
+	// authentication. We drop only malformed names and continue with remaining
+	// valid policy names (plus the default policy when enabled), so stale stored
+	// policy data does not block login.
 	_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 	if err != nil {
 		return false, nil, ErrInternalError
 	}
+	validatedIdentityPolicies := make(map[string][]string, len(identityPolicies))
+	for nsID, policyNames := range identityPolicies {
+		validatedPolicyNames := make([]string, 0, len(policyNames))
+		for _, policyName := range policyNames {
+			validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
+			if err != nil {
+				c.Logger().Debug(
+					"skipping invalid identity policy name during token creation",
+					"namespace_id", nsID,
+					"policy_name", policyName,
+					"error", err,
+				)
+				continue
+			}
+			validatedPolicyNames = append(validatedPolicyNames, validatedPolicyName)
+		}
+		if len(validatedPolicyNames) > 0 {
+			validatedIdentityPolicies[nsID] = validatedPolicyNames
+		}
+	}
+	identityPolicies = validatedIdentityPolicies
 
 	auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
 	allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)

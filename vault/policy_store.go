@@ -6,7 +6,7 @@ package vault
 import (
 	"context"
 	"fmt"
-	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/observations"
 )
@@ -380,8 +381,12 @@ func (ps *PolicyStore) SetPolicyWithRequest(ctx context.Context, p *Policy, req 
 	if p.Name == "" {
 		return fmt.Errorf("policy name missing")
 	}
-	// Policies are normalized to lower-case
-	p.Name = ps.sanitizeName(p.Name)
+	originalName := p.Name
+	validatedName, err := policyutil.ValidatePolicyName(p.Name)
+	if err != nil {
+		return fmt.Errorf("invalid policy name %q: %w", originalName, err)
+	}
+	p.Name = validatedName
 	if strutil.StrListContains(immutablePolicies, p.Name) {
 		return fmt.Errorf("cannot update %q policy", p.Name)
 	}
@@ -540,8 +545,13 @@ func pathRulesToObservationPathRules(rules []*PathRules) []*ObservationPathRules
 // them both being token policies, but the logic related to EGPs is separate
 // enough that it is never necessary to look up their type.
 func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyType, error) {
-	sanitizedName := ps.sanitizeName(name)
-	index := path.Join(nsID, sanitizedName)
+	sanitizedName, err := policyutil.ValidatePolicyName(name)
+	if err != nil {
+		// Fail closed: invalid names are treated as non-existent so they cannot
+		// be resolved via cache, map, or storage during ACL construction.
+		return nil, ErrPolicyNotExistInTypeMap
+	}
+	index := policyCacheKey(nsID, sanitizedName)
 
 	pt, ok := ps.policyTypeMap.Load(index)
 	if !ok {
@@ -569,8 +579,12 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	if err != nil {
 		return nil, err
 	}
-	// Policies are normalized to lower-case
-	name = ps.sanitizeName(name)
+	name, err = policyutil.ValidatePolicyName(name)
+	if err != nil {
+		// Fail closed: invalid names behave as unresolved token policies and are
+		// never resolved through map/cache/storage lookups.
+		return nil, nil
+	}
 	index := ps.cacheKey(ns, name)
 
 	var cache *lru.TwoQueueCache
@@ -607,7 +621,10 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	if cache != nil {
 		// Check for cached policy
 		if raw, ok := cache.Get(index); ok {
-			return raw.(*Policy), nil
+			cachedPolicy := raw.(*Policy)
+			if cachedPolicy.namespace != nil && cachedPolicy.namespace.ID == ns.ID {
+				return cachedPolicy, nil
+			}
 		}
 	}
 
@@ -631,7 +648,10 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	// See if anything has added it since we got the lock
 	if cache != nil {
 		if raw, ok := cache.Get(index); ok {
-			return raw.(*Policy), nil
+			cachedPolicy := raw.(*Policy)
+			if cachedPolicy.namespace != nil && cachedPolicy.namespace.ID == ns.ID {
+				return cachedPolicy, nil
+			}
 		}
 	}
 
@@ -843,6 +863,7 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 	// Policies are normalized to lower-case
 	name = ps.sanitizeName(name)
 	index := ps.cacheKey(ns, name)
+	sentinelIndex := ns.ID + "/" + name
 
 	view := ps.getBarrierView(ns, policyType)
 	if view == nil {
@@ -889,7 +910,7 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 
 		ps.policyTypeMap.Delete(index)
 
-		defer ps.core.invalidateSentinelPolicy(policyType, index)
+		defer ps.core.invalidateSentinelPolicy(policyType, sentinelIndex)
 
 	case PolicyTypeEGP:
 		if physicalDeletion {
@@ -904,9 +925,9 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 			ps.egpLRU.Remove(index)
 		}
 
-		defer ps.core.invalidateSentinelPolicy(policyType, index)
+		defer ps.core.invalidateSentinelPolicy(policyType, sentinelIndex)
 
-		ps.invalidateEGPTreePath(index)
+		ps.invalidateEGPTreePath(sentinelIndex)
 	}
 
 	var clientId string
@@ -948,7 +969,12 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 		}
 		policyCtx := namespace.ContextWithNamespace(ctx, policyNS)
 		for _, nsPolicyName := range nsPolicyNames {
-			p, err := ps.GetPolicy(policyCtx, nsPolicyName, PolicyTypeToken)
+			validatedPolicyName, err := policyutil.ValidatePolicyName(nsPolicyName)
+			if err != nil {
+				ps.logger.Debug("skipping invalid policy name during ACL construction", "policy_name", nsPolicyName, "error", err)
+				continue
+			}
+			p, err := ps.GetPolicy(policyCtx, validatedPolicyName, PolicyTypeToken)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get policy: %w", err)
 			}
@@ -1033,11 +1059,22 @@ func (ps *PolicyStore) loadACLPolicyInternal(ctx context.Context, policyName, po
 }
 
 func (ps *PolicyStore) sanitizeName(name string) string {
-	return strings.ToLower(strings.TrimSpace(name))
+	return policyutil.CanonicalizePolicyName(name)
+}
+
+// policyCacheKey uses len(nsID) to make the cache key unambiguous by encoding
+// exactly where the namespace ID ends and the policy name begins. For example:
+// 3:abc:reader means the next 3 bytes (abc) are the namespace ID, and reader
+// is the policy name. This prevents separator ambiguity and cache-key
+// collisions. Without the length prefix, a:b:c could mean namespace a with
+// policy b:c, or namespace a:b with policy c. Adding the namespace length
+// removes that ambiguity.
+func policyCacheKey(nsID, name string) string {
+	return strconv.Itoa(len(nsID)) + ":" + nsID + ":" + name
 }
 
 func (ps *PolicyStore) cacheKey(ns *namespace.Namespace, name string) string {
-	return path.Join(ns.ID, name)
+	return policyCacheKey(ns.ID, name)
 }
 
 // logDeniedParamWarning logs a warning if the given policy uses allowed_parameters or denied_parameters

@@ -165,6 +165,11 @@ func (b *backend) pathUserWrite(ctx context.Context, req *logical.Request, d *fr
 
 	groups := strutil.RemoveDuplicates(d.Get("groups").([]string), lowercaseGroups)
 	policies := policyutil.ParsePolicies(d.Get("policies"))
+	for _, policy := range policies {
+		if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+			return logical.ErrorResponse("invalid policy name %q: %s", policy, err), nil
+		}
+	}
 	for i, g := range groups {
 		groups[i] = strings.TrimSpace(g)
 	}

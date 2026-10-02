@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render, waitFor } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, render, triggerKeyEvent, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
@@ -145,6 +145,88 @@ module('Integration | Component | list-table', function (hooks) {
     ];
     await this.renderComponent();
     assert.dom('[role="slider"]').doesNotExist('resize sliders do not exist');
+  });
+
+  test('fr column widths are scaled and other widths are passed through', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', width: '2fr' },
+      { key: 'trip_date', label: 'Date trip starts', width: '200px' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 3 }, 'columns are resizable');
+    assert.strictEqual(
+      find('.hds-advanced-table').style.gridTemplateColumns,
+      '100fr 200fr 200px 10%',
+      'missing and fr widths are scaled while px and % widths are unchanged'
+    );
+  });
+
+  test('the table stays full width after resizing into the actions column', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    const headerCellsWidth = () =>
+      findAll('.hds-advanced-table__thead .hds-advanced-table__th').reduce(
+        (sum, th) => sum + th.offsetWidth,
+        0
+      );
+
+    for (let i = 0; i < 10; i++) {
+      await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+    }
+    const [islandWidth, actionsWidth] = find('.hds-advanced-table').style.gridTemplateColumns.split(' ');
+    assert.notStrictEqual(islandWidth, '100fr', 'resized column shrinks');
+    assert.notStrictEqual(actionsWidth, '10%', 'actions column takes the freed width');
+    const tableWidth = find('.hds-advanced-table').clientWidth;
+    assert.true(Math.abs(headerCellsWidth() - tableWidth) <= 2, 'table fills its container');
+  });
+
+  ['Islands', 'Actions'].forEach((resetLabel) => {
+    test(`resetting the ${resetLabel} column after a resize restores every column to its original width`, async function (assert) {
+      this.columns = [
+        { key: 'island', label: 'Islands' },
+        { key: 'popupMenu', label: 'Actions', width: '10%' },
+      ];
+      await this.renderComponent();
+      const gridColumns = () => find('.hds-advanced-table').style.gridTemplateColumns.split(' ');
+
+      for (let i = 0; i < 10; i++) {
+        await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+      }
+      assert.notDeepEqual(gridColumns(), ['100fr', '10%'], 'columns are resized');
+
+      await click(`[aria-label="Additional actions for ${resetLabel}"]`);
+      await click('[data-test-context-option-key="reset-column-width"]');
+      assert.deepEqual(gridColumns(), ['100fr', '10%'], 'both columns are back to their original widths');
+
+      await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+      assert.notDeepEqual(gridColumns(), ['100fr', '10%'], 'columns can be resized again after a reset');
+    });
+  });
+
+  test('resetting a column restores every column on a selectable table', async function (assert) {
+    this.selectionKeyField = 'island';
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'trip_date', label: 'Date trip starts' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    const gridColumns = () => find('.hds-advanced-table').style.gridTemplateColumns.trim().split(/\s+/);
+    const originalColumns = gridColumns();
+
+    for (let i = 0; i < 10; i++) {
+      await triggerKeyEvent('[aria-label="Resize Islands column"]', 'keydown', 'ArrowRight');
+    }
+    assert.notDeepEqual(gridColumns(), originalColumns, 'columns are resized');
+
+    await click('[aria-label="Additional actions for Islands"]');
+    await click('[data-test-context-option-key="reset-column-width"]');
+    assert.deepEqual(gridColumns(), originalColumns, 'every column is back to its original width');
   });
 
   test('it stringifies object and array values for non-custom columns', async function (assert) {
