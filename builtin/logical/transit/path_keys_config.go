@@ -100,7 +100,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	}
 	defer p.Unlock()
 
-	var warning string
+	var warnings []string
 
 	originalMinDecryptionVersion := p.MinDecryptionVersion
 	originalMinEncryptionVersion := p.MinEncryptionVersion
@@ -130,7 +130,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 
 		if minDecryptionVersion == 0 {
 			minDecryptionVersion = 1
-			warning = "since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1"
+			warnings = append(warnings, "since Vault 0.3, transit key numbering starts at 1; forcing minimum to 1")
 		}
 
 		if minDecryptionVersion != p.MinDecryptionVersion {
@@ -193,6 +193,8 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		if exportable && !p.Exportable {
 			p.Exportable = exportable
 			persistNeeded = true
+		} else if !exportable && p.Exportable {
+			warnings = append(warnings, "exportable cannot be disabled once set; the supplied value was ignored")
 		}
 	}
 
@@ -203,6 +205,8 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		if allowPlaintextBackup && !p.AllowPlaintextBackup {
 			p.AllowPlaintextBackup = allowPlaintextBackup
 			persistNeeded = true
+		} else if !allowPlaintextBackup && p.AllowPlaintextBackup {
+			warnings = append(warnings, "allow_plaintext_backup cannot be disabled once set; the supplied value was ignored")
 		}
 	}
 
@@ -233,7 +237,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 			return nil, err
 		}
 		resp.Data["key_usages"] = p.Type.KeyUsages()
-		if warning != "" {
+		for _, warning := range warnings {
 			resp.AddWarning(warning)
 		}
 		return resp, nil
@@ -255,7 +259,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 	resp.Data["key_usages"] = p.Type.KeyUsages()
-	if warning != "" {
+	for _, warning := range warnings {
 		resp.AddWarning(warning)
 	}
 	return resp, nil
