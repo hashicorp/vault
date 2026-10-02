@@ -12,6 +12,18 @@
   @sortOrder={{@sortOrder}}
   @onSortChange={{@onSortChange}}
 >
+  <:headerActions>
+    {{#if @model.canCreate}}
+      <Hds::Button
+        @color="primary"
+        @icon="plus"
+        @text="Create EGP policy"
+        @route="vault.cluster.policies.egp.create"
+        data-test-button="Create EGP policy"
+      />
+    {{/if}}
+  </:headerActions>
+
   <:customTableItem as |rowData column|>
     {{#if (eq column.key "name")}}
       <Hds::Link::Inline
