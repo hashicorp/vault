@@ -61,6 +61,205 @@ func TestRequiresMaterializedTokenState(t *testing.T) {
 	}
 }
 
+// TestNormalizeCaseInsensitiveResourcePath verifies that
+// normalizeCaseInsensitiveResourcePath lowercases (and, for policy paths,
+// trims whitespace from) the resource-name segment of paths handled by
+// backends that resolve that name case-insensitively, while leaving
+// identity paths untouched once the identity store has entered
+// case-sensitive mode (IdentityStore.disableLowerCasedNames). Identity
+// names are only guaranteed unique per-case once the store is in that mode
+// (entered automatically when a duplicate name is detected across cases),
+// so unconditionally lowercasing would incorrectly let a policy scoped to
+// "admin" also authorize the distinct group "Admin".
+func TestNormalizeCaseInsensitiveResourcePath(t *testing.T) {
+	t.Parallel()
+
+	userpassEntry := &MountEntry{Table: credentialTableType, Type: "userpass", Path: "userpass/"}
+	approleEntry := &MountEntry{Table: credentialTableType, Type: "approle", Path: "approle/"}
+	awsEC2Entry := &MountEntry{Table: credentialTableType, Type: "aws-ec2", Path: "aws-ec2/"}
+	azureEntry := &MountEntry{Table: credentialTableType, Type: "azure", Path: "azure/"}
+	gcpEntry := &MountEntry{Table: credentialTableType, Type: "gcp", Path: "gcp/"}
+	githubEntry := &MountEntry{Table: credentialTableType, Type: "github", Path: "github/"}
+	tpmEntry := &MountEntry{Table: credentialTableType, Type: "tpm", Path: "tpm/"}
+	kubernetesEntry := &MountEntry{Table: credentialTableType, Type: "kubernetes", Path: "kubernetes/"}
+	oktaEntry := &MountEntry{Table: credentialTableType, Type: "okta", Path: "okta/"}
+	ldapEntry := &MountEntry{Table: credentialTableType, Type: "ldap", Path: "ldap/"}
+	radiusEntry := &MountEntry{Table: credentialTableType, Type: "radius", Path: "radius/"}
+	// A secrets mount whose type collides with an auth backend name; plugin
+	// names are namespaced by plugin type, so this is legitimately possible.
+	secretCertEntry := &MountEntry{Table: mountTableType, Type: "cert", Path: "cert/"}
+	// An external auth plugin overriding the builtin of the same name, which
+	// Vault permits for unversioned plugins. A non-empty RunningSha256 is
+	// what marks a mount as running an external plugin.
+	externalApproleEntry := &MountEntry{
+		Table:         credentialTableType,
+		Type:          "approle",
+		Path:          "approle-ext/",
+		RunningSha256: "abc123",
+	}
+
+	tests := []struct {
+		name                  string
+		path                  string
+		entry                 *MountEntry
+		disableLowerCaseNames bool
+		want                  string
+	}{
+		{
+			name: "identity group name lowercased by default",
+			path: "identity/group/name/Admin",
+			want: "identity/group/name/admin",
+		},
+		{
+			name: "identity entity name lowercased by default",
+			path: "identity/entity/name/Foo",
+			want: "identity/entity/name/foo",
+		},
+		{
+			name:                  "identity group name untouched in case-sensitive mode",
+			path:                  "identity/group/name/Admin",
+			disableLowerCaseNames: true,
+			want:                  "identity/group/name/Admin",
+		},
+		{
+			name: "acl policy name lowercased and trimmed",
+			path: "sys/policies/acl/ Admin ",
+			want: "sys/policies/acl/admin",
+		},
+		{
+			name: "legacy policy name lowercased and trimmed",
+			path: "sys/policy/ Admin ",
+			want: "sys/policy/admin",
+		},
+		{
+			name: "rgp policy name lowercased and trimmed",
+			path: "sys/policies/rgp/ Admin ",
+			want: "sys/policies/rgp/admin",
+		},
+		{
+			name: "egp policy name lowercased and trimmed",
+			path: "sys/policies/egp/ Admin ",
+			want: "sys/policies/egp/admin",
+		},
+		{
+			name:  "userpass user name lowercased",
+			path:  "auth/userpass/users/Bob",
+			entry: userpassEntry,
+			want:  "auth/userpass/users/bob",
+		},
+		{
+			name:  "userpass login name lowercased",
+			path:  "auth/userpass/login/Bob",
+			entry: userpassEntry,
+			want:  "auth/userpass/login/bob",
+		},
+		{
+			name:  "approle role name lowercased, sub-resource preserved",
+			path:  "auth/approle/role/MyRole/role-id",
+			entry: approleEntry,
+			want:  "auth/approle/role/myrole/role-id",
+		},
+		{
+			name:  "aws-ec2 alias mount resolves to aws role prefix",
+			path:  "auth/aws-ec2/role/Admin",
+			entry: awsEC2Entry,
+			want:  "auth/aws-ec2/role/admin",
+		},
+		{
+			name:  "azure role name lowercased",
+			path:  "auth/azure/role/Admin",
+			entry: azureEntry,
+			want:  "auth/azure/role/admin",
+		},
+		{
+			name:  "gcp role name lowercased, sub-resource preserved",
+			path:  "auth/gcp/role/Admin/service-accounts",
+			entry: gcpEntry,
+			want:  "auth/gcp/role/admin/service-accounts",
+		},
+		{
+			name:  "kubernetes role name lowercased",
+			path:  "auth/kubernetes/role/Admin",
+			entry: kubernetesEntry,
+			want:  "auth/kubernetes/role/admin",
+		},
+		{
+			name:  "github team map key lowercased",
+			path:  "auth/github/map/teams/Admins",
+			entry: githubEntry,
+			want:  "auth/github/map/teams/admins",
+		},
+		{
+			name:  "github user map key lowercased",
+			path:  "auth/github/map/users/Bob",
+			entry: githubEntry,
+			want:  "auth/github/map/users/bob",
+		},
+		{
+			name:  "tpm role name lowercased",
+			path:  "auth/tpm/role/Admin",
+			entry: tpmEntry,
+			want:  "auth/tpm/role/admin",
+		},
+		{
+			name:  "okta group name deliberately untouched",
+			path:  "auth/okta/groups/Admin",
+			entry: oktaEntry,
+			want:  "auth/okta/groups/Admin",
+		},
+		// ldap, radius, and scim are known-uncovered rather than unaffected;
+		// these pin that exclusion so a change in either direction is
+		// deliberate. See normalizeCaseInsensitiveResourcePath's doc comment.
+		{
+			name:  "ldap user name deliberately untouched",
+			path:  "auth/ldap/users/Bob",
+			entry: ldapEntry,
+			want:  "auth/ldap/users/Bob",
+		},
+		{
+			name:  "radius user name deliberately untouched",
+			path:  "auth/radius/users/Bob",
+			entry: radiusEntry,
+			want:  "auth/radius/users/Bob",
+		},
+		{
+			name: "scim client name deliberately untouched",
+			path: "identity/scim/client/Admin",
+			want: "identity/scim/client/Admin",
+		},
+		{
+			name:  "secrets mount with colliding type not normalized",
+			path:  "cert/certs/Admin",
+			entry: secretCertEntry,
+			want:  "cert/certs/Admin",
+		},
+		{
+			name:  "external plugin overriding builtin auth type not normalized",
+			path:  "auth/approle-ext/role/MyRole",
+			entry: externalApproleEntry,
+			want:  "auth/approle-ext/role/MyRole",
+		},
+		{
+			name:  "unrelated path untouched",
+			path:  "secret/data/Foo",
+			entry: approleEntry,
+			want:  "secret/data/Foo",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			c := &Core{identityStore: &IdentityStore{}}
+			if tc.disableLowerCaseNames {
+				c.identityStore.SetDisableLowerCasedNames()
+			}
+			require.Equal(t, tc.want, c.normalizeCaseInsensitiveResourcePath(tc.path, tc.entry))
+		})
+	}
+}
+
 // TestRestoreForwardingTokenHeaders_UsesInboundToken verifies Authorization
 // forwarding prefers the original inbound token when present.
 func TestRestoreForwardingTokenHeaders_UsesInboundToken(t *testing.T) {
