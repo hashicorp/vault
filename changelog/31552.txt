@@ -1,0 +1,5 @@
+```release-note:bug
+http: Fix the `max_json_token` listener setting not being included alongside the other
+`max_json_*` limits when applying startup defaults and reporting listener configuration,
+which could cause it to be omitted from the server's startup info output.
+```
