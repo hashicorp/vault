@@ -6,7 +6,9 @@
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 
+import localStorage from 'vault/lib/local-storage';
 import { SegmentProvider } from 'vault/utils/analytics-providers/segment';
+import { setStringPreference, STRING_PREFERENCES } from 'vault/utils/preferences';
 
 module('Unit | Utils | analytics providers | segment', function (hooks) {
   hooks.afterEach(function () {
@@ -126,6 +128,42 @@ module('Unit | Utils | analytics providers | segment', function (hooks) {
       'Vault dedicated',
       'productPlanType is set to dedicated at start, before identify runs'
     );
+  });
+
+  module('trackEvent roles from persona preference', function (hooks) {
+    const rolesFor = (stored?: string) => {
+      if (stored !== undefined) setStringPreference('persona', stored);
+      const provider = new SegmentProvider();
+      const trackStub = sinon.stub(provider.client, 'track');
+      provider.trackEvent('UI Interaction');
+      return trackStub.firstCall.args[1]?.['roles'];
+    };
+
+    hooks.beforeEach(function () {
+      localStorage.removeItem(STRING_PREFERENCES['persona']?.key ?? '');
+    });
+
+    test('sends "unknown" when no persona is stored', function (assert) {
+      assert.deepEqual(rolesFor(undefined), ['unknown']);
+    });
+
+    test('sends the selected predefined persona', function (assert) {
+      assert.deepEqual(rolesFor(JSON.stringify({ value: 'developer' })), ['developer']);
+    });
+
+    test('sends "other" when other is selected without a custom role', function (assert) {
+      assert.deepEqual(rolesFor(JSON.stringify({ value: 'other' })), ['other']);
+    });
+
+    test('sends "other-<kebab-role>" when a custom role is provided', function (assert) {
+      assert.deepEqual(rolesFor(JSON.stringify({ value: 'other', customRole: 'DevOps SRE' })), [
+        'other-devops-sre',
+      ]);
+    });
+
+    test('sends "other" when the custom role is only whitespace', function (assert) {
+      assert.deepEqual(rolesFor(JSON.stringify({ value: 'other', customRole: '   ' })), ['other']);
+    });
   });
 
   test('start defaults productPlanType to self-managed', function (assert) {
