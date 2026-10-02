@@ -26,6 +26,7 @@ export interface PoliciesAclIndexModel {
     capabilities: Capabilities | null;
   }>;
   listViewConfig: typeof policiesAclListViewConfig;
+  canCreate: boolean;
   page: number;
   pageSize: number;
 }
@@ -61,13 +62,15 @@ export default class PoliciesAclIndexRoute extends Route {
       };
     });
 
+    const { canCreate } = await this.capabilities.for('policiesAcl');
+
     const listViewConfig = { ...policiesAclListViewConfig };
     listViewConfig.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'ACL policies' },
     ];
 
-    return { policies, listViewConfig, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
+    return { policies, listViewConfig, canCreate, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
   }
 
   resetController(

@@ -11,11 +11,6 @@ export const policiesEgpListViewConfig: ListViewDisplayConfig = {
   description:
     'Use Sentinel to specify policies as code that apply to discrete API paths and enforce organizational compliance standards.',
   breadcrumbs: [], // set by route model() before returning
-  primaryAction: {
-    label: 'Create EGP policy',
-    route: 'vault.cluster.policies.egp.create',
-    icon: 'plus',
-  },
   filter: {
     type: 'text',
     placeholder: 'Filter policies',

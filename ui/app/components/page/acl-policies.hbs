@@ -14,6 +14,15 @@
   @onSortChange={{@onSortChange}}
 >
   <:headerActions>
+    {{#if @model.canCreate}}
+      <Hds::Button
+        @color="primary"
+        @icon="plus"
+        @text="Create ACL policy"
+        @route="vault.cluster.policies.acl.create"
+        data-test-button="Create ACL policy"
+      />
+    {{/if}}
     {{#if this.showIntroButton}}
       <Hds::Button
         @color="secondary"
