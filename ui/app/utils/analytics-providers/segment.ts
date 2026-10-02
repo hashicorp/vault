@@ -5,6 +5,7 @@
 
 import { AnalyticsBrowser } from '@segment/analytics-next';
 
+import personaAnalyticsValue from 'vault/utils/persona-analytics-value';
 import { getStringPreference } from 'vault/utils/preferences';
 
 import type { MiddlewareFunction } from '@segment/analytics-next';
@@ -47,6 +48,7 @@ const ALLOWED_PROPERTIES = new Set([
   'successFlag',
   'quantity',
   'text',
+  'roles',
   // CTA Clicked context
   'variation',
   'uiElement',
@@ -169,6 +171,22 @@ export class SegmentProvider implements AnalyticsProvider {
     };
   }
 
+  private get userSpecificProperties() {
+    const raw = getStringPreference('persona');
+    const unknown = { roles: ['unknown'] };
+    if (!raw) return unknown;
+
+    try {
+      const parsed = JSON.parse(raw) as { value?: string; customRole?: string };
+      const value = parsed?.value;
+      if (!value) return unknown;
+
+      return { roles: [personaAnalyticsValue(value, parsed.customRole)] };
+    } catch {
+      return unknown;
+    }
+  }
+
   identify(identifier: string, traits: Record<string, unknown>) {
     const isHvd = Boolean(traits['isHvdManaged']);
     this.userId = identifier;
@@ -196,6 +214,6 @@ export class SegmentProvider implements AnalyticsProvider {
   }
 
   trackEvent(eventName: AnalyticsEventName, metadata?: Record<string, unknown>) {
-    this.client.track(eventName, { ...this.ibmProperties, ...metadata });
+    this.client.track(eventName, { ...this.ibmProperties, ...this.userSpecificProperties, ...metadata });
   }
 }
