@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/observations"
 	"github.com/mitchellh/copystructure"
@@ -582,8 +583,10 @@ CHECK:
 			for parameter, value := range req.Data {
 				// Check if parameter has been explicitly denied
 				if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
-					normalizedValue := normalizePolicyParameterValue(parameter, value)
-					if valueInDeniedParameterList(normalizedValue, valueSlice, useLegacyMatching) {
+					canonicalizedValue := canonicalizePolicyParameterValue(parameter, value)
+					canonicalizedPatterns := canonicalizePolicyParameterPatterns(parameter, valueSlice)
+					_, policyBearing := policyBearingParameters[strings.ToLower(parameter)]
+					if valueInDeniedParameterList(canonicalizedValue, canonicalizedPatterns, useLegacyMatching, policyBearing) {
 						return
 					}
 				}
@@ -609,9 +612,12 @@ CHECK:
 				return
 			}
 
-			normalizedValue := normalizePolicyParameterValue(parameter, value)
-			if ok && !valueInAllowedParameterList(normalizedValue, valueSlice, useLegacyMatching) {
-				return
+			if ok {
+				canonicalizedValue := canonicalizePolicyParameterValue(parameter, value)
+				canonicalizedPatterns := canonicalizePolicyParameterPatterns(parameter, valueSlice)
+				if !valueInAllowedParameterList(canonicalizedValue, canonicalizedPatterns, useLegacyMatching) {
+					return
+				}
 			}
 		}
 	}
@@ -1012,40 +1018,76 @@ func (c *Core) performPolicyChecksSinglePath(ctx context.Context, acl *ACL, te *
 	return ret
 }
 
-// normalizePolicyParameterValue returns a lowercased copy of value when
-// parameter is one that Vault canonicalises to lowercase internally before
-// storing or enforcing policy names. Without this normalisation a caller can
-// bypass a denied_parameters (or allowed_parameters) constraint by submitting
-// a mixed-case variant.
-func normalizePolicyParameterValue(parameter string, value interface{}) interface{} {
-	switch strings.ToLower(parameter) {
-	case "policies", "token_policies":
-		// fall through to normalisation below
-	default:
+// policyBearingParameters is the set of request parameters whose values Vault
+// interprets as ACL policy names, and which downstream consumers canonicalize
+// (via policyutil.SanitizePolicies, policyutil.ParsePolicies, or an equivalent
+// ToLower(TrimSpace()) normalization) before storing or enforcing them.
+var policyBearingParameters = map[string]struct{}{
+	// Token and auth-method policy assignment, including the token_policies
+	// field shared by all auth methods via sdk/helper/tokenutil, and the
+	// policies field used by identity entities/groups and auth roles.
+	"policies":       {},
+	"token_policies": {},
+
+	// Token role policy sets. These determine the policies of tokens issued
+	// through the role, which may be disjoint from the caller's own policies.
+	"allowed_policies":         {},
+	"disallowed_policies":      {},
+	"allowed_policies_glob":    {},
+	"disallowed_policies_glob": {},
+
+	// Agent registry ceiling policies.
+	"ceiling_policies": {},
+
+	// Radius config policies granted to unregistered users on login.
+	"unregistered_user_policies": {},
+}
+
+// canonicalizePolicyParameterValue returns a copy of value with every policy
+// name canonicalized, when parameter is a policy-bearing parameter. Values are
+// canonicalized with policyutil.CanonicalizePolicyName, which is the same
+// function the downstream consumers use, so that ACL enforcement and downstream
+// behavior cannot diverge.
+func canonicalizePolicyParameterValue(parameter string, value interface{}) interface{} {
+	if _, ok := policyBearingParameters[strings.ToLower(parameter)]; !ok {
 		return value
 	}
+
 	switch v := value.(type) {
 	case string:
-		return strings.ToLower(v)
+		return policyutil.CanonicalizePolicyName(v)
 	case []string:
-		lowered := make([]interface{}, len(v))
+		canonicalized := make([]interface{}, len(v))
 		for i, s := range v {
-			lowered[i] = strings.ToLower(s)
+			canonicalized[i] = policyutil.CanonicalizePolicyName(s)
 		}
-		return lowered
+		return canonicalized
 	case []interface{}:
-		lowered := make([]interface{}, len(v))
+		canonicalized := make([]interface{}, len(v))
 		for i, el := range v {
 			if s, ok := el.(string); ok {
-				lowered[i] = strings.ToLower(s)
+				canonicalized[i] = policyutil.CanonicalizePolicyName(s)
 			} else {
-				lowered[i] = el
+				canonicalized[i] = el
 			}
 		}
-		return lowered
+		return canonicalized
 	default:
 		return value
 	}
+}
+
+// canonicalizePolicyParameterPatterns applies the request-side policy name
+// normalization to configured ACL patterns, including whole-list patterns.
+func canonicalizePolicyParameterPatterns(parameter string, patterns []interface{}) []interface{} {
+	if _, ok := policyBearingParameters[strings.ToLower(parameter)]; !ok {
+		return patterns
+	}
+	canonicalized := make([]interface{}, len(patterns))
+	for i, pattern := range patterns {
+		canonicalized[i] = canonicalizePolicyParameterValue(parameter, pattern)
+	}
+	return canonicalized
 }
 
 func valueInAllowedParameterList(v interface{}, list []interface{}, useLegacyMatching bool) bool {
@@ -1092,13 +1134,28 @@ func valueInAllowedParameterList(v interface{}, list []interface{}, useLegacyMat
 	return false
 }
 
-func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatching bool) bool {
-	// Empty list is equivalent to the item always existing in the list
+func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatching, policyBearing bool) bool {
 	if len(list) == 0 {
 		return true
 	}
 
-	if valueInParameterList(v, list) {
+	matches := func(value interface{}) bool {
+		if policyBearing {
+			for _, pattern := range list {
+				if policyPattern, ok := pattern.(string); ok {
+					if name, ok := value.(string); ok && policyDeniedPatternMatches(policyPattern, name) {
+						return true
+					}
+				} else if reflect.DeepEqual(pattern, value) {
+					return true
+				}
+			}
+			return false
+		}
+		return valueInParameterList(value, list)
+	}
+
+	if matches(v) {
 		return true
 	}
 
@@ -1109,8 +1166,8 @@ func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatc
 
 	// The new behaviour is that if any value in the slice is in the denied list, we deny.
 	if vSlice, ok := v.([]interface{}); ok {
-		for _, v := range vSlice {
-			if valueInParameterList(v, list) {
+		for _, element := range vSlice {
+			if matches(element) {
 				return true
 			}
 		}
@@ -1119,8 +1176,11 @@ func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatc
 		// because failing to match a value because of it being in a comma-separated string is way more likely
 		// and worse than accidentally matching a substring of a string value.
 		if vSlice, err := parseutil.ParseCommaStringSlice(vString); err == nil {
-			for _, v := range vSlice {
-				if valueInParameterList(v, list) {
+			for _, element := range vSlice {
+				if policyBearing {
+					element = policyutil.CanonicalizePolicyName(element)
+				}
+				if matches(element) {
 					return true
 				}
 			}
@@ -1128,6 +1188,27 @@ func valueInDeniedParameterList(v interface{}, list []interface{}, useLegacyMatc
 	}
 
 	return false
+}
+
+// policyDeniedPatternMatches supports interior wildcards in policy-name denials.
+// Allowlist patterns retain their existing narrower matching semantics.
+func policyDeniedPatternMatches(pattern, name string) bool {
+	if !strings.Contains(pattern, "*") {
+		return pattern == name
+	}
+	parts := strings.Split(pattern, "*")
+	if !strings.HasPrefix(name, parts[0]) {
+		return false
+	}
+	name = name[len(parts[0]):]
+	for _, part := range parts[1 : len(parts)-1] {
+		index := strings.Index(name, part)
+		if index < 0 {
+			return false
+		}
+		name = name[index+len(part):]
+	}
+	return strings.HasSuffix(name, parts[len(parts)-1])
 }
 
 func valueInParameterList(v interface{}, list []interface{}) bool {
