@@ -424,6 +424,12 @@
     color: var(--token-color-palette-red-500);
   }
 
+  .hds-badge--color-neutral.hds-badge--type-filled {
+    color: var(--token-badge-foreground-color-neutral-filled);
+    background-color: var(--token-color-palette-neutral-200);
+    border-color: transparent;
+  }
+
   .hds-button.toolbar-button {
     color: var(--token-color-foreground-primary);
   }
@@ -704,6 +710,11 @@
     .col_header,
     .table-container {
       color: var(--token-color-palette-neutral-700);
+    }
+
+    .operation-filter-input {
+      background-color: var(--token-form-control-base-surface-color-default);
+      border: var(--token-form-control-border-width) solid var(--token-form-control-base-border-color-default);
     }
 
     .opblock-summary-operation-id {

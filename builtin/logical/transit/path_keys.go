@@ -353,16 +353,28 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 		return p.Type
 	}
 
-	// Compute supports_* as the superset of capabilities across all key entries.
-	// After an algorithm change via POST .../algorithm, individual entries may
-	// carry a different Algorithm than p.Type, so we OR the flags together.
+	// Compute supports_* and key_usages as the superset of capabilities across
+	// all key entries. After an algorithm change via POST .../algorithm,
+	// individual entries may carry a different Algorithm than p.Type, so we OR
+	// the flags together.
 	var supportsEncryption, supportsDecryption, supportsSigning, supportsDerivation bool
+	usageSet := make(map[string]struct{})
 	for _, entry := range p.Keys {
 		kt := effectiveType(entry)
 		supportsEncryption = supportsEncryption || kt.EncryptionSupported()
 		supportsDecryption = supportsDecryption || kt.DecryptionSupported()
 		supportsSigning = supportsSigning || kt.SigningSupported()
 		supportsDerivation = supportsDerivation || kt.DerivationSupported()
+		for _, u := range kt.KeyUsages() {
+			usageSet[u] = struct{}{}
+		}
+	}
+	allUsageNames := []string{"aead-encryption", "asymmetric-encryption", "digital-signature", "message-authentication", "symmetric-encryption"}
+	keyUsages := make([]string, 0, len(usageSet))
+	for _, u := range allUsageNames {
+		if _, ok := usageSet[u]; ok {
+			keyUsages = append(keyUsages, u)
+		}
 	}
 
 	// Return the response
@@ -385,6 +397,7 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
 			"imported_key":           p.Imported,
 			"latest_version_type":    p.KeyVersionType(p.LatestVersion).String(),
+			"key_usages":             keyUsages,
 		},
 	}
 	if p.KeySize != 0 {
