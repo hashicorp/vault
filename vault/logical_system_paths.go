@@ -37,6 +37,10 @@ var passwordPolicySchema = map[string]*framework.FieldSchema{
 		Type:        framework.TypeString,
 		Description: "The entropy source for generation",
 	},
+	"prefix": {
+		Type:        framework.TypeString,
+		Description: "The prefix to prepend to generated passwords",
+	},
 }
 
 func (b *SystemBackend) configPaths() []*framework.Path {
