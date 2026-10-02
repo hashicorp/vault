@@ -42,12 +42,20 @@ export default class VaultClusterSecretsBackendController extends Controller {
   declare model: RouteModel;
 
   // page refreshes the model (re-fetches from API) on change.
-  // pageSize is client-side only — no model reload needed, but must survive route transitions.
-  queryParams = ['page', 'pageSize'];
+  // pageSize, sortBy, sortOrder are client-side only — no model reload needed.
+  queryParams = ['page', 'pageSize', 'sortBy', 'sortOrder'];
   @tracked page = 1;
   @tracked pageSize = 10;
+  @tracked sortBy: string | undefined = undefined;
+  @tracked sortOrder: 'asc' | 'desc' | undefined = undefined;
 
   @tracked shouldRenderIntroModal = false;
+
+  @action
+  updateSort(sortBy: string, sortOrder: 'asc' | 'desc') {
+    this.sortBy = sortBy;
+    this.sortOrder = sortOrder;
+  }
   @tracked engineTypeFilters: string[] = [];
   @tracked engineVersionFilters: string[] = [];
 

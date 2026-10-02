@@ -9,6 +9,8 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
 
+type SortDirection = 'asc' | 'desc';
+
 /**
  * @module ListTable
  * `ListTable` renders paginated table rows with optional row selection.
@@ -34,7 +36,9 @@ import { paginate } from 'core/utils/paginate-list';
 interface TableColumn {
   key: string;
   label: string;
+  isSortable?: boolean;
   customTableItem?: boolean; // when true, the parent yields a custom display for that column
+  sortingFunction?: (a: Record<string, unknown>, b: Record<string, unknown>) => number | boolean;
 }
 
 interface SelectableRowState {
@@ -71,11 +75,22 @@ interface Args {
   onSelectionChange?: OnSelectionChange;
   onPageChange?: CallableFunction;
   onPageSizeChange?: CallableFunction;
+  /**
+   * When provided by a parent that owns sort state (e.g. Page::ListView), these
+   * three args keep the Hds::AdvancedTable header indicator in sync and tell
+   * ListTable to skip its own internal sort (the parent has already sorted
+   * @data before slicing for the current page).
+   */
+  sortBy?: string;
+  sortOrder?: SortDirection;
+  onSort?: (column: string, direction: SortDirection) => void;
 }
 
 export default class ListTable extends Component<Args> {
   @tracked currentPage;
   @tracked pageSize;
+  @tracked sortColumn?: string;
+  @tracked sortDirection: SortDirection = 'asc';
   //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
   @tracked renderPagination = true;
 
@@ -84,6 +99,38 @@ export default class ListTable extends Component<Args> {
 
     this.currentPage = args.page || 1;
     this.pageSize = args.pageSize || 10;
+  }
+
+  /**
+   * Decorates column definitions with a custom `sortingFunction` that uses natural / numeric
+   * collation so that <Hds::AdvancedTable> does not re-sort the model with standard lexicographical order.
+   */
+  get tableColumns(): TableColumn[] {
+    return this.args.columns.map((column) => {
+      if (!column.isSortable) return column;
+
+      return {
+        ...column,
+        sortingFunction: (a: Record<string, unknown>, b: Record<string, unknown>) => {
+          const sortOrder = this.activeSortDirection;
+          const valA = a[column.key];
+          const valB = b[column.key];
+
+          if (valA == null && valB == null) return 0;
+          if (valA == null) return sortOrder === 'asc' ? 1 : -1;
+          if (valB == null) return sortOrder === 'asc' ? -1 : 1;
+
+          let result: number;
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            result = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+          } else {
+            result = valA < valB ? -1 : valA > valB ? 1 : 0;
+          }
+
+          return sortOrder === 'asc' ? result : -result;
+        },
+      };
+    });
   }
 
   get hasResizableColumns() {
@@ -100,14 +147,57 @@ export default class ListTable extends Component<Args> {
   }
 
   /**
+   * The active sort column — driven by the parent when @sortBy is supplied
+   * (e.g. Page::ListView owns sort state), otherwise tracked internally.
+   */
+  get activeSortColumn() {
+    return this.args.sortBy ?? this.sortColumn;
+  }
+
+  /** The active sort direction — driven by parent @sortOrder when provided. */
+  get activeSortDirection(): SortDirection {
+    return this.args.sortOrder ?? this.sortDirection;
+  }
+
+  get sortedTableData() {
+    if (this.activeSortColumn) {
+      const column = this.activeSortColumn;
+      const direction = this.activeSortDirection;
+
+      return [...this.args.data].sort((a, b) => {
+        const valA = a[column];
+        const valB = b[column];
+
+        if (valA == null && valB == null) return 0;
+        if (valA == null) return 1;
+        if (valB == null) return -1;
+
+        let result: number;
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          // Use natural/numeric collation so values with numbers (e.g. "item-2", "item-10") sort in human order rather than lexicographically.
+          result = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+        } else {
+          result = valA < valB ? -1 : valA > valB ? 1 : 0;
+        }
+
+        return direction === 'asc' ? result : -result;
+      });
+    }
+    return this.args.data;
+  }
+
+  /**
    * When the parent supplies @totalItems the data is already pre-sliced to one
-   * page, so pass it straight through. Otherwise paginate internally as before.
+   * page AND pre-sorted (Page::ListView sorts before paginating). Pass it
+   * straight through — do not re-sort or re-paginate here.
+   * For standalone ListTable usage (no @totalItems), apply the internal sort
+   * and paginate as before.
    */
   get paginatedTableData() {
     if (this.args.totalItems !== undefined) {
       return this.args.data;
     }
-    return paginate(this.args.data, {
+    return paginate(this.sortedTableData, {
       page: this.currentPage,
       pageSize: this.pageSize,
     });
@@ -116,6 +206,17 @@ export default class ListTable extends Component<Args> {
   /** True total for Hds::Pagination::Numbered — use external value when supplied. */
   get paginationTotalItems() {
     return this.args.totalItems ?? this.args.data.length;
+  }
+
+  @action
+  updateSort(column: string, direction: SortDirection) {
+    if (this.args.onSort) {
+      // Parent owns sort state — delegate so it can sort the full dataset.
+      this.args.onSort(column, direction);
+    } else {
+      this.sortColumn = column;
+      this.sortDirection = direction;
+    }
   }
 
   @action

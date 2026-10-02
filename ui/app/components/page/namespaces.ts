@@ -32,6 +32,9 @@ import type { NamespacesIndexModel } from 'vault/routes/vault/cluster/access/nam
 interface Args {
   model: NamespacesIndexModel;
   onRefresh: () => void;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 export default class PageNamespacesComponent extends Component<Args> {
