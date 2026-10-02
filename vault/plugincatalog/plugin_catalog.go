@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -43,6 +45,9 @@ var (
 	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
 	ErrPluginVersionMismatch    = errors.New("plugin version mismatch")
 	ErrPluginUnableToRun        = errors.New("unable to run plugin")
+	// ErrPluginOutsideDirectory is returned when a stored plugin command
+	// resolves to a location outside of the configured plugin directory.
+	ErrPluginOutsideDirectory = errors.New("plugin command is outside of configured plugin directory")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -969,8 +974,16 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 			return entry, nil
 		case c.directory != "":
 			// Only allow returning non-container external plugins if we have a plugin directory.
+			// Stored entries are not guaranteed to have passed the registration
+			// checks in Set (e.g. they may have arrived through a raft snapshot
+			// restore), so verify the command stays within the plugin directory
+			// before it is handed out for execution.
+			absCommand := filepath.Join(c.directory, entry.Command)
+			if err := c.checkCommandInPluginDirectory(absCommand); err != nil {
+				return nil, fmt.Errorf("refusing to use plugin %q: %w", name, err)
+			}
 			// Make the command path fully rooted.
-			entry.Command = filepath.Join(c.directory, entry.Command)
+			entry.Command = absCommand
 			return entry, nil
 		}
 	}
@@ -998,6 +1011,44 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 	}
 
 	return nil, nil
+}
+
+// checkCommandInPluginDirectory verifies that absCommand, which must already
+// have been joined onto the plugin directory, does not escape it. Two checks
+// are made:
+//
+//  1. Lexical: the cleaned path must still be beneath the plugin directory.
+//     filepath.Join cleans ".." segments, so a stored command such as
+//     "../../bin/sh" would otherwise silently resolve outside of the directory.
+//  2. Resolved: after following symlinks, the target must still be beneath the
+//     (also resolved) plugin directory.
+//
+// A command that does not exist on disk is not an error: entries are also read
+// for inspection (read API, metrics) and the binary may have been removed.
+// Executing a missing binary fails on its own.
+func (c *PluginCatalog) checkCommandInPluginDirectory(absCommand string) error {
+	rel, err := filepath.Rel(c.directory, absCommand)
+	if err != nil || !filepath.IsLocal(rel) {
+		return ErrPluginOutsideDirectory
+	}
+
+	resolvedCommand, err := filepath.EvalSymlinks(absCommand)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+			return nil
+		}
+		return fmt.Errorf("error while validating the command path: %w", err)
+	}
+	resolvedDir, err := filepath.EvalSymlinks(c.directory)
+	if err != nil {
+		return fmt.Errorf("error while validating the plugin directory: %w", err)
+	}
+
+	rel, err = filepath.Rel(resolvedDir, resolvedCommand)
+	if err != nil || !filepath.IsLocal(rel) {
+		return ErrPluginOutsideDirectory
+	}
+	return nil
 }
 
 // Set registers a new external plugin with the catalog, or updates an existing
