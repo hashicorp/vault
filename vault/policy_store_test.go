@@ -20,7 +20,8 @@ func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
 	conf := &CoreConfig{
 		DisableCache: disableCache,
 	}
-	core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+	cluster := NewTestCluster(t, conf, nil)
+	core := cluster.Cores[0].Core
 	ps := core.policyStore
 
 	return core, ps
@@ -420,21 +421,21 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 		expectedErrorMessage string
 	}{
 		"happy-acl": {
-			policyStoreKey:   "1AbcD/policy1",
+			policyStoreKey:   "5:1AbcD:policy1",
 			policyStoreValue: PolicyTypeACL,
 			paramNamespace:   "1AbcD",
 			paramPolicyName:  "policy1",
 			paramPolicyType:  PolicyTypeACL,
 		},
 		"happy-rgp": {
-			policyStoreKey:   "1AbcD/policy1",
+			policyStoreKey:   "5:1AbcD:policy1",
 			policyStoreValue: PolicyTypeRGP,
 			paramNamespace:   "1AbcD",
 			paramPolicyName:  "policy1",
 			paramPolicyType:  PolicyTypeRGP,
 		},
 		"not-in-map-acl": {
-			policyStoreKey:       "2WxyZ/policy2",
+			policyStoreKey:       "5:2WxyZ:policy2",
 			policyStoreValue:     PolicyTypeACL,
 			paramNamespace:       "1AbcD",
 			paramPolicyName:      "policy1",
@@ -442,7 +443,7 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 			expectedErrorMessage: "policy does not exist in type map",
 		},
 		"not-in-map-rgp": {
-			policyStoreKey:       "2WxyZ/policy2",
+			policyStoreKey:       "5:2WxyZ:policy2",
 			policyStoreValue:     PolicyTypeRGP,
 			paramNamespace:       "1AbcD",
 			paramPolicyName:      "policy1",
@@ -450,12 +451,12 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 			expectedErrorMessage: "policy does not exist in type map",
 		},
 		"unknown-policy-type": {
-			policyStoreKey:       "1AbcD/policy1",
+			policyStoreKey:       "5:1AbcD:policy1",
 			policyStoreValue:     7,
 			paramNamespace:       "1AbcD",
 			paramPolicyName:      "policy1",
 			isErrorExpected:      true,
-			expectedErrorMessage: "unknown policy type for: 1AbcD/policy1",
+			expectedErrorMessage: "unknown policy type for: 5:1AbcD:policy1",
 		},
 	}
 
@@ -483,8 +484,199 @@ func TestPolicyStore_GetNonEGPPolicyType(t *testing.T) {
 	}
 }
 
-// TestPolicyStore_DuplicateAttributes checks the behaviour of the policyStore.ACL method when it finds a templated
-// policy with duplicate attributes
+// TestPolicyStore_CacheKey_DoesNotNormalizeTraversalLikeNames verifies that
+// policy cache keys preserve traversal-like policy names and are never path-normalized.
+func TestPolicyStore_CacheKey_DoesNotNormalizeTraversalLikeNames(t *testing.T) {
+	t.Parallel()
+
+	key := policyCacheKey("root", "../child/admin")
+	require.Equal(t, "4:root:../child/admin", key)
+}
+
+// TestPolicyStore_CacheKey_NoCollisionsForTraversalLikeSiblingAndRoot verifies
+// sibling/root traversal-like names cannot collide with valid root keys.
+func TestPolicyStore_CacheKey_NoCollisionsForTraversalLikeSiblingAndRoot(t *testing.T) {
+	t.Parallel()
+
+	rootKey := policyCacheKey("root", "admin")
+	siblingAttemptKey := policyCacheKey("sibling", "../root/admin")
+	require.NotEqual(t, rootKey, siblingAttemptKey)
+}
+
+// TestPolicyStore_GetNonEGPPolicyType_UsesSharedCacheKeyFormat verifies
+// GetNonEGPPolicyType only uses the shared key format and does not match
+// legacy path-joined keys.
+func TestPolicyStore_GetNonEGPPolicyType_UsesSharedCacheKeyFormat(t *testing.T) {
+	t.Parallel()
+
+	ps := new(PolicyStore)
+
+	ps.policyTypeMap.Store("root/dev", PolicyTypeACL)
+	policyType, err := ps.GetNonEGPPolicyType("root", "dev")
+	require.Error(t, err)
+	require.Nil(t, policyType)
+
+	key := policyCacheKey("root", "dev")
+	ps.policyTypeMap.Store(key, PolicyTypeACL)
+	policyType, err = ps.GetNonEGPPolicyType("root", "dev")
+	require.NoError(t, err)
+	require.NotNil(t, policyType)
+	require.Equal(t, PolicyTypeACL, *policyType)
+}
+
+// TestPolicyStore_SetPolicyWithRequest_PolicyNameValidation verifies direct
+// policy creation rejects invalid policy names before storage.
+func TestPolicyStore_SetPolicyWithRequest_PolicyNameValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		policy string
+	}{
+		{name: "traversal-like", policy: "../team/read"},
+		{name: "parent in middle", policy: "team/../read"},
+		{name: "dot", policy: "."},
+		{name: "dot segment in middle", policy: "team/./read"},
+		{name: "empty canonical", policy: "   "},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ps := new(PolicyStore)
+
+			p := &Policy{
+				Name:      tc.policy,
+				Raw:       aclPolicy,
+				Type:      PolicyTypeACL,
+				namespace: namespace.RootNamespace,
+			}
+			err := ps.SetPolicyWithRequest(context.Background(), p, nil)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "invalid policy name")
+		})
+	}
+}
+
+// TestPolicyStore_GetPolicy_DoesNotResolveInvalidNameFromCaches verifies that
+// invalid policy names are treated as unresolved before token/EGP cache lookup.
+func TestPolicyStore_GetPolicy_DoesNotResolveInvalidNameFromCaches(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, nil, nil)
+	ps := cluster.Cores[0].Core.policyStore
+	ctx := namespace.RootContext(t.Context())
+
+	invalidPolicyName := "sibling/../admin"
+	invalidKey := policyCacheKey(namespace.RootNamespaceID, ps.sanitizeName(invalidPolicyName))
+	ps.policyTypeMap.Store(invalidKey, PolicyTypeRGP)
+
+	ps.tokenPoliciesLRU.Add(invalidKey, &Policy{
+		Name:      invalidPolicyName,
+		Type:      PolicyTypeRGP,
+		Raw:       `path "secret/data/forbidden" { capabilities = ["read"] }`,
+		namespace: namespace.RootNamespace,
+	})
+	policy, err := ps.GetPolicy(ctx, invalidPolicyName, PolicyTypeToken)
+	require.NoError(t, err)
+	require.Nil(t, policy)
+
+	ps.egpLRU.Add(invalidKey, &Policy{
+		Name:      invalidPolicyName,
+		Type:      PolicyTypeEGP,
+		Raw:       `main = "rule"`,
+		namespace: namespace.RootNamespace,
+	})
+	policy, err = ps.GetPolicy(ctx, invalidPolicyName, PolicyTypeEGP)
+	require.NoError(t, err)
+	require.Nil(t, policy)
+
+	policyType, err := ps.GetNonEGPPolicyType(namespace.RootNamespaceID, invalidPolicyName)
+	require.ErrorIs(t, err, ErrPolicyNotExistInTypeMap)
+	require.Nil(t, policyType)
+}
+
+// TestPolicyStore_ACL_SkipsLegacyInvalidPolicyNames verifies ACL construction
+// ignores invalid legacy policy references even when they exist in storage,
+// policyTypeMap, and cache.
+func TestPolicyStore_ACL_SkipsLegacyInvalidPolicyNames(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name              string
+		invalidPolicyName string
+		primeCache        bool
+	}{
+		{
+			name:              "cached sibling target",
+			invalidPolicyName: "sibling/./admin",
+			primeCache:        true,
+		},
+		{
+			name:              "uncached root target",
+			invalidPolicyName: "root/./admin",
+			primeCache:        false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, ps := mockPolicyWithCore(t, false)
+			ctx := namespace.RootContext(context.Background())
+
+			validPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/allowed" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(false))
+			require.NoError(t, err)
+			validPolicy.Name = "legacy-valid-acl"
+			validPolicy.namespace = namespace.RootNamespace
+			require.NoError(t, ps.SetPolicy(ctx, validPolicy))
+
+			legacyInvalidPolicy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "secret/data/forbidden" {
+	capabilities = ["read"]
+}
+`, WithDenySlashInTemplatedPaths(false))
+			require.NoError(t, err)
+			legacyInvalidPolicy.Name = tc.invalidPolicyName
+			legacyInvalidPolicy.namespace = namespace.RootNamespace
+			require.NoError(t, ps.setPolicyInternal(ctx, legacyInvalidPolicy, nil))
+
+			invalidKey := policyCacheKey(namespace.RootNamespaceID, ps.sanitizeName(tc.invalidPolicyName))
+			_, found := ps.policyTypeMap.Load(invalidKey)
+			require.True(t, found)
+			storedEntry, err := ps.getACLView(namespace.RootNamespace).Get(ctx, tc.invalidPolicyName)
+			require.NoError(t, err)
+			require.NotNil(t, storedEntry)
+
+			if !tc.primeCache {
+				ps.tokenPoliciesLRU.Remove(invalidKey)
+			}
+
+			acl, err := ps.ACL(ctx, nil, map[string][]string{
+				namespace.RootNamespaceID: {"legacy-valid-acl", tc.invalidPolicyName},
+			})
+			require.NoError(t, err)
+
+			allowed := acl.AllowOperation(ctx, &logical.Request{
+				Path:      "secret/data/allowed",
+				Operation: logical.ReadOperation,
+			}, false)
+			require.True(t, allowed.Allowed)
+
+			forbidden := acl.AllowOperation(ctx, &logical.Request{
+				Path:      "secret/data/forbidden",
+				Operation: logical.ReadOperation,
+			}, false)
+			require.False(t, forbidden.Allowed)
+		})
+	}
+}
+
+// TestPolicyStore_DuplicateAttributes checks that the policyStore.ACL method rejects templated
+// policies with duplicate attributes. The VAULT_ALLOW_PENDING_REMOVAL_DUPLICATE_HCL_ATTRIBUTES
+// environment variable has been removed, so duplicate attributes now always fail.
 func TestPolicyStore_DuplicateAttributes(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	ps := core.policyStore
