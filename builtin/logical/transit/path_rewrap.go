@@ -205,9 +205,17 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
+		decryptVer, err := getVersion(item.Ciphertext)
+		if err != nil {
+			batchResponseItems[i].Error = err.Error()
+			continue
+		}
+
+		decryptVerType := p.KeyVersionType(decryptVer)
+
 		var factories []any
 		if item.DecryptPaddingScheme != "" {
-			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.DecryptPaddingScheme)
+			paddingScheme, err := parsePaddingSchemeArg(decryptVerType, item.DecryptPaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].decrypt_padding_scheme' invalid: %s", i, err.Error())
 				continue
@@ -219,7 +227,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
-		if p.Type == keysutil.KeyType_MANAGED_KEY {
+		if decryptVerType == keysutil.KeyType_MANAGED_KEY {
 			factory, err := b.GetManagedKeyFactory(ctx)
 			if err != nil {
 				batchResponseItems[i].Error = err.Error()
@@ -245,9 +253,11 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
+		encryptVerType := p.KeyVersionType(item.KeyVersion)
+
 		factories = make([]any, 0)
 		if item.EncryptPaddingScheme != "" {
-			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.EncryptPaddingScheme)
+			paddingScheme, err := parsePaddingSchemeArg(encryptVerType, item.EncryptPaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].encrypt_padding_scheme' invalid: %s", i, err.Error())
 				continue
@@ -259,7 +269,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			warnAboutNonceUsage = true
 		}
 
-		if p.Type == keysutil.KeyType_MANAGED_KEY {
+		if encryptVerType == keysutil.KeyType_MANAGED_KEY {
 			factory, err := b.GetManagedKeyFactory(ctx)
 			if err != nil {
 				batchResponseItems[i].Error = err.Error()

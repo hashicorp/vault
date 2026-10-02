@@ -5,6 +5,8 @@ package transit
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 )
@@ -46,4 +48,27 @@ func parseHashAlgorithmArg(keyType keysutil.KeyType, rawHt any) (keysutil.HashTy
 	default:
 		return keysutil.HashTypeNone, fmt.Errorf("unsupported key type %s for hash algorithm", keyType.String())
 	}
+}
+
+// getVersion returns the key version for an input signature or ciphertext
+func getVersion(input string) (int, error) {
+	if !strings.HasPrefix(input, "vault:v") {
+		return 0, fmt.Errorf("invalid ciphertext: no prefix")
+	}
+
+	splitVerification := strings.SplitN(strings.TrimPrefix(input, "vault:v"), ":", 2)
+	if len(splitVerification) != 2 {
+		return 0, fmt.Errorf("wrong number of fields delimited by ':', got %d expected 2", len(splitVerification))
+	}
+
+	ver, err := strconv.Atoi(splitVerification[0])
+	if err != nil {
+		return 0, fmt.Errorf("key version number %s count not be decoded", splitVerification[0])
+	}
+
+	if ver < 0 {
+		return 0, fmt.Errorf("key version cannot be negative: %d", ver)
+	}
+
+	return ver, nil
 }
