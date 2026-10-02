@@ -744,6 +744,52 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	}
 }
 
+func TestOpenAPI_CustomNameMatcher(t *testing.T) {
+	p := &Path{
+		Pattern:      "foo",
+		HelpSynopsis: "Synopsis",
+		Fields: map[string]*FieldSchema{
+			"foo": {
+				Type:        TypeString,
+				Description: "foo description",
+			},
+			"bar": {
+				Type:        TypeString,
+				Description: "bar description",
+			},
+		},
+		Operations: map[logical.Operation]OperationHandler{
+			logical.UpdateOperation: &PathOperation{
+				Summary: "My Summary",
+			},
+		},
+	}
+
+	docOrig := NewOASDocument("version")
+	err := documentPath(p, &Backend{BackendType: logical.TypeLogical}, "kv", docOrig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	docJSON := mustJSONMarshal(t, docOrig)
+
+	var intermediate map[string]interface{}
+	if err := jsonutil.DecodeJSON(docJSON, &intermediate); err != nil {
+		t.Fatal(err)
+	}
+
+	docNew, err := NewOASDocumentFromMap(intermediate)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	docNewJSON := mustJSONMarshal(t, docNew)
+
+	if diff := deep.Equal(docJSON, docNewJSON); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func TestOpenAPI_CleanResponse(t *testing.T) {
 	// Verify that an all-null input results in empty JSON
 	orig := &logical.Response{}
