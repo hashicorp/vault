@@ -15,6 +15,7 @@ import (
 
 // TestGitHub_Login tests that we can successfully login with the given config
 func TestGitHub_Login(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 
 	// use a test server to return our mock GH org info
@@ -59,9 +60,52 @@ func TestGitHub_Login(t *testing.T) {
 	assert.NoError(t, resp.Error())
 }
 
+// TestGitHub_Login_InvalidToken tests that when GitHub returns a 4xx error
+// (e.g., 401 for invalid/expired token), Vault returns a logical error response
+// instead of a 500 Internal Server Error.
+func TestGitHub_Login_InvalidToken(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Use a test server that returns 401 Unauthorized for all requests
+	ts := setupUnauthorizedTestServer(t)
+	defer ts.Close()
+
+	// Write the config
+	ctx := namespace.RootContext(nil)
+	config := config{
+		Organization:   "foo-org",
+		OrganizationID: 12345,
+		BaseURL:        ts.URL + "/",
+	}
+	entry, err := logical.StorageEntryJSON("config", config)
+	if err != nil {
+		t.Fatalf("failed creating storage entry")
+	}
+	if err := s.Put(ctx, entry); err != nil {
+		t.Fatalf("writing to in mem storage failed")
+	}
+
+	// Attempt a login with an invalid token
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Path:      "login",
+		Operation: logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"token": "invalid-token",
+		},
+		Storage: s,
+	})
+
+	// The current implementation returns an error for invalid credentials
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	assert.Contains(t, err.Error(), "401 Bad credentials")
+}
+
 // TestGitHub_Login_OrgInvalid tests that we cannot login with an ID other than
 // what is set in the config
 func TestGitHub_Login_OrgInvalid(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	ctx := namespace.RootContext(nil)
 
@@ -98,6 +142,7 @@ func TestGitHub_Login_OrgInvalid(t *testing.T) {
 // TestGitHub_Login_OrgNameChanged tests that we can successfully login with the
 // given config and emit a warning when the organization name has changed
 func TestGitHub_Login_OrgNameChanged(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	ctx := namespace.RootContext(nil)
 
@@ -140,6 +185,7 @@ func TestGitHub_Login_OrgNameChanged(t *testing.T) {
 // config when no organization ID is present and write the fetched ID to the
 // config
 func TestGitHub_Login_NoOrgID(t *testing.T) {
+	t.Parallel()
 	b, s := createBackendWithStorage(t)
 	ctx := namespace.RootContext(nil)
 
