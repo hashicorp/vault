@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// Used to display the active vs inactive features table on the license page (/ui/vault/license)
+// and in test helpers to stub full feature sets.
 const ALL_FEATURES = [
   'HSM',
   'Performance Replication',
@@ -18,8 +20,7 @@ const ALL_FEATURES = [
   'Transform Secrets Engine',
   'Secrets Sync',
   'PKI-only Secrets',
-  'platform-standard',
-  'agentic-iam',
+  'Agentic IAM',
 ];
 
 export function allFeatures() {
