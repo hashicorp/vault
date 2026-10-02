@@ -334,6 +334,17 @@ func (c *LoginCommand) Run(args []string) int {
 		// Store the token in the local client
 		if err := tokenHelper.Store(token); err != nil {
 			c.UI.Error(fmt.Sprintf("Error storing token: %s", err))
+			// Respect -no-print here too: the user explicitly asked for the
+			// token not to be printed, so do not leak it to stdout even on a
+			// store failure (e.g. this output can end up in CI logs). Warn
+			// them that it was neither stored nor printed so they can retry.
+			if c.flagNoPrint {
+				c.UI.Error(wrapAtLength(
+					"Authentication was successful, but the token was not persisted, "+
+						"and -no-print was set so the token is not shown. Re-run login "+
+						"without -no-print (or fix token storage) to obtain the token.") + "\n")
+				return 2
+			}
 			c.UI.Error(wrapAtLength(
 				"Authentication was successful, but the token was not persisted. The "+
 					"resulting token is shown below for your records.") + "\n")
