@@ -189,301 +189,384 @@ func TestTransit_CreateKeyWithAutorotation(t *testing.T) {
 	}
 }
 
-// TestTransit_CreateKey validates transit key creation functionality
+// TestTransit_CreateKey validates transit key creation for all supported key
+// types, checking that the response includes the correct type and key_usages.
 func TestTransit_CreateKey(t *testing.T) {
+	aeadUsages := []string{"aead-encryption"}
+	symUsages := []string{"symmetric-encryption"}
+	sigUsages := []string{"digital-signature"}
+	rsaUsages := []string{"asymmetric-encryption", "digital-signature"}
+	macUsages := []string{"message-authentication"}
+
 	testCases := map[string]struct {
 		creationParams map[string]interface{}
+		expectedUsages []string
 		shouldError    bool
 		entOnly        bool
 	}{
 		"AES-128 GCM": {
 			creationParams: map[string]interface{}{"type": "aes128-gcm96"},
+			expectedUsages: aeadUsages,
 		},
 		"AES-256 GCM": {
 			creationParams: map[string]interface{}{"type": "aes256-gcm96"},
+			expectedUsages: aeadUsages,
 		},
 		"CHACHA20": {
 			creationParams: map[string]interface{}{"type": "chacha20-poly1305"},
+			expectedUsages: aeadUsages,
 		},
 		"ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "ecdsa-p256"},
+			expectedUsages: sigUsages,
 		},
 		"ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "ecdsa-p384"},
+			expectedUsages: sigUsages,
 		},
 		"ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "ecdsa-p521"},
+			expectedUsages: sigUsages,
 		},
 		"RSA_2048": {
 			creationParams: map[string]interface{}{"type": "rsa-2048"},
+			expectedUsages: rsaUsages,
 		},
 		"RSA_3072": {
 			creationParams: map[string]interface{}{"type": "rsa-3072"},
+			expectedUsages: rsaUsages,
 		},
 		"RSA_4096": {
 			creationParams: map[string]interface{}{"type": "rsa-4096"},
+			expectedUsages: rsaUsages,
 		},
 		"HMAC": {
 			creationParams: map[string]interface{}{"type": "hmac", "key_size": 128},
+			expectedUsages: macUsages,
 		},
 		"AES-128 CMAC": {
 			creationParams: map[string]interface{}{"type": "aes128-cmac"},
+			expectedUsages: macUsages,
 			entOnly:        true,
 		},
 		"AES-192 CMAC": {
 			creationParams: map[string]interface{}{"type": "aes192-cmac"},
+			expectedUsages: macUsages,
 			entOnly:        true,
 		},
 		"AES-256 CMAC": {
 			creationParams: map[string]interface{}{"type": "aes256-cmac"},
+			expectedUsages: macUsages,
 			entOnly:        true,
 		},
 		"ML-DSA-44": {
 			creationParams: map[string]interface{}{"type": "ml-dsa", "parameter_set": "44"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"ML-DSA-65": {
 			creationParams: map[string]interface{}{"type": "ml-dsa", "parameter_set": "65"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"ML-DSA-87": {
 			creationParams: map[string]interface{}{"type": "ml-dsa", "parameter_set": "87"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-44-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "44", "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-44-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "44", "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-44-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "44", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-65-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "65", "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-65-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "65", "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-65-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "65", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-87-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-87-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid ML-DSA-87-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-128s-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-128s-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-128s-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-128s-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-128s-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-128s-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-128f-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-128f-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-128f-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-128f-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-128f-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-128f-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-192s-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-192s-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-192s-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-192s-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-192s-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-192s-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-192f-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-192f-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-192f-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-192f-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-192f-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-192f-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-256s-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-256s-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-256s-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-256s-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-256s-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-256s-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-256f-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-256f-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHA2-256f-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-256f-ECDSA-P256": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F, "hybrid_key_type_ec": "ecdsa-p256", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-256f-ECDSA-P384": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F, "hybrid_key_type_ec": "ecdsa-p384", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"Hybrid SLH-DSA-SHAKE-256f-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F, "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "slh-dsa"},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHA2-128s": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHAKE-128s": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHA2-128f": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHAKE-128f": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHA2-192s": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHAKE-192s": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHA2-192f": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHAKE-192f": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHA2-256s": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHAKE-256s": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHA2-256f": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"SLH-DSA-SHAKE-256f": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F},
+			expectedUsages: sigUsages,
 			entOnly:        true,
 		},
 		"AES-128 CBC": {
 			creationParams: map[string]interface{}{"type": "aes128-cbc"},
+			expectedUsages: symUsages,
 			entOnly:        true,
 		},
 		"AES-256 CBC": {
 			creationParams: map[string]interface{}{"type": "aes256-cbc"},
+			expectedUsages: symUsages,
 			entOnly:        true,
 		},
 		"bad key type": {
@@ -546,6 +629,23 @@ func TestTransit_CreateKey(t *testing.T) {
 
 				if keyType != tt.creationParams["type"] {
 					t.Fatalf("incorrect key type: expected %s, got %s", tt.creationParams["type"], keyType)
+				}
+
+				gotRaw, ok := resp.Data["key_usages"]
+				if !ok {
+					t.Fatal("missing key_usages in response")
+				}
+				gotUsages, ok := gotRaw.([]interface{})
+				if !ok {
+					t.Fatalf("key_usages is not []interface{}, got %T", gotRaw)
+				}
+				if len(gotUsages) != len(tt.expectedUsages) {
+					t.Fatalf("key_usages length mismatch: expected %v, got %v", tt.expectedUsages, gotUsages)
+				}
+				for i, u := range gotUsages {
+					if u != tt.expectedUsages[i] {
+						t.Fatalf("key_usages[%d] mismatch: expected %q, got %q", i, tt.expectedUsages[i], u)
+					}
 				}
 			}
 		})

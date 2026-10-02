@@ -232,7 +232,6 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		if err != nil {
 			return nil, err
 		}
-		resp.Data["key_usages"] = p.Type.KeyUsages()
 		if warning != "" {
 			resp.AddWarning(warning)
 		}
@@ -254,7 +253,6 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	if err != nil {
 		return nil, err
 	}
-	resp.Data["key_usages"] = p.Type.KeyUsages()
 	if warning != "" {
 		resp.AddWarning(warning)
 	}

@@ -207,11 +207,19 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
+		keyVersion, err := getVersion(item.Ciphertext)
+		if err != nil {
+			userErrorInBatch = true
+			batchResponseItems[i].Error = err.Error()
+			continue
+		}
+		verType := p.KeyVersionType(keyVersion)
+
 		var factories []any
 		var parsedPaddingScheme keysutil.PaddingScheme
 		if item.PaddingScheme != "" {
 			var err error
-			parsedPaddingScheme, err = parsePaddingSchemeArg(p.Type, item.PaddingScheme)
+			parsedPaddingScheme, err = parsePaddingSchemeArg(verType, item.PaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].padding_scheme' invalid: %s", i, err.Error())
 				continue
@@ -221,7 +229,7 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 
 		if item.HashAlgorithm != "" {
 			var err error
-			parsedHashAlgorithm, err := parseHashAlgorithmArg(p.Type, item.HashAlgorithm)
+			parsedHashAlgorithm, err := parseHashAlgorithmArg(verType, item.HashAlgorithm)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].hash_algorithm' invalid: %s", i, err.Error())
 				continue
@@ -229,15 +237,15 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			factories = append(factories, parsedHashAlgorithm)
 		}
 		if item.AssociatedData != "" {
-			if !p.Type.AssociatedDataSupported() {
-				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
+			if !verType.AssociatedDataSupported() {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, verType.String())
 				continue
 			}
 
 			factories = append(factories, AssocDataFactory{item.AssociatedData})
 		}
 
-		if p.Type == keysutil.KeyType_MANAGED_KEY {
+		if verType == keysutil.KeyType_MANAGED_KEY {
 			factory, err := b.GetManagedKeyFactory(ctx)
 			if err != nil {
 				batchResponseItems[i].Error = err.Error()

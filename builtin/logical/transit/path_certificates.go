@@ -134,7 +134,7 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 	}
 
 	var createCsr keysutil.CsrCreator
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
+	if p.KeyVersionType(signingKeyVersion) == keysutil.KeyType_MANAGED_KEY {
 		factory, err := b.GetManagedKeyFactory(ctx)
 		if err != nil {
 			return nil, err
@@ -158,7 +158,7 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"name": p.Name,
-			"type": p.Type.String(),
+			"type": p.KeyVersionType(signingKeyVersion).String(),
 			"csr":  string(pemCsr),
 		},
 	}
@@ -206,7 +206,7 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	}
 
 	var validateKeyMatch keysutil.LeafCertKeyMatchValidator
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
+	if p.KeyVersionType(keyVersion) == keysutil.KeyType_MANAGED_KEY {
 		factory, err := b.GetManagedKeyFactory(ctx)
 		if err != nil {
 			return nil, err
@@ -234,7 +234,7 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"name":              p.Name,
-			"type":              p.Type.String(),
+			"type":              p.KeyVersionType(keyVersion).String(),
 			"certificate-chain": pemCertChain,
 		},
 	}
