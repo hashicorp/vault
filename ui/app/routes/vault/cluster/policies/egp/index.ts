@@ -26,6 +26,7 @@ export interface PoliciesEgpIndexModel {
     capabilities: Capabilities | null;
   }>;
   listViewConfig: typeof policiesEgpListViewConfig;
+  canCreate: boolean;
   page: number;
   pageSize: number;
 }
@@ -67,13 +68,15 @@ export default class PoliciesEgpIndexRoute extends Route {
       };
     });
 
+    const { canCreate } = await this.capabilities.for('policiesEgp');
+
     const listViewConfig = { ...policiesEgpListViewConfig };
     listViewConfig.breadcrumbs = [
       { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
       { label: 'EGP policies' },
     ];
 
-    return { policies, listViewConfig, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
+    return { policies, listViewConfig, canCreate, page: Number(page) || 1, pageSize: Number(pageSize) || 10 };
   }
 
   resetController(
