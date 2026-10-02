@@ -51,6 +51,12 @@ func (i *IdentityStore) GetDisableLowerCasedNames() bool {
 	return i.disableLowerCasedNames
 }
 
+func (i *IdentityStore) SetDisableLowerCasedNames() {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	i.disableLowerCasedNames = true
+}
+
 // resetDB callers must hold the write lock on i.lock before calling, to ensure
 // that no other goroutine is reading from or writing to the database while it
 // gets reset.
