@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/ldaputil: Preserve underlying errors and correct error messages for LDAP connection failures and malformed SIDs.
+```
