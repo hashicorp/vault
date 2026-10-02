@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/stretchr/testify/require"
@@ -66,6 +67,25 @@ func CreateBackendWithStorageAndLogger(t testing.TB, logger hclog.Logger) (*back
 	// Assume for our tests we have performed the migration already.
 	b.pkiStorageVersion.Store(1)
 	return b, config.StorageView
+}
+
+// CreateBackendWithObservationRecorder is like CreateBackendWithStorage but wires
+// in a TestObservationRecorder so that tests can inspect recorded observations.
+func CreateBackendWithObservationRecorder(t testing.TB) (*backend, logical.Storage, *observations.TestObservationRecorder) {
+	t.Helper()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	rec := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = rec
+
+	b := Backend(config)
+	b.pkiCertificateCounter = &testingPkiCertificateCounter{}
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	b.pkiStorageVersion.Store(1)
+	return b, config.StorageView, rec
 }
 
 func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {
