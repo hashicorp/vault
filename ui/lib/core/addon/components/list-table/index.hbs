@@ -12,8 +12,10 @@
   @isSelectable={{if @selectionKeyField true false}}
   @onSelectionChange={{@onSelectionChange}}
   @hasResizableColumns={{this.hasResizableColumns}}
+  @onColumnResize={{this.handleColumnResize}}
   @childrenKey={{@childrenKey}}
   class="has-bottom-margin-s"
+  {{did-insert this.registerTableContainer}}
   {{did-update this.resetPagination @data}}
 >
   <:body as |B|>

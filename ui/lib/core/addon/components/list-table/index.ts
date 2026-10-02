@@ -6,7 +6,7 @@
 import { action } from '@ember/object';
 import { next } from '@ember/runloop';
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
+import { cached, tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
 
 type SortDirection = 'asc' | 'desc';
@@ -38,8 +38,16 @@ interface TableColumn {
   label: string;
   isSortable?: boolean;
   customTableItem?: boolean; // when true, the parent yields a custom display for that column
+  width?: string;
   sortingFunction?: (a: Record<string, unknown>, b: Record<string, unknown>) => number | boolean;
 }
+
+const FR_SCALE = 100;
+// HDS treats a missing width as 1fr
+const scaleFrWidth = (width = '1fr') => {
+  const fr = width.match(/^(\d+(?:\.\d+)?)fr$/)?.[1];
+  return fr ? `${Number(fr) * FR_SCALE}fr` : width;
+};
 
 interface SelectableRowState {
   selectionKey: string; // value of selected item
@@ -93,6 +101,10 @@ export default class ListTable extends Component<Args> {
   @tracked sortDirection: SortDirection = 'asc';
   //  WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage
   @tracked renderPagination = true;
+  // bumped by handleColumnResize to reset every column to its original width
+  @tracked columnWidthsVersion = 0;
+  tableContainer: HTMLElement | null = null;
+  lastAppliedWidths: string[] | null = null;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -104,13 +116,19 @@ export default class ListTable extends Component<Args> {
   /**
    * Decorates column definitions with a custom `sortingFunction` that uses natural / numeric
    * collation so that <Hds::AdvancedTable> does not re-sort the model with standard lexicographical order.
+   * Also scales `fr` widths by FR_SCALE so they can't sum below 1 after a resize, which would stop the table filling its container.
    */
+  @cached
   get tableColumns(): TableColumn[] {
+    // consumed so handleColumnResize can force a new array, which makes HDS re-apply every original width
+    void this.columnWidthsVersion;
     return this.args.columns.map((column) => {
-      if (!column.isSortable) return column;
+      const width = scaleFrWidth(column.width);
+      if (!column.isSortable) return { ...column, width };
 
       return {
         ...column,
+        width,
         sortingFunction: (a: Record<string, unknown>, b: Record<string, unknown>) => {
           const sortOrder = this.activeSortDirection;
           const valA = a[column.key];
@@ -184,6 +202,34 @@ export default class ListTable extends Component<Args> {
       });
     }
     return this.args.data;
+  }
+
+  @action
+  registerTableContainer(element: HTMLElement) {
+    this.tableContainer = element;
+  }
+
+  /**
+   * HDS "Reset column width" only restores the clicked column, so width it traded with other columns during a
+   * resize stays with them. HDS calls this after both drags and resets; a column that just changed back to its
+   * original width was reset, so every column is reset with it.
+   */
+  @action
+  handleColumnResize(columnKey: string) {
+    const originalWidths = this.tableColumns.map((column) => column.width);
+    const grid = this.tableContainer?.querySelector<HTMLElement>('.hds-advanced-table');
+    const gridWidths = grid?.style.gridTemplateColumns.trim().split(/\s+/) ?? [];
+    // selectable tables prepend a checkbox column to the grid
+    const appliedWidths = gridWidths.slice(-originalWidths.length);
+    const previousWidths = this.lastAppliedWidths ?? originalWidths;
+    const index = this.tableColumns.findIndex((column) => column.key === columnKey);
+
+    if (appliedWidths[index] === originalWidths[index] && previousWidths[index] !== originalWidths[index]) {
+      this.columnWidthsVersion++;
+      this.lastAppliedWidths = null;
+    } else {
+      this.lastAppliedWidths = appliedWidths;
+    }
   }
 
   /**
