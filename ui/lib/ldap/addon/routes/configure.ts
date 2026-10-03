@@ -1,41 +1,45 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
+import LdapConfigForm from 'vault/forms/secrets/ldap/config';
 
-import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type LdapConfigModel from 'vault/models/ldap/config';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
+import type { LdapApplicationModel } from './application';
+import type { ModelFrom } from 'vault/route';
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
 }
 
-@withConfig('ldap/config')
+export type LdapConfigureModel = ModelFrom<LdapConfigureRoute>;
+
 export default class LdapConfigureRoute extends Route {
-  @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 
-  declare configModel: LdapConfigModel;
-
   model() {
-    const backend = this.secretMountPath.currentPath;
-    return this.configModel || this.store.createRecord('ldap/config', { backend });
+    const { secretsEngine, promptConfig, config } = this.modelFor('application') as LdapApplicationModel;
+    const form = new LdapConfigForm(config, { isNew: !config });
+    return {
+      secretsEngine,
+      promptConfig,
+      form,
+    };
   }
 
-  setupController(controller: RouteController, resolvedModel: LdapConfigModel, transition: Transition) {
+  setupController(controller: RouteController, resolvedModel: LdapConfigureModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'overview' },
+      { label: resolvedModel.secretsEngine.id, route: 'overview' },
+      ...(resolvedModel.promptConfig ? [] : [{ label: 'Configuration', route: 'configuration' }]),
       { label: 'Configure' },
     ];
   }

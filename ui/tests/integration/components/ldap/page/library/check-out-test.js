@@ -1,12 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
@@ -15,11 +14,10 @@ import sinon from 'sinon';
 module('Integration | Component | ldap | Page::Library::CheckOut', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'ldap');
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.creds = {
-      account: 'foo.bar',
+      service_account_name: 'foo.bar',
       password: 'password',
       lease_id: 'ldap/library/test/check-out/123',
       lease_duration: 86400,
@@ -43,13 +41,9 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
   test('it should render page title and breadcrumbs', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('[data-test-header-title]').hasText('Check-out', 'Page title renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(1)')
-      .containsText('ldap-test', 'Overview breadcrumb renders');
-    assert
-      .dom('[data-test-breadcrumbs] li:nth-child(2) a')
-      .containsText('Libraries', 'Libraries breadcrumb renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Check-out', 'Page title renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(0)).containsText('ldap-test', 'Overview breadcrumb renders');
+    assert.dom(GENERAL.breadcrumbAtIdx(1)).containsText('Libraries', 'Libraries breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText('test-library', 'Library breadcrumb renders');

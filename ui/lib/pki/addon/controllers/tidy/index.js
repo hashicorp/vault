@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 import Ember from 'ember';
@@ -11,7 +11,6 @@ import { service } from '@ember/service';
 const POLL_INTERVAL_MS = 5000;
 
 export default class PkiTidyIndexController extends Controller {
-  @service store;
   @service secretMountPath;
 
   @tracked tidyStatus = null;

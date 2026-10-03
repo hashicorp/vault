@@ -1,20 +1,23 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
 {{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
-  <PageHeader as |p|>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        {{uppercase this.policyType}}
-        Policies
-        {{#if (not-eq this.policyType "acl")}}
-          <Hds::Badge @text="Sentinel" />
-        {{/if}}
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
+  <Page::Header @title="{{uppercase this.policyType}} Policies">
+    <:badges>
+      {{#if (not-eq this.policyType "acl")}}
+        <Hds::Badge @text="Sentinel" />
+      {{/if}}
+    </:badges>
+    <:breadcrumbs>
+      <Page::Breadcrumbs
+        @breadcrumbs={{array
+          (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+          (hash label=(concat (uppercase this.policyType) " Policies"))
+        }}
+      />
+    </:breadcrumbs>
+  </Page::Header>
   <Toolbar>
     {{#if this.model.meta.total}}
       <ToolbarFilters>

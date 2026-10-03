@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package transit
@@ -168,6 +168,11 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	if plaintextAllowed {
 		resp.Data["plaintext"] = plaintext
 	}
+
+	// Increment the counter for successful operations
+	// Since there are not batched operations, we can add one successful
+	// request to the transit request counter.
+	b.incrementDataProtectionCounter(1)
 
 	return resp, nil
 }

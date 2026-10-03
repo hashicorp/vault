@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -599,6 +599,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Path = adjustedPath
 	if !existenceCheck {
 		metricName := []string{"route", string(req.Operation)}
+		if req.IsSnapshotReadOrList() {
+			metricName[1] = metricName[1] + "-snapshot"
+		}
 		if req.Operation != logical.RollbackOperation || r.rollbackMetricsMountName {
 			metricName = append(metricName, strings.ReplaceAll(mount, "/", "-"))
 		}

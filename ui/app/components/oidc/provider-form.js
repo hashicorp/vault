@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -36,8 +36,23 @@ export default class OidcProviderForm extends Component {
       ? 'allow_all'
       : 'limited';
 
+  get breadcrumbs() {
+    const providersOrDetailsBreadcrumb = this.args.model.isNew
+      ? { label: 'Providers', route: 'vault.cluster.access.oidc.providers' }
+      : {
+          label: 'Details',
+          route: 'vault.cluster.access.oidc.providers.provider.details',
+          model: this.args.model.name,
+        };
+    return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      providersOrDetailsBreadcrumb,
+      { label: this.args.model.isNew ? 'Create Provider' : 'Edit Provider' },
+    ];
+  }
+
   // function passed to search select
-  renderInfoTooltip(selection, dropdownOptions) {
+  renderTooltip(selection, dropdownOptions) {
     // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)
     const clientExists = !!dropdownOptions.find((opt) => opt.clientId === selection);
     return !clientExists ? 'The application associated with this client_id no longer exists' : false;

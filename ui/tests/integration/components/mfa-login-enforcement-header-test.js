@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | mfa-login-enforcement-header', function (hooks) {
   setupRenderingTest(hooks);
@@ -31,10 +32,10 @@ module('Integration | Component | mfa-login-enforcement-header', function (hooks
   test('it renders heading', async function (assert) {
     await render(hbs`<Mfa::MfaLoginEnforcementHeader @heading="New enforcement" />`);
 
-    assert.dom('[data-test-mleh-title]').includesText('New enforcement');
-    assert.dom('[data-test-mleh-title] svg').hasClass('hds-icon-lock', 'Lock icon renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).includesText('New enforcement');
+    assert.dom(GENERAL.icon('lock')).hasClass('hds-icon-lock', 'Lock icon renders');
     assert
-      .dom('[data-test-mleh-description]')
+      .dom(GENERAL.hdsPageHeaderDescription)
       .includesText('An enforcement will define which auth types', 'Description renders');
     assert.dom('[data-test-mleh-radio]').doesNotExist('Radio cards are hidden when not inline display mode');
     assert
@@ -66,9 +67,9 @@ module('Integration | Component | mfa-login-enforcement-header', function (hooks
       />
     `);
 
-    assert.dom('[data-test-mleh-title]').includesText('Enforcement');
+    assert.dom(GENERAL.hdsPageHeaderTitle).includesText('Enforcement');
     assert
-      .dom('[data-test-mleh-description]')
+      .dom(GENERAL.hdsPageHeaderDescription)
       .includesText('An enforcement includes the authentication types', 'Description renders');
     for (const option of ['new', 'existing', 'skip']) {
       await click(`[data-test-mleh-radio="${option}"] input`);

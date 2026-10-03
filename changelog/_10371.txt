@@ -1,0 +1,7 @@
+```release-note:bug
+ui (enterprise): Fix KV v2 not displaying secrets in namespaces.
+```
+
+```release-note:bug
+ui: Fix KV v2 metadata list request failing for policies without a trailing slash in the path.
+```

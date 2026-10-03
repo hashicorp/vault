@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -36,7 +36,7 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       { owner: this.engine }
     );
 
-    assert.dom('[data-test-header-title]').hasText('Credentials', 'Page title renders');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Credentials', 'Page title renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText('ldap-test', 'Overview breadcrumb renders');

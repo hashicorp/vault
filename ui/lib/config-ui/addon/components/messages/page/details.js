@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -22,7 +22,6 @@ export default class MessageDetails extends Component {
   @service('app-router') router;
   @service flashMessages;
   @service customMessages;
-  @service pagination;
   @service api;
 
   displayFields = ['active', 'type', 'authenticated', 'title', 'message', 'start_time', 'end_time', 'link'];

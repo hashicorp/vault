@@ -1,0 +1,3 @@
+```release-note:improvement
+core/metrics: Reading and listing from a snapshot are now tracked via the `vault.route.read-snapshot.{mount_point}` and `vault.route.list-snapshot.{mount_point}` metrics.
+```

@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: Add NewTestDockerCluster support for running external plugins within the same container as the server.  Also add support for those plugins to expose their own listeners, as KMIP does.
+```

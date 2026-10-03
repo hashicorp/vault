@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -122,6 +122,13 @@ func (b *backend) rotateRoot(ctx context.Context, req *logical.Request) (*logica
 	if err != nil {
 		return nil, fmt.Errorf("error deleting old access key: %w", err)
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSRootConfigRotate, map[string]interface{}{
+		"rotation_period":            config.RotationPeriod.String(),
+		"rotation_schedule":          config.RotationSchedule,
+		"rotation_window":            config.RotationWindow.String(),
+		"disable_automatic_rotation": config.DisableAutomatedRotation,
+	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{

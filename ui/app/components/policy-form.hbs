@@ -1,80 +1,145 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<form {{on "submit" (perform this.save)}} data-test-policy-form>
-  <div class="box is-shadowless is-fullwidth is-marginless">
+<NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
+
+<Hds::Form {{on "submit" (perform this.save)}} data-test-policy-form class="has-bottom-margin-xs" as |FORM|>
+  <FORM.Section @isFullWidth={{true}}>
     <MessageError @errorMessage={{this.errorBanner}} />
-    <NamespaceReminder @mode={{if @model.isNew "create" "edit"}} @noun="policy" />
-    {{#if @model.isNew}}
-      <div class="field">
-        <label for="policy-name" class="is-label">Name</label>
-        <div class="control">
-          <Input
-            @type="text"
-            @value={{lowercase @model.name}}
-            id="policy-name"
-            class="input"
-            {{on "input" this.setModelName}}
-            data-test-policy-input="name"
-          />
-        </div>
-      </div>
-    {{/if}}
-    <div class="field">
-      <Toolbar aria-label="toolbar for managing {{or @model.name 'new'}} policy">
-        {{#if @renderPolicyExampleModal}}
-          {{! only true in policy create and edit routes }}
-          <ToolbarFilters aria-label="help tools for managing {{or @model.name 'new'}} policy">
-            <Hds::Button
-              @text="How to write a policy"
-              @icon="bulb"
-              @size="small"
-              @color="tertiary"
-              {{on "click" (fn (mut this.showTemplateModal))}}
-              data-test-button="How to write a policy"
-            />
-          </ToolbarFilters>
-        {{/if}}
-        {{#if @model.isNew}}
-          <ToolbarActions aria-label="actions for managing {{or @model.name 'new'}} policy">
-            <div class="control is-flex">
-              <Input
-                id="fileUploadToggle"
-                @type="checkbox"
-                name="fileUploadToggle"
-                class="toggle is-success is-small"
-                @checked={{this.showFileUpload}}
-                {{on "change" (fn (mut this.showFileUpload) (not this.showFileUpload))}}
-                data-test-policy-edit-toggle
-              />
-              <label for="fileUploadToggle" class="has-text-weight-bold is-size-8">Upload file</label>
-            </div>
-          </ToolbarActions>
-        {{/if}}
-      </Toolbar>
+  </FORM.Section>
+
+  {{#if @model.isNew}}
+    <FORM.Section @isFullWidth={{true}} as |FS|>
+      <FS.Header as |FSH|>
+        <FSH.Title @tag="h2">
+          Policy information
+
+          <div class="is-pulled-right">
+            <Hds::Form::Toggle::Field
+              checked={{this.showFileUpload}}
+              {{on "change" (fn (mut this.showFileUpload) (not this.showFileUpload))}}
+              data-test-toggle-input="Upload file"
+              as |F|
+            >
+              <F.Label>Upload file</F.Label>
+            </Hds::Form::Toggle::Field>
+          </div>
+        </FSH.Title>
+      </FS.Header>
+
       {{#if this.showFileUpload}}
-        <div class="has-top-margin-xs">
-          <TextFile @uploadOnly={{true}} @onChange={{this.setPolicyFromFile}} />
-        </div>
+        <TextFile @uploadOnly={{true}} @onChange={{this.setPolicyFromFile}} />
+      {{else}}
+        <Hds::Form::TextInput::Field
+          name="name"
+          @value={{lowercase @model.name}}
+          placeholder="Enter the policy name"
+          autocomplete="off"
+          spellcheck="false"
+          {{on "input" this.handleNameInput}}
+          data-test-input="name"
+          as |F|
+        >
+          <F.Label>Policy name</F.Label>
+        </Hds::Form::TextInput::Field>
+      {{/if}}
+    </FORM.Section>
+  {{/if}}
+
+  {{#unless this.showFileUpload}}
+    <FORM.Section @isFullWidth={{true}} as |FS|>
+      {{#if @model.isNew}}
+        <FS.Header @tag="h3" data-test-form-header="Policy rules" as |FSH|>
+          <FSH.Title>Policy rules</FSH.Title>
+
+          <FSH.Description data-test-form-description="Policy rules">
+            {{#if this.visualEditorSupported}}
+              Use
+              <Hds::Text::Code class="code-in-text">*</Hds::Text::Code>
+              for wildcard matching.
+
+              <Hds::Layout::Flex @gap="24" class="has-top-margin-s">
+                {{! Re-render radio buttons when modal closes so radio checked state matches editType }}
+                {{#unless this.showSwitchEditorsModal}}
+                  {{#each-in this.editTypes as |value label|}}
+                    <Hds::Form::Radio::Field
+                      name="editType"
+                      @value={{value}}
+                      checked={{this.isActiveEditor value}}
+                      {{on "change" this.handleRadioChange}}
+                      data-test-radio={{value}}
+                      as |F|
+                    >
+                      <F.Label>{{label}}</F.Label>
+                    </Hds::Form::Radio::Field>
+                  {{/each-in}}
+                {{/unless}}
+              </Hds::Layout::Flex>
+            {{/if}}
+          </FSH.Description>
+        </FS.Header>
+      {{/if}}
+
+      {{#if (and (this.isActiveEditor "visual") this.visualEditorSupported)}}
+        <CodeGenerator::Policy::Builder
+          @policyName={{@model.name}}
+          @onPolicyChange={{this.handlePolicyChange}}
+          @stanzas={{this.stanzas}}
+          data-test-field="visual editor"
+        />
       {{else}}
         <JsonEditor
-          @title="Policy"
+          @title="Policy editor"
           @value={{@model.policy}}
-          @valueUpdated={{action (mut @model.policy)}}
-          @mode="ruby"
+          @valueUpdated={{this.setPolicy}}
+          @mode="hcl"
           @extraKeys={{hash Shift-Enter=(perform this.save)}}
-          data-test-policy-editor
-        />
+          @hasFullScreenButton={{true}}
+        >
+          <:description>
+            {{#unless @isCompact}}
+              <Hds::Button
+                @text="How to write a policy"
+                @icon="bulb"
+                @size="small"
+                {{on "click" (fn (mut this.showTemplateModal))}}
+                data-test-button="How to write a policy"
+              />
+            {{/unless}}
+          </:description>
+        </JsonEditor>
       {{/if}}
-    </div>
-    {{#each @model.additionalAttrs as |attr|}}
-      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-    {{/each}}
-  </div>
-  <div class="field is-grouped box is-fullwidth is-bottomless">
-    <Hds::ButtonSet>
+    </FORM.Section>
+  {{/unless}}
+
+  {{#if @model.additionalAttrs}}
+    <FORM.Section @isFullWidth={{true}}>
+      {{#each @model.additionalAttrs as |attr|}}
+        <FormField @attr={{attr}} @model={{@model}} />
+      {{/each}}
+    </FORM.Section>
+  {{/if}}
+
+  {{! Automation snippets are currently only supported for ACL policies }}
+  {{#if (and (eq @model.policyType "acl") (not @isCompact))}}
+    <FORM.Separator />
+
+    <FORM.Section @isFullWidth={{true}}>
+      <Hds::Accordion @size="medium" as |A|>
+        <A.Item data-test-accordion="Automation snippets">
+          <:toggle>Automation snippets</:toggle>
+          <:content>
+            <CodeGenerator::AutomationSnippets @cliArgs={{this.snippetArgs.cli}} @tfvpArgs={{this.snippetArgs.terraform}} />
+          </:content>
+        </A.Item>
+      </Hds::Accordion>
+    </FORM.Section>
+  {{/if}}
+
+  <FORM.Footer as |FF|>
+    <FF.ButtonSet>
       <Hds::Button
         @text={{if @model.isNew "Create policy" "Save"}}
         @icon={{if this.save.isRunning "loading"}}
@@ -89,9 +154,9 @@
         {{on "click" this.cancel}}
         data-test-cancel
       />
-    </Hds::ButtonSet>
-  </div>
-</form>
+    </FF.ButtonSet>
+  </FORM.Footer>
+</Hds::Form>
 
 {{! SAMPLE POLICY MODAL. Only renders in policy create and edit routes }}
 {{#if this.showTemplateModal}}
@@ -99,19 +164,36 @@
     id="policy-example-modal"
     @size="large"
     @onClose={{fn (mut this.showTemplateModal) false}}
-    data-test-policy-example-modal
+    data-test-modal="Example policy"
     as |M|
   >
-    <M.Header data-test-modal-title>
+    <M.Header data-test-modal-header="Example policy">
       Example
       {{uppercase @model.policyType}}
       Policy
     </M.Header>
     <M.Body>
-      <PolicyExample @policyType={{@model.policyType}} @container="#policy-example-modal" />
+      <PolicyExample @policyType={{@model.policyType}} />
     </M.Body>
     <M.Footer as |F|>
       <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-close-button />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}
+
+{{#if this.showSwitchEditorsModal}}
+  <Hds::Modal @onClose={{fn (mut this.showSwitchEditorsModal) false}} @color="warning" data-test-modal="warning" as |M|>
+    <M.Header @icon="alert-triangle">Switching editors?</M.Header>
+    <M.Body>
+      Changes made in the Code editor will not be carried over to the Visual editor.
+      <br />
+      Do you want to switch and discard changes?
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::ButtonSet>
+        <Hds::Button @text="Switch and discard changes" {{on "click" this.confirmEditorSwitch}} data-test-confirm-button />
+        <Hds::Button @text="Cancel" {{on "click" F.close}} @color="secondary" data-test-cancel />
+      </Hds::ButtonSet>
     </M.Footer>
   </Hds::Modal>
 {{/if}}

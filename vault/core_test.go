@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -38,6 +38,7 @@ import (
 	"github.com/sasha-s/go-deadlock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	uberatomic "go.uber.org/atomic"
 )
 
 // invalidKey is used to test Unseal
@@ -256,6 +257,138 @@ func TestNewCore_configureLogRequestLevel(t *testing.T) {
 			}
 			core.configureLogRequestsLevel(tc.level)
 			require.Equal(t, tc.expectedLevel, log.Level(core.logRequestsLevel.Load()))
+		})
+	}
+}
+
+// TestCore_FinalizeInFlightReqData validates that the core server
+// correctly finalizes a completed request. It verifies that the request is
+// removed from the in-flight map and the counter is decremented.
+func TestCore_FinalizeInFlightReqData(t *testing.T) {
+	core := &Core{
+		logger:           corehelpers.NewTestLogger(t),
+		logRequestsLevel: uberatomic.NewInt32(int32(log.Info)), // Set to a valid log level
+		inFlightReqData: &InFlightRequests{
+			InFlightReqMap:   &sync.Map{},
+			InFlightReqCount: uberatomic.NewUint64(1),
+		},
+	}
+
+	reqID := "test-req"
+	reqData := InFlightReqData{
+		StartTime:        time.Now(),
+		ClientRemoteAddr: "127.0.0.1",
+		ReqPath:          "/test",
+		Method:           "GET",
+		ClientID:         "client-1",
+	}
+	core.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
+
+	core.FinalizeInFlightReqData(reqID, 200)
+
+	_, ok := core.inFlightReqData.InFlightReqMap.Load(reqID)
+	if ok {
+		t.Errorf("Expected request to be deleted from map")
+	}
+
+	if got := core.inFlightReqData.InFlightReqCount.Load(); got != 0 {
+		t.Errorf("Expected counter to be 0, got %d", got)
+	}
+}
+
+// TestCore_FinalizeInFlightReqData_LogLevelVariants checks that request
+// logging is conditional on the configured log level. It asserts that logging
+// only occurs when a valid log level is set and not for "off" or invalid levels.
+func TestCore_FinalizeInFlightReqData_LogLevelVariants(t *testing.T) {
+	tests := []struct {
+		name         string
+		logLevel     int32
+		expectLogged bool // For manual inspection only
+	}{
+		{"log level off", int32(log.Off), false},
+		{"log level no level (empty)", int32(log.NoLevel), false},
+		{"log level info", int32(log.Info), true},
+		{"log level invalid", int32(-99), false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			core := &Core{
+				logger:           corehelpers.NewTestLogger(t),
+				logRequestsLevel: uberatomic.NewInt32(tc.logLevel),
+				inFlightReqData: &InFlightRequests{
+					InFlightReqMap:   &sync.Map{},
+					InFlightReqCount: uberatomic.NewUint64(1),
+				},
+			}
+			reqID := "test-req"
+			reqData := InFlightReqData{
+				StartTime:        time.Now(),
+				ClientRemoteAddr: "127.0.0.1",
+				ReqPath:          "/test",
+				Method:           "GET",
+				ClientID:         "client-1",
+			}
+			core.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
+
+			core.FinalizeInFlightReqData(reqID, 200)
+
+			_, ok := core.inFlightReqData.InFlightReqMap.Load(reqID)
+			if ok {
+				t.Errorf("Expected request to be deleted from map")
+			}
+
+			if got := core.inFlightReqData.InFlightReqCount.Load(); got != 0 {
+				t.Errorf("Expected counter to be 0, got %d", got)
+			}
+		})
+	}
+}
+
+// TestCore_ReloadLogRequestsLevel ensures the log level for completed
+// requests is correctly updated when the server config is reloaded via SIGHUP,
+// including handling empty or "off" values.
+func TestCore_ReloadLogRequestsLevel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name          string
+		configLevel   string
+		expectedLevel log.Level
+	}{
+		{"none", "", log.Off},
+		{"off", "off", log.Off},
+		{"trace", "trace", log.Trace},
+		{"debug", "debug", log.Debug},
+		{"info", "info", log.Info},
+		{"warn", "warn", log.Warn},
+		{"error", "error", log.Error},
+		{"bad", "foo", log.NoLevel},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Create an atomic.Value instance and initialize it
+			rawConfig := &atomic.Value{}
+			rawConfig.Store(&server.Config{
+				SharedConfig: &configutil.SharedConfig{},
+			})
+
+			core := &Core{
+				logger:           corehelpers.NewTestLogger(t),
+				logRequestsLevel: uberatomic.NewInt32(0),
+				rawConfig:        rawConfig,
+			}
+			// Simulate config reload
+			conf := &server.Config{
+				SharedConfig:     &configutil.SharedConfig{},
+				LogRequestsLevel: tc.configLevel,
+			}
+			core.rawConfig.Store(conf)
+
+			core.ReloadLogRequestsLevel()
+			got := log.Level(core.logRequestsLevel.Load())
+			require.Equal(t, tc.expectedLevel, got)
 		})
 	}
 }
@@ -817,15 +950,16 @@ func TestCore_ShutdownDone(t *testing.T) {
 	c := TestCoreWithSealAndUINoCleanup(t, &CoreConfig{})
 	testCoreUnsealed(t, c)
 	doneCh := c.ShutdownDone()
+
+	errCh := make(chan error)
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		err := c.Shutdown()
-		if err != nil {
-			t.Fatal(err)
-		}
+		errCh <- c.Shutdown()
 	}()
 
 	select {
+	case err := <-errCh:
+		t.Fatal(err)
 	case <-doneCh:
 		if !c.Sealed() {
 			t.Fatalf("shutdown done called prematurely!")

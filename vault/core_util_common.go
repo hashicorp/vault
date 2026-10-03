@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -10,6 +10,11 @@ import (
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+type DiagnoseCheckLicenseGeneration struct {
+	Generate           bool
+	GenerateIBMLicense bool
+}
 
 // GetCoreConfigInternal returns the server configuration
 // in struct format.
@@ -68,4 +73,8 @@ func (c *Core) setupHeaderHMACKey(ctx context.Context, isPerfStandby bool) error
 	}
 	c.IndexHeaderHMACKey.Store([]byte(key))
 	return nil
+}
+
+func (c *Core) GetPkiCertificateCounter() logical.CertificateCounter {
+	return c.pkiCertCountManager
 }

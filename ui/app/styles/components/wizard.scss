@@ -1,0 +1,43 @@
+@use '../helper-classes/flexbox-and-grid';
+@use '../helper-classes/spacing';
+
+/**
+ * Copyright IBM Corp. 2016, 2025
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.wizard {
+  @extend .is-flex-column;
+  @extend .is-flex-grow-1;
+
+  &.welcome {
+    @extend .has-top-margin-xxl;
+    svg {
+      flex-shrink: 0;
+    }
+  }
+
+  .content {
+    padding-top: 40px;
+    overflow: visible;
+
+    // Non-active panels are hidden and prevented from taking up space
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .button-bar {
+    @extend .has-padding-m;
+    @extend .is-flex-between;
+
+    .hds-button-set {
+      margin-left: auto;
+    }
+  }
+
+  .tree {
+    border: 1px solid var(--token-color-border-primary);
+    border-radius: var(--token-border-radius-medium);
+  }
+}

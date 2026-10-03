@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package docker
@@ -34,7 +34,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 )
 
-const DockerAPIVersion = "1.40"
+const DockerAPIVersion = "1.44"
 
 type Runner struct {
 	DockerAPI  *client.Client
@@ -63,6 +63,8 @@ type RunOptions struct {
 	LogStderr              io.Writer
 	LogStdout              io.Writer
 	VolumeNameToMountPoint map[string]string
+	Resources              container.Resources
+	ExtraHosts             []string
 }
 
 func NewDockerAPI() (*client.Client, error) {
@@ -394,6 +396,8 @@ func (d *Runner) Start(ctx context.Context, addSuffix, forceLocalAddr bool) (*St
 	hostConfig := &container.HostConfig{
 		AutoRemove:      !d.RunOptions.DoNotAutoRemove,
 		PublishAllPorts: true,
+		Resources:       d.RunOptions.Resources,
+		ExtraHosts:      d.RunOptions.ExtraHosts,
 	}
 	if len(d.RunOptions.Capabilities) > 0 {
 		hostConfig.CapAdd = d.RunOptions.Capabilities

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package database
@@ -881,7 +881,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()},
 			AdditionalDatabaseMetadata{key: "rotation_period", value: rotationPeriod.String()},
 			AdditionalDatabaseMetadata{key: "rotation_schedule", value: rotationScheduleRaw},
-			AdditionalDatabaseMetadata{key: "next_vault_rotation", value: nextVaultRotation.String()},
+			AdditionalDatabaseMetadata{key: "next_vault_rotation", value: nextVaultRotation.Format(time.RFC3339)},
 		)
 	} else {
 		recordDatabaseObservation(ctx, b, req, role.DBName, ObservationTypeDatabaseStaticRoleUpdate,
@@ -889,7 +889,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			AdditionalDatabaseMetadata{key: "credential_type", value: role.CredentialType.String()},
 			AdditionalDatabaseMetadata{key: "rotation_period", value: rotationPeriod.String()},
 			AdditionalDatabaseMetadata{key: "rotation_schedule", value: rotationScheduleRaw},
-			AdditionalDatabaseMetadata{key: "next_vault_rotation", value: nextVaultRotation.String()},
+			AdditionalDatabaseMetadata{key: "next_vault_rotation", value: nextVaultRotation.Format(time.RFC3339)},
 		)
 	}
 

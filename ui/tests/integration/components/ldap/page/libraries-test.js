@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,10 +9,10 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,33 +20,34 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
-    this.store = this.owner.lookup('service:store');
-    this.backend = createSecretsEngine(this.store);
-    this.breadcrumbs = generateBreadcrumbs(this.backend.id);
-
-    for (const name of ['foo', 'bar', 'foo/']) {
-      this.store.pushPayload('ldap/library', {
-        modelName: 'ldap/library',
-        backend: 'ldap-test',
-        ...this.server.create('ldap-library', { name }),
-      });
-    }
-    this.libraries = this.store.peekAll('ldap/library');
+    this.backend = 'ldap-test';
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+    this.secretsEngine = createSecretsEngine();
+    this.breadcrumbs = generateBreadcrumbs(this.backend);
+    this.libraries = ['foo', 'bar', 'foo/'].map((name) =>
+      this.server.create('ldap-library', { name, completeLibraryName: name })
+    );
+    this.capabilities = this.libraries.reduce((capabilities, { name }) => {
+      const path = this.owner
+        .lookup('service:capabilities')
+        .pathFor('ldapLibrary', { backend: this.backend, name });
+      capabilities[path] = { canRead: true, canUpdate: true, canDelete: true };
+      return capabilities;
+    }, {});
     this.promptConfig = false;
 
-    this.renderComponent = () => {
-      return render(
+    this.renderComponent = () =>
+      render(
         hbs`<Page::Libraries
-          @promptConfig={{this.promptConfig}}
-          @backendModel={{this.backend}}
           @libraries={{this.libraries}}
+          @capabilities={{this.capabilities}}
+          @promptConfig={{this.promptConfig}}
+          @secretsEngine={{this.secretsEngine}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,
         { owner: this.engine }
       );
-    };
+
     setRunOptions({
       rules: {
         list: { enabled: false },
@@ -54,17 +55,13 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
     });
   });
 
-  test('it should render tab page header and config cta', async function (assert) {
+  test('it should render tab page header', async function (assert) {
     this.promptConfig = true;
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
-    assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
-    assert
-      .dom('[data-test-toolbar-action="config"]')
-      .hasText('Configure LDAP', 'Correct toolbar action renders');
-    assert.dom('[data-test-config-cta]').exists('Config cta renders');
+    assert.dom(GENERAL.icon('folder-users')).hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('ldap-test', 'Mount path renders in title');
   });
 
   test('it should render create libraries cta', async function (assert) {
@@ -114,7 +111,7 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
 
     await fillIn('[data-test-filter-input]', 'baz');
     assert
-      .dom('[data-test-empty-state-title]')
+      .dom(GENERAL.emptyStateTitle)
       .hasText('There are no libraries matching "baz"', 'Filter message renders');
 
     await fillIn('[data-test-filter-input]', 'foo');

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -549,5 +549,82 @@ func TestRequestHandling_isRetryableRPCError(t *testing.T) {
 			}
 			require.Equal(t, tc.want, isRetryableRPCError(useCtx, tc.err))
 		})
+	}
+}
+
+// TestRequestHandling_TokenRenewal tests that a renewable token can be renewed
+// and that an error is returned when lease_id is not a string
+func TestRequestHandling_TokenRenewal(t *testing.T) {
+	core, _, root := TestCoreUnsealed(t)
+
+	// First, create a renewable token with a short TTL
+	req := &logical.Request{
+		Path:        "auth/token/create",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"ttl":       "1h",
+			"renewable": true,
+			"policies":  []string{"default"},
+		},
+	}
+
+	resp, err := core.HandleRequest(namespace.RootContext(context.TODO()), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	newToken := resp.Auth.ClientToken
+	if newToken == "" {
+		t.Fatal("expected non-empty token")
+	}
+	if !resp.Auth.Renewable {
+		t.Fatal("expected renewable token")
+	}
+
+	// Test token renewal
+	req = &logical.Request{
+		Path:        "auth/token/renew-self",
+		ClientToken: newToken,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"increment": "2h", // Extend by 2 hours
+		},
+	}
+
+	resp, err = core.HandleRequest(namespace.RootContext(context.TODO()), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Auth == nil {
+		t.Fatalf("bad: %v", resp)
+	}
+
+	// Verify the token was renewed
+	if resp.Auth.ClientToken != newToken {
+		t.Fatalf("expected same token, got %s", resp.Auth.ClientToken)
+	}
+	if !resp.Auth.Renewable {
+		t.Fatal("expected renewable token after renewal")
+	}
+
+	req = &logical.Request{
+		Path:        "sys/leases/renew",
+		ClientToken: root,
+		Operation:   logical.UpdateOperation,
+		Data: map[string]interface{}{
+			"lease_id": 12345, // Non-string value
+		},
+	}
+
+	resp, err = core.HandleRequest(namespace.RootContext(context.TODO()), req)
+	if err == nil {
+		t.Fatal("expected error when lease_id is not a string")
+	}
+	if !strings.Contains(err.Error(), "invalid request") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aerospike
@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	aero "github.com/aerospike/aerospike-client-go/v5"
+	aero "github.com/aerospike/aerospike-client-go/v8"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"

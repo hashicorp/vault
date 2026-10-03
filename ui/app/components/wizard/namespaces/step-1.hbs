@@ -1,0 +1,77 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Layout::Grid @columnWidth="50%" @gap="16" as |LG|>
+  <LG.Item>
+    <Hds::Text::Display @tag="h2" @size="400" @weight="bold" class="has-bottom-padding-m">
+      What best describes your access policy between teams and applications?
+    </Hds::Text::Display>
+
+    <Hds::Form::Radio::Group @name="security-policy" as |G|>
+      <G.RadioField
+        checked={{eq @wizardState.securityPolicyChoice this.policy.FLEXIBLE}}
+        {{on "change" (fn @updateWizardState "securityPolicyChoice" this.policy.FLEXIBLE)}}
+        data-test-radio="flexible"
+        as |F|
+      >
+        <F.Label>
+          <Hds::Text::Body @tag="p">
+            <strong>Flexible/shared access:</strong>
+            our teams are generally allowed to access secrets across different business units and applications.
+          </Hds::Text::Body>
+        </F.Label>
+      </G.RadioField>
+      <G.RadioField
+        checked={{eq @wizardState.securityPolicyChoice this.policy.STRICT}}
+        {{on "change" (fn @updateWizardState "securityPolicyChoice" this.policy.STRICT)}}
+        data-test-radio="strict"
+        as |F|
+      >
+        <F.Label>
+          <Hds::Text::Body @tag="p">
+            <strong>Strict isolation required:</strong>
+            our policy mandates hard boundaries (separate ownership and access) between major teams, business units, or
+            applications.
+          </Hds::Text::Body>
+        </F.Label>
+      </G.RadioField>
+    </Hds::Form::Radio::Group>
+  </LG.Item>
+
+  {{#if @wizardState.securityPolicyChoice}}
+    <LG.Item>
+      <Hds::Text::Display @tag="h2" @size="400" @weight="bold" class="has-bottom-padding-m">Your recommended setup</Hds::Text::Display>
+      <Hds::Card::Container @background="neutral-secondary" @hasBorder={{true}} class="has-padding-m">
+        <Hds::Text::Display @tag="h3" @size="200" class="has-bottom-padding-m">{{this.cardInfo.title}}</Hds::Text::Display>
+        <Hds::Text::Body @tag="p">{{this.cardInfo.description}}</Hds::Text::Body>
+
+        {{#if this.cardInfo.diagram}}
+          <img src={{img-path this.cardInfo.diagram}} alt="Namespace hierarchy example" />
+        {{/if}}
+
+        <div class="is-flex-center has-top-padding-m">
+          <Hds::Icon @name="check" @color="success" />
+          <Hds::Text::Body class="has-left-margin-xs"><strong>Best for:</strong></Hds::Text::Body>
+        </div>
+        <ul class="bullet">
+          {{#each this.cardInfo.bestFor as |item|}}
+            <li>{{item}}</li>
+          {{/each}}
+        </ul>
+
+        <div class="is-flex-center has-top-padding-m">
+          <Hds::Icon @name="x" @color="critical" />
+          <Hds::Text::Body class="has-left-margin-xs"><strong>Avoid if:</strong></Hds::Text::Body>
+        </div>
+
+        <ul class="bullet">
+          {{#each this.cardInfo.avoidIf as |item|}}
+            <li>{{item}}</li>
+          {{/each}}
+        </ul>
+      </Hds::Card::Container>
+    </LG.Item>
+  {{/if}}
+</Hds::Layout::Grid>

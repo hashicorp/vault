@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,17 +12,17 @@ import { spy } from 'sinon';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { runCmd, mountEngineCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
   fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import secretsNavTestHelper from 'vault/tests/acceptance/secrets/secrets-nav-test-helper';
 
 module('Acceptance | aws | configuration', function (hooks) {
   setupApplicationTest(hooks);
@@ -44,33 +44,31 @@ module('Acceptance | aws | configuration', function (hooks) {
         max_retries: 1,
       },
     };
+
+    this.mountAndConfig = (backend) => {
+      return runCmd([
+        mountEngineCmd('aws', backend),
+        `write ${backend}/config/root access_key=AKIAJWVN5Z4FOFT7NLNA secret_key=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 region=us-east-1`,
+      ]);
+    };
+    this.expectedConfigEditRoute = 'configuration.edit';
+    this.overviewUrl = (backend) => `/vault/secrets-engines/${backend}/list`;
     return login();
   });
+
+  secretsNavTestHelper(test, 'aws');
 
   module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
     });
 
-    test('it should prompt configuration after mounting the aws engine', async function (assert) {
-      const path = `aws-${this.uid}`;
-      // in this test go through the full mount process. Bypass this step in later tests.
-      await visit('/vault/secrets/mounts');
-      await mountBackend('aws', path);
-      await click(SES.configTab);
-      assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
-      assert.dom(GENERAL.emptyStateActions).hasText('Configure AWS');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
     test('it should transition to configure page on click "Configure" from toolbar', async function (assert) {
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
-      await click(SES.configTab);
-      await click(SES.configure);
-      assert.strictEqual(currentURL(), `/vault/secrets/${path}/configuration/edit`);
-      assert.dom(SES.configureTitle('aws')).hasText('Configure AWS');
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${path}/configuration/edit`);
       assert.dom(SES.configureForm).exists('it lands on the configuration form.');
       assert
         .dom(SES.additionalConfigModelTitle)
@@ -86,7 +84,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       // we are intentionally not redirecting from the old url to the new one.
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
-      await click(SES.configTab);
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
       await visit(`/vault/settings/secrets/configure/${path}`);
       assert.dom(GENERAL.notFound).exists('shows page-error');
       // cleanup
@@ -103,8 +102,8 @@ module('Acceptance | aws | configuration', function (hooks) {
         );
       });
 
-      await click(SES.configTab);
-      await click(SES.configure);
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
       await fillInAwsConfig('withWif');
       await click(GENERAL.submitButton);
       assert.dom(SES.wif.issuerWarningModal).exists('issuer warning modal exists');
@@ -115,6 +114,8 @@ module('Acceptance | aws | configuration', function (hooks) {
         `Successfully saved ${path}'s configuration.`,
         'first flash message about the first model config.'
       );
+      await click(GENERAL.tabLink('plugin-settings'));
+
       assert.dom(GENERAL.infoRowValue('Issuer')).exists('Issuer has been set and is shown.');
       assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
       assert
@@ -141,9 +142,11 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       await enablePage.enable(type, path);
-      await click(SES.configTab);
+      await visit(`/vault/secrets-engines/${path}/configuration/general-settings`);
+      await click(GENERAL.tabLink('plugin-settings'));
+
       assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
-      assert.dom(GENERAL.infoRowLabel('Access key')).exists(`Access key does exists on config details.`);
+      assert.dom(GENERAL.infoRowLabel('Access key')).exists(`Access key does exist on config details.`);
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });
@@ -157,14 +160,15 @@ module('Acceptance | aws | configuration', function (hooks) {
         throw new Error(`post request was made to config/lease when it should not have been.`);
       });
 
-      await click(SES.configTab);
-      await click(SES.configure);
+      await visit(`/vault/secrets-engines/${path}/configuration/edit`);
       await fillInAwsConfig('withAccess');
       await click(GENERAL.submitButton);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
         'Success flash message is rendered showing the configuration was saved.'
       );
+      await click(GENERAL.tabLink('plugin-settings'));
+
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access Key has been set.');
       assert
         .dom(GENERAL.infoRowValue('Secret key'))
@@ -177,9 +181,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // documenting the intention that we show fields that have not been set but are returned by the api due to defaults
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
-
-      await click(SES.configTab);
-      await click(SES.configure);
+      await visit(`/vault/secrets-engines/${path}/configuration/edit`);
       // manually fill in attrs without using helper so we can exclude identity_token_ttl and max_retries.
       await click(SES.wif.accessType('wif')); // toggle to wif
       await fillIn(GENERAL.inputByAttr('role_arn'), 'foo-role');
@@ -188,6 +190,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(GENERAL.button('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
       await click(GENERAL.submitButton);
+      await click(GENERAL.tabLink('plugin-settings'));
+
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
         .hasText('0', 'Identity token TTL shows default.');
@@ -208,7 +212,9 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       await enablePage.enable(type, path);
-      await click(SES.configTab);
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
+      await click(GENERAL.tabLink('plugin-settings'));
 
       for (const key of expectedConfigKeys(type)) {
         if (key === 'Secret key') continue; // secret-key is not returned by the API
@@ -218,10 +224,11 @@ module('Acceptance | aws | configuration', function (hooks) {
           .dom(GENERAL.infoRowValue(key))
           .hasText(responseKeyAndValue, `value for ${key} on the ${type} config details exists.`);
       }
+
       // check mount configuration details are present and accurate.
-      await click(SES.configurationToggle);
+      await visit(`/vault/secrets-engines/${path}/configuration/general-settings`);
       assert
-        .dom(GENERAL.infoRowValue('Path'))
+        .dom(GENERAL.copySnippet('path'))
         .hasText(`${path}/`, 'mount path is displayed in the configuration details');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
@@ -232,10 +239,11 @@ module('Acceptance | aws | configuration', function (hooks) {
       const type = 'aws';
       await enablePage.enable(type, path);
       // create access_key with value foo and confirm it shows up in the details page.
-      await click(SES.configTab);
-      await click(SES.configure);
+      await visit(`/vault/secrets-engines/${path}/configuration/edit`);
       await fillInAwsConfig('withAccess');
       await click(GENERAL.submitButton);
+      await click(GENERAL.tabLink('plugin-settings'));
+
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access key is foo');
       assert
         .dom(GENERAL.infoRowValue('Region'))
@@ -249,6 +257,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       // add lease config details
       await fillInAwsConfig('withLease');
       await click(GENERAL.submitButton);
+      await click(GENERAL.tabLink('plugin-settings'));
+
       assert
         .dom(GENERAL.infoRowValue('Access key'))
         .hasText('not-foo', 'Access key has been updated to not-foo');
@@ -266,8 +276,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
-      await click(SES.configTab);
-      await click(SES.configure);
+      await visit(`/vault/secrets-engines/${path}/configuration/edit`);
       await fillInAwsConfig('withLease');
       await click(GENERAL.submitButton);
 
@@ -277,7 +286,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       );
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${path}/configuration`,
+        `/vault/secrets-engines/${path}/configuration/plugin-settings`,
         'the form transitioned as expected to the details page'
       );
       // cleanup
@@ -294,8 +303,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
       await enablePage.enable(type, path);
-      await click(SES.configTab);
-      await click(SES.configure);
+      await visit(`/vault/secrets-engines/${path}/configuration/edit`);
       assert
         .dom(SES.wif.accessTypeSection)
         .doesNotExist('Access type section does not render for a community user');
@@ -326,8 +334,7 @@ module('Acceptance | aws | configuration', function (hooks) {
             `post request was made to config/lease when the first config was not saved. A request to this endpoint should NOT be be made`
           );
         });
-        await click(SES.configTab);
-        await click(SES.configure);
+        await visit(`/vault/secrets-engines/${path}/configuration/edit`);
         await fillInAwsConfig('withAccess');
         await fillInAwsConfig('withLease');
         await click(GENERAL.submitButton);
@@ -344,8 +351,7 @@ module('Acceptance | aws | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['bad request!'] });
         });
 
-        await click(SES.configTab);
-        await click(SES.configure);
+        await visit(`/vault/secrets-engines/${path}/configuration/edit`);
         await fillInAwsConfig('withLease');
         await click(GENERAL.submitButton);
 
@@ -355,7 +361,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         );
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${path}/configuration`,
+          `/vault/secrets-engines/${path}/configuration/plugin-settings`,
           'lease configuration failed to save but the component transitioned as expected'
         );
         // cleanup
@@ -370,15 +376,14 @@ module('Acceptance | aws | configuration', function (hooks) {
           return overrideResponse(400, { errors: ['welp, that did not work!'] });
         });
 
-        await click(SES.configTab);
-        await click(SES.configure);
+        await visit(`/vault/secrets-engines/${path}/configuration/edit`);
         await fillInAwsConfig('withAccess');
         await click(GENERAL.submitButton);
 
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
         assert.strictEqual(
           currentURL(),
-          `/vault/secrets/${path}/configuration/edit`,
+          `/vault/secrets-engines/${path}/configuration/edit`,
           'the form did not transition because the save failed.'
         );
         // cleanup
@@ -394,8 +399,8 @@ module('Acceptance | aws | configuration', function (hooks) {
         this.server.get(configUrl(type, path), () => {
           return overrideResponse(400, { errors: ['bad request'] });
         });
-        await click(SES.configTab);
-        assert.dom(SES.error.title).hasText('Error', 'shows the secrets backend error route');
+        await visit(`/vault/secrets-engines/${path}/configuration/edit`);
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Error', 'shows the secrets backend error route');
       });
     });
   });

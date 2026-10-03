@@ -1,45 +1,46 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Route from '@ember/routing/route';
+import LdapLibrariesRoute from '../libraries';
 import { service } from '@ember/service';
-import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
-import { hash } from 'rsvp';
 
-import type Store from '@ember-data/store';
+import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type LdapLibraryModel from 'vault/models/ldap/library';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type { LdapApplicationModel } from '../application';
+import type { LdapLibrary } from 'vault/secrets/ldap';
+import type CapabilitiesService from 'vault/services/capabilities';
 
 interface LdapLibrariesRouteModel {
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
-  libraries: Array<LdapLibraryModel>;
+  libraries: LdapLibrary[];
 }
 interface LdapLibrariesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapLibrariesRouteModel;
 }
 
-@withConfig('ldap/config')
-export default class LdapLibrariesRoute extends Route {
-  @service declare readonly store: Store;
+export default class LdapLibrariesIndexRoute extends LdapLibrariesRoute {
+  @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly capabilities: CapabilitiesService;
 
-  declare promptConfig: boolean;
+  async model() {
+    const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
+    const { libraries, capabilities } = await this.fetchLibrariesAndCapabilities();
 
-  model() {
-    const backendModel = this.modelFor('application') as SecretEngineModel;
-    return hash({
-      backendModel,
-      promptConfig: this.promptConfig,
-      libraries: this.store.query('ldap/library', { backend: backendModel.id }),
-    });
+    return {
+      secretsEngine,
+      promptConfig,
+      libraries,
+      capabilities,
+    };
   }
 
   setupController(
@@ -51,7 +52,7 @@ export default class LdapLibrariesRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backendModel.id },
+      { label: resolvedModel.secretsEngine.id, route: 'overview', model: resolvedModel.secretsEngine.id },
       { label: 'Libraries' },
     ];
   }

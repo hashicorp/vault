@@ -1,17 +1,16 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-const root = ['create', 'read', 'update', 'delete', 'list', 'patch'];
+import { ACL_CAPABILITIES, formatCapabilities } from 'core/utils/code-generators/policy';
 
-// returns a string with each capability wrapped in double quotes => ["create", "read"]
-const format = (array) => array.map((c) => `"${c}"`).join(', ');
+const root = ACL_CAPABILITIES;
 
 export const adminPolicy = (backend) => {
   return `
     path "${backend}/*" {
-      capabilities = [${format(root)}]
+      capabilities = [${formatCapabilities(root)}]
     },
   `;
 };
@@ -20,7 +19,7 @@ export const dataPolicy = ({ backend, secretPath = '*', capabilities = root }) =
   // "delete" capability on this path can delete latest version
   return `
     path "${backend}/data/${secretPath}" {
-      capabilities = [${format(capabilities)}]
+      capabilities = [${formatCapabilities(capabilities)}]
     }
   `;
 };
@@ -36,7 +35,7 @@ export const subkeysPolicy = ({ backend, secretPath = '*' }) => {
 export const dataNestedPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
   return `
     path "${backend}/data/app/${secretPath}" {
-      capabilities = [${format(capabilities)}]
+      capabilities = [${formatCapabilities(capabilities)}]
     }
   `;
 };
@@ -45,7 +44,7 @@ export const metadataPolicy = ({ backend, secretPath = '*', capabilities = root 
   // "delete" capability on this path can destroy all versions
   return `
     path "${backend}/metadata/${secretPath}" {
-        capabilities = [${format(capabilities)}]
+        capabilities = [${formatCapabilities(capabilities)}]
     }
   `;
 };
@@ -53,7 +52,7 @@ export const metadataPolicy = ({ backend, secretPath = '*', capabilities = root 
 export const metadataNestedPolicy = ({ backend, secretPath = '*', capabilities = root }) => {
   return `
     path "${backend}/metadata/app/${secretPath}" {
-        capabilities = [${format(capabilities)}]
+        capabilities = [${formatCapabilities(capabilities)}]
     }
   `;
 };

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package configutil
@@ -151,6 +151,11 @@ type Listener struct {
 	DisableRequestLimiter    bool `hcl:"-"`
 
 	// JSON-specific limits
+
+	// DisableJSONLimitParsing disables the checking for JSON limits. This is only applicable to
+	// the listener config passed into the Cluster listener since this would impact forwarded
+	// requests that have already been checked via the API listener on the originating node.
+	DisableJSONLimitParsing bool `hcl:"-"`
 
 	// CustomMaxJSONDepth specifies the maximum nesting depth of a JSON object.
 	CustomMaxJSONDepthRaw interface{} `hcl:"max_json_depth"`

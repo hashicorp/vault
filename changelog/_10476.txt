@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/ldap: Users can now fully manage and tune the LDAP secrets engine. This includes the ability to view, edit, and configure the LDAP engine.
+```

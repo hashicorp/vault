@@ -1,10 +1,10 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title={{this.title}} @subtitle={{this.subtitle}}>
+  <:breadcrumbs>
     <KeyValueHeader
       @baseKey={{this.model}}
       @path="vault.cluster.secrets.backend.list"
@@ -12,20 +12,8 @@
       @root={{this.root}}
       @showCurrent={{true}}
     />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-secret-header="true">
-      {{#if (eq this.mode "create")}}
-        Create an SSH Role
-      {{else if (eq this.mode "edit")}}
-        Edit SSH Role
-      {{else}}
-        SSH Role
-        <code>{{this.model.id}}</code>
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if (eq this.mode "show")}}
   <Toolbar>
@@ -40,16 +28,11 @@
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if (eq this.model.keyType "otp")}}
-        <ToolbarSecretLink
-          @secret={{this.model.id}}
-          @mode="credentials"
-          data-test-backend-credentials={{true}}
-          @replace={{true}}
-        >
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials @replace={{true}}>
           Generate Credential
         </ToolbarSecretLink>
       {{else}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" data-test-backend-credentials={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" data-test-backend-credentials @replace={{true}}>
           Sign Keys
         </ToolbarSecretLink>
       {{/if}}

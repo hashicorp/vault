@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,10 +9,12 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import Sinon from 'sinon';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki/pki-selectors';
+import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import sinon from 'sinon';
 
 module('Integration | Component | pki-generate-root', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,23 +22,51 @@ module('Integration | Component | pki-generate-root', function (hooks) {
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(async function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-test';
-    this.urls = this.store.createRecord('pki/config/urls', { id: 'pki-test' });
-    this.model = this.store.createRecord('pki/action');
-    this.onSave = Sinon.spy();
-    this.onCancel = Sinon.spy();
+    this.owner.lookup('service:secretMountPath').update('pki-test');
+
+    this.capabilitiesForStub = sinon
+      .stub(this.owner.lookup('service:capabilities'), 'for')
+      .resolves({ canCreate: false });
+
+    const api = this.owner.lookup('service:api');
+    this.issuersGenerateStub = sinon.stub(api.secrets, 'pkiIssuersGenerateRoot');
+    this.generateStub = sinon.stub(api.secrets, 'pkiGenerateRoot');
+    this.rotateStub = sinon.stub(api.secrets, 'pkiRotateRoot');
+
+    this.withUrls = true;
+    this.canSetUrls = true;
+    this.onCancel = sinon.stub();
+    this.onComplete = sinon.stub();
+    this.onSave = sinon.stub();
+
+    this.renderComponent = () =>
+      render(
+        hbs`
+          <PkiGenerateRoot
+            @withUrls={{this.withUrls}}
+            @canSetUrls={{this.canSetUrls}}
+            @rotateCertData={{this.rotateCertData}}
+            @capabilities={{this.capabilities}}
+            @onCancel={{this.onCancel}}
+            @onSave={{this.onSave}}
+            @onComplete={{this.onComplete}}
+          />
+        `,
+        {
+          owner: this.engine,
+        }
+      );
+
+    this.fillInAndSubmit = async (type) => {
+      await fillIn(GENERAL.inputByAttr('type'), type);
+      await fillIn(GENERAL.inputByAttr('common_name'), 'foo');
+      await click(GENERAL.submitButton);
+    };
   });
 
   test('it renders with correct sections', async function (assert) {
-    await render(
-      hbs`<PkiGenerateRoot @model={{this.model}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    this.withUrls = false;
+    await this.renderComponent();
 
     assert.dom('h2').exists({ count: 1 }, 'One H2 title without @urls');
     assert.dom(PKI_GENERATE_ROOT.mainSectionTitle).hasText('Root parameters');
@@ -48,12 +78,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
   });
 
   test('it shows the appropriate fields under the toggles', async function (assert) {
-    await render(
-      hbs`<PkiGenerateRoot @model={{this.model}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await this.renderComponent();
 
     await click(GENERAL.button('Additional subject fields'));
     assert
@@ -86,19 +111,14 @@ module('Integration | Component | pki-generate-root', function (hooks) {
   });
 
   test('it renders the correct form fields in key params', async function (assert) {
-    this.set('type', '');
-    await render(
-      hbs`<PkiGenerateRoot @model={{this.model}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await this.renderComponent();
+
     await click(GENERAL.button('Key parameters'));
     assert
       .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 0 }, '0 form fields under keyParams toggle');
 
-    this.set('type', 'exported');
+    this.type = 'exported';
     await fillIn(GENERAL.inputByAttr('type'), this.type);
     assert
       .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
@@ -106,15 +126,14 @@ module('Integration | Component | pki-generate-root', function (hooks) {
         'This certificate type is exported. This means the private key will be returned in the response. Below, you will name the key and define its type and key bits.',
         `has correct description for type=${this.type}`
       );
-    assert.strictEqual(this.model.type, this.type);
     assert
       .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 4 }, '4 form fields under keyParams toggle');
-    assert.dom(GENERAL.fieldByAttr('keyName')).exists(`Key name field shown when type=${this.type}`);
-    assert.dom(GENERAL.fieldByAttr('keyType')).exists(`Key type field shown when type=${this.type}`);
-    assert.dom(GENERAL.fieldByAttr('keyBits')).exists(`Key bits field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_name')).exists(`Key name field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_type')).exists(`Key type field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_bits')).exists(`Key bits field shown when type=${this.type}`);
 
-    this.set('type', 'internal');
+    this.type = 'internal';
     await fillIn(GENERAL.inputByAttr('type'), this.type);
     assert
       .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
@@ -122,13 +141,12 @@ module('Integration | Component | pki-generate-root', function (hooks) {
         'This certificate type is internal. This means that the private key will not be returned and cannot be retrieved later. Below, you will name the key and define its type and key bits.',
         `has correct description for type=${this.type}`
       );
-    assert.strictEqual(this.model.type, this.type);
     assert
       .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 3 }, '3 form fields under keyParams toggle');
-    assert.dom(GENERAL.fieldByAttr('keyName')).exists(`Key name field shown when type=${this.type}`);
-    assert.dom(GENERAL.fieldByAttr('keyType')).exists(`Key type field shown when type=${this.type}`);
-    assert.dom(GENERAL.fieldByAttr('keyBits')).exists(`Key bits field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_name')).exists(`Key name field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_type')).exists(`Key type field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_bits')).exists(`Key bits field shown when type=${this.type}`);
 
     this.set('type', 'existing');
     await fillIn(GENERAL.inputByAttr('type'), this.type);
@@ -138,11 +156,10 @@ module('Integration | Component | pki-generate-root', function (hooks) {
         'You chose to use an existing key. This means that we’ll use the key reference to create the CSR or root. Please provide the reference to the key.',
         `has correct description for type=${this.type}`
       );
-    assert.strictEqual(this.model.type, this.type);
     assert
       .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 1 }, '1 form field under keyParams toggle');
-    assert.dom(GENERAL.fieldByAttr('keyRef')).exists(`Key reference field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_ref')).exists(`Key reference field shown when type=${this.type}`);
 
     this.set('type', 'kms');
     await fillIn(GENERAL.inputByAttr('type'), this.type);
@@ -152,53 +169,69 @@ module('Integration | Component | pki-generate-root', function (hooks) {
         'This certificate type is kms, meaning managed keys will be used. Below, you will name the key and tell Vault where to find it in your KMS or HSM. Learn more about managed keys.',
         `has correct description for type=${this.type}`
       );
-    assert.strictEqual(this.model.type, this.type);
     assert
       .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 3 }, '3 form fields under keyParams toggle');
-    assert.dom(GENERAL.fieldByAttr('keyName')).exists(`Key name field shown when type=${this.type}`);
+    assert.dom(GENERAL.fieldByAttr('key_name')).exists(`Key name field shown when type=${this.type}`);
     assert
-      .dom(GENERAL.fieldByAttr('managedKeyName'))
+      .dom(GENERAL.fieldByAttr('managed_key_name'))
       .exists(`Managed key name field shown when type=${this.type}`);
     assert
-      .dom(GENERAL.fieldByAttr('managedKeyId'))
+      .dom(GENERAL.fieldByAttr('managed_key_id'))
       .exists(`Managed key id field shown when type=${this.type}`);
   });
 
   test('it shows errors before submit if form is invalid', async function (assert) {
-    const saveSpy = Sinon.spy();
-    this.set('onSave', saveSpy);
-    await render(
-      hbs`<PkiGenerateRoot @model={{this.model}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
-      {
-        owner: this.engine,
-      }
-    );
+    await this.renderComponent();
 
     await click(GENERAL.submitButton);
     assert.dom(PKI_GENERATE_ROOT.formInvalidError).exists('Shows overall error form');
-    assert.ok(saveSpy.notCalled);
+    assert.true(this.onSave.notCalled);
+  });
+
+  test('it should use correct endpoint based on issuer permissions', async function (assert) {
+    assert.expect(6);
+
+    this.rotateCertData = parseCertificate(CERTIFICATES.loadedCert);
+    this.rotateStub.rejects(getErrorResponse());
+
+    await this.renderComponent();
+    await this.fillInAndSubmit('exported');
+
+    assert.true(this.rotateStub.calledOnce, 'rotate endpoint used when rotating');
+    assert.dom(GENERAL.messageError).exists('error message shown');
+
+    this.rotateCertData = undefined;
+    this.capabilitiesForStub.resolves({ canCreate: true });
+    this.issuersGenerateStub.rejects(getErrorResponse());
+    await this.renderComponent();
+    await this.fillInAndSubmit('exported');
+
+    assert.true(
+      this.capabilitiesForStub.calledWith('pkiIssuersGenerateRoot', {
+        backend: 'pki-test',
+        type: 'exported',
+      })
+    );
+    assert.true(this.issuersGenerateStub.calledOnce, 'issuers generate endpoint used when permitted');
+    assert.dom(GENERAL.messageError).exists('error message shown');
+
+    this.capabilitiesForStub.resolves({ canCreate: false });
+    this.generateStub.resolves({});
+    await click(GENERAL.submitButton);
+
+    assert.true(this.generateStub.calledOnce, 'generate endpoint used when there is no issuer permission');
   });
 
   module('URLs section', function () {
     test('it does not render when no urls passed', async function (assert) {
-      await render(
-        hbs`<PkiGenerateRoot @model={{this.model}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
-        {
-          owner: this.engine,
-        }
-      );
-
+      this.withUrls = false;
+      await this.renderComponent();
       assert.dom(PKI_GENERATE_ROOT.urlsSection).doesNotExist();
     });
 
     test('it renders when urls model passed', async function (assert) {
-      await render(
-        hbs`<PkiGenerateRoot @model={{this.model}} @urls={{this.urls}} @onSave={{this.onSave}} @onCancel={{this.onCancel}} />`,
-        {
-          owner: this.engine,
-        }
-      );
+      await this.renderComponent();
       assert.dom(PKI_GENERATE_ROOT.urlsSection).exists();
       assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
       assert.dom(PKI_GENERATE_ROOT.urlSectionTitle).hasText('Issuer URLs');

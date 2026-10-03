@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -144,6 +144,6 @@ func (a *acmeBillingImpl) CreateActivityCountEventForIdentifiers(ctx context.Con
 	return nil
 }
 
-func (a *acmeBillingImpl) GetPkiCertificateCounter() logical.PkiCertificateCounter {
+func (a *acmeBillingImpl) GetPkiCertificateCounter() logical.CertificateCounter {
 	return a.core.GetPkiCertificateCounter()
 }

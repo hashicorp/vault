@@ -1,13 +1,18 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, typeIn } from '@ember/test-helpers';
+import { render, click, typeIn, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
+import {
+  allowAllCapabilitiesStub,
+  capabilitiesStub,
+  noopStub,
+  overrideResponse,
+} from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
@@ -23,9 +28,8 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
 
   hooks.beforeEach(function () {
     this.flashMessages = this.owner.lookup('service:flash-messages');
-    this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
-    this.store = this.owner.lookup('service:store');
+    this.flashWarningSpy = sinon.spy(this.flashMessages, 'warning');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.server.post('/sys/mounts/foo', noopStub());
     this.onMountSuccess = sinon.spy();
@@ -95,15 +99,51 @@ module('Integration | Component | mount/secrets-engine-form', function (hooks) {
     );
   });
 
-  module('KV engine', function () {
-    test('it shows KV specific fields when type is kv', async function (assert) {
+  module('KV engine', function (hooks) {
+    hooks.beforeEach(function () {
       this.model.type = 'kv';
+    });
+
+    test('it shows KV specific fields when type is kv', async function (assert) {
       await render(
         hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert.dom(GENERAL.inputByAttr('kv_config.max_versions')).exists('shows max versions field');
       assert.dom(GENERAL.inputByAttr('kv_config.cas_required')).exists('shows CAS required field');
       assert.dom(GENERAL.inputByAttr('kv_config.delete_version_after')).exists('shows delete after field');
+    });
+
+    test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
+      assert.expect(6);
+      this.server.post('/sys/capabilities-self', () => capabilitiesStub('my-kv-engine/config', ['deny']));
+      this.server.post('/sys/mounts/my-kv-engine', (schema, req) => {
+        assert.true(true, 'it makes request to mount engine');
+        const payload = JSON.parse(req.requestBody);
+        const expected = {
+          config: { listing_visibility: 'hidden', force_no_cache: false },
+          options: { version: 2 },
+          type: 'kv',
+        };
+        assert.propEqual(payload, expected, 'mount request has expected payload');
+        return overrideResponse(204);
+      });
+
+      await render(
+        hbs`<Mount::SecretsEngineForm @model={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+      );
+      await fillIn(GENERAL.inputByAttr('path'), 'my-kv-engine');
+      await fillIn(GENERAL.inputByAttr('kv_config.max_versions'), '101');
+      await click(GENERAL.submitButton);
+      const [message] = this.flashWarningSpy.lastCall.args;
+      assert.strictEqual(
+        message,
+        `You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.`,
+        'it calls warning flash with expected message'
+      );
+      const [type, enginePath, useEngineRoute] = this.onMountSuccess.lastCall.args;
+      assert.strictEqual(type, 'kv', 'onMountSuccess called with expected type');
+      assert.strictEqual(enginePath, 'my-kv-engine', 'onMountSuccess called with expected engine path');
+      assert.true(useEngineRoute, 'onMountSuccess called useEngineRoute: true');
     });
   });
 

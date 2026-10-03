@@ -2,7 +2,7 @@
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,7 +10,7 @@
   background-color: hsl(0, 0%, 100%);
   border-radius: 0;
   box-shadow: 0 0 0 1px rgba(var(--token-color-palette-neutral-500), 0.3);
-  color: var(--token-color-palette-neutral-600);
+  color: var(--token-color-foreground-primary);
   display: block;
   padding: size_variables.$spacing-18;
 
@@ -21,10 +21,6 @@
   &.is-fullwidth {
     padding-left: 0;
     padding-right: 0;
-  }
-
-  &.no-padding-top {
-    padding-top: 0;
   }
 
   &.has-slim-padding {

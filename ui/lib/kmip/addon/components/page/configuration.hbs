@@ -1,0 +1,57 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header
+  @title="{{@secretsEngine.id}} configuration"
+  @description="KMIP"
+  @icon={{@secretsEngine.icon}}
+  @configRoute="configuration"
+>
+  <:breadcrumbs>
+    <KmipBreadcrumb @showPath={{true}} @configRoute="configuration" />
+  </:breadcrumbs>
+  <:actions>
+    <Hds::Button @color="secondary" @route="scopes" @text="Exit configuration" data-test-button="Exit configuration" />
+  </:actions>
+</Page::Header>
+
+<KmipTabs @path={{@secretsEngine.id}} @configRoute="configuration" />
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if @config.ca_pem}}
+      <DownloadButton
+        class="toolbar-button"
+        @color="secondary"
+        @filename={{concat this.secretMountPath.currentPath "-ca"}}
+        @data={{@config.ca_pem}}
+        @extension="pem"
+        @text="Download CA cert"
+        data-test-kmip-toolbar-action="download"
+      />
+    {{/if}}
+    <ToolbarLink @route="configure" data-test-kmip-toolbar-action="config">
+      Configure
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#if @config}}
+  {{#each this.displayFields as |field|}}
+    <InfoTableRow
+      @label={{field.label}}
+      @value={{get @config field.key}}
+      @formatTtl={{eq field.key "default_tls_client_ttl"}}
+    />
+  {{/each}}
+  <InfoTableRow @label="CA PEM">
+    <MaskedInput @value={{@config.ca_pem}} @displayOnly={{true}} @allowCopy={{true}} />
+  </InfoTableRow>
+{{else}}
+  <EmptyState
+    @title="No configuration for this secrets engine"
+    @message="We'll need to configure a few things before getting started."
+  />
+{{/if}}

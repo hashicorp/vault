@@ -1,0 +1,111 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if this.version.isEnterprise}}
+  {{#if (has-block "customTrigger")}}
+    {{! Passes the open flyout action to any yielded component }}
+    {{yield this.openFlyout to="customTrigger"}}
+  {{else}}
+    <Hds::Button
+      @icon="file-plus"
+      @text="Generate policy"
+      @color="secondary"
+      @iconPosition="trailing"
+      {{on "click" this.openFlyout}}
+      data-test-button="Generate policy"
+    />
+  {{/if}}
+
+  {{#if this.showFlyout}}
+    <Hds::Flyout id="policy-generator-flyout" @onClose={{this.closeFlyout}} @size="large" data-test-flyout as |M|>
+      <M.Header @icon="shield-check">
+        Policy generator
+      </M.Header>
+
+      <M.Body>
+        <Hds::Form id="flyout-policy-form" {{on "submit" (perform this.onSave)}} data-test-policy-form as |FORM|>
+          {{#if this.errorMessage}}
+            <FORM.Section @isFullWidth={{true}}>
+              <MessageError @errorMessage={{this.errorMessage}} />
+            </FORM.Section>
+          {{/if}}
+
+          <FORM.Section @isFullWidth={{true}}>
+            <Hds::Form::TextInput::Field
+              name="name"
+              @value={{this.policyName}}
+              @isInvalid={{this.validationError "name"}}
+              placeholder="Enter the policy name"
+              autocomplete="off"
+              spellcheck="false"
+              data-test-input="name"
+              {{on "input" this.handleNameInput}}
+              as |F|
+            >
+              <F.Label>Policy name</F.Label>
+              {{#if (this.validationError "name")}}
+                <F.Error data-test-validation-error="name">{{this.validationError "name"}}</F.Error>
+              {{/if}}
+            </Hds::Form::TextInput::Field>
+          </FORM.Section>
+
+          <FORM.Section @isFullWidth={{true}} as |FS|>
+            <FS.Header>
+              <Hds::Text::Body @size="200" @weight="semibold" @tag="h2">Policy rules</Hds::Text::Body>
+              <Hds::Text::Body @tag="p">
+                Use
+                <Hds::Text::Code class="code-in-text">*</Hds::Text::Code>
+                for wildcard matching.
+              </Hds::Text::Body>
+            </FS.Header>
+
+            <CodeGenerator::Policy::Builder
+              @policyName={{this.policyName}}
+              @onPolicyChange={{this.handlePolicyChange}}
+              @stanzas={{this.stanzas}}
+              data-test-field="visual editor"
+            />
+          </FORM.Section>
+
+          <FORM.Separator />
+
+          <FORM.Section @isFullWidth={{true}}>
+            <Hds::Accordion @size="medium" as |A|>
+              <A.Item data-test-accordion="Automation snippets">
+                <:toggle>Automation snippets</:toggle>
+                <:content>
+                  <CodeGenerator::AutomationSnippets
+                    @cliArgs={{this.snippetArgs.cli}}
+                    @tfvpArgs={{this.snippetArgs.terraform}}
+                  />
+                </:content>
+              </A.Item>
+            </Hds::Accordion>
+          </FORM.Section>
+        </Hds::Form>
+      </M.Body>
+
+      <M.Footer as |F|>
+        <Hds::ButtonSet>
+          <Hds::Button
+            @text="Save"
+            @icon={{if this.onSave.isRunning "loading"}}
+            type="submit"
+            form="flyout-policy-form"
+            disabled={{this.onSave.isRunning}}
+            data-test-submit
+          />
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            disabled={{this.onSave.isRunning}}
+            {{on "click" F.close}}
+            data-test-cancel
+          />
+        </Hds::ButtonSet>
+      </M.Footer>
+    </Hds::Flyout>
+  {{/if}}
+{{/if}}

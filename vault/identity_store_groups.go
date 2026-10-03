@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -34,6 +34,10 @@ func groupPathFields() map[string]*framework.FieldSchema {
 		"name": {
 			Type:        framework.TypeString,
 			Description: "Name of the group.",
+		},
+		"scim_client_id": {
+			Type:        framework.TypeString,
+			Description: "SCIM Client ID of the entity",
 		},
 		"metadata": {
 			Type: framework.TypeKVPairs,
@@ -307,6 +311,12 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			return logical.ErrorResponse("group name is already in use"), nil
 		}
 		group.Name = groupName
+	}
+
+	_, ok = d.Schema["scim_client_id"]
+	if ok {
+		entitSCIMClientID := d.Get("scim_client_id").(string)
+		group.ScimClientID = entitSCIMClientID
 	}
 
 	metadata, ok, err := d.GetOkErr("metadata")

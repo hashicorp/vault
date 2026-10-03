@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,6 +9,7 @@ import EmberObject from '@ember/object';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | keymgmt/key-edit', function (hooks) {
@@ -43,7 +44,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
   test('it renders show view as default', async function (assert) {
     assert.expect(8);
     await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @tab={{this.tab}} />`);
-    assert.dom('[data-test-secret-header]').hasText('Unicorns', 'Shows key name');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Unicorns', 'Shows key name');
     assert.dom('[data-test-keymgmt-key-toolbar]').exists('Subnav toolbar exists');
     assert.dom('[data-test-tab="Details"]').exists('Details tab exists');
     assert.dom('[data-test-tab="Versions"]').exists('Versions tab exists');
@@ -67,7 +68,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.set('model', model);
 
     await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
-    assert.dom('[data-test-secret-header]').hasText('Edit Key', 'Shows edit header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
     assert.dom('[data-test-tab="Versions"]').doesNotExist('Versions tab does not exist');
@@ -80,7 +81,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     this.set('model', model);
 
     await render(hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} />`);
-    assert.dom('[data-test-secret-header]').hasText('Create Key', 'Shows edit header');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
     assert.dom('[data-test-tab="Versions"]').doesNotExist('Versions tab does not exist');

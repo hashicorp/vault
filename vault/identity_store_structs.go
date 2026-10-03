@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -100,6 +100,10 @@ type IdentityStore struct {
 	// buckets
 	groupPacker *storagepacker.StoragePacker
 
+	// groupPacker is used to pack multiple group storage entries into 256
+	// buckets
+	scimConfigPacker *storagepacker.StoragePacker
+
 	// disableLowerCaseNames indicates whether or not identity artifacts are
 	// operated case insensitively
 	disableLowerCasedNames bool
@@ -129,6 +133,9 @@ type IdentityStore struct {
 
 	// activateDeduplicationDone is a channel used for synchronization in testing
 	activateDeduplicationDone chan struct{}
+
+	// scimEnabled is used to indicate if SCIM paths are enabled and if SCIM operations can be performed.
+	scimEnabled bool
 }
 
 type groupDiff struct {

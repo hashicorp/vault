@@ -1,9 +1,10 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package quotas
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -16,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -31,12 +33,32 @@ path "/auth/token/lookup" {
 `
 )
 
+// panicAuthBackend creates an auth backend that panics when req.Storage is nil during ResolveRoleOperation
+func panicAuthBackend() logical.Factory {
+	return func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+		return &vault.NoopBackend{
+			BackendType: logical.TypeCredential,
+			RequestHandler: func(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+				if req.Operation == logical.ResolveRoleOperation {
+					if req.Storage == nil {
+						// Simulate the panic scenario
+						panic("req.Storage is nil during role resolution")
+					}
+					return &logical.Response{}, nil
+				}
+				return &logical.Response{}, nil
+			},
+		}, nil
+	}
+}
+
 var coreConfig = &vault.CoreConfig{
 	LogicalBackends: map[string]logical.Factory{
 		"pki": pki.Factory,
 	},
 	CredentialBackends: map[string]logical.Factory{
-		"userpass": userpass.Factory,
+		"userpass":  userpass.Factory,
+		"panicauth": panicAuthBackend(),
 	},
 }
 
@@ -765,4 +787,44 @@ func TestQuotas_RateLimit_ZeroRetryRegression(t *testing.T) {
 	}
 	wg.Wait()
 	require.False(t, failed.Load())
+}
+
+// TestQuotas_RateLimit_NilStorage_ResolveRole tests rate limit quota creation
+// with role-based auth backends using external HTTP API calls. This is a
+// blackbox test that verifies the nil storage protection works through the
+// API.
+func TestQuotas_RateLimit_NilStorage_ResolveRole(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	}, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Enable our custom panic auth method which will panic on nil storage
+	err := client.Sys().EnableAuthWithOptions("panicauth", &api.EnableAuthOptions{
+		Type: "panicauth",
+	})
+	require.NoError(t, err)
+
+	// Create a rate limit quota with a role - this should trigger role resolution
+	_, err = client.Logical().Write("sys/quotas/rate-limit/test-quota", map[string]interface{}{
+		"name":     "test-quota",
+		"path":     "auth/panicauth/",
+		"role":     "testuser",
+		"rate":     10.0,
+		"interval": "1s",
+	})
+
+	// This should succeed without panicking due to nil storage protection
+	require.NoError(t, err, "Rate limit quota creation should not fail due to nil storage panic")
+
+	// Verify the quota was created
+	resp, err := client.Logical().Read("sys/quotas/rate-limit/test-quota")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Equal(t, "test-quota", resp.Data["name"])
+	require.Equal(t, "auth/panicauth/", resp.Data["path"])
+	require.Equal(t, "testuser", resp.Data["role"])
 }

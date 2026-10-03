@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -36,6 +36,59 @@
 
   .vault-loading-order-4 {
     animation-delay: 0.4s;
+  }
+
+  // Transform origins for each polygon
+  .vault-loading-y1-1 {
+    transform-origin: 5px 5px;
+  }
+  .vault-loading-y1-2 {
+    transform-origin: 10px 5px;
+  }
+  .vault-loading-y1-3 {
+    transform-origin: 15px 5px;
+  }
+  .vault-loading-y1-4 {
+    transform-origin: 20px 5px;
+  }
+  .vault-loading-y1-5 {
+    transform-origin: 25px 5px;
+  }
+  .vault-loading-y1-6 {
+    transform-origin: 30px 5px;
+  }
+  .vault-loading-y1-7 {
+    transform-origin: 35px 5px;
+  }
+
+  .vault-loading-y2-1 {
+    transform-origin: 10px 15px;
+  }
+  .vault-loading-y2-2 {
+    transform-origin: 15px 15px;
+  }
+  .vault-loading-y2-3 {
+    transform-origin: 20px 15px;
+  }
+  .vault-loading-y2-4 {
+    transform-origin: 25px 15px;
+  }
+  .vault-loading-y2-5 {
+    transform-origin: 30px 15px;
+  }
+
+  .vault-loading-y3-1 {
+    transform-origin: 15px 25px;
+  }
+  .vault-loading-y3-2 {
+    transform-origin: 20px 25px;
+  }
+  .vault-loading-y3-3 {
+    transform-origin: 25px 25px;
+  }
+
+  .vault-loading-y4-1 {
+    transform-origin: 20px 35px;
   }
 }
 

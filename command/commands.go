@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -95,6 +95,8 @@ const (
 	flagNameAllowedManagedKeys = "allowed-managed-keys"
 	// flagNamePluginVersion selects what version of a plugin should be used.
 	flagNamePluginVersion = "plugin-version"
+	// flagNameOverridePinnedVersion is the flag name used for allowing plugin-version to override the pinned plugin version
+	flagNameOverridePinnedVersion = "override-pinned-version"
 	// flagNameIdentityTokenKey selects the key used to sign plugin identity tokens
 	flagNameIdentityTokenKey = "identity-token-key"
 	// flagNameTrimRequestTrailingSlashes selects the key used to determine whether to trim trailing slashes

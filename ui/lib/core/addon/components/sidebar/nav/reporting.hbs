@@ -1,0 +1,34 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::AppSideNav::Portal @ariaLabel="Reporting Navigation Links" data-test-sidebar-nav-panel="Reporting" as |Nav|>
+  <Nav.BackLink
+    @route="vault.cluster"
+    @current-when={{false}}
+    @icon="arrow-left"
+    @text="Back to main navigation"
+    data-test-sidebar-nav-link="Back to main navigation"
+  />
+
+  <Nav.Title data-test-sidebar-nav-heading="Reporting">Reporting</Nav.Title>
+  {{#if this.canAccessVaultUsageDashboard}}
+    <Nav.Link @route="vault.cluster.usage-reporting" @text="Vault usage" data-test-sidebar-nav-link="Vault usage" />
+  {{/if}}
+  {{#if
+    (and
+      this.version.features
+      this.isRootNamespace
+      (has-permission "status" routeParams="license")
+      (not this.cluster.dr.isSecondary)
+    )
+  }}
+    <Nav.Link
+      @route="vault.cluster.license"
+      @model={{this.cluster.name}}
+      @text="License"
+      data-test-sidebar-nav-link="License"
+    />
+  {{/if}}
+</Hds::AppSideNav::Portal>

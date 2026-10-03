@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -53,7 +53,7 @@ func newGithubListWorkflowRunsCmd() *cobra.Command {
 func runListGithubWorkflowsCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.Github)
+	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.GithubV3)
 	if err != nil {
 		return fmt.Errorf("listing github workflow runs: %w", err)
 	}

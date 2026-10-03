@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -100,7 +100,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
 
       // create a new key
-      await click('[data-test-breadcrumb-link="oidc-keys"] a');
+      await click(GENERAL.breadcrumbLink('Keys'));
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.access.oidc.keys.index',
@@ -261,7 +261,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
       await visit(OIDC_BASE_URL);
       await click('[data-test-oidc-client-linked-block]');
-      assert.dom('[data-test-oidc-client-header]').hasText('test-app', 'renders application name as title');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('test-app', 'renders application name as title');
       assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
       assert.dom(SELECTORS.clientDeleteButton).exists('toolbar renders delete option');
       assert.dom(SELECTORS.clientEditButton).exists('toolbar renders edit button');
@@ -293,7 +293,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       await visit(OIDC_BASE_URL);
       await click('[data-test-oidc-client-linked-block]');
-      assert.dom('[data-test-oidc-client-header]').hasText('test-app', 'renders application name as title');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('test-app', 'renders application name as title');
       assert.dom(SELECTORS.clientDetailsTab).hasClass('active', 'details tab is active');
       assert.dom(SELECTORS.clientDeleteButton).doesNotExist('delete option is hidden');
       assert.dom(SELECTORS.clientEditButton).doesNotExist('edit button is hidden');
@@ -355,7 +355,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       await visit(OIDC_BASE_URL);
       assert.strictEqual(currentURL(), '/vault/access/oidc');
-      assert.dom('h1.title.is-3').hasText('OIDC Provider');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('OIDC Provider');
       assert.dom(SELECTORS.oidcHeader).hasText(
         `Configure Vault to act as an OIDC identity provider, and offer Vault’s various authentication
       methods and source of identity to any client applications. Learn more Create your first app`,
@@ -518,7 +518,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'vault.cluster.access.oidc.assignments.create',
         'navigates to create form'
       );
-      assert.dom('[data-test-oidc-assignment-title]').hasText('Create Assignment', 'Form title renders');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Assignment', 'Form title renders');
       await fillIn('[data-test-input="name"]', 'test-assignment');
       await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
       await click('.ember-power-select-option');
@@ -545,7 +545,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'vault.cluster.access.oidc.assignments.assignment.edit',
         'navigates to the assignment edit page from details'
       );
-      assert.dom('[data-test-oidc-assignment-title]').hasText('Edit Assignment', 'Form title renders');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Assignment', 'Form title renders');
       await click('[data-test-component="search-select"]#groups .ember-basic-dropdown-trigger');
       await click('.ember-power-select-option');
       assert.dom('[data-test-oidc-assignment-save]').hasText('Update');
@@ -638,9 +638,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       await visit(OIDC_BASE_URL + '/assignments');
       await click('[data-test-oidc-assignment-linked-block="test-assignment"]');
-      assert
-        .dom('[data-test-oidc-assignment-title]')
-        .hasText('test-assignment', 'renders assignment name as title');
+      assert.dom(GENERAL.hdsPageHeaderTitle).hasText('test-assignment', 'renders assignment name as title');
       assert.dom(SELECTORS.assignmentDetailsTab).hasClass('active', 'details tab is active');
       assert.dom(SELECTORS.assignmentDeleteButton).doesNotExist('delete option is hidden');
       assert.dom(SELECTORS.assignmentEditButton).doesNotExist('edit button is hidden');

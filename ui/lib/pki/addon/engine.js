@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -17,18 +17,23 @@ export default class PkiEngine extends Engine {
   Resolver = Resolver;
   dependencies = {
     services: [
+      'api',
       'auth',
+      'capabilities',
       'download',
       'flash-messages',
       'namespace',
       'path-help',
       'app-router',
       'secret-mount-path',
-      'store',
-      'pagination',
       'version',
     ],
-    externalRoutes: ['secrets', 'secretsListRootConfiguration', 'externalMountIssuer'],
+    externalRoutes: [
+      'secrets',
+      'secretsListRootConfiguration',
+      'externalMountIssuer',
+      'secretsGeneralSettingsConfiguration',
+    ],
   };
 }
 

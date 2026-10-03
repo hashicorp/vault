@@ -1,7 +1,7 @@
 @use 'utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -19,8 +19,8 @@
 }
 
 #docfy-content {
-  font-size: 16px;
-  font-family: var(--token-typography-display-300-font-family);
+  font-size: var(--token-typography-body-300-font-size);
+  font-family: var(--token-typography-font-stack-text);
   margin-left: 1.5rem;
   margin-right: 2rem;
   margin-top: 1.5rem;
@@ -60,14 +60,14 @@
 
   pre,
   code {
-    background-color: var(--token-color-palette-neutral-100);
+    background-color: var(--token-color-surface-strong);
   }
 
   blockquote {
     margin-left: 1rem;
     padding: 0.5rem;
-    background: var(--token-color-palette-neutral-50);
-    border-radius: 6px;
+    background: var(--token-color-surface-faint);
+    border-radius: var(--token-border-radius-medium);
   }
 
   code {
@@ -87,7 +87,7 @@
     margin-bottom: 1rem;
     padding: 1rem;
     text-align: left;
-    border-radius: 6px;
+    border-radius: var(--token-border-radius-medium);
   }
 
   table {
@@ -107,7 +107,7 @@
 
   .docfy-demo {
     border: 1px solid var(--token-color-palette-neutral-50);
-    border-radius: 6px;
+    border-radius: var(--token-border-radius-medium);
     padding: 1rem;
     overflow: scroll;
 

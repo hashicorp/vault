@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -190,7 +190,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	autoSeal := NewAutoSeal(testSealAccess)
 	autoSeal.SetCore(core)
 	core.seal = autoSeal
-	autoSeal.StartHealthCheck()
+	autoSeal.StartHealthCheck(t.Context())
 	defer autoSeal.StopHealthCheck()
 	wrappers[0].SetError(errors.New("disconnected"))
 

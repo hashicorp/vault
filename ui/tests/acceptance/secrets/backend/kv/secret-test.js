@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -14,7 +14,7 @@ import listPage from 'vault/tests/pages/secrets/backend/list';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -58,7 +58,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       await click(GENERAL.submitButton);
 
-      await click(PAGE.secretTab('Configuration'));
+      await click(GENERAL.dropdownToggle('Manage'));
+      await click(GENERAL.menuItem('Configure'));
+      await click(GENERAL.tabLink('plugin-settings'));
 
       assert
         .dom(PAGE.infoRowValue('Maximum number of versions'))
@@ -70,7 +72,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         .dom(PAGE.infoRowValue('Automate secret deletion'))
         .hasText('1 second', 'displays the delete version after set when configuring the secret-engine');
       // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
-      await visit('/vault/secrets');
+      await visit('/vault/secrets-engines');
       await deleteEngine(enginePath, assert);
     });
 
@@ -81,7 +83,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await showPage.visit({ backend: 'test', id: 'a' });
       assert.ok(showPage.editIsPresent, 'renders the page properly');
       // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
-      await visit('/vault/secrets');
+      await visit('/vault/secrets-engines');
       await deleteEngine('test', assert);
     });
   });
@@ -94,6 +96,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     hooks.afterEach(async function () {
       await runCmd([`delete sys/mounts/${this.backend}`]);
     });
+
     test('it can create a secret when check-and-set is required', async function (assert) {
       const secretPath = 'foo/bar';
       const output = await runCmd(`write ${this.backend}/config cas_required=true`);
@@ -102,7 +105,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         `Success! Data written to: ${this.backend}/config`,
         'Engine successfully updated'
       );
-      await visit(`/vault/secrets/kv/list`);
+      await visit(`/vault/secrets-engines/kv/list`);
       await writeSecret(this.backend, secretPath, 'foo', 'bar');
       assert.strictEqual(
         currentRouteName(),
@@ -110,6 +113,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirects to the overview page'
       );
     });
+
     test('it navigates to version history and to a specific version', async function (assert) {
       assert.expect(4);
       const secretPath = `specific-version`;
@@ -126,7 +130,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/kv/${secretPath}/details?version=2`,
+        `/vault/secrets-engines/${this.backend}/kv/${secretPath}/details?version=2`,
         'redirects to the show page with queryParam version=2'
       );
     });
@@ -143,9 +147,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.version(1);
       await click(GENERAL.submitButton);
     });
+
     hooks.afterEach(async function () {
       await runCmd([`delete sys/mounts/${this.backend}`]);
     });
+
     test('version 1 performs the correct capabilities lookup', async function (assert) {
       // TODO: while this should pass it doesn't really do anything anymore for us as v1 and v2 are completely separate.
       const secretPath = 'foo/bar';
@@ -158,6 +164,41 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
     });
+
+    test('version 1 token without read permissions can create and update a secret', async function (assert) {
+      const updatePersonaToken = await runCmd(
+        tokenWithPolicyCmd(
+          'read-all',
+          `
+    path "${this.backend}/*" {
+      capabilities = ["create", "update", "list"]
+    }
+    # used to delete the engine after test done in afterEach hook
+    path "sys/mounts/${this.backend}" {
+      capabilities = ["delete"]
+    }
+    `
+        )
+      );
+
+      await login(updatePersonaToken);
+      await visit(`/vault/secrets-engines/${this.backend}/list`);
+      await click(SS.createSecretLink);
+      await createSecret('test', 'foo', 'bar');
+      await click('[data-test-secret-edit]', 'can click edit button');
+      // edit only without read permissions
+      assert
+        .dom('[data-test-secret-no-read-permissions] .hds-alert__description')
+        .hasText(
+          'You do not have read permissions. If a secret exists at this path creating a new secret will overwrite it.',
+          'Displays warning about no read permissions'
+        );
+      await fillIn('[data-test-secret-key]', 'new');
+      await fillIn('[data-test-secret-value] textarea', 'new');
+      await click(GENERAL.submitButton);
+      assert.dom(GENERAL.latestFlashContent).includesText('Secret test updated successfully.');
+    });
+
     // https://github.com/hashicorp/vault/issues/5960
     test('version 1: nested paths creation maintains ability to navigate the tree', async function (assert) {
       const enginePath = this.backend;
@@ -169,7 +210,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       ]);
       await settled();
       // navigate to farthest leaf
-      await visit(`/vault/secrets/${enginePath}/list`);
+      await visit(`/vault/secrets-engines/${enginePath}/list`);
       assert.dom('[data-test-component="navigate-input"]').hasNoValue();
       assert.dom(SS.secretLink()).exists({ count: 1 });
       await click(SS.secretLink('1/'));
@@ -187,20 +228,28 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(`${SS.secretLink('1/2/3/4')} ${GENERAL.confirmTrigger}`);
       await click(GENERAL.confirmButton);
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
-      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${enginePath}/list/1/2/3/`,
+        'remains on the page'
+      );
       assert.dom(SS.secretLink()).exists({ count: 1 });
 
       await listPage.secrets.objectAt(0).menuToggle();
       await click(GENERAL.confirmTrigger);
       await click(GENERAL.confirmButton);
-      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${enginePath}/list/1/2/3/`,
+        'remains on the page'
+      );
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/3/".');
 
       await fillIn('[data-test-component="navigate-input"]', '1/2/');
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/".');
 
       await click('[data-test-list-root-link]');
-      assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list`);
+      assert.strictEqual(currentURL(), `/vault/secrets-engines/${enginePath}/list`);
       assert.dom(SS.secretLink()).exists({ count: 1 });
     });
 
@@ -216,6 +265,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirected to the list page on delete'
       );
     });
+
     test('paths are properly encoded', async function (assert) {
       const backend = this.backend;
       const paths = [
@@ -255,7 +305,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         );
       }
       // [BANDAID] avoid error from missing param for links in SecretEdit > KeyValueHeader
-      await visit('/vault/secrets');
+      await visit('/vault/secrets-engines');
       await deleteEngine(backend, assert);
     });
 
@@ -273,14 +323,14 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
+        `/vault/secrets-engines/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
         'First part of path is encoded in URL'
       );
       assert.dom(SS.secretLink(secretPath)).exists('Link to secret exists');
       await click(SS.secretLink(secretPath));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${enginePath}/show/${encodeURIComponent(firstPath)}/${encodeURIComponent(
+        `/vault/secrets-engines/${enginePath}/show/${encodeURIComponent(firstPath)}/${encodeURIComponent(
           secondPath
         )}`,
         'secret path is encoded in URL'
@@ -289,7 +339,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(SS.crumb(firstPath));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
+        `/vault/secrets-engines/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
         'Breadcrumb link encodes correctly'
       );
     });
@@ -311,7 +361,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
           'vault.cluster.secrets.backend.show',
           `${path}: show page renders correctly`
         );
-        assert.dom('h1.title').hasText(`${path}/2`, 'shows correct page title');
+        assert.dom(GENERAL.hdsPageHeaderTitle).hasText(`${path}/2`, 'shows correct page title');
       }
     });
 

@@ -1,22 +1,19 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <PkiPageHeader @backend={{this.model.engine}} />
 
-<Toolbar>
-  <ToolbarActions>
-    {{#unless this.model.hasConfig}}
-      <ToolbarLink @route="configuration.create" @model={{this.model.engine.id}}>
-        Configure PKI
-      </ToolbarLink>
-    {{/unless}}
-  </ToolbarActions>
-</Toolbar>
+<Toolbar />
 
 {{#if this.model.hasConfig}}
-  <Page::PkiOverview @issuers={{this.model.issuers}} @roles={{this.model.roles}} @engine={{this.model.engine}} />
+  <Page::PkiOverview
+    @issuers={{this.model.issuers}}
+    @roles={{this.model.roles}}
+    @certificates={{this.model.certificates}}
+    @engine={{this.model.engine}}
+  />
 {{else}}
   <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
     <Hds::Link::Standalone

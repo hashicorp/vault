@@ -1,25 +1,13 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title={{this.title}} @subtitle={{this.subtitle}}>
+  <:breadcrumbs>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-kms-provider-header>
-      {{#if this.isDistributing}}
-        Distribute Key to Provider
-      {{else if this.isShowing}}
-        Provider
-        <span class="has-font-weight-normal">{{@model.id}}</span>
-      {{else}}
-        {{if this.isCreating "Create Provider" "Update Credentials"}}
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.isDistributing}}
   <Keymgmt::Distribute @backend={{@model.backend}} @provider={{@model.id}} @onClose={{fn (mut this.isDistributing) false}} />
@@ -110,7 +98,10 @@
                 {{! Only show last field if provider selected }}
                 <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
               {{else}}
-                <EmptyState @title="No provider selected" @message="Select a provider in order to configure it." />
+                <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+                  <A.Header @title="No provider selected" />
+                  <A.Body @text="Select a provider in order to configure it." />
+                </Hds::ApplicationState>
               {{/if}}
             {{else}}
               <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
@@ -179,17 +170,18 @@
             />
 
           {{else}}
-            <EmptyState
-              @title="No keys for this provider"
-              @message="Keys for this provider will be listed here. Add a key to get started."
-            >
-              <Hds::Link::Standalone
-                @icon="plus"
-                @text="Create key"
-                @route="vault.cluster.secrets.backend.create-root"
-                @query={{hash itemType="key"}}
-              />
-            </EmptyState>
+            <Hds::ApplicationState @align="center" class="top-padding-32 bottom-padding-32" as |A|>
+              <A.Header @title="No keys for this provider" />
+              <A.Body @text="Keys for this provider will be listed here. Add a key to get started." />
+              <A.Footer as |F|>
+                <F.LinkStandalone
+                  @icon="plus"
+                  @text="Create key"
+                  @route="vault.cluster.secrets.backend.create-root"
+                  @query={{hash itemType="key"}}
+                />
+              </A.Footer>
+            </Hds::ApplicationState>
           {{/if}}
         {{/let}}
       {{else}}

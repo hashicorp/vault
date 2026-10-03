@@ -30,13 +30,13 @@ jobs:
       TF_VAR_aws_ssh_public_key: ${{ secrets.SSH_KEY_PUBLIC_CI }}
       TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_wrapper: false
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@a03048d87541d1d9fcf2ecf528a4a65ba9bd7838 # v5.0.0
+        uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI_09042025 }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI_09042025 }}

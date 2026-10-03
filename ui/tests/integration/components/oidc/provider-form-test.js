@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -67,9 +67,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     />
     `);
 
-    assert
-      .dom('[data-test-oidc-provider-title]')
-      .hasText('Create Provider', 'Form title renders correct text');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Provider', 'Form title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Create', 'Save button has correct text');
     assert
       .dom('[data-test-input="issuer"]')
@@ -133,7 +131,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-provider-title]').hasText('Edit Provider', 'Title renders correct text');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Provider', 'Title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert

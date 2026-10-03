@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package issuing
@@ -428,33 +428,33 @@ func upgradeIssuerIfRequired(issuer *IssuerEntry) *IssuerEntry {
 
 // FetchCAInfoByIssuerId will fetch the CA info, will return an error if no ca info exists for the given issuerId.
 // This does support the loading using the legacyBundleShimID
-func FetchCAInfoByIssuerId(ctx context.Context, s logical.Storage, mkv managed_key.PkiManagedKeyView, issuerId IssuerID, usage IssuerUsage) (*certutil.CAInfoBundle, error) {
+func FetchCAInfoByIssuerId(ctx context.Context, s logical.Storage, mkv managed_key.PkiManagedKeyView, issuerId IssuerID, usage IssuerUsage) (*certutil.CAInfoBundle, *IssuerEntry, error) {
 	entry, bundle, err := FetchCertBundleByIssuerId(ctx, s, issuerId, true)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
-			return nil, err
+			return nil, nil, err
 		case errutil.InternalError:
-			return nil, err
+			return nil, nil, err
 		default:
-			return nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
+			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching CA info: %v", err)}
 		}
 	}
 
 	if err = entry.EnsureUsage(usage); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
+		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error while attempting to use issuer %v: %v", issuerId, err)}
 	}
 
 	parsedBundle, err := ParseCABundle(ctx, mkv, bundle)
 	if err != nil {
-		return nil, errutil.InternalError{Err: err.Error()}
+		return nil, nil, errutil.InternalError{Err: err.Error()}
 	}
 
 	if parsedBundle.Certificate == nil {
-		return nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
+		return nil, nil, errutil.InternalError{Err: "stored CA information not able to be parsed"}
 	}
 	if parsedBundle.PrivateKey == nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
+		return nil, nil, errutil.UserError{Err: fmt.Sprintf("unable to fetch corresponding key for issuer %v; unable to use this issuer for signing", issuerId)}
 	}
 
 	caInfo := &certutil.CAInfoBundle{
@@ -466,11 +466,11 @@ func FetchCAInfoByIssuerId(ctx context.Context, s logical.Storage, mkv managed_k
 
 	entries, err := GetAIAURLs(ctx, s, entry)
 	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
+		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch AIA URL information: %v", err)}
 	}
 	caInfo.URLs = entries
 
-	return caInfo, nil
+	return caInfo, entry, nil
 }
 
 func ParseCABundle(ctx context.Context, mkv managed_key.PkiManagedKeyView, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {

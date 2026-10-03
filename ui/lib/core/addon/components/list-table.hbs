@@ -1,0 +1,55 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+{{#if (has-block "selectedItems")}}
+  {{yield to="selectedItems"}}
+{{/if}}
+<Hds::AdvancedTable
+  @model={{this.paginatedTableData}}
+  @columns={{@columns}}
+  @isSelectable={{if @selectionKey true false}}
+  class="has-bottom-margin-s"
+  @onSelectionChange={{@onSelectionChange}}
+  {{did-update this.resetPagination @data}}
+>
+  <:body as |B|>
+    <B.Tr
+      @selectionKey={{get B.data @selectionKey}}
+      @selectionAriaLabelSuffix="row {{B.data.path}}"
+      data-test-table-row={{get B.data @selectionKey}}
+    >
+      {{#each this.columnKeys as |key index|}}
+        {{#if (and (eq key "popupMenu") (has-block "popupMenu"))}}
+          <B.Td data-test-table-data="popupMenu">
+            {{yield B.data to="popupMenu"}}
+          </B.Td>
+        {{else}}
+          {{#let (get B.data key) as |value|}}
+            <B.Td data-test-table-data={{key}} class="is-inline text-overflow-ellipsis">
+              {{#if (get (get @columns index) "customTableItem")}}
+                {{yield B.data to="customTableItem"}}
+              {{else}}
+                {{! stringify value if it is an array or object, otherwise render directly }}
+                {{if (this.isObject value) (stringify value) value}}
+              {{/if}}
+            </B.Td>
+          {{/let}}
+        {{/if}}
+      {{/each}}
+    </B.Tr>
+  </:body>
+</Hds::AdvancedTable>
+{{! WORKAROUND to manually re-render Hds::Pagination::Numbered to force update @currentPage }}
+{{#if this.renderPagination}}
+  <Hds::Pagination::Numbered
+    class="has-bottom-margin-m is-fullwidth"
+    @currentPage={{this.currentPage}}
+    @currentPageSize={{this.pageSize}}
+    @onPageChange={{fn this.handlePaginationChange "currentPage"}}
+    @onPageSizeChange={{fn this.handlePaginationChange "pageSize"}}
+    @pageSizes={{array 5 10 25 50 100}}
+    data-test-pagination
+    @totalItems={{@data.length}}
+  />
+{{/if}}

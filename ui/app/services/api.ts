@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -25,6 +25,7 @@ import type NamespaceService from 'vault/services/namespace';
 import type ControlGroupService from 'vault/services/control-group';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { HeaderMap, XVaultHeaders } from 'vault/api';
+import type { HTTPMethod } from '@hashicorp/vault-client-typescript';
 
 export default class ApiService extends Service {
   @service('auth') declare readonly authService: AuthService;
@@ -209,7 +210,7 @@ export default class ApiService extends Service {
 
     // log out generic error for ease of debugging in dev env
     if (config.environment === 'development') {
-      console.log('API Error:', e); // eslint-disable-line no-console
+      console.error('API Error:', e);
     }
 
     return {
@@ -217,9 +218,9 @@ export default class ApiService extends Service {
     };
   });
 
-  // accepts a list response as { keyInfo, keys } and returns a flat array of the keyInfo datum
-  // to preserve the keys (unique identifiers) the value will be set on the datum as id
-  keyInfoToArray(response: unknown = {}) {
+  // accepts a list response as { key_info, keys } and returns a flat array of the key_info datum
+  // to preserve the keys (unique identifiers) the value will be set on the datum as the provided uuidKey or id
+  keyInfoToArray(response: unknown = {}, uuidKey = 'id') {
     const { key_info, keys } = response as { key_info?: Record<string, unknown>; keys?: string[] };
     if (!key_info || !keys) {
       return [];
@@ -228,7 +229,7 @@ export default class ApiService extends Service {
       (arr, key) => {
         const datum = key_info[key];
         if (datum) {
-          arr.push({ id: key, ...datum });
+          arr.push({ [uuidKey]: key, ...datum });
         }
         return arr;
       },
@@ -252,4 +253,34 @@ export default class ApiService extends Service {
     }
     return [];
   }
+
+  // interface for making raw fetch requests outside of the generated API methods
+  // this should only be used in cases where it's not possible to use the client
+  private async rawRequest(path: string, method: HTTPMethod, body?: unknown) {
+    const context = {
+      url: `${this.configuration.basePath}${path}`,
+      init: { method } as RequestInit,
+    };
+
+    if (body) {
+      context.init.body = JSON.stringify(body);
+    }
+
+    const { url, init } = await this.setHeaders(context as RequestContext);
+
+    const response = await this.configuration.fetchApi?.(new Request(url, init));
+    if (!response?.ok) {
+      throw response;
+    }
+    // with various content types like application/pem-certificate-chain or application/pkix-cert for example,
+    // return the response so the caller can read the body with the appropriate method (blob, text, json etc.)
+    return response;
+  }
+  request = {
+    get: (path: string) => this.rawRequest(path, 'GET'),
+    post: (path: string, body?: unknown) => this.rawRequest(path, 'POST', body),
+    put: (path: string, body?: unknown) => this.rawRequest(path, 'PUT', body),
+    patch: (path: string, body?: unknown) => this.rawRequest(path, 'PATCH', body),
+    delete: (path: string, body?: unknown) => this.rawRequest(path, 'DELETE', body),
+  };
 }

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package metricsutil
@@ -47,6 +47,7 @@ type Metrics interface {
 	SetGauge(key []string, val float32)
 	SetGaugeWithLabels(key []string, val float32, labels []Label)
 	IncrCounterWithLabels(key []string, val float32, labels []Label)
+	AddSample(key []string, val float32)
 	AddSampleWithLabels(key []string, val float32, labels []Label)
 	AddDurationWithLabels(key []string, d time.Duration, labels []Label)
 	MeasureSinceWithLabels(key []string, start time.Time, labels []Label)

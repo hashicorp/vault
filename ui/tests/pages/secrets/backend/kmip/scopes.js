@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,8 +8,8 @@ import ListView from 'vault/tests/pages/components/list-view';
 
 export default create({
   ...ListView,
-  visit: visitable('/vault/secrets/:backend/kmip/scopes'),
-  visitCreate: visitable('/vault/secrets/:backend/kmip/scopes/create'),
+  visit: visitable('/vault/secrets-engines/:backend/kmip/scopes'),
+  visitCreate: visitable('/vault/secrets-engines/:backend/kmip/scopes/create'),
   createLink: clickable('[data-test-scope-create]'),
   scopeName: fillable('[data-test-input="name"]'),
   configurationLink: clickable('[data-test-kmip-link-config]'),

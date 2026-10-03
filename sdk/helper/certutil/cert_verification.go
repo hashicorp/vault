@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package certutil
@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/errwrap"
 )
 
-func VerifyCertificate(parsedBundle *ParsedCertBundle, options ctx509.VerifyOptions) error {
+func VerifyCertificateChain(parsedBundle *ParsedCertBundle, options ctx509.VerifyOptions, rootChainOnly bool) error {
 	// If private key exists, check if it matches the public key of cert
 	if parsedBundle.PrivateKey != nil && parsedBundle.Certificate != nil {
 		equal, err := ComparePublicKeys(parsedBundle.Certificate.PublicKey, parsedBundle.PrivateKey.Public())
@@ -45,9 +45,16 @@ func VerifyCertificate(parsedBundle *ParsedCertBundle, options ctx509.VerifyOpti
 		}
 	}
 
-	if len(rootCertPool.Subjects()) < 1 {
-		// Alright, this is weird, since we don't have the root CA, we'll treat the intermediate as
-		// the root, otherwise we'll get a "x509: certificate signed by unknown authority" error.
+	if !rootChainOnly && len(rootCertPool.Subjects()) < 1 {
+		// In this case, we don't have the root CA.  In some cases systems do trust an intermediate
+		// directly, and this will work.  To accommodate those cases, we'll treat the intermediate
+		// as the root.
+		//
+		// In other cases, such as in Common Criteria mode, we are required to return an error if
+		// no root certificate is present.
+		//
+		// If there's no root, and we don't treat the intermediates as root certificates, we'd get
+		// a "x509: certificate signed by unknown authority" error.
 		rootCertPool, intermediateCertPool = intermediateCertPool, rootCertPool
 	}
 
@@ -65,6 +72,10 @@ func VerifyCertificate(parsedBundle *ParsedCertBundle, options ctx509.VerifyOpti
 
 	_, err = certificate.Verify(options)
 	return err
+}
+
+func VerifyCertificate(parsedBundle *ParsedCertBundle, options ctx509.VerifyOptions) error {
+	return VerifyCertificateChain(parsedBundle, options, false)
 }
 
 func convertCertificate(certBytes []byte) (*ctx509.Certificate, error) {

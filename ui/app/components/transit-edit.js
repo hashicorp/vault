@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -67,6 +67,22 @@ export default Component.extend(FocusOnInsertMixin, {
       return [...baseCrumbs, { label: 'Create' }];
     }
     return baseCrumbs;
+  },
+
+  get title() {
+    if (this.mode === 'create') {
+      return 'Create Key';
+    } else if (this.mode === 'edit') {
+      return 'Edit Key';
+    } else {
+      return 'Key';
+    }
+  },
+
+  get subtitle() {
+    if (this.mode === 'create' || this.mode === 'edit') return '';
+
+    return this.key?.id;
   },
 
   waitForKeyUp: task(function* () {

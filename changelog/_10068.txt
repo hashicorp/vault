@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Added sudo-permissioned `sys/reporting/scan` endpoint which will output a set of files containing information about Vault state to the location specified by the `reporting_scan_directory` config item.
+```

@@ -1,11 +1,9 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<TabPageHeader @model={{@backend}} @breadcrumbs={{@breadcrumbs}}>
-  <ToolbarLink @route="configure">Configure Kubernetes</ToolbarLink>
-</TabPageHeader>
+<KubernetesHeader @model={{@secretsEngine}} @promptConfig={{@promptConfig}} @breadcrumbs={{@breadcrumbs}} />
 
 {{#if @promptConfig}}
   <ConfigCta />
@@ -21,10 +19,9 @@
         />
       </:action>
       <:content>
-        <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-card-overview-num>{{or
-            @roles.length
-            "None"
-          }}</h2>
+        <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-card-overview-num>
+          {{or @roles.length "None"}}
+        </h2>
       </:content>
     </OverviewCard>
     <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">

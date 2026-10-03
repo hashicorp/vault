@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -1666,7 +1666,7 @@ func identityStoreLoadingIsDeterministic(t *testing.T, flags *determinismTestFla
 		require.NoError(t, err)
 
 		c.identityStore.MakeDeduplicationDoneChan()
-		err := c.systemBackend.activateIdentityDeduplication(ctx, nil)
+		err := c.systemBackend.activateIdentity(ctx, nil, activationflags.IdentityDeduplication)
 		require.NoError(t, err)
 		err = c.identityStore.WaitForActivateDeduplicationDone(ctx)
 		require.NoError(t, err)

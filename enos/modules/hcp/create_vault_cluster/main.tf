@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 terraform {
@@ -50,6 +50,44 @@ variable "upgrade_type" {
   description = "The upgrade strategy"
   type        = string
   default     = "MANUAL"
+}
+
+# Docker-specific variables (ignored but accepted for compatibility)
+variable "vault_edition" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+}
+
+variable "vault_license" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+  sensitive   = true
+}
+
+variable "network_name" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+}
+
+variable "cluster_name" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
+}
+
+variable "use_local_build" {
+  type        = bool
+  description = "Ignored - for Docker compatibility only"
+  default     = false
+}
+
+variable "local_build_path" {
+  type        = string
+  description = "Ignored - for Docker compatibility only"
+  default     = ""
 }
 
 data "enos_environment" "localhost" {}

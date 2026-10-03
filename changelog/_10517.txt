@@ -1,0 +1,3 @@
+```release-note:feature
+**Plugins (Enterprise)**: Allow overriding pinned version when creating and updating database engines
+```

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -49,7 +49,7 @@ module('Acceptance | auth backend list', function (hooks) {
     await createUser(this.path1, this.user1);
 
     // navigate back to the methods list
-    await click(SELECTORS.methods);
+    await click(GENERAL.breadcrumbAtIdx(0));
     assert.strictEqual(currentURL(), '/vault/access');
 
     // enable a second user in the second userpass backend
@@ -59,7 +59,7 @@ module('Acceptance | auth backend list', function (hooks) {
     assert.dom(SELECTORS.listItem).hasText(this.user2, 'user2 exists in the list');
 
     // check that switching back to the first auth method shows the first user
-    await click(SELECTORS.methods);
+    await click(GENERAL.breadcrumbAtIdx(0));
     await click(GENERAL.linkedBlock(this.path1));
     assert.dom(SELECTORS.listItem).hasText(this.user1, 'user1 exists in the list');
 
@@ -98,6 +98,7 @@ module('Acceptance | auth backend list', function (hooks) {
           const itemSelector = `${GENERAL.linkedBlock(path)} .hds-dropdown-list-item`;
 
           await click(triggerSelector);
+
           assert
             .dom(itemSelector)
             .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);

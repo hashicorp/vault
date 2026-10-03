@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 syntax = "proto3";
@@ -23,6 +23,8 @@ message EventPluginInfo {
   string plugin_version = 5;
   // Mount version that this event originated from, i.e., if KVv2, then "2". Usually empty.
   string version = 6;
+  // Whether the event is from from a local mount plugin or not.
+  bool is_local = 7;
 }
 
 // EventData contains event data in a CloudEvents container.

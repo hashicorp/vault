@@ -1,0 +1,3 @@
+```release-note:improvement
+core: check rotation manager queue every 5 seconds instead of 10 seconds to improve responsiveness
+```

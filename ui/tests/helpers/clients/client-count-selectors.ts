@@ -1,7 +1,9 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
+
+import { camelize } from '@ember/string';
 
 // TODO: separate nested into distinct exported consts
 export const CLIENT_COUNT = {
@@ -54,10 +56,9 @@ export const CHARTS = {
 };
 
 export const FILTERS = {
-  dropdown: (name: string) => `[data-test-dropdown="${name}"]`,
-  dropdownToggle: (name: string) => `[data-test-dropdown="${name}"] button`,
-  dropdownItem: (name: string) => `[data-test-dropdown-item="${name}"]`,
-  dropdownSearch: (name: string) => `[data-test-dropdown="${name}"] input`,
+  dropdownItem: (name: string) =>
+    name ? `[data-test-dropdown-item="${name}"]` : '[data-test-dropdown-item]',
+  dropdownSearch: (name: string) => `#${camelize(name)}Search`,
   tag: (filter?: string, value?: string) =>
     filter && value ? `[data-test-filter-tag="${filter} ${value}"]` : '[data-test-filter-tag]',
   tagContainer: '[data-test-filter-tag-container]',

@@ -1,15 +1,13 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Wrap Data
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Wrap data">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+  </:breadcrumbs>
+</Page::Header>
 
 {{#if this.token}}
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -51,7 +49,7 @@
         <JsonEditor
           class="has-top-margin-s"
           @title="Data to wrap"
-          @subTitle="json-formatted"
+          @helpText="json-formatted"
           @value={{this.stringifiedWrapData}}
           @valueUpdated={{this.editorUpdated}}
         />

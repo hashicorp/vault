@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,7 +11,7 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 // CUSTOM ACTIONS RELEVANT TO KV-V2
 
 export const writeSecret = async function (backend, path, key, val, ns = null) {
-  const url = `vault/secrets/${backend}/kv/create`;
+  const url = `vault/secrets-engines/${backend}/kv/create`;
   ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
   await settled();
   await fillIn(FORM.inputByAttr('path'), path);
@@ -26,7 +26,7 @@ export const writeVersionedSecret = async function (backend, path, key, val, ver
   await writeSecret(backend, path, 'key-1', 'val-1', ns);
   await settled();
   for (let currentVersion = 2; currentVersion <= version; currentVersion++) {
-    const url = `/vault/secrets/${backend}/kv/${encodeURIComponent(path)}/details/edit`;
+    const url = `/vault/secrets-engines/${backend}/kv/${encodeURIComponent(path)}/details/edit`;
     ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
     await settled();
     if (currentVersion === version) {

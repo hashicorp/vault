@@ -1,41 +1,46 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import LdapLibraryForm from 'vault/forms/secrets/ldap/library';
+import { ModelFrom } from 'vault/route';
 
-import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type LdapLibraryModel from 'vault/models/ldap/library';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
+export type LdapLibrariesCreateRouteModel = ModelFrom<LdapLibrariesCreateRoute>;
+
 interface LdapLibrariesCreateController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  model: LdapLibraryModel;
+  model: LdapLibrariesCreateRouteModel;
 }
 
 export default class LdapLibrariesCreateRoute extends Route {
-  @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 
   model() {
-    const backend = this.secretMountPath.currentPath;
-    return this.store.createRecord('ldap/library', { backend });
+    const defaults = {
+      ttl: '24h',
+      max_ttl: '24h',
+      disable_check_in_enforcement: 'Enabled',
+    };
+    return new LdapLibraryForm(defaults, { isNew: true });
   }
 
   setupController(
     controller: LdapLibrariesCreateController,
-    resolvedModel: LdapLibraryModel,
+    resolvedModel: LdapLibrariesCreateRouteModel,
     transition: Transition
   ) {
     super.setupController(controller, resolvedModel, transition);
 
     controller.breadcrumbs = [
-      { label: resolvedModel.backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'Libraries', route: 'libraries' },
       { label: 'Create' },
     ];

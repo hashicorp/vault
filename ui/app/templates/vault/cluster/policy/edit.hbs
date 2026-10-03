@@ -1,30 +1,26 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
-    <Hds::Breadcrumb>
-      <Hds::Breadcrumb::Item
-        @text="{{uppercase this.policyType}} policies"
-        @route="vault.cluster.policies"
-        @model={{this.policyType}}
-        data-test-policy-list-link
-      />
-      <Hds::Breadcrumb::Item @text={{this.model.id}} @route="vault.cluster.policy.show" @model={{this.model.id}} />
-      <Hds::Breadcrumb::Item @text="Edit" @current={{true}} />
-    </Hds::Breadcrumb>
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{this.model.id}}
-      {{#if this.model.enforcementLevel}}
-        <Hds::Badge @text={{this.model.enforcementLevel}} aria-label="Enforcement level: {{this.model.enforcementLevel}}" />
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title={{this.model.id}}>
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label=(concat (uppercase this.policyType) " policies") route="vault.cluster.policies" model=this.policyType)
+        (hash label=this.model.id route="vault.cluster.policy.show" model=this.model.id)
+        (hash label="Edit")
+      }}
+    />
+  </:breadcrumbs>
+  <:badges>
+    {{#if this.model.enforcementLevel}}
+      <Hds::Badge @text={{this.model.enforcementLevel}} aria-label="Enforcement level: {{this.model.enforcementLevel}}" />
+    {{/if}}
+  </:badges>
+</Page::Header>
+
 {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
   <Toolbar>
     <ToolbarActions>
@@ -38,7 +34,7 @@
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-policy-edit-toggle>
+      <ToolbarLink @route="vault.cluster.policy.show" @model={{this.model.id}} data-test-button="Back to policy">
         Back to policy
       </ToolbarLink>
     </ToolbarActions>
@@ -49,5 +45,4 @@
   @model={{this.model}}
   @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
   @onCancel={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
-  @renderPolicyExampleModal={{true}}
 />

@@ -1,37 +1,40 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import LdapStaticRoleForm from 'vault/forms/secrets/ldap/roles/static';
+import LdapDynamicRoleForm from 'vault/forms/secrets/ldap/roles/dynamic';
 
-import type Store from '@ember-data/store';
+import { ModelFrom } from 'vault/route';
 import type SecretMountPath from 'vault/services/secret-mount-path';
-import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';
-import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
+
+export type LdapRolesCreateRouteModel = ModelFrom<LdapRolesCreateRoute>;
 
 interface RouteController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  model: LdapRoleModel;
+  model: LdapRolesCreateRouteModel;
 }
 
 export default class LdapRolesCreateRoute extends Route {
-  @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 
   model() {
-    const backend = this.secretMountPath.currentPath;
-    return this.store.createRecord('ldap/role', { backend });
+    return {
+      staticForm: new LdapStaticRoleForm({}, { isNew: true }),
+      dynamicForm: new LdapDynamicRoleForm({ default_ttl: '1h', max_ttl: '24h' }, { isNew: true }),
+    };
   }
 
-  setupController(controller: RouteController, resolvedModel: LdapRoleModel, transition: Transition) {
-    super.setupController(controller, resolvedModel, transition);
+  setupController(controller: RouteController, resolvedModel: LdapRolesCreateRouteModel) {
+    super.setupController(controller, resolvedModel);
 
     controller.breadcrumbs = [
-      { label: resolvedModel.backend, route: 'overview' },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'Roles', route: 'roles' },
       { label: 'Create' },
     ];

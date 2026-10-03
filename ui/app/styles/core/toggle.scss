@@ -1,7 +1,7 @@
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -62,7 +62,7 @@
   content: '';
 }
 .toggle[type='checkbox']:checked + label::before {
-  background: var(--token-color-palette-neutral-500);
+  background: var(--token-color-foreground-faint);
 }
 .toggle[type='checkbox']:checked + label::after {
   left: 1.625rem;

@@ -1,23 +1,24 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
-import { hash } from 'rsvp';
 
 @withConfig()
 export default class PkiTidyRoute extends Route {
-  @service store;
+  @service api;
 
-  model() {
+  async model() {
     const engine = this.modelFor('application');
-    return hash({
+    const autoTidyConfig = await this.api.secrets.pkiReadAutoTidyConfiguration(engine.id);
+
+    return {
       hasConfig: this.pkiMountHasConfig,
       engine,
-      autoTidyConfig: this.store.findRecord('pki/tidy', engine.id),
-    });
+      autoTidyConfig,
+    };
   }
 }

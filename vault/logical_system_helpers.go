@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/pki_cert_count"
 )
 
 type enterprisePathStub struct {
@@ -131,6 +132,11 @@ var (
 		// group-policy-application paths
 		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
 			"config/group-policy-application$": {operations: []logical.Operation{logical.ReadOperation, logical.UpdateOperation}},
+		})...)
+
+		// reporting paths
+		paths = append(paths, buildEnterpriseOnlyPaths(map[string]enterprisePathStub{
+			"reporting/scan$": {operations: []logical.Operation{logical.UpdateOperation}},
 		})...)
 
 		// namespaces paths
@@ -284,7 +290,41 @@ func ceSysInitialize(b *SystemBackend) func(context.Context, *logical.Initializa
 		if err != nil {
 			return fmt.Errorf("failed to initialize activation flags: %w", err)
 		}
+
+		b.Core.pkiCertCountManager.StartConsumerJob(func(issuedCount, storedCount uint64) {
+			b.Core.consumePkiCertCounts(issuedCount, storedCount)
+		})
 		return nil
+	}
+}
+
+// consumePkiCertCounts updates the PKI certificate counts in storage if we are
+// running on the active node; otherwise it forwards them to the active node.
+func (c *Core) consumePkiCertCounts(issuedCount uint64, storedCount uint64) {
+	var consumed bool
+	haState := c.HAStateWithLock()
+	if issuedCount == 0 && storedCount == 0 {
+		return
+	}
+
+	switch haState {
+	case consts.Standby:
+		consumed = true
+	case consts.PerfStandby:
+		consumed = forwardPkiCertCounts(c, issuedCount, storedCount)
+	case consts.Active:
+		c.logger.Info("storing PKI certificate counts", "issuedCerts", issuedCount, "storedCerts", storedCount)
+		err := pki_cert_count.IncrementStoredCounts(c.activeContext, c.barrier, issuedCount, storedCount)
+		if err != nil {
+			c.logger.Error("error storing PKI certificate counts", "error", err)
+		} else {
+			consumed = true
+		}
+	default:
+		c.logger.Error("Unexpected HA state when consuming PKI certificate counts", "ha_state", haState)
+	}
+	if !consumed {
+		c.pkiCertCountManager.IncrementCount(issuedCount, storedCount)
 	}
 }
 

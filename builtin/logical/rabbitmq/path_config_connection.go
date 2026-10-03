@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package rabbitmq
@@ -122,6 +122,8 @@ func (b *backend) pathConnectionUpdate(ctx context.Context, req *logical.Request
 	if err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeRabbitMQConnectionConfigWrite, nil)
 
 	// Reset the client connection
 	b.resetClient(ctx)

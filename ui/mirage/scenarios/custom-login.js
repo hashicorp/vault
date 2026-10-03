@@ -1,24 +1,24 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 export default function (server) {
   server.create('login-rule', {
     name: 'root-rule',
-    namespace_path: '',
-    default_auth_type: 'okta',
-    backup_auth_types: ['token'],
+    namespace_path: 'root',
+    default_auth_type: 'token',
+    backup_auth_types: ['userpass', 'ldap'],
     disable_inheritance: false,
   });
   server.create('login-rule', {
-    namespace_path: 'admin',
+    namespace_path: 'admin/',
     default_auth_type: 'oidc',
     backup_auth_types: ['token'],
   });
   server.create('login-rule', {
     name: 'ns-rule',
-    namespace_path: 'test-ns',
+    namespace_path: 'test-ns/',
     default_auth_type: 'ldap',
     backup_auth_types: [],
     disable_inheritance: true,

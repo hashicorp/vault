@@ -1,10 +1,9 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package issuing
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strconv"
@@ -34,7 +33,7 @@ func isCertificateVerificationDisabled() (bool, error) {
 	return disable, nil
 }
 
-func VerifyCertificate(ctx context.Context, storage logical.Storage, issuerId IssuerID, parsedBundle *certutil.ParsedCertBundle) error {
+func VerifyCertificate(issuer *IssuerEntry, system logical.SystemView, parsedBundle *certutil.ParsedCertBundle) error {
 	if verificationDisabled, err := isCertificateVerificationDisabled(); err != nil {
 		return err
 	} else if verificationDisabled {
@@ -53,9 +52,11 @@ func VerifyCertificate(ctx context.Context, storage logical.Storage, issuerId Is
 		DisablePathLenChecks:           false,
 		DisableNameConstraintChecks:    false,
 	}
-	if err := entSetCertVerifyOptions(ctx, storage, issuerId, &options); err != nil {
+
+	isCommonCriteria, err := entSetCertVerifyOptions(issuer, system, &options)
+	if err != nil {
 		return err
 	}
 
-	return certutil.VerifyCertificate(parsedBundle, options)
+	return certutil.VerifyCertificateChain(parsedBundle, options, isCommonCriteria)
 }

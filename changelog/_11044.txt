@@ -1,0 +1,7 @@
+```release-note:bug
+rotation: Fix a bug where a performance secondary would panic if a write was made to a local mount
+```
+
+```release-note:improvement
+rotation: Ensure rotations for shared paths only execute on the Primary cluster's active node. Ensure rotations for local paths execute on the cluster-local active node.
+```

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package issuing
@@ -428,7 +428,7 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 			SignatureBits:                 role.SignatureBits,
 			UsePSS:                        role.UsePSS,
 			NotAfter:                      notAfter,
-			KeyUsage:                      x509.KeyUsage(parsing.ParseKeyUsages(role.KeyUsage)),
+			KeyUsage:                      ParseKeyUsagesFromRole(role),
 			ExtKeyUsage:                   ParseExtKeyUsagesFromRole(role),
 			ExtKeyUsageOIDs:               role.ExtKeyUsageOIDs,
 			PolicyIdentifiers:             role.PolicyIdentifiers,
@@ -441,6 +441,13 @@ func GenerateCreationBundle(b logical.SystemView, role *RoleEntry, entityInfo En
 		SigningBundle: caSign,
 		CSR:           csr,
 	}
+
+	// Make Sure Signature Bits are Correct for EC (or ECDSA) Keys
+	// It's not possible to do later during the signing process because
+	// signingKeyType := role.KeyType // if root
+	// if caSign != nil {
+	// 	signingKeyType = caSign.ParsedCertBundle.Certificate.PublicKeyAlgorithm.String()
+	// }
 
 	// Don't deal with URLs or max path length if it's self-signed, as these
 	// normally come from the signing bundle
@@ -999,6 +1006,15 @@ func GetCertificateNotAfter(b logical.SystemView, role *RoleEntry, input CertNot
 	if err != nil {
 		return time.Time{}, warnings, err
 	}
+	notBefore := time.Now().Add(-role.NotBeforeDuration)
+	if notAfter.Before(notBefore) {
+		return time.Time{}, warnings, errutil.UserError{Err: "notAfter before notBefore"}
+	}
+
+	if caSign != nil && notBefore.Before(caSign.Certificate.NotBefore) {
+		return time.Time{}, warnings, errutil.UserError{Err: "notBefore before signer's notBefore"}
+	}
+
 	return notAfter, warnings, nil
 }
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,9 +8,9 @@
 /* eslint-disable n/no-extraneous-require */
 'use strict';
 
-const EngineAddon = require('ember-engines/lib/engine-addon');
+const { buildEngine } = require('ember-engines/lib/engine-addon');
 
-module.exports = EngineAddon.extend({
+module.exports = buildEngine({
   name: 'open-api-explorer',
 
   included() {

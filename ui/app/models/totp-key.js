@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -145,7 +145,7 @@ export default class TotpKeyModel extends Model {
   @attr('string', {
     label: 'URL',
     helpText:
-      'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=Y64VEVMBTSXCYIWRSHRNDZW62MPGVU2G&issuer=Vault',
+      'If a URL is provided the other fields can be left empty. E.g. otpauth://totp/Vault:test@test.com?secret=<your_secret>&issuer=Vault',
     subText: 'The TOTP key url string that can be used to configure a key.',
   })
   url;

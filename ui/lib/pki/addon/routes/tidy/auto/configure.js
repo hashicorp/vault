@@ -1,29 +1,30 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import PkiTidyForm from 'vault/forms/secrets/pki/tidy';
 
-@withConfirmLeave()
 export default class PkiTidyAutoConfigureRoute extends Route {
-  @service store;
   @service secretMountPath;
 
-  // inherits model from tidy/auto
+  model() {
+    const { autoTidyConfig } = this.modelFor('tidy');
+    return new PkiTidyForm('PkiConfigureAutoTidyRequest', autoTidyConfig);
+  }
 
   setupController(controller, resolvedModel) {
     // autoTidyConfig id is the backend path
-    const { id: backend } = resolvedModel;
+    const { currentPath } = this.secretMountPath;
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview', model: backend },
-      { label: 'Configuration', route: 'configuration.index', model: backend },
-      { label: 'Tidy', route: 'tidy', model: backend },
-      { label: 'Auto', route: 'tidy.auto', model: backend },
+      { label: currentPath, route: 'overview', model: currentPath },
+      { label: 'Configuration', route: 'configuration.index', model: currentPath },
+      { label: 'Tidy', route: 'tidy', model: currentPath },
+      { label: 'Auto', route: 'tidy.auto', model: currentPath },
       { label: 'Configure' },
     ];
   }

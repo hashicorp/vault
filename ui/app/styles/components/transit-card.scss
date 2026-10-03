@@ -1,9 +1,8 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -17,7 +16,7 @@
 }
 
 .transit-card {
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   box-shadow: 0 0 0 1px rgba(var(--token-color-palette-neutral-300), 0.4);
   display: grid;
   grid-template-columns: 0.45fr 2fr;
@@ -29,8 +28,8 @@
   }
 
   .transit-action-description {
-    font-family: font_variables.$family-sans;
-    font-size: size_variables.$size-8;
+    font-family: var(--token-typography-font-stack-text);
+    font-size: var(--token-typography-body-200-font-size);
     color: var(--token-color-palette-neutral-400);
   }
 

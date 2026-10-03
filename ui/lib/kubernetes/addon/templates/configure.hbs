@@ -1,6 +1,6 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::Configure @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />
+<Page::Configure @form={{this.model.form}} @breadcrumbs={{this.breadcrumbs}} @engine={{this.model.secretsEngine}} />

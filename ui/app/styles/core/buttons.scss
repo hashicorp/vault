@@ -1,24 +1,23 @@
 @use 'sass:color';
 @use '../utils/box-shadow_variables';
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .button {
   align-items: center;
-  background-color: var(--token-color-palette-neutral-50);
+  background-color: var(--token-color-surface-faint);
   border: 1px solid var(--token-color-palette-neutral-300);
-  border-radius: size_variables.$radius;
+  border-radius: var(--token-border-radius-x-small);
   box-shadow: box-shadow_variables.$box-shadow-low;
   cursor: pointer;
-  color: var(--token-color-palette-neutral-600);
+  color: var(--token-color-foreground-primary);
   display: inline-block;
-  font-size: size_variables.$size-8;
-  font-weight: font_variables.$font-weight-semibold;
+  font-size: var(--token-typography-body-200-font-size);
+  font-weight: var(--token-typography-font-weight-semibold);
   min-height: 2.25rem;
   min-width: 6rem;
   padding: 0.5625rem 0.9375rem;
@@ -97,7 +96,7 @@
 
   &.is-danger-outlined {
     border: 1px solid var(--token-color-palette-red-200);
-    color: var(--token-color-palette-red-200);
+    color: var(--token-color-foreground-critical);
   }
 
   &.is-flat {
@@ -110,7 +109,7 @@
     background-color: transparent;
     border-color: transparent;
     box-shadow: none;
-    color: var(--token-color-palette-blue-200);
+    color: var(--token-color-foreground-action);
     text-decoration: none;
 
     &:hover {
@@ -145,9 +144,9 @@
   &.is-link {
     background-color: transparent;
     border-color: transparent;
-    color: var(--token-color-palette-blue-200);
+    color: var(--token-color-foreground-action);
     text-decoration: none;
-    font-weight: font_variables.$font-weight-semibold;
+    font-weight: var(--token-typography-font-weight-semibold);
     box-shadow: none;
     min-width: 4rem;
   }
@@ -156,7 +155,7 @@
     background-color: var(--token-color-palette-blue-200);
     border-color: color.adjust(#1060ff, $lightness: -2%);
     color: hsl(0, 0%, 100%);
-    font-weight: font_variables.$font-weight-bold;
+    font-weight: var(--token-typography-font-weight-bold);
     text-shadow: 0 1px 1px rgba(hsl(0, 0%, 4%), 0.25);
 
     &:disabled {
@@ -200,13 +199,13 @@
     &.is-outlined {
       background-color: transparent;
       border-color: var(--token-color-palette-blue-200);
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
 
       &:hover,
       &:focus {
         background-color: transparent;
         border-color: color.adjust(#1060ff, $lightness: -10%);
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
 
       &:active,
@@ -221,7 +220,7 @@
       background-color: transparent;
       border-color: var(--token-color-palette-neutral-500);
       box-shadow: none;
-      color: var(--token-color-palette-neutral-500);
+      color: var(--token-color-foreground-faint);
     }
   }
 
@@ -236,7 +235,7 @@
   // End of button types
 
   &.tool-tip-trigger {
-    color: var(--token-color-palette-neutral-500);
+    color: var(--token-color-foreground-faint);
     min-width: auto;
     padding: 0;
   }
@@ -322,7 +321,7 @@ a.button.disabled {
 // TODO HDS adoption cleanup: audit styles with design and see what to keep/remove once buttons are fully HDS
 // Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
 .hds-copy-button {
-  font-weight: font_variables.$font-weight-semibold; // TODO delete
+  font-weight: var(--token-typography-font-weight-semibold); // TODO delete
   box-shadow: box-shadow_variables.$box-shadow-low; // TODO delete
 
   &.white-icon svg {
@@ -351,7 +350,7 @@ a.button.disabled {
     background-color: var(--token-color-palette-blue-200);
     border-color: color.adjust(#1060ff, $lightness: -2%);
     color: hsl(0, 0%, 100%);
-    font-weight: font_variables.$font-weight-bold;
+    font-weight: var(--token-typography-font-weight-bold);
     text-shadow: 0 1px 1px rgba(hsl(0, 0%, 4%), 0.25);
     svg {
       color: hsl(0, 0%, 100%);
@@ -359,7 +358,7 @@ a.button.disabled {
   }
 
   &.secondary {
-    background-color: var(--token-color-palette-neutral-50);
+    background-color: var(--token-color-surface-faint);
     border: 1px solid var(--token-color-palette-neutral-300);
   }
 
@@ -375,7 +374,9 @@ a.button.disabled {
 
 // Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
 .hds-button {
-  font-weight: font_variables.$font-weight-semibold; // TODO consult design on font weight after button class audit
+  font-weight: var(
+    --token-typography-font-weight-semibold
+  ); // TODO consult design on font weight after button class audit
   display: inline-flex; // temporarily fixes existing button alignment until we adopt Hds::ButtonSet
   // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
@@ -384,8 +385,8 @@ a.button.disabled {
     border: none;
     box-shadow: none;
     &:hover:not(.disabled) {
-      background-color: var(--token-color-palette-neutral-100);
-      color: var(--token-color-palette-blue-200);
+      background-color: var(--token-color-surface-strong);
+      color: var(--token-color-foreground-action);
     }
   }
 }

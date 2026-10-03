@@ -1,11 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const PAGE = {
   // General selectors that are common between pages
-  title: '[data-test-header-title]',
+  title: '.hds-page-header__title',
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
@@ -36,7 +36,7 @@ export const PAGE = {
     deleteMetadata: '[data-test-kv-delete="delete-metadata"]',
   },
   detail: {
-    versionTimestamp: '[data-test-kv-version-tooltip-trigger]',
+    versionTimestamp: '[data-test-tooltip="kv-version"]',
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,
     createNewVersion: '[data-test-create-new-version]',
@@ -56,7 +56,7 @@ export const PAGE = {
     toggleDiffDescription: '[data-test-diff-description]',
   },
   list: {
-    createSecret: '[data-test-toolbar-create-secret]',
+    createSecret: '[data-test-button="create secret"]',
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
     menuItem: (label) => `[data-test-list-menu-item="${label}"]`,
     filter: `[data-test-kv-list-filter]`,

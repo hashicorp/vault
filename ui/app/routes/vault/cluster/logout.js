@@ -1,28 +1,26 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Ember from 'ember';
-import { computed } from '@ember/object';
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
+import clearModelCache from 'vault/utils/shared-model-boundary';
 
-export default Route.extend(ModelBoundaryRoute, {
-  auth: service(),
-  controlGroup: service(),
-  flashMessages: service(),
-  console: service(),
-  permissions: service(),
-  namespaceService: service('namespace'),
-  router: service(),
-  version: service(),
-  customMessages: service(),
+export default class LogoutRoute extends Route {
+  @service auth;
+  @service store;
+  @service controlGroup;
+  @service flashMessages;
+  @service console;
+  @service permissions;
+  @service('namespace') namespaceService;
+  @service router;
+  @service version;
+  @service customMessages;
 
-  modelTypes: computed(function () {
-    return ['secret', 'secret-engine'];
-  }),
+  modelTypes = ['secret', 'secret-engine'];
 
   beforeModel({ to: { queryParams } }) {
     const ns = this.namespaceService.path;
@@ -49,5 +47,8 @@ export default Route.extend(ModelBoundaryRoute, {
       const { cluster_name } = this.paramsFor('vault.cluster');
       location.assign(this.router.urlFor('vault.cluster.auth', cluster_name, { queryParams }));
     }
-  },
-});
+  }
+  deactivate() {
+    clearModelCache(this.store, this.modelTypes);
+  }
+}

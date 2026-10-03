@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -6,6 +6,7 @@ package github
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"io"
 	"os"
 	"text/template"
@@ -70,4 +71,41 @@ func renderEmbeddedTemplate(name string, data any) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+// limitCharacters truncates a string to maxGitHubMessageChars while preserving
+// markdown formatting integrity. It adds a truncation notice if truncation occurs.
+const maxGitHubMessageChars = 65536
+
+func limitCharacters(content string) string {
+	if len(content) <= maxGitHubMessageChars {
+		return content
+	}
+
+	// Define the truncation notice to calculate its length
+	truncationNotice := "\n\n---\n\n:scissors: **Message truncated due to GitHub's character limit**\n\n" +
+		fmt.Sprintf("This message was automatically truncated because it exceeded GitHub's %d character limit for "+
+			"comments and pull request descriptions.", maxGitHubMessageChars)
+
+	// Calculate how much space the notice needs
+	noticeLen := len(truncationNotice)
+	maxContentLen := maxGitHubMessageChars - noticeLen
+
+	// Find a good truncation point to avoid breaking markdown
+	truncateAt := maxContentLen
+	for truncateAt > 0 && content[truncateAt] != '\n' {
+		truncateAt--
+	}
+
+	// If we can't find a newline within reasonable bounds, just truncate
+	if truncateAt == 0 || (maxContentLen-truncateAt) > 1000 {
+		truncateAt = maxContentLen
+	}
+
+	// Ensure we don't go out of bounds
+	if truncateAt > len(content) {
+		truncateAt = len(content)
+	}
+
+	return content[:truncateAt] + truncationNotice
 }

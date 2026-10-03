@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -31,6 +31,21 @@ export default class OidcClientForm extends Component {
     !this.args.model.assignments || this.args.model.assignments.includes('allow_all')
       ? 'allow_all'
       : 'limited';
+
+  get breadcrumbs() {
+    const applicationOrDetailsBreadcrumb = this.args.model.isNew
+      ? { label: 'Applications', route: 'vault.cluster.access.oidc.clients' }
+      : {
+          label: 'Details',
+          route: 'vault.cluster.access.oidc.clients.client.details',
+          model: this.args.model.name,
+        };
+    return [
+      { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
+      applicationOrDetailsBreadcrumb,
+      { label: this.args.model.isNew ? 'Create Application' : 'Edit Application' },
+    ];
+  }
 
   get modelAssignments() {
     const { assignments } = this.args.model;

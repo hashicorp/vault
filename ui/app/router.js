@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -167,10 +167,11 @@ Router.map(function () {
           });
         });
       });
-      this.route('secrets', function () {
-        this.route('mounts', function () {
+      this.route('secrets-redirect', { path: '/secrets' }); // legacy redirect
+      this.route('secrets', { path: '/secrets-engines' }, function () {
+        this.route('enable', function () {
           // TODO: Revisit path on create once components are separated - should we specify selected type or just keep it generic as /create?
-          this.route('create', { path: '/:mount_type/create' });
+          this.route('create', { path: '/:mount_type' });
         });
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
@@ -181,7 +182,6 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
-            this.route('index', { path: '/' }); // this is still used by old engines
             this.route('general-settings');
             this.route('plugin-settings');
             // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
@@ -223,10 +223,7 @@ Router.map(function () {
       this.route('replication-dr-promote', function () {
         this.route('details');
       });
-      if (config.addRootMounts) {
-        config.addRootMounts.call(this);
-      }
-
+      this.mount('replication');
       this.route('not-found', { path: '/*path' });
     });
     this.route('not-found', { path: '/*path' });

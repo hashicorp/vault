@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,7 +9,7 @@ interface ParsedCertificateData {
 
   // certificate values
   common_name: string;
-  subject_serial_number: string;
+  serial_number: string;
   ou: string;
   organization: string;
   country: string;

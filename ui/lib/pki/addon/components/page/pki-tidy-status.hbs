@@ -1,16 +1,16 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <Toolbar>
   <ToolbarActions>
     <div class="toolbar-separator"></div>
-    {{#if @autoTidyConfig.enabled}}
-      <ToolbarLink @route="tidy.auto" @model={{@autoTidyConfig.id}} data-test-pki-auto-tidy-config>
+    {{#if @enabled}}
+      <ToolbarLink @route="tidy.auto" @model={{this.secretMountPath.currentPath}} data-test-pki-auto-tidy-config>
         Auto-tidy configuration
       </ToolbarLink>
-      <ToolbarLink @route="tidy.manual" @model={{@autoTidyConfig.id}} data-test-pki-manual-tidy-config>
+      <ToolbarLink @route="tidy.manual" @model={{this.secretMountPath.currentPath}} data-test-pki-manual-tidy-config>
         Perform manual tidy
       </ToolbarLink>
     {{else}}
@@ -149,13 +149,13 @@
         <Hds::Button
           @text="Automatic tidy"
           @route="tidy.auto.configure"
-          @model={{@autoTidyConfig.id}}
+          @model={{this.secretMountPath.currentPath}}
           data-test-tidy-modal-auto-button
         />
         <Hds::Button
           @text="Manual tidy"
           @route="tidy.manual"
-          @model={{@autoTidyConfig.id}}
+          @model={{this.secretMountPath.currentPath}}
           data-test-tidy-modal-manual-button
         />
         <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-tidy-modal-cancel-button />

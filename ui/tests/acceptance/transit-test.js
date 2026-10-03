@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -219,7 +219,7 @@ module('Acceptance | transit', function (hooks) {
     };
     await runCmd(mountEngineCmd('transit', this.path));
     // Start test on backend main page
-    return visit(`/vault/secrets/${this.path}/list`);
+    return visit(`/vault/secrets-engines/${this.path}/list`);
   });
 
   hooks.afterEach(async function () {
@@ -243,7 +243,7 @@ module('Acceptance | transit', function (hooks) {
 
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/show/${name}?tab=details`,
+      `/vault/secrets-engines/${this.path}/show/${name}?tab=details`,
       'it navigates to show page'
     );
     assert.dom(GENERAL.infoRowValue('Auto-rotation period')).hasText('30 days');
@@ -258,20 +258,20 @@ module('Acceptance | transit', function (hooks) {
     await click(SELECTORS.secretLink);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/show/${name}?tab=actions`,
+      `/vault/secrets-engines/${this.path}/show/${name}?tab=actions`,
       'navigates to key actions tab'
     );
     await click(SELECTORS.actionsTab);
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${this.path}/show/${name}?tab=actions`,
+      `/vault/secrets-engines/${this.path}/show/${name}?tab=actions`,
       'navigates back to transit actions'
     );
   });
 
   test('create form renders supported options for each key type', async function (assert) {
     assert.expect(30);
-    await visit(`/vault/secrets/${this.path}/create`);
+    await visit(`/vault/secrets-engines/${this.path}/create`);
     const KEY_OPTIONS = [
       {
         type: 'ed25519',
@@ -345,7 +345,7 @@ module('Acceptance | transit', function (hooks) {
     };
 
     const name = await this.generateTransitKey(keyData);
-    await visit(`vault/secrets/${this.path}/show/${name}`);
+    await visit(`vault/secrets-engines/${this.path}/show/${name}`);
     assert
       .dom(GENERAL.infoRowValue('Auto-rotation period'))
       .hasText('30 days', 'Has expected auto rotate value');
@@ -462,7 +462,7 @@ module('Acceptance | transit', function (hooks) {
     test(`transit backend: ${key.type}`, async function (assert) {
       assert.expect(key.convergent ? 43 : 7);
       const name = await this.generateTransitKey(key);
-      await visit(`vault/secrets/${this.path}/show/${name}`);
+      await visit(`vault/secrets-engines/${this.path}/show/${name}`);
 
       const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
       assert
@@ -483,7 +483,7 @@ module('Acceptance | transit', function (hooks) {
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.path}/show/${name}?tab=actions`,
+        `/vault/secrets-engines/${this.path}/show/${name}?tab=actions`,
         `${name}: navigates to transit actions`
       );
 

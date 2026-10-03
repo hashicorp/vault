@@ -1,0 +1,5 @@
+```release-note:feature
+**KV v2 Version Attribution**: Vault now includes attribution metadata for
+versioned KV secrets. This allows lookup of attribution information for each
+version of KV v2 secrets from CLI and API.
+```

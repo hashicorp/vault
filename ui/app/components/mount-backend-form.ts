@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -32,8 +32,14 @@ import type { ValidationMap } from 'vault/vault/app-types';
  *
  */
 
+interface TypeInfo {
+  type: string;
+  displayName: string;
+  glyph: string;
+}
 interface Args {
   mountModel: AuthMethodForm;
+  mountTypes: TypeInfo[] | undefined;
   onMountSuccess: (type: string, path: string, useEngineRoute: boolean) => void;
 }
 
@@ -57,6 +63,16 @@ export default class MountBackendForm extends Component<Args> {
 
   get showEnable(): boolean {
     return !!this.mountForm.type;
+  }
+
+  get title(): string {
+    const typeInfo = (this.args?.mountTypes || []).find(
+      (mountType: TypeInfo) => this.mountForm.type === mountType.type
+    );
+    if (this.showEnable) {
+      return `Enable ${typeInfo?.displayName || this.mountForm.type} Authentication Method`;
+    }
+    return 'Enable an Authentication Method';
   }
 
   constructor(owner: unknown, args: Args) {

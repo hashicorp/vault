@@ -1,10 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 
 /**
  * This route is responsible for fetching all configuration data.
@@ -15,19 +16,24 @@ import Route from '@ember/routing/route';
 export default class SecretsBackendConfigurationRoute extends Route {
   @service api;
   @service version;
+  @service router;
 
   async model() {
     const secretsEngine = this.modelFor('vault.cluster.secrets.backend');
     const { type, id } = secretsEngine;
     return {
       secretsEngine,
-      config: await this.fetchConfig(type, id), // fetch config for configurable engines (aws, azure, gcp, ssh)
+      // fetch config for configurable secrets engines that use the "general" route pattern: aws, azure, gcp, ssh
+      // ember-engines manage their own engine config routes and requests so do not fetch here.
+      config: await this.fetchConfig(type, id),
     };
   }
 
   fetchConfig(type, id) {
     // id is the path where the backend is mounted since there's only one config per engine (often this path is referred to just as backend)
-    switch (type) {
+    // Use effective type to handle external plugin mappings
+    const effectiveType = getEffectiveEngineType(type);
+    switch (effectiveType) {
       case 'aws':
         return this.fetchAwsConfigs(id);
       case 'azure':

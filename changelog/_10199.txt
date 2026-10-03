@@ -1,0 +1,27 @@
+```release-note:bug
+auth/approle (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/aws (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/github (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/ldap (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/okta (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/radius (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/scep (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/cert (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```
+```release-note:bug
+auth/userpass (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
+```

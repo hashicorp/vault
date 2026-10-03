@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -617,8 +617,9 @@ func generateURLSteps(t *testing.T, caCert, caKey string, intdata, reqdata map[s
 			Operation: logical.UpdateOperation,
 			Path:      "root/generate/exported",
 			Data: map[string]interface{}{
-				"common_name": "Root Cert",
-				"ttl":         "180h",
+				"common_name":         "Root Cert",
+				"ttl":                 "180h",
+				"not_before_duration": "3h",
 			},
 			Check: func(resp *logical.Response) error {
 				if resp.Secret != nil && resp.Secret.LeaseID != "" {
@@ -1492,9 +1493,9 @@ func generateRoleSteps(t *testing.T, useCSRs bool) []logicaltest.TestStep {
 				roleVals.KeyBits = plan.roleKeyBits
 				issueTestStep.ErrorOk = plan.errorOk
 
-				addTests(getCnCheck(issueVals.CommonName, roleVals, plan.privKey, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, plan.privKey, parsedKeyUsage, extUsage, validity))
 			} else {
-				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, x509.KeyUsage(parsedKeyUsage), extUsage, validity))
+				addTests(getCnCheck(issueVals.CommonName, roleVals, nil, parsedKeyUsage, extUsage, validity))
 			}
 		}
 	}
@@ -1952,7 +1953,7 @@ func TestRolesAltIssuer(t *testing.T) {
 	require.NoError(t, err, "should be signed by root-b but wasn't")
 }
 
-func TestBackend_PathFetchValidRaw(t *testing.T) {
+func TestBackend_PathFetchValid(t *testing.T) {
 	t.Parallel()
 	b, storage := CreateBackendWithStorage(t)
 
@@ -2039,6 +2040,8 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	expectedSerial := serialFromCert(issuedCrt)
 	expectedCert := []byte(issueCrtAsPem)
 
+	require.Equal(t, resp.Data["authority_key_id"].(string), certutil.GetHexFormatted(issuedCrt.AuthorityKeyId, ":"))
+
 	// get der cert
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.ReadOperation,
@@ -2082,6 +2085,22 @@ func TestBackend_PathFetchValidRaw(t *testing.T) {
 	if resp.Data[logical.HTTPContentType] != "application/pem-certificate-chain" {
 		t.Fatalf("failed to get raw cert content-type")
 	}
+
+	// get json
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      fmt.Sprintf("cert/%s", expectedSerial),
+		Storage:   storage,
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to get cert, %#v", resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	require.Equal(t, resp.Data["certificate"].(string), issueCrtAsPem)
+	require.Equal(t, resp.Data["authority_key_id"].(string), certutil.GetHexFormatted(issuedCrt.AuthorityKeyId, ":"))
 }
 
 func TestBackend_PathFetchCertList(t *testing.T) {
@@ -2247,8 +2266,9 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 
 	// generate root
 	rootData := map[string]interface{}{
-		"common_name": "test.com",
-		"not_after":   "9999-12-31T23:59:59Z",
+		"common_name":         "test.com",
+		"not_after":           "9999-12-31T23:59:59Z",
+		"not_before_duration": "3h",
 	}
 
 	resp, err := b.HandleRequest(context.Background(), &logical.Request{
@@ -2364,6 +2384,8 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if resp.Secret != nil {
 		t.Fatal("got a lease when we should not have")
 	}
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	require.Equal(t, certutil.GetHexFormatted(cert.AuthorityKeyId, ":"), resp.Data["authority_key_id"].(string))
 	resp, err = b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "sign-verbatim/test",
@@ -2383,19 +2405,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
 	}
-	certString := resp.Data["certificate"].(string)
-	block, _ := pem.Decode([]byte(certString))
-	if block == nil {
-		t.Fatal("nil pem block")
-	}
-	certs, err := x509.ParseCertificates(block.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(certs) != 1 {
-		t.Fatalf("expected a single cert, got %d", len(certs))
-	}
-	cert := certs[0]
+	cert = parseCert(t, resp.Data["certificate"].(string))
 	if math.Abs(float64(time.Now().Add(12*time.Hour).Unix()-cert.NotAfter.Unix())) < 10 {
 		t.Fatalf("sign-verbatim did not properly cap validity period (notAfter) on signed CSR: was %v vs requested %v but should've been %v", cert.NotAfter, time.Now().Add(12*time.Hour), time.Now().Add(8*time.Hour))
 	}
@@ -2423,19 +2433,7 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	if resp.Data == nil || resp.Data["certificate"] == nil {
 		t.Fatal("did not get expected data")
 	}
-	certString = resp.Data["certificate"].(string)
-	block, _ = pem.Decode([]byte(certString))
-	if block == nil {
-		t.Fatal("nil pem block")
-	}
-	certs, err = x509.ParseCertificates(block.Bytes)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(certs) != 1 {
-		t.Fatalf("expected a single cert, got %d", len(certs))
-	}
-	cert = certs[0]
+	cert = parseCert(t, resp.Data["certificate"].(string))
 
 	// Fallback check for duplicate otherName, necessary on Go versions before 1.19.
 	// We assume that there is only one SAN in the original CSR and that it is an otherName.
@@ -2495,6 +2493,134 @@ func runTestSignVerbatim(t *testing.T, keyType string) {
 	}
 	if math.Abs(float64(resp.Secret.TTL-(5*time.Hour))) > float64(5*time.Hour) {
 		t.Fatalf("ttl not default; wanted %v, got %v", b.System().DefaultLeaseTTL(), resp.Secret.TTL)
+	}
+}
+
+func TestBackend_SignVerbatim_WithBasicConstraints(t *testing.T) {
+	// create the backend
+	b, storage := CreateBackendWithStorage(t)
+
+	// generate root
+	rootData := map[string]interface{}{
+		"common_name": "test.com",
+		"not_after":   "9999-12-31T23:59:59Z",
+	}
+
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "root/generate/internal",
+		Storage:    storage,
+		Data:       rootData,
+		MountPoint: "pki/",
+	})
+	if resp != nil && resp.IsError() {
+		t.Fatalf("failed to generate root, %#v", *resp)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct {
+		name      string
+		isCA      bool
+		expectErr bool
+	}{
+		{
+			"isca",
+			true,
+			true,
+		},
+		{
+			"notca",
+			false,
+			false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			extNonCA, err := certutil.CreateBasicConstraintExtension(tc.isCA, -1)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			csrReq := &x509.CertificateRequest{
+				Subject: pkix.Name{
+					CommonName: "foo.bar.com",
+				},
+				ExtraExtensions: []pkix.Extension{
+					extNonCA,
+				},
+			}
+			csr, err := x509.CreateCertificateRequest(rand.Reader, csrReq, key)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(csr) == 0 {
+				t.Fatal("generated csr is empty")
+			}
+			pemCSR := strings.TrimSpace(string(pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE REQUEST",
+				Bytes: csr,
+			})))
+			if len(pemCSR) == 0 {
+				t.Fatal("pem csr is empty")
+			}
+
+			signVerbatimData := map[string]interface{}{
+				"csr":            pemCSR,
+				"signature_bits": 512,
+			}
+			resp, err = b.HandleRequest(context.Background(), &logical.Request{
+				Operation:  logical.UpdateOperation,
+				Path:       "sign-verbatim",
+				Storage:    storage,
+				Data:       signVerbatimData,
+				MountPoint: "pki/",
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if tc.expectErr {
+				if resp.Error() == nil {
+					t.Fatalf("expected error, got none")
+				}
+				return
+			}
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("sign-verbatim"), logical.UpdateOperation), resp, true)
+
+			if resp != nil && resp.IsError() {
+				t.Fatalf("failed to sign-verbatim CSR with basic constraint: %#v", *resp)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			certs, err := certutil.ParseCertsPEM([]byte(resp.Data["certificate"].(string)))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			found := false
+			for _, ext := range certs[0].Extensions {
+				if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+					isCA, _, err := certutil.ParseBasicConstraintExtension(ext)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if isCA {
+						t.Fatal("expected isCA=false")
+					}
+					found = true
+				}
+			}
+			if !found {
+				t.Fatal("no basic constraints extension")
+			}
+		})
 	}
 }
 
@@ -7471,6 +7597,87 @@ func TestIssuance_AlwaysEnforceErr(t *testing.T) {
 	})
 }
 
+// TestIssuance_NotBefore verifies that issuance fails with a NotAfter in the past.
+func TestIssuance_NotBefore(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+		"ttl":         "10h",
+		"issuer_name": "root-ca",
+		"key_name":    "root-key",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
+
+	resp, err = CBWrite(b, s, "roles/test-role", map[string]interface{}{
+		"allow_any_name":         true,
+		"key_type":               "ec",
+		"allowed_serial_numbers": "*",
+	})
+
+	// Make sure sign-intermediate fails if the NotAfter is in the past
+	t.Run("ca-issuance", func(t *testing.T) {
+		resp, err = CBWrite(b, s, "intermediate/generate/internal", map[string]interface{}{
+			"common_name": "myint.com",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed generating intermediary CSR")
+		requireFieldsSetInResp(t, resp, "csr")
+		csr := resp.Data["csr"]
+
+		_, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+			"csr":                 csr,
+			"use_csr_values":      true,
+			"not_before_duration": "1s",
+			"not_after":           time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		})
+		require.ErrorContains(t, err, "notAfter before notBefore", "expected error from sign csr got: %v", resp)
+
+		_, err = CBWrite(b, s, "issuer/root-ca/sign-intermediate", map[string]interface{}{
+			"csr":                 csr,
+			"use_csr_values":      true,
+			"not_before_duration": "1s",
+			"not_after":           time.Now().Add(2 * time.Hour).Format(time.RFC3339),
+		})
+		requireSuccessNonNilResponse(t, resp, err, "notAfter after notBefore")
+		time.Sleep(time.Second)
+	})
+
+	// Make sure sign of leaf cert fails if the NotAfter is in the past
+	t.Run("sign-leaf-csr", func(t *testing.T) {
+		_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
+
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign/test-role", map[string]interface{}{
+			"csr":       csrPem,
+			"not_after": time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		})
+		require.ErrorContains(t, err, "notAfter before notBefore", "expected error from sign csr got: %v", resp)
+
+		resp, err = CBWrite(b, s, "issuer/root-ca/sign/test-role", map[string]interface{}{
+			"csr":       csrPem,
+			"not_after": time.Now().Add(2 * time.Hour).Format(time.RFC3339),
+		})
+		requireSuccessNonNilResponse(t, resp, err, "sign should have succeeded with a NotAfter in the future")
+	})
+
+	// Make sure issue of leaf cert fails if the NotAfter is in the past
+	t.Run("issue-leaf-csr", func(t *testing.T) {
+		resp, err = CBWrite(b, s, "issuer/root-ca/issue/test-role", map[string]interface{}{
+			"common_name": "leaf.example.com",
+			"not_after":   time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
+		})
+		require.ErrorContains(t, err, "notAfter before notBefore", "expected error from issue got: %v", resp)
+
+		// Make sure it works if we are under
+		resp, err = CBWrite(b, s, "issuer/root-ca/issue/test-role", map[string]interface{}{
+			"common_name": "leaf.example.com",
+			"not_after":   time.Now().Add(2 * time.Hour).Format(time.RFC3339),
+		})
+		requireSuccessNonNilResponse(t, resp, err, "issue should have worked with a NotAfter in the future")
+	})
+}
+
 // TestIssuance_SignIntermediateKeyUsages tests the field "key_usage" both when directly generating a root certificate,
 // and when signing a CA CSR.  In particular, this test verifies that:
 // - the key usage DigitalSignature is added if present
@@ -7573,3 +7780,122 @@ var (
 	edCAKey   string
 	edCACert  string
 )
+
+func getCACert(notBefore, notAfter time.Time) (string, error) {
+	caCertTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "root.localhost",
+		},
+		DNSNames:              []string{"root.localhost"},
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		SerialNumber:          big.NewInt(mathrand.Int63()),
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	rak, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+	if err != nil {
+		return "", err
+	}
+
+	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, rak.Public(), rak)
+	if err != nil {
+		panic(err)
+	}
+	pemCert := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caBytes,
+	}))
+
+	pemKey := string(pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(rak),
+	}))
+
+	return pemCert + "\n" + pemKey, nil
+}
+
+func requireResponse(t *testing.T, expectErr bool, resp *logical.Response, err error, msgAndArgs ...interface{}) {
+	t.Helper()
+
+	if expectErr {
+		if err == nil {
+			err = resp.Error()
+		}
+		require.Error(t, err, msgAndArgs)
+	} else {
+		requireSuccessNonNilResponse(t, resp, err, msgAndArgs)
+	}
+}
+
+// TestIssuance_ValidityPeriodContainedByCA attempt to issue/sign certs with a 1h ttl,
+// having first imported a CA with NotBefore/NotAfter set to test various conditions.
+func TestIssuance_ValidityPeriodContainedByCA(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		caNotBefore time.Time
+		caNotAfter  time.Time
+		expectErr   bool
+	}{
+		{
+			name:        "valid",
+			caNotBefore: time.Now().Add(-time.Hour),
+			caNotAfter:  time.Now().Add(5 * time.Hour),
+			expectErr:   false,
+		},
+		{
+			name:        "caExpired",
+			caNotBefore: time.Now().Add(-time.Hour),
+			caNotAfter:  time.Now().Add(-time.Minute),
+			expectErr:   true,
+		},
+		{
+			name:        "caWillExpire",
+			caNotBefore: time.Now().Add(-time.Hour),
+			caNotAfter:  time.Now().Add(30 * time.Minute),
+			expectErr:   true,
+		},
+		{
+			name:        "caNotYet",
+			caNotBefore: time.Now().Add(time.Hour),
+			caNotAfter:  time.Now().Add(2 * time.Hour),
+			expectErr:   true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			b, s := CreateBackendWithStorage(t)
+
+			ca, err := getCACert(tc.caNotBefore, tc.caNotAfter)
+			require.NoError(t, err)
+
+			resp, err := CBWrite(b, s, "config/ca", map[string]interface{}{"pem_bundle": ca})
+			requireSuccessNonNilResponse(t, resp, err)
+
+			resp, err = CBWrite(b, s, "roles/test-role", map[string]interface{}{
+				"allow_any_name":         true,
+				"key_type":               "ec",
+				"allowed_serial_numbers": "*",
+			})
+
+			t.Run("sign-leaf-csr", func(t *testing.T) {
+				_, csrPem := generateTestCsr(t, certutil.ECPrivateKey, 256)
+
+				resp, err = CBWrite(b, s, "sign/test-role", map[string]interface{}{
+					"csr":       csrPem,
+					"not_after": time.Now().Add(time.Hour).Format(time.RFC3339),
+				})
+				requireResponse(t, tc.expectErr, resp, err)
+			})
+
+			t.Run("issue-leaf-csr", func(t *testing.T) {
+				resp, err = CBWrite(b, s, "issue/test-role", map[string]interface{}{
+					"common_name": "leaf.example.com",
+					"not_after":   time.Now().Add(time.Hour).Format(time.RFC3339),
+				})
+				requireResponse(t, tc.expectErr, resp, err)
+			})
+		})
+	}
+}

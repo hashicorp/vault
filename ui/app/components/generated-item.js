@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,6 +9,8 @@ import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { capitalize } from '@ember/string';
+import { singularize } from 'ember-inflector';
 
 /**
  * @module GeneratedItem
@@ -35,6 +37,18 @@ export default Component.extend({
   props: computed('model', function () {
     return this.model.serialize();
   }),
+
+  get title() {
+    const title = `${capitalize(this.mode)} ${singularize(this.itemType)}`;
+    if (this.mode === 'show') {
+      return this.model.id;
+    } else if (this.mode === 'edit') {
+      return `${title} ${this.model.id}`;
+    }
+
+    return `${capitalize(this.mode)} ${singularize(this.itemType)}`;
+  },
+
   validateForm() {
     // Only validate on new models because blank passwords will not be updated
     // in practice this only happens for userpass users

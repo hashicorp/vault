@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package ssh
@@ -87,6 +87,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	if err != nil {
 		return nil, err
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHOTPVerify, map[string]interface{}{
+		"role_name": otpEntry.RoleName,
+	})
 
 	// Return username and IP only if there were no problems uptill this point.
 	return &logical.Response{

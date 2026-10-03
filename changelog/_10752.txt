@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/ldap: Require non-empty passwords on login command to prevent unauthenticated access to Vault.
+```

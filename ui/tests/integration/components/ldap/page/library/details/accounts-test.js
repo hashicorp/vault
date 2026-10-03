@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,46 +9,22 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { setupDetailsTest } from 'vault/tests/helpers/ldap/ldap-helpers';
 
 module('Integration | Component | ldap | Page::Library::Details::Accounts', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'ldap');
   setupMirage(hooks);
+  setupDetailsTest(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
-    this.store = this.owner.lookup('service:store');
-
-    this.store.pushPayload('ldap/library', {
-      modelName: 'ldap/library',
-      backend: 'ldap-test',
-      ...this.server.create('ldap-library', { name: 'test-library' }),
-    });
-    this.model = this.store.peekRecord('ldap/library', 'test-library');
-    this.statuses = [
-      {
-        account: 'foo.bar',
-        available: false,
-        library: 'test-library',
-        borrower_client_token: '123',
-        borrower_entity_id: '456',
-      },
-      { account: 'bar.baz', available: true, library: 'test-library' },
-    ];
-    this.renderComponent = () => {
-      return render(
-        hbs`
-                    <Page::Library::Details::Accounts @library={{this.model}} @statuses={{this.statuses}} />
-        `,
-        {
-          owner: this.engine,
-        }
+    this.renderComponent = () =>
+      render(
+        hbs`<Page::Library::Details::Accounts @library={{this.library}} @capabilities={{this.capabilities}} @statuses={{this.statuses}} />`,
+        { owner: this.engine }
       );
-    };
   });
 
   test('it should render account cards', async function (assert) {

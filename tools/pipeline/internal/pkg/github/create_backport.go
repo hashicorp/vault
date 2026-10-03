@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -15,7 +15,7 @@ import (
 	"slices"
 	"strings"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v81/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/releases"
@@ -91,7 +91,7 @@ type CreateBackportReq struct {
 // NewCreateBackportPRReq()
 type NewCreateBackportReqOpt func(*CreateBackportReq)
 
-// CreateBackportPRReq is a respose of creating a backport pull request
+// CreateBackportRes is a respose of creating a backport pull request
 type CreateBackportRes struct {
 	OriginPullRequest *libgithub.PullRequest            `json:"origin_pull_request,omitempty"`
 	Branch            string                            `json:"branch,omitempty"`
@@ -688,8 +688,20 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 
-	prTitle := fmt.Sprintf("Backport %s into %s", pr.GetTitle(), ref)
-	prBody, err := renderEmbeddedTemplate("backport-pr-message.tmpl", struct {
+	// Generate title, removing existing "Backport" prefix to avoid stuttering
+	cleanTitle := pr.GetTitle()
+	if strings.HasPrefix(strings.ToLower(cleanTitle), "backport ") {
+		cleanTitle = strings.TrimSpace(cleanTitle[9:]) // Remove "Backport " prefix
+	}
+	prTitle := fmt.Sprintf("Backport %s into %s", cleanTitle, ref)
+
+	// Choose template based on whether this is a CE backport
+	templateName := "backport-pr-message.tmpl"
+	if r.hasCEPrefix(ref) {
+		templateName = "backport-ce-pr-message.tmpl"
+	}
+
+	prBody, err := renderEmbeddedTemplate(templateName, struct {
 		OriginPullRequest *libgithub.PullRequest
 		Attempt           *CreateBackportAttempt
 	}{pr, res})
@@ -697,13 +709,14 @@ func (r *CreateBackportReq) backportRef(
 		res.Error = fmt.Errorf("creating backport pull request body %w", err)
 		return res
 	}
+	limitedPRBody := limitCharacters(prBody)
 	res.PullRequest, _, err = github.PullRequests.Create(
 		ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
 			Title:    &prTitle,
 			Head:     &branchName,
 			HeadRepo: &r.Repo,
 			Base:     &ref,
-			Body:     &prBody,
+			Body:     &limitedPRBody,
 		},
 	)
 	if err != nil {

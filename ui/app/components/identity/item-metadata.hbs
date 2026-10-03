@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -22,17 +22,21 @@
     </div>
   </div>
 {{else}}
-  <EmptyState
-    @title="No metadata for {{@model.name}}"
-    @message='You can store custom data that you want to associate with this {{lowercase
-      (humanize @model.identityType)
-    }}. Click "Edit {{lowercase (humanize @model.identityType)}}" to get started.'
-  >
-    <Hds::Link::Standalone
-      @text="Identity: entities and groups tutorial"
-      @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
-      @icon="learn-link"
-      @iconPosition="trailing"
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No metadata for {{@model.name}}" />
+    <A.Body
+      data-test-empty-state-message
+      @text='You can store custom data that you want to associate with this {{lowercase
+        (humanize @model.identityType)
+      }}. Click "Edit {{lowercase (humanize @model.identityType)}}" to get started.'
     />
-  </EmptyState>
+    <A.Footer data-test-empty-state-actions as |F|>
+      <F.LinkStandalone
+        @text="Identity: entities and groups tutorial"
+        @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+        @icon="learn-link"
+        @iconPosition="trailing"
+      />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{/each-in}}

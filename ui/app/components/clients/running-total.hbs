@@ -1,18 +1,18 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @byMonthNewClients.length}}
-  <Clients::CountsCard
-    @title="Client usage trends for selected billing period"
-    @description={{this.chartContainerText}}
-    @legend={{this.chartLegend}}
-  >
+{{#if @byMonthClients.length}}
+  <Clients::CountsCard @title="Client usage trends" @description={{this.chartContainerText}} @legend={{this.chartLegend}}>
 
     <:dataLeft>
       <Hds::Text::Body @tag="p">Client count and type distribution</Hds::Text::Body>
-      <VaultReporting::DonutChart @data={{this.donutChartData}} @title="Total Clients" class="donut-chart" />
+      <VaultReporting::DonutChart
+        @data={{this.donutChartData}}
+        @title={{if this.flags.isHvdManaged "Total unique clients" "Total clients"}}
+        class="donut-chart"
+      />
     </:dataLeft>
 
     <:dataRight>
@@ -37,7 +37,7 @@
         <Clients::Charts::VerticalBarBasic
           @chartTitle="Client usage by month"
           @data={{this.runningTotalData}}
-          @dataKey="new_clients"
+          @dataKey={{this.dataKey}}
           @chartHeight={{200}}
         />
       {{/if}}
@@ -45,7 +45,7 @@
   </Clients::CountsCard>
 {{else}}
   {{! Renders when viewing activity log data that predates the monthly breakdown added in 1.11 }}
-  <Clients::UsageStats @title="Client usage" @description="Total client usage for the selected billing period.">
+  <Clients::UsageStats @title="Client usage" @description="Total client usage for the selected date range.">
     <StatText
       class="column"
       @label="Total clients"

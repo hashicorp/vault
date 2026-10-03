@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,6 +28,10 @@ export default class VersionService extends Service {
   }
 
   /* Features */
+  get hasPKIOnly() {
+    return this.features.includes('PKI-only Secrets');
+  }
+
   get hasPerfReplication() {
     return this.features.includes('Performance Replication');
   }

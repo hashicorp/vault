@@ -1,16 +1,17 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
-import ClusterRouteBase from './cluster-route-base';
+import Route from '@ember/routing/route';
 import config from 'vault/config/environment';
-import { isEmptyValue } from 'core/helpers/is-empty-value';
 import { supportedTypes } from 'vault/utils/auth-form-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
+import AuthMethodResource from 'vault/resources/auth/method';
+import { REDIRECT } from 'vault/lib/route-paths';
 
-export default class AuthRoute extends ClusterRouteBase {
+export default class AuthRoute extends Route {
   queryParams = {
     authMount: { replace: true, refreshModel: true },
     wrapped_token: { refreshModel: true },
@@ -20,13 +21,15 @@ export default class AuthRoute extends ClusterRouteBase {
   @service auth;
   @service flashMessages;
   @service namespace;
+  @service router;
   @service store;
   @service version;
 
   beforeModel() {
-    return super.beforeModel().then(() => {
-      return this.version.fetchFeatures();
-    });
+    if (this.auth.currentToken) {
+      return this.router.replaceWith(REDIRECT);
+    }
+    return this.version.fetchFeatures();
   }
 
   async model(params) {
@@ -62,13 +65,14 @@ export default class AuthRoute extends ClusterRouteBase {
   redirect(model, transition) {
     if (model?.unwrapResponse) {
       // handles the transition
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       return this.controllerFor('vault.cluster.auth').loginAndTransition.perform(model.unwrapResponse);
     }
     const hasQueryParam = transition.to?.queryParams?.with;
     const isInvalid = !model.directLinkData;
     if (hasQueryParam && isInvalid) {
       // redirect user and clear out the query param if it's invalid
-      this.router.replaceWith(this.routeName, { queryParams: { authMount: null } });
+      return this.router.replaceWith(this.routeName, { queryParams: { authMount: '' } });
     }
   }
 
@@ -80,6 +84,7 @@ export default class AuthRoute extends ClusterRouteBase {
       return await this.auth.authSuccess(clusterId, authData);
     } catch (e) {
       const { message } = await this.api.parseError(e);
+      /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controllerFor('vault.cluster.auth').unwrapTokenError = message;
     }
   }
@@ -112,8 +117,11 @@ export default class AuthRoute extends ClusterRouteBase {
       const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
         this.api.buildHeaders({ token: '' })
       );
-      // return a falsy value if the object is empty
-      return isEmptyValue(resp.auth) ? null : resp.auth;
+      const authMounts = this.api.responseObjectToArray(resp.auth, 'path').flatMap((method) => {
+        const resource = new AuthMethodResource(method, this);
+        return this.isSupported(resource.methodType) ? [resource] : [];
+      });
+      return authMounts.length ? authMounts : null;
     } catch {
       // catch error if there's a problem fetching mount data (i.e. invalid namespace)
       return null;
@@ -122,7 +130,7 @@ export default class AuthRoute extends ClusterRouteBase {
 
   /*
     In older versions of Vault, the "with" query param could refer to either the auth mount path or the type
-    (which may be the same, since the default mount path *is* the type). 
+    (which may be the same, since the default mount path *is* the type).
     For backward compatibility, we handle both scenarios.
     → If `authMount` matches a visible auth mount the method will assume that mount path to login and render as the default in the login form.
     → If `authMount` matches a supported auth type (and the mount does not have `listing_visibility="unauth"`), that type is preselected in the login form.
@@ -133,17 +141,18 @@ export default class AuthRoute extends ClusterRouteBase {
     const sanitizedParam = sanitizePath(authMount); // strip leading/trailing slashes
     // mount paths in visibleAuthMounts always end in a slash, so format for consistency
     const formattedPath = `${sanitizedParam}/`;
-    const mountData = visibleAuthMounts?.[formattedPath];
+    const mountData = visibleAuthMounts?.find((a) => a.path === formattedPath);
     if (mountData) {
       return { path: formattedPath, type: mountData.type };
     }
 
-    const types = supportedTypes(this.version.isEnterprise);
-    if (types.includes(sanitizedParam)) {
+    if (this.isSupported(sanitizedParam)) {
       return { type: sanitizedParam };
     }
     // `type` is necessary because it determines which login fields to render.
     // If we can't safely glean it from the query param, ignore it and return null.
     return null;
   }
+
+  isSupported = (type = '') => supportedTypes(this.version.isEnterprise).includes(type);
 }

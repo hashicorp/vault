@@ -1,11 +1,11 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, settled } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/pki/pki-selectors';
@@ -16,20 +16,37 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(async function () {
-    this.context = { owner: this.engine };
-    this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
-    this.secretMountPath.currentPath = 'pki-test';
-    this.issuer = this.store.createRecord('pki/issuer', { issuerId: 'abcd-efgh' });
+    this.backend = 'pki-test';
+    this.owner.lookup('service:secret-mount-path').update('pki-test');
+
+    this.issuer = { issuer_id: 'abcd-efgh' };
+    this.isRotatable = false;
+    this.canRotate = false;
+    this.canCrossSign = false;
+    this.canSignIntermediate = false;
+    this.canConfigure = false;
+
+    this.renderComponent = () =>
+      render(
+        hbs`
+          <Page::PkiIssuerDetails
+            @issuer={{this.issuer}}
+            @pem={{this.pem}}
+            @der={{this.der}}
+            @isRotatable={{this.isRotatable}}
+            @canRotate={{this.canRotate}}
+            @canCrossSign={{this.canCrossSign}}
+            @canSignIntermediate={{this.canSignIntermediate}}
+            @canConfigure={{this.canConfigure}}
+            @backend={{this.backend}}
+          />
+        `,
+        { owner: this.engine }
+      );
   });
 
   test('it renders with correct toolbar by default', async function (assert) {
-    await render(
-      hbs`
-      <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-            `,
-      this.context
-    );
+    await this.renderComponent();
 
     assert.dom(PKI_ISSUER_DETAILS.rotateRoot).doesNotExist();
     assert.dom(PKI_ISSUER_DETAILS.crossSign).doesNotExist();
@@ -40,25 +57,13 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   });
 
   test('it renders toolbar actions depending on passed capabilities', async function (assert) {
-    this.set('isRotatable', true);
-    this.set('canRotate', true);
-    this.set('canCrossSign', true);
-    this.set('canSignIntermediate', true);
-    this.set('canConfigure', true);
+    this.isRotatable = true;
+    this.canRotate = true;
+    this.canCrossSign = true;
+    this.canSignIntermediate = true;
+    this.canConfigure = true;
 
-    await render(
-      hbs`
-      <Page::PkiIssuerDetails
-        @issuer={{this.issuer}}
-        @isRotatable={{this.isRotatable}}
-        @canRotate={{this.canRotate}}
-        @canCrossSign={{this.canCrossSign}}
-        @canSignIntermediate={{this.canSignIntermediate}}
-        @canConfigure={{this.canConfigure}}
-      />
-            `,
-      this.context
-    );
+    await this.renderComponent();
 
     assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).doesNotExist();
     assert.dom(PKI_ISSUER_DETAILS.rotateRoot).hasText('Rotate this root');
@@ -67,11 +72,12 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
     assert.dom(PKI_ISSUER_DETAILS.download).hasText('Download');
     assert.dom(PKI_ISSUER_DETAILS.configure).hasText('Configure');
 
-    this.set('canRotate', false);
-    this.set('canCrossSign', false);
-    this.set('canSignIntermediate', false);
-    this.set('canConfigure', false);
-    await settled();
+    this.canRotate = false;
+    this.canCrossSign = false;
+    this.canSignIntermediate = false;
+    this.canConfigure = false;
+
+    await this.renderComponent();
 
     assert.dom(PKI_ISSUER_DETAILS.rotateRoot).doesNotExist();
     assert.dom(PKI_ISSUER_DETAILS.crossSign).doesNotExist();
@@ -81,12 +87,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   });
 
   test('it renders correct details by default', async function (assert) {
-    await render(
-      hbs`
-        <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-                `,
-      this.context
-    );
+    await this.renderComponent();
 
     // Default group details:
     assert.dom(PKI_ISSUER_DETAILS.defaultGroup).exists('Default group of details exists');
@@ -102,7 +103,9 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
 
     // Issuer URLs group details:
     assert.dom(PKI_ISSUER_DETAILS.urlsGroup).exists('Issuer URLs group of details exists');
-    assert.dom(GENERAL.infoRowValue('Issuing certificates')).exists('Issuing certificates detail exists');
+    assert
+      .dom(GENERAL.infoRowValue('Issuing certificates urls'))
+      .exists('Issuing certificates detail exists');
     assert
       .dom(GENERAL.infoRowValue('CRL distribution points'))
       .exists('CRL distribution points detail exists');
@@ -112,7 +115,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   test('it renders parsing error banner if issuer certificate contains unsupported OIDs', async function (assert) {
     this.issuer.parsedCertificate = {
       common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
-      subject_serial_number: null,
+      serial_number: null,
       ou: null,
       organization: 'Acme, Inc',
       country: 'US',
@@ -122,12 +125,8 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       parsing_errors: [new Error('certificate contains stuff we cannot parse')],
       can_parse: true,
     };
-    await render(
-      hbs`
-      <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-            `,
-      this.context
-    );
+
+    await this.renderComponent();
 
     assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).exists();
     assert
@@ -140,7 +139,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   test('it renders parsing error banner if can_parse=false but no parsing_errors', async function (assert) {
     this.issuer.parsedCertificate = {
       common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
-      subject_serial_number: null,
+      serial_number: null,
       ou: null,
       organization: 'Acme, Inc',
       country: 'US',
@@ -150,12 +149,8 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       parsing_errors: [],
       can_parse: false,
     };
-    await render(
-      hbs`
-      <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-            `,
-      this.context
-    );
+
+    await this.renderComponent();
 
     assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).exists();
     assert
@@ -168,7 +163,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
   test('it renders parsing error banner if no key for parsing_errors', async function (assert) {
     this.issuer.parsedCertificate = {
       common_name: 'fancy-cert-unsupported-subj-and-ext-oids',
-      subject_serial_number: null,
+      serial_number: null,
       ou: null,
       organization: 'Acme, Inc',
       country: 'US',
@@ -178,12 +173,7 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
       can_parse: false,
     };
 
-    await render(
-      hbs`
-      <Page::PkiIssuerDetails @issuer={{this.issuer}} />
-            `,
-      this.context
-    );
+    await this.renderComponent();
 
     assert.dom(PKI_ISSUER_DETAILS.parsingAlertBanner).exists();
     assert

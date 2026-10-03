@@ -17,15 +17,17 @@ jobs:
       runs-on: ${{ steps.metadata.outputs.runs-on }}
       version: ${{ steps.metadata.outputs.version }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - id: set-product-version
         uses: hashicorp/actions-set-product-version@2ec1b51402b3070bccf7ca95306afbd039e574ff # v2.0.1
+        with:
+          checkout: false # There's no need to check out again
       - id: metadata
         run: |
           echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
           github_repository="${{ github.repository }}"
           if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
-            echo 'runs-on=["self-hosted","ubuntu-latest-x64","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"
+            echo 'runs-on=["self-hosted","ubuntu-latest-x64","type=c6a.2xlarge;c6a.4xlarge;c6a.8xlarge"]' >> "$GITHUB_OUTPUT"
           else
             echo 'runs-on="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"
           fi
@@ -34,7 +36,7 @@ jobs:
     needs: metadata
     runs-on: ${{ fromJSON(needs.metadata.outputs.runs-on) }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - uses: ./.github/actions/set-up-go
         with:
           no-restore: true
@@ -43,7 +45,7 @@ jobs:
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_wrapper: false
-      - uses: hashicorp/action-setup-enos@39a8f388434bea5eeba6649b99aa9949a55a1150 # v1.38
+      - uses: hashicorp/action-setup-enos@80a17fa25605989a7a53199137dae1244e32353f # v1.40
       - name: Ensure shellcheck is available for linting
         run: which shellcheck || (sudo apt update && sudo apt install -y shellcheck)
       - name: lint

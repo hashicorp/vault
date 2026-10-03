@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -32,6 +32,16 @@ export default class DatabaseConnectionEdit extends Component {
 
   @tracked
   showSaveModal = false; // used for create mode
+
+  get title() {
+    if (this.args?.mode === 'create') {
+      return 'Create Connection';
+    } else if (this.args?.mode === 'edit') {
+      return 'Edit Connection';
+    } else {
+      return this.args?.model?.id;
+    }
+  }
 
   rotateCredentials(backend, name) {
     const adapter = this.store.adapterFor('database/connection');

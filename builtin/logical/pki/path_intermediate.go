@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -122,7 +122,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	data.Raw["use_pss"] = false
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	exported, format, role, errorResp := getGenerationParams(sc, data)
+	exported, format, role, errorResp := getGenerationParams(sc, data, false)
 	if errorResp != nil {
 		return errorResp, nil
 	}
@@ -214,7 +214,8 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	b.pkiObserver.RecordPKIObservation(ctx, req, observe.ObservationTypePKIGenerateIntermediate,
 		observe.NewAdditionalPKIMetadata("key_id", myKey.ID),
 		observe.NewAdditionalPKIMetadata("key_name", myKey.Name),
-		observe.NewAdditionalPKIMetadata("role", role.Name),
+		observe.NewAdditionalPKIMetadata("key_type", myKey.PrivateKeyType),
+		observe.NewAdditionalPKIMetadata("role_name", role.Name),
 		observe.NewAdditionalPKIMetadata("exported", exported),
 		observe.NewAdditionalPKIMetadata("type", format))
 

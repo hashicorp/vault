@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package pki
@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
 	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -207,7 +208,7 @@ func (b *backend) ocspHandler(ctx context.Context, request *logical.Request, dat
 
 	var serialNumber string
 	if ocspStatus.serialNumber != nil {
-		serialNumber = ocspStatus.serialNumber.String()
+		serialNumber = parsing.SerialFromBigInt(ocspStatus.serialNumber)
 	}
 
 	b.pkiObserver.RecordPKIObservation(ctx, request, observe.ObservationTypePKIOCSP,

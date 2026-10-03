@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -22,5 +22,7 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState @title="This group has no parent groups yet" />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="This group has no parent groups yet" />
+  </Hds::ApplicationState>
 {{/if}}

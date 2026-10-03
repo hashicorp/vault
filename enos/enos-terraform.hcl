@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 terraform_cli "default" {
@@ -22,6 +22,10 @@ terraform "default" {
   required_providers {
     aws = {
       source = "hashicorp/aws"
+    }
+
+    docker = {
+      source = "kreuzwerker/docker"
     }
 
     enos = {

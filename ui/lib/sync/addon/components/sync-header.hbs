@@ -1,28 +1,17 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  {{#if @breadcrumbs}}
-    <p.top>
+<Page::Header @title={{@title}} @icon={{@icon}}>
+  <:breadcrumbs>
+    {{#if @breadcrumbs}}
       <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-    </p.top>
-  {{/if}}
-
-  <p.levelLeft>
-    <h1 class="title is-3 has-bottom-margin-m" data-test-page-title>
-      {{#if @icon}}
-        <Icon @name={{@icon}} @size="24" />
-      {{/if}}
-      {{@title}}
-      {{#if this.flags.isHvdManaged}}
-        <Hds::Badge @text="Plus feature" @color="highlight" @size="large" />
-      {{/if}}
-    </h1>
-  </p.levelLeft>
-
-  <p.levelRight>
-    {{yield to="actions"}}
-  </p.levelRight>
-</PageHeader>
+    {{/if}}
+  </:breadcrumbs>
+  <:badges>
+    {{#if this.flags.isHvdManaged}}
+      <Hds::Badge @text="Plus feature" @color="highlight" @size="large" data-test-badge="Plus feature" />
+    {{/if}}
+  </:badges>
+</Page::Header>

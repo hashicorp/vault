@@ -1,8 +1,7 @@
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -34,19 +33,19 @@
       }
       &.active {
         border-color: var(--token-color-palette-blue-200);
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
     }
     li {
       // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
       &.is-active {
         border-bottom: 2px solid var(--token-color-palette-blue-200);
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
       // solves for tabs on auth mounts & secrets engines
       > a {
         &.active {
-          color: var(--token-color-palette-blue-200);
+          color: var(--token-color-foreground-action);
           background-color: transparent;
           border-bottom: 2px solid var(--token-color-palette-blue-200);
         }
@@ -61,7 +60,7 @@
     &.active a,
     &.is-active a {
       border-color: var(--token-color-palette-blue-200);
-      color: var(--token-color-palette-blue-200);
+      color: var(--token-color-foreground-action);
     }
   }
   // important for auth tabs in active state, otherwise the border-bottom will not show.
@@ -71,8 +70,8 @@
     justify-content: center;
     vertical-align: top;
     border-bottom: 2px solid transparent;
-    color: var(--token-color-palette-neutral-400);
-    font-weight: font_variables.$font-weight-semibold;
+    color: var(--token-color-palette-neutral-500);
+    font-weight: var(--token-typography-font-weight-semibold);
     padding: size_variables.$spacing-14 size_variables.$spacing-12 size_variables.$spacing-12;
     text-decoration: none;
     transition:
@@ -85,8 +84,8 @@
     }
 
     &:hover {
-      background-color: var(--token-color-palette-neutral-50);
-      color: var(--token-color-palette-neutral-600);
+      background-color: var(--token-color-surface-faint);
+      color: var(--token-color-foreground-primary);
     }
   }
 

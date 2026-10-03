@@ -1,0 +1,165 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if (has-feature "Namespaces")}}
+  {{#if this.showWizard}}
+    <Wizard::Namespaces::NamespaceWizard
+      @onDismiss={{fn (mut this.hasDismissedWizard) true}}
+      @onRefresh={{this.refreshNamespaceList}}
+    />
+  {{else}}
+    <Page::Header @title="Namespaces">
+      <:breadcrumbs>
+        <Page::Breadcrumbs
+          @breadcrumbs={{array (hash label="Vault" route="vault.cluster.dashboard" icon="vault") (hash label="Namespaces")}}
+        />
+      </:breadcrumbs>
+      <:badges>
+        <Hds::Badge @icon="org" @text={{this.namespacePath}} data-test-badge="namespace-path" />
+      </:badges>
+      <:actions>
+        {{#unless @model.namespaces}}
+          <Hds::Button
+            class="has-right-margin-4"
+            @color="secondary"
+            @icon="bulb"
+            @text="New to Namespaces?"
+            {{on "click" this.enterGuidedStart}}
+            data-test-button="guided-start"
+          />
+          <Hds::Button
+            class="has-right-margin-4"
+            @icon="plus"
+            @route="vault.cluster.access.namespaces.create"
+            @text="Create namespace"
+            data-test-button="create-namespace"
+          />
+        {{/unless}}
+      </:actions>
+    </Page::Header>
+
+    {{#if @model.namespaces}}
+      <Toolbar>
+        <ToolbarFilters>
+          <FilterInputExplicit
+            @query={{@model.pageFilter}}
+            @placeholder="Search"
+            @handleSearch={{this.handleSearch}}
+            @handleInput={{this.handleInput}}
+            @handleKeyDown={{this.handleKeyDown}}
+          />
+        </ToolbarFilters>
+        <ToolbarActions>
+          <Hds::Button
+            class="has-right-margin-4"
+            @color="secondary"
+            @icon="reload"
+            @iconPosition="trailing"
+            @text="Refresh list"
+            {{on "click" this.refreshNamespaceList}}
+            data-test-button="refresh-namespace-list"
+          />
+          <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add" data-test-link-to="create-namespace">
+            Create namespace
+          </ToolbarLink>
+        </ToolbarActions>
+      </Toolbar>
+
+      <ListView
+        @items={{@model.namespaces}}
+        @itemNoun="namespace"
+        @paginationRouteName="vault.cluster.access.namespaces"
+        @onPageChange={{this.handlePageChange}}
+        as |list|
+      >
+        {{#if @model.namespaces.length}}
+          <ListItem as |Item|>
+            <Item.content>
+              {{list.item.id}}
+            </Item.content>
+            <Item.menu>
+              <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                <dd.ToggleIcon
+                  @icon="more-horizontal"
+                  @text="More options"
+                  @hasChevron={{false}}
+                  data-test-popup-menu-trigger
+                />
+                {{#let (concat this.namespace.path (if this.namespace.path "/") list.item.id) as |targetNamespace|}}
+                  {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
+                    <dd.Interactive
+                      {{on "click" (fn this.switchNamespace targetNamespace)}}
+                      data-test-popup-menu="switch"
+                    >Switch to namespace</dd.Interactive>
+                  {{/if}}
+                {{/let}}
+                <dd.Interactive
+                  @color="critical"
+                  {{on "click" (fn (mut this.nsToDelete) list.item)}}
+                  data-test-popup-menu="delete"
+                >Delete</dd.Interactive>
+              </Hds::Dropdown>
+              {{#if (eq this.nsToDelete list.item)}}
+                <ConfirmModal
+                  @color="critical"
+                  @onClose={{fn (mut this.nsToDelete) null}}
+                  @onConfirm={{fn this.deleteNamespace list.item}}
+                  @confirmTitle="Delete this namespace?"
+                  @confirmMessage="Any engines or mounts in this namespace will also be removed."
+                />
+              {{/if}}
+            </Item.menu>
+          </ListItem>
+        {{else}}
+          <list.empty>
+            <Hds::Link::Standalone
+              @icon="learn-link"
+              @text="Secure multi-tenancy with namespaces tutorial"
+              @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+            />
+          </list.empty>
+        {{/if}}
+      </ListView>
+    {{else}}
+      {{#if this.showSetupAlert}}
+        <Hds::Alert @type="inline" class="top-margin-32" as |A|>
+          <A.Title>Your current setup is 1 namespace.</A.Title>
+          <A.Description>Based on your answer about your security policy in the Guided start, no new namespaces are required.</A.Description>
+        </Hds::Alert>
+      {{/if}}
+
+      <Hds::Card::Container @hasBorder={{true}} class="has-padding-l top-margin-32">
+        <Hds::ApplicationState @align="left" class="is-marginless" as |A|>
+          <A.Header
+            @title="No namespaces yet"
+            @titleTag="h2"
+            @icon="skip"
+            class="align-items-end"
+            data-test-empty-state-title
+          />
+          <A.Body @text="Your namespaces will be listed here. Add a namespace to get started." />
+          <A.Footer as |F|>
+            <F.Button
+              @color="secondary"
+              @icon="reload"
+              @text="Refresh"
+              {{on "click" this.refreshNamespaceList}}
+              data-test-button="refresh-namespace-list"
+            />
+            <F.LinkStandalone
+              @icon="learn-link"
+              @text="Secure multi-tenancy with namespaces tutorial"
+              @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+            />
+          </A.Footer>
+        </Hds::ApplicationState>
+      </Hds::Card::Container>
+    {{/if}}
+
+  {{/if}}
+
+{{else}}
+  <UpgradePage @title="Namespaces" @minimumEdition="Vault Enterprise Pro" />
+{{/if}}

@@ -1,18 +1,13 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.top>
+<Page::Header @title="Cross-Sign Issuers">
+  <:breadcrumbs>
     <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3" data-test-page-title>
-      Cross-Sign Issuers
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  </:breadcrumbs>
+</Page::Header>
 
 <div class="is-flex-row has-top-margin-s box is-fullwidth has-only-top-shadow">
   <div class="has-right-margin-m" data-test-pki-cross-sign-steps>
@@ -26,7 +21,7 @@
       <ol class="has-left-margin-m has-bottom-margin-s">
         <li>You identify which intermediates need to be cross-signed.</li>
         <li>The new CSR for your intermediate(s) will be generated.</li>
-        <li>The CSR is signed with the root <strong>{{this.model.issuerRef}}</strong>.</li>
+        <li>The CSR is signed with the root <strong>{{or this.model.issuer_name this.model.issuer_id}}</strong>.</li>
         <li>Your new intermediate(s) are imported into any existing mount(s).</li>
       </ol>
       Then, you can begin re-issuing leaf certs and phase out the old root.

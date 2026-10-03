@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,17 +10,24 @@ export const GENERAL = {
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx: string) => `[data-test-breadcrumbs] li:nth-child(${idx + 1}) a`,
   breadcrumbLink: (label: string) => `[data-test-breadcrumb="${label}"] a`,
+  currentBreadcrumb: (label: string) => `[data-test-breadcrumb="${label}"]`,
   breadcrumbs: '[data-test-breadcrumbs]',
   headerContainer: 'header.page-header',
   title: '[data-test-page-title]',
   hdsPageHeaderTitle: '.hds-page-header__title',
+  hdsPageHeaderSubtitle: '.hds-page-header__subtitle',
   hdsPageHeaderDescription: '.hds-page-header__description',
 
   /* ────── Tabs & Navigation ────── */
   tab: (name: string) => `[data-test-tab="${name}"]`,
-  hdsTab: (name: string) => `[data-test-tab="${name}"] button`, // HDS tab buttons
+  tabLink: (name: string) => `[data-test-tab="${name}"] a`,
+  hdsTab: (name: string) => (name ? `[data-test-tab="${name}"] button` : '[data-test-tab] button'), // HDS tab buttons
+  hdsTabPanel: (name: string) => (name ? `[data-test-panel="${name}"]` : '[data-test-panel]'),
   secretTab: (name: string) => `[data-test-secret-list-tab="${name}"]`,
-  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
+  navLink: (label: string) =>
+    label ? `[data-test-sidebar-nav-link="${label}"]` : '[data-test-sidebar-nav-link]',
+  navHeading: (label: string) =>
+    label ? `[data-test-sidebar-nav-heading="${label}"]` : '[data-test-sidebar-nav-heading]',
   linkTo: (label: string) => `[data-test-link-to="${label}"]`,
 
   /* ────── Buttons ────── */
@@ -29,6 +36,8 @@ export const GENERAL = {
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
+  revealButton: (label: string) => `[data-test-reveal="${label}"] button`, // intended for Hds::Reveal components
+  accordionButton: (label: string) => `[data-test-accordion="${label}"] button`, // intended for Hds::Accordion components
   // there should only be one submit button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
@@ -36,9 +45,10 @@ export const GENERAL = {
   copySnippet: (name: string) => `[data-test-copy-snippet=${name}]`,
 
   /* ────── Menus & Lists ────── */
-  menuTrigger: '[data-test-popup-menu-trigger]',
+  dropdownToggle: (text: string) => `[data-test-dropdown="${text}"]`, // Use when dropdown toggle has text
+  menuTrigger: '[data-test-popup-menu-trigger]', // Use when dropdown toggle is just an icon
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
-  listItem: (label: string) => `[data-test-list-item="${label}"]`,
+  listItem: (label: string) => (label ? `[data-test-list-item="${label}"]` : '[data-test-list-item]'),
   listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
@@ -48,6 +58,10 @@ export const GENERAL = {
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
   tableColumnHeader: (col: number, { isAdvanced = false } = {}) =>
     `${isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'}:nth-child(${col})`, // number is not 0-indexed, first column header is 1
+  tableColumnHeaderSortButton: (col: number, { isAdvanced = false } = {}) =>
+    `${
+      isAdvanced ? '.hds-advanced-table__th' : 'hds-table__th'
+    }:nth-child(${col}) .hds-advanced-table__th-button--sort`, // number is not 0-indexed, first column header is 1
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
@@ -56,27 +70,31 @@ export const GENERAL = {
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
-  fieldLabel: () => `[data-test-form-field-label]`,
-  fieldLabelbyAttr: (attr: string) => `[data-test-form-field-label="${attr}"]`,
+  fieldLabel: (attr: string) =>
+    attr ? `[data-test-form-field-label="${attr}"]` : `[data-test-form-field-label]`,
+  fileInput: '[data-test-file-input]',
+  filter: (name: string) => `[data-test-filter="${name}"]`,
+  filterInput: '[data-test-filter-input]',
+  filterInputExplicit: '[data-test-filter-input-explicit]',
   groupControlByIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index})`,
-  helpText: () => `[data-test-help-text]`,
+  helpText: '[data-test-help-text]',
   helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
   helpTextByGroupControlIndex: (index: number) =>
     `.hds-form-group__control-field:nth-of-type(${index}) [data-test-help-text]`,
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   inputGroupByAttr: (attr: string) => `[data-test-input-group="${attr}"]`,
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
-  filterInput: '[data-test-filter-input]',
-  filterInputExplicit: '[data-test-filter-input-explicit]',
   labelById: (id: string) => `label[id="${id}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   maskedInput: '[data-test-masked-input]',
-  radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
+  radioByAttr: (attr: string) => (attr ? `[data-test-radio="${attr}"]` : '[data-test-radio]'),
+  radioCardByAttr: (attr: string) => (attr ? `[data-test-radio-card="${attr}"]` : '[data-test-radio-card]'),
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
-  toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  stringListByIdx: (index: number) => `[data-test-string-list-input="${index}"]`,
   textToggle: '[data-test-text-toggle]',
-  filter: (name: string) => `[data-test-filter="${name}"]`,
   textareaByAttr: (attr: string) => `textarea[name="${attr}"]`,
+  toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
+  superSelect: (name: string) => `[data-test-super-select="${name}"]`,
 
   /* ────── Code Blocks / Editor ────── */
   codemirror: `[data-test-component="code-mirror-modifier"]`,
@@ -159,18 +177,21 @@ export const GENERAL = {
   },
 
   /* ────── Cards ────── */
-  cardContainer: (title: string) => `[data-test-card-container="${title}"]`,
+  cardContainer: (title: string) =>
+    title ? `[data-test-card-container="${title}"]` : '[data-test-card-container]',
 
   /* ────── Modals & Flyouts ────── */
   flyout: '[data-test-flyout]',
   modal: {
-    container: (title: string) => `[data-test-modal=${title}]`,
-    header: (title: string) => `[data-test-modal-header=${title}]`,
-    body: (title: string) => `[data-test-modal-body=${title}]`,
+    container: (title: string) => `[data-test-modal="${title}"]`,
+    header: (title: string) => `[data-test-modal-header="${title}"]`,
+    body: (title: string) => `[data-test-modal-body="${title}"]`,
   },
 
   /* ────── Misc ────── */
   icon: (name: string) => (name ? `[data-test-icon="${name}"]` : '[data-test-icon]'),
   badge: (name: string) => (name ? `[data-test-badge="${name}"]` : '[data-test-badge]'),
+  licenseBanner: (name: string) => `[data-test-license-banner="${name}"]`,
   tooltip: (label: string) => `[data-test-tooltip="${label}"]`,
+  tooltipText: '.hds-tooltip-container',
 };

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,7 +11,6 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
-import { clearRecords } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_OVERVIEW } from 'vault/tests/helpers/pki/pki-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const { overviewCard } = GENERAL;
@@ -20,7 +19,6 @@ module('Acceptance | pki overview', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    this.store = this.owner.lookup('service:store');
     await login();
     // Setup PKI engine
     const mountPath = `pki-${uuidv4()}`;
@@ -46,8 +44,6 @@ module('Acceptance | pki overview', function (hooks) {
     this.pkiRolesList = await runCmd(tokenWithPolicyCmd('pki-roles-list', pki_roles_list_policy));
     this.pkiIssuersList = await runCmd(tokenWithPolicyCmd('pki-issuers-list', pki_issuers_list_policy));
     this.pkiAdminToken = await runCmd(tokenWithPolicyCmd('pki-admin', pki_admin_policy));
-
-    clearRecords(this.store);
   });
 
   hooks.afterEach(async function () {
@@ -58,21 +54,21 @@ module('Acceptance | pki overview', function (hooks) {
 
   test('navigates to view issuers when link is clicked on issuer card', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     assert.dom(overviewCard.title('Issuers')).hasText('Issuers');
     assert.dom(`${overviewCard.container('Issuers')} p`).hasText('1');
     await click(overviewCard.actionLink('Issuers'));
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers`);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/issuers`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
   });
 
   test('navigates to view roles when link is clicked on roles card', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     assert.dom(overviewCard.title('Roles')).hasText('Roles');
     assert.dom(`${overviewCard.container('Roles')} p`).hasText('0');
     await click(overviewCard.actionLink('Roles'));
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles`);
+    assert.strictEqual(currentURL(), `/vault/secrets-engines/${this.mountPath}/pki/roles`);
     await runCmd([
       `write ${this.mountPath}/roles/some-role \
     issuer_ref="default" \
@@ -80,13 +76,13 @@ module('Acceptance | pki overview', function (hooks) {
     allow_subdomains=true \
     max_ttl="720h"`,
     ]);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     assert.dom(`${overviewCard.container('Roles')} p`).hasText('1');
   });
 
   test('hides roles card if user does not have permissions', async function (assert) {
     await login(this.pkiIssuersList);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     assert.dom(overviewCard.title('Roles')).doesNotExist('Roles card does not exist');
     assert.dom(overviewCard.title('Issuers')).hasText('Issuers');
   });
@@ -100,7 +96,7 @@ module('Acceptance | pki overview', function (hooks) {
     allow_subdomains=true \
     max_ttl="720h"`,
     ]);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     await click(PKI_OVERVIEW.issueCertificatePowerSearch);
     await click(PKI_OVERVIEW.firstPowerSelectOption);
     await click(PKI_OVERVIEW.issueCertificateButton);
@@ -109,7 +105,7 @@ module('Acceptance | pki overview', function (hooks) {
 
   test('navigates to certificate details page for View Certificates card', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     await click(PKI_OVERVIEW.viewCertificatePowerSearch);
     await click(PKI_OVERVIEW.firstPowerSelectOption);
     await click(PKI_OVERVIEW.viewCertificateButton);
@@ -121,7 +117,7 @@ module('Acceptance | pki overview', function (hooks) {
 
   test('navigates to issuer details page for View Issuer card', async function (assert) {
     await login(this.pkiAdminToken);
-    await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+    await visit(`/vault/secrets-engines/${this.mountPath}/pki/overview`);
     await click(PKI_OVERVIEW.viewIssuerPowerSearch);
     await click(PKI_OVERVIEW.firstPowerSelectOption);
     await click(PKI_OVERVIEW.viewIssuerButton);

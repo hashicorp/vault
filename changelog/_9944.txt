@@ -1,0 +1,3 @@
+```release-note:bug
+ui (enterprise): Fixes login form so input renders correctly when token is a preferred login method for a namespace.
+```

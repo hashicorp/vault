@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package ssh
@@ -133,6 +133,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 			return nil, err
 		}
 
+		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHOTPCreate, role.observationMetadata(roleName))
 		// Return the information relevant to user of OTP type and save
 		// the data required for later use in the internal section of secret.
 		// In this case, saving just the OTP is sufficient since there is

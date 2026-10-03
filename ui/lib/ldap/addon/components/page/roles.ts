@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,20 +7,20 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
-import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
 
-import type LdapRoleModel from 'vault/models/ldap/role';
-import type SecretEngineModel from 'vault/models/secret-engine';
+import type { LdapRole } from 'vault/secrets/ldap';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
-import type PaginationService from 'vault/services/pagination';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface Args {
-  roles: Array<LdapRoleModel>;
+  roles: Array<LdapRole>;
   promptConfig: boolean;
-  backendModel: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
   pageFilter: string;
 }
@@ -28,14 +28,15 @@ interface Args {
 export default class LdapRolesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly pagination: PaginationService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
-  @tracked credsToRotate: LdapRoleModel | null = null;
-  @tracked roleToDelete: LdapRoleModel | null = null;
+  @tracked credsToRotate: LdapRole | null = null;
+  @tracked roleToDelete: LdapRole | null = null;
 
   isHierarchical = (name: string) => name.endsWith('/');
 
-  linkParams = (role: LdapRoleModel) => {
+  linkParams = (role: LdapRole) => {
     const route = this.isHierarchical(role.name) ? 'roles.subdirectory' : 'roles.role.details';
     return [route, role.type, role.completeRoleName];
   };
@@ -51,33 +52,41 @@ export default class LdapRolesPageComponent extends Component<Args> {
 
   @action
   onFilterChange(pageFilter: string) {
-    // refresh route, which fires off lazyPaginatedQuery to re-request and filter response
+    // refresh route to re-request and filter response
     this.router.transitionTo(this.router?.currentRoute?.name, { queryParams: { pageFilter } });
   }
 
   @action
-  async onRotate(model: LdapRoleModel) {
+  async onRotate(role: LdapRole) {
     try {
-      const message = `Successfully rotated credentials for ${model.completeRoleName}.`;
-      await model.rotateStaticPassword();
-      this.flashMessages.success(message);
+      await this.api.secrets.ldapRotateStaticRole(
+        role.completeRoleName,
+        this.secretMountPath.currentPath,
+        {}
+      );
+      this.flashMessages.success(`Successfully rotated credentials for ${role.completeRoleName}.`);
     } catch (error) {
-      this.flashMessages.danger(`Error rotating credentials \n ${errorMessage(error)}`);
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Error rotating credentials \n ${message}`);
     } finally {
       this.credsToRotate = null;
     }
   }
 
   @action
-  async onDelete(model: LdapRoleModel) {
+  async onDelete(role: LdapRole) {
     try {
-      const message = `Successfully deleted role ${model.completeRoleName}.`;
-      await model.destroyRecord();
-      this.pagination.clearDataset('ldap/role');
+      const { currentPath } = this.secretMountPath;
+      if (role.type === 'static') {
+        await this.api.secrets.ldapDeleteStaticRole(role.completeRoleName, currentPath);
+      } else {
+        await this.api.secrets.ldapDeleteDynamicRole(role.completeRoleName, currentPath);
+      }
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');
-      this.flashMessages.success(message);
+      this.flashMessages.success(`Successfully deleted role ${role.completeRoleName}.`);
     } catch (error) {
-      this.flashMessages.danger(`Error deleting role \n ${errorMessage(error)}`);
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Error deleting role \n ${message}`);
     } finally {
       this.roleToDelete = null;
     }

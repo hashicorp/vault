@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -74,7 +74,7 @@ func pathUser(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (response *logical.Response, rerr error) {
 	roleName := d.Get("name").(string)
 
 	// Read the policy
@@ -143,6 +143,21 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 			return logical.ErrorResponse(fmt.Sprintf("attempted to retrieve %s credentials through the creds path; this is not allowed for legacy roles", credentialType)), nil
 		}
 	}
+
+	defer func() {
+		obsType := ObservationTypeAWSCredentialCreateSuccess
+		if rerr != nil {
+			obsType = ObservationTypeAWSCredentialCreateFail
+		}
+
+		b.TryRecordObservationWithRequest(ctx, req, obsType, map[string]interface{}{
+			"role_name":        roleName,
+			"credential_types": role.CredentialTypes,
+			"ttl":              ttl,
+			"max_ttl":          maxTTL,
+			"is_sts":           credentialType != iamUserCred,
+		})
+	}()
 
 	switch credentialType {
 	case iamUserCred:

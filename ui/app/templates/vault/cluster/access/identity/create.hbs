@@ -1,14 +1,20 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Create
-      {{titleize this.model.identityType}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+<Page::Header @title="Create {{titleize this.model.identityType}}">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash
+          label=(titleize this.model.identityType) route="vault.cluster.access.identity" model=(pluralize this.identityType)
+        )
+        (hash label="Create")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
 <Identity::EditForm @model={{this.model}} @onSave={{action "navAfterSave"}} />

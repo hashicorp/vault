@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -128,6 +128,11 @@ func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request,
 	if err := entry.DecodeJSON(&config); err != nil {
 		return nil, fmt.Errorf("failed to decode configuration for static role %q: %w", roleName, err)
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSStaticRoleRead, map[string]interface{}{
+		"role_name":       roleName.(string),
+		"rotation_period": config.RotationPeriod.String(),
+	})
 
 	return &logical.Response{
 		Data: formatResponse(config),
@@ -260,6 +265,11 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		}
 	}
 
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSStaticRoleWrite, map[string]interface{}{
+		"role_name":       config.Name,
+		"rotation_period": config.RotationPeriod.String(),
+	})
+
 	return &logical.Response{
 		Data: formatResponse(config),
 	}, nil
@@ -299,7 +309,18 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 		return nil, fmt.Errorf("couldn't delete key from queue: %w", err)
 	}
 
-	return nil, req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))
+	err = req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete role %q from storage: %w", roleName.(string), err)
+	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSStaticRoleDelete, map[string]interface{}{
+		"role_name":       roleName.(string),
+		"rotation_period": cfg.RotationPeriod.String(),
+	})
+
+	// ignore-nil-nil-function-check
+	return nil, nil
 }
 
 func (b *backend) pathStaticRolesList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {

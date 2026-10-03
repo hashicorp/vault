@@ -1,19 +1,17 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
-import { setProperties } from '@ember/object';
 import Route from '@ember/routing/route';
-import ClusterRoute from 'vault/mixins/cluster-route';
 
-export default Route.extend(ClusterRoute, {
-  version: service(),
-  store: service(),
-  auth: service(),
-  router: service('app-router'),
-  capabilities: service(),
+export default class ApplicationRoute extends Route {
+  @service version;
+  @service store;
+  @service auth;
+  @service('app-router') router;
+  @service capabilities;
 
   async fetchCapabilities() {
     const enablePath = (type, cluster) => `sys/replication/${type}/${cluster}/enable`;
@@ -29,21 +27,19 @@ export default Route.extend(ClusterRoute, {
       canEnablePrimaryPerformance: perms[enablePath('performance', 'secondary')].canUpdate,
       canEnableSecondaryPerformance: perms[enablePath('performance', 'secondary')].canUpdate,
     };
-  },
+  }
 
   beforeModel() {
     if (this.auth.activeCluster.replicationRedacted) {
       // disallow replication access if endpoints are redacted
       return this.router.transitionTo('vault.cluster');
     }
-    return this.version.fetchFeatures().then(() => {
-      return this._super(...arguments);
-    });
-  },
+    return this.version.fetchFeatures();
+  }
 
   model() {
     return this.auth.activeCluster;
-  },
+  }
 
   async afterModel(model) {
     const {
@@ -53,17 +49,10 @@ export default Route.extend(ClusterRoute, {
       canEnableSecondaryPerformance,
     } = await this.fetchCapabilities();
 
-    setProperties(model, {
-      canEnablePrimaryDr,
-      canEnableSecondaryDr,
-      canEnablePrimaryPerformance,
-      canEnableSecondaryPerformance,
-    });
+    model.canEnablePrimaryDr = canEnablePrimaryDr;
+    model.canEnableSecondaryDr = canEnableSecondaryDr;
+    model.canEnablePrimaryPerformance = canEnablePrimaryPerformance;
+    model.canEnableSecondaryPerformance = canEnableSecondaryPerformance;
     return model;
-  },
-  actions: {
-    refresh() {
-      this.refresh();
-    },
-  },
-});
+  }
+}

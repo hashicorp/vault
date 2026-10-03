@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,7 +9,6 @@ import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { paginate } from 'core/utils/paginate-list';
 
 export default class KvSecretsListRoute extends Route {
-  @service pagination;
   @service('app-router') router;
   @service secretMountPath;
   @service api;
@@ -26,6 +25,10 @@ export default class KvSecretsListRoute extends Route {
 
   async fetchMetadata(backend, pathToSecret, params) {
     try {
+      // kvV2List => GET /:secret-mount-path/metadata/:secret_path/?list=true
+      // This request can either list secrets at the mount root or for a specified :secret_path.
+      // Since :secret_path already contains a trailing slash, e.g. /metadata/my-secret//
+      // the request URL is sanitized by the api service to remove duplicate slashes.
       const { keys } = await this.api.secrets.kvV2List(pathToSecret, backend, true);
       return paginate(keys, { page: Number(params.page) || 1, filter: params.pageFilter });
     } catch (error) {
@@ -55,8 +58,10 @@ export default class KvSecretsListRoute extends Route {
     const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     const secrets = await this.fetchMetadata(backend, pathToSecret, params);
     const capabilities = await this.capabilities.for('kvMetadata', { backend, path: path_to_secret });
+    const backendModel = this.modelFor('application');
 
     return {
+      backendModel,
       secrets,
       backend,
       pathToSecret,

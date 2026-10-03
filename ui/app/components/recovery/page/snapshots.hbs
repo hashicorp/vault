@@ -1,11 +1,12 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <Recovery::Page::Header
   @title="Secrets Recovery"
   @subtitle="Recover lost or deleted data from a raft snapshot. Supported data includes KV v1 and Cubbyhole secrets or Database static roles."
+  @breadcrumbs={{@breadcrumbs}}
 />
 
 {{#if @model.showCommunityMessage}}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -74,6 +74,10 @@ export default class KvSuggestionInputComponent extends Component<Args> {
       const backend = keyIsFolder(mountPath) ? mountPath.slice(0, -1) : mountPath;
       const parentDirectory = parentKeyForKey(this.args.value);
       this.pathToSecret = this.isDirectory ? this.args.value : parentDirectory;
+      // kvV2List => GET /:secret-mount-path/metadata/:secret_path/?list=true
+      // This request can either list secrets at the mount root or for a specified :secret_path.
+      // Since :secret_path already contains a trailing slash, e.g. /metadata/my-secret//
+      // the request URL is sanitized by the api service to remove duplicate slashes.
       const { keys } = await this.api.secrets.kvV2List(this.pathToSecret, backend, KvV2ListListEnum.TRUE);
       // this will be used to filter the existing result set when the search term changes within the same path
       this._cachedSecrets = keys || [];

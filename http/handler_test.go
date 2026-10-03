@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package http
@@ -1207,4 +1207,25 @@ func TestHandler_JSONLimitQuotaWrappers(t *testing.T) {
 			require.NotNil(t, resp)
 		})
 	}
+}
+
+// TestAutoSnapshotLoadForwarded tests that a request to load from a cloud
+// snapshot is forwarded to the active node, rather than being redirected
+func TestAutoSnapshotLoadForwarded(t *testing.T) {
+	cluster := vault.NewTestCluster(t, &vault.CoreConfig{}, &vault.TestClusterOptions{
+		NumCores:    2,
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	client := cluster.Cores[1].Client
+	client.SetToken(cluster.RootToken)
+
+	_, err := client.Logical().Write("sys/storage/raft/snapshot-auto/snapshot-load/cfg1", nil)
+	// the request will fail, but all that we care about is that the error
+	// doesn't indicate a redirect
+	require.Error(t, err)
+	require.NotContains(t, err.Error(), "redirects not allowed in these tests")
 }

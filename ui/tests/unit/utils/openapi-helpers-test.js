@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -46,7 +46,6 @@ module('Unit | Utility | OpenAPI helper utils', function (hooks) {
 
   test(`getHelpUrlForModel`, function (assert) {
     [
-      { modelType: 'kmip/config', result: '/v1/foobar/config?help=1' },
       { modelType: 'does-not-exist', result: null },
       { modelType: 4, result: null },
       { modelType: '', result: null },

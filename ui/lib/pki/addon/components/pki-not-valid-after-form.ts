@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,17 +7,17 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { format } from 'date-fns';
+
 import type { HTMLElementEvent } from 'forms';
+import type PkiConfigGenerateForm from 'vault/forms/secrets/pki/config/generate';
+import type PkiCertificateIssueForm from 'vault/forms/secrets/pki/certificate';
+import type PkiIssuersSignIntermediateForm from 'vault/forms/secrets/pki/issuers/sign-intermediate';
 
 /**
  * <PkiNotValidAfterForm /> components are used to manage two mutually exclusive role options in the form.
  */
 interface Args {
-  model: {
-    notAfter: string;
-    ttl: string | number;
-    set: (key: string, value: string | number) => void;
-  };
+  form: PkiConfigGenerateForm | PkiIssuersSignIntermediateForm | PkiCertificateIssueForm;
 }
 
 export default class PkiNotValidAfterForm extends Component<Args> {
@@ -28,11 +28,11 @@ export default class PkiNotValidAfterForm extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    const { model } = this.args;
-    this.cachedNotAfter = model.notAfter || '';
-    this.formDate = this.calculateFormDate(model.notAfter);
-    this.cachedTtl = model.ttl || '';
-    if (model.notAfter) {
+    const { not_after, ttl } = this.args.form.data;
+    this.cachedNotAfter = not_after || '';
+    this.formDate = this.calculateFormDate(this.cachedNotAfter);
+    this.cachedTtl = ttl || '';
+    if (this.cachedNotAfter) {
       this.groupValue = 'specificDate';
     }
   }
@@ -49,14 +49,15 @@ export default class PkiNotValidAfterForm extends Component<Args> {
   @action onRadioButtonChange(selection: string) {
     this.groupValue = selection;
     // Clear the previous selection if they have clicked the other radio button.
+    const { data } = this.args.form;
     if (selection === 'specificDate') {
-      this.args.model.ttl = '';
-      this.args.model.notAfter = this.cachedNotAfter;
+      data.ttl = '';
+      data.not_after = this.cachedNotAfter;
       this.formDate = this.calculateFormDate(this.cachedNotAfter);
     }
     if (selection === 'ttl') {
-      this.args.model.notAfter = '';
-      this.args.model.ttl = this.cachedTtl;
+      data.not_after = '';
+      data.ttl = `${this.cachedTtl}`;
       this.formDate = '';
     }
   }
@@ -69,7 +70,7 @@ export default class PkiNotValidAfterForm extends Component<Args> {
     }
     const ttlVal = enabled === true ? goSafeTimeString : 0;
     this.cachedTtl = ttlVal;
-    this.args.model.ttl = ttlVal;
+    this.args.form.data.ttl = ttlVal.toString();
   }
 
   @action setAndBroadcastInput(evt: HTMLElementEvent<HTMLInputElement>) {
@@ -77,7 +78,7 @@ export default class PkiNotValidAfterForm extends Component<Args> {
     if (!setDate) return;
 
     this.cachedNotAfter = setDate;
-    this.args.model.notAfter = setDate;
+    this.args.form.data.not_after = setDate;
     this.formDate = this.calculateFormDate(setDate);
   }
 }

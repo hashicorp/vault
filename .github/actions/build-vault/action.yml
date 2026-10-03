@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 ---
@@ -69,7 +69,7 @@ runs:
       shell: bash
       run: git config --global url."https://${{ inputs.github-token }}:@github.com".insteadOf "https://github.com"
     - name: Restore UI from cache
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+      uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # v5.0.2
       with:
         # Restore the UI asset from the UI build workflow. Never use a partial restore key.
         enableCrossOsArchive: true
@@ -133,7 +133,7 @@ runs:
       shell: bash
       run: make ci-build
     - if: inputs.cgo-enabled == '1'
-      uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
+      uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
       with:
         driver-opts: network=host # So we can run our own little registry
     - if: inputs.cgo-enabled == '1'
@@ -218,7 +218,7 @@ runs:
         BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
       shell: bash
       run: make ci-bundle
-    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+    - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ steps.metadata.outputs.artifact-basename }}.zip
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
@@ -250,13 +250,13 @@ runs:
           echo "deb-files=$(basename out/*.deb)"
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ steps.package-files.outputs.rpm-files }}
         path: out/${{ steps.package-files.outputs.rpm-files }}
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ steps.package-files.outputs.deb-files }}
         path: out/${{ steps.package-files.outputs.deb-files }}

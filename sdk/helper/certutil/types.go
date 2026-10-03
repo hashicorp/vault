@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 // Package certutil contains helper functions that are mostly used
@@ -763,6 +763,33 @@ const (
 	MicrosoftKernelCodeSigningExtKeyUsage
 )
 
+var certExtKeyUsagesToString = map[CertExtKeyUsage]string{
+	AnyExtKeyUsage:                            "any",
+	ServerAuthExtKeyUsage:                     "serverAuth",
+	ClientAuthExtKeyUsage:                     "clientAuth",
+	CodeSigningExtKeyUsage:                    "codeSigning",
+	EmailProtectionExtKeyUsage:                "emailProtection",
+	IpsecEndSystemExtKeyUsage:                 "ipsecEndSystem",
+	IpsecTunnelExtKeyUsage:                    "ipsecTunnel",
+	IpsecUserExtKeyUsage:                      "ipsecUser",
+	TimeStampingExtKeyUsage:                   "timeStamping",
+	OcspSigningExtKeyUsage:                    "ocspSigning",
+	MicrosoftServerGatedCryptoExtKeyUsage:     "microsoftServerGatedCrypto",
+	NetscapeServerGatedCryptoExtKeyUsage:      "netscapeServerGatedCrypto",
+	MicrosoftCommercialCodeSigningExtKeyUsage: "microsoftCommercialCodeSigning",
+	MicrosoftKernelCodeSigningExtKeyUsage:     "microsoftKernelCodeSigning",
+}
+
+var lowercaseStringToCertExtKeyUsage = flipAndLowercaseCertExtKeyUsageMap(certExtKeyUsagesToString)
+
+func flipAndLowercaseCertExtKeyUsageMap(m map[CertExtKeyUsage]string) map[string]CertExtKeyUsage {
+	flipped := make(map[string]CertExtKeyUsage, len(m))
+	for k, v := range m {
+		flipped[strings.ToLower(v)] = k
+	}
+	return flipped
+}
+
 type CreationParameters struct {
 	Subject                       pkix.Name
 	DNSNames                      []string
@@ -810,6 +837,8 @@ type CreationParameters struct {
 	// sender of the CSR has proven proof of possession of the associated
 	// private key by some other means, otherwise keep this set to false.
 	IgnoreCSRSignature bool
+
+	ZeroNotBefore bool
 }
 
 type CreationBundle struct {
@@ -818,7 +847,40 @@ type CreationBundle struct {
 	CSR           *x509.CertificateRequest
 }
 
-// addKeyUsages adds appropriate key usages to the template given the creation
+// CertExtKeyUsageIsPresent returns true if the singular CertExtKeyUsage is present within the
+// overall extKeyUsages. The desiredExtKeyUsage can only contain a singular ExtKeyUsage, otherwise false will
+// be returned. We are comparing direct ExtKeyUsage values, so we don't consider if extKeyUsages has the
+// AnyExtKeyUsage set that any value of desiredExtKeyUsage will match.
+func CertExtKeyUsageIsPresent(extKeyUsages CertExtKeyUsage, desiredExtKeyUsage CertExtKeyUsage) bool {
+	if _, ok := certExtKeyUsagesToString[desiredExtKeyUsage]; !ok {
+		return false
+	}
+	return extKeyUsages&desiredExtKeyUsage != 0
+}
+
+// GetCertEKUString returns a human friendly Extended Key Usage (EKU) string, with the boolean
+// returning true if we found a proper value for the passed in EKU, false otherwise.
+func GetCertEKUString(eku CertExtKeyUsage) (string, bool) {
+	if ekuString, ok := certExtKeyUsagesToString[eku]; ok {
+		return ekuString, true
+	}
+
+	return fmt.Sprintf("unknown EKU %d", eku), false
+}
+
+// GetCertEKUFromString cleans up a passed in string and returns the desired CertExtKeyUsage constant
+// that represents it. The boolean parameter represents if we were able to match an CertExtKeyUsage or
+// not based on the string.
+func GetCertEKUFromString(eku string) (CertExtKeyUsage, bool) {
+	cleanEku := strings.TrimSuffix(strings.ToLower(strings.TrimSpace(eku)), "extkeyusage")
+	if val, ok := lowercaseStringToCertExtKeyUsage[cleanEku]; ok {
+		return val, true
+	}
+
+	return 0, false
+}
+
+// AddKeyUsages adds appropriate key usages to the template given the creation
 // information
 func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.IsCA {

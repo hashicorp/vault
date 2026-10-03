@@ -1,10 +1,10 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 {{#if this.unwrapTokenError}}
-  <Hds::ApplicationState class="has-top-margin-xxl" data-test-page-error as |A|>
+  <Hds::ApplicationState @align="center" class="has-top-margin-xxl" data-test-page-error as |A|>
     <A.Header @title="Authentication error" />
     <A.Body @text="Token unwrap failed" />
     <A.Body @text="Error: {{this.unwrapTokenError}}" />

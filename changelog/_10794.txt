@@ -1,0 +1,3 @@
+```release-note:bug
+auth/approle (enterprise): Fixed bug that prevented periodic tidy running on performance secondary 
+```

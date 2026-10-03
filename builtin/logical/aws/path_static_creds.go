@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -81,6 +81,10 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, req *logical.Request,
 	if err := entry.DecodeJSON(&credentials); err != nil {
 		return nil, fmt.Errorf("failed to decode credentials: %w", err)
 	}
+
+	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeAWSStaticCredentialRead, map[string]interface{}{
+		"role_name": roleName.(string),
+	})
 
 	return &logical.Response{
 		Data: structs.New(credentials).Map(),

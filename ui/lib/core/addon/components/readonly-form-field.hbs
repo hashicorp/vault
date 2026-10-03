@@ -1,18 +1,17 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<label for={{@attr.name}} class="is-label" data-test-readonly-label>
-  {{this.labelString}}
+<div class="label-row">
+  <label for={{@attr.name}} data-test-readonly-label>
+    {{this.labelString}}
+  </label>
   {{#if @attr.options.helpText}}
-    <InfoTooltip>
-      <span data-test-help-text>
-        {{@attr.options.helpText}}
-      </span>
-    </InfoTooltip>
+    <Hds::TooltipButton @text={{@attr.options.helpText}} aria-label="More information">
+      <Hds::Icon @name="info" />
+    </Hds::TooltipButton>
   {{/if}}
-</label>
+</div>
 {{#if @attr.options.subText}}
   <p class="sub-text">{{@attr.options.subText}}</p>
 {{/if}}

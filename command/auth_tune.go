@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -35,6 +35,7 @@ type AuthTuneCommand struct {
 	flagTokenType                       string
 	flagVersion                         int
 	flagPluginVersion                   string
+	flagOverridePinnedVersion           BoolPtr
 	flagUserLockoutThreshold            uint
 	flagUserLockoutDuration             time.Duration
 	flagUserLockoutCounterResetDuration time.Duration
@@ -196,6 +197,13 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
+
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameOverridePinnedVersion,
+		Target: &c.flagOverridePinnedVersion,
+		Usage:  "Whether to override the pinned version for this mount",
+	})
+
 	f.BoolPtrVar(&BoolPtrVar{
 		Name:   flagNameTrimRequestTrailingSlashes,
 		Target: &c.flagTrimRequestTrailingSlashes,
@@ -335,6 +343,11 @@ func (c *AuthTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			tuneMountInput.PluginVersion = &c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameOverridePinnedVersion && c.flagOverridePinnedVersion.IsSet() {
+			val := c.flagOverridePinnedVersion.Get()
+			tuneMountInput.OverridePinnedVersion = &val
 		}
 
 		if fl.Name == flagNameIdentityTokenKey {

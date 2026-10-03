@@ -1,0 +1,38 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Layout::Flex @align="start" @direction="column">
+  <Hds::Text::Display @tag="h1" @size="400" @weight="bold">
+    Welcome to Namespaces
+  </Hds::Text::Display>
+  <div class="flex column-gap-8 has-bottom-margin-xs has-top-margin-xs">
+    <Hds::Badge @text="Optional" />
+    <Hds::Badge @text="Setup time: 15min" @type="outlined" />
+  </div>
+  <Hds::Text::Body @tag="p" class="has-bottom-margin-xl">Namespaces let you create secure, isolated environments where
+    independent teams can manage their own secrets engines, auth methods, and policies within a single Vault cluster.</Hds::Text::Body>
+  <div class="flex has-bottom-margin-s">
+    <Hds::Icon @name="service" />
+    <Hds::Text::Body @tag="p" class="has-left-margin-xs">Use for multi-tenancy: strict
+      <strong>administrative and configuration isolation</strong>
+      between business units and client environments.</Hds::Text::Body>
+  </div>
+  <div class="flex has-bottom-margin-s">
+    <Hds::Icon @name="database" />
+    <Hds::Text::Body @tag="p" class="has-left-margin-xs">Namespaces allow you to segment your cluster into
+      <strong>separate logical partitions</strong>, with isolated data, policy, and tokens.</Hds::Text::Body>
+  </div>
+  <div class="flex">
+    <Hds::Icon @name="org" />
+    <Hds::Text::Body @tag="p" class="has-left-margin-xs">Namespaces should not be used like folders. Use them for
+      <strong>large-scale, highly-regulated</strong>
+      environments.</Hds::Text::Body>
+  </div>
+</Hds::Layout::Flex>
+<div>
+  <img src={{img-path "~/namespaces-welcome.png"}} alt="namespace hierarchy example" />
+  <Hds::Text::Body @align="center" @tag="p">Namespaces provide necessary isolation based on your company’s organization and
+    access requirements.</Hds::Text::Body>
+</div>

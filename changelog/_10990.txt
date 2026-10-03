@@ -1,0 +1,5 @@
+```release-note:improvement
+secrets-sync (enterprise): Added support for a boolean force_delete flag (default: false).
+When set to true, this flag allows deletion of a destination even if its associations cannot be unsynced.
+This option should be used only as a last-resort deletion mechanism, as any secrets already synced to the external provider will remain orphaned and require manual cleanup.
+```

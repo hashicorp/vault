@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -20,6 +20,8 @@ export default function (server) {
     const data = JSON.parse(req.requestBody);
     if (key === 'kubernetes-config') {
       data.path = req.params.path;
+    } else if (key === 'kubernetes-role') {
+      data.name = req.params.name;
     }
     server.create(key, data);
     return new Response(204);

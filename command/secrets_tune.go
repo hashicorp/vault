@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -34,6 +34,7 @@ type SecretsTuneCommand struct {
 	flagOptions                    map[string]string
 	flagVersion                    int
 	flagPluginVersion              string
+	flagOverridePinnedVersion      BoolPtr
 	flagAllowedManagedKeys         []string
 	flagDelegatedAuthAccessors     []string
 	flagIdentityTokenKey           string
@@ -161,6 +162,12 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
 	})
 
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameOverridePinnedVersion,
+		Target: &c.flagOverridePinnedVersion,
+		Usage:  "Enterprise only. Specified plugin-version will override the pinned plugin version.",
+	})
+
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameDelegatedAuthAccessors,
 		Target: &c.flagDelegatedAuthAccessors,
@@ -265,6 +272,11 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameOverridePinnedVersion && c.flagOverridePinnedVersion.IsSet() {
+			val := c.flagOverridePinnedVersion.Get()
+			mountConfigInput.OverridePinnedVersion = &val
 		}
 
 		if fl.Name == flagNameDelegatedAuthAccessors {

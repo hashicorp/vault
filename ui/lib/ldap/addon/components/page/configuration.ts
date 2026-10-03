@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,81 +7,60 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
+import { toLabel } from 'core/helpers/to-label';
 
-import type LdapConfigModel from 'vault/models/ldap/config';
-import type SecretEngineModel from 'vault/models/secret-engine';
-import type AdapterError from '@ember-data/adapter/error';
-import type { Breadcrumb } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
+import type ApiService from 'vault/services/api';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type { Breadcrumb } from 'vault/vault/app-types';
+import type { LdapApplicationModel } from 'ldap/routes/application';
 
 interface Args {
-  configModel: LdapConfigModel;
-  configError: AdapterError;
-  backendModel: SecretEngineModel;
+  model: LdapApplicationModel;
   breadcrumbs: Array<Breadcrumb>;
-}
-
-interface Field {
-  label: string;
-  value: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  formatTtl?: boolean;
 }
 
 export default class LdapConfigurationPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly api: ApiService;
+  @service declare readonly secretMountPath: SecretMountPath;
 
-  get defaultFields(): Array<Field> {
-    const model = this.args.configModel;
-    const keys = [
-      'binddn',
-      'url',
-      'schema',
-      'password_policy',
-      'userdn',
-      'userattr',
-      'connection_timeout',
-      'request_timeout',
-    ];
-    return model.allFields.reduce<Array<Field>>((filtered, field) => {
-      if (keys.includes(field.name)) {
-        const label =
-          {
-            schema: 'Schema',
-            password_policy: 'Password Policy',
-          }[field.name] || field.options.label;
-        filtered.splice(keys.indexOf(field.name), 0, {
-          label,
-          value: model[field.name as keyof typeof model],
-          formatTtl: field.name.includes('timeout'),
-        });
+  defaultFields = [
+    'binddn',
+    'url',
+    'schema',
+    'password_policy',
+    'userdn',
+    'userattr',
+    'connection_timeout',
+    'request_timeout',
+  ];
+
+  connectionFields = ['certificate', 'starttls', 'insecure_tls', 'client_tls_cert', 'client_tls_key'];
+
+  label = (field: string) => {
+    return (
+      {
+        binddn: 'Administrator distinguished name',
+        url: 'URL',
+        certificate: 'CA certificate',
+        starttls: 'Start TLS',
+        insecure_tls: 'Insecure TLS',
+        client_tls_cert: 'Client TLS certificate',
+        client_tls_key: 'Client TLS key',
+      }[field] || toLabel([field])
+    );
+  };
+
+  rotateRoot = task(
+    waitFor(async () => {
+      try {
+        await this.api.secrets.ldapRotateRootCredentials(this.secretMountPath.currentPath);
+        this.flashMessages.success('Root password successfully rotated.');
+      } catch (error) {
+        const { message } = await this.api.parseError(error);
+        this.flashMessages.danger(`Error rotating root password \n ${message}`);
       }
-      return filtered;
-    }, []);
-  }
-
-  get connectionFields(): Array<Field> {
-    const model = this.args.configModel;
-    const keys = ['certificate', 'starttls', 'insecure_tls', 'client_tls_cert', 'client_tls_key'];
-    return model.allFields.reduce<Array<Field>>((filtered, field) => {
-      if (keys.includes(field.name)) {
-        filtered.splice(keys.indexOf(field.name), 0, {
-          label: field.options.label,
-          value: model[field.name as keyof typeof model],
-        });
-      }
-      return filtered;
-    }, []);
-  }
-
-  @task
-  @waitFor
-  *rotateRoot() {
-    try {
-      yield this.args.configModel.rotateRoot();
-      this.flashMessages.success('Root password successfully rotated.');
-    } catch (error) {
-      this.flashMessages.danger(`Error rotating root password \n ${errorMessage(error)}`);
-    }
-  }
+    })
+  );
 }

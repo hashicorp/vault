@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -20,11 +20,12 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       dr: {
         clusterId: '123',
         state: 'running',
+        mode: 'primary',
       },
       performance: {
         clusterId: 'abc-1',
         state: 'running',
-        isPrimary: true,
+        mode: 'primary',
       },
     };
     this.version = {
@@ -52,17 +53,9 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     assert.dom(DASHBOARD.tooltipTitle('Performance primary')).hasText('running');
     assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
   });
+
   test('it should display replication information if both dr and performance replication are enabled as features and only dr is setup', async function (assert) {
-    this.replication = {
-      dr: {
-        clusterId: '123',
-        state: 'running',
-      },
-      performance: {
-        clusterId: '',
-        isPrimary: true,
-      },
-    };
+    this.replication.performance = { mode: 'disabled' };
     await render(
       hbs`
         <Dashboard::ReplicationCard
@@ -77,13 +70,10 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'check-circle')).exists();
     assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'DR primary', 'check-circle')).hasClass('has-text-success');
 
-    assert.dom(DASHBOARD.title('Performance primary')).hasText('Performance primary');
-
-    assert.dom(DASHBOARD.tooltipTitle('Performance primary')).hasText('not set up');
-    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
-    assert
-      .dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
-      .hasClass('has-text-danger');
+    assert.dom(DASHBOARD.title('Performance')).hasText('Performance');
+    assert.dom(DASHBOARD.tooltipTitle('Performance')).hasText('not set up');
+    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance', 'x-circle')).exists();
+    assert.dom(DASHBOARD.tooltipIcon('dr-perf', 'Performance', 'x-circle')).hasClass('has-text-danger');
   });
 
   test('it should display only dr replication information if vault version only has hasDRReplication', async function (assert) {
@@ -124,11 +114,12 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       dr: {
         clusterId: 'abc',
         state: 'idle',
+        mode: 'primary',
       },
       performance: {
         clusterId: 'def',
         state: 'shutdown',
-        isPrimary: true,
+        mode: 'primary',
       },
     };
     await render(
@@ -158,10 +149,11 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       dr: {
         clusterId: 'abc',
         state: 'running',
+        mode: 'primary',
       },
       performance: {
         clusterId: 'def',
-        isPrimary: true,
+        mode: 'primary',
       },
     };
     await render(
@@ -176,16 +168,7 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     assert.dom(DASHBOARD.title('DR primary')).hasText('DR primary');
     assert.dom(DASHBOARD.title('Performance primary')).hasText('Performance primary');
 
-    this.replication = {
-      dr: {
-        clusterId: 'abc',
-        state: 'running',
-      },
-      performance: {
-        clusterId: 'def',
-        isPrimary: false,
-      },
-    };
+    this.replication.performance.mode = 'secondary';
     await render(
       hbs`
           <Dashboard::ReplicationCard

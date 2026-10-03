@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,6 +7,11 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
+import {
+  PkiListCertsListEnum,
+  PkiListRolesListEnum,
+  PkiListIssuersListEnum,
+} from '@hashicorp/vault-client-typescript';
 
 export const PKI_DEFAULT_EMPTY_STATE_MSG =
   "This PKI mount hasn't yet been configured with a certificate issuer.";
@@ -21,29 +26,41 @@ export const getCliMessage = (msg) => {
 export default class PkiOverviewRoute extends Route {
   @service secretMountPath;
   @service auth;
-  @service store;
+  @service api;
 
   async fetchAllCertificates() {
     try {
-      return await this.store.query('pki/certificate/base', { backend: this.secretMountPath.currentPath });
+      const { keys } = await this.api.secrets.pkiListCerts(
+        this.secretMountPath.currentPath,
+        PkiListCertsListEnum.TRUE
+      );
+      return keys;
     } catch (e) {
-      return e.httpStatus;
+      return e.response.status;
     }
   }
 
   async fetchAllRoles() {
     try {
-      return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
+      const { keys } = await this.api.secrets.pkiListRoles(
+        this.secretMountPath.currentPath,
+        PkiListRolesListEnum.TRUE
+      );
+      return keys;
     } catch (e) {
-      return e.httpStatus;
+      return e.response.status;
     }
   }
 
   async fetchAllIssuers() {
     try {
-      return await this.store.query('pki/issuer', { backend: this.secretMountPath.currentPath });
+      const { keys } = await this.api.secrets.pkiListIssuers(
+        this.secretMountPath.currentPath,
+        PkiListIssuersListEnum.TRUE
+      );
+      return keys;
     } catch (e) {
-      return e.httpStatus;
+      return e.response.status;
     }
   }
 

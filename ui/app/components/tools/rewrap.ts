@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -27,6 +27,10 @@ export default class ToolsRewrap extends Component {
   @tracked originalToken = '';
   @tracked rewrappedToken = '';
   @tracked errorMessage = '';
+
+  get breadcrumbs() {
+    return [{ label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' }, { label: 'Rewrap token' }];
+  }
 
   @action
   reset() {

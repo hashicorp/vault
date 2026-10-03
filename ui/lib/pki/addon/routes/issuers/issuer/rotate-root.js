@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,13 +7,9 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import camelizeKeys from 'vault/utils/camelize-object-keys';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-@withConfirmLeave('model.newRootModel')
 export default class PkiIssuerRotateRootRoute extends Route {
   @service secretMountPath;
-  @service store;
 
   model() {
     const oldRoot = this.modelFor('issuers.issuer');
@@ -23,14 +19,9 @@ export default class PkiIssuerRotateRootRoute extends Route {
       const errorMessage = certData.parsing_errors.map((e) => e.message).join(', ');
       parsingErrors = errorMessage;
     }
-    const newRootModel = this.store.createRecord('pki/action', {
-      actionType: 'rotate-root',
-      type: 'internal',
-      ...camelizeKeys(certData), // copy old root settings over to new one
-    });
     return hash({
       oldRoot,
-      newRootModel,
+      certData,
       parsingErrors,
       backend: this.secretMountPath.currentPath,
     });
@@ -40,12 +31,12 @@ export default class PkiIssuerRotateRootRoute extends Route {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.oldRoot.backend },
-      { label: 'Issuers', route: 'issuers.index', model: resolvedModel.oldRoot.backend },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.backend },
+      { label: 'Issuers', route: 'issuers.index', model: resolvedModel.backend },
       {
-        label: resolvedModel.oldRoot.id,
+        label: resolvedModel.oldRoot.issuer_id,
         route: 'issuers.issuer.details',
-        models: [resolvedModel.oldRoot.backend, resolvedModel.oldRoot.id],
+        models: [resolvedModel.backend, resolvedModel.oldRoot.issuer_id],
       },
       { label: 'Rotate Root' },
     ];

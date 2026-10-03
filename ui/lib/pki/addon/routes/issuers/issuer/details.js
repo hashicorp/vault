@@ -1,26 +1,59 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { verifyCertificates } from 'vault/utils/parse-pki-cert';
-import { hash } from 'rsvp';
 
 export default class PkiIssuerDetailsRoute extends Route {
-  @service store;
+  @service api;
   @service secretMountPath;
+  @service capabilities;
 
-  model() {
+  async fetchCapabilities() {
+    const { pathFor } = this.capabilities;
+    const backend = this.secretMountPath.currentPath;
+    const { issuer_id: issuerId } = this.modelFor('issuers.issuer');
+
+    const pathMap = {
+      rotateExported: pathFor('pkiRootRotate', { backend, type: 'exported' }),
+      rotateInternal: pathFor('pkiRootRotate', { backend, type: 'internal' }),
+      rotateExisting: pathFor('pkiRootRotate', { backend, type: 'existing' }),
+      crossSign: pathFor('pkiIntermediateCrossSign', { backend }),
+      signIntermediate: pathFor('pkiIssuerSignIntermediate', { backend, issuerId }),
+      configure: pathFor('pkiIssuer', { backend, issuerId }),
+    };
+    const perms = await this.capabilities.fetch(Object.values(pathMap));
+
+    const canRotate =
+      perms[pathMap.rotateExported].canUpdate ||
+      perms[pathMap.rotateInternal].canUpdate ||
+      perms[pathMap.rotateExisting].canUpdate;
+
+    return {
+      canRotate,
+      canCrossSign: perms[pathMap.crossSign].canUpdate,
+      canSignIntermediate: perms[pathMap.signIntermediate].canUpdate,
+      canConfigure: perms[pathMap.configure].canUpdate,
+    };
+  }
+
+  async model() {
     const issuer = this.modelFor('issuers.issuer');
-    return hash({
+    const { canRotate, canCrossSign, canSignIntermediate, canConfigure } = await this.fetchCapabilities();
+
+    return {
       issuer,
-      pem: this.fetchCertByFormat(issuer.id, 'pem'),
-      der: this.fetchCertByFormat(issuer.id, 'der'),
-      isRotatable: this.isRoot(issuer),
+      pem: await this.fetchCertByFormat(issuer.issuer_id, 'pem'),
+      der: await this.fetchCertByFormat(issuer.issuer_id, 'der'),
+      isRotatable: issuer.isRoot && !!issuer.key_id,
       backend: this.secretMountPath.currentPath,
-    });
+      canRotate,
+      canCrossSign,
+      canSignIntermediate,
+      canConfigure,
+    };
   }
 
   setupController(controller, resolvedModel) {
@@ -36,23 +69,14 @@ export default class PkiIssuerDetailsRoute extends Route {
   /**
    * @private fetches cert by format so it's available for download
    */
-  fetchCertByFormat(issuerId, format) {
-    const endpoint = `/v1/${this.secretMountPath.currentPath}/issuer/${issuerId}/${format}`;
-    const adapter = this.store.adapterFor('application');
+  async fetchCertByFormat(issuerId, format) {
     try {
-      return adapter.rawRequest(endpoint, 'GET', { unauthenticated: true }).then(function (response) {
-        if (format === 'der') {
-          return response.blob();
-        }
-        return response.text();
-      });
+      const path = `/${this.secretMountPath.currentPath}/issuer/${issuerId}/${format}`;
+      const response = await this.api.request.get(path);
+      const body = format === 'der' ? 'blob' : 'text';
+      return response[body]();
     } catch (e) {
       return null;
     }
-  }
-
-  async isRoot({ certificate, keyId }) {
-    const isSelfSigned = await verifyCertificates(certificate, certificate);
-    return isSelfSigned && !!keyId;
   }
 }

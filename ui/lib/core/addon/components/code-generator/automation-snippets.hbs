@@ -1,0 +1,22 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Tabs as |T|>
+  {{! key="key" tells Ember to track each tab by its key property rather than array index. }}
+  {{! This prevents the tabs from re-rendering and jarring page flashes when this.tabs recalculates. }}
+  {{#each this.tabs key="key" as |tab|}}
+    <T.Tab data-test-tab={{tab.key}}>{{tab.label}}</T.Tab>
+    <T.Panel data-test-panel={{tab.key}} class="has-top-padding-m">
+      <Hds::CodeBlock
+        @language={{or tab.language "hcl"}}
+        @value={{tab.snippet}}
+        @hasLineNumbers={{false}}
+        @hasCopyButton={{true}}
+        data-test-field={{tab.key}}
+      />
+    </T.Panel>
+
+  {{/each}}
+</Hds::Tabs>

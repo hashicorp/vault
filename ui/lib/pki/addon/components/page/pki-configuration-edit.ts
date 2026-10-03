@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -9,44 +9,49 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
+import { addToArray } from 'vault/helpers/add-to-array';
+import { capitalize } from '@ember/string';
+
 import type RouterService from '@ember/routing/router-service';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type VersionService from 'vault/services/version';
-import type PkiConfigAcmeModel from 'vault/models/pki/config/acme';
-import type PkiConfigClusterModel from 'vault/models/pki/config/cluster';
-import type PkiConfigCrlModel from 'vault/models/pki/config/crl';
-import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
+import type PkiConfigAcmeForm from 'vault/forms/secrets/pki/config/acme';
+import type PkiConfigClusterForm from 'vault/forms/secrets/pki/config/cluster';
+import type PkiConfigCrlForm from 'vault/forms/secrets/pki/config/crl';
+import type PkiConfigUrlsForm from 'vault/forms/secrets/pki/config/urls';
 import type { FormField, TtlEvent } from 'vault/app-types';
-import { addToArray } from 'vault/helpers/add-to-array';
+import type ApiService from 'vault/services/api';
 
 interface Args {
-  acme: PkiConfigAcmeModel;
-  cluster: PkiConfigClusterModel;
-  crl: PkiConfigCrlModel;
-  urls: PkiConfigUrlsModel;
+  acmeForm: PkiConfigAcmeForm;
+  clusterForm: PkiConfigClusterForm;
+  crlForm: PkiConfigCrlForm;
+  urlsForm: PkiConfigUrlsForm;
+  backend: string;
+  capabilities: Record<string, boolean>;
 }
 interface PkiConfigCrlTtls {
-  autoRebuildGracePeriod: string;
+  auto_rebuild_grace_period: string;
   expiry: string;
-  deltaRebuildInterval: string;
-  ocspExpiry: string;
+  delta_rebuild_interval: string;
+  ocsp_expiry: string;
 }
 interface PkiConfigCrlBooleans {
-  autoRebuild: boolean;
-  enableDelta: boolean;
+  auto_rebuild: boolean;
+  enable_delta: boolean;
   disable: boolean;
-  ocspDisable: boolean;
+  ocsp_disable: boolean;
 }
 
 interface ErrorObject {
-  modelName: string;
+  type: string;
   message: string;
 }
 export default class PkiConfigurationEditComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly version: VersionService;
+  @service declare readonly api: ApiService;
 
   @tracked invalidFormAlert = '';
   @tracked errors: Array<ErrorObject> = [];
@@ -55,38 +60,41 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
     return this.version.isEnterprise;
   }
 
-  @task
-  @waitFor
-  *save(event: Event) {
-    event.preventDefault();
-    // first clear errors and sticky flash messages
-    this.errors = [];
-    this.flashMessages.clearMessages();
+  save = task(
+    waitFor(async (event: Event) => {
+      event.preventDefault();
+      // first clear errors and sticky flash messages
+      this.errors = [];
+      this.flashMessages.clearMessages();
 
-    // modelName is also the API endpoint (i.e. pki/config/cluster)
-    for (const modelName of ['cluster', 'acme', 'urls', 'crl']) {
-      const model = this.args[modelName as keyof Args];
-      // skip saving and continue to next iteration if user does not have permission
-      if (!model.canSet) continue;
-      try {
-        yield model.save();
-        this.flashMessages.success(`Successfully updated config/${modelName}`);
-      } catch (error) {
-        const errorObject: ErrorObject = {
-          modelName,
-          message: errorMessage(error),
-        };
-        this.flashMessages.danger(`Error updating config/${modelName}`, { sticky: true });
-        this.errors = addToArray(this.errors, errorObject);
+      for (const type of ['cluster', 'acme', 'urls', 'crl']) {
+        // skip saving and continue to next iteration if user does not have permission
+        if (!this.args.capabilities[`canSet${capitalize(type)}`]) continue;
+
+        try {
+          const formKey = `${type}Form` as 'clusterForm' | 'acmeForm' | 'urlsForm' | 'crlForm';
+          const { data } = this.args[formKey].toJSON();
+          const apiKey = `pkiConfigure${capitalize(type)}` as
+            | 'pkiConfigureAcme'
+            | 'pkiConfigureCluster'
+            | 'pkiConfigureUrls'
+            | 'pkiConfigureCrl';
+          await this.api.secrets[apiKey](this.args.backend, data);
+          this.flashMessages.success(`Successfully updated config/${type}`);
+        } catch (error) {
+          const { message } = await this.api.parseError(error);
+          this.errors = addToArray(this.errors, { type, message });
+          this.flashMessages.danger(`Error updating config/${type}`, { sticky: true });
+        }
       }
-    }
 
-    if (this.errors.length) {
-      this.invalidFormAlert = 'There was an error submitting this form.';
-    } else {
-      this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
-    }
-  }
+      if (this.errors.length) {
+        this.invalidFormAlert = 'There was an error submitting this form.';
+      } else {
+        this.router.transitionTo('vault.cluster.secrets.backend.pki.configuration.index');
+      }
+    })
+  );
 
   @action
   cancel() {
@@ -94,14 +102,17 @@ export default class PkiConfigurationEditComponent extends Component<Args> {
   }
 
   @action
-  handleTtl(attr: FormField, e: TtlEvent) {
+  handleTtl(field: FormField, e: TtlEvent) {
     const { enabled, goSafeTimeString } = e;
-    const ttlAttr = attr.name;
-    this.args.crl[ttlAttr as keyof PkiConfigCrlTtls] = goSafeTimeString;
+    const {
+      name,
+      options: { mapToBoolean, isOppositeValue },
+    } = field;
+    const { data } = this.args.crlForm;
+
+    data[name as keyof PkiConfigCrlTtls] = goSafeTimeString;
     // expiry and ocspExpiry both correspond to 'disable' booleans
     // so when ttl is enabled, the booleans are set to false
-    this.args.crl[attr.options.mapToBoolean as keyof PkiConfigCrlBooleans] = attr.options.isOppositeValue
-      ? !enabled
-      : enabled;
+    data[mapToBoolean as keyof PkiConfigCrlBooleans] = isOppositeValue ? !enabled : enabled;
   }
 }

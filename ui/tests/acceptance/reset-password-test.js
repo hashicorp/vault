@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -63,7 +63,7 @@ module('Acceptance | reset password', function (hooks) {
         'shows correct banner text'
       );
 
-    assert.dom('[data-test-title]').hasText('Reset password', 'page title');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Reset password', 'page title');
     await fillIn('[data-test-input="reset-password"]', 'newpassword');
     await click(GENERAL.submitButton);
     await waitFor('[data-test-flash-message]');

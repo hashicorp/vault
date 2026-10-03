@@ -1,0 +1,209 @@
+{{!
+  Copyright IBM Corp. 2016, 2025
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Layout::Grid @gap="16" @columnMinWidth="25%" as |LG|>
+  <LG.Item @colspan={{4}}>
+    <Hds::Text::Display @tag="h2" @size="400" class="has-bottom-padding-m" data-test-step-title>Map out your namespaces</Hds::Text::Display>
+
+    <Hds::Text::Body @tag="p">
+      Create the namespaces you need using the 3-layer structure, starting with the global level. Refresh the preview to
+      update. These changes will only be applied on the next step, once you select the implementation method.
+    </Hds::Text::Body>
+  </LG.Item>
+
+  <LG.Item @colspan={{4}}>
+    <Hds::Reveal @isOpen={{true}} @text="Namespace best practices">
+      <Hds::Layout::Grid @columnMinWidth="10%" @gap="24" as |LG|>
+        <LG.Item @colspan={{7}}>
+          <ul class="bullet">
+            <li>
+              <strong>Logic:</strong>
+              We recommend using three layers, such as
+              <Hds::Text::Code @weight="bold">
+                global-org-project.
+              </Hds::Text::Code>
+              For example, treat the first column as global or company level, and the following two as departments and teams.
+            </li>
+            <li>
+              <strong>Naming:</strong>
+              Be concise and descriptive. Use meaningful words like application name, geo-region, etc. Namespaces will be
+              used as paths in API calls and CLI commands. You will not be able to edit it later.
+            </li>
+          </ul>
+          <Hds::Text:Body @tag="p" class="has-top-margin-s">Example path that your users or apps will reference:</Hds::Text:Body>
+          <Hds::Text::Code @tag="p" class="has-top-margin-s">
+            $$global/finance-org/payroll-app/kv/data/config$$
+          </Hds::Text::Code>
+          <Hds::Link::Standalone
+            @icon="docs-link"
+            @iconPosition="trailing"
+            @text="Learn more about namespaces"
+            @href="https://developer.hashicorp.com/vault/docs/enterprise/namespaces/namespace-structure"
+            class="has-top-margin-s"
+          />
+        </LG.Item>
+        <LG.Item @colspan={{3}}>
+          <img src={{img-path "~/multi-namespace.gif"}} alt="Namespace hierarchy example" />
+        </LG.Item>
+      </Hds::Layout::Grid>
+    </Hds::Reveal>
+  </LG.Item>
+  {{#each this.blocks as |block blockIndex|}}
+    <LG.Item @colspan={{4}}>
+      <Hds::Card::Container @hasBorder={{true}}>
+        <Hds::Accordion as |A|>
+          <A.Item @containsInteractive={{true}} @isOpen={{true}} data-test-input-row={{blockIndex}}>
+            <:toggle>
+              <div class="flex space-between align-items-center">
+                <span>{{or block.global "Namespace"}}</span>
+                <Hds::Button
+                  @text="Delete namespace"
+                  @color="secondary"
+                  @icon="trash"
+                  @isIconOnly={{true}}
+                  {{on "click" (fn this.deleteBlock blockIndex)}}
+                  data-test-button="delete namespace"
+                />
+              </div>
+            </:toggle>
+            <:content>
+              {{#each block.orgs key="@index" as |org orgIndex|}}
+                {{#if (gt orgIndex 0)}}
+                  <Hds::Separator />
+                {{/if}}
+
+                <Hds::Layout::Grid @gap="16" as |Grid|>
+                  {{! Global Column - Only show for first org }}
+                  <Grid.Item>
+                    {{#if (eq orgIndex 0)}}
+                      <Hds::Form::TextInput::Field
+                        @value={{block.global}}
+                        @isInvalid={{block.globalError}}
+                        {{on "input" (fn this.updateGlobalValue blockIndex)}}
+                        data-test-input="global-{{blockIndex}}"
+                        as |F|
+                      >
+                        <F.Label>Global</F.Label>
+                        {{#if block.globalError}}
+                          <F.Error data-test-validation-error="global">{{block.globalError}}</F.Error>
+                        {{/if}}
+                      </Hds::Form::TextInput::Field>
+                    {{/if}}
+                  </Grid.Item>
+
+                  {{! Org Column }}
+                  <Grid.Item>
+                    <Hds::Layout::Flex @gap="8" @align="end">
+                      <Hds::Form::TextInput::Field
+                        @value={{org.name}}
+                        @isInvalid={{org.error}}
+                        {{on "input" (fn this.updateOrgValue block org)}}
+                        data-test-input="org-{{orgIndex}}"
+                        as |F|
+                      >
+                        <F.Label>Org</F.Label>
+                        {{#if org.error}}
+                          <F.Error data-test-validation-error="org">{{org.error}}</F.Error>
+                        {{/if}}
+                      </Hds::Form::TextInput::Field>
+
+                      {{#unless (eq orgIndex 0)}}
+                        <Hds::Button
+                          @color="secondary"
+                          @icon="trash"
+                          @isIconOnly={{true}}
+                          @text="Delete org"
+                          class="align-self-end"
+                          {{on "click" (fn this.removeOrg block org)}}
+                          data-test-button="delete org"
+                        />
+                      {{/unless}}
+                    </Hds::Layout::Flex>
+
+                    {{! Show Add button under last input }}
+                    {{#if (eq orgIndex (sub block.orgs.length 1))}}
+                      <Hds::Button
+                        @color="secondary"
+                        @icon="plus"
+                        @size="small"
+                        @text="Add"
+                        {{on "click" (fn this.addOrg block)}}
+                        class="has-top-margin-s"
+                        data-test-button="add org"
+                      />
+                    {{/if}}
+                  </Grid.Item>
+
+                  {{! Project Column }}
+                  <Grid.Item>
+                    {{#each org.projects key="@index" as |project projectIndex|}}
+                      <div class="{{if (gt projectIndex 0) 'has-top-margin-s'}}">
+                        <Hds::Layout::Flex @gap="8" @align="end">
+                          <Hds::Form::TextInput::Field
+                            @value={{project.name}}
+                            @isInvalid={{project.error}}
+                            {{on "input" (fn this.updateProjectValue block org project)}}
+                            data-test-input="project-{{projectIndex}}"
+                            as |F|
+                          >
+                            <F.Label>Project</F.Label>
+                            {{#if project.error}}
+                              <F.Error data-test-validation-error="config">{{project.error}}</F.Error>
+                            {{/if}}
+                          </Hds::Form::TextInput::Field>
+
+                          {{#unless (eq projectIndex 0)}}
+                            <Hds::Button
+                              @color="secondary"
+                              @icon="trash"
+                              @isIconOnly={{true}}
+                              @text="Delete project"
+                              class="align-self-end"
+                              {{on "click" (fn this.removeProject block org project)}}
+                              data-test-button="delete project"
+                            />
+                          {{/unless}}
+                        </Hds::Layout::Flex>
+                      </div>
+                    {{/each}}
+
+                    <Hds::Button
+                      @color="secondary"
+                      @icon="plus"
+                      @text="Add"
+                      @size="small"
+                      {{on "click" (fn this.addProject block org)}}
+                      class="has-top-margin-s"
+                      data-test-button="add project"
+                    />
+                  </Grid.Item>
+                </Hds::Layout::Grid>
+              {{/each}}
+
+            </:content>
+          </A.Item>
+        </Hds::Accordion>
+      </Hds::Card::Container>
+    </LG.Item>
+  {{/each}}
+
+  <LG.Item @colspan={{4}}>
+    <Hds::Button
+      @text="Add namespace"
+      @color="secondary"
+      @icon="plus"
+      {{on "click" this.addBlock}}
+      data-test-button="add namespace"
+    />
+  </LG.Item>
+
+  {{#if this.shouldShowTreeChart}}
+    <LG.Item @colspan={{4}}>
+      <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-padding-s">Namespace Structure Preview</Hds::Text::Display>
+      <TreeChart @data={{this.treeData}} @options={{this.treeChartOptions}} class="tree has-padding-m" data-test-tree />
+    </LG.Item>
+  {{/if}}
+
+</Hds::Layout::Grid>

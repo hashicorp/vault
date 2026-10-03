@@ -1,15 +1,16 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 {{#let this.model.roleAncestry.type this.model.roleAncestry.path_to_role as |roleType path_to_role|}}
   <Page::Roles
     @roles={{this.model.roles}}
+    @capabilities={{this.model.capabilities}}
     @promptConfig={{false}}
-    @backendModel={{this.model.backendModel}}
+    @secretsEngine={{this.model.secretsEngine}}
     @breadcrumbs={{this.breadcrumbs}}
     @pageFilter={{this.pageFilter}}
-    @currentRouteParams={{array this.model.backendModel.id roleType path_to_role}}
+    @currentRouteParams={{array this.model.secretsEngine.id roleType path_to_role}}
   />
 {{/let}}

@@ -1,0 +1,6 @@
+```release-note:improvement
+license utilization reporting (enterprise): Add metrics for the number of issued PKI certificates.
+```
+```release-note:improvement
+sys (enterprise): Add sys/billing/certificates API endpoint to retrieve the number of issued PKI certificates.
+```

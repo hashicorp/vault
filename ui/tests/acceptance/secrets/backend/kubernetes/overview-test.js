@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -24,7 +24,7 @@ module('Acceptance | kubernetes | overview', function (hooks) {
       shouldConfigureRoles ? kubernetesScenario(this.server) : kubernetesScenario(this.server, false);
 
     this.visitOverview = () => {
-      return visit('/vault/secrets/kubernetes/kubernetes/overview');
+      return visit('/vault/secrets-engines/kubernetes/kubernetes/overview');
     };
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);

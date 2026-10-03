@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -232,9 +232,12 @@ module('Integration | Component | auth | form template', function (hooks) {
     });
 
     // in the ent module to test ALL supported login methods
-    // iterating in tests should generally be avoided, but purposefully wanted to test the component
-    // renders as expected as auth types change
+    // iterating in tests should generally be avoided, but the for loop below is intentional
+    // to test the component renders as expected when auth types change
     test('it selects each supported auth type and renders its form and relevant fields', async function (assert) {
+      const routerStub = sinon.stub(this.router, 'urlFor').returns('123-example.com');
+      // Setup so jwt auth mount is configured for jwt login and not oidc (jwt/oidc are interchangeable)
+      this.server.post(`/auth/jwt/oidc/auth_url`, () => overrideResponse(400, { errors: [ERROR_JWT_LOGIN] }));
       const authMethodTypes = supportedTypes(true);
       const totalFields = Object.values(AUTH_METHOD_LOGIN_DATA).reduce(
         (sum, obj) => sum + Object.keys(obj).length,
@@ -245,15 +248,8 @@ module('Integration | Component | auth | form template', function (hooks) {
 
       await this.renderComponent();
       for (const authType of authMethodTypes) {
-        let stub;
-        if (['oidc', 'jwt'].includes(authType)) {
-          stub = sinon.stub(this.router, 'urlFor').returns('123-example.com');
-        }
         const loginData = AUTH_METHOD_LOGIN_DATA[authType];
-
-        const fields = Object.keys(loginData);
         await fillIn(GENERAL.selectByAttr('auth type'), authType);
-
         assert.dom(GENERAL.selectByAttr('auth type')).hasValue(authType), `${authType}: it selects type`;
         assert.dom(AUTH_FORM.authForm(authType)).exists(`${authType}: it renders form component`);
 
@@ -269,14 +265,11 @@ module('Integration | Component | auth | form template', function (hooks) {
         const assertion = authType === 'token' ? 'doesNotExist' : 'exists';
         assert.dom(GENERAL.inputByAttr('path'))[assertion](`${authType}: mount path input ${assertion}`);
 
-        fields.forEach((field) => {
+        Object.keys(loginData).forEach((field) => {
           assert.dom(GENERAL.inputByAttr(field)).exists(`${authType}: ${field} input renders`);
         });
-
-        if (stub) {
-          stub.restore();
-        }
       }
+      routerStub.restore();
     });
 
     test('dropdown includes enterprise methods', async function (assert) {

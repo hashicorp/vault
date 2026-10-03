@@ -1,17 +1,17 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
 
-import type { StaticCredentials, DynamicCredentials } from 'ldap/routes/roles/role/credentials';
+import type { LdapStaticRoleCredentials, LdapDynamicRoleCredentials } from 'vault/secrets/ldap';
 import { Breadcrumb } from 'vault/vault/app-types';
-import type AdapterError from '@ember-data/adapter/error';
+import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 interface Args {
-  credentials: StaticCredentials | DynamicCredentials;
-  error: AdapterError;
+  credentials: LdapStaticRoleCredentials | LdapDynamicRoleCredentials;
+  error?: ResponseError;
   breadcrumbs: Array<Breadcrumb>;
 }
 

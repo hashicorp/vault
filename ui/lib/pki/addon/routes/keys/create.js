@@ -1,19 +1,17 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import PkiKeyForm from 'vault/forms/secrets/pki/key';
 
-@withConfirmLeave()
 export default class PkiKeysCreateRoute extends Route {
   @service secretMountPath;
-  @service store;
 
   model() {
-    return this.store.createRecord('pki/key');
+    return new PkiKeyForm({}, { isNew: true });
   }
 
   setupController(controller, resolvedModel) {

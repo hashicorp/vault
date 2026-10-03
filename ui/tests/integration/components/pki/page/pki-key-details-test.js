@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,46 +8,43 @@ import { setupRenderingTest } from 'ember-qunit';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_KEYS } from 'vault/tests/helpers/pki/pki-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | pki key details page', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
-    this.store = this.owner.lookup('service:store');
-    this.secretMountPath = this.owner.lookup('service:secret-mount-path');
+
     this.backend = 'pki-test';
-    this.secretMountPath.currentPath = this.backend;
-    this.store.pushPayload('pki/key', {
-      modelName: 'pki/key',
-      key_id: '724862ff-6438-bad0-b598-77a6c7f4e934',
-      key_type: 'ec',
-      key_name: 'test-key',
-    });
-    this.model = this.store.peekRecord('pki/key', '724862ff-6438-bad0-b598-77a6c7f4e934');
+    this.owner.lookup('service:secret-mount-path').update(this.backend);
+
+    this.deleteStub = sinon.stub(this.owner.lookup('service:api').secrets, 'pkiDeleteKey').resolves();
+
+    this.key = { key_id: '724862ff-6438-bad0-b598-77a6c7f4e934', key_type: 'ec', key_name: 'test-key' };
+    this.canDelete = true;
+    this.canEdit = true;
+
+    this.renderComponent = () =>
+      render(
+        hbs`
+        <Page::PkiKeyDetails
+          @key={{this.key}}
+          @canDelete={{this.canDelete}}
+          @canEdit={{this.canEdit}}
+        />
+      `,
+        { owner: this.engine }
+      );
   });
 
   test('it renders the page component and deletes a key', async function (assert) {
     assert.expect(7);
-    this.server.delete(`${this.backend}/key/${this.model.keyId}`, () => {
-      assert.ok(true, 'confirming delete fires off destroyRecord()');
-    });
 
-    await render(
-      hbs`
-        <Page::PkiKeyDetails
-          @key={{this.model}}
-          @canDelete={{true}}
-          @canEdit={{true}}
-        />
-      `,
-      { owner: this.engine }
-    );
+    await this.renderComponent();
 
     assert
       .dom(GENERAL.infoRowValue('Key ID'))
@@ -59,39 +56,28 @@ module('Integration | Component | pki key details page', function (hooks) {
     assert.dom(PKI_KEYS.keyDeleteButton).exists('renders delete button');
     await click(PKI_KEYS.keyDeleteButton);
     await click(GENERAL.confirmButton);
+    assert.true(
+      this.deleteStub.calledWith(this.key.key_id, this.backend),
+      'pkiDeleteKey called with correct args'
+    );
   });
 
   test('it does not render actions when capabilities are false', async function (assert) {
     assert.expect(2);
 
-    await render(
-      hbs`
-        <Page::PkiKeyDetails
-          @key={{this.model}}
-          @canDelete={{false}}
-          @canEdit={{false}}
-        />
-      `,
-      { owner: this.engine }
-    );
+    this.canDelete = false;
+    this.canEdit = false;
+
+    await this.renderComponent();
 
     assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
     assert.dom(PKI_KEYS.keyEditLink).doesNotExist('does not render edit button if no permission');
   });
 
   test('it renders the private key as a <CertificateCard> component when there is a private key', async function (assert) {
-    this.model.privateKey = 'private-key-value';
-    await render(
-      hbs`
-        <Page::PkiKeyDetails
-          @key={{this.model}}
-          @canDelete={{false}}
-          @canEdit={{false}}
-        />
-      `,
-      { owner: this.engine }
-    );
+    this.key.private_key = 'private-key-value';
 
+    await this.renderComponent();
     assert.dom('[data-test-certificate-card]').exists('Certificate card renders for the private key');
   });
 });

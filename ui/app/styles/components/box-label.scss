@@ -5,7 +5,7 @@
 @use '../helper-classes/flexbox-and-grid.scss';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -18,7 +18,7 @@ label.box-label {
   @extend .is-centered;
 
   border-color: var(--token-color-palette-neutral-300);
-  border-radius: 3px;
+  border-radius: var(--token-border-radius-x-small);
   box-shadow: box-shadow_variables.$box-link-shadow;
   text-decoration: none;
   transition: box-shadow size_variables.$speed;
@@ -69,6 +69,6 @@ label.box-label {
   color: var(--token-color-palette-neutral-400);
 
   .is-selected & {
-    color: var(--token-color-palette-neutral-600);
+    color: var(--token-color-foreground-primary);
   }
 }

@@ -1,9 +1,8 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/font_variables';
 @use '../utils/size_variables';
 
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -20,7 +19,7 @@
 
   .ember-power-select-trigger {
     border: 0;
-    border-radius: size_variables.$radius;
+    border-radius: var(--token-border-radius-x-small);
     padding-right: 0;
 
     &--active {
@@ -81,14 +80,14 @@
     }
 
     .ember-power-select-option[aria-current='true'] {
-      background-color: var(--token-color-palette-neutral-50);
-      color: var(--token-color-palette-neutral-600);
+      background-color: var(--token-color-surface-faint);
+      color: var(--token-color-foreground-primary);
     }
 
     .ember-power-select-option--no-matches-message {
       color: var(--token-color-palette-neutral-400);
-      font-size: size_variables.$size-8;
-      font-weight: font_variables.$font-weight-semibold;
+      font-size: var(--token-typography-body-200-font-size);
+      font-weight: var(--token-typography-font-weight-semibold);
       text-transform: uppercase;
 
       &:hover,
@@ -116,7 +115,7 @@
 
       &:hover,
       &:focus {
-        color: var(--token-color-palette-blue-200);
+        color: var(--token-color-foreground-action);
       }
     }
   }
@@ -131,7 +130,7 @@
 
 .search-select-list-key {
   color: var(--token-color-foreground-faint);
-  font-size: size_variables.$size-8;
+  font-size: var(--token-typography-body-200-font-size);
 }
 
 .search-select .search-icon {

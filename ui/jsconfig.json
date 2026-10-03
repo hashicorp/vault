@@ -5,7 +5,6 @@
   },
   "exclude": [
     "node_modules",
-    ".yarn",
     "public"
   ]
 }

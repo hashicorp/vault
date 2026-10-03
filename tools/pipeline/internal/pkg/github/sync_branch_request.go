@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	libgithub "github.com/google/go-github/v74/github"
+	libgithub "github.com/google/go-github/v81/github"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/jedib0t/go-pretty/v6/table"
 	slogctx "github.com/veqryn/slog-context"
@@ -58,7 +58,6 @@ func (r *SyncBranchReq) Run(
 		slog.String("to-repo", r.ToRepo),
 		slog.String("to-origin", r.ToOrigin),
 		slog.String("to-branch", r.ToBranch),
-		slog.String("to-owner", r.ToOwner),
 		slog.String("repo-dir", r.RepoDir),
 	), "synchronizing branches")
 
@@ -152,7 +151,6 @@ func (r *SyncBranchReq) Run(
 // request. It is always recommended that additional fitlers be given to reduce the response size
 // and not exhaust API limits.
 func (r *SyncBranchReq) Validate(ctx context.Context) error {
-	// TODO
 	if r == nil {
 		return errors.New("failed to initialize request")
 	}

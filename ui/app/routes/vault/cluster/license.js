@@ -1,24 +1,23 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Route from '@ember/routing/route';
-import ClusterRoute from 'vault/mixins/cluster-route';
 import { service } from '@ember/service';
+import Route from '@ember/routing/route';
 
-export default Route.extend(ClusterRoute, {
-  store: service(),
-  version: service(),
-  router: service(),
+export default class LicenseRoute extends Route {
+  @service store;
+  @service version;
+  @service router;
 
   beforeModel() {
     if (this.version.isCommunity) {
       this.router.transitionTo('vault.cluster');
     }
-  },
+  }
 
   model() {
     return this.store.queryRecord('license', {});
-  },
-});
+  }
+}

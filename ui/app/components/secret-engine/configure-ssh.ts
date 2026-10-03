@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -81,7 +81,7 @@ export default class ConfigureSshComponent extends Component<Args> {
     if (isDelete) {
       this.router.transitionTo('vault.cluster.secrets.backend.configuration.edit', id);
     } else {
-      this.router.transitionTo('vault.cluster.secrets.backend.configuration', id);
+      this.router.transitionTo('vault.cluster.secrets.backend.configuration.plugin-settings', id);
     }
   }
 

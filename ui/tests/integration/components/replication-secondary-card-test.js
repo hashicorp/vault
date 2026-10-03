@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const TITLE = 'Status';
 
@@ -29,13 +28,6 @@ module('Integration | Component | replication-secondary-card', function (hooks) 
   hooks.beforeEach(function () {
     this.set('replicationDetails', REPLICATION_DETAILS);
     this.set('title', TITLE);
-    // TODO: remove Tooltip/ember-basic-dropdown
-    setRunOptions({
-      rules: {
-        'aria-command-name': { enabled: false },
-        'nested-interactive': { enabled: false },
-      },
-    });
   });
 
   test('it renders', async function (assert) {

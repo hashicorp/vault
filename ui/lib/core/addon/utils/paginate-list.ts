@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -7,7 +7,7 @@ import config from 'vault/config/environment';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
-type PaginateOptions = {
+export type PaginateOptions = {
   page?: number;
   pageSize?: number;
   filter?: string;

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: MPL-2.0
 
 package automatedrotationutil
@@ -38,6 +38,13 @@ var schemaMap = map[string]*framework.FieldSchema{
 	"disable_automated_rotation": {
 		Type:        framework.TypeBool,
 		Description: "If set to true, will deregister all registered rotation jobs from the RotationManager for the plugin.",
+		DisplayAttrs: &framework.DisplayAttributes{
+			Group: "default",
+		},
+	},
+	"rotation_policy": {
+		Type:        framework.TypeString,
+		Description: "Defines the rotation policy to use when performing automated rotations.",
 		DisplayAttrs: &framework.DisplayAttributes{
 			Group: "default",
 		},
@@ -252,6 +259,7 @@ func TestPopulateAutomatedRotationData(t *testing.T) {
 				"rotation_schedule":          "*/15 * * * *",
 				"rotation_window":            time.Duration(60).Seconds(),
 				"rotation_period":            time.Duration(0).Seconds(),
+				"rotation_policy":            "",
 				"disable_automated_rotation": false,
 			},
 			inputParams: &AutomatedRotationParams{

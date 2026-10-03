@@ -1,33 +1,37 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @model.serialNumber}}
-  <Page::PkiCertificateDetails @model={{@model}} @onBack={{this.cancel}} />
+{{#if this.certData}}
+  <Page::PkiCertificateDetails @certData={{this.certData}} @canRevoke={{this.canRevoke}} @onBack={{this.cancel}} />
 {{else}}
   <form {{on "submit" (perform this.save)}} data-test-pki-generate-cert-form>
     <div class="box is-bottomless is-fullwidth is-marginless">
       <MessageError @errorMessage={{this.errorBanner}} />
       <NamespaceReminder @mode="create" @noun="certificate" />
-      {{#let (get @model.formFieldGroups "0") as |defaultGroup|}}
-        {{#each defaultGroup.default as |attr|}}
-          <FormField @model={{@model}} @attr={{attr}} @modelValidations={{this.modelValidations}}>
-            <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+
+      {{#let (get @form.formFieldGroups "0") as |defaultGroup|}}
+        {{#each defaultGroup.default as |field|}}
+          <FormField @model={{@form}} @attr={{field}} @modelValidations={{this.modelValidations}}>
+            <PkiNotValidAfterForm @form={{@form}} />
           </FormField>
         {{/each}}
       {{/let}}
+
       <FormFieldGroups
-        @model={{@model}}
+        @model={{@form}}
         @renderGroup="Subject Alternative Name (SAN) Options"
         @groupName="formFieldGroups"
         @showHelpText={{false}}
       />
     </div>
+
     <hr class="has-background-gray-100" />
+
     <Hds::ButtonSet>
       <Hds::Button
-        @text={{capitalize this.verb}}
+        @text={{capitalize @mode}}
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}

@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package eventbus
@@ -52,8 +52,7 @@ func TestFilters_Watch(t *testing.T) {
 	t.Cleanup(cancelFunc)
 	f := NewFilters("self")
 	f.addPattern("self", []string{"ns1"}, "e3")
-	ch, cancelFunc2, err := f.watch(ctx, "self")
-	assert.Nil(t, err)
+	ch, cancelFunc2 := f.watch(ctx, "self")
 	t.Cleanup(cancelFunc2)
 	initial := <-ch // we always get one immediately for the current state
 	assert.Len(t, initial, 2)
@@ -98,8 +97,7 @@ func waitForChanges(t *testing.T, ch <-chan []FilterChange) []FilterChange {
 func TestFilters_WatchCancel(t *testing.T) {
 	f := NewFilters("self")
 	f.addPattern("self", []string{"ns1"}, "e3")
-	ch, cancelFunc, err := f.watch(context.Background(), "self")
-	assert.Nil(t, err)
+	ch, cancelFunc := f.watch(context.Background(), "self")
 	t.Cleanup(cancelFunc)
 	initial := <-ch // we always get one immediately for the current state
 	assert.Len(t, initial, 2)
@@ -139,12 +137,26 @@ func TestFilters_AddRemoveClear(t *testing.T) {
 	f.clearClusterNodePatterns("somecluster")
 	assert.NotContains(t, f.filters, "somecluster")
 
-	f.addGlobalPattern([]string{"ns1"}, "abc")
-	f.removeGlobalPattern([]string{"ns1"}, "abcd")
-	assert.Equal(t, "{ns=ns1,ev=abc}", f.filters[globalCluster].String())
-	f.removeGlobalPattern([]string{"ns1"}, "abc")
-	assert.Equal(t, "", f.filters[globalCluster].String())
-	f.addGlobalPattern([]string{"ns1"}, "abc")
-	f.clearGlobalPatterns()
-	assert.NotContains(t, f.filters, globalCluster)
+	f.addClusterWidePattern([]string{"ns1"}, "abc")
+	f.removeClusterWidePattern([]string{"ns1"}, "abcd")
+	assert.Equal(t, "{ns=ns1,ev=abc}", f.filters[clusterWide].String())
+	f.removeClusterWidePattern([]string{"ns1"}, "abc")
+	assert.Equal(t, "", f.filters[clusterWide].String())
+	f.addClusterWidePattern([]string{"ns1"}, "abc")
+	f.clearClusterWidePatterns()
+	assert.NotContains(t, f.filters, clusterWide)
+}
+
+// TestFilters_makeClusterWideFilters tests that making cluster-wide filters
+// works as expected.
+func TestFilters_makeClusterWideFilters(t *testing.T) {
+	f := NewFilters("self")
+	f.addPattern("node1", []string{"ns1"}, "abc")
+	f.addPattern("node2", []string{"ns1"}, "abc")
+	f.makeClusterWideFilters()
+	assert.Equal(t, "{ns=ns1,ev=abc}", f.filters[clusterWide].String())
+
+	f.addPattern("node3", []string{"ns3"}, "def")
+	f.makeClusterWideFilters()
+	assert.Equal(t, "{ns=ns1,ev=abc},{ns=ns3,ev=def}", f.filters[clusterWide].String())
 }

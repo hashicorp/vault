@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -15,3 +15,5 @@ declare module '@icholy/duration' {
   import Duration from '@icholy/duration';
   export default Duration;
 }
+
+declare module 'vault/tests/helpers/vault-keys';

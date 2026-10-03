@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 // Shim module to handle the fact that Vault doesn't actually need a backend module when we use raft.

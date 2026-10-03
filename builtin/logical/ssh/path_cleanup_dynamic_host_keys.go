@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package ssh
@@ -41,6 +41,10 @@ func (b *backend) handleCleanupKeys(ctx context.Context, req *logical.Request, d
 			return nil, fmt.Errorf("unable to delete key %v of %v: %w", index+1, len(names), err)
 		}
 	}
+
+	b.Backend.TryRecordObservationWithRequest(ctx, req, ObservationTypeSSHTidyDynamicKeys, map[string]interface{}{
+		"keys_deleted": len(names),
+	})
 
 	return &logical.Response{
 		Data: map[string]interface{}{

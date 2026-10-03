@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package redshift
@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	thutils "github.com/hashicorp/vault/sdk/helper/testhelpers/utils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -81,7 +81,7 @@ func TestRedshift_Initialize(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, _, _, _, err := redshiftEnv()
 	if err != nil {
@@ -122,7 +122,7 @@ func TestRedshift_NewUser(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
@@ -175,7 +175,7 @@ func TestRedshift_NewUser_NoCreationStatement_ShouldError(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, _, _, _, err := redshiftEnv()
 	if err != nil {
@@ -221,7 +221,7 @@ func TestRedshift_UpdateUser_Expiration(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
@@ -284,7 +284,7 @@ func TestRedshift_UpdateUser_Password(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
@@ -341,7 +341,7 @@ func TestRedshift_DeleteUser(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
@@ -409,7 +409,7 @@ func TestRedshift_DefaultUsernameTemplate(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {
@@ -460,7 +460,7 @@ func TestRedshift_CustomUsernameTemplate(t *testing.T) {
 	}
 
 	// Ensure each cred is populated.
-	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+	thutils.SkipUnlessEnvVarsSet(t, credNames)
 
 	connURL, url, _, _, err := redshiftEnv()
 	if err != nil {

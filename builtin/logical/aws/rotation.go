@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -81,6 +81,11 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 	if err != nil {
 		return true, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", cfg.Name, err)
 	}
+
+	b.TryRecordObservationWithRequest(ctx, nil, ObservationTypeAWSStaticCredentialRotate, map[string]interface{}{
+		"role_name":       cfg.Name,
+		"rotation_period": cfg.RotationPeriod.String(),
+	})
 
 	return true, nil
 }

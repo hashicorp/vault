@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,7 +11,7 @@ import { ACTIVITY_EXPORT_STUB } from 'vault/tests/helpers/clients/client-count-h
 import { CLIENT_COUNT, FILTERS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { ClientFilters } from 'core/utils/client-count-utils';
+import { ClientFilters } from 'core/utils/client-counts/helpers';
 
 const EXPORT_TAB_TO_TYPE = {
   Entity: 'entity',
@@ -145,20 +145,20 @@ module('Integration | Component | clients/page/client-list', function (hooks) {
   test('it renders dropdown lists from activity response to filter table data', async function (assert) {
     await this.renderComponent();
     // Select each filter
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
-    findAll(`${FILTERS.dropdown(ClientFilters.NAMESPACE)} li button`).forEach((item, idx) => {
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
+    findAll(FILTERS.dropdownItem()).forEach((item, idx) => {
       const expected = this.expectedNamespaces[idx] === '' ? 'root' : this.expectedNamespaces[idx];
       assert.dom(item).hasText(expected, `namespace dropdown renders: ${expected}`);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
-    findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_PATH)} li button`).forEach((item, idx) => {
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
+    findAll(FILTERS.dropdownItem()).forEach((item, idx) => {
       const expected = this.expectedMountPaths[idx];
       assert.dom(item).hasText(expected, `mount_path dropdown renders: ${expected}`);
     });
 
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
-    findAll(`${FILTERS.dropdown(ClientFilters.MOUNT_TYPE)} li button`).forEach((item, idx) => {
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    findAll(FILTERS.dropdownItem()).forEach((item, idx) => {
       const expected = this.expectedMountTypes[idx];
       assert.dom(item).hasText(expected, `mount_type dropdown renders: ${expected}`);
     });
@@ -169,13 +169,13 @@ module('Integration | Component | clients/page/client-list', function (hooks) {
     const { mount_path, mount_type } = this.exportData[0];
     await this.renderComponent();
 
-    await click(FILTERS.dropdownToggle(ClientFilters.NAMESPACE));
+    await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
     await click(FILTERS.dropdownItem(ns));
     // select mount path
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_PATH));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
     await click(FILTERS.dropdownItem(mount_path));
     // select mount type
-    await click(FILTERS.dropdownToggle(ClientFilters.MOUNT_TYPE));
+    await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
     await click(FILTERS.dropdownItem(mount_type));
 
     const [actual] = this.onFilterChange.lastCall.args;

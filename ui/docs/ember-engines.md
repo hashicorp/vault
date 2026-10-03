@@ -35,7 +35,7 @@ In the engine’s `index.js` file:
 
 ```js
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -57,7 +57,6 @@ Within your Engine’s `config/environment.js` file:
 
 ```js
 /**
- * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -79,7 +78,6 @@ Within your Engine’s `addon/engine.js` file:
 
 ```js
 /**
- * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -132,7 +130,6 @@ In our `app/app.js` file in the engines object, add your engine’s name and dep
 
 ```js
 /**
- * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -173,7 +170,7 @@ If you used `ember g in-repo-engine <engine-name>` to generate the engine’s bl
 
 ### Important Notes:
 
-- Anytime a new engine is created, you will need to `yarn install` and **RESTART** ember server!
+- Anytime a new engine is created, you will need to `pnpm install` and **RESTART** ember server!
 - To add `package.json` **dependencies** or **devDependencies**, you can copy + paste the dependency into corresponding sections. Most of the time, we will want to use "\*" in place of the version number to ensure all the dependencies have the latest version.
 
 ### Common blueprint commands:

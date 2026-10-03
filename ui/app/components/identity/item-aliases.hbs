@@ -1,5 +1,5 @@
 {{!
-  Copyright (c) HashiCorp, Inc.
+  Copyright IBM Corp. 2016, 2025
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -29,5 +29,7 @@
     </div>
   </LinkedBlock>
 {{else}}
-  <EmptyState @title="No {{@model.identityType}} aliases for {{@model.name}} yet" />
+  <Hds::ApplicationState @align="center" class="top-padding-32" as |A|>
+    <A.Header data-test-empty-state-title @title="No {{@model.identityType}} aliases for {{@model.name}} yet" />
+  </Hds::ApplicationState>
 {{/each}}

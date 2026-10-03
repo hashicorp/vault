@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,8 +8,8 @@ import ListView from 'vault/tests/pages/components/list-view';
 
 export default create({
   ...ListView,
-  visit: visitable('/vault/secrets/:backend/list?tab=roles'),
-  visitCreate: visitable('/vault/secrets/:backend/create?itemType=role'),
+  visit: visitable('/vault/secrets-engines/:backend/list?tab=roles'),
+  visitCreate: visitable('/vault/secrets-engines/:backend/create?itemType=role'),
   createLink: clickable('[data-test-secret-create]'),
   name: fillable('[data-test-input="name"]'),
   transformations: fillable('[data-test-input="transformations"'),

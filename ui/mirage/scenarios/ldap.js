@@ -1,10 +1,10 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 export default function (server) {
-  server.create('ldap-config', { path: 'kubernetes', backend: 'ldap-test' });
+  server.create('ldap-config', { path: 'ldap', backend: 'ldap-test' });
   server.create('ldap-role', 'static', { name: 'static-role' });
   server.create('ldap-role', 'dynamic', { name: 'dynamic-role' });
   // hierarchical roles

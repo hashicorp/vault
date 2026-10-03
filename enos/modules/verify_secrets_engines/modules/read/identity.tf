@@ -1,4 +1,4 @@
-# Copyright (c) HashiCorp, Inc.
+# Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
 
 // Read our testuser identity entity and verify that it matches our expected alias, groups, policy,

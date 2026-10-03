@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -30,11 +30,12 @@ export interface EngineDisplayData {
   mountCategory: string[];
   requiredFeature?: string; // flag for engines that require the ADP (Advanced Data Protection) feature. - https://www.hashicorp.com/en/blog/advanced-data-protection-adp-now-available-in-hcp-vault
   requiresEnterprise?: boolean;
-  isConfigurable?: boolean; // for secret engines that have their own configuration page and actions. - These engines do not exist in their own Ember engine.
+  isConfigurable?: boolean; // for secret engines that have additional configuration pages and actions.
   isOnlyMountable?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
   isOldEngine?: boolean; // flag for engine views, if set to true, the engine will show pre-existing page design, if not, then the new views will be used. This is temporary until all engines have been migrated to the new design.
   type: string;
   value?: string;
+  configRoute?: string; // override for custom route if not "configuration.plugin-settings" (used for Ember engines)
 }
 
 /**
@@ -57,7 +58,9 @@ export function filterEnginesByMountCategory({
 }
 
 export function isAddonEngine(type: string, version: number) {
-  if (type === 'kv' && version === 1) return false;
+  if (type === 'kv' && version === 1) {
+    return false;
+  }
   const engineRoute = ALL_ENGINES.find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
@@ -67,7 +70,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'AliCloud',
     glyph: 'alibaba-color',
-    isOldEngine: true,
     mountCategory: ['auth', 'secret'],
     type: 'alicloud',
   },
@@ -85,7 +87,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     displayName: 'AWS',
     glyph: 'aws-color',
     isConfigurable: true,
-    isOldEngine: true,
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'aws',
@@ -94,7 +95,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
-    isOldEngine: true,
     isOnlyMountable: true,
     isConfigurable: true,
     isWIF: true,
@@ -105,13 +105,11 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'Consul',
     glyph: 'consul-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'consul',
   },
   {
     displayName: 'Cubbyhole',
-    isOldEngine: true,
     type: 'cubbyhole',
     mountCategory: ['secret'],
   },
@@ -119,7 +117,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'Databases',
     glyph: 'database',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'database',
   },
@@ -136,7 +133,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
-    isOldEngine: true,
     isOnlyMountable: true,
     isConfigurable: true,
     isWIF: true,
@@ -147,7 +143,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'cloud',
     displayName: 'Google Cloud KMS',
     glyph: 'gcp-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'gcpkms',
   },
@@ -164,8 +159,8 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'KV',
     engineRoute: 'kv.list',
+    configRoute: 'kv.configuration', // only utilized to display config data for kvv2, not in conjunction with isConfigurable as templates determine whether engine is kv v1 or v2
     glyph: 'key-values',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'kv',
   },
@@ -173,8 +168,9 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'KMIP',
     engineRoute: 'kmip.scopes.index',
+    configRoute: 'kmip.configuration',
+    isConfigurable: true,
     glyph: 'lock',
-    isOldEngine: true,
     mountCategory: ['secret'],
     requiredFeature: 'KMIP',
     requiresEnterprise: true,
@@ -184,7 +180,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'Transform',
     glyph: 'transform-data',
-    isOldEngine: true,
     mountCategory: ['secret'],
     requiredFeature: 'Transform Secrets Engine',
     requiresEnterprise: true,
@@ -203,17 +198,19 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'Kubernetes',
     engineRoute: 'kubernetes.overview',
+    configRoute: 'kubernetes.configuration',
     glyph: 'kubernetes-color',
-    isOldEngine: true,
+    isConfigurable: true,
     mountCategory: ['auth', 'secret'],
     type: 'kubernetes',
   },
   {
     pluginCategory: 'generic',
     displayName: 'LDAP',
+    isConfigurable: true,
     engineRoute: 'ldap.overview',
+    configRoute: 'ldap.configuration',
     glyph: 'folder-users',
-    isOldEngine: true,
     mountCategory: ['auth', 'secret'],
     type: 'ldap',
   },
@@ -221,7 +218,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'Nomad',
     glyph: 'nomad-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'nomad',
   },
@@ -246,9 +242,10 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     pluginCategory: 'generic',
     displayName: 'PKI Certificates',
+    isConfigurable: true,
     engineRoute: 'pki.overview',
+    configRoute: 'pki.configuration',
     glyph: 'certificate',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'pki',
   },
@@ -265,7 +262,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'infra',
     displayName: 'RabbitMQ',
     glyph: 'rabbitmq-color',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'rabbitmq',
   },
@@ -283,7 +279,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'SSH',
     glyph: 'terminal-screen',
-    isOldEngine: true,
     isConfigurable: true,
     mountCategory: ['secret'],
     type: 'ssh',
@@ -301,7 +296,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'TOTP',
     glyph: 'history',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'totp',
   },
@@ -309,7 +303,6 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     pluginCategory: 'generic',
     displayName: 'Transit',
     glyph: 'swap-horizontal',
-    isOldEngine: true,
     mountCategory: ['secret'],
     type: 'transit',
   },

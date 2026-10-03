@@ -1,4 +1,4 @@
-// Copyright (c) HashiCorp, Inc.
+// Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -48,7 +48,7 @@ func newCreateGithubBackportCmd() *cobra.Command {
 		},
 	}
 
-	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{"docs", "changelog", "pipeline"}, "Change file groups that should be allowed to backport to inactive CE branches")
+	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{}, "Change file groups that should be allowed to backport to inactive CE branches")
 	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.CEBranchPrefix, "ce-branch-prefix", "ce", "The branch name prefix")
 	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceExclude, "ce-exclude-groups", "e", []string{"enterprise"}, "Change file groups that should be excluded from the backporting to CE branches")
 	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.BaseOrigin, "base-origin", "origin", "The name to use for the base remote origin")
@@ -79,21 +79,21 @@ func newCreateGithubBackportCmd() *cobra.Command {
 func runCreateGithubBackportCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	for i, ig := range createGithubBackportState.ceAllowInactive {
-		if i == 0 && createGithubBackportState.req.CEAllowInactiveGroups == nil {
-			createGithubBackportState.req.CEAllowInactiveGroups = changed.FileGroups{}
-		}
+	if createGithubBackportState.req.CEAllowInactiveGroups == nil {
+		createGithubBackportState.req.CEAllowInactiveGroups = changed.FileGroups{}
+	}
+	for _, ig := range createGithubBackportState.ceAllowInactive {
 		createGithubBackportState.req.CEAllowInactiveGroups = createGithubBackportState.req.CEAllowInactiveGroups.Add(changed.FileGroup(ig))
 	}
 
-	for i, eg := range createGithubBackportState.ceExclude {
-		if i == 0 && createGithubBackportState.req.CEExclude == nil {
-			createGithubBackportState.req.CEExclude = changed.FileGroups{}
-		}
+	if createGithubBackportState.req.CEExclude == nil {
+		createGithubBackportState.req.CEExclude = changed.FileGroups{}
+	}
+	for _, eg := range createGithubBackportState.ceExclude {
 		createGithubBackportState.req.CEExclude = createGithubBackportState.req.CEExclude.Add(changed.FileGroup(eg))
 	}
 
-	res := createGithubBackportState.req.Run(context.TODO(), githubCmdState.Github, githubCmdState.Git)
+	res := createGithubBackportState.req.Run(context.TODO(), githubCmdState.GithubV3, githubCmdState.Git)
 	if res == nil {
 		res = &github.CreateBackportRes{}
 	}

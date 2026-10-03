@@ -39,3 +39,8 @@ package-lock.json
 # copywrite tool used in pre-commit hook
 .copywrite
 
+# vendor bundle
+vendor/jsondiffpatch.umd.js
+vendor/htmlformatter.umd.js
+
+

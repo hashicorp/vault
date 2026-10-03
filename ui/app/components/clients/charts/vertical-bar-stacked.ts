@@ -1,5 +1,5 @@
 /**
- * Copyright (c) HashiCorp, Inc.
+ * Copyright IBM Corp. 2016, 2025
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -48,7 +48,7 @@ type ChartDatum = DatumBase & {
  * @example
  * <Clients::Charts::VerticalBarStacked
  * @chartTitle="Total monthly usage"
- * @data={{this.byMonthNewClients}}
+ * @data={{this.byMonthClients}}
  * @chartLegend={{this.legend}}
  * @chartHeight={{250}}
  * />
