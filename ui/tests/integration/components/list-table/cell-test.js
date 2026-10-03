@@ -374,32 +374,16 @@ module('Integration | Component | list-table/cell', function (hooks) {
       assert.dom(this.element).hasText('', 'renders nothing for a falsy value');
     });
 
-    test('renders a TooltipButton when the cell value overflows the parent element', async function (assert) {
+    test('applies word wrapping to plain text values', async function (assert) {
       this.column = { key: 'name', label: 'Name' };
       this.row = { name: 'a'.repeat(300) };
       this.value = this.row.name;
 
-      await render(hbs`
-        <div style="width:1px; overflow:hidden; white-space:nowrap; display:block;">
-          <ListTable::Cell @column={{this.column}} @row={{this.row}} @value={{this.value}} />
-        </div>
-      `);
-
-      assert
-        .dom(GENERAL.tooltip(this.value))
-        .exists('tooltip button is shown when the cell value overflows the container');
-    });
-
-    test('does not render a TooltipButton when the cell value fits', async function (assert) {
-      this.column = { key: 'name', label: 'Name' };
-      this.row = ROW;
-      this.value = ROW.name;
-
       await render(hbs`<ListTable::Cell @column={{this.column}} @row={{this.row}} @value={{this.value}} />`);
 
       assert
-        .dom(GENERAL.tooltip(this.value))
-        .doesNotExist('no tooltip button when the full value fits in the cell');
+        .dom('[data-test-list-table-cell-text]')
+        .hasClass('word-wrap', 'plain text cell values use the word-wrap class');
     });
   });
 });

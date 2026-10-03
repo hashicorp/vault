@@ -8,12 +8,14 @@ description: Set up Go with a shared module cache.
 inputs:
   github-token:
     description: A Github token used to authenticate module downloads and avoid rate limits. Defaults to github.token.
-  no-restore:
-    description: Whether or not to restore the Go module cache on a cache hit
-    default: "false"
-  no-save:
-    description: Whether or not to create a Go module cache on cache miss
-    default: "false"
+  cache:
+    description: |
+      Cache mode for Go modules. One of:
+        true        (default) Restore on hit; download and save on miss.
+        fetch-only  Restore on hit; download on miss; never save.
+        prime       Download and save on miss.
+        false       Skip all cache interaction.
+    default: "true"
   go-version:
     description: "Override .go-version"
     default: ""
@@ -63,10 +65,11 @@ runs:
           echo "cache-key=go-modules-${wd_hash}-${{ hashFiles('**/go.sum') }}"
         } | tee -a "$GITHUB_OUTPUT"
     - id: set-up-go-cache-modules
+      if: inputs.cache != 'false'
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         enableCrossOsArchive: true
-        lookup-only: ${{ inputs.no-restore }}
+        lookup-only: ${{ inputs.cache == 'prime' }}
         # We need to be very considerate of our caching strategy because Github only allows 10gb
         # of caches per repository before it starts to evict older caches. This is usually fine
         # if you only use the actions cache for cache, but we also use it for Go test time results.
@@ -98,7 +101,7 @@ runs:
         else
           echo "is-enterprise=false" | tee -a "$GITHUB_OUTPUT"
         fi
-    - if: steps.set-up-go-cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'true'
+    - if: inputs.cache != 'false' && steps.set-up-go-cache-modules.outputs.cache-hit != 'true'
       name: Download go modules
       shell: bash
       env:
@@ -112,7 +115,7 @@ runs:
       run: |
         make go-mod-download
         du -h -d 1 ${{ steps.set-up-go-metadata.outputs.cache-path }}
-    - if: steps.set-up-go-cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'true'
+    - if: (inputs.cache == 'true' || inputs.cache == 'prime') && steps.set-up-go-cache-modules.outputs.cache-hit != 'true'
       id: set-up-go-save-modules
       name: Save go modules
       uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

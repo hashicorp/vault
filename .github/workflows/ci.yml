@@ -75,15 +75,13 @@ jobs:
         uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          no-restore: true # don't download them on a cache hit
+          cache: prime # Prime the cache for downstream jobs; don't restore to disk
       # Make sure all required vault tools are cached at this point. We don't want all of the Go
       # tests and build jobs to build the tools and race to upload them to the cache.
       - uses: ./.github/actions/install-tools
         name: Ensure Vault tools are cached
         with:
-          # Don't download them on a cache hit during setup, just make sure they're cached before
-          # subsequent workflows are run.
-          no-restore: true
+          cache: prime # Prime the cache for downstream jobs; don't restore to disk
 
   test-autopilot-upgrade:
     name: Run Autopilot upgrade tool

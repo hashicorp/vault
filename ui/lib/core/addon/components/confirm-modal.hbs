@@ -28,7 +28,7 @@
       <Hds::Button data-test-cancel @text="Close" {{on "click" F.close}} />
     </M.Footer>
   {{else}}
-    <M.Header data-test-confirm-action-title @icon="alert-circle">
+    <M.Header data-test-confirm-action-title @icon="alert-circle" class="word-wrap">
       {{or @confirmTitle "Are you sure?"}}
     </M.Header>
     <M.Body data-test-confirm-action-message>
@@ -66,7 +66,7 @@
       <Hds::ButtonSet>
         <Hds::Button
           data-test-confirm-button
-          disabled={{@isRunning}}
+          disabled={{this.isConfirmDisabled}}
           @icon={{if @isRunning "loading"}}
           @color={{if (eq @color "critical") "critical" "primary"}}
           @text={{or @confirmButtonText "Confirm"}}

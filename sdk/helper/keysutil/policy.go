@@ -3108,11 +3108,11 @@ func (p *Policy) setKDF(ctx context.Context, storage logical.Storage, kdf int) e
 }
 
 func (p *Policy) isCompatibleKeyType(newType KeyType) error {
-	if p.Type == KeyType_ED25519 && p.Derived && newType != KeyType_ED25519 {
+	if p.KeyVersionType(p.LatestVersion) == KeyType_ED25519 && p.Derived && newType != KeyType_ED25519 {
 		return errors.New("algorithm cannot be changed from ed25519 with derivation enabled")
 	}
 
-	if newType == KeyType_MANAGED_KEY {
+	if newType == KeyType_MANAGED_KEY || p.KeyVersionType(p.LatestVersion) == KeyType_MANAGED_KEY {
 		return nil
 	}
 

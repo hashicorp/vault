@@ -31,11 +31,12 @@
     </Hds::Layout::Flex>
 
     <Hds::Link::Standalone
-      @text="Learn more"
-      @href={{doc-link this.currentFeature.link}}
+      @text={{this.linkText}}
+      @route={{this.currentFeature.route}}
+      @href={{if this.currentFeature.link (doc-link this.currentFeature.link)}}
       @icon="arrow-right"
       @iconPosition="trailing"
-      @isHrefExternal={{true}}
+      @isHrefExternal={{if this.currentFeature.link true}}
       {{on "click" this.trackLearnMore}}
       data-test-link-to="feature-spotlight-learn-more"
     />

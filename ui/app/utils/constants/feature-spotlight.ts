@@ -6,7 +6,12 @@
 export interface FeatureSpotlightCard {
   title: string;
   description: string;
-  link: string;
+  /** Docs path (e.g. '/vault/docs/...'). Mutually exclusive with `route`. */
+  link?: string;
+  /** Ember route name (e.g. 'vault.cluster.preferences'). Mutually exclusive with `link`. */
+  route?: string;
+  /** Custom call-to-action link text. Defaults to 'Learn more'. */
+  linkText?: string;
   imageSrc?: string;
   /** Dark-mode variant of the image. Falls back to imageSrc when not provided. */
   imageSrcDark?: string;
@@ -30,15 +35,23 @@ export const FEATURE_SPOTLIGHT_CARDS: FeatureSpotlightCard[] = [
     imageSrcDark: '~/agent-registry-dashboard-dark.png',
   },
   {
-    title: 'Post-Quantum Certificate Issuance with ML-DSA',
+    title: 'Post-quantum certificate issuance with ML-DSA',
     description:
       "Vault's PKI secrets engine now supports ML-DSA for X.509 certificate issuance, giving you a low-friction path to begin migrating your CA hierarchy to post-quantum cryptography.",
     link: '/vault/docs/secrets/pki/ml-dsa',
   },
   {
-    title: 'Eliminate Secret Zero with TPM Auth',
+    title: 'Eliminate secret zero with TPM auth',
     description:
       'Authenticate Linux VMs to Vault using their vTPM — no bootstrap secret required. TPM-based attestation eliminates Secret Zero for on-premises and private cloud environments.',
     link: '/vault/docs/auth/tpm',
+  },
+  {
+    title: 'Dark mode is here',
+    description: 'Easier on your eyes, day or night. Head to Preferences to switch modes anytime.',
+    route: 'vault.cluster.preferences',
+    linkText: 'Try it out',
+    imageSrc: '~/preferences-whats-new.png',
+    imageSrcDark: '~/preferences-whats-new-dark.png',
   },
 ];

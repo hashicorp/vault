@@ -14,7 +14,7 @@ import (
 
 // validateSignApiArgsVersionSpecific will perform a validation of the Sign API parameters
 // from the Enterprise or CE point of view.
-func validateSignApiArgsVersionSpecific(p *keysutil.Policy, apiArgs commonSignVerifyApiArgs) error {
+func validateSignApiArgsVersionSpecific(p *keysutil.Policy, apiArgs commonSignVerifyApiArgs, ver int) error {
 	if err := _validateEntSpecificKeyType(p); err != nil {
 		return err
 	}

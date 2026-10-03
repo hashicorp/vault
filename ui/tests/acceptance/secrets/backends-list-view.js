@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, fillIn, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, visit, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -106,6 +106,26 @@ module('Acceptance | secrets backends list view', function (hooks) {
     assert.dom(GENERAL.emptyStateTitle).includesText('No results for');
   });
 
+  test('dropdown search text is cleared when a dropdown closes', async function (assert) {
+    await visit('/vault/secrets-engines');
+    const controller = this.owner.lookup('controller:vault.cluster.secrets.backends');
+    controller.versionSearchText = 'v0.14.0';
+
+    await click(GENERAL.toggleInput('filter-by-engine-type'));
+    await fillIn(GENERAL.inputSearch('engine-type'), 'kv');
+    assert.dom(GENERAL.checkboxByAttr('aws')).doesNotExist('search narrows engine type options');
+
+    // close and reopen the dropdown
+    await click(GENERAL.toggleInput('filter-by-engine-type'));
+    await click(GENERAL.toggleInput('filter-by-engine-type'));
+    await waitFor(GENERAL.checkboxByAttr('aws'));
+
+    assert.strictEqual(controller.versionSearchText, '', 'version search text is cleared on close');
+    assert.dom(GENERAL.inputSearch('engine-type')).hasValue('', 'search input is empty after reopening');
+    assert.dom(GENERAL.checkboxByAttr('aws')).exists('all engine type options render after reopening');
+    assert.dom(GENERAL.checkboxByAttr('kv')).exists('previously matching option still renders');
+  });
+
   // ── Empty state ──────────────────────────────────────────────────────────
 
   test('shows empty state when list is empty', async function (assert) {
@@ -159,12 +179,106 @@ module('Acceptance | secrets backends list view', function (hooks) {
     assert.true(currentURL().includes('page=2'), 'URL contains page=2 after clicking next');
   });
 
-  test('page query param resets to 1 on navigation away and back', async function (assert) {
+  test('search text and page query param reset on navigation away and back', async function (assert) {
     await visit('/vault/secrets-engines?page=2');
+    const controller = this.owner.lookup('controller:vault.cluster.secrets.backends');
+    controller.pathSearchText = 'kv/';
+    controller.typeSearchText = 'kv';
+    controller.versionSearchText = 'v0.14.0';
+
     // navigate away then back — resetController should reset page
     await visit('/vault/dashboard');
     await visit('/vault/secrets-engines');
     assert.false(currentURL().includes('page=2'), 'page param was reset');
+    assert.strictEqual(controller.pathSearchText, '', 'path search text was reset');
+    assert.strictEqual(controller.typeSearchText, '', 'type search text was reset');
+    assert.strictEqual(controller.versionSearchText, '', 'version search text was reset');
+  });
+
+  // ── Sorting ──────────────────────────────────────────────────────────────
+
+  test('sorting by path applies to the full dataset before pagination', async function (assert) {
+    // 20 engines named kv-00/ through kv-19/; ascending sort keeps kv-00/ on page 1.
+    // Descending sort moves kv-19/ to page 1 and pushes kv-00/ off.
+    const manyEngines = {};
+    for (let i = 0; i < 20; i++) {
+      const padded = String(i).padStart(2, '0');
+      manyEngines[`kv-${padded}/`] = {
+        type: 'kv',
+        path: `kv-${padded}/`,
+        accessor: `kv_${i}`,
+        description: '',
+        options: { version: 2 },
+        running_plugin_version: 'v0.14.0',
+        plugin_version: '',
+        running_sha256: '',
+        local: false,
+        seal_wrap: false,
+        external_entropy_access: false,
+        config: {},
+        uuid: `uuid-${i}`,
+      };
+    }
+    this.server.get('/sys/internal/ui/mounts', () => ({ data: { secret: manyEngines } }));
+
+    await visit('/vault/secrets-engines');
+
+    // Column 2 is "Engine path" (the sortable path column)
+    await click(GENERAL.tableColumnHeaderSortButton(2));
+    await waitFor(GENERAL.listItem('kv-00/'));
+
+    assert.dom(GENERAL.listItem('kv-00/')).exists('kv-00/ is on page 1 after ascending sort');
+    assert.dom(GENERAL.listItem('kv-19/')).doesNotExist('kv-19/ is not on page 1 after ascending sort');
+
+    // Click again → descending; kv-19/ should now appear on page 1
+    await click(GENERAL.tableColumnHeaderSortButton(2));
+    await waitFor(GENERAL.listItem('kv-19/'));
+
+    assert.dom(GENERAL.listItem('kv-19/')).exists('kv-19/ is on page 1 after descending sort');
+    assert.dom(GENERAL.listItem('kv-00/')).doesNotExist('kv-00/ is not on page 1 after descending sort');
+  });
+
+  test('sort query params persist when navigating to a different page', async function (assert) {
+    // After sorting then changing page, sortBy and sortOrder must remain in the URL.
+    const manyEngines = {};
+    for (let i = 0; i < 20; i++) {
+      const padded = String(i).padStart(2, '0');
+      manyEngines[`kv-${padded}/`] = {
+        type: 'kv',
+        path: `kv-${padded}/`,
+        accessor: `kv_${i}`,
+        description: '',
+        options: { version: 2 },
+        running_plugin_version: 'v0.14.0',
+        plugin_version: '',
+        running_sha256: '',
+        local: false,
+        seal_wrap: false,
+        external_entropy_access: false,
+        config: {},
+        uuid: `uuid-${i}`,
+      };
+    }
+    this.server.get('/sys/internal/ui/mounts', () => ({ data: { secret: manyEngines } }));
+
+    await visit('/vault/secrets-engines');
+    await click(GENERAL.tableColumnHeaderSortButton(2));
+    await click(GENERAL.nextPage);
+
+    const url = currentURL();
+    assert.true(url.includes('sortBy=path'), 'sortBy=path persists after page change');
+    assert.true(url.includes('sortOrder=asc'), 'sortOrder=asc persists after page change');
+    assert.true(url.includes('page=2'), 'page=2 is set');
+  });
+
+  test('sort query params reset when navigating away from the page', async function (assert) {
+    await visit('/vault/secrets-engines?sortBy=path&sortOrder=asc');
+    await visit('/vault/dashboard');
+    await visit('/vault/secrets-engines');
+
+    const url = currentURL();
+    assert.false(url.includes('sortBy='), 'sortBy param is cleared after navigation away');
+    assert.false(url.includes('sortOrder='), 'sortOrder param is cleared after navigation away');
   });
 
   // ── Dark mode icon resolution ─────────────────────────────────────────────

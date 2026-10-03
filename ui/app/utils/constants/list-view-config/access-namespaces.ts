@@ -11,19 +11,14 @@ export const accessNamespacesListViewConfig: ListViewDisplayConfig = {
     'Create logically separated, multi-tenant environments so teams can manage secrets, policies, and authentication methods independently.',
   breadcrumbs: [], // set by route model() before returning
   columns: [
-    { key: 'id', label: 'Namespace' },
-    { key: 'popupMenu', label: 'Action', width: '10%' },
+    { key: 'id', label: 'Namespace', isSortable: true },
+    { key: 'popupMenu', label: 'Actions', width: '125px' },
   ],
   badge: '', // set by route model() before returning
   badgeIcon: 'org',
   noDataTitle: 'No namespaces yet',
   noDataDescription: 'Your namespaces will be listed here. Add a namespace to get started.',
   filteredEmptyTitle: 'No results for',
-  primaryAction: {
-    label: 'Create namespace',
-    route: 'vault.cluster.access.namespaces.create',
-    icon: 'plus',
-  },
   filter: {
     type: 'text',
     placeholder: 'Filter by namespace path',

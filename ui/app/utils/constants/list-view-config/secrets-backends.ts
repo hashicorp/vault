@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,11 +10,6 @@ export const secretsBackendsListViewConfig: ListViewDisplayConfig = {
   description:
     'View and manage your configured secrets engines in the current cluster, ranging from key value store (kv) to dynamic database credentials and more.',
   breadcrumbs: [], // filled by route setupController
-  primaryAction: {
-    label: 'Enable new engine',
-    route: 'vault.cluster.secrets.enable',
-    icon: 'plus',
-  },
   columns: [
     {
       key: 'path',
@@ -54,7 +49,7 @@ export const secretsBackendsListViewConfig: ListViewDisplayConfig = {
     {
       key: 'popupMenu',
       label: 'Actions',
-      width: '10%',
+      width: '125px',
     },
   ],
   rowActions: [
@@ -69,6 +64,7 @@ export const secretsBackendsListViewConfig: ListViewDisplayConfig = {
       dataTest: 'delete-engine-path',
       kind: 'modal',
       color: 'critical',
+      capability: 'canDelete',
       modal: {
         title: 'Delete secrets engine',
         titleItemDisplayKey: 'path',

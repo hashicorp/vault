@@ -16,6 +16,9 @@
     @page={{@model.page}}
     @pageSize={{@model.pageSize}}
     @wizardShown={{this.showWizard}}
+    @sortBy={{@sortBy}}
+    @sortOrder={{@sortOrder}}
+    @onSortChange={{@onSortChange}}
   >
     <:headerActions>
       {{#if this.showIntroButton}}
@@ -25,6 +28,15 @@
           @text="New to Namespaces?"
           {{on "click" this.showIntroPage}}
           data-test-button="guided-start"
+        />
+      {{/if}}
+      {{#if this.canCreateNamespace}}
+        <Hds::Button
+          @color="primary"
+          @icon="plus"
+          @text="Create namespace"
+          @route="vault.cluster.access.namespaces.create"
+          data-test-button="Create namespace"
         />
       {{/if}}
     </:headerActions>
@@ -39,20 +51,31 @@
       />
     </:toolbarActions>
     <:popupMenu as |rowData|>
-      <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-        <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-        {{#let (concat this.namespace.path (if this.namespace.path "/") rowData.id) as |targetNamespace|}}
-          {{#if (includes targetNamespace this.namespace.accessibleNamespaces)}}
-            <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch to
-              namespace</dd.Interactive>
+      {{#let (concat this.namespace.path (if this.namespace.path "/") rowData.id) as |targetNamespace|}}
+        {{#let (or rowData.canRead (includes targetNamespace this.namespace.accessibleNamespaces)) as |canSwitch|}}
+          {{#if (or canSwitch rowData.canDelete)}}
+            <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @text="More options"
+                @hasChevron={{false}}
+                data-test-popup-menu-trigger
+              />
+              {{#if canSwitch}}
+                <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch
+                  to namespace</dd.Interactive>
+              {{/if}}
+              {{#if rowData.canDelete}}
+                <dd.Interactive
+                  @color="critical"
+                  {{on "click" (fn (mut this.nsToDelete) rowData.id)}}
+                  data-test-popup-menu="delete"
+                >Delete</dd.Interactive>
+              {{/if}}
+            </Hds::Dropdown>
           {{/if}}
         {{/let}}
-        <dd.Interactive
-          @color="critical"
-          {{on "click" (fn (mut this.nsToDelete) rowData.id)}}
-          data-test-popup-menu="delete"
-        >Delete</dd.Interactive>
-      </Hds::Dropdown>
+      {{/let}}
       {{#if (eq this.nsToDelete rowData.id)}}
         <ConfirmModal
           @color="critical"

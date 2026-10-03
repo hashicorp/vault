@@ -13,6 +13,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
 import type { Capabilities } from 'vault/app-types';
 import type { PoliciesRgpIndexModel } from 'vault/routes/vault/cluster/policies/rgp/index';
+import type DownloadService from 'vault/services/download';
 
 /**
  * @module Page::RgpPolicies
@@ -36,12 +37,16 @@ interface Args {
   model: PoliciesRgpIndexModel;
   page: number;
   pageSize: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 export default class PageRgpPoliciesComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
+  @service declare readonly download: DownloadService;
 
   @tracked policyToDelete: PolicyRow | null = null;
 
@@ -50,13 +55,7 @@ export default class PageRgpPoliciesComponent extends Component<Args> {
     try {
       const res = await this.api.sys.systemReadPoliciesRgpName(item.name);
       const policy = (res as unknown as { data: { policy: string } }).data?.policy ?? '';
-      const blob = new Blob([policy], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${item.name}.sentinel`;
-      a.click();
-      URL.revokeObjectURL(url);
+      this.download.miscExtension(item.name, policy, 'sentinel');
     } catch (err) {
       const { message } = await this.api.parseError(err);
       this.flashMessages.danger(message);
@@ -73,7 +72,7 @@ export default class PageRgpPoliciesComponent extends Component<Args> {
     try {
       await this.api.sys.systemDeletePoliciesRgpName(item.name);
       this.flashMessages.success(`Successfully deleted policy: ${item.name}`);
-      this.router.refresh();
+      this.router.refresh('vault.cluster.policies.rgp');
     } catch (err) {
       const { message } = await this.api.parseError(err);
       this.flashMessages.danger(message);

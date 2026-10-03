@@ -1755,6 +1755,258 @@ func TestAllowedAndDeniedParameters(t *testing.T) {
 				},
 			},
 		},
+		// Whitespace canonicalization. Downstream consumers trim surrounding
+		// whitespace from policy names, so a value such as " super-admin "
+		// resolves to the denied policy and must be denied at the ACL layer too.
+		"policies_denied_parameters_whitespace_trimming": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"policies" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"exact_value_is_denied": {
+					parameters: `{"policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"leading_space_is_also_denied": {
+					parameters: `{"policies": " super-admin"}`,
+					allowed:    false,
+				},
+				"trailing_space_is_also_denied": {
+					parameters: `{"policies": "super-admin "}`,
+					allowed:    false,
+				},
+				"surrounding_tabs_are_also_denied": {
+					parameters: `{"policies": "\tsuper-admin\t"}`,
+					allowed:    false,
+				},
+				"surrounding_newlines_are_also_denied": {
+					parameters: `{"policies": "\nsuper-admin\r\n"}`,
+					allowed:    false,
+				},
+				// U+00A0 no-break space and U+2028 line separator are both
+				// reported as whitespace by unicode.IsSpace, so TrimSpace
+				// removes them and the value resolves to the denied policy.
+				"surrounding_unicode_whitespace_is_also_denied": {
+					parameters: `{"policies": "\u00a0super-admin\u2028"}`,
+					allowed:    false,
+				},
+				"whitespace_and_mixed_case_combined_is_also_denied": {
+					parameters: `{"policies": "  Super-Admin\t"}`,
+					allowed:    false,
+				},
+				// Interior whitespace is not trimmed by the downstream
+				// canonicalization either, so this is a genuinely different
+				// policy name and must remain allowed.
+				"interior_whitespace_is_a_different_policy_and_allowed": {
+					parameters: `{"policies": "super admin"}`,
+					allowed:    true,
+				},
+				"whitespace_in_list_form_is_also_denied": {
+					parameters:           `{"policies": [" Super-Admin "]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				// Comma-separated strings are the wire form of
+				// framework.TypeCommaStringSlice; each element is canonicalized.
+				"whitespace_in_comma_separated_string_is_also_denied": {
+					parameters:           `{"policies": "default, Super-Admin "}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+			},
+		},
+		"policy_infix_glob_denials": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"policies" = [" TEAM.*.LEAD "]
+						"token_policies" = ["TEAM.*.LEAD"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"scalar_infix_glob_is_denied": {
+					parameters: `{"policies": "team.platform.lead"}`,
+					allowed:    false,
+				},
+				"list_infix_glob_is_denied": {
+					parameters:           `{"policies": ["default", "team.platform.lead"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"token_policies_infix_glob_is_denied": {
+					parameters:           `{"token_policies": ["team.platform.lead"]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"different_policy_is_allowed": {
+					parameters: `{"policies": "team.platform.reader"}`,
+					allowed:    true,
+				},
+			},
+		},
+		// Token-role policy fields were not covered by the partial remediation,
+		// leaving them vulnerable to both mixed-case and whitespace variants.
+		// These fields determine the policies of tokens issued through the role.
+		"token_role_policy_fields_denied_parameters_canonicalization": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"allowed_policies" = ["super-admin"]
+						"disallowed_policies" = ["super-admin"]
+						"allowed_policies_glob" = ["super-admin"]
+						"disallowed_policies_glob" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"allowed_policies_exact_is_denied": {
+					parameters: `{"allowed_policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"allowed_policies_mixed_case_is_also_denied": {
+					parameters: `{"allowed_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"allowed_policies_whitespace_is_also_denied": {
+					parameters: `{"allowed_policies": " super-admin "}`,
+					allowed:    false,
+				},
+				"allowed_policies_list_form_is_also_denied": {
+					parameters:           `{"allowed_policies": [" Super-Admin "]}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"disallowed_policies_mixed_case_is_also_denied": {
+					parameters: `{"disallowed_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"disallowed_policies_whitespace_is_also_denied": {
+					parameters: `{"disallowed_policies": "\tsuper-admin\n"}`,
+					allowed:    false,
+				},
+				"allowed_policies_glob_mixed_case_is_also_denied": {
+					parameters: `{"allowed_policies_glob": "SUPER-ADMIN"}`,
+					allowed:    false,
+				},
+				"allowed_policies_glob_whitespace_is_also_denied": {
+					parameters: `{"allowed_policies_glob": " super-admin"}`,
+					allowed:    false,
+				},
+				"disallowed_policies_glob_mixed_case_is_also_denied": {
+					parameters: `{"disallowed_policies_glob": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"disallowed_policies_glob_whitespace_is_also_denied": {
+					parameters: `{"disallowed_policies_glob": "super-admin "}`,
+					allowed:    false,
+				},
+				"non_denied_policy_name_remains_allowed": {
+					parameters: `{"allowed_policies": "read-only"}`,
+					allowed:    true,
+				},
+			},
+		},
+		// Agent Registry and RADIUS policy fields canonicalized by their downstream consumers.
+		"agent_registry_and_radius_policy_fields_canonicalization": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"ceiling_policies" = ["super-admin"]
+						"unregistered_user_policies" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"ceiling_policies_mixed_case_is_denied": {
+					parameters: `{"ceiling_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"ceiling_policies_whitespace_is_denied": {
+					parameters: `{"ceiling_policies": " super-admin "}`,
+					allowed:    false,
+				},
+				"unregistered_user_policies_mixed_case_is_denied": {
+					parameters: `{"unregistered_user_policies": "Super-Admin"}`,
+					allowed:    false,
+				},
+				"unregistered_user_policies_whitespace_is_denied": {
+					parameters: `{"unregistered_user_policies": "super-admin\t"}`,
+					allowed:    false,
+				},
+			},
+		},
+		// Non-policy parameters must keep their existing exact-match semantics;
+		// canonicalization must not leak into unrelated parameters.
+		"non_policy_parameters_are_not_canonicalized": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					denied_parameters = {
+						"policy" = ["super-admin"]
+						"name" = ["super-admin"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"policy_document_param_exact_match_is_denied": {
+					parameters: `{"policy": "super-admin"}`,
+					allowed:    false,
+				},
+				"policy_document_param_whitespace_matches_under_slice_matching": {
+					parameters:           `{"policy": " super-admin "}`,
+					allowed:              false,
+					onlyNewSliceMatching: true,
+				},
+				"policy_document_param_whitespace_allowed_under_legacy_matching": {
+					parameters:              `{"policy": " super-admin "}`,
+					allowed:                 true,
+					onlyLegacyExactMatching: true,
+				},
+				"name_param_mixed_case_remains_allowed": {
+					parameters: `{"name": "Super-Admin"}`,
+					allowed:    true,
+				},
+			},
+		},
+		// allowed_parameters must remain fail-closed: canonicalization may only
+		// make a value match an explicitly allowed entry, never bypass the list.
+		"policies_allowed_parameters_remain_fail_closed": {
+			policy: `
+				path "test/path" {
+					capabilities = ["update"]
+					allowed_parameters = {
+						"policies" = ["read-only"]
+					}
+				}
+			`,
+			requests: map[string]testReq{
+				"allowed_value_with_whitespace_is_allowed": {
+					parameters: `{"policies": " Read-Only "}`,
+					allowed:    true,
+				},
+				"unlisted_policy_is_denied": {
+					parameters: `{"policies": "super-admin"}`,
+					allowed:    false,
+				},
+				"unlisted_policy_with_whitespace_is_still_denied": {
+					parameters: `{"policies": " Super-Admin "}`,
+					allowed:    false,
+				},
+				"unlisted_parameter_is_denied": {
+					parameters: `{"some_other_param": "value"}`,
+					allowed:    false,
+				},
+			},
+		},
 		"allow_and_deny_any_value": {
 			policy: `
 				path "test/allow_all" {

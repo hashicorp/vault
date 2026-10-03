@@ -16,10 +16,16 @@ export type ThemeChoice = 'dark' | 'light' | 'system';
 export default class ThemeService extends Service {
   @tracked theme: ThemeChoice = this._resolveInitialTheme();
 
+  // Held so we can remove the listener when the theme changes away from 'system'
+  // or when the service is destroyed.
+  private _mediaQuery: MediaQueryList | null = null;
+  private _systemListener = () => this._applyTheme(true);
+
   constructor(owner: Owner) {
     super(owner);
     // Leave unanimated as there is no previous state to cross-fade from on boot.
     this._applyTheme();
+    this._syncSystemListener();
   }
 
   /** True when the effective (resolved) theme is dark. */
@@ -35,6 +41,13 @@ export default class ThemeService extends Service {
     this.theme = choice;
     setStringPreference(STORAGE_KEY, choice);
     this._applyTheme(true);
+    // Re-register because the 'system' branch may have changed.
+    this._syncSystemListener();
+  }
+
+  willDestroy(): void {
+    this._mediaQuery?.removeEventListener('change', this._systemListener);
+    super.willDestroy();
   }
 
   private _resolveInitialTheme(): ThemeChoice {
@@ -63,6 +76,22 @@ export default class ThemeService extends Service {
       document.startViewTransition(write);
     } else {
       write();
+    }
+  }
+
+  /**
+   * Keeps the OS-level `prefers-color-scheme` listener in sync with the current
+   * theme choice. When the theme is 'system' we subscribe so that OS dark/light
+   * toggles update the page immediately without a reload. For explicit 'dark' or
+   * 'light' choices the listener is removed — OS changes should have no effect.
+   */
+  private _syncSystemListener(): void {
+    this._mediaQuery?.removeEventListener('change', this._systemListener);
+    this._mediaQuery = null;
+
+    if (this.theme === 'system') {
+      this._mediaQuery = window.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
+      this._mediaQuery?.addEventListener('change', this._systemListener);
     }
   }
 }

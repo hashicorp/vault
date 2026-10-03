@@ -14,6 +14,7 @@ import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type NamespaceService from 'vault/services/namespace';
+import type PermissionsService from 'vault/services/permissions';
 import type RouterService from '@ember/routing/router-service';
 import type WizardService from 'vault/services/wizard';
 import type { NamespacesIndexModel } from 'vault/routes/vault/cluster/access/namespaces/index';
@@ -31,6 +32,9 @@ import type { NamespacesIndexModel } from 'vault/routes/vault/cluster/access/nam
 interface Args {
   model: NamespacesIndexModel;
   onRefresh: () => void;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 export default class PageNamespacesComponent extends Component<Args> {
@@ -40,12 +44,24 @@ export default class PageNamespacesComponent extends Component<Args> {
   @service declare readonly router: RouterService;
   @service declare readonly wizard: WizardService;
   @service declare namespace: NamespaceService;
+  @service declare readonly permissions: PermissionsService;
 
   @tracked nsToDelete: string | null = null;
   @tracked showSetupAlert = false;
   @tracked shouldRenderIntroModal = false;
 
   wizardId = WIZARD_ID_MAP.namespace;
+
+  // Creating a namespace is an update on sys/namespaces/:path. The path is not chosen yet, so check
+  // whether the token can update any path under sys/namespaces (policies may be scoped, e.g. team-*),
+  // ignoring the api-lock routes, which share the prefix but cannot create namespaces.
+  get canCreateNamespace() {
+    return this.permissions.hasPermissionBeneath(
+      'sys/namespaces',
+      ['update'],
+      ['api-lock/lock', 'api-lock/unlock']
+    );
+  }
 
   get hasNamespaces() {
     return this.args.model.namespaces.length > 0;

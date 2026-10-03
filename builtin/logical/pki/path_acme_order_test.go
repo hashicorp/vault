@@ -283,25 +283,26 @@ func buildTestRole(t *testing.T, config map[string]interface{}) *issuing.RoleEnt
 	return role
 }
 
-// acmeFinalizeTestEnv holds a PKI backend with a usable issuer plus a ready
+// acmeFinalizeTestContext holds a PKI backend with a usable issuer plus a ready
 // ACME order, so a test can drive acmeFinalizeOrderHandler directly. It exists
 // to exercise the per-order locking and processing-state handling added for
 // GH-31987.
-type acmeFinalizeTestEnv struct {
-	b       *backend
-	storage logical.Storage
-	issuer  *issuing.IssuerEntry
-	role    *issuing.RoleEntry
-	baseUrl *url.URL
-	uc      *jwsCtx
-	account *acmeAccount
-	orderId string
-	csrB64  string
+type acmeFinalizeTestContext struct {
+	b                    *backend
+	storage              logical.Storage
+	issuer               *issuing.IssuerEntry
+	role                 *issuing.RoleEntry
+	baseUrl              *url.URL
+	uc                   *jwsCtx
+	account              *acmeAccount
+	orderId              string
+	csrB64               string
+	rejectUnverifiedSANs bool
 }
 
 // setupACMEFinalizeTest builds a backend with a real root issuer and persists a
 // ready order for the given DNS identifier, along with a CSR that matches it.
-func setupACMEFinalizeTest(t *testing.T, identifier string) *acmeFinalizeTestEnv {
+func setupACMEFinalizeTest(t *testing.T, identifier string) *acmeFinalizeTestContext {
 	t.Helper()
 
 	b, s := CreateBackendWithStorage(t)
@@ -354,7 +355,7 @@ func setupACMEFinalizeTest(t *testing.T, identifier string) *acmeFinalizeTestEnv
 	}, csrKey)
 	require.NoError(t, err)
 
-	return &acmeFinalizeTestEnv{
+	return &acmeFinalizeTestContext{
 		b:       b,
 		storage: s,
 		issuer:  issuer,
@@ -370,13 +371,14 @@ func setupACMEFinalizeTest(t *testing.T, identifier string) *acmeFinalizeTestEnv
 // runFinalize invokes the finalize handler with a fresh storage context, the
 // way a real request would. It is safe to call concurrently because the only
 // shared state is the backend storage and the per-order lock pool.
-func (e *acmeFinalizeTestEnv) runFinalize() (*logical.Response, error) {
+func (e *acmeFinalizeTestContext) runFinalize() (*logical.Response, error) {
 	sc := e.b.makeStorageContext(ctx, e.storage)
 	ac := &acmeContext{
-		baseUrl:     e.baseUrl,
-		sc:          sc,
-		acmeState:   e.b.GetAcmeState(),
-		runtimeOpts: acmeWrapperOpts{},
+		baseUrl:              e.baseUrl,
+		sc:                   sc,
+		acmeState:            e.b.GetAcmeState(),
+		runtimeOpts:          acmeWrapperOpts{},
+		rejectUnverifiedSANs: e.rejectUnverifiedSANs,
 	}
 	ac.Issuer = e.issuer
 	ac.Role = e.role
@@ -390,14 +392,14 @@ func (e *acmeFinalizeTestEnv) runFinalize() (*logical.Response, error) {
 	return e.b.acmeFinalizeOrderHandler(ac, &logical.Request{Storage: e.storage}, fields, e.uc, data, e.account)
 }
 
-func (e *acmeFinalizeTestEnv) loadOrder(t *testing.T) *acmeOrder {
+func (e *acmeFinalizeTestContext) loadOrder(t *testing.T) *acmeOrder {
 	t.Helper()
 	order, err := e.b.GetAcmeState().LoadOrder(&acmeContext{sc: e.b.makeStorageContext(ctx, e.storage)}, e.uc, e.orderId)
 	require.NoError(t, err)
 	return order
 }
 
-func (e *acmeFinalizeTestEnv) countStoredCerts(t *testing.T) int {
+func (e *acmeFinalizeTestContext) countStoredCerts(t *testing.T) int {
 	t.Helper()
 	serials, err := e.storage.List(ctx, issuing.PathCerts)
 	require.NoError(t, err)
@@ -412,8 +414,8 @@ func (e *acmeFinalizeTestEnv) countStoredCerts(t *testing.T) int {
 func TestACMEFinalizeOrder_ConcurrentRequestsIssueSingleCert(t *testing.T) {
 	t.Parallel()
 
-	env := setupACMEFinalizeTest(t, "test.example.com")
-	certsBefore := env.countStoredCerts(t)
+	tc := setupACMEFinalizeTest(t, "test.example.com")
+	certsBefore := tc.countStoredCerts(t)
 
 	const workers = 8
 	var wg sync.WaitGroup
@@ -422,7 +424,7 @@ func TestACMEFinalizeOrder_ConcurrentRequestsIssueSingleCert(t *testing.T) {
 		wg.Add(1)
 		go func(idx int) {
 			defer wg.Done()
-			_, results[idx] = env.runFinalize()
+			_, results[idx] = tc.runFinalize()
 		}(i)
 	}
 	wg.Wait()
@@ -438,14 +440,14 @@ func TestACMEFinalizeOrder_ConcurrentRequestsIssueSingleCert(t *testing.T) {
 	require.Equal(t, 1, successes, "exactly one finalize must succeed, got errors: %v", results)
 
 	// Only one certificate may have been issued for the order.
-	require.Equal(t, certsBefore+1, env.countStoredCerts(t),
+	require.Equal(t, certsBefore+1, tc.countStoredCerts(t),
 		"concurrent finalize must not issue more than one certificate")
 
-	order := env.loadOrder(t)
+	order := tc.loadOrder(t)
 	require.Equal(t, ACMEOrderValid, order.Status)
 	require.NotEmpty(t, order.CertificateSerialNumber)
 
-	stored, err := env.storage.Get(ctx, issuing.PathCerts+order.CertificateSerialNumber)
+	stored, err := tc.storage.Get(ctx, issuing.PathCerts+order.CertificateSerialNumber)
 	require.NoError(t, err)
 	require.NotNil(t, stored, "the order's serial must reference a stored certificate, not an orphan")
 }
@@ -457,36 +459,36 @@ func TestACMEFinalizeOrder_ConcurrentRequestsIssueSingleCert(t *testing.T) {
 func TestACMEFinalizeOrder_FailedIssuanceLeavesOrderRetryable(t *testing.T) {
 	t.Parallel()
 
-	env := setupACMEFinalizeTest(t, "test.example.com")
-	certsBefore := env.countStoredCerts(t)
+	tc := setupACMEFinalizeTest(t, "test.example.com")
+	certsBefore := tc.countStoredCerts(t)
 
 	// A role that does not permit the order's identifier makes signCert reject
 	// the CSR, so issuance fails partway through finalize.
-	env.role = buildTestRole(t, map[string]interface{}{
+	tc.role = buildTestRole(t, map[string]interface{}{
 		"allowed_domains":    []string{"unrelated.example.com"},
 		"allow_bare_domains": true,
 		"allow_subdomains":   false,
 	})
 
-	_, err := env.runFinalize()
+	_, err := tc.runFinalize()
 	require.Error(t, err, "issuance with a non-matching role must fail")
 
-	order := env.loadOrder(t)
+	order := tc.loadOrder(t)
 	require.Equal(t, ACMEOrderReady, order.Status, "a failed issuance must leave the order finalizable")
 	require.Empty(t, order.CertificateSerialNumber)
-	require.Equal(t, certsBefore, env.countStoredCerts(t), "a failed issuance must not leave a certificate behind")
+	require.Equal(t, certsBefore, tc.countStoredCerts(t), "a failed issuance must not leave a certificate behind")
 
 	// Retrying with a permissive role now succeeds, proving the order was not
 	// stranded by the failed attempt.
-	env.role = issuing.SignVerbatimRole()
-	resp, err := env.runFinalize()
+	tc.role = issuing.SignVerbatimRole()
+	resp, err := tc.runFinalize()
 	require.NoError(t, err, "retry after a transient issuance failure must succeed")
 	require.NotNil(t, resp)
 
-	final := env.loadOrder(t)
+	final := tc.loadOrder(t)
 	require.Equal(t, ACMEOrderValid, final.Status)
 	require.NotEmpty(t, final.CertificateSerialNumber)
-	require.Equal(t, certsBefore+1, env.countStoredCerts(t))
+	require.Equal(t, certsBefore+1, tc.countStoredCerts(t))
 }
 
 // TestACMEFinalizeOrder_OrderLockIsStablePerOrder confirms the striped lock pool
@@ -500,4 +502,346 @@ func TestACMEFinalizeOrder_OrderLockIsStablePerOrder(t *testing.T) {
 	require.NotNil(t, state.orderLocks)
 	require.Same(t, state.orderLockFor("order-abc"), state.orderLockFor("order-abc"),
 		"the same order id must always map to the same lock")
+}
+
+// loadIssuedCert fetches and parses the certificate that was stored for the
+// order after a successful finalize.
+func (e *acmeFinalizeTestContext) loadIssuedCert(t *testing.T) *x509.Certificate {
+	t.Helper()
+	order := e.loadOrder(t)
+	require.NotEmpty(t, order.CertificateSerialNumber, "order must have a certificate serial after finalize")
+
+	entry, err := e.storage.Get(ctx, issuing.PathCerts+order.CertificateSerialNumber)
+	require.NoError(t, err)
+	require.NotNil(t, entry, "certificate entry must exist in storage")
+
+	// StoreCertificate writes raw DER bytes, not a JSON bundle.
+	cert, err := x509.ParseCertificate(entry.Value)
+	require.NoError(t, err)
+	return cert
+}
+
+// setupACMEFinalizeTestWithCSR is like setupACMEFinalizeTest but accepts a
+// pre-built CSR template so callers can embed extra SAN types.
+func setupACMEFinalizeTestWithCSR(t *testing.T, identifier string, tmpl *x509.CertificateRequest) *acmeFinalizeTestContext {
+	t.Helper()
+
+	tc := setupACMEFinalizeTest(t, identifier)
+
+	// Replace the default (DNS-only) CSR with the caller-supplied template.
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, tmpl, csrKey)
+	require.NoError(t, err)
+	tc.csrB64 = base64.RawURLEncoding.EncodeToString(csrDER)
+	return tc
+}
+
+// setupACMEFinalizeTestWithOtherSAN is like setupACMEFinalizeTestWithCSR but
+// embeds a single Other SAN (specified as "<oid>;utf8:<value>") into the CSR
+// alongside the given DNS identifier.
+func setupACMEFinalizeTestWithOtherSAN(t *testing.T, identifier, otherSAN string) *acmeFinalizeTestContext {
+	t.Helper()
+
+	// parseOtherSANs strips the "utf8:" type prefix, leaving bare values that
+	// handleOtherCSRSANs encodes directly into the ASN.1 UTF8String field.
+	parsed, err := parseOtherSANs([]string{otherSAN})
+	if err != nil {
+		t.Fatalf("parseOtherSANs(%q): %v", otherSAN, err)
+	}
+	tmpl := &x509.CertificateRequest{DNSNames: []string{identifier}}
+	if err := handleOtherCSRSANs(tmpl, parsed); err != nil {
+		t.Fatalf("handleOtherCSRSANs: %v", err)
+	}
+	return setupACMEFinalizeTestWithCSR(t, identifier, tmpl)
+}
+
+// TestACMEFinalizeOrder_UnverifiedSANsRejected verifies that when
+// default_directory_policy is "sign-verbatim" (the default), a CSR that
+// contains URI SANs, email SANs, or Other SANs is rejected outright because
+// ACME challenges only verify DNS and IP identifiers.
+// When the policy is "sign-verbatim-unsafe" those SANs are preserved.
+func TestACMEFinalizeOrder_UnverifiedSANsRejected(t *testing.T) {
+	t.Parallel()
+
+	const dnsIdentifier = "test.example.com"
+
+	t.Run("sign-verbatim rejects CSR with URI SANs", func(t *testing.T) {
+		t.Parallel()
+
+		csrTemplate := &x509.CertificateRequest{
+			DNSNames: []string{dnsIdentifier},
+			URIs:     []*url.URL{{Scheme: "spiffe", Host: "example.com", Path: "/workload"}},
+		}
+		tc := setupACMEFinalizeTestWithCSR(t, dnsIdentifier, csrTemplate)
+		tc.rejectUnverifiedSANs = true
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.Error(t, err, "finalize must be rejected when CSR contains URI SANs")
+		// ErrBadCSR is what TranslateError maps to the "badCSR" type in the ACME
+		// error response (RFC 8555 §6.7), so the client receives a 400 badCSR.
+		require.ErrorIs(t, err, ErrBadCSR)
+		require.Equal(t, certsBefore, tc.countStoredCerts(t), "no certificate must be stored on rejection")
+		// The order must remain in the ready state so the client can correct the
+		// CSR and retry without needing to restart the ACME flow from scratch.
+		order := tc.loadOrder(t)
+		require.Equal(t, ACMEOrderReady, order.Status, "order must stay ready after a badCSR rejection")
+		require.Empty(t, order.CertificateSerialNumber)
+	})
+
+	t.Run("sign-verbatim rejects CSR with email SANs", func(t *testing.T) {
+		t.Parallel()
+
+		csrTemplate := &x509.CertificateRequest{
+			DNSNames:       []string{dnsIdentifier},
+			EmailAddresses: []string{"user@example.com"},
+		}
+		tc := setupACMEFinalizeTestWithCSR(t, dnsIdentifier, csrTemplate)
+		tc.rejectUnverifiedSANs = true
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.Error(t, err, "finalize must be rejected when CSR contains email SANs")
+		// ErrBadCSR is what TranslateError maps to the "badCSR" type in the ACME
+		// error response (RFC 8555 §6.7), so the client receives a 400 badCSR.
+		require.ErrorIs(t, err, ErrBadCSR)
+		require.Equal(t, certsBefore, tc.countStoredCerts(t), "no certificate must be stored on rejection")
+		// The order must remain in the ready state so the client can correct the
+		// CSR and retry without needing to restart the ACME flow from scratch.
+		order := tc.loadOrder(t)
+		require.Equal(t, ACMEOrderReady, order.Status, "order must stay ready after a badCSR rejection")
+		require.Empty(t, order.CertificateSerialNumber)
+	})
+
+	t.Run("sign-verbatim rejects CSR with Other SANs", func(t *testing.T) {
+		t.Parallel()
+
+		const otherSAN = "1.3.6.1.4.1.311.20.2.3;utf8:devops@example.com"
+		tc := setupACMEFinalizeTestWithOtherSAN(t, dnsIdentifier, otherSAN)
+		tc.rejectUnverifiedSANs = true
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.Error(t, err, "finalize must be rejected when CSR contains Other SANs")
+		// ErrBadCSR is what TranslateError maps to the "badCSR" type in the ACME
+		// error response (RFC 8555 §6.7), so the client receives a 400 badCSR.
+		require.ErrorIs(t, err, ErrBadCSR)
+		require.Equal(t, certsBefore, tc.countStoredCerts(t), "no certificate must be stored on rejection")
+		// The order must remain in the ready state so the client can correct the
+		// CSR and retry without needing to restart the ACME flow from scratch.
+		order := tc.loadOrder(t)
+		require.Equal(t, ACMEOrderReady, order.Status, "order must stay ready after a badCSR rejection")
+		require.Empty(t, order.CertificateSerialNumber)
+	})
+
+	t.Run("sign-verbatim-unsafe preserves URI and email SANs", func(t *testing.T) {
+		t.Parallel()
+
+		csrTemplate := &x509.CertificateRequest{
+			DNSNames:       []string{dnsIdentifier},
+			EmailAddresses: []string{"user@example.com"},
+			URIs:           []*url.URL{{Scheme: "spiffe", Host: "example.com", Path: "/workload"}},
+		}
+		tc := setupACMEFinalizeTestWithCSR(t, dnsIdentifier, csrTemplate)
+		// rejectUnverifiedSANs is false (zero value): sign-verbatim-unsafe semantics.
+
+		_, err := tc.runFinalize()
+		require.NoError(t, err)
+
+		cert := tc.loadIssuedCert(t)
+		require.Len(t, cert.URIs, 1, "URI SANs must be preserved by sign-verbatim-unsafe")
+		require.Equal(t, "spiffe://example.com/workload", cert.URIs[0].String())
+		require.Contains(t, cert.EmailAddresses, "user@example.com",
+			"email SANs must be preserved by sign-verbatim-unsafe")
+		require.Contains(t, cert.DNSNames, dnsIdentifier, "ACME-verified DNS SAN must be present")
+	})
+}
+
+// TestACMEFinalizeOrder_RoleConstraintsEnforcedAtIssuance verifies that when a
+// role-qualified ACME directory is used, the role's SAN constraints are enforced
+// during finalization — not just at order creation. validateIdentifiersAgainstRole
+// runs at order-creation time and checks ACME identifiers; the finalize path must
+// additionally enforce the role against the CSR content via signCert.
+func TestACMEFinalizeOrder_RoleConstraintsEnforcedAtIssuance(t *testing.T) {
+	t.Parallel()
+
+	t.Run("dns name outside allowed_domains is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		tc := setupACMEFinalizeTest(t, "test.example.com")
+		// Role permits only other.com; the order identifier is test.example.com.
+		tc.role = buildTestRole(t, map[string]interface{}{
+			"key_type":           "any",
+			"allowed_domains":    []string{"other.com"},
+			"allow_subdomains":   true,
+			"allow_bare_domains": false,
+		})
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.Error(t, err, "finalize must be rejected when the DNS name is outside allowed_domains")
+		require.Equal(t, certsBefore, tc.countStoredCerts(t), "no new certificate must be stored on rejection")
+	})
+
+	t.Run("ip san blocked by allow_ip_sans=false is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		ip := "192.168.1.1"
+		tc := setupACMEFinalizeTestWithCSR(t, ip, &x509.CertificateRequest{
+			IPAddresses: []net.IP{net.ParseIP(ip)},
+		})
+		tc.role = buildTestRole(t, map[string]interface{}{
+			"key_type":      "any",
+			"allow_ip_sans": false,
+		})
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.Error(t, err, "finalize must be rejected when IP SANs are disallowed by the role")
+		require.Equal(t, certsBefore, tc.countStoredCerts(t), "no new certificate must be stored on rejection")
+	})
+
+	t.Run("dns name within allowed_domains is issued with correct SANs", func(t *testing.T) {
+		t.Parallel()
+
+		tc := setupACMEFinalizeTest(t, "host.example.com")
+		tc.role = buildTestRole(t, map[string]interface{}{
+			"key_type":         "any",
+			"allowed_domains":  []string{"example.com"},
+			"allow_subdomains": true,
+			// Mirror what getAcmeRoleAndIssuer does when AllowRoleExtKeyUsage=false
+			// so the cert passes the ServerAuth-only check in issueCertFromCsr.
+			"server_flag": true,
+			"client_flag": false,
+		})
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.NoError(t, err, "finalize must succeed when the DNS name is within allowed_domains")
+		require.Equal(t, certsBefore+1, tc.countStoredCerts(t), "exactly one certificate must be stored")
+
+		cert := tc.loadIssuedCert(t)
+		require.Contains(t, cert.DNSNames, "host.example.com",
+			"issued certificate must contain the ACME-verified DNS SAN")
+	})
+
+	t.Run("uri san permitted by role is accepted and present in issued cert", func(t *testing.T) {
+		t.Parallel()
+
+		const spiffeURI = "spiffe://example.com/workload"
+		tc := setupACMEFinalizeTestWithCSR(t, "host.example.com", &x509.CertificateRequest{
+			DNSNames: []string{"host.example.com"},
+			URIs:     []*url.URL{{Scheme: "spiffe", Host: "example.com", Path: "/workload"}},
+		})
+		// rejectUnverifiedSANs is false (zero value): role-based ACME does not
+		// apply the sign-verbatim unverified-SAN guard; the role's own
+		// allowed_uri_sans constraint governs URI SANs instead.
+		tc.role = buildTestRole(t, map[string]interface{}{
+			"key_type":         "any",
+			"allowed_domains":  []string{"example.com"},
+			"allow_subdomains": true,
+			"allowed_uri_sans": []interface{}{spiffeURI},
+			"use_csr_sans":     true,
+			"server_flag":      true,
+			"client_flag":      false,
+		})
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.NoError(t, err, "finalize must succeed when URI SAN is permitted by the role")
+		require.Equal(t, certsBefore+1, tc.countStoredCerts(t), "exactly one certificate must be stored")
+
+		cert := tc.loadIssuedCert(t)
+		require.Contains(t, cert.DNSNames, "host.example.com",
+			"issued certificate must contain the DNS SAN")
+		require.Len(t, cert.URIs, 1, "issued certificate must contain the URI SAN permitted by the role")
+		require.Equal(t, spiffeURI, cert.URIs[0].String())
+	})
+
+	t.Run("uri san not permitted by role is rejected, order stays ready", func(t *testing.T) {
+		t.Parallel()
+
+		tc := setupACMEFinalizeTestWithCSR(t, "host.example.com", &x509.CertificateRequest{
+			DNSNames: []string{"host.example.com"},
+			URIs:     []*url.URL{{Scheme: "spiffe", Host: "other.com", Path: "/workload"}},
+		})
+		// The role only permits URIs under example.com; the CSR presents one
+		// under other.com, which the signing pipeline must reject.
+		tc.role = buildTestRole(t, map[string]interface{}{
+			"key_type":         "any",
+			"allowed_domains":  []string{"example.com"},
+			"allow_subdomains": true,
+			"allowed_uri_sans": []interface{}{"spiffe://example.com/*"},
+			"use_csr_sans":     true,
+			"server_flag":      true,
+			"client_flag":      false,
+		})
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.Error(t, err, "finalize must be rejected when URI SAN is not permitted by the role")
+		require.Equal(t, certsBefore, tc.countStoredCerts(t), "no certificate must be stored on rejection")
+		order := tc.loadOrder(t)
+		require.Equal(t, ACMEOrderReady, order.Status, "order must stay ready after rejection")
+		require.Empty(t, order.CertificateSerialNumber)
+	})
+
+	t.Run("other san permitted by role is accepted and present in issued cert", func(t *testing.T) {
+		t.Parallel()
+
+		const otherSAN = "1.3.6.1.4.1.311.20.2.3;utf8:devops@example.com"
+		tc := setupACMEFinalizeTestWithOtherSAN(t, "host.example.com", otherSAN)
+		// rejectUnverifiedSANs is false (zero value): role-based ACME does not
+		// apply the sign-verbatim unverified-SAN guard; the role's own
+		// allowed_other_sans constraint governs Other SANs instead.
+		tc.role = buildTestRole(t, map[string]interface{}{
+			"key_type":           "any",
+			"allowed_domains":    []string{"example.com"},
+			"allow_subdomains":   true,
+			"allowed_other_sans": []interface{}{"1.3.6.1.4.1.311.20.2.3;utf8:*"},
+			"use_csr_sans":       true,
+			"server_flag":        true,
+			"client_flag":        false,
+		})
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.NoError(t, err, "finalize must succeed when Other SAN is permitted by the role")
+		require.Equal(t, certsBefore+1, tc.countStoredCerts(t), "exactly one certificate must be stored")
+
+		cert := tc.loadIssuedCert(t)
+		require.Contains(t, cert.DNSNames, "host.example.com",
+			"issued certificate must contain the DNS SAN")
+		others, err := getOtherSANsFromX509Extensions(cert.Extensions)
+		require.NoError(t, err)
+		require.Len(t, others, 1, "issued certificate must contain the Other SAN permitted by the role")
+		require.Equal(t, "1.3.6.1.4.1.311.20.2.3", others[0].Oid)
+		require.Equal(t, "devops@example.com", others[0].Value)
+	})
+
+	t.Run("other san not permitted by role is rejected, order stays ready", func(t *testing.T) {
+		t.Parallel()
+
+		// The role only permits the UPN OID; use a different OID in the CSR.
+		const otherSAN = "1.3.6.1.4.1.311.20.2.4;utf8:other@example.com"
+		tc := setupACMEFinalizeTestWithOtherSAN(t, "host.example.com", otherSAN)
+		tc.role = buildTestRole(t, map[string]interface{}{
+			"key_type":           "any",
+			"allowed_domains":    []string{"example.com"},
+			"allow_subdomains":   true,
+			"allowed_other_sans": []interface{}{"1.3.6.1.4.1.311.20.2.3;utf8:*"},
+			"use_csr_sans":       true,
+			"server_flag":        true,
+			"client_flag":        false,
+		})
+
+		certsBefore := tc.countStoredCerts(t)
+		_, err := tc.runFinalize()
+		require.Error(t, err, "finalize must be rejected when Other SAN OID is not permitted by the role")
+		require.Equal(t, certsBefore, tc.countStoredCerts(t), "no certificate must be stored on rejection")
+		order := tc.loadOrder(t)
+		require.Equal(t, ACMEOrderReady, order.Status, "order must stay ready after rejection")
+		require.Empty(t, order.CertificateSerialNumber)
+	})
 }

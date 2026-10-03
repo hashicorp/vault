@@ -248,7 +248,10 @@ export interface ListViewRowAction {
   /** Modal configuration rendered when kind is "modal" */
   modal?: ListViewModalConfig;
   color?: 'critical';
-  /** Optional capability key on the capabilities object (e.g. "canDelete") */
+  /**
+   * Optional key on the row's `capabilities` object (e.g. "canDelete"). When set,
+   * Page::ListView only renders the action if `rowData.capabilities[capability]` is truthy.
+   */
   capability?: string;
 }
 
@@ -265,10 +268,11 @@ export interface ListViewFilter {
   /**
    * Raw API field name (snake_case) to filter on. Must exactly match the field
    * on the data object — the same value that would be passed as `filterKey` to
-   * paginate(). Required when filter is defined.
-   * e.g. "path", "name", "id"
+   * paginate(). Required when filter is defined. Pass an array to match against
+   * multiple fields.
+   * e.g. "path", "name", ["name", "id"]
    */
-  filterKey: string;
+  filterKey: string | string[];
 }
 
 export interface ListViewRoutePaths {

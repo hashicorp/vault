@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -114,6 +114,23 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'vault.cluster.secrets.backends',
       'redirects to the backends list page'
     );
+  });
+
+  // The cubbyhole/ engine is a built-in per-token mount that Vault refuses to disable.
+  test('it never offers delete for cubbyhole but does for other engines', async function (assert) {
+    const enginePath = `kv-delete-${this.uid}`;
+    await runCmd(mountEngineCmd('kv-v2', enginePath));
+    await visit('/vault/secrets-engines');
+
+    await click('[data-test-popup-menu-trigger="cubbyhole"]');
+    assert.dom(GENERAL.menuItem('view-configuration')).exists('cubbyhole offers view configuration');
+    assert.dom(GENERAL.menuItem('delete-engine-path')).doesNotExist('cubbyhole does not offer delete');
+
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), enginePath);
+    await click(`[data-test-popup-menu-trigger="${enginePath}"]`);
+    assert.dom(GENERAL.menuItem('delete-engine-path')).exists('a user-mounted engine offers delete');
+
+    await runCmd(deleteEngineCmd(enginePath));
   });
 
   test('it allows navigation to a non-nested secret with pagination', async function (assert) {
@@ -254,5 +271,66 @@ module('Acceptance | secret-engine list view', function (hooks) {
       await login();
       await runCmd(`delete sys/namespaces/${this.namespace}`);
     });
+  });
+});
+
+// Read-only tokens must not be offered enable or delete actions.
+module('Acceptance | secret-engine list view | read-only token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    this.enginePath = `kv-read-only-${uuidv4()}`;
+    // The engine path grant is needed because the list only shows mounts the token can reach.
+    const readOnlyPolicy = `
+      path "sys/mounts" { capabilities = ["read", "list"] }
+      path "sys/mounts/*" { capabilities = ["read", "list"] }
+      path "sys/internal/ui/mounts/*" { capabilities = ["read"] }
+      path "${this.enginePath}/*" { capabilities = ["read", "list"] }
+    `;
+    await login();
+    await runCmd(mountEngineCmd('kv-v2', this.enginePath));
+    const token = await runCmd(tokenWithPolicyCmd('secrets-engines-read-only', readOnlyPolicy));
+    await login(token);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
+  });
+
+  hooks.afterEach(async function () {
+    await login();
+    await runCmd(deleteEngineCmd(this.enginePath));
+  });
+
+  test('it hides the enable and delete actions', async function (assert) {
+    await visit('/vault/secrets-engines');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets engines', 'list view renders');
+    assert.dom(GENERAL.button('Enable new engine')).doesNotExist('enable action is hidden');
+
+    await fillIn(GENERAL.inputSearch('secret-engine-path'), this.enginePath);
+    await click(`[data-test-popup-menu-trigger="${this.enginePath}"]`);
+    assert.dom(GENERAL.menuItem('view-configuration')).exists('view configuration is offered');
+    assert.dom(GENERAL.menuItem('delete-engine-path')).doesNotExist('delete action is hidden');
+  });
+});
+
+// Enable permission is often scoped to a mount prefix, which capabilities-self cannot evaluate for an
+// unnamed mount, so the header action must still show for these tokens.
+module('Acceptance | secret-engine list view | path-scoped token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    const scopedPolicy = `
+      path "sys/mounts" { capabilities = ["read"] }
+      path "sys/mounts/team-*" { capabilities = ["update"] }
+      path "sys/internal/ui/mounts/*" { capabilities = ["read"] }
+    `;
+    await login();
+    const token = await runCmd(tokenWithPolicyCmd('secrets-engines-team-scoped', scopedPolicy));
+    await login(token);
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.secretEngines);
+  });
+
+  test('it shows the enable action when update is scoped to a mount prefix', async function (assert) {
+    await visit('/vault/secrets-engines');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Secrets engines', 'list view renders');
+    assert.dom(GENERAL.button('Enable new engine')).exists('enable action is offered');
   });
 });

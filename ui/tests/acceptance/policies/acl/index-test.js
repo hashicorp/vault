@@ -209,4 +209,117 @@ module('Acceptance | ACL policies list view', function (hooks) {
     assert.dom(GENERAL.listItem('policy-15')).exists('policy-15 is visible on page 2');
     assert.dom(GENERAL.listItem('policy-0')).doesNotExist('policy-0 is not visible on page 2');
   });
+
+  // ── Sorting ─────────────────────────────────────────────────────────────────
+
+  test('sorting descending sorts the global dataset before pagination', async function (assert) {
+    // Regression for VAULT-50816: sorting must apply to the full dataset, not
+    // just the items on the current page. With 20 policies (policy-0..policy-19)
+    // sorted Z→A with natural sorting, the globally last item numerically ('policy-19')
+    // must appear on page 1 — not stranded on page 2 as it was before the fix.
+    const manyPolicies = Array.from({ length: 20 }, (_, i) => `policy-${i}`);
+    this.server.get('sys/policies/acl/', () => ({
+      data: { keys: manyPolicies },
+      request_id: 'test',
+    }));
+
+    await visit('/vault/policies/acl');
+
+    // Click the "Policy name" column sort button once (asc), then again (desc).
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+
+    // Under natural descending sort, "policy-19" is globally first.
+    // It must be visible on page 1.
+    assert.dom(GENERAL.listItem('policy-19')).exists('policy-19 is on page 1 when globally sorted Z→A');
+
+    // "policy-0" sorts last and must NOT be visible on page 1.
+    assert
+      .dom(GENERAL.listItem('policy-0'))
+      .doesNotExist('policy-0 is not on page 1 when sorted Z→A (belongs on a later page)');
+  });
+
+  test('sortBy and sortOrder query params persist across page transitions', async function (assert) {
+    // Regression for VAULT-50816: the active sort column/direction must survive
+    // the model refresh triggered when the page query param changes.  Before the
+    // fix, navigating to page 2 reset the sort indicator back to unsorted (⇅).
+    const manyPolicies = Array.from({ length: 20 }, (_, i) => `policy-${i}`);
+    this.server.get('sys/policies/acl/', () => ({
+      data: { keys: manyPolicies },
+      request_id: 'test',
+    }));
+
+    await visit('/vault/policies/acl');
+
+    // Sort ascending — first click on the sortable "Policy name" header.
+    await click(GENERAL.tableColumnHeaderSortButton(1, { isAdvanced: true }));
+
+    // The URL must now include sortBy and sortOrder.
+    assert.true(currentURL().includes('sortBy=name'), 'sortBy=name is in the URL');
+    assert.true(currentURL().includes('sortOrder=asc'), 'sortOrder=asc is in the URL');
+
+    // Navigate to page 2.
+    await click(GENERAL.nextPage);
+
+    // Sort params must still be present after the page transition.
+    assert.true(currentURL().includes('sortBy=name'), 'sortBy=name remains after navigating to page 2');
+    assert.true(currentURL().includes('sortOrder=asc'), 'sortOrder=asc remains after navigating to page 2');
+
+    // The column header sort indicator must still be active (aria-sort="ascending").
+    assert
+      .dom('.hds-advanced-table__th:nth-child(1)')
+      .hasAttribute('aria-sort', 'ascending', 'sort indicator remains active on page 2');
+  });
+
+  test('sortBy and sortOrder query params reset on navigation away', async function (assert) {
+    // Verifies resetController clears sort QPs when leaving the route so a
+    // subsequent visit starts unsorted.
+    await visit('/vault/policies/acl?sortBy=name&sortOrder=asc');
+    await visit('/vault/dashboard');
+    await visit('/vault/policies/acl');
+    assert.false(currentURL().includes('sortBy='), 'sortBy was reset after navigation');
+    assert.false(currentURL().includes('sortOrder='), 'sortOrder was reset after navigation');
+  });
+
+  // ── Regression: VAULT-50826 ──────────────────────────────────────────────
+
+  test('it navigates to the correct ACL policy edit page from the list', async function (assert) {
+    // Regression guard for VAULT-50826: clicking "Edit policy" on a list row must
+    // navigate to THAT policy's edit page, not the one last loaded by the show route.
+    //
+    // Root cause: policy/edit calls this.modelFor('vault.cluster.policy.show'),
+    // which returns route.currentModel — a value Ember retains on the route singleton
+    // after navigating away. When the show route was previously activated for a
+    // different policy, edit.model() blindly reuses that stale object.
+    //
+    // Minimum reproduction: show(policy-alpha) → list → edit(policy-beta).
+    this.server.get('sys/policies/acl/', () => ({
+      data: { keys: ['policy-alpha', 'policy-beta'] },
+    }));
+    this.server.get('sys/policies/acl/:name', (_schema, request) => ({
+      data: {
+        name: request.params.name,
+        policy: `path "secret/*" { capabilities = ["read"] }`,
+      },
+    }));
+
+    // Step 1: visit the show page for policy-alpha so show.currentModel is set on
+    // the route singleton to { name: 'policy-alpha', ... }.
+    await visit('/vault/policy/acl/policy-alpha');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('policy-alpha', 'show page loaded for policy-alpha');
+
+    // Step 2: navigate to the list (show deactivates, but currentModel persists).
+    await click(GENERAL.breadcrumbLink('ACL policies'));
+
+    // Step 3: click "Edit policy" on policy-beta.
+    // show.currentModel is still policy-alpha — the edit route must not reuse it.
+    const triggers = document.querySelectorAll(GENERAL.menuTrigger);
+    await click(triggers[1]);
+    await click(GENERAL.menuItem('edit-policy'));
+
+    assert.true(currentURL().includes('/vault/policy/acl/policy-beta/edit'), 'URL is for policy-beta');
+    assert
+      .dom(GENERAL.hdsPageHeaderTitle)
+      .hasText('policy-beta', 'edit page shows policy-beta, not the stale policy-alpha');
+  });
 });

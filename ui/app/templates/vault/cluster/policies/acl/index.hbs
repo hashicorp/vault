@@ -3,4 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::AclPolicies @model={{this.model}} @page={{this.page}} @pageSize={{this.pageSize}} />
+<Page::AclPolicies
+  @model={{this.model}}
+  @page={{this.page}}
+  @pageSize={{this.pageSize}}
+  @sortBy={{this.sortBy}}
+  @sortOrder={{this.sortOrder}}
+  @onSortChange={{this.updateSort}}
+/>

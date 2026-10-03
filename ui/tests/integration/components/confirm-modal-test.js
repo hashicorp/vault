@@ -65,6 +65,7 @@ module('Integration | Component | confirm-modal', function (hooks) {
     );
 
     assert.dom(GENERAL.confirmTextInput).exists('type-to-confirm input is rendered');
+    assert.dom(GENERAL.confirmButton).isDisabled('confirm button is disabled until the text matches');
     assert.dom(GENERAL.confirmWarning).doesNotExist('warning is not shown before interact');
   });
 
@@ -78,40 +79,15 @@ module('Integration | Component | confirm-modal', function (hooks) {
       .containsText('Confirm deletion', 'renders custom confirm label');
   });
 
-  test('it shows a warning after clicking confirm with wrong input', async function (assert) {
+  test('confirm button remains disabled when the input does not match', async function (assert) {
     await render(
       hbs`<ConfirmModal @onConfirm={{this.onConfirm}} @onClose={{this.onClose}} @confirmText="delete-me" />`
     );
 
     await fillIn(GENERAL.confirmTextInput, 'wrong');
-    await click(GENERAL.confirmButton);
 
-    assert.dom(GENERAL.confirmTextInput).exists('type-to-confirm input is rendered');
-    assert.dom(GENERAL.confirmWarning).exists('warning shown after failed confirm');
+    assert.dom(GENERAL.confirmButton).isDisabled('confirm button stays disabled for non-matching text');
     assert.false(this.onConfirm.called, 'onConfirm is not called with wrong input');
-  });
-
-  test('it shows a warning after clicking confirm with empty input', async function (assert) {
-    await render(
-      hbs`<ConfirmModal @onConfirm={{this.onConfirm}} @onClose={{this.onClose}} @confirmText="delete-me" />`
-    );
-
-    await click(GENERAL.confirmButton);
-
-    assert.dom(GENERAL.confirmWarning).exists('warning shown when input is empty');
-    assert.false(this.onConfirm.called, 'onConfirm is not called with empty input');
-  });
-
-  test('warning clears when user retypes after a failed confirm', async function (assert) {
-    await render(
-      hbs`<ConfirmModal @onConfirm={{this.onConfirm}} @onClose={{this.onClose}} @confirmText="delete-me" />`
-    );
-
-    await click(GENERAL.confirmButton);
-    assert.dom(GENERAL.confirmWarning).exists('warning shown after empty confirm');
-
-    await fillIn(GENERAL.confirmTextInput, 'del');
-    assert.dom(GENERAL.confirmWarning).doesNotExist('warning clears on retype');
   });
 
   test('it calls onConfirm when correct text is entered', async function (assert) {
@@ -119,7 +95,9 @@ module('Integration | Component | confirm-modal', function (hooks) {
       hbs`<ConfirmModal @onConfirm={{this.onConfirm}} @onClose={{this.onClose}} @confirmText="delete-me" />`
     );
 
+    assert.dom(GENERAL.confirmButton).isDisabled('confirm button starts disabled');
     await fillIn(GENERAL.confirmTextInput, 'delete-me');
+    assert.dom(GENERAL.confirmButton).isNotDisabled('confirm button enables when the text matches');
     await click(GENERAL.confirmButton);
 
     assert.dom(GENERAL.confirmWarning).doesNotExist('no warning when input matches');

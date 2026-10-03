@@ -3,7 +3,26 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Page::ListView @config={{@model.listViewConfig}} @model={{this.groups}} @page={{@page}} @pageSize={{@pageSize}}>
+<Page::ListView
+  @config={{@model.listViewConfig}}
+  @model={{this.groups}}
+  @page={{@page}}
+  @pageSize={{@pageSize}}
+  @sortBy={{@sortBy}}
+  @sortOrder={{@sortOrder}}
+  @onSortChange={{@onSortChange}}
+>
+  <:headerActions>
+    {{#if this.canCreateGroup}}
+      <Hds::Button
+        @color="primary"
+        @icon="plus"
+        @text="Create group"
+        @route="vault.cluster.access.identity.groups.create"
+        data-test-button="Create group"
+      />
+    {{/if}}
+  </:headerActions>
   <:tabs>
     <nav class="tabs" aria-label="navigation for groups">
       <ul>

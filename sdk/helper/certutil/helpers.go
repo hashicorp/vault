@@ -119,6 +119,12 @@ var FreshestCrlOid = asn1.ObjectIdentifier([]int{2, 5, 29, 46})
 // OID for ReasonCode from RFC 2459
 var ReasonCodeOid = asn1.ObjectIdentifier([]int{2, 5, 29, 21})
 
+// OidExtensionRequest is the PKCS #9 OID for the requestedExtensions CSR
+// attribute (RFC 2986 §4.1, id-pkcs9-extensionRequest).
+//
+// > pkcs-9-at-extensionRequest OBJECT IDENTIFIER ::= { pkcs-9 14 }
+var OidExtensionRequest = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 14}
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {

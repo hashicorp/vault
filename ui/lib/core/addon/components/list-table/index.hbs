@@ -5,12 +5,17 @@
 
 <Hds::AdvancedTable
   @model={{this.paginatedTableData}}
-  @columns={{@columns}}
+  @columns={{this.tableColumns}}
+  @sortBy={{this.activeSortColumn}}
+  @sortOrder={{this.activeSortDirection}}
+  @onSort={{this.updateSort}}
   @isSelectable={{if @selectionKeyField true false}}
   @onSelectionChange={{@onSelectionChange}}
   @hasResizableColumns={{this.hasResizableColumns}}
+  @onColumnResize={{this.handleColumnResize}}
   @childrenKey={{@childrenKey}}
   class="has-bottom-margin-s"
+  {{did-insert this.registerTableContainer}}
   {{did-update this.resetPagination @data}}
 >
   <:body as |B|>
@@ -22,7 +27,7 @@
       data-test-table-parent-row={{if (this.isParentRow B.data) "true"}}
       data-test-list-item={{this.identifier B.data}}
     >
-      {{#each @columns as |column|}}
+      {{#each this.tableColumns as |column|}}
         {{#if (and (eq column.key "popupMenu") (has-block "popupMenu"))}}
           <B.Td data-test-table-data="popupMenu">
             {{yield B.data to="popupMenu"}}

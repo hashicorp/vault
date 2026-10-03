@@ -137,6 +137,7 @@ export default class App extends Application {
           'control-group',
           'download',
           'flash-messages',
+          'kv-mount-retry',
           'namespace',
           { 'app-router': 'router' },
           'secret-mount-path',

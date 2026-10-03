@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render, waitFor } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, render, triggerKeyEvent, waitFor } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
@@ -27,7 +27,7 @@ module('Integration | Component | list-table', function (hooks) {
     this.selectionKeyField = undefined;
     this.columns = [
       { key: 'island', label: 'Islands', isSortable: true },
-      { key: 'visit_length', label: 'Visit length', customTableItem: true },
+      { key: 'visit_length', label: 'Visit length', customTableItem: true, isSortable: true },
       { key: 'trip_date', label: 'Date trip starts' },
       { key: 'popupMenu', label: 'Action' },
     ];
@@ -72,6 +72,38 @@ module('Integration | Component | list-table', function (hooks) {
     assert.dom(GENERAL.tableData(0, 'island')).hasText('Seychelles', 'second page has expected row');
   });
 
+  test('it sorts table data across pages', async function (assert) {
+    // Default is 10, so change to 5 so we have multiple pages with 6 items
+    await this.renderComponent();
+    await fillIn(GENERAL.paginationSizeSelector, '5');
+
+    const secondColumnSortButton = GENERAL.tableColumnHeaderSortButton(2, {
+      isAdvanced: true,
+    });
+    // Click to sort ascending by island
+    await click(secondColumnSortButton);
+
+    const expectedPage1 = ['Santorini', 'Maldives', 'Seychelles', 'Bora Bora', 'Maui'];
+    expectedPage1.forEach((value, idx) => {
+      assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `page 1, row ${idx} is ${value}`);
+    });
+
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Fiji', 'page 2 has last sorted item');
+
+    // Click again to sort descending
+    await click(GENERAL.prevPage);
+    await click(secondColumnSortButton);
+
+    const expectedDescPage1 = ['Fiji', 'Maui', 'Bora Bora', 'Seychelles', 'Maldives'];
+    expectedDescPage1.forEach((value, idx) => {
+      assert.dom(GENERAL.tableData(idx, 'island')).hasText(value, `desc page 1, row ${idx} is ${value}`);
+    });
+
+    await click(GENERAL.nextPage);
+    assert.dom(GENERAL.tableData(0, 'island')).hasText('Santorini', 'desc page 2 has last sorted item');
+  });
+
   test('it does not render popup menu if @columns does not include a popupMenu key', async function (assert) {
     this.columns = [
       { key: 'island', label: 'Islands', isSortable: true },
@@ -113,6 +145,88 @@ module('Integration | Component | list-table', function (hooks) {
     ];
     await this.renderComponent();
     assert.dom('[role="slider"]').doesNotExist('resize sliders do not exist');
+  });
+
+  test('fr column widths are scaled and other widths are passed through', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands', isSortable: true },
+      { key: 'visit_length', label: 'Visit length', width: '2fr' },
+      { key: 'trip_date', label: 'Date trip starts', width: '200px' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    assert.dom('[role="slider"]').exists({ count: 3 }, 'columns are resizable');
+    assert.strictEqual(
+      find('.hds-advanced-table').style.gridTemplateColumns,
+      '100fr 200fr 200px 10%',
+      'missing and fr widths are scaled while px and % widths are unchanged'
+    );
+  });
+
+  test('the table stays full width after resizing into the actions column', async function (assert) {
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    const headerCellsWidth = () =>
+      findAll('.hds-advanced-table__thead .hds-advanced-table__th').reduce(
+        (sum, th) => sum + th.offsetWidth,
+        0
+      );
+
+    for (let i = 0; i < 10; i++) {
+      await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+    }
+    const [islandWidth, actionsWidth] = find('.hds-advanced-table').style.gridTemplateColumns.split(' ');
+    assert.notStrictEqual(islandWidth, '100fr', 'resized column shrinks');
+    assert.notStrictEqual(actionsWidth, '10%', 'actions column takes the freed width');
+    const tableWidth = find('.hds-advanced-table').clientWidth;
+    assert.true(Math.abs(headerCellsWidth() - tableWidth) <= 2, 'table fills its container');
+  });
+
+  ['Islands', 'Actions'].forEach((resetLabel) => {
+    test(`resetting the ${resetLabel} column after a resize restores every column to its original width`, async function (assert) {
+      this.columns = [
+        { key: 'island', label: 'Islands' },
+        { key: 'popupMenu', label: 'Actions', width: '10%' },
+      ];
+      await this.renderComponent();
+      const gridColumns = () => find('.hds-advanced-table').style.gridTemplateColumns.split(' ');
+
+      for (let i = 0; i < 10; i++) {
+        await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+      }
+      assert.notDeepEqual(gridColumns(), ['100fr', '10%'], 'columns are resized');
+
+      await click(`[aria-label="Additional actions for ${resetLabel}"]`);
+      await click('[data-test-context-option-key="reset-column-width"]');
+      assert.deepEqual(gridColumns(), ['100fr', '10%'], 'both columns are back to their original widths');
+
+      await triggerKeyEvent('[role="slider"]', 'keydown', 'ArrowLeft');
+      assert.notDeepEqual(gridColumns(), ['100fr', '10%'], 'columns can be resized again after a reset');
+    });
+  });
+
+  test('resetting a column restores every column on a selectable table', async function (assert) {
+    this.selectionKeyField = 'island';
+    this.columns = [
+      { key: 'island', label: 'Islands' },
+      { key: 'trip_date', label: 'Date trip starts' },
+      { key: 'popupMenu', label: 'Actions', width: '10%' },
+    ];
+    await this.renderComponent();
+    const gridColumns = () => find('.hds-advanced-table').style.gridTemplateColumns.trim().split(/\s+/);
+    const originalColumns = gridColumns();
+
+    for (let i = 0; i < 10; i++) {
+      await triggerKeyEvent('[aria-label="Resize Islands column"]', 'keydown', 'ArrowRight');
+    }
+    assert.notDeepEqual(gridColumns(), originalColumns, 'columns are resized');
+
+    await click('[aria-label="Additional actions for Islands"]');
+    await click('[data-test-context-option-key="reset-column-width"]');
+    assert.deepEqual(gridColumns(), originalColumns, 'every column is back to its original width');
   });
 
   test('it stringifies object and array values for non-custom columns', async function (assert) {
@@ -311,24 +425,73 @@ module('Integration | Component | list-table', function (hooks) {
   });
 
   test('it should render expandable rows', async function (assert) {
-    delete this.columns[0].isSortable;
-    this.columns[0].isExpandable = true;
-    const childData = { island: 'Bahamas', visit_length: 2, trip_date: '2025-06-22T00:00:00.000Z' };
-    this.data[0].children = [childData];
+    // Using different columns/dataset here to test expanding rows
+    // because expandable (nested) rows cannot be sortable!
+    this.columns = [
+      { key: 'region', label: 'Region', isExpandable: true },
+      { key: 'destinations_count', label: 'Destinations' },
+      { key: 'best_season', label: 'Best season' },
+    ];
+
+    const frenchPolynesiaChild1 = {
+      region: 'Bora Bora',
+      destinations_count: '1 island',
+      best_season: 'May–Oct',
+    };
+
+    const southeastAsiaChild1 = {
+      region: 'Bali',
+      destinations_count: '1 island',
+      best_season: 'Apr–Oct',
+    };
+
+    const southeastAsiaChild2 = {
+      region: 'Komodo',
+      destinations_count: '1 island',
+      best_season: 'Apr–Aug',
+    };
+
+    this.data = [
+      {
+        region: 'French Polynesia',
+        destinations_count: '118 islands',
+        best_season: 'May–Oct',
+        children: [frenchPolynesiaChild1],
+      },
+      {
+        region: 'Southeast Asia',
+        destinations_count: '2 islands',
+        best_season: 'Apr–Oct',
+        children: [southeastAsiaChild1, southeastAsiaChild2],
+      },
+    ];
 
     await this.renderComponent();
-    assert.dom(GENERAL.tableDataNested(1, 'island')).isNotVisible('nested row is initially hidden');
-    await click(GENERAL.tableExpandableColumn(0, 'island'));
-    assert.dom(GENERAL.tableDataNested(1, 'island')).isVisible('nested row is visible when expanded');
-    assert.dom(GENERAL.tableDataNested(1, 'island')).hasText(childData.island, 'child island renders');
+    assert.dom(GENERAL.tableDataNested(1, 'region')).isNotVisible('nested row is initially hidden');
+    await click(GENERAL.tableExpandableColumn(0, 'region'));
+    assert.dom(GENERAL.tableDataNested(1, 'region')).isVisible('nested row is visible when expanded');
     assert
-      .dom(GENERAL.tableDataNested(1, 'visit_length'))
-      .hasText(`${childData.visit_length}`, 'child visit length renders');
+      .dom(GENERAL.tableDataNested(1, 'region'))
+      .hasText(frenchPolynesiaChild1.region, 'child destination renders');
     assert
-      .dom(GENERAL.tableDataNested(1, 'trip_date'))
-      .hasText(childData.trip_date, 'child trip date renders');
-    await click(GENERAL.tableExpandableColumn(0, 'island'));
-    assert.dom(GENERAL.tableDataNested(1, 'island')).isNotVisible('nested row hidden when collapsed');
+      .dom(GENERAL.tableDataNested(1, 'destinations_count'))
+      .hasText(frenchPolynesiaChild1.destinations_count, 'child destination count renders');
+    assert
+      .dom(GENERAL.tableDataNested(1, 'best_season'))
+      .hasText(frenchPolynesiaChild1.best_season, 'child best season renders');
+    await click(GENERAL.tableExpandableColumn(0, 'region'));
+    assert.dom(GENERAL.tableDataNested(1, 'region')).isNotVisible('nested row hidden when collapsed');
+
+    // Expand a parent row with two children
+    await click(GENERAL.tableExpandableColumn(2, 'region'));
+    assert
+      .dom(GENERAL.tableDataNested(3, 'region'))
+      .isVisible('first child of second parent is visible')
+      .hasText(southeastAsiaChild1.region, 'first child renders correct region');
+    assert
+      .dom(GENERAL.tableDataNested(4, 'region'))
+      .isVisible('second child of second parent is visible')
+      .hasText(southeastAsiaChild2.region, 'second child renders correct region');
   });
 
   test('it hides pagination when @hidePagination is true', async function (assert) {

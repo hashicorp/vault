@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
 import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 import type ApiService from 'vault/services/api';
@@ -17,6 +16,7 @@ import type RouterService from '@ember/routing/router-service';
 import type WizardService from 'vault/services/wizard';
 import type { Capabilities } from 'vault/app-types';
 import type { PoliciesAclIndexModel } from 'vault/routes/vault/cluster/policies/acl/index';
+import type DownloadService from 'vault/services/download';
 
 /**
  * @module Page::AclPolicies
@@ -41,6 +41,9 @@ interface Args {
   model: PoliciesAclIndexModel;
   page: number;
   pageSize: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 export default class PageAclPoliciesComponent extends Component<Args> {
@@ -49,6 +52,7 @@ export default class PageAclPoliciesComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
   @service declare readonly router: RouterService;
   @service declare readonly wizard: WizardService;
+  @service declare readonly download: DownloadService;
 
   @tracked policyToDelete: PolicyRow | null = null;
   @tracked shouldRenderIntroModal = false;
@@ -79,15 +83,10 @@ export default class PageAclPoliciesComponent extends Component<Args> {
   async downloadPolicy(item: PolicyRow) {
     try {
       const { policy } = await this.api.sys.policiesReadAclPolicy(item.name);
-      const blob = new Blob([policy ?? ''], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${item.name}.hcl`;
-      a.click();
-      URL.revokeObjectURL(url);
+      this.download.miscExtension(item.name, policy ?? '', 'hcl');
     } catch (err) {
-      this.flashMessages.danger(errorMessage(err));
+      const { message } = await this.api.parseError(err);
+      this.flashMessages.danger(message);
     }
   }
 
@@ -101,9 +100,10 @@ export default class PageAclPoliciesComponent extends Component<Args> {
     try {
       await this.api.sys.policiesDeleteAclPolicy(item.name);
       this.flashMessages.success(`Successfully deleted policy: ${item.name}`);
-      this.router.refresh();
+      this.router.refresh('vault.cluster.policies.acl');
     } catch (err) {
-      this.flashMessages.danger(errorMessage(err));
+      const { message } = await this.api.parseError(err);
+      this.flashMessages.danger(message);
     }
     this.policyToDelete = null;
   }

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 import Controller from '@ember/controller';
@@ -13,6 +13,7 @@ import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
 
 import type RouterService from '@ember/routing/router-service';
 import type AnalyticsService from 'vault/services/analytics';
+import type PermissionsService from 'vault/services/permissions';
 import type WizardService from 'vault/services/wizard';
 
 interface Engine {
@@ -34,18 +35,27 @@ interface RouteModel {
 
 export default class VaultClusterSecretsBackendController extends Controller {
   @service declare readonly analytics: AnalyticsService;
+  @service declare readonly permissions: PermissionsService;
   @service declare readonly router: RouterService;
   @service declare readonly wizard: WizardService;
 
   declare model: RouteModel;
 
   // page refreshes the model (re-fetches from API) on change.
-  // pageSize is client-side only — no model reload needed, but must survive route transitions.
-  queryParams = ['page', 'pageSize'];
+  // pageSize, sortBy, sortOrder are client-side only — no model reload needed.
+  queryParams = ['page', 'pageSize', 'sortBy', 'sortOrder'];
   @tracked page = 1;
   @tracked pageSize = 10;
+  @tracked sortBy: string | undefined = undefined;
+  @tracked sortOrder: 'asc' | 'desc' | undefined = undefined;
 
   @tracked shouldRenderIntroModal = false;
+
+  @action
+  updateSort(sortBy: string, sortOrder: 'asc' | 'desc') {
+    this.sortBy = sortBy;
+    this.sortOrder = sortOrder;
+  }
   @tracked engineTypeFilters: string[] = [];
   @tracked engineVersionFilters: string[] = [];
 
@@ -53,6 +63,12 @@ export default class VaultClusterSecretsBackendController extends Controller {
   @tracked pathSearchText = '';
   @tracked typeSearchText = '';
   @tracked versionSearchText = '';
+
+  // Enabling an engine is an update on sys/mounts/:path. The path is not chosen yet, so check
+  // whether the token can update any path under sys/mounts (policies may be scoped, e.g. team-*).
+  get canCreateEngine(): boolean {
+    return this.permissions.hasPermissionBeneath('sys/mounts', ['update']);
+  }
 
   // Returns unique engine types matching the current type search text
   get secretEngineArrayByType(): { name: string; icon: string }[] {
@@ -125,6 +141,13 @@ export default class VaultClusterSecretsBackendController extends Controller {
     }
   }
 
+  // Dropdown content unmounts on close, so the input clears but tracked search text would persist.
+  @action
+  clearDropdownSearch(): void {
+    this.typeSearchText = '';
+    this.versionSearchText = '';
+  }
+
   @action
   filterByEngineType(type: string): void {
     if (this.engineTypeFilters.includes(type)) {
@@ -149,6 +172,10 @@ export default class VaultClusterSecretsBackendController extends Controller {
   clearAllFilters(): void {
     this.engineTypeFilters = [];
     this.engineVersionFilters = [];
+    this.resetSearchText();
+  }
+
+  resetSearchText(): void {
     this.pathSearchText = '';
     this.typeSearchText = '';
     this.versionSearchText = '';

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -34,6 +34,7 @@ export type GroupListItem = Pick<Group, 'id' | 'name' | 'type' | 'alias'> & {
 export interface IdentityGroupsIndexModel {
   groups: GroupListItem[];
   listViewConfig: typeof accessIdentityGroupsListViewConfig;
+  canCreateGroup: boolean;
   page: number;
   pageSize: number;
 }
@@ -49,10 +50,14 @@ export default class IdentityGroupsIndexRoute extends Route {
 
   queryParams = {
     page: { refreshModel: true },
+    sortBy: { refreshModel: false },
+    sortOrder: { refreshModel: false },
   };
 
   async model(params: RouteParams) {
     const { page, pageSize } = params;
+    // Creating a group is an update operation on identity/group (no existence check).
+    const { canUpdate: canCreateGroup } = await this.capabilities.for('identityGroup');
 
     try {
       const response = await this.api.identity.groupListById(IdentityApiGroupListByIdListEnum.TRUE);
@@ -104,6 +109,7 @@ export default class IdentityGroupsIndexRoute extends Route {
       return {
         groups,
         listViewConfig,
+        canCreateGroup,
         page: Number(page) || 1,
         pageSize: Number(pageSize) || 10,
       };
@@ -115,16 +121,21 @@ export default class IdentityGroupsIndexRoute extends Route {
           { label: 'Vault', route: 'vault.cluster.dashboard', icon: 'vault' },
           { label: 'Groups' },
         ];
-        return { groups: [], listViewConfig, page: 1, pageSize: Number(pageSize) || 10 };
+        return { groups: [], listViewConfig, canCreateGroup, page: 1, pageSize: Number(pageSize) || 10 };
       }
       throw error;
     }
   }
 
-  resetController(controller: RouteController, isExiting: boolean) {
+  resetController(
+    controller: RouteController & { sortBy: string | undefined; sortOrder: string | undefined },
+    isExiting: boolean
+  ) {
     if (isExiting) {
       controller.page = 1;
       controller.pageSize = 10;
+      controller.sortBy = undefined;
+      controller.sortOrder = undefined;
     }
   }
 

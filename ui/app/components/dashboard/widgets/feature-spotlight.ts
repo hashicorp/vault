@@ -61,6 +61,10 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
     return imageSrc;
   }
 
+  get linkText(): string {
+    return this.currentFeature.linkText ?? 'Learn more';
+  }
+
   get total(): number {
     return this.cards.length;
   }
@@ -91,8 +95,8 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
       uiElement: 'next-button',
       type: 'Button',
       action: 'clicked',
-      cardTitle: this.currentFeature.title,
-      cardIndex: this.currentIndex,
+      object: this.currentFeature.title,
+      elementId: `feature-spotlight-card-${this.currentIndex}`,
     });
   }
 
@@ -106,23 +110,23 @@ export default class DashboardWidgetsFeatureSpotlight extends Component<Args> {
       uiElement: 'back-button',
       type: 'Button',
       action: 'clicked',
-      cardTitle: this.currentFeature.title,
-      cardIndex: this.currentIndex,
+      object: this.currentFeature.title,
+      elementId: `feature-spotlight-card-${this.currentIndex}`,
     });
   }
 
   @action
   trackLearnMore(): void {
     this.analytics.trackEvent(DASHBOARD_FEATURE_SPOTLIGHT_LEARN_MORE, {
-      CTA: 'Learn more',
+      CTA: this.linkText,
       channel: 'webpage',
       location: 'dashboard',
       objectType: 'feature-spotlight-widget',
       uiElement: 'learn-more-link',
       type: 'Link',
       action: 'clicked',
-      cardTitle: this.currentFeature.title,
-      cardIndex: this.currentIndex,
+      object: this.currentFeature.title,
+      elementId: `feature-spotlight-card-${this.currentIndex}`,
     });
   }
 }

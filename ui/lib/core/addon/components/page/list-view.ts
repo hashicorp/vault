@@ -14,6 +14,8 @@ import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { ListViewColumn, ListViewDisplayConfig, ListViewModalConfig } from 'core/types/list-view-config';
 
+type SortDirection = 'asc' | 'desc';
+
 /**
  * @module Page::ListView
  *
@@ -78,13 +80,36 @@ interface Args {
   config: ListViewDisplayConfig;
   /**
    * Raw (unpaginated) data array from the route model. Page::ListView applies
-   * filtering (via config.filter.filterKey) and pagination internally.
+   * filtering (via config.filter.filterKey) and pagination internally unless
+   * the caller has already filtered the model.
    */
   model: unknown[];
+  /**
+   * Search text already applied by the caller, used to select filtered-empty
+   * state.
+   */
+  filterValue?: string;
   /** Current page number. Changes on pagination. */
   page?: number;
   /** Current page size. Comes from the controller query param so it survives route transitions. */
   pageSize?: number;
+  /**
+   * Active sort column key. Comes from the controller sortBy query param so the
+   * sort state is encoded in the URL and survives model refreshes triggered by
+   * the page query param changing. When undefined no sort is applied.
+   */
+  sortBy?: string;
+  /**
+   * Active sort direction. Comes from the controller sortOrder query param.
+   * Defaults to 'asc' when undefined.
+   */
+  sortOrder?: SortDirection;
+  /**
+   * Called when the user clicks a sortable column header. The parent route
+   * template is expected to bubble this up to the controller so the sortBy and
+   * sortOrder query params are updated in the URL.
+   */
+  onSortChange?: (sortBy: string, sortOrder: SortDirection) => void;
 }
 
 export default class PageListViewComponent extends Component<Args> {
@@ -99,6 +124,11 @@ export default class PageListViewComponent extends Component<Args> {
 
   @tracked pageFilter = '';
 
+  // Returns the effective filter value, checking the internal pageFilter state and the external filterValue argument.
+  get filterValue() {
+    return this.pageFilter || this.args.filterValue || '';
+  }
+
   get pageSize() {
     return this.args.pageSize ?? 10;
   }
@@ -108,29 +138,31 @@ export default class PageListViewComponent extends Component<Args> {
   @action
   onFilterChange(value: string | null) {
     this.pageFilter = value ?? '';
-    // Only reset the page QP to 1 when the user is on a page other than 1.
-    // Skipping the transition when already on page 1 prevents a spurious
-    // route re-render (and model re-fetch) every time the filter changes.
-    if ((this.args.page ?? 1) === 1) return;
-    // Wrapped in try/catch because transitionTo({ queryParams }) requires an
-    // active route ("has last route info") — in integration tests and any
-    // render context with no running route it would otherwise throw.
-    try {
-      this.router.transitionTo({ queryParams: { page: 1 } });
-    } catch (_) {
-      // no active route — filter state still updates, QP reset is a no-op
-    }
+    // No router transition needed: paginate() already resets to page 1 when
+    // the active page exceeds the filtered total (page > lastPage → currentPage = 1).
+    // Calling transitionTo({ queryParams: { page: 1 } }) would trigger a full
+    // route model refresh (page has refreshModel: true), which destroys the
+    // component instance and wipes @tracked pageFilter — breaking search from
+    // any page other than page 1.
   }
 
   /**
    * Called by ListTable when the user clicks a pagination control.
-   * Transitions the `page` query param so the route model refreshes and the
-   * URL stays in sync with the displayed page.
+   * Transitions the `page` query param together with the current sortBy/sortOrder
+   * so the URL always carries the full view state (page + sort) as a unit.
+   * Without this, a transitionTo({queryParams:{page:2}}) would drop sortBy/sortOrder
+   * from the URL and reset them to their controller defaults on the next render.
    */
   @action
   onPageChange(page: number) {
     try {
-      this.router.transitionTo({ queryParams: { page } });
+      this.router.transitionTo({
+        queryParams: {
+          page,
+          ...(this.args.sortBy !== undefined ? { sortBy: this.args.sortBy } : {}),
+          ...(this.args.sortOrder !== undefined ? { sortOrder: this.args.sortOrder } : {}),
+        },
+      });
     } catch (_) {
       // no active route (integration test context) — no-op
     }
@@ -164,6 +196,11 @@ export default class PageListViewComponent extends Component<Args> {
   }
 
   @action
+  updateSort(column: string, direction: SortDirection) {
+    this.args.onSortChange?.(column, direction);
+  }
+
+  @action
   async confirmDelete() {
     const item = this.activeModalItem;
     const modal = this.activeModalConfig;
@@ -189,12 +226,48 @@ export default class PageListViewComponent extends Component<Args> {
 
   // ── Computed data ────────────────────────────────────────────────────────────
   /**
+   * Returns the full model array sorted by the active sort column/direction.
+   * sortBy/sortOrder come from URL query params (via @args) so the sort survives
+   * the model refresh triggered when the page query param changes.
+   * Sorting happens before pagination so the entire dataset is ordered globally,
+   * not just the current page's slice.
+   */
+  get sortedModel(): unknown[] {
+    const data = this.args.model;
+    const column = this.args.sortBy;
+    if (!column || !Array.isArray(data)) return data;
+
+    const direction: SortDirection = this.args.sortOrder ?? 'asc';
+
+    return [...(data as Record<string, unknown>[])].sort((a, b) => {
+      const valA = a[column];
+      const valB = b[column];
+
+      if (valA == null && valB == null) return 0;
+      if (valA == null) return 1;
+      if (valB == null) return -1;
+
+      let result: number;
+      if (typeof valA === 'string' && typeof valB === 'string') {
+        // Use natural/numeric collation so values with numbers (e.g. "item-2", "item-10") sort in human order rather than lexicographically.
+        result = valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+      } else {
+        result = valA < valB ? -1 : valA > valB ? 1 : 0;
+      }
+
+      return direction === 'asc' ? result : -result;
+    });
+  }
+
+  /**
    * Applies client-side filtering (via config.filter.filterKey) and pagination
-   * to the raw @model array. Called once per render cycle when model, pageFilter,
-   * or page changes — cheap since paginate() is a pure array operation.
+   * to the sorted model array. Sorting is applied before slicing so page 1
+   * always contains the globally first items under the active sort order.
+   * Called once per render cycle when model, sortColumn, sortDirection,
+   * pageFilter, or page changes — cheap since paginate() is a pure array operation.
    */
   get filteredData() {
-    return paginate(this.args.model as Parameters<typeof paginate>[0], {
+    return paginate(this.sortedModel as Parameters<typeof paginate>[0], {
       page: this.args.page ?? 1,
       pageSize: this.pageSize,
       filter: this.pageFilter || undefined,
@@ -207,11 +280,11 @@ export default class PageListViewComponent extends Component<Args> {
   }
 
   get isFilteredEmpty() {
-    return !!(this.pageFilter && this.filteredData?.length === 0);
+    return !!(this.filterValue && this.filteredData?.length === 0);
   }
 
   get isNoData() {
-    return !this.pageFilter && !this.hasData;
+    return !this.filterValue && !this.hasData;
   }
 
   // ── Column normalization ────────────────────────────────────────────────────

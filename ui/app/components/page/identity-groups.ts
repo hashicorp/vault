@@ -19,6 +19,9 @@ interface Args {
   model: IdentityGroupsIndexModel;
   page: number;
   pageSize: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
 }
 
 export default class PageIdentityGroupsComponent extends Component<Args> {
@@ -28,6 +31,11 @@ export default class PageIdentityGroupsComponent extends Component<Args> {
   @tracked groupToDelete: GroupListItem | null = null;
   // Optimistic local copy — updated on delete so the list updates without a route refresh.
   @tracked localGroups: GroupListItem[] | null = null;
+
+  // Set by the route from the token's capabilities on identity/group.
+  get canCreateGroup(): boolean {
+    return this.args.model.canCreateGroup;
+  }
 
   get groups(): GroupListItem[] {
     return this.localGroups ?? this.args.model.groups;

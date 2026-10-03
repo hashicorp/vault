@@ -237,7 +237,7 @@ module('Unit | Service | analytics', function (hooks) {
       });
 
       test('accept when operator disabled -> persists true but does not start', function (assert) {
-        this.service.startVaultSmAnalytics(false, this.config); // entry point is user preferences
+        this.service.startVaultSmAnalytics(false, this.config); // entry point is preferences page
 
         this.service.recordConsent(true);
 
