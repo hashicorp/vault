@@ -216,4 +216,10 @@ export class SegmentProvider implements AnalyticsProvider {
   trackEvent(eventName: AnalyticsEventName, metadata?: Record<string, unknown>) {
     this.client.track(eventName, { ...this.ibmProperties, ...this.userSpecificProperties, ...metadata });
   }
+
+  // Clears Segment's persisted identity (ajs_user_id + ajs_anonymous_id) so the
+  // next user starts with a fresh identity and is not aliased to this session.
+  reset() {
+    this.client.reset();
+  }
 }

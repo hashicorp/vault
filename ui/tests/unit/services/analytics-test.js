@@ -23,6 +23,7 @@ class ProviderStub {
   start = sinon.stub();
   identify = sinon.stub();
   trackPageView = sinon.stub();
+  reset = sinon.stub();
 }
 
 module('Unit | Service | analytics', function (hooks) {
@@ -39,6 +40,8 @@ module('Unit | Service | analytics', function (hooks) {
   test('#identifyUser passes data to the provider', function (assert) {
     const providerStub = new ProviderStub();
     this.service.provider = providerStub;
+    // identify is only sent once analytics has activated (otherwise it is cached).
+    this.service.activated = true;
 
     const identifier = 'carl';
     const traits = { apples: 'oranges' };
@@ -93,6 +96,8 @@ module('Unit | Service | analytics', function (hooks) {
 
     test('logging works for all public methods', function (assert) {
       this.service.debug = true;
+      // identify logs only once analytics has activated.
+      this.service.activated = true;
 
       this.service.identifyUser('user-123', { role: 'admin' });
       this.service.trackEvent('button-click', { location: 'sidebar' });
@@ -265,6 +270,28 @@ module('Unit | Service | analytics', function (hooks) {
         this.service.startVaultSmAnalytics(true, this.config);
         assert.false(this.service.shouldPromptConsent, 'recorded decline is not treated as undecided');
       });
+
+      // Regression: identify was only sent from the cluster route while analytics
+      // was already active. When consent is accepted AFTER the route loads, the
+      // provider activates via recordConsent — so the identity must be replayed,
+      // otherwise the session sends page events but never an identify call.
+      test('identity cached before consent is applied once consent is accepted', function (assert) {
+        clearConsent();
+        const identifyStub = sinon.stub(SegmentProvider.prototype, 'identify');
+        // Operator on, consent undecided -> banner prompts, analytics not started.
+        this.service.startVaultSmAnalytics(true, this.config);
+        // The cluster route computes the identity while consent is still pending.
+        this.service.identifyUser('vault-abc', { realmName: 'vault' });
+        assert.true(identifyStub.notCalled, 'identify is not sent before analytics activates');
+
+        // User accepts the banner -> analytics activates and the cached identity is sent.
+        this.service.recordConsent(true);
+
+        assert.true(
+          identifyStub.calledOnceWith('vault-abc', { realmName: 'vault' }),
+          'the cached identity is sent exactly once, after consent activates analytics'
+        );
+      });
     });
 
     module('#reset', function () {
@@ -293,6 +320,20 @@ module('Unit | Service | analytics', function (hooks) {
         this.service.reset();
 
         assert.strictEqual(this.service.provider, provider, 'provider unchanged when nothing is running');
+      });
+
+      test('clears the provider identity so the next user is not aliased', function (assert) {
+        const resetStub = sinon.stub(SegmentProvider.prototype, 'reset');
+        setConsent(true);
+        this.service.startVaultSmAnalytics(true, this.config); // starts the provider (adds route listener)
+
+        this.service.reset();
+
+        assert.true(
+          resetStub.calledOnce,
+          'provider.reset() clears the persisted identity (e.g. Segment ajs_user_id/anonymousId)'
+        );
+        assert.false(this.service.activated, 'no longer active');
       });
     });
 
