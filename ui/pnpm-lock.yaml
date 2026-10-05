@@ -342,6 +342,9 @@ importers:
       eslint-plugin-qunit:
         specifier: ~8.1.2
         version: 8.1.2(eslint@8.57.1)
+      eslint-plugin-vault:
+        specifier: file:./eslint-rules
+        version: file:eslint-rules
       execa:
         specifier: ^5.1.1
         version: 5.1.1
@@ -4385,6 +4388,9 @@ packages:
   eslint-plugin-qunit@8.1.2:
     resolution: {integrity: sha512-2gDQdHlQW8GVXD7YYkO8vbm9Ldc60JeGMuQN5QlD48OeZ8znBvvoHWZZMeXjvoDPReGaLEvyuWrDtrI8bDbcqw==}
     engines: {node: ^16.0.0 || ^18.0.0 || >=20.0.0}
+
+  eslint-plugin-vault@file:eslint-rules:
+    resolution: {directory: eslint-rules, type: directory}
 
   eslint-scope@5.1.1:
     resolution: {integrity: sha512-2NxwbF/hZ0KpepYN0cNbo+FN6XoK7GaHlQhgx/hIZl6Va0bF45RQOOwhLIy8lQDbuCiadSLCBnH2CFYquit5bw==}
@@ -14538,6 +14544,8 @@ snapshots:
       requireindex: 1.2.0
     transitivePeerDependencies:
       - eslint
+
+  eslint-plugin-vault@file:eslint-rules: {}
 
   eslint-scope@5.1.1:
     dependencies:

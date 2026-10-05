@@ -18,7 +18,7 @@ module.exports = {
       plugins: [['@babel/plugin-proposal-decorators', { decoratorsBeforeExport: true }]],
     },
   },
-  plugins: ['ember'],
+  plugins: ['ember', 'vault'],
   extends: [
     'eslint:recommended',
     'plugin:ember/recommended',
@@ -29,6 +29,7 @@ module.exports = {
     browser: true,
   },
   rules: {
+    'vault/require-version-guard': 'error',
     'no-console': ['error', { allow: ['warn', 'error', 'info'] }],
     'prefer-const': ['error', { destructuring: 'all' }],
     'ember/no-mixins': 'warn',
@@ -61,6 +62,7 @@ module.exports = {
         './config/**/*.js',
         './lib/*/index.js',
         './server/**/*.js',
+        './eslint-rules/**/*.js',
       ],
       parserOptions: {
         sourceType: 'script',
