@@ -109,9 +109,16 @@ runs:
         GOPRIVATE: ${{ steps.set-up-go-build-context.outputs.is-enterprise == 'true' && 'github.com/hashicorp/*' || '' }}
         # Configure the Git URL override with env vars to avoid poisoning the
         # config with an elevated token.
-        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_COUNT: "3"
         GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token || github.token }}@github.com.insteadOf
         GIT_CONFIG_VALUE_0: https://github.com
+        # Go fetches multi-module repos (e.g. go-secure-stdlib) into a shared VCS cache dir.
+        # Detached auto gc/maintenance after a fetch can rewrite .git/shallow while Go's next
+        # 'git fetch --unshallow' runs, failing with "shallow file has changed since we read it".
+        GIT_CONFIG_KEY_1: gc.auto
+        GIT_CONFIG_VALUE_1: "0"
+        GIT_CONFIG_KEY_2: maintenance.auto
+        GIT_CONFIG_VALUE_2: "false"
       run: |
         make go-mod-download
         du -h -d 1 ${{ steps.set-up-go-metadata.outputs.cache-path }}

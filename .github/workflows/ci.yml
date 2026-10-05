@@ -38,6 +38,21 @@ jobs:
       compute-test-go: ${{ steps.metadata.outputs.compute-test-go }}
       compute-test-ui: ${{ steps.metadata.outputs.compute-test-ui }}
       go-tags: ${{ steps.metadata.outputs.go-tags }}
+      # Space-separated Go module directories to test; empty means every module in go.work.
+      # Changes confined to tools/pipeline only need that module's tests because no other module
+      # depends on it. go_modules ignores tools/pipeline and covers go.work and tools.sh (which pins
+      # gotestsum), so any of those tests everything.
+      go-test-modules: >-
+        ${{
+          (
+            contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'pipeline') &&
+            !contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'go_app') &&
+            !contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'go_modules') &&
+            !contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'go_tests') &&
+            !contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'go_toolchain') &&
+            !contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'test_ci')
+          ) && 'tools/pipeline' || ''
+        }}
       is-draft: ${{ steps.metadata.outputs.is-draft }}
       is-ent-branch: ${{ steps.metadata.outputs.is-ent-branch }}
       is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
@@ -162,6 +177,7 @@ jobs:
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
     name: Run Go tests
     needs: setup
@@ -180,11 +196,13 @@ jobs:
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
+      modules: ${{ needs.setup.outputs.go-test-modules }}
       name: standard
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
       test-timing-cache-key: go-test-timing-standard-${{ needs.setup.outputs.is-ent-branch && 'ent' || 'ce' }}
-      total-runners: 16
+      # Test runners cannot be less than 2.
+      total-runners: ${{ needs.setup.outputs.go-test-modules == '' && '16' || '2' }}
     secrets: inherit
 
   test-go-testonly:
@@ -228,6 +246,7 @@ jobs:
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
       )
     name: Run Go tests with data race detection
@@ -250,10 +269,12 @@ jobs:
       name: race
       go-arch: amd64
       go-tags: ${{ needs.setup.outputs.go-tags }}
+      modules: ${{ needs.setup.outputs.go-test-modules }}
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
       test-timing-cache-key: go-test-timing-race-${{ needs.setup.outputs.is-ent-branch && 'ent' || 'ce' }}
-      total-runners: 16
+      # Test runners cannot be less than 2.
+      total-runners: ${{ needs.setup.outputs.go-test-modules == '' && '16' || '2' }}
     secrets: inherit
 
   test-go-fips:
@@ -266,6 +287,7 @@ jobs:
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
       ) &&
       needs.setup.outputs.is-ent-branch == 'true' &&
@@ -290,10 +312,12 @@ jobs:
       name: fips
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_3'
+      modules: ${{ needs.setup.outputs.go-test-modules }}
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
       test-timing-cache-key: go-test-timing-fips
-      total-runners: 16
+      # Test runners cannot be less than 2.
+      total-runners: ${{ needs.setup.outputs.go-test-modules == '' && '16' || '2' }}
     secrets: inherit
 
   test-ui:
@@ -319,9 +343,268 @@ jobs:
       is-ent-branch: ${{ needs.setup.outputs.is-ent-branch }}
     secrets: inherit
 
+  check-go:
+    name: Check Go modules and generated code
+    # Make sure that our Go modules, workspaces, and generated code are correct.
+    # We target this whenever something changes anything related to Go, rather
+    # than just on mod/workspace changes, because code changes can break these
+    # too: removing an import can leave a module untidy, and changing an enum
+    # can leave its generated code stale.
+    #
+    # The pipeline tool doesn't know about Vault, so each step catches its
+    # failure and explains how to fix it in Vault.
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
+    needs: setup
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-build) }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      GOPRIVATE: github.com/hashicorp/*
+      # Directory globs of the modules that other projects import. Go ignores replace directives
+      # outside the main module, so these must build against the released versions of the workspace
+      # modules they require rather than replacing them with the code on the branch.
+      PUBLISHED_GO_MODULES: api api/auth/* sdk
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.setup.outputs.checkout-ref }}
+      - if: needs.setup.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: needs.setup.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          # Don't export the token to every later step's environment, so go generate doesn't get it.
+          # This limits its exposure rather than isolating it: the setup actions below still use it,
+          # and on a cache miss they run Makefile targets from the pull request.
+          exportEnv: false
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          cache: fetch-only
+      - id: install-tools
+        uses: ./.github/actions/install-tools # pinned enumer
+        with:
+          cache: fetch-only
+      - name: Check go.work and replace directives
+        # Only module files can break this check. The pipeline group stands in for tools/pipeline's
+        # go.mod, which go_modules ignores. test_ci keeps it exercised when the job changes.
+        if: |
+          !cancelled() && steps.install-tools.outcome == 'success' &&
+          (
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+            contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
+          )
+        run: |
+          set -euo pipefail
+          # read doesn't expand globs, so the patterns reach the pipeline tool as written.
+          read -r -a published <<< "$PUBLISHED_GO_MODULES"
+          published_flags=()
+          for pattern in "${published[@]}"; do
+            published_flags+=(--published "$pattern")
+          done
+          if pipeline go check workspace ${{ runner.debug && '--log debug' || '' }} \
+            "${published_flags[@]}" --format markdown | tee -a "$GITHUB_STEP_SUMMARY"; then
+            exit 0
+          fi
+
+          # The fix depends on each problem, so list them in the annotation too. Rerunning is cheap:
+          # the check only reads go.work and go.mod files.
+          problems=$(pipeline go check workspace "${published_flags[@]}" --format json 2> /dev/null |
+            jq -r '.violations[]? | "- \(.module): \(.detail)"' || true)
+          what_to_do=$(cat <<'EOF'
+          Fix each problem by its kind:
+
+          - "is committed but go.work has no 'use ...'": add the module to the workspace with `go work use ./<dir>`, or delete the stray go.mod.
+          - "requires ... without a replace" or "replace ... resolves to ...": modules that aren't published must build against this branch's code of the workspace modules they require. Add the replace that the problem names to the module's go.mod, then run `make go-mod-tidy`.
+          - "published module replaces ...": other projects import the published modules (PUBLISHED_GO_MODULES in .github/workflows/ci.yml) and Go ignores their replace directives, so they must build against released versions. Run `go mod edit -dropreplace=<module>` in the published module's directory, then `make go-mod-tidy`. If it needs a change that isn't released yet, release the module it requires first, then require that version with `GOWORK=off go get <module>@<version>`.
+
+          If no problems are listed, the check couldn't run. The step's log has the error.
+          EOF
+          )
+          printf '\n### What to do\n\n%s\n' "$what_to_do" >> "$GITHUB_STEP_SUMMARY"
+          annotation=$(printf 'Problems:\n%s\n\nWhat to do:\n%s' "${problems:-(none listed)}" "$what_to_do")
+          annotation=${annotation//'%'/'%25'}
+          echo "::error title=go.work or a go.mod file is wrong::${annotation//$'\n'/%0A}"
+          exit 1
+      - name: Check that every Go module is tidy
+        if: ${{ !cancelled() && steps.install-tools.outcome == 'success' }}
+        env:
+          # Credentials only for this step: tidy may fetch go.mod files the cache lacks.
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: url.https://user:${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com
+        run: |
+          set -euo pipefail
+          if pipeline go check tidy ${{ runner.debug && '--log debug' || '' }} --format markdown |
+            tee -a "$GITHUB_STEP_SUMMARY"; then
+            exit 0
+          fi
+
+          what_to_do=$(cat <<'EOF'
+          Run `make go-mod-tidy` and commit the go.mod and go.sum changes. The step's log and the job summary show the change each module needs.
+
+          A module with an "error" result couldn't be tidied at all. Run `GOWORK=off go mod tidy` in its directory to see why. Usually it requires a version, or imports a package, that doesn't exist.
+
+          If no table was printed, the check couldn't run. The step's log has the error.
+          EOF
+          )
+          printf '\n### What to do\n\n%s\n' "$what_to_do" >> "$GITHUB_STEP_SUMMARY"
+          what_to_do=${what_to_do//'%'/'%25'}
+          echo "::error title=Go modules aren't tidy::${what_to_do//$'\n'/%0A}"
+          exit 1
+      - name: Check that published Go modules build with this branch
+        # Published modules are tested against the released versions of the workspace modules they
+        # require, which is what their importers get. Build them, and compile their tests, against
+        # this branch's code too, so a change there can't break their next release unnoticed.
+        if: ${{ !cancelled() && steps.install-tools.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          read -r -a published <<< "$PUBLISHED_GO_MODULES"
+          # Match a module directory like path.Match does: the glob must match and '*' can't cross
+          # a '/', so the directory has as many '/' as the pattern.
+          is_published() {
+            local pattern
+            for pattern in "${published[@]}"; do
+              # shellcheck disable=SC2053 # pattern is a glob
+              if [[ "$1" == $pattern ]] && [ "${1//[^\/]/}" = "${pattern//[^\/]/}" ]; then
+                return 0
+              fi
+            done
+            return 1
+          }
+
+          failed=()
+          while IFS= read -r dir; do
+            if ! is_published "$dir"; then
+              continue
+            fi
+            echo "::group::$dir"
+            # The go.work in the repository root is in effect, so required workspace modules
+            # resolve to their directories. -exec /usr/bin/true compiles test binaries without
+            # running them. There are no build tags, as for the modules' importers.
+            if ! (cd "$dir" && go build ./... && go test -vet=off -run '^$' -exec /usr/bin/true ./...); then
+              failed+=("$dir")
+            fi
+            echo "::endgroup::"
+          done < <(pipeline go list modules --format json | jq -r '.modules[].dir')
+
+          if [ "${#failed[@]}" -eq 0 ]; then
+            exit 0
+          fi
+
+          problem="These published modules don't build, or their tests don't compile, against this branch's code of the workspace modules they require: ${failed[*]}. The compiler errors are in the step's log."
+          what_to_do=$(cat <<'EOF'
+          Their own tests use the released versions of the modules they require, so those still pass, but their next release would be broken. Usually a change to api removed or changed something that sdk or an api/auth/* module uses.
+
+          Keep the change backward compatible, or update the published module so it builds with it. To reproduce, run `go build ./... && go test -vet=off -run '^$' -exec /usr/bin/true ./...` in the module's directory with the repository's go.work in place.
+          EOF
+          )
+          printf '# Published Go module build\n\n%s\n\n### What to do\n\n%s\n' "$problem" "$what_to_do" >> "$GITHUB_STEP_SUMMARY"
+          annotation=$(printf '%s\n\nWhat to do:\n%s' "$problem" "$what_to_do")
+          annotation=${annotation//'%'/'%25'}
+          echo "::error title=Published Go modules don't build with this branch::${annotation//$'\n'/%0A}"
+          exit 1
+      - name: Check that the Go tests cover every module
+        # The Go test jobs split the packages that 'pipeline go list packages' lists across runners,
+        # then test each runner's packages from the module 'pipeline go group packages' puts them in.
+        # Pull requests that only change tools/pipeline only test that module, so make sure here
+        # that listing and grouping still cover every module.
+        if: ${{ !cancelled() && steps.install-tools.outcome == 'success' }}
+        env:
+          GO_TAGS: ${{ needs.setup.outputs.go-tags }}
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/go-test-coverage"
+          mkdir -p "$dir"
+          pipeline go list modules --format json | jq '[.modules[].dir] | sort' > "$dir/modules.json"
+          pipeline go list packages --format json --tags "$GO_TAGS" > "$dir/packages.json"
+          jq -r '.modules[].packages[]' "$dir/packages.json" |
+            pipeline go group packages --format json - > "$dir/grouped.json"
+          normalize='[.modules[] | select(.packages | length > 0) | {dir, packages: (.packages | sort)}] | sort_by(.dir)'
+          jq -S "$normalize" "$dir/packages.json" > "$dir/listed-normalized.json"
+          jq -S "$normalize" "$dir/grouped.json" > "$dir/grouped-normalized.json"
+
+          problems=()
+          missing=$(jq -r --slurpfile listed "$dir/listed-normalized.json" \
+            '. - [$listed[0][].dir] | join(" ")' "$dir/modules.json")
+          if [ -n "$missing" ]; then
+            problems+=("- No packages were listed for these go.work modules: $missing")
+          fi
+          if ! diff -u "$dir/listed-normalized.json" "$dir/grouped-normalized.json"; then
+            problems+=("- Grouping the listed packages doesn't put each one back in its module. The step's log has the difference.")
+          fi
+          if [ "${#problems[@]}" -eq 0 ]; then
+            echo "Listing and grouping cover all $(jq length "$dir/modules.json") modules."
+            exit 0
+          fi
+
+          what_to_do=$(cat <<'EOF'
+          The Go test jobs would silently skip tests. `pipeline go list packages` must list at least one package for every module in go.work, and `pipeline go group packages` must put each listed package back in the module it came from.
+
+          - If this pull request changes tools/pipeline, fix `go list packages` or `go group packages` in tools/pipeline/internal/pkg/golang.
+          - If it adds a module to go.work, make sure the module has at least one Go package.
+          EOF
+          )
+          problem=$(printf '%s\n' "${problems[@]}")
+          printf '# Go test coverage of modules\n\n%s\n\n### What to do\n\n%s\n' "$problem" "$what_to_do" >> "$GITHUB_STEP_SUMMARY"
+          annotation=$(printf 'Problems:\n%s\n\nWhat to do:\n%s' "$problem" "$what_to_do")
+          annotation=${annotation//'%'/'%25'}
+          echo "::error title=The Go tests don't cover every module::${annotation//$'\n'/%0A}"
+          exit 1
+      - name: Check that generated code is up to date
+        # No credentials in the environment: go generate runs commands written in the pull request.
+        # No build tags yet: enumer can't emit build constraints, so enterprise-only packages
+        # can't be regenerated reproducibly. When that's fixed, add
+        # --tags '${{ needs.setup.outputs.go-tags }}'.
+        # This runs last because it leaves regenerated files in the working tree.
+        if: ${{ !cancelled() && steps.install-tools.outcome == 'success' }}
+        run: |
+          set -euo pipefail
+          if pipeline go check generate ${{ runner.debug && '--log debug' || '' }} --format markdown |
+            tee -a "$GITHUB_STEP_SUMMARY"; then
+            exit 0
+          fi
+
+          what_to_do=$(cat <<'EOF'
+          Run `make tools tools-pipeline`, then `pipeline go check generate`, and commit the files it changes. The check runs `go generate ./...` in every module the same way CI does and leaves the regenerated files in your working tree. The step's log and the job summary list each change. By result:
+
+          - "modified", "added" or "deleted": commit the change.
+          - "added-ignored": a generator wrote a file that git ignores, so builds that skip generation never see it. Commit it, e.g. by un-ignoring it, or stop generating it.
+          - "error": a go:generate directive failed in that module. The detail has its output.
+
+          If no table was printed, the check couldn't run. The step's log has the error.
+          EOF
+          )
+          printf '\n### What to do\n\n%s\n' "$what_to_do" >> "$GITHUB_STEP_SUMMARY"
+          what_to_do=${what_to_do//'%'/'%25'}
+          echo "::error title=Generated Go code is out of date::${what_to_do//$'\n'/%0A}"
+          exit 1
+
   tests-completed:
     needs:
       - setup
+      - check-go
       - test-autopilot-upgrade
       - test-go
       - test-go-testonly
@@ -392,6 +675,7 @@ jobs:
           needs.setup.outputs.workflow-trigger == 'push' &&
           (
             needs.setup.result == 'failure' ||
+            needs.check-go.result == 'failure' ||
             needs.test-autopilot-upgrade.result == 'failure' ||
             needs.test-go.result == 'failure' ||
             needs.test-go-race.result == 'failure' ||
@@ -420,6 +704,7 @@ jobs:
                   type: mrkdwn
                   text: |
                     ${{ needs.setup.result                  == 'failure' && ':x: Setup'             || '' }}
+                    ${{ needs.check-go.result               == 'failure' && ':x: Go module and generated code checks' || '' }}
                     ${{ needs.test-autopilot-upgrade.result == 'failure' && ':x: Autopilot upgrade' || '' }}
                     ${{ needs.test-go.result                == 'failure' && ':x: Go tests'          || '' }}
                     ${{ needs.test-go-testonly.result       == 'failure' && ':x: Go testonly tests' || '' }}

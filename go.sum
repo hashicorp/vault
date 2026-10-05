@@ -885,8 +885,6 @@ github.com/hashicorp/vault-plugin-secrets-terraform v0.15.0 h1:zY6K764j17xNX6n75
 github.com/hashicorp/vault-plugin-secrets-terraform v0.15.0/go.mod h1:sXFZp5LoGcd6dSBjQ0C8cQe8xhjcSX5EsA6IUSQZLmI=
 github.com/hashicorp/vault-testing-stepwise v0.3.4 h1:1aPfI/KLAqQlC+dMTQL5Jol+Z25JEqFaA0dGMRfDJZk=
 github.com/hashicorp/vault-testing-stepwise v0.3.4/go.mod h1:pvd92mdMPQMvmDVUmWRWKWyp5Q16ckDF0Mu+qGLcCFQ=
-github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77 h1:Y/+BtwxmRak3Us9jrByARvYW6uNeqZlEpMylIdXVIjY=
-github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77/go.mod h1:a2crHoMWwY6aiL8GWT8hYj7vKD64uX0EdRPbnsHF5wU=
 github.com/hashicorp/yamux v0.1.2 h1:XtB8kyFOyHXYVFnwT5C3+Bdo8gArse7j2AQ0DA0Uey8=
 github.com/hashicorp/yamux v0.1.2/go.mod h1:C+zze2n6e/7wshOZep2A70/aQU6QBRWJO/G6FT1wIns=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=

@@ -38,6 +38,13 @@ on:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
+      modules:
+        description: |
+          Space-separated Go module directories, relative to the repository root, whose packages
+          are tested. When empty, every module in go.work is tested.
+        required: false
+        default: ''
+        type: string
       name:
         description: |
           A unique identifier to use for labeling artifacts and workflows. It is commonly used to
@@ -137,6 +144,7 @@ jobs:
           secrets: |
             kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
             kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
             kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
             kv/data/github/${{ github.repository }}/ibm-license license_1 | VAULT_LICENSE_IBM;
@@ -148,6 +156,10 @@ jobs:
       - uses: ./.github/actions/install-tools # for gotestsum
         with:
           cache: fetch-only
+      # Every matrix variant needs the pipeline tool, including testonly, to group packages by module.
+      - uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ steps.global-metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       - run: mkdir -p ${{ steps.local-metadata.outputs.go-test-dir }}
       - if: inputs.test-timing-cache-restore || inputs.test-timing-cache-save
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -166,14 +178,30 @@ jobs:
             jq . "$file" || rm "$file"
           ' shell {} \; > /dev/null 2>&1
       - if: ${{ !inputs.testonly }}
+        name: List Go test packages
+        env:
+          # tools/pipeline needs GOPRIVATE on every branch. This step only lists packages.
+          GOPRIVATE: github.com/hashicorp/*
+          GO_TAGS: ${{ inputs.go-tags }}
+          MODULES: ${{ inputs.modules }}
+        run: |
+          set -euo pipefail
+          module_flags=()
+          # shellcheck disable=SC2086 # MODULES is a space-separated list
+          for module in $MODULES; do
+            module_flags+=(--module "$module")
+          done
+          pipeline go list packages ${{ runner.debug && '--log debug' || '' }} \
+            --format json --tags "$GO_TAGS" "${module_flags[@]}" |
+            jq -r '.modules[].packages[]' > packages.txt
+          wc -l packages.txt
+      - if: ${{ !inputs.testonly }}
         name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
-        env:
-          GOPRIVATE: ${{ steps.global-metadata.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
-            make all-packages | grep -v "_binary\|testonly\|vault/integ\|vault/external_tests/blackbox" | gotestsum tool ci-matrix --debug \
+            grep -v "_binary\|testonly\|vault/integ\|vault/external_tests/blackbox" packages.txt | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files '${{ steps.local-metadata.outputs.go-test-dir }}/*.json' > matrix.json
           )
@@ -198,7 +226,7 @@ jobs:
         name: Capture list of binary tests
         id: list-binary-tests
         run: |
-          LIST="$(make all-packages | grep "_binary" | xargs)"
+          LIST="$(grep "_binary" packages.txt | xargs || true)"
           echo "list=$LIST" >> "$GITHUB_OUTPUT"
       - name: Build complete matrix
         id: build
@@ -216,6 +244,16 @@ jobs:
               }]' matrix.json > new-matrix.json
               matrix_file="new-matrix.json"
             fi
+            # Drop partitions that ci-matrix leaves empty when there are fewer packages than partitions.
+            jq '.include |= map(select(.packages != ""))' "$matrix_file" > pruned-matrix.json
+            # Group each partition's packages by Go module so runners can test each module from its own
+            # directory with GOWORK=off.
+            jq -c '.include[]' pruned-matrix.json | while read -r partition; do
+              modules=$(jq -r '.packages' <<< "$partition" | tr ' ' '\n' |
+                pipeline go group packages --format json - | jq -c '.modules')
+              jq -c --argjson modules "$modules" '. + {modules: $modules}' <<< "$partition"
+            done | jq -s '{include: .}' > grouped-matrix.json
+            matrix_file="grouped-matrix.json"
             # convert the json to a map keyed by id
             (
               echo -n "matrix="
@@ -244,6 +282,8 @@ jobs:
         id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
       GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
+      # Skip go generate. Generated code should be checked in.
+      SKIP_GEN: "1"
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     outputs:
       go-test-results-download-pattern: ${{ steps.metadata.outputs.go-test-results-download-pattern }}
@@ -346,7 +386,7 @@ jobs:
           GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
-          time make prep enthsmdev
+          time make enthsmdev
           # The subsequent build of vault will blow away the bin folder
           mv bin/vault vault-hsm-binary
       - if: inputs.binary-tests && matrix.id == inputs.total-runners
@@ -356,7 +396,7 @@ jobs:
           GOPRIVATE: ${{ needs.test-matrix.outputs.is-ent-branch == 'true' && 'github.com/hashicorp/*' || '' }}
         run: |
           set -exo pipefail
-          time make prep dev
+          time make dev
           mv bin/vault vault-binary
       - if: inputs.binary-tests && matrix.id == inputs.total-runners
         id: build-docker-image
@@ -394,15 +434,17 @@ jobs:
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
         env:
           COMMIT_SHA: ${{ github.sha }}
+          # Pass this runner's modules through the environment. Inlining JSON into the script leaves
+          # it unquoted, and bash brace-expands it. Only this runner's slice keeps the variable well
+          # under Linux's 128 KiB limit for one environment string.
+          MODULES: ${{ toJSON(fromJSON(needs.test-matrix.outputs.matrix)[matrix.id].modules) }}
+          GOTESTSUM_JSONFILE: ${{ steps.metadata.outputs.gotestsum-jsonfile }}
+          GOTESTSUM_JUNITFILE: ${{ steps.metadata.outputs.gotestsum-junitfile }}
+          GOTESTSUM_TIMING_EVENTS: ${{ steps.metadata.outputs.gotestsum-timing-events }}
         run: |
           set -exo pipefail
 
-          # Build the dynamically generated source files.
-          make prep
-
-          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
-
-          if [ -z "$packages" ]; then
+          if [ "$(jq 'length' <<< "$MODULES")" -eq 0 ]; then
             echo "no test packages to run"
             exit 1
           fi
@@ -456,20 +498,80 @@ jobs:
           mkdir -p "$VAULT_TEST_LOG_DIR"
           unset VAULT_ADDR
           export GOWORK=off
-          # shellcheck disable=SC2086 # can't quote RERUN_FAILS
-          GOARCH=${{ inputs.go-arch }} \
-            gotestsum --format=short-verbose \
-              --junitfile '${{ steps.metadata.outputs.gotestsum-junitfile }}' \
-              --jsonfile '${{ steps.metadata.outputs.gotestsum-jsonfile }}' \
-              --jsonfile-timing-events '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
-              $RERUN_FAILS \
-              --packages "$packages" \
-              -- \
-              $package_parallelism \
-              -tags "${{ inputs.go-tags }}" \
-              -timeout=${{ inputs.go-test-timeout }} \
-              -parallel="$test_parallelism" \
-              ${{ inputs.extra-flags }} \
+          repo_root=$(pwd)
+          jsonfile="${repo_root}/${GOTESTSUM_JSONFILE}"
+          timing_events="${repo_root}/${GOTESTSUM_TIMING_EVENTS}"
+          junit_base="${repo_root}/${GOTESTSUM_JUNITFILE}"
+          : > "$jsonfile"
+          : > "$timing_events"
+
+          # Run each module's tests from its own directory so Go uses that module's go.mod and go.sum.
+          # Per-module JSON and timing events are concatenated into the files later steps read;
+          # each module gets its own JUnit file. The modules are read from fd 3 so the tests can't
+          # consume the list from stdin.
+          failed_modules=()
+          while IFS=$'\t' read -r -u 3 dir packages; do
+            if [ "$dir" = "." ]; then slug=root; else slug="${dir//\//-}"; fi
+            goprivate="${GOPRIVATE:-}"
+            # tools/pipeline depends on a private module on every branch. Its modules come from the
+            # shared cache; this keeps Go from asking public proxies about private paths on a miss.
+            if [ "$dir" = "tools/pipeline" ]; then goprivate='github.com/hashicorp/*'; fi
+
+            # Load the packages and their test dependencies before testing them. -mod=mod lets Go
+            # record requirements a stale go.mod or go.sum is missing, so drift doesn't block the
+            # tests; the tidy check in ci.yml is what enforces tidy modules. A module that still can't
+            # load makes gotestsum report "0 tests, 1 error" without saying why, so we surface Go's
+            # error as an annotation and skip the module's tests.
+            # shellcheck disable=SC2086 # can't quote packages
+            if ! load_err=$(cd "$dir" && GOARCH=${{ inputs.go-arch }} GOPRIVATE="$goprivate" \
+                go list -mod=mod -deps -test -tags "${{ inputs.go-tags }}" $packages 2>&1 >/dev/null); then
+              echo "::error title=Go module '${dir}' failed to load::${load_err//$'\n'/%0A}"
+              failed_modules+=("${dir} (failed to load packages; see the annotation)")
+              git checkout -- "${dir}/go.mod" "${dir}/go.sum"
+              continue
+            fi
+            if ! git diff --quiet -- "${dir}/go.mod" "${dir}/go.sum"; then
+              echo "::warning title=Go module '${dir}' isn't tidy::Its go.mod or go.sum is missing requirements. Running its tests with the updated files; run \`make go-mod-tidy\` and commit the changes."
+              git --no-pager diff -- "${dir}/go.mod" "${dir}/go.sum"
+            fi
+
+            module_json=$(mktemp)
+            module_timing=$(mktemp)
+            # shellcheck disable=SC2086 # can't quote RERUN_FAILS, package_parallelism, extra-flags
+            if ! (
+              cd "$dir"
+              GOARCH=${{ inputs.go-arch }} GOPRIVATE="$goprivate" \
+                gotestsum --format=short-verbose \
+                  --junitfile "${junit_base%.xml}-${slug}.xml" \
+                  --jsonfile "$module_json" \
+                  --jsonfile-timing-events "$module_timing" \
+                  $RERUN_FAILS \
+                  --packages "$packages" \
+                  -- \
+                  $package_parallelism \
+                  -mod=mod \
+                  -tags "${{ inputs.go-tags }}" \
+                  -timeout=${{ inputs.go-test-timeout }} \
+                  -parallel="$test_parallelism" \
+                  ${{ inputs.extra-flags }}
+            ); then
+              echo "::error title=Go module '${dir}' tests failed::gotestsum exited non-zero for module '${dir}'"
+              failed_modules+=("${dir} (tests failed)")
+            fi
+            cat "$module_json" >> "$jsonfile"
+            cat "$module_timing" >> "$timing_events"
+            rm -f "$module_json" "$module_timing"
+            # Undo -mod=mod's edits so later steps, like the Go module cache save, see the committed files.
+            git checkout -- "${dir}/go.mod" "${dir}/go.sum"
+          done 3< <(jq -r '.[] | [.dir, (.packages | join(" "))] | @tsv' <<< "$MODULES")
+
+          if [ "${#failed_modules[@]}" -gt 0 ]; then
+            {
+              echo "### Failed Go modules (${{ inputs.name }}, ${{ matrix.id }})"
+              printf -- '- %s\n' "${failed_modules[@]}"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
       - if: github.repository == 'hashicorp/vault-enterprise' && (success() || failure())
         name: Upload test results to Instana
         continue-on-error: true
@@ -510,7 +612,14 @@ jobs:
           if [[ ${{ github.repository }} == 'hashicorp/vault' || ${{ github.repository }} == 'hashicorp/vault-enterprise' ]]; then
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
-          datadog-ci junit upload --service "$GITHUB_REPOSITORY" '${{ steps.metadata.outputs.gotestsum-junitfile }}'
+          junit_base='${{ steps.metadata.outputs.gotestsum-junitfile }}'
+          shopt -s nullglob
+          junit_files=("${junit_base%.xml}"-*.xml)
+          if [ "${#junit_files[@]}" -eq 0 ]; then
+            echo "no JUnit files to upload"
+            exit 0
+          fi
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" "${junit_files[@]}"
       - if: success() || failure()
         name: Archive test logs
         id: archive-test-logs
@@ -653,13 +762,21 @@ jobs:
           path: ${{ steps.metadata.outputs.failure-summary-file-name }}
       - if: inputs.name == 'standard' && contains(inputs.go-tags, 'enterprise')
         name: Compile tests without enterprise tag to make sure they're backportable
+        env:
+          MODULES: ${{ toJSON(fromJSON(needs.test-matrix.outputs.matrix)[matrix.id].modules) }}
         run: |
-          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
-          # shellcheck disable=SC2086 # can't quote packages
-          cepackages=$(go list -e -json -tags testonly ${packages} |
-            jq -r 'select(.TestGoFiles|length>0) | select(.Module.Path == "github.com/hashicorp/vault") | .Dir')
-          # shellcheck disable=SC2086 # can't quote cepackages
-          GOWORK=off go test -o /dev/null -c ${cepackages}
+          set -euo pipefail
+          # -mod=mod keeps go.mod or go.sum drift from failing this step; ci.yml's tidy check enforces it.
+          while IFS=$'\t' read -r -u 3 dir packages; do
+            # shellcheck disable=SC2086 # can't quote packages
+            test_dirs=$(cd "$dir" && GOWORK=off go list -mod=mod -e -json -tags testonly $packages |
+              jq -r 'select(.TestGoFiles|length>0) | .Dir')
+            if [ -n "$test_dirs" ]; then
+              # shellcheck disable=SC2086 # can't quote test_dirs
+              (cd "$dir" && GOWORK=off go test -mod=mod -o /dev/null -c $test_dirs)
+            fi
+            git checkout -- "${dir}/go.mod" "${dir}/go.sum"
+          done 3< <(jq -r '(. // [])[] | [.dir, (.packages | join(" "))] | @tsv' <<< "$MODULES")
 
   status:
     # Perform final data aggregation and determine overall status

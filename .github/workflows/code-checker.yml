@@ -12,6 +12,11 @@ concurrency:
   group: ${{ github.head_ref || github.run_id }}-lint
   cancel-in-progress: true
 
+env:
+  # Make targets that depend on prep don't regenerate code. Generated code is committed and checked
+  # by ci.yml's check-go job.
+  SKIP_GEN: "1"
+
 jobs:
   setup:
     name: Setup
@@ -178,7 +183,7 @@ jobs:
         with:
           cache: fetch-only
       - name: Check generate delta
-        run: make prep check-proto-delta
+        run: make check-proto-delta
 
   format:
     name: Format
@@ -216,7 +221,7 @@ jobs:
         with:
           cache: fetch-only
       - name: Go format
-        run: make prep check-go-fmt
+        run: make check-go-fmt
       - name: Protobuf format
         run: |
           echo "Using buf version $(buf --version)"
