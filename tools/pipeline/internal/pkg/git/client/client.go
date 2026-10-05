@@ -19,8 +19,11 @@ import (
 
 // Client is the local git client.
 type Client struct {
-	Token  string
-	Host   string
+	Token string
+	Host  string
+	// Dir is the working directory for git commands. When empty, commands run
+	// in the current process's working directory.
+	Dir    string
 	config map[string]string
 }
 
@@ -80,6 +83,13 @@ func WithConfig(config map[string]string) NewClientOpt {
 	}
 }
 
+// WithDir sets the working directory for git commands in NewClient()
+func WithDir(dir string) NewClientOpt {
+	return func(client *Client) {
+		client.Dir = dir
+	}
+}
+
 // WithLoadTokenFromEnv sets the Token from known env vars in NewClient()
 func WithLoadTokenFromEnv() NewClientOpt {
 	return func(client *Client) {
@@ -105,8 +115,12 @@ func (c *Client) Exec(ctx context.Context, subCmd string, opts OptStringer) (*Ex
 
 	cmd := exec.Command("git", append([]string{subCmd}, opts.Strings()...)...)
 	cmd.Env = env
+	cmd.Dir = c.Dir
 	res.Cmd = cmd.String()
 	ctx = slogctx.Append(ctx, slog.String("cmd", cmd.String()))
+	if c.Dir != "" {
+		ctx = slogctx.Append(ctx, slog.String("dir", c.Dir))
+	}
 	slog.Default().DebugContext(ctx, "executing git command")
 	var err error
 	res.Stdout, err = cmd.Output()
