@@ -636,8 +636,8 @@ ed25519 and ml-dsa.`,
 
 			parameterSetParam: {
 				Type:        framework.TypeString,
-				Default:     "44",
-				Description: `The parameter set to use with ML-DSA keys; defaults to 44. Valid values are 44, 65, and 87.`,
+				Default:     certutil.MLDSA44,
+				Description: `The parameter set to use with ML-DSA keys; defaults to ml-dsa-44. Valid values are ml-dsa-44, ml-dsa-65, and ml-dsa-87.`,
 			},
 
 			"signature_bits": {

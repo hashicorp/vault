@@ -64,10 +64,10 @@ is required. Ignored for other types.`,
 			},
 			parameterSetParam: {
 				Type:    framework.TypeString,
-				Default: "44",
+				Default: certutil.MLDSA44,
 				Description: `The parameter set to use for ML-DSA keys; defaults to 44. Valid values are
-				44, 65, and 87.`,
-				AllowedValues: []interface{}{"44", "65", "87"},
+				ml-dsa-44, ml-dsa-65, and ml-dsa-87.`,
+				AllowedValues: []interface{}{certutil.MLDSA44, certutil.MLDSA65, certutil.MLDSA87},
 			},
 		},
 
@@ -101,10 +101,10 @@ is required. Ignored for other types.`,
 							},
 							parameterSetParam: {
 								Type:    framework.TypeString,
-								Default: "44",
-								Description: `The parameter set to use for ML-DSA keys; defaults to 44. Valid values are
-				44, 65, and 87. Only valid for ML-DSA keys.`,
-								AllowedValues: []interface{}{"44", "65", "87"},
+								Default: certutil.MLDSA44,
+								Description: `The parameter set to use for ML-DSA keys; defaults to ml-dsa-44. Valid values are
+				ml-dsa-44, ml-dsa-65, and ml-dsa-87. Only valid for ML-DSA keys.`,
+								AllowedValues: []interface{}{certutil.MLDSA44, certutil.MLDSA65, certutil.MLDSA87},
 							},
 						},
 					}},

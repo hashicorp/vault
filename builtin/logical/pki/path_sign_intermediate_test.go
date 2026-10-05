@@ -365,7 +365,7 @@ func TestSignIntermediate_MLDSA(t *testing.T) {
 	resp, err := CBWrite(bRoot, sRoot, "root/generate/internal", map[string]interface{}{
 		"common_name":   "ML-DSA Root CA",
 		"key_type":      "ml-dsa",
-		"parameter_set": "44",
+		"parameter_set": "ml-dsa-44",
 		"ttl":           "87600h",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to generate ML-DSA-44 root CA")
@@ -388,7 +388,7 @@ func TestSignIntermediate_MLDSA(t *testing.T) {
 	resp, err = CBWrite(bInt, sInt, "intermediate/generate/internal", map[string]interface{}{
 		"common_name":   "ML-DSA Intermediate CA",
 		"key_type":      "ml-dsa",
-		"parameter_set": "65",
+		"parameter_set": "ml-dsa-65",
 	})
 	requireSuccessNonNilResponse(t, resp, err, "failed to generate ML-DSA-65 intermediate CSR")
 	intCSR := resp.Data["csr"].(string)
@@ -436,7 +436,7 @@ func TestSignIntermediate_MLDSA(t *testing.T) {
 		"allow_any_name": true,
 		"max_ttl":        "1h",
 		"key_type":       "ml-dsa",
-		"parameter_set":  "65",
+		"parameter_set":  "ml-dsa-65",
 	})
 	require.NoError(t, err, "failed to create ML-DSA leaf role")
 
