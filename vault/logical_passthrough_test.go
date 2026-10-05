@@ -199,6 +199,31 @@ func TestPassthroughBackend_List(t *testing.T) {
 	test(b)
 }
 
+// TestPassthroughBackend_List_ConsecutiveSlashes checks that paths with
+// consecutive slashes are normalised on write so list never returns "/".
+func TestPassthroughBackend_List_ConsecutiveSlashes(t *testing.T) {
+	b := testPassthroughBackend()
+
+	req := logical.TestRequest(t, logical.UpdateOperation, "folder//secret")
+	req.Data["value"] = "test"
+	storage := req.Storage
+	if _, err := b.HandleRequest(context.Background(), req); err != nil {
+		t.Fatalf("write err: %v", err)
+	}
+
+	req = logical.TestRequest(t, logical.ListOperation, "folder/")
+	req.Storage = storage
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("list err: %v", err)
+	}
+
+	keys, _ := resp.Data["keys"].([]string)
+	if !reflect.DeepEqual(keys, []string{"secret"}) {
+		t.Errorf("expected [secret], got %v", keys)
+	}
+}
+
 func TestPassthroughBackend_Revoke(t *testing.T) {
 	test := func(t *testing.T, b logical.Backend) {
 		t.Helper()
