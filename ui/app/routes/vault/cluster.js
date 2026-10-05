@@ -226,7 +226,11 @@ export default class ClusterRoute extends Route {
           version: model.version.version,
           storageType: model.storageType,
           replicationMode: model.replicationMode,
-          isEnterprise: Boolean(model.license),
+          // Use the version service (resolved in the parent `vault` route via
+          // fetchType) rather than `model.license`, which is loaded by a separate
+          // license fetch and is frequently null here — making an enterprise
+          // cluster report productPlanName "community".
+          isEnterprise: this.version.isEnterprise,
           isHvdManaged: this.flagsService.isHvdManaged,
         });
       } catch (e) {
