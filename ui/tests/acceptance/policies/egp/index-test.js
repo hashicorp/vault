@@ -132,6 +132,51 @@ module('Acceptance | EGP policies list view', function (hooks) {
     assert.dom(GENERAL.menuItem('delete-policy')).exists('Delete policy action exists');
   });
 
+  // Downloading reads the policy body, so it must be hidden when the token cannot read the policy.
+  test('it only offers Download for policies the token can read', async function (assert) {
+    this.server.get('sys/policies/egp/', () => ({
+      data: {
+        keys: ['readable-egp-policy', 'editable-egp-policy', 'deletable-egp-policy', 'listed-egp-policy'],
+      },
+      request_id: 'test',
+    }));
+    this.server.post('sys/capabilities-self', () => ({
+      data: {
+        'sys/policies/egp/readable-egp-policy': ['read'],
+        'sys/policies/egp/editable-egp-policy': ['update'],
+        'sys/policies/egp/deletable-egp-policy': ['delete'],
+        'sys/policies/egp/listed-egp-policy': ['list'],
+      },
+      request_id: 'test',
+    }));
+    await visit('/vault/policies/egp');
+
+    await click(`${GENERAL.listItem('readable-egp-policy')} ${GENERAL.menuTrigger}`);
+    assert
+      .dom(`${GENERAL.listItem('readable-egp-policy')} ${GENERAL.menuItem('download-policy')}`)
+      .exists('readable policy offers Download');
+
+    await click(`${GENERAL.listItem('editable-egp-policy')} ${GENERAL.menuTrigger}`);
+    assert
+      .dom(`${GENERAL.listItem('editable-egp-policy')} ${GENERAL.menuItem('edit-policy')}`)
+      .exists('update-only policy offers Edit');
+    assert
+      .dom(`${GENERAL.listItem('editable-egp-policy')} ${GENERAL.menuItem('download-policy')}`)
+      .doesNotExist('update-only policy hides Download');
+
+    await click(`${GENERAL.listItem('deletable-egp-policy')} ${GENERAL.menuTrigger}`);
+    assert
+      .dom(`${GENERAL.listItem('deletable-egp-policy')} ${GENERAL.menuItem('delete-policy')}`)
+      .exists('delete-only policy keeps its menu with Delete');
+    assert
+      .dom(`${GENERAL.listItem('deletable-egp-policy')} ${GENERAL.menuItem('download-policy')}`)
+      .doesNotExist('delete-only policy hides Download');
+
+    assert
+      .dom(`${GENERAL.listItem('listed-egp-policy')} ${GENERAL.menuTrigger}`)
+      .doesNotExist('a policy with no permitted actions has no row menu');
+  });
+
   // ── Delete modal ─────────────────────────────────────────────────────────
 
   test('it shows a confirmation modal when Delete is clicked', async function (assert) {

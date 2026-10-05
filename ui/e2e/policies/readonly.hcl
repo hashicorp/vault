@@ -23,6 +23,15 @@ path "sys/internal/ui/mounts/*" {
   capabilities = ["read"]
 }
 
+path "sys/policies/+" {
+  capabilities = ["list"]
+}
+
+# Only policies named readable-* can be read, so list views show policies the token cannot read.
+path "sys/policies/+/readable-*" {
+  capabilities = ["read"]
+}
+
 path "identity/*" {
   capabilities = ["read", "list"]
 }
