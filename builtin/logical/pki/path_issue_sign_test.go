@@ -47,9 +47,9 @@ func TestPathIssueSign_KeyTypeAny(t *testing.T) {
 		{"ec-384", "ec", 384, "", 384, []int{0, 384}, ec384CaAndKey, ec384leafCsr},
 		{"ec-521", "ec", 521, "", 512, []int{0, 512}, ec512CaAndKey, ec512leafCsr},
 		{"ed25519", "ed25519", 0, "", 512, []int{0, 512}, ed25519CaAndKey, ed25519leafCsr},
-		{"ml-dsa-44", "ml-dsa", 0, "44", mldsa.MLDSA44SignatureSize * 8, []int{0}, mldsa44CaAndKey, mldsa44LeafCsr},
-		{"ml-dsa-65", "ml-dsa", 0, "65", mldsa.MLDSA65SignatureSize * 8, []int{0}, mldsa65CaAndKey, mldsa65LeafCsr},
-		{"ml-dsa-87", "ml-dsa", 0, "87", mldsa.MLDSA87SignatureSize * 8, []int{0}, mldsa87CaAndKey, mldsa87LeafCsr},
+		{"ml-dsa-44", "ml-dsa", 0, "ml-dsa-44", mldsa.MLDSA44SignatureSize * 8, []int{0}, mldsa44CaAndKey, mldsa44LeafCsr},
+		{"ml-dsa-65", "ml-dsa", 0, "ml-dsa-65", mldsa.MLDSA65SignatureSize * 8, []int{0}, mldsa65CaAndKey, mldsa65LeafCsr},
+		{"ml-dsa-87", "ml-dsa", 0, "ml-dsa-87", mldsa.MLDSA87SignatureSize * 8, []int{0}, mldsa87CaAndKey, mldsa87LeafCsr},
 	}
 	signatureBitOptions := []int{0, 224, 256, 384, 512, 1117}
 

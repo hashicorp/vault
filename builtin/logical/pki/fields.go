@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"software.sslmate.com/src/go-pkcs12"
 )
 
@@ -425,9 +426,9 @@ RSA key-type issuer. Defaults to false.`,
 
 	fields[parameterSetParam] = &framework.FieldSchema{
 		Type:          framework.TypeString,
-		Default:       "44",
-		Description:   `The parameter set to use for ML-DSA keys; defaults to 44. Valid values are 44, 65, and 87`,
-		AllowedValues: []interface{}{"44", "65", "87"},
+		Default:       certutil.MLDSA44,
+		Description:   `The parameter set to use for ML-DSA keys; defaults to ml-dsa-44. Valid values are ml-dsa-44, ml-dsa-65, and ml-dsa-87`,
+		AllowedValues: []interface{}{certutil.MLDSA44, certutil.MLDSA65, certutil.MLDSA87},
 	}
 
 	fields = addKeyRefNameFields(fields)

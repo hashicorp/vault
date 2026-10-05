@@ -234,6 +234,13 @@
   /* stylelint-enable selector-class-pattern */
 }
 
+@mixin dark-mode-accordion-override {
+  .hds-accordion-item,
+  .progress {
+    border: 1px solid var(--token-color-palette-neutral-400);
+  }
+}
+
 @mixin dark-mode-box-label-override {
   // .box-label extends .box which hard-codes background-color: hsl(0,0%,100%) and uses
   // box-shadow (not border) for its outline. Both must be overridden explicitly.
@@ -712,13 +719,138 @@
       color: var(--token-color-palette-neutral-700);
     }
 
+    // ── Expand/collapse arrow ─────────────────────────────────────────────────
+    // swagger-ui renders the opblock expand arrow as an SVG with a hardcoded
+    // fill (#707070 dark-grey). Setting `color` alone has no effect on SVG fill
+    // unless the SVG uses currentColor. Override fill directly so the arrow is
+    // visible on the dark surface.
+    .expand-methods svg,
+    .expand-operation svg,
+    .opblock-control-arrow svg {
+      fill: var(--token-color-foreground-primary);
+    }
+
     .operation-filter-input {
       background-color: var(--token-form-control-base-surface-color-default);
       border: var(--token-form-control-border-width) solid var(--token-form-control-base-border-color-default);
     }
 
-    .opblock-summary-operation-id {
+    // ── Opblock section header (Parameters / Request body rows) ───────────────
+    // swagger-ui sets background: hsla(0,0%,100%,.8) (near-white) and
+    // color: #3b4151 (near-black) on the section-header and its children.
+    .opblock .opblock-section-header {
+      background: var(--token-color-surface-faint);
+      box-shadow: none;
+
+      h4,
+      label {
+        color: var(--token-color-foreground-primary);
+      }
+    }
+
+    // ── Parameter name and type text ─────────────────────────────────────────
+    // Both are set to color: #3b4151 in swagger-ui — invisible on dark surfaces.
+    .parameter__name,
+    .parameter__type,
+    .try-out button,
+    .response-control-media-type__title {
       color: var(--token-color-foreground-primary);
+    }
+
+    .opblock-summary-operation-id,
+    .opblock-description-wrapper,
+    .opblock-description-wrapper p,
+    .opblock-description-wrapper h4,
+    .parameter__in {
+      color: var(--token-color-foreground-primary);
+    }
+
+    // ── Parameter / body text inputs ──────────────────────────────────────────
+    // swagger-ui sets background:#fff and border: #d9d9d9 on text inputs and
+    // background: hsla(0,0%,100%,.8) / color:#3b4151 on textareas (request body
+    // editor). Both are invisible on dark surfaces.
+    input[type='email'],
+    input[type='file'],
+    input[type='password'],
+    input[type='search'],
+    input[type='text'] {
+      background: var(--token-form-control-base-surface-color-default);
+      border-color: var(--token-form-control-base-border-color-default);
+      color: var(--token-color-palette-neutral-600);
+    }
+
+    textarea:not(.curl) {
+      background: var(--token-color-surface-faint);
+      color: var(--token-color-foreground-primary);
+    }
+
+    // ── Select / dropdown ─────────────────────────────────────────────────────
+    // swagger-ui sets background:#f7f7f7 (light grey) with a dark SVG arrow.
+    // In dark mode this creates a jarring white box. Use the form control surface
+    // token so it matches the input fields and fits the dark theme.
+    select {
+      background-color: var(--token-form-control-base-surface-color-default);
+      border-color: var(--token-form-control-base-border-color-default);
+      color: var(--token-color-foreground-primary);
+    }
+
+    // ── Required field marker ("* required") ──────────────────────────────────
+    // swagger-ui uses hardcoded red / rgba(255,0,0,.6) — fails contrast on dark
+    // green surfaces. Use the critical foreground token which is designed for
+    // accessible contrast in both themes.
+    .parameter__name.required span {
+      color: var(--token-color-foreground-critical);
+    }
+
+    .parameter__name.required::after {
+      color: var(--token-color-foreground-critical);
+    }
+
+    // ── Tab-item heading ("Example Value" / "Schema") ────────────────────────
+    // .responses-inner h4 sets color:#3b4151 which beats a plain h4 rule.
+    // Target the full chain including .responses-inner to win the specificity
+    // race. Use foreground-strong for sufficient contrast on the dark green
+    // opblock body background.
+    .opblock .tab-header .tab-item h4,
+    .opblock .tab-header .tab-item h4 span,
+    .tab-item.active,
+    .tablinks,
+    .responses-inner h4,
+    .responses-inner h5 {
+      color: var(--token-color-foreground-strong);
+    }
+
+    // ── Response status code ("200", "204") ───────────────────────────────────
+    // response-col_status is set to color: #3b4151 — invisible on dark surfaces.
+    .response-col_status {
+      color: var(--token-color-foreground-primary);
+    }
+
+    // ── "No links" text ───────────────────────────────────────────────────────
+    // .response-col_links and its .response-undocumented child both use dark
+    // hardcoded colors invisible on the dark green response row background.
+    .response-col_links {
+      color: var(--token-color-foreground-primary);
+
+      .response-undocumented {
+        color: var(--token-color-foreground-faint);
+      }
+    }
+
+    // ── renderedMarkdown (response/parameter description prose) ──────────────
+    // swagger-ui sets pre to color:#000 and code to color:#9012fe on a near-
+    // transparent background — both unreadable on dark surfaces.
+    .renderedMarkdown,
+    .markdown {
+      p,
+      pre {
+        color: var(--token-color-foreground-primary);
+      }
+
+      code {
+        color: var(--token-color-palette-purple-400);
+        background-color: var(--token-color-surface-highlight);
+      }
     }
 
     // .info pre.version — may appear on green-300 (OAS stamp, #00ae4e) or
@@ -740,4 +872,13 @@
     }
   }
   /* stylelint-enable selector-class-pattern */
+
+  // ── Dashboard header gradient: opacity boost for dark backgrounds ─────────
+  // opacity: 0.18 is calibrated for a white background — it produces a soft
+  // pastel glow. On the near-black dark page (#030303) the same opacity makes
+  // the colors almost imperceptible. Raise the opacity so the effect reads on
+  // the dark surface.
+  .dashboard-header-with-gradient::before {
+    opacity: 0.3;
+  }
 }

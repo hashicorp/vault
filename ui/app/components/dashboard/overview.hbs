@@ -16,7 +16,7 @@
   </:badges>
 </Page::Header>
 
-<div class="has-bottom-margin-xl">
+<div class="has-bottom-margin-xl is-relative">
   <Hds::Layout::Flex @wrap={{true}} @gap="48" as |LF|>
     {{#if @version.isEnterprise}}
       <LF.Item @basis="58%" @grow={{true}} @shrink={{true}}>
@@ -27,6 +27,7 @@
             @visibleSteps={{this.visibleSteps}}
             @onHide={{this.hideChecklist}}
             @onStepCompletionChange={{this.handleChecklistStepCompletionChange}}
+            class="dashboard-checklist"
           />
           <Dashboard::Widgets::SecretsEngines @secretsEngines={{@secretsEngines}} class="has-top-margin-xl" />
         {{else if (eq this.checklistLifecycleState "complete")}}
