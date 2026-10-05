@@ -37,6 +37,9 @@ interface PolicyRow {
   capabilities: Capabilities | null;
 }
 
+// Built-in ACL policies that Vault refuses to delete (see PolicyStore.DeletePolicy in vault/policy_store.go).
+const UNDELETABLE_POLICIES = ['root', 'default', 'default-ceiling'];
+
 interface Args {
   model: PoliciesAclIndexModel;
   page: number;
@@ -58,6 +61,14 @@ export default class PageAclPoliciesComponent extends Component<Args> {
   @tracked shouldRenderIntroModal = false;
 
   wizardId = WIZARD_ID_MAP.aclPolicy;
+
+  canDeletePolicy = (row: PolicyRow) =>
+    !!row.capabilities?.canDelete && !UNDELETABLE_POLICIES.includes(row.name);
+
+  // root never gets a menu; other rows only when at least one action is permitted, to avoid an empty menu.
+  hasPolicyActions = (row: PolicyRow) =>
+    row.name !== 'root' &&
+    !!(row.capabilities?.canRead || row.capabilities?.canUpdate || this.canDeletePolicy(row));
 
   // Policies are considered "only defaults" when the total is at or below the
   // expected number of built-in policies (root + default + default-ceiling in root

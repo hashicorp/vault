@@ -51,7 +51,7 @@
   </:customTableItem>
 
   <:popupMenu as |rowData|>
-    {{#unless (eq rowData.name "root")}}
+    {{#if (this.hasPolicyActions rowData)}}
       <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
         <dd.ToggleIcon @icon="more-horizontal" @text="Policy options" @hasChevron={{false}} data-test-popup-menu-trigger />
         {{#if rowData.capabilities.canRead}}
@@ -68,9 +68,11 @@
             data-test-popup-menu="edit-policy"
           >Edit policy</dd.Interactive>
         {{/if}}
-        <dd.Interactive {{on "click" (fn this.downloadPolicy rowData)}} data-test-popup-menu="download-policy">Download
-          policy</dd.Interactive>
-        {{#if (and rowData.capabilities.canDelete (not-eq rowData.name "default") (not-eq rowData.name "default-ceiling"))}}
+        {{#if rowData.capabilities.canRead}}
+          <dd.Interactive {{on "click" (fn this.downloadPolicy rowData)}} data-test-popup-menu="download-policy">Download
+            policy</dd.Interactive>
+        {{/if}}
+        {{#if (this.canDeletePolicy rowData)}}
           <dd.Interactive
             @color="critical"
             {{on "click" (fn this.setPolicyToDelete rowData)}}
@@ -78,7 +80,7 @@
           >Delete policy</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>
-    {{/unless}}
+    {{/if}}
   </:popupMenu>
 </Page::ListView>
 
