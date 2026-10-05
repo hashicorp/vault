@@ -137,7 +137,7 @@ export const generateInteractiveScaffold = ({
     : '';
 
   return `/**
- * Copyright IBM Corp. 2016, ${new Date().getFullYear()}
+ * Copyright IBM Corp. 2016, 2026, ${new Date().getFullYear()}
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -212,7 +212,7 @@ export const generateOpenApiScaffold = ({
 
   const date = new Date();
   return `/**
- * Copyright IBM Corp. 2016, ${date.getFullYear()}
+ * Copyright IBM Corp. 2016, 2026, ${date.getFullYear()}
  * SPDX-License-Identifier: BUSL-1.1
  */
 
