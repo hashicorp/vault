@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 <Page::Header @title={{@model.role.name}}>
@@ -52,7 +52,7 @@
         @allowCopy={{true}}
         @onToggle={{perform this.onPasswordToggle}}
       />
-      {{#if this.onPasswordToggle.isRunning}}
+      {{#if this.fetchPassword.isRunning}}
         <Hds::Icon @name="loading" @color="neutral" data-test-password-loading />
       {{/if}}
       {{#if this.passwordError}}

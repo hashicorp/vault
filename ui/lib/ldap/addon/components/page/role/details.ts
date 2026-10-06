@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -33,6 +33,8 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
   @tracked showConfirmRotateModal = false;
   @tracked cachedPassword: string | null = null;
   @tracked passwordError = '';
+  // Set on the first reveal, even if that request is still pending or failed.
+  passwordRequested = false;
 
   isTtl = (field: string) => ['default_ttl', 'max_ttl', 'rotation_period'].includes(field);
   label = (field: string) => {
@@ -79,7 +81,13 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
       if (this.cachedPassword !== null) {
         return;
       }
+      this.passwordRequested = true;
+      await this.fetchPassword.perform();
+    })
+  );
 
+  fetchPassword = task(
+    waitFor(async () => {
       this.passwordError = '';
       try {
         const { role } = this.args.model;
@@ -125,8 +133,11 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
         const { role } = this.args.model;
         await this.api.secrets.ldapRotateStaticRole(role.completeRoleName, currentPath, {});
         this.flashMessages.success('Credentials successfully rotated.');
-        // The previous password is no longer valid.
+        // The previous password is no longer valid. Refresh it only if the user asked to see it.
         this.cachedPassword = null;
+        if (this.passwordRequested) {
+          await this.fetchPassword.perform();
+        }
       } catch (error) {
         const { message } = await this.api.parseError(error);
         this.flashMessages.danger(`Error rotating credentials \n ${message}`);
