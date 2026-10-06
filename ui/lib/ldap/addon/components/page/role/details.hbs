@@ -7,33 +7,35 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    <Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
-      {{#if @model.capabilities.canEdit}}
-        <D.Interactive @icon="edit" @route="roles.role.edit" data-test-popup-menu="Edit role">
-          Edit role
-        </D.Interactive>
-      {{/if}}
-      {{#if @model.capabilities.canRotateStaticCreds}}
-        <D.Interactive
-          @icon="rotate-cw"
-          {{on "click" (fn (mut this.showConfirmRotateModal) true)}}
-          data-test-popup-menu="Rotate credentials"
-        >
-          Rotate credentials
-        </D.Interactive>
-      {{/if}}
-      {{#if @model.capabilities.canDelete}}
-        <D.Interactive
-          @color="critical"
-          @icon="trash"
-          {{on "click" (fn (mut this.showConfirmDeleteModal) true)}}
-          data-test-popup-menu="Delete role"
-        >
-          Delete role
-        </D.Interactive>
-      {{/if}}
-    </Hds::Dropdown>
+    {{#if this.hasManageActions}}
+      <Hds::Dropdown as |D|>
+        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+        {{#if @model.capabilities.canEdit}}
+          <D.Interactive @icon="edit" @route="roles.role.edit" data-test-popup-menu="Edit role">
+            Edit role
+          </D.Interactive>
+        {{/if}}
+        {{#if @model.capabilities.canRotateStaticCreds}}
+          <D.Interactive
+            @icon="rotate-cw"
+            {{on "click" (fn (mut this.showConfirmRotateModal) true)}}
+            data-test-popup-menu="Rotate credentials"
+          >
+            Rotate credentials
+          </D.Interactive>
+        {{/if}}
+        {{#if @model.capabilities.canDelete}}
+          <D.Interactive
+            @color="critical"
+            @icon="trash"
+            {{on "click" (fn (mut this.showConfirmDeleteModal) true)}}
+            data-test-popup-menu="Delete role"
+          >
+            Delete role
+          </D.Interactive>
+        {{/if}}
+      </Hds::Dropdown>
+    {{/if}}
     {{#if @model.capabilities.canReadCreds}}
       <Hds::Button @text="Get credentials" @route="roles.role.credentials" data-test-button="Get credentials" />
     {{/if}}

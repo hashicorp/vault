@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -100,6 +100,41 @@ module('Acceptance | ldap | roles', function (hooks) {
       isURL('roles/dynamic/dynamic-role/edit', this.backend),
       'Transitions to edit route from toolbar link'
     );
+  });
+
+  // Vault handles rotate-role as an update operation, so a create-only token is denied.
+  test('it should offer rotate credentials only with update capability on rotate-role', async function (assert) {
+    const stubRotateCapabilities = (rotateCapabilities) => {
+      this.server.post('/sys/capabilities-self', (_, { requestBody }) => {
+        const { paths } = JSON.parse(requestBody);
+        const data = paths.reduce((obj, path) => {
+          obj[path] = path.includes('/rotate-role/') ? rotateCapabilities : ['root'];
+          return obj;
+        }, {});
+        return { ...data, data };
+      });
+    };
+
+    // Leave the roles page first so revisiting it re-runs the model hook with the new stub.
+    stubRotateCapabilities(['update']);
+    await visitURL('overview', this.backend);
+    await visitURL('roles', this.backend);
+    await click(LDAP_SELECTORS.roleMenu('static', 'static-role'));
+    assert.dom(LDAP_SELECTORS.action('rotate-creds')).exists('list menu offers rotate with update');
+    await click(LDAP_SELECTORS.roleItem('static', 'static-role'));
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Rotate credentials')).exists('details menu offers rotate with update');
+
+    stubRotateCapabilities(['create']);
+    await visitURL('overview', this.backend);
+    await visitURL('roles', this.backend);
+    await click(LDAP_SELECTORS.roleMenu('static', 'static-role'));
+    assert.dom(LDAP_SELECTORS.action('rotate-creds')).doesNotExist('list menu hides rotate with create only');
+    await click(LDAP_SELECTORS.roleItem('static', 'static-role'));
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert
+      .dom(GENERAL.menuItem('Rotate credentials'))
+      .doesNotExist('details menu hides rotate with create only');
   });
 
   test('it should clear roles page filter value on route exit', async function (assert) {
