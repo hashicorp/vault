@@ -304,4 +304,143 @@ module('Unit | Service | theme', function (hooks) {
       .dom(document.documentElement)
       .doesNotHaveAttribute('data-theme', 'DOM is not updated after willDestroy is called');
   });
+
+  // --- cross-tab sync via storage events ---
+
+  // Simulates the browser dispatching a storage event as another tab would trigger it.
+  // The browser fires this event on all OTHER tabs when localStorage changes, so it never
+  // fires in the tab that performed the write. We dispatch it manually to simulate that.
+
+  // StorageEvent constructor arguments are ignored in some runtimes. Define the properties directly on a plain Event so the
+  // handler is guaranteed to see them regardless of runtime behaviour.
+  function fireStorageEvent(key, newValue) {
+    const evt = new Event('storage');
+    Object.defineProperties(evt, {
+      key: { value: key },
+      newValue: { value: newValue },
+      storageArea: { value: window.localStorage },
+    });
+    window.dispatchEvent(evt);
+  }
+
+  const THEME_STORAGE_KEY = 'vault:prefs:theme';
+
+  test('storage event with key "dark" updates theme and DOM in this tab', function (assert) {
+    sinon.stub(window, 'matchMedia').returns(makeFakeMediaQuery(false));
+    const service = this.owner.lookup('service:theme');
+
+    // Tab starts on system (light).
+    assert.strictEqual(service.theme, 'system');
+    assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
+
+    // Another tab writes dark — browser delivers storage event here.
+    fireStorageEvent(THEME_STORAGE_KEY, JSON.stringify('dark'));
+
+    assert.strictEqual(service.theme, 'dark', 'theme updated from storage event');
+    assert.true(service.isDarkMode, 'isDarkMode is true');
+    assert.dom(document.documentElement).hasAttribute('data-theme', 'dark');
+  });
+
+  test('storage event with key "light" removes dark theme attribute', function (assert) {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify('dark'));
+    sinon.stub(window, 'matchMedia').returns(makeFakeMediaQuery(false));
+    const service = this.owner.lookup('service:theme');
+
+    assert.dom(document.documentElement).hasAttribute('data-theme', 'dark');
+
+    // Another tab switches to light.
+    fireStorageEvent(THEME_STORAGE_KEY, JSON.stringify('light'));
+
+    assert.strictEqual(service.theme, 'light', 'theme updated to light');
+    assert.false(service.isDarkMode, 'isDarkMode is false');
+    assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
+  });
+
+  test('storage event with key "system" re-registers OS listener', function (assert) {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify('dark'));
+    const fmq = makeFakeMediaQuery(false); // OS is light
+    sinon.stub(window, 'matchMedia').returns(fmq);
+    const service = this.owner.lookup('service:theme');
+
+    // Started as explicit dark — no OS listener.
+    assert.false(fmq.addEventListener.called, 'no OS listener on explicit dark');
+
+    // Another tab switches to system.
+    fireStorageEvent(THEME_STORAGE_KEY, JSON.stringify('system'));
+
+    assert.strictEqual(service.theme, 'system', 'theme is system after storage event');
+    assert.true(fmq.addEventListener.calledOnce, 'OS listener registered after switching to system');
+
+    // OS switching to dark should now apply.
+    fmq.triggerChange(true);
+    assert.dom(document.documentElement).hasAttribute('data-theme', 'dark');
+  });
+
+  test('storage event for a different key is ignored', function (assert) {
+    sinon.stub(window, 'matchMedia').returns(makeFakeMediaQuery(false));
+    const service = this.owner.lookup('service:theme');
+
+    fireStorageEvent('vault:prefs:someOtherKey', JSON.stringify('dark'));
+
+    assert.strictEqual(service.theme, 'system', 'theme unchanged for unrelated key');
+    assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
+  });
+
+  test('storage event from sessionStorage is ignored', function (assert) {
+    sinon.stub(window, 'matchMedia').returns(makeFakeMediaQuery(false));
+    const service = this.owner.lookup('service:theme');
+
+    // Dispatch with storageArea: sessionStorage — should be ignored entirely.
+    // StorageEvent constructor arguments for storageArea are ignored in some
+    // runtimes. Define the properties
+    // directly on a plain Event to guarantee the handler sees them.
+    const evt = new Event('storage');
+    Object.defineProperties(evt, {
+      key: { value: THEME_STORAGE_KEY },
+      newValue: { value: JSON.stringify('dark') },
+      storageArea: { value: window.sessionStorage },
+    });
+    window.dispatchEvent(evt);
+
+    assert.strictEqual(service.theme, 'system', 'theme unchanged for sessionStorage event');
+    assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
+  });
+
+  test('storage event with invalid theme value is ignored', function (assert) {
+    sinon.stub(window, 'matchMedia').returns(makeFakeMediaQuery(false));
+    const service = this.owner.lookup('service:theme');
+
+    fireStorageEvent(THEME_STORAGE_KEY, JSON.stringify('neon-pink'));
+
+    assert.strictEqual(service.theme, 'system', 'theme unchanged for invalid value');
+  });
+
+  test('storage event with null newValue (key removed) falls back to system', function (assert) {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify('dark'));
+    sinon.stub(window, 'matchMedia').returns(makeFakeMediaQuery(false));
+    const service = this.owner.lookup('service:theme');
+
+    assert.strictEqual(service.theme, 'dark');
+
+    fireStorageEvent(THEME_STORAGE_KEY, null);
+
+    assert.strictEqual(service.theme, 'system', 'theme falls back to system when key removed');
+    assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
+  });
+
+  test('willDestroy removes the storage listener so further cross-tab events are ignored', function (assert) {
+    sinon.stub(window, 'matchMedia').returns(makeFakeMediaQuery(false));
+    const service = this.owner.lookup('service:theme');
+
+    service.willDestroy();
+
+    // After destruction, a cross-tab event must not touch the service.
+    fireStorageEvent(THEME_STORAGE_KEY, JSON.stringify('dark'));
+
+    // The service's theme property should not have changed.
+    assert.strictEqual(service.theme, 'system', 'theme unchanged after service is destroyed');
+    // The DOM should also not be updated (the service managed data-theme; on destroy
+    // it should not do further writes).
+    assert.dom(document.documentElement).doesNotHaveAttribute('data-theme');
+  });
 });
