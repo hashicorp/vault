@@ -53,6 +53,11 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
     );
   };
 
+  get hasManageActions() {
+    const { capabilities } = this.args.model;
+    return !!(capabilities?.canEdit || capabilities?.canDelete || capabilities?.canRotateStaticCreds);
+  }
+
   get displayFields() {
     const { role, capabilities } = this.args.model;
     const fields = ['name', 'type'];
