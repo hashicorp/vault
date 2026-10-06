@@ -202,4 +202,86 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
 
     assert.dom(GENERAL.inlineAlert).exists('an inline alert renders when the request fails');
   });
+
+  module('rotating credentials', function (hooks) {
+    hooks.beforeEach(function () {
+      const { secrets } = this.owner.lookup('service:api');
+      this.rotateStub = sinon.stub(secrets, 'ldapRotateStaticRole').resolves();
+      this.credsStub = sinon.stub(secrets, 'ldapRequestStaticRoleCredentials');
+      this.credsStub.onFirstCall().resolves({ data: { password: 'old-password' } });
+      this.credsStub.onSecondCall().resolves({ data: { password: 'new-password' } });
+      this.rotate = async () => {
+        await click(GENERAL.dropdownToggle('Manage'));
+        await click(GENERAL.menuItem('Rotate credentials'));
+        await click(GENERAL.confirmButton);
+      };
+    });
+
+    // Rotation invalidates the revealed password, so the row must show the new one rather than
+    // going blank and making the user click reveal again.
+    test('it should refresh a revealed password after rotating', async function (assert) {
+      await this.renderComponent('static');
+      await click(GENERAL.button('toggle-masked'));
+      assert.dom(GENERAL.maskedInput).hasText('old-password', 'the current password is revealed');
+
+      await this.rotate();
+
+      assert.true(this.rotateStub.calledOnce, 'the role is rotated');
+      assert.true(this.credsStub.calledTwice, 'the password is fetched again after rotating');
+      assert.dom(GENERAL.maskedInput).hasText('new-password', 'the rotated password is displayed');
+    });
+
+    test('it should copy the rotated password after rotating', async function (assert) {
+      const clipboardStub = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
+      await this.renderComponent('static');
+      await click(GENERAL.button('toggle-masked'));
+      await this.rotate();
+      await click(GENERAL.copyButton);
+
+      assert.true(clipboardStub.calledOnceWith('new-password'), 'the rotated password is copied');
+    });
+
+    // Opening the details page or rotating must not pull a secret the user never asked to see.
+    test('it should not fetch the password after rotating when it was never revealed', async function (assert) {
+      await this.renderComponent('static');
+      await this.rotate();
+
+      assert.true(this.rotateStub.calledOnce, 'the role is rotated');
+      assert.false(this.credsStub.called, 'no credential request is made');
+      assert.dom(GENERAL.maskedInput).hasText('***********', 'the password stays masked');
+    });
+
+    test('it should render an inline error when the password cannot be refreshed after rotating', async function (assert) {
+      const flashSuccessSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
+      this.credsStub.onSecondCall().rejects({ status: 403 });
+
+      await this.renderComponent('static');
+      await click(GENERAL.button('toggle-masked'));
+      await this.rotate();
+
+      assert.true(
+        flashSuccessSpy.calledWith('Credentials successfully rotated.'),
+        'the rotation still reports success'
+      );
+      assert.dom(GENERAL.inlineAlert).exists('an inline alert explains why the password is missing');
+      assert
+        .dom(GENERAL.maskedInput)
+        .doesNotIncludeText('old-password', 'the invalidated password is no longer displayed');
+    });
+
+    test('it should fetch the password after rotating when the first reveal failed', async function (assert) {
+      this.credsStub.onFirstCall().rejects({ status: 500 });
+
+      await this.renderComponent('static');
+      await click(GENERAL.button('toggle-masked'));
+      assert.dom(GENERAL.inlineAlert).exists('the failed reveal shows an inline error');
+
+      await this.rotate();
+
+      assert.true(this.credsStub.calledTwice, 'the password is fetched again after rotating');
+      assert.dom(GENERAL.maskedInput).hasText('new-password', 'the rotated password is displayed');
+      assert.dom(GENERAL.inlineAlert).doesNotExist('the earlier error is cleared');
+    });
+  });
 });
