@@ -47,7 +47,13 @@ binary {
         // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
         // that doesn't depend on 1.84.0 we can update all of our Go modules
         // and remove this exemption.
-        "GO-2026-6443"
+        "GO-2026-6443",
+
+        // https://github.com/advisories/GHSA-qqj6-54q6-cxv6
+        // gosnowflake v1 does not currently have patch for the issue, nor is
+        // clear if v1 is still actively maintained. We'll want to migrate to
+        // v2 ASAP.
+        "GHSA-qqj6-54q6-cxv6",
       ]
     }
   }
@@ -101,7 +107,13 @@ container {
         // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
         // that doesn't depend on 1.84.0 we can update all of our Go modules
         // and remove this exemption.
-        "GO-2026-6443"
+        "GO-2026-6443",
+
+        // https://github.com/advisories/GHSA-qqj6-54q6-cxv6
+        // gosnowflake v1 does not currently have patch for the issue, nor is
+        // clear if v1 is still actively maintained. We'll want to migrate to
+        // v2 ASAP.
+        "GHSA-qqj6-54q6-cxv6",
       ]
 
       // The OSV scanner will trip on several packages that are included in the
