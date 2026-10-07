@@ -12,6 +12,7 @@ import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import OidcAssingmentForm from 'vault/forms/oidc/assignment';
 import sinon from 'sinon';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | oidc/assignment-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -98,6 +99,17 @@ module('Integration | Component | oidc/assignment-form', function (hooks) {
     assert
       .dom('[data-test-search-select="groups"] [data-test-smaller-id]')
       .hasText('abcdef-123', 'group id renders in selected option');
+  });
+
+  test('it should render the API error when saving an assignment fails', async function (assert) {
+    this.writeStub.rejects(getErrorResponse({ errors: ['permission denied'] }, 403));
+
+    await this.renderComponent(this.assignment);
+    await click('[data-test-oidc-assignment-save]');
+
+    assert
+      .dom('[data-test-message-error]')
+      .hasText('Error permission denied', 'shows the server error message');
   });
 
   test('it should use fallback component on create if no permissions for entities or groups', async function (assert) {

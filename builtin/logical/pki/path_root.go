@@ -323,8 +323,8 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	resp.Data["issuer_name"] = myIssuer.Name
 	resp.Data["key_id"] = myKey.ID
 	resp.Data["key_name"] = myKey.Name
-	if myKey.PrivateKeyType == certutil.MLDSAPrivateKey {
-		resp.Data[parameterSetParam] = myKey.ParameterSet
+	if genParams.exported && myKey.ParameterSet != "" {
+		resp.Data["private_key_parameter_set"] = myKey.ParameterSet
 	}
 
 	// The one time that it is safe (and good) to copy the

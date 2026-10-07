@@ -58,3 +58,11 @@ module "k8s_deploy_client_sidecar" {
 module "k8s_vault_verify_client_sidecar" {
   source = "../modules/k8s_vault_verify_client_sidecar"
 }
+
+# Standalone kubeclient binary smoke tests.
+# Execs into the vault-client-sidecar container that is already deployed by
+# k8s_deploy_client_sidecar. No binary copy needed — the binary ships inside
+# the client image. Set var.kubeclient_bin_path to activate the full suite.
+module "k8s_vault_verify_client_smoke" {
+  source = "../modules/k8s_vault_verify_client_smoke"
+}

@@ -1143,6 +1143,12 @@ func validateRole(b *backend, entry *issuing.RoleEntry, ctx context.Context, s l
 		return `"ttl" value must be less than "max_ttl" value`, nil, nil
 	}
 
+	if entry.KeyType == "ml-dsa" && entry.ParameterSet == "" {
+		entry.ParameterSet = certutil.MLDSA44
+	} else if entry.KeyType != "ml-dsa" && entry.KeyType != "any" {
+		entry.ParameterSet = ""
+	}
+
 	keyBits, err := certutil.ValidateDefaultOrValueKeyType(entry.KeyType, entry.KeyBits, string(entry.ParameterSet))
 	if err != nil {
 		return fmt.Sprintf("error setting keyBits %v on role for keyType %v: %v", entry.KeyBits, entry.KeyType, err.Error()), nil, nil
