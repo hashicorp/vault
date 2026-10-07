@@ -10,6 +10,7 @@ import { service } from '@ember/service';
 
 export default class IdentityAliasesShowRoute extends Route {
   @service api;
+  @service capabilities;
 
   async model(params) {
     const { section } = params;
@@ -23,8 +24,12 @@ export default class IdentityAliasesShowRoute extends Route {
 
     const { data } = await this.api.identity.entityReadAliasById(params.item_alias_id);
 
+    const { canUpdate: canEditAlias } = await this.capabilities.for('entityAliasById', {
+      id: params.item_alias_id,
+    });
+
     return hash({
-      model: { ...data, itemType: 'entity-alias', identityType: 'entity' },
+      model: { ...data, itemType: 'entity-alias', identityType: 'entity', canEditAlias },
       section,
     });
   }

@@ -9,19 +9,25 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const emptyModel = () => {
-  const model = [];
-  Object.defineProperty(model, 'meta', { value: { total: 0 }, writable: false });
-  return model;
+const buildModel = (entities, { canCreateEntity = true, canMergeEntities = true } = {}) => ({
+  entities,
+  canCreateEntity,
+  canMergeEntities,
+});
+
+const emptyModel = (capabilities) => {
+  const entities = [];
+  Object.defineProperty(entities, 'meta', { value: { total: 0 }, writable: false });
+  return buildModel(entities, capabilities);
 };
 
 const populatedModel = () => {
-  const model = [{ id: 'entity-1', name: 'test-entity' }];
-  Object.defineProperty(model, 'meta', { value: { total: 1 }, writable: false });
-  return model;
+  const entities = [{ id: 'entity-1', name: 'test-entity' }];
+  Object.defineProperty(entities, 'meta', { value: { total: 1 }, writable: false });
+  return buildModel(entities);
 };
 
-const noMetaModel = () => [];
+const noMetaModel = () => buildModel([]);
 
 module('Integration | Component | identity/page/entities', function (hooks) {
   setupRenderingTest(hooks);
@@ -52,6 +58,14 @@ module('Integration | Component | identity/page/entities', function (hooks) {
     assert
       .dom(GENERAL.button('entity-create-link'))
       .hasText('Create new entity', 'renders the Create new entity button with correct label');
+  });
+
+  test('it hides the Merge entities and Create new entity header actions without capabilities', async function (assert) {
+    this.model = emptyModel({ canCreateEntity: false, canMergeEntities: false });
+    await render(hbs`<Identity::Page::Entities @model={{this.model}} />`);
+
+    assert.dom(GENERAL.button('entity-merge-link')).doesNotExist('merge button is hidden');
+    assert.dom(GENERAL.button('entity-create-link')).doesNotExist('create button is hidden');
   });
 
   test('it renders the empty state when there are no entities', async function (assert) {

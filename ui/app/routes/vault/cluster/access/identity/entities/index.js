@@ -25,6 +25,11 @@ export default class IdentityIndexRoute extends Route {
   async model(params) {
     const { pageFilter, page } = params;
 
+    const [{ canUpdate: canCreateEntity }, { canUpdate: canMergeEntities }] = await Promise.all([
+      this.capabilities.for('identityEntity'),
+      this.capabilities.for('entityMerge'),
+    ]);
+
     // Fetch entity list, treating a 404 as an empty list rather than an error
     let items = [];
     try {
@@ -79,7 +84,11 @@ export default class IdentityIndexRoute extends Route {
       };
     });
 
-    return paginate(itemsWithCapabilities, { page, filter: pageFilter });
+    return {
+      entities: paginate(itemsWithCapabilities, { page, filter: pageFilter }),
+      canCreateEntity,
+      canMergeEntities,
+    };
   }
 
   setupController(controller, resolvedModel) {
@@ -89,7 +98,7 @@ export default class IdentityIndexRoute extends Route {
 
     controller.setProperties({
       filter: pageFilter || '',
-      page: resolvedModel?.meta?.currentPage || 1,
+      page: resolvedModel?.entities?.meta?.currentPage || 1,
       identityType: 'entity',
     });
   }
