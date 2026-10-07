@@ -185,4 +185,55 @@ module('Unit | Utils | analytics providers | segment', function (hooks) {
 
     assert.true(resetStub.calledOnce, 'client.reset() is called to clear ajs_user_id and anonymousId');
   });
+
+  module('purgeStorage', function (hooks) {
+    const SEGMENT_KEYS = [
+      'ajs_user_id',
+      'ajs_anonymous_id',
+      'persisted-queue:v1:testkey:dest-Segment.io:items',
+      'persisted-queue:v1:testkey:dest-Segment.io:seen',
+    ];
+
+    hooks.afterEach(function () {
+      [...SEGMENT_KEYS, 'vault:prefs:telemetryConsent', 'vault:prefs:persona'].forEach((k) =>
+        window.localStorage.removeItem(k)
+      );
+    });
+
+    test('removes Segment identity and queue keys but preserves vault:prefs keys', function (assert) {
+      SEGMENT_KEYS.forEach((k) => window.localStorage.setItem(k, 'x'));
+      // Vault's own prefs (including the consent flag itself) must survive.
+      window.localStorage.setItem('vault:prefs:telemetryConsent', 'false');
+      window.localStorage.setItem('vault:prefs:persona', 'developer');
+
+      SegmentProvider.purgeStorage();
+
+      SEGMENT_KEYS.forEach((k) => assert.strictEqual(window.localStorage.getItem(k), null, `${k} is purged`));
+      assert.strictEqual(
+        window.localStorage.getItem('vault:prefs:telemetryConsent'),
+        'false',
+        'the consent flag is preserved'
+      );
+      assert.strictEqual(
+        window.localStorage.getItem('vault:prefs:persona'),
+        'developer',
+        'unrelated vault prefs are preserved'
+      );
+    });
+
+    test('reset() purges storage in addition to client.reset()', function (assert) {
+      const provider = new SegmentProvider();
+      const clientReset = sinon.stub(provider.client, 'reset');
+      window.localStorage.setItem('ajs_user_id', 'IBMid-123');
+
+      provider.reset();
+
+      assert.true(clientReset.calledOnce, 'delegates to client.reset() for in-memory identity');
+      assert.strictEqual(
+        window.localStorage.getItem('ajs_user_id'),
+        null,
+        'also purges the persisted keys client.reset() leaves behind'
+      );
+    });
+  });
 });

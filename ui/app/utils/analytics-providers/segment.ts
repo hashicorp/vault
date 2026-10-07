@@ -218,8 +218,35 @@ export class SegmentProvider implements AnalyticsProvider {
   }
 
   // Clears Segment's persisted identity (ajs_user_id + ajs_anonymous_id) so the
-  // next user starts with a fresh identity and is not aliased to this session.
+  // next user starts with a fresh identity and is not aliased to this session,
+  // then purges the localStorage Segment leaves behind. client.reset() only
+  // resets the in-memory user/group; it does NOT remove the persisted-queue keys
+  // (owned by a separate persisted priority queue), so we clear those explicitly.
   reset() {
     this.client.reset();
+    SegmentProvider.purgeStorage();
+  }
+
+  // Removes every localStorage key Segment owns: its identity keys (ajs_*) and
+  // its event-delivery queue (persisted-queue:v1:...dest-Segment.io:*). Static so
+  // it can run without a live provider instance e.g. an on-load safety sweep or a
+  // decline before analytics ever activated. Tightly scoped: it never touches
+  // Vault's own `vault:prefs:*` preferences (including the consent flag itself).
+  static purgeStorage() {
+    if (typeof window === 'undefined' || !window.localStorage) return;
+    try {
+      const keysToBeRemoved: string[] = [];
+      for (let i = 0; i < window.localStorage.length; i++) {
+        const key = window.localStorage.key(i);
+        if (!key) continue;
+        const isIdentity = key.startsWith('ajs_');
+        const isSegmentQueue = key.startsWith('persisted-queue:') && key.includes('Segment.io');
+        if (isIdentity || isSegmentQueue) keysToBeRemoved.push(key);
+      }
+      keysToBeRemoved.forEach((key) => window.localStorage.removeItem(key));
+    } catch {
+      // localStorage unavailable (private browsing, quota, blocked) then there is
+      // nothing persisted to purge.
+    }
   }
 }
