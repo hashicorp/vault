@@ -22,7 +22,7 @@ import {
   ASSIGNMENT_LIST_RESPONSE,
   ASSIGNMENT_DATA_RESPONSE,
 } from 'vault/tests/helpers/oidc-config';
-import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { allowAllCapabilitiesStub, capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelect = create(ss);
@@ -254,6 +254,52 @@ module('Acceptance | oidc-config clients', function (hooks) {
         currentRouteName(),
         'vault.cluster.access.oidc.keys.index',
         'navigates back to list view after delete'
+      );
+    });
+
+    test('it shows an error when key rotation is denied', async function (assert) {
+      this.server.get('/identity/oidc/key', () => overrideResponse(null, { data: { keys: ['test-key'] } }));
+      this.server.get('/identity/oidc/key/test-key', () =>
+        overrideResponse(null, {
+          data: { algorithm: 'RS256', rotation_period: 86400, verification_ttl: 86400 },
+        })
+      );
+      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'update', 'delete']));
+      this.server.post('/identity/oidc/key/test-key/rotate', () => overrideResponse(403));
+
+      await visit(OIDC_BASE_URL + '/keys');
+      await click('[data-test-oidc-key-linked-block="test-key"]');
+      await click(SELECTORS.keyRotateButton);
+      await click(GENERAL.confirmButton);
+
+      assert.strictEqual(flashMessage.latestMessage, 'permission denied', 'shows the rotation error');
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.access.oidc.keys.key.details',
+        'keeps the user on the key details after a failed rotation'
+      );
+    });
+
+    test('it shows an error when key deletion is denied', async function (assert) {
+      this.server.get('/identity/oidc/key', () => overrideResponse(null, { data: { keys: ['test-key'] } }));
+      this.server.get('/identity/oidc/key/test-key', () =>
+        overrideResponse(null, {
+          data: { algorithm: 'RS256', rotation_period: 86400, verification_ttl: 86400 },
+        })
+      );
+      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub(['read', 'delete']));
+      this.server.delete('/identity/oidc/key/test-key', () => overrideResponse(403));
+
+      await visit(OIDC_BASE_URL + '/keys');
+      await click('[data-test-oidc-key-linked-block="test-key"]');
+      await click(SELECTORS.keyDeleteButton);
+      await click(GENERAL.confirmButton);
+
+      assert.strictEqual(flashMessage.latestMessage, 'permission denied', 'shows the delete error');
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.access.oidc.keys.key.details',
+        'keeps the user on the key details after a failed delete'
       );
     });
 
@@ -572,6 +618,31 @@ module('Acceptance | oidc-config clients', function (hooks) {
         currentRouteName(),
         'vault.cluster.access.oidc.assignments.index',
         'navigates back to assignment list view after delete'
+      );
+    });
+
+    test('it shows an error when assignment deletion is denied', async function (assert) {
+      this.server.get('/identity/oidc/assignment', () =>
+        overrideResponse(null, { data: ASSIGNMENT_LIST_RESPONSE })
+      );
+      this.server.get('/identity/oidc/assignment/test-assignment', () =>
+        overrideResponse(null, { data: ASSIGNMENT_DATA_RESPONSE })
+      );
+      this.server.post('/sys/capabilities-self', () =>
+        capabilitiesStub('identity/oidc/assignment/test-assignment', ['read', 'delete'])
+      );
+      this.server.delete('/identity/oidc/assignment/test-assignment', () => overrideResponse(403));
+
+      await visit(OIDC_BASE_URL + '/assignments');
+      await click('[data-test-oidc-assignment-linked-block="test-assignment"]');
+      await click(SELECTORS.assignmentDeleteButton);
+      await click(GENERAL.confirmButton);
+
+      assert.strictEqual(flashMessage.latestMessage, 'permission denied', 'shows the delete error');
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.access.oidc.assignments.assignment.details',
+        'keeps the user on assignment details after a failed delete'
       );
     });
 
