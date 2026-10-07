@@ -6201,8 +6201,6 @@ type SealStatusResponse struct {
 	ClusterID            string   `json:"cluster_id,omitempty"`
 	RecoverySeal         bool     `json:"recovery_seal"`
 	StorageType          string   `json:"storage_type,omitempty"`
-	HCPLinkStatus        string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID    string   `json:"hcp_link_resource_ID,omitempty"`
 	Warnings             []string `json:"warnings,omitempty"`
 	RecoverySealType     string   `json:"recovery_seal_type,omitempty"`
 	RemovedFromCluster   *bool    `json:"removed_from_cluster,omitempty"`
@@ -6242,8 +6240,6 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		return nil, err
 	}
 
-	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
-
 	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
 	var removed *bool
 	isRemoved, shouldInclude := core.IsRemovedFromCluster()
@@ -6266,11 +6262,6 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 		if redactVersion {
 			s.Version = ""
 			s.BuildDate = ""
-		}
-
-		if resourceIDonHCP != "" {
-			s.HCPLinkStatus = hcpLinkStatus
-			s.HCPLinkResourceID = resourceIDonHCP
 		}
 
 		return s, nil
@@ -6321,11 +6312,6 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	}
 	if p := core.sealMigrationDone.Load(); p != nil {
 		s.MigrationDoneAtEpoch = p.Unix()
-	}
-
-	if resourceIDonHCP != "" {
-		s.HCPLinkStatus = hcpLinkStatus
-		s.HCPLinkResourceID = resourceIDonHCP
 	}
 
 	if redactVersion {
