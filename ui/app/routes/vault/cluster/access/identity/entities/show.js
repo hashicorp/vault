@@ -25,7 +25,11 @@ export default class IdentityShowRoute extends Route {
     }
 
     const { data } = await this.api.identity.entityReadById(params.item_id);
-    const canAddAlias = (await this.capabilities.for('groupAlias').canCreate) || false;
+    const { canUpdate: canAddAlias } = await this.capabilities.for('entityAlias');
+    const { canUpdate: canEditEntity } = await this.capabilities.for('identityCapabilities', {
+      identityType: 'entity',
+      id: params.item_id,
+    });
     const aliases =
       section === 'aliases'
         ? await attachAliasCapabilities({
@@ -36,7 +40,7 @@ export default class IdentityShowRoute extends Route {
         : data.aliases;
 
     return hash({
-      model: { ...data, aliases, identityType: 'entity', canAddAlias },
+      model: { ...data, aliases, identityType: 'entity', canAddAlias, canEditEntity },
       section,
     });
   }
