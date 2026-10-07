@@ -863,19 +863,12 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("mounts of type %q aren't supported by license", entry.Type), logical.ErrInvalidRequest
 	}
 
-	// If the request requires a snapshot ID, we need to perform checks to
-	// ensure the request is valid and lock the snapshot, so it doesn't get
-	// unloaded while the request is being processed.
-	if req.RequiresSnapshotID != "" {
-		if c.perfStandby {
-			return nil, logical.ErrPerfStandbyPleaseForward
-		}
-		unlockSnapshot, err := c.lockSnapshotForRequest(ctx, req, entry)
-		if err != nil {
-			return logical.ErrorResponse("unable to lock snapshot: " + err.Error()), err
-		}
-		defer unlockSnapshot()
+	// Snapshot requests are served by the active node. The snapshot itself is
+	// validated and locked in handleRequest, after the caller is authenticated.
+	if req.RequiresSnapshotID != "" && c.perfStandby {
+		return nil, logical.ErrPerfStandbyPleaseForward
 	}
+
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -1534,6 +1527,18 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}()
 
+	// Validate and lock the snapshot only after authentication and the request
+	// audit entry, so that unauthenticated callers can't use the lock errors to
+	// probe mounts or snapshot state, and failures are audited. The lock keeps
+	// the snapshot from being unloaded while the request is processed.
+	if req.RequiresSnapshotID != "" {
+		unlockSnapshot, err := c.lockSnapshotForRequest(ctx, req, entry)
+		if err != nil {
+			return logical.ErrorResponse("unable to lock snapshot: " + err.Error()), auth, err
+		}
+		defer unlockSnapshot()
+	}
+
 	// This context value will be empty if it's a request that doesn't require a
 	// snapshot. This is done on purpose and handled in the
 	// SnapshotStorageRouter
@@ -2147,6 +2152,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			c.logger.Error("failed to audit request", "path", req.Path, "error", err)
 			return nil, nil, ErrInternalError
 		}
+	}
+
+	// Login requests are never served from a loaded snapshot.
+	if req.RequiresSnapshotID != "" {
+		return logical.ErrorResponse("snapshot operations are not supported for login requests"), nil, logical.ErrInvalidRequest
 	}
 
 	// The token store uses authentication even when creating a new token,
