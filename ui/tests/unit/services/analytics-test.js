@@ -337,6 +337,73 @@ module('Unit | Service | analytics', function (hooks) {
       });
     });
 
+    // A declined browser must not retain Segment's identity (ajs_*) or its event
+    // queue (persisted-queue:v1:...Segment.io:*), including keys left by an older
+    // build, another tab, or a previously-accepted session.
+    module('Segment storage purge on opt-out', function (hooks) {
+      const SEGMENT_KEYS = [
+        'ajs_user_id',
+        'ajs_anonymous_id',
+        'persisted-queue:v1:testkey:dest-Segment.io:items',
+        'persisted-queue:v1:testkey:dest-Segment.io:seen',
+      ];
+
+      const seedSegmentKeys = () => SEGMENT_KEYS.forEach((k) => window.localStorage.setItem(k, 'x'));
+      const assertSegmentKeysGone = (assert) =>
+        SEGMENT_KEYS.forEach((k) =>
+          assert.strictEqual(window.localStorage.getItem(k), null, `${k} is purged`)
+        );
+
+      hooks.afterEach(function () {
+        SEGMENT_KEYS.forEach((k) => window.localStorage.removeItem(k));
+      });
+
+      test('decline before analytics activates purges any Segment keys', function (assert) {
+        clearConsent();
+        this.service.startVaultSmAnalytics(true, this.config); // undecided -> prompt, not activated
+        seedSegmentKeys();
+
+        this.service.recordConsent(false);
+
+        assert.false(this.service.activated, 'analytics never activated');
+        assertSegmentKeysGone(assert);
+      });
+
+      test('decline while running purges Segment keys via reset', function (assert) {
+        setConsent(true);
+        this.service.startVaultSmAnalytics(true, this.config); // activated (SegmentProvider, start stubbed)
+        seedSegmentKeys();
+
+        this.service.recordConsent(false);
+
+        assert.false(this.service.activated, 'analytics stopped');
+        assertSegmentKeysGone(assert);
+      });
+
+      test('on-load gate sweeps stale Segment keys when consent is already declined', function (assert) {
+        setConsent(false);
+        seedSegmentKeys();
+
+        this.service.startVaultSmAnalytics(true, this.config);
+
+        assert.true(this.startSpy.notCalled, 'analytics is not started');
+        assertSegmentKeysGone(assert);
+      });
+
+      test('purge leaves the persisted consent flag intact', function (assert) {
+        setConsent(false);
+        seedSegmentKeys();
+
+        this.service.startVaultSmAnalytics(true, this.config);
+
+        assert.strictEqual(
+          window.localStorage.getItem(CONSENT_KEY),
+          'false',
+          'the consent decision itself is preserved through the sweep'
+        );
+      });
+    });
+
     module('session transitions (no page reload)', function () {
       test('undecided -> accept -> analytics starts', function (assert) {
         clearConsent();
