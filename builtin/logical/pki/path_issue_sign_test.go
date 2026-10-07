@@ -667,6 +667,116 @@ func TestPathIssueSign_JKSFormat(t *testing.T) {
 //		"key_bits":    parentKeyType.keySize,
 //		"ttl":         "1000000h",
 //	})
+
+// TestPathIssueSign_MLDSAParameterSet verifies that the parameter_set field is returned
+// in the response when issuing a leaf certificate signed by an ML-DSA CA, and that it
+// is absent for non-ML-DSA leaf certificates. It also verifies that sign (CSR-based)
+// responses return parameter_set when the CSR key is ML-DSA.
+func TestPathIssueSign_MLDSAParameterSet(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name         string
+		caBundle     string
+		leafCsr      string
+		parameterSet certutil.ParameterSet
+	}{
+		{"ml-dsa-44", mldsa44CaAndKey, mldsa44LeafCsr, certutil.MLDSA44},
+		{"ml-dsa-65", mldsa65CaAndKey, mldsa65LeafCsr, certutil.MLDSA65},
+		{"ml-dsa-87", mldsa87CaAndKey, mldsa87LeafCsr, certutil.MLDSA87},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			b, s := CreateBackendWithStorage(t)
+
+			// Import the ML-DSA CA bundle and set it as default issuer.
+			resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+				"pem_bundle": tc.caBundle,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			require.False(t, resp.IsError(), "import failed: %v", resp.Error())
+			issuers := resp.Data["imported_issuers"].([]string)
+			require.Len(t, issuers, 1)
+
+			_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+				"default": issuers[0],
+			})
+			require.NoError(t, err)
+
+			// Create a role that allows leaf issuance with an ML-DSA key.
+			_, err = CBWrite(b, s, "roles/test-role", map[string]interface{}{
+				"allowed_domains":    "foobar.com",
+				"allow_bare_domains": true,
+				"key_type":           "ml-dsa",
+				"parameter_set":      string(tc.parameterSet),
+				"max_ttl":            "2h",
+			})
+			require.NoError(t, err)
+
+			// issue/:role — Vault generates the leaf key; parameter_set should reflect
+			// the ML-DSA parameter set of the issued leaf certificate's public key.
+			issueResp, err := CBWrite(b, s, "issue/test-role", map[string]interface{}{
+				"common_name": "foobar.com",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, issueResp)
+			require.False(t, issueResp.IsError(), "issue failed: %v", issueResp.Error())
+			require.Equal(t, tc.parameterSet, issueResp.Data["private_key_parameter_set"],
+				"issue/: private_key_parameter_set should match the requested ML-DSA parameter set")
+
+			// sign/:role — no private key is returned, so private_key_parameter_set should be absent.
+			signResp, err := CBWrite(b, s, "sign/test-role", map[string]interface{}{
+				"common_name": "foobar.com",
+				"csr":         tc.leafCsr,
+			})
+			require.NoError(t, err)
+			require.NotNil(t, signResp)
+			require.False(t, signResp.IsError(), "sign failed: %v", signResp.Error())
+			require.Nil(t, signResp.Data["private_key_parameter_set"],
+				"sign/: private_key_parameter_set must not be present when no private_key is returned")
+		})
+	}
+
+	// Verify parameter_set is absent for a non-ML-DSA leaf.
+	t.Run("non-mldsa-no-parameter-set", func(t *testing.T) {
+		t.Parallel()
+		b, s := CreateBackendWithStorage(t)
+
+		resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+			"pem_bundle": rsa2048CaAndKey,
+		})
+		require.NoError(t, err)
+		require.False(t, resp.IsError())
+		issuers := resp.Data["imported_issuers"].([]string)
+
+		_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+			"default": issuers[0],
+		})
+		require.NoError(t, err)
+
+		_, err = CBWrite(b, s, "roles/rsa-role", map[string]interface{}{
+			"allowed_domains":    "foobar.com",
+			"allow_bare_domains": true,
+			"key_type":           "rsa",
+			"key_bits":           2048,
+			"max_ttl":            "2h",
+		})
+		require.NoError(t, err)
+
+		issueResp, err := CBWrite(b, s, "issue/rsa-role", map[string]interface{}{
+			"common_name": "foobar.com",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, issueResp)
+		require.False(t, issueResp.IsError())
+		require.Nil(t, issueResp.Data["private_key_parameter_set"],
+			"private_key_parameter_set must not be present for non-ML-DSA leaf certificates")
+	})
+}
+
 const rsa2048CaAndKey = `-----BEGIN CERTIFICATE-----
 MIIDNDCCAhygAwIBAgIURfqw7VetXbOAIRomrgKZvUPwvCUwDQYJKoZIhvcNAQEL
 BQAwFTETMBEGA1UEAxMKZm9vYmFyLmNvbTAgFw0yNTExMTQyMDI3MjVaGA8yMTM5

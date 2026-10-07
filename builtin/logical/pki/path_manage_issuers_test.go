@@ -76,8 +76,8 @@ func TestIssuerGenerateRoot_exported(t *testing.T) {
 			})
 			requireSuccessNonNilResponse(t, resp, err, "generate ML-DSA-%s root via issuers/generate/root/exported", tc.paramSet)
 
-			require.Equal(t, certutil.ParameterSet(tc.paramSet), resp.Data["parameter_set"],
-				"parameter_set should match requested value for ML-DSA-%s root", tc.paramSet)
+			require.Equal(t, certutil.ParameterSet(tc.paramSet), resp.Data["private_key_parameter_set"],
+				"private_key_parameter_set should match requested value for ML-DSA-%s root", tc.paramSet)
 
 			requireMLDSAExportedPrivateKey(t, resp, tc.expectedAlgo, tc.paramSet)
 			requireMLDSARootCert(t, resp, tc.expectedAlgo, tc.paramSet)

@@ -11,6 +11,7 @@ import (
 
 	"github.com/hashicorp/vault/builtin/logical/pki/observe"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -210,6 +211,9 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 		return nil, err
 	}
 	resp.Data["key_id"] = myKey.ID
+	if genParams.exported && myKey.PrivateKeyType == certutil.MLDSAPrivateKey {
+		resp.Data["private_key_parameter_set"] = myKey.ParameterSet
+	}
 
 	resp = addWarnings(resp, warnings)
 
