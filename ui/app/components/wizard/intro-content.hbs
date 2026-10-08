@@ -4,22 +4,35 @@
 }}
 
 <Hds::Layout::Flex @align="start" @direction="column" as |LF|>
-  <LF.Item class="has-bottom-margin-xs">
-    {{#if @setupTime}}
-      <Hds::Badge @text={{concat "Setup time: " @setupTime}} />
+  <Hds::Text::Body @tag="p" class="bottom-margin-16">
+    {{#if (has-block "description")}}
+      {{yield to="description"}}
+    {{else}}
+      {{@description}}
     {{/if}}
-    {{#if @isOptional}}
-      <Hds::Badge @text="Optional" @type="outlined" class="has-left-margin-xs" />
-    {{/if}}
-    {{#if @isBeta}}
-      <Hds::Badge @text="Beta" class="has-left-margin-xs" />
-    {{/if}}
-    {{#if @isEnterprise}}
-      <Hds::Badge @text="Enterprise" @color="highlight" class="has-left-margin-xs" />
-    {{/if}}
-  </LF.Item>
+  </Hds::Text::Body>
 
-  <Hds::Text::Body @tag="p" class="has-bottom-margin-l">{{@description}}</Hds::Text::Body>
+  {{! Collect only the truthy badges so the first rendered badge never gets a left margin }}
+  <LF.Item class="bottom-margin-48">
+    {{#each
+      (compact
+        (array
+          (if @setupTime (hash text=(concat "Setup time: " @setupTime)))
+          (if @isOptional (hash text="Optional" type="outlined"))
+          (if @isBeta (hash text="Beta"))
+          (if @isEnterprise (hash text="Enterprise" color="highlight"))
+        )
+      )
+      as |badge index|
+    }}
+      <Hds::Badge
+        @text={{badge.text}}
+        @type={{badge.type}}
+        @color={{badge.color}}
+        class={{if (gt index 0) "has-left-margin-xs"}}
+      />
+    {{/each}}
+  </LF.Item>
 
   {{yield to="features"}}
 </Hds::Layout::Flex>
