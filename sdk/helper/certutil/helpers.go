@@ -808,7 +808,7 @@ func ValidateParameterSet(keyType string, parameterSet string) error {
 		return nil
 	}
 
-	switch parameterSet {
+	switch strings.ToLower(parameterSet) {
 	case MLDSA44, MLDSA65, MLDSA87:
 		return nil
 	default:

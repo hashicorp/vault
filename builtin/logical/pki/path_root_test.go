@@ -119,17 +119,17 @@ func TestGenerateRoot_exported(t *testing.T) {
 func TestGenerateRoot_existing(t *testing.T) {
 	t.Parallel()
 
-	mldsa44Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "44")
+	mldsa44Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-44")
 	require.NoError(t, err, "failed generating an ml-dsa key bundle")
 	mldsa44Pem, err := mldsa44Bundle.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ml-dsa key to pem")
 
-	mldsa65Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "65")
+	mldsa65Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-65")
 	require.NoError(t, err, "failed generating an ml-dsa key bundle")
 	mldsa65Pem, err := mldsa65Bundle.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ml-dsa key to pem")
 
-	mldsa87Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "87")
+	mldsa87Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-87")
 	require.NoError(t, err, "failed generating an ml-dsa key bundle")
 	mldsa87Pem, err := mldsa87Bundle.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ml-dsa key to pem")

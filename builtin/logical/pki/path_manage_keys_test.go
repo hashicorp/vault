@@ -96,7 +96,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys_MLDSA(t *testing.T) {
 		wantLogicalErr bool
 		entOnly        bool
 	}{
-		{"ml-dsa", "ml-dsa", []string{"", "44", "65", "87"}, false, true},
+		{"ml-dsa", "ml-dsa", []string{"", "ml-dsa-44", "ml-dsa-65", "ml-dsa-87"}, false, true},
 		{"error-ml-dsa", "ml-dsa", []string{"14"}, true, false},
 	}
 	for _, tt := range tests {
@@ -148,7 +148,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys_MLDSA(t *testing.T) {
 					if tt.keyType == "ml-dsa" {
 						expectedParamSet := paramSet
 						if expectedParamSet == "" {
-							expectedParamSet = "44"
+							expectedParamSet = "ml-dsa-44"
 						}
 						require.Equal(t, certutil.ParameterSet(expectedParamSet), resp.Data["parameter_set"],
 							"parameter_set field in response did not match the requested value")
@@ -387,17 +387,17 @@ func TestPKI_PathManageKeys_ImportKeyBundle_MLDSA(t *testing.T) {
 	t.Parallel()
 	b, s := CreateBackendWithStorage(t)
 
-	mldsa44Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "44")
+	mldsa44Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-44")
 	require.NoError(t, err, "failed generating an ml-dsa key bundle")
 	mldsa44Pem, err := mldsa44Bundle.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ml-dsa key to pem")
 
-	mldsa65Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "65")
+	mldsa65Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-65")
 	require.NoError(t, err, "failed generating an ml-dsa key bundle")
 	mldsa65Pem, err := mldsa65Bundle.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ml-dsa key to pem")
 
-	mldsa87Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "87")
+	mldsa87Bundle, err := certutil.CreateKeyBundle("ml-dsa", 0, rand.Reader, "ml-dsa-87")
 	require.NoError(t, err, "failed generating an ml-dsa key bundle")
 	mldsa87Pem, err := mldsa87Bundle.ToPrivateKeyPemString()
 	require.NoError(t, err, "failed converting ml-dsa key to pem")

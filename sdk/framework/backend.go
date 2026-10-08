@@ -114,10 +114,10 @@ type Backend struct {
 	// to communicate with a plugin on when to rotate a credential
 	RotateCredential func(context.Context, *logical.Request) error
 
-	// HealthCheck is the optional callback invoked by the HealthCheckBackend to
-	// validate connectivity and authentication against the plugin's configured
-	// external system. Plugins that do not set this field are treated as
-	// health-check unsupported and the operation returns a 501 Not Implemented.
+	// HealthCheck is the optional callback invoked when the HealthCheckManager
+	// routes a health check operation to the plugin. The plugin defines which
+	// checks to perform. Plugins that do not set this field return
+	// 501 Not Implemented for health check operations.
 	//
 	// The callback receives the full logical.Request to access storage and read
 	// the plugin's configuration. The path being checked is available in req.Path.

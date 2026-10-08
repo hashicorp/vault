@@ -73,9 +73,9 @@ const (
 type ParameterSet string
 
 const (
-	MLDSA44 = "44"
-	MLDSA65 = "65"
-	MLDSA87 = "87"
+	MLDSA44 = "ml-dsa-44"
+	MLDSA65 = "ml-dsa-65"
+	MLDSA87 = "ml-dsa-87"
 )
 
 // TLSUsage controls whether the intended usage of a *tls.Config
