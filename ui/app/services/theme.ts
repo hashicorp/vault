@@ -11,6 +11,8 @@ import Ember from 'ember';
 import { getStringPreference, setStringPreference } from 'vault/utils/preferences';
 
 const STORAGE_KEY = 'theme';
+// The full localStorage key written by setStringPreference / local-storage.ts.
+const STORAGE_FULL_KEY = `vault:prefs:${STORAGE_KEY}`;
 export type ThemeChoice = 'dark' | 'light' | 'system';
 
 export default class ThemeService extends Service {
@@ -21,11 +23,36 @@ export default class ThemeService extends Service {
   private _mediaQuery: MediaQueryList | null = null;
   private _systemListener = () => this._applyTheme(true);
 
+  // Bound storage listener for cross-tab theme sync. Stored so we can remove it
+  // in willDestroy without creating a new function reference each time.
+  private _storageListener = (event: StorageEvent) => {
+    if (event.storageArea !== window.localStorage) return;
+    if (event.key !== STORAGE_FULL_KEY) return;
+
+    // newValue is JSON-encoded by local-storage.ts (e.g. `"\"dark\""`).
+    // A null newValue means the key was removed; fall back to the default.
+    let incoming: string;
+    try {
+      incoming = event.newValue !== null ? (JSON.parse(event.newValue) as string) : 'system';
+    } catch {
+      return; // unparseable — ignore
+    }
+
+    const isValidTheme = (v: string): v is ThemeChoice => v === 'dark' || v === 'light' || v === 'system';
+    if (!isValidTheme(incoming)) return;
+
+    this.theme = incoming;
+    this._applyTheme(true);
+    this._syncSystemListener();
+  };
+
   constructor(owner: Owner) {
     super(owner);
     // Leave unanimated as there is no previous state to cross-fade from on boot.
     this._applyTheme();
     this._syncSystemListener();
+    // Listen for theme changes written by other tabs on the same origin.
+    window.addEventListener('storage', this._storageListener);
   }
 
   /** True when the effective (resolved) theme is dark. */
@@ -47,6 +74,7 @@ export default class ThemeService extends Service {
 
   willDestroy(): void {
     this._mediaQuery?.removeEventListener('change', this._systemListener);
+    window.removeEventListener('storage', this._storageListener);
     super.willDestroy();
   }
 

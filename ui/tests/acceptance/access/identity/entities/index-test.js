@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/index';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -53,6 +53,21 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .hasText('Edit entity Create alias Disable entity Delete entity', 'all actions render for entities');
     await click(`${GENERAL.listItem(name)} ${GENERAL.menuItem('delete')}`);
     await click(GENERAL.confirmButton);
+  });
+
+  test('it lists a deleted policy that is still attached to an entity', async function (assert) {
+    const name = `entity-${uuidv4()}`;
+    const policy = `policy-${uuidv4()}`;
+    await runCmd([
+      `write sys/policies/acl/${policy} policy=${btoa('path "secret/*" { capabilities = ["read"] }')}`,
+      `write identity/entity name=${name} policies=${policy}`,
+      `delete sys/policies/acl/${policy}`,
+    ]);
+    await visit('/vault/access/identity/entities');
+    await click(GENERAL.button(`entity ${name}`));
+
+    assert.dom(GENERAL.hdsTab('policies')).exists('renders the policies tab');
+    assert.dom(GENERAL.table('policy-list')).includesText(policy, 'lists the deleted policy');
   });
 
   test('it hides delete and shows create alias based on the token policy', async function (assert) {
@@ -229,5 +244,82 @@ module('Acceptance | /access/identity/entities', function (hooks) {
 
     assert.dom(GENERAL.messageError).exists();
     assert.dom(GENERAL.messageDescription).hasText(error, 'Specific error message is rendered');
+  });
+});
+
+// Read-only tokens must not see create, merge, or edit actions for entities and entity aliases.
+module('Acceptance | Identity entities | read-only token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    await login();
+    this.entityId = await runCmd('write -field=id identity/entity name=read-only-entity');
+    const accessor = await runCmd('read -field=accessor sys/auth/token');
+    this.aliasId = await runCmd(
+      `write -field=id identity/entity-alias name=read-only-alias mount_accessor=${accessor} canonical_id=${this.entityId}`
+    );
+    const policy = `
+      path "identity/*" { capabilities = ["read", "list"] }
+            path "sys/config/ui/checklist-state" { capabilities = ["read"] }
+    `;
+    const token = await runCmd(tokenWithPolicyCmd('entities-read-only', policy));
+    await login(token);
+  });
+
+  hooks.afterEach(async function () {
+    await login();
+    await runCmd(`delete identity/entity-alias/id/${this.aliasId}`);
+    await runCmd('delete identity/entity/name/read-only-entity');
+  });
+
+  test('it hides the merge and create actions on the entities list view', async function (assert) {
+    await visit('/vault/access/identity/entities');
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Entities', 'list view renders');
+    assert.dom(GENERAL.button('entity read-only-entity')).exists('entity is listed');
+    assert.dom(GENERAL.button('entity-merge-link')).doesNotExist('merge action is hidden');
+    assert.dom(GENERAL.button('entity-create-link')).doesNotExist('create action is hidden');
+  });
+
+  test('it hides the edit and add alias actions on the entity details view', async function (assert) {
+    await visit(`/vault/access/identity/entities/${this.entityId}/details`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('read-only-entity', 'details view renders');
+    assert.dom('[data-test-entity-edit-link]').doesNotExist('edit action is hidden');
+    assert.dom('[data-test-entity-create-link]').doesNotExist('add alias action is hidden');
+  });
+
+  test('it hides the edit action on the alias details view', async function (assert) {
+    await visit(`/vault/access/identity/entities/aliases/${this.aliasId}/details`);
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('read-only-alias', 'details view renders');
+    assert.dom('[data-test-alias-edit-link]').doesNotExist('edit action is hidden');
+  });
+});
+
+// Capability gating must not hide entity actions from a user who is allowed to use them.
+module('Acceptance | Identity entities | root token', function (hooks) {
+  setupApplicationTest(hooks);
+
+  hooks.beforeEach(async function () {
+    await login();
+    this.entityId = await runCmd('write -field=id identity/entity name=root-entity');
+    const accessor = await runCmd('read -field=accessor sys/auth/token');
+    this.aliasId = await runCmd(
+      `write -field=id identity/entity-alias name=root-alias mount_accessor=${accessor} canonical_id=${this.entityId}`
+    );
+  });
+
+  hooks.afterEach(async function () {
+    await runCmd(`delete identity/entity-alias/id/${this.aliasId}`);
+    await runCmd('delete identity/entity/name/root-entity');
+  });
+
+  test('it shows the edit and add alias actions on the entity details view', async function (assert) {
+    await visit(`/vault/access/identity/entities/${this.entityId}/details`);
+    assert.dom('[data-test-entity-edit-link]').exists('edit action is shown');
+    assert.dom('[data-test-entity-create-link]').exists('add alias action is shown');
+  });
+
+  test('it shows the edit action on the alias details view', async function (assert) {
+    await visit(`/vault/access/identity/entities/aliases/${this.aliasId}/details`);
+    assert.dom('[data-test-alias-edit-link]').exists('edit action is shown');
   });
 });

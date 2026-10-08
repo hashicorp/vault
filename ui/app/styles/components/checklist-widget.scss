@@ -3,6 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// position: relative makes .dashboard-checklist a positioned element so that
+// z-index takes effect, placing the checklist above the ::before gradient blob
+// on the Page::Header behind it.
+.dashboard-checklist {
+  position: relative;
+  z-index: 1;
+}
+
 .checklist-step-marker {
   display: inline-flex;
 }
