@@ -9,6 +9,7 @@ import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { PREFERENCES_PERSONA_SET } from 'vault/utils/analytic-events';
+import personaAnalyticsValue from 'vault/utils/persona-analytics-value';
 import { getPreference, getStringPreference, setStringPreference } from 'vault/utils/preferences';
 
 import type AnalyticsService from 'vault/services/analytics';
@@ -73,15 +74,6 @@ export default class PreferencesPersona extends Component {
     return this.selectedValue === 'other';
   }
 
-  /** Normalises arbitrary text to lowercase kebab-case for analytics events. */
-  private toKebab(value: string): string {
-    return value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-  }
-
   @action
   updatePersona(event: Event) {
     const { value } = event.target as HTMLSelectElement;
@@ -115,11 +107,7 @@ export default class PreferencesPersona extends Component {
     setStringPreference('persona', JSON.stringify(toStore));
 
     if (getPreference('telemetryConsent')) {
-      let eventValue = pref.value;
-      if (pref.value === 'other' && pref.customRole) {
-        const kebab = this.toKebab(pref.customRole);
-        eventValue = kebab ? `other-${kebab}` : 'other';
-      }
+      const eventValue = personaAnalyticsValue(pref.value, pref.customRole);
       this.analytics.trackEvent(PREFERENCES_PERSONA_SET, {
         namespace: 'preferences',
         action: 'persona_set',
