@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -429,30 +429,8 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
 		}
 
-		// Strip a leading '/' as paths in Vault start after the / in the API path
-		if len(pc.Path) > 0 && pc.Path[0] == '/' {
-			pc.Path = pc.Path[1:]
-		}
-
-		// Ensure we are using the full request path internally
-		pc.Path = result.namespace.Path + pc.Path
-
-		if strings.Contains(pc.Path, "+*") {
-			return fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", pc.Path)
-		}
-
-		if pc.Path == "+" || strings.Count(pc.Path, "/+") > 0 || strings.HasPrefix(pc.Path, "+/") {
-			pc.HasSegmentWildcards = true
-		}
-
-		if strings.HasSuffix(pc.Path, "*") {
-			// If there are segment wildcards, don't actually strip the
-			// trailing asterisk, but don't want to hit the default case
-			if !pc.HasSegmentWildcards {
-				// Strip the glob character if found
-				pc.Path = strings.TrimSuffix(pc.Path, "*")
-				pc.IsPrefix = true
-			}
+		if err := pc.normalizePath(result.namespace); err != nil {
+			return err
 		}
 
 		// Map old-style policies into capabilities
@@ -587,5 +565,39 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 	}
 
 	result.Paths = paths
+	return nil
+}
+
+// normalizePath converts pr.Path from a path written relative to ns into the
+// fully-qualified form that ACL matching uses. It strips a leading '/',
+// prefixes the namespace path, rejects '+*', and records whether the path has
+// segment wildcards or a trailing glob.
+func (pr *PathRules) normalizePath(ns *namespace.Namespace) error {
+	// Strip a leading '/' as paths in Vault start after the / in the API path
+	if len(pr.Path) > 0 && pr.Path[0] == '/' {
+		pr.Path = pr.Path[1:]
+	}
+
+	// Ensure we are using the full request path internally
+	pr.Path = ns.Path + pr.Path
+
+	if strings.Contains(pr.Path, "+*") {
+		return fmt.Errorf("path %q: invalid use of wildcards ('+*' is forbidden)", pr.Path)
+	}
+
+	if pr.Path == "+" || strings.Count(pr.Path, "/+") > 0 || strings.HasPrefix(pr.Path, "+/") {
+		pr.HasSegmentWildcards = true
+	}
+
+	if strings.HasSuffix(pr.Path, "*") {
+		// If there are segment wildcards, don't actually strip the
+		// trailing asterisk, but don't want to hit the default case
+		if !pr.HasSegmentWildcards {
+			// Strip the glob character if found
+			pr.Path = strings.TrimSuffix(pr.Path, "*")
+			pr.IsPrefix = true
+		}
+	}
+
 	return nil
 }
