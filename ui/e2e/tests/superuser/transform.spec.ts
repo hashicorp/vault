@@ -3,7 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from '../../fixtures/demo';
 import { BasePage } from '../../pages/base';
 import { ConfigurationSettingsPage } from '../../pages/configuration-settings';
 
