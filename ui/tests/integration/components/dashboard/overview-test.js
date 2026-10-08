@@ -11,6 +11,7 @@ import sinon from 'sinon';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { CLUSTER_STARTUP_CHECKLIST } from 'vault/utils/constants/checklist';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -505,16 +506,44 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(GENERAL.widget('checklist')).exists('Checklist restored after clicking restore');
     });
 
-    test('restore button in post-completion explore vault banner returns to the congrats panel when that was last shown', async function (assert) {
+    test('shows congrats after completing the last step on a restored partial checklist', async function (assert) {
+      this.permissions.isRoot = true;
+      await this.renderComponent();
+      const visibleSteps = this.checklistState.getVisibleSteps(CLUSTER_STARTUP_CHECKLIST.id, [
+        ...CLUSTER_STARTUP_CHECKLIST.order,
+      ]);
+
+      for (const stepId of visibleSteps.slice(0, -1)) {
+        await click(`[data-test-checklist-step-mark-complete="${stepId}"]`);
+      }
+
+      assert.dom('[data-test-checklist-progress-label]').hasText('80%', 'Four of five steps are complete');
+
+      await click('[data-test-checklist-hide]');
+      assert.dom(GENERAL.widget('explore-vault')).exists('Setup guide is hidden');
+
+      await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Setup guide is restored');
+
+      const finalStepId = visibleSteps[visibleSteps.length - 1];
+      await click(`[data-test-checklist-step-mark-complete="${finalStepId}"]`);
+
+      assert
+        .dom(GENERAL.widget('congrats-banner'))
+        .exists('Completion banner appears after the last step is completed');
+      assert
+        .dom(GENERAL.widget('checklist'))
+        .doesNotExist('Completed checklist is replaced by the completion banner');
+    });
+
+    test('restore button in post-completion explore vault banner always returns to the checklist', async function (assert) {
       this.checklistState['_state'] = {
         'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
       };
-      // Render first so the congrats banner is visible, then dismiss via the UI
-      // action so OverviewComponent.hideChecklist records lastView: 'complete-banner'.
+      // Dismiss directly from the congrats panel without navigating to checklist first.
       await this.renderComponent();
       assert.dom(GENERAL.widget('congrats-banner')).exists('Congrats banner is visible before dismissing');
 
-      // Dismiss directly from the congrats panel (no "back to checklist" click first)
       await click('[data-test-congrats-dismiss]');
       assert
         .dom(GENERAL.widget('explore-vault'))
@@ -522,29 +551,64 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await click('[data-test-explore-vault-restore]');
 
+      // Regardless of what was showing when dismissed, restoring always goes to the checklist.
       assert
-        .dom(GENERAL.widget('congrats-banner'))
-        .exists('Returns to the completion panel that was showing before it was hidden');
-      assert.dom(GENERAL.widget('checklist')).doesNotExist('Does not land on the checklist');
+        .dom(GENERAL.widget('checklist'))
+        .exists('Always returns to the checklist, not the congrats banner');
+      assert.dom(GENERAL.widget('congrats-banner')).doesNotExist('Does not land on the completion panel');
     });
 
-    test('restore button in post-completion explore vault banner returns to the checklist when that was last shown', async function (assert) {
+    test('restored completed checklist returns to congrats after a step is made incomplete and complete', async function (assert) {
+      this.permissions.isRoot = true;
       this.checklistState['_state'] = {
         'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
       };
       await this.renderComponent();
 
-      // Navigate to the checklist view before dismissing, so that's the view to restore
-      await click('[data-test-congrats-back]');
-      await click('[data-test-checklist-hide]');
-      assert.dom(GENERAL.widget('explore-vault')).exists('Starts in post-completion explore vault');
-
+      await click('[data-test-congrats-dismiss]');
       await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Completed checklist is restored');
 
+      const firstStepToggle =
+        '[data-test-checklist-step="tvp-cli"] [data-test-checklist-step-mark-complete="tvp-cli"]';
+      await click(firstStepToggle);
       assert
         .dom(GENERAL.widget('checklist'))
-        .exists('Returns to the checklist view that was showing before it was hidden');
-      assert.dom(GENERAL.widget('congrats-banner')).doesNotExist('Does not land on the completion panel');
+        .exists('Checklist remains visible after a step is made incomplete');
+      assert
+        .dom(GENERAL.widget('congrats-banner'))
+        .doesNotExist('Completion banner is hidden while a step is incomplete');
+
+      await click(firstStepToggle);
+      assert
+        .dom(GENERAL.widget('congrats-banner'))
+        .exists('Completion banner returns after the step is completed again');
+      assert
+        .dom(GENERAL.widget('checklist'))
+        .doesNotExist('Completed checklist is replaced by the completion banner');
+    });
+
+    test('hiding a restored completed checklist returns to the post-completion banner', async function (assert) {
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+      await this.renderComponent();
+
+      await click('[data-test-congrats-dismiss]');
+      await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Completed checklist is restored');
+
+      await click('[data-test-checklist-hide]');
+      assert
+        .dom(GENERAL.widget('explore-vault'))
+        .exists('Post-completion banner returns after hiding the checklist');
+      assert.dom(GENERAL.widget('checklist')).doesNotExist('Checklist is hidden again');
+
+      await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Checklist can be restored again');
+      assert
+        .dom('[data-test-checklist-progress-label]')
+        .hasText('100%', 'Checklist completion progress is preserved');
     });
 
     test('clicking hide button in checklist transitions to explore vault banner', async function (assert) {
@@ -556,11 +620,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       assert.dom(GENERAL.widget('explore-vault')).exists('Explore vault banner shown after hide');
       assert.dom(GENERAL.widget('checklist')).doesNotExist('Checklist is no longer visible');
-      assert.strictEqual(
-        this.checklistState.getLastView('cluster-startup'),
-        'checklist',
-        'Records the active checklist view before hiding'
-      );
     });
 
     test('after back to setup, incomplete then re-complete shows congrats again', async function (assert) {

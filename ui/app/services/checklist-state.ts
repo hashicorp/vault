@@ -14,7 +14,7 @@ import type { ApiResponse } from 'vault/api';
 import type ApiService from 'vault/services/api';
 import type PermissionsService from 'vault/services/permissions';
 import type VersionService from 'vault/services/version';
-import type { ChecklistLocalStateData, ChecklistView } from 'vault/utils/constants/checklist';
+import type { ChecklistLocalStateData } from 'vault/utils/constants/checklist';
 
 /**
  * Sparse map of checklist completion state: { checklistId: { stepId: true } }.
@@ -72,7 +72,7 @@ function isNonBlockingError(error: unknown): boolean {
 
 /**
  * Type guard that validates a value has the expected ChecklistLocalStateData
- * shape: { [checklistId]: { hidden?: boolean, lastView?: 'checklist' | 'complete-banner' } }.
+ * shape: { [checklistId]: { hidden?: boolean } }.
  * An empty object is valid (no checklists have local preferences yet).
  */
 function isChecklistLocalStateData(value: unknown): value is ChecklistLocalStateData {
@@ -81,9 +81,8 @@ function isChecklistLocalStateData(value: unknown): value is ChecklistLocalState
   return Object.values(value as Record<string, unknown>).every((entry) => {
     if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) return false;
 
-    const { hidden, lastView } = entry as Record<string, unknown>;
+    const { hidden } = entry as Record<string, unknown>;
     if (hidden !== undefined && typeof hidden !== 'boolean') return false;
-    if (lastView !== undefined && lastView !== 'checklist' && lastView !== 'complete-banner') return false;
     return true;
   });
 }
@@ -93,9 +92,8 @@ function isChecklistLocalStateData(value: unknown): value is ChecklistLocalState
  * storage model:
  *  - Completion state: read/written via the sys/config/ui/checklist-state API
  *    so that progress is shared across browsers and sessions.
- *  - Local preferences (hidden, last view shown): stored in localStorage,
- *    nested by checklist ID, so they are per-browser and never written to
- *    the backend.
+ *  - Local preferences (hidden): stored in localStorage, nested by checklist
+ *    ID, so they are per-browser and never written to the backend.
  *
  * The stored completion shape is { checklistId: { stepId: true } }; a missing
  * step entry is treated as false (incomplete) by consumers.
@@ -140,7 +138,7 @@ export default class ChecklistStateService extends Service {
   }
 
   /** Merges a partial local-state patch for a single checklist and persists the result. */
-  private _patchLocalState(checklistId: string, patch: { hidden?: boolean; lastView?: ChecklistView }): void {
+  private _patchLocalState(checklistId: string, patch: { hidden?: boolean }): void {
     this._localState = {
       ...this._localState,
       [checklistId]: { ...this._localState[checklistId], ...patch },
@@ -240,23 +238,6 @@ export default class ChecklistStateService extends Service {
    */
   showChecklist(checklistId: string): void {
     this._patchLocalState(checklistId, { hidden: false });
-  }
-
-  /**
-   * Returns which panel (checklist vs. completion) was last shown for a
-   * checklist. Defaults to 'complete-banner' — the original completion panel —
-   * when no preference has been recorded yet.
-   */
-  getLastView(checklistId: string): ChecklistView {
-    return this._localState[checklistId]?.lastView ?? 'complete-banner';
-  }
-
-  /**
-   * Records which panel (checklist vs. completion) is currently shown for a
-   * checklist so it can be restored to the same view later.
-   */
-  setLastView(checklistId: string, view: ChecklistView): void {
-    this._patchLocalState(checklistId, { lastView: view });
   }
 
   // ---------------------------------------------------------------------------
