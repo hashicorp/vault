@@ -94,6 +94,44 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
     );
   });
 
+  // An empty dropdown would open a blank popover, so the toggle is omitted entirely.
+  test('it should hide the Manage dropdown when no actions are permitted', async function (assert) {
+    this.model.capabilities = {
+      canDelete: false,
+      canEdit: false,
+      canReadCreds: false,
+      canRotateStaticCreds: false,
+    };
+
+    for (const type of ['static', 'dynamic']) {
+      await this.renderComponent(type);
+      assert.dom(GENERAL.dropdownToggle('Manage')).doesNotExist(`Manage is hidden for a ${type} role`);
+    }
+  });
+
+  test('it should show the Manage dropdown with only the permitted action', async function (assert) {
+    const actions = {
+      canEdit: 'Edit role',
+      canDelete: 'Delete role',
+      canRotateStaticCreds: 'Rotate credentials',
+    };
+
+    for (const [capability, label] of Object.entries(actions)) {
+      this.model.capabilities = {
+        canDelete: false,
+        canEdit: false,
+        canReadCreds: false,
+        canRotateStaticCreds: false,
+        [capability]: true,
+      };
+      await this.renderComponent('static');
+      await click(GENERAL.dropdownToggle('Manage'));
+
+      assert.dom(GENERAL.menuItem()).exists({ count: 1 }, `only one action renders for ${capability}`);
+      assert.dom(GENERAL.menuItem(label)).exists(`${label} renders for ${capability}`);
+    }
+  });
+
   test('it should render details fields', async function (assert) {
     assert.expect(26);
 

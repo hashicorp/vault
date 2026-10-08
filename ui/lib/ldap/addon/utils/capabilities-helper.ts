@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -38,7 +38,7 @@ export async function fetchRoleCapabilities(
       canDelete: perms[pathMap.role]?.canDelete,
       canEdit: perms[pathMap.role]?.canUpdate,
       canReadCreds: perms[pathMap.creds]?.canRead,
-      canRotateStaticCreds: pathMap.rotate ? perms[pathMap.rotate]?.canCreate : false,
+      canRotateStaticCreds: pathMap.rotate ? perms[pathMap.rotate]?.canUpdate : false,
     };
   });
 }

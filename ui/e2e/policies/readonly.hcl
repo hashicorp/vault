@@ -40,3 +40,8 @@ path "identity/*" {
 path "readonly-kv/*" {
   capabilities = ["read", "list"]
 }
+
+# LDAP roles can be viewed but not edited, deleted or rotated.
+path "readonly-ldap/*" {
+  capabilities = ["read", "list"]
+}
