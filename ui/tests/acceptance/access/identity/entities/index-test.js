@@ -55,6 +55,21 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(GENERAL.confirmButton);
   });
 
+  test('it lists a deleted policy that is still attached to an entity', async function (assert) {
+    const name = `entity-${uuidv4()}`;
+    const policy = `policy-${uuidv4()}`;
+    await runCmd([
+      `write sys/policies/acl/${policy} policy=${btoa('path "secret/*" { capabilities = ["read"] }')}`,
+      `write identity/entity name=${name} policies=${policy}`,
+      `delete sys/policies/acl/${policy}`,
+    ]);
+    await visit('/vault/access/identity/entities');
+    await click(GENERAL.button(`entity ${name}`));
+
+    assert.dom(GENERAL.hdsTab('policies')).exists('renders the policies tab');
+    assert.dom(GENERAL.table('policy-list')).includesText(policy, 'lists the deleted policy');
+  });
+
   test('it hides delete and shows create alias based on the token policy', async function (assert) {
     const name = `entity-${uuidv4()}`;
     const policy = `
