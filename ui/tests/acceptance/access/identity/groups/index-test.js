@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const GROUP_ID_1 = '66638b30-a05e-560b-18cc-f43af766ce73';
 const GROUP_ID_2 = '78938b30-a85e-535b-14ac-f43af766ce73';
@@ -113,6 +114,8 @@ module('Acceptance | Identity groups list view', function (hooks) {
       data: { key_info: {}, keys: [] },
       request_id: 'test',
     }));
+    this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.identityGroups);
+
     await visit('/vault/access/identity/groups');
     assert.dom(GENERAL.emptyStateTitle).hasText('No groups yet');
   });

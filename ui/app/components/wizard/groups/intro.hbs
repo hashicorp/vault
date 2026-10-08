@@ -1,0 +1,31 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @isOptional={{true}}
+  @imageAlt="Identity group and external group mapping"
+  @imageCaption="Internal groups designate entities manually within Vault. External groups sync group membership based on your identity provider."
+  @imageSrc={{img-path "~/groups-intro.png"}}
+>
+  <:description>
+    Groups collect
+    <strong>multiple entities under a shared identity unit</strong>, allowing policies to be assigned at a group level rather
+    than individually. Each group can contain subgroups, with policies cascading down to all members.
+  </:description>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="service">
+      Groups are used to
+      <strong>apply shared policies across teams</strong>, mirroring existing Identity Provider (IdP) groupings.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="database">
+      Groups are
+      <strong>scoped to the namespace where they are created.</strong>
+      They extend down to child namespaces, but are not applied cluster-wide by default.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="org">
+      Groups come in two forms: internal group membership is managed and dictated within Vault; external group membership is
+      directly mirrors and syncs membership from your identity provider.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>

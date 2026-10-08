@@ -1,0 +1,31 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @isOptional={{true}}
+  @imageAlt="Diagram showing a Vault client authenticating with Vault as an OIDC identity provider, which verifies identity with a trusted identity provider such as Okta, LDAP, or AWS, and returns a client token"
+  @imageCaption="Vault as an OIDC identity provider enables client applications to leverage Vault when authenticating end-users."
+  @imageSrc={{img-path "~/oidc-provider-intro.png"}}
+>
+  <:description>
+    Implementing zero-trust architecture requires providing identity-based access to services within an organization. OpenID
+    Connect (OIDC)
+    <strong>allows clients to confirm their identity with Vault as an identity provider</strong>.
+  </:description>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="service">
+      Using Vault as an OIDC provider allows external applications to receive verifiable identity authentication.
+      Applications then use this information to make their own access decisions.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="database">
+      Vault as an OIDC provider is
+      <strong>cluster-wide within a Vault instance</strong>, not namespace-limited by default.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="org">
+      A cluster first
+      <strong>must define OIDC scopes to configure OIDC provider</strong>. Scopes should be minimal and client-specific, and
+      must be defined in the CLI/API.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>
