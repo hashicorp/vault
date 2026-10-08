@@ -168,6 +168,11 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
 
   @action
   cancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');
+    if (this.isNew) {
+      this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');
+    } else {
+      // Without params, the current type and name segments are reused, so hierarchical names need no re-encoding.
+      this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles.role.details');
+    }
   }
 }
