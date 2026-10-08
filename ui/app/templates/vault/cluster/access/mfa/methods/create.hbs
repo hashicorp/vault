@@ -59,17 +59,23 @@
           @onChange={{this.onTypeSelect}}
           data-test-radio-card={{lowercase method.name}}
         >
-          <div class="radio-card-row is-flex-v-centered">
-            <div>
-              <Icon @name={{method.icon}} @size="24" class={{if (eq method.name "TOTP") "has-text-grey"}} />
-              <p
-                class="has-text-weight-semibold has-text-center
-                  {{if (or (eq method.name 'Okta') (eq method.name 'TOTP')) 'has-top-margin-xs'}}"
+          <Hds::Layout::Flex @justify="center" class="has-padding-16 is-flex-1">
+            <Hds::Layout::Flex @direction="column" @align="center" @justify="center">
+              <Icon
+                @name={{if (and method.iconMono this.isDarkMode) method.iconMono method.icon}}
+                @size="24"
+                class={{if (eq method.name "TOTP") "has-text-grey"}}
+              />
+              <Hds::Text::Body
+                @tag="p"
+                @weight="semibold"
+                @align="center"
+                class={{if (or (eq method.name "Okta") (eq method.name "TOTP")) "has-top-margin-xs"}}
               >
                 {{method.name}}
-              </p>
-            </div>
-          </div>
+              </Hds::Text::Body>
+            </Hds::Layout::Flex>
+          </Hds::Layout::Flex>
         </RadioCard>
       {{/each}}
     </div>
