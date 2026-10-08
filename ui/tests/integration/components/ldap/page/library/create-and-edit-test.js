@@ -21,6 +21,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
   hooks.beforeEach(function () {
     const router = this.owner.lookup('service:router');
     const routerStub = sinon.stub(router, 'transitionTo');
+    this.routerStub = routerStub;
     this.transitionCalledWith = (routeName, name) => {
       const route = `vault.cluster.secrets.backend.ldap.${routeName}`;
       const args = name ? [route, name] : [route];
@@ -74,11 +75,27 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
       .isChecked('Correct radio is checked for check-in enforcement');
   });
 
-  test('it should go back to list route on cancel', async function (assert) {
+  test('it should go back to list route on cancel when creating', async function (assert) {
+    this.form = this.createForm;
+
     await this.renderComponent();
     await click('[data-test-cancel]');
 
-    assert.ok(this.transitionCalledWith('libraries'), 'Transitions to libraries list route on cancel');
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.libraries'),
+      'Transitions to libraries list route on cancel'
+    );
+  });
+
+  test('it should go back to details route on cancel when editing', async function (assert) {
+    await this.renderComponent();
+    await click('[data-test-cancel]');
+
+    // No params are passed so the current library name segment is reused, including hierarchical names.
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.libraries.library.details'),
+      'Transitions to the details route of the library being edited on cancel'
+    );
   });
 
   test('it should validate form fields', async function (assert) {
