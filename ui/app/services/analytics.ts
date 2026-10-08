@@ -33,6 +33,11 @@ export default class AnalyticsService extends Service {
   private pendingConfig?: AnalyticsConfig;
   private operatorTelemetryEnabled = false;
 
+  // The most recent identity (computed by the cluster route). Cached so it can be
+  // applied if the provider activates AFTER the route computed it e.g. when the
+  // user accepts the consent banner, which starts analytics only at that point.
+  private pendingIdentity?: { identifier: string; traits: Record<string, string> };
+
   debug = config.environment === 'development';
 
   private log(...args: unknown[]) {
@@ -55,9 +60,21 @@ export default class AnalyticsService extends Service {
   }
 
   identifyUser = (identifer: string, traits: Record<string, string>) => {
-    this.provider.identify(identifer, traits);
-    this.log('identifyUser', identifer, traits);
+    // Cache the identity so it survives until the provider is active. Without this,
+    // an identify computed before consent is accepted (the provider is not yet
+    // started) would be lost, leaving the session unidentified once it activates.
+    this.pendingIdentity = { identifier: identifer, traits };
+    this.applyPendingIdentity();
   };
+
+  // Sends the cached identity to the active provider. A no-op until analytics is
+  // activated, so a later activation (e.g. consent accept) can replay it.
+  private applyPendingIdentity() {
+    if (this.activated && this.pendingIdentity) {
+      this.provider.identify(this.pendingIdentity.identifier, this.pendingIdentity.traits);
+      this.log('identifyUser', this.pendingIdentity.identifier, this.pendingIdentity.traits);
+    }
+  }
 
   start = (provider: string, config: AnalyticsConfig) => {
     // fail silently, analytics is nonessential
@@ -154,6 +171,10 @@ export default class AnalyticsService extends Service {
       // fire outside the gate, and the operator flag must still allow telemetry.
       if (this.operatorTelemetryEnabled && this.pendingConfig && !this.activated) {
         this.start(SegmentProviderName, this.pendingConfig);
+        // Analytics may have activated only now as the cluster route computed the
+        // identity before consent was granted so replay the cached identity.
+        // Without this, the session sends page events but never an identify call.
+        this.applyPendingIdentity();
       }
     } else if (this.activated) {
       this.reset();
@@ -168,9 +189,18 @@ export default class AnalyticsService extends Service {
    */
   reset = () => {
     if (!this.activated) return;
+    // Clear the provider's persisted identity so the next user does not inherit
+    // or get aliased to this ession's identity. Called on consent decline and on
+    // logout.
+    try {
+      this.provider.reset();
+    } catch (e) {
+      this.log('provider reset failed', e);
+    }
     this.teardownRouteEventListener();
     this.provider = new DummyProvider();
     this.activated = false;
+    this.pendingIdentity = undefined;
     this.log('reset');
   };
 

@@ -13,6 +13,7 @@ export interface AnalyticsProvider {
   start: (config: Record<string, string | boolean>) => void;
   trackPageView: (routeName: string, metadata: Record<string, string>) => void;
   trackEvent: (eventName: AnalyticsEventName, metadata: Record<string, unknown>) => void;
+  reset: () => void;
 }
 
 export interface AnalyticsConfig extends Record<string, string | boolean> {

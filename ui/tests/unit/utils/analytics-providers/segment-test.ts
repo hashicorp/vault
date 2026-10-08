@@ -176,4 +176,13 @@ module('Unit | Utils | analytics providers | segment', function (hooks) {
       'productPlanType defaults to self-managed when no HVD hint is provided'
     );
   });
+
+  test('reset clears the Segment identity', function (assert) {
+    const provider = new SegmentProvider();
+    const resetStub = sinon.stub(provider.client, 'reset');
+
+    provider.reset();
+
+    assert.true(resetStub.calledOnce, 'client.reset() is called to clear ajs_user_id and anonymousId');
+  });
 });
