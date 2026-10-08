@@ -150,6 +150,11 @@ export default class AnalyticsService extends Service {
 
     if (consentGranted) {
       this.start(SegmentProviderName, config);
+    } else {
+      // Consent is recorded as declined. Sweep any Segment localStorage left by an
+      // older build, another tab, or a previously-accepted session so a declined
+      // browser never retains Segment identity or its event queue.
+      SegmentProvider.purgeStorage();
     }
   };
 
@@ -178,6 +183,10 @@ export default class AnalyticsService extends Service {
       }
     } else if (this.activated) {
       this.reset();
+    } else {
+      // Declined before analytics ever activated; reset() would early-return, so
+      // purge directly to guarantee a declined browser is left with no Segment keys.
+      SegmentProvider.purgeStorage();
     }
   };
 
