@@ -27,8 +27,8 @@ ha_backend "consul" {
 service_registration "consul" {
     address = "https://consulserverIP:8500"
     foo = "bar"
-    tls_cert_file = "./../vault/diagnose/test-fixtures/expiredcert.pem"
-    tls_key_file = "./../vault/diagnose/test-fixtures/expiredprivatekey.pem"
+    tls_cert_file = "./../../vault/diagnose/test-fixtures/expiredcert.pem"
+    tls_key_file = "./../../vault/diagnose/test-fixtures/expiredprivatekey.pem"
 }
 
 sentinel {

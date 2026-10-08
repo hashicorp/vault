@@ -71,6 +71,7 @@ runs:
         path: vault-tools
     - name: Install needed Vault versions
       env:
+        GOWORK: off
         GOPATH: /home/runner/go
       shell: bash
       run: |
@@ -83,6 +84,7 @@ runs:
         done
     - name: Build dev binary for binary tests
       env:
+        GOWORK: off
         GOPATH: /home/runner/go
         # This action is only called from ENT workflows; GOPRIVATE is unconditionally required.
         GOPRIVATE: github.com/hashicorp/*
@@ -104,15 +106,19 @@ runs:
       with:
         sqlc-version: '1.29.0'
     - name: Build VCM
+      env:
+        GOWORK: off
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}/vcm" || exit 1
         make
     - name: Build Autopilot upgrade tool
+      env:
+        GOWORK: off
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}/vault-tools/apupgrade" || exit 1
-        GOWORK=off go build -o apupgrade .
+        go build -o apupgrade .
     - name: Run Autopilot upgrade tool
       shell: bash
       run: |

@@ -11,6 +11,8 @@ use (
 	./api/auth/kubernetes
 	./api/auth/ldap
 	./api/auth/userpass
+	./command/base
+	./command/client
 	./internalshared
 	./sdk
 	./tools/pipeline
