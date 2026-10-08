@@ -8,8 +8,12 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { aggregatePolicies } from 'vault/utils/policy-aggregator';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
 
+import type AnalyticsService from 'vault/services/analytics';
 import type ApiService from 'vault/services/api';
+import type WizardService from 'vault/services/wizard';
 import type { Entity, Group, ListEntity } from 'vault/vault/identity';
 import type { AggregatePolicy } from 'vault/utils/policy-aggregator';
 import type { Breadcrumb } from 'vault/vault/app-types';
@@ -41,10 +45,56 @@ export type IdentityEntitiesIndexModel = {
 interface Args {
   model: IdentityEntitiesIndexModel;
   breadcrumbs?: Breadcrumb[];
+  onRefresh: () => void;
 }
 
 export default class IdentityPageEntitiesComponent extends Component<Args> {
+  @service declare readonly analytics: AnalyticsService;
   @service declare readonly api: ApiService;
+  @service declare readonly wizard: WizardService;
+
+  @tracked shouldRenderIntroModal = false;
+  wizardId = WIZARD_ID_MAP.identityEntities;
+
+  get isInitialState() {
+    return !this.args.model.entities.meta?.total;
+  }
+
+  get showWizard() {
+    return !this.wizard.isDismissed(this.wizardId) && this.isInitialState;
+  }
+
+  // Show page content when the full-page wizard is not shown, or when the
+  // intro modal is open (so the list renders behind the modal overlay).
+  get showContent() {
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
+  }
+
+  get showIntroButton() {
+    return this.showContent && this.isInitialState;
+  }
+
+  @action
+  showIntroPage() {
+    this.analytics.trackEvent(INTRO_REOPEN_CLICKED, {
+      namespace: 'intro-page',
+      action: 'clicked',
+      elementId: 'intro-reopen-button',
+      channel: 'webpage',
+      objectType: 'identity-entity',
+    });
+    this.wizard.reset(this.wizardId);
+    this.shouldRenderIntroModal = true;
+  }
+
+  @action
+  refreshList() {
+    try {
+      this.args.onRefresh();
+    } catch {
+      // refresh is best-effort; silently ignore if the route reload fails
+    }
+  }
 
   @tracked entityFlyoutData: EntityFlyoutData | null = null;
   @tracked entityFlyoutInitialTab: EntityFlyoutTab = 'policies';

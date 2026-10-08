@@ -13,7 +13,7 @@
   </Hds::Text::Body>
 
   {{! Collect only the truthy badges so the first rendered badge never gets a left margin }}
-  <LF.Item class="bottom-margin-48">
+  <LF.Item>
     {{#each
       (compact
         (array
@@ -34,7 +34,9 @@
     {{/each}}
   </LF.Item>
 
-  {{yield to="features"}}
+  <LF.Item class="top-margin-36">
+    {{yield to="features"}}
+  </LF.Item>
 </Hds::Layout::Flex>
 
 <Hds::Layout::Flex @direction="column" class={{@imageClass}} data-test-intro-content-image-container>

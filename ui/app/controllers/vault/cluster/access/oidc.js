@@ -7,11 +7,19 @@ import Controller from '@ember/controller';
 import { capitalize } from '@ember/string';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
+import { INTRO_REOPEN_CLICKED } from 'vault/utils/analytic-events';
 
 export default class OidcConfigureController extends Controller {
   @service router;
+  @service wizard;
+  @service analytics;
 
   @tracked header = null;
+  @tracked shouldRenderIntroModal = false;
+
+  wizardId = WIZARD_ID_MAP.oidcProvider;
 
   constructor() {
     super(...arguments);
@@ -36,6 +44,21 @@ export default class OidcConfigureController extends Controller {
 
   get isCta() {
     return this.header === 'cta';
+  }
+
+  // True when the user is on the initial "no clients yet" landing page.
+  get isInitialState() {
+    return this.isCta;
+  }
+
+  get showWizard() {
+    return !this.wizard.isDismissed(this.wizardId) && this.isInitialState;
+  }
+
+  // Show page content when the full-page wizard is not displayed, or when the
+  // intro modal is open on top of the existing content.
+  get showContent() {
+    return !this.showWizard || (this.shouldRenderIntroModal && this.wizard.isIntroVisible(this.wizardId));
   }
 
   get breadcrumbs() {
@@ -64,5 +87,24 @@ export default class OidcConfigureController extends Controller {
     }
 
     return baseCrumbs;
+  }
+
+  @action
+  showIntroPage() {
+    this.analytics.trackEvent(INTRO_REOPEN_CLICKED, {
+      namespace: 'intro-page',
+      action: 'clicked',
+      elementId: 'intro-reopen-button',
+      channel: 'webpage',
+      objectType: 'oidc-provider',
+    });
+    // Reset dismissal so the wizard is visible again as a modal
+    this.wizard.reset(this.wizardId);
+    this.shouldRenderIntroModal = true;
+  }
+
+  @action
+  refreshRoute() {
+    this.router.refresh('vault.cluster.access.oidc');
   }
 }
