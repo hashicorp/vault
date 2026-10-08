@@ -59,7 +59,7 @@ module('Integration | Component | sidebar-nav-secrets', function (hooks) {
     await renderComponent();
 
     promotionalLinks.forEach((link) => {
-      assert.dom(GENERAL.navLink(link)).hasText(`${link} Plus`, `${link} link renders Plus badge`);
+      assert.dom(GENERAL.navLink(link)).hasText(`${link} Standard`, `${link} link renders Standard badge`);
     });
   });
 
