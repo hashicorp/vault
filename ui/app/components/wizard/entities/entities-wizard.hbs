@@ -1,0 +1,35 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Wizard @wizardId={{this.wizardId}} @isModal={{@isIntroModal}} @title="Entities" @onDismiss={{this.onDismiss}}>
+  <:intro>
+    <Wizard::Entities::Intro />
+  </:intro>
+  <:introActions>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @icon="plus"
+        @text="Create an entity"
+        @route="vault.cluster.access.identity.entities.create"
+        {{on "click" (fn this.trackClickEvent "Create an entity")}}
+        data-test-button="Create an entity"
+      />
+      <Hds::Button
+        @color="secondary"
+        @text={{if @isIntroModal "Close" "Skip"}}
+        {{on "click" this.onDismiss}}
+        data-test-button={{if @isIntroModal "Close" "Skip"}}
+      />
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="View documentation"
+        @href={{doc-link "/vault/tutorials/auth-methods/identity"}}
+        {{on "click" (fn this.trackClickEvent "View documentation")}}
+        class="margin-left-auto"
+      />
+    </Hds::ButtonSet>
+  </:introActions>
+</Wizard>
