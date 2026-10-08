@@ -127,6 +127,61 @@ module('Acceptance | ACL policies list view', function (hooks) {
     assert.dom(GENERAL.menuItem('delete-policy')).exists('Delete policy action exists');
   });
 
+  // Downloading reads the policy body, so it must be hidden when the token cannot read the policy.
+  test('it only offers Download for policies the token can read', async function (assert) {
+    this.server.get('sys/policies/acl/', () => ({
+      data: { keys: ['readable-policy', 'editable-policy', 'deletable-policy', 'listed-policy'] },
+      request_id: 'test',
+    }));
+    this.server.post('sys/capabilities-self', () => ({
+      data: {
+        'sys/policies/acl/readable-policy': ['read'],
+        'sys/policies/acl/editable-policy': ['update'],
+        'sys/policies/acl/deletable-policy': ['delete'],
+        'sys/policies/acl/listed-policy': ['list'],
+      },
+      request_id: 'test',
+    }));
+    await visit('/vault/policies/acl');
+
+    await click(`${GENERAL.listItem('readable-policy')} ${GENERAL.menuTrigger}`);
+    assert
+      .dom(`${GENERAL.listItem('readable-policy')} ${GENERAL.menuItem('download-policy')}`)
+      .exists('readable policy offers Download');
+
+    await click(`${GENERAL.listItem('editable-policy')} ${GENERAL.menuTrigger}`);
+    assert
+      .dom(`${GENERAL.listItem('editable-policy')} ${GENERAL.menuItem('edit-policy')}`)
+      .exists('update-only policy offers Edit');
+    assert
+      .dom(`${GENERAL.listItem('editable-policy')} ${GENERAL.menuItem('download-policy')}`)
+      .doesNotExist('update-only policy hides Download');
+
+    await click(`${GENERAL.listItem('deletable-policy')} ${GENERAL.menuTrigger}`);
+    assert
+      .dom(`${GENERAL.listItem('deletable-policy')} ${GENERAL.menuItem('delete-policy')}`)
+      .exists('delete-only policy keeps its menu with Delete');
+    assert
+      .dom(`${GENERAL.listItem('deletable-policy')} ${GENERAL.menuItem('download-policy')}`)
+      .doesNotExist('delete-only policy hides Download');
+
+    assert
+      .dom(`${GENERAL.listItem('listed-policy')} ${GENERAL.menuTrigger}`)
+      .doesNotExist('a policy with no permitted actions has no row menu');
+  });
+
+  test('it omits the row menu when Delete is the only permitted action on the default policy', async function (assert) {
+    // Delete is never offered for default, so delete-only access must not leave an empty menu.
+    this.server.get('sys/policies/acl/', () => ({ data: { keys: ['default'] }, request_id: 'test' }));
+    this.server.post('sys/capabilities-self', () => ({
+      data: { 'sys/policies/acl/default': ['delete'] },
+      request_id: 'test',
+    }));
+    await visit('/vault/policies/acl');
+    assert.dom(GENERAL.listItem('default')).exists('default policy is listed');
+    assert.dom(GENERAL.menuTrigger).doesNotExist('no empty row menu is rendered');
+  });
+
   test('it suppresses Delete for the default policy', async function (assert) {
     // default and default-ceiling policies must not show the Delete action.
     this.server.get('sys/policies/acl/', () => ({

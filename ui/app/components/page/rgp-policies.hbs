@@ -37,31 +37,36 @@
   </:customTableItem>
 
   <:popupMenu as |rowData|>
-    <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-      <dd.ToggleIcon @icon="more-horizontal" @text="Policy options" @hasChevron={{false}} data-test-popup-menu-trigger />
-      {{#if rowData.capabilities.canRead}}
-        <dd.Interactive
-          @route="vault.cluster.policy.show"
-          @models={{array "rgp" rowData.name}}
-          data-test-popup-menu="view-policy"
-        >View policy</dd.Interactive>
-      {{/if}}
-      {{#if rowData.capabilities.canUpdate}}
-        <dd.Interactive
-          @route="vault.cluster.policy.edit"
-          @models={{array "rgp" rowData.name}}
-          data-test-popup-menu="edit-policy"
-        >Edit policy</dd.Interactive>
-      {{/if}}
-      <dd.Interactive {{on "click" (fn this.downloadPolicy rowData)}} data-test-popup-menu="download-policy">Download policy</dd.Interactive>
-      {{#if rowData.capabilities.canDelete}}
-        <dd.Interactive
-          @color="critical"
-          {{on "click" (fn this.setPolicyToDelete rowData)}}
-          data-test-popup-menu="delete-policy"
-        >Delete policy</dd.Interactive>
-      {{/if}}
-    </Hds::Dropdown>
+    {{#if (or rowData.capabilities.canRead rowData.capabilities.canUpdate rowData.capabilities.canDelete)}}
+      <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+        <dd.ToggleIcon @icon="more-horizontal" @text="Policy options" @hasChevron={{false}} data-test-popup-menu-trigger />
+        {{#if rowData.capabilities.canRead}}
+          <dd.Interactive
+            @route="vault.cluster.policy.show"
+            @models={{array "rgp" rowData.name}}
+            data-test-popup-menu="view-policy"
+          >View policy</dd.Interactive>
+        {{/if}}
+        {{#if rowData.capabilities.canUpdate}}
+          <dd.Interactive
+            @route="vault.cluster.policy.edit"
+            @models={{array "rgp" rowData.name}}
+            data-test-popup-menu="edit-policy"
+          >Edit policy</dd.Interactive>
+        {{/if}}
+        {{#if rowData.capabilities.canRead}}
+          <dd.Interactive {{on "click" (fn this.downloadPolicy rowData)}} data-test-popup-menu="download-policy">Download
+            policy</dd.Interactive>
+        {{/if}}
+        {{#if rowData.capabilities.canDelete}}
+          <dd.Interactive
+            @color="critical"
+            {{on "click" (fn this.setPolicyToDelete rowData)}}
+            data-test-popup-menu="delete-policy"
+          >Delete policy</dd.Interactive>
+        {{/if}}
+      </Hds::Dropdown>
+    {{/if}}
   </:popupMenu>
 </Page::ListView>
 
