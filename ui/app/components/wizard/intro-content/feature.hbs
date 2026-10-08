@@ -3,9 +3,11 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Layout::Flex class="has-bottom-margin-s">
-  <Hds::Icon @name={{@icon}} @size="24" />
-  <Hds::Text::Body @tag="p" class="has-left-margin-xs">
+<Hds::Layout::Flex class="bottom-margin-24">
+  {{#if @icon}}
+    <Hds::Icon @name={{@icon}} @size="24" />
+  {{/if}}
+  <Hds::Text::Body @tag="p" class={{if @icon "has-left-margin-xs"}}>
     {{yield}}
   </Hds::Text::Body>
 </Hds::Layout::Flex>

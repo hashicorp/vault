@@ -14,22 +14,26 @@
   </:badges>
   <:description>{{@config.description}}</:description>
   <:actions>
-    {{#if @config.primaryAction}}
-      <Hds::Button
-        @color="primary"
-        @icon={{@config.primaryAction.icon}}
-        @text={{@config.primaryAction.label}}
-        @route={{@config.primaryAction.route}}
-        data-test-button={{@config.primaryAction.label}}
-      />
-    {{/if}}
+    {{#unless @wizardShown}}
+      {{#if @config.primaryAction}}
+        <Hds::Button
+          @color="primary"
+          @icon={{@config.primaryAction.icon}}
+          @text={{@config.primaryAction.label}}
+          @route={{@config.primaryAction.route}}
+          data-test-button={{@config.primaryAction.label}}
+        />
+      {{/if}}
+    {{/unless}}
     {{yield to="headerActions"}}
   </:actions>
 </Page::Header>
 
-{{#if (has-block "tabs")}}
-  {{yield to="tabs"}}
-{{/if}}
+{{#unless @wizardShown}}
+  {{#if (has-block "tabs")}}
+    {{yield to="tabs"}}
+  {{/if}}
+{{/unless}}
 
 {{#unless @wizardShown}}
   {{#if (or @config.filter (has-block "toolbarFilters") (has-block "toolbarActions"))}}

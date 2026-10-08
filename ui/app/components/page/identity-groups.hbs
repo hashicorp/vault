@@ -11,9 +11,10 @@
   @sortBy={{@sortBy}}
   @sortOrder={{@sortOrder}}
   @onSortChange={{@onSortChange}}
+  @wizardShown={{not this.showContent}}
 >
   <:headerActions>
-    {{#if this.canCreateGroup}}
+    {{#if (and this.canCreateGroup this.showContent)}}
       <Hds::Button
         @color="primary"
         @icon="plus"
@@ -22,7 +23,17 @@
         data-test-button="Create group"
       />
     {{/if}}
+    {{#if this.showIntroButton}}
+      <Hds::Button
+        @color="secondary"
+        @icon="bulb"
+        @text="New to Groups?"
+        data-test-button="intro"
+        {{on "click" this.showIntroPage}}
+      />
+    {{/if}}
   </:headerActions>
+
   <:tabs>
     <nav class="tabs" aria-label="navigation for groups">
       <ul>
@@ -96,4 +107,8 @@
     @onConfirm={{fn this.deleteGroup this.groupToDelete}}
     data-test-confirm-modal="delete-group"
   />
+{{/if}}
+
+{{#if this.showWizard}}
+  <Wizard::Groups::GroupsWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshList}} />
 {{/if}}
