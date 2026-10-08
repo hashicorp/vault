@@ -1048,7 +1048,7 @@ func (s *staticAccount) NextRotationTime() time.Time {
 	if s.UsesRotationPeriod() {
 		return s.NextVaultRotation
 	}
-	return s.Schedule.Next(time.Now())
+	return s.Schedule.Next(s.LastVaultRotation)
 }
 
 // NextRotationTimeFromInput calculates the next rotation time for period and
