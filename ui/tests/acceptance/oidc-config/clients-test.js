@@ -24,6 +24,7 @@ import {
 } from 'vault/tests/helpers/oidc-config';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
 const searchSelect = create(ss);
 const flashMessage = create(fm);
@@ -354,16 +355,15 @@ module('Acceptance | oidc-config clients', function (hooks) {
     });
 
     test('it renders empty state when no clients are configured', async function (assert) {
-      assert.expect(4);
+      assert.expect(3);
+      this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.oidcProvider);
       this.server.get('/identity/oidc/client', () => overrideResponse(404));
 
       await visit(OIDC_BASE_URL);
+
       assert.strictEqual(currentURL(), '/vault/access/oidc');
       assert.dom(GENERAL.hdsPageHeaderTitle).hasText('OIDC provider');
       assert.dom('[data-test-oidc-landing]').exists('landing page renders when no clients are configured');
-      assert
-        .dom(SELECTORS.oidcLandingImg)
-        .hasAttribute('src', '/ui/images/oidc-landing.png', 'image renders image when no clients configured');
     });
 
     test('it creates an assignment inline, creates a client, updates client to limit access, deletes client', async function (assert) {

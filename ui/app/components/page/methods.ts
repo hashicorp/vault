@@ -150,10 +150,6 @@ export default class PageAuthMethodsComponent extends Component<Args> {
     return !this.wizard.isDismissed(this.wizardId) && this.hasOnlyDefaultMethods;
   }
 
-  get showPageHeader() {
-    return !this.showWizard || this.wizard.isIntroVisible(this.wizardId);
-  }
-
   getAuthMethodData = (path: string) => {
     return this.authMethodList.find((method) => method.path === path);
   };
