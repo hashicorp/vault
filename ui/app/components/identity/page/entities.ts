@@ -32,8 +32,14 @@ export type EntitiesRouteModel = (ListEntity & {
 })[] &
   PaginatedMetadata;
 
+export type IdentityEntitiesIndexModel = {
+  entities: EntitiesRouteModel;
+  canCreateEntity: boolean;
+  canMergeEntities: boolean;
+};
+
 interface Args {
-  model: EntitiesRouteModel;
+  model: IdentityEntitiesIndexModel;
   breadcrumbs?: Breadcrumb[];
 }
 

@@ -13,25 +13,29 @@
     />
   </:breadcrumbs>
   <:actions>
-    <Hds::Button
-      @color="secondary"
-      @text="Merge entities"
-      @route="vault.cluster.access.identity.entities.merge"
-      data-test-button="entity-merge-link"
-    />
-    <Hds::Button
-      @color="primary"
-      @icon="plus"
-      @text="Create new entity"
-      @route="vault.cluster.access.identity.entities.create"
-      data-test-button="entity-create-link"
-    />
+    {{#if @model.canMergeEntities}}
+      <Hds::Button
+        @color="secondary"
+        @text="Merge entities"
+        @route="vault.cluster.access.identity.entities.merge"
+        data-test-button="entity-merge-link"
+      />
+    {{/if}}
+    {{#if @model.canCreateEntity}}
+      <Hds::Button
+        @color="primary"
+        @icon="plus"
+        @text="Create new entity"
+        @route="vault.cluster.access.identity.entities.create"
+        data-test-button="entity-create-link"
+      />
+    {{/if}}
   </:actions>
 </Page::Header>
 
-{{#if @model.meta.total}}
+{{#if @model.entities.meta.total}}
   <Identity::Entities::Table
-    @model={{@model}}
+    @model={{@model.entities}}
     @onClickEntity={{this.openEntityFlyout}}
     @onClickAlias={{this.openAliasFlyout}}
   />
