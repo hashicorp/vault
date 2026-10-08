@@ -50,10 +50,11 @@ binary {
         "GO-2026-6443",
 
         // https://github.com/advisories/GHSA-qqj6-54q6-cxv6
+        // https://pkg.go.dev/vuln/GO-2026-6665
         // gosnowflake v1 does not currently have patch for the issue, nor is
         // clear if v1 is still actively maintained. We'll want to migrate to
         // v2 ASAP.
-        "GHSA-qqj6-54q6-cxv6",
+        "GHSA-qqj6-54q6-cxv6", "GO-2026-6665",
       ]
     }
   }
@@ -110,10 +111,11 @@ container {
         "GO-2026-6443",
 
         // https://github.com/advisories/GHSA-qqj6-54q6-cxv6
+        // https://pkg.go.dev/vuln/GO-2026-6665
         // gosnowflake v1 does not currently have patch for the issue, nor is
         // clear if v1 is still actively maintained. We'll want to migrate to
         // v2 ASAP.
-        "GHSA-qqj6-54q6-cxv6",
+        "GHSA-qqj6-54q6-cxv6", "GO-2026-6665",
       ]
 
       // The OSV scanner will trip on several packages that are included in the
