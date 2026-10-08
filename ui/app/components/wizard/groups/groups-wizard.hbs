@@ -1,0 +1,35 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Wizard @wizardId={{this.wizardId}} @isModal={{@isIntroModal}} @title="Groups" @onDismiss={{this.onDismiss}}>
+  <:intro>
+    <Wizard::Groups::Intro />
+  </:intro>
+  <:introActions>
+    <Hds::ButtonSet>
+      <Hds::Button
+        @icon="plus"
+        @text="Create group"
+        @route="vault.cluster.access.identity.groups.create"
+        {{on "click" (fn this.trackClickEvent "Create group")}}
+        data-test-button="Create group"
+      />
+      <Hds::Button
+        @color="secondary"
+        @text={{if @isIntroModal "Close" "Skip"}}
+        {{on "click" this.onDismiss}}
+        data-test-button={{if @isIntroModal "Close" "Skip"}}
+      />
+      <Hds::Link::Standalone
+        @icon="docs-link"
+        @iconPosition="trailing"
+        @text="View documentation"
+        @href={{doc-link "/vault/docs/concepts/identity"}}
+        {{on "click" (fn this.trackClickEvent "View documentation")}}
+        class="margin-left-auto"
+      />
+    </Hds::ButtonSet>
+  </:introActions>
+</Wizard>
