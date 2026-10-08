@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
+import { test } from '../../fixtures/demo';
+import { rootApi } from '../../fixtures/root-api';
 import { BasePage } from '../../pages/base';
 
 const SELF_MANAGED_MOUNT = 'ldap-self-managed';
@@ -13,6 +15,8 @@ const ROLE_NAME = 'lazy-user-role';
 const ROLE_DN = 'cn=lazy-user,ou=users,dc=my-domain,dc=com';
 const ROLE_USERNAME = 'lazy-user';
 const ROLE_PASSWORD = 'initialpass';
+const EDITED_PASSWORD = 'edited-password';
+const VAULT_ROTATED_PASSWORD = 'vault-rotated-password';
 
 const NAME_FORMAT_ERROR =
   'Name must be lowercase and can only contain alphanumeric characters, hyphens, underscores, periods, and forward slashes.';
@@ -69,7 +73,7 @@ async function skipImportRotation(page: Page) {
   });
 }
 
-test('ldap self-managed static role workflow', async ({ page }) => {
+test('ldap self-managed static role workflow', async ({ page, playwright }, testInfo) => {
   const basePage = new BasePage(page);
   await skipImportRotation(page);
 
@@ -194,12 +198,45 @@ test('ldap self-managed static role workflow', async ({ page }) => {
     await expect(password).toBeEditable();
     await expect(password).toBeEmpty();
 
-    await password.fill('rotated-pass');
+    await password.fill(EDITED_PASSWORD);
     await page.getByRole('button', { name: 'Save' }).click();
 
     await expect(page).toHaveURL(new RegExp(`/roles/static/${ROLE_NAME}/details`));
     await revealPassword(page);
-    await expect(page.getByText('rotated-pass')).toBeVisible();
+    await expect(page.getByText(EDITED_PASSWORD)).toBeVisible();
+    await basePage.dismissFlashMessages();
+  });
+
+  await test.step('rotating credentials shows the new password without another reveal', async () => {
+    // No LDAP server is available, so the rotate call is faked. Vault's endpoint returns 204 with
+    // no body after storing the new password, so the fake stores one too, through the root API.
+    const api = await rootApi(playwright, testInfo);
+    await page.route('**/v1/*/rotate-role/*', async (route) => {
+      const stored = await api.post(`/v1/${SELF_MANAGED_MOUNT}/static-role/${ROLE_NAME}`, {
+        data: { password: VAULT_ROTATED_PASSWORD },
+      });
+      await route.fulfill({ status: stored.ok() ? 204 : 500 });
+    });
+    const refetch = page.waitForRequest((request) => request.url().includes(`/static-cred/${ROLE_NAME}`));
+
+    await page.getByRole('button', { name: 'Manage' }).click();
+    await page.getByRole('button', { name: 'Rotate credentials' }).click();
+    await page.getByRole('button', { name: 'Confirm' }).click();
+
+    await expect(page.getByText('Credentials successfully rotated.')).toBeVisible();
+    await expect(page.getByText(VAULT_ROTATED_PASSWORD, { exact: true })).toBeVisible();
+    await expect(page.getByText(EDITED_PASSWORD, { exact: true })).toBeHidden();
+    await refetch;
+
+    await page
+      .locator('.info-table-row')
+      .filter({ hasText: 'Password' })
+      .getByRole('button', { name: 'Copy' })
+      .click();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(VAULT_ROTATED_PASSWORD);
+
+    await page.unroute('**/v1/*/rotate-role/*');
+    await api.dispose();
     await basePage.dismissFlashMessages();
   });
 

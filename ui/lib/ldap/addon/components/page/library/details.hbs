@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 <Page::Header @title={{@model.library.name}}>
@@ -7,36 +7,46 @@
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </:breadcrumbs>
   <:actions>
-    <Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
-      {{#if
-        (has-capability
-          @model.capabilities
-          "update"
-          pathKey="ldapLibrary"
-          params=(hash backend=this.secretMountPath.currentPath name=@model.library.completeLibraryName)
-        )
-      }}
-        <D.Interactive @icon="settings" @route="libraries.library.edit" data-test-popup-menu="Edit library">Edit library</D.Interactive>
-      {{/if}}
-      {{#if
-        (has-capability
-          @model.capabilities
-          "delete"
-          pathKey="ldapLibrary"
-          params=(hash backend=this.secretMountPath.currentPath name=@model.library.completeLibraryName)
-        )
-      }}
-        <D.Interactive
-          @icon="trash"
-          @color="critical"
-          {{on "click" (fn (mut this.showConfirmModal) true)}}
-          data-test-popup-menu="Delete library"
-        >
-          Delete library
-        </D.Interactive>
-      {{/if}}
-    </Hds::Dropdown>
+    {{#if
+      (has-capability
+        @model.capabilities
+        "update"
+        "delete"
+        pathKey="ldapLibrary"
+        params=(hash backend=this.secretMountPath.currentPath name=@model.library.completeLibraryName)
+      )
+    }}
+      <Hds::Dropdown as |D|>
+        <D.ToggleButton @text="Manage" @color="secondary" data-test-dropdown="Manage" />
+        {{#if
+          (has-capability
+            @model.capabilities
+            "update"
+            pathKey="ldapLibrary"
+            params=(hash backend=this.secretMountPath.currentPath name=@model.library.completeLibraryName)
+          )
+        }}
+          <D.Interactive @icon="settings" @route="libraries.library.edit" data-test-popup-menu="Edit library">Edit library</D.Interactive>
+        {{/if}}
+        {{#if
+          (has-capability
+            @model.capabilities
+            "delete"
+            pathKey="ldapLibrary"
+            params=(hash backend=this.secretMountPath.currentPath name=@model.library.completeLibraryName)
+          )
+        }}
+          <D.Interactive
+            @icon="trash"
+            @color="critical"
+            {{on "click" (fn (mut this.showConfirmModal) true)}}
+            data-test-popup-menu="Delete library"
+          >
+            Delete library
+          </D.Interactive>
+        {{/if}}
+      </Hds::Dropdown>
+    {{/if}}
   </:actions>
 </Page::Header>
 
