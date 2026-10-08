@@ -1,5 +1,21 @@
 # Copyright IBM Corp. 2016, 2025
 # SPDX-License-Identifier: BUSL-1.1
+#
+# CI entry point: .github/workflows/test-run-enos-scenario-containers.yml
+#
+# That workflow injects the following variables via ENOS_VAR_* env vars
+# (no -var flags needed locally when running in CI):
+#
+#   ENOS_VAR_terraform_plugin_cache_dir  → var.terraform_plugin_cache_dir
+#   ENOS_VAR_vault_build_date            → var.vault_build_date
+#   ENOS_VAR_vault_version               → var.vault_version
+#   ENOS_VAR_vault_revision              → var.vault_revision
+#   ENOS_VAR_container_image_archive     → var.container_image_archive
+#
+# When running locally you must supply at minimum:
+#   -var vault_version=<version>
+#   -var container_image_archive=<path/to/image.tar>  (or omit to pull from registry)
+# All other variables have sensible defaults defined in enos-variables-k8s.hcl.
 
 scenario "k8s" {
   description = <<-EOF
@@ -169,6 +185,20 @@ scenario "k8s" {
   step "load_client_docker_image" {
     description = <<-EOF
       Load the Vault Client container image into the kind k8s cluster for testing as a sidecar.
+
+      TODAY  — var.client_container_image_archive is null, so this falls back to
+      var.container_image_archive and loads the same vault-enterprise image that the
+      server uses. The sidecar runs "vault agent" from that image.
+
+      FUTURE — set var.client_container_image_archive to the standalone client image
+      archive (.tar). That image will be loaded here and used as the sidecar container
+      in deploy_client_sidecar. Also set var.kubeclient_bin_path to the path of the
+      kubeclient binary inside that image (e.g. "/bin/kubeclient") to activate the
+      verify_client_smoke tests.
+
+      Both variables can be set via ENOS_VAR_* in CI or with -var flags locally:
+        ENOS_VAR_client_container_image_archive=/path/to/client.tar
+        ENOS_VAR_kubeclient_bin_path=/bin/kubeclient
     EOF
     module      = module.load_docker_image
     depends_on  = [step.create_kind_cluster]
@@ -177,7 +207,9 @@ scenario "k8s" {
       cluster_name = step.create_kind_cluster.cluster_name
       image        = local.repo_metadata[matrix.edition][matrix.repo].repo
       tag          = local.repo_metadata[matrix.edition][matrix.repo].tag
-      archive      = var.client_container_image_archive != null ? var.client_container_image_archive : var.container_image_archive
+      // TODAY  : falls back to the vault-enterprise archive (client_container_image_archive is null)
+      // FUTURE : set var.client_container_image_archive to the standalone client image archive
+      archive = var.client_container_image_archive != null ? var.client_container_image_archive : var.container_image_archive
     }
   }
 
@@ -273,6 +305,40 @@ scenario "k8s" {
       kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
       app_pod_name      = step.deploy_client_sidecar.app_pod_name
       app_pod_namespace = step.deploy_client_sidecar.app_pod_namespace
+    }
+  }
+
+  step "verify_client_smoke" {
+    description = <<-EOF
+      Run kubeclient binary smoke tests inside the vault-client-sidecar container.
+
+      TODAY  — var.kubeclient_bin_path defaults to "/bin/vault". The smoke
+      module detects the fallback and skips all binary-level tests, running
+      only the RBAC setup so the infrastructure is ready. No failures.
+
+      FUTURE — when the standalone client image ships, set kubeclient_bin_path
+      to the path of the kubeclient binary inside that image (e.g. "/bin/kubeclient").
+      The module will exec into the vault-client-sidecar container and run:
+        1. get-pod        — happy path: expects pod JSON in stdout
+        2. patch-pod      — single label add, verified via re-fetch
+        3. patch-pod-multi— comma-separated -patches, both labels verified
+        4. invalid-call   — -call=delete-pod must exit non-zero
+
+      The vault-client-sidecar container already runs inside the cluster, so
+      KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT are set automatically
+      by Kubernetes — exactly what the kubeclient binary requires.
+    EOF
+    module      = module.k8s_vault_verify_client_smoke
+    depends_on  = [step.verify_client_sidecar]
+
+    variables {
+      context_name      = step.create_kind_cluster.context_name
+      kubeconfig_base64 = step.create_kind_cluster.kubeconfig_base64
+      app_pod_name      = step.deploy_client_sidecar.app_pod_name
+      app_pod_namespace = step.deploy_client_sidecar.app_pod_namespace
+      kind_cluster_name = step.create_kind_cluster.cluster_name
+      // Change this single line when the standalone client image is ready:
+      kubeclient_bin_path = var.kubeclient_bin_path
     }
   }
 }

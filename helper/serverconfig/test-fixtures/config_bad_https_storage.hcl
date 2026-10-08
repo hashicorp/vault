@@ -16,8 +16,8 @@ backend "consul" {
     foo = "bar"
     advertise_addr = "foo"
     scheme = "https"
-    tls_cert_file = "./../vault/diagnose/test-fixtures/expiredcert.pem"
-    tls_key_file = "./../vault/diagnose/test-fixtures/expiredprivatekey.pem"
+    tls_cert_file = "./../../vault/diagnose/test-fixtures/expiredcert.pem"
+    tls_key_file = "./../../vault/diagnose/test-fixtures/expiredprivatekey.pem"
 }
 
 ha_backend "consul" {
