@@ -14,8 +14,7 @@ import (
 
 // BuildTLSConfig creates a tls.Config from an attestation result.
 // The resulting config uses TPM-backed certificates for client authentication.
-// If cfg.TestTPM is provided, it will be reused for signing operations;
-// otherwise the TPM will be opened on each signing operation.
+// The TPM will be opened on each signing operation.
 func BuildTLSConfig(result *AttestationResult, caCert, caPath string, cfg TPMConfig) (*tls.Config, error) {
 	if result == nil {
 		return nil, fmt.Errorf("attestation result is nil")
