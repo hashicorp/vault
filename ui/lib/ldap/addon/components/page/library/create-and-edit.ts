@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -70,6 +70,11 @@ export default class LdapCreateAndEditLibraryPageComponent extends Component<Arg
 
   @action
   cancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries');
+    if (this.args.form.isNew) {
+      this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries');
+    } else {
+      // Without params, the current name segment is reused, so hierarchical names need no re-encoding.
+      this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries.library.details');
+    }
   }
 }

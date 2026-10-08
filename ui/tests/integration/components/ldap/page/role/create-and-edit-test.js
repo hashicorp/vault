@@ -25,6 +25,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     this.owner.lookup('service:secret-mount-path').update(this.backend);
 
     const routerStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+    this.routerStub = routerStub;
     this.transitionCalledWith = (routeName, ...extraArgs) => {
       const route = `vault.cluster.secrets.backend.ldap.${routeName}`;
       return routerStub.calledWith(route, ...extraArgs);
@@ -141,13 +142,41 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     checkFields(['creation_ldif', 'deletion_ldif', 'rollback_ldif'], '.cm-content');
   });
 
-  test('it should go back to list route on cancel', async function (assert) {
+  test('it should go back to list route on cancel when creating', async function (assert) {
+    this.model = this.createModel;
+
+    await this.renderComponent();
+    await click(GENERAL.cancelButton);
+
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.roles'),
+      'Transitions to roles list route on cancel'
+    );
+  });
+
+  test('it should go back to details route on cancel when editing a static role', async function (assert) {
     this.model = this.staticEditModel;
 
     await this.renderComponent();
     await click(GENERAL.cancelButton);
 
-    assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list route on cancel');
+    // No params are passed so the current type and role name segments are reused, including hierarchical names.
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.roles.role.details'),
+      'Transitions to the details route of the static role being edited on cancel'
+    );
+  });
+
+  test('it should go back to details route on cancel when editing a dynamic role', async function (assert) {
+    this.model = this.dynamicEditModel;
+
+    await this.renderComponent();
+    await click(GENERAL.cancelButton);
+
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.roles.role.details'),
+      'Transitions to the details route of the dynamic role being edited on cancel'
+    );
   });
 
   test('it should validate form fields', async function (assert) {

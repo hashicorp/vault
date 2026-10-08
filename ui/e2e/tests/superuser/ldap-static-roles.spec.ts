@@ -172,6 +172,15 @@ test('ldap self-managed static role workflow', async ({ page, playwright }, test
     await expect(page.getByText(ROLE_PASSWORD)).toBeVisible();
   });
 
+  await test.step('cancelling an edit returns to the role details page', async () => {
+    await goToEdit(page);
+    await expect(page.getByRole('heading', { name: 'Edit Role' })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/roles/static/${ROLE_NAME}/details`));
+    await expect(page.getByRole('heading', { name: ROLE_NAME })).toBeVisible();
+  });
+
   await test.step('edit page locks the password and freezes the distinguished name', async () => {
     await goToEdit(page);
 
