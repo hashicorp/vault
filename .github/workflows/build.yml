@@ -316,6 +316,7 @@ jobs:
           fi
           echo "A branch: $ent_base_ref"
           echo "B branch: $HEAD_REF"
+          # --workspace-modules compares the go.mod of every module in this branch's go.work.
           pipeline github check go-mod-diff ${{ runner.debug && '--log debug' }} \
             --a-repo vault-enterprise \
             --a-branch "$ent_base_ref" \
@@ -323,20 +324,7 @@ jobs:
             --b-branch "$HEAD_REF" \
               --strict-replace=false \
               --strict-require=false \
-                -p go.mod \
-                -p api/go.mod \
-                -p api/auth/approle/go.mod \
-                -p api/auth/aws/go.mod \
-                -p api/auth/azure/go.mod \
-                -p api/auth/cert/go.mod \
-                -p api/auth/gcp/go.mod \
-                -p api/auth/kubernetes/go.mod \
-                -p api/auth/ldap/go.mod \
-                -p api/auth/userpass/go.mod \
-                -p tools/pipeline/go.mod \
-                -p sdk/go.mod \
-                -p version/go.mod \
-                -p internalshared/go.mod \
+              --workspace-modules \
                 --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
       - if: always()
         name: Upload build metric to Instana

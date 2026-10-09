@@ -408,8 +408,10 @@ changed_files {
     }
   }
 
-  // The "go_modules" group tracks Go module dependency changes.
-  // Triggers dependency security scans and full test suite.
+  // The "go_modules" group tracks Go module and workspace definitions, and the script that pins our
+  // code generators and test tools. It ignores tools/pipeline, whose module files are covered by the
+  // "pipeline" group. Triggers full builds, dependency security scans, the Go module checks and the
+  // full test suite.
   group "go_modules" {
     ignore {
       base_dir = [
@@ -421,7 +423,13 @@ changed_files {
       base_name = [
         "go.mod",
         "go.sum",
+        "go.work",
+        "go.work.sum",
       ]
+    }
+
+    match {
+      file = [joinpath("tools", "tools.sh")]
     }
   }
 
