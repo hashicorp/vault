@@ -222,7 +222,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			}
 			factories = append(factories, paddingScheme)
 		}
-		if item.Nonce != "" && !nonceAllowed(p) {
+		if item.Nonce != "" && !nonceAllowed(p, item.KeyVersion) {
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
@@ -265,7 +265,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			factories = append(factories, paddingScheme)
 			factories = append(factories, keysutil.PaddingScheme(item.EncryptPaddingScheme))
 		}
-		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce, item.KeyVersion) {
 			warnAboutNonceUsage = true
 		}
 

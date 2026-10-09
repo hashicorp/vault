@@ -558,13 +558,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
-		if item.Nonce != "" && !nonceAllowed(p) {
+		if item.Nonce != "" && !nonceAllowed(p, item.KeyVersion) {
 			userErrorInBatch = true
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
-		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce, item.KeyVersion) {
 			warnAboutNonceUsage = true
 		}
 
@@ -688,9 +688,9 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	return batchRequestResponse(d, resp, req, successesInBatch, userErrorInBatch, internalErrorInBatch)
 }
 
-func nonceAllowed(p *keysutil.Policy) bool {
+func nonceAllowed(p *keysutil.Policy, ver int) bool {
 	var supportedKeyType bool
-	switch p.Type {
+	switch p.KeyVersionType(ver) {
 	case keysutil.KeyType_MANAGED_KEY:
 		return true
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
@@ -737,13 +737,13 @@ func batchRequestResponse(d *framework.FieldData, resp *logical.Response, req *l
 // shouldWarnAboutNonceUsage attempts to determine if we will use a provided nonce or not. Ideally this
 // would be information returned through p.Encrypt but that would require an SDK api change and this is
 // transit specific
-func shouldWarnAboutNonceUsage(p *keysutil.Policy, userSuppliedNonce []byte) bool {
+func shouldWarnAboutNonceUsage(p *keysutil.Policy, userSuppliedNonce []byte, ver int) bool {
 	if len(userSuppliedNonce) == 0 {
 		return false
 	}
 
 	var supportedKeyType bool
-	switch p.Type {
+	switch p.KeyVersionType(ver) {
 	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305:
 		supportedKeyType = true
 	default:
