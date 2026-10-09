@@ -186,8 +186,10 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v1.0.0 // indirect
 	github.com/google/btree v1.1.3 // indirect
+	github.com/google/go-attestation v0.6.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/go-metrics-stackdriver v0.2.0 // indirect
+	github.com/google/go-tpm v0.9.8 // indirect
 	github.com/google/s2a-go v0.1.10 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.22 // indirect
