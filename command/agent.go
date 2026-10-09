@@ -600,6 +600,8 @@ func (c *AgentCommand) Run(args []string) int {
 			MetricsSignifier:             "agent",
 		})
 
+		authInProgress = ah.AuthInProgress
+		invalidTokenErrCh = ah.InvalidToken
 		ss = sink.NewSinkServer(&sink.SinkServerConfig{
 			Logger:        c.logger.Named("sink.server"),
 			Client:        ahClient,
