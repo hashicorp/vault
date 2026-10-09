@@ -177,11 +177,13 @@ func _cleanupInternalCRLMapping(ctx context.Context, s logical.Storage, mapping 
 			continue
 		}
 
-		if presentMap[CrlID(crl)] {
+		// delta crls are stored next to their full crl with a suffix and belong
+		// to the same issuer
+		if presentMap[CrlID(strings.TrimSuffix(crl, DeltaCRLPathSuffix))] {
 			continue
 		}
 
-		if err := s.Delete(ctx, baseCRLPath+"/"+crl); err != nil {
+		if err := s.Delete(ctx, baseCRLPath+crl); err != nil {
 			return fmt.Errorf("failed cleaning up orphaned CRL %v: %w", crl, err)
 		}
 	}
