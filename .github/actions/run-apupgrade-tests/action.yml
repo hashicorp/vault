@@ -91,10 +91,12 @@ runs:
         GIT_CONFIG_COUNT: "1"
         GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token }}@github.com.insteadOf
         GIT_CONFIG_VALUE_0: https://github.com
+        # Skip go generate. Generated code should be checked in.
+        SKIP_GEN: "1"
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}" || exit 1
-        time make prep dev
+        time make dev
 
         # Save the binary we just build under the current Vault version number to VVM
         # for apupgrade to use as a target version

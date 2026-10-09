@@ -36,6 +36,15 @@ type CheckGoModDiffReq struct {
 	// sides of the diff.
 	Paths []string `json:"paths,omitempty"`
 
+	// WorkspaceModules compares the go.mod of every module in the local
+	// go.work instead of Paths. The go.mod paths are relative to the go.work
+	// directory, which must be the repository root.
+	WorkspaceModules bool `json:"workspace_modules,omitempty"`
+
+	// GoWork is the go.work to list when WorkspaceModules is set. When empty,
+	// the first go.work in the current directory or its parents is used.
+	GoWork string `json:"go_work,omitempty"`
+
 	// DiffOpts the option to pass to the Go module diff.
 	DiffOpts *golang.DiffOpts `json:"diff_opts,omitempty"`
 }
@@ -47,7 +56,9 @@ type CheckGoModDiffRes struct {
 
 // CheckGoModDiff is one instance of a checked Go module diff.
 type CheckGoModDiff struct {
-	Err     error          `json:"err,omitempty"`
+	// Err is why the path couldn't be compared. Error is its message, which
+	// is what JSON carries.
+	Err     error          `json:"-"`
 	Error   string         `json:"error,omitempty"`
 	Path    string         `json:"path,omitempty"`
 	ModDiff golang.ModDiff `json:"diff,omitempty"`
@@ -74,6 +85,17 @@ func (r *CheckGoModDiffReq) Run(
 
 	if err = r.validate(); err != nil {
 		return nil, fmt.Errorf("validating request: %w", err)
+	}
+
+	// List the workspace modules before cloning, which changes the working
+	// directory to the clone. A listing failure is fatal so that we never fall
+	// back to comparing only the root go.mod.
+	paths := r.Paths
+	if r.WorkspaceModules {
+		paths, err = workspaceGoModPaths(ctx, r.GoWork)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Create a temp repository directory where we can keep both branches we're
@@ -147,12 +169,12 @@ func (r *CheckGoModDiffReq) Run(
 	}
 
 	// Diff each path that we've been configured with.
-	if len(r.Paths) < 1 {
+	if len(paths) < 1 {
 		slog.Default().DebugContext(ctx, "No go.mod paths have been given. Assuming go.mod in the root directory of the repositories")
-		r.Paths = []string{"go.mod"}
+		paths = []string{"go.mod"}
 	}
 
-	for _, path := range r.Paths {
+	for _, path := range paths {
 		slog.Default().DebugContext(
 			slogctx.Append(ctx, slog.String("path", path)),
 			"creating module diff",
@@ -264,7 +286,36 @@ func (r *CheckGoModDiffReq) validate() error {
 		return errors.New("cannot use same repository and branch on both sides of the diff")
 	}
 
+	if r.WorkspaceModules && len(r.Paths) > 0 {
+		return errors.New("go.mod paths cannot be combined with workspace modules")
+	}
+
+	if r.GoWork != "" && !r.WorkspaceModules {
+		return errors.New("a go.work path requires workspace modules")
+	}
+
 	return nil
+}
+
+// workspaceGoModPaths returns the go.mod path of every module in goWork, in
+// go.work order. When goWork is empty, the first go.work in the current
+// directory or its parents is used.
+func workspaceGoModPaths(ctx context.Context, goWork string) ([]string, error) {
+	res, err := (&golang.ListModulesReq{GoWork: goWork}).Run(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("listing workspace modules: %w", err)
+	}
+
+	if len(res.Workspace.Modules) == 0 {
+		return nil, fmt.Errorf("%s has no modules", res.Workspace.GoWork)
+	}
+
+	paths := make([]string, 0, len(res.Workspace.Modules))
+	for _, m := range res.Workspace.Modules {
+		paths = append(paths, m.GoMod)
+	}
+
+	return paths, nil
 }
 
 // ToTable marshals the response to a text table.
@@ -289,6 +340,11 @@ func (r *CheckGoModDiffRes) ToTable(err error) (table.Writer, error) {
 
 	t.AppendHeader(table.Row{"path", "explanation", "diff"})
 	for _, check := range r.Diffs {
+		// A path that couldn't be compared, e.g. because its go.mod is missing
+		// on one branch, mustn't look the same as one without differences.
+		if check.Error != "" {
+			t.AppendRow(table.Row{check.Path, "error", check.Error})
+		}
 		for _, diff := range check.ModDiff {
 			if diff == nil {
 				continue
@@ -308,6 +364,37 @@ func (r *CheckGoModDiffRes) ToTable(err error) (table.Writer, error) {
 	t.SuppressTrailingSpaces()
 
 	return t, nil
+}
+
+// Err returns an error that counts the differences across every path and
+// includes each path that couldn't be compared. It's nil when every path was
+// compared and matched.
+func (r *CheckGoModDiffRes) Err() error {
+	if r == nil {
+		return nil
+	}
+
+	var differences int
+	var errs []error
+	for _, check := range r.Diffs {
+		for _, diff := range check.ModDiff {
+			if diff != nil {
+				differences++
+			}
+		}
+		switch {
+		case check.Err != nil:
+			errs = append(errs, check.Err)
+		case check.Error != "":
+			errs = append(errs, errors.New(check.Error))
+		}
+	}
+
+	if differences > 0 {
+		errs = append([]error{fmt.Errorf("%d differences were found", differences)}, errs...)
+	}
+
+	return errors.Join(errs...)
 }
 
 // ToJSON marshals the response to JSON.

@@ -124,6 +124,8 @@ runs:
         GOARM: ${{ inputs.goarm }}
         GOOS: ${{ inputs.goos }}
         GOEXPERIMENT: ${{ inputs.goexperiment }}
+        # Skip go generate. Generated code should be checked in.
+        SKIP_GEN: "1"
         VERSION: ${{ inputs.vault-version }}
         VERSION_METADATA: ""
       shell: bash
@@ -138,6 +140,8 @@ runs:
         GOOS: ${{ inputs.goos }}
         GOEXPERIMENT: ${{ inputs.goexperiment }}
         GOPRIVATE: github.com/hashicorp/*
+        # Skip go generate. Generated code should be checked in.
+        SKIP_GEN: "1"
         VERSION: ${{ inputs.vault-version }}
         VERSION_METADATA: ${{ inputs.vault-edition }}
         # Authenticate module downloads on cache misses without poisoning the runner's git config.
@@ -219,6 +223,7 @@ runs:
             --env GOEXPERIMENT='${{ inputs.goexperiment }}' \
             --env GOMODCACHE=/go-mod-cache \
             --env GOOS='${{ inputs.goos }}' \
+            --env SKIP_GEN=1 \
             --env VERSION='${{ inputs.vault-version }}' \
             --env VERSION_METADATA='${{ inputs.vault-edition }}' \
               localhost:5000/vault-builder:${{ steps.metadata.outputs.vault-builder-cache-key }} \

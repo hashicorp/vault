@@ -67,10 +67,12 @@ jobs:
           GIT_CONFIG_COUNT: ${{ inputs.is-ent-repo == 'true' && '1' || '0' }}
           GIT_CONFIG_KEY_0: url.https://user:${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com.insteadOf
           GIT_CONFIG_VALUE_0: https://github.com
+          # Skip go generate. Generated code should be checked in.
+          SKIP_GEN: "1"
         run: |
           rm -rf ./pkg
           mkdir ./pkg
-          make prep dev
+          make dev
       - name: Upload Vault Binary for UI Tests
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
