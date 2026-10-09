@@ -478,7 +478,7 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 			vType := effectiveType(v)
 			switch vType {
 			case keysutil.KeyType_HYBRID, keysutil.KeyType_ML_DSA, keysutil.KeyType_SLH_DSA:
-				key.HybridPublicKey = getFormattedPQCPublicKey(p.Type, v, p.HybridConfig.PQCKeyType)
+				key.HybridPublicKey = getFormattedPQCPublicKey(vType, v, p.HybridConfig.PQCKeyType)
 			default:
 				key.PublicKey = v.FormattedPublicKey
 			}
