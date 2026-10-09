@@ -653,6 +653,48 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 		},
 	}
 
+	commands["tpm"] = func() (cli.Command, error) {
+		return &TPMCommand{
+			BaseCommand: getBaseCommand(),
+		}, nil
+	}
+
+	commands["tpm attest"] = func() (cli.Command, error) {
+		return &TPMAttestCommand{
+			BaseCommand: getBaseCommand(),
+		}, nil
+	}
+
+	commands["tpm inspect"] = func() (cli.Command, error) {
+		return &TPMInspectCommand{
+			BaseCommand: getBaseCommand(),
+		}, nil
+	}
+
+	commands["tpm reattest"] = func() (cli.Command, error) {
+		return &TPMReattestCommand{
+			BaseCommand: getBaseCommand(),
+		}, nil
+	}
+
+	commands["tpm cleanup"] = func() (cli.Command, error) {
+		return &TPMCleanupCommand{
+			BaseCommand: getBaseCommand(),
+		}, nil
+	}
+
+	commands["tpm ek"] = func() (cli.Command, error) {
+		return &TPMEkCommand{
+			BaseCommand: getBaseCommand(),
+		}, nil
+	}
+
+	commands["tpm enroll"] = func() (cli.Command, error) {
+		return &TPMEnrollCommand{
+			BaseCommand: getBaseCommand(),
+		}, nil
+	}
+
 	entInitCommands(ui, serverCmdUi, runOpts, commands)
 	InitHCPCommands(ui, commands)
 
