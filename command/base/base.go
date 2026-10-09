@@ -631,7 +631,21 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 				Default: false,
 				Usage:   "When set true, prevents asking the user for input via the terminal.",
 			})
-			c.setupTPMFlags(f)
+
+			f.StringVar(&StringVar{
+				Name:    "tpm-state-dir",
+				Target:  &c.FlagTPMStateDir,
+				Default: ".",
+				Usage:   "Sets where to write the cert and associated files. Default is working directory",
+			})
+
+			f.StringVar(&StringVar{
+				Name:    "tpm-device-path",
+				Target:  &c.FlagTPMDevicePath,
+				Default: "",
+				Usage: "Path to the TPM device (e.g. /dev/tpm0 or a unix socket). " +
+					"Autodetected by default.",
+			})
 		}
 
 		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed) != 0 {
