@@ -48,3 +48,27 @@ func (p *Policy) CreateCsrWithManagedKeyVersion(params ManagedKeyParameters) Csr
 func (p *Policy) ValidateLeafCertKeyMatchWithManagedKeyVersion(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any, params ManagedKeyParameters) (bool, error) {
 	return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 }
+
+func (p *Policy) getKeyConfig(ver int) (KeyType, *KeyConfig, error) {
+	keyType := p.Type
+	keyConfig := &KeyConfig{
+		KeySize: p.KeySize,
+	}
+
+	if p.LatestVersion > 0 {
+		key, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return 0, nil, err
+		}
+
+		if key.Algorithm != nil {
+			keyType = *key.Algorithm
+		}
+
+		if key.KeySize != 0 {
+			keyConfig.KeySize = key.KeySize
+		}
+	}
+
+	return keyType, keyConfig, nil
+}

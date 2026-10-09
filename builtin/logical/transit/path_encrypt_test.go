@@ -1073,7 +1073,7 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 					Type:                 keyType,
 				}
 
-				actual := shouldWarnAboutNonceUsage(&p, tt.nonce)
+				actual := shouldWarnAboutNonceUsage(&p, tt.nonce, tt.convergentVersion)
 
 				if actual != tt.expected {
 					t.Errorf("Expected actual '%v' but got '%v'", tt.expected, actual)

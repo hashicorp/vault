@@ -149,7 +149,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if key == nil && p.Type != keysutil.KeyType_MANAGED_KEY {
+	if key == nil && p.KeyVersionType(ver) != keysutil.KeyType_MANAGED_KEY {
 		return nil, fmt.Errorf("HMAC key value could not be computed")
 	}
 

@@ -9,13 +9,16 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"net"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -26,9 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTransit_Certs_CreateCsr(t *testing.T) {
-	// NOTE: Use an existing CSR or generate one here?
-	templateCsr := `
+var templateCsr = `
 -----BEGIN CERTIFICATE REQUEST-----
 MIICRTCCAS0CAQAwADCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAM49
 McW7u3ILuAJfSFLUtGOMGBytHmMFcjTiX+5JcajFj0Uszb+HQ7eIsJJNXhVc/7fg
@@ -46,45 +47,45 @@ O1aQIm23HrrG
 -----END CERTIFICATE REQUEST-----
 `
 
-	testTransit_CreateCsr(t, "rsa-2048", templateCsr)
-	testTransit_CreateCsr(t, "rsa-3072", templateCsr)
-	testTransit_CreateCsr(t, "rsa-4096", templateCsr)
-	testTransit_CreateCsr(t, "ecdsa-p256", templateCsr)
-	testTransit_CreateCsr(t, "ecdsa-p384", templateCsr)
-	testTransit_CreateCsr(t, "ecdsa-p521", templateCsr)
-	testTransit_CreateCsr(t, "ed25519", templateCsr)
-	testTransit_CreateCsr(t, "aes256-gcm96", templateCsr)
+func TestTransit_Certs_CreateCsr(t *testing.T) {
+	for _, keyType := range []string{
+		"rsa-2048", "rsa-3072", "rsa-4096",
+		"ecdsa-p256", "ecdsa-p384", "ecdsa-p521",
+		"ed25519", "aes256-gcm96",
+	} {
+		b, s := createBackendWithStorage(t)
+
+		resp, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "keys/test-key",
+			Storage:   s,
+			Data:      map[string]interface{}{"type": keyType},
+		})
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("resp: %#v\nerr: %v", resp, err)
+		}
+
+		testTransit_CreateCsr(t, b, s, "test-key", keyType, templateCsr, 0)
+	}
 }
 
-func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
-	var resp *logical.Response
-	var err error
-	b, s := createBackendWithStorage(t)
-
-	// Create the policy
-	policyReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key",
-		Storage:   s,
-		Data: map[string]interface{}{
-			"type": keyType,
-		},
-	}
-	resp, err = b.HandleRequest(context.Background(), policyReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("resp: %#v\nerr: %v", resp, err)
-	}
+func testTransit_CreateCsr(t *testing.T, b logical.Backend, s logical.Storage, keyName, keyType, pemTemplateCsr string, keyVersion int) {
+	t.Helper()
 
 	csrSignReq := &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key/csr",
+		Path:      fmt.Sprintf("keys/%s/csr", keyName),
 		Storage:   s,
 		Data: map[string]interface{}{
 			"csr": pemTemplateCsr,
 		},
 	}
 
-	resp, err = b.HandleRequest(context.Background(), csrSignReq)
+	if keyVersion != 0 {
+		csrSignReq.Data["version"] = keyVersion
+	}
+
+	resp, err := b.HandleRequest(context.Background(), csrSignReq)
 
 	switch keyType {
 	case "rsa-2048", "rsa-3072", "rsa-4096", "ecdsa-p256", "ecdsa-p384", "ecdsa-p521", "ed25519":
@@ -133,7 +134,6 @@ func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	})
 
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
 	// Mount transit backend
@@ -148,24 +148,25 @@ func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	testTransit_ImportCertChain(t, client, "rsa-2048")
-	testTransit_ImportCertChain(t, client, "rsa-3072")
-	testTransit_ImportCertChain(t, client, "rsa-4096")
-	testTransit_ImportCertChain(t, client, "ecdsa-p256")
-	testTransit_ImportCertChain(t, client, "ecdsa-p384")
-	testTransit_ImportCertChain(t, client, "ecdsa-p521")
-	testTransit_ImportCertChain(t, client, "ed25519")
+	for _, keyType := range []string{
+		"rsa-2048", "rsa-3072", "rsa-4096",
+		"ecdsa-p256", "ecdsa-p384", "ecdsa-p521",
+		"ed25519",
+	} {
+		_, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyType), map[string]interface{}{
+			"type": keyType,
+		})
+		require.NoError(t, err)
+
+		testTransit_ImportCertChain(t, client, keyType, keyType, 0)
+	}
 }
 
-func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType string) {
-	keyName := fmt.Sprintf("%s", keyType)
-	issuerName := fmt.Sprintf("%s-issuer", keyType)
-
-	// Create transit key
-	_, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
-		"type": keyType,
-	})
+func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType, keyName string, keyVersion int) {
+	t.Helper()
+	id, err := uuid.GenerateUUID()
 	require.NoError(t, err)
+	issuerName := fmt.Sprintf("%s-issuer-%s", keyType, id)
 
 	// Setup a new CSR
 	privKey, err := cryptoutil.GenerateRSAKey(cryptoRand.Reader, 3072)
@@ -182,10 +183,16 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	})
 	t.Logf("csr: %v", string(pemTemplateCsr))
 
-	// Create CSR from template CSR fields and key in transit
-	resp, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/csr", keyName), map[string]interface{}{
+	reqData := map[string]interface{}{
 		"csr": string(pemTemplateCsr),
-	})
+	}
+
+	if keyVersion != 0 {
+		reqData["version"] = keyVersion
+	}
+
+	// Create CSR from template CSR fields and key in transit
+	resp, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/csr", keyName), reqData)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	pemCsr := resp.Data["csr"].(string)
@@ -236,10 +243,15 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	t.Logf("leaf: %v", leafCertPEM)
 
 	certificateChain := strings.Join([]string{leafCertPEM, rootCertPEM}, "\n")
-	// Import certificate chain to transit key version
-	resp, err = apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/set-certificate", keyName), map[string]interface{}{
+	reqData = map[string]interface{}{
 		"certificate_chain": certificateChain,
-	})
+	}
+	if keyVersion != 0 {
+		reqData["version"] = keyVersion
+	}
+
+	// Import certificate chain to transit key version
+	resp, err = apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/set-certificate", keyName), reqData)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 
@@ -250,14 +262,21 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	if !ok {
 		t.Fatalf("could not cast Keys value")
 	}
-	keyData, ok := keys["1"].(map[string]interface{})
+	var expectedVer int
+	if keyVersion == 0 {
+		latestVerRaw, ok := resp.Data["latest_version"].(json.Number)
+		require.True(t, ok)
+		latestVer, err := latestVerRaw.Int64()
+		require.NoError(t, err)
+		expectedVer = int(latestVer)
+	} else {
+		expectedVer = keyVersion
+	}
+	keyData, ok := keys[strconv.Itoa(expectedVer)].(map[string]interface{})
 	if !ok {
-		t.Fatalf("could not cast key version 1 from keys")
+		t.Fatalf("could not cast key version %d from keys", expectedVer)
 	}
-	_, present := keyData["certificate_chain"]
-	if !present {
-		t.Fatalf("certificate chain not present in key version 1")
-	}
+	require.NotEmpty(t, keyData["certificate_chain"])
 }
 
 func TestTransit_Certs_ImportInvalidCertChain(t *testing.T) {
@@ -274,7 +293,6 @@ func TestTransit_Certs_ImportInvalidCertChain(t *testing.T) {
 	})
 
 	cores := cluster.Cores
-	vault.TestWaitActive(t, cores[0].Core)
 	client := cores[0].Client
 
 	// Mount transit backend
@@ -289,24 +307,25 @@ func TestTransit_Certs_ImportInvalidCertChain(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	testTransit_ImportInvalidCertChain(t, client, "rsa-2048")
-	testTransit_ImportInvalidCertChain(t, client, "rsa-3072")
-	testTransit_ImportInvalidCertChain(t, client, "rsa-4096")
-	testTransit_ImportInvalidCertChain(t, client, "ecdsa-p256")
-	testTransit_ImportInvalidCertChain(t, client, "ecdsa-p384")
-	testTransit_ImportInvalidCertChain(t, client, "ecdsa-p521")
-	testTransit_ImportInvalidCertChain(t, client, "ed25519")
+	for _, keyType := range []string{
+		"rsa-2048", "rsa-3072", "rsa-4096",
+		"ecdsa-p256", "ecdsa-p384", "ecdsa-p521",
+		"ed25519",
+	} {
+		_, err := client.Logical().Write(fmt.Sprintf("transit/keys/%s", keyType), map[string]interface{}{
+			"type": keyType,
+		})
+		require.NoError(t, err)
+
+		testTransit_ImportInvalidCertChain(t, client, keyType, keyType, "")
+	}
 }
 
-func testTransit_ImportInvalidCertChain(t *testing.T, apiClient *api.Client, keyType string) {
-	keyName := fmt.Sprintf("%s", keyType)
-	issuerName := fmt.Sprintf("%s-issuer", keyType)
-
-	// Create transit key
-	_, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
-		"type": keyType,
-	})
+func testTransit_ImportInvalidCertChain(t *testing.T, apiClient *api.Client, keyType, keyName string, version string) {
+	t.Helper()
+	id, err := uuid.GenerateUUID()
 	require.NoError(t, err)
+	issuerName := fmt.Sprintf("%s-issuer-%s", keyType, id)
 
 	// Generate PKI root
 	resp, err := apiClient.Logical().Write("pki/root/generate/internal", map[string]interface{}{
@@ -327,7 +346,7 @@ func testTransit_ImportInvalidCertChain(t *testing.T, apiClient *api.Client, key
 	pkiKeyBits := "0"
 	if strings.HasPrefix(keyType, "rsa") {
 		pkiKeyBits = keyType[4:]
-	} else if strings.HasPrefix(keyType, "ecdas") {
+	} else if strings.HasPrefix(keyType, "ecdsa") {
 		pkiKeyType = "ec"
 		pkiKeyBits = keyType[7:]
 	} else if keyType == "ed25519" {
@@ -372,6 +391,7 @@ func testTransit_ImportInvalidCertChain(t *testing.T, apiClient *api.Client, key
 	// Import certificate chain to transit key version
 	resp, err = apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/set-certificate", keyName), map[string]interface{}{
 		"certificate_chain": certificateChain,
+		"version":           version,
 	})
 	require.Error(t, err)
 }
@@ -386,7 +406,18 @@ func TestTransit_Certs_CreateCsr_PreservesNonExtensionAttributes(t *testing.T) {
 		keyType := keyType
 		t.Run(keyType, func(t *testing.T) {
 			t.Parallel()
-			testTransit_CreateCsr_PreservesNonExtensionAttributes(t, keyType)
+			b, s := createBackendWithStorage(t)
+
+			resp, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "keys/test-key",
+				Storage:   s,
+				Data:      map[string]interface{}{"type": keyType},
+			})
+			require.NoError(t, err)
+			require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
+
+			testTransit_CreateCsr_PreservesNonExtensionAttributes(t, b, s, "test-key")
 		})
 	}
 }
@@ -395,18 +426,8 @@ func TestTransit_Certs_CreateCsr_PreservesNonExtensionAttributes(t *testing.T) {
 // with a challengePassword attribute and a critical custom extension, then:
 //  1. Calls parseCsr directly: extensionRequest is gone, challengePassword unchanged.
 //  2. Re-signs via Transit: challengePassword survives, Critical flag intact, signature valid.
-func testTransit_CreateCsr_PreservesNonExtensionAttributes(t *testing.T, keyType string) {
+func testTransit_CreateCsr_PreservesNonExtensionAttributes(t *testing.T, b logical.Backend, s logical.Storage, keyName string) {
 	t.Helper()
-	b, s := createBackendWithStorage(t)
-
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key",
-		Storage:   s,
-		Data:      map[string]interface{}{"type": keyType},
-	})
-	require.NoError(t, err)
-	require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
 
 	// PKCS#9 challengePassword (OID 1.2.840.113549.1.9.7) — a non-extension attribute.
 	oidChallengePassword := asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 9, 7}
@@ -488,9 +509,9 @@ func testTransit_CreateCsr_PreservesNonExtensionAttributes(t *testing.T, keyType
 	require.True(t, hasChallengeAfterParse, "challengePassword attribute missing from parseCsr output")
 
 	// Re-sign via Transit and check the output CSR.
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key/csr",
+		Path:      fmt.Sprintf("keys/%s/csr", keyName),
 		Storage:   s,
 		Data:      map[string]interface{}{"csr": pemTemplate},
 	})
@@ -546,23 +567,24 @@ func testTransit_CreateCsr_PreservesNonExtensionAttributes(t *testing.T, keyType
 func TestTransit_Certs_CreateCsr_PreservesExtensions(t *testing.T) {
 	for _, keyType := range []string{"rsa-2048", "ecdsa-p256", "ed25519"} {
 		t.Run(keyType, func(t *testing.T) {
-			testTransit_CreateCsr_PreservesExtensions(t, keyType)
+			b, s := createBackendWithStorage(t)
+
+			resp, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "keys/test-key",
+				Storage:   s,
+				Data:      map[string]interface{}{"type": keyType},
+			})
+			require.NoError(t, err)
+			require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
+
+			testTransit_CreateCsr_PreservesExtensions(t, b, s, "test-key")
 		})
 	}
 }
 
-func testTransit_CreateCsr_PreservesExtensions(t *testing.T, keyType string) {
+func testTransit_CreateCsr_PreservesExtensions(t *testing.T, b logical.Backend, s logical.Storage, keyName string) {
 	t.Helper()
-	b, s := createBackendWithStorage(t)
-
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key",
-		Storage:   s,
-		Data:      map[string]interface{}{"type": keyType},
-	})
-	require.NoError(t, err)
-	require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
 
 	// Template has SANs and a critical extension to exercise both failure paths.
 	customOID := asn1.ObjectIdentifier{1, 2, 3, 4, 5}
@@ -598,9 +620,9 @@ func testTransit_CreateCsr_PreservesExtensions(t *testing.T, keyType string) {
 	}))
 
 	// Re-sign via Transit.
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key/csr",
+		Path:      fmt.Sprintf("keys/%s/csr", keyName),
 		Storage:   s,
 		Data:      map[string]interface{}{"csr": pemTemplate},
 	})
@@ -664,23 +686,24 @@ func testTransit_CreateCsr_PreservesExtensions(t *testing.T, keyType string) {
 func TestTransit_Certs_CreateCsr_PreservesOtherNameSAN(t *testing.T) {
 	for _, keyType := range []string{"rsa-2048", "ecdsa-p256", "ed25519"} {
 		t.Run(keyType, func(t *testing.T) {
-			testTransit_CreateCsr_PreservesOtherNameSAN(t, keyType)
+			b, s := createBackendWithStorage(t)
+
+			resp, err := b.HandleRequest(context.Background(), &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "keys/test-key",
+				Storage:   s,
+				Data:      map[string]interface{}{"type": keyType},
+			})
+			require.NoError(t, err)
+			require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
+
+			testTransit_CreateCsr_PreservesOtherNameSAN(t, b, s, "test-key")
 		})
 	}
 }
 
-func testTransit_CreateCsr_PreservesOtherNameSAN(t *testing.T, keyType string) {
+func testTransit_CreateCsr_PreservesOtherNameSAN(t *testing.T, b logical.Backend, s logical.Storage, keyName string) {
 	t.Helper()
-	b, s := createBackendWithStorage(t)
-
-	resp, err := b.HandleRequest(context.Background(), &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key",
-		Storage:   s,
-		Data:      map[string]interface{}{"type": keyType},
-	})
-	require.NoError(t, err)
-	require.False(t, resp != nil && resp.IsError(), "key creation failed: %v", resp)
 
 	// Hand-craft a SAN extension with a dNSName and an otherName/UPN (tag 0).
 	// Go's stdlib has no API for otherName so we build the raw ASN.1 directly.
@@ -762,9 +785,9 @@ func testTransit_CreateCsr_PreservesOtherNameSAN(t *testing.T, keyType string) {
 	}))
 
 	// Re-sign via Transit.
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
 		Operation: logical.UpdateOperation,
-		Path:      "keys/test-key/csr",
+		Path:      fmt.Sprintf("keys/%s/csr", keyName),
 		Storage:   s,
 		Data:      map[string]interface{}{"csr": pemTemplate},
 	})

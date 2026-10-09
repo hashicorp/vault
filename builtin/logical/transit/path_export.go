@@ -115,6 +115,10 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		}
 	}
 
+	data := map[string]interface{}{
+		"name": p.Name,
+	}
+
 	retKeys := map[string]string{}
 	switch version {
 	case "":
@@ -125,6 +129,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 			}
 			retKeys[k] = exportKey
 		}
+		data["type"] = p.Type.String()
 
 		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExport, b.keyPolicyObservationMetadata(p))
 	default:
@@ -155,15 +160,14 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		retKeys[strconv.Itoa(versionValue)] = exportKey
 		metadata := b.keyPolicyObservationMetadata(p)
 		metadata["export_version"] = versionValue
+		data["type"] = p.KeyVersionType(versionValue).String()
 		b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyExport, metadata)
 	}
 
+	data["keys"] = retKeys
+
 	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"name": p.Name,
-			"type": p.Type.String(),
-			"keys": retKeys,
-		},
+		Data: data,
 	}
 
 	return resp, nil
@@ -174,16 +178,21 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		return "", errors.New("nil policy provided")
 	}
 
+	keyType := policy.Type
+	if key.Algorithm != nil {
+		keyType = *key.Algorithm
+	}
+
 	switch exportType {
 	case exportTypeHMACKey:
 		src := key.HMACKey
-		if policy.Type == keysutil.KeyType_HMAC {
+		if keyType == keysutil.KeyType_HMAC {
 			src = key.Key
 		}
 		return strings.TrimSpace(base64.StdEncoding.EncodeToString(src)), nil
 
 	case exportTypeEncryptionKey:
-		switch policy.Type {
+		switch keyType {
 		case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305, keysutil.KeyType_AES128_CBC, keysutil.KeyType_AES256_CBC:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
@@ -196,10 +205,10 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		}
 
 	case exportTypeSigningKey:
-		switch policy.Type {
+		switch keyType {
 		case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
 			var curve elliptic.Curve
-			switch policy.Type {
+			switch keyType {
 			case keysutil.KeyType_ECDSA_P384:
 				curve = elliptic.P384()
 			case keysutil.KeyType_ECDSA_P521:
@@ -236,10 +245,10 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			}
 		}
 	case exportTypePublicKey:
-		switch policy.Type {
+		switch keyType {
 		case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
 			var curve elliptic.Curve
-			switch policy.Type {
+			switch keyType {
 			case keysutil.KeyType_ECDSA_P384:
 				curve = elliptic.P384()
 			case keysutil.KeyType_ECDSA_P521:
@@ -289,13 +298,13 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 		return certChain, nil
 	case exportTypeCMACKey:
-		switch policy.Type {
+		switch keyType {
 		case keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC, keysutil.KeyType_AES192_CMAC:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 		}
 	}
 
-	return "", fmt.Errorf("unknown key type %v for export type %v", policy.Type, exportType)
+	return "", fmt.Errorf("unknown key type %v for export type %v", keyType, exportType)
 }
 
 func encodeRSAPrivateKey(key *keysutil.KeyEntry) (string, error) {
