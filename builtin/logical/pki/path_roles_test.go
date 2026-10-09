@@ -1367,3 +1367,33 @@ func TestRoles_MLDSA_InvalidParameterSet(t *testing.T) {
 		require.Contains(t, err.Error(), "invalid parameter set", "expected invalid parameter set error message")
 	})
 }
+
+// TestRoles_NonMLDSA_ParameterSetDefault verifies that non-ML-DSA roles (e.g. RSA, EC, Ed25519)
+// do not return parameter_set by default (it is empty), while ML-DSA roles default to 44.
+func TestRoles_NonMLDSA_ParameterSetDefault(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// RSA role without parameter_set specified
+	resp, err := CBWrite(b, s, "roles/rsa-role", map[string]interface{}{
+		"allow_any_name": true,
+		"key_type":       "rsa",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "create RSA role")
+
+	resp, err = CBRead(b, s, "roles/rsa-role")
+	requireSuccessNonNilResponse(t, resp, err, "read RSA role")
+	require.Equal(t, certutil.ParameterSet(""), resp.Data["parameter_set"], "expected parameter_set to be empty for RSA role")
+
+	// ML-DSA role without parameter_set specified (should default to 44)
+	resp, err = CBWrite(b, s, "roles/mldsa-default-role", map[string]interface{}{
+		"allow_any_name": true,
+		"key_type":       "ml-dsa",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "create ML-DSA role without explicit parameter_set")
+
+	resp, err = CBRead(b, s, "roles/mldsa-default-role")
+	requireSuccessNonNilResponse(t, resp, err, "read ML-DSA default role")
+	require.Equal(t, certutil.ParameterSet(certutil.MLDSA44), resp.Data["parameter_set"], "expected parameter_set to default to 44 for ML-DSA role")
+}

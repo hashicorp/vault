@@ -6,6 +6,7 @@ package pki
 import (
 	"bytes"
 	"context"
+	"crypto/mldsa"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/pem"
@@ -98,6 +99,11 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 							"authority_key_id": {
 								Type:        framework.TypeString,
 								Description: `AuthorityKeyID of certificate`,
+								Required:    false,
+							},
+							"private_key_parameter_set": {
+								Type:        framework.TypeString,
+								Description: `The ML-DSA parameter set of the private key, if applicable.`,
 								Required:    false,
 							},
 						},
@@ -602,6 +608,13 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 		if includeKey {
 			respData["private_key"] = cb.PrivateKey
 			respData["private_key_type"] = cb.PrivateKeyType
+			if pub, ok := parsedBundle.Certificate.PublicKey.(*mldsa.PublicKey); ok {
+				parameterSet, err := getMLDSAParameterSet(pub)
+				if err != nil {
+					return nil, err
+				}
+				respData["private_key_parameter_set"] = parameterSet
+			}
 		}
 
 	case "pem_bundle":
@@ -613,6 +626,13 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 		if includeKey {
 			respData["private_key"] = cb.PrivateKey
 			respData["private_key_type"] = cb.PrivateKeyType
+			if pub, ok := parsedBundle.Certificate.PublicKey.(*mldsa.PublicKey); ok {
+				parameterSet, err := getMLDSAParameterSet(pub)
+				if err != nil {
+					return nil, err
+				}
+				respData["private_key_parameter_set"] = parameterSet
+			}
 		}
 
 	case "der":
@@ -626,6 +646,13 @@ func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *c
 		if includeKey {
 			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
 			respData["private_key_type"] = cb.PrivateKeyType
+			if pub, ok := parsedBundle.Certificate.PublicKey.(*mldsa.PublicKey); ok {
+				parameterSet, err := getMLDSAParameterSet(pub)
+				if err != nil {
+					return nil, err
+				}
+				respData["private_key_parameter_set"] = parameterSet
+			}
 		}
 
 	case "pkcs12_bundle":
