@@ -12,6 +12,8 @@ module github.com/hashicorp/vault/internalshared
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
 go 1.27.1
 
+replace github.com/hashicorp/vault => ..
+
 replace github.com/hashicorp/vault/api => ../api
 
 replace github.com/hashicorp/vault/api/auth/approle => ../api/auth/approle
@@ -20,7 +22,13 @@ replace github.com/hashicorp/vault/api/auth/kubernetes => ../api/auth/kubernetes
 
 replace github.com/hashicorp/vault/api/auth/userpass => ../api/auth/userpass
 
+replace github.com/hashicorp/vault/internalshared => ../internalshared
+
 replace github.com/hashicorp/vault/sdk => ../sdk
+
+replace github.com/hashicorp/vault/version => ../version
+
+replace github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 => github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.83
 
 // The keyring library has an outstanding bug that causes zombie dbus-daemon
 // processes on each execution. Vault has an indirect dependency on keyring via
@@ -252,6 +260,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.22 // indirect
 	github.com/googleapis/gax-go/v2 v2.24.1 // indirect
 	github.com/gophercloud/gophercloud v1.14.1 // indirect
+	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cap v0.13.0 // indirect
@@ -408,6 +417,7 @@ require (
 	github.com/shirou/gopsutil/v3 v3.22.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
+	github.com/smartystreets/assertions v1.13.1 // indirect
 	github.com/snowflakedb/gosnowflake v1.19.0 // indirect
 	github.com/softlayer/softlayer-go v1.2.1 // indirect
 	github.com/softlayer/xmlrpc v0.0.0-20200409220501-5f089df7cb7e // indirect
@@ -477,13 +487,3 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.7.2 // indirect
 )
-
-replace github.com/hashicorp/vault/version => ../version
-
-replace github.com/hashicorp/vault/internalshared => ../internalshared
-
-replace github.com/hashicorp/vault => ..
-
-replace github.com/ma314smith/signedxml v1.1.1 => github.com/moov-io/signedxml v1.1.1
-
-replace github.com/tencentcloud/tencentcloud-sdk-go v1.0.162 => github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.83
