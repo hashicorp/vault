@@ -4785,7 +4785,7 @@ func (c *Core) doResolveRoleLocked(ctx context.Context, mountPoint string, data 
 		req.Headers = filteredHeaders(headers, passthroughRequestHeaders, deniedPassthroughRequestHeaders)
 	}
 	resp, err := be.HandleRequest(ctx, req)
-	if err != nil || resp.Data["role"] == nil {
+	if err != nil || resp == nil || resp.Data == nil || resp.Data["role"] == nil {
 		return ""
 	}
 
