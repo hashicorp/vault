@@ -4,8 +4,13 @@
 package ldaputil
 
 import (
+	"errors"
+	"fmt"
+	"io"
+	"net/url"
 	"testing"
 
+	"github.com/go-ldap/ldap/v3"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -26,6 +31,49 @@ func TestDialLDAP(t *testing.T) {
 	}
 	if _, err := ldapClient.DialLDAP(ce); err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+type failingLDAP struct {
+	err error
+}
+
+func (l failingLDAP) DialURL(string, ...ldap.DialOpt) (Connection, error) {
+	return nil, l.err
+}
+
+func TestDialLDAPErrorWrapping(t *testing.T) {
+	t.Parallel()
+	dialErr := errors.New("dial failed")
+	for _, tc := range []struct {
+		name    string
+		url     string
+		wantErr error
+		message string
+	}{
+		{
+			name:    "parse",
+			url:     "ldap://%zz",
+			wantErr: url.EscapeError("%zz"),
+			message: `error parsing url "ldap://%zz": parse "ldap://%zz": invalid URL escape "%zz"`,
+		},
+		{
+			name:    "dial",
+			url:     "ldap://localhost",
+			wantErr: dialErr,
+			message: `error connecting to host "ldap://localhost": dial failed`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := Client{Logger: hclog.NewNullLogger(), LDAP: failingLDAP{err: dialErr}}
+			conn, err := client.DialLDAP(&ConfigEntry{Url: tc.url})
+			require.Error(t, err)
+			assert.Nil(t, conn)
+			assert.ErrorIs(t, err, tc.wantErr)
+			assert.ErrorContains(t, err, tc.message)
+			assert.NotContains(t, err.Error(), "{{err}}")
+			assert.NotContains(t, err.Error(), "%!")
+		})
 	}
 }
 
@@ -93,6 +141,28 @@ func TestSIDBytesToString(t *testing.T) {
 		} else if answer != res {
 			t.Errorf("Failed to convert %#v: %s != %s", test, res, answer)
 		}
+	}
+}
+
+func TestSIDBytesToStringErrorWrapping(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		field   string
+		input   []byte
+		wantErr error
+	}{
+		{field: "Revision", input: nil, wantErr: io.EOF},
+		{field: "SubAuthorityCount", input: []byte{1}, wantErr: io.EOF},
+		{field: "IdentifierAuthority", input: []byte{1, 1, 0}, wantErr: io.ErrUnexpectedEOF},
+		{field: "SubAuthority", input: []byte{1, 1, 0, 0, 0, 0, 0, 5, 0}, wantErr: io.ErrUnexpectedEOF},
+	} {
+		t.Run(tc.field, func(t *testing.T) {
+			result, err := sidBytesToString(tc.input)
+			require.Error(t, err)
+			assert.Empty(t, result)
+			assert.ErrorIs(t, err, tc.wantErr)
+			assert.EqualError(t, err, fmt.Sprintf("SID %#v convert failed reading %s: %s", tc.input, tc.field, tc.wantErr))
+		})
 	}
 }
 
