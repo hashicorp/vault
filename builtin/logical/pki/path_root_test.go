@@ -51,9 +51,11 @@ func TestGenerateRoot_internal(t *testing.T) {
 
 			validateResponse(t, resp)
 
-			// Private key must not appear for internal generation
+			// Private key and parameter_set must not appear for internal generation
 			require.Nil(t, resp.Data["private_key"],
 				"private_key must not be present in internal root generation response")
+			require.Nil(t, resp.Data["private_key_parameter_set"],
+				"private_key_parameter_set must not be present in internal root generation response")
 		})
 	}
 }
@@ -99,8 +101,8 @@ func TestGenerateRoot_exported(t *testing.T) {
 
 			require.Equal(t, certutil.MLDSAPrivateKey, resp.Data["private_key_type"],
 				"key_type should be ml-dsa for ML-DSA-%s root", tc.paramSet)
-			require.Equal(t, certutil.ParameterSet(tc.paramSet), resp.Data["parameter_set"],
-				"parameter_set should match requested value for ML-DSA-%s root", tc.paramSet)
+			require.Equal(t, certutil.ParameterSet(tc.paramSet), resp.Data["private_key_parameter_set"],
+				"private_key_parameter_set should match requested value for ML-DSA-%s root", tc.paramSet)
 
 			// Decode and verify the ML-DSA private key
 			block, rest := pem.Decode([]byte(keyPEM))

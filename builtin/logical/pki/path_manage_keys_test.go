@@ -79,6 +79,7 @@ func TestPKI_PathManageKeys_GenerateInternalKeys(t *testing.T) {
 					require.NotEmpty(t, resp.Data["key_id"], "returned an empty key_id field, should never happen")
 					require.Equal(t, keyName, resp.Data["key_name"], "key name was not processed correctly")
 					require.Nil(t, resp.Data["private_key"], "private_key field should not appear in internal generation type.")
+					require.Nil(t, resp.Data["parameter_set"], "parameter_set field should not appear for non-ML-DSA key types")
 				}
 			})
 		}

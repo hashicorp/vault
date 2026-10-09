@@ -191,10 +191,12 @@ func (b *backend) pathGenerateKeyHandler(ctx context.Context, req *logical.Reque
 		return nil, err
 	}
 	responseData := map[string]interface{}{
-		keyIdParam:        key.ID,
-		keyNameParam:      key.Name,
-		keyTypeParam:      string(actualPrivateKeyType),
-		parameterSetParam: key.ParameterSet,
+		keyIdParam:   key.ID,
+		keyNameParam: key.Name,
+		keyTypeParam: string(actualPrivateKeyType),
+	}
+	if key.PrivateKeyType == certutil.MLDSAPrivateKey {
+		responseData[parameterSetParam] = key.ParameterSet
 	}
 	if exportPrivateKey {
 		responseData["private_key"] = privateKeyPemString
