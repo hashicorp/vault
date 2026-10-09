@@ -66,3 +66,41 @@ test('read-only user is not offered the Manage menu on LDAP role details', async
     });
   }
 });
+
+// Creating a role needs create access, so a read-only user is not sent to a form it cannot submit.
+test('read-only user is not offered Create role on LDAP pages', async ({ page }) => {
+  await test.step('roles list has no Create role', async () => {
+    await page.goto(`secrets-engines/${LDAP_PATH}/ldap/roles`);
+    await expect(page.getByRole('link', { name: 'readonly-static static', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Create role' })).toHaveCount(0);
+  });
+
+  await test.step('overview offers Create new for libraries only', async () => {
+    await page.getByRole('link', { name: 'Overview' }).click();
+    // Production builds strip data-test attributes, so the cards are told apart by their links.
+    const createNew = page.getByRole('link', { name: 'Create new' });
+    await expect(createNew).toHaveCount(1);
+    await expect(createNew).toHaveAttribute('href', /\/libraries\/create$/);
+    if (isVideoEnabled) {
+      // The Roles card mirrors the Libraries card, so its Create new link would sit at the same
+      // offset from the card's left edge. Circle that empty spot.
+      const link = await createNew.boundingBox();
+      const librariesText = await page
+        .getByText('The total number of libraries that have been created')
+        .boundingBox();
+      const rolesText = await page.getByText('The total number of roles that have been set up').boundingBox();
+      if (link && librariesText && rolesText) {
+        const centerX = link.x + link.width / 2 - (librariesText.x - rolesText.x);
+        const centerY = link.y + link.height / 2;
+        const radius = 14;
+        await page.mouse.move(centerX + radius, centerY, { steps: 20 });
+        // Recording slows every Playwright call, so one loop of 12 points already reads as a smooth circle.
+        for (let step = 1; step <= 12; step++) {
+          const angle = (step / 12) * Math.PI * 2;
+          await page.mouse.move(centerX + radius * Math.cos(angle), centerY + radius * Math.sin(angle));
+        }
+        await page.waitForTimeout(1_000);
+      }
+    }
+  });
+});

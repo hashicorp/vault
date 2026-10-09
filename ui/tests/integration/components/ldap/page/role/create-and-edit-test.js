@@ -445,6 +445,25 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     );
   });
 
+  // Vault rejects an empty password on a self-managed mount, so an emptied field must mean "no change".
+  test('it should omit password from the payload when the enabled field is left empty', async function (assert) {
+    const writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapWriteStaticRole').resolves();
+
+    this.model = this.selfManagedEditModel;
+    await this.renderComponent();
+
+    await click(GENERAL.enableField('password'));
+    await fillIn(GENERAL.inputByAttr('password'), 'typed');
+    await fillIn(GENERAL.inputByAttr('password'), '');
+    await click(GENERAL.submitButton);
+
+    const [, , payload] = writeStub.getCall(0).args;
+    assert.false(
+      Object.prototype.hasOwnProperty.call(payload, 'password'),
+      'an emptied password is not sent, so the stored value is kept'
+    );
+  });
+
   test('it should include password in the payload after Enable input and a new value', async function (assert) {
     const writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapWriteStaticRole').resolves();
 
@@ -621,5 +640,48 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     this.model = this.selfManagedEditModel;
     await this.renderComponent();
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Role', 'edit title is unchanged');
+  });
+
+  // ––––– mount type unknown –––––
+  // A token that cannot read the mount config cannot tell a self-managed mount from a root-managed
+  // one, so the form keeps the root-managed fields and explains what differs on self-managed mounts.
+
+  test('it should flag an unknown mount type on the create page', async function (assert) {
+    this.model = { ...this.createModel, isMountTypeUnknown: true };
+    await this.renderComponent();
+
+    const alert = GENERAL.inlineAlertByAttr('mount-type-unknown');
+    assert
+      .dom(`${alert} .hds-alert__title`)
+      .hasText('Unable to determine LDAP configuration mode', 'alert title renders');
+    assert
+      .dom(`${alert} .hds-alert__description`)
+      .hasText(
+        "You don't have permission to read the LDAP secrets engine configuration. Self-managed engines don't support dynamic roles and require password and DN when creating static roles.",
+        'alert description renders'
+      );
+    assert.dom(GENERAL.radioCardByAttr('dynamic')).exists('both role types are still offered');
+  });
+
+  test('it should not flag the mount type when it is known', async function (assert) {
+    for (const [label, model] of [
+      ['root-managed', this.createModel],
+      ['self-managed', this.selfManagedCreateModel],
+    ]) {
+      this.model = model;
+      await this.renderComponent();
+
+      assert
+        .dom(GENERAL.inlineAlertByAttr('mount-type-unknown'))
+        .doesNotExist(`no alert for a ${label} mount`);
+    }
+  });
+
+  // On edit the DN is locked, the role type is fixed and the role already has a stored password.
+  test('it should not flag an unknown mount type on the edit page', async function (assert) {
+    this.model = { ...this.staticEditModel, isMountTypeUnknown: true };
+    await this.renderComponent();
+
+    assert.dom(GENERAL.inlineAlertByAttr('mount-type-unknown')).doesNotExist('no alert on edit');
   });
 });

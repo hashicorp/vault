@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 <Page::Header @title={{this.pageTitle}}>
@@ -12,6 +12,18 @@
 
 <form {{on "submit" (perform this.save)}} class="has-top-margin-m">
   <MessageError @errorMessage={{this.error}} />
+
+  {{#if this.isMountTypeUnknown}}
+    <div class="has-bottom-padding-m">
+      <Hds::Alert @type="inline" @color="warning" data-test-inline-alert="mount-type-unknown" as |A|>
+        <A.Title>Unable to determine LDAP configuration mode</A.Title>
+        <A.Description>
+          You don't have permission to read the LDAP secrets engine configuration. Self-managed engines don't support dynamic
+          roles and require password and DN when creating static roles.
+        </A.Description>
+      </Hds::Alert>
+    </div>
+  {{/if}}
 
   {{! Self-managed mounts support static roles only, so the choice is not offered. }}
   {{#unless this.isSelfManaged}}
