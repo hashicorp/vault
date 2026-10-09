@@ -1,0 +1,241 @@
+// Copyright IBM Corp. 2016, 2025
+// SPDX-License-Identifier: BUSL-1.1
+
+package command
+
+import (
+	"os"
+	"strings"
+	"testing"
+
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/api"
+	base "github.com/hashicorp/vault/command/base"
+	clientcmd "github.com/hashicorp/vault/command/client"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
+	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/stretchr/testify/require"
+)
+
+func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginReloadCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &clientcmd.PluginReloadCommand{
+		BaseCommand: &base.BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func testPluginReloadStatusCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginReloadStatusCommand) {
+	tb.Helper()
+
+	ui := cli.NewMockUi()
+	return ui, &clientcmd.PluginReloadStatusCommand{
+		BaseCommand: &base.BaseCommand{
+			UI: ui,
+		},
+	}
+}
+
+func TestPluginReloadCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			nil,
+			"No plugins specified, must specify exactly one of -plugin or -mounts",
+			1,
+		},
+		{
+			"too_many_args",
+			[]string{"-plugin", "foo", "-mounts", "bar"},
+			"Must specify exactly one of -plugin or -mounts",
+			1,
+		},
+		{
+			"type_and_mounts_mutually_exclusive",
+			[]string{"-mounts", "bar", "-type", "secret"},
+			"Cannot specify -type with -mounts",
+			1,
+		},
+		{
+			"invalid_type",
+			[]string{"-plugin", "bar", "-type", "unsupported"},
+			"Error parsing -type as a plugin type",
+			1,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testPluginReloadCommand(t)
+			cmd.SetClient(client)
+
+			args := append([]string{}, tc.args...)
+			code := cmd.Run(args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
+	}
+
+	t.Run("integration", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir := corehelpers.MakeTestPluginDir(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		pluginName := "my-plugin"
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
+
+		ui, cmd := testPluginReloadCommand(t)
+		cmd.SetClient(client)
+
+		resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
+			Name:    pluginName,
+			Type:    api.PluginTypeCredential,
+			Command: pluginName,
+			SHA256:  sha256Sum,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Warnings) > 0 {
+			t.Errorf("expected no warnings, got: %v", resp.Warnings)
+		}
+
+		code := cmd.Run([]string{
+			"-plugin", pluginName,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := "Success! Reloaded plugin: "
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, expected) {
+			t.Errorf("expected %q to contain %q", combined, expected)
+		}
+	})
+
+	// TestPluginReloadCommand_Run_MountsInRootNamespace verifies that using
+	// -mounts in the root namespace correctly routes to the ReloadPlugin API
+	// (sys/plugins/reload/backend) rather than the RootReloadPlugin API
+	// (sys/plugins/reload/:type/:name), which does not support mounts.
+	t.Run("mounts_in_root_namespace", func(t *testing.T) {
+		t.Parallel()
+
+		pluginDir := corehelpers.MakeTestPluginDir(t)
+
+		client, _, closer := testVaultServerPluginDir(t, pluginDir)
+		defer closer()
+
+		workingDir, err := os.Getwd()
+		require.NoError(t, err)
+		plugin := pluginhelpers.CompilePlugin(t, consts.PluginTypeCredential, "", pluginDir)
+		currentDir, err := os.Getwd()
+		require.NoError(t, err)
+		require.Equal(t, workingDir, currentDir, "compiling a plugin must not change the process working directory")
+
+		resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
+			Name:    plugin.Name,
+			Type:    api.PluginType(plugin.Typ),
+			Command: plugin.Name,
+			SHA256:  plugin.Sha256,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Warnings) > 0 {
+			t.Errorf("expected no warnings, got: %v", resp.Warnings)
+		}
+
+		mountPath := "auth/" + plugin.Name + "/"
+		if err := client.Sys().EnableAuthWithOptions(plugin.Name, &api.EnableAuthOptions{
+			Type: plugin.Name,
+		}); err != nil {
+			t.Fatal(err)
+		}
+
+		ui, cmd := testPluginReloadCommand(t)
+		cmd.SetClient(client)
+
+		code := cmd.Run([]string{
+			"-mounts", mountPath,
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d, output: %s", code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+		}
+
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		if !strings.Contains(combined, "Success! Reloaded mounts:") {
+			t.Errorf("expected %q to contain %q", combined, "Success! Reloaded mounts:")
+		}
+	})
+}
+
+func TestPluginReloadStatusCommand_Run(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		args []string
+		out  string
+		code int
+	}{
+		{
+			"not_enough_args",
+			nil,
+			"Not enough arguments",
+			1,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			client, closer := testVaultServer(t)
+			defer closer()
+
+			ui, cmd := testPluginReloadStatusCommand(t)
+			cmd.SetClient(client)
+
+			args := append([]string{}, tc.args...)
+			code := cmd.Run(args)
+			if code != tc.code {
+				t.Errorf("expected %d to be %d", code, tc.code)
+			}
+
+			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+			if !strings.Contains(combined, tc.out) {
+				t.Errorf("expected %q to contain %q", combined, tc.out)
+			}
+		})
+	}
+}

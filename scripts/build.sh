@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copyright IBM Corp. 2016, 2025
+# Copyright IBM Corp. 2016, 2026
 # SPDX-License-Identifier: BUSL-1.1
 
 #
@@ -20,6 +20,12 @@ cd "$DIR"
 # Set build tags
 BUILD_TAGS="${BUILD_TAGS:-"vault"}"
 
+# BUILD_SOURCE selects the entrypoint package. Defaults to the full server binary.
+BUILD_SOURCE="${BUILD_SOURCE:-"./command/server/cmd"}"
+
+# Entrypoint packages are named cmd, so the product name must be explicit.
+BIN_NAME="${BIN_NAME:-"vault"}"
+
 # Get the git commit
 GIT_COMMIT="$("$SOURCE_DIR"/ci-helper.sh revision)"
 GIT_DIRTY="$(test -n "`git status --porcelain`" && echo "+CHANGES" || true)"
@@ -33,9 +39,9 @@ case $(uname) in
         ;;
 esac
 
-# Delete the old dir
-echo "==> Removing old directory..."
-rm -f bin/*
+# Delete the old binary
+echo "==> Removing old binary..."
+rm -f "bin/${BIN_NAME}"
 rm -rf pkg/*
 mkdir -p bin/
 
@@ -44,9 +50,9 @@ echo "==> Building..."
 ${GO_CMD} build \
     -gcflags "${GCFLAGS}" \
     -ldflags "${LD_FLAGS} -X github.com/hashicorp/vault/version.GitCommit='${GIT_COMMIT}${GIT_DIRTY}' -X github.com/hashicorp/vault/version.BuildDate=${BUILD_DATE}" \
-    -o "bin/vault" \
+    -o "bin/${BIN_NAME}" \
     -tags "${BUILD_TAGS}" \
-    .
+    "${BUILD_SOURCE}"
 
 # Move all the compiled things to the $GOPATH/bin
 OLDIFS=$IFS
@@ -55,8 +61,8 @@ IFS=$OLDIFS
 
 # Ensure the go bin folder exists
 mkdir -p ${BIN_PATH}
-rm -f ${BIN_PATH}/vault
-cp bin/vault ${BIN_PATH}
+rm -f "${BIN_PATH}/${BIN_NAME}"
+cp "bin/${BIN_NAME}" "${BIN_PATH}"
 
 # Done!
 echo
