@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Fix nodes that join a Raft HA (`ha_storage`) cluster after a Raft TLS key rotation being unable to receive Raft traffic from the active node.
+```
