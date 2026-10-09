@@ -15,6 +15,7 @@ import { LdapApplicationModel } from '../application';
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
   promptConfig: boolean;
+  isSelfManaged: boolean;
   roles: Array<LdapRole>;
 }
 
@@ -35,11 +36,14 @@ export default class LdapRolesIndexRoute extends LdapRolesRoute {
 
   async model(params: { page?: string; pageFilter: string }) {
     const { page, pageFilter: filter } = params;
-    const { secretsEngine, promptConfig } = this.modelFor('application') as LdapApplicationModel;
+    const { secretsEngine, promptConfig, isSelfManaged } = this.modelFor(
+      'application'
+    ) as LdapApplicationModel;
     const { roles, capabilities } = await this.fetchRolesAndCapabilities({ page: Number(page) || 1, filter });
     return {
       secretsEngine,
       promptConfig,
+      isSelfManaged,
       roles,
       capabilities,
     };
