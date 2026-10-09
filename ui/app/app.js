@@ -120,6 +120,7 @@ export default class App extends Application {
           'auth',
           'api',
           'capabilities',
+          'permissions',
         ],
         externalRoutes: {
           vault: 'vault.cluster',

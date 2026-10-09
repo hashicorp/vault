@@ -68,6 +68,12 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
     return this.args.model.isSelfManaged === true;
   }
 
+  // Only flagged on create: on edit the DN is locked and the role already has a stored password.
+  get isMountTypeUnknown(): boolean {
+    const { model } = this.args;
+    return this.isNew && 'isMountTypeUnknown' in model && model.isMountTypeUnknown === true;
+  }
+
   get pageTitle(): string {
     if (!this.isNew) return 'Edit Role';
     return this.isSelfManaged ? 'Create static role' : 'Create Role';
@@ -121,6 +127,11 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
       const { isValid, state, invalidFormMessage, data } = this.form.toJSON();
       const { name, ...payload } = data;
       const { currentPath } = this.secretMountPath;
+      // On edit an empty password means "keep the stored one"; Vault rejects an empty password on
+      // self-managed mounts.
+      if (!this.isNew && 'password' in payload && !payload.password) {
+        delete payload.password;
+      }
 
       this.modelValidations = isValid ? null : state;
       this.invalidFormMessage = isValid ? '' : invalidFormMessage;
