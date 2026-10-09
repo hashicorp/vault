@@ -2145,11 +2145,6 @@ func (a *ActivityLog) HandleUsage(ctx context.Context, entry *logical.TokenEntry
 		return nil
 	}
 
-	// Tokens created for the purpose of Link should bypass counting for billing purposes
-	if entry.InternalMeta != nil && entry.InternalMeta[IgnoreForBilling] == "true" {
-		return nil
-	}
-
 	// Look up the mount accessor of the auth method that issued the token, taking care to resolve the token path
 	// against the token namespace, which may not be the same as the request namespace!
 	tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, a.core)

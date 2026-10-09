@@ -384,13 +384,6 @@ func TestServer(t *testing.T) {
 			[]string{"-test-verify-only"},
 		},
 		{
-			"cloud_config",
-			testBaseHCL(t, "") + inmemHCL + cloudHCL,
-			"HCP Organization: bc58b3d0-2eab-4ab8-abf4-f61d3c9975ff",
-			0,
-			[]string{"-test-verify-only"},
-		},
-		{
 			"recovery_mode",
 			testBaseHCL(t, "") + inmemHCL,
 			"",
