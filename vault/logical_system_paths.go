@@ -30,8 +30,10 @@ var passwordPolicySchema = map[string]*framework.FieldSchema{
 		Description: "The name of the password policy.",
 	},
 	"policy": {
-		Type:        framework.TypeString,
-		Description: "The password policy",
+		Type: framework.TypeString,
+		Description: "The password policy in HCL or JSON, optionally base64 encoded. Supports a top-level " +
+			"'length', an optional top-level 'consecutive-chars-allowed' (defaults to true; when false the same " +
+			"character may not appear in adjacent positions), and one or more 'rule \"charset\"' blocks.",
 	},
 	"entropy_source": {
 		Type:        framework.TypeString,
