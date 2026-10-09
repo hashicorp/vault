@@ -19,6 +19,8 @@ import (
 	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	base "github.com/hashicorp/vault/command/base"
+	"github.com/hashicorp/vault/command/client/login/spiffe"
+	"github.com/hashicorp/vault/command/client/login/tpm"
 	_ "github.com/hashicorp/vault/helper/builtinplugins"
 	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
@@ -84,6 +86,8 @@ func newFullAddonHandlers() (map[string]physical.Factory, map[string]base.LoginH
 		"radius": &credUserpass.CLIHandler{
 			DefaultMount: "radius",
 		},
+		"spiffe": &spiffe.CLIHandler{},
+		"tpm":    &tpm.CLIHandler{},
 	}
 
 	return addonPhysicalBackends, addonLoginHandlers
