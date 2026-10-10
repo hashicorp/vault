@@ -140,7 +140,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	return resp, nil
 }
 
-func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, error) {
+/* mapGitHubError converts GitHub API client errors into coded logical errors so Vault's HTTP layer returns the upstream 4xx status instead of a generic 500 (see hashicorp/vault#18579). */ func mapGitHubError(err error) error { var ghErr *github.ErrorResponse; if errors.As(err, &ghErr) && ghErr.Response != nil { if code := ghErr.Response.StatusCode; code >= 400 && code < 500 { return logical.CodedError(code, ghErr.Error()) } }; return err } func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, token string) (*verifyCredentialsResp, error) {
 	var warnings []string
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
@@ -180,7 +180,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 		err = config.setOrganizationID(ctx, client)
 		if err != nil {
 			b.Logger().Error("failed to set the organization_id on login", "error", err)
-			return nil, err
+			return nil, mapGitHubError(err)
 		}
 		entry, err := logical.StorageEntryJSON("config", config)
 		if err != nil {
@@ -197,7 +197,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, t
 	// Get the user
 	user, _, err := client.Users.Get(ctx, "")
 	if err != nil {
-		return nil, err
+		return nil, mapGitHubError(err)
 	}
 
 	// Verify that the user is part of the organization
