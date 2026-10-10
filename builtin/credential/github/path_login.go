@@ -211,7 +211,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	for {
 		orgs, resp, err := client.Organizations.List(ctx, "", orgOpt)
 		if err != nil {
-			return nil, err
+			return nil, mapGitHubError(err)
 		}
 		allOrgs = append(allOrgs, orgs...)
 		if resp.NextPage == 0 {
@@ -278,12 +278,12 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 
 	groupPoliciesList, err := b.TeamMap.Policies(ctx, req.Storage, teamNames...)
 	if err != nil {
-		return nil, err
+		return nil, mapGitHubError(err)
 	}
 
 	userPoliciesList, err := b.UserMap.Policies(ctx, req.Storage, []string{*user.Login}...)
 	if err != nil {
-		return nil, err
+		return nil, mapGitHubError(err)
 	}
 
 	verifyResp := &verifyCredentialsResp{
