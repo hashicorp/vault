@@ -10,7 +10,7 @@ module github.com/hashicorp/vault/version
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.27.1
+go 1.27.2
 
 require github.com/stretchr/testify v1.12.1
 

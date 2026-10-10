@@ -3,7 +3,7 @@
 
 module github.com/hashicorp/vault/command/client
 
-go 1.27.1
+go 1.27.2
 
 replace (
 	github.com/hashicorp/vault => ../..
