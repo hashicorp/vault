@@ -1,0 +1,3 @@
+```release-note:bug
+api: report the configured unix socket address instead of http://localhost in request errors
+```
