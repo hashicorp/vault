@@ -388,6 +388,54 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     assert.strictEqual(payload.rotation_period, '0s', 'the cleared field saves as zero');
   });
 
+  test('it should block a rotation period longer than Vault supports', async function (assert) {
+    const writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapWriteStaticRole').resolves();
+
+    this.model = this.selfManagedCreateModel;
+    await this.renderComponent();
+
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
+    await fillIn(GENERAL.inputByAttr('username'), 'bar');
+    await fillIn(GENERAL.inputByAttr('dn'), 'cn=test');
+    await fillIn(GENERAL.inputByAttr('password'), 'secret');
+    await fillIn(GENERAL.ttl.input('Rotation period'), '9999999999');
+    await fillIn(`${GENERAL.fieldByAttr('rotation_period')} ${GENERAL.selectByAttr('ttl-unit')}`, 'd');
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('rotation_period'))
+      .hasText(
+        'Rotation period is too large. Maximum allowed value is 106,751 days.',
+        'rotation period explains the maximum'
+      );
+    assert.dom(GENERAL.invalidFormMessage).hasText('There is an error with this form.');
+    assert.true(writeStub.notCalled, 'the role is not saved');
+
+    await fillIn(GENERAL.ttl.input('Rotation period'), '106751');
+    await click(GENERAL.submitButton);
+
+    const [, , payload] = writeStub.getCall(0).args;
+    assert.strictEqual(payload.rotation_period, '9223286400s', 'the maximum whole number of days saves');
+  });
+
+  test('it should block a rotation period too long to be stored as a number', async function (assert) {
+    const writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapWriteStaticRole').resolves();
+
+    this.model = this.createModel;
+    await this.renderComponent();
+
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
+    await fillIn(GENERAL.inputByAttr('username'), 'bar');
+    // The TTL picker parses this many digits to Infinity.
+    await fillIn(GENERAL.ttl.input('Rotation period'), '9'.repeat(400));
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('rotation_period'))
+      .hasText('Rotation period is too large. Maximum allowed value is 106,751 days.');
+    assert.true(writeStub.notCalled, 'the role is not saved');
+  });
+
   test('it should render an editable password field on the create page', async function (assert) {
     this.model = this.createModel;
     await this.renderComponent();

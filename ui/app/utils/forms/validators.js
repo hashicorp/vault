@@ -1,10 +1,11 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { isPresent } from '@ember/utils';
 import { capitalize } from '@ember/string';
+import { isDurationOverMax } from 'core/utils/duration-utils';
 
 /*
 * Model Validators
@@ -42,6 +43,8 @@ export const endsInSlash = (value) => {
   const validation = new RegExp('/$');
   return !validation.test(value);
 };
+
+export const maxDuration = (value) => !isDurationOverMax(value);
 
 /*
 * General Validators
@@ -85,6 +88,7 @@ export default {
   isNonString,
   hasWhitespace,
   isNot,
+  maxDuration,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
 };
