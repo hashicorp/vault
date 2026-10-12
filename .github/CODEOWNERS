@@ -77,6 +77,8 @@
 /.bob/                            @hashicorp/vault
 /.opencode/                       @hashicorp/vault
 /opencode.json                    @hashicorp/vault
+/.github/copilot-instructions.md  @hashicorp/vault
+/.github/instructions/            @hashicorp/vault
 
 # Cryptosec
 /api/auth/cert/                                      @hashicorp/vault-crypto
