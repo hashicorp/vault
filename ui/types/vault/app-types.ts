@@ -35,7 +35,8 @@ export type Validator =
   | 'endsInSlash'
   | 'hasWhitespace'
   | 'isNonString'
-  | 'isNot';
+  | 'isNot'
+  | 'maxDuration';
 
 export type ValidatorOption = {
   nullable?: boolean;

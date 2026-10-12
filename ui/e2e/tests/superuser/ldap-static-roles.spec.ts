@@ -181,6 +181,26 @@ test('ldap self-managed static role workflow', async ({ page, playwright }, test
     await expect(page.getByRole('heading', { name: ROLE_NAME })).toBeVisible();
   });
 
+  await test.step('a rotation period longer than Vault supports is blocked', async () => {
+    await goToEdit(page);
+    const rotation = page.getByRole('group', { name: 'Rotation period' });
+    await rotation.getByLabel('Number of units').fill('9999999999');
+    await rotation.getByRole('combobox').selectOption('d');
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await expect(
+      page.getByText('Rotation period is too large. Maximum allowed value is 106,751 days.')
+    ).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/roles/static/${ROLE_NAME}/edit`));
+
+    // The largest whole number of days Vault accepts still saves.
+    await rotation.getByLabel('Number of units').fill('106751');
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await expect(page).toHaveURL(new RegExp(`/roles/static/${ROLE_NAME}/details`));
+    await basePage.dismissFlashMessages();
+  });
+
   await test.step('edit page locks the password and freezes the distinguished name', async () => {
     await goToEdit(page);
 
