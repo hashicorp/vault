@@ -10,7 +10,7 @@ module github.com/hashicorp/vault/internalshared
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.27.1
+go 1.27.2
 
 replace github.com/hashicorp/vault => ..
 
