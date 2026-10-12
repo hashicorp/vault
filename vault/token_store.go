@@ -948,6 +948,10 @@ func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 
 	s, err := ts.Salt(ctx)
 	if err != nil {
+		// A perf standby can't create a missing salt; the active node must.
+		if ts.core.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+			return "", logical.ErrPerfStandbyPleaseForward
+		}
 		return "", err
 	}
 
