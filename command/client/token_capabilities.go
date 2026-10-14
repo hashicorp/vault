@@ -30,7 +30,7 @@ func (c *TokenCapabilitiesCommand) Synopsis() string {
 
 func (c *TokenCapabilitiesCommand) Help() string {
 	helpText := `
-Usage: vault token capabilities [options] [TOKEN | ACCESSOR] PATH
+Usage: ` + c.BinaryName + ` token capabilities [options] [TOKEN | ACCESSOR] PATH
 
   Fetches the capabilities of a token or accessor for a given path. If a TOKEN
   is provided as an argument, the "/sys/capabilities" endpoint is used, which
@@ -42,15 +42,15 @@ Usage: vault token capabilities [options] [TOKEN | ACCESSOR] PATH
 
   List capabilities for the local token on the "secret/foo" path:
 
-      $ vault token capabilities secret/foo
+      $ ` + c.BinaryName + ` token capabilities secret/foo
 
   List capabilities for a token on the "cubbyhole/foo" path:
 
-      $ vault token capabilities 96ddf4bc-d217-f3ba-f9bd-017055595017 cubbyhole/foo
+      $ ` + c.BinaryName + ` token capabilities 96ddf4bc-d217-f3ba-f9bd-017055595017 cubbyhole/foo
 
   List capabilities for a token on the "cubbyhole/foo" path via its accessor:
 
-      $ vault token capabilities -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da cubbyhole/foo
+      $ ` + c.BinaryName + ` token capabilities -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da cubbyhole/foo
 
   For a full list of examples, please see the documentation.
 

@@ -31,20 +31,20 @@ func (c *KVDestroyCommand) Synopsis() string {
 
 func (c *KVDestroyCommand) Help() string {
 	helpText := `
-Usage: vault kv destroy [options] KEY
+Usage: ` + c.BinaryName + ` kv destroy [options] KEY
 
   Permanently removes the specified versions' data from the key-value store. If
   no key exists at the path, no action is taken.
 
   To destroy version 3 of key foo:
 
-      $ vault kv destroy -mount=secret -versions=3 foo
+      $ ` + c.BinaryName + ` kv destroy -mount=secret -versions=3 foo
 
   The deprecated path-like syntax can also be used, but this should be avoided 
   for KV v2, as the fact that it is not actually the full API path to 
   the secret (secret/data/foo) can cause confusion: 
   
-      $ vault kv destroy -versions=3 secret/foo
+      $ ` + c.BinaryName + ` kv destroy -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 

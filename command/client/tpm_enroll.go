@@ -29,8 +29,8 @@ func (c *TPMEnrollCommand) Synopsis() string {
 }
 
 func (c *TPMEnrollCommand) Help() string {
-	helpText := `
-Usage: vault tpm enroll [options]
+	helpText := fmt.Sprintf(`
+Usage: %s tpm enroll [options]
 
   Registers the local TPM's endorsement key (EK) with the Vault identity
   backend so that the TPM can later be used for attestation. By default the EK
@@ -40,18 +40,18 @@ Usage: vault tpm enroll [options]
 
   Enroll the local TPM, specifying a device path and metadata:
 
-      $ vault tpm enroll -name=my-server \
+      $ %s tpm enroll -name=my-server \
           -tpm-device-path=/dev/tpm0 \
           -metadata=env=prod \
           -metadata=region=us-east-1
 
   Enroll a remote TPM by supplying its EK public key directly:
 
-      $ vault tpm enroll -name=remote-server \
+      $ %s tpm enroll -name=remote-server \
           -ekpem="$(cat ek-public.pem)" \
           -metadata=env=prod
 
-` + c.Flags().Help()
+`, c.BinaryName, c.BinaryName, c.BinaryName) + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }
 

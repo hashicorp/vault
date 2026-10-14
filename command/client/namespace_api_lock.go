@@ -28,15 +28,15 @@ func (c *NamespaceAPILockCommand) Synopsis() string {
 
 func (c *NamespaceAPILockCommand) Help() string {
 	helpText := `
-Usage: vault namespace lock PATH
+Usage: ` + c.BinaryName + ` namespace lock PATH
 
 	Lock the current namespace, and all descendants:
 
-		$ vault namespace lock
+		$ ` + c.BinaryName + ` namespace lock
 
 	Lock a child namespace, and all of its descendants (e.g. ns1/ns2/):
 
-		$ vault namespace lock ns1/ns2
+		$ ` + c.BinaryName + ` namespace lock ns1/ns2
 
 ` + c.Flags().Help()
 

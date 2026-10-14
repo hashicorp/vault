@@ -30,13 +30,13 @@ func (c *KVListCommand) Synopsis() string {
 func (c *KVListCommand) Help() string {
 	helpText := `
 
-Usage: vault kv list [options] PATH
+Usage: ` + c.BinaryName + ` kv list [options] PATH
 
   Lists data from Vault's key-value store at the given path.
 
   List values under the "my-app" folder of the key-value store:
 
-      $ vault kv list secret/my-app/
+      $ ` + c.BinaryName + ` kv list secret/my-app/
 
   Additional flags and more advanced use cases are detailed below.
 

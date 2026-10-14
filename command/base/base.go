@@ -46,6 +46,11 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
+	// BinaryName is detected from os.Args[0] at runtime to support both
+	// vault and vault-client binaries using the same command code.
+	// This allows usage text to dynamically show the correct binary name.
+	BinaryName string
+
 	// Flag* fields hold parsed flag values. They are exported so the commands
 	// in command/client and command/server can read them.
 	FlagAddress           string
@@ -306,6 +311,11 @@ func NewBaseCommand(ui cli.Ui, runOpts *RunOptions) *BaseCommand {
 		bc.client = runOpts.Client
 		bc.hcpTokenHelper = runOpts.HCPTokenHelper
 		bc.stdin = runOpts.Stdin
+		bc.BinaryName = runOpts.BinaryName
+	}
+	// Default to "vault" if not set
+	if bc.BinaryName == "" {
+		bc.BinaryName = "vault"
 	}
 	return bc
 }

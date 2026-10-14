@@ -29,14 +29,14 @@ func (c *ListCommand) Synopsis() string {
 func (c *ListCommand) Help() string {
 	helpText := `
 
-Usage: vault list [options] PATH
+Usage: ` + c.BinaryName + ` list [options] PATH
 
   Lists data from Vault at the given path. This can be used to list keys in a,
   given secret engine.
 
   List values under the "my-app" folder of the generic secret engine:
 
-      $ vault list secret/my-app/
+      $ ` + c.BinaryName + ` list secret/my-app/
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secret engine in use. Not all engines support listing.

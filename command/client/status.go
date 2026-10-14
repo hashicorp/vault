@@ -27,7 +27,7 @@ func (c *StatusCommand) Synopsis() string {
 
 func (c *StatusCommand) Help() string {
 	helpText := `
-Usage: vault status [options]
+Usage: ` + c.BinaryName + ` status [options]
 
   Prints the current state of Vault including whether it is sealed and if HA
   mode is enabled. This command prints regardless of whether the Vault is

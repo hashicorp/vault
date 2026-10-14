@@ -29,7 +29,7 @@ func (c *AuthHelpCommand) Synopsis() string {
 
 func (c *AuthHelpCommand) Help() string {
 	helpText := `
-Usage: vault auth help [options] TYPE | PATH
+Usage: ` + c.BinaryName + ` auth help [options] TYPE | PATH
 
   Prints usage and help for an auth method.
 
@@ -42,11 +42,11 @@ Usage: vault auth help [options] TYPE | PATH
 
   Get usage instructions for the userpass auth method:
 
-      $ vault auth help userpass
+      $ ` + c.BinaryName + ` auth help userpass
 
   Print usage for the auth method enabled at my-method/:
 
-      $ vault auth help my-method/
+      $ ` + c.BinaryName + ` auth help my-method/
 
   Each auth method produces its own help output.
 

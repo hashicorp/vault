@@ -27,7 +27,7 @@ func (c *NamespaceDeleteCommand) Synopsis() string {
 
 func (c *NamespaceDeleteCommand) Help() string {
 	helpText := `
-Usage: vault namespace delete [options] PATH
+Usage: ` + c.BinaryName + ` namespace delete [options] PATH
 
   Delete an existing namespace. The namespace deleted will be relative to the
   namespace provided in either the VAULT_NAMESPACE environment variable or
@@ -35,11 +35,11 @@ Usage: vault namespace delete [options] PATH
 
   Delete a namespace (e.g. ns1/):
 
-      $ vault namespace delete ns1
+      $ ` + c.BinaryName + ` namespace delete ns1
 
   Delete a namespace namespace from a parent namespace (e.g. ns1/ns2/):
 
-      $ vault namespace delete -namespace=ns1 ns2
+      $ ` + c.BinaryName + ` namespace delete -namespace=ns1 ns2
 
 ` + c.Flags().Help()
 

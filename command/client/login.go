@@ -51,7 +51,7 @@ func (c *LoginCommand) Synopsis() string {
 
 func (c *LoginCommand) Help() string {
 	helpText := `
-Usage: vault login [options] [AUTH K=V...]
+Usage: ` + c.BinaryName + ` login [options] [AUTH K=V...]
 
   Authenticates users or machines to Vault using the provided arguments. A
   successful authentication results in a Vault token - conceptually similar to
@@ -66,17 +66,17 @@ Usage: vault login [options] [AUTH K=V...]
   cert. For these, additional "K=V" pairs may be required. For example, to
   authenticate to the userpass auth method:
 
-      $ vault login -method=userpass username=my-username
+      $ ` + c.BinaryName + ` login -method=userpass username=my-username
 
   For more information about the list of configuration parameters available for
-  a given auth method, use the "vault auth help TYPE" command. You can also use
-  "vault auth list" to see the list of enabled auth methods.
+  a given auth method, use the "` + c.BinaryName + ` auth help TYPE" command. You can also use
+  "` + c.BinaryName + ` auth list" to see the list of enabled auth methods.
 
   If an auth method is enabled at a non-standard path, the -method flag still
   refers to the canonical type, but the -path flag refers to the enabled path.
   If a github auth method was enabled at "github-prod", authenticate like this:
 
-      $ vault login -method=github -path=github-prod
+      $ ` + c.BinaryName + ` login -method=github -path=github-prod
 
   If the authentication is requested with response wrapping (via -wrap-ttl),
   the returned token is automatically unwrapped unless:
