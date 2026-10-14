@@ -1,12 +1,9 @@
 // Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
-//go:build race
-
 package vault
 
 import (
-	"context"
 	"sync"
 	"testing"
 
@@ -14,7 +11,6 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/internalshared/namespace"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -27,9 +23,9 @@ import (
 // read or clone those same objects from MemDB using lock-free read
 // transactions without holding i.lock, which races with the invalidation.
 //
-// This test is meaningful only under the race detector, so it lives in a file
-// gated behind the "race" build tag (which the Go toolchain sets automatically
-// when -race is passed) and is excluded from ordinary builds.
+// This test is meaningful only under the race detector, but it's also ran
+// without the race detector to better validate that the test is healthy and
+// ensure it cannot be broken and checked in in a broken state.
 //
 // This is deliberately an internal (white-box) test: it calls Invalidate
 // directly and reads and clones the same MemDB entity and alias via
@@ -39,10 +35,11 @@ import (
 // asynchronously over the performance-replication WAL, so their timing cannot
 // be lined up with the concurrent reads.
 func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	t.Parallel()
+	cluster := NewTestCluster(t, nil, nil)
 
-	is := c.identityStore
-	ctx := context.Background()
+	is := cluster.Cores[0].Core.identityStore
+	ctx := t.Context()
 
 	entityID, err := uuid.GenerateUUID()
 	require.NoError(t, err)
@@ -129,9 +126,8 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for n := 0; n < iterations; n++ {
-			if !assert.NoError(t, is.localAliasPacker.PutItem(ctx, aliasItems[n%2])) {
-				return
-			}
+			err = is.localAliasPacker.PutItem(ctx, aliasItems[n%2])
+			require.NoError(t, err)
 			is.Invalidate(ctx, localAliasBucketKey)
 		}
 	}()
@@ -144,12 +140,17 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for n := 0; n < iterations; n++ {
-			if e, err := is.MemDBEntityByID(entityID, true); err == nil && e != nil {
-				_, _ = e.Clone()
-			}
-			if a, err := is.MemDBAliasByID(aliasID, true, false); err == nil && a != nil {
-				_, _ = a.Clone()
-			}
+			e, err := is.MemDBEntityByID(entityID, true)
+			require.NoError(t, err)
+			require.NotNil(t, e)
+			_, err = e.Clone()
+			require.NoError(t, err)
+
+			a, err := is.MemDBAliasByID(aliasID, true, false)
+			require.NoError(t, err)
+			require.NotNil(t, a)
+			_, err = a.Clone()
+			require.NoError(t, err)
 		}
 	}()
 
