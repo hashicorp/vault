@@ -133,7 +133,7 @@ func (c *Sys) DisableAuditWithContext(ctx context.Context, path string) error {
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
