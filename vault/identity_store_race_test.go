@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -117,6 +118,14 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
+	// Errors are reported through this channel rather than with require or
+	// t.FailNow inside the goroutines: FailNow must only be called from the
+	// goroutine running the test, since it exits the calling goroutine via
+	// runtime.Goexit and does not stop the test itself. Each goroutine sends at
+	// most one error and returns; the test goroutine asserts on them after
+	// wg.Wait().
+	errCh := make(chan error, 2)
+
 	// Repeatedly swap the stored alias, then invalidate the bucket. Varying the
 	// alias every iteration keeps invalidateLocalAliasesBucket on its "changed"
 	// branch, so each pass both compares (proto.Equal) the shared MemDB alias
@@ -126,8 +135,10 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for n := 0; n < iterations; n++ {
-			err = is.localAliasPacker.PutItem(ctx, aliasItems[n%2])
-			require.NoError(t, err)
+			if err := is.localAliasPacker.PutItem(ctx, aliasItems[n%2]); err != nil {
+				errCh <- fmt.Errorf("putting local alias item: %w", err)
+				return
+			}
 			is.Invalidate(ctx, localAliasBucketKey)
 		}
 	}()
@@ -141,20 +152,32 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 		defer wg.Done()
 		for n := 0; n < iterations; n++ {
 			e, err := is.MemDBEntityByID(entityID, true)
-			require.NoError(t, err)
-			require.NotNil(t, e)
-			_, err = e.Clone()
-			require.NoError(t, err)
+			if err != nil || e == nil {
+				errCh <- fmt.Errorf("reading entity from MemDB: entity=%v err=%v", e, err)
+				return
+			}
+			if _, err = e.Clone(); err != nil {
+				errCh <- fmt.Errorf("cloning entity: %w", err)
+				return
+			}
 
 			a, err := is.MemDBAliasByID(aliasID, true, false)
-			require.NoError(t, err)
-			require.NotNil(t, a)
-			_, err = a.Clone()
-			require.NoError(t, err)
+			if err != nil || a == nil {
+				errCh <- fmt.Errorf("reading alias from MemDB: alias=%v err=%v", a, err)
+				return
+			}
+			if _, err = a.Clone(); err != nil {
+				errCh <- fmt.Errorf("cloning alias: %w", err)
+				return
+			}
 		}
 	}()
 
 	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		require.NoError(t, err)
+	}
 
 	// Sanity check that the entity and its local alias are still present and
 	// correctly associated after all the concurrent invalidations.
