@@ -31,20 +31,20 @@ func (c *KVUndeleteCommand) Synopsis() string {
 
 func (c *KVUndeleteCommand) Help() string {
 	helpText := `
-Usage: vault kv undelete [options] KEY
+Usage: ` + c.BinaryName + ` kv undelete [options] KEY
 
   Undeletes the data for the provided version and path in the key-value store.
   This restores the data, allowing it to be returned on get requests.
 
   To undelete version 3 of key "foo":
 
-      $ vault kv undelete -mount=secret -versions=3 foo
+      $ ` + c.BinaryName + ` kv undelete -mount=secret -versions=3 foo
 
   The deprecated path-like syntax can also be used, but this should be avoided,
   as the fact that it is not actually the full API path to
   the secret (secret/data/foo) can cause confusion:
 
-      $ vault kv undelete -versions=3 secret/foo
+      $ ` + c.BinaryName + ` kv undelete -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
 

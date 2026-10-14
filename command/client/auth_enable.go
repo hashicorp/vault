@@ -52,7 +52,7 @@ func (c *AuthEnableCommand) Synopsis() string {
 
 func (c *AuthEnableCommand) Help() string {
 	helpText := `
-Usage: vault auth enable [options] TYPE
+Usage: ` + c.BinaryName + ` auth enable [options] TYPE
 
   Enables a new auth method. An auth method is responsible for authenticating
   users or machines and assigning them policies with which they can access
@@ -60,19 +60,19 @@ Usage: vault auth enable [options] TYPE
 
   Enable the userpass auth method at userpass/:
 
-      $ vault auth enable userpass
+      $ ` + c.BinaryName + ` auth enable userpass
 
   Enable the LDAP auth method at auth-prod/:
 
-      $ vault auth enable -path=auth-prod ldap
+      $ ` + c.BinaryName + ` auth enable -path=auth-prod ldap
 
   Enable a custom auth plugin (after it's registered in the plugin registry):
 
-      $ vault auth enable -path=my-auth -plugin-name=my-auth-plugin plugin
+      $ ` + c.BinaryName + ` auth enable -path=my-auth -plugin-name=my-auth-plugin plugin
 
       OR (preferred way):
 
-      $ vault auth enable -path=my-auth my-auth-plugin
+      $ ` + c.BinaryName + ` auth enable -path=my-auth my-auth-plugin
 
 ` + c.Flags().Help()
 

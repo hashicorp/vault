@@ -33,7 +33,7 @@ func (c *TokenRenewCommand) Synopsis() string {
 
 func (c *TokenRenewCommand) Help() string {
 	helpText := `
-Usage: vault token renew [options] [TOKEN]
+Usage: ` + c.BinaryName + ` token renew [options] [TOKEN]
 
   Renews a token's lease, extending the amount of time it can be used. If a
   TOKEN is not provided, the locally authenticated token is used. A token
@@ -43,16 +43,16 @@ Usage: vault token renew [options] [TOKEN]
 
   Renew a token (this uses the /auth/token/renew endpoint and permission):
 
-      $ vault token renew 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ ` + c.BinaryName + ` token renew 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   Renew the currently authenticated token (this uses the /auth/token/renew-self
   endpoint and permission):
 
-      $ vault token renew
+      $ ` + c.BinaryName + ` token renew
 
   Renew a token requesting a specific increment value:
 
-      $ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ ` + c.BinaryName + ` token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   For a full list of examples, please see the documentation.
 

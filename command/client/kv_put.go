@@ -31,23 +31,23 @@ func (c *KVPutCommand) Synopsis() string {
 
 func (c *KVPutCommand) Help() string {
 	helpText := `
-Usage: vault kv put [options] KEY [DATA]
+Usage: ` + c.BinaryName + ` kv put [options] KEY [DATA]
 
   Writes the data to the given path in the key-value store. The data can be of
   any type.
 
-      $ vault kv put -mount=secret foo bar=baz
+      $ ` + c.BinaryName + ` kv put -mount=secret foo bar=baz
 
   The deprecated path-like syntax can also be used, but this should be avoided 
   for KV v2, as the fact that it is not actually the full API path to 
   the secret (secret/data/foo) can cause confusion: 
   
-      $ vault kv put secret/foo bar=baz
+      $ ` + c.BinaryName + ` kv put secret/foo bar=baz
 
   The data can also be consumed from a file on disk by prefixing with the "@"
   symbol. For example:
 
-      $ vault kv put -mount=secret foo @data.json
+      $ ` + c.BinaryName + ` kv put -mount=secret foo @data.json
 
   Or it can be read from stdin using the "-" symbol:
 
@@ -57,7 +57,7 @@ Usage: vault kv put [options] KEY [DATA]
   appropriate version number corresponding to the key you want to perform
   the CAS operation on:
 
-      $ vault kv put -mount=secret -cas=1 foo bar=baz
+      $ ` + c.BinaryName + ` kv put -mount=secret -cas=1 foo bar=baz
 
   Additional flags and more advanced use cases are detailed below.
 

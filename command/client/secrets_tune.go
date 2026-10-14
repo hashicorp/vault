@@ -49,7 +49,7 @@ func (c *SecretsTuneCommand) Synopsis() string {
 
 func (c *SecretsTuneCommand) Help() string {
 	helpText := `
-Usage: vault secrets tune [options] PATH
+Usage: ` + c.BinaryName + ` secrets tune [options] PATH
 
   Tunes the configuration options for the secrets engine at the given PATH.
   The argument corresponds to the PATH where the secrets engine is enabled,
@@ -57,7 +57,7 @@ Usage: vault secrets tune [options] PATH
 
   Tune the default lease for the PKI secrets engine:
 
-      $ vault secrets tune -default-lease-ttl=72h pki/
+      $ ` + c.BinaryName + ` secrets tune -default-lease-ttl=72h pki/
 
 ` + c.Flags().Help()
 

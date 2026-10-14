@@ -31,24 +31,24 @@ func (c *KVGetCommand) Synopsis() string {
 
 func (c *KVGetCommand) Help() string {
 	helpText := `
-Usage: vault kv get [options] KEY
+Usage: ` + c.BinaryName + ` kv get [options] KEY
 
   Retrieves the value from Vault's key-value store at the given key name. If no
   key exists with that name, an error is returned. If a key exists with that
   name but has no data, nothing is returned.
 
-      $ vault kv get -mount=secret foo
+      $ ` + c.BinaryName + ` kv get -mount=secret foo
 
   The deprecated path-like syntax can also be used, but this should be avoided 
   for KV v2, as the fact that it is not actually the full API path to 
   the secret (secret/data/foo) can cause confusion: 
   
-      $ vault kv get secret/foo
+      $ ` + c.BinaryName + ` kv get secret/foo
 
   To view the given key name at a specific version in time, specify the "-version"
   flag:
 
-      $ vault kv get -mount=secret -version=1 foo
+      $ ` + c.BinaryName + ` kv get -mount=secret -version=1 foo
 
   Additional flags and more advanced use cases are detailed below.
 

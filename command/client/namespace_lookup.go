@@ -27,15 +27,15 @@ func (c *NamespaceLookupCommand) Synopsis() string {
 
 func (c *NamespaceLookupCommand) Help() string {
 	helpText := `
-Usage: vault namespace lookup [options] PATH
+Usage: ` + c.BinaryName + ` namespace lookup [options] PATH
 
   Get information about the namespace of the locally authenticated token:
 
-      $ vault namespace lookup
+      $ ` + c.BinaryName + ` namespace lookup
 
   Get information about the namespace of a particular child token (e.g. ns1/ns2/):
 
-      $ vault namespace lookup -namespace=ns1 ns2
+      $ ` + c.BinaryName + ` namespace lookup -namespace=ns1 ns2
 
 ` + c.Flags().Help()
 
