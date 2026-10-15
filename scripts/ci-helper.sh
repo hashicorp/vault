@@ -70,7 +70,7 @@ function bundle() {
   : "${BUNDLE_PATH:=$(repo_root)/vault.zip}"
   : "${BIN_PATH:="dist/"}"
 
-  if [ ! -d "$BIN_PATH" ] || [ -z "$(ls -A "$BIN_PATH" 2>/dev/null)" ]; then
+  if [ ! -d "$BIN_PATH" ] || [ -z "$(ls -A "$BIN_PATH" 2> /dev/null)" ]; then
     echo "Warning: $BIN_PATH is empty or does not exist, bundle will be empty" >&2
   fi
 
@@ -132,7 +132,10 @@ function build() {
 
   # Keep the symbol and dwarf information by default
   if [ -n "$REMOVE_SYMBOLS" ]; then
-    ldflags="-s -w "
+    # We only disable DWARF but keep the symbol table because go version -m
+    # does not work on aix builds without a symbol table. As that is required
+    # for the security scanner we leave it everywhere.
+    ldflags="-w "
   else
     ldflags=""
   fi

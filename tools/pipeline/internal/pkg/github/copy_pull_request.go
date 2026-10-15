@@ -389,7 +389,7 @@ func (r *CopyPullRequestRes) CommentBody(err error) string {
 		return "no copy pull request response has been initialized"
 	}
 
-	t := r.ToTable(err)
+	t := r.ToMarkdownTable(err)
 	if err == nil {
 		t.SetTitle("Copy workflow completed!")
 		return t.RenderMarkdown()
@@ -418,6 +418,11 @@ func (r *CopyPullRequestRes) ToJSON() ([]byte, error) {
 	}
 
 	return b, nil
+}
+
+// ToMarkdownTable escapes error text but leaves our PR links as Markdown.
+func (r *CopyPullRequestRes) ToMarkdownTable(err error) table.Writer {
+	return escapeMarkdownTableColumns(r.ToTable(err), 4)
 }
 
 // ToTable marshals the response to a text table.
