@@ -401,11 +401,12 @@ func (r *SyncGoModRes) ToString(err error) string {
 // per-path results table. Same layout as ToString.
 func (r *SyncGoModRes) ToMarkdown(err error) string {
 	if r == nil {
-		return r.metaTable(err).RenderMarkdown()
+		return escapeMarkdownTableColumns(r.metaTable(err), 2).RenderMarkdown()
 	}
 	meta := r.metaTable(err)
 	paths := r.pathTable()
-	return meta.RenderMarkdown() + "\n" + paths.RenderMarkdown()
+	return escapeMarkdownTableColumns(meta, 2).RenderMarkdown() + "\n" +
+		escapeMarkdownTableColumns(paths, 1, 4).RenderMarkdown()
 }
 
 // ToJSON marshals the result to JSON.
