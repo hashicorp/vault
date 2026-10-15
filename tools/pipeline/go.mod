@@ -12,6 +12,7 @@ require (
 	github.com/google/go-github/v83 v83.0.0
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/hashicorp/releases-api v0.4.14
+	github.com/hasura/go-graphql-client v0.16.0
 	github.com/jedib0t/go-pretty/v6 v6.8.3
 	github.com/owenrumney/go-sarif/v3 v3.3.1
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
@@ -33,6 +34,7 @@ require (
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
+	github.com/coder/websocket v1.8.14 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
