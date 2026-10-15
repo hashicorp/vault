@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: fix the storage path used to remove orphaned crls, which contained an empty segment and failed on backends such as zookeeper, and keep the delta crls of referenced issuers when cleaning up.
+```
