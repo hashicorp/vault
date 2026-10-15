@@ -25,8 +25,6 @@ type OperatorRaftJoinCommand struct {
 	flagLeaderCACert     string
 	flagLeaderClientCert string
 	flagLeaderClientKey  string
-	flagAutoJoinScheme   string
-	flagAutoJoinPort     uint
 	*base.BaseCommand
 }
 
@@ -36,23 +34,15 @@ func (c *OperatorRaftJoinCommand) Synopsis() string {
 
 func (c *OperatorRaftJoinCommand) Help() string {
 	helpText := `
-Usage: vault operator raft join [options] <leader-api-addr|auto-join-configuration>
+Usage: vault operator raft join [options] <leader-api-addr>
 
   Join the current node as a peer to the Raft cluster by providing the address
   of the Raft leader node.
 
       $ vault operator raft join "http://127.0.0.2:8200"
 
-  Join the current node as a peer to the Raft cluster by providing cloud auto-join
-  configuration.
-
-      $ vault operator raft join "provider=aws region=eu-west-1 ..."
-
-  Join the current node as a peer to the Raft cluster by providing cloud auto-join
-  configuration with an explicit URI scheme and port.
-
-			$ vault operator raft join -auto-join-scheme="http" -auto-join-port=8201 \
-			  "provider=aws region=eu-west-1 ..."
+  Configure automatic leader discovery with raft.retry_join in the Vault server
+  configuration; auto-join metadata cannot be provided to this command.
 
   TLS certificate data can also be consumed from a file on disk by prefixing with
   the "@" symbol. For example:
@@ -71,22 +61,6 @@ func (c *OperatorRaftJoinCommand) Flags() *base.FlagSets {
 	set := c.FlagSetForBit(base.FlagSetHTTP | base.FlagSetOutputFormat)
 
 	f := set.NewFlagSet("Command Options")
-
-	f.StringVar(&base.StringVar{
-		Name:       "auto-join-scheme",
-		Target:     &c.flagAutoJoinScheme,
-		Completion: complete.PredictNothing,
-		Default:    "https",
-		Usage:      "An optional URI protocol scheme used for addresses discovered via auto-join.",
-	})
-
-	f.UintVar(&base.UintVar{
-		Name:       "auto-join-port",
-		Target:     &c.flagAutoJoinPort,
-		Completion: complete.PredictNothing,
-		Default:    8200,
-		Usage:      "An optional port used for addresses discovered via auto-join.",
-	})
 
 	f.StringVar(&base.StringVar{
 		Name:       "leader-ca-cert",
@@ -155,6 +129,11 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 1
 	}
 
+	if strings.Contains(leaderInfo, "provider=") {
+		c.UI.Error("auto-join configuration cannot be provided to this command; configure raft.retry_join in the Vault server configuration")
+		return 1
+	}
+
 	leaderCACert, err := base.ParseFlagFile(c.flagLeaderCACert)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse leader CA certificate: %s", err))
@@ -173,11 +152,6 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		return 1
 	}
 
-	if c.flagAutoJoinScheme != "" && (c.flagAutoJoinScheme != "http" && c.flagAutoJoinScheme != "https") {
-		c.UI.Error(fmt.Sprintf("invalid scheme %q; must either be http or https", c.flagAutoJoinScheme))
-		return 1
-	}
-
 	client, err := c.Client()
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -192,13 +166,7 @@ func (c *OperatorRaftJoinCommand) Run(args []string) int {
 		NonVoter:         c.flagNonVoter,
 	}
 
-	if strings.Contains(leaderInfo, "provider=") {
-		joinReq.AutoJoin = leaderInfo
-		joinReq.AutoJoinScheme = c.flagAutoJoinScheme
-		joinReq.AutoJoinPort = c.flagAutoJoinPort
-	} else {
-		joinReq.LeaderAPIAddr = configutil.NormalizeAddr(leaderInfo)
-	}
+	joinReq.LeaderAPIAddr = configutil.NormalizeAddr(leaderInfo)
 
 	resp, err := client.Sys().RaftJoin(joinReq)
 	if err != nil {
