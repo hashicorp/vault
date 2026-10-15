@@ -89,7 +89,7 @@ func runCheckGithubGoModCmd(cmd *cobra.Command, args []string) error {
 			fmt.Println(string(b))
 		}
 	case "markdown":
-		tbl, err1 := res.ToTable(err)
+		tbl, err1 := res.ToMarkdownTable(err)
 		if err1 != nil {
 			err = errors.Join(err, err1)
 		} else {
