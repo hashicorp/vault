@@ -263,7 +263,7 @@ func (r *CloseCopiedOriginPullRequestRes) copiedCommentBody(err error) string {
 		return "no close copied origin pull request response has been initialized"
 	}
 
-	t := r.ToTable(err)
+	t := r.ToMarkdownTable(err)
 	if err == nil {
 		t.SetTitle("Origin pull request and all associated issues have been closed!")
 		return t.RenderMarkdown()
@@ -291,7 +291,7 @@ func (r *CloseCopiedOriginPullRequestRes) originCommentBody(err error) string {
 		return "no close copied origin pull request response has been initialized"
 	}
 
-	t := r.ToTable(err)
+	t := r.ToMarkdownTable(err)
 	if err == nil {
 		t.SetTitle("Copied pull request has been merged!")
 		return t.RenderMarkdown()
@@ -310,6 +310,11 @@ func (r *CloseCopiedOriginPullRequestRes) originCommentBody(err error) string {
 	t.SetCaption("Error: " + err.Error())
 
 	return t.RenderMarkdown()
+}
+
+// ToMarkdownTable escapes cell text so it isn't treated as Markdown.
+func (r *CloseCopiedOriginPullRequestRes) ToMarkdownTable(err error) table.Writer {
+	return escapeMarkdownTableColumns(r.ToTable(err), 1, 2, 3, 4)
 }
 
 // ToJSON marshals the response to JSON.

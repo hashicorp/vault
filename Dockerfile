@@ -178,9 +178,10 @@ COPY ${LICENSE_SOURCE}/ /licenses/
 
 # Update our timezone database. Install shadow-utils for creating our vault user
 # and group. Install util-linux for su for exec when the container is run as root.
-# Add tar as tar as it is necessary for some of our testing.
+# Add tar as tar as it is necessary for some of our testing. We also include
+# procps for pidof as is used by the Helm chart in preStop.
 RUN microdnf update -y --nobest && \
-  microdnf install -y tzdata shadow-utils util-linux tar && \
+  microdnf install -y tzdata shadow-utils util-linux tar procps && \
   rm -rf /var/cache/yum && \
   microdnf clean all
 

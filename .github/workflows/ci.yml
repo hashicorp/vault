@@ -601,10 +601,59 @@ jobs:
           echo "::error title=Generated Go code is out of date::${what_to_do//$'\n'/%0A}"
           exit 1
 
+  rerun-disconnected-jobs:
+    name: Rerun failed jobs after suspected runner disconnects
+    needs:
+      - setup
+      - test-autopilot-upgrade
+      - test-go
+      - test-go-testonly
+      - test-go-race
+      - test-go-fips
+      - test-ui
+      - check-go
+    if: failure() && fromJSON(github.run_attempt) < 2
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.setup.outputs.checkout-ref }}
+      - if: needs.setup.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: needs.setup.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          exportEnv: false
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - uses: ./.github/actions/set-up-pipeline
+        with:
+          github-token: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - name: Check for runner disconnects and rerun failed jobs
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+        run: |
+          pipeline github rerun-if-disconnected ${{ runner.debug && '--log debug' || '' }} '${{ github.run_id }}' \
+            --owner '${{ github.repository_owner }}' \
+            --repo '${{ github.event.repository.name }}' \
+            --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
+
   tests-completed:
     needs:
       - setup
       - check-go
+      - rerun-disconnected-jobs
       - test-autopilot-upgrade
       - test-go
       - test-go-testonly
@@ -630,7 +679,7 @@ jobs:
           # Encode the needs context into JSON, filter out unrequired workflows, shape the result
           # into a more useful schema. Determine the overall status by comparing the total number of
           # successful results with the number of required jobs.
-          if results=$(jq -rec 'del(.["test-go-fips"], .["test-go-race"]) as $required
+          if results=$(jq -rec 'del(.["test-go-fips"], .["test-go-race"], .["rerun-disconnected-jobs"]) as $required
               | $required | keys as $jobs
               | reduce $jobs[] as $job ([]; . + [{job: $job}+$required[$job]])' <<< '${{ toJSON(needs) }}'
           ); then
