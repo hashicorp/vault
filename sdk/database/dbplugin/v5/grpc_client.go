@@ -126,8 +126,9 @@ func newUserReqToProto(req NewUserRequest) (*proto.NewUserRequest, error) {
 
 	rpcReq := &proto.NewUserRequest{
 		UsernameConfig: &proto.UsernameConfig{
-			DisplayName: req.UsernameConfig.DisplayName,
-			RoleName:    req.UsernameConfig.RoleName,
+			DisplayName:              req.UsernameConfig.DisplayName,
+			RoleName:                 req.UsernameConfig.RoleName,
+			UsernameTemplateMetadata: req.UsernameConfig.UsernameTemplateMetadata,
 		},
 		CredentialType: int32(req.CredentialType),
 		Password:       req.Password,
