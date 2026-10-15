@@ -30,6 +30,7 @@ export const DOMAIN_PROVIDER_MAP = {
   'okta.com': 'Okta',
   'auth0.com': 'Auth0',
   'login.microsoftonline.com': 'Azure',
+  'login.microsoftonline.us': 'Azure',
 };
 
 export const ERROR_POPUP_FAILED =
