@@ -48,6 +48,10 @@ const (
 
 	// objectDelimiter is the string to use to delimit objects.
 	objectDelimiter = "/"
+
+	// envUniverseDomain is an optional env var used to override the universe
+	// domain (helpful for custom GCS-compatible endpoints).
+	envUniverseDomain = "GOOGLE_UNIVERSE_DOMAIN"
 )
 
 var (
@@ -124,6 +128,20 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 	// Values are specified as kb, but the API expects them as bytes.
 	chunkSize = chunkSize * 1024
 
+	// universe_domain: optional custom domain used by the GCS client
+	universeDomain := os.Getenv(envUniverseDomain)
+	if universeDomain == "" {
+		universeDomain = c["universe_domain"]
+	}
+
+	// Build client options (we always set a user-agent).
+	clientOptions := []option.ClientOption{option.WithUserAgent(useragent.String())}
+	if universeDomain != "" {
+		// WithUniverseDomain is optional and only appended when provided.
+		clientOptions = append(clientOptions, option.WithUniverseDomain(universeDomain))
+		logger.Debug("using custom universe_domain", "universe_domain", universeDomain)
+	}
+
 	// HA configuration
 	haClient := (*storage.Client)(nil)
 	haEnabled := false
@@ -142,7 +160,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 		logger.Debug("creating client")
 		var err error
 		ctx := context.Background()
-		haClient, err = storage.NewClient(ctx, option.WithUserAgent(useragent.String()))
+		haClient, err = storage.NewClient(ctx, clientOptions...)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HA storage client: %w", err)
 		}
@@ -163,7 +181,7 @@ func NewBackend(c map[string]string, logger log.Logger) (physical.Backend, error
 
 	logger.Debug("creating client")
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx, option.WithUserAgent(useragent.String()))
+	client, err := storage.NewClient(ctx, clientOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create storage client: %w", err)
 	}
