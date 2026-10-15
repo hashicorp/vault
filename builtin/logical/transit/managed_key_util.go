@@ -20,6 +20,6 @@ func GetManagedKeyUUID(ctx context.Context, b *backend, keyName string, keyId st
 	return "", errEntOnly
 }
 
-func getFormattedManagedKeyPublicKey(_ context.Context, _ *backend, _ *keysutil.Policy) (map[string]map[string]interface{}, error) {
+func getFormattedManagedKeyPublicKey(_ context.Context, _ *backend, _ *keysutil.Policy, _ string) (map[string]interface{}, error) {
 	return nil, errEntOnly
 }
