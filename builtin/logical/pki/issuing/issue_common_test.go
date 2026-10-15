@@ -327,4 +327,37 @@ func Test_wildHostnameRegex(t *testing.T) {
 	}
 }
 
+// Test_relaxedWildHostnameRegex tests the relaxed regular expression used for
+// dns sans on roles with enforce_hostnames=false: underscores are permitted
+// inside labels, everything else follows wildHostnameRegex.
+func Test_relaxedWildHostnameRegex(t *testing.T) {
+	tests := []struct {
+		name     string
+		hostname string
+		want     bool
+	}{
+		{name: "plain hostname", hostname: "www.example.com", want: true},
+		{name: "underscore in label", hostname: "with_underscore.example.com", want: true},
+		{name: "leading underscore label", hostname: "_acme-challenge.example.com", want: true},
+		{name: "trailing underscore in label", hostname: "host_.example.com", want: true},
+		{name: "underscore with trailing dot", hostname: "with_underscore.example.com.", want: true},
+		{name: "wildcard with underscore label", hostname: "*.with_underscore.example.com", want: true},
+		{name: "partial wildcard label", hostname: "sub*.example.com", want: true},
+		{name: "empty string", hostname: "", want: false},
+		{name: "space in label", hostname: "with space.example.com", want: false},
+		{name: "caret in label", hostname: "host^123.example.com", want: false},
+		{name: "double dots", hostname: "with_underscore..example.com", want: false},
+		{name: "leading hyphen", hostname: "-with_underscore.example.com", want: false},
+		{name: "wildcard not leftmost", hostname: "with_underscore.*.example.com", want: false},
+		{name: "multiple wildcards", hostname: "*.*.example.com", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := relaxedWildHostnameRegex.MatchString(tt.hostname)
+			require.Equal(t, tt.want, got, "relaxedWildHostnameRegex.MatchString(%q)", tt.hostname)
+		})
+	}
+}
+
 // Made with Bob
