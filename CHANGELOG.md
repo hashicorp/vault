@@ -3,8 +3,8 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
-## 2.2.0-rc1
-### October 07, 2026
+## 2.2.0
+### October 15, 2026
 BREAKING CHANGES:
 
 * containers: Remove `cap_ipc_lock` capability on `vault` at build time to allow running Vault in common container runtimes. Vault in containers will no longer be able to call `mlock()` to lock memory. Operators should set `disable_mlock = true` in Vault's configuration. Runtime operators are advised to disable swapping to guarantee data safety.
@@ -70,6 +70,7 @@ SECURITY:
 CHANGES:
 
 * License: Add Agentic IAM terms to client licensing model and update terms for Vault Platform licensing model.
+* api: Removed the `hcp_link_status` and `hcp_link_resource_ID` fields from the `sys/seal-status` response.
 * audit: A new top-level key called `supplemental_audit_data` can now appear within audit entries of type "response" within the request and response data structures. These new fields can contain data that further describe the request/response data and are mainly used for non-JSON based requests and responses to help auditing. The `audit-non-hmac-request-keys` and `audit-non-hmac-response-keys` apply to keys within `supplemental_audit_data` to remove the HMAC of the field values if so desired.
 * auth/alicloud: Update plugin to [v0.24.0](https://github.com/hashicorp/vault-plugin-auth-alicloud/releases/tag/v0.24.0)
 * auth/azure: Update plugin to [v0.25.1](https://github.com/hashicorp/vault-plugin-auth-azure/releases/tag/v0.25.1)
@@ -81,6 +82,7 @@ CHANGES:
 * auth/oci: Update plugin to [v0.22.0](https://github.com/hashicorp/vault-plugin-auth-oci/releases/tag/v0.22.0)
 * auth/saml: Update plugin to [v0.9.0](https://github.com/hashicorp/vault-plugin-auth-saml/releases/tag/v0.9.0)
 * auth/token: JWT revocation via `auth/token/revoke-self` and `auth/token/revoke-accessor` is no longer supported. `auth/token/revoke` and `auth/token/revoke-orphan` now require the full JWT to revoke an OAuth JWT and reject the internal stored JWT ID form. Non-JWT Vault token behavior is unchanged.
+* cli: `vault operator diagnose` no longer runs an HCP Link connectivity check, and `vault status` no longer shows HCP Link status.
 * cli/status: `vault status` no longer forces the root namespace when querying seal status. It now respects the namespace set via `VAULT_NAMESPACE` or the `-namespace` flag, consistent with other CLI commands.
 * core/acl: LIST requests with a trailing slash now correctly respect more-specific deny policies. Previously, a deny on `path "kv/*" { deny }` could be bypassed for `LIST kv/private/` if a broader allow `path "kv/*"` also existed. Policies relying on the previous (incorrect) behavior may now be denied.
 * core/managed-keys (enterprise): The response to API endpoint GET sys/managed-keys/:type/:name now
@@ -99,6 +101,7 @@ returns an array of string values for key usages, rather than an array of intege
 * core: secondary DR requests can now be authenticated using a root token generated on the primary.
 * core: sys/generate-root and sys/replication/dr/secondary/generate-operation-token endpoints are now authenticated by default, with the old unauthenticated behaviour enabled by setting the new HCL config key enable_unauthenticated_access to include the value "generate-root" or "generate-operation-token" respectively.
 * core: sys/rekey endpoints are now authenticated by default, with the old unauthenticated behaviour enabled by setting the new HCL config key enable_unauthenticated_access to include the value "rekey".
+*  core: Removed support for HCP Link, which connected self-managed Vault clusters to the HashiCorp Cloud Platform (HCP). Vault no longer starts an HCP Link connection, and the `cloud` stanza in the server configuration no longer has any effect and will be unrecognized.
 * database/couchbase: Update plugin to [v0.17.0](https://github.com/hashicorp/vault-plugin-database-couchbase/releases/tag/v0.17.0)
 * database/elasticsearch: Update plugin to [v0.21.0](https://github.com/hashicorp/vault-plugin-database-elasticsearch/releases/tag/v0.21.0)
 * database/mongodbatlas: Update plugin to [v0.18.0](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/releases/tag/v0.18.0)
@@ -122,7 +125,7 @@ returns an array of string values for key usages, rather than an array of intege
 * secrets/ad: Update plugin to [v0.23.0](https://github.com/hashicorp/vault-plugin-secrets-ad/releases/tag/v0.23.0)
 * secrets/alicloud: Update plugin to [v0.23.0](https://github.com/hashicorp/vault-plugin-secrets-alicloud/releases/tag/v0.23.0)
 * secrets/azure: Update azure enterprise secrets plugin to include static roles.
-* secrets/azure: Update plugin to [v0.28.2+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.28.2+ent)
+* secrets/azure: Update plugin to [v0.28.3+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.28.3+ent)
 * secrets/gcp: Update plugin to [v0.25.0](https://github.com/hashicorp/vault-plugin-secrets-gcp/releases/tag/v0.25.0)
 * secrets/gcpkms: Update plugin to [v0.25.0](https://github.com/hashicorp/vault-plugin-secrets-gcpkms/releases/tag/v0.25.0)
 * secrets/keymgmt: Update plugin to [v0.20.1+ent](https://github.com/hashicorp/vault-plugin-secrets-keymgmt/releases/tag/v0.20.1+ent)
@@ -131,7 +134,7 @@ returns an array of string values for key usages, rather than an array of intege
 * secrets/kv: Update plugin to [v0.27.0](https://github.com/hashicorp/vault-plugin-secrets-kv/releases/tag/v0.27.0)
 * secrets/ldap (enterprise): Static roles will be migrated from a plugin-managed queue to the Vault Enterprise Rotation Manager system. Static role migration progress can be checked and managed through a new static-migration endpoint. See the [LDAP documentation](https://developer.hashicorp.com/vault/docs/secrets/ldap#static-role-migration-to-rotation-manager) for more details on this process.
 * secrets/mongodbatlas: Update plugin to [v0.18.0](https://github.com/hashicorp/vault-plugin-secrets-mongodbatlas/releases/tag/v0.18.0)
-* secrets/openldap: Update plugin to [v0.19.1+ent](https://github.com/hashicorp/vault-plugin-secrets-openldap/releases/tag/v0.19.1+ent)
+* secrets/openldap: Update plugin to [v0.19.3+ent](https://github.com/hashicorp/vault-plugin-secrets-openldap/releases/tag/v0.19.3+ent)
 * secrets/pki: sign-verbatim endpoints no longer ignore basic constraints extension in CSRs, using them in generated certificates if isCA=false or returning an error if isCA=true
 * secrets/ssh: RSA key sizes are now limited to a maximum size of 8192 bits addressing CVE-2026-39829
 * secrets/terraform: Update plugin to [v0.15.0](https://github.com/hashicorp/vault-plugin-secrets-terraform/releases/tag/v0.15.0)
@@ -224,6 +227,7 @@ IMPROVEMENTS:
 * auth/token: Add the `revoke-oauth` endpoint to revoke an external OAuth token by its issuer and unique ID.
 * auth/token: auth/token/revoke-accessor now supports revoking JWT tokens by accessor
 * ci (enterprise): Upload build stage duration metrics to Instana for CI observability.
+* cli: Move spiffe and tpm CLI login methods to CE.
 * command/agent: Migrate AWS client from aws-sdk-go v1 to aws-sdk-go-v2.
 * config/listener: logs warnings on invalid x-forwarded-for configurations.
 * consumption-billing: Add a new `sys/billing/config` endpoint to allow configuration of billing data retention (min 13 months, max 6 years).
@@ -382,19 +386,26 @@ supported managed key backends.
 * ui: Add support for self-managed LDAP static roles, including setting the account password on the create and edit pages and viewing it from the role details page.
 * ui: Add test coverage asserting automation snippets remain visible when editing an existing ACL policy
 * ui: Added Page::Tabs component and migrated all Hds::Tabs usages to it
+* ui: Adds an onboarding intro for Entities which provides feature context to users.
+* ui: Adds an onboarding intro for Groups which provides feature context to users.
+* ui: Adds an onboarding intro for OIDC Provider which provides feature context to users.
 * ui: After clicking Save or Discard in the unsaved changes modal, the user will now navigate to the intended destination link.
+* ui: Analytics identity is now cached and applied when the user accepts the consent banner, ensuring sessions are correctly identified even when consent is granted after the cluster route loads.
 * ui: Bump `@hashicorp/design-system-components` from 4.24.1 to 5.2.0 and migrate deprecated side-nav SCSS tokens.
 * ui: Bump `dompurify` from `3.4.6` to `3.4.13`.
 * ui: Bump dompurify to 3.4.15 to address SECVULN advisories
+* ui: Bump js-yaml from 5.2.1 to 5.4.1
 * ui: Bump pnpm.overrides entry for `tmp` from 0.2.6 to 0.2.7.
 * ui: Bump pnpm.overrides entry for `ws` from 8.20.1 to 8.21.0.
 * ui: Bump shell-quote from 1.8.4 to 1.9.0.
+* ui: Cancelling an LDAP role or library edit now returns to its details page instead of the list.
 * ui: Dashboard feature spotlight widget now cycles through multiple "What's New" cards with random start position and Back/Next pagination.
 * ui: Display errors consistently across the application and show API messages where available.
 * ui: Enable Segment analytics for self-managed Vault clusters in production
 * ui: Exposing the RSA Private Key field in the UI when generating credentials with the snowflake database secrets engine. Previously, this field was only shown in the cli.
 * ui: Increase list item width when adding policies to groups or entities to display longer names and add a tooltip for showing full labels.
 * ui: Migrated ExternalLink component to HDS links.
+* ui: Pass persona in the event payload and emit 'unknown' when no persona is set.
 * ui: Refine Segment analytics provider to use cluster ID as instanceId, omit subscriptionId for community clusters. Add event tracking and prune unused event properties.
 * ui: Remove unused Vercel Storybook artifacts (`vercel.json`, `metadata.json`) left over from the Storybook removal in 2022
 * ui: Rename user-preferences route, components, and static assets to preferences for consistency
@@ -455,6 +466,7 @@ BUG FIXES:
 * auth/github (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
 * auth/jwt: Fix three critical OAuth/RAR issues: authorization_details not being logged in auth section of audit logs, RAR mandatory logic incorrectly requiring both profile and registration to exist, and rar_types_metadata_endpoint path in OAuth Protected Resource Metadata
 * auth/jwt: Fixed incorrect HTTP status codes returned during agent ceiling policy evaluation.
+* auth/jwt: Validate the JWT `typ` from the JOSE header only, so specific header claims (like `typ`) appearing in the JWT payload are ignored from JWT Validation.
 * auth/ldap (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
 * auth/okta (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
 * auth/radius (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
@@ -464,9 +476,13 @@ BUG FIXES:
 * auth/token: Fix bug which skipped local token state clean up on PR secondary clusters after JWT revocation
 * auth/token: Fixed a bug where `auth/token/lookup` and `auth/token/lookup-self` returned 403 for JWT tokens in a non-root namespace.
 * auth/token: Prevent performance secondary node from writing to the OAuth JWT denylist.
+* auth/tpm: Fix broken implementation of alias-lookahead and resolve-role operations.
+* auth/tpm: Improve locking during login operations.  Return permission denied for login renew with invalid role.  Fix inconsistent case handling on login endpoints.
+* auth/tpm: Use sealwrap for CAs in storage.
 * auth/userpass (enterprise): Role parameter `alias_metadata` now populates alias custom metadata field instead of alias metadata.
 * auth: fixed panic when suppling integer as a lease_id in renewal.
 * aws/auth: Redact EC2 instance metadata values from AWS auth error messages.
+* cli/login: Fix handle leak in `vault login -method=tpm` when using a raw tpm device like /dev/tpm0.
 * client/ocsp: Adds a grace period to renew the cached entry for OCSP response.
 * consumption-billing: Fix OIDC identity token billing units being computed incorrectly across periodic flush cycles. The billing scalar now applies per-token duration adjustment, so the reported scalar and the per-mount attribution breakdown are always consistent.
 * consumption-billing: Fix bug where PKI, SSH and SSH OTP certificate billing units from performance standby nodes were not being forwarded to active nodes for storage, causing billing events on standby nodes to be lost.
@@ -499,6 +515,7 @@ BUG FIXES:
 * core/rotation: avoid shifting timezones by ignoring cron.SpecSchedule
 * core/rotationMgr: Fix storage routing for local mounts in namespaces to prevent metadata replication and ensure GDPR compliance.
 * core/seal: Fixed goroutine leak occurring when Encryption and Decryption functions time out.
+* core/snapshots: Fix issue during single item snapshot restore operations where snapshot locks were being checked prior to authentication, resulting in some failed requests not being audited.
 * core/wrapping: sys/wrapping/wrap now enforces uuid-format wrapping tokens, ignoring any caller-requested wrap format.
 * core: Fix `vault operator migrate -start` command when migrating to raft integrated storage.
 * core: Fix bug where background thread to clean the MFA response auth queue runs on PR and DR secondaries.
@@ -540,6 +557,7 @@ BUG FIXES:
 * oauth-resource-server (enterprise): Fix issue where RAR enforcement was skipped when the token's `iss` claim had cosmetic differences (e.g. different casing or trailing slash) compared to the issuer stored in the resource server profile.
 * oauth-resource-server (enterprise): Fix issue where `optional_authorization_details` was incorrectly ignored for delegated (OBO) workflows when the subject has no agent registration, resulting in RAR not being mandatory in those requests.
 * oauth-resource-server (enterprise): OAuth Resource Server authorization now treats an empty `authorization_details` array like an absent claim when authorization details are optional. Previously, tokens containing an empty array were rejected with `RAR_NO_MATCH` instead of continuing through normal identity and policy authorization.
+* oauth-resource-server (enterprise): Fix `vault:path_access` authorization details denying allowed requests with `RAR_NO_MATCH` in non-root namespaces and treating `*` and `+` wildcards as literal characters. Paths are now matched like ACL policy paths in the namespace of the OAuth resource server profile that validated the token, including when the token is used in a child namespace.
 * plugins (enterprise): Fix bug where requests to external plugins that modify storage weren't populating the X-Vault-Index response header.
 * plugins/database/hana: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL identifiers before ALTER USER and DROP USER statements.
 * plugins/database/redshift: Fixed a SQL injection risk in the default DeleteUser revoke path by safely quoting usernames as SQL string literals when invoking terminateloop(...), preventing statement-structure manipulation.
@@ -584,6 +602,7 @@ on quota creation.
 * secrets/database: Sanitize the caller-controlled DisplayName before it is used in generated usernames to prevent SQL injection via username templates. Adds a configuration warning when a username_template references DisplayName without a truncate function.
 * secrets/kmip (enterprise): Address a nil pointer within the invalidation handler for managed objects.
 * secrets/ldap: enable proper license checking on 'openldap' plugin alias. This enables enterprise features when configuring mounts with the 'openldap' alias.
+* secrets/ldap (enterprise): Manual static role rotation correctly resets the `TTL` and `next_vault_rotation` timestamp and adjusting its automated rotation cadence accordingly
 * secrets/nomad: Fix connection exhaustion under high concurrency by introducing a shared, pooled HTTP client with a per-host connection cap. Previously, a new TCP connection was opened for every credential request, causing Nomad to return HTTP 429 "too many concurrent connections" errors when more than 100 leases were generated simultaneously.
 * secrets/pki (enterprise): Address cache invalidation issues with CMPv2 on performance standby nodes.
 * secrets/pki (enterprise): Address issues using SCEP on performance standby nodes failing due to configuration invalidation issues along with errors writing to storage
@@ -610,6 +629,7 @@ on quota creation.
 * storage/raft: reject `performance_multiplier` values less than or equal to zero
 * tpm cli: Fix errors when using an explicit -tpm-device-path that's not a socket with `vault tpm` and `vault login -method=tpm` commands.
 * ui (enterprise): Fix KV v2 not displaying secrets in namespaces.
+* ui (enterprise): Fix Secrets Sync landing page instructions that incorrectly limited supported secrets engines to KV v2
 * ui (enterprise): Fixes login form so input renders correctly when token is a preferred login method for a namespace.
 * ui (enterprise): fix dashboard hang on initial load due to nil storage in checklistStateManager
 * ui/pki: Fixes certificate parsing of the `key_usage` extension so details accurately reflect certificate values.
@@ -632,13 +652,18 @@ on quota creation.
 * ui: Fix regression where the client count billing configuration request omitted the root-namespace header, causing 404s on Monitoring > Client Count when viewed from a child namespace
 * ui: Fix secrets table pagination when switching page sizes.
 * ui: Fix secrets to secrets-engines redirect for bookmarked URLs.
+* ui: Fix the self-managed LDAP static role details page showing a blank password after manually rotating credentials.
 * ui: Fix total secrets count binding on secrets sync overview page to match the API response key.
 * ui: Fixed an issue where enabling a KV secrets engine from a performance standby or performance secondary displayed an error even though the mount was created successfully. The UI now waits for the request to be forwarded and the mount to become available before loading the new engine.
+* ui: Fixed analytics identity persisting across logout by calling reset on the Segment provider.
 * ui: Fixed custom messages list to display the expiration time on Inactive message badges.
 * ui: Fixed edit policy code block to sync with user policy input.
 * ui: Fixed sidebar navigation animation issues
 * ui: Fixes PKI generate root so Not valid after correctly controls cert expiration inputs.
 * ui: Fixes login form so `?with=<path>` query param correctly displays only the specified mount when multiple mounts of the same auth type are configured with `listing_visibility="unauth"`
+* ui: Hide the Manage menu on LDAP role and library details pages when the token has no permitted actions, and show Rotate credentials only when the token can update the rotate-role path.
+* ui: Purge Segment localStorage keys when analytics consent is declined so tracked data is never retained after a user opts out
+* ui: Report enterprise plan name from version service instead of inferring from licenseId
 * ui: Resolve the flickering on the login page when a trailing slash is added to the namespace in the field.
 * ui: Resolved a regression that prevented users with create and update permissions on KV v1 secrets from opening the edit view. The UI now correctly recognizes these capabilities and allows editing without requiring full read access.
 * ui: Restore re-sizable columns for secrets and namespaces tables.
@@ -647,6 +672,7 @@ on quota creation.
 * ui: Update KV max_version validation to disallow negative values.
 * ui: Update LDAP accounts checked-in table to display hierarchical LDAP libraries
 * ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
+* ui: Warn on the LDAP Create role page when the token can't read the engine configuration, hide Create role when the token can't create roles, and keep the stored password when it's left empty on the Edit role page.
 * ui: add totalItems property to fix filtered list pagination showing incorrect total page count
 * ui: fix renew token button rendering for denied renew-self.
 * ui: fix spurious "No access" banner when navigating to Vault UI with `?namespace=root` in the URL
