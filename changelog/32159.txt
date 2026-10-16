@@ -1,0 +1,3 @@
+```release-note:bug
+core/ha: Fix standby nodes reporting themselves unsealed but rejecting every request with "Vault is sealed" until restart, after a seal reload or seal migration error while acquiring leadership.
+```
