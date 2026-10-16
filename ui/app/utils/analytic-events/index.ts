@@ -1,20 +1,7 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
-
-export const PREFIX = 'vault_ui';
-
-/*
-  buildEventName is a helper to build conformant analytics event names.
-
-  While event names are not strictly controlled in the data warehouse, consistent
-    naming helps find things predictably.
-
-
-*/
-const buildEventName = (category: string, resource: string, action: string) =>
-  `${PREFIX}_${category}_${resource}_${action}`;
 
 // IBM Tracking Plan generic event names; the specifics (namespace, elementId,
 // action, CTA, object, etc.) are carried as event properties.
@@ -22,7 +9,10 @@ const UI_INTERACTION = 'UI Interaction';
 const CTA_CLICKED = 'CTA Clicked';
 const CREATED_OBJECT = 'Created Object';
 
-export const TOGGLE_WEB_REPL = buildEventName('core', 'web-repl', 'toggle');
+export type AnalyticsEventName = typeof UI_INTERACTION | typeof CTA_CLICKED | typeof CREATED_OBJECT;
+
+// WEB_REPL toggle
+export const TOGGLE_WEB_REPL = UI_INTERACTION;
 
 // Side navigation — cluster level
 export const NAV_DASHBOARD = UI_INTERACTION;
@@ -74,6 +64,18 @@ export const INTRO_AUTH_METHODS_CTA_CLICKED = CTA_CLICKED;
 export const INTRO_ACL_POLICIES_CTA_CLICKED = CTA_CLICKED;
 // Namespace wizard — intro CTA (guided start / docs / dismiss)
 export const INTRO_NAMESPACES_CTA_CLICKED = CTA_CLICKED;
+export const INTRO_IDENTITY_ENTITIES_CTA_CLICKED = CTA_CLICKED;
+export const INTRO_IDENTITY_GROUPS_CTA_CLICKED = CTA_CLICKED;
+export const INTRO_OIDC_PROVIDER_CTA_CLICKED = CTA_CLICKED;
 
 // Intro reopen — re-opening a dismissed intro from a resource list page
 export const INTRO_REOPEN_CLICKED = UI_INTERACTION;
+
+// Preferences
+export const PREFERENCES_PERSONA_SET = UI_INTERACTION;
+export const PREFERENCES_THEME_SET = UI_INTERACTION;
+
+// Dashboard feature spotlight widget
+export const DASHBOARD_FEATURE_SPOTLIGHT_LEARN_MORE = CTA_CLICKED;
+export const DASHBOARD_FEATURE_SPOTLIGHT_NEXT = UI_INTERACTION;
+export const DASHBOARD_FEATURE_SPOTLIGHT_BACK = UI_INTERACTION;

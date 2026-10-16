@@ -6,6 +6,7 @@ package issuing
 import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
@@ -172,6 +173,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 	// the Value in the actualKeyType/actualKeyBits values.
 	actualKeyType := ""
 	actualKeyBits := 0
+	actualParameterSet := ""
 
 	switch role.KeyType {
 	case "rsa":
@@ -216,6 +218,32 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 
 		actualKeyType = "ed25519"
 		actualKeyBits = 0
+	case "ml-dsa":
+		// Verify that the key matches the role type
+		if csr.PublicKeyAlgorithm != x509.MLDSA {
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf(
+				"role requires keys of type %s",
+				role.KeyType)}
+		}
+
+		pub, ok := csr.PublicKey.(*mldsa.PublicKey)
+		if !ok {
+			return nil, nil, errutil.UserError{Err: "could not parse CSR's public key"}
+		}
+
+		switch pub.Parameters() {
+		case mldsa.MLDSA44():
+			actualParameterSet = certutil.MLDSA44
+		case mldsa.MLDSA65():
+			actualParameterSet = certutil.MLDSA65
+		case mldsa.MLDSA87():
+			actualParameterSet = certutil.MLDSA87
+		default:
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("unsupported parameter set %s", pub.Parameters())}
+		}
+
+		actualKeyType = "ml-dsa"
+		actualKeyBits = 0
 	case "any":
 		// We need to compute the actual key type and key bits, to correctly
 		// validate minimums and SignatureBits below.
@@ -247,6 +275,25 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 
 			actualKeyType = "ed25519"
 			actualKeyBits = 0
+		case x509.MLDSA:
+			pub, ok := csr.PublicKey.(*mldsa.PublicKey)
+			if !ok {
+				return nil, nil, errutil.UserError{Err: "could not parse CSR's public key"}
+			}
+
+			switch pub.Parameters() {
+			case mldsa.MLDSA44():
+				actualParameterSet = certutil.MLDSA44
+			case mldsa.MLDSA65():
+				actualParameterSet = certutil.MLDSA65
+			case mldsa.MLDSA87():
+				actualParameterSet = certutil.MLDSA87
+			default:
+				return nil, nil, errutil.UserError{Err: fmt.Sprintf("unsupported parameter set %s", pub.Parameters())}
+			}
+
+			actualKeyType = "ml-dsa"
+			actualKeyBits = 0
 		default:
 			return nil, nil, errutil.UserError{Err: "Unknown key type in CSR: " + csr.PublicKeyAlgorithm.String()}
 		}
@@ -270,7 +317,7 @@ func SignCert(b logical.SystemView, role *RoleEntry, entityInfo EntityInfo, caSi
 		// for signing operations
 		var err error
 		if role.KeyBits, err = certutil.ValidateDefaultOrValueKeyType(
-			actualKeyType, 0); err != nil {
+			actualKeyType, 0, actualParameterSet); err != nil {
 			return nil, nil, errutil.InternalError{Err: fmt.Sprintf("unknown internal error updating default values: %v", err)}
 		}
 

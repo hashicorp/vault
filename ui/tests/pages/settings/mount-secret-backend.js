@@ -13,7 +13,7 @@ export default create({
   setMaxVersion: fillable('[data-test-input="kv_config.max_versions"]'),
   maxTTLVal: fillable('[data-test-ttl-value="Max Lease TTL"]'),
   maxTTLUnit: fillable('[data-test-ttl-unit="Max Lease TTL"] [data-test-select="ttl-unit"]'),
-  enableEngine: clickable('[data-test-enable-engine]'),
+  enableEngine: clickable('[data-test-button="Enable new engine"]'),
   secretList: clickable('[data-test-sidebar-nav-link="Secrets"]'),
   defaultTTLVal: fillable('input[data-test-ttl-value="Default Lease TTL"]'),
   defaultTTLUnit: fillable('[data-test-ttl-unit="Default Lease TTL"] [data-test-select="ttl-unit"]'),

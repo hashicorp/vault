@@ -190,12 +190,15 @@ export default class ClusterRoute extends Route {
   }
 
   async addAnalyticsService(model) {
-    // HVD-managed clusters use PostHog, started at the application-route level.
-    // Segment is Self-Managed only.
+    // HVD-managed clusters start Segment at the application-route level, with no
+    // consent gate. The consent-gated Segment start is Self-Managed only.
     if (!this.flagsService.isHvdManaged) await this.startVaultSmAnalytics();
 
-    // identify user for analytics service
-    if (this.analytics.activated) {
+    // Identify the user for analytics. Compute the identity when analytics is
+    // active OR when the consent banner is about to prompt — in the latter case
+    // the analytics service caches it and applies it if the user accepts, so the
+    // session is identified even though consent is granted after this route loads.
+    if (this.analytics.activated || this.analytics.shouldPromptConsent) {
       let licenseId = '';
 
       try {
@@ -223,7 +226,12 @@ export default class ClusterRoute extends Route {
           version: model.version.version,
           storageType: model.storageType,
           replicationMode: model.replicationMode,
-          isEnterprise: Boolean(model.license),
+          // Use the version service (resolved in the parent `vault` route via
+          // fetchType) rather than `model.license`, which is loaded by a separate
+          // license fetch and is frequently null here — making an enterprise
+          // cluster report productPlanName "community".
+          isEnterprise: this.version.isEnterprise,
+          isHvdManaged: this.flagsService.isHvdManaged,
         });
       } catch (e) {
         console.error('unable to start analytics', e);

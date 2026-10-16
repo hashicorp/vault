@@ -8,12 +8,14 @@ description: Set up Go with a shared module cache.
 inputs:
   github-token:
     description: A Github token used to authenticate module downloads and avoid rate limits. Defaults to github.token.
-  no-restore:
-    description: Whether or not to restore the Go module cache on a cache hit
-    default: "false"
-  no-save:
-    description: Whether or not to create a Go module cache on cache miss
-    default: "false"
+  cache:
+    description: |
+      Cache mode for Go modules. One of:
+        true        (default) Restore on hit; download and save on miss.
+        fetch-only  Restore on hit; download on miss; never save.
+        prime       Download and save on miss.
+        false       Skip all cache interaction.
+    default: "true"
   go-version:
     description: "Override .go-version"
     default: ""
@@ -21,18 +23,18 @@ inputs:
 outputs:
   cache-key:
     description: The Go modules cache key
-    value: ${{ steps.metadata.outputs.cache-key }}
+    value: ${{ steps.set-up-go-metadata.outputs.cache-key }}
   cache-path:
     description: The GOMODCACHE path
-    value: ${{ steps.metadata.outputs.cache-path }}
+    value: ${{ steps.set-up-go-metadata.outputs.cache-path }}
   go-version:
     description: "The version of Go used"
-    value: ${{ steps.go-version.outputs.go-version }}
+    value: ${{ steps.set-up-go-go-version.outputs.go-version }}
 
 runs:
   using: composite
   steps:
-    - id: go-version
+    - id: set-up-go-go-version
       shell: bash
       run: |
         if [ "${{ inputs.go-version }}" = "" ]; then
@@ -42,9 +44,9 @@ runs:
         fi
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
-        go-version: ${{ steps.go-version.outputs.go-version }}
+        go-version: ${{ steps.set-up-go-go-version.outputs.go-version }}
         cache: false # We use our own caching strategy
-    - id: metadata
+    - id: set-up-go-metadata
       shell: bash
       run: |
         # Cache restore have some surprising relative pathing behavior we need
@@ -62,11 +64,12 @@ runs:
           echo "cache-path=$(go env GOMODCACHE)/cache"
           echo "cache-key=go-modules-${wd_hash}-${{ hashFiles('**/go.sum') }}"
         } | tee -a "$GITHUB_OUTPUT"
-    - id: cache-modules
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+    - id: set-up-go-cache-modules
+      if: inputs.cache != 'false'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         enableCrossOsArchive: true
-        lookup-only: ${{ inputs.no-restore }}
+        lookup-only: ${{ inputs.cache == 'prime' }}
         # We need to be very considerate of our caching strategy because Github only allows 10gb
         # of caches per repository before it starts to evict older caches. This is usually fine
         # if you only use the actions cache for cache, but we also use it for Go test time results.
@@ -80,9 +83,9 @@ runs:
         # We intentionally do not use partial restore keys. If we get dont get an exact cache hit
         # we only want to download the latest modules, not append them to a prior cache. This
         # keeps cache upload time, download time, and storage size to a minimum.
-        path: ${{ steps.metadata.outputs.cache-path }}
-        key: ${{ steps.metadata.outputs.cache-key }}
-    - id: build-context
+        path: ${{ steps.set-up-go-metadata.outputs.cache-path }}
+        key: ${{ steps.set-up-go-metadata.outputs.cache-key }}
+    - id: set-up-go-build-context
       shell: bash
       run: |
         # Determine whether our branch is an enterprise branch. Only on those
@@ -98,17 +101,32 @@ runs:
         else
           echo "is-enterprise=false" | tee -a "$GITHUB_OUTPUT"
         fi
-    - if: steps.cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'true'
+    - if: inputs.cache != 'false' && steps.set-up-go-cache-modules.outputs.cache-hit != 'true'
       name: Download go modules
       shell: bash
       env:
         # Only enable GOPRIVATE for enterprise builds.
-        GOPRIVATE: ${{ steps.build-context.outputs.is-enterprise == 'true' && 'github.com/hashicorp/*' || '' }}
+        GOPRIVATE: ${{ steps.set-up-go-build-context.outputs.is-enterprise == 'true' && 'github.com/hashicorp/*' || '' }}
         # Configure the Git URL override with env vars to avoid poisoning the
         # config with an elevated token.
-        GIT_CONFIG_COUNT: "1"
+        GIT_CONFIG_COUNT: "3"
         GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token || github.token }}@github.com.insteadOf
         GIT_CONFIG_VALUE_0: https://github.com
+        # Go fetches multi-module repos (e.g. go-secure-stdlib) into a shared VCS cache dir.
+        # Detached auto gc/maintenance after a fetch can rewrite .git/shallow while Go's next
+        # 'git fetch --unshallow' runs, failing with "shallow file has changed since we read it".
+        GIT_CONFIG_KEY_1: gc.auto
+        GIT_CONFIG_VALUE_1: "0"
+        GIT_CONFIG_KEY_2: maintenance.auto
+        GIT_CONFIG_VALUE_2: "false"
       run: |
         make go-mod-download
-        du -h -d 1 ${{ steps.metadata.outputs.cache-path }}
+        du -h -d 1 ${{ steps.set-up-go-metadata.outputs.cache-path }}
+    - if: (inputs.cache == 'true' || inputs.cache == 'prime') && steps.set-up-go-cache-modules.outputs.cache-hit != 'true'
+      id: set-up-go-save-modules
+      name: Save go modules
+      uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        enableCrossOsArchive: true
+        path: ${{ steps.set-up-go-metadata.outputs.cache-path }}
+        key: ${{ steps.set-up-go-metadata.outputs.cache-key }}

@@ -49,6 +49,7 @@ export default class SidebarNavClusterComponent extends Component {
   routeName = {
     vaultUsage: RouteName.VAULT_USAGE,
     billingDashboard: RouteName.BILLING_DASHBOARD,
+    agentRegistry: RouteName.AGENT_REGISTRY,
   };
 
   get cluster() {
@@ -81,7 +82,9 @@ export default class SidebarNavClusterComponent extends Component {
 
   get accessRoute() {
     if (this.permissions.hasNavPermission('policies')) {
-      return 'vault.cluster.policies';
+      // policies are nested under their type (e.g. vault.cluster.policies.acl), not a dynamic segment
+      const [policyType] = this.routeParamsFor('policies')?.models || [];
+      return `vault.cluster.policies.${policyType || 'acl'}`;
     }
 
     if (this.permissions.hasNavPermission('access')) {
@@ -93,7 +96,7 @@ export default class SidebarNavClusterComponent extends Component {
 
   get accessRouteModels() {
     if (this.permissions.hasNavPermission('policies')) {
-      return this.routeParamsFor('policies')?.models;
+      return null;
     }
 
     if (this.permissions.hasNavPermission('access')) {

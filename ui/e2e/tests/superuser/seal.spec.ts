@@ -3,11 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { test, expect } from '@playwright/test';
+import { expect } from '@playwright/test';
+import { test } from '../../fixtures/demo';
 import fs from 'fs';
 import path from 'path';
 
 const keysPath = path.resolve(__dirname, '../../tmp/superuser-keys.json');
+
+const readSealed = async (page: Parameters<Parameters<typeof test>[1]>[0]['page']) => {
+  const response = await page.request.get('/v1/sys/seal-status');
+  await expect(response).toBeOK();
+  return (await response.json()).sealed;
+};
 
 test('sealing/unsealing workflow', async ({ page }) => {
   await page.goto('dashboard');
@@ -16,11 +23,13 @@ test('sealing/unsealing workflow', async ({ page }) => {
   await page.getByRole('button', { name: 'Seal' }).click();
   await page.getByRole('button', { name: 'Confirm' }).click();
   await expect(page.getByText('Vault is sealed')).toBeVisible();
+  await expect.poll(() => readSealed(page)).toBe(true);
 
   // unseal vault for sequential tests
   const { keys, root_token } = JSON.parse(fs.readFileSync(keysPath, 'utf-8'));
   await page.getByRole('textbox', { name: 'Unseal Key Portion' }).fill(keys[0]);
   await page.getByRole('button', { name: 'Unseal' }).click();
+  await expect.poll(() => readSealed(page)).toBe(false);
   await page.getByRole('textbox', { name: 'Token' }).fill(root_token);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('button', { name: 'root' })).toBeVisible();

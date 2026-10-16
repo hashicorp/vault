@@ -24,8 +24,8 @@ import (
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/observations"
@@ -229,7 +229,7 @@ func (i *IdentityStore) activateDeduplication() error {
 		// If we fail to load from storage, we'll end up with a broken
 		// IdentityStore, so we're better of just sealing and letting another node
 		// take over!
-		if err := i.loadArtifacts(reloadCtx, i.localNode.HAState() == consts.Active); err != nil {
+		if err := i.loadArtifacts(reloadCtx, i.localNode.HAStateWithLock() == consts.Active); err != nil {
 			i.logger.Error("failed to activate identity deduplication, shutting down")
 			i.activationErrorHandler.Shutdown()
 			return
@@ -3114,6 +3114,9 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 
 		var newGroups []*identity.Group
 		var validAliases []*logical.Alias
+
+		// seenGroupIDs prevents duplicate group objects when a JWT/OIDC token carries repeated group-name entries.
+		seenGroupIDs := make(map[string]struct{})
 		for _, alias := range groupAliases {
 			aliasByFactors, err := i.MemDBAliasByFactorsInTxn(txn, alias.MountAccessor, alias.Name, true, true)
 			if err != nil {
@@ -3130,6 +3133,10 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 				return false, nil, fmt.Errorf("group unavailable for a valid alias ID %q", aliasByFactors.ID)
 			}
 
+			if _, alreadySeen := seenGroupIDs[mappingGroup.ID]; alreadySeen {
+				continue
+			}
+			seenGroupIDs[mappingGroup.ID] = struct{}{}
 			newGroups = append(newGroups, mappingGroup)
 			validAliases = append(validAliases, alias)
 		}
@@ -3150,7 +3157,11 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 
 			i.logger.Debug("adding member entity ID to external group", "member_entity_id", entityID, "group_id", group.ID)
 
-			group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
+			// Guard against duplicates even if newGroups was somehow not
+			// deduplicated upstream (e.g. concurrent writes on a standby).
+			if !strutil.StrListContains(group.MemberEntityIDs, entityID) {
+				group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
+			}
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, true)
 			if errors.Is(err, logical.ErrReadOnly) {

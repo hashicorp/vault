@@ -169,6 +169,16 @@ type Request struct {
 	// CheckToken has already done the work.
 	OAuthJwtValidated bool `json:"oauth_jwt_validated,omitempty" structs:"oauth_jwt_validated" mapstructure:"oauth_jwt_validated"`
 
+	// ValidatingOAuthResourceServerConfigId is set when the request was authenticated using
+	// OAuthResourceServerConfigProfile, then the config id is set to the profile's config id that
+	// successfully validated the request
+	ValidatingOAuthResourceServerConfigId string `json:"validating_oauth_resource_server_config_id" structs:"validating_oauth_resource_server_config_id" mapstructure:"validating_oauth_resource_server_config_id"`
+
+	// ValidatingOAuthResourceServerConfigNamespaceId is set when the request was authenticated using
+	// OAuthResourceServerConfigProfile, then the namespace id is set to the namespace id where profile resides that
+	// successfully validated the request
+	ValidatingOAuthResourceServerConfigNamespaceId string `json:"validating_oauth_resource_server_config_namespace_id" structs:"validating_oauth_resource_server_config_namespace_id" mapstructure:"validating_oauth_resource_server_config_namespace_id"`
+
 	// ClientTokenAccessor is provided to the core so that the it can get
 	// logged as part of request audit logging.
 	ClientTokenAccessor string `json:"client_token_accessor" structs:"client_token_accessor" mapstructure:"client_token_accessor" sentinel:""`

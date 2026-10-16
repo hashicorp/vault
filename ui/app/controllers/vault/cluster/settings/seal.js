@@ -3,27 +3,24 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { service } from '@ember/service';
+import { action } from '@ember/object';
 import Controller from '@ember/controller';
+import { service } from '@ember/service';
 
-export default Controller.extend({
-  auth: service(),
-  router: service(),
-  version: service(),
-  store: service(),
+export default class SealController extends Controller {
+  @service api;
+  @service auth;
+  @service router;
+  @service version;
 
-  actions: {
-    seal() {
-      return this.model.cluster.store
-        .adapterFor('cluster')
-        .seal()
-        .then(() => {
-          this.router.transitionTo('vault.cluster.unseal');
-          this.store.peekAll('cluster')[0].reload();
-          this.auth.deleteCurrentToken();
-          // Reset version so it doesn't show on footer
-          this.version.version = null;
-        });
-    },
-  },
-});
+  @action
+  seal() {
+    return this.api.request.put('/sys/seal').then(() => {
+      this.router.transitionTo('vault.cluster.unseal');
+      this.version.fetchType();
+      this.auth.deleteCurrentToken();
+      // Reset version so it doesn't show on footer
+      this.version.version = null;
+    });
+  }
+}

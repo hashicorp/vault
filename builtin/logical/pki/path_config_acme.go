@@ -127,9 +127,16 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Default:     false,
 			},
 			"default_directory_policy": {
-				Type:        framework.TypeString,
-				Description: `the policy to be used for non-role-qualified ACME requests; by default ACME issuance will be otherwise unrestricted, equivalent to the sign-verbatim endpoint; one may also specify a role to use as this policy, as "role:<role_name>", the specified role must be allowed by allowed_roles`,
-				Default:     "sign-verbatim",
+				Type: framework.TypeString,
+				Description: `the policy to be used for non-role-qualified ACME requests; ` +
+					`"sign-verbatim" (default) rejects finalization if the CSR contains URI SANs, email SANs, ` +
+					`or Other SANs — ACME challenges only verify DNS names and IP addresses so those SAN types ` +
+					`are never validated and must not appear in issued certificates; ` +
+					`"sign-verbatim-unsafe" issues the certificate with those SANs passed through from the CSR ` +
+					`without ACME verification — use only when a legacy workflow requires it and the risk is ` +
+					`explicitly accepted; ` +
+					`"forbid" disallows the default directory; "role:<role_name>" applies the named role`,
+				Default: "sign-verbatim",
 			},
 			"dns_resolver": {
 				Type:        framework.TypeString,
@@ -330,6 +337,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	switch defaultDirectoryPolicyType {
 	case Forbid:
 	case SignVerbatim:
+	case SignVerbatimUnsafe:
 	case ExternalPolicy:
 		if !constants.IsEnterprise {
 			return nil, fmt.Errorf("external-policy is only available in enterprise versions of Vault")
@@ -443,6 +451,8 @@ func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirect
 		return Forbid, "", nil
 	case defaultDirectoryPolicy == "sign-verbatim":
 		return SignVerbatim, "", nil
+	case defaultDirectoryPolicy == "sign-verbatim-unsafe":
+		return SignVerbatimUnsafe, "", nil
 	case strings.HasPrefix(defaultDirectoryPolicy, rolePrefix):
 		if len(defaultDirectoryPolicy) == rolePrefixLength {
 			return Forbid, "", fmt.Errorf("no role specified by policy %v", defaultDirectoryPolicy)
@@ -479,4 +489,9 @@ const (
 	SignVerbatim
 	Role
 	ExternalPolicy
+	// SignVerbatimUnsafe behaves like SignVerbatim but does not strip URI SANs,
+	// email SANs, or Other SANs from the CSR before issuance. These SAN types are
+	// never verified by ACME challenges; use this only when a legacy workflow
+	// requires them and the risk is explicitly accepted.
+	SignVerbatimUnsafe
 )

@@ -1,0 +1,3 @@
+```release-note:change
+ui: Remove HCP Link status indicator following deprecation of HCP Link.
+```

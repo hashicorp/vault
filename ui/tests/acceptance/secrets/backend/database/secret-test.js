@@ -536,7 +536,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // Check with restricted permissions
     await login(token);
     await click(GENERAL.navLink('Secrets'));
-    assert.dom(GENERAL.listItem(`${backend}/`)).exists('Shows backend on secret list page');
+    assert.dom(GENERAL.linkTo(`${backend}/`)).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),
@@ -556,7 +556,9 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-overview-card="Roles"]')
       .doesNotExist('Roles card does not exist on overview w/ policy');
-    assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
+    assert
+      .dom('[data-test-overview-card-content="Connections"]')
+      .hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn(GENERAL.inputSearch('search-input-role'), 'blah');
     assert.dom(GENERAL.button('Get credentials')).isEnabled();

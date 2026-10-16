@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { ALL_ENGINES, type EngineDisplayData } from 'core/utils/all-engines-metadata';
+import { ALL_ENGINES, resolveGlyph, type EngineDisplayData } from 'core/utils/all-engines-metadata';
 import { getEffectiveEngineType } from 'vault/utils/external-plugin-helpers';
 
 /**
@@ -40,7 +40,7 @@ export default function engineDisplayData(methodType: string): EngineDisplayData
   // First try to find an exact match
   const builtinEngine = ALL_ENGINES?.find((t) => t.type === methodType);
   if (builtinEngine) {
-    return builtinEngine;
+    return withResolvedGlyph(builtinEngine);
   }
 
   // If no direct match, check if this is a known external plugin and use its builtin mapping
@@ -50,13 +50,18 @@ export default function engineDisplayData(methodType: string): EngineDisplayData
     const mappedEngine = ALL_ENGINES?.find((t) => t.type === effectiveType);
     if (mappedEngine) {
       // Return the mapped engine metadata but preserve the original external plugin type
-      return {
+      return withResolvedGlyph({
         ...mappedEngine,
         type: methodType, // Keep the original external plugin name for identification
-      };
+      });
     }
   }
 
   // Return default unknown plugin metadata
   return unknownEngineMetadata(methodType);
+}
+
+/** Returns a shallow copy of the engine with its glyph resolved for the current theme. */
+function withResolvedGlyph(engine: EngineDisplayData): EngineDisplayData {
+  return { ...engine, glyph: resolveGlyph(engine.glyph) };
 }

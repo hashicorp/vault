@@ -1,0 +1,35 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+<Wizard::IntroContent
+  @imageAlt="Entity and alias structure showing how authentication methods map to a single entity with associated policies"
+  @imageCaption="An entity is made up of aliases that map individual authentication methods to a single entity. Policies are then tied to an entity."
+  @imageSrc={{img-path "~/entities-intro.png"}}
+>
+  <:description>
+    Entities
+    <strong>unify a client's identity across multiple authentication methods</strong>
+    into a single representative in Vault. Each entity is made of one or more aliases, individual account mappings that link
+    an auth method to the entity.
+  </:description>
+  <:features>
+    <Wizard::IntroContent::Feature @icon="service">
+      Entities consolidate identities across authentication methods, ensuring
+      <strong>consistent policy enforcement</strong>
+      and
+      <strong>accurate client count</strong>
+      tracking.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="database">
+      Entities are
+      <strong>scoped to the namespaces</strong>
+      where the client authenticates. They may extend to child namespaces, but do not apply cluster-wide by default.
+    </Wizard::IntroContent::Feature>
+    <Wizard::IntroContent::Feature @icon="org">
+      Though entities are automatically created upon first login,
+      <strong>operators should still explicitly manage and merge them</strong>
+      to avoid duplicates and inflated client counts.
+    </Wizard::IntroContent::Feature>
+  </:features>
+</Wizard::IntroContent>

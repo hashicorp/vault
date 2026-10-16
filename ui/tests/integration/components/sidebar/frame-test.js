@@ -48,12 +48,7 @@ module('Integration | Component | sidebar-frame', function (hooks) {
     assert.dom('[data-test-app-header]').doesNotExist('App header is hidden');
   });
 
-  test('it should render link status, console ui panel container and yield block for app content', async function (assert) {
-    const currentCluster = this.owner.lookup('service:currentCluster');
-    currentCluster.setCluster({ hcpLinkStatus: 'connected' });
-    const version = this.owner.lookup('service:version');
-    version.type = 'enterprise';
-
+  test('it should render console ui panel container and yield block for app content', async function (assert) {
     await render(hbs`
       <Sidebar::Frame @showSidebar={{true}}>
         <div class="page-container">
@@ -62,7 +57,6 @@ module('Integration | Component | sidebar-frame', function (hooks) {
       </Sidebar::Frame>
     `);
 
-    assert.dom('[data-test-link-status]').exists('Link status component renders');
     assert.dom('[data-test-console-panel]').exists('Console UI panel container renders');
     assert.dom('.page-container').exists('Block yields for app content');
   });

@@ -8,8 +8,8 @@ import Component from '@glimmer/component';
 interface Args {
   identityType: 'entity' | 'group';
   model: {
-    meta: {
-      total: number;
+    meta?: {
+      total?: number;
     };
   };
 }

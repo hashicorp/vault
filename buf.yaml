@@ -11,11 +11,9 @@ lint:
   ignore_only:
     ENUM_VALUE_PREFIX:
       - sdk/helper/clientcountutil/generation/generate_data.proto
-      - vault/hcp_link/proto/node_status/status.proto
       - vault/replication_services_ent.proto
     ENUM_ZERO_VALUE_SUFFIX:
       - sdk/helper/clientcountutil/generation/generate_data.proto
-      - vault/hcp_link/proto/node_status/status.proto
       - vault/replication_services_ent.proto
     FIELD_LOWER_SNAKE_CASE:
       - enthelpers/wal/types_ent.proto
@@ -23,12 +21,9 @@ lint:
       - sdk/database/dbplugin/v5/proto/database.proto
       - sdk/logical/identity.proto
       - sdk/plugin/pb/backend.proto
-      - vault/hcp_link/proto/meta/meta.proto
-      - vault/hcp_link/proto/node_status/status.proto
       - vault/replication/replication_resolver_ent.proto
       - vault/replication_services_ent.proto
     IMPORT_USED:
-      - vault/hcp_link/proto/node_status/status.proto
       - vault/replication_services_ent.proto
     PACKAGE_DIRECTORY_MATCH:
       - builtin/logical/pki/metadata.proto
@@ -53,9 +48,6 @@ lint:
       - vault/activity/activity_log.proto
       - vault/billing/billing.proto
       - sdk/helper/clientcountutil/generation/generate_data.proto
-      - vault/hcp_link/proto/link_control/link_control.proto
-      - vault/hcp_link/proto/meta/meta.proto
-      - vault/hcp_link/proto/node_status/status.proto
       - vault/replication/replication_resolver_ent.proto
       - vault/seal/multi_wrap_value.proto
       - vault/tokens/token.proto
@@ -88,9 +80,6 @@ lint:
       - vault/activity/activity_log.proto
       - vault/billing/billing.proto
       - sdk/helper/clientcountutil/generation/generate_data.proto
-      - vault/hcp_link/proto/link_control/link_control.proto
-      - vault/hcp_link/proto/meta/meta.proto
-      - vault/hcp_link/proto/node_status/status.proto
       - vault/replication/replication_resolver_ent.proto
       - vault/replication_services_ent.proto
       - vault/request_forwarding_service.proto
@@ -120,7 +109,6 @@ lint:
       - sdk/database/dbplugin/v5/proto/database_ent.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
-      - vault/hcp_link/proto/meta/meta.proto
       - vault/replication/replication_resolver_ent.proto
       - vault/replication_services_ent.proto
       - vault/request_forwarding_service.proto
@@ -132,8 +120,6 @@ lint:
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
       - sdk/plugin/pb/system_view_service_ent.proto
-      - vault/hcp_link/proto/link_control/link_control.proto
-      - vault/hcp_link/proto/meta/meta.proto
       - vault/replication/replication_resolver_ent.proto
       - vault/replication_services_ent.proto
       - vault/request_forwarding_service.proto

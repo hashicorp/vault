@@ -7,9 +7,9 @@ import { module, test } from 'qunit';
 import exitConfigurationRoute from 'vault/helpers/exit-configuration-route';
 
 module('Unit | Helper | exit-configuration-route', function () {
-  test('alicloud returns list-root', function (assert) {
+  test('alicloud returns backends route (isOnlyMountable)', function (assert) {
     const result = exitConfigurationRoute('alicloud');
-    assert.strictEqual(result, 'vault.cluster.secrets.backend.list-root');
+    assert.strictEqual(result, 'vault.cluster.secrets.backends');
   });
 
   test('aws returns list-root', function (assert) {
@@ -22,9 +22,9 @@ module('Unit | Helper | exit-configuration-route', function () {
     assert.strictEqual(result, 'vault.cluster.secrets.backends');
   });
 
-  test('consul returns list-root', function (assert) {
+  test('consul returns backends route (isOnlyMountable)', function (assert) {
     const result = exitConfigurationRoute('consul');
-    assert.strictEqual(result, 'vault.cluster.secrets.backend.list-root');
+    assert.strictEqual(result, 'vault.cluster.secrets.backends');
   });
 
   test('cubbyhole returns list-root', function (assert) {
@@ -42,9 +42,9 @@ module('Unit | Helper | exit-configuration-route', function () {
     assert.strictEqual(result, 'vault.cluster.secrets.backends');
   });
 
-  test('gcpkms returns list-root', function (assert) {
+  test('gcpkms returns backends route (isOnlyMountable)', function (assert) {
     const result = exitConfigurationRoute('gcpkms');
-    assert.strictEqual(result, 'vault.cluster.secrets.backend.list-root');
+    assert.strictEqual(result, 'vault.cluster.secrets.backends');
   });
 
   test('kv with no version (defaults to v1) returns list-root', function (assert) {
@@ -87,9 +87,9 @@ module('Unit | Helper | exit-configuration-route', function () {
     assert.strictEqual(result, 'vault.cluster.secrets.backend.ldap.overview');
   });
 
-  test('nomad returns list-root', function (assert) {
+  test('nomad returns backends route (isOnlyMountable)', function (assert) {
     const result = exitConfigurationRoute('nomad');
-    assert.strictEqual(result, 'vault.cluster.secrets.backend.list-root');
+    assert.strictEqual(result, 'vault.cluster.secrets.backends');
   });
 
   test('pki returns pki.overview', function (assert) {
@@ -97,9 +97,9 @@ module('Unit | Helper | exit-configuration-route', function () {
     assert.strictEqual(result, 'vault.cluster.secrets.backend.pki.overview');
   });
 
-  test('rabbitmq returns list-root', function (assert) {
+  test('rabbitmq returns backends route (isOnlyMountable)', function (assert) {
     const result = exitConfigurationRoute('rabbitmq');
-    assert.strictEqual(result, 'vault.cluster.secrets.backend.list-root');
+    assert.strictEqual(result, 'vault.cluster.secrets.backends');
   });
 
   test('ssh returns list-root', function (assert) {

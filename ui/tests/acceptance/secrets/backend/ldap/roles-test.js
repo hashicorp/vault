@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -16,6 +16,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/com
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { assertURL, isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Acceptance | ldap | roles', function (hooks) {
   setupApplicationTest(hooks);
@@ -102,6 +103,41 @@ module('Acceptance | ldap | roles', function (hooks) {
     );
   });
 
+  // Vault handles rotate-role as an update operation, so a create-only token is denied.
+  test('it should offer rotate credentials only with update capability on rotate-role', async function (assert) {
+    const stubRotateCapabilities = (rotateCapabilities) => {
+      this.server.post('/sys/capabilities-self', (_, { requestBody }) => {
+        const { paths } = JSON.parse(requestBody);
+        const data = paths.reduce((obj, path) => {
+          obj[path] = path.includes('/rotate-role/') ? rotateCapabilities : ['root'];
+          return obj;
+        }, {});
+        return { ...data, data };
+      });
+    };
+
+    // Leave the roles page first so revisiting it re-runs the model hook with the new stub.
+    stubRotateCapabilities(['update']);
+    await visitURL('overview', this.backend);
+    await visitURL('roles', this.backend);
+    await click(LDAP_SELECTORS.roleMenu('static', 'static-role'));
+    assert.dom(LDAP_SELECTORS.action('rotate-creds')).exists('list menu offers rotate with update');
+    await click(LDAP_SELECTORS.roleItem('static', 'static-role'));
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert.dom(GENERAL.menuItem('Rotate credentials')).exists('details menu offers rotate with update');
+
+    stubRotateCapabilities(['create']);
+    await visitURL('overview', this.backend);
+    await visitURL('roles', this.backend);
+    await click(LDAP_SELECTORS.roleMenu('static', 'static-role'));
+    assert.dom(LDAP_SELECTORS.action('rotate-creds')).doesNotExist('list menu hides rotate with create only');
+    await click(LDAP_SELECTORS.roleItem('static', 'static-role'));
+    await click(GENERAL.dropdownToggle('Manage'));
+    assert
+      .dom(GENERAL.menuItem('Rotate credentials'))
+      .doesNotExist('details menu hides rotate with create only');
+  });
+
   test('it should clear roles page filter value on route exit', async function (assert) {
     await fillIn('[data-test-filter-input]', 'foo');
     assert
@@ -111,6 +147,31 @@ module('Acceptance | ldap | roles', function (hooks) {
     await click('[data-test-tab="libraries"]');
     await click('[data-test-tab="roles"]');
     assert.dom('[data-test-filter-input]').hasNoValue('Roles page filter value cleared on route exit');
+  });
+
+  // A token that cannot read the mount config cannot tell whether the mount is self-managed.
+  test('it should flag the mount type as unknown when the config cannot be read', async function (assert) {
+    this.server.get('/:backend/config', () => overrideResponse(403));
+    // The engine reads the config once on entry, so leave it before visiting again.
+    await visit('/vault/secrets');
+    await visitURL('roles/create', this.backend);
+
+    assert
+      .dom(`${GENERAL.inlineAlertByAttr('mount-type-unknown')} .hds-alert__title`)
+      .hasText('Unable to determine LDAP configuration mode', 'the create page flags the unknown mount type');
+    assert.dom(GENERAL.radioCardByAttr('dynamic')).exists('both role types are still offered');
+  });
+
+  // Only a 403 means the token lacks permission; other failures must not claim it does.
+  test('it should not flag the mount type when the config read fails for another reason', async function (assert) {
+    this.server.get('/:backend/config', () => overrideResponse(500));
+    await visit('/vault/secrets');
+    await visitURL('roles/create', this.backend);
+
+    assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Create Role', 'the create page renders');
+    assert
+      .dom(GENERAL.inlineAlertByAttr('mount-type-unknown'))
+      .doesNotExist('a server error is not reported as missing permission');
   });
 
   module('self-managed mounts', function (hooks) {

@@ -1,0 +1,70 @@
+/**
+ * Copyright IBM Corp. 2016, 2026
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+@mixin dark-variables {
+  // ── Primary token colors  ────────────────────────────────────────────────────────
+
+  // Neutral (lightness inverted)
+  --token-color-palette-neutral-700: #f1f2f3;
+  --token-color-palette-neutral-600: #dedfe3;
+  --token-color-palette-neutral-500: #c2c5cb;
+  --token-color-palette-neutral-400: #8c909c;
+  --token-color-palette-neutral-300: #636770;
+  --token-color-palette-neutral-200: #3b3d45;
+  --token-color-palette-neutral-100: #121214;
+  --token-color-palette-neutral-50: #0c0c0e;
+  --token-color-palette-neutral-0: #030303;
+
+  // Alpha variants
+  --token-color-palette-alpha-300: rgba(255, 255, 255, 0.15);
+  --token-color-palette-alpha-200: rgba(255, 255, 255, 0.1);
+  --token-color-palette-alpha-100: rgba(255, 255, 255, 0.08);
+
+  --token-color-palette-neutral-500-alpha-200: #f1f2f340;
+  --token-color-palette-neutral-500-alpha-100: #f1f2f326;
+  --token-color-palette-neutral-500-alpha-50: #f1f2f30d;
+  --token-color-palette-neutral-600-alpha-200: #fafafa59;
+  --token-color-palette-neutral-600-alpha-100: #fafafa40;
+
+  // Blue (lightness inverted)
+  --token-color-palette-blue-500: #a8dbff; // new: lighter than previous blue-500
+  --token-color-palette-blue-400: #5fbcff; // was blue-500
+  --token-color-palette-blue-300: #4d9fff; // was blue-400, lightened to reach AAA (7:1) on dark bg
+  --token-color-palette-blue-200: #0073fb;
+  --token-color-palette-blue-100: #1c345f;
+  --token-color-palette-blue-50: #142542;
+
+  // Purple
+  --token-color-palette-purple-500: #dda5ff;
+  --token-color-palette-purple-400: #c070ff;
+  --token-color-palette-purple-300: #b14fff;
+  --token-color-palette-purple-200: #aa3fff;
+  --token-color-palette-purple-100: #42225b;
+  --token-color-palette-purple-50: #2f1543;
+
+  // Green
+  --token-color-palette-green-500: #1ce375;
+  --token-color-palette-green-400: #00c157;
+  --token-color-palette-green-300: #00ae4e;
+  --token-color-palette-green-200: #009241;
+  --token-color-palette-green-100: #054220;
+  --token-color-palette-green-50: #042d16;
+
+  // Amber
+  --token-color-palette-amber-500: #ffcc6a;
+  --token-color-palette-amber-400: #faad3a;
+  --token-color-palette-amber-300: #fda219;
+  --token-color-palette-amber-200: #e88c03;
+  --token-color-palette-amber-100: #542800;
+  --token-color-palette-amber-50: #2e1b06;
+
+  // Red
+  --token-color-palette-red-500: #ff8c7c;
+  --token-color-palette-red-400: #ff5841;
+  --token-color-palette-red-300: #f9381e;
+  --token-color-palette-red-200: #ef3016;
+  --token-color-palette-red-100: #62170d;
+  --token-color-palette-red-50: #3f0d07;
+}

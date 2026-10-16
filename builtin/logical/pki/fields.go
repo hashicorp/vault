@@ -9,17 +9,19 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"software.sslmate.com/src/go-pkcs12"
 )
 
 const (
-	issuerRefParam = "issuer_ref"
-	keyNameParam   = "key_name"
-	keyRefParam    = "key_ref"
-	keyIdParam     = "key_id"
-	keyTypeParam   = "key_type"
-	keyBitsParam   = "key_bits"
-	skidParam      = "subject_key_id"
+	issuerRefParam    = "issuer_ref"
+	keyNameParam      = "key_name"
+	keyRefParam       = "key_ref"
+	keyIdParam        = "key_id"
+	keyTypeParam      = "key_type"
+	keyBitsParam      = "key_bits"
+	skidParam         = "subject_key_id"
+	parameterSetParam = "parameter_set"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
@@ -416,10 +418,17 @@ RSA key-type issuer. Defaults to false.`,
 		Default: "rsa",
 		Description: `The type of key to use; defaults to RSA. "rsa"
 "ec" and "ed25519" are the only valid values.`,
-		AllowedValues: []interface{}{"rsa", "ec", "ed25519"},
+		AllowedValues: []interface{}{"rsa", "ec", "ed25519", "ml-dsa"},
 		DisplayAttrs: &framework.DisplayAttributes{
 			Value: "rsa",
 		},
+	}
+
+	fields[parameterSetParam] = &framework.FieldSchema{
+		Type:          framework.TypeString,
+		Default:       certutil.MLDSA44,
+		Description:   `The parameter set to use for ML-DSA keys; defaults to ml-dsa-44. Valid values are ml-dsa-44, ml-dsa-65, and ml-dsa-87`,
+		AllowedValues: []interface{}{certutil.MLDSA44, certutil.MLDSA65, certutil.MLDSA87},
 	}
 
 	fields = addKeyRefNameFields(fields)

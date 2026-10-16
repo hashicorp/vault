@@ -1,20 +1,17 @@
 // Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
-//go:build race
-
 package vault
 
 import (
-	"context"
+	"fmt"
 	"sync"
 	"testing"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
-	"github.com/stretchr/testify/assert"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -27,9 +24,9 @@ import (
 // read or clone those same objects from MemDB using lock-free read
 // transactions without holding i.lock, which races with the invalidation.
 //
-// This test is meaningful only under the race detector, so it lives in a file
-// gated behind the "race" build tag (which the Go toolchain sets automatically
-// when -race is passed) and is excluded from ordinary builds.
+// This test is meaningful only under the race detector, but it's also ran
+// without the race detector to better validate that the test is healthy and
+// ensure it cannot be broken and checked in in a broken state.
 //
 // This is deliberately an internal (white-box) test: it calls Invalidate
 // directly and reads and clones the same MemDB entity and alias via
@@ -39,10 +36,11 @@ import (
 // asynchronously over the performance-replication WAL, so their timing cannot
 // be lined up with the concurrent reads.
 func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	t.Parallel()
+	cluster := NewTestCluster(t, nil, nil)
 
-	is := c.identityStore
-	ctx := context.Background()
+	is := cluster.Cores[0].Core.identityStore
+	ctx := t.Context()
 
 	entityID, err := uuid.GenerateUUID()
 	require.NoError(t, err)
@@ -120,6 +118,14 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
+	// Errors are reported through this channel rather than with require or
+	// t.FailNow inside the goroutines: FailNow must only be called from the
+	// goroutine running the test, since it exits the calling goroutine via
+	// runtime.Goexit and does not stop the test itself. Each goroutine sends at
+	// most one error and returns; the test goroutine asserts on them after
+	// wg.Wait().
+	errCh := make(chan error, 2)
+
 	// Repeatedly swap the stored alias, then invalidate the bucket. Varying the
 	// alias every iteration keeps invalidateLocalAliasesBucket on its "changed"
 	// branch, so each pass both compares (proto.Equal) the shared MemDB alias
@@ -129,7 +135,8 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for n := 0; n < iterations; n++ {
-			if !assert.NoError(t, is.localAliasPacker.PutItem(ctx, aliasItems[n%2])) {
+			if err := is.localAliasPacker.PutItem(ctx, aliasItems[n%2]); err != nil {
+				errCh <- fmt.Errorf("putting local alias item: %w", err)
 				return
 			}
 			is.Invalidate(ctx, localAliasBucketKey)
@@ -144,16 +151,33 @@ func TestIdentityStoreInvalidate_LocalAliasesDataRace(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for n := 0; n < iterations; n++ {
-			if e, err := is.MemDBEntityByID(entityID, true); err == nil && e != nil {
-				_, _ = e.Clone()
+			e, err := is.MemDBEntityByID(entityID, true)
+			if err != nil || e == nil {
+				errCh <- fmt.Errorf("reading entity from MemDB: entity=%v err=%v", e, err)
+				return
 			}
-			if a, err := is.MemDBAliasByID(aliasID, true, false); err == nil && a != nil {
-				_, _ = a.Clone()
+			if _, err = e.Clone(); err != nil {
+				errCh <- fmt.Errorf("cloning entity: %w", err)
+				return
+			}
+
+			a, err := is.MemDBAliasByID(aliasID, true, false)
+			if err != nil || a == nil {
+				errCh <- fmt.Errorf("reading alias from MemDB: alias=%v err=%v", a, err)
+				return
+			}
+			if _, err = a.Clone(); err != nil {
+				errCh <- fmt.Errorf("cloning alias: %w", err)
+				return
 			}
 		}
 	}()
 
 	wg.Wait()
+	close(errCh)
+	for err := range errCh {
+		require.NoError(t, err)
+	}
 
 	// Sanity check that the entity and its local alias are still present and
 	// correctly associated after all the concurrent invalidations.

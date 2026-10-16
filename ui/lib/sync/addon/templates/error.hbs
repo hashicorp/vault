@@ -3,6 +3,13 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<SyncHeader @title="Secrets Sync" @breadcrumbs={{array (hash label="Secrets Sync" route="secrets.overview")}} />
+<Page::Header @title="Secrets Sync">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{array (hash label="Secrets Sync" route="secrets.overview")}} />
+  </:breadcrumbs>
+  <:badges>
+    <Secrets::HvdBadge />
+  </:badges>
+</Page::Header>
 
 <Page::Error @error={{this.model}} @titleTag="h2" />

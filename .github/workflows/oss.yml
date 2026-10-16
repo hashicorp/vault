@@ -46,7 +46,7 @@ jobs:
               - 'builtin/logical/nomad/**'
               - 'builtin/logical/postgresql/**'
               - 'builtin/logical/rabbitmq/**'
-              - 'command/agent/**'
+              - 'command/client/agent/**'
               - 'plugins/**'
               - 'vault/plugin_catalog.go'
               - 'ui/app/components/auth-jwt.js'

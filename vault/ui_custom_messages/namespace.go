@@ -3,7 +3,7 @@
 
 package uicustommessages
 
-import "github.com/hashicorp/vault/helper/namespace"
+import "github.com/hashicorp/vault/internalshared/namespace"
 
 // NamespaceManager is the interface needed of a NamespaceManager by this
 // package. This interface allows setting a dummy NamespaceManager in the

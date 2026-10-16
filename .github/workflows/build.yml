@@ -187,17 +187,13 @@ jobs:
         name: Ensure Go modules are cached
         with:
           github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          # Don't download them on a cache hit during setup, just make sure they're cached before
-          # subsequent workflows are run.
-          no-restore: true
+          cache: prime # Prime the cache for downstream jobs; don't restore to disk
       # Make sure all required vault tools are cached at this point. We don't want all of the Go
       # tests and build jobs to build the tools and race to upload them to the cache.
       - uses: ./.github/actions/install-tools
         name: Ensure Vault tools are cached
         with:
-          # Don't download them on a cache hit during setup, just make sure they're cached before
-          # subsequent workflows are run.
-          no-restore: true
+          cache: prime # Prime the cache for downstream jobs; don't restore to disk
       - if: always() && steps.metadata.outputs.is-ent-repo == 'true'
         name: Upload build metric to Instana
         continue-on-error: true
@@ -283,7 +279,10 @@ jobs:
         uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          cache: fetch-only
       - uses: ./.github/actions/install-tools
+        with:
+          cache: fetch-only
       - if: "! startsWith(github.event.pull_request.base.ref, 'ce/')"
         name: Ensure that the community edition still builds on enterprise branches
         env:
@@ -317,6 +316,7 @@ jobs:
           fi
           echo "A branch: $ent_base_ref"
           echo "B branch: $HEAD_REF"
+          # --workspace-modules compares the go.mod of every module in this branch's go.work.
           pipeline github check go-mod-diff ${{ runner.debug && '--log debug' }} \
             --a-repo vault-enterprise \
             --a-branch "$ent_base_ref" \
@@ -324,18 +324,7 @@ jobs:
             --b-branch "$HEAD_REF" \
               --strict-replace=false \
               --strict-require=false \
-                -p go.mod \
-                -p api/go.mod \
-                -p api/auth/approle/go.mod \
-                -p api/auth/aws/go.mod \
-                -p api/auth/azure/go.mod \
-                -p api/auth/cert/go.mod \
-                -p api/auth/gcp/go.mod \
-                -p api/auth/kubernetes/go.mod \
-                -p api/auth/ldap/go.mod \
-                -p api/auth/userpass/go.mod \
-                -p tools/pipeline/go.mod \
-                -p sdk/go.mod \
+              --workspace-modules \
                 --format markdown | tee -a "$GITHUB_STEP_SUMMARY"
       - if: always()
         name: Upload build metric to Instana
@@ -872,7 +861,7 @@ jobs:
         name: Ensure Go is available for Instana upload
         with:
           github-token: ${{ steps.secrets.outputs.ELEVATED_GITHUB_TOKEN }}
-          no-save: true # cache was primed by setup; never attempt a fresh download here
+          cache: "false" # only the Go toolchain is needed for the Instana upload step
         continue-on-error: true
       - if: always() && needs.setup.outputs.is-ent-repo == 'true'
         name: Upload build metric to Instana

@@ -2324,13 +2324,27 @@ func (b *backend) pathRolePoliciesUpdate(ctx context.Context, req *logical.Reque
 	if !ok {
 		policiesRaw, ok = data.GetOk("policies")
 		if ok {
-			role.Policies = policyutil.ParsePolicies(policiesRaw)
+			policies := policyutil.ParsePolicies(policiesRaw)
+			for _, policy := range policies {
+				if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+					return logical.ErrorResponse(fmt.Sprintf("invalid policy name %q: %s", policy, err)), nil
+				}
+			}
+
+			role.Policies = policies
 			role.TokenPolicies = role.Policies
 		} else {
 			return logical.ErrorResponse("missing token_policies"), nil
 		}
 	} else {
-		role.TokenPolicies = policyutil.ParsePolicies(policiesRaw)
+		policies := policyutil.ParsePolicies(policiesRaw)
+		for _, policy := range policies {
+			if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("invalid policy name %q: %s", policy, err)), nil
+			}
+		}
+
+		role.TokenPolicies = policies
 		_, ok = data.GetOk("policies")
 		if ok {
 			role.Policies = role.TokenPolicies

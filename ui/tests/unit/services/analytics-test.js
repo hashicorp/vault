@@ -23,6 +23,7 @@ class ProviderStub {
   start = sinon.stub();
   identify = sinon.stub();
   trackPageView = sinon.stub();
+  reset = sinon.stub();
 }
 
 module('Unit | Service | analytics', function (hooks) {
@@ -39,6 +40,8 @@ module('Unit | Service | analytics', function (hooks) {
   test('#identifyUser passes data to the provider', function (assert) {
     const providerStub = new ProviderStub();
     this.service.provider = providerStub;
+    // identify is only sent once analytics has activated (otherwise it is cached).
+    this.service.activated = true;
 
     const identifier = 'carl';
     const traits = { apples: 'oranges' };
@@ -93,6 +96,8 @@ module('Unit | Service | analytics', function (hooks) {
 
     test('logging works for all public methods', function (assert) {
       this.service.debug = true;
+      // identify logs only once analytics has activated.
+      this.service.activated = true;
 
       this.service.identifyUser('user-123', { role: 'admin' });
       this.service.trackEvent('button-click', { location: 'sidebar' });
@@ -237,7 +242,7 @@ module('Unit | Service | analytics', function (hooks) {
       });
 
       test('accept when operator disabled -> persists true but does not start', function (assert) {
-        this.service.startVaultSmAnalytics(false, this.config); // entry point is user preferences
+        this.service.startVaultSmAnalytics(false, this.config); // entry point is preferences page
 
         this.service.recordConsent(true);
 
@@ -264,6 +269,28 @@ module('Unit | Service | analytics', function (hooks) {
         // A stored decline suppresses the prompt on the next gate run.
         this.service.startVaultSmAnalytics(true, this.config);
         assert.false(this.service.shouldPromptConsent, 'recorded decline is not treated as undecided');
+      });
+
+      // Regression: identify was only sent from the cluster route while analytics
+      // was already active. When consent is accepted AFTER the route loads, the
+      // provider activates via recordConsent — so the identity must be replayed,
+      // otherwise the session sends page events but never an identify call.
+      test('identity cached before consent is applied once consent is accepted', function (assert) {
+        clearConsent();
+        const identifyStub = sinon.stub(SegmentProvider.prototype, 'identify');
+        // Operator on, consent undecided -> banner prompts, analytics not started.
+        this.service.startVaultSmAnalytics(true, this.config);
+        // The cluster route computes the identity while consent is still pending.
+        this.service.identifyUser('vault-abc', { realmName: 'vault' });
+        assert.true(identifyStub.notCalled, 'identify is not sent before analytics activates');
+
+        // User accepts the banner -> analytics activates and the cached identity is sent.
+        this.service.recordConsent(true);
+
+        assert.true(
+          identifyStub.calledOnceWith('vault-abc', { realmName: 'vault' }),
+          'the cached identity is sent exactly once, after consent activates analytics'
+        );
       });
     });
 
@@ -293,6 +320,87 @@ module('Unit | Service | analytics', function (hooks) {
         this.service.reset();
 
         assert.strictEqual(this.service.provider, provider, 'provider unchanged when nothing is running');
+      });
+
+      test('clears the provider identity so the next user is not aliased', function (assert) {
+        const resetStub = sinon.stub(SegmentProvider.prototype, 'reset');
+        setConsent(true);
+        this.service.startVaultSmAnalytics(true, this.config); // starts the provider (adds route listener)
+
+        this.service.reset();
+
+        assert.true(
+          resetStub.calledOnce,
+          'provider.reset() clears the persisted identity (e.g. Segment ajs_user_id/anonymousId)'
+        );
+        assert.false(this.service.activated, 'no longer active');
+      });
+    });
+
+    // A declined browser must not retain Segment's identity (ajs_*) or its event
+    // queue (persisted-queue:v1:...Segment.io:*), including keys left by an older
+    // build, another tab, or a previously-accepted session.
+    module('Segment storage purge on opt-out', function (hooks) {
+      const SEGMENT_KEYS = [
+        'ajs_user_id',
+        'ajs_anonymous_id',
+        'persisted-queue:v1:testkey:dest-Segment.io:items',
+        'persisted-queue:v1:testkey:dest-Segment.io:seen',
+      ];
+
+      const seedSegmentKeys = () => SEGMENT_KEYS.forEach((k) => window.localStorage.setItem(k, 'x'));
+      const assertSegmentKeysGone = (assert) =>
+        SEGMENT_KEYS.forEach((k) =>
+          assert.strictEqual(window.localStorage.getItem(k), null, `${k} is purged`)
+        );
+
+      hooks.afterEach(function () {
+        SEGMENT_KEYS.forEach((k) => window.localStorage.removeItem(k));
+      });
+
+      test('decline before analytics activates purges any Segment keys', function (assert) {
+        clearConsent();
+        this.service.startVaultSmAnalytics(true, this.config); // undecided -> prompt, not activated
+        seedSegmentKeys();
+
+        this.service.recordConsent(false);
+
+        assert.false(this.service.activated, 'analytics never activated');
+        assertSegmentKeysGone(assert);
+      });
+
+      test('decline while running purges Segment keys via reset', function (assert) {
+        setConsent(true);
+        this.service.startVaultSmAnalytics(true, this.config); // activated (SegmentProvider, start stubbed)
+        seedSegmentKeys();
+
+        this.service.recordConsent(false);
+
+        assert.false(this.service.activated, 'analytics stopped');
+        assertSegmentKeysGone(assert);
+      });
+
+      test('on-load gate sweeps stale Segment keys when consent is already declined', function (assert) {
+        setConsent(false);
+        seedSegmentKeys();
+
+        this.service.startVaultSmAnalytics(true, this.config);
+
+        assert.true(this.startSpy.notCalled, 'analytics is not started');
+        assertSegmentKeysGone(assert);
+      });
+
+      test('purge leaves the persisted consent flag intact', function (assert) {
+        setConsent(false);
+        seedSegmentKeys();
+
+        this.service.startVaultSmAnalytics(true, this.config);
+
+        assert.strictEqual(
+          window.localStorage.getItem(CONSENT_KEY),
+          'false',
+          'the consent decision itself is preserved through the sweep'
+        );
       });
     });
 

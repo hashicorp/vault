@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import OidcAssignmentResource from 'vault/resources/oidc/assignment';
 
 export default class OidcAssignmentRoute extends Route {
   @service api;
@@ -14,7 +15,7 @@ export default class OidcAssignmentRoute extends Route {
     const { data } = await this.api.identity.oidcReadAssignment(name);
     const capabilities = await this.capabilities.for('oidcAssignment', { name });
     return {
-      assignment: { ...data, name },
+      assignment: new OidcAssignmentResource({ ...data, name }),
       capabilities,
     };
   }

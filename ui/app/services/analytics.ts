@@ -7,10 +7,6 @@ import Service, { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 
 import { DummyProvider, PROVIDER_NAME as DummyProviderName } from 'vault/utils/analytics-providers/dummy';
-import {
-  PostHogProvider,
-  PROVIDER_NAME as PostHogProviderName,
-} from 'vault/utils/analytics-providers/posthog';
 
 import {
   SegmentProvider,
@@ -19,8 +15,8 @@ import {
 
 import { getPreference, hasPreference, setPreference } from 'vault/utils/preferences';
 
-import type { AnalyticsConfig, AnalyticsProvider } from 'vault/vault/analytics';
 import type RouterService from '@ember/routing/router-service';
+import type { AnalyticsConfig, AnalyticsEventName, AnalyticsProvider } from 'vault/vault/analytics';
 
 import config from 'vault/config/environment';
 
@@ -36,6 +32,11 @@ export default class AnalyticsService extends Service {
   // operator opt-in is re-checked at accept time.
   private pendingConfig?: AnalyticsConfig;
   private operatorTelemetryEnabled = false;
+
+  // The most recent identity (computed by the cluster route). Cached so it can be
+  // applied if the provider activates AFTER the route computed it e.g. when the
+  // user accepts the consent banner, which starts analytics only at that point.
+  private pendingIdentity?: { identifier: string; traits: Record<string, string> };
 
   debug = config.environment === 'development';
 
@@ -59,9 +60,21 @@ export default class AnalyticsService extends Service {
   }
 
   identifyUser = (identifer: string, traits: Record<string, string>) => {
-    this.provider.identify(identifer, traits);
-    this.log('identifyUser', identifer, traits);
+    // Cache the identity so it survives until the provider is active. Without this,
+    // an identify computed before consent is accepted (the provider is not yet
+    // started) would be lost, leaving the session unidentified once it activates.
+    this.pendingIdentity = { identifier: identifer, traits };
+    this.applyPendingIdentity();
   };
+
+  // Sends the cached identity to the active provider. A no-op until analytics is
+  // activated, so a later activation (e.g. consent accept) can replay it.
+  private applyPendingIdentity() {
+    if (this.activated && this.pendingIdentity) {
+      this.provider.identify(this.pendingIdentity.identifier, this.pendingIdentity.traits);
+      this.log('identifyUser', this.pendingIdentity.identifier, this.pendingIdentity.traits);
+    }
+  }
 
   start = (provider: string, config: AnalyticsConfig) => {
     // fail silently, analytics is nonessential
@@ -76,9 +89,6 @@ export default class AnalyticsService extends Service {
       switch (provider) {
         case DummyProviderName:
           this.provider = new DummyProvider();
-          break;
-        case PostHogProviderName:
-          this.provider = new PostHogProvider();
           break;
         case SegmentProviderName:
           this.provider = new SegmentProvider();
@@ -115,7 +125,7 @@ export default class AnalyticsService extends Service {
     if (!uiTelemetryEnabled) return;
 
     // Cache the config on every gate run (not just when prompting) so a later
-    // accept via user preferences can start in the same session even after a reload.
+    // accept via preferences can start in the same session even after a reload.
     this.pendingConfig = config;
 
     if (this.activated) return;
@@ -140,6 +150,11 @@ export default class AnalyticsService extends Service {
 
     if (consentGranted) {
       this.start(SegmentProviderName, config);
+    } else {
+      // Consent is recorded as declined. Sweep any Segment localStorage left by an
+      // older build, another tab, or a previously-accepted session so a declined
+      // browser never retains Segment identity or its event queue.
+      SegmentProvider.purgeStorage();
     }
   };
 
@@ -161,9 +176,17 @@ export default class AnalyticsService extends Service {
       // fire outside the gate, and the operator flag must still allow telemetry.
       if (this.operatorTelemetryEnabled && this.pendingConfig && !this.activated) {
         this.start(SegmentProviderName, this.pendingConfig);
+        // Analytics may have activated only now as the cluster route computed the
+        // identity before consent was granted so replay the cached identity.
+        // Without this, the session sends page events but never an identify call.
+        this.applyPendingIdentity();
       }
     } else if (this.activated) {
       this.reset();
+    } else {
+      // Declined before analytics ever activated; reset() would early-return, so
+      // purge directly to guarantee a declined browser is left with no Segment keys.
+      SegmentProvider.purgeStorage();
     }
   };
 
@@ -175,9 +198,18 @@ export default class AnalyticsService extends Service {
    */
   reset = () => {
     if (!this.activated) return;
+    // Clear the provider's persisted identity so the next user does not inherit
+    // or get aliased to this ession's identity. Called on consent decline and on
+    // logout.
+    try {
+      this.provider.reset();
+    } catch (e) {
+      this.log('provider reset failed', e);
+    }
     this.teardownRouteEventListener();
     this.provider = new DummyProvider();
     this.activated = false;
+    this.pendingIdentity = undefined;
     this.log('reset');
   };
 
@@ -194,7 +226,7 @@ export default class AnalyticsService extends Service {
 
   // Swallow provider errors as analytics is non-essential and
   // must never break navigation or interaction if the provider throws.
-  trackEvent = (eventName: string, metadata: Record<string, unknown>) => {
+  trackEvent = (eventName: AnalyticsEventName, metadata: Record<string, unknown>) => {
     try {
       this.provider.trackEvent(eventName, metadata);
       this.log('custom event', eventName, metadata);

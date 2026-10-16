@@ -1,0 +1,24 @@
+{{!
+  Copyright IBM Corp. 2016, 2026
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Page::Header @title="Create {{uppercase this.policyType}} policy">
+  <:breadcrumbs>
+    <Page::Breadcrumbs
+      @breadcrumbs={{array
+        (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
+        (hash label=(concat (uppercase this.policyType) " policies") route="vault.cluster.policies.rgp")
+        (hash label="Create")
+      }}
+    />
+  </:breadcrumbs>
+</Page::Header>
+
+<Hds::Separator @spacing="0" />
+
+<PolicyForm
+  @form={{this.model}}
+  @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
+  @onCancel={{transition-to "vault.cluster.policies.rgp.index"}}
+/>

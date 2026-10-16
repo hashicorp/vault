@@ -19,10 +19,10 @@ export default class PolicyRoute extends Route {
   model(params) {
     const policyType = params.type;
     if (!ALLOWED_TYPES.includes(policyType)) {
-      return this.router.transitionTo('vault.cluster.policies', ALLOWED_TYPES[0]);
+      return this.router.transitionTo(`vault.cluster.policies.${ALLOWED_TYPES[0]}`);
     }
     if (!this.version.hasSentinel && policyType !== 'acl') {
-      return this.router.transitionTo('vault.cluster.policies', policyType);
+      return this.router.transitionTo(`vault.cluster.policies.${policyType}`);
     }
     return {};
   }

@@ -6,7 +6,7 @@
 import localStorage from 'vault/lib/local-storage';
 
 /**
- * Central registry for Vault UI user preferences.
+ * Central registry for Vault UI preferences.
  *
  * This module is the single source of truth for every preference key name,
  * its type, and its default value. Consuming components MUST reference this
@@ -44,6 +44,63 @@ function resolve(name: PreferenceName): PreferenceDefinition {
     throw new Error(`[preferences] Unknown preference "${name}". Register it in app/utils/preferences.ts.`);
   }
   return def;
+}
+
+// ---------------------------------------------------------------------------
+// String preferences
+// ---------------------------------------------------------------------------
+
+interface StringPreferenceDefinition {
+  key: string;
+  type: 'string';
+  default: string;
+}
+
+export const STRING_PREFERENCES: Record<string, StringPreferenceDefinition> = {
+  // The user's self-identified role. Empty string means "not yet chosen".
+  // Stored in localStorage only; used to personalise future UX and, when the
+  // user has opted into telemetry, forwarded to Segment as a discrete event.
+  persona: {
+    key: `${NAMESPACE}:persona`,
+    type: 'string',
+    default: '',
+  },
+  theme: {
+    key: `${NAMESPACE}:theme`,
+    type: 'string',
+    default: 'system',
+  },
+};
+
+export type StringPreferenceName = keyof typeof STRING_PREFERENCES;
+
+function resolveString(name: StringPreferenceName): StringPreferenceDefinition {
+  const def = STRING_PREFERENCES[name];
+  if (!def) {
+    throw new Error(
+      `[preferences] Unknown string preference "${name}". Register it in app/utils/preferences.ts.`
+    );
+  }
+  return def;
+}
+
+export function getStringPreference(name: StringPreferenceName): string {
+  const def = resolveString(name);
+  try {
+    const stored = localStorage.getItem(def.key);
+    return stored === null || stored === undefined ? def.default : stored;
+  } catch {
+    return def.default;
+  }
+}
+
+export function setStringPreference(name: StringPreferenceName, value: string): void {
+  const { key } = resolveString(name);
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Cannot persist (storage unavailable). No-op.
+  }
 }
 
 export function getPreference(name: PreferenceName): boolean {

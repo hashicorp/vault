@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
 import { tracked } from '@glimmer/tracking';
+import { canCreateRole } from 'ldap/utils/capabilities-helper';
 
 import type { LdapRole } from 'vault/secrets/ldap';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -15,11 +16,13 @@ import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
 import type SecretMountPath from 'vault/services/secret-mount-path';
+import type PermissionsService from 'vault/services/permissions';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 
 interface Args {
   roles: Array<LdapRole>;
   promptConfig: boolean;
+  isSelfManaged?: boolean;
   secretsEngine: SecretsEngineResource;
   breadcrumbs: Array<Breadcrumb>;
   pageFilter: string;
@@ -30,6 +33,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly api: ApiService;
   @service declare readonly secretMountPath: SecretMountPath;
+  @service declare readonly permissions: PermissionsService;
 
   @tracked credsToRotate: LdapRole | null = null;
   @tracked roleToDelete: LdapRole | null = null;
@@ -40,6 +44,10 @@ export default class LdapRolesPageComponent extends Component<Args> {
     const route = this.isHierarchical(role.name) ? 'roles.subdirectory' : 'roles.role.details';
     return [route, role.type, role.completeRoleName];
   };
+
+  get canCreateRole() {
+    return canCreateRole(this.permissions, this.secretMountPath.currentPath, this.args.isSelfManaged);
+  }
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;

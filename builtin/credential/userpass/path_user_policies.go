@@ -66,11 +66,25 @@ func (b *backend) pathUserPoliciesUpdate(ctx context.Context, req *logical.Reque
 	if !ok {
 		policiesRaw, ok = d.GetOk("policies")
 		if ok {
-			userEntry.Policies = policyutil.ParsePolicies(policiesRaw)
+			policies := policyutil.ParsePolicies(policiesRaw)
+			for _, policy := range policies {
+				if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+					return logical.ErrorResponse("invalid policy name %q: %s", policy, err), nil
+				}
+			}
+
+			userEntry.Policies = policies
 			userEntry.TokenPolicies = userEntry.Policies
 		}
 	} else {
-		userEntry.TokenPolicies = policyutil.ParsePolicies(policiesRaw)
+		policies := policyutil.ParsePolicies(policiesRaw)
+		for _, policy := range policies {
+			if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+				return logical.ErrorResponse("invalid policy name %q: %s", policy, err), nil
+			}
+		}
+
+		userEntry.TokenPolicies = policies
 		_, ok = d.GetOk("policies")
 		if ok {
 			userEntry.Policies = userEntry.TokenPolicies

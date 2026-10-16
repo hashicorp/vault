@@ -52,6 +52,17 @@ type TokenParams struct {
 	AliasMetadata map[string]string `json:"alias_metadata" mapstructure:"alias_metadata"`
 }
 
+func parseAndValidateTokenPolicies(policiesRaw interface{}) ([]string, error) {
+	policies := policyutil.ParsePolicies(policiesRaw)
+	for _, policy := range policies {
+		if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+			return nil, fmt.Errorf("invalid token policy %q: %w", policy, err)
+		}
+	}
+
+	return policies, nil
+}
+
 // AddTokenFields adds fields to an existing role. It panics if it would
 // overwrite an existing field.
 func AddTokenFields(m map[string]*framework.FieldSchema) {
@@ -205,7 +216,11 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	}
 
 	if policiesRaw, ok := d.GetOk("token_policies"); ok {
-		t.TokenPolicies = policiesRaw.([]string)
+		policies, err := parseAndValidateTokenPolicies(policiesRaw)
+		if err != nil {
+			return err
+		}
+		t.TokenPolicies = policies
 	}
 
 	if tokenTypeRaw, ok := d.GetOk("token_type"); ok {
@@ -361,7 +376,11 @@ func upgradeStringSliceValue(d *framework.FieldData, oldKey, newKey string, oldV
 		if ok {
 			// Special case: if we're looking at "token_policies" parse the policies
 			if newKey == "token_policies" {
-				*oldVal = policyutil.ParsePolicies(raw)
+				policies, err := parseAndValidateTokenPolicies(raw)
+				if err != nil {
+					return err
+				}
+				*oldVal = policies
 			} else {
 				*oldVal = raw.([]string)
 			}

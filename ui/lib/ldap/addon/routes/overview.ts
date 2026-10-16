@@ -30,7 +30,9 @@ export default class LdapOverviewRoute extends Route {
   @service declare readonly secretMountPath: SecretMountPath;
 
   async model() {
-    const { promptConfig, secretsEngine } = this.modelFor('application') as LdapApplicationModel;
+    const { promptConfig, secretsEngine, isSelfManaged } = this.modelFor(
+      'application'
+    ) as LdapApplicationModel;
     const { currentPath } = this.secretMountPath;
     const requests = [
       this.api.secrets.ldapListStaticRoles(currentPath, SecretsApiLdapListStaticRolesListEnum.TRUE),
@@ -48,6 +50,7 @@ export default class LdapOverviewRoute extends Route {
     }
     return {
       promptConfig,
+      isSelfManaged,
       secretsEngine,
       roles,
     };

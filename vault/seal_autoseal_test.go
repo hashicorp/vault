@@ -13,7 +13,7 @@ import (
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	metrics "github.com/hashicorp/go-metrics/compat"
-	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 	"github.com/stretchr/testify/require"

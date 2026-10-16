@@ -41,6 +41,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
         last_update_time: '2026-01-02T11:00:00Z',
         canEdit: true,
         canAddAlias: true,
+        canDelete: true,
         aliases: [
           {
             id: 'alias-1',
@@ -49,6 +50,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
             mount_type: 'token',
             creation_time: '2026-01-03T12:00:00Z',
             last_update_time: '2026-01-04T13:00:00Z',
+            canDelete: true,
           },
           {
             id: 'alias-2',
@@ -57,6 +59,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
             mount_type: 'approle',
             creation_time: '2026-01-05T14:00:00Z',
             last_update_time: '2026-01-06T15:00:00Z',
+            canDelete: false,
           },
         ],
       },
@@ -68,6 +71,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
         last_update_time: '2026-02-02T11:00:00Z',
         canEdit: true,
         canAddAlias: true,
+        canDelete: true,
         aliases: [],
       },
       {
@@ -78,6 +82,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
         last_update_time: '2026-03-02T11:00:00Z',
         canEdit: false,
         canAddAlias: false,
+        canDelete: false,
         aliases: [],
       },
     ];
@@ -223,6 +228,9 @@ module('Integration | Component | identity/entities/table', function (hooks) {
 
     assert.dom(GENERAL.menuItem('edit')).containsText('Edit entity', 'shows edit option');
     assert.dom(GENERAL.menuItem('create alias')).containsText('Create alias', 'shows create alias option');
+    assert
+      .dom(GENERAL.menuItem('view-details'))
+      .doesNotExist('hides view details when other actions are available');
   });
 
   test('it hides edit and create-alias options when entity cannot edit or add alias', async function (assert) {
@@ -234,6 +242,29 @@ module('Integration | Component | identity/entities/table', function (hooks) {
     assert
       .dom(GENERAL.menuItem('create alias'))
       .doesNotExist('hides create alias option when canAddAlias is false');
+  });
+
+  test('it hides disable and delete options for a read-only entity (no canEdit or canDelete)', async function (assert) {
+    await this.renderComponent();
+    const parentRowIds = findAllParentRowIds();
+    await click(`${GENERAL.tableRow(parentRowIds[2])} ${GENERAL.menuTrigger}`);
+
+    assert
+      .dom(GENERAL.menuItem('view-details'))
+      .containsText('View details', 'still shows view details so the menu is never empty');
+    assert.dom(GENERAL.menuItem('disable')).doesNotExist('hides disable option when canEdit is false');
+    assert.dom(GENERAL.menuItem('enable')).doesNotExist('hides enable option when canEdit is false');
+    assert.dom(GENERAL.menuItem('delete')).doesNotExist('hides delete option when canDelete is false');
+  });
+
+  test('it hides the delete option for an entity that cannot delete', async function (assert) {
+    this.model[0].canDelete = false;
+    await this.renderComponent();
+    await click(`${GENERAL.tableRow(0)} ${GENERAL.menuTrigger}`);
+
+    assert.dom(GENERAL.menuItem('edit')).exists('still shows edit option');
+    assert.dom(GENERAL.menuItem('disable')).exists('still shows disable option');
+    assert.dom(GENERAL.menuItem('delete')).doesNotExist('hides delete option when canDelete is false');
   });
 
   test('it shows disable option for an enabled entity', async function (assert) {
@@ -279,7 +310,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
       'called with correct arguments to disable'
     );
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully disabled entity'),
+      this.flashSuccessStub.calledWith('Successfully disabled entity test-entity-1'),
       'shows correct success flash'
     );
     assert.true(
@@ -300,7 +331,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
       'called with correct arguments to enable'
     );
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully enabled entity'),
+      this.flashSuccessStub.calledWith('Successfully enabled entity test-entity-2'),
       'shows correct success flash'
     );
     assert.true(
@@ -318,7 +349,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
 
     assert.true(this.flashDangerStub.calledOnce, 'danger flash message shown');
     assert.true(
-      this.flashDangerStub.calledWith('Error disabling entity: Test error message'),
+      this.flashDangerStub.calledWith('Error enabling entity: Test error message'),
       'shows correct error message'
     );
   });
@@ -340,7 +371,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
     assert.true(this.entityDeleteStub.calledOnce, 'entityDeleteById called once');
     assert.true(this.entityDeleteStub.calledWith('entity-1'), 'called with correct entity ID');
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully deleted entity entity-1'),
+      this.flashSuccessStub.calledWith('Successfully deleted entity: test-entity-1'),
       'shows correct success flash'
     );
     assert.true(
@@ -358,7 +389,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
 
     assert.true(this.flashDangerStub.calledOnce, 'danger flash message shown');
     assert.true(
-      this.flashDangerStub.calledWith('Error deleting entity entity-1: Test error message'),
+      this.flashDangerStub.calledWith('Error deleting entity test-entity-1: Test error message'),
       'shows correct error message'
     );
   });
@@ -400,6 +431,21 @@ module('Integration | Component | identity/entities/table', function (hooks) {
     assert.dom(GENERAL.menuItem('delete')).containsText('Delete alias', 'shows delete alias option');
   });
 
+  test('it hides the delete alias option when the alias cannot be deleted', async function (assert) {
+    await this.renderComponent();
+
+    await click(GENERAL.tableExpandableColumn(0, 'entityName'));
+    // alias-2 (row index 2) has canDelete: false
+    await click(`${GENERAL.tableDataNested(2, 'popupMenu')} ${GENERAL.menuTrigger}`);
+
+    assert
+      .dom(GENERAL.menuItem('edit alias'))
+      .containsText('Edit alias', 'still shows edit alias option since the entity can edit');
+    assert
+      .dom(GENERAL.menuItem('delete'))
+      .doesNotExist('hides delete alias option when the alias cannot be deleted');
+  });
+
   test('it opens delete alias confirmation modal', async function (assert) {
     await this.renderComponent();
 
@@ -421,7 +467,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
     assert.true(this.entityDeleteAliasStub.calledOnce, 'entityDeleteAliasById called once');
     assert.true(this.entityDeleteAliasStub.calledWith('alias-1'), 'called with correct alias ID');
     assert.true(
-      this.flashSuccessStub.calledWith('Successfully deleted alias alias-1'),
+      this.flashSuccessStub.calledWith('Successfully deleted alias: test-alias-1'),
       'shows correct success flash'
     );
     assert.true(
@@ -441,7 +487,7 @@ module('Integration | Component | identity/entities/table', function (hooks) {
 
     assert.true(this.flashDangerStub.calledOnce, 'danger flash message shown');
     assert.true(
-      this.flashDangerStub.calledWith('Error deleting alias alias-1: Test error message'),
+      this.flashDangerStub.calledWith('Error deleting alias test-alias-1: Test error message'),
       'shows correct error message'
     );
   });

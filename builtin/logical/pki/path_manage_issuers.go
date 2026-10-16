@@ -102,6 +102,11 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 								Description: `The private key if exported was specified.`,
 								Required:    false,
 							},
+							"private_key_parameter_set": {
+								Type:        framework.TypeString,
+								Description: `The ML-DSA parameter set of the private key, if applicable.`,
+								Required:    false,
+							},
 						},
 					}},
 				},

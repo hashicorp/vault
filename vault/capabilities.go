@@ -7,7 +7,8 @@ import (
 	"context"
 	"sort"
 
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -29,9 +30,35 @@ func (c *Core) CapabilitiesAndSubscribeEventTypes(ctx context.Context, token, pa
 		return nil, nil, &logical.StatusBadRequest{Err: "missing token"}
 	}
 
-	te, err := c.tokenStore.Lookup(ctx, token)
-	if err != nil {
-		return nil, nil, err
+	return c.capabilitiesAndSubscribeEventTypesForRequest(ctx, &logical.Request{
+		ClientToken: token,
+		Path:        path,
+		Operation:   logical.ListOperation,
+	})
+}
+
+func (c *Core) capabilitiesAndSubscribeEventTypesForRequest(ctx context.Context, req *logical.Request) ([]string, []string, error) {
+	if req == nil || req.Path == "" {
+		return nil, nil, &logical.StatusBadRequest{Err: "missing path"}
+	}
+	if req.ClientToken == "" {
+		return nil, nil, &logical.StatusBadRequest{Err: "missing token"}
+	}
+
+	var te *logical.TokenEntry
+	var entity *identity.Entity
+	var acl *ACL
+	var err error
+	if IsOAuthJwt(req.ClientToken) || req.JwtIssuer != "" {
+		acl, te, entity, _, err = c.fetchACLTokenEntryAndEntity(ctx, req)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		te, err = c.tokenStore.Lookup(ctx, req.ClientToken)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	if te == nil {
 		return nil, nil, &logical.StatusBadRequest{Err: "invalid token"}
@@ -51,9 +78,12 @@ func (c *Core) CapabilitiesAndSubscribeEventTypes(ctx context.Context, token, pa
 	policyNames[tokenNS.ID] = te.Policies
 	policyCount += len(te.Policies)
 
-	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
-	if err != nil {
-		return nil, nil, err
+	var identityPolicies map[string][]string
+	if acl == nil {
+		entity, identityPolicies, err = c.fetchEntityAndDerivedPolicies(ctx, tokenNS, te.EntityID, te.NoIdentityPolicies)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	if entity != nil && entity.Disabled {
 		c.logger.Warn("permission denied as the entity on the token is disabled")
@@ -80,19 +110,22 @@ func (c *Core) CapabilitiesAndSubscribeEventTypes(ctx context.Context, token, pa
 		policyCount++
 	}
 
-	if policyCount == 0 {
+	if policyCount == 0 && acl == nil {
 		return []string{DenyCapability}, nil, nil
 	}
 
 	// Construct the corresponding ACL object. ACL construction should be
 	// performed on the token's namespace.
-	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
-	acl, err := c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
-	if err != nil {
-		return nil, nil, err
+	if acl == nil {
+		tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
+		acl, err = c.policyStore.ACL(tokenCtx, entity, policyNames, policies...)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
-	capabilities, eventTypes := acl.CapabilitiesAndSubscribeEventTypes(ctx, path)
+	capabilities, eventTypes := acl.CapabilitiesAndSubscribeEventTypes(ctx, req.Path)
+	capabilities, eventTypes = c.filterOAuthJWTCapabilities(ctx, req, capabilities, eventTypes)
 	sort.Strings(capabilities)
 	return capabilities, eventTypes, nil
 }

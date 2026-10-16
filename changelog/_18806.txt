@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Adds an onboarding intro for Entities which provides feature context to users.
+```

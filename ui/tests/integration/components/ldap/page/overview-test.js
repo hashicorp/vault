@@ -37,6 +37,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
       return render(
         hbs`<Page::Overview
           @promptConfig={{this.promptConfig}}
+          @isSelfManaged={{this.isSelfManaged}}
           @secretsEngine={{this.secretsEngine}}
           @roles={{this.roles}}
           @breadcrumbs={{this.breadcrumbs}}
@@ -204,5 +205,37 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
     await this.renderComponent();
     assert.dom('[data-test-libraries-error]').doesNotExist();
     assert.dom('[data-test-libraries-count]').hasText('None');
+  });
+
+  test('it should only offer to create a role when the token can create one', async function (assert) {
+    const permissions = this.owner.lookup('service:permissions');
+    const beneathStub = sinon.stub(permissions, 'hasPermissionBeneath').returns(false);
+    const createLink = (card) => `[data-test-overview-card-container="${card}"] .hds-link-standalone`;
+
+    await this.renderComponent();
+    assert.dom(createLink('Roles')).doesNotExist('Roles Create new is hidden without create');
+    assert.dom(createLink('Libraries')).exists('Libraries Create new is unchanged');
+
+    beneathStub.withArgs(`${this.backend}/static-role`, ['create']).returns(true);
+    await this.renderComponent();
+    assert.dom(createLink('Roles')).exists('Roles Create new renders when a role can be created');
+  });
+
+  test('it should require static role create to offer Create new on a self-managed mount', async function (assert) {
+    this.isSelfManaged = true;
+    const beneathStub = sinon
+      .stub(this.owner.lookup('service:permissions'), 'hasPermissionBeneath')
+      .returns(false);
+    beneathStub.withArgs(`${this.backend}/role`, ['create']).returns(true);
+    const rolesCreateLink = '[data-test-overview-card-container="Roles"] .hds-link-standalone';
+
+    await this.renderComponent();
+    assert
+      .dom(rolesCreateLink)
+      .doesNotExist('Roles Create new is hidden when only dynamic roles can be created');
+
+    beneathStub.withArgs(`${this.backend}/static-role`, ['create']).returns(true);
+    await this.renderComponent();
+    assert.dom(rolesCreateLink).exists('Roles Create new renders when static roles can be created');
   });
 });

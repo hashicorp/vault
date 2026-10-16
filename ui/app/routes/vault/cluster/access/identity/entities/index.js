@@ -25,48 +25,70 @@ export default class IdentityIndexRoute extends Route {
   async model(params) {
     const { pageFilter, page } = params;
 
+    const [{ canUpdate: canCreateEntity }, { canUpdate: canMergeEntities }] = await Promise.all([
+      this.capabilities.for('identityEntity'),
+      this.capabilities.for('entityMerge'),
+    ]);
+
+    // Fetch entity list, treating a 404 as an empty list rather than an error
+    let items = [];
     try {
-      // Fetch entity list
       const response = await this.api.identity.entityListById(IdentityApiEntityListByIdListEnum.TRUE);
-      const items = this.api.keyInfoToArray(response);
-
-      // Build capability paths for all items plus the alias create path
-      const capabilityPaths = [
-        ...items.map((item) =>
-          this.capabilities.pathFor('identityCapabilities', { identityType: 'entity', id: item.id })
-        ),
-        this.capabilities.pathFor('groupAlias'),
-      ];
-
-      // Fetch capabilities for all items
-      const capabilitiesMap = await this.capabilities.fetch(capabilityPaths);
-
-      const aliasPath = this.capabilities.pathFor('groupAlias');
-      const aliasCapabilities = capabilitiesMap[aliasPath];
-
-      const itemsWithCapabilities = items.map((item) => {
-        const capPath = this.capabilities.pathFor('identityCapabilities', {
-          identityType: 'entity',
-          id: item.id,
-        });
-        const itemCapabilities = capabilitiesMap[capPath];
-
-        return {
-          ...item,
-          canDelete: itemCapabilities?.canDelete || false,
-          canEdit: itemCapabilities?.canUpdate || false,
-          canAddAlias: aliasCapabilities?.canCreate || false,
-        };
-      });
-
-      return paginate(itemsWithCapabilities, { page, filter: pageFilter });
+      items = this.api.keyInfoToArray(response);
     } catch (error) {
       const { status } = await this.api.parseError(error);
-      if (status === 404) {
-        return [];
+      if (status !== 404) {
+        throw error;
       }
-      throw error;
     }
+
+    // Build capability paths: per-entity and per-alias (for delete gating), plus the
+    // entity-alias create path used to gate the "Create alias" row action
+    const capabilityPaths = [
+      this.capabilities.pathFor('entityAlias'),
+      ...items.map((item) =>
+        this.capabilities.pathFor('identityCapabilities', { identityType: 'entity', id: item.id })
+      ),
+      ...items.flatMap(
+        (item) =>
+          item.aliases?.map((alias) => this.capabilities.pathFor('entityAliasById', { id: alias.id })) || []
+      ),
+    ];
+
+    // Fetch capabilities for all paths
+    const capabilitiesMap = await this.capabilities.fetch(capabilityPaths);
+
+    const entityAliasCapabilities = capabilitiesMap[this.capabilities.pathFor('entityAlias')];
+
+    const itemsWithCapabilities = items.map((item) => {
+      const capPath = this.capabilities.pathFor('identityCapabilities', {
+        identityType: 'entity',
+        id: item.id,
+      });
+      const itemCapabilities = capabilitiesMap[capPath];
+
+      return {
+        ...item,
+        canDelete: itemCapabilities?.canDelete || false,
+        canEdit: itemCapabilities?.canUpdate || false,
+        canAddAlias: entityAliasCapabilities?.canCreate || false,
+        aliases: (item.aliases || []).map((alias) => {
+          const aliasCapPath = this.capabilities.pathFor('entityAliasById', { id: alias.id });
+          const aliasCapabilities = capabilitiesMap[aliasCapPath];
+
+          return {
+            ...alias,
+            canDelete: aliasCapabilities?.canDelete || false,
+          };
+        }),
+      };
+    });
+
+    return {
+      entities: paginate(itemsWithCapabilities, { page, filter: pageFilter }),
+      canCreateEntity,
+      canMergeEntities,
+    };
   }
 
   setupController(controller, resolvedModel) {
@@ -76,7 +98,7 @@ export default class IdentityIndexRoute extends Route {
 
     controller.setProperties({
       filter: pageFilter || '',
-      page: resolvedModel?.meta?.currentPage || 1,
+      page: resolvedModel?.entities?.meta?.currentPage || 1,
       identityType: 'entity',
     });
   }

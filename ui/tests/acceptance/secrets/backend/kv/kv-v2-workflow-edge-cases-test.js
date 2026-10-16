@@ -40,6 +40,7 @@ import { personas } from 'vault/tests/helpers/kv/policy-generator';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support';
+import { Response } from 'miragejs';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -567,6 +568,39 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         currentURL(),
         `/vault/secrets-engines/${this.backend}/kv/${secret}`,
         'destroyed secrets redirect'
+      );
+    });
+  });
+
+  module('regression: transient KV upgrade response on a new mount', function () {
+    // a brand-new mount can transiently 400 while its storage upgrades; the list route should retry
+    // instead of rendering the raw backend error (VAULT-49960)
+    test('it retries instead of showing the raw error page', async function (assert) {
+      let calls = 0;
+      this.server.get(`/${this.backend}/metadata/`, function () {
+        calls++;
+        if (calls <= 2) {
+          return new Response(
+            400,
+            {},
+            {
+              errors: [
+                'Upgrading from non-versioned to versioned data. This backend will be unavailable for a brief period and will resume service shortly.',
+              ],
+            }
+          );
+        }
+        return new Response(200, {}, { data: { keys: [] } });
+      });
+
+      await visit(`/vault/secrets-engines/${this.backend}/kv/list`);
+
+      assert.strictEqual(calls, 3, 'the list request was retried until it succeeded');
+      assert.dom(GENERAL.pageError.error).doesNotExist('the raw backend error is not shown');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${this.backend}/kv/list`,
+        'lands on the kv list route'
       );
     });
   });

@@ -44,16 +44,16 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/cache"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/osutil"
+	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/helper/trace"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/osutil"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -308,9 +308,6 @@ type Core struct {
 
 	// serviceRegistration is the ServiceRegistration network
 	serviceRegistration sr.ServiceRegistration
-
-	// hcpLinkStatus is a string describing the status of HCP link connection
-	hcpLinkStatus HCPLinkStatus
 
 	// underlyingPhysical will always point to the underlying backend
 	// implementation. This is an un-trusted backend with durable data
@@ -1281,11 +1278,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store(context.CancelFunc(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
-
-	c.hcpLinkStatus = HCPLinkStatus{
-		lock:             sync.RWMutex{},
-		ConnectionStatus: "disconnected",
-	}
 
 	c.raftInfo.Store((*raftInformation)(nil))
 
@@ -2956,10 +2948,13 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return c.migrateProfilesByIssuerIndex(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
-			return c.populateIssuerNamespacesIndex(ctx)
+			return c.setupOAuthResourceServerConfigManager(ctx)
 		})
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.startRotation()
+		})
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.setupHealthCheckManager()
 		})
 		setupFunctions = append(setupFunctions, c.loadAudits)
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
@@ -3196,9 +3191,6 @@ func (c *Core) postUnseal(ctx context.Context, unsealer UnsealStrategy) (retErr 
 		// starts, which happens in the post-unseal functions above.
 		sysActivityLogReporting(c.systemBackend)
 	}
-
-	// initialize the HealthCheckManager
-	c.healthCheckManager = NewHealthCheckManager(c)
 
 	c.logger.Info("post-unseal setup complete")
 	return nil
@@ -4793,7 +4785,7 @@ func (c *Core) doResolveRoleLocked(ctx context.Context, mountPoint string, data 
 		req.Headers = filteredHeaders(headers, passthroughRequestHeaders, deniedPassthroughRequestHeaders)
 	}
 	resp, err := be.HandleRequest(ctx, req)
-	if err != nil || resp.Data["role"] == nil {
+	if err != nil || resp == nil || resp.Data == nil || resp.Data["role"] == nil {
 		return ""
 	}
 
@@ -4924,29 +4916,6 @@ func (c *Core) SetGroupPolicyApplicationMode(ctx context.Context, mode string) e
 		Key:   coreGroupPolicyApplicationPath,
 		Value: json,
 	})
-}
-
-type HCPLinkStatus struct {
-	lock             sync.RWMutex
-	ConnectionStatus string `json:"hcp_link_status,omitempty"`
-	ResourceIDOnHCP  string `json:"resource_ID_on_hcp,omitempty"`
-}
-
-func (c *Core) SetHCPLinkStatus(status, resourceID string) {
-	c.hcpLinkStatus.lock.Lock()
-	defer c.hcpLinkStatus.lock.Unlock()
-	c.hcpLinkStatus.ConnectionStatus = status
-	c.hcpLinkStatus.ResourceIDOnHCP = resourceID
-}
-
-func (c *Core) GetHCPLinkStatus() (string, string) {
-	c.hcpLinkStatus.lock.RLock()
-	defer c.hcpLinkStatus.lock.RUnlock()
-
-	status := c.hcpLinkStatus.ConnectionStatus
-	resourceID := c.hcpLinkStatus.ResourceIDOnHCP
-
-	return status, resourceID
 }
 
 // IsExperimentEnabled is true if the experiment is enabled in the core.

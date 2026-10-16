@@ -11,9 +11,9 @@ import (
 	"io"
 
 	"github.com/hashicorp/go-hclog"
-	cserver "github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/activationflags"
-	"github.com/hashicorp/vault/helper/namespace"
+	cserver "github.com/hashicorp/vault/helper/serverconfig"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"

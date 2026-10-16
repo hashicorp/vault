@@ -15,6 +15,7 @@ import type { LdapApplicationModel } from '../application';
 
 interface RouteModel {
   secretsEngine: SecretsEngineResource;
+  isSelfManaged: boolean;
   roleAncestry: { path_to_role: string; type: string };
   roles: Array<LdapRole>;
 }
@@ -43,7 +44,7 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
 
   async model(params: RouteParams) {
     const { page, pageFilter: filter } = params;
-    const { secretsEngine } = this.modelFor('application') as LdapApplicationModel;
+    const { secretsEngine, isSelfManaged } = this.modelFor('application') as LdapApplicationModel;
     const { path_to_role, type } = params as { path_to_role: string; type: string };
     const roleAncestry = { path_to_role, type };
     const { roles, capabilities } = await this.fetchRolesAndCapabilities(
@@ -52,6 +53,7 @@ export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {
     );
     return {
       secretsEngine,
+      isSelfManaged,
       roleAncestry,
       roles,
       capabilities,

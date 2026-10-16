@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -186,6 +187,9 @@ func (b *PassthroughBackend) handleWrite(ctx context.Context, req *logical.Reque
 	if req.Path == "" {
 		return logical.ErrorResponse("missing path"), nil
 	}
+
+	// Collapse consecutive slashes to avoid broken list results.
+	req.Path = strings.TrimPrefix(path.Clean("/"+req.Path), "/")
 
 	// Check that some fields are given
 	if len(req.Data) == 0 {

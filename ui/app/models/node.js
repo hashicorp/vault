@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -28,7 +28,6 @@ export default Model.extend({
   version: attr('string'),
   type: attr('string'),
   storageType: attr('string'),
-  hcpLinkStatus: attr('string'),
 
   // https://developer.hashicorp.com/vault/api-docs/system/leader
   haEnabled: attr('boolean'),

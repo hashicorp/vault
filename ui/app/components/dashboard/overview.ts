@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -86,13 +86,13 @@ export default class OverviewComponent extends Component<Args> {
    * Allows users to temporarily return to the checklist after completion
    * without mutating completion state.
    */
-  get shouldShowChecklistInPlaceOfCongrats(): boolean {
+  get isShowingCompletedChecklist(): boolean {
     return this.checklistLifecycleState === 'complete' && this.showSetupGuideInCompleteState;
   }
 
   /** True when the checklist widget should be rendered in the left column. */
   get shouldShowChecklist(): boolean {
-    return this.checklistLifecycleState === 'active' || this.shouldShowChecklistInPlaceOfCongrats;
+    return this.checklistLifecycleState === 'active' || this.isShowingCompletedChecklist;
   }
 
   @action hideChecklist() {
@@ -101,7 +101,8 @@ export default class OverviewComponent extends Component<Args> {
   }
 
   @action restoreChecklist() {
-    this.showSetupGuideInCompleteState = false;
+    // Always return to the checklist view regardless of what was showing before.
+    this.showSetupGuideInCompleteState = true;
     this.checklistState.showChecklist(this.startupChecklist.id);
   }
 
@@ -111,8 +112,6 @@ export default class OverviewComponent extends Component<Args> {
 
   @action
   handleChecklistStepCompletionChange() {
-    if (this.checklistLifecycleState !== 'complete') {
-      this.showSetupGuideInCompleteState = false;
-    }
+    this.showSetupGuideInCompleteState = false;
   }
 }

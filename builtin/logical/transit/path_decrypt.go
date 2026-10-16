@@ -51,8 +51,14 @@ The ciphertext to decrypt, provided as returned by encrypt.`,
 
 			"padding_scheme": {
 				Type: framework.TypeString,
-				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+				Description: `The padding scheme to use for decryption. Currently only applies to RSA key types.
 Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
+			"hash_algorithm": {
+				Type: framework.TypeString,
+				Description: `The hash algorithm to use for decryption. Currently only applies to RSA key types.
+	Options are 'sha1', 'sha2-224', 'sha2-256', 'sha2-384', 'sha2-512', 'sha3-224', 'sha3-256', 'sha3-384', 'sha3-512'. Defaults to 'sha2-256'.`,
 			},
 
 			"context": {
@@ -138,6 +144,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		if ps, ok := d.GetOk("padding_scheme"); ok {
 			batchInputItems[0].PaddingScheme = ps.(string)
 		}
+		if ha, ok := d.GetOk("hash_algorithm"); ok {
+			batchInputItems[0].HashAlgorithm = ha.(string)
+		}
 	}
 
 	batchResponseItems := make([]DecryptBatchResponseItem, len(batchInputItems))
@@ -198,25 +207,45 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
+		keyVersion, err := getVersion(item.Ciphertext)
+		if err != nil {
+			userErrorInBatch = true
+			batchResponseItems[i].Error = err.Error()
+			continue
+		}
+		verType := p.KeyVersionType(keyVersion)
+
 		var factories []any
+		var parsedPaddingScheme keysutil.PaddingScheme
 		if item.PaddingScheme != "" {
-			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.PaddingScheme)
+			var err error
+			parsedPaddingScheme, err = parsePaddingSchemeArg(verType, item.PaddingScheme)
 			if err != nil {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].padding_scheme' invalid: %s", i, err.Error())
 				continue
 			}
-			factories = append(factories, paddingScheme)
+			factories = append(factories, parsedPaddingScheme)
+		}
+
+		if item.HashAlgorithm != "" {
+			var err error
+			parsedHashAlgorithm, err := parseHashAlgorithmArg(verType, item.HashAlgorithm)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].hash_algorithm' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, parsedHashAlgorithm)
 		}
 		if item.AssociatedData != "" {
-			if !p.Type.AssociatedDataSupported() {
-				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
+			if !verType.AssociatedDataSupported() {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, verType.String())
 				continue
 			}
 
 			factories = append(factories, AssocDataFactory{item.AssociatedData})
 		}
 
-		if p.Type == keysutil.KeyType_MANAGED_KEY {
+		if verType == keysutil.KeyType_MANAGED_KEY {
 			factory, err := b.GetManagedKeyFactory(ctx)
 			if err != nil {
 				batchResponseItems[i].Error = err.Error()

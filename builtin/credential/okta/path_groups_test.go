@@ -33,7 +33,7 @@ func TestGroupsList(t *testing.T) {
 			Path:      "groups/" + group,
 			Storage:   storage,
 			Data: map[string]interface{}{
-				"policies": []string{group + "_a", group + "_b"},
+				"policies": []string{"policy_a", "policy_b"},
 			},
 		}
 
@@ -64,7 +64,7 @@ func TestGroupsList(t *testing.T) {
 				t.Fatal("unexpected nil response")
 			}
 
-			expected := []string{group + "_a", group + "_b"}
+			expected := []string{"policy_a", "policy_b"}
 
 			if diff := deep.Equal(resp.Data["policies"].([]string), expected); diff != nil {
 				t.Fatal(diff)

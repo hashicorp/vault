@@ -44,7 +44,6 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
 
   get icon() {
     const engineData = engineDisplayData(this.engineType);
-
     return engineData?.glyph || 'lock';
   }
 
@@ -80,6 +79,11 @@ export default class SecretsEngineResource extends baseResourceFactory<Mount>() 
     if (this.isV2KV) {
       // if it's KV v2 but not registered as an addon, it's type generic
       return 'vault.cluster.secrets.backend.kv.list';
+    }
+    const engineMeta = engineDisplayData(this.effectiveEngineType);
+    if (engineMeta?.isOnlyMountable && !engineMeta?.isConfigurable) {
+      // No navigable list or overview page exists for this engine; suppress the path link.
+      return null;
     }
     return `vault.cluster.secrets.backend.list-root`;
   }

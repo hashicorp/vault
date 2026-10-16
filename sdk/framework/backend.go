@@ -114,10 +114,10 @@ type Backend struct {
 	// to communicate with a plugin on when to rotate a credential
 	RotateCredential func(context.Context, *logical.Request) error
 
-	// HealthCheck is the optional callback invoked by the HealthCheckBackend to
-	// validate connectivity and authentication against the plugin's configured
-	// external system. Plugins that do not set this field are treated as
-	// health-check unsupported and the operation returns a 501 Not Implemented.
+	// HealthCheck is the optional callback invoked when the HealthCheckManager
+	// routes a health check operation to the plugin. The plugin defines which
+	// checks to perform. Plugins that do not set this field return
+	// 501 Not Implemented for health check operations.
 	//
 	// The callback receives the full logical.Request to access storage and read
 	// the plugin's configuration. The path being checked is available in req.Path.
@@ -371,7 +371,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 // HandlePatchOperation acts as an abstraction for performing JSON merge patch
 // operations (see https://datatracker.ietf.org/doc/html/rfc7396) for HTTP
-// PATCH requests. It is responsible for properly processing and marshalling
+// PATCH requests. It is responsible for properly processing and marshalli ng
 // the input and existing resource prior to performing the JSON merge operation
 // using the MergePatch function from the json-patch library. The preprocessor
 // is an arbitrary func that can be provided to further process the input. The

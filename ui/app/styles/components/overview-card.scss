@@ -11,6 +11,18 @@
 }
 
 .dashboard-header-with-gradient {
+  // Lift the header's direct children above the ::before gradient blob.
+  // The ::before has no z-index so it paints at the base of the stacking
+  // context; giving all sibling children position: relative; z-index: 1
+  // ensures they always paint on top of it.
+  /* stylelint-disable selector-class-pattern */
+  > .hds-page-header__body,
+  > .hds-page-header__metadata {
+    position: relative;
+    z-index: 1;
+  }
+  /* stylelint-enable selector-class-pattern */
+
   &::before {
     content: '';
     position: absolute;
@@ -33,6 +45,10 @@
     opacity: 0.18;
     filter: blur(60px);
     pointer-events: none;
-    z-index: -1;
   }
+}
+
+.telemetry-consent {
+  position: relative;
+  z-index: 1;
 }

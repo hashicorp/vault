@@ -42,30 +42,30 @@
 {{/if}}
 
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
-  <InfoTableRow @label="Issue time" @value={{this.model.issueTime}}>
-    {{date-format this.model.issueTime "MMM dd, yyyy hh:mm:ss a"}}
+  <InfoTableRow @label="Issue time" @value={{this.model.issue_time}}>
+    {{date-format this.model.issue_time "MMM dd, yyyy hh:mm:ss a"}}
     <br />
     <code>
-      {{this.model.issueTime}}
+      {{this.model.issue_time}}
     </code>
   </InfoTableRow>
   <InfoTableRow @label="Renewable" @value={{this.model.renewable}} />
-  <InfoTableRow @label="Last renewal" @value={{this.model.lastRenewal}}>
-    {{date-format this.model.lastRenewal "MMM dd, yyyy hh:mm:ss a"}}
+  <InfoTableRow @label="Last renewal" @value={{this.model.last_renewal}}>
+    {{date-format this.model.last_renewal "MMM dd, yyyy hh:mm:ss a"}}
     <br />
     <code>
-      {{this.model.lastRenewal}}
+      {{this.model.last_renewal}}
     </code>
   </InfoTableRow>
-  {{#if this.model.expireTime}}
-    <InfoTableRow @label="Expiration time" @value={{this.model.expireTime}}>
-      {{date-format this.model.expireTime "MMM dd, yyyy hh:mm:ss a"}}
+  {{#if this.model.expire_time}}
+    <InfoTableRow @label="Expiration time" @value={{this.model.expire_time}}>
+      {{date-format this.model.expire_time "MMM dd, yyyy hh:mm:ss a"}}
       <br />
       <code>
-        {{this.model.expireTime}}
+        {{this.model.expire_time}}
       </code>
     </InfoTableRow>
-    <InfoTableRow @label="Expires in" @value={{date-from-now this.model.expireTime increment=1000 hideSuffix=true}} />
+    <InfoTableRow @label="Expires in" @value={{date-from-now this.model.expire_time increment=1000 hideSuffix=true}} />
   {{/if}}
   <InfoTableRow @label="TTL" @value={{this.model.ttl}} />
 </div>
@@ -83,7 +83,7 @@
       />
       <div class="field has-top-margin-s">
         <div class="control">
-          <Hds::Button @text="Renew lease" type="submit" />
+          <Hds::Button @text="Renew lease" type="submit" data-test-renew-lease-submit />
         </div>
       </div>
     </form>

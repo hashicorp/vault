@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL } from '@ember/test-helpers';
+import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
@@ -97,6 +97,34 @@ module('Acceptance | sidebar navigation', function (hooks) {
       await click(link(l.label));
       assert.ok(currentURL().includes(l.route), `${l.label} route renders`);
     }
+  });
+
+  test('ACL policies nav link stays active when viewing or editing an individual ACL policy', async function (assert) {
+    // Visiting the policy show/edit route (vault.cluster.policy) should keep the
+    // "ACL policies" nav link active. Without current-when including vault.cluster.policy,
+    // the link would go inactive as soon as the user navigated away from the list.
+    await visit('/vault/policy/acl/default');
+    assert.strictEqual(currentURL(), '/vault/policy/acl/default', 'on ACL policy show page');
+    assert
+      .dom(link('ACL policies'))
+      .hasClass('active', 'ACL policies nav link is active on policy show page');
+  });
+
+  test('ACL policies nav link stays active when editing an individual ACL policy', async function (assert) {
+    await visit('/vault/policy/acl/default/edit');
+    assert.strictEqual(currentURL(), '/vault/policy/acl/default/edit', 'on ACL policy edit page');
+    assert
+      .dom(link('ACL policies'))
+      .hasClass('active', 'ACL policies nav link is active on policy edit page');
+  });
+
+  test('ACL policies nav link is not active on unrelated access routes', async function (assert) {
+    // Ensures the nav link does not stay falsely active when the user navigates
+    // to a different section of the Access panel.
+    await visit('/vault/access/identity/groups');
+    assert
+      .dom(link('ACL policies'))
+      .doesNotHaveClass('active', 'ACL policies nav link is not active on Groups page');
   });
 
   test('it should link to correct routes at the tools level', async function (assert) {

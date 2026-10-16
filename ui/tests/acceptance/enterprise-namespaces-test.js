@@ -169,17 +169,19 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await click(GENERAL.button('namespace-picker'));
 
     // Verify that the namespace exists in the manage namespaces page
-    await fillIn(GENERAL.filterInputExplicit, namespace);
-    await click(GENERAL.button('Search'));
+    await fillIn(GENERAL.filterInput, namespace);
 
     // Delete the namespace
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('delete'));
     await click(GENERAL.confirmButton);
 
+    // Clear search filter
+    await fillIn(GENERAL.filterInput, '');
+
     assert.strictEqual(
       currentURL(),
-      `/vault/access/namespaces?page=1&pageFilter=${namespace}`,
+      `/vault/access/namespaces`,
       'Should remain on the manage namespaces page after deletion'
     );
     // Verify that the namespace no longer exists on the namespace page

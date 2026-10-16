@@ -844,7 +844,7 @@ func TestDeletedIssuersPostMigration(t *testing.T) {
 
 	// Create a new issuer + key.
 	bundle = genCertBundle(t, b, s)
-	_, _, err = sc.writeCaBundle(bundle, "", "")
+	_, _, err = sc.writeCaBundle(bundle, "", "", "")
 	require.NoError(t, err)
 
 	// List which issuers + keys we currently have.

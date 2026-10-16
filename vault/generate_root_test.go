@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/go-secure-stdlib/base62"
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 )
 

@@ -29,8 +29,8 @@ import (
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -91,13 +91,14 @@ const (
 	// MaxRetrySSCTokensGenerationCounter is the maximum number of retries the TokenStore
 	// will make when attempting to get the SSCTokensGenerationCounter
 	MaxRetrySSCTokensGenerationCounter = 3
-
-	// IgnoreForBilling used for HCP Link batch tokens and inserted into the InternalMeta
-	// Tokens created for the purpose of HCP Link should bypass counting for billing purposes
-	IgnoreForBilling = "ignore_for_billing"
 )
 
 var (
+	// ErrFullJWTRequired is returned by auth/token/revoke and
+	// auth/token/revoke-orphan when given the internal stored JWT ID form
+	// instead of the full JWT.
+	ErrFullJWTRequired = errors.New("OAuth JWTs must be revoked using the full JWT, not the internal Vault storage ID. Provide full JWT or use auth/token/revoke-oauth")
+
 	// displayNameSanitize is used to sanitize a display name given to a token.
 	displayNameSanitize = regexp.MustCompile("[^a-zA-Z0-9-]")
 
@@ -136,6 +137,19 @@ var (
 		}
 	}
 )
+
+func validatePolicyNameSet(policies []string, fieldName string) error {
+	for _, policy := range policies {
+		if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+			if fieldName == "" {
+				return fmt.Errorf("invalid policy name %q: %w", policy, err)
+			}
+			return fmt.Errorf("invalid policy name %q in %s: %w", policy, fieldName, err)
+		}
+	}
+
+	return nil
+}
 
 func (ts *TokenStore) paths() []*framework.Path {
 	commonFieldsForCreate := map[string]*framework.FieldSchema{
@@ -668,6 +682,8 @@ func (ts *TokenStore) paths() []*framework.Path {
 	tokenutil.AddTokenFieldsWithAllowList(rolesPath.Fields, []string{"token_bound_cidrs", "token_explicit_max_ttl", "token_period", "token_type", "token_no_default_policy", "token_num_uses"})
 	p = append(p, rolesPath)
 
+	p = append(p, ts.entPaths()...)
+
 	return p
 }
 
@@ -932,6 +948,10 @@ func (ts *TokenStore) SaltID(ctx context.Context, id string) (string, error) {
 
 	s, err := ts.Salt(ctx)
 	if err != nil {
+		// A perf standby can't create a missing salt; the active node must.
+		if ts.core.perfStandby && errors.Is(err, logical.ErrReadOnly) {
+			return "", logical.ErrPerfStandbyPleaseForward
+		}
 		return "", err
 	}
 
@@ -1065,6 +1085,10 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 	}
 	if tokenNS == nil {
 		return namespace.ErrNoNamespace
+	}
+
+	if err := validatePolicyNameSet(entry.Policies, ""); err != nil {
+		return err
 	}
 
 	entry.Policies = policyutil.SanitizePolicies(entry.Policies, policyutil.DoNotAddDefaultPolicy)
@@ -2675,11 +2699,12 @@ func (ts *TokenStore) handleUpdateRevokeAccessor(ctx context.Context, req *logic
 		return nil, namespace.ErrNoNamespace
 	}
 
-	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
+	// Reject JWTs
 	if te.Type == logical.TokenTypeEnt {
-		return ts.revokeCommonJWT(revokeCtx, req, te.ID)
+		return logical.ErrorResponse("OAuth JWTs cannot be revoked via revoke-accessor"), logical.ErrInvalidRequest
 	}
 
+	revokeCtx := namespace.ContextWithNamespace(ts.quitContext, tokenNS)
 	leaseID, err := ts.expiration.CreateOrFetchRevocationLeaseByToken(revokeCtx, te)
 	if err != nil {
 		return nil, err
@@ -2738,6 +2763,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
 
 	policies := d.Get("policies").([]string)
+	if err := validatePolicyNameSet(policies, "policies"); err != nil {
+		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
 
 	// If the context's namespace is different from the parent and this is an
 	// orphan token creation request, then this is an admin token generation for
@@ -2914,6 +2942,11 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		if scimErr != nil || scimResp != nil {
 			return scimResp, scimErr
 		}
+		// SCIM tokens are orphans, so preserve the effective entity resolved during
+		// validation instead of relying on the parent token when stamping the entry.
+		if explicitEntityID == "" {
+			explicitEntityID = req.EntityID
+		}
 	}
 
 	// GetOk is used here solely to preserve the distinction between an absent/nil map and an empty map, to match the
@@ -3004,6 +3037,19 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	switch {
 	case role != nil && (len(role.AllowedPolicies) > 0 || len(role.DisallowedPolicies) > 0 ||
 		len(role.AllowedPoliciesGlob) > 0 || len(role.DisallowedPoliciesGlob) > 0):
+		if err := validatePolicyNameSet(role.AllowedPolicies, "allowed_policies"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if err := validatePolicyNameSet(role.DisallowedPolicies, "disallowed_policies"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if err := validatePolicyNameSet(role.AllowedPoliciesGlob, "allowed_policies_glob"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		if err := validatePolicyNameSet(role.DisallowedPoliciesGlob, "disallowed_policies_glob"); err != nil {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+
 		// Holds the final set of policies as they get munged
 		var finalPolicies []string
 
@@ -3430,6 +3476,9 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 // in a way that revokes all child tokens. Normally, using sys/revoke/leaseID will revoke
 // the token and all children anyways, but that is only available when there is a lease.
 func (ts *TokenStore) handleRevokeSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if IsOAuthJwt(req.ClientToken) || IsOAuthJwtId(req.ClientToken) {
+		return logical.ErrorResponse("OAuth JWTs cannot be revoked via revoke-self. Use auth/token/revoke or auth/token/revoke-oauth"), logical.ErrInvalidRequest
+	}
 	return ts.revokeCommon(ctx, req, data, req.ClientToken)
 }
 
@@ -3442,6 +3491,15 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
+	// Prevent revocation of internal representation (JWT ID)
+	if IsOAuthJwtId(id) {
+		return logical.ErrorResponse(ErrFullJWTRequired.Error()), logical.ErrInvalidRequest
+	}
+
+	if IsOAuthJwt(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
+	}
+
 	if resp, err := ts.revokeCommon(ctx, req, data, id); resp != nil || err != nil {
 		return resp, err
 	}
@@ -3450,9 +3508,6 @@ func (ts *TokenStore) handleRevokeTree(ctx context.Context, req *logical.Request
 }
 
 func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, data *framework.FieldData, id string) (*logical.Response, error) {
-	if IsOAuthJwt(id) || IsOAuthJwtId(id) {
-		return ts.revokeCommonJWT(ctx, req, id)
-	}
 	te, err := ts.Lookup(ctx, id)
 	if err != nil {
 		return nil, err
@@ -3497,13 +3552,15 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	normalizedID, err := ts.core.normalizeJwtForLookup(ctx, id)
-	if err != nil {
-		return logical.ErrorResponse("invalid token"), logical.ErrInvalidRequest
+	// Prevent revocation of internal representation (JWT ID)
+	if IsOAuthJwtId(id) {
+		return logical.ErrorResponse(ErrFullJWTRequired.Error()), logical.ErrInvalidRequest
 	}
 
-	if IsOAuthJwtId(normalizedID) {
-		return logical.ErrorResponse("JWTs cannot be revoked"), nil
+	// Because JWT Tokens are unable to create child tokens, there are no
+	// orphans to worry about. Delegate to the shared JWT revocation path.
+	if IsOAuthJwt(id) {
+		return ts.revokeCommonJWT(ctx, req, id)
 	}
 
 	// Do a lookup. Among other things, that will ensure that this is either
@@ -3911,30 +3968,62 @@ func (ts *TokenStore) tokenStoreRoleCreateUpdate(ctx context.Context, req *logic
 
 		allowedPoliciesRaw, ok := data.GetOk("allowed_policies")
 		if ok {
-			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPoliciesRaw.([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPolicies := allowedPoliciesRaw.([]string)
+			if err := validatePolicyNameSet(allowedPolicies, "allowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPolicies, policyutil.DoNotAddDefaultPolicy)
 		} else if req.Operation == logical.CreateOperation {
-			entry.AllowedPolicies = policyutil.SanitizePolicies(data.Get("allowed_policies").([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPolicies := data.Get("allowed_policies").([]string)
+			if err := validatePolicyNameSet(allowedPolicies, "allowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPolicies = policyutil.SanitizePolicies(allowedPolicies, policyutil.DoNotAddDefaultPolicy)
 		}
 
 		disallowedPoliciesRaw, ok := data.GetOk("disallowed_policies")
 		if ok {
-			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPoliciesRaw.([]string), true)
+			disallowedPolicies := disallowedPoliciesRaw.([]string)
+			if err := validatePolicyNameSet(disallowedPolicies, "disallowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPolicies, true)
 		} else if req.Operation == logical.CreateOperation {
-			entry.DisallowedPolicies = strutil.RemoveDuplicates(data.Get("disallowed_policies").([]string), true)
+			disallowedPolicies := data.Get("disallowed_policies").([]string)
+			if err := validatePolicyNameSet(disallowedPolicies, "disallowed_policies"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPolicies = strutil.RemoveDuplicates(disallowedPolicies, true)
 		}
 
 		allowedPoliciesGlobRaw, ok := data.GetOk("allowed_policies_glob")
 		if ok {
-			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(allowedPoliciesGlobRaw.([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPoliciesGlob := allowedPoliciesGlobRaw.([]string)
+			if err := validatePolicyNameSet(allowedPoliciesGlob, "allowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(allowedPoliciesGlob, policyutil.DoNotAddDefaultPolicy)
 		} else if req.Operation == logical.CreateOperation {
-			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(data.Get("allowed_policies_glob").([]string), policyutil.DoNotAddDefaultPolicy)
+			allowedPoliciesGlob := data.Get("allowed_policies_glob").([]string)
+			if err := validatePolicyNameSet(allowedPoliciesGlob, "allowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.AllowedPoliciesGlob = policyutil.SanitizePolicies(allowedPoliciesGlob, policyutil.DoNotAddDefaultPolicy)
 		}
 
 		disallowedPoliciesGlobRaw, ok := data.GetOk("disallowed_policies_glob")
 		if ok {
-			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(disallowedPoliciesGlobRaw.([]string), true)
+			disallowedPoliciesGlob := disallowedPoliciesGlobRaw.([]string)
+			if err := validatePolicyNameSet(disallowedPoliciesGlob, "disallowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(disallowedPoliciesGlob, true)
 		} else if req.Operation == logical.CreateOperation {
-			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(data.Get("disallowed_policies_glob").([]string), true)
+			disallowedPoliciesGlob := data.Get("disallowed_policies_glob").([]string)
+			if err := validatePolicyNameSet(disallowedPoliciesGlob, "disallowed_policies_glob"); err != nil {
+				return logical.ErrorResponse(err.Error()), nil
+			}
+			entry.DisallowedPoliciesGlob = strutil.RemoveDuplicates(disallowedPoliciesGlob, true)
 		}
 	}
 
@@ -4423,6 +4512,7 @@ as revocation of tokens. The tokens are renewable if associated with a lease.`
 	tokenRevokeAccessorHelp  = `This endpoint will delete the token associated with the accessor and all of its child tokens.`
 	tokenRevokeHelp          = `This endpoint will delete the given token and all of its child tokens.`
 	tokenRevokeSelfHelp      = `This endpoint will delete the token used to call it and all of its child tokens.`
+	tokenRevokeOAuthHelp     = `This endpoint revokes an external OAuth token identified by its issuer and unique ID.`
 	tokenRevokeOrphanHelp    = `This endpoint will delete the token and orphan its child tokens.`
 	tokenRenewHelp           = `This endpoint will renew the given token and prevent expiration.`
 	tokenRenewSelfHelp       = `This endpoint will renew the token used to call it and prevent expiration.`

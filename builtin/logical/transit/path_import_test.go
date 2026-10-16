@@ -619,7 +619,7 @@ func TestTransit_ImportVersion(t *testing.T) {
 	)
 
 	t.Run(
-		"imported key version type must match existing key type",
+		"imported key version type must match existing key type (if type is not specified)",
 		func(t *testing.T) {
 			keyID, err := uuid.GenerateUUID()
 			if err != nil {
@@ -659,6 +659,89 @@ func TestTransit_ImportVersion(t *testing.T) {
 				t.Fatal("import_version into a key of a different type incorrectly succeeded")
 			}
 		},
+	)
+
+	t.Run("import key version fails for incompatible key types", func(t *testing.T) {
+		keyID, err := uuid.GenerateUUID()
+		if err != nil {
+			t.Fatalf("failed to generate key ID: %s", err)
+		}
+
+		// Import an RSA key
+		targetKey := getKey(t, "rsa-2048")
+		importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "rsa-2048", "SHA256")
+		req := &logical.Request{
+			Storage:   s,
+			Operation: logical.UpdateOperation,
+			Path:      fmt.Sprintf("keys/%s/import", keyID),
+			Data: map[string]interface{}{
+				"ciphertext": importBlob,
+				"type":       "rsa-2048",
+			},
+		}
+		_, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatalf("failed to generate a key within transit: %s", err)
+		}
+
+		// Attempt to import an AES key version into existing RSA key
+		targetKey = getKey(t, "aes256-gcm96")
+		importBlob = wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
+		req = &logical.Request{
+			Storage:   s,
+			Operation: logical.UpdateOperation,
+			Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+			Data: map[string]interface{}{
+				"ciphertext": importBlob,
+				"type":       "aes256-gcm96",
+			},
+		}
+		_, err = b.HandleRequest(context.Background(), req)
+		if err == nil {
+			t.Fatal("import_version of a key of an incompatible type should have failed but didn't")
+		}
+	})
+
+	t.Run("import key version with a bad type should fail", func(t *testing.T) {
+		keyID, err := uuid.GenerateUUID()
+		if err != nil {
+			t.Fatalf("failed to generate key ID: %s", err)
+		}
+
+		// Import an RSA key
+		targetKey := getKey(t, "rsa-2048")
+		importBlob := wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "rsa-2048", "SHA256")
+		req := &logical.Request{
+			Storage:   s,
+			Operation: logical.UpdateOperation,
+			Path:      fmt.Sprintf("keys/%s/import", keyID),
+			Data: map[string]interface{}{
+				"ciphertext": importBlob,
+				"type":       "rsa-2048",
+			},
+		}
+		_, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatalf("failed to generate a key within transit: %s", err)
+		}
+
+		// Attempt to import an AES key version into existing RSA key
+		targetKey = getKey(t, "aes256-gcm96")
+		importBlob = wrapTargetKeyForImport(t, pubWrappingKey, targetKey, "aes256-gcm96", "SHA256")
+		req = &logical.Request{
+			Storage:   s,
+			Operation: logical.UpdateOperation,
+			Path:      fmt.Sprintf("keys/%s/import_version", keyID),
+			Data: map[string]interface{}{
+				"ciphertext": importBlob,
+				"type":       "invalid",
+			},
+		}
+		_, err = b.HandleRequest(context.Background(), req)
+		if err == nil {
+			t.Fatal("import_version of a key of a invalid type incorrectly succeeded")
+		}
+	},
 	)
 
 	t.Run(

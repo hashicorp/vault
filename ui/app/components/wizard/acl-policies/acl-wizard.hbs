@@ -12,7 +12,7 @@
       <Hds::Button
         @icon="plus"
         @text="Create a policy"
-        @route="vault.cluster.policies.create"
+        @route="vault.cluster.policies.acl.create"
         {{on "click" (fn this.trackClickEvent "Create a policy")}}
         data-test-button="Create a policy"
       />

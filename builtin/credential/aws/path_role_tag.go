@@ -132,6 +132,11 @@ func (b *backend) pathRoleTagUpdate(ctx context.Context, req *logical.Request, d
 	policiesRaw, ok := data.GetOk("policies")
 	if ok {
 		policies = policyutil.ParsePolicies(policiesRaw)
+		for _, policy := range policies {
+			if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+				return logical.ErrorResponse(fmt.Sprintf("invalid policy name %q: %s", policy, err)), nil
+			}
+		}
 	}
 	if !strutil.StrListSubset(roleEntry.TokenPolicies, policies) {
 		resp.AddWarning("Policies on the tag are not a subset of the policies set on the role. Login will not be allowed with this tag unless the role policies are updated.")

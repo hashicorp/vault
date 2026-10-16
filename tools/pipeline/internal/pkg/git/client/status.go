@@ -41,6 +41,7 @@ type StatusOpts struct {
 	NoAheadBehind    bool                 // --no-ahead-behind
 	NoColumn         bool                 // --no-column
 	NoRenames        bool                 // --no-renames
+	NullTerminated   bool                 // -z
 	Porcelain        bool                 // --porcelain
 	Renames          bool                 // --renames
 	Short            bool                 // --short
@@ -107,6 +108,10 @@ func (o *StatusOpts) Strings() []string {
 
 	if o.NoRenames {
 		opts = append(opts, "--no-renames")
+	}
+
+	if o.NullTerminated {
+		opts = append(opts, "-z")
 	}
 
 	if o.Porcelain {

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
-	nshelper "github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internal/observability/event"
+	nshelper "github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )

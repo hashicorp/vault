@@ -3,37 +3,30 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if this.showPageHeader}}
-  <Page::Header @title="Authentication methods" @icon="lock">
-    <:breadcrumbs>
-      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-    </:breadcrumbs>
-    <:description>
-      Configure authentication methods for accessing Vault.
-      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/mfa"}}>
-        Learn more
-      </Hds::Link::Inline>
-    </:description>
-    <:actions>
-      {{#if this.showIntroButton}}
-        <Hds::Button
-          class="has-right-margin-4"
-          @color="secondary"
-          @icon="bulb"
-          @text="New to Auth methods?"
-          {{on "click" this.showIntroPage}}
-          data-test-button="intro"
-        />
-      {{/if}}
+<Page::Header @title="Authentication methods" @icon="lock">
+  <:breadcrumbs>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </:breadcrumbs>
+  <:description>
+    Configure authentication methods for accessing Vault.
+    <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/mfa"}}>
+      Learn more
+    </Hds::Link::Inline>
+  </:description>
+  <:actions>
+    {{#if this.showIntroButton}}
       <Hds::Button
-        @text="Enable new method"
-        @icon="plus"
-        @route="vault.cluster.settings.auth.enable"
-        data-test-auth-enable
+        class="has-right-margin-4"
+        @color="secondary"
+        @icon="bulb"
+        @text="New to Auth methods?"
+        {{on "click" this.showIntroPage}}
+        data-test-button="intro"
       />
-    </:actions>
-  </Page::Header>
-{{/if}}
+    {{/if}}
+    <Hds::Button @text="Enable new method" @icon="plus" @route="vault.cluster.settings.auth.enable" data-test-auth-enable />
+  </:actions>
+</Page::Header>
 
 {{#if this.showWizard}}
   <Wizard::Methods::MethodsWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshMethodsList}} />

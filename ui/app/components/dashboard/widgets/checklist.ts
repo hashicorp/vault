@@ -83,17 +83,19 @@ export default class DashboardWidgetsChecklist extends Component<Args> {
     return this.stepsWithStatus[0]?.id ?? null;
   }
 
-  /** Single controlled open state for accordion items. */
+  /** Single controlled open state for accordion items. `null` means the user explicitly collapsed all steps. */
   get openStepId(): string | null {
     if (this.expandedStepId === undefined) {
       return this.nextIncompleteActionableStepId ?? this.firstOpenableStepId;
     }
 
-    if (this.expandedStepId) {
-      const step = this.stepsWithStatus.find((s) => s.id === this.expandedStepId);
-      if (step) {
-        return this.expandedStepId;
-      }
+    if (this.expandedStepId === null) {
+      return null;
+    }
+
+    const step = this.stepsWithStatus.find((s) => s.id === this.expandedStepId);
+    if (step) {
+      return this.expandedStepId;
     }
 
     return this.nextIncompleteActionableStepId ?? this.firstOpenableStepId;
@@ -128,6 +130,6 @@ export default class DashboardWidgetsChecklist extends Component<Args> {
 
   @action
   handleItemToggle(stepId: string) {
-    this.expandedStepId = stepId;
+    this.expandedStepId = this.openStepId === stepId ? null : stepId;
   }
 }

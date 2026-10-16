@@ -13,12 +13,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
-	"github.com/hashicorp/vault/helper/timeutil"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
 	"github.com/hashicorp/vault/vault"
@@ -563,8 +563,8 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 			currentMonthClients := monthsResponse[len(monthsResponse)-1]
 
 			// Now verify that the new client totals for ALL namespaces are approximately accurate (there are no namespaces in CE)
-			newClientsError := math.Abs((float64)(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
-			newClientsErrorMargin := newClientsError / (float64)(tt.expectedNewClients)
+			newClientsError := math.Abs(float64(currentMonthClients.NewClients.Counts.Clients - tt.expectedNewClients))
+			newClientsErrorMargin := newClientsError / float64(tt.expectedNewClients)
 			expectedAccuracyCalc := (1 - tt.expectedTotalAccuracy) * 100 / 100
 			if newClientsErrorMargin > expectedAccuracyCalc {
 				t.Fatalf("bad accuracy: expected %+v, found %+v", expectedAccuracyCalc, newClientsErrorMargin)

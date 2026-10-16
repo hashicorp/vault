@@ -343,26 +343,28 @@ func (b *backend) keyPolicyObservationMetadata(p *keysutil.Policy) map[string]in
 }
 
 func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, context []byte) (*logical.Response, error) {
-	// effectiveType returns the KeyType for a specific key entry. When entry.Algorithm
-	// is non-nil (set by RotateInMemoryWithAlgorithm after a POST .../algorithm call),
-	// that per-version type is used; otherwise the policy-level type is the fallback.
-	effectiveType := func(entry keysutil.KeyEntry) keysutil.KeyType {
-		if entry.Algorithm != nil {
-			return *entry.Algorithm
-		}
-		return p.Type
-	}
-
-	// Compute supports_* as the superset of capabilities across all key entries.
-	// After an algorithm change via POST .../algorithm, individual entries may
-	// carry a different Algorithm than p.Type, so we OR the flags together.
+	// Compute supports_* and key_usages as the superset of capabilities across
+	// all key entries. After an algorithm change via POST .../algorithm,
+	// individual entries may carry a different Algorithm than p.Type, so we OR
+	// the flags together.
 	var supportsEncryption, supportsDecryption, supportsSigning, supportsDerivation bool
+	usageSet := make(map[string]struct{})
 	for _, entry := range p.Keys {
-		kt := effectiveType(entry)
+		kt := effectiveType(p, entry)
 		supportsEncryption = supportsEncryption || kt.EncryptionSupported()
 		supportsDecryption = supportsDecryption || kt.DecryptionSupported()
 		supportsSigning = supportsSigning || kt.SigningSupported()
 		supportsDerivation = supportsDerivation || kt.DerivationSupported()
+		for _, u := range kt.KeyUsages() {
+			usageSet[u] = struct{}{}
+		}
+	}
+	allUsageNames := []string{"aead-encryption", "asymmetric-encryption", "digital-signature", "message-authentication", "symmetric-encryption"}
+	keyUsages := make([]string, 0, len(usageSet))
+	for _, u := range allUsageNames {
+		if _, ok := usageSet[u]; ok {
+			keyUsages = append(keyUsages, u)
+		}
 	}
 
 	// Return the response
@@ -385,6 +387,7 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 			"auto_rotate_period":     int64(p.AutoRotatePeriod.Seconds()),
 			"imported_key":           p.Imported,
 			"latest_version_type":    p.KeyVersionType(p.LatestVersion).String(),
+			"key_usages":             keyUsages,
 		},
 	}
 	if p.KeySize != 0 {
@@ -430,113 +433,136 @@ func (b *backend) formatKeyPolicy(ctx context.Context, p *keysutil.Policy, conte
 		resp.Data["hybrid_key_type_pqc"] = p.HybridConfig.PQCKeyType.String()
 		resp.Data["hybrid_key_type_ec"] = p.HybridConfig.ECKeyType.String()
 	}
+	asymmetricKeys := map[string]map[string]interface{}{}
+	symmetricKeys := map[string]int64{}
 
-	// The outer switch on p.Type is intentionally kept: isCompatibleKeyType ensures
-	// algorithm changes cannot cross the symmetric/asymmetric boundary, so every
-	// version in a ring always falls into the same broad rendering category.
-	switch p.Type {
-	case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305, keysutil.KeyType_AES128_CBC, keysutil.KeyType_AES256_CBC:
-		retKeys := map[string]int64{}
-		for k, v := range p.Keys {
-			retKeys[k] = v.DeprecatedCreationTime
-		}
-		resp.Data["keys"] = retKeys
-
-	case keysutil.KeyType_MANAGED_KEY:
-		retKeys, err := getFormattedManagedKeyPublicKey(ctx, b, p)
-		switch {
-		case err == nil:
-			resp.Data["keys"] = retKeys
-		case errors.Is(err, errNotAsymmetricManagedKey):
-			symKeys := map[string]int64{}
-			for k, v := range p.Keys {
-				symKeys[k] = v.DeprecatedCreationTime
-			}
-			resp.Data["keys"] = symKeys
-		default:
-			return nil, err
-		}
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
-		retKeys := map[string]map[string]interface{}{}
-		for k, v := range p.Keys {
-			key := asymKey{
-				CreationTime: v.CreationTime,
-			}
-			vType := effectiveType(v)
-			switch vType {
-			case keysutil.KeyType_HYBRID, keysutil.KeyType_ML_DSA, keysutil.KeyType_SLH_DSA:
-				key.HybridPublicKey = getFormattedPQCPublicKey(p.Type, v, p.HybridConfig.PQCKeyType)
+	for k, v := range p.Keys {
+		switch effectiveType(p, v) {
+		case keysutil.KeyType_AES128_GCM96, keysutil.KeyType_AES256_GCM96, keysutil.KeyType_ChaCha20_Poly1305, keysutil.KeyType_AES128_CBC, keysutil.KeyType_AES256_CBC:
+			symmetricKeys[k] = v.DeprecatedCreationTime
+		case keysutil.KeyType_MANAGED_KEY:
+			key, err := getFormattedManagedKeyPublicKey(ctx, b, p, k)
+			switch {
+			case err == nil:
+				asymmetricKeys[k] = key
+			case errors.Is(err, errNotAsymmetricManagedKey):
+				symmetricKeys[k] = v.DeprecatedCreationTime
 			default:
-				key.PublicKey = v.FormattedPublicKey
+				return nil, err
 			}
-			if key.CreationTime.IsZero() {
-				key.CreationTime = time.Unix(v.DeprecatedCreationTime, 0)
+		case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
+			var err error
+			asymmetricKeys[k], err = formatAsymmetricKey(p, k, v, context)
+			if err != nil {
+				return nil, err
 			}
-			if v.CertificateChain != nil {
-				var pemCerts []string
-				for _, derCertBytes := range v.CertificateChain {
-					pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
-						&pem.Block{
-							Type:  "CERTIFICATE",
-							Bytes: derCertBytes,
-						})))
-					pemCerts = append(pemCerts, pemCert)
-				}
-				key.CertificateChain = strings.Join(pemCerts, "\n")
-			}
-
-			switch vType {
-			case keysutil.KeyType_ECDSA_P256:
-				key.Name = elliptic.P256().Params().Name
-			case keysutil.KeyType_ECDSA_P384:
-				key.Name = elliptic.P384().Params().Name
-			case keysutil.KeyType_ECDSA_P521:
-				key.Name = elliptic.P521().Params().Name
-			case keysutil.KeyType_ED25519:
-				if p.Derived {
-					if len(context) == 0 {
-						key.PublicKey = ""
-					} else {
-						ver, err := strconv.Atoi(k)
-						if err != nil {
-							return nil, fmt.Errorf("invalid version %q: %w", k, err)
-						}
-						derived, err := p.GetKey(context, ver, 32)
-						if err != nil {
-							return nil, fmt.Errorf("failed to derive key to return public component: %w", err)
-						}
-						pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
-						key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
-					}
-				}
-				key.Name = "ed25519"
-			case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-				key.Name = "rsa-2048"
-				if vType == keysutil.KeyType_RSA3072 {
-					key.Name = "rsa-3072"
-				}
-
-				if vType == keysutil.KeyType_RSA4096 {
-					key.Name = "rsa-4096"
-				}
-
-				pubKey, err := encodeRSAPublicKey(&v)
-				if err != nil {
-					return nil, err
-				}
-				key.PublicKey = pubKey
-			case keysutil.KeyType_ML_DSA:
-				key.Name = "ml-dsa-" + p.ParameterSet
-			case keysutil.KeyType_SLH_DSA:
-				key.Name = p.ParameterSet
-			}
-
-			retKeys[k] = structs.New(key).Map()
 		}
+	}
+
+	switch {
+	case len(symmetricKeys) > 0 && len(asymmetricKeys) == 0:
+		resp.Data["keys"] = symmetricKeys
+	case len(asymmetricKeys) > 0 && len(symmetricKeys) == 0:
+		resp.Data["keys"] = asymmetricKeys
+	case len(symmetricKeys) > 0 && len(asymmetricKeys) > 0:
+		retKeys := map[string]interface{}{}
+		for k, v := range symmetricKeys {
+			retKeys[k] = v
+		}
+		for k, v := range asymmetricKeys {
+			retKeys[k] = v
+		}
+
 		resp.Data["keys"] = retKeys
 	}
 
 	return resp, nil
+}
+
+// effectiveType returns the KeyType for a specific key entry. When entry.Algorithm
+// is non-nil (set by RotateInMemoryWithAlgorithm after a POST .../algorithm call),
+// that per-version type is used; otherwise the policy-level type is the fallback.
+func effectiveType(p *keysutil.Policy, entry keysutil.KeyEntry) keysutil.KeyType {
+	if entry.Algorithm != nil {
+		return *entry.Algorithm
+	}
+	return p.Type
+}
+
+func formatAsymmetricKey(p *keysutil.Policy, keyVer string, entry keysutil.KeyEntry, context []byte) (map[string]interface{}, error) {
+	key := asymKey{
+		CreationTime: entry.CreationTime,
+	}
+	vType := effectiveType(p, entry)
+	switch vType {
+	case keysutil.KeyType_HYBRID, keysutil.KeyType_ML_DSA, keysutil.KeyType_SLH_DSA:
+		key.HybridPublicKey = getFormattedPQCPublicKey(vType, entry, p.HybridConfig.PQCKeyType)
+	default:
+		key.PublicKey = entry.FormattedPublicKey
+	}
+	if key.CreationTime.IsZero() {
+		key.CreationTime = time.Unix(entry.DeprecatedCreationTime, 0)
+	}
+	if entry.CertificateChain != nil {
+		var pemCerts []string
+		for _, derCertBytes := range entry.CertificateChain {
+			pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
+				&pem.Block{
+					Type:  "CERTIFICATE",
+					Bytes: derCertBytes,
+				})))
+			pemCerts = append(pemCerts, pemCert)
+		}
+		key.CertificateChain = strings.Join(pemCerts, "\n")
+	}
+
+	switch vType {
+	case keysutil.KeyType_ECDSA_P256:
+		key.Name = elliptic.P256().Params().Name
+	case keysutil.KeyType_ECDSA_P384:
+		key.Name = elliptic.P384().Params().Name
+	case keysutil.KeyType_ECDSA_P521:
+		key.Name = elliptic.P521().Params().Name
+	case keysutil.KeyType_ED25519:
+		if p.Derived {
+			if len(context) == 0 {
+				key.PublicKey = ""
+			} else {
+				ver, err := strconv.Atoi(keyVer)
+				if err != nil {
+					return nil, fmt.Errorf("invalid version %q: %w", keyVer, err)
+				}
+				derived, err := p.GetKey(context, ver, 32)
+				if err != nil {
+					return nil, fmt.Errorf("failed to derive key to return public component: %w", err)
+				}
+				pubKey := ed25519.PrivateKey(derived).Public().(ed25519.PublicKey)
+				key.PublicKey = base64.StdEncoding.EncodeToString(pubKey)
+			}
+		}
+		key.Name = "ed25519"
+	case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
+		key.Name = "rsa-2048"
+		if vType == keysutil.KeyType_RSA3072 {
+			key.Name = "rsa-3072"
+		}
+
+		if vType == keysutil.KeyType_RSA4096 {
+			key.Name = "rsa-4096"
+		}
+
+		pubKey, err := encodeRSAPublicKey(&entry)
+		if err != nil {
+			return nil, err
+		}
+		key.PublicKey = pubKey
+	case keysutil.KeyType_ML_DSA:
+		key.Name = "ml-dsa-" + p.ParameterSet
+	case keysutil.KeyType_SLH_DSA:
+		key.Name = p.ParameterSet
+	}
+
+	return structs.New(key).Map(), nil
 }
 
 func (b *backend) pathPolicyDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {

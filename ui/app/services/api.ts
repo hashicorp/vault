@@ -15,6 +15,7 @@ import {
   HTTPQuery,
   HTTPRequestInit,
   RequestOpts,
+  RequiredError,
   ResponseError,
 } from '@hashicorp/vault-client-typescript';
 import config from 'vault/config/environment';
@@ -26,6 +27,14 @@ import type ControlGroupService from 'vault/services/control-group';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { HeaderMap, ApiErrorResponse, ApiParsedError, XVaultHeaders } from 'vault/api';
 import type { HTTPMethod } from '@hashicorp/vault-client-typescript';
+
+/** Maps namespace keys to their typed generated-client classes. */
+type ApiNamespaces = {
+  auth: AuthApi;
+  identity: IdentityApi;
+  secrets: SecretsApi;
+  sys: SystemApi;
+};
 
 export default class ApiService extends Service {
   @service('auth') declare readonly authService: AuthService;
@@ -166,6 +175,48 @@ export default class ApiService extends Service {
   secrets = new SecretsApi(this.configuration);
   sys = new SystemApi(this.configuration);
 
+  /**
+   * Calls a method on one of the four API namespace clients (`auth`, `identity`,
+   * `secrets`, `sys`) in a way that is fully type-checked on the branch where the
+   * method exists, but compiles silently on older branches where it may be absent.
+   *
+   * Pass the namespace key as the first argument and a callback that receives the
+   * typed client as the second. On the current branch the client is typed as its
+   * real generated-client class, giving full autocomplete, method name checking, and
+   * argument validation. On older branches the internal `as any` cast silences the
+   * missing-method error without widening the callback's apparent type.
+   *
+   * **Only call this method inside a `this.version.hasFeature(...)` gate.**
+   * The ESLint rule `require-version-guard` enforces this — unguarded usage will
+   * cause a lint error in CI.
+   *
+   * @example
+   * ```ts
+   * if (this.version.hasFeature('agents')) {
+   *   const result = await this.api.versioned('sys', (sys) => sys.newAgentMethod(params));
+   * }
+   * ```
+   *
+   * @see vault/utils/feature-versions — register new version-gated features here
+   * @see ui/docs/versioned-api-calls.md — full guide to the version-gating pattern
+   */
+  versioned<K extends keyof ApiNamespaces, R>(namespace: K, fn: (client: ApiNamespaces[K]) => R): R {
+    const namespaces: ApiNamespaces = {
+      auth: this.auth,
+      identity: this.identity,
+      secrets: this.secrets,
+      sys: this.sys,
+    };
+    // The `as any` cast is an implementation detail confined to this line. It does NOT
+    // affect the type seen by the caller's callback — TypeScript resolves `fn`'s parameter
+    // type from the generic signature (`ApiNamespaces[K]`) at the call site, before this
+    // body is evaluated. On the current branch the callback argument is fully typed as the
+    // real generated-client class; on older branches the cast silences the missing-method
+    // error without widening anything visible to the caller.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return fn(namespaces[namespace] as any);
+  }
+
   // convenience method for overriding headers for given requests to ensure consistency
   // eg. this.api.sys.wrap(data, { headers: { 'X-Vault-Wrap-TTL': wrap } });
   // -> this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));
@@ -226,6 +277,13 @@ export default class ApiService extends Service {
       // log out generic error for ease of debugging in dev env
       if (config.environment === 'development') {
         console.error('API Error:', e);
+      }
+
+      // RequiredError indicates a client-side bug, not something actionable by the user, so log it
+      // for debugging but return the generic fallback instead of its raw internal message.
+      if (e instanceof RequiredError) {
+        console.error(e);
+        return { message: fallbackMessage };
       }
 
       return {

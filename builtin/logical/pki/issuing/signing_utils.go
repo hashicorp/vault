@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -46,6 +47,9 @@ var (
 	oidSignatureECDSAWithSHA512 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 4}
 	oidSignatureEd25519         = asn1.ObjectIdentifier{1, 3, 101, 112}
 	oidISOSignatureSHA1WithRSA  = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 29}
+	oidMLDSA44                  = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 17}
+	oidMLDSA65                  = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 18}
+	oidMLDSA87                  = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 19}
 
 	signatureAlgorithmDetails = []struct {
 		algo       x509.SignatureAlgorithm
@@ -72,6 +76,9 @@ var (
 		{x509.ECDSAWithSHA384, "ECDSA-SHA384", oidSignatureECDSAWithSHA384, emptyRawValue, x509.ECDSA, crypto.SHA384, false},
 		{x509.ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, emptyRawValue, x509.ECDSA, crypto.SHA512, false},
 		{x509.PureEd25519, "Ed25519", oidSignatureEd25519, emptyRawValue, x509.Ed25519, crypto.Hash(0) /* no pre-hashing */, false},
+		{x509.MLDSA44, "ML-DSA-44", oidMLDSA44, emptyRawValue, x509.MLDSA, crypto.Hash(0), false},
+		{x509.MLDSA65, "ML-DSA-65", oidMLDSA65, emptyRawValue, x509.MLDSA, crypto.Hash(0), false},
+		{x509.MLDSA87, "ML-DSA-87", oidMLDSA87, emptyRawValue, x509.MLDSA, crypto.Hash(0), false},
 	}
 )
 
@@ -106,8 +113,22 @@ func SigningParamsForKey(key crypto.Signer, sigAlgo x509.SignatureAlgorithm) (x5
 		pubType = x509.Ed25519
 		defaultAlgo = x509.PureEd25519
 
+	case *mldsa.PublicKey:
+		pubType = x509.MLDSA
+
+		switch pub.Parameters() {
+		case mldsa.MLDSA44():
+			defaultAlgo = x509.MLDSA44
+		case mldsa.MLDSA65():
+			defaultAlgo = x509.MLDSA65
+		case mldsa.MLDSA87():
+			defaultAlgo = x509.MLDSA87
+		default:
+			return 0, ai, errors.New("x509: unsupported ML-DSA parameters")
+		}
+
 	default:
-		return 0, ai, errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
+		return 0, ai, errors.New("x509: only RSA, ECDSA, Ed25519, and ML-DSA keys supported")
 	}
 
 	if sigAlgo == 0 {

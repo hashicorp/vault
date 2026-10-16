@@ -17,10 +17,10 @@ import (
 	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
-	"github.com/hashicorp/vault/helper/metricsutil"
-	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/helper/versions"
+	"github.com/hashicorp/vault/internalshared/metricsutil"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
@@ -52,6 +52,13 @@ func (i *IdentityStore) GetDisableLowerCasedNames() bool {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	return i.disableLowerCasedNames
+}
+
+// SetDisableLowerCasedNames sets that value to true for external tests to access. It is false by default
+func (i *IdentityStore) SetDisableLowerCasedNames() {
+	i.lock.Lock()
+	i.disableLowerCasedNames = true
+	i.lock.Unlock()
 }
 
 // resetDB callers must hold the write lock on i.lock before calling, to ensure
@@ -1487,7 +1494,8 @@ func (i *IdentityStore) CreateEntity(ctx context.Context) (*identity.Entity, err
 		1,
 		[]metrics.Label{
 			nsLabel,
-		})
+		},
+	)
 
 	return entity.Clone()
 }
@@ -1611,7 +1619,8 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 				nsLabel,
 				{"auth_method", newAlias.MountType},
 				{"mount_point", newAlias.MountPath},
-			})
+			},
+		)
 		entityCreated = true
 	}
 

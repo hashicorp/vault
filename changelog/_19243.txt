@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Rename user-preferences route, components, and static assets to preferences for consistency
+```

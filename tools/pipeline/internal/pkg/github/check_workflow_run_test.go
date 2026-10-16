@@ -634,7 +634,7 @@ func TestBuildBranchResult(t *testing.T) {
 				require.Len(t, br.MissingPatterns, 1)
 				require.Len(t, br.FailedJobs, 1)
 				require.NotNil(t, br.FailureDetails)
-				require.Equal(t, "Required jobs failed or missing", br.FailureDetails.Reason)
+				require.Equal(t, "Required jobs failed and missing", br.FailureDetails.Reason)
 			},
 		},
 	}
