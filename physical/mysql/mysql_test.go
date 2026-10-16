@@ -1,10 +1,11 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package mysql
 
 import (
 	"bytes"
+	"database/sql"
 	"os"
 	"strings"
 	"testing"
@@ -13,9 +14,11 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	mysql "github.com/go-sql-driver/mysql"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-uuid"
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMySQLPlaintextCatch(t *testing.T) {
@@ -263,6 +266,112 @@ func TestMySQLHABackend_LockFailPanic(t *testing.T) {
 	leaderCh2, err = lock2.Lock(stopCh2)
 	if err == nil {
 		t.Fatalf("expected error, got none, leaderCh2=%v", leaderCh2)
+	}
+}
+
+// TestValidateDBTableSQLInjectionChars preserves configuration validation while
+// allowing comment-like text that is harmless inside quoted identifiers.
+func TestValidateDBTableSQLInjectionChars(t *testing.T) {
+	t.Parallel()
+	tests := map[string]bool{
+		"vault`":        true,
+		"vault'":        true,
+		"vault`;SELECT": true,
+		"vault--":       false,
+		"vault_tbl1":    false,
+	}
+	for name, wantErr := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			for _, names := range [][2]string{{name, "vault"}, {"vault", name}} {
+				err := validateDBTable(names[0], names[1])
+				if wantErr {
+					require.Error(t, err, "invalid configured identifier %q must be rejected", name)
+				} else {
+					require.NoError(t, err, "existing valid identifier %q must remain accepted", name)
+				}
+			}
+		})
+	}
+}
+
+// TestQuoteIdentifier verifies escaping independently of validation, including
+// custom lock table names that can contain spaces, quotes and backticks.
+func TestQuoteIdentifier(t *testing.T) {
+	t.Parallel()
+	tests := map[string]struct {
+		name string
+		want string
+	}{
+		"plain identifier":   {name: "vault", want: "`vault`"},
+		"embedded backtick":  {name: "vault`x", want: "`vault``x`"},
+		"multiple backticks": {name: "a`b`c", want: "`a``b``c`"},
+		"leading/trailing":   {name: "`vault`", want: "```vault```"},
+		"lock table":         {name: "vault lock's", want: "`vault lock's`"},
+		"SQL-looking text":   {name: "vault`; SELECT 1--", want: "`vault``; SELECT 1--`"},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			require.Equal(t, tc.want, quoteIdentifier(tc.name), "identifier must be delimited and escaped")
+		})
+	}
+}
+
+// TestMySQLBackendCustomLockTable verifies that custom names remain supported
+// with HA enabled and unused lock-table settings are ignored with HA disabled.
+func TestMySQLBackendCustomLockTable(t *testing.T) {
+	t.Parallel()
+	cleanup, connURL := mysqlhelper.PrepareTestContainer(t, false, "secret")
+	t.Cleanup(cleanup)
+	cfg, err := mysql.ParseDSN(connURL)
+	require.NoError(t, err, "parse test connection")
+	setupDB, err := sql.Open("mysql", connURL)
+	require.NoError(t, err, "open setup connection")
+	t.Cleanup(func() { require.NoError(t, setupDB.Close(), "close setup connection") })
+
+	tests := map[string]struct {
+		lockTable string
+		haEnabled string
+	}{
+		"spaces and apostrophe": {lockTable: "vault lock's", haEnabled: "true"},
+		"backtick":              {lockTable: "vault`lock", haEnabled: "true"},
+		"HA disabled":           {lockTable: "", haEnabled: "false"},
+	}
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			id, err := uuid.GenerateUUID()
+			require.NoError(t, err, "generate isolated database name")
+			database := "vault_quote_" + strings.ReplaceAll(id, "-", "")
+			t.Cleanup(func() {
+				_, err := setupDB.Exec("DROP DATABASE IF EXISTS " + quoteIdentifier(database))
+				require.NoError(t, err, "drop isolated database")
+			})
+			b, err := NewMySQLBackend(map[string]string{
+				"address":                      cfg.Addr,
+				"username":                     cfg.User,
+				"password":                     cfg.Passwd,
+				"database":                     database,
+				"table":                        "vault",
+				"lock_table":                   tc.lockTable,
+				"ha_enabled":                   tc.haEnabled,
+				"plaintext_connection_allowed": "true",
+			}, logging.NewVaultLogger(log.Debug))
+			require.NoError(t, err, "create backend with custom lock-table configuration")
+			backend := b.(*MySQLBackend)
+			t.Cleanup(func() { require.NoError(t, backend.client.Close(), "close backend") })
+			physical.ExerciseBackend(t, b)
+			if tc.haEnabled == "true" {
+				_, err := backend.client.Exec("INSERT INTO "+backend.dbLockTable+" VALUES (?, ?)", "job", "leader")
+				require.NoError(t, err, "write to quoted lock table")
+				var leader string
+				err = backend.statements["get_lock"].QueryRow("job").Scan(&leader)
+				require.NoError(t, err, "read from quoted lock table")
+				require.Equal(t, "leader", leader, "lock table must retain stored data")
+			}
+		})
 	}
 }
 

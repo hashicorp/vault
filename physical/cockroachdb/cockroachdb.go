@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cockroachdb
@@ -323,6 +323,12 @@ func (c *CockroachDBBackend) transaction(tx *sql.Tx, txns []*physical.TxnEntry) 
 //
 // The docs do state that we can bypass these rules with double quotes, however I think it
 // is safer to just require these rules across the board.
+//
+// Table names are concatenated into SQL unquoted, so this allowlist is the only
+// SQL injection protection. Before relaxing it, quote identifiers, lowercasing
+// each part first: current CockroachDB versions lowercase unquoted names but keep
+// quoted ones as written, so existing data for "vault.MyTable" lives in "mytable"
+// and quoting it as written would point Vault at an empty "MyTable".
 func validateDBTable(dbTable string) (err error) {
 	// Check if this is 'database.table' formatted. If so, split them apart and check the two
 	// parts from each other
