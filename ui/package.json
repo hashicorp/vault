@@ -224,7 +224,7 @@
     "@segment/analytics-next": "^1.84.1",
     "ember-auto-import": "2.10.0",
     "handlebars": "4.7.9",
-    "js-yaml": "^5.2.1",
+    "js-yaml": "5.4.1",
     "posthog-js": "1.236.1",
     "uuid": "9.0.1"
   },
