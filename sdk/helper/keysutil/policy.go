@@ -1287,10 +1287,10 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 		return nil, err
 	}
 
-	if p.Type == KeyType_HMAC {
+	if p.KeyVersionType(version) == KeyType_HMAC {
 		return keyEntry.Key, nil
 	}
-	if keyEntry.HMACKey == nil {
+	if keyEntry.HMACKey == nil && p.KeyVersionType(version) != KeyType_MANAGED_KEY {
 		return nil, fmt.Errorf("no HMAC key exists for that key version")
 	}
 	return keyEntry.HMACKey, nil
