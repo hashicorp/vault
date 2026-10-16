@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package mssqlhelper
@@ -6,11 +6,13 @@ package mssqlhelper
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -26,6 +28,15 @@ const mssqlPassword = "yourStrong(!)Password"
 // is unreachable.
 const numRetries = 3
 
+// SQL Server accepts sa logins before startup recovery, which includes system
+// database upgrades, has finished; statements issued in that window can stall.
+// SQL Server writes this line to its log once that startup work is done.
+const recoveryCompleteLog = "Recovery is complete."
+
+// PrepareMSSQLTestContainer returns a connection URL for a SQL Server that tests
+// can use, and a cleanup function. If MSSQL_URL is set, that server is used as is.
+// Otherwise it starts a fresh SQL Server container and returns only after the
+// server has finished starting up, not merely after it first accepts logins.
 func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
 	if strings.Contains(runtime.GOARCH, "arm") {
 		t.Skip("Skipping, as this image is not supported on ARM architectures")
@@ -61,16 +72,27 @@ USER mssql
 	imageName := "mssql-workaround-895"
 	imageTag := "latest"
 
-	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ContainerName: "sqlserver",
-		ImageRepo:     imageName,
-		ImageTag:      imageTag,
-		Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
-		Ports:         []string{"1433/tcp"},
-		LogConsumer: func(s string) {
-			logger.Info(s)
-		},
-	})
+	// runOptions describes the container to start. Its LogConsumer receives every
+	// line the container logs and sets recovered once SQL Server reports that
+	// startup recovery is complete.
+	runOptions := func(recovered *atomic.Bool) docker.RunOptions {
+		return docker.RunOptions{
+			ContainerName: "sqlserver",
+			ImageRepo:     imageName,
+			ImageTag:      imageTag,
+			Env:           []string{"ACCEPT_EULA=Y", "SA_PASSWORD=" + mssqlPassword},
+			Ports:         []string{"1433/tcp"},
+			LogConsumer: func(s string) {
+				logger.Info(s)
+				if strings.Contains(s, recoveryCompleteLog) {
+					recovered.Store(true)
+				}
+			},
+		}
+	}
+
+	// This runner only builds the image, so its recovered flag is never read.
+	runner, err := docker.NewServiceRunner(runOptions(new(atomic.Bool)))
 	if err != nil {
 		t.Fatalf("Could not provision docker service runner: %s", err)
 	}
@@ -93,7 +115,23 @@ USER mssql
 	for i := 0; i < numRetries; i++ {
 		var svc *docker.Service
 
-		svc, err = runner.StartService(context.Background(), connectMSSQL)
+		// A runner per attempt gives each container its own log consumer, so
+		// output from a replaced container cannot mark the next one as recovered.
+		recovered := new(atomic.Bool)
+		runner, err = docker.NewServiceRunner(runOptions(recovered))
+		if err != nil {
+			t.Fatalf("Could not provision docker service runner: %s", err)
+		}
+		// StartService starts the container, then keeps calling this readiness
+		// check with backoff (up to about two minutes) until it returns no error.
+		// The server counts as ready only after it has logged that recovery is
+		// complete and an sa login succeeds.
+		svc, err = runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
+			if !recovered.Load() {
+				return nil, errors.New("SQL Server has not completed startup recovery")
+			}
+			return connectMSSQL(ctx, host, port)
+		})
 		if err == nil {
 			return svc.Cleanup, svc.Config.URL().String()
 		}
