@@ -943,3 +943,264 @@ func TestIdentityStore_MergeEntities_FailsDueToMultipleClashMergesAttempted(t *t
 		t.Fatalf("did not error for the right reason. Error: %v", err)
 	}
 }
+
+// aliasSpec describes a alias
+type aliasSpec struct {
+	mountPath string // name of the mount accessor
+	name      string
+}
+
+// aliasExistsByID returns true when the alias with aliasID is still present in
+// the identity alias list, false when it has been deleted
+func aliasExistsByID(t *testing.T, client *api.Client, aliasID string) bool {
+	t.Helper()
+	resp, err := client.Logical().Read("identity/entity-alias/id/" + aliasID)
+	require.NoError(t, err)
+	return resp != nil
+}
+
+// entityAliasIDs returns the sorted set of alias IDs currently attached to an entity
+func entityAliasIDs(t *testing.T, client *api.Client, entityID string) []string {
+	t.Helper()
+	resp, err := client.Logical().Read("identity/entity/id/" + entityID)
+	require.NoError(t, err)
+	require.NotNil(t, resp, "entity %s not found", entityID)
+
+	aliases, _ := resp.Data["aliases"].([]interface{})
+	ids := make([]string, 0, len(aliases))
+	for _, raw := range aliases {
+		m := raw.(map[string]interface{})
+		ids = append(ids, m["id"].(string))
+	}
+	sort.Strings(ids)
+	return ids
+}
+
+// TestEntityMerge_ConflictResolution verifies that the caller can resolve alias conflicts that arise
+// when merging two entities that share one or more mount accessors.
+// Each test case declares the full alias topology for both entities via toAliases / fromAliases:
+// any mount path that appears in both lists is a conflict and requires a resolution entry.
+// The merged entity should have non-conflicting aliases and alias decided to kept,
+// and shouldn't have alias that get deleted during the entityMerge.
+func TestEntityMerge_ConflictResolution(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name        string
+		toAliases   []aliasSpec // aliases to create on toEntity
+		fromAliases []aliasSpec // aliases to create on fromEntity
+		// conflictResolution receives maps of aliasName -> aliasID for each entity
+		// and returns the slice of alias IDs to pass as conflicting_alias_ids_to_keep.
+		conflictResolution func(toAliasIDs, fromAliasIDs map[string]string) []string
+	}{
+		{
+			name:        "one conflict mount: keep toEntity alias",
+			toAliases:   []aliasSpec{{mountPath: "jwt1", name: "to-alias"}},
+			fromAliases: []aliasSpec{{mountPath: "jwt1", name: "from-alias"}},
+			conflictResolution: func(toAliasIDs, _ map[string]string) []string {
+				return []string{toAliasIDs["to-alias"]}
+			},
+		},
+		{
+			name:        "one conflict mount: keep fromEntity alias",
+			toAliases:   []aliasSpec{{mountPath: "jwt1", name: "to-alias"}},
+			fromAliases: []aliasSpec{{mountPath: "jwt1", name: "from-alias"}},
+			conflictResolution: func(_, fromAliasIDs map[string]string) []string {
+				return []string{fromAliasIDs["from-alias"]}
+			},
+		},
+		{
+			// two conflicting mounts: keep one alias from each entity
+			name: "two conflict mounts: keep one alias from each entity",
+			toAliases: []aliasSpec{
+				{mountPath: "jwt1", name: "to-alias-jwt1"},
+				{mountPath: "jwt2", name: "to-alias-jwt2"},
+			},
+			fromAliases: []aliasSpec{
+				{mountPath: "jwt1", name: "from-alias-jwt1"},
+				{mountPath: "jwt2", name: "from-alias-jwt2"},
+			},
+			conflictResolution: func(toAliasIDs, fromAliasIDs map[string]string) []string {
+				return []string{toAliasIDs["to-alias-jwt1"], fromAliasIDs["from-alias-jwt2"]}
+			},
+		},
+		{
+			// one conflicting mount and one non conflicting alias on toEntity only
+			// The non conflicting and kept alias should survive
+			name: "one conflict plus one non-conflicting toEntity alias",
+			toAliases: []aliasSpec{
+				{mountPath: "jwt1", name: "to-alias-conflict"},
+				{mountPath: "jwt2", name: "to-alias-unique"},
+			},
+			fromAliases: []aliasSpec{
+				{mountPath: "jwt1", name: "from-alias-conflict"},
+			},
+			conflictResolution: func(toAliasIDs, _ map[string]string) []string {
+				return []string{toAliasIDs["to-alias-conflict"]}
+			},
+		},
+		{
+			// One conflicting mount and one non conflicting alias on fromEntity only
+			// The non conflicting alias must be transferred to toEntity
+			name: "one conflict plus one non-conflicting fromEntity alias",
+			toAliases: []aliasSpec{
+				{mountPath: "jwt1", name: "to-alias-conflict"},
+			},
+			fromAliases: []aliasSpec{
+				{mountPath: "jwt1", name: "from-alias-conflict"},
+				{mountPath: "jwt2", name: "from-alias-unique"},
+			},
+			conflictResolution: func(_, fromAliasIDs map[string]string) []string {
+				return []string{fromAliasIDs["from-alias-conflict"]}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cluster := minimal.NewTestSoloCluster(t, nil)
+			client := cluster.Cores[0].Client
+
+			// Get and enable mount paths across both entities
+			seenMounts := make(map[string]bool)
+			for _, a := range append(tc.toAliases, tc.fromAliases...) {
+				if !seenMounts[a.mountPath] {
+					seenMounts[a.mountPath] = true
+					require.NoError(t, client.Sys().EnableAuthWithOptions(a.mountPath, &api.EnableAuthOptions{
+						Type: "jwt",
+					}))
+				}
+			}
+
+			authMounts, err := client.Sys().ListAuth()
+			require.NoError(t, err)
+			accessorOf := make(map[string]string, len(seenMounts))
+			for path := range seenMounts {
+				accessorOf[path] = authMounts[path+"/"].Accessor
+			}
+
+			// Create toEntity and all its aliases and map aliasName -> aliasID
+			toResp, err := client.Logical().Write("identity/entity", map[string]interface{}{"name": "to-entity"})
+			require.NoError(t, err)
+			toEntityID := toResp.Data["id"].(string)
+
+			toAliasIDs := make(map[string]string, len(tc.toAliases))
+			for _, a := range tc.toAliases {
+				r, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+					"name":           a.name,
+					"mount_accessor": accessorOf[a.mountPath],
+					"canonical_id":   toEntityID,
+				})
+				require.NoError(t, err)
+				toAliasIDs[a.name] = r.Data["id"].(string)
+			}
+
+			// Create fromEntity and all its aliases and map aliasName -> aliasID
+			fromResp, err := client.Logical().Write("identity/entity", map[string]interface{}{"name": "from-entity"})
+			require.NoError(t, err)
+			fromEntityID := fromResp.Data["id"].(string)
+
+			fromAliasIDs := make(map[string]string, len(tc.fromAliases))
+			for _, a := range tc.fromAliases {
+				r, err := client.Logical().Write("identity/entity-alias", map[string]interface{}{
+					"name":           a.name,
+					"mount_accessor": accessorOf[a.mountPath],
+					"canonical_id":   fromEntityID,
+				})
+				require.NoError(t, err)
+				fromAliasIDs[a.name] = r.Data["id"].(string)
+			}
+
+			// Determine which aliases are kept and which are discarded
+			keptAliasIDs := tc.conflictResolution(toAliasIDs, fromAliasIDs)
+			keptSet := make(map[string]bool, len(keptAliasIDs))
+			for _, id := range keptAliasIDs {
+				keptSet[id] = true
+			}
+
+			// Perform the merge with conflict resolution
+			_, err = client.Logical().Write("identity/entity/merge", map[string]interface{}{
+				"to_entity_id":                  toEntityID,
+				"from_entity_ids":               []string{fromEntityID},
+				"conflicting_alias_ids_to_keep": keptAliasIDs,
+			})
+			require.NoError(t, err, "merge with conflict resolution should succeed")
+
+			// fromEntity should be deleted after the merge
+			resp, err := client.Logical().Read("identity/entity/id/" + fromEntityID)
+			require.NoError(t, err)
+			require.Nil(t, resp, "fromEntity should have been deleted after merge")
+
+			// Determine conflicting mount paths
+			toMountPaths := make(map[string]bool, len(tc.toAliases))
+			for _, a := range tc.toAliases {
+				toMountPaths[a.mountPath] = true
+			}
+			conflictingMounts := make(map[string]bool)
+			for _, a := range tc.fromAliases {
+				if toMountPaths[a.mountPath] {
+					conflictingMounts[a.mountPath] = true
+				}
+			}
+
+			// Build the complete set of alias IDs that survive on toEntity after the merge:
+			// all non conflicting aliases and keptAliasIDs from both entities
+			expectedSurvivors := make(map[string]bool)
+			for _, a := range tc.toAliases {
+				id := toAliasIDs[a.name]
+				if conflictingMounts[a.mountPath] {
+					if keptSet[id] {
+						expectedSurvivors[id] = true
+					}
+				} else {
+					expectedSurvivors[id] = true
+				}
+			}
+			for _, a := range tc.fromAliases {
+				id := fromAliasIDs[a.name]
+				if conflictingMounts[a.mountPath] {
+					if keptSet[id] {
+						expectedSurvivors[id] = true
+					}
+				} else {
+					expectedSurvivors[id] = true
+				}
+			}
+
+			// Every alias that should survive should exist and be attached to toEntity.
+			for id := range expectedSurvivors {
+				require.True(t, aliasExistsByID(t, client, id),
+					"alias %s should still exist after merge", id)
+			}
+
+			// Every discarded alias should be deleted
+			allAliasIDs := make(map[string]struct{})
+			for _, id := range toAliasIDs {
+				allAliasIDs[id] = struct{}{}
+			}
+			for _, id := range fromAliasIDs {
+				allAliasIDs[id] = struct{}{}
+			}
+			for id := range allAliasIDs {
+				if !expectedSurvivors[id] {
+					require.False(t, aliasExistsByID(t, client, id),
+						"alias %s should have been deleted after merge", id)
+				}
+			}
+
+			// toEntity should only contain the surviving aliases: non conflicting and
+			// explicitly kept via conflicting_alias_ids_to_keep
+			wantIDs := make([]string, 0, len(expectedSurvivors))
+			for id := range expectedSurvivors {
+				wantIDs = append(wantIDs, id)
+			}
+			sort.Strings(wantIDs)
+
+			gotIDs := entityAliasIDs(t, client, toEntityID)
+			require.Equal(t, wantIDs, gotIDs,
+				"toEntity should carry exactly the expected aliases after merge")
+		})
+	}
+}

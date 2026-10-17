@@ -164,6 +164,11 @@ func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAtt
 								Description: `Managed Key Name`,
 								Required:    false,
 							},
+							"parameter_set": {
+								Type:        framework.TypeString,
+								Description: `The ML-DSA parameter set of the key, if applicable`,
+								Required:    false,
+							},
 						},
 					}},
 				},
@@ -255,6 +260,9 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		keyIdParam:   key.ID,
 		keyNameParam: key.Name,
 		keyTypeParam: string(key.PrivateKeyType),
+	}
+	if key.ParameterSet != "" {
+		respData[parameterSetParam] = key.ParameterSet
 	}
 
 	var pkForSkid crypto.PublicKey

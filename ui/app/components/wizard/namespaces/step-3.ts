@@ -21,6 +21,7 @@ import {
   generateCliSnippet,
   generateTerraformSnippet,
 } from 'core/utils/code-generators/namespace-snippets';
+import type { AnalyticsEventName } from 'vault/utils/analytic-events';
 
 interface Args {
   wizardState: {
@@ -39,7 +40,7 @@ interface CreationMethodChoice {
   isRecommended?: boolean;
 }
 
-const CREATION_METHOD_EVENTS: Record<CreationMethod, string> = {
+const CREATION_METHOD_EVENTS: Record<CreationMethod, AnalyticsEventName> = {
   [CreationMethod.TERRAFORM]: WIZARD_NAMESPACE_STEP3_SELECT_TERRAFORM,
   [CreationMethod.APICLI]: WIZARD_NAMESPACE_STEP3_SELECT_CLI_API,
   [CreationMethod.UI]: WIZARD_NAMESPACE_STEP3_SELECT_UI,

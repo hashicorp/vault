@@ -69,12 +69,14 @@
 
 // large grouped css blocks
 .is-hint {
-  color: var(--token-color-palette-neutral-400);
+  // neutral-400 (#8c909c) fails contrast on white; foreground-faint (#656a76)
+  // achieves ≥4.5:1 on the default page background in both light and dark mode.
+  color: var(--token-color-foreground-faint);
   font-size: var(--token-typography-body-200-font-size);
 }
 
 .is-optional {
-  color: var(--token-color-palette-neutral-400);
+  color: var(--token-color-foreground-faint);
   font-size: var(--token-typography-body-200-font-size);
   text-transform: lowercase;
 }

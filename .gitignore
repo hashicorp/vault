@@ -149,6 +149,11 @@ scratch
 # ignore Idea/Goland .run directory
 .run
 
-# bob
+# .agents/
+.agents/tmp
+# per-engineer agent preferences
+.agents/preferences/user.preferences.md
+
+# .bob/
 .bob/notes
 .bob/tmp

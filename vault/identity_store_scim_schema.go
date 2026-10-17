@@ -138,9 +138,12 @@ func (i *IdentityStore) scimFieldGuard(ctx context.Context, resource scimManaged
 		return nil
 	}
 
-	// The request is from the API (not SCIM). Check whether any of the
-	// modified fields are SCIM-managed.
-	scimManagedFields := resource.SCIMFields()
+	// The request is from the API (not SCIM). Check whether any of the modified
+	// fields are SCIM-managed for the owning client's effective schema version.
+	scimManagedFields, err := i.effectiveSCIMFields(ctx, resource)
+	if err != nil {
+		return err
+	}
 	managedSet := make(map[string]struct{}, len(scimManagedFields))
 	for _, f := range scimManagedFields {
 		managedSet[f] = struct{}{}

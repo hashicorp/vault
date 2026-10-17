@@ -20,7 +20,7 @@ import (
 	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -444,7 +444,7 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		if ok && cancel != nil {
 			cancel()
 		}
-		c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
+		c.activeContextCancelFunc.Store(context.CancelFunc(nil))
 	}
 
 	var g run.Group

@@ -26,6 +26,9 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   hooks.beforeEach(function () {
     this._originalResizeObserver = window.ResizeObserver;
     window.ResizeObserver = class ResizeObserver {
+      constructor(callback) {
+        this.callback = callback;
+      }
       observe() {}
       unobserve() {}
       disconnect() {}

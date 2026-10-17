@@ -32,8 +32,7 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    {{! template-lint-disable simple-unless }}
-    {{#unless (or (and (eq this.model.identityType "group") (eq this.model.type "internal")) this.model.alias.id)}}
+    {{#if this.model.canAddAlias}}
       <ToolbarLink
         @route="vault.cluster.access.identity.entities.aliases.add"
         @models={{array this.model.id}}
@@ -42,16 +41,17 @@
       >
         Add alias
       </ToolbarLink>
-    {{/unless}}
-    {{! template-lint-enable simple-unless }}
-    <ToolbarLink
-      @route="vault.cluster.access.identity.entities.edit"
-      @models={{array this.model.id}}
-      data-test-entity-edit-link={{true}}
-    >
-      Edit
-      {{this.model.identityType}}
-    </ToolbarLink>
+    {{/if}}
+    {{#if this.model.canEditEntity}}
+      <ToolbarLink
+        @route="vault.cluster.access.identity.entities.edit"
+        @models={{array this.model.id}}
+        data-test-entity-edit-link={{true}}
+      >
+        Edit
+        {{this.model.identityType}}
+      </ToolbarLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
 {{! renders either the identity item-aliases or item-groups component}}

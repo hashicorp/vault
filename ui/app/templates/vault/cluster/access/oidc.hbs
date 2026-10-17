@@ -10,15 +10,23 @@
     </:breadcrumbs>
     <:description>
       Use Vault as an identity provider for external authentication methods that use the OpenID Connect (OIDC) protocol.
-      <Hds::Link::Inline @isHrefExternal={{true}} @href={{doc-link "/vault/gui/oidc-provider"}}>
-        Learn more
-      </Hds::Link::Inline>
     </:description>
     <:actions>
-      {{#if this.isCta}}
+      {{#if (and this.showContent this.isInitialState)}}
+        <Hds::Button
+          class="has-right-margin-4"
+          @color="secondary"
+          @icon="bulb"
+          @text="New to OIDC Provider?"
+          {{on "click" this.showIntroPage}}
+          data-test-button="intro"
+        />
+      {{/if}}
+      {{#if (and this.isCta this.showContent)}}
         <Hds::Button
           @text="Create your first app"
           @route="vault.cluster.access.oidc.clients.create"
+          @icon="plus"
           data-test-oidc-configure
         />
       {{/if}}
@@ -50,4 +58,12 @@
   {{/unless}}
 {{/if}}
 
-{{outlet}}
+{{#if this.showWizard}}
+  <Wizard::OidcProvider::OidcProviderWizard @isIntroModal={{this.shouldRenderIntroModal}} @onRefresh={{this.refreshRoute}} />
+{{/if}}
+
+{{! Always render the outlet when content should be visible, including when
+    the intro is shown as a modal so the empty state remains behind it. }}
+{{#if this.showContent}}
+  {{outlet}}
+{{/if}}

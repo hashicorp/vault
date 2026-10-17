@@ -1,0 +1,8 @@
+{
+  "name": "eslint-plugin-vault",
+  "version": "0.0.0",
+  "description": "Local ESLint rules for the Vault UI",
+  "main": "index.js",
+  "private": true,
+  "license": "BUSL-1.1"
+}

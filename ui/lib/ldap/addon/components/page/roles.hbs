@@ -15,11 +15,11 @@
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>
-    {{#unless @promptConfig}}
+    {{#if (and (not @promptConfig) this.canCreateRole)}}
       <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-action="role">
         Create role
       </ToolbarLink>
-    {{/unless}}
+    {{/if}}
   </:toolbarActions>
 </LdapHeader>
 

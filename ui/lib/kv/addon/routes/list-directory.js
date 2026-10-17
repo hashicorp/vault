@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { didCancel } from 'ember-concurrency';
 import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 import { paginate } from 'core/utils/paginate-list';
 
@@ -13,6 +14,7 @@ export default class KvSecretsListRoute extends Route {
   @service secretMountPath;
   @service api;
   @service capabilities;
+  @service('kv-mount-retry') kvMountRetry;
 
   queryParams = {
     pageFilter: {
@@ -29,9 +31,14 @@ export default class KvSecretsListRoute extends Route {
       // This request can either list secrets at the mount root or for a specified :secret_path.
       // Since :secret_path already contains a trailing slash, e.g. /metadata/my-secret//
       // the request URL is sanitized by the api service to remove duplicate slashes.
-      const { keys } = await this.api.secrets.kvV2List(pathToSecret, backend, true);
+      // A brand-new KV v2 mount can transiently 400 here while it upgrades storage from non-versioned
+      // to versioned data (slower on a perf standby/secondary, which polls the primary). Retry instead
+      // of surfacing the raw upgrade message.
+      const { keys } = await this.kvMountRetry.listKvSecrets.perform(pathToSecret, backend);
       return paginate(keys, { page: Number(params.page) || 1, filter: params.pageFilter });
     } catch (error) {
+      if (didCancel(error)) throw error;
+
       const { status, response } = await this.api.parseError(error);
       if (status === 403 && !response?.isControlGroupError) {
         return 403;

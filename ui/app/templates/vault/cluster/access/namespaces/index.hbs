@@ -5,7 +5,8 @@
 
 <Page::Namespaces
   @model={{this.model}}
-  @onFilterChange={{this.navigate}}
   @onRefresh={{this.refreshRoute}}
-  @onPageChange={{this.navigate}}
+  @sortBy={{this.sortBy}}
+  @sortOrder={{this.sortOrder}}
+  @onSortChange={{this.updateSort}}
 />

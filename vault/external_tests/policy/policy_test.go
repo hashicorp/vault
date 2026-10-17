@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPolicy_NoDefaultPolicy(t *testing.T) {
@@ -157,9 +158,7 @@ func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	}
 
 	// Verify that the lease renewal extended the duration properly.
-	if float64(secret.Auth.LeaseDuration) < (1 * time.Hour).Seconds() {
-		t.Fatalf("failed to renew lease, got: %v", secret.Auth.LeaseDuration)
-	}
+	require.GreaterOrEqual(t, float64(secret.Auth.LeaseDuration), (1 * time.Hour).Seconds(), "failed to renew lease")
 }
 
 func TestPolicy_TokenRenewal(t *testing.T) {
@@ -264,18 +263,15 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 
 			// Verify the policies exist in the login response
 			expectedTokenPolicies := append([]string{"default"}, tc.tokenPolicies...)
-			if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies) {
-				t.Fatalf("token policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
-			}
+			require.True(t, strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies),
+				"token policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
 
-			if !strutil.EquivalentSlices(secret.Auth.IdentityPolicies, tc.identityPolicies) {
-				t.Fatalf("identity policy mismatch:\nexpected: %v\ngot: %v", tc.identityPolicies, secret.Auth.IdentityPolicies)
-			}
+			require.True(t, strutil.EquivalentSlices(secret.Auth.IdentityPolicies, tc.identityPolicies),
+				"identity policy mismatch:\nexpected: %v\ngot: %v", tc.identityPolicies, secret.Auth.IdentityPolicies)
 
 			expectedPolicies := append(expectedTokenPolicies, tc.identityPolicies...)
-			if !strutil.EquivalentSlices(secret.Auth.Policies, expectedPolicies) {
-				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedPolicies, secret.Auth.Policies)
-			}
+			require.True(t, strutil.EquivalentSlices(secret.Auth.Policies, expectedPolicies),
+				"policy mismatch:\nexpected: %v\ngot: %v", expectedPolicies, secret.Auth.Policies)
 
 			// Renew token
 			secret, err = client.Logical().Write("auth/token/renew", map[string]interface{}{
@@ -286,17 +282,87 @@ func TestPolicy_TokenRenewal(t *testing.T) {
 			}
 
 			// Verify the policies exist in the renewal response
-			if !strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies) {
-				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
-			}
+			require.True(t, strutil.EquivalentSlices(secret.Auth.TokenPolicies, expectedTokenPolicies),
+				"policy mismatch:\nexpected: %v\ngot: %v", expectedTokenPolicies, secret.Auth.TokenPolicies)
 
-			if !strutil.EquivalentSlices(secret.Auth.IdentityPolicies, tc.identityPolicies) {
-				t.Fatalf("identity policy mismatch:\nexpected: %v\ngot: %v", tc.identityPolicies, secret.Auth.IdentityPolicies)
-			}
+			require.True(t, strutil.EquivalentSlices(secret.Auth.IdentityPolicies, tc.identityPolicies),
+				"identity policy mismatch:\nexpected: %v\ngot: %v", tc.identityPolicies, secret.Auth.IdentityPolicies)
 
-			if !strutil.EquivalentSlices(secret.Auth.Policies, expectedPolicies) {
-				t.Fatalf("policy mismatch:\nexpected: %v\ngot: %v", expectedPolicies, secret.Auth.Policies)
-			}
+			require.True(t, strutil.EquivalentSlices(secret.Auth.Policies, expectedPolicies),
+				"policy mismatch:\nexpected: %v\ngot: %v", expectedPolicies, secret.Auth.Policies)
 		})
 	}
+}
+
+// TestPolicy_IdentityPolicyNameValidation verifies identity entity/group policy
+// attachment rejects invalid policy names and accepts canonicalizable names.
+func TestPolicy_IdentityPolicyNameValidation(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{})
+	client := cluster.Cores[0].Client
+
+	invalidWrites := []struct {
+		path string
+		data map[string]interface{}
+	}{
+		{
+			path: "identity/entity",
+			data: map[string]interface{}{
+				"name":     "entity-invalid-parent-segment",
+				"policies": []string{"team/../read"},
+			},
+		},
+		{
+			path: "identity/entity",
+			data: map[string]interface{}{
+				"name":     "entity-invalid-dot-segment",
+				"policies": []string{"team/./read"},
+			},
+		},
+		{
+			path: "identity/group",
+			data: map[string]interface{}{
+				"name":     "group-invalid-parent-segment",
+				"policies": []string{"group/../read"},
+			},
+		},
+		{
+			path: "identity/group",
+			data: map[string]interface{}{
+				"name":     "group-invalid-dot",
+				"policies": []string{"."},
+			},
+		},
+	}
+
+	for _, tc := range invalidWrites {
+		_, err := client.Logical().Write(tc.path, tc.data)
+		require.Error(t, err, "expected invalid policy name error for %s write", tc.path)
+		require.Contains(t, err.Error(), "invalid policy name", "expected invalid policy name error for %s write", tc.path)
+	}
+
+	_, err := client.Logical().Write("identity/entity", map[string]interface{}{
+		"name":     "entity-valid-policy",
+		"policies": []string{" Team-Read "},
+	})
+	require.NoError(t, err, "expected valid entity policy name to be accepted")
+
+	_, err = client.Logical().Write("identity/entity", map[string]interface{}{
+		"name":     "entity-valid-backslash-policy",
+		"policies": []string{`team\read`},
+	})
+	require.NoError(t, err, "expected backslash policy name to be accepted")
+
+	_, err = client.Logical().Write("identity/group", map[string]interface{}{
+		"name":     "group-valid-policy",
+		"policies": []string{" Team-Read "},
+	})
+	require.NoError(t, err, "expected valid group policy name to be accepted")
+
+	_, err = client.Logical().Write("identity/group", map[string]interface{}{
+		"name":     "group-valid-embedded-dotdot-policy",
+		"policies": []string{"team..read"},
+	})
+	require.NoError(t, err, "expected embedded dotdot policy name to be accepted")
 }

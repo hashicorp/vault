@@ -99,6 +99,7 @@ if vault version | grep -q "+ent"; then
     vault auth enable "saml"
     vault auth enable "scep"
     vault auth enable "spiffe"
+    vault auth enable "tpm"
 fi
 
 # Output OpenAPI, optionally formatted

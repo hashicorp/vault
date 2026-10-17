@@ -3,7 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 {{#if @isModal}}
-  <Hds::Modal id={{@title "-intro-modal"}} @size="large" @onClose={{@onDismiss}} class="modal" ...attributes as |M|>
+  <Hds::Modal
+    id={{@title "-intro-modal"}}
+    @size="large"
+    @onClose={{@onDismiss}}
+    class="modal"
+    data-test-modal={{@title}}
+    ...attributes
+    as |M|
+  >
     <M.Header>
       {{or @customHeader (concat "Welcome to " @title)}}
     </M.Header>

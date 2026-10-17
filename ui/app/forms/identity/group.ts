@@ -24,6 +24,7 @@ export default class GroupIdentityForm extends Form<GroupIdentityFormData> {
       new FormField('name', 'string'),
       new FormField('type', 'string', {
         possibleValues: ['internal', 'external'],
+        editDisabled: this.isNew ? false : true,
       }),
       new FormField('policies', undefined, {
         editType: 'yield',

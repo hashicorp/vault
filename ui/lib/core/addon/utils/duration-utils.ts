@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -58,3 +58,28 @@ export const durationToSeconds = (duration: string) => {
     return null;
   }
 };
+
+// Vault parses durations into Go's time.Duration (int64 nanoseconds) and rejects anything longer.
+export const MAX_DURATION_SECONDS = 9223372036;
+
+// Matches plain seconds, including the exponent notation large numbers get when interpolated (e.g. '1e+21s')
+// and 'Infinity', which TtlPicker produces when a long digit input overflows.
+const PLAIN_SECONDS = /^(\d+(?:\.\d+)?(?:e\+?\d+)?|Infinity)s?$/;
+
+/**
+ * Returns true when a duration is longer than Vault can store.
+ * Empty values and values that cannot be parsed return false so the API can report them.
+ */
+export const isDurationOverMax = (duration: unknown): boolean => {
+  let seconds: number | null = null;
+  if (typeof duration === 'number') {
+    seconds = duration;
+  } else if (typeof duration === 'string' && duration.trim()) {
+    const plain = duration.trim().match(PLAIN_SECONDS);
+    seconds = plain ? Number(plain[1]) : durationToSeconds(duration.trim());
+  }
+  return seconds !== null && seconds > MAX_DURATION_SECONDS;
+};
+
+export const maxDurationMessage = (label: string) =>
+  `${label} is too large. Maximum allowed value is 106,751 days.`;

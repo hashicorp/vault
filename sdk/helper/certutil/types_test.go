@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"testing"
 
@@ -30,6 +31,11 @@ func TestGetPrivateKeyTypeFromPublicKey(t *testing.T) {
 		t.Fatalf("error generating ed25519 key: %s", err)
 	}
 
+	mldsaKey, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	if err != nil {
+		t.Fatalf("error generating mldsa key: %s", err)
+	}
+
 	testCases := map[string]struct {
 		publicKey       crypto.PublicKey
 		expectedKeyType PrivateKeyType
@@ -45,6 +51,10 @@ func TestGetPrivateKeyTypeFromPublicKey(t *testing.T) {
 		"ed25519": {
 			publicKey:       publicKey,
 			expectedKeyType: Ed25519PrivateKey,
+		},
+		"ml-dsa": {
+			publicKey:       mldsaKey.Public(),
+			expectedKeyType: MLDSAPrivateKey,
 		},
 		"bad key type": {
 			publicKey:       []byte{},

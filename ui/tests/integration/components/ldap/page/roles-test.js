@@ -48,6 +48,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
       return render(
         hbs`<Page::Roles
           @promptConfig={{this.promptConfig}}
+          @isSelfManaged={{this.isSelfManaged}}
           @secretsEngine={{this.secretsEngine}}
           @roles={{this.roles}}
           @capabilities={{this.capabilities}}
@@ -144,5 +145,48 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
       },
       'Transition called with correct query params on filter change'
     );
+  });
+  // Creating a role needs create on a path beneath static-role or role; read-only tokens would
+  // otherwise land on a form they cannot submit.
+  test('it should only offer Create role when the token can create a role', async function (assert) {
+    const permissions = this.owner.lookup('service:permissions');
+    const beneathStub = sinon.stub(permissions, 'hasPermissionBeneath').returns(false);
+
+    await this.renderComponent();
+    assert.dom('[data-test-toolbar-action="role"]').doesNotExist('Create role is hidden without create');
+    assert.true(
+      beneathStub.calledWith(`${this.backend}/static-role`, ['create']),
+      'static roles are checked for create'
+    );
+    assert.true(
+      beneathStub.calledWith(`${this.backend}/role`, ['create']),
+      'dynamic roles are checked for create'
+    );
+
+    beneathStub.withArgs(`${this.backend}/role`, ['create']).returns(true);
+    await this.renderComponent();
+    assert
+      .dom('[data-test-toolbar-action="role"]')
+      .exists('Create role renders when either role type can be created');
+  });
+
+  // Self-managed mounts only support static roles, so create on dynamic roles alone is not enough.
+  test('it should require static role create to offer Create role on a self-managed mount', async function (assert) {
+    this.isSelfManaged = true;
+    const beneathStub = sinon
+      .stub(this.owner.lookup('service:permissions'), 'hasPermissionBeneath')
+      .returns(false);
+    beneathStub.withArgs(`${this.backend}/role`, ['create']).returns(true);
+
+    await this.renderComponent();
+    assert
+      .dom('[data-test-toolbar-action="role"]')
+      .doesNotExist('Create role is hidden when only dynamic roles can be created');
+
+    beneathStub.withArgs(`${this.backend}/static-role`, ['create']).returns(true);
+    await this.renderComponent();
+    assert
+      .dom('[data-test-toolbar-action="role"]')
+      .exists('Create role renders when static roles can be created');
   });
 });

@@ -31,12 +31,12 @@
   </InfoTableRow>
   <InfoTableRow @label="Created" @value={{@model.creation_time}}>
     <time datetime={{@model.creation_time}} title={{@model.creation_time}}>
-      {{date-format @model.creation_time "MMM dd, yyyy h:mm a"}}
+      {{date-format @model.creation_time "MMM dd, yyyy hh:mm:ss a" withTimeZone=true}}
     </time>
   </InfoTableRow>
   <InfoTableRow @label="Last Updated" @value={{this.model.last_update_time}}>
     <time datetime={{this.model.last_update_time}} title={{this.model.last_update_time}}>
-      {{date-format this.model.last_update_time "MMM dd, yyyy h:mm a"}}
+      {{date-format this.model.last_update_time "MMM dd, yyyy hh:mm:ss a" withTimeZone=true}}
     </time>
   </InfoTableRow>
 </div>

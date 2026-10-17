@@ -9,6 +9,7 @@ import Route from '@ember/routing/route';
 import clearModelCache from 'vault/utils/shared-model-boundary';
 
 export default class LogoutRoute extends Route {
+  @service analytics;
   @service auth;
   @service store;
   @service controlGroup;
@@ -31,6 +32,9 @@ export default class LogoutRoute extends Route {
     this.console.clearLog(true);
     this.flashMessages.clearMessages();
     this.permissions.reset();
+    // Clear the analytics identity so the next user to log in on this browser is
+    // not attributed to or aliased with the user who just logged out.
+    this.analytics.reset();
     this.version.version = null;
 
     if (this.version.isEnterprise) {

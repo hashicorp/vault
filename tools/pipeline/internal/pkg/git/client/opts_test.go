@@ -4,6 +4,8 @@
 package client
 
 import (
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -862,6 +864,7 @@ func TestOptsStringers(t *testing.T) {
 				NoAheadBehind:    true,
 				NoColumn:         true,
 				NoRenames:        true,
+				NullTerminated:   true,
 				Porcelain:        true,
 				Renames:          true,
 				Short:            true,
@@ -870,7 +873,7 @@ func TestOptsStringers(t *testing.T) {
 				Verbose:          true,
 				PathSpec:         []string{"go.mod", "go.sum"},
 			},
-			"--ahead-behind --branch --column=always --find-renames=12 --ignored=matching --ignore-submodules=dirty --long --no-ahead-behind --no-column --no-renames --porcelain --renames --short --show-stash --untracked-files=all --verbose -- go.mod go.sum",
+			"--ahead-behind --branch --column=always --find-renames=12 --ignored=matching --ignore-submodules=dirty --long --no-ahead-behind --no-column --no-renames -z --porcelain --renames --short --show-stash --untracked-files=all --verbose -- go.mod go.sum",
 		},
 		"log 1/3 opts": {
 			&LogOpts{
@@ -1301,6 +1304,66 @@ func TestOptsStringers(t *testing.T) {
 			(*ConfigOpts)(nil),
 			"",
 		},
+		"ls-files": {
+			&LsFilesOpts{
+				Cached:            true,
+				Deleted:           true,
+				Modified:          true,
+				Others:            true,
+				Ignored:           true,
+				Stage:             true,
+				Directory:         true,
+				NoEmptyDirectory:  true,
+				Unmerged:          true,
+				Killed:            true,
+				NullTerminated:    true,
+				ExcludeStandard:   true,
+				ErrorUnmatch:      true,
+				FullName:          true,
+				RecurseSubmodules: true,
+				Format:            "%(path)",
+				PathSpec:          []string{":(top,glob)**/go.mod"},
+			},
+			"--cached --deleted --modified --others --ignored --stage --directory --no-empty-directory --unmerged --killed -z --exclude-standard --error-unmatch --full-name --recurse-submodules --format=%(path) -- :(top,glob)**/go.mod",
+		},
+		"ls-files nil opts": {
+			(*LsFilesOpts)(nil),
+			"",
+		},
+		"diff": {
+			&DiffOpts{
+				Cached:         true,
+				DiffAlgorithm:  DiffAlgorithmHistogram,
+				DstPrefix:      "b/",
+				ExitCode:       true,
+				NameOnly:       true,
+				NameStatus:     true,
+				NoColor:        true,
+				NoExtDiff:      true,
+				NoPatch:        true,
+				NoRenames:      true,
+				NullTerminated: true,
+				Output:         "/path/to/my.diff",
+				Patch:          true,
+				Quiet:          true,
+				SrcPrefix:      "a/",
+				Stat:           true,
+				Commits:        []string{"HEAD~1", "HEAD"},
+				PathSpec:       []string{"go.mod", "go.sum"},
+			},
+			"--cached --diff-algorithm=histogram --dst-prefix=b/ --exit-code --name-only --name-status --no-color --no-ext-diff --no-patch --no-renames -z --output=/path/to/my.diff --patch --quiet --src-prefix=a/ --stat HEAD~1 HEAD -- go.mod go.sum",
+		},
+		"diff worktree paths": {
+			&DiffOpts{
+				NoColor:  true,
+				PathSpec: []string{"a.go"},
+			},
+			"--no-color -- a.go",
+		},
+		"diff nil opts": {
+			(*DiffOpts)(nil),
+			"",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -1336,4 +1399,24 @@ func TestWithHost(t *testing.T) {
 			require.NotContains(t, e, "insteadOf")
 		}
 	})
+}
+
+// TestWithDir verifies that a client created WithDir runs git in that
+// directory instead of the process's working directory, so callers can operate
+// on a repository other than the one they were started in.
+func TestWithDir(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	initCmd := exec.Command("git", "init", "--quiet", dir)
+	out, err := initCmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+
+	c := NewClient(WithDir(dir))
+	res, err := c.RevParse(t.Context(), &RevParseOpts{ShowTopLevel: true})
+	require.NoError(t, err, res.String())
+
+	want, err := filepath.EvalSymlinks(dir)
+	require.NoError(t, err)
+	require.Equal(t, want, strings.TrimSpace(string(res.Stdout)))
 }

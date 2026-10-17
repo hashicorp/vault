@@ -317,7 +317,7 @@ func (kt KeyType) ImportPublicKeySupported() bool {
 
 func (kt KeyType) PaddingSchemesSupported() bool {
 	switch kt {
-	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	default:
 		return false
@@ -417,6 +417,8 @@ type KeyEntry struct {
 	// nil means the entry uses the policy-level Type; non-nil means this
 	// specific version has an explicit algorithm.
 	Algorithm *KeyType `json:"algorithm,omitempty"`
+
+	KeySize int `json:"key_size,omitempty"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
@@ -992,8 +994,8 @@ func (p *Policy) GetKey(context []byte, ver, numBytes int) ([]byte, error) {
 // check the policies Derived flag, but just implements the derivation logic.  GetKey
 // is responsible for switching on the policy config.
 func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte, error) {
-	if !p.Type.DerivationSupported() {
-		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.Type)}
+	if !p.KeyVersionType(ver).DerivationSupported() {
+		return nil, errutil.UserError{Err: fmt.Sprintf("derivation not supported for key type %v", p.KeyVersionType(ver))}
 	}
 
 	if p.Keys == nil || p.LatestVersion == 0 {
@@ -1029,7 +1031,7 @@ func (p *Policy) DeriveKey(context, salt []byte, ver int, numBytes int) ([]byte,
 			N: int64(numBytes),
 		}
 
-		switch p.Type {
+		switch p.KeyVersionType(ver) {
 		case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
 			n, err := derBytes.ReadFrom(limReader)
 			if err != nil {
@@ -1222,11 +1224,12 @@ func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factor
 		}
 		key := keyEntry.RSAKey
 
+		hashFn := HashFuncMap[getHashType(factories)]
 		switch paddingScheme {
 		case PaddingScheme_PKCS1v15:
 			plain, err = rsa.DecryptPKCS1v15(rand.Reader, key, decoded)
 		case PaddingScheme_OAEP:
-			plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
+			plain, err = rsa.DecryptOAEP(hashFn(), rand.Reader, key, decoded, nil)
 		default:
 			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
 		}
@@ -1256,7 +1259,7 @@ func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad, factories)
 		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, wrappingOpts...)
 		if err != nil {
 			return "", err
@@ -1284,10 +1287,10 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 		return nil, err
 	}
 
-	if p.Type == KeyType_HMAC {
+	if p.KeyVersionType(version) == KeyType_HMAC {
 		return keyEntry.Key, nil
 	}
-	if keyEntry.HMACKey == nil {
+	if keyEntry.HMACKey == nil && p.KeyVersionType(version) != KeyType_MANAGED_KEY {
 		return nil, fmt.Errorf("no HMAC key exists for that key version")
 	}
 	return keyEntry.HMACKey, nil
@@ -1305,11 +1308,11 @@ func (p *Policy) CMACKey(version int) ([]byte, error) {
 		return nil, err
 	}
 
-	if p.Type.CMACSupported() {
+	if p.KeyVersionType(version).CMACSupported() {
 		return keyEntry.Key, nil
 	}
 
-	return nil, fmt.Errorf("key type %s does not support CMAC operations", p.Type)
+	return nil, fmt.Errorf("key type %s does not support CMAC operations", p.KeyVersionType(version))
 }
 
 func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
@@ -1408,6 +1411,9 @@ func (p *Policy) SignWithOptions(ver int, context, input []byte, options *Signin
 		}
 	default:
 		sig, err = entSignWithOptions(p, input, context, ver, hashAlgorithm, options)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Convert to base64
@@ -1740,10 +1746,13 @@ func formatPKCS8ParsingError(key []byte, err error) error {
 }
 
 func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
-	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader)
+	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader, p.KeyVersionType(p.LatestVersion))
 }
 
-func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader) error {
+func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader, keyType KeyType) error {
+	if err := p.isCompatibleKeyType(keyType); err != nil {
+		return err
+	}
 	now := time.Now()
 	entry := KeyEntry{
 		CreationTime:           now,
@@ -1762,7 +1771,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		}
 	}
 
-	if p.Type != KeyType_HMAC {
+	if keyType != KeyType_HMAC {
 		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 		if err != nil {
 			return err
@@ -1770,20 +1779,20 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		entry.HMACKey = hmacKey
 	}
 
-	if p.Type == KeyType_ED25519 && p.Derived && !isPrivateKey {
+	if keyType == KeyType_ED25519 && p.Derived && !isPrivateKey {
 		return fmt.Errorf("unable to import only public key for derived Ed25519 key: imported key should not be an Ed25519 key pair but is instead an HKDF key")
 	}
 
-	if ((p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES128_CBC) && len(key) != 16) ||
-		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES256_CBC) && len(key) != 32) ||
-		(p.Type == KeyType_AES192_CMAC && len(key) != 24) ||
-		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
-		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
+	if ((keyType == KeyType_AES128_GCM96 || keyType == KeyType_AES128_CMAC || keyType == KeyType_AES128_CBC) && len(key) != 16) ||
+		((keyType == KeyType_AES256_GCM96 || keyType == KeyType_ChaCha20_Poly1305 || keyType == KeyType_AES256_CMAC || keyType == KeyType_AES256_CBC) && len(key) != 32) ||
+		(keyType == KeyType_AES192_CMAC && len(key) != 24) ||
+		(keyType == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
+		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), keyType)
 	}
 
-	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES192_CMAC || p.Type == KeyType_AES128_CBC || p.Type == KeyType_AES256_CBC {
+	if keyType == KeyType_AES128_GCM96 || keyType == KeyType_AES256_GCM96 || keyType == KeyType_ChaCha20_Poly1305 || keyType == KeyType_HMAC || keyType == KeyType_AES128_CMAC || keyType == KeyType_AES256_CMAC || keyType == KeyType_AES192_CMAC || keyType == KeyType_AES128_CBC || keyType == KeyType_AES256_CBC {
 		entry.Key = key
-		if p.Type == KeyType_HMAC {
+		if keyType == KeyType_HMAC {
 			p.KeySize = len(key)
 			entry.HMACKey = key
 		}
@@ -1825,7 +1834,7 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 			}
 		}
 
-		err = entry.parseFromKey(p.Type, parsedKey)
+		err = entry.parseFromKey(keyType, parsedKey)
 		if err != nil {
 			return err
 		}
@@ -1838,6 +1847,9 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		// don't need to call migrate here because if we've called getPolicy to
 		// get the policy in the first place it will have been run.
 		p.Keys = keyEntryMap{}
+	}
+	if p.Type != keyType {
+		entry.Algorithm = &keyType
 	}
 	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 
@@ -1854,24 +1866,12 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 // Rotate rotates the policy and persists it to storage.
 // If the rotation partially fails, the policy state will be restored.
 func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader io.Reader) (retErr error) {
-	keyType := p.Type
-
-	if p.LatestVersion > 0 {
-		key, err := p.safeGetKeyEntry(p.LatestVersion)
-		if err != nil {
-			return err
-		}
-
-		if key.Algorithm != nil {
-			keyType = *key.Algorithm
-		}
+	keyType, keyConfig, err := p.getKeyConfig(p.LatestVersion)
+	if err != nil {
+		return err
 	}
 
-	return p.RotateWithAlgorithm(ctx, storage, randReader, keyType, &KeyConfig{
-		ParameterSet: p.ParameterSet,
-		HybridConfig: p.HybridConfig,
-		KeySize:      p.KeySize,
-	})
+	return p.RotateWithAlgorithm(ctx, storage, randReader, keyType, keyConfig)
 }
 
 // RotateWithAlgorithm rotates the policy using the specified key type and
@@ -1912,24 +1912,11 @@ func (p *Policy) RotateWithAlgorithm(ctx context.Context, storage logical.Storag
 // RotateInMemory rotates the policy but does not persist it to storage.
 // The algorithm used for the new key version is determined by p.Type.
 func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
-	keyType := p.Type
-
-	if p.LatestVersion > 0 {
-		key, err := p.safeGetKeyEntry(p.LatestVersion)
-		if err != nil {
-			return err
-		}
-
-		if key.Algorithm != nil {
-			keyType = *key.Algorithm
-		}
+	keyType, keyConfig, err := p.getKeyConfig(p.LatestVersion)
+	if err != nil {
+		return err
 	}
-
-	return p.RotateInMemoryWithAlgorithm(randReader, keyType, &KeyConfig{
-		HybridConfig: p.HybridConfig,
-		ParameterSet: p.ParameterSet,
-		KeySize:      p.KeySize,
-	})
+	return p.RotateInMemoryWithAlgorithm(randReader, keyType, keyConfig)
 }
 
 // RotateInMemoryWithAlgorithm rotates the policy but does not persist it to
@@ -1982,6 +1969,7 @@ func (p *Policy) RotateInMemoryWithAlgorithm(randReader io.Reader, keyType KeyTy
 		if keyType == KeyType_HMAC {
 			// To avoid causing problems, ensure HMACKey = Key.
 			entry.HMACKey = newKey
+			entry.KeySize = numBytes
 		}
 
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
@@ -2399,11 +2387,12 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 		} else {
 			publicKey = keyEntry.RSAPublicKey
 		}
+		hashFn := HashFuncMap[getHashType(factories)]
 		switch paddingScheme {
 		case PaddingScheme_PKCS1v15:
 			ciphertext, err = rsa.EncryptPKCS1v15(rand.Reader, publicKey, plaintext)
 		case PaddingScheme_OAEP:
-			ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
+			ciphertext, err = rsa.EncryptOAEP(hashFn(), rand.Reader, publicKey, plaintext, nil)
 		default:
 			return "", errutil.InternalError{Err: fmt.Sprintf("unsupported RSA padding scheme %s", paddingScheme)}
 		}
@@ -2435,7 +2424,7 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		wrappingOpts := buildManagedKeyOpts(opts, aad)
+		wrappingOpts := buildManagedKeyOpts(opts, aad, factories)
 		if opts.Raw {
 			wrappingOpts = append(wrappingOpts, wrapping.WithoutEnvelope(true))
 		}
@@ -2461,7 +2450,31 @@ func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factor
 	return encoded, nil
 }
 
-func buildManagedKeyOpts(opts EncryptionOptions, aad []byte) []wrapping.Option {
+// getRsaEncryptionPadding extracts the PaddingScheme and HashType that were
+// injected into factories and returns them as an getRsaEncryptionPadding.
+func getRsaEncryptionPadding(factories []any) wrapping.RSAEncryptionPadding {
+	ps, _ := getPaddingScheme(factories)
+
+	ht := getHashType(factories)
+
+	switch ps {
+	case PaddingScheme_PKCS1v15:
+		return wrapping.RSAEncryptionPadding_Pkcs1v15
+	case PaddingScheme_OAEP:
+		switch ht {
+		case HashTypeSHA2256:
+			return wrapping.RSAEncryptionPadding_OaepSha256
+		case HashTypeSHA1:
+			return wrapping.RSAEncryptionPadding_OaepSha1
+		}
+	}
+
+	return wrapping.RSAEncryptionPadding_Unknown_RSAEncryptionPadding
+}
+
+// buildManagedKeyOpts constructs the wrapping options for a managed key
+// encrypt/decrypt call.
+func buildManagedKeyOpts(opts EncryptionOptions, aad []byte, factories []any) []wrapping.Option {
 	wrappingOpts := []wrapping.Option{wrapping.WithoutEnvelope(true)}
 	if len(opts.IV) > 0 {
 		wrappingOpts = append(wrappingOpts, wrapping.WithIV(opts.IV))
@@ -2469,6 +2482,9 @@ func buildManagedKeyOpts(opts EncryptionOptions, aad []byte) []wrapping.Option {
 	if len(aad) > 0 {
 		wrappingOpts = append(wrappingOpts, wrapping.WithAad(aad))
 	}
+
+	wrappingOpts = append(wrappingOpts, wrapping.WithRsaEncryptionPadding(getRsaEncryptionPadding(factories)))
+
 	return wrappingOpts
 }
 
@@ -2531,13 +2547,27 @@ func getPaddingScheme(factories []any) (PaddingScheme, error) {
 	return PaddingScheme_OAEP, nil
 }
 
+func getHashType(factories []any) HashType {
+	for _, rawFactory := range factories {
+		if rawFactory == nil {
+			continue
+		}
+
+		if ht, ok := rawFactory.(HashType); ok && ht != HashTypeNone {
+			return ht
+		}
+	}
+
+	return HashTypeSHA2256
+}
+
 func (p *Policy) KeyVersionCanBeUpdated(keyVersion int, isPrivateKey bool) error {
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return err
 	}
 
-	if !p.Type.ImportPublicKeySupported() {
+	if !p.KeyVersionType(keyVersion).ImportPublicKeySupported() {
 		return errors.New("provided type does not support importing key versions")
 	}
 
@@ -2613,7 +2643,7 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 		}
 	}
 
-	err = keyEntry.parseFromKey(p.Type, parsedPrivateKey)
+	err = keyEntry.parseFromKey(p.KeyVersionType(keyVersion), parsedPrivateKey)
 	if err != nil {
 		return err
 	}
@@ -2823,10 +2853,10 @@ func (p *Policy) CreateCsrWithKeyVersion(keyVersion int, csrTemplate *x509.Certi
 	}
 
 	var key crypto.Signer
-	switch p.Type {
+	switch p.KeyVersionType(keyVersion) {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
-		switch p.Type {
+		switch p.KeyVersionType(keyVersion) {
 		case KeyType_ECDSA_P384:
 			curve = elliptic.P384()
 		case KeyType_ECDSA_P521:
@@ -2851,10 +2881,13 @@ func (p *Policy) CreateCsrWithKeyVersion(keyVersion int, csrTemplate *x509.Certi
 		key = ed25519.PrivateKey(keyEntry.Key)
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		if keyEntry.RSAKey == nil {
+			return nil, errutil.InternalError{Err: "key not found"}
+		}
 		key = keyEntry.RSAKey
 
 	default:
-		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type.String())}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.KeyVersionType(keyVersion).String())}
 	}
 
 	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
@@ -2866,7 +2899,7 @@ func (p *Policy) CreateCsrWithKeyVersion(keyVersion int, csrTemplate *x509.Certi
 }
 
 func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest, getCsrRequest CsrCreator) ([]byte, error) {
-	if !p.Type.SigningSupported() {
+	if !p.KeyVersionType(keyVersion).SigningSupported() {
 		return nil, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
 	}
 
@@ -2888,12 +2921,12 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest,
 
 // ValidateLeafCertKeyMatchWithNativeKeyVersion checks whether a certificate's public key matches a transit key version. It must only be used with native (non-managed) key types.
 func (p *Policy) ValidateLeafCertKeyMatchWithNativeKeyVersion(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
-	if !p.Type.SigningSupported() {
+	if !p.KeyVersionType(keyVersion).SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
 	}
 
 	var keyTypeMatches bool
-	switch p.Type {
+	switch p.KeyVersionType(keyVersion) {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		if certPublicKeyAlgorithm == x509.ECDSA {
 			keyTypeMatches = true
@@ -2909,7 +2942,7 @@ func (p *Policy) ValidateLeafCertKeyMatchWithNativeKeyVersion(keyVersion int, ce
 	}
 	if !keyTypeMatches {
 		return false, errutil.UserError{Err: fmt.Sprintf("provided leaf certificate public key algorithm '%s' does not match the transit key type '%s'",
-			certPublicKeyAlgorithm, p.Type)}
+			certPublicKeyAlgorithm, p.KeyVersionType(keyVersion))}
 	}
 
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
@@ -2921,7 +2954,7 @@ func (p *Policy) ValidateLeafCertKeyMatchWithNativeKeyVersion(keyVersion int, ce
 	case x509.ECDSA:
 		certPublicKey := certPublicKey.(*ecdsa.PublicKey)
 		var curve elliptic.Curve
-		switch p.Type {
+		switch p.KeyVersionType(keyVersion) {
 		case KeyType_ECDSA_P384:
 			curve = elliptic.P384()
 		case KeyType_ECDSA_P521:
@@ -2954,6 +2987,10 @@ func (p *Policy) ValidateLeafCertKeyMatchWithNativeKeyVersion(keyVersion int, ce
 
 	case x509.RSA:
 		certPublicKey := certPublicKey.(*rsa.PublicKey)
+		if keyEntry.RSAKey == nil {
+			return false, errutil.InternalError{Err: "key not found"}
+		}
+
 		publicKey := keyEntry.RSAKey.PublicKey
 		return publicKey.Equal(certPublicKey), nil
 
@@ -3059,11 +3096,11 @@ func (p *Policy) setKDF(ctx context.Context, storage logical.Storage, kdf int) e
 }
 
 func (p *Policy) isCompatibleKeyType(newType KeyType) error {
-	if p.Type == KeyType_ED25519 && p.Derived && newType != KeyType_ED25519 {
+	if p.KeyVersionType(p.LatestVersion) == KeyType_ED25519 && p.Derived && newType != KeyType_ED25519 {
 		return errors.New("algorithm cannot be changed from ed25519 with derivation enabled")
 	}
 
-	if newType == KeyType_MANAGED_KEY {
+	if newType == KeyType_MANAGED_KEY || p.KeyVersionType(p.LatestVersion) == KeyType_MANAGED_KEY {
 		return nil
 	}
 

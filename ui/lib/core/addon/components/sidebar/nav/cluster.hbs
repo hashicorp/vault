@@ -22,7 +22,7 @@
     {{on "click" (fn this.trackNavClick this.navEvents.secrets "nav-secrets" "Secrets")}}
   />
 
-  {{#if this.version.isEnterprise}}
+  {{#if (display-nav-item this.routeName.agentRegistry)}}
     <Nav.Link
       @route="vault.cluster.agents"
       @text="Agentic security"

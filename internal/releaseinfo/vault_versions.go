@@ -14,7 +14,7 @@ import (
 	"time"
 
 	goversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/helper/useragent"
+	"github.com/hashicorp/vault/internalshared/useragent"
 )
 
 const (

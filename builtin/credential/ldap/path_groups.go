@@ -151,9 +151,16 @@ func (b *backend) pathGroupWrite(ctx context.Context, req *logical.Request, d *f
 		groupname = strings.ToLower(groupname)
 	}
 
+	policies := policyutil.ParsePolicies(d.Get("policies"))
+	for _, policy := range policies {
+		if _, err := policyutil.ValidatePolicyName(policy); err != nil {
+			return logical.ErrorResponse("invalid policy name %q: %s", policy, err), nil
+		}
+	}
+
 	// Store it
 	entry, err := logical.StorageEntryJSON("group/"+groupname, &GroupEntry{
-		Policies: policyutil.ParsePolicies(d.Get("policies")),
+		Policies: policies,
 	})
 	if err != nil {
 		return nil, err

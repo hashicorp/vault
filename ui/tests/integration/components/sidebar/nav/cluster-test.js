@@ -81,7 +81,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     const links = [
       'Dashboard',
       'Secrets',
-      'Agentic security',
       'Access control',
       'Operational tools',
       'Support',
@@ -89,6 +88,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Reporting',
       'Raft storage',
       'Client count',
+      'Agentic security',
     ];
     // do not add PKI-only Secrets feature as it hides Client count nav link
     const features = allFeatures().filter((feat) => feat !== 'PKI-only Secrets');
@@ -227,5 +227,12 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     await renderComponent();
 
     assert.dom(GENERAL.navLink('Support')).doesNotExist('Support link is hidden for HVD managed clusters');
+  });
+
+  test('it should show Agentic security nav link when Agentic IAM feature is enabled', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true, false, ['Agentic IAM']);
+    await renderComponent();
+
+    assert.dom(GENERAL.navLink('Agentic security')).exists('Agentic security link is visible.');
   });
 });

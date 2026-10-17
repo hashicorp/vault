@@ -162,7 +162,10 @@ pnpm exec playwright test e2e/tests/raft/storage.spec.ts --project=chrome:raft
 
 The existing `superuser` and `raft` personas share the `superuser` policy, but run
 on separate in-memory and Raft servers. Their project names remain
-`chrome:superuser` and `chrome:raft`. Add a persona entry and a matching
+`chrome:superuser` and `chrome:raft`. The `readonly` persona (`chrome:readonly`)
+uses the [readonly policy](e2e/policies/readonly.hcl) to verify that list and
+detail views hide actions the token cannot perform. Its specs seed data with the
+persona's root token through [rootApi](e2e/fixtures/root-api.ts). Add a persona entry and a matching
 `e2e/tests/<name>/` directory to add a scenario; add a policy only when permissions
 actually differ. Setup verifies the backend and issued token's policy, then saves
 an isolated session for the browser project.

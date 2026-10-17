@@ -25,6 +25,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     this.owner.lookup('service:secret-mount-path').update(this.backend);
 
     const routerStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+    this.routerStub = routerStub;
     this.transitionCalledWith = (routeName, ...extraArgs) => {
       const route = `vault.cluster.secrets.backend.ldap.${routeName}`;
       return routerStub.calledWith(route, ...extraArgs);
@@ -141,13 +142,41 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     checkFields(['creation_ldif', 'deletion_ldif', 'rollback_ldif'], '.cm-content');
   });
 
-  test('it should go back to list route on cancel', async function (assert) {
+  test('it should go back to list route on cancel when creating', async function (assert) {
+    this.model = this.createModel;
+
+    await this.renderComponent();
+    await click(GENERAL.cancelButton);
+
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.roles'),
+      'Transitions to roles list route on cancel'
+    );
+  });
+
+  test('it should go back to details route on cancel when editing a static role', async function (assert) {
     this.model = this.staticEditModel;
 
     await this.renderComponent();
     await click(GENERAL.cancelButton);
 
-    assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list route on cancel');
+    // No params are passed so the current type and role name segments are reused, including hierarchical names.
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.roles.role.details'),
+      'Transitions to the details route of the static role being edited on cancel'
+    );
+  });
+
+  test('it should go back to details route on cancel when editing a dynamic role', async function (assert) {
+    this.model = this.dynamicEditModel;
+
+    await this.renderComponent();
+    await click(GENERAL.cancelButton);
+
+    assert.true(
+      this.routerStub.calledOnceWithExactly('vault.cluster.secrets.backend.ldap.roles.role.details'),
+      'Transitions to the details route of the dynamic role being edited on cancel'
+    );
   });
 
   test('it should validate form fields', async function (assert) {
@@ -359,6 +388,54 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     assert.strictEqual(payload.rotation_period, '0s', 'the cleared field saves as zero');
   });
 
+  test('it should block a rotation period longer than Vault supports', async function (assert) {
+    const writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapWriteStaticRole').resolves();
+
+    this.model = this.selfManagedCreateModel;
+    await this.renderComponent();
+
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
+    await fillIn(GENERAL.inputByAttr('username'), 'bar');
+    await fillIn(GENERAL.inputByAttr('dn'), 'cn=test');
+    await fillIn(GENERAL.inputByAttr('password'), 'secret');
+    await fillIn(GENERAL.ttl.input('Rotation period'), '9999999999');
+    await fillIn(`${GENERAL.fieldByAttr('rotation_period')} ${GENERAL.selectByAttr('ttl-unit')}`, 'd');
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('rotation_period'))
+      .hasText(
+        'Rotation period is too large. Maximum allowed value is 106,751 days.',
+        'rotation period explains the maximum'
+      );
+    assert.dom(GENERAL.invalidFormMessage).hasText('There is an error with this form.');
+    assert.true(writeStub.notCalled, 'the role is not saved');
+
+    await fillIn(GENERAL.ttl.input('Rotation period'), '106751');
+    await click(GENERAL.submitButton);
+
+    const [, , payload] = writeStub.getCall(0).args;
+    assert.strictEqual(payload.rotation_period, '9223286400s', 'the maximum whole number of days saves');
+  });
+
+  test('it should block a rotation period too long to be stored as a number', async function (assert) {
+    const writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapWriteStaticRole').resolves();
+
+    this.model = this.createModel;
+    await this.renderComponent();
+
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
+    await fillIn(GENERAL.inputByAttr('username'), 'bar');
+    // The TTL picker parses this many digits to Infinity.
+    await fillIn(GENERAL.ttl.input('Rotation period'), '9'.repeat(400));
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(GENERAL.validationErrorByAttr('rotation_period'))
+      .hasText('Rotation period is too large. Maximum allowed value is 106,751 days.');
+    assert.true(writeStub.notCalled, 'the role is not saved');
+  });
+
   test('it should render an editable password field on the create page', async function (assert) {
     this.model = this.createModel;
     await this.renderComponent();
@@ -413,6 +490,25 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     assert.false(
       Object.prototype.hasOwnProperty.call(payload, 'password'),
       'password is absent from the payload, so the stored value is left untouched'
+    );
+  });
+
+  // Vault rejects an empty password on a self-managed mount, so an emptied field must mean "no change".
+  test('it should omit password from the payload when the enabled field is left empty', async function (assert) {
+    const writeStub = sinon.stub(this.owner.lookup('service:api').secrets, 'ldapWriteStaticRole').resolves();
+
+    this.model = this.selfManagedEditModel;
+    await this.renderComponent();
+
+    await click(GENERAL.enableField('password'));
+    await fillIn(GENERAL.inputByAttr('password'), 'typed');
+    await fillIn(GENERAL.inputByAttr('password'), '');
+    await click(GENERAL.submitButton);
+
+    const [, , payload] = writeStub.getCall(0).args;
+    assert.false(
+      Object.prototype.hasOwnProperty.call(payload, 'password'),
+      'an emptied password is not sent, so the stored value is kept'
     );
   });
 
@@ -592,5 +688,48 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     this.model = this.selfManagedEditModel;
     await this.renderComponent();
     assert.dom(GENERAL.hdsPageHeaderTitle).hasText('Edit Role', 'edit title is unchanged');
+  });
+
+  // ––––– mount type unknown –––––
+  // A token that cannot read the mount config cannot tell a self-managed mount from a root-managed
+  // one, so the form keeps the root-managed fields and explains what differs on self-managed mounts.
+
+  test('it should flag an unknown mount type on the create page', async function (assert) {
+    this.model = { ...this.createModel, isMountTypeUnknown: true };
+    await this.renderComponent();
+
+    const alert = GENERAL.inlineAlertByAttr('mount-type-unknown');
+    assert
+      .dom(`${alert} .hds-alert__title`)
+      .hasText('Unable to determine LDAP configuration mode', 'alert title renders');
+    assert
+      .dom(`${alert} .hds-alert__description`)
+      .hasText(
+        "You don't have permission to read the LDAP secrets engine configuration. Self-managed engines don't support dynamic roles and require password and DN when creating static roles.",
+        'alert description renders'
+      );
+    assert.dom(GENERAL.radioCardByAttr('dynamic')).exists('both role types are still offered');
+  });
+
+  test('it should not flag the mount type when it is known', async function (assert) {
+    for (const [label, model] of [
+      ['root-managed', this.createModel],
+      ['self-managed', this.selfManagedCreateModel],
+    ]) {
+      this.model = model;
+      await this.renderComponent();
+
+      assert
+        .dom(GENERAL.inlineAlertByAttr('mount-type-unknown'))
+        .doesNotExist(`no alert for a ${label} mount`);
+    }
+  });
+
+  // On edit the DN is locked, the role type is fixed and the role already has a stored password.
+  test('it should not flag an unknown mount type on the edit page', async function (assert) {
+    this.model = { ...this.staticEditModel, isMountTypeUnknown: true };
+    await this.renderComponent();
+
+    assert.dom(GENERAL.inlineAlertByAttr('mount-type-unknown')).doesNotExist('no alert on edit');
   });
 });

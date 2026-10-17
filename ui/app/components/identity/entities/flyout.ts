@@ -31,14 +31,16 @@ export default class IdentityEntitiesFlyoutComponent extends Component<Args> {
 
   get tabs(): TabMap[] {
     const { data } = this.args;
-    // Only show the alias tab when the entity has aliases; policies tab when there are policies to display
+    // Only show the alias tab when the entity has aliases; policies tab when the entity or its groups reference policies
     return ALL_TABS.filter((tab) => {
       if (tab.key === 'alias') {
         return data?.entity?.aliases?.length;
       }
 
       if (tab.key === 'policies') {
-        return data?.aggregatePolicy?.policyString;
+        // Check the attached policy names rather than the aggregated policy, since deleted policies stay
+        // attached (and regain access if recreated) but can't be read to build the aggregate
+        return data?.entity?.policies?.length || data?.groups?.some((group) => group.policies?.length);
       }
 
       return true;

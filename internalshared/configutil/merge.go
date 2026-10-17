@@ -24,11 +24,6 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.UserLockouts = append(result.UserLockouts, userlockout)
 	}
 
-	result.HCPLinkConf = c.HCPLinkConf
-	if c2.HCPLinkConf != nil {
-		result.HCPLinkConf = c2.HCPLinkConf
-	}
-
 	result.Entropy = c.Entropy
 	if c2.Entropy != nil {
 		result.Entropy = c2.Entropy

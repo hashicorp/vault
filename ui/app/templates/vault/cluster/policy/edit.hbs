@@ -9,8 +9,7 @@
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
         (hash
           label=(concat (uppercase this.model.policyType) " policies")
-          route="vault.cluster.policies"
-          model=this.model.policyType
+          route=(concat "vault.cluster.policies." this.model.policyType)
         )
         (hash label=this.model.name route="vault.cluster.policy.show" model=this.model.name)
         (hash label="Edit")

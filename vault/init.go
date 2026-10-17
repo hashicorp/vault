@@ -12,8 +12,8 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/internalshared/namespace"
+	"github.com/hashicorp/vault/internalshared/pgpkeys"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/seal"

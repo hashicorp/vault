@@ -7,6 +7,7 @@ import { defineConfig, devices } from '@playwright/test';
 import path from 'path';
 import fs from 'fs';
 import { TEST_USERS } from './e2e/test-users';
+import { isVideoEnabled, videoOptionsFor, videoTimeout } from './e2e/video-config';
 
 import type { UserSetupOptions } from './e2e/init.setup';
 
@@ -39,7 +40,10 @@ export default defineConfig<UserSetupOptions>({
   // use a worker for each project so they run concurrently
   workers: userTypes.length,
   // reporter to use. See https://playwright.dev/docs/test-reporters
-  reporter: 'html',
+  // the html reporter opens a browser at the end, which interrupts a recording session
+  reporter: isVideoEnabled ? 'list' : 'html',
+  // recorded runs are paced for viewing and need more than the 30s default
+  ...(isVideoEnabled ? { timeout: videoTimeout } : {}),
   // shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions.
   use: {
     // collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer
@@ -58,8 +62,9 @@ export default defineConfig<UserSetupOptions>({
     // create browser projects for each user type
     ...userTypes.map((userType, index) => {
       const sessionFile = path.join(tmpDir, `${userType.name}-session.json`);
+      const name = `chrome:${userType.name}`;
       return {
-        name: `chrome:${userType.name}`,
+        name,
         dependencies: [`setup:${userType.name}`],
         workers: 1,
         // only run tests for this user type
@@ -71,6 +76,8 @@ export default defineConfig<UserSetupOptions>({
           // start at port 8204 and increment for each project to allow them to run concurrently without conflicts
           baseURL: getURL(index),
           permissions: ['clipboard-read', 'clipboard-write'],
+          // no-op unless PW_VIDEO is set; never applied to setup projects
+          ...videoOptionsFor(name),
         },
       };
     }),

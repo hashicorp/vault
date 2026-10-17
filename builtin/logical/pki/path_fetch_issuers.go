@@ -452,7 +452,43 @@ func (b *backend) pathGetIssuer(ctx context.Context, req *logical.Request, data 
 		observe.NewAdditionalPKIMetadata("last_modified", issuer.LastModified.String()),
 		observe.NewAdditionalPKIMetadata("revoked", issuer.Revoked))
 
-	return respondReadIssuer(issuer)
+	resp, err := respondReadIssuer(issuer)
+	if err != nil {
+		return nil, err
+	}
+
+	// Append a warning for each time this CA's private key was exported via the
+	// secure BYOK export endpoint.  We look up records by the SPKI fingerprint of
+	// the key so warnings survive a delete-and-reimport of the key entry.
+	if issuer.KeyID != "" {
+		keyEntry, keyErr := issuing.FetchKeyById(ctx, req.Storage, issuer.KeyID)
+		if keyErr != nil {
+			b.Logger().Debug("failed to fetch key entry for export record lookup; skipping export warnings",
+				"issuer_id", issuer.ID, "key_id", issuer.KeyID, "error", keyErr)
+		} else if !keyEntry.IsManagedPrivateKey() {
+			spkiFingerprint, fpErr := caPublicKeyFingerprint(keyEntry.PrivateKey)
+			if fpErr != nil {
+				b.Logger().Debug("failed to compute SPKI fingerprint for export record lookup; skipping export warnings",
+					"issuer_id", issuer.ID, "key_id", issuer.KeyID, "error", fpErr)
+			} else {
+				exportRecords, recErr := listCAKeyExportRecords(ctx, req.Storage, spkiFingerprint)
+				if recErr != nil {
+					b.Logger().Debug("failed to list CA key export records; skipping export warnings",
+						"issuer_id", issuer.ID, "key_id", issuer.KeyID, "error", recErr)
+				} else {
+					for _, rec := range exportRecords {
+						resp.AddWarning(fmt.Sprintf(
+							"private key exported on %s with %s",
+							rec.ExportedAt.UTC().Format(time.RFC3339),
+							rec.ExportKeyHMAC,
+						))
+					}
+				}
+			}
+		}
+	}
+
+	return resp, nil
 }
 
 func respondReadIssuer(issuer *issuing.IssuerEntry) (*logical.Response, error) {

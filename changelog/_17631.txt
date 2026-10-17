@@ -1,0 +1,15 @@
+```release-note:improvement
+secrets/transit (enterprise): Implement OAEP/PKCS1v15 padding support to encrypt/decrypt operations for managed keys.
+```
+
+```release-note:improvement
+secrets/transit: Add hash_algorithm parameter in encrypt/decrypt operations for RSA keys. 
+```
+
+```release-note:improvement
+core/managed-keys/PKCS#11  (enterprise): Add PKCS#11 backend parameter `rsa_oaep_hash` to use for RSA-OAEP encryption with CKM_RSA_PKCS_OAEP mechanism.
+```
+
+```release-note:improvement
+core (enterprise): Add `disallow_env_vars` in PKCS#11 to allow per key configuration for RSA encryption algorithm.
+```

@@ -4,6 +4,15 @@
 }}
 
 {{#if this.fetchedCert}}
+  <div class="has-top-margin-l">
+    <Hds::Button
+      @icon="arrow-left"
+      @text="Back"
+      @color="tertiary"
+      {{on "click" (fn (mut this.fetchedCert) undefined)}}
+      data-test-button="Back"
+    />
+  </div>
   <ExternalPki::OrderCertDetails @certificate={{hash details=this.fetchedCert}} />
 {{else}}
   <Hds::Layout::Flex class="padding-top-24" @gap="24" @wrap={{true}} as |LF|>

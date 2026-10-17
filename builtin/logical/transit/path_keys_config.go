@@ -222,7 +222,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 			persistNeeded = true
 		}
 
-		if p.Type == keysutil.KeyType_MANAGED_KEY && autoRotatePeriod != 0 {
+		if p.KeyVersionType(p.LatestVersion) == keysutil.KeyType_MANAGED_KEY && autoRotatePeriod != 0 {
 			return logical.ErrorResponse("Auto rotation can not be set for managed keys"), nil
 		}
 	}
@@ -232,7 +232,6 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		if err != nil {
 			return nil, err
 		}
-		resp.Data["key_usages"] = p.Type.KeyUsages()
 		if warning != "" {
 			resp.AddWarning(warning)
 		}
@@ -254,7 +253,6 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	if err != nil {
 		return nil, err
 	}
-	resp.Data["key_usages"] = p.Type.KeyUsages()
 	if warning != "" {
 		resp.AddWarning(warning)
 	}

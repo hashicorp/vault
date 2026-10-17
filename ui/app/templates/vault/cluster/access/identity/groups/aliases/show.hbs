@@ -31,14 +31,16 @@
 </div>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @route="vault.cluster.access.identity.groups.aliases.edit"
-      @model={{this.model.id}}
-      data-test-alias-edit-link
-    >
-      Edit
-      {{lowercase (humanize this.model.identityType)}}
-    </ToolbarLink>
+    {{#if this.model.canEditAlias}}
+      <ToolbarLink
+        @route="vault.cluster.access.identity.groups.aliases.edit"
+        @model={{this.model.id}}
+        data-test-alias-edit-link
+      >
+        Edit
+        {{lowercase (humanize this.model.identityType)}}
+      </ToolbarLink>
+    {{/if}}
   </ToolbarActions>
 </Toolbar>
 {{component (concat "identity/item-alias/alias-" this.section) model=this.model}}

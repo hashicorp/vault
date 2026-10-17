@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -26,7 +26,6 @@ export default class ClusterModel extends Model {
   get sealProgress(): any;
   get sealType(): any;
   get storageType(): any;
-  get hcpLinkStatus(): any;
   get hasProgress(): boolean;
   get usingRaft(): boolean;
   mode: any;

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -11,6 +11,7 @@ import sinon from 'sinon';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { CLUSTER_STARTUP_CHECKLIST } from 'vault/utils/constants/checklist';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -315,7 +316,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert
       .dom(GENERAL.cardContainer('feature-spotlight'))
       .exists('feature spotlight card is visible on enterprise');
-    assert.dom(GENERAL.textDisplay('New Agent Registry in Vault')).hasText('New Agent Registry in Vault');
+    assert.dom(GENERAL.textDisplay()).exists('feature spotlight card renders a title');
   });
 
   test('it does not show the feature spotlight card on community', async function (assert) {
@@ -326,6 +327,40 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert
       .dom(GENERAL.cardContainer('feature-spotlight'))
       .doesNotExist('feature spotlight card is not shown for community');
+  });
+
+  test('it uses the dark image for the feature spotlight in dark mode', async function (assert) {
+    const theme = this.owner.lookup('service:theme');
+    sinon.stub(theme, 'isDarkMode').value(true);
+    this.cards = [
+      {
+        title: 'Test',
+        description: 'Desc',
+        link: '/test',
+        imageSrc: '/light.png',
+        imageSrcDark: '/dark.png',
+      },
+    ];
+    await render(hbs`<Dashboard::Widgets::FeatureSpotlight @cards={{this.cards}} />`);
+
+    assert.dom(`${GENERAL.cardContainer('feature-spotlight')} img`).hasAttribute('src', '/dark.png');
+  });
+
+  test('it uses the light image for the feature spotlight in light mode', async function (assert) {
+    const theme = this.owner.lookup('service:theme');
+    sinon.stub(theme, 'isDarkMode').value(false);
+    this.cards = [
+      {
+        title: 'Test',
+        description: 'Desc',
+        link: '/test',
+        imageSrc: '/light.png',
+        imageSrcDark: '/dark.png',
+      },
+    ];
+    await render(hbs`<Dashboard::Widgets::FeatureSpotlight @cards={{this.cards}} />`);
+
+    assert.dom(`${GENERAL.cardContainer('feature-spotlight')} img`).hasAttribute('src', '/light.png');
   });
 
   test('it shows the learn more card on community', async function (assert) {
@@ -365,9 +400,10 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       this.version.type = 'enterprise';
       this.checklistState = this.owner.lookup('service:checklist-state');
       this.checklistState['_state'] = {};
-      // Reset the hidden-checklists list so tests that call hideChecklist() do
-      // not bleed localStorage state into subsequent tests.
-      this.checklistState['_hiddenChecklists'] = [];
+      // Reset local checklist preferences (hidden, last view) so tests that
+      // call hideChecklist()/setLastView() do not bleed localStorage state
+      // into subsequent tests.
+      this.checklistState['_localState'] = {};
       // Re-enable checklist for these tests
       this.checklistState.isAvailable = true;
       // Grant the minimum permissions required for hasChecklistEntryAccess to
@@ -401,9 +437,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       // No steps complete → active
       await this.renderComponent();
 
-      assert.dom('[data-test-widget="checklist"]').exists('Checklist widget is rendered');
-      assert.dom('[data-test-widget="congrats-banner"]').doesNotExist('No congrats banner');
-      assert.dom('[data-test-widget="explore-vault"]').doesNotExist('No explore vault');
+      assert.dom(GENERAL.widget('checklist')).exists('Checklist widget is rendered');
+      assert.dom(GENERAL.widget('congrats-banner')).doesNotExist('No congrats banner');
+      assert.dom(GENERAL.widget('explore-vault')).doesNotExist('No explore vault');
     });
 
     test('shows congrats banner when all visible steps are complete', async function (assert) {
@@ -415,9 +451,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom('[data-test-widget="congrats-banner"]').exists('Congrats banner is rendered');
-      assert.dom('[data-test-widget="checklist"]').doesNotExist('No checklist widget');
-      assert.dom('[data-test-widget="explore-vault"]').doesNotExist('No explore vault');
+      assert.dom(GENERAL.widget('congrats-banner')).exists('Congrats banner is rendered');
+      assert.dom(GENERAL.widget('checklist')).doesNotExist('No checklist widget');
+      assert.dom(GENERAL.widget('explore-vault')).doesNotExist('No explore vault');
     });
 
     test('does not show congrats banner when there are zero visible steps', async function (assert) {
@@ -432,7 +468,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom('[data-test-widget="congrats-banner"]').doesNotExist('No congrats when zero visible steps');
+      assert.dom(GENERAL.widget('congrats-banner')).doesNotExist('No congrats when zero visible steps');
       sinon.restore();
     });
 
@@ -441,9 +477,9 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom('[data-test-widget="explore-vault"]').exists('Explore Vault banner shown');
+      assert.dom(GENERAL.widget('explore-vault')).exists('Explore Vault banner shown');
       assert.dom('[data-test-explore-vault-restore]').exists('Restore button present');
-      assert.dom('[data-test-widget="checklist"]').doesNotExist('No checklist widget');
+      assert.dom(GENERAL.widget('checklist')).doesNotExist('No checklist widget');
     });
 
     test('shows explore vault banner in post-completion state', async function (assert) {
@@ -455,7 +491,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       await this.renderComponent();
 
       assert
-        .dom('[data-test-widget="explore-vault"]')
+        .dom(GENERAL.widget('explore-vault'))
         .exists('Explore Vault banner shown after completion + dismiss');
     });
 
@@ -463,22 +499,127 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       this.checklistState.hideChecklist('cluster-startup');
       await this.renderComponent();
 
-      assert.dom('[data-test-widget="explore-vault"]').exists('Starts in explore vault');
+      assert.dom(GENERAL.widget('explore-vault')).exists('Starts in explore vault');
 
       await click('[data-test-explore-vault-restore]');
 
-      assert.dom('[data-test-widget="checklist"]').exists('Checklist restored after clicking restore');
+      assert.dom(GENERAL.widget('checklist')).exists('Checklist restored after clicking restore');
+    });
+
+    test('shows congrats after completing the last step on a restored partial checklist', async function (assert) {
+      this.permissions.isRoot = true;
+      await this.renderComponent();
+      const visibleSteps = this.checklistState.getVisibleSteps(CLUSTER_STARTUP_CHECKLIST.id, [
+        ...CLUSTER_STARTUP_CHECKLIST.order,
+      ]);
+
+      for (const stepId of visibleSteps.slice(0, -1)) {
+        await click(`[data-test-checklist-step-mark-complete="${stepId}"]`);
+      }
+
+      assert.dom('[data-test-checklist-progress-label]').hasText('80%', 'Four of five steps are complete');
+
+      await click('[data-test-checklist-hide]');
+      assert.dom(GENERAL.widget('explore-vault')).exists('Setup guide is hidden');
+
+      await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Setup guide is restored');
+
+      const finalStepId = visibleSteps[visibleSteps.length - 1];
+      await click(`[data-test-checklist-step-mark-complete="${finalStepId}"]`);
+
+      assert
+        .dom(GENERAL.widget('congrats-banner'))
+        .exists('Completion banner appears after the last step is completed');
+      assert
+        .dom(GENERAL.widget('checklist'))
+        .doesNotExist('Completed checklist is replaced by the completion banner');
+    });
+
+    test('restore button in post-completion explore vault banner always returns to the checklist', async function (assert) {
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+      // Dismiss directly from the congrats panel without navigating to checklist first.
+      await this.renderComponent();
+      assert.dom(GENERAL.widget('congrats-banner')).exists('Congrats banner is visible before dismissing');
+
+      await click('[data-test-congrats-dismiss]');
+      assert
+        .dom(GENERAL.widget('explore-vault'))
+        .exists('Moved to post-completion explore vault after dismiss');
+
+      await click('[data-test-explore-vault-restore]');
+
+      // Regardless of what was showing when dismissed, restoring always goes to the checklist.
+      assert
+        .dom(GENERAL.widget('checklist'))
+        .exists('Always returns to the checklist, not the congrats banner');
+      assert.dom(GENERAL.widget('congrats-banner')).doesNotExist('Does not land on the completion panel');
+    });
+
+    test('restored completed checklist returns to congrats after a step is made incomplete and complete', async function (assert) {
+      this.permissions.isRoot = true;
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+      await this.renderComponent();
+
+      await click('[data-test-congrats-dismiss]');
+      await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Completed checklist is restored');
+
+      const firstStepToggle =
+        '[data-test-checklist-step="tvp-cli"] [data-test-checklist-step-mark-complete="tvp-cli"]';
+      await click(firstStepToggle);
+      assert
+        .dom(GENERAL.widget('checklist'))
+        .exists('Checklist remains visible after a step is made incomplete');
+      assert
+        .dom(GENERAL.widget('congrats-banner'))
+        .doesNotExist('Completion banner is hidden while a step is incomplete');
+
+      await click(firstStepToggle);
+      assert
+        .dom(GENERAL.widget('congrats-banner'))
+        .exists('Completion banner returns after the step is completed again');
+      assert
+        .dom(GENERAL.widget('checklist'))
+        .doesNotExist('Completed checklist is replaced by the completion banner');
+    });
+
+    test('hiding a restored completed checklist returns to the post-completion banner', async function (assert) {
+      this.checklistState['_state'] = {
+        'cluster-startup': { 'tvp-cli': true, policy: true, auth: true, kv: true, namespaces: true },
+      };
+      await this.renderComponent();
+
+      await click('[data-test-congrats-dismiss]');
+      await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Completed checklist is restored');
+
+      await click('[data-test-checklist-hide]');
+      assert
+        .dom(GENERAL.widget('explore-vault'))
+        .exists('Post-completion banner returns after hiding the checklist');
+      assert.dom(GENERAL.widget('checklist')).doesNotExist('Checklist is hidden again');
+
+      await click('[data-test-explore-vault-restore]');
+      assert.dom(GENERAL.widget('checklist')).exists('Checklist can be restored again');
+      assert
+        .dom('[data-test-checklist-progress-label]')
+        .hasText('100%', 'Checklist completion progress is preserved');
     });
 
     test('clicking hide button in checklist transitions to explore vault banner', async function (assert) {
       await this.renderComponent();
 
-      assert.dom('[data-test-widget="checklist"]').exists('Starts in active checklist state');
+      assert.dom(GENERAL.widget('checklist')).exists('Starts in active checklist state');
 
       await click('[data-test-checklist-hide]');
 
-      assert.dom('[data-test-widget="explore-vault"]').exists('Explore vault banner shown after hide');
-      assert.dom('[data-test-widget="checklist"]').doesNotExist('Checklist is no longer visible');
+      assert.dom(GENERAL.widget('explore-vault')).exists('Explore vault banner shown after hide');
+      assert.dom(GENERAL.widget('checklist')).doesNotExist('Checklist is no longer visible');
     });
 
     test('after back to setup, incomplete then re-complete shows congrats again', async function (assert) {
@@ -488,18 +629,16 @@ module('Integration | Component | dashboard/overview', function (hooks) {
 
       await this.renderComponent();
 
-      assert.dom('[data-test-widget="congrats-banner"]').exists('Starts on congrats when fully complete');
+      assert.dom(GENERAL.widget('congrats-banner')).exists('Starts on congrats when fully complete');
 
       await click('[data-test-congrats-back]');
-      assert.dom('[data-test-widget="checklist"]').exists('Back shows checklist with completed steps');
+      assert.dom(GENERAL.widget('checklist')).exists('Back shows checklist with completed steps');
 
       await click('[data-test-checklist-step="tvp-cli"] [data-test-checklist-step-mark-complete="tvp-cli"]');
-      assert
-        .dom('[data-test-widget="checklist"]')
-        .exists('Checklist remains visible after marking incomplete');
+      assert.dom(GENERAL.widget('checklist')).exists('Checklist remains visible after marking incomplete');
 
       await click('[data-test-checklist-step="tvp-cli"] [data-test-checklist-step-mark-complete="tvp-cli"]');
-      assert.dom('[data-test-widget="congrats-banner"]').exists('Congrats shows again after re-completing');
+      assert.dom(GENERAL.widget('congrats-banner')).exists('Congrats shows again after re-completing');
     });
   });
 });

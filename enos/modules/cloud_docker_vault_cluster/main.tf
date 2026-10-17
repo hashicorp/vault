@@ -168,6 +168,9 @@ resource "docker_container" "vault" {
   name  = "${var.cluster_name}-${count.index}"
   image = var.use_local_build ? docker_image.vault_local[0].name : docker_image.vault_remote[0].image_id
 
+  # Explicitly set network mode to avoid conflicts with networks_advanced
+  network_mode = docker_network.cluster.name
+
   networks_advanced {
     name = docker_network.cluster.name
   }
@@ -205,11 +208,25 @@ resource "docker_container" "vault" {
 
   command = ["vault", "server", "-config=/vault/config/vault.hcl"]
 
-  restart  = "no"
-  must_run = true
+  restart         = "on-failure"
+  max_retry_count = 3
+  must_run        = true
+
+  # Use native docker provider wait functionality with vault status
+  # Exit codes: 0=unsealed, 1=error, 2=sealed - accept only 0 or 2 as healthy
+  wait         = true
+  wait_timeout = 60
+
+  healthcheck {
+    test         = ["CMD-SHELL", "VAULT_ADDR=http://127.0.0.1:${var.vault_port} vault status > /dev/null 2>&1; exit_code=$?; [ $exit_code -eq 0 ] || [ $exit_code -eq 2 ]"]
+    interval     = "5s"
+    timeout      = "3s"
+    start_period = "10s"
+    retries      = 3
+  }
 }
 
-# Capture container logs immediately after creation
+# Capture container logs after creation
 resource "null_resource" "capture_logs" {
   count = var.container_count
 
@@ -237,30 +254,8 @@ locals {
 resource "enos_local_exec" "init_leader" {
   inline = [
     <<-EOT
-      # Check for recently exited containers first
-      EXITED_CONTAINER=$(docker ps -a --filter "name=${docker_container.vault[local.leader_idx].name}" --filter "status=exited" --format "{{.Names}}" | head -1)
-      if [ -n "$EXITED_CONTAINER" ]; then
-        echo "Container $EXITED_CONTAINER exited. Logs:" >&2
-        docker logs $EXITED_CONTAINER 2>&1 >&2
-        echo "Exit code: $(docker inspect $EXITED_CONTAINER --format='{{.State.ExitCode}}')" >&2
-        exit 1
-      fi
-
       # Wait for Vault to be ready (output to stderr to keep stdout clean)
       for i in 1 2 3 4 5 6 7 8 9 10; do
-        # Check if container exists and is running
-        if ! docker ps --filter "name=${docker_container.vault[local.leader_idx].name}" --format "{{.Names}}" | grep -q "${docker_container.vault[local.leader_idx].name}"; then
-          echo "Container ${docker_container.vault[local.leader_idx].name} is not running. Checking for exited container..." >&2
-          EXITED=$(docker ps -a --filter "name=${docker_container.vault[local.leader_idx].name}" --filter "status=exited" --format "{{.Names}}" | head -1)
-          if [ -n "$EXITED" ]; then
-            echo "Found exited container. Logs:" >&2
-            docker logs $EXITED 2>&1 >&2
-          else
-            echo "Container not found at all" >&2
-          fi
-          exit 1
-        fi
-
         if docker exec -e VAULT_ADDR=http://127.0.0.1:${var.vault_port} ${docker_container.vault[local.leader_idx].name} vault status 2>&1 | grep -q "Initialized.*false"; then
           break
         fi

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -20,7 +20,7 @@ func TestAcc_AssociatedIssues(t *testing.T) {
 
 	token, setToken := os.LookupEnv("GITHUB_TOKEN")
 	_, setACC := os.LookupEnv("PIPELINE_ACC")
-	if !setACC && setToken {
+	if !setACC || !setToken {
 		t.Skip("GITHUB_TOKEN and PIPELINE_ACC are not set")
 	}
 

@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 )
@@ -37,4 +38,7 @@ func (c *Core) resolveMountEntryVersion(ctx context.Context, pluginType consts.P
 		return pinnedVersion.Version, nil
 	}
 	return entry.Version, nil
+}
+
+func (c *Core) postMountInitialize(entry *MountEntry, postUnsealLogger hclog.Logger) {
 }

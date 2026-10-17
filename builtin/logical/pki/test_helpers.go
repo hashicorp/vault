@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/observations"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/pavlo-v-chernykh/keystore-go/v4"
 	"github.com/stretchr/testify/require"
@@ -38,22 +39,53 @@ import (
 )
 
 // Setup helpers
+
+// CreateBackendWithStorage creates a backend wired to an in-memory storage view
+// with the PKI migration mark already set, ready for use in unit tests.
 func CreateBackendWithStorage(t testing.TB) (*backend, logical.Storage) {
+	t.Helper()
+	return CreateBackendWithStorageAndLogger(t, nil)
+}
+
+// CreateBackendWithStorageAndLogger is like CreateBackendWithStorage but allows
+// the caller to inject a custom logger (e.g. one backed by a bytes.Buffer) so
+// that log output can be asserted in tests. Pass nil to use the default logger.
+func CreateBackendWithStorageAndLogger(t testing.TB, logger hclog.Logger) (*backend, logical.Storage) {
 	t.Helper()
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
+	if logger != nil {
+		config.Logger = logger
+	}
 
-	var err error
 	b := Backend(config)
 	b.pkiCertificateCounter = &testingPkiCertificateCounter{}
-	err = b.Setup(context.Background(), config)
-	if err != nil {
+	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
 	// Assume for our tests we have performed the migration already.
 	b.pkiStorageVersion.Store(1)
 	return b, config.StorageView
+}
+
+// CreateBackendWithObservationRecorder is like CreateBackendWithStorage but wires
+// in a TestObservationRecorder so that tests can inspect recorded observations.
+func CreateBackendWithObservationRecorder(t testing.TB) (*backend, logical.Storage, *observations.TestObservationRecorder) {
+	t.Helper()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	rec := observations.NewTestObservationRecorder()
+	config.ObservationRecorder = rec
+
+	b := Backend(config)
+	b.pkiCertificateCounter = &testingPkiCertificateCounter{}
+	if err := b.Setup(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	b.pkiStorageVersion.Store(1)
+	return b, config.StorageView, rec
 }
 
 func mountPKIEndpoint(t testing.TB, client *api.Client, path string) {

@@ -51,9 +51,11 @@ runs:
     - uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
-        no-save: true
+        cache: fetch-only
     - name: Build external tools
       uses: ./.github/actions/install-tools
+      with:
+        cache: fetch-only
     - name: Checkout VCM repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
@@ -69,6 +71,7 @@ runs:
         path: vault-tools
     - name: Install needed Vault versions
       env:
+        GOWORK: off
         GOPATH: /home/runner/go
       shell: bash
       run: |
@@ -81,16 +84,19 @@ runs:
         done
     - name: Build dev binary for binary tests
       env:
+        GOWORK: off
         GOPATH: /home/runner/go
         # This action is only called from ENT workflows; GOPRIVATE is unconditionally required.
         GOPRIVATE: github.com/hashicorp/*
         GIT_CONFIG_COUNT: "1"
         GIT_CONFIG_KEY_0: url.https://user:${{ inputs.github-token }}@github.com.insteadOf
         GIT_CONFIG_VALUE_0: https://github.com
+        # Skip go generate. Generated code should be checked in.
+        SKIP_GEN: "1"
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}" || exit 1
-        time make prep dev
+        time make dev
 
         # Save the binary we just build under the current Vault version number to VVM
         # for apupgrade to use as a target version
@@ -102,15 +108,19 @@ runs:
       with:
         sqlc-version: '1.29.0'
     - name: Build VCM
+      env:
+        GOWORK: off
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}/vcm" || exit 1
         make
     - name: Build Autopilot upgrade tool
+      env:
+        GOWORK: off
       shell: bash
       run: |
         cd "${GITHUB_WORKSPACE}/vault-tools/apupgrade" || exit 1
-        GOWORK=off go build -o apupgrade .
+        go build -o apupgrade .
     - name: Run Autopilot upgrade tool
       shell: bash
       run: |

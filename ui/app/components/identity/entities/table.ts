@@ -131,39 +131,44 @@ export default class IdentityEntitiesTableComponent extends Component<Args> {
 
   @action
   async toggleEntity(id: string, disabled: boolean) {
+    const name = this.args.model.find((entity) => entity.id === id)?.name;
     try {
       await this.api.identity.entityUpdateById(id, { disabled });
-      this.flashMessages.success(`Successfully ${disabled ? 'disabled' : 'enabled'} entity`);
+      this.flashMessages.success(`Successfully ${disabled ? 'disabled' : 'enabled'} entity ${name}`);
       this.router.refresh('vault.cluster.access.identity.entities.index');
     } catch (error) {
       const { message } = await this.api.parseError(error);
-      this.flashMessages.danger(`Error disabling entity: ${message}`);
+      this.flashMessages.danger(`Error ${disabled ? 'disabling' : 'enabling'} entity: ${message}`);
     }
   }
 
   @action
   async deleteEntity() {
+    const name = this.args.model.find((entity) => entity.id === this.entityToDelete)?.name;
     try {
       const entity = this.entityToDelete;
       await this.api.identity.entityDeleteById(entity);
-      this.flashMessages.success(`Successfully deleted entity ${entity}`);
+      this.flashMessages.success(`Successfully deleted entity: ${name}`);
       this.router.refresh('vault.cluster.access.identity.entities.index');
     } catch (error) {
       const { message } = await this.api.parseError(error);
-      this.flashMessages.danger(`Error deleting entity ${this.entityToDelete}: ${message}`);
+      this.flashMessages.danger(`Error deleting entity ${name}: ${message}`);
     }
   }
 
   @action
   async deleteAlias() {
+    const name = this.args.model
+      .flatMap((entity) => entity.aliases ?? [])
+      .find((alias) => alias.id === this.aliasToDelete)?.name;
     try {
       const alias = this.aliasToDelete;
       await this.api.identity.entityDeleteAliasById(alias);
-      this.flashMessages.success(`Successfully deleted alias ${alias}`);
+      this.flashMessages.success(`Successfully deleted alias: ${name}`);
       this.router.refresh('vault.cluster.access.identity.entities.index');
     } catch (error) {
       const { message } = await this.api.parseError(error);
-      this.flashMessages.danger(`Error deleting alias ${this.aliasToDelete}: ${message}`);
+      this.flashMessages.danger(`Error deleting alias ${name}: ${message}`);
     }
   }
 }

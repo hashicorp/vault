@@ -10,7 +10,7 @@
   },
   "scripts": {
     "postinstall": "pnpm build:jsondiffpatch",
-    "build": "pnpm build:jsondiffpatch && ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
+    "build": "pnpm build:jsondiffpatch && ember build --environment=production",
     "build:dev": "pnpm build:jsondiffpatch && ember build",
     "build:jsondiffpatch": "webpack --config webpack.jsondiffpatch.config.js",
     "lint:css": "stylelint \"**/*.css\"",
@@ -42,6 +42,7 @@
     "test:filter": "node scripts/start-vault.js --server -f='!enterprise'",
     "test:server": "node scripts/start-vault.js --server",
     "test:dev": "node scripts/start-vault.js",
+    "test:e2e:video": "node scripts/record-e2e-video.js",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional",
     "vault:e2e": "vault server"
@@ -143,6 +144,7 @@
     "eslint-plugin-n": "~16.6.2",
     "eslint-plugin-prettier": "~5.2.6",
     "eslint-plugin-qunit": "~8.1.2",
+    "eslint-plugin-vault": "file:./eslint-rules",
     "execa": "^5.1.1",
     "filesize": "~4.2.1",
     "jsdoc-babel": "~0.5.0",
@@ -223,7 +225,7 @@
     "@segment/analytics-next": "^1.84.1",
     "ember-auto-import": "2.10.0",
     "handlebars": "4.7.9",
-    "js-yaml": "^5.2.1",
+    "js-yaml": "5.4.1",
     "posthog-js": "1.236.1",
     "uuid": "9.0.1"
   },

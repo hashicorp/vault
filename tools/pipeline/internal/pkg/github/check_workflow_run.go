@@ -262,28 +262,28 @@ func (r *CheckWorkflowRunRes) ToMarkdown() string {
 	var output strings.Builder
 
 	output.WriteString("## Branch Summary\n\n")
-	output.WriteString(r.buildSummaryTable().RenderMarkdown())
+	output.WriteString(escapeMarkdownTableColumns(r.buildSummaryTable(), 1, 4, 5, 6, 7).RenderMarkdown())
 
 	// Show Matched Jobs section if: we have failures OR we're not hiding successful jobs
 	if r.hasMatchedJobs() && (r.hasFailedJobs() || !r.HideSuccessfulJobs) {
 		output.WriteString("\n\n## Matched Jobs\n\n")
-		output.WriteString(r.buildMatchedJobsTable(r.HideSuccessfulJobs).RenderMarkdown())
+		output.WriteString(escapeMarkdownTableColumns(r.buildMatchedJobsTable(r.HideSuccessfulJobs), 1, 3, 4, 5, 6).RenderMarkdown())
 	}
 
 	if r.hasFailedJobs() {
 		output.WriteString("\n\n## Failed Jobs\n\n")
-		output.WriteString(r.buildFailedJobsTable().RenderMarkdown())
+		output.WriteString(escapeMarkdownTableColumns(r.buildFailedJobsTable(), 1, 3, 4, 5, 6).RenderMarkdown())
 	}
 
 	if r.hasTaintedJobs() {
 		output.WriteString("\n\n## Tainted Jobs\n\n")
 		output.WriteString("Non-matched jobs that failed and may have prevented required jobs from running.\n\n")
-		output.WriteString(r.buildTaintedJobsTable().RenderMarkdown())
+		output.WriteString(escapeMarkdownTableColumns(r.buildTaintedJobsTable(), 1, 3, 4, 5).RenderMarkdown())
 	}
 
 	if r.hasMissingPatterns() {
 		output.WriteString("\n\n## Missing Patterns\n\n")
-		output.WriteString(r.buildMissingPatternsTable().RenderMarkdown())
+		output.WriteString(escapeMarkdownTableColumns(r.buildMissingPatternsTable(), 1, 2).RenderMarkdown())
 	}
 
 	return output.String()
@@ -792,7 +792,7 @@ func (r *CheckWorkflowRunReq) buildBranchResult(
 			return "Workflow run has failed jobs that prevented required jobs from running"
 		}
 		if len(eval.FailedJobs) > 0 && len(eval.MissingPatterns) > 0 {
-			return "Required jobs failed or missing"
+			return "Required jobs failed and missing"
 		}
 		if len(eval.FailedJobs) > 0 {
 			return "Required jobs failed"

@@ -9,9 +9,10 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/billing"
 )
@@ -744,7 +745,7 @@ func (c *Core) getStoredTransitCallCountsLocked(ctx context.Context, localPathPr
 	if entry == nil {
 		return 0, nil
 	}
-	transitCount, err := strconv.ParseUint(string(entry.Value), 10, 64)
+	transitCount, err := strconv.ParseUint(strings.TrimSpace(string(entry.Value)), 10, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -847,7 +848,7 @@ func (c *Core) getStoredGcpKmsCallCountsLocked(ctx context.Context, localPathPre
 	if entry == nil {
 		return 0, nil
 	}
-	gcpKmsCount, err := strconv.ParseUint(string(entry.Value), 10, 64)
+	gcpKmsCount, err := strconv.ParseUint(strings.TrimSpace(string(entry.Value)), 10, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -1028,7 +1029,7 @@ func (c *Core) getStoredPkiDurationAdjustedCountLocked(ctx context.Context, loca
 		return 0, err
 	}
 
-	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	currentCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current PKI duration adjusted cert count: %w", err)
 	}
@@ -1167,7 +1168,7 @@ func (c *Core) getStoredSSHDurationAdjustedCertCountLocked(ctx context.Context, 
 		return 0, err
 	}
 
-	certCount, err := strconv.ParseFloat(string(se.Value), 64)
+	certCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current SSH duration adjusted cert count: %w", err)
 	}
@@ -1244,7 +1245,7 @@ func (c *Core) getStoredSSHOTPCountLocked(ctx context.Context, localPathPrefix s
 		return 0, err
 	}
 
-	otpCount, err := strconv.ParseFloat(string(se.Value), 64)
+	otpCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current OTP cert count: %w", err)
 	}
@@ -1321,7 +1322,7 @@ func (c *Core) getStoredOidcDurationAdjustedCountLocked(ctx context.Context, cur
 		return 0, err
 	}
 
-	currentCount, err := strconv.ParseFloat(string(se.Value), 64)
+	currentCount, err := strconv.ParseFloat(strings.TrimSpace(string(se.Value)), 64)
 	if err != nil {
 		return 0, fmt.Errorf("error decoding current OIDC duration-adjusted token count: %w", err)
 	}
@@ -1431,7 +1432,7 @@ func (c *Core) storeOidcDurationAdjustedCountLocked(ctx context.Context, current
 // - Example: 1-year cert (8760 hours) = 12.0000 units
 // - Example: 1-day cert (24 hours) = 0.0329 units
 func DurationAdjustedTokenCount(tokenDurationSeconds float64) float64 {
-	validityHours := tokenDurationSeconds / (time.Hour.Seconds())
+	validityHours := tokenDurationSeconds / time.Hour.Seconds()
 	units := validityHours / DurationAdjustedStandardDuration
 	// Round to 4 decimal places
 	ret := math.Round(units*DecimalPrecisionMultiplier) / DecimalPrecisionMultiplier

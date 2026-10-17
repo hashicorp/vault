@@ -13,7 +13,7 @@ on:
 jobs:
   # checks that a do-not-merge label is not present for a PR
   do-not-merge-check:
-    # If there is a `do-not-merge` label we ignore this check
+    # Only run (and fail) when a `do-not-merge` label is applied
     if: ${{ contains(github.event.pull_request.labels.*.name, 'do-not-merge') }}
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
     steps:

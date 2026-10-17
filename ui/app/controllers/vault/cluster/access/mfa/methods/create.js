@@ -20,14 +20,20 @@ export default class MfaMethodCreateController extends Controller {
   @service flashMessages;
   @service router;
   @service api;
+  /** @type {import('vault/services/theme').default} */
+  @service theme;
 
   queryParams = ['type'];
   methods = [
     { name: 'TOTP', icon: 'history', type: 'totp' },
-    { name: 'Duo', icon: 'duo-color', type: 'duo' },
-    { name: 'Okta', icon: 'okta-color', type: 'okta' },
-    { name: 'PingID', icon: 'ping-identity-color', type: 'pingid' },
+    { name: 'Duo', icon: 'duo-color', iconMono: 'duo', type: 'duo' },
+    { name: 'Okta', icon: 'okta-color', iconMono: 'okta', type: 'okta' },
+    { name: 'PingID', icon: 'ping-identity-color', iconMono: 'ping-identity', type: 'pingid' },
   ];
+
+  get isDarkMode() {
+    return this.theme.isDarkMode;
+  }
 
   @tracked type = null;
   @tracked method = null;

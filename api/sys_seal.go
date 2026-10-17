@@ -111,8 +111,6 @@ type SealStatusResponse struct {
 	RecoverySeal         bool     `json:"recovery_seal"`
 	RecoverySealType     string   `json:"recovery_seal_type,omitempty"`
 	StorageType          string   `json:"storage_type,omitempty"`
-	HCPLinkStatus        string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID    string   `json:"hcp_link_resource_ID,omitempty"`
 	RemovedFromCluster   *bool    `json:"removed_from_cluster,omitempty"`
 	Warnings             []string `json:"warnings,omitempty"`
 	MigrationDoneAtEpoch int64    `json:"migration_done_at_epoch,omitempty"`

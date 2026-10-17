@@ -184,7 +184,11 @@ export default class NavigateInput extends Component {
 
   filterUpdatedNoNav(val, mode) {
     const key = val ? val.trim() : null;
-    this.transitionToRoute(routeFor('list-root', mode, this.args.urls), {
+    const route = routeFor('list-root', mode, this.args.urls);
+    // policies are nested under their type (e.g. vault.cluster.policies.acl) rather than a dynamic segment
+    const routeName =
+      mode === 'policy' && this.args.extraNavParams ? `${route}.${this.args.extraNavParams}` : route;
+    this.transitionToRoute(routeName, {
       queryParams: {
         pageFilter: key,
         page: 1,

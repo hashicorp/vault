@@ -71,8 +71,8 @@ export default class PageAuthMethodsComponent extends Component<Args> {
     },
     {
       key: 'popupMenu',
-      label: 'Action',
-      width: '8%',
+      label: 'Actions',
+      width: '125px',
     },
   ];
 
@@ -148,10 +148,6 @@ export default class PageAuthMethodsComponent extends Component<Args> {
 
   get showWizard() {
     return !this.wizard.isDismissed(this.wizardId) && this.hasOnlyDefaultMethods;
-  }
-
-  get showPageHeader() {
-    return !this.showWizard || this.wizard.isIntroVisible(this.wizardId);
   }
 
   getAuthMethodData = (path: string) => {

@@ -8,7 +8,7 @@ package main // import "github.com/hashicorp/vault"
 import (
 	"os"
 
-	"github.com/hashicorp/vault/command"
+	command "github.com/hashicorp/vault/command/server"
 )
 
 func main() {

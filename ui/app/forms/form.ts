@@ -1,10 +1,12 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 import { validate } from 'vault/utils/forms/validate';
 import { set } from '@ember/object';
+import { capitalize } from '@ember/string';
 import { TrackedObject } from 'tracked-built-ins';
+import { maxDurationMessage } from 'core/utils/duration-utils';
 
 import type { Validations } from 'vault/app-types';
 import type FormField from 'vault/utils/forms/field';
@@ -12,6 +14,48 @@ import type FormFieldGroup from 'vault/utils/forms/field-group';
 
 export type FormOptions = {
   isNew?: boolean;
+};
+
+// Flattens the fields declared on a form, including those nested in formFieldGroups.
+const collectFormFields = (form: Form<object>): FormField[] => {
+  const fields = form.fieldProps.reduce((fields: FormField[], prop) => {
+    const formFields = form[prop as keyof typeof form];
+    if (Array.isArray(formFields)) {
+      fields.push(...formFields);
+    }
+    return fields;
+  }, []);
+  const groupFields = form.fieldGroupProps.reduce((groupFields: FormField[], prop) => {
+    const formFieldGroups = form[prop as keyof typeof form];
+    if (Array.isArray(formFieldGroups)) {
+      const fields = formFieldGroups.reduce((arr: FormField[], group: FormFieldGroup) => {
+        const values = Object.values(group)[0] || [];
+        return [...arr, ...values];
+      }, []);
+      groupFields.push(...fields);
+    }
+    return groupFields;
+  }, []);
+  return [...fields, ...groupFields];
+};
+
+// Vault rejects durations it cannot store, so every TTL field gets a max rule on top of the form's own validations.
+const withMaxDurationRules = (fields: FormField[], validations?: Validations) => {
+  const ttlFields = fields.filter((field) => field.options?.editType === 'ttl');
+  if (!ttlFields.length) return validations;
+
+  const merged: Validations = { ...validations };
+  // A field can be listed in both formFields and formFieldGroups, so add each rule once per key.
+  const seen = new Set<string>();
+  for (const { name, options } of ttlFields) {
+    const key = options.fieldValue || name;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    // Matches the label FormField renders for unlabeled fields.
+    const label = options.label || capitalize(name.replace(/[_-]+/g, ' '));
+    merged[key] = [...(merged[key] || []), { type: 'maxDuration', message: maxDurationMessage(label) }];
+  }
+  return merged;
 };
 
 export default class Form<T extends object> {
@@ -37,27 +81,7 @@ export default class Form<T extends object> {
     const proxyTarget = (target: this, prop: string) => {
       try {
         // check if the property that is being accessed is a form field
-        const fields = this.fieldProps.reduce((fields: FormField[], prop) => {
-          const formFields = target[prop as keyof this];
-          if (Array.isArray(formFields)) {
-            fields.push(...formFields);
-          }
-          return fields;
-        }, []);
-        // in the case of formFieldGroups we need extract the fields out into a flat array
-        const groupFields = this.fieldGroupProps.reduce((groupFields: FormField[], prop) => {
-          const formFieldGroups = target[prop as keyof this];
-          if (Array.isArray(formFieldGroups)) {
-            const fields = formFieldGroups.reduce((arr: FormField[], group: FormFieldGroup) => {
-              const values = Object.values(group)[0] || [];
-              return [...arr, ...values];
-            }, []);
-            groupFields.push(...fields);
-          }
-          return groupFields;
-        }, []);
-        // combine the formFields and formGroupFields into a single array
-        const allFields = [...fields, ...groupFields];
+        const allFields = collectFormFields(target);
         const formDataKeys = allFields.reduce((keys: string[], field) => {
           keys.push(field.name);
           // keyValueFields sub-fields can bind directly to their own model attribute via `valuePath`
@@ -99,7 +123,7 @@ export default class Form<T extends object> {
   toJSON(data = this.data) {
     // validate the form
     // if validations are not defined the util will ignore and return valid state
-    const formValidation = validate(data, this.validations);
+    const formValidation = validate(data, withMaxDurationRules(collectFormFields(this), this.validations));
     return { ...formValidation, data };
   }
 }

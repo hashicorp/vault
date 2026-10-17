@@ -11,12 +11,14 @@
 >
   <div class="onboarding-card__background">
     <img class="onboarding-card__aurora" src={{img-path "~/onboarding-checklist-aurora.svg"}} alt="" aria-hidden="true" />
-    <img
-      class="onboarding-card__vault-icon"
-      src={{img-path "~/onboarding-checklist-vault-icon.svg"}}
-      alt=""
-      aria-hidden="true"
-    />
+    {{#unless this.theme.isDarkMode}}
+      <img
+        class="onboarding-card__vault-icon"
+        src={{img-path "~/onboarding-checklist-vault-icon.svg"}}
+        alt=""
+        aria-hidden="true"
+      />
+    {{/unless}}
   </div>
 
   <div class="onboarding-card__content">

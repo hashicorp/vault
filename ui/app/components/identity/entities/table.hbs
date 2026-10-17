@@ -90,6 +90,13 @@
       {{#if data.isAlias}}
         <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
           <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          {{#if (not (or data.entity.canEdit data.alias.canDelete))}}
+            <dd.Interactive
+              data-test-popup-menu="view-details"
+              {{on "click" (fn @onClickAlias data.entity data.alias)}}
+              @icon="eye"
+            >View details</dd.Interactive>
+          {{/if}}
           {{#if data.entity.canEdit}}
             <dd.Interactive
               data-test-popup-menu="edit alias"
@@ -97,20 +104,31 @@
               @models={{array data.entityAliasId}}
               @icon="edit"
             >Edit alias</dd.Interactive>
+          {{/if}}
+          {{#if (and data.entity.canEdit data.alias.canDelete)}}
             <dd.Separator />
           {{/if}}
-          <dd.Interactive
-            @color="critical"
-            @icon="trash"
-            {{on "click" (fn (mut this.aliasToDelete) data.entityAliasId)}}
-            data-test-popup-menu="delete"
-          >
-            Delete alias
-          </dd.Interactive>
+          {{#if data.alias.canDelete}}
+            <dd.Interactive
+              @color="critical"
+              @icon="trash"
+              {{on "click" (fn (mut this.aliasToDelete) data.entityAliasId)}}
+              data-test-popup-menu="delete"
+            >
+              Delete alias
+            </dd.Interactive>
+          {{/if}}
         </Hds::Dropdown>
       {{else}}
         <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
           <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
+          {{#if (not (or data.entity.canEdit data.entity.canAddAlias data.entity.canDelete))}}
+            <dd.Interactive
+              data-test-popup-menu="view-details"
+              {{on "click" (fn @onClickEntity data.entity)}}
+              @icon="eye"
+            >View details</dd.Interactive>
+          {{/if}}
           {{#if data.entity.canEdit}}
             <dd.Interactive
               data-test-popup-menu="edit"
@@ -128,33 +146,39 @@
               @icon="plus-circle"
             >Create alias</dd.Interactive>
           {{/if}}
-          <dd.Separator />
-          {{#if (eq data.entityStatus "Disabled")}}
-            <dd.Interactive
-              @icon="reload"
-              {{on "click" (fn this.toggleEntity data.entity.id false)}}
-              data-test-popup-menu="enable"
-            >
-              Enable entity
-            </dd.Interactive>
-          {{else}}
+          {{#if (and (or data.entity.canEdit data.entity.canAddAlias) (or data.entity.canEdit data.entity.canDelete))}}
+            <dd.Separator />
+          {{/if}}
+          {{#if data.entity.canEdit}}
+            {{#if (eq data.entityStatus "Disabled")}}
+              <dd.Interactive
+                @icon="reload"
+                {{on "click" (fn this.toggleEntity data.entity.id false)}}
+                data-test-popup-menu="enable"
+              >
+                Enable entity
+              </dd.Interactive>
+            {{else}}
+              <dd.Interactive
+                @color="critical"
+                @icon="skip"
+                {{on "click" (fn (mut this.entityToDisable) data.entity.id)}}
+                data-test-popup-menu="disable"
+              >
+                Disable entity
+              </dd.Interactive>
+            {{/if}}
+          {{/if}}
+          {{#if data.entity.canDelete}}
             <dd.Interactive
               @color="critical"
-              @icon="skip"
-              {{on "click" (fn (mut this.entityToDisable) data.entity.id)}}
-              data-test-popup-menu="disable"
+              @icon="trash"
+              {{on "click" (fn (mut this.entityToDelete) data.entity.id)}}
+              data-test-popup-menu="delete"
             >
-              Disable entity
+              Delete entity
             </dd.Interactive>
           {{/if}}
-          <dd.Interactive
-            @color="critical"
-            @icon="trash"
-            {{on "click" (fn (mut this.entityToDelete) data.entity.id)}}
-            data-test-popup-menu="delete"
-          >
-            Delete entity
-          </dd.Interactive>
         </Hds::Dropdown>
       {{/if}}
     </:popupMenu>

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
@@ -43,6 +45,9 @@ var (
 	ErrPinnedVersion            = errors.New("cannot delete a pinned version")
 	ErrPluginVersionMismatch    = errors.New("plugin version mismatch")
 	ErrPluginUnableToRun        = errors.New("unable to run plugin")
+	// ErrPluginOutsideDirectory is returned when a stored plugin command
+	// resolves to a location outside of the configured plugin directory.
+	ErrPluginOutsideDirectory = errors.New("plugin command is outside of configured plugin directory")
 )
 
 // PluginCatalog keeps a record of plugins known to vault. External plugins need
@@ -67,6 +72,11 @@ type PluginCatalog struct {
 
 	lock    sync.RWMutex
 	wrapper pluginutil.RunnerUtil
+
+	// activeReloadOps is the number of in-flight reloadMatching* operations.
+	// While this is non-zero, mounts linked to externalPlugins entries marked
+	// reloading should fail fast instead of attempting reactive reload.
+	activeReloadOps int
 
 	runtimeCatalog *PluginRuntimeCatalog
 
@@ -127,6 +137,14 @@ type externalPlugin struct {
 	connections map[string]*pluginClient
 
 	multiplexingSupport bool
+
+	// reloading is set to true after the shared gRPC process for a multiplexed
+	// plugin has been killed as part of a reload. It signals to subsequent
+	// reloadExternalPlugin calls (for other mounts that shared the same process)
+	// that the kill has already been performed and they should be treated as
+	// no-ops. It is cleared once the first new connection successfully completes
+	// its handshake, ending the reload window.
+	reloading bool
 }
 
 // pluginClient represents a connection to a plugin process
@@ -139,10 +157,11 @@ type pluginClient struct {
 
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
-	client      *plugin.Client
-	clientConn  grpc.ClientConnInterface
-	cleanupFunc func() error
-	reloadFunc  func() error
+	client          *plugin.Client
+	clientConn      grpc.ClientConnInterface
+	cleanupFunc     func() error
+	reloadFunc      func() error
+	isReloadingFunc func() bool
 
 	plugin.ClientProtocol
 }
@@ -273,8 +292,49 @@ func (p *pluginClient) Reload() error {
 	return p.reloadFunc()
 }
 
+// Reloading reports whether this client's external plugin key is in a
+// reloading window while at least one explicit reload operation is in progress.
+func (p *pluginClient) Reloading() bool {
+	if p.isReloadingFunc == nil {
+		return false
+	}
+
+	return p.isReloadingFunc()
+}
+
 func (c *PluginCatalog) Processes() int {
 	return len(c.externalPlugins)
+}
+
+// BeginReloadOperation marks the start of a reloadMatchingPlugin or
+// reloadMatchingPluginMounts operation.
+func (c *PluginCatalog) BeginReloadOperation() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.activeReloadOps++
+}
+
+// EndReloadOperation marks completion of a reloadMatchingPlugin or
+// reloadMatchingPluginMounts operation. Once no reload operations remain, stale
+// reloading entries are pruned from externalPlugins.
+func (c *PluginCatalog) EndReloadOperation() {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.activeReloadOps == 0 {
+		return
+	}
+
+	c.activeReloadOps--
+	if c.activeReloadOps > 0 {
+		return
+	}
+
+	for key, extPlugin := range c.externalPlugins {
+		if extPlugin.reloading && len(extPlugin.connections) == 0 {
+			delete(c.externalPlugins, key)
+		}
+	}
 }
 
 // reloadExternalPlugin
@@ -294,12 +354,28 @@ func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, pluginB
 
 	pc, ok := extPlugin.connections[id]
 	if !ok {
+		// For multiplexed plugins the shared process is killed on the first
+		// reloadExternalPlugin call for a given reload cycle (see below).
+		// Subsequent mounts sharing that process will no longer find their
+		// connection ID in the already-reset entry, which means the process
+		// has already been killed on their behalf — treat this as a no-op.
+		if extPlugin.reloading {
+			return nil
+		}
 		return fmt.Errorf("%w id: %s", ErrPluginConnectionNotFound, id)
 	}
 
-	delete(c.externalPlugins, key)
+	// Kill the shared gRPC process once and install a fresh entry so that
+	// subsequent mounts' reloadExternalPlugin calls (above) become no-ops,
+	// and the next newPluginClient call spawns exactly one new process that
+	// all remaining mounts can reuse via normal multiplexing.
 	pc.client.Kill()
 	c.logger.Debug("killed external plugin process for reload", "plugin", pluginBinaryRef, "pluginID", pc.pluginID)
+	c.externalPlugins[key] = &externalPlugin{
+		connections:         make(map[string]*pluginClient),
+		multiplexingSupport: true,
+		reloading:           true,
+	}
 
 	return nil
 }
@@ -424,6 +500,15 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			defer c.lock.Unlock()
 			return c.reloadExternalPlugin(key, id, pluginRunner.BinaryReference())
 		},
+		isReloadingFunc: func() bool {
+			c.lock.RLock()
+			defer c.lock.RUnlock()
+			if c.activeReloadOps == 0 {
+				return false
+			}
+			ep, ok := c.externalPlugins[key]
+			return ok && ep.reloading
+		},
 	}
 
 	// Multiplexing support will always be false initially, but will be
@@ -496,6 +581,10 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	extPlugin.connections[id] = pc
 	extPlugin.multiplexingSupport = muxed
+	// The first successful connection to a freshly-spawned process marks the
+	// end of the reload window; clear the flag so that future out-of-band
+	// ErrPluginConnectionNotFound errors are not silently swallowed.
+	extPlugin.reloading = false
 
 	return extPlugin.connections[id], nil
 }
@@ -969,8 +1058,17 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 			return entry, nil
 		case c.directory != "":
 			// Only allow returning non-container external plugins if we have a plugin directory.
+			// Stored entries are not guaranteed to have passed the registration
+			// checks in Set (e.g. they may have arrived through a raft snapshot
+			// restore), so apply the same command checks that registration
+			// applies before the command is handed out for execution. Unlike
+			// registration, a binary that does not exist yet is allowed.
+			absCommand, err := c.checkPluginCommand(entry.Name, entry.Command, c.storedPluginDir(entry), true)
+			if err != nil {
+				return nil, fmt.Errorf("refusing to use plugin %q: %w", name, err)
+			}
 			// Make the command path fully rooted.
-			entry.Command = filepath.Join(c.directory, entry.Command)
+			entry.Command = absCommand
 			return entry, nil
 		}
 	}
@@ -998,6 +1096,121 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 	}
 
 	return nil, nil
+}
+
+// storedPluginDir returns the directory a stored plugin's binary must be in,
+// derived from the entry the same way set derives it at registration: the
+// runtime directory for downloaded plugins, the plugin directory for a command
+// given directly in it, and the extracted artifact directory otherwise.
+func (c *PluginCatalog) storedPluginDir(entry *pluginutil.PluginRunner) string {
+	artifactDir := GetExtractedArtifactDir(entry.Name, entry.Version)
+	switch {
+	case entry.Download:
+		return filepath.Join(c.directory, ".runtime", artifactDir)
+	case filepath.Dir(filepath.Clean(entry.Command)) == ".":
+		return c.directory
+	default:
+		return filepath.Join(c.directory, artifactDir)
+	}
+}
+
+// checkPluginCommand validates a non-container plugin command and returns it
+// joined onto the plugin directory. It is shared by registration (set) and
+// lookup (get) so both apply the same rules:
+//
+//  1. Neither the plugin name nor the command may contain "..".
+//  2. expectedDir must be inside the plugin directory, and the command must
+//     name a file directly in expectedDir.
+//  3. After resolving symlinks, the binary must be directly in expectedDir.
+//     Only the plugin directory itself may be reached through a symlink; the
+//     directories below it are compared without resolving symlinks, so a
+//     symlinked subdirectory is refused just as an escaping binary is.
+//
+// When allowMissing is true, a binary that does not exist is not an error:
+// entries are also read for inspection (read API, metrics), and downloaded
+// plugins are looked up before their binary is extracted. The part of the
+// path that does exist is still checked; see checkMissingCommand.
+func (c *PluginCatalog) checkPluginCommand(name, command, expectedDir string, allowMissing bool) (string, error) {
+	if strings.Contains(name, "..") || strings.Contains(command, "..") {
+		return "", fmt.Errorf("%w: %w", ErrPluginOutsideDirectory, consts.ErrPathContainsParentReferences)
+	}
+
+	expectedDir = filepath.Clean(expectedDir)
+	relDir, err := filepath.Rel(c.directory, expectedDir)
+	if err != nil || !filepath.IsLocal(relDir) {
+		return "", ErrPluginOutsideDirectory
+	}
+	absCommand := filepath.Join(c.directory, command)
+	if filepath.Dir(absCommand) != expectedDir {
+		return "", fmt.Errorf("%w: command must name a file in %s", ErrPluginOutsideDirectory, expectedDir)
+	}
+
+	resolvedDir, err := filepath.EvalSymlinks(c.directory)
+	if err != nil {
+		return "", fmt.Errorf("error while validating the plugin directory: %w", err)
+	}
+
+	resolved, err := filepath.EvalSymlinks(absCommand)
+	if err != nil {
+		if allowMissing && isNotExist(err) {
+			return absCommand, c.checkMissingCommand(absCommand, resolvedDir)
+		}
+		return "", fmt.Errorf("error while validating the command path: %w", err)
+	}
+	if filepath.Dir(resolved) != filepath.Join(resolvedDir, relDir) {
+		return "", fmt.Errorf("%w: binary must be in %s", ErrPluginOutsideDirectory, expectedDir)
+	}
+	return absCommand, nil
+}
+
+// checkMissingCommand handles a command whose binary does not exist. It finds
+// the deepest existing component of absCommand below the plugin directory and
+// requires it to be reached without following any symlink, as the binary's
+// directory must be once the binary exists.
+//
+// Without this, a broken symlink at the command, or a symlinked directory on
+// the way to it, would pass while its target is absent; whatever later
+// appears at the target would then be executed.
+func (c *PluginCatalog) checkMissingCommand(absCommand, resolvedDir string) error {
+	existing := absCommand
+	for {
+		if existing == c.directory {
+			// Nothing below the plugin directory exists; whatever is created
+			// later is created inside the directory itself.
+			return nil
+		}
+		_, err := os.Lstat(existing)
+		if err == nil {
+			break
+		}
+		if !isNotExist(err) {
+			return fmt.Errorf("error while validating the command path: %w", err)
+		}
+		parent := filepath.Dir(existing)
+		if parent == existing {
+			return ErrPluginOutsideDirectory
+		}
+		existing = parent
+	}
+
+	resolved, err := filepath.EvalSymlinks(existing)
+	if err != nil {
+		if isNotExist(err) {
+			// existing is a symlink whose target is missing, so where it will
+			// point once the target exists cannot be verified.
+			return fmt.Errorf("%w: command path contains a broken symlink", ErrPluginOutsideDirectory)
+		}
+		return fmt.Errorf("error while validating the command path: %w", err)
+	}
+	rel, err := filepath.Rel(c.directory, existing)
+	if err != nil || resolved != filepath.Join(resolvedDir, rel) {
+		return ErrPluginOutsideDirectory
+	}
+	return nil
+}
+
+func isNotExist(err error) bool {
+	return errors.Is(err, fs.ErrNotExist) || errors.Is(err, syscall.ENOTDIR)
 }
 
 // Set registers a new external plugin with the catalog, or updates an existing
@@ -1081,23 +1294,11 @@ func (c *PluginCatalog) set(ctx context.Context, plugin pluginutil.SetPluginInpu
 			}
 		}
 
-		absCommand = filepath.Join(c.directory, plugin.Command)
-
-		sym, err := filepath.EvalSymlinks(absCommand)
+		// Make sure the command isn't breaking out of the configured plugin
+		// directory. get applies the same check to stored entries.
+		absCommand, err = c.checkPluginCommand(plugin.Name, plugin.Command, expectedPluginDir, false)
 		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
-
-		// Best effort check to make sure the command isn't breaking out of the
-		// configured plugin directory.
-
-		symAbs, err := filepath.Abs(filepath.Dir(sym))
-		if err != nil {
-			return nil, fmt.Errorf("error while validating the command path: %w", err)
-		}
-
-		if symAbs != expectedPluginDir {
-			return nil, fmt.Errorf("cannot execute files outside of configured plugin directory %s: expected %s, got %s", c.directory, expectedPluginDir, symAbs)
+			return nil, err
 		}
 	}
 

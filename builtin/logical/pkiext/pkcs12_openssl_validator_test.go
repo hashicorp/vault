@@ -345,7 +345,7 @@ func validateCertificateOrder(t *testing.T, runner *docker.Runner, containerID s
 // generateKeyAndCert creates a private key and certificate for the specified key type
 func generateKeyAndCert(t *testing.T, keyType string, keyBits int) (crypto.Signer, *x509.Certificate, []*x509.Certificate, error) {
 	container := &privateKeyContainer{}
-	if err := certutil.GeneratePrivateKey(keyType, keyBits, container); err != nil {
+	if err := certutil.GeneratePrivateKey(keyType, keyBits, container, ""); err != nil {
 		return nil, nil, nil, err
 	}
 	privateKey := container.key

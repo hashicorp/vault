@@ -8,6 +8,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -52,15 +53,15 @@ func TestBackend_CA_Steps(t *testing.T) {
 	client := cluster.Cores[0].Client
 
 	// Set RSA/EC CA certificates
-	var rsaCAKey, rsaCACert, ecCAKey, ecCACert, edCAKey, edCACert string
+	var rsaCAKey, rsaCACert, ecCAKey, ecCACert, edCAKey, edCACert, mldsaCAKey, mldsaCACert string
 	{
 		cak, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		marshaledKey, err := x509.MarshalECPrivateKey(cak)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		keyPEMBlock := &pem.Block{
 			Type:  "EC PRIVATE KEY",
@@ -68,11 +69,11 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		ecCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		subjKeyID, err := certutil.GetSubjKeyID(cak)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		caCertTemplate := &x509.Certificate{
 			Subject: pkix.Name{
@@ -88,7 +89,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, cak.Public(), cak)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		caCertPEMBlock := &pem.Block{
 			Type:  "CERTIFICATE",
@@ -98,7 +99,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 
 		rak, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		marshaledKey = x509.MarshalPKCS1PrivateKey(rak)
 		keyPEMBlock = &pem.Block{
@@ -107,15 +108,15 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		rsaCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		_, err = certutil.GetSubjKeyID(rak)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, rak.Public(), rak)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		caCertPEMBlock = &pem.Block{
 			Type:  "CERTIFICATE",
@@ -125,11 +126,11 @@ func TestBackend_CA_Steps(t *testing.T) {
 
 		_, edk, err := ed25519.GenerateKey(rand.Reader)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		marshaledKey, err = x509.MarshalPKCS8PrivateKey(edk)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		keyPEMBlock = &pem.Block{
 			Type:  "PRIVATE KEY",
@@ -137,25 +138,52 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		edCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		_, err = certutil.GetSubjKeyID(edk)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, edk.Public(), edk)
 		if err != nil {
-			panic(err)
+			t.Fatal(err)
 		}
 		caCertPEMBlock = &pem.Block{
 			Type:  "CERTIFICATE",
 			Bytes: caBytes,
 		}
 		edCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
+
+		key, err := mldsa.GenerateKey(mldsa.MLDSA44())
+		if err != nil {
+			t.Fatal(err)
+		}
+		marshaledKey, err = x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		keyPEMBlock = &pem.Block{
+			Type:  "PRIVATE KEY",
+			Bytes: marshaledKey,
+		}
+		mldsaCAKey = strings.TrimSpace(string(pem.EncodeToMemory(keyPEMBlock)))
+		_, err = certutil.GetSubjKeyID(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		caBytes, err = x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, key.Public(), key)
+		if err != nil {
+			t.Fatal(err)
+		}
+		caCertPEMBlock = &pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: caBytes,
+		}
+		mldsaCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 	}
 
 	// Setup backends
-	var rsaRoot, rsaInt, ecRoot, ecInt, edRoot, edInt *backend
+	var rsaRoot, rsaInt, ecRoot, ecInt, edRoot, edInt, mldsaRoot, mldsaInt *backend
 	{
 		if err := client.Sys().Mount("rsaroot", &api.MountInput{
 			Type: "pki",
@@ -222,6 +250,28 @@ func TestBackend_CA_Steps(t *testing.T) {
 			t.Fatal(err)
 		}
 		edInt = b
+
+		if err := client.Sys().Mount("mldsaroot", &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "16h",
+				MaxLeaseTTL:     "60h",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		mldsaRoot = b
+
+		if err := client.Sys().Mount("mldsaint", &api.MountInput{
+			Type: "pki",
+			Config: api.MountConfigInput{
+				DefaultLeaseTTL: "16h",
+				MaxLeaseTTL:     "60h",
+			},
+		}); err != nil {
+			t.Fatal(err)
+		}
+		mldsaInt = b
 	}
 
 	t.Run("teststeps", func(t *testing.T) {
@@ -251,6 +301,15 @@ func TestBackend_CA_Steps(t *testing.T) {
 			}
 			subClient.SetToken(client.Token())
 			runSteps(t, edRoot, edInt, subClient, "ed25519root/", "ed25519int/", edCACert, edCAKey)
+		})
+		t.Run("mldsa", func(t *testing.T) {
+			t.Parallel()
+			subClient, err := client.Clone()
+			if err != nil {
+				t.Fatal(err)
+			}
+			subClient.SetToken(client.Token())
+			runSteps(t, mldsaRoot, mldsaInt, subClient, "mldsaroot/", "mldsaint/", mldsaCACert, mldsaCAKey)
 		})
 	})
 }

@@ -18,6 +18,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/auth/token/revoke-orphan":                     regexp.MustCompile(`^/auth/token/revoke-orphan$`),
 	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
 	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
+	"/pki/keys/{ca_key_uuid}/export":                regexp.MustCompile(`^/pki/keys/[^/]+/export$`),
 	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
 	"/sys/audit/{path}":                             regexp.MustCompile(`^/sys/audit/.+$`),
 	"/sys/auth/{path}":                              regexp.MustCompile(`^/sys/auth/.+$`),

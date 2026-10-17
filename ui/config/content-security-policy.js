@@ -15,7 +15,6 @@ module.exports = function (environment) {
     'form-action': ["'none'"],
   };
 
-  policy['connect-src'].push('https://eu.i.posthog.com');
   // Segment event pipeline and integration bundle fetches
   policy['connect-src'].push('https://api.segment.io');
   policy['connect-src'].push('https://cdn.segment.com');

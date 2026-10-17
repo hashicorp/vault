@@ -60,4 +60,31 @@ module('Integration | Component | ldap | Page::Library::Details', function (hook
       'Transitions to libraries route on delete success'
     );
   });
+
+  // An empty dropdown would open a blank popover, so the toggle is omitted entirely.
+  test('it should hide the Manage dropdown when no actions are permitted', async function (assert) {
+    const { pathFor } = this.owner.lookup('service:capabilities');
+    const libraryPath = pathFor('ldapLibrary', { backend: this.backend, name: this.name });
+    this.model.capabilities[libraryPath] = { canRead: true, canUpdate: false, canDelete: false };
+
+    await render(hbs`<Page::Library::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+
+    assert.dom(GENERAL.dropdownToggle('Manage')).doesNotExist('Manage is hidden');
+  });
+
+  test('it should show the Manage dropdown with only the permitted action', async function (assert) {
+    const { pathFor } = this.owner.lookup('service:capabilities');
+    const libraryPath = pathFor('ldapLibrary', { backend: this.backend, name: this.name });
+    this.model.capabilities[libraryPath] = { canRead: true, canUpdate: false, canDelete: true };
+
+    await render(hbs`<Page::Library::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+    await click(GENERAL.dropdownToggle('Manage'));
+
+    assert.dom(GENERAL.menuItem()).exists({ count: 1 }, 'only one action renders');
+    assert.dom(GENERAL.menuItem('Delete library')).exists('Delete library renders');
+  });
 });

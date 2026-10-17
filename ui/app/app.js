@@ -31,6 +31,7 @@ export default class App extends Application {
           'custom-messages',
           'api',
           'capabilities',
+          'theme',
           // services needed for tools sidebar component
           'permissions',
           'current-cluster',
@@ -119,6 +120,7 @@ export default class App extends Application {
           'auth',
           'api',
           'capabilities',
+          'permissions',
         ],
         externalRoutes: {
           vault: 'vault.cluster',
@@ -136,6 +138,7 @@ export default class App extends Application {
           'control-group',
           'download',
           'flash-messages',
+          'kv-mount-retry',
           'namespace',
           { 'app-router': 'router' },
           'secret-mount-path',

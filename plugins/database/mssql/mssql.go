@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package mssql
@@ -261,14 +261,14 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	}
 	defer sessionRows.Close()
 
-	var revokeStmts []string
+	var revokeStmts []revokeStatement
 	for sessionRows.Next() {
 		var sessionID int
 		err = sessionRows.Scan(&sessionID)
 		if err != nil {
 			return err
 		}
-		revokeStmts = append(revokeStmts, fmt.Sprintf("KILL %d;", sessionID))
+		revokeStmts = append(revokeStmts, revokeStatement{query: fmt.Sprintf("KILL %d;", sessionID)})
 	}
 
 	// selectUserSQL identifies database-level users associated with a server login.
@@ -302,14 +302,17 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 		if !dbName.Valid {
 			continue
 		}
-		revokeStmts = append(revokeStmts, fmt.Sprintf(dropUserSQL, dbName.String, username, username))
+		revokeStmts = append(revokeStmts, revokeStatement{
+			query: dropUserSQL,
+			args:  []interface{}{sql.Named("dbname", dbName.String), sql.Named("username", username)},
+		})
 	}
 
 	// we do not stop on error, as we want to remove as
 	// many permissions as possible right now
 	var lastStmtError error
-	for _, query := range revokeStmts {
-		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
+	for _, stmt := range revokeStmts {
+		if _, err := db.ExecContext(ctx, stmt.query, stmt.args...); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -349,13 +352,6 @@ func (m *MSSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) 
 
 func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
 	stmts := changePass.Statements.Commands
-	if len(stmts) == 0 {
-		stmts = []string{alterLoginSQL}
-		if m.containedDB {
-			stmts = []string{alterUserContainedSQL}
-		}
-	}
-
 	password := changePass.NewPassword
 
 	if username == "" || password == "" {
@@ -392,8 +388,13 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 	}()
 
 	if len(stmts) == 0 {
-		// should not happen, but guard against it anyway
-		return errors.New("no statement provided")
+		query := alterLoginSQL
+		if m.containedDB {
+			query = alterUserContainedSQL
+		}
+		if _, err := tx.ExecContext(ctx, query, sql.Named("username", username), sql.Named("password", password)); err != nil {
+			return fmt.Errorf("failed to execute query: %w", err)
+		}
 	}
 
 	for _, stmt := range stmts {
@@ -421,32 +422,54 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 	return nil
 }
 
+// Identifiers require dynamic SQL; the principal lookup remains parameterized
+// so usernames retain their Unicode value in the target database.
 const dropUserSQL = `
-USE [%s]
-IF EXISTS
-  (SELECT name
-   FROM sys.database_principals
-   WHERE name = N'%s')
-BEGIN
-  DROP USER [%s]
-END
-`
+DECLARE @stmt nvarchar(max)
+SET @stmt = N'USE ' + QuoteName(@dbname) + N'; ' +
+	N'IF EXISTS (SELECT name FROM sys.database_principals WHERE name = @username) ' +
+	N'BEGIN ' +
+		N'DROP USER ' + QuoteName(@username) + N' ' +
+	N'END'
+EXEC sp_executesql @stmt, N'@username nvarchar(max)', @username = @username`
 
+type revokeStatement struct {
+	query string
+	args  []interface{}
+}
+
+// The lookup is parameterized because a quoted string literal would be converted
+// to the database code page, so non-ASCII login names would never match.
 const dropLoginSQL = `
 DECLARE @stmt nvarchar(max)
-SET @stmt = 'IF EXISTS (SELECT name FROM [master].[sys].[server_principals] WHERE [name] = ' + QuoteName(@username, '''') + ') ' +
-	'BEGIN ' +
-		'DROP LOGIN ' + QuoteName(@username) + ' ' +
-	'END'
-EXEC (@stmt)`
+SET @stmt = N'IF EXISTS (SELECT name FROM [master].[sys].[server_principals] WHERE [name] = @username) ' +
+	N'BEGIN ' +
+		N'DROP LOGIN ' + QuoteName(@username) + N' ' +
+	N'END'
+EXEC sp_executesql @stmt, N'@username nvarchar(max)', @username = @username`
 
+// ALTER LOGIN and ALTER USER cannot take the password as a variable, so it is
+// embedded as an escaped Unicode literal. QUOTENAME is not used for the password
+// because it returns NULL for input over 128 characters; the NULL check stops
+// an over-length username from turning the rotation into a silent no-op.
+// RAISERROR is used instead of THROW, which requires SQL Server 2012 or later.
 const alterLoginSQL = `
-ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}'
-`
+DECLARE @stmt nvarchar(max);
+SET @stmt = N'ALTER LOGIN ' + QuoteName(@username) +
+	N' WITH PASSWORD = N''' + Replace(@password, N'''', N'''''') + N'''';
+IF @stmt IS NULL
+	RAISERROR(N'username must be at most 128 characters', 16, 1);
+ELSE
+	EXEC (@stmt);`
 
 const alterUserContainedSQL = `
-ALTER USER [{{username}}] WITH PASSWORD = '{{password}}'
-`
+DECLARE @stmt nvarchar(max);
+SET @stmt = N'ALTER USER ' + QuoteName(@username) +
+	N' WITH PASSWORD = N''' + Replace(@password, N'''', N'''''') + N'''';
+IF @stmt IS NULL
+	RAISERROR(N'username must be at most 128 characters', 16, 1);
+ELSE
+	EXEC (@stmt);`
 
 const selectUserSQL = ` SELECT
     l.name AS LoginName,

@@ -1,9 +1,10 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import type CapabilitiesService from 'vault/services/capabilities';
+import type PermissionsService from 'vault/services/permissions';
 import type { LdapRole } from 'vault/vault/secrets/ldap';
 
 export async function fetchRoleCapabilities(
@@ -38,7 +39,15 @@ export async function fetchRoleCapabilities(
       canDelete: perms[pathMap.role]?.canDelete,
       canEdit: perms[pathMap.role]?.canUpdate,
       canReadCreds: perms[pathMap.creds]?.canRead,
-      canRotateStaticCreds: pathMap.rotate ? perms[pathMap.rotate]?.canCreate : false,
+      canRotateStaticCreds: pathMap.rotate ? perms[pathMap.rotate]?.canUpdate : false,
     };
   });
+}
+
+// Creating a role is a create on <mount>/static-role/:name or <mount>/role/:name. The name is not chosen
+// yet, so check for create anywhere beneath either path (policies may be scoped, e.g. team-*).
+// Self-managed mounts only support static roles.
+export function canCreateRole(permissions: PermissionsService, backend: string, isSelfManaged = false) {
+  const paths = isSelfManaged ? ['static-role'] : ['static-role', 'role'];
+  return paths.some((path) => permissions.hasPermissionBeneath(`${backend}/${path}`, ['create']));
 }

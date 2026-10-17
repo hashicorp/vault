@@ -19,6 +19,14 @@
   </:description>
 </Page::Header>
 
+<Hds::Alert @type="inline" @color="warning" @icon="alert-triangle" data-test-beta-banner as |A|>
+  <A.Title>Beta feature</A.Title>
+  <A.Description>
+    Beta functionality is stable, but possibly incomplete and subject to change. We'd love your input —
+    <Hds::Link::Inline @href={{this.feedbackUrl}} data-test-feedback-link>share your feedback</Hds::Link::Inline>.
+  </A.Description>
+</Hds::Alert>
+
 {{#if this.errorMessage}}
   <Hds::ApplicationState class="top-padding-32" as |A|>
     <A.Header @icon="skip" @title="Something has gone wrong" />

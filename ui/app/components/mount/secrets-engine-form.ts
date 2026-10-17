@@ -9,6 +9,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import OidcKeyForm from 'vault/forms/oidc/key';
+import { isTransientKvMountError } from 'vault/utils/kv-mount-transient-error';
 
 import type Router from '@ember/routing/router';
 import type FlashMessagesService from 'ember-cli-flash/services/flash-messages';
@@ -417,7 +418,9 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
       const useEngineRoute = isAddonEngine(mountModel.normalizedType, Number(version));
 
       this.trackSecretsCreationEvent(type, true, version);
-      this.onMountSuccess(type, path, useEngineRoute);
+      // Mount creation already succeeded here; any error below is about loading the destination route,
+      // not the create request, so it must not be treated as a mount-creation failure.
+      yield this.attemptPostMountNavigation(type, path, useEngineRoute);
     } catch (error) {
       this.trackSecretsCreationEvent(type, false, version);
       const { status, response, message } = yield this.api.parseError(error);
@@ -530,6 +533,30 @@ export default class MountSecretsEngineFormComponent extends Component<Args> {
       transition = this.router.transitionTo('vault.cluster.secrets.backends');
     }
     return transition?.followRedirects();
+  }
+
+  // The destination route's model hook already retries internally on the known transient "mount not
+  // ready yet" responses, so a single attempt here waits for that to resolve or exhaust its retries.
+  // Do not retry by calling transitionTo again: each failed transition renders its error substate
+  // immediately, so retrying here would just flash the raw backend error once per attempt.
+  async attemptPostMountNavigation(type: string, path: string, useEngineRoute: boolean): Promise<void> {
+    try {
+      await this.onMountSuccess(type, path, useEngineRoute);
+    } catch (error) {
+      const { status, message } = await this.api.parseError(error);
+
+      if (isTransientKvMountError(status, message)) {
+        this.flashMessages.warning(
+          'Secrets engine was created, but it is still becoming available on this node. Refresh shortly or connect to an active node.'
+        );
+      } else {
+        // The mount was still created successfully, so avoid onMountError (which assumes the create
+        // request itself failed) and surface a narrower warning instead.
+        this.flashMessages.warning(
+          `The secrets engine at ${path} was created, but loading it failed. ${message}`
+        );
+      }
+    }
   }
 
   @action

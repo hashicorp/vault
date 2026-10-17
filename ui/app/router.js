@@ -48,7 +48,7 @@ Router.map(function () {
         this.route('edit');
       });
       this.route('usage-reporting');
-      this.route('user-preferences');
+      this.route('preferences');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
@@ -231,9 +231,21 @@ Router.map(function () {
           this.route('overview');
         });
       });
-      this.route('policies', { path: '/policies/:type' }, function () {
-        this.route('index', { path: '/' });
-        this.route('create');
+      this.route('policies', function () {
+        this.route('acl', function () {
+          this.route('index', { path: '/' });
+          this.route('create');
+        });
+        this.route('egp', function () {
+          this.route('index', { path: '/' });
+          this.route('create');
+        });
+        this.route('rgp', function () {
+          this.route('index', { path: '/' });
+          this.route('create');
+        });
+        // redirects /policies/foo to default acl list
+        this.route('index', { path: '/:type' });
       });
       this.route('policy', { path: '/policy/:type' }, function () {
         this.route('show', { path: '/:policy_name' });

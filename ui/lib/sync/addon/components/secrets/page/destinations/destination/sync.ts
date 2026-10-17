@@ -55,7 +55,12 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   }
 
   get syncedSecretTypeConfig() {
-    const syncedMountData = this.allSupportedMounts.find((mount) => mount.id === this.syncedMount);
+    // syncedMount has its trailing slash stripped to match the value sent to the API,
+    // so normalize the mount ids before comparing.
+    const syncedMountData = this.allSupportedMounts.find((mount) => {
+      const id = keyIsFolder(mount.id) ? mount.id.slice(0, -1) : mount.id;
+      return id === this.syncedMount;
+    });
     const secretType = syncedMountData
       ? getSecretTypeFromMount(syncedMountData.engineType, syncedMountData.version)
       : null;
@@ -132,12 +137,13 @@ export default class DestinationSyncPageComponent extends Component<Args> {
       this.syncedSecret = '';
       const { name, type } = this.args.destination;
       const mount = keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath;
+      const secretName = this.currentSecretTypeConfig.toSecretName(this.secretPath);
 
-      const payload = { mount, secret_name: this.secretPath };
+      const payload = { mount, secret_name: secretName };
 
       await this.api.sys.systemWriteSyncDestinationsTypeNameAssociationsSet(name, type, payload);
-      this.syncedSecret = this.secretPath;
-      this.syncedMount = this.mountPath;
+      this.syncedSecret = secretName;
+      this.syncedMount = mount;
       this.mountPath = '';
       this.secretPath = '';
     } catch (error) {

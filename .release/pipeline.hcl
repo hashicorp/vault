@@ -267,8 +267,19 @@ changed_files {
         joinpath(".github", "workflows", "build-artifacts-ent.yml"),
         joinpath(".github", "workflows", "backport-automation-ent.yml"),
         joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
-        # This was accidentally merged and synced before we had bob classified as ent only
+        # These were merged and synced before we had bob/copilot/agents classified
+        # as ent only.
         joinpath(".bob", "enos-test-automation.md"),
+        joinpath(".github", "instructions", "generic", "code_comments.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_general.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_hbs.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_js.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_styles.instructions.md"),
+        joinpath(".github", "instructions", "generic", "ember_tests.instructions.md"),
+        joinpath(".github", "instructions", "generic", "golang.instructions.md"),
+        joinpath(".github", "instructions", "generic", "golang_tests.instructions.md"),
+        joinpath(".github", "instructions", "generic", "testing.instructions.md"),
+        joinpath(".github", "instructions", "index.md"),
       ]
     }
 
@@ -330,6 +341,9 @@ changed_files {
         ".opencode",
         ".agents",
         joinpath("ui", ".agents"),
+        // Symlinks into .agents/ for GitHub Copilot and other AI tooling
+        joinpath(".github", "agents"),
+        joinpath(".github", "instructions"),
       ]
     }
 
@@ -339,6 +353,7 @@ changed_files {
         "Dockerfile-ent-hsm",
         "AGENTS.md",
         "opencode.json",
+        ".mcp.json",
       ]
     }
 
@@ -394,8 +409,10 @@ changed_files {
     }
   }
 
-  // The "go_modules" group tracks Go module dependency changes.
-  // Triggers dependency security scans and full test suite.
+  // The "go_modules" group tracks Go module and workspace definitions, and the script that pins our
+  // code generators and test tools. It ignores tools/pipeline, whose module files are covered by the
+  // "pipeline" group. Triggers full builds, dependency security scans, the Go module checks and the
+  // full test suite.
   group "go_modules" {
     ignore {
       base_dir = [
@@ -407,7 +424,13 @@ changed_files {
       base_name = [
         "go.mod",
         "go.sum",
+        "go.work",
+        "go.work.sum",
       ]
+    }
+
+    match {
+      file = [joinpath("tools", "tools.sh")]
     }
   }
 

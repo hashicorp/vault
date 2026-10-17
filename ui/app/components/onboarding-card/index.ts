@@ -4,6 +4,9 @@
  */
 
 import Component from '@glimmer/component';
+import { service } from '@ember/service';
+
+import type ThemeService from 'vault/services/theme';
 
 export type OnboardingCardSize = 'small' | 'large';
 
@@ -30,6 +33,8 @@ interface OnboardingCardSignature {
  * </OnboardingCard>
  */
 export default class OnboardingCard extends Component<OnboardingCardSignature> {
+  @service declare readonly theme: ThemeService;
+
   get sizeClass(): string {
     return `onboarding-card--${this.args.size || 'large'}`;
   }
