@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix the web UI loading an empty page since 2.2.0, caused by the CSP nonce making the page longer than its Content-Length.
+```
