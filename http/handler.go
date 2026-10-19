@@ -25,6 +25,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -960,6 +961,9 @@ func handleUI(h http.Handler) http.Handler {
 		if !hasExtension {
 			nonce, ok := req.Context().Value(cspNonceContextKey{}).(string)
 			if ok && nonce != "" {
+				// The page is rewritten before it is sent, so a byte range of
+				// the file on disk would not match what the client receives.
+				req.Header.Del("Range")
 				nrw := &nonceResponseWriter{
 					ResponseWriter: w,
 					nonce:          nonce,
@@ -975,30 +979,29 @@ func handleUI(h http.Handler) http.Handler {
 	})
 }
 
-// nonceResponseWriter wraps http.ResponseWriter to inject CSP nonce into HTML
+// nonceResponseWriter wraps http.ResponseWriter to inject CSP nonce into HTML.
+// The status line and headers are held back until flush, since the handler
+// sets Content-Length for the page before the nonce is added to it.
 type nonceResponseWriter struct {
 	http.ResponseWriter
-	nonce       string
-	wroteHeader bool
-	buf         bytes.Buffer
+	nonce      string
+	statusCode int
+	buf        bytes.Buffer
 }
 
 func (nrw *nonceResponseWriter) Write(b []byte) (int, error) {
-	if !nrw.wroteHeader {
-		nrw.WriteHeader(http.StatusOK)
+	if nrw.statusCode == 0 {
+		nrw.statusCode = http.StatusOK
 	}
 
 	// Buffer the content
-	nrw.buf.Write(b)
-	return len(b), nil
+	return nrw.buf.Write(b)
 }
 
 func (nrw *nonceResponseWriter) WriteHeader(statusCode int) {
-	if nrw.wroteHeader {
-		return
+	if nrw.statusCode == 0 {
+		nrw.statusCode = statusCode
 	}
-	nrw.wroteHeader = true
-	nrw.ResponseWriter.WriteHeader(statusCode)
 }
 
 func (nrw *nonceResponseWriter) flush() {
@@ -1007,6 +1010,13 @@ func (nrw *nonceResponseWriter) flush() {
 	if htmlContent != "" && nrw.nonce != "" {
 		nonceMetaTag := fmt.Sprintf(`<meta name="csp-nonce" content="%s">`, nrw.nonce)
 		htmlContent = strings.Replace(htmlContent, "<head>", "<head>\n    "+nonceMetaTag, 1)
+	}
+
+	if htmlContent != nrw.buf.String() {
+		nrw.Header().Set("Content-Length", strconv.Itoa(len(htmlContent)))
+	}
+	if nrw.statusCode != 0 {
+		nrw.ResponseWriter.WriteHeader(nrw.statusCode)
 	}
 
 	// Write the modified content
