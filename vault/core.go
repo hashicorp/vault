@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -4751,10 +4752,24 @@ func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint str
 func (c *Core) DetermineRoleFromLoginRequestFromReader(ctx context.Context, mountPoint string, reader io.Reader, conn *logical.Connection, header http.Header) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-	data := make(map[string]interface{})
-	err := jsonutil.DecodeJSONFromReader(reader, &data)
-	if err != nil {
+
+	body, err := io.ReadAll(reader)
+	if err != nil || len(bytes.TrimSpace(body)) == 0 {
 		return ""
+	}
+
+	data := make(map[string]interface{})
+	jsonErr := jsonutil.DecodeJSONFromReader(bytes.NewReader(body), &data)
+	// We weren't able to decode the body as JSON, try parsing as form-data now.
+	if jsonErr != nil {
+		form, formErr := url.ParseQuery(string(body))
+		if formErr != nil {
+			return ""
+		}
+		data = make(map[string]interface{}, len(form))
+		for k, v := range form {
+			data[k] = strings.Join(v, ",")
+		}
 	}
 	return c.doResolveRoleLocked(ctx, mountPoint, data, conn, header)
 }
