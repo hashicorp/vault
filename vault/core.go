@@ -2985,7 +2985,7 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			if c.agentRegistry == nil {
 				return nil
 			}
-			return c.agentRegistry.loadRegistrations(ctx, isActive)
+			return c.agentRegistry.loadArtifacts(ctx, isActive)
 		})
 	}
 
