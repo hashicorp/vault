@@ -32,7 +32,7 @@ func (c *AuthListCommand) Synopsis() string {
 
 func (c *AuthListCommand) Help() string {
 	helpText := `
-Usage: vault auth list [options]
+Usage: ` + c.BinaryName + ` auth list [options]
 
   Lists the enabled auth methods on the Vault server. This command also outputs
   information about the method including configuration and human-friendly
@@ -40,11 +40,11 @@ Usage: vault auth list [options]
 
   List all enabled auth methods:
 
-      $ vault auth list
+      $ ` + c.BinaryName + ` auth list
 
   List all enabled auth methods with detailed output:
 
-      $ vault auth list -detailed
+      $ ` + c.BinaryName + ` auth list -detailed
 
 ` + c.Flags().Help()
 

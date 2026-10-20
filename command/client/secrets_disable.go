@@ -27,7 +27,7 @@ func (c *SecretsDisableCommand) Synopsis() string {
 
 func (c *SecretsDisableCommand) Help() string {
 	helpText := `
-Usage: vault secrets disable [options] PATH
+Usage: ` + c.BinaryName + ` secrets disable [options] PATH
 
   Disables a secrets engine at the given PATH. The argument corresponds to
   the enabled PATH of the engine, not the TYPE! All secrets created by this
@@ -35,7 +35,7 @@ Usage: vault secrets disable [options] PATH
 
   Disable the secrets engine enabled at aws/:
 
-      $ vault secrets disable aws/
+      $ ` + c.BinaryName + ` secrets disable aws/
 
 ` + c.Flags().Help()
 

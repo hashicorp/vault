@@ -37,7 +37,7 @@ func (c *TPMAttestCommand) Synopsis() string {
 
 func (c *TPMAttestCommand) Help() string {
 	helpText := `
-Usage: vault tpm attest [options]
+Usage: ` + c.BinaryName + ` tpm attest [options]
 
   Note: Attestation requires the TPM to have been registered in the auth mount's namespace.
 
@@ -54,17 +54,17 @@ Usage: vault tpm attest [options]
 
   Attest using the default TPM device and write output to the current directory:
 
-      $ vault tpm attest -role-name=my-role
+      $ ` + c.BinaryName + ` tpm attest -role-name=my-role
 
   Specify a custom TPM device path and state directory:
 
-      $ vault tpm attest -role-name=my-role \
+      $ ` + c.BinaryName + ` tpm attest -role-name=my-role \
           -tpm-device-path=/dev/tpm0 \
           -tpm-state-dir=/etc/vault/tpm
 
   Include certificate subject fields:
 
-      $ vault tpm attest -role-name=my-role \
+      $ ` + c.BinaryName + ` tpm attest -role-name=my-role \
           -cert-subject-CN=my-host.example.com \
           -cert-subject-O="My Org" \
           -cert-subject-C=US

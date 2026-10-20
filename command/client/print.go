@@ -26,7 +26,7 @@ func (c *PrintCommand) Synopsis() string {
 
 func (c *PrintCommand) Help() string {
 	helpText := `
-Usage: vault print <subcommand>
+Usage: ` + c.BinaryName + ` print <subcommand>
 
 	This command groups subcommands for interacting with Vault's runtime values.
 

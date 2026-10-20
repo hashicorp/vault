@@ -33,7 +33,7 @@ func (c *NamespacePatchCommand) Synopsis() string {
 
 func (c *NamespacePatchCommand) Help() string {
 	helpText := `
-Usage: vault namespace patch [options] PATH
+Usage: ` + c.BinaryName + ` namespace patch [options] PATH
 
   Patch an existing namespace. The namespace patched will be relative to the
   namespace provided in either the VAULT_NAMESPACE environment variable or
@@ -41,11 +41,11 @@ Usage: vault namespace patch [options] PATH
 
   Patch an existing child namespace by adding and removing custom-metadata (e.g. ns1/):
 
-      $ vault namespace patch -custom-metadata=foo=abc -remove-custom-metadata=bar ns1
+      $ ` + c.BinaryName + ` namespace patch -custom-metadata=foo=abc -remove-custom-metadata=bar ns1
 
   Patch an existing child namespace from a parent namespace (e.g. ns1/ns2/):
 
-      $ vault namespace patch -namespace=ns1 -custom-metadata=foo=abc ns2
+      $ ` + c.BinaryName + ` namespace patch -namespace=ns1 -custom-metadata=foo=abc ns2
 
 ` + c.Flags().Help()
 

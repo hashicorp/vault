@@ -27,22 +27,22 @@ func (c *DeleteCommand) Synopsis() string {
 
 func (c *DeleteCommand) Help() string {
 	helpText := `
-Usage: vault delete [options] PATH
+Usage: ` + c.BinaryName + ` delete [options] PATH
 
   Deletes secrets and configuration from Vault at the given path. The behavior
   of "delete" is delegated to the backend corresponding to the given path.
 
   Remove data in the status secret backend:
 
-      $ vault delete secret/my-secret
+      $ ` + c.BinaryName + ` delete secret/my-secret
 
   Uninstall an encryption key in the transit backend:
 
-      $ vault delete transit/keys/my-key
+      $ ` + c.BinaryName + ` delete transit/keys/my-key
 
   Delete an IAM role:
 
-      $ vault delete aws/roles/ops
+      $ ` + c.BinaryName + ` delete aws/roles/ops
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secret backend in use.

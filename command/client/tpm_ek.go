@@ -27,7 +27,7 @@ func (c *TPMEkCommand) Synopsis() string {
 
 func (c *TPMEkCommand) Help() string {
 	helpText := `
-Usage: vault tpm ek
+Usage: ` + c.BinaryName + ` tpm ek
 
   Reads the endorsement key (EK) from the local TPM device and prints its
   public key in PEM format (type "PUBLIC KEY") along with the TPM ID.

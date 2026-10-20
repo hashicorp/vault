@@ -33,7 +33,7 @@ func (c *WriteCommand) Synopsis() string {
 
 func (c *WriteCommand) Help() string {
 	helpText := `
-Usage: vault write [options] PATH [DATA K=V...]
+Usage: ` + c.BinaryName + ` write [options] PATH [DATA K=V...]
 
   Writes data to Vault at the given path. The data can be credentials, secrets,
   configuration, or arbitrary data. The specific behavior of this command is
@@ -45,17 +45,17 @@ Usage: vault write [options] PATH [DATA K=V...]
 
   Store an arbitrary secret in the token's cubbyhole.
 
-      $ vault write cubbyhole/git-credentials username="student01" password="p@$$w0rd"
+      $ ` + c.BinaryName + ` write cubbyhole/git-credentials username="student01" password="p@$$w0rd"
 
   Create a new encryption key in the transit secrets engine:
 
-      $ vault write -force transit/keys/my-key
+      $ ` + c.BinaryName + ` write -force transit/keys/my-key
 
   The -force / -f flag allows a write operation without any input data.
 
   Upload an AWS IAM policy from a file on disk:
 
-      $ vault write aws/roles/ops policy=@policy.json
+      $ ` + c.BinaryName + ` write aws/roles/ops policy=@policy.json
 
   Configure access to Consul by providing an access token:
 
@@ -63,7 +63,7 @@ Usage: vault write [options] PATH [DATA K=V...]
 
   Create a token
 
-      $ vault write auth/token/create policies="admin" policies="secops" ttl=8h num_uses=3
+      $ ` + c.BinaryName + ` write auth/token/create policies="admin" policies="secops" ttl=8h num_uses=3
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secret engines in use.

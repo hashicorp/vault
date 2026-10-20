@@ -22,13 +22,13 @@ func (c *TPMCommand) Synopsis() string {
 
 func (c *TPMCommand) Help() string {
 	helpText := `
-Usage: vault tpm <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` tpm <subcommand> [options] [args]
 
   Interact with Vault's TPM authentication. The primary command is "attest",
   which opens the local TPM device, runs the workflow against a Vault TPM auth
   method mount, and writes the issued certificate and key material to a state directory.
 
-      $ vault tpm attest -role-name=my-role
+      $ ` + c.BinaryName + ` tpm attest -role-name=my-role
 
   Please see the individual subcommand help for detailed usage information.
 `

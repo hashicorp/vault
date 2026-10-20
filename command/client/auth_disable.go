@@ -27,7 +27,7 @@ func (c *AuthDisableCommand) Synopsis() string {
 
 func (c *AuthDisableCommand) Help() string {
 	helpText := `
-Usage: vault auth disable [options] PATH
+Usage: ` + c.BinaryName + ` auth disable [options] PATH
 
   Disables an existing auth method at the given PATH. The argument corresponds
   to the PATH of the mount, not the TYPE!. Once the auth method is disabled its
@@ -38,7 +38,7 @@ Usage: vault auth disable [options] PATH
 
   Disable the auth method at userpass/:
 
-      $ vault auth disable userpass/
+      $ ` + c.BinaryName + ` auth disable userpass/
 
 ` + c.Flags().Help()
 

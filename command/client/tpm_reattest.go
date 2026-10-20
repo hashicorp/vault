@@ -36,7 +36,7 @@ func (c *TPMReattestCommand) Synopsis() string {
 
 func (c *TPMReattestCommand) Help() string {
 	helpText := `
-Usage: vault tpm reattest [options]
+Usage: ` + c.BinaryName + ` tpm reattest [options]
 
   Performs a fresh TPM attestation, reusing the certificate subject fields
   stored in the existing certificate in the state directory. This is useful
@@ -48,11 +48,11 @@ Usage: vault tpm reattest [options]
 
   Reattest using the existing certificate subject (role read from cert SAN):
 
-      $ vault tpm reattest
+      $ ` + c.BinaryName + ` tpm reattest
 
   Reattest with an explicit role name and custom state directory:
 
-      $ vault tpm reattest -role-name=my-role \
+      $ ` + c.BinaryName + ` tpm reattest -role-name=my-role \
           -tpm-state-dir=/etc/vault/tpm
 
 ` + c.Flags().Help()

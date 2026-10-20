@@ -22,27 +22,27 @@ func (c *AuthCommand) Synopsis() string {
 
 func (c *AuthCommand) Help() string {
 	return strings.TrimSpace(`
-Usage: vault auth <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` auth <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault's auth methods.
   Users can list, enable, disable, and get help for different auth methods.
 
-  To authenticate to Vault as a user or machine, use the "vault login" command
+  To authenticate to Vault as a user or machine, use the "` + c.BinaryName + ` login" command
   instead. This command is for interacting with the auth methods themselves, not
   authenticating to Vault.
 
   List all enabled auth methods:
 
-      $ vault auth list
+      $ ` + c.BinaryName + ` auth list
 
   Enable a new auth method "userpass";
 
-      $ vault auth enable userpass
+      $ ` + c.BinaryName + ` auth enable userpass
 
   Get detailed help information about how to authenticate to a particular auth
   method:
 
-      $ vault auth help github
+      $ ` + c.BinaryName + ` auth help github
 
   Please see the individual subcommand help for detailed usage information.
 `)

@@ -31,7 +31,7 @@ func (c *TokenRevokeCommand) Synopsis() string {
 
 func (c *TokenRevokeCommand) Help() string {
 	helpText := `
-Usage: vault token revoke [options] [TOKEN | ACCESSOR]
+Usage: ` + c.BinaryName + ` token revoke [options] [TOKEN | ACCESSOR]
 
   Revokes authentication tokens and their children. If a TOKEN is not provided,
   the locally authenticated token is used. The "-mode" flag can be used to
@@ -40,15 +40,15 @@ Usage: vault token revoke [options] [TOKEN | ACCESSOR]
 
   Revoke a token and all the token's children:
 
-      $ vault token revoke 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ ` + c.BinaryName + ` token revoke 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   Revoke a token leaving the token's children:
 
-      $ vault token revoke -mode=orphan 96ddf4bc-d217-f3ba-f9bd-017055595017
+      $ ` + c.BinaryName + ` token revoke -mode=orphan 96ddf4bc-d217-f3ba-f9bd-017055595017
 
   Revoke a token by accessor:
 
-      $ vault token revoke -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
+      $ ` + c.BinaryName + ` token revoke -accessor 9793c9b3-e04a-46f3-e7b8-748d7da248da
 
   For a full list of examples, please see the documentation.
 

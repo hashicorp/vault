@@ -30,7 +30,7 @@ func (c *LeaseRenewCommand) Synopsis() string {
 
 func (c *LeaseRenewCommand) Help() string {
 	helpText := `
-Usage: vault lease renew [options] ID
+Usage: ` + c.BinaryName + ` lease renew [options] ID
 
   Renews the lease on a secret, extending the time that it can be used before
   it is revoked by Vault.
@@ -42,7 +42,7 @@ Usage: vault lease renew [options] ID
 
   Renew a secret:
 
-      $ vault lease renew database/creds/readonly/2f6a614c...
+      $ ` + c.BinaryName + ` lease renew database/creds/readonly/2f6a614c...
 
   Lease renewal will fail if the secret is not renewable, the secret has already
   been revoked, or if the secret has already reached its maximum TTL.

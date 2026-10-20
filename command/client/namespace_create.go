@@ -29,7 +29,7 @@ func (c *NamespaceCreateCommand) Synopsis() string {
 
 func (c *NamespaceCreateCommand) Help() string {
 	helpText := `
-Usage: vault namespace create [options] PATH
+Usage: ` + c.BinaryName + ` namespace create [options] PATH
 
   Create a child namespace. The namespace created will be relative to the
   namespace provided in either the VAULT_NAMESPACE environment variable or
@@ -37,11 +37,11 @@ Usage: vault namespace create [options] PATH
 
   Create a child namespace (e.g. ns1/):
 
-      $ vault namespace create ns1
+      $ ` + c.BinaryName + ` namespace create ns1
 
   Create a child namespace from a parent namespace (e.g. ns1/ns2/):
 
-      $ vault namespace create -namespace=ns1 ns2
+      $ ` + c.BinaryName + ` namespace create -namespace=ns1 ns2
 
 ` + c.Flags().Help()
 
