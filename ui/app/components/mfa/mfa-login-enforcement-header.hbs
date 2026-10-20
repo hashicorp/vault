@@ -1,59 +1,69 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<Page::Header @title={{if @isInline "Enforcement" @heading}} @icon={{unless @isInline "lock"}}>
-  <:breadcrumbs>
-    <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
-  </:breadcrumbs>
-  <:description>
-    {{#if @isInline}}
-      An enforcement includes the authentication types, authentication methods, groups, and entities that will require this
-      MFA method. This is optional and can be added later.
-    {{else}}
+{{#if @isInline}}
+  <h2 class="is-size-4 has-text-weight-semibold">Enforcement</h2>
+  <p class="has-border-top-light has-top-padding-m">
+    An enforcement includes the authentication types, authentication methods, groups, and entities that will require this MFA
+    method. This is optional and can be added later.
+  </p>
+{{else}}
+  <Page::Header @title={{@heading}} @icon="lock">
+    <:breadcrumbs>
+      <Page::Breadcrumbs @breadcrumbs={{this.breadcrumbs}} />
+    </:breadcrumbs>
+    <:description>
       An enforcement will define which auth types, auth mounts, groups, and/or entities will require this MFA method. Keep in
       mind that only one of these conditions needs to be satisfied. For example, if an authentication method is added here,
       all entities and groups which make use of that authentication method will be subject to an MFA request.
       <DocLink @path="/vault/docs/auth/login-mfa">Learn more here.</DocLink>
-    {{/if}}
-  </:description>
-</Page::Header>
+    </:description>
+  </Page::Header>
+{{/if}}
 
-<div class="has-border-top-light has-top-bottom-margin">
-  {{#if @isInline}}
-    <div class="is-flex-row">
-      <RadioCard
-        @title="Create new"
-        @description="Create a new enforcement for this MFA method."
-        @icon="plus-circle"
+{{#if @isInline}}
+  <div class="has-top-bottom-margin">
+    <Hds::Form::RadioCard::Group @name="mfa-enforcement-preference" as |G|>
+      <G.Legend class="sr-only">Enforcement</G.Legend>
+      <G.RadioCard
         @value="new"
-        @groupValue={{@radioCardGroupValue}}
-        @onChange={{@onRadioCardSelect}}
+        @checked={{eq @radioCardGroupValue "new"}}
+        {{on "change" (fn @onRadioCardSelect "new")}}
         data-test-mleh-radio="new"
-      />
-      <RadioCard
-        @title="Use existing"
-        @description="Use an existing enforcement configuration."
-        @icon="list"
+        as |R|
+      >
+        <R.Label>Create new</R.Label>
+        <R.Icon @name="plus-circle" />
+        <R.Description>Create a new enforcement for this MFA method.</R.Description>
+      </G.RadioCard>
+      <G.RadioCard
         @value="existing"
-        @groupValue={{@radioCardGroupValue}}
+        @checked={{eq @radioCardGroupValue "existing"}}
         @disabled={{not this.enforcements.length}}
-        @onChange={{@onRadioCardSelect}}
+        {{on "change" (fn @onRadioCardSelect "existing")}}
         data-test-mleh-radio="existing"
-      />
-      <RadioCard
-        @title="Skip this step"
-        @description="Create MFA without enforcement for now. "
-        @icon="build"
+        as |R|
+      >
+        <R.Icon @name="list" />
+        <R.Label>Use existing</R.Label>
+        <R.Description>Use an existing enforcement configuration.</R.Description>
+      </G.RadioCard>
+      <G.RadioCard
         @value="skip"
-        @groupValue={{@radioCardGroupValue}}
-        @onChange={{@onRadioCardSelect}}
+        @checked={{eq @radioCardGroupValue "skip"}}
+        {{on "change" (fn @onRadioCardSelect "skip")}}
         data-test-mleh-radio="skip"
-      />
-    </div>
+        as |R|
+      >
+        <R.Icon @name="build" />
+        <R.Label>Skip this step</R.Label>
+        <R.Description>Create MFA without enforcement for now.</R.Description>
+      </G.RadioCard>
+    </Hds::Form::RadioCard::Group>
     {{#if (eq @radioCardGroupValue "existing")}}
       <SearchSelect
+        class="has-top-bottom-margin"
         @label="Enforcement"
         @subText="Choose the existing enforcement(s) to add to this MFA method."
         @placeholder="Search for an existing enforcement"
@@ -63,5 +73,5 @@
         @onChange={{this.onEnforcementSelect}}
       />
     {{/if}}
-  {{/if}}
-</div>
+  </div>
+{{/if}}
