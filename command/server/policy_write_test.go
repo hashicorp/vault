@@ -14,14 +14,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testPolicyWriteCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PolicyWriteCommand) {
+func testPolicyWriteCommand(tb testing.TB) (*cli.MockUi, *PolicyWriteCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PolicyWriteCommand{
+	return ui, &PolicyWriteCommand{
 		BaseCommand: base.NewBaseCommand(ui, nil),
 	}
 }

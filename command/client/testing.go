@@ -73,16 +73,6 @@ func MakeTestProxyCommandWithControl(logger hclog.Logger, client *api.Client) (*
 	}
 }
 
-// MakeTestDebugCommand constructs a DebugCommand with shortened capture timing
-// for integration tests.
-func MakeTestDebugCommand(client *api.Client) (*cli.MockUi, *DebugCommand) {
-	ui := cli.NewMockUi()
-	return ui, &DebugCommand{
-		BaseCommand:      makeTestBaseCommand(ui, client),
-		SkipTimingChecks: true,
-	}
-}
-
 func makeTestBaseCommand(ui cli.Ui, client *api.Client) *base.BaseCommand {
 	cmd := &base.BaseCommand{UI: ui}
 	cmd.SetHCPTokenHelper(testHCPTokenHelper{})

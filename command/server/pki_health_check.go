@@ -12,7 +12,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	"github.com/hashicorp/vault/command/client/healthcheck"
+	"github.com/hashicorp/vault/command/server/healthcheck"
 	"github.com/posener/complete"
 	"github.com/ryanuber/columnize"
 )

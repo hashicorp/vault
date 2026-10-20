@@ -8,19 +8,6 @@ package command
 import (
 	"maps"
 
-	credAliCloud "github.com/hashicorp/vault-plugin-auth-alicloud"
-	credCF "github.com/hashicorp/vault-plugin-auth-cf"
-	credGcp "github.com/hashicorp/vault-plugin-auth-gcp/plugin"
-	credKerb "github.com/hashicorp/vault-plugin-auth-kerberos"
-	credOCI "github.com/hashicorp/vault-plugin-auth-oci"
-	credAws "github.com/hashicorp/vault/builtin/credential/aws"
-	credGitHub "github.com/hashicorp/vault/builtin/credential/github"
-	credLdap "github.com/hashicorp/vault/builtin/credential/ldap"
-	credOkta "github.com/hashicorp/vault/builtin/credential/okta"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
-	base "github.com/hashicorp/vault/command/base"
-	"github.com/hashicorp/vault/command/client/login/spiffe"
-	"github.com/hashicorp/vault/command/client/login/tpm"
 	_ "github.com/hashicorp/vault/helper/builtinplugins"
 	physAerospike "github.com/hashicorp/vault/physical/aerospike"
 	physAliCloudOSS "github.com/hashicorp/vault/physical/alicloudoss"
@@ -46,7 +33,7 @@ import (
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 )
 
-func newFullAddonHandlers() (map[string]physical.Factory, map[string]base.LoginHandler) {
+func newFullAddonHandlers() map[string]physical.Factory {
 	addonPhysicalBackends := map[string]physical.Factory{
 		"aerospike":             physAerospike.NewAerospikeBackend,
 		"alicloudoss":           physAliCloudOSS.NewAliCloudOSSBackend,
@@ -72,30 +59,11 @@ func newFullAddonHandlers() (map[string]physical.Factory, map[string]base.LoginH
 		"swift":                 physSwift.NewSwiftBackend,
 		"zookeeper":             physZooKeeper.NewZooKeeperBackend,
 	}
-	addonLoginHandlers := map[string]base.LoginHandler{
-		"alicloud": &credAliCloud.CLIHandler{},
-		"aws":      &credAws.CLIHandler{},
-		"cf":       &credCF.CLIHandler{},
-		"gcp":      &credGcp.CLIHandler{},
-		"github":   &credGitHub.CLIHandler{},
-		"kerberos": &credKerb.CLIHandler{},
-		"ldap":     &credLdap.CLIHandler{},
-		"oci":      &credOCI.CLIHandler{},
-		"okta":     &credOkta.CLIHandler{},
-		"pcf":      &credCF.CLIHandler{}, // Deprecated.
-		"radius": &credUserpass.CLIHandler{
-			DefaultMount: "radius",
-		},
-		"spiffe": &spiffe.CLIHandler{},
-		"tpm":    &tpm.CLIHandler{},
-	}
-
-	return addonPhysicalBackends, addonLoginHandlers
+	return addonPhysicalBackends
 }
 
 func extendAddonHandlers(handlers *vaultHandlers) {
-	addonPhysicalBackends, addonLoginHandlers := newFullAddonHandlers()
+	addonPhysicalBackends := newFullAddonHandlers()
 
 	maps.Copy(handlers.physicalBackends, addonPhysicalBackends)
-	maps.Copy(handlers.loginHandlers, addonLoginHandlers)
 }
