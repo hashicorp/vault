@@ -38,6 +38,8 @@ const (
 	// another workspace module. Go ignores replace directives in imported
 	// modules, so the replace hides what importers actually build against.
 	WorkspaceViolationPublishedReplace WorkspaceViolationKind = "published-replace"
+	// WorkspaceViolationExcludedModule is an excluded module that we've found in go.work.
+	WorkspaceViolationExcludedModule WorkspaceViolationKind = "excluded-module"
 )
 
 // WorkspaceViolation is a problem found by a workspace check.
@@ -63,6 +65,10 @@ type CheckWorkspaceReq struct {
 	// builds would then test code that its importers never get. Each pattern
 	// must match at least one module.
 	Published []string
+	// Excluded are module directories, relative to the workspace root, that have a committed go.mod
+	// but must not be in go.work. We use this on CE branches to keep modules with private requirements
+	// out of the workspace so that workspace mode go commands work without private module access.
+	Excluded []string
 }
 
 // CheckWorkspaceRes is the response to a CheckWorkspaceReq.
@@ -92,12 +98,24 @@ func (r *CheckWorkspaceReq) Run(ctx context.Context) (*CheckWorkspaceRes, error)
 		return nil, err
 	}
 
-	res := &CheckWorkspaceRes{
-		Workspace:  ws,
-		Violations: findUnregisteredModules(ws, goMods),
+	excluded, err := excludedModuleDirs(ws, goMods, published, r.Excluded)
+	if err != nil {
+		return nil, err
 	}
 
+	res := &CheckWorkspaceRes{
+		Workspace:  ws,
+		Violations: findUnregisteredModules(ws, goMods, excluded),
+	}
+	res.Violations = append(res.Violations, findExcludedModuleViolations(ws, excluded)...)
+
 	for _, m := range ws.Modules {
+		// An excluded module in go.work is already a violation. We don't check its replaces since
+		// the fix is to remove it.
+		if _, ok := excluded[m.Dir]; ok {
+			continue
+		}
+
 		goModPath := filepath.Join(ws.AbsDir(m), "go.mod")
 		slog.Default().DebugContext(ctx, "checking local replaces", slog.String("go_mod", goModPath))
 		data, err := os.ReadFile(goModPath)
@@ -169,11 +187,70 @@ func committedGoMods(ctx context.Context, ws *Workspace) ([]string, error) {
 	return goMods, nil
 }
 
+// excludedModuleDirs returns the set of excluded module directories. Every excluded directory has to
+// have a committed go.mod, otherwise a typo would quietly exclude nothing. We also reject the root
+// module, directories the go command ignores, and published modules since excluding any of those
+// would either hide real problems or do nothing at all.
+func excludedModuleDirs(
+	ws *Workspace,
+	goMods []string,
+	published map[*WorkspaceModule]struct{},
+	dirs []string,
+) (map[string]struct{}, error) {
+	committed := map[string]struct{}{}
+	for _, goMod := range goMods {
+		committed[path.Dir(goMod)] = struct{}{}
+	}
+
+	publishedDirs := map[string]struct{}{}
+	for m := range published {
+		publishedDirs[m.Dir] = struct{}{}
+	}
+
+	excluded := map[string]struct{}{}
+	for _, dir := range dirs {
+		dir = path.Clean(filepath.ToSlash(dir))
+		switch {
+		case dir == ".":
+			return nil, fmt.Errorf("invalid excluded module: %s: the root module can't be excluded", dir)
+		case isIgnoredGoDir(dir):
+			return nil, fmt.Errorf("invalid excluded module: %s: the go command already ignores it", dir)
+		}
+		if _, ok := committed[dir]; !ok {
+			return nil, fmt.Errorf("invalid excluded module: %s: no committed go.mod in %s", dir, ws.Root)
+		}
+		if _, ok := publishedDirs[dir]; ok {
+			return nil, fmt.Errorf("invalid excluded module: %s: it's also published", dir)
+		}
+		excluded[dir] = struct{}{}
+	}
+
+	return excluded, nil
+}
+
+// findExcludedModuleViolations returns a violation for every excluded module that's in go.work.
+func findExcludedModuleViolations(ws *Workspace, excluded map[string]struct{}) []*WorkspaceViolation {
+	violations := []*WorkspaceViolation{}
+	for _, m := range ws.Modules {
+		if _, ok := excluded[m.Dir]; !ok {
+			continue
+		}
+		violations = append(violations, &WorkspaceViolation{
+			Kind:   WorkspaceViolationExcludedModule,
+			Module: m.Dir,
+			Detail: fmt.Sprintf("%s is excluded but it's in %s; remove it with 'go work edit -dropuse=./%s'",
+				m.Dir, filepath.Base(ws.GoWork), m.Dir),
+		})
+	}
+
+	return violations
+}
+
 // findUnregisteredModules returns a violation for each go.mod in goMods whose
 // directory isn't a workspace module. goMods are slash-separated paths
-// relative to the workspace root. Directories the go command ignores are
-// skipped.
-func findUnregisteredModules(ws *Workspace, goMods []string) []*WorkspaceViolation {
+// relative to the workspace root. We skip directories that the go command
+// ignores and any that we've excluded.
+func findUnregisteredModules(ws *Workspace, goMods []string, excluded map[string]struct{}) []*WorkspaceViolation {
 	registered := map[string]struct{}{}
 	for _, m := range ws.Modules {
 		registered[m.Dir] = struct{}{}
@@ -186,6 +263,9 @@ func findUnregisteredModules(ws *Workspace, goMods []string) []*WorkspaceViolati
 			continue
 		}
 		if _, ok := registered[dir]; ok {
+			continue
+		}
+		if _, ok := excluded[dir]; ok {
 			continue
 		}
 
