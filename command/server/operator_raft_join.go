@@ -57,10 +57,11 @@ Usage: vault operator raft join [options] <leader-api-addr|auto-join-configurati
   TLS certificate data can also be consumed from a file on disk by prefixing with
   the "@" symbol. For example:
 
-      $ vault operator raft join "http://127.0.0.2:8200" \
+      $ vault operator raft join \
         -leader-ca-cert=@leader_ca.crt \
         -leader-client-cert=@leader_client.crt \
-        -leader-client-key=@leader.key
+        -leader-client-key=@leader.key \
+        "http://127.0.0.2:8200"
 
 ` + c.Flags().Help()
 

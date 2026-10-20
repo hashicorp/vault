@@ -16,16 +16,15 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/hashicorp/vault/internalshared/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 )
 
-func testOperatorInitCommand(tb testing.TB) (*cli.MockUi, *clientcmd.OperatorInitCommand) {
+func testOperatorInitCommand(tb testing.TB) (*cli.MockUi, *OperatorInitCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.OperatorInitCommand{
+	return ui, &OperatorInitCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

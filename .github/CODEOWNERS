@@ -96,7 +96,7 @@
 /builtin/logical/transit/                            @hashicorp/vault-crypto
 /website/content/docs/secrets/transit/               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/api-docs/secret/transit.mdx         @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/helper/random/                                      @hashicorp/vault-crypto
+/internalshared/random/                              @hashicorp/vault-crypto
 /sdk/helper/certutil/                                @hashicorp/vault-crypto
 /sdk/helper/cryptoutil/                              @hashicorp/vault-crypto
 /sdk/helper/kdf/                                     @hashicorp/vault-crypto

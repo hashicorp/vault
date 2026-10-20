@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-package cache
+package cache_test
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cachememdb"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/sink/mock"
 	"github.com/hashicorp/vault/internalshared/namespace"
@@ -29,10 +30,10 @@ import (
 	"github.com/hashicorp/vault/vault"
 )
 
-func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expected map[string]string, leaseCache *LeaseCache) {
+func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expected map[string]string, leaseCache *cache.LeaseCache) {
 	t.Helper()
 	for val, valType := range sampleSpace {
-		index, err := leaseCache.db.Get(valType, val)
+		index, err := leaseCache.DBForTest().Get(valType, val)
 		if err != nil && err != cachememdb.ErrCacheItemNotFound {
 			t.Fatal(err)
 		}
@@ -50,11 +51,11 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	response2 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup"}}`
 	response3 := `{"auth": {"client_token": "testid", "accessor": "testaccessor"}}`
 	response4 := `{"auth": {"client_token": "testid", "accessor": "testaccessor"}}`
-	responses := []*SendResponse{
-		newTestSendResponse(http.StatusOK, response1),
-		newTestSendResponse(http.StatusOK, response2),
-		newTestSendResponse(http.StatusOK, response3),
-		newTestSendResponse(http.StatusOK, response4),
+	responses := []*cache.SendResponse{
+		cache.NewTestSendResponse(http.StatusOK, response1),
+		cache.NewTestSendResponse(http.StatusOK, response2),
+		cache.NewTestSendResponse(http.StatusOK, response3),
+		cache.NewTestSendResponse(http.StatusOK, response4),
 	}
 
 	leaseCache := testNewLeaseCache(t, responses)
@@ -79,7 +80,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.Handle(consts.AgentPathCacheClear, leaseCache.HandleCacheClear(ctx))
 
-	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), false, true, nil, nil))
+	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink("testid"), false, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -142,7 +143,7 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 }
 
 func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
-	leaseCache := &mockTokenVerifierProxier{}
+	leaseCache := &cache.MockTokenVerifierProxier{}
 	dummyToken := "DUMMY"
 	realToken := "testid"
 
@@ -162,7 +163,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 	// Create a muxer and add paths relevant for the lease cache layer
 	mux := http.NewServeMux()
 
-	mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), true, true, nil, nil))
+	mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, mock.NewSink(realToken), true, true, nil, nil))
 	server := &http.Server{
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -187,7 +188,7 @@ func TestCache_AutoAuthClientTokenProxyStripping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if leaseCache.currentToken != realToken {
+	if leaseCache.GetCurrentRequestToken() != realToken {
 		t.Fatalf("failed to use real token from auto-auth")
 	}
 }
@@ -785,7 +786,7 @@ func TestCache_TokenRevocations_BaseContextCancellation(t *testing.T) {
 
 	// Cancel the base context of the lease cache. This should trigger
 	// evictions of all the entries from the cache.
-	leaseCache.baseCtxInfo.CancelFunc()
+	leaseCache.BaseContextInfoForTest().CancelFunc()
 	time.Sleep(1 * time.Second)
 
 	// Ensure that all the entries are now gone
@@ -1040,7 +1041,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	gotLeaseID := resp.LeaseID
 
 	// Verify the entry exists
-	idx, err := leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
+	idx, err := leaseCache.DBForTest().Get(cachememdb.IndexNameLease, gotLeaseID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1100,7 +1101,7 @@ func testCachingCacheClearCommon(t *testing.T, clearType string) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Verify the entry is cleared
-	idx, err = leaseCache.db.Get(cachememdb.IndexNameLease, gotLeaseID)
+	idx, err = leaseCache.DBForTest().Get(cachememdb.IndexNameLease, gotLeaseID)
 	if err != cachememdb.ErrCacheItemNotFound {
 		t.Fatal("expected entry to be nil, got", err)
 	}
@@ -1122,7 +1123,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 			}
 			token := resp.Auth.ClientToken
 
-			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			idx, err := leaseCache.DBForTest().Get(cachememdb.IndexNameToken, token)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1149,7 +1150,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 			}
 			token := resp.Auth.ClientToken
 
-			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			idx, err := leaseCache.DBForTest().Get(cachememdb.IndexNameToken, token)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1173,7 +1174,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 			}
 			token := resp.Auth.ClientToken
 
-			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			idx, err := leaseCache.DBForTest().Get(cachememdb.IndexNameToken, token)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1199,7 +1200,7 @@ func TestCache_AuthTokenCreateOrphan(t *testing.T) {
 			}
 			token := resp.Auth.ClientToken
 
-			idx, err := leaseCache.db.Get(cachememdb.IndexNameToken, token)
+			idx, err := leaseCache.DBForTest().Get(cachememdb.IndexNameToken, token)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -10,14 +10,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testPluginRuntimeDeregisterCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginRuntimeDeregisterCommand) {
+func testPluginRuntimeDeregisterCommand(tb testing.TB) (*cli.MockUi, *PluginRuntimeDeregisterCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PluginRuntimeDeregisterCommand{
+	return ui, &PluginRuntimeDeregisterCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

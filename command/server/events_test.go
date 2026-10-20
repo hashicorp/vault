@@ -9,14 +9,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testEventsSubscribeCommand(tb testing.TB) (*cli.MockUi, *clientcmd.EventsSubscribeCommands) {
+func testEventsSubscribeCommand(tb testing.TB) (*cli.MockUi, *EventsSubscribeCommands) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.EventsSubscribeCommands{
+	return ui, &EventsSubscribeCommands{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

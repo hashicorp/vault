@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-package awsauth
+package aws
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	awsutil "github.com/hashicorp/go-secure-stdlib/awsutil/v2"
 	"github.com/hashicorp/vault/api"
-	awsutilint "github.com/hashicorp/vault/internal/awsutil/v2"
+	awsutilint "github.com/hashicorp/vault/internalshared/awsutil"
 )
 
 type CLIHandler struct{}

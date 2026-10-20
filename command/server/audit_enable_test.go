@@ -10,14 +10,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testAuditEnableCommand(tb testing.TB) (*cli.MockUi, *clientcmd.AuditEnableCommand) {
+func testAuditEnableCommand(tb testing.TB) (*cli.MockUi, *AuditEnableCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.AuditEnableCommand{
+	return ui, &AuditEnableCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

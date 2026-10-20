@@ -13,10 +13,10 @@ import (
 
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	credToken "github.com/hashicorp/vault/builtin/credential/token"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	base "github.com/hashicorp/vault/command/base"
 	clientcmd "github.com/hashicorp/vault/command/client"
+	credToken "github.com/hashicorp/vault/command/client/login/token"
+	credUserpass "github.com/hashicorp/vault/command/client/login/userpass"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/vault"

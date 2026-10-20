@@ -9,14 +9,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testOperatorSealCommand(tb testing.TB) (*cli.MockUi, *clientcmd.OperatorSealCommand) {
+func testOperatorSealCommand(tb testing.TB) (*cli.MockUi, *OperatorSealCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.OperatorSealCommand{
+	return ui, &OperatorSealCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

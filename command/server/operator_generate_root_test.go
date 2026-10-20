@@ -15,18 +15,17 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/hashicorp/vault/sdk/helper/xor"
 	"github.com/hashicorp/vault/vault"
 )
 
 func testOperatorGenerateRootCommand(
 	tb testing.TB,
-) (*cli.MockUi, *clientcmd.OperatorGenerateRootCommand) {
+) (*cli.MockUi, *OperatorGenerateRootCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.OperatorGenerateRootCommand{
+	return ui, &OperatorGenerateRootCommand{
 		BaseCommand: base.NewBaseCommand(ui, nil),
 	}
 }

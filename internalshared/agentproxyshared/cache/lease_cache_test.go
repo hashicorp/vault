@@ -380,7 +380,7 @@ func TestCache_ComputeStaticSecretIndexIDNamespaces(t *testing.T) {
 
 func TestLeaseCache_EmptyToken(t *testing.T) {
 	responses := []*SendResponse{
-		newTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
+		NewTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
 	}
 	lc := testNewLeaseCache(t, responses)
 
@@ -404,8 +404,8 @@ func TestLeaseCache_SendCacheable(t *testing.T) {
 	// Emulate 2 responses from the api proxy. One returns a new token and the
 	// other returns a lease.
 	responses := []*SendResponse{
-		newTestSendResponse(http.StatusCreated, `{"auth": {"client_token": "testtoken", "renewable": true}}`),
-		newTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
+		NewTestSendResponse(http.StatusCreated, `{"auth": {"client_token": "testtoken", "renewable": true}}`),
+		NewTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
 	}
 
 	lc := testNewLeaseCache(t, responses)
@@ -493,7 +493,7 @@ func TestLeaseCache_StoreCacheableStaticSecret(t *testing.T) {
 		},
 		Token: "token",
 	}
-	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	response := NewTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
 	responses := []*SendResponse{
 		response,
 	}
@@ -559,7 +559,7 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 		},
 		Token: "token",
 	}
-	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	response := NewTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
 	responses := []*SendResponse{
 		response,
 	}
@@ -621,7 +621,7 @@ func TestLeaseCache_StaticSecret_CacheClear_All(t *testing.T) {
 // only tests the surface level of the functionality, but there are other tests that
 // test the rest.
 func TestLeaseCache_SendCacheableStaticSecret(t *testing.T) {
-	response := newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
+	response := NewTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`)
 	responses := []*SendResponse{
 		response,
 		response,
@@ -693,10 +693,10 @@ func TestLeaseCache_SendCacheableStaticSecret(t *testing.T) {
 
 func TestLeaseCache_SendNonCacheable(t *testing.T) {
 	responses := []*SendResponse{
-		newTestSendResponse(http.StatusOK, `{"value": "output"}`),
-		newTestSendResponse(http.StatusNotFound, `{"value": "invalid"}`),
-		newTestSendResponse(http.StatusOK, `<html>Hello</html>`),
-		newTestSendResponse(http.StatusTemporaryRedirect, ""),
+		NewTestSendResponse(http.StatusOK, `{"value": "output"}`),
+		NewTestSendResponse(http.StatusNotFound, `{"value": "invalid"}`),
+		NewTestSendResponse(http.StatusOK, `<html>Hello</html>`),
+		NewTestSendResponse(http.StatusTemporaryRedirect, ""),
 	}
 
 	lc := testNewLeaseCache(t, responses)
@@ -760,8 +760,8 @@ func TestLeaseCache_SendNonCacheable(t *testing.T) {
 func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
 	// Create the cache
 	responses := []*SendResponse{
-		newTestSendResponse(http.StatusOK, `{"value": "output", "lease_id": "foo"}`),
-		newTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
+		NewTestSendResponse(http.StatusOK, `{"value": "output", "lease_id": "foo"}`),
+		NewTestSendResponse(http.StatusCreated, `{"value": "invalid", "auth": {"client_token": "testtoken"}}`),
 	}
 	lc := testNewLeaseCache(t, responses)
 
@@ -1201,16 +1201,16 @@ func TestLeaseCache_PersistAndRestore(t *testing.T) {
 	// The test re-sends each request to ensure that the response is cached
 	// so the number of responses and cacheTests specified should always be equal.
 	responses := []*SendResponse{
-		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 600}}`),
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
+		NewTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 600}}`),
+		NewTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
 		// The auth token will get manually deleted from the bolt DB storage, causing both of the following two responses
 		// to be missing from the cache after a restore, because the lease is a child of the auth token.
-		newTestSendResponse(202, `{"auth": {"client_token": "testtoken2", "renewable": true, "orphan": true, "lease_duration": 600}}`),
-		newTestSendResponse(203, `{"lease_id": "secret2-lease", "renewable": true, "data": {"number": "two"}, "lease_duration": 600}`),
+		NewTestSendResponse(202, `{"auth": {"client_token": "testtoken2", "renewable": true, "orphan": true, "lease_duration": 600}}`),
+		NewTestSendResponse(203, `{"lease_id": "secret2-lease", "renewable": true, "data": {"number": "two"}, "lease_duration": 600}`),
 		// 204 No content gets special handling - avoid.
-		newTestSendResponse(250, `{"auth": {"client_token": "testtoken3", "renewable": true, "orphan": true, "lease_duration": 600}}`),
-		newTestSendResponse(251, `{"lease_id": "secret3-lease", "renewable": true, "data": {"number": "three"}, "lease_duration": 600}`),
-		newTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`),
+		NewTestSendResponse(250, `{"auth": {"client_token": "testtoken3", "renewable": true, "orphan": true, "lease_duration": 600}}`),
+		NewTestSendResponse(251, `{"lease_id": "secret3-lease", "renewable": true, "data": {"number": "three"}, "lease_duration": 600}`),
+		NewTestSendResponse(http.StatusCreated, `{"data": {"foo": "bar"}, "mount_type": "kvv2"}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)
@@ -1376,7 +1376,7 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 			Token:   parentToken,
 			Request: httptest.NewRequest("PUT", "http://example.com"+path, strings.NewReader("")),
 		})
-		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"auth": {"client_token": "%s", "renewable": true, "lease_duration": 600}}`, newToken)))
+		responses = append(responses, NewTestSendResponse(200, fmt.Sprintf(`{"auth": {"client_token": "%s", "renewable": true, "lease_duration": 600}}`, newToken)))
 
 		// Fetch a leased secret using the new token
 		path = fmt.Sprintf("/v1/kv/%d", id)
@@ -1385,7 +1385,7 @@ func TestLeaseCache_PersistAndRestore_WithManyDependencies(t *testing.T) {
 			Token:   newToken,
 			Request: httptest.NewRequest("GET", "http://example.com"+path, strings.NewReader("")),
 		})
-		responses = append(responses, newTestSendResponse(200, fmt.Sprintf(`{"lease_id": "secret-%d-lease", "renewable": true, "data": {"number": %d}, "lease_duration": 600}`, id, id)))
+		responses = append(responses, NewTestSendResponse(200, fmt.Sprintf(`{"lease_id": "secret-%d-lease", "renewable": true, "data": {"number": %d}, "lease_duration": 600}`, id, id)))
 	}
 
 	// Pathological case: a long chain of child tokens
@@ -1445,7 +1445,7 @@ func TestEvictPersistent(t *testing.T) {
 	ctx := context.Background()
 
 	responses := []*SendResponse{
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
+		NewTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)
@@ -1516,8 +1516,8 @@ func TestRegisterAutoAuth_sameToken(t *testing.T) {
 
 func Test_hasExpired(t *testing.T) {
 	responses := []*SendResponse{
-		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 60}`),
+		NewTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": 60}}`),
+		NewTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": 60}`),
 	}
 	lc := testNewLeaseCache(t, responses)
 	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
@@ -1593,8 +1593,8 @@ Date: Tue, 02 Mar 2021 17:54:16 GMT
 func TestLeaseCacheRestore_expired(t *testing.T) {
 	// Emulate 2 responses from the api proxy, both expired
 	responses := []*SendResponse{
-		newTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": -600}}`),
-		newTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": -600}`),
+		NewTestSendResponse(200, `{"auth": {"client_token": "testtoken", "renewable": true, "lease_duration": -600}}`),
+		NewTestSendResponse(201, `{"lease_id": "foo", "renewable": true, "data": {"value": "foo"}, "lease_duration": -600}`),
 	}
 
 	tempDir, boltStorage := setupBoltStorage(t)
