@@ -29,9 +29,9 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1
-	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
+	github.com/hashicorp/go-secure-stdlib/mlock v0.1.4-0.20261005181433-49bfb1561b96
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
-	github.com/hashicorp/go-secure-stdlib/password v0.1.5
+	github.com/hashicorp/go-secure-stdlib/password v0.1.6-0.20261005181433-49bfb1561b96
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.5.0
 	github.com/hashicorp/go-secure-stdlib/regexp v1.0.0

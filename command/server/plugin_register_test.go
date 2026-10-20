@@ -12,16 +12,15 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
-func testPluginRegisterCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginRegisterCommand) {
+func testPluginRegisterCommand(tb testing.TB) (*cli.MockUi, *PluginRegisterCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PluginRegisterCommand{
+	return ui, &PluginRegisterCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

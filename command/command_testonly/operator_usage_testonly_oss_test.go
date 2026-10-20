@@ -14,7 +14,7 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
+	servercmd "github.com/hashicorp/vault/command/server"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/timeutil"
 	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
@@ -23,11 +23,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *clientcmd.OperatorUsageCommand) {
+func testOperatorUsageCommand(tb testing.TB) (*cli.MockUi, *servercmd.OperatorUsageCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.OperatorUsageCommand{
+	return ui, &servercmd.OperatorUsageCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

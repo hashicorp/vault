@@ -11,15 +11,14 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/hashicorp/vault/version"
 )
 
-func testVersionHistoryCommand(tb testing.TB) (*cli.MockUi, *clientcmd.VersionHistoryCommand) {
+func testVersionHistoryCommand(tb testing.TB) (*cli.MockUi, *VersionHistoryCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.VersionHistoryCommand{
+	return ui, &VersionHistoryCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},
