@@ -1,7 +1,7 @@
 // Copyright IBM Corp. 2016, 2025
 // SPDX-License-Identifier: BUSL-1.1
 
-package cache
+package cache_test
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache"
 	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/internalshared/useragent"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -33,7 +34,7 @@ func TestAPIProxy(t *testing.T) {
 	cleanup, client, _, _ := setupClusterAndAgent(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
-	proxier, err := NewAPIProxy(&APIProxyConfig{
+	proxier, err := cache.NewAPIProxy(&cache.APIProxyConfig{
 		Client:                  client,
 		Logger:                  logging.NewVaultLogger(hclog.Trace),
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
@@ -49,7 +50,7 @@ func TestAPIProxy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := proxier.Send(namespace.RootContext(nil), &SendRequest{
+	resp, err := proxier.Send(namespace.RootContext(nil), &cache.SendRequest{
 		Request: req,
 	})
 	if err != nil {
@@ -71,7 +72,7 @@ func TestAPIProxyNoCache(t *testing.T) {
 	cleanup, client, _, _ := setupClusterAndAgentNoCache(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
-	proxier, err := NewAPIProxy(&APIProxyConfig{
+	proxier, err := cache.NewAPIProxy(&cache.APIProxyConfig{
 		Client:                  client,
 		Logger:                  logging.NewVaultLogger(hclog.Trace),
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
@@ -87,7 +88,7 @@ func TestAPIProxyNoCache(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := proxier.Send(namespace.RootContext(nil), &SendRequest{
+	resp, err := proxier.Send(namespace.RootContext(nil), &cache.SendRequest{
 		Request: req,
 	})
 	if err != nil {
@@ -111,7 +112,7 @@ func TestAPIProxy_queryParams(t *testing.T) {
 	cleanup, client, _, _ := setupClusterAndAgentOnStandby(namespace.RootContext(nil), t, nil)
 	defer cleanup()
 
-	proxier, err := NewAPIProxy(&APIProxyConfig{
+	proxier, err := cache.NewAPIProxy(&cache.APIProxyConfig{
 		Client:                  client,
 		Logger:                  logging.NewVaultLogger(hclog.Trace),
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
@@ -132,7 +133,7 @@ func TestAPIProxy_queryParams(t *testing.T) {
 	q.Add("standbyok", "true")
 	req.URL.RawQuery = q.Encode()
 
-	resp, err := proxier.Send(namespace.RootContext(nil), &SendRequest{
+	resp, err := proxier.Send(namespace.RootContext(nil), &cache.SendRequest{
 		Request: req,
 	})
 	if err != nil {
@@ -158,7 +159,7 @@ func TestAPIProxy_queryParams(t *testing.T) {
 // caching agent against the active node. It returns a cleanup func that should
 // be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
-func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
+func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *cache.LeaseCache) {
 	return setupClusterAndAgentCommon(ctx, t, coreConfig, false, true)
 }
 
@@ -166,7 +167,7 @@ func setupClusterAndAgent(ctx context.Context, t *testing.T, coreConfig *vault.C
 // proxying agent against the active node. It returns a cleanup func that should
 // be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
-func setupClusterAndAgentNoCache(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
+func setupClusterAndAgentNoCache(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *cache.LeaseCache) {
 	return setupClusterAndAgentCommon(ctx, t, coreConfig, false, false)
 }
 
@@ -174,11 +175,11 @@ func setupClusterAndAgentNoCache(ctx context.Context, t *testing.T, coreConfig *
 // and caching agent against a standby node. It returns a cleanup func that
 // should be deferred immediately along with two clients, one for direct cluster
 // communication and another to talk to the caching agent.
-func setupClusterAndAgentOnStandby(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *LeaseCache) {
+func setupClusterAndAgentOnStandby(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig) (func(), *api.Client, *api.Client, *cache.LeaseCache) {
 	return setupClusterAndAgentCommon(ctx, t, coreConfig, true, true)
 }
 
-func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig, onStandby bool, useCache bool) (func(), *api.Client, *api.Client, *LeaseCache) {
+func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *vault.CoreConfig, onStandby bool, useCache bool) (func(), *api.Client, *api.Client, *cache.LeaseCache) {
 	t.Helper()
 
 	if ctx == nil {
@@ -244,7 +245,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	apiProxyLogger := cluster.Logger.Named("apiproxy")
 
 	// Create the API proxier
-	apiProxy, err := NewAPIProxy(&APIProxyConfig{
+	apiProxy, err := cache.NewAPIProxy(&cache.APIProxyConfig{
 		Client:                  clienToUse,
 		Logger:                  apiProxyLogger,
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
@@ -257,13 +258,13 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	// Create a muxer and add paths relevant for the lease cache layer and API proxy layer
 	mux := http.NewServeMux()
 
-	var leaseCache *LeaseCache
+	var leaseCache *cache.LeaseCache
 	if useCache {
 		cacheLogger := cluster.Logger.Named("cache")
 
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
-		leaseCache, err = NewLeaseCache(&LeaseCacheConfig{
+		leaseCache, err = cache.NewLeaseCache(&cache.LeaseCacheConfig{
 			Client:              clienToUse,
 			BaseContext:         ctx,
 			Proxier:             apiProxy,
@@ -277,9 +278,9 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 
 		mux.Handle("/agent/v1/cache-clear", leaseCache.HandleCacheClear(ctx))
 
-		mux.Handle("/", ProxyHandler(ctx, cacheLogger, leaseCache, nil, false, false, nil, nil))
+		mux.Handle("/", cache.ProxyHandler(ctx, cacheLogger, leaseCache, nil, false, false, nil, nil))
 	} else {
-		mux.Handle("/", ProxyHandler(ctx, apiProxyLogger, apiProxy, nil, false, false, nil, nil))
+		mux.Handle("/", cache.ProxyHandler(ctx, apiProxyLogger, apiProxy, nil, false, false, nil, nil))
 	}
 
 	server := &http.Server{

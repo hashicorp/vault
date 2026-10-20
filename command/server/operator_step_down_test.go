@@ -9,14 +9,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testOperatorStepDownCommand(tb testing.TB) (*cli.MockUi, *clientcmd.OperatorStepDownCommand) {
+func testOperatorStepDownCommand(tb testing.TB) (*cli.MockUi, *OperatorStepDownCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.OperatorStepDownCommand{
+	return ui, &OperatorStepDownCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

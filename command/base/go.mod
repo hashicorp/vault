@@ -6,7 +6,6 @@ module github.com/hashicorp/vault/command/base
 go 1.27.2
 
 replace (
-	github.com/hashicorp/vault => ../..
 	github.com/hashicorp/vault/api => ../../api
 	github.com/hashicorp/vault/internalshared => ../../internalshared
 	github.com/hashicorp/vault/sdk => ../../sdk
@@ -151,7 +150,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1 // indirect
-	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3 // indirect
+	github.com/hashicorp/go-secure-stdlib/mlock v0.1.4-0.20261005181433-49bfb1561b96 // indirect
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.5.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect

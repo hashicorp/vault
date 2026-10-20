@@ -10,17 +10,16 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
-func testPluginInfoCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginInfoCommand) {
+func testPluginInfoCommand(tb testing.TB) (*cli.MockUi, *PluginInfoCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PluginInfoCommand{
+	return ui, &PluginInfoCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

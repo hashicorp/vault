@@ -525,6 +525,49 @@ jobs:
           annotation=${annotation//'%'/'%25'}
           echo "::error title=Published Go modules don't build with this branch::${annotation//$'\n'/%0A}"
           exit 1
+      - name: Check that vault-client doesn't depend on the root module
+        # From 2.2 the enterprise vault-client builds without the server, so neither it nor its
+        # tests may use the root github.com/hashicorp/vault module. Older and CE branches still
+        # allow it, so the step checks the branch itself and does nothing there.
+        if: ${{ !cancelled() && steps.install-tools.outcome == 'success' && needs.setup.outputs.is-ent-branch == 'true' }}
+        env:
+          # Credentials only for this step: listing may fetch modules the cache lacks.
+          GIT_CONFIG_COUNT: "1"
+          GIT_CONFIG_KEY_0: url.https://user:${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}@github.com.insteadOf
+          GIT_CONFIG_VALUE_0: https://github.com
+          GOWORK: "off"
+        run: |
+          set -euo pipefail
+          root=github.com/hashicorp/vault
+          version=$(cat version/VERSION 2> /dev/null || true)
+          if [ -z "$version" ] || [ "$(printf '%s\n' 2.2.0 "${version%%-*}" | sort -V | head -n1)" != 2.2.0 ]; then
+            echo "Skipping: version/VERSION is '${version}', and the boundary applies from 2.2.0."
+            exit 0
+          fi
+
+          cd command/client
+          problems=$(go mod edit -json | jq -r --arg root "$root" '
+            (.Require // [] | .[] | select(.Path == $root) | "go.mod requires \(.Path)"),
+            (.Replace // [] | .[] | select(.Old.Path == $root) | "go.mod replaces \(.Old.Path)")')
+          # Without the go.mod require, go list fails on a root import, so its error is a problem too.
+          if ! pkgs=$(go list -deps -test -tags enterprise \
+            -f '{{.ImportPath}} {{with .Module}}{{.Path}}{{end}}' ./... 2>&1); then
+            problems+=$'\n'"go list failed: ${pkgs}"
+          else
+            problems+=$'\n'$(awk -v root="$root" '$2 == root { print "imports " $1 }' <<< "$pkgs")
+          fi
+          problems=$(sed -e '/^$/d' -e 's/^/- /' <<< "$problems")
+          if [ -z "$problems" ]; then
+            echo "vault-client doesn't depend on ${root}."
+            exit 0
+          fi
+
+          what_to_do="vault-client and its tests must not use the root ${root} module. Move the code they need into command/base, internalshared or another module that doesn't require the root module, or move the command or test to command/server. To reproduce, run 'GOWORK=off go list -deps -test -tags enterprise ./...' in command/client."
+          printf '# vault-client module boundary\n\n%s\n\n### What to do\n\n%s\n' "$problems" "$what_to_do" >> "$GITHUB_STEP_SUMMARY"
+          annotation=$(printf 'Problems:\n%s\n\nWhat to do:\n%s' "$problems" "$what_to_do")
+          annotation=${annotation//'%'/'%25'}
+          echo "::error title=vault-client depends on the root module::${annotation//$'\n'/%0A}"
+          exit 1
       - name: Check that the Go tests cover every module
         # The Go test jobs split the packages that 'pipeline go list packages' lists across runners,
         # then test each runner's packages from the module 'pipeline go group packages' puts them in.

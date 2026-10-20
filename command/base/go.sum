@@ -326,8 +326,8 @@ github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1 h1:VaLXp47MqD1Y2K6QVrA9R
 github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1/go.mod h1:hH8rgXHh9fPSDPerG6WzABHsHF+9ZpLhRI1LPk4JZ8c=
 github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2 h1:NS6BHieb/pDfx3M9jDdaPpGyyVp+aD4A3DjX3dgRmzs=
 github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2/go.mod h1:rf5JPE13wi+NwjgsmGkbg4b2CgHq8v7Htn/F0nDe/hg=
-github.com/hashicorp/go-secure-stdlib/mlock v0.1.3 h1:kH3Rhiht36xhAfhuHyWJDgdXXEx9IIZhDGRk24CDhzg=
-github.com/hashicorp/go-secure-stdlib/mlock v0.1.3/go.mod h1:ov1Q0oEDjC3+A4BwsG2YdKltrmEw8sf9Pau4V9JQ4Vo=
+github.com/hashicorp/go-secure-stdlib/mlock v0.1.4-0.20261005181433-49bfb1561b96 h1:Jl4NvXg+/iIByQBQNABGnTaroj7LpGw/vyOGgTgbTD0=
+github.com/hashicorp/go-secure-stdlib/mlock v0.1.4-0.20261005181433-49bfb1561b96/go.mod h1:OxJBRBqJYAX1wjLFHRSLv9jt2+cUFW4W5HTS0YfcFWY=
 github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0 h1:U+kC2dOhMFQctRfhK0gRctKAPTloZdMU5ZJxaesJ/VM=
 github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0/go.mod h1:Ll013mhdmsVDuoIXVfBtvgGJsXDYkTw1kooNcoCXuE0=
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0 h1:U6y5MXGiDVOOtkWJ6o/tu1TxABnI0yKTQWJr7z6BpNk=
@@ -638,7 +638,6 @@ golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a/go.mod h1:oPkhp1MJrh7nUepCBc
 golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.1.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.5.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.7.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.8.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.15.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
 golang.org/x/sys v0.48.0 h1:bbX/i/6MgT9BVLM9RT1thmxL04yeTAhbEz4SyadbXoo=

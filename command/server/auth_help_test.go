@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
-	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	base "github.com/hashicorp/vault/command/base"
 	clientcmd "github.com/hashicorp/vault/command/client"
+	credUserpass "github.com/hashicorp/vault/command/client/login/userpass"
 )
 
 func testAuthHelpCommand(tb testing.TB) (*cli.MockUi, *clientcmd.AuthHelpCommand) {
