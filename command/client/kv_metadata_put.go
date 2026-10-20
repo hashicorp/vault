@@ -35,36 +35,36 @@ func (c *KVMetadataPutCommand) Synopsis() string {
 
 func (c *KVMetadataPutCommand) Help() string {
 	helpText := `
-Usage: vault kv metadata put [options] KEY
+Usage: ` + c.BinaryName + ` kv metadata put [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
 
   Create a key in the key-value store with no data:
 
-      $ vault kv metadata put -mount=secret foo
+      $ ` + c.BinaryName + ` kv metadata put -mount=secret foo
 
   The deprecated path-like syntax can also be used, but this should be avoided 
   for KV v2, as the fact that it is not actually the full API path to 
   the secret (secret/metadata/foo) can cause confusion: 
   
-      $ vault kv metadata put secret/foo
+      $ ` + c.BinaryName + ` kv metadata put secret/foo
 
   Set a max versions setting on the key:
 
-      $ vault kv metadata put -mount=secret -max-versions=5 foo
+      $ ` + c.BinaryName + ` kv metadata put -mount=secret -max-versions=5 foo
 
   Set delete-version-after on the key:
 
-      $ vault kv metadata put -mount=secret -delete-version-after=3h25m19s foo
+      $ ` + c.BinaryName + ` kv metadata put -mount=secret -delete-version-after=3h25m19s foo
 
   Require Check-and-Set for this key:
 
-      $ vault kv metadata put -mount=secret -cas-required foo
+      $ ` + c.BinaryName + ` kv metadata put -mount=secret -cas-required foo
 
   Set custom metadata on the key:
 
-      $ vault kv metadata put -mount=secret -custom-metadata=foo=abc -custom-metadata=bar=123 foo
+      $ ` + c.BinaryName + ` kv metadata put -mount=secret -custom-metadata=foo=abc -custom-metadata=bar=123 foo
 
   Additional flags and more advanced use cases are detailed below.
 

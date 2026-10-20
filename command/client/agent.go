@@ -104,14 +104,14 @@ func (c *AgentCommand) Synopsis() string {
 
 func (c *AgentCommand) Help() string {
 	helpText := `
-Usage: vault agent [options]
+Usage: ` + c.BinaryName + ` agent [options]
 
   This command starts a Vault Agent that can perform automatic authentication
   in certain environments.
 
   Start an agent with a configuration file:
 
-      $ vault agent -config=/etc/vault/config.hcl
+      $ ` + c.BinaryName + ` agent -config=/etc/vault/config.hcl
 
   For a full list of examples, please see the documentation.
 

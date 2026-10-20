@@ -30,14 +30,14 @@ func (c *VersionCommand) Synopsis() string {
 
 func (c *VersionCommand) Help() string {
 	helpText := `
-Usage: vault version
+Usage: ` + c.BinaryName + ` version
 
   Prints the version of this Vault CLI. This does not print the target Vault
   server version.
 
   Print the version:
 
-      $ vault version
+      $ ` + c.BinaryName + ` version
 
   There are no arguments or flags to this command. Any additional arguments or
   flags are ignored.

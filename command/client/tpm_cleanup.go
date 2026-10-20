@@ -34,7 +34,7 @@ func (c *TPMCleanupCommand) Synopsis() string {
 
 func (c *TPMCleanupCommand) Help() string {
 	helpText := `
-Usage: vault tpm cleanup [options]
+Usage: ` + c.BinaryName + ` tpm cleanup [options]
 
   Removes the certificate and key material written to the state directory by
   "vault tpm attest". The directory itself is preserved. Any other files in
@@ -50,11 +50,11 @@ Usage: vault tpm cleanup [options]
 
   Clean up the state in the current directory:
 
-      $ vault tpm cleanup
+      $ ` + c.BinaryName + ` tpm cleanup
 
   Clean up a specific state directory:
 
-      $ vault tpm cleanup -tpm-state-dir=/etc/vault/tpm
+      $ ` + c.BinaryName + ` tpm cleanup -tpm-state-dir=/etc/vault/tpm
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)

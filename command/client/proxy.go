@@ -101,14 +101,14 @@ func (c *ProxyCommand) Synopsis() string {
 
 func (c *ProxyCommand) Help() string {
 	helpText := `
-Usage: vault proxy [options]
+Usage: ` + c.BinaryName + ` proxy [options]
 
   This command starts a Vault Proxy that can perform automatic authentication
   in certain environments.
 
   Start a proxy with a configuration file:
 
-      $ vault proxy -config=/etc/vault/config.hcl
+      $ ` + c.BinaryName + ` proxy -config=/etc/vault/config.hcl
 
   For a full list of examples, please see the documentation.
 

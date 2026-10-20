@@ -22,7 +22,7 @@ func (c *NamespaceCommand) Synopsis() string {
 
 func (c *NamespaceCommand) Help() string {
 	helpText := `
-Usage: vault namespace <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` namespace <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault namespaces.
   These subcommands operate in the context of the namespace that the
@@ -30,31 +30,31 @@ Usage: vault namespace <subcommand> [options] [args]
 
   List enabled child namespaces:
 
-      $ vault namespace list
+      $ ` + c.BinaryName + ` namespace list
 
   Look up an existing namespace:
 
-      $ vault namespace lookup
+      $ ` + c.BinaryName + ` namespace lookup
 
   Create a new namespace:
 
-      $ vault namespace create
+      $ ` + c.BinaryName + ` namespace create
 
   Patch an existing namespace:
 
-      $ vault namespace patch
+      $ ` + c.BinaryName + ` namespace patch
 
   Delete an existing namespace:
 
-      $ vault namespace delete
+      $ ` + c.BinaryName + ` namespace delete
 
   Lock the API for an existing namespace:
 
-      $ vault namespace lock
+      $ ` + c.BinaryName + ` namespace lock
 
   Unlock the API for an existing namespace:
 
-      $ vault namespace unlock
+      $ ` + c.BinaryName + ` namespace unlock
 
   Please see the individual subcommand help for detailed usage information.
 `

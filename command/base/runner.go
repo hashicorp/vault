@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -144,6 +145,10 @@ type RunOptions struct {
 	Stderr         io.Writer
 	Address        string
 	Client         *api.Client
+	// BinaryName is detected from os.Args[0] at runtime to support both
+	// vault and vault-client binaries using the same command code.
+	// This allows usage text to dynamically show the correct binary name.
+	BinaryName string
 }
 
 // LoginHandler is the base interface that any auth handler must implement to enable
@@ -167,6 +172,11 @@ func RunCustomWithCommandsFn(args []string, runOpts *RunOptions, initFn CommandI
 func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn) int {
 	if runOpts == nil {
 		runOpts = &RunOptions{}
+	}
+
+	// Detect binary name from os.Args[0] if not explicitly set
+	if runOpts.BinaryName == "" {
+		runOpts.BinaryName = filepath.Base(os.Args[0])
 	}
 
 	var format string
@@ -248,11 +258,12 @@ func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn)
 	hiddenCommands := []string{"version"}
 
 	cliApp := &cli.CLI{
-		Name:     "vault",
+		Name:     runOpts.BinaryName,
 		Args:     args,
 		Commands: commands,
 		HelpFunc: groupedHelpFunc(
-			cli.BasicHelpFunc("vault"),
+			cli.BasicHelpFunc(runOpts.BinaryName),
+			runOpts.BinaryName,
 		),
 		HelpWriter:                 runOpts.Stdout,
 		ErrorWriter:                runOpts.Stderr,
@@ -286,12 +297,12 @@ var commonCommands = []string{
 	"unwrap",
 }
 
-func groupedHelpFunc(f cli.HelpFunc) cli.HelpFunc {
+func groupedHelpFunc(f cli.HelpFunc, binaryName string) cli.HelpFunc {
 	return func(commands map[string]cli.CommandFactory) string {
 		var b bytes.Buffer
 		tw := tabwriter.NewWriter(&b, 0, 2, 6, ' ', 0)
 
-		fmt.Fprintf(tw, "Usage: vault <command> [args]\n\n")
+		fmt.Fprintf(tw, "Usage: %s <command> [args]\n\n", binaryName)
 		fmt.Fprintf(tw, "Common commands:\n")
 		for _, v := range commonCommands {
 			if commands[v] != nil {

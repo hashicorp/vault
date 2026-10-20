@@ -26,12 +26,12 @@ func (c *PrintTokenCommand) Synopsis() string {
 
 func (c *PrintTokenCommand) Help() string {
 	helpText := `
-Usage: vault print token
+Usage: ` + c.BinaryName + ` print token
 
   Prints the value of the Vault token that will be used for commands, after
   taking into account the configured token-helper and the environment.
 
-      $ vault print token
+      $ ` + c.BinaryName + ` print token
 
 `
 	return strings.TrimSpace(helpText)

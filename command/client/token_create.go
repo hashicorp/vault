@@ -44,7 +44,7 @@ func (c *TokenCreateCommand) Synopsis() string {
 
 func (c *TokenCreateCommand) Help() string {
 	helpText := `
-Usage: vault token create [options]
+Usage: ` + c.BinaryName + ` token create [options]
 
   Creates a new token that can be used for authentication. This token
   will be created as a child of the currently authenticated token.

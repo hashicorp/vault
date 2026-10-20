@@ -29,7 +29,7 @@ func (c *TPMInspectCommand) Synopsis() string {
 
 func (c *TPMInspectCommand) Help() string {
 	helpText := `
-Usage: vault tpm inspect [options]
+Usage: ` + c.BinaryName + ` tpm inspect [options]
 
   Reads the attestation state directory written by "vault tpm attest" and
   displays information about the stored certificate and key material without
@@ -43,11 +43,11 @@ Usage: vault tpm inspect [options]
 
   Inspect the attestation state in the current directory:
 
-      $ vault tpm inspect
+      $ ` + c.BinaryName + ` tpm inspect
 
   Inspect a state directory at a custom path:
 
-      $ vault tpm inspect -tpm-state-dir=/etc/vault/tpm
+      $ ` + c.BinaryName + ` tpm inspect -tpm-state-dir=/etc/vault/tpm
 	` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }

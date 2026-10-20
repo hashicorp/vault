@@ -29,7 +29,7 @@ func (c *UnwrapCommand) Synopsis() string {
 
 func (c *UnwrapCommand) Help() string {
 	helpText := `
-Usage: vault unwrap [options] [TOKEN]
+Usage: ` + c.BinaryName + ` unwrap [options] [TOKEN]
 
   Unwraps a wrapped secret from Vault by the given token. The result is the
   same as the "vault read" operation on the non-wrapped secret. If no token
@@ -37,12 +37,12 @@ Usage: vault unwrap [options] [TOKEN]
 
   Unwrap the data in the cubbyhole secrets engine for a token:
 
-      $ vault unwrap 3de9ece1-b347-e143-29b0-dc2dc31caafd
+      $ ` + c.BinaryName + ` unwrap 3de9ece1-b347-e143-29b0-dc2dc31caafd
 
   Unwrap the data in the active token:
 
-      $ vault login 848f9ccf-7176-098c-5e2b-75a0689d41cd
-      $ vault unwrap # unwraps 848f9ccf...
+      $ ` + c.BinaryName + ` login 848f9ccf-7176-098c-5e2b-75a0689d41cd
+      $ ` + c.BinaryName + ` unwrap # unwraps 848f9ccf...
 
   For a full list of examples and paths, please see the online documentation.
 

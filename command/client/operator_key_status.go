@@ -27,7 +27,7 @@ func (c *OperatorKeyStatusCommand) Synopsis() string {
 
 func (c *OperatorKeyStatusCommand) Help() string {
 	helpText := `
-Usage: vault operator key-status [options]
+Usage: ` + c.BinaryName + ` operator key-status [options]
 
   Provides information about the active encryption key. Specifically,
   the current key term and the key installation time.

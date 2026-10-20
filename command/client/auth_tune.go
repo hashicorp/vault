@@ -52,7 +52,7 @@ func (c *AuthTuneCommand) Synopsis() string {
 
 func (c *AuthTuneCommand) Help() string {
 	helpText := `
-Usage: vault auth tune [options] PATH
+Usage: ` + c.BinaryName + ` auth tune [options] PATH
 
   Tunes the configuration options for the auth method at the given PATH. The
   argument corresponds to the PATH where the auth method is enabled, not the
@@ -60,7 +60,7 @@ Usage: vault auth tune [options] PATH
 
   Tune the default lease for the github auth method:
 
-      $ vault auth tune -default-lease-ttl=72h github/
+      $ ` + c.BinaryName + ` auth tune -default-lease-ttl=72h github/
 
 ` + c.Flags().Help()
 

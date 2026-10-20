@@ -32,7 +32,7 @@ func (c *LeaseRevokeCommand) Synopsis() string {
 
 func (c *LeaseRevokeCommand) Help() string {
 	helpText := `
-Usage: vault lease revoke [options] ID
+Usage: ` + c.BinaryName + ` lease revoke [options] ID
 
   Revokes secrets by their lease ID. This command can revoke a single secret
   or multiple secrets based on a path-matched prefix.
@@ -45,15 +45,15 @@ Usage: vault lease revoke [options] ID
 
   Revoke a single lease:
 
-      $ vault lease revoke database/creds/readonly/2f6a614c...
+      $ ` + c.BinaryName + ` lease revoke database/creds/readonly/2f6a614c...
 
   Revoke all leases for a role:
 
-      $ vault lease revoke -prefix aws/creds/deploy
+      $ ` + c.BinaryName + ` lease revoke -prefix aws/creds/deploy
 
   Force delete leases from Vault even if secret engine revocation fails:
 
-      $ vault lease revoke -force -prefix consul/creds
+      $ ` + c.BinaryName + ` lease revoke -force -prefix consul/creds
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secret engine in use.
