@@ -425,7 +425,6 @@ changed_files {
         "go.mod",
         "go.sum",
         "go.work",
-        "go.work.sum",
       ]
     }
 

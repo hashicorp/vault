@@ -41,10 +41,12 @@ jobs:
       # Space-separated Go module directories to test; empty means every module in go.work.
       # Changes confined to tools/pipeline only need that module's tests because no other module
       # depends on it. go_modules ignores tools/pipeline and covers go.work and tools.sh (which pins
-      # gotestsum), so any of those tests everything.
+      # gotestsum), so any of those tests everything. We don't include tools/pipeline in go.work on
+      # CE branches so we can't select it there.
       go-test-modules: >-
         ${{
           (
+            steps.metadata.outputs.is-ent-branch == 'true' &&
             contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'pipeline') &&
             !contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'go_app') &&
             !contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'go_modules') &&
@@ -171,13 +173,17 @@ jobs:
           source-versions: ${{ env.VAULT_SOURCE_VERSIONS }}
 
   test-go:
-    # Run Go tests if the vault app changed
+    # Run Go tests if the vault app changed. We only test tools/pipeline on enterprise branches since
+    # it's not in go.work on CE branches.
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_app') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+      (
+        needs.setup.outputs.is-ent-branch == 'true' &&
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
+      ) ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
     name: Run Go tests
     needs: setup
@@ -200,7 +206,7 @@ jobs:
       name: standard
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
-      test-timing-cache-key: go-test-timing-standard-${{ needs.setup.outputs.is-ent-branch && 'ent' || 'ce' }}
+      test-timing-cache-key: go-test-timing-standard-${{ needs.setup.outputs.is-ent-branch == 'true' && 'ent' || 'ce' }}
       # Test runners cannot be less than 2.
       total-runners: ${{ needs.setup.outputs.go-test-modules == '' && '16' || '2' }}
     secrets: inherit
@@ -238,7 +244,8 @@ jobs:
 
   test-go-race:
     # Run Go test with the data race detector enabled if the vault app changed and we're out of
-    # drafts mode.
+    # drafts mode. We only test tools/pipeline on enterprise branches since it's not in go.work on
+    # CE branches.
     if: |
       needs.setup.outputs.is-draft == 'false' &&
       (
@@ -246,7 +253,10 @@ jobs:
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_modules') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_toolchain') ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'go_tests') ||
-        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+        (
+          needs.setup.outputs.is-ent-branch == 'true' &&
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
+        ) ||
         contains(fromJSON(needs.setup.outputs.changed-files).groups, 'test_ci')
       )
     name: Run Go tests with data race detection
@@ -272,7 +282,7 @@ jobs:
       modules: ${{ needs.setup.outputs.go-test-modules }}
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
-      test-timing-cache-key: go-test-timing-race-${{ needs.setup.outputs.is-ent-branch && 'ent' || 'ce' }}
+      test-timing-cache-key: go-test-timing-race-${{ needs.setup.outputs.is-ent-branch == 'true' && 'ent' || 'ce' }}
       # Test runners cannot be less than 2.
       total-runners: ${{ needs.setup.outputs.go-test-modules == '' && '16' || '2' }}
     secrets: inherit
@@ -372,6 +382,10 @@ jobs:
       # outside the main module, so these must build against the released versions of the workspace
       # modules they require rather than replacing them with the code on the branch.
       PUBLISHED_GO_MODULES: api api/auth/* sdk
+      # Module directories that we keep out of go.work on CE branches. tools/pipeline has private
+      # requirements so we have to leave it out to make workspace mode go commands, including
+      # 'make go-mod-download', work without private module access.
+      EXCLUDED_GO_MODULES: ${{ needs.setup.outputs.is-ent-branch != 'true' && 'tools/pipeline' || '' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -419,23 +433,28 @@ jobs:
           set -euo pipefail
           # read doesn't expand globs, so the patterns reach the pipeline tool as written.
           read -r -a published <<< "$PUBLISHED_GO_MODULES"
-          published_flags=()
+          check_flags=()
           for pattern in "${published[@]}"; do
-            published_flags+=(--published "$pattern")
+            check_flags+=(--published "$pattern")
+          done
+          read -r -a excluded <<< "$EXCLUDED_GO_MODULES"
+          for dir in "${excluded[@]}"; do
+            check_flags+=(--excluded "$dir")
           done
           if pipeline go check workspace ${{ runner.debug && '--log debug' || '' }} \
-            "${published_flags[@]}" --format markdown | tee -a "$GITHUB_STEP_SUMMARY"; then
+            "${check_flags[@]}" --format markdown | tee -a "$GITHUB_STEP_SUMMARY"; then
             exit 0
           fi
 
           # The fix depends on each problem, so list them in the annotation too. Rerunning is cheap:
           # the check only reads go.work and go.mod files.
-          problems=$(pipeline go check workspace "${published_flags[@]}" --format json 2> /dev/null |
+          problems=$(pipeline go check workspace "${check_flags[@]}" --format json 2> /dev/null |
             jq -r '.violations[]? | "- \(.module): \(.detail)"' || true)
           what_to_do=$(cat <<'EOF'
           Fix each problem by its kind:
 
           - "is committed but go.work has no 'use ...'": add the module to the workspace with `go work use ./<dir>`, or delete the stray go.mod.
+          - "is excluded but it's in go.work": we keep the modules in EXCLUDED_GO_MODULES (.github/workflows/ci.yml) out of go.work on CE branches because they have private requirements. Run the `go work edit -dropuse` command in the problem to remove it.
           - "requires ... without a replace" or "replace ... resolves to ...": modules that aren't published must build against this branch's code of the workspace modules they require. Add the replace that the problem names to the module's go.mod, then run `make go-mod-tidy`.
           - "published module replaces ...": other projects import the published modules (PUBLISHED_GO_MODULES in .github/workflows/ci.yml) and Go ignores their replace directives, so they must build against released versions. Run `go mod edit -dropreplace=<module>` in the published module's directory, then `make go-mod-tidy`. If it needs a change that isn't released yet, release the module it requires first, then require that version with `GOWORK=off go get <module>@<version>`.
 
