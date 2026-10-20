@@ -10,7 +10,7 @@
     <Page::Breadcrumbs
       @breadcrumbs={{array
         (hash label="Vault" route="vault.cluster.dashboard" icon="vault")
-        (hash label="Methods" route="vault.cluster.access.mfa.methods.index")
+        (hash label="Multi-factor authentication" route="vault.cluster.access.mfa.methods.index")
         (hash label="Configure MFA Method")
       }}
     />
@@ -25,8 +25,8 @@
 
 <div>
   {{#if this.showForms}}
-    <h3 class="is-size-4 has-text-weight-semibold">Settings</h3>
-    <p class="has-border-top-light has-top-padding-l">
+    <h2 class="is-size-4 has-text-weight-semibold">Settings</h2>
+    <p class="has-border-top-light has-top-padding-m">
       {{this.description}}
       <Hds::Link::Inline
         @isHrefExternal={{true}}
