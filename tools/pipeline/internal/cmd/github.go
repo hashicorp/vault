@@ -16,6 +16,8 @@ import (
 )
 
 type githubCommandState struct {
+	Owner      string
+	Repo       string
 	GithubV3   *gh.Client
 	GithubV4   *githubv4.Client
 	GithubHost string
@@ -55,6 +57,8 @@ func newGithubCmd() *cobra.Command {
 	}
 
 	githubCmd.PersistentFlags().StringVar(&githubCmdState.GithubHost, "github-host", "github.com", "GitHub API host (use for GitHub Enterprise Server)")
+	githubCmd.PersistentFlags().StringVarP(&githubCmdState.Owner, "owner", "o", "hashicorp", "GitHub repository owner")
+	githubCmd.PersistentFlags().StringVarP(&githubCmdState.Repo, "repo", "r", "vault-enterprise", "GitHub repository name")
 
 	githubCmd.AddCommand(newGithubCheckCmd())
 	githubCmd.AddCommand(newGithubCloseCmd())
@@ -63,6 +67,7 @@ func newGithubCmd() *cobra.Command {
 	githubCmd.AddCommand(newGithubCreateCmd())
 	githubCmd.AddCommand(newGithubFindCmd())
 	githubCmd.AddCommand(newGithubListCmd())
+	githubCmd.AddCommand(newGithubRerunIfDisconnectedCmd(githubCmdState))
 	githubCmd.AddCommand(newGithubSyncCmd())
 
 	return githubCmd

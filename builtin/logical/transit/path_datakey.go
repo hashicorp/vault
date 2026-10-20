@@ -178,7 +178,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 
 func (b *backend) generateDataKey(ctx context.Context, p *keysutil.Policy, params *DataKeyParams) (string, string, error) {
 	factories := params.factories
-	if p.Type == keysutil.KeyType_MANAGED_KEY {
+	if p.KeyVersionType(params.keyVersion) == keysutil.KeyType_MANAGED_KEY {
 		factory, err := b.GetManagedKeyFactory(ctx)
 		if err != nil {
 			return "", "", err

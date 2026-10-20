@@ -318,6 +318,15 @@ func workspaceGoModPaths(ctx context.Context, goWork string) ([]string, error) {
 	return paths, nil
 }
 
+// ToMarkdownTable escapes paths, errors, and diffs so they aren't treated as Markdown.
+func (r *CheckGoModDiffRes) ToMarkdownTable(err error) (table.Writer, error) {
+	t, err := r.ToTable(err)
+	if t == nil {
+		return nil, err
+	}
+	return escapeMarkdownTableColumns(t, 1, 2, 3), err
+}
+
 // ToTable marshals the response to a text table.
 func (r *CheckGoModDiffRes) ToTable(err error) (table.Writer, error) {
 	t := table.NewWriter()

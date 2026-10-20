@@ -527,6 +527,10 @@ jobs:
                 go list -mod=mod -deps -test -tags "${{ inputs.go-tags }}" $packages 2>&1 >/dev/null); then
               echo "::error title=Go module '${dir}' failed to load::${load_err//$'\n'/%0A}"
               failed_modules+=("${dir} (failed to load packages; see the annotation)")
+              # A named failure keeps load errors in the summaries and PR comment even though no tests ran.
+              jq -nc --arg module "$dir" \
+                '{Action: "fail", Package: $module, Test: "Package load failed", Elapsed: 0}' \
+                >> "$timing_events"
               git checkout -- "${dir}/go.mod" "${dir}/go.sum"
               continue
             fi
@@ -566,10 +570,6 @@ jobs:
           done 3< <(jq -r '.[] | [.dir, (.packages | join(" "))] | @tsv' <<< "$MODULES")
 
           if [ "${#failed_modules[@]}" -gt 0 ]; then
-            {
-              echo "### Failed Go modules (${{ inputs.name }}, ${{ matrix.id }})"
-              printf -- '- %s\n' "${failed_modules[@]}"
-            } | tee -a "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
       - if: github.repository == 'hashicorp/vault-enterprise' && (success() || failure())
@@ -754,6 +754,14 @@ jobs:
           | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
           >> '${{ steps.metadata.outputs.failure-summary-file-name }}'
+
+          if [ -s '${{ steps.metadata.outputs.failure-summary-file-name }}' ]; then
+            {
+              echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
+              echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
+              cat '${{ steps.metadata.outputs.failure-summary-file-name }}'
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
       - if: success() || failure()
         name: Upload failure summary
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

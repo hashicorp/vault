@@ -149,9 +149,6 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if key == nil && p.KeyVersionType(ver) != keysutil.KeyType_MANAGED_KEY {
-		return nil, fmt.Errorf("HMAC key value could not be computed")
-	}
 
 	hashAlgorithm, ok := keysutil.HashTypeMap[algorithm]
 	if !ok {
@@ -205,15 +202,24 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 
 		var retBytes []byte
 
-		if p.Type == keysutil.KeyType_MANAGED_KEY {
+		if p.KeyVersionType(ver) == keysutil.KeyType_MANAGED_KEY {
 			managedKeySystemView, err := b.GetManagedKeySystemView()
 			if err != nil {
+				if batchInputRaw != nil {
+					response[i].Error = err.Error()
+				}
 				response[i].err = err
+				continue
 			}
 
 			retBytes, err = p.HMACWithManagedKey(ctx, ver, managedKeySystemView, b.backendUUID, algorithm, input)
 			if err != nil {
+				if batchInputRaw != nil {
+					response[i].Error = err.Error()
+				}
 				response[i].err = err
+
+				continue
 			}
 		} else {
 			hf := hmac.New(hashAlg, key)
@@ -384,21 +390,38 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 			continue
 		}
 
-		key, err := p.HMACKey(ver)
-		if err != nil {
-			response[i].Error = err.Error()
-			response[i].err = logical.ErrInvalidRequest
-			continue
-		}
-		if key == nil {
-			response[i].Error = ""
-			response[i].err = fmt.Errorf("HMAC key value could not be computed")
-			continue
+		var retBytes []byte
+		if p.KeyVersionType(ver) != keysutil.KeyType_MANAGED_KEY {
+			key, err := p.HMACKey(ver)
+			if err != nil {
+				response[i].Error = err.Error()
+				response[i].err = logical.ErrInvalidRequest
+				continue
+			}
+
+			hf := hmac.New(hashAlg, key)
+			hf.Write(input)
+			retBytes = hf.Sum(nil)
+		} else {
+			managedKeySystemView, err := b.GetManagedKeySystemView()
+			if err != nil {
+				if batchInputRaw != nil {
+					response[i].Error = err.Error()
+				}
+				response[i].err = err
+				continue
+			}
+
+			retBytes, err = p.HMACWithManagedKey(ctx, ver, managedKeySystemView, b.backendUUID, algorithm, input)
+			if err != nil {
+				if batchInputRaw != nil {
+					response[i].Error = err.Error()
+				}
+				response[i].err = err
+				continue
+			}
 		}
 
-		hf := hmac.New(hashAlg, key)
-		hf.Write(input)
-		retBytes := hf.Sum(nil)
 		response[i].Valid = hmac.Equal(retBytes, verBytes)
 		successfulRequests++
 	}

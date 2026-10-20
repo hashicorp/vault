@@ -12,8 +12,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1399,6 +1401,33 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 	for i := range cluster.Cores {
 		verifyInitStatus(i, true)
 	}
+}
+
+// TestRaft_Join_RejectsAutoJoinMetadata verifies that the unauthenticated join
+// endpoint rejects caller-selected discovery before making an outbound request.
+func TestRaft_Join_RejectsAutoJoinMetadata(t *testing.T) {
+	t.Setenv("PACKET_AUTH_TOKEN", "harmless-test-token")
+	t.Setenv("PACKET_PROJECT", "test-project")
+
+	var requests atomic.Int32
+	discoveryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
+	}))
+	defer discoveryServer.Close()
+
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+	})
+	client, err := cluster.Cores[1].Client.Clone()
+	require.NoError(t, err)
+	client.SetToken("")
+
+	_, err = client.Sys().RaftJoin(&api.RaftJoinRequest{
+		AutoJoin: "provider=packet url=" + discoveryServer.URL,
+	})
+	require.ErrorContains(t, err, "auto-join metadata must be configured using raft.retry_join")
+	require.Zero(t, requests.Load())
 }
 
 // TestRaftCluster_Removed creates a 3 node raft cluster and then removes one of

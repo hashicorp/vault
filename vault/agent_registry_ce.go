@@ -21,7 +21,7 @@ type AgentRegistry struct {
 	*framework.Backend
 }
 
-func (ar *AgentRegistry) loadRegistrations(_ context.Context, _ bool) error {
+func (ar *AgentRegistry) loadArtifacts(_ context.Context, _ bool) error {
 	return nil
 }
 
