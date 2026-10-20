@@ -433,3 +433,55 @@ func TestRetryHandlerAPIConnectivityProblemsNotifications(t *testing.T) {
 		t.Fatal("expected true")
 	}
 }
+
+// In this test, a label patch fails and is queued for retry, then a newer
+// patch for the same label succeeds. The retry must not overwrite it.
+func TestRetryHandlerNotifySupersedesQueuedPatch(t *testing.T) {
+	testState, testConf, closeFunc := kubetest.Server(t)
+	defer closeFunc()
+	defer kubetest.ReturnGatewayTimeouts.Store(false)
+
+	client.Scheme = testConf.ClientScheme
+	client.TokenFile = testConf.PathToTokenFile
+	client.RootCAFile = testConf.PathToRootCAFile
+	client.RetryMax = 0
+	t.Setenv(client.EnvVarKubernetesServiceHost, testConf.ServiceHost)
+	t.Setenv(client.EnvVarKubernetesServicePort, testConf.ServicePort)
+
+	c, err := client.New(hclog.NewNullLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r := &retryHandler{
+		logger:          hclog.NewNullLogger(),
+		namespace:       kubetest.ExpectedNamespace,
+		podName:         kubetest.ExpectedPodName,
+		patchesToRetry:  make(map[string]*client.Patch),
+		client:          c,
+		initialStateSet: true,
+	}
+
+	kubetest.ReturnGatewayTimeouts.Store(true)
+	r.Notify(&client.Patch{
+		Operation: client.Replace,
+		Path:      pathToLabels + labelActive,
+		Value:     "false",
+	})
+	if len(r.patchesToRetry) != 1 {
+		t.Fatalf("expected 1 queued patch, got %d", len(r.patchesToRetry))
+	}
+
+	kubetest.ReturnGatewayTimeouts.Store(false)
+	r.Notify(&client.Patch{
+		Operation: client.Replace,
+		Path:      pathToLabels + labelActive,
+		Value:     "true",
+	})
+
+	r.updateState()
+
+	if val := testState.Get(pathToLabels + labelActive)["value"]; val != "true" {
+		t.Fatalf("expected %q but received %q", "true", val)
+	}
+}

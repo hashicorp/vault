@@ -1,0 +1,3 @@
+```release-note:bug
+serviceregistration/kubernetes: Fix a stale `vault-active` label patch overwriting a newer one after a failed update, and resend refreshed service account tokens on 401/403 retries
+```

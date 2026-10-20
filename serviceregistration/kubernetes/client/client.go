@@ -158,6 +158,11 @@ func (c *Client) do(req *http.Request, ptrToReturnObj interface{}) error {
 		RetryMax:     RetryMax,
 		CheckRetry:   c.getCheckRetry(req),
 		Backoff:      retryablehttp.DefaultBackoff,
+		// getCheckRetry may have reloaded the token after a 401 or 403.
+		PrepareRetry: func(retryReq *http.Request) error {
+			retryReq.Header.Set("Authorization", "Bearer "+c.config.BearerToken)
+			return nil
+		},
 	}
 	client.HTTPClient.Transport = &http.Transport{
 		TLSClientConfig: &tls.Config{

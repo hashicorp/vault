@@ -128,7 +128,12 @@ func (r *retryHandler) Notify(patch *client.Patch) {
 			r.logger.Warn(fmt.Sprintf("unable to update state for %s due to %s, will retry", patch.Path, err.Error()))
 		}
 		r.patchesToRetry[patch.Path] = patch
+		return
 	}
+
+	// This patch supersedes any older failed patch for the same label, which
+	// would otherwise overwrite it on the next retry.
+	delete(r.patchesToRetry, patch.Path)
 }
 
 // setInitialStateInternal sets the initial state remotely. This should be
