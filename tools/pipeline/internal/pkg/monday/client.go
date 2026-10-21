@@ -5,11 +5,25 @@ package monday
 
 import (
 	"net/http"
+	"time"
 
 	graphql "github.com/hasura/go-graphql-client"
 )
 
 const apiURL = "https://api.monday.com/v2"
+
+// defaultRetryDelay is the fixed delay between attempts when a mutation fails
+// with a retryable error.
+const defaultRetryDelay = 5 * time.Second
+
+// retryDelayOrDefault returns d, or defaultRetryDelay when d is zero. Requests
+// carry an unexported delay override so tests can shorten the wait.
+func retryDelayOrDefault(d time.Duration) time.Duration {
+	if d == 0 {
+		return defaultRetryDelay
+	}
+	return d
+}
 
 // DuplicateBoardType is the GraphQL enum for the duplicate_board mutation's
 // duplicate_type argument. Implements graphql.GraphQLType so that hasura emits

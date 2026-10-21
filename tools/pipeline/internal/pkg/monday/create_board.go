@@ -39,6 +39,9 @@ type CreateBoardReq struct {
 	// BoardKind controls the visibility of the new board.
 	// Defaults to BoardKindPublic when zero.
 	BoardKind BoardKind
+
+	// retryDelay overrides the delay between retries. Zero uses defaultRetryDelay.
+	retryDelay time.Duration
 }
 
 // CreateBoardRes is the result of a CreateBoardReq.
@@ -91,7 +94,7 @@ func (r *CreateBoardReq) Run(ctx context.Context, client *graphql.Client) (*Crea
 			return nil
 		},
 		retry.Attempts(5),
-		retry.Delay(5*time.Second),
+		retry.Delay(retryDelayOrDefault(r.retryDelay)),
 		retry.DelayType(retry.FixedDelay),
 		retry.Context(ctx),
 		retry.RetryIf(isRetryableError),
