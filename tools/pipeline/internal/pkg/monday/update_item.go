@@ -20,6 +20,9 @@ type UpdateItemReq struct {
 	ItemID   string
 	ColumnID string
 	Value    string
+
+	// retryDelay overrides the delay between retries. Zero uses defaultRetryDelay.
+	retryDelay time.Duration
 }
 
 type UpdateItemRes struct {
@@ -67,7 +70,7 @@ func (r *UpdateItemReq) Run(ctx context.Context, client *graphql.Client) (*Updat
 			return nil
 		},
 		retry.Attempts(5),
-		retry.Delay(5*time.Second),
+		retry.Delay(retryDelayOrDefault(r.retryDelay)),
 		retry.DelayType(retry.FixedDelay),
 		retry.Context(ctx),
 		retry.RetryIf(isRetryableError),
