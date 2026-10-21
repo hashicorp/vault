@@ -148,6 +148,12 @@ runs:
         tags: ${{ steps.vars.outputs.docker-container-tags }}
         target: ${{ steps.vars.outputs.docker-container-target }}
         version: ${{ steps.vars.outputs.container-version }}
+    - if: inputs.docker == 'true'
+      name: Ensure Docker image rejects compromised certificate chains
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ env.AUTO_TAG }}
+      run: bash .github/actions/containerize/check-emudhra.sh "$IMAGE_NAME"
     - if: inputs.redhat == 'true'
       uses: hashicorp/actions-docker-build@4e0c63aad578fbc5d9dc5a88d108b8fc6253f769
       with:
@@ -162,3 +168,9 @@ runs:
         revision: ${{ steps.vars.outputs.revision }}
         target: ${{ steps.vars.outputs.redhat-container-target }}
         version: ${{ steps.vars.outputs.container-version }}
+    - if: inputs.redhat == 'true'
+      name: Ensure Red Hat image rejects compromised certificate chains
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ env.AUTO_TAG }}
+      run: bash .github/actions/containerize/check-emudhra.sh "$IMAGE_NAME"
