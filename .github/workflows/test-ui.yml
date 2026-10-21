@@ -69,6 +69,9 @@ jobs:
           GIT_CONFIG_VALUE_0: https://github.com
           # Skip go generate. Generated code should be checked in.
           SKIP_GEN: "1"
+          # Build the root module on its own. Workspace mode needs checksums that aren't in any
+          # module's go.sum, and we don't keep go.work.sum in the tree.
+          GOWORK: "off"
         run: |
           rm -rf ./pkg
           mkdir ./pkg

@@ -83,7 +83,7 @@ jobs:
           GIT_CONFIG_KEY_1: user.email
           GIT_CONFIG_VALUE_1: hc-github-team-secure-vault-ecosystem@users.noreply.github.com
         run: |
-          git add ./\*go.mod ./\*go.sum go.work go.work.sum
+          git add ./\*go.mod ./\*go.sum go.work
           git commit -m "Update ${{ inputs.plugin }} to v${{ inputs.version }}"
           git push -f origin ${{ inputs.base-branch }}:"$VAULT_BRANCH"
 

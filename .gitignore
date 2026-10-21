@@ -34,6 +34,9 @@ _testmain.go
 
 # Vault-specific
 example.hcl
+# Go will regenerate this whenever we use the workspace. We don't need it on tree since our builds
+# and tests use GOWORK=off and each module's go.sum.
+/go.work.sum
 example.vault.d
 
 # Without this, the *.[568vq] above ignores this folder.
