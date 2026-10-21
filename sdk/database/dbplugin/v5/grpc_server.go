@@ -132,6 +132,7 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 		UsernameConfig: UsernameMetadata{
 			DisplayName: req.GetUsernameConfig().GetDisplayName(),
 			RoleName:    req.GetUsernameConfig().GetRoleName(),
+			Reason:      req.GetUsernameConfig().GetReason(),
 		},
 		CredentialType:     CredentialType(req.GetCredentialType()),
 		Password:           req.GetPassword(),
