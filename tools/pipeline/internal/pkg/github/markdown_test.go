@@ -34,6 +34,12 @@ func TestMarkdownLiteralCells(t *testing.T) {
 			require.Contains(t, md, "## Missing Patterns")
 			return md, r.ToTable()
 		},
+		"open PRs": func(t *testing.T) (string, string) {
+			r := &github.ListOpenPRsRes{BranchPRs: map[string][]*github.OpenPullRequest{
+				raw: {{Milestone: raw, Backports: []string{raw}}},
+			}}
+			return r.ToMarkdown(), r.ToTable()
+		},
 		"sync go mod": func(t *testing.T) (string, string) {
 			r := &github.SyncGoModRes{ToBranch: raw}
 			return r.ToMarkdown(errText), r.ToString(errText)
