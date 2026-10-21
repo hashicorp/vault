@@ -151,7 +151,7 @@ require (
 	github.com/hashicorp/raft-autopilot v0.3.0
 	github.com/hashicorp/raft-boltdb/v2 v2.3.0
 	github.com/hashicorp/raft-snapshot v1.0.4
-	github.com/hashicorp/raft-wal v0.4.0
+	github.com/hashicorp/raft-wal v0.4.2
 	github.com/hashicorp/vault-envelope-encryption-sdk v0.1.1
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.24.0
@@ -174,7 +174,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.14.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.26.3-0.20260626165612-824fb96aa7a8
+	github.com/hashicorp/vault-plugin-secrets-kv v0.27.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.18.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.15.0
@@ -237,15 +237,15 @@ require (
 	go.opentelemetry.io/otel/sdk v1.45.0
 	go.opentelemetry.io/otel/trace v1.46.0
 	go.uber.org/atomic v1.12.0
-	golang.org/x/crypto v0.57.0
+	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597
-	golang.org/x/net v0.59.0
+	golang.org/x/net v0.60.0
 	golang.org/x/oauth2 v0.37.0
-	golang.org/x/sync v0.23.0
-	golang.org/x/sys v0.48.0
-	golang.org/x/term v0.46.0
+	golang.org/x/sync v0.24.0
+	golang.org/x/sys v0.49.0
+	golang.org/x/term v0.47.0
 	golang.org/x/time v0.16.0
-	golang.org/x/tools v0.49.0
+	golang.org/x/tools v0.51.0
 	google.golang.org/api v0.299.0
 	google.golang.org/grpc v1.84.0
 	google.golang.org/protobuf v1.36.12
@@ -544,7 +544,7 @@ require (
 	github.com/sony/gobreaker/v2 v2.4.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/spiffe/go-spiffe/v2 v2.8.1 // indirect
+	github.com/spiffe/go-spiffe/v2 v2.8.2 // indirect
 	github.com/std-uritemplate/std-uritemplate/go/v2 v2.0.12 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.3.83 // indirect
@@ -579,8 +579,8 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/mod v0.41.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260811182544-a038080d80e5 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	golang.org/x/telemetry v0.0.0-20260924152758-ed294f943157 // indirect
+	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto v0.0.0-20260715232425-e75dac1f907d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688 // indirect
