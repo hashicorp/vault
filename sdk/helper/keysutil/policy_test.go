@@ -1417,3 +1417,199 @@ func TestPolicy_RotateInMemoryWithAlgorithmRejectsUsageChanges(t *testing.T) {
 	_, ok := p.Keys["2"]
 	require.False(t, ok, "new key version should not be created after a rejected algorithm change")
 }
+
+// TestIsCompatibleKeyType verifies that isCompatibleKeyType allows algorithm
+// changes that preserve key usage, rejects changes that alter key usage, allows
+// any transition to or from MANAGED_KEY, and blocks algorithm changes away from
+// ED25519 when key derivation is enabled.
+func TestIsCompatibleKeyType(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		newType   KeyType
+		config    PolicyConfig
+		expectErr bool
+	}{
+		// Same-type rotations are always compatible.
+		"aes256-gcm96 to aes256-gcm96": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType: KeyType_AES256_GCM96,
+		},
+		// AEAD <-> AEAD: same usage group, compatible.
+		"aes256-gcm96 to aes128-gcm96": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType: KeyType_AES128_GCM96,
+		},
+		"aes128-gcm96 to chacha20-poly1305": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES128_GCM96},
+			newType: KeyType_ChaCha20_Poly1305,
+		},
+		// Signature <-> Signature: compatible.
+		"ecdsa-p256 to ecdsa-p384": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_ECDSA_P384,
+		},
+		"ecdsa-p256 to ed25519": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_ED25519,
+		},
+		"ed25519 to ecdsa-p521": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ED25519},
+			newType: KeyType_ECDSA_P521,
+		},
+		"ed25519 to ml-dsa": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ED25519},
+			newType: KeyType_ML_DSA,
+		},
+		// RSA has both signature and asymmetric-encryption usages; it is
+		// compatible with pure signature key types.
+		"rsa2048 to rsa4096": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_RSA2048},
+			newType: KeyType_RSA4096,
+		},
+		"rsa2048 to ecdsa-p256": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_RSA2048},
+			newType: KeyType_ECDSA_P256,
+		},
+		"ecdsa-p256 to rsa2048": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_RSA2048,
+		},
+		// Transitions to MANAGED_KEY are always allowed.
+		"aes256-gcm96 to managed-key": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType: KeyType_MANAGED_KEY,
+		},
+		"ecdsa-p256 to managed-key": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType: KeyType_MANAGED_KEY,
+		},
+		// Transitions from MANAGED_KEY are always allowed.
+		"managed-key to aes256-gcm96": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_MANAGED_KEY},
+			newType: KeyType_AES256_GCM96,
+		},
+		// ED25519 with derivation: only ED25519 is allowed.
+		"ed25519 derived to ed25519": {
+			config:  PolicyConfig{Name: "test", Type: KeyType_ED25519, Derived: true},
+			newType: KeyType_ED25519,
+		},
+		"ed25519 derived to ecdsa-p256 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_ED25519, Derived: true},
+			newType:   KeyType_ECDSA_P256,
+			expectErr: true,
+		},
+		// Cross-usage incompatibilities.
+		"aes256-gcm96 to ecdsa-p256 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType:   KeyType_ECDSA_P256,
+			expectErr: true,
+		},
+		"ecdsa-p256 to aes256-gcm96 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_ECDSA_P256},
+			newType:   KeyType_AES256_GCM96,
+			expectErr: true,
+		},
+		"hmac to aes256-gcm96 is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_HMAC},
+			newType:   KeyType_AES256_GCM96,
+			expectErr: true,
+		},
+		"aes256-gcm96 to hmac is rejected": {
+			config:    PolicyConfig{Name: "test", Type: KeyType_AES256_GCM96},
+			newType:   KeyType_HMAC,
+			expectErr: true,
+		},
+	}
+
+	for name, tt := range testCases {
+		t.Run(name, func(t *testing.T) {
+			pol := NewPolicy(tt.config)
+			pol.Keys = keyEntryMap{
+				"1": KeyEntry{},
+			}
+
+			err := pol.isCompatibleKeyType(tt.newType)
+			if tt.expectErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetKeyConfig(t *testing.T) {
+	var hmacType KeyType = KeyType_HMAC
+	var ecdsaType KeyType = KeyType_ECDSA_P384
+
+	testCases := map[string]struct {
+		pol            *Policy
+		expectedType   KeyType
+		expectedConfig *KeyConfig
+	}{
+		"before key creation": {
+			pol: &Policy{
+				Type: KeyType_ECDSA_P384,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{},
+		},
+		"key rotation": {
+			pol: &Policy{
+				Type:          KeyType_ECDSA_P384,
+				Keys:          keyEntryMap{"1": KeyEntry{}},
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{},
+		},
+		"key rotation with algorithm": {
+			pol: &Policy{
+				Type:          KeyType_ECDSA_P384,
+				Keys:          keyEntryMap{"1": KeyEntry{Algorithm: &ecdsaType}},
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{},
+		},
+		"hmac keys before key creation": {
+			pol: &Policy{
+				Type:    KeyType_HMAC,
+				KeySize: 32,
+			},
+			expectedType:   KeyType_HMAC,
+			expectedConfig: &KeyConfig{KeySize: 32},
+		},
+		"hmac key rotation": {
+			pol: &Policy{
+				Type:          KeyType_ECDSA_P384,
+				Keys:          keyEntryMap{"1": KeyEntry{}},
+				KeySize:       32,
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_ECDSA_P384,
+			expectedConfig: &KeyConfig{KeySize: 32},
+		},
+		"hmac key rotation with algorithm": {
+			pol: &Policy{
+				Type:          KeyType_HMAC,
+				Keys:          keyEntryMap{"1": KeyEntry{KeySize: 32, Algorithm: &hmacType}},
+				LatestVersion: 1,
+			},
+			expectedType:   KeyType_HMAC,
+			expectedConfig: &KeyConfig{KeySize: 32},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			keyType, keyConfig, err := tc.pol.getKeyConfig(tc.pol.LatestVersion)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedType, keyType)
+			require.Equal(t, tc.expectedConfig, keyConfig)
+		})
+	}
+}
