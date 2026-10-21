@@ -15,6 +15,5 @@ use (
 	./command/client
 	./internalshared
 	./sdk
-	./tools/pipeline
 	./version
 )
