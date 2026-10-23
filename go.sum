@@ -843,8 +843,8 @@ github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.0 h1:RP5Q4Lz86D+l1QSWEOd
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.0/go.mod h1:+OU4zOV9sK5mfYFdfEfV1ULhdo2ZJSLTWQJXcn+4ewE=
 github.com/hashicorp/vault-plugin-auth-oci v0.22.0 h1:SPkkaDFz++ODxj88A7JuGltUViiNj/Qxmn48KOyroj0=
 github.com/hashicorp/vault-plugin-auth-oci v0.22.0/go.mod h1:NsbkQh8hev2nVacNMpvAAPRXdDYfYBZxA9W5Oodamuw=
-github.com/hashicorp/vault-plugin-database-couchbase v0.17.0 h1:Amahe9YkeuK+cnu8Gwt9KmEu8+aV+qMmtidoiJvOdko=
-github.com/hashicorp/vault-plugin-database-couchbase v0.17.0/go.mod h1:OeQ24tKxDmSiBqMPOYxQ7zSLHnceFHHwxG7UQz8FdAw=
+github.com/hashicorp/vault-plugin-database-couchbase v0.17.1 h1:cC8qFXErzvqdFIC4aiCsCTAYlCCb7Zs14lAQqHePdzU=
+github.com/hashicorp/vault-plugin-database-couchbase v0.17.1/go.mod h1:TZ6T08/DqS42VpW2D87zS7BOp6SqPTAqxjq8iQ3bz78=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0 h1:/eK+PbHhRA8eToew4g98A9GtLdw3zpUUATJD+Ko8zJY=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0/go.mod h1:det1+jA8armrKsmJIi1KXC+/t0gRdUVYAvxVDbapvq4=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1 h1:/bT9LvdvHsFsTha+S5Hy9naV6CrpE4T5AqYzaWOTlrM=
@@ -853,12 +853,12 @@ github.com/hashicorp/vault-plugin-database-redis v0.9.0 h1:PUbtbTBgXymGxd3U4kQXg
 github.com/hashicorp/vault-plugin-database-redis v0.9.0/go.mod h1:FqP7g+BIpTVMbvCqLRDO1K76DOVRxeY66/770cBsdfw=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.0 h1:4R+HyvPwy+CPk6Ep8e4M6XUd1D8dceT8A6DlQgMOijU=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.0/go.mod h1:hJWtDqRnsUx1IWy8pRKmVMHRDZJ9XNW1FWr4JfYy/0c=
-github.com/hashicorp/vault-plugin-database-snowflake v0.17.0 h1:vEhilT+XTH/0ewRvpTUn3zAmDgCK3xisy5pkX/R38m4=
-github.com/hashicorp/vault-plugin-database-snowflake v0.17.0/go.mod h1:vhLg0wFGHLoS3YhIpVCynZorwzeND0UR+AKpPAPxwQU=
+github.com/hashicorp/vault-plugin-database-snowflake v0.17.1 h1:SniuhfROuwQ5CNsQvUrChAGXS2LDl7NjMgChXcAuo8g=
+github.com/hashicorp/vault-plugin-database-snowflake v0.17.1/go.mod h1:og72ifS9Ckmrph5+3cxlCmW9Ke1qOy07s6Dv+vNdNO8=
 github.com/hashicorp/vault-plugin-secrets-ad v0.23.0 h1:92sVbsItwAvX4vMFVCsC3J8o0AYerOxpsEPjp1yxMRo=
 github.com/hashicorp/vault-plugin-secrets-ad v0.23.0/go.mod h1:flOZFVSM3i63FhE9fw+1aKiAHsKE2YOpQYr75MniwKU=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.0 h1:oZzstFMPPTBX+XqP7S/WaJo8au9qx/ZTJXiXEv+4n1I=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.0/go.mod h1:JoKVsTtRaDHFeI7psno4aafFYyC0OuUOYbGl0N/189g=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.1 h1:eiGNyqcM9T8iNjMX7Bf+nX7gdfr3/OY22NxCq27cGec=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.1/go.mod h1:MLuxPTWJQ+crunZlY9Ag5RHcIuTS2idBuJ3uXxACRvk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.25.1 h1:TsNf///5v9rC7PKJrUvzEfThC8CcTdwnXYE4yoxFMUU=
 github.com/hashicorp/vault-plugin-secrets-azure v0.25.1/go.mod h1:ntFjytD9ehQWS5r2T/MWqpCLhzxeoKUGL5XjibzW6/k=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.25.0 h1:Izh43CWxWh9L7wabe3GFE5PR961e10fpqPsmPLF3vBo=
