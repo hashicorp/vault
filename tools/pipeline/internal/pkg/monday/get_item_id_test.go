@@ -30,7 +30,16 @@ func TestGetItemIDReq_Run(t *testing.T) {
 		boardQuery  = `query ($boardId:ID!){boards(ids:[$boardId]){items_page(limit:100){items{id,name}}}}`
 		parentQuery = `query ($parentId:ID!){items(ids:[$parentId]){subitems{id,name,board{id}}}}`
 
-		// The responses Run() should receive from Monday for the different cases
+		// Response bodies for the different cases. missingBoardResponse,
+		// noSubitemsResponse, missingParentResponse and unauthorizedResponse
+		// were captured from the Monday.com API with request IDs
+		// replaced by a fake value. The rest are hand-written placeholders
+		// shaped like Monday's responses.
+		missingBoardResponse  = `{"data":{"boards":[]},"extensions":{"request_id":"00000000-0000-0000-0000-000000000000"}}`
+		noSubitemsResponse    = `{"data":{"items":[{"subitems":[]}]},"extensions":{"request_id":"00000000-0000-0000-0000-000000000000"}}`
+		missingParentResponse = `{"data":{"items":[]},"extensions":{"request_id":"00000000-0000-0000-0000-000000000000"}}`
+		unauthorizedResponse  = `{"errors":["Not Authenticated"]}`
+
 		boardResponse = `{"data":{"boards":[{"items_page":{"items":[
 			{"id":"111","name":"Other item"},
 			{"id":"222","name":"Release Checklist"},
@@ -106,7 +115,7 @@ func TestGetItemIDReq_Run(t *testing.T) {
 			wantQuery: boardQuery, wantVars: boardVars, wantErr: "couldn't find id for item Release  Checklist",
 		},
 		"board: board not found": {
-			req: boardReq("Release Checklist"), status: 200, body: `{"data":{"boards":[]}}`,
+			req: boardReq("Release Checklist"), status: 200, body: missingBoardResponse,
 			wantQuery: boardQuery, wantVars: boardVars, wantErr: "board 1010222 not found",
 		},
 		"board: graphql error in 200 response": {
@@ -114,7 +123,7 @@ func TestGetItemIDReq_Run(t *testing.T) {
 			wantQuery: boardQuery, wantVars: boardVars, wantErr: "Not authenticated",
 		},
 		"board: HTTP 401": {
-			req: boardReq("Release Checklist"), status: 401, body: `{}`,
+			req: boardReq("Release Checklist"), status: 401, body: unauthorizedResponse,
 			wantQuery: boardQuery, wantVars: boardVars, wantErr: "querying item by item-name",
 		},
 		"board: HTTP 500": {
@@ -138,11 +147,11 @@ func TestGetItemIDReq_Run(t *testing.T) {
 			wantQuery: parentQuery, wantVars: parentVars, wantErr: "couldn't find subitem Missing under parent item 5050606",
 		},
 		"parent: no subitems": {
-			req: parentReq("If updating,  update the Go Version for CE"), status: 200, body: `{"data":{"items":[{"subitems":[]}]}}`,
+			req: parentReq("If updating,  update the Go Version for CE"), status: 200, body: noSubitemsResponse,
 			wantQuery: parentQuery, wantVars: parentVars, wantErr: "couldn't find subitem",
 		},
 		"parent: parent not found": {
-			req: parentReq("If updating,  update the Go Version for CE"), status: 200, body: `{"data":{"items":[]}}`,
+			req: parentReq("If updating,  update the Go Version for CE"), status: 200, body: missingParentResponse,
 			wantQuery: parentQuery, wantVars: parentVars, wantErr: "parent item 5050606 not found",
 		},
 		"parent: graphql error in 200 response": {
@@ -150,7 +159,7 @@ func TestGetItemIDReq_Run(t *testing.T) {
 			wantQuery: parentQuery, wantVars: parentVars, wantErr: "Item not found",
 		},
 		"parent: HTTP 401": {
-			req: parentReq("If updating,  update the Go Version for CE"), status: 401, body: `{}`,
+			req: parentReq("If updating,  update the Go Version for CE"), status: 401, body: unauthorizedResponse,
 			wantQuery: parentQuery, wantVars: parentVars, wantErr: "querying subitem by parent-id",
 		},
 	} {
