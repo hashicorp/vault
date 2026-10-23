@@ -20,14 +20,15 @@ import (
 )
 
 const (
+	// The default number of PBKDF2 iterations for SCRAM-SHA-256, matching the PostgreSQL default.
+	// @see https://github.com/postgres/postgres/blob/e6bdfd9700ebfc7df811c97c2fc46d7e94e329a2/src/include/common/scram-common.h#L43-L47
+	DefaultIterations = 4096
+
 	// @see https://github.com/postgres/postgres/blob/e6bdfd9700ebfc7df811c97c2fc46d7e94e329a2/src/include/common/scram-common.h#L36-L41
 	saltSize = 16
 
 	// @see https://github.com/postgres/postgres/blob/c30f54ad732ca5c8762bb68bbe0f51de9137dd72/src/include/common/sha2.h#L22
 	digestLen = 32
-
-	// @see https://github.com/postgres/postgres/blob/e6bdfd9700ebfc7df811c97c2fc46d7e94e329a2/src/include/common/scram-common.h#L43-L47
-	iterationCnt = 4096
 )
 
 var (
@@ -75,12 +76,12 @@ func hashPassword(rawPassword, salt []byte, iter, keyLen int) string {
 	)
 }
 
-func Hash(password string) (string, error) {
+func Hash(password string, iterations int) (string, error) {
 	salt, err := genSalt(saltSize)
 	if err != nil {
 		return "", err
 	}
 
-	hashedPassword := hashPassword([]byte(password), salt, iterationCnt, digestLen)
+	hashedPassword := hashPassword([]byte(password), salt, iterations, digestLen)
 	return hashedPassword, nil
 }
