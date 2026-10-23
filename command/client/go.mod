@@ -49,7 +49,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.24.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.27.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.18.0
-	github.com/hashicorp/vault-plugin-auth-oci v0.22.0
+	github.com/hashicorp/vault-plugin-auth-oci v0.22.1
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/hashicorp/vault/command/base v0.0.0-00010101000000-000000000000
 	github.com/hashicorp/vault/internalshared v0.0.0

@@ -841,10 +841,10 @@ github.com/hashicorp/vault-plugin-auth-kerberos v0.18.0 h1:Y3Yf8+b+m+rMBEirb/ofX
 github.com/hashicorp/vault-plugin-auth-kerberos v0.18.0/go.mod h1:V1wspzIJt+hCMOdHwFiZC31N6RGPolf1ybkIJHhmULc=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.0 h1:RP5Q4Lz86D+l1QSWEOdDvHOpmwnpfJYGGVFyHSmV2uM=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.0/go.mod h1:+OU4zOV9sK5mfYFdfEfV1ULhdo2ZJSLTWQJXcn+4ewE=
-github.com/hashicorp/vault-plugin-auth-oci v0.22.0 h1:SPkkaDFz++ODxj88A7JuGltUViiNj/Qxmn48KOyroj0=
-github.com/hashicorp/vault-plugin-auth-oci v0.22.0/go.mod h1:NsbkQh8hev2nVacNMpvAAPRXdDYfYBZxA9W5Oodamuw=
-github.com/hashicorp/vault-plugin-database-couchbase v0.17.0 h1:Amahe9YkeuK+cnu8Gwt9KmEu8+aV+qMmtidoiJvOdko=
-github.com/hashicorp/vault-plugin-database-couchbase v0.17.0/go.mod h1:OeQ24tKxDmSiBqMPOYxQ7zSLHnceFHHwxG7UQz8FdAw=
+github.com/hashicorp/vault-plugin-auth-oci v0.22.1 h1:tN2/PE+g9O7WRq2BFyIzL/lDYEMYGfjIe2O6O75CWGk=
+github.com/hashicorp/vault-plugin-auth-oci v0.22.1/go.mod h1:B2XoB4vzBO3NLOTdkRJmpqIno+BkDV7Ps1kerDSQYpk=
+github.com/hashicorp/vault-plugin-database-couchbase v0.17.1 h1:cC8qFXErzvqdFIC4aiCsCTAYlCCb7Zs14lAQqHePdzU=
+github.com/hashicorp/vault-plugin-database-couchbase v0.17.1/go.mod h1:TZ6T08/DqS42VpW2D87zS7BOp6SqPTAqxjq8iQ3bz78=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0 h1:/eK+PbHhRA8eToew4g98A9GtLdw3zpUUATJD+Ko8zJY=
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0/go.mod h1:det1+jA8armrKsmJIi1KXC+/t0gRdUVYAvxVDbapvq4=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1 h1:/bT9LvdvHsFsTha+S5Hy9naV6CrpE4T5AqYzaWOTlrM=
