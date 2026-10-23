@@ -619,27 +619,35 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		// Trigger a seal reload if necessary. A seal reload is necessary when a node
 		// becomes the leader since its seal generation information may be out of
 		// date (as is the case, for example, when a new node joins the cluster).
+		// Sealing only the barrier here would leave c.sealed unset and stop this
+		// loop, so the node would report itself unsealed while rejecting every
+		// request. Give up the lock and retry instead, like the steps below.
 		if err := c.TriggerSealReload(c.activeContext); err != nil {
 			c.logger.Error("seal configuration reload error", "error", err)
-			c.barrier.Seal()
-			c.logger.Warn("vault is sealed")
+			activeCtxCancel()
 			c.heldHALock = nil
 			lock.Unlock()
 			close(continueCh)
 			c.stateLock.Unlock()
-			return
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			continue
 		}
 
 		// Perform seal migration
 		if err := c.migrateSeal(c.activeContext); err != nil {
 			c.logger.Error("seal migration error", "error", err)
-			c.barrier.Seal()
-			c.logger.Warn("vault is sealed")
+			// migrateSeal runs on every leadership change, so only a failed seal
+			// migration, which may leave the keys inconsistent, seals the node.
+			if c.IsInSealMigrationMode(false) {
+				go c.Shutdown()
+			}
+			activeCtxCancel()
 			c.heldHALock = nil
 			lock.Unlock()
 			close(continueCh)
 			c.stateLock.Unlock()
-			return
+			metrics.MeasureSince([]string{"core", "leadership_setup_failed"}, activeTime)
+			continue
 		}
 
 		// This block is used to wipe barrier/seal state and verify that
