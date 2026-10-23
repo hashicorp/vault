@@ -845,8 +845,8 @@ github.com/hashicorp/vault-plugin-auth-oci v0.22.1 h1:tN2/PE+g9O7WRq2BFyIzL/lDYE
 github.com/hashicorp/vault-plugin-auth-oci v0.22.1/go.mod h1:B2XoB4vzBO3NLOTdkRJmpqIno+BkDV7Ps1kerDSQYpk=
 github.com/hashicorp/vault-plugin-database-couchbase v0.17.1 h1:cC8qFXErzvqdFIC4aiCsCTAYlCCb7Zs14lAQqHePdzU=
 github.com/hashicorp/vault-plugin-database-couchbase v0.17.1/go.mod h1:TZ6T08/DqS42VpW2D87zS7BOp6SqPTAqxjq8iQ3bz78=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0 h1:/eK+PbHhRA8eToew4g98A9GtLdw3zpUUATJD+Ko8zJY=
-github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.0/go.mod h1:det1+jA8armrKsmJIi1KXC+/t0gRdUVYAvxVDbapvq4=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.1 h1:kqrxz7D40Fmzkvl+x5GrhohyvaXWuXjaYJXkXSoPJSM=
+github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.1/go.mod h1:cI/9Vec6HZ55X7wLSL07fDpMbTiIFls3/WZ45kw6TrI=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1 h1:/bT9LvdvHsFsTha+S5Hy9naV6CrpE4T5AqYzaWOTlrM=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1/go.mod h1:olHM92/hQabG5g4Uslo+tvA8HwNhWdAGyb+JHqsXVYk=
 github.com/hashicorp/vault-plugin-database-redis v0.9.1 h1:/rHtYJPOwYxMS4Ctd5H8Rz79T/HllVU5iN9Mn2Nkc60=
@@ -857,8 +857,8 @@ github.com/hashicorp/vault-plugin-database-snowflake v0.17.1 h1:SniuhfROuwQ5CNsQ
 github.com/hashicorp/vault-plugin-database-snowflake v0.17.1/go.mod h1:og72ifS9Ckmrph5+3cxlCmW9Ke1qOy07s6Dv+vNdNO8=
 github.com/hashicorp/vault-plugin-secrets-ad v0.23.0 h1:92sVbsItwAvX4vMFVCsC3J8o0AYerOxpsEPjp1yxMRo=
 github.com/hashicorp/vault-plugin-secrets-ad v0.23.0/go.mod h1:flOZFVSM3i63FhE9fw+1aKiAHsKE2YOpQYr75MniwKU=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.0 h1:oZzstFMPPTBX+XqP7S/WaJo8au9qx/ZTJXiXEv+4n1I=
-github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.0/go.mod h1:JoKVsTtRaDHFeI7psno4aafFYyC0OuUOYbGl0N/189g=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.1 h1:eiGNyqcM9T8iNjMX7Bf+nX7gdfr3/OY22NxCq27cGec=
+github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.1/go.mod h1:MLuxPTWJQ+crunZlY9Ag5RHcIuTS2idBuJ3uXxACRvk=
 github.com/hashicorp/vault-plugin-secrets-azure v0.25.1 h1:TsNf///5v9rC7PKJrUvzEfThC8CcTdwnXYE4yoxFMUU=
 github.com/hashicorp/vault-plugin-secrets-azure v0.25.1/go.mod h1:ntFjytD9ehQWS5r2T/MWqpCLhzxeoKUGL5XjibzW6/k=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.25.0 h1:Izh43CWxWh9L7wabe3GFE5PR961e10fpqPsmPLF3vBo=
