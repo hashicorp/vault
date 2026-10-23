@@ -610,6 +610,64 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // Real connection (actual running db) required to save role, so we aren't testing that flow yet
   });
 
+  test('enterprise: static-only users can open the Roles tab without listing dynamic roles', async function (assert) {
+    const backend = this.backend;
+    const policyName = `${backend}-static-only`;
+    const policy = `
+      path "${backend}/static-roles" {
+        capabilities = ["list"]
+      }
+      path "${backend}/static-roles/*" {
+        capabilities = ["list", "read"]
+      }
+      path "${backend}/static-creds/static-role-1" {
+        capabilities = ["read"]
+      }
+      path "${backend}/static-creds/static-role-2" {
+        capabilities = ["read"]
+      }
+    `;
+
+    // Skip database contact so this ACL regression can run without a live MySQL server.
+    await runCmd([
+      `write ${backend}/config/mysql plugin_name=mysql-database-plugin connection_url="{{username}}:{{password}}@tcp(127.0.0.1:3306)/" username=vaultadmin password=test-password allowed_roles="*" verify_connection=false`,
+      ...[1, 2].flatMap((index) => [
+        `write ${backend}/static-roles/static-role-${index} db_name=mysql username=static_user${index} rotation_period=24h skip_import_rotation=true`,
+        `write ${backend}/roles/dynamic-role-${index} db_name=mysql creation_statements="SELECT 1;"`,
+      ]),
+    ]);
+    const token = await runCmd(tokenWithPolicyCmd(policyName, policy));
+
+    try {
+      await login(token);
+      await visit(`/vault/secrets-engines/${backend}/overview`);
+
+      assert.dom(GENERAL.secretTab('Roles')).hasText('Roles', 'Static-only users can access the Roles tab');
+      assert.dom(GENERAL.secretTab('Connections')).doesNotExist('Connection access is not granted');
+      await click(GENERAL.searchSelect.trigger('search-input-role'));
+      assert.dom(GENERAL.searchSelect.options).exists({ count: 2 }, 'Only static roles are offered');
+      assert.dom(GENERAL.searchSelect.option(0)).hasText('static-role-1', 'The first static role is offered');
+      assert
+        .dom(GENERAL.searchSelect.option(1))
+        .hasText('static-role-2', 'The second static role is offered');
+
+      await click(GENERAL.secretTab('Roles'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets-engines/${backend}/list?tab=role`,
+        'The tab opens the role list'
+      );
+      assert.dom(SES.secretLink('static-role-1')).exists('The first static role is listed');
+      assert.dom(SES.secretLink('static-role-2')).exists('The second static role is listed');
+      assert.dom(SES.secretLink('dynamic-role-1')).doesNotExist('Dynamic roles remain inaccessible');
+      assert.dom(SES.secretLink('dynamic-role-2')).doesNotExist('No dynamic-role list permission is added');
+    } finally {
+      await visit('/vault/secrets-engines');
+      await login();
+      await runCmd(`delete sys/policies/acl/${policyName}`);
+    }
+  });
+
   test('root and limited access', async function (assert) {
     const backend = this.backend;
     const NO_ROLES_POLICY = `

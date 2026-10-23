@@ -48,6 +48,8 @@ O1aQIm23HrrG
 `
 
 func TestTransit_Certs_CreateCsr(t *testing.T) {
+	t.Parallel()
+
 	for _, keyType := range []string{
 		"rsa-2048", "rsa-3072", "rsa-4096",
 		"ecdsa-p256", "ecdsa-p384", "ecdsa-p521",
@@ -121,6 +123,8 @@ func testTransit_CreateCsr(t *testing.T, b logical.Backend, s logical.Storage, k
 }
 
 func TestTransit_Certs_ImportCertChain(t *testing.T) {
+	t.Parallel()
+
 	// Create Cluster
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -280,6 +284,8 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType, k
 }
 
 func TestTransit_Certs_ImportInvalidCertChain(t *testing.T) {
+	t.Parallel()
+
 	// Create Cluster
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -565,6 +571,8 @@ func testTransit_CreateCsr_PreservesNonExtensionAttributes(t *testing.T, b logic
 // TestTransit_Certs_CreateCsr_PreservesExtensions checks that re-signing a
 // template CSR preserves extension Critical flags and does not duplicate SANs.
 func TestTransit_Certs_CreateCsr_PreservesExtensions(t *testing.T) {
+	t.Parallel()
+
 	for _, keyType := range []string{"rsa-2048", "ecdsa-p256", "ed25519"} {
 		t.Run(keyType, func(t *testing.T) {
 			b, s := createBackendWithStorage(t)
@@ -684,6 +692,8 @@ func testTransit_CreateCsr_PreservesExtensions(t *testing.T, b logical.Backend, 
 // TestTransit_Certs_CreateCsr_PreservesOtherNameSAN verifies that otherName/UPN
 // entries inside the SAN extension survive re-signing unchanged.
 func TestTransit_Certs_CreateCsr_PreservesOtherNameSAN(t *testing.T) {
+	t.Parallel()
+
 	for _, keyType := range []string{"rsa-2048", "ecdsa-p256", "ed25519"} {
 		t.Run(keyType, func(t *testing.T) {
 			b, s := createBackendWithStorage(t)

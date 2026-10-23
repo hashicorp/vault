@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { getContext, render } from '@ember/test-helpers';
-import hbs from 'htmlbars-inline-precompile';
+import { hbs } from 'ember-cli-htmlbars';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -25,6 +25,52 @@ const mirageToModels = (data) => {
 module('Integration | Component | secret-list-header', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
+
+  for (const rolePath of ['roles', 'static-roles']) {
+    for (const capability of ['list', 'create', 'update']) {
+      test(`database Roles tab is shown with only ${capability} on ${rolePath}`, async function (assert) {
+        this.server.post('/sys/capabilities-self', (_, request) => {
+          const { paths } = JSON.parse(request.requestBody);
+          return {
+            data: Object.fromEntries(
+              paths.map((path) => [path, path === `custom-database/${rolePath}` ? [capability] : ['deny']])
+            ),
+          };
+        });
+        this.model = { id: 'custom-database', engineType: 'database' };
+
+        await render(hbs`<SecretListHeader @model={{this.model}} />`);
+
+        assert.dom(GENERAL.secretTab('Roles')).hasText('Roles', 'Either role type can make the tab visible');
+        assert
+          .dom(GENERAL.secretTab('Connections'))
+          .doesNotExist('Role permissions do not grant access to the Connections tab');
+      });
+    }
+  }
+
+  for (const roleCapabilities of [['deny'], ['read', 'delete']]) {
+    test(`database Roles tab is hidden with only ${roleCapabilities.join(
+      '/'
+    )} on both role types`, async function (assert) {
+      this.server.post('/sys/capabilities-self', (_, request) => {
+        const { paths } = JSON.parse(request.requestBody);
+        return {
+          data: Object.fromEntries(
+            paths.map((path) => [path, path === 'custom-database/config' ? ['list'] : roleCapabilities])
+          ),
+        };
+      });
+      this.model = { id: 'custom-database', engineType: 'database' };
+
+      await render(hbs`<SecretListHeader @model={{this.model}} />`);
+
+      assert.dom(GENERAL.secretTab('Roles')).doesNotExist('Neither role type grants tab access');
+      assert
+        .dom(GENERAL.secretTab('Connections'))
+        .hasText('Connections', 'Connection permissions still independently control their tab');
+    });
+  }
 
   test('it should render version badge for kv and generic engine types', async function (assert) {
     const backends = supportedSecretBackends();
