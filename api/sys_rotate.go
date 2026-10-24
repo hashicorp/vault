@@ -22,7 +22,7 @@ func (c *Sys) RotateWithContext(ctx context.Context) error {
 	r := c.c.NewRequest(http.MethodPost, "/v1/sys/rotate")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
