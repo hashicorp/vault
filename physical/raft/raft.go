@@ -12,6 +12,7 @@ import (
 	"io"
 	"maps"
 	"math/rand"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -1222,6 +1223,26 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 		return false
 	}
 
+	raftPath := filepath.Join(b.dataDir, raftState)
+	peersFile := filepath.Join(raftPath, peersFileName)
+	var recoveryConfig *raft.Configuration
+	_, err := os.Stat(peersFile)
+	if err == nil {
+		b.logger.Info("raft recovery initiated", "recovery_file", peersFileName)
+
+		config, err := raft.ReadConfigJSON(peersFile)
+		if err != nil {
+			return fmt.Errorf("raft recovery failed to parse peers.json: %w", err)
+		}
+
+		validateAddresses := opts.TLSKeyring != nil &&
+			!listenerIsNil(opts.ClusterListener) && b.serverAddressProvider == nil
+		if err := validateRaftRecoveryConfig(config, nonVotersAllowed, validateAddresses); err != nil {
+			return err
+		}
+		recoveryConfig = &config
+	}
+
 	var initialTimeoutMultiplier time.Duration
 	switch {
 	case opts.TLSKeyring == nil && listenerIsNil(opts.ClusterListener):
@@ -1287,28 +1308,10 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	// Setup the Raft store.
 	b.fsm.SetNoopRestore(true)
 
-	raftPath := filepath.Join(b.dataDir, raftState)
-	peersFile := filepath.Join(raftPath, peersFileName)
-	_, err := os.Stat(peersFile)
-	if err == nil {
-		b.logger.Info("raft recovery initiated", "recovery_file", peersFileName)
+	if recoveryConfig != nil {
+		b.logger.Info("raft recovery found new config", "config", *recoveryConfig)
 
-		recoveryConfig, err := raft.ReadConfigJSON(peersFile)
-		if err != nil {
-			return fmt.Errorf("raft recovery failed to parse peers.json: %w", err)
-		}
-
-		// Non-voting servers are only allowed in enterprise. If Suffrage is disabled,
-		// error out to indicate that it isn't allowed.
-		for idx := range recoveryConfig.Servers {
-			if !nonVotersAllowed && recoveryConfig.Servers[idx].Suffrage == raft.Nonvoter {
-				return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", recoveryConfig.Servers[idx].ID)
-			}
-		}
-
-		b.logger.Info("raft recovery found new config", "config", recoveryConfig)
-
-		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, recoveryConfig)
+		err = raft.RecoverCluster(raftConfig, b.fsm, b.logStore, b.stableStore, b.snapStore, b.raftTransport, *recoveryConfig)
 		if err != nil {
 			return fmt.Errorf("raft recovery failed: %w", err)
 		}
@@ -1444,6 +1447,21 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	b.StartRemovedChecker(ctx)
 
 	b.logger.Trace("finished setting up raft cluster")
+	return nil
+}
+
+func validateRaftRecoveryConfig(config raft.Configuration, nonVotersAllowed, validateAddresses bool) error {
+	for idx := range config.Servers {
+		server := config.Servers[idx]
+		if validateAddresses {
+			if _, _, err := net.SplitHostPort(string(server.Address)); err != nil {
+				return fmt.Errorf("raft recovery failed to parse configuration for node %q: address %q must use host:port format: %w", server.ID, server.Address, err)
+			}
+		}
+		if !nonVotersAllowed && server.Suffrage == raft.Nonvoter {
+			return fmt.Errorf("raft recovery failed to parse configuration for node %q: setting `non_voter` is only supported in enterprise", server.ID)
+		}
+	}
 	return nil
 }
 
