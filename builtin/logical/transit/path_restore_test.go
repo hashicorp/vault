@@ -6,6 +6,7 @@ package transit
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -87,8 +88,6 @@ func TestTransit_Restore(t *testing.T) {
 		return &b
 	}
 
-	keyExitsError := fmt.Errorf("key %q already exists", keyName)
-
 	testCases := []struct {
 		Name string
 		// Seed dermines if we start the test by restoring the initial backup we
@@ -98,6 +97,10 @@ func TestTransit_Restore(t *testing.T) {
 		Force *bool
 		// The error we expect, if any
 		ExpectedErr error
+		// ExpectedRespErr is true when the restore should fail with an error
+		// *response* (HTTP 400) instead of a raw error (HTTP 500), e.g. when
+		// the key already exists and force was not given
+		ExpectedRespErr bool
 
 		// RestoreName is used to restore the key to a differnt name
 		RestoreName string
@@ -107,10 +110,12 @@ func TestTransit_Restore(t *testing.T) {
 			Name: "Default restore",
 		},
 		{
-			// key already exists
-			Name:        "Restore-without-force",
-			Seed:        true,
-			ExpectedErr: keyExitsError,
+			// key already exists: restoring without force is a client error,
+			// reported as an error response (HTTP 400) rather than a raw
+			// error (HTTP 500)
+			Name:            "Restore-without-force",
+			Seed:            true,
+			ExpectedRespErr: true,
 		},
 		{
 			// key already exists, use force to force a restore
@@ -156,11 +161,11 @@ func TestTransit_Restore(t *testing.T) {
 			Force: boolPtr(false),
 		},
 		{
-			// using false force should still error
-			Name:        "Restore-force-false",
-			Seed:        true,
-			Force:       boolPtr(false),
-			ExpectedErr: keyExitsError,
+			// using false force should still fail with an error response
+			Name:            "Restore-force-false",
+			Seed:            true,
+			Force:           boolPtr(false),
+			ExpectedRespErr: true,
 		},
 	}
 
@@ -207,19 +212,33 @@ func TestTransit_Restore(t *testing.T) {
 			}
 
 			resp, err = b.HandleRequest(context.Background(), restoreReq)
-			if resp != nil && resp.IsError() {
-				t.Fatalf("resp: %#v\nerr: %v", resp, err)
-			}
-			if err == nil && tc.ExpectedErr != nil {
-				t.Fatalf("expected an error, but got none")
-			}
-			if err != nil && tc.ExpectedErr == nil {
-				t.Fatalf("unexpected error:%s", err)
-			}
+			if tc.ExpectedRespErr {
+				// A client error must come back as an error response
+				// (HTTP 400), not a raw error (HTTP 500)
+				if err != nil {
+					t.Fatalf("expected an error response, got raw error: %s", err)
+				}
+				if resp == nil || !resp.IsError() {
+					t.Fatalf("expected an error response, got resp: %#v", resp)
+				}
+				if !strings.Contains(resp.Error().Error(), "already exists") {
+					t.Fatalf("expected 'already exists' in error response, got: %s", resp.Error())
+				}
+			} else {
+				if resp != nil && resp.IsError() {
+					t.Fatalf("resp: %#v\nerr: %v", resp, err)
+				}
+				if err == nil && tc.ExpectedErr != nil {
+					t.Fatalf("expected an error, but got none")
+				}
+				if err != nil && tc.ExpectedErr == nil {
+					t.Fatalf("unexpected error:%s", err)
+				}
 
-			if err != nil && tc.ExpectedErr != nil {
-				if err.Error() != tc.ExpectedErr.Error() {
-					t.Fatalf("expected error: (%s), got: (%s)", tc.ExpectedErr.Error(), err.Error())
+				if err != nil && tc.ExpectedErr != nil {
+					if err.Error() != tc.ExpectedErr.Error() {
+						t.Fatalf("expected error: (%s), got: (%s)", tc.ExpectedErr.Error(), err.Error())
+					}
 				}
 			}
 
@@ -228,7 +247,7 @@ func TestTransit_Restore(t *testing.T) {
 				readKeyName = tc.RestoreName
 			}
 
-			if tc.ExpectedErr == nil {
+			if tc.ExpectedErr == nil && !tc.ExpectedRespErr {
 				obs := obsRecorder.LastObservationOfType(ObservationTypeTransitKeyRestore)
 				require.NotNil(t, obs)
 				require.Equal(t, obs.Data["key_name"], readKeyName)
