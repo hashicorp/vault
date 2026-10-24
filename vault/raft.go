@@ -470,6 +470,12 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 			return time.Time{}, fmt.Errorf("failed to write keyring: %w", err)
 		}
 
+		// Standbys pick up the new keyring from storage; the active node must
+		// install it in its own transport.
+		if err := c.getRaftBackend().SetTLSKeyring(keyring); err != nil {
+			return time.Time{}, fmt.Errorf("failed to install raft TLS keyring: %w", err)
+		}
+
 		logger.Info("wrote new raft TLS config")
 
 		// Schedule the next rotation
