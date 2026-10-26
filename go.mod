@@ -155,7 +155,7 @@ require (
 	github.com/hashicorp/vault-envelope-encryption-sdk v0.1.1
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.24.1
-	github.com/hashicorp/vault-plugin-auth-azure v0.25.1
+	github.com/hashicorp/vault-plugin-auth-azure v0.25.2
 	github.com/hashicorp/vault-plugin-auth-cf v0.24.1
 	github.com/hashicorp/vault-plugin-auth-gcp v0.24.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.27.2
@@ -239,7 +239,7 @@ require (
 	go.uber.org/atomic v1.12.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597
-	golang.org/x/net v0.60.0
+	golang.org/x/net v0.61.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.24.0
 	golang.org/x/sys v0.49.0
