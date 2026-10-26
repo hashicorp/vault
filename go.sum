@@ -851,8 +851,8 @@ github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1 h1:/bT9LvdvHsFsT
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1/go.mod h1:olHM92/hQabG5g4Uslo+tvA8HwNhWdAGyb+JHqsXVYk=
 github.com/hashicorp/vault-plugin-database-redis v0.9.1 h1:/rHtYJPOwYxMS4Ctd5H8Rz79T/HllVU5iN9Mn2Nkc60=
 github.com/hashicorp/vault-plugin-database-redis v0.9.1/go.mod h1:JKCNxbAuoOIDyrWcD17Jvp2Zsr9wwo5M92dCJbjpDNg=
-github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.0 h1:4R+HyvPwy+CPk6Ep8e4M6XUd1D8dceT8A6DlQgMOijU=
-github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.0/go.mod h1:hJWtDqRnsUx1IWy8pRKmVMHRDZJ9XNW1FWr4JfYy/0c=
+github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.1 h1:JWV6BmF0QaJlTZ18rix8hvroLYmpg7ntfT8acMxR0EI=
+github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.1/go.mod h1:ncN15z2/tJIq2D2MC9zppVA9qxMXMFMeo6RtVvw0b2M=
 github.com/hashicorp/vault-plugin-database-snowflake v0.17.1 h1:SniuhfROuwQ5CNsQvUrChAGXS2LDl7NjMgChXcAuo8g=
 github.com/hashicorp/vault-plugin-database-snowflake v0.17.1/go.mod h1:og72ifS9Ckmrph5+3cxlCmW9Ke1qOy07s6Dv+vNdNO8=
 github.com/hashicorp/vault-plugin-secrets-ad v0.23.0 h1:92sVbsItwAvX4vMFVCsC3J8o0AYerOxpsEPjp1yxMRo=
