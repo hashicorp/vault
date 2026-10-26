@@ -71,6 +71,7 @@ module('Integration | Component | search select', function (hooks) {
     sinon.stub(this.api.secrets, 'transformListAlphabets').resolves(responses.alphabet);
     sinon.stub(this.api.sys, 'systemListMfaMethod').resolves(responses.mfa);
     sinon.stub(this.api.secrets, 'databaseListRoles').rejects(responses.role);
+    sinon.stub(this.api.secrets, 'databaseListStaticRoles').rejects(responses.role);
   });
 
   test('it renders', async function (assert) {
