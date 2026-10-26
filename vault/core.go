@@ -3244,9 +3244,13 @@ func (c *Core) preSeal() error {
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 
-	// Clear any rekey progress
+	// Clear any rekey progress. rekeyLock guards these fields against
+	// concurrent readers such as the secure hub cluster state worker, which is
+	// not stopped until entPreSeal runs.
+	c.rekeyLock.Lock()
 	c.barrierRekeyConfig = nil
 	c.recoveryRekeyConfig = nil
+	c.rekeyLock.Unlock()
 
 	if c.metricsCh != nil {
 		close(c.metricsCh)

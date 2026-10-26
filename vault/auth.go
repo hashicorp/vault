@@ -974,12 +974,13 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			localEntry := entry
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
 				postUnsealLogger := c.logger.With("type", localEntry.Type, "version", localEntry.RunningVersion, "path", localEntry.Path)
+				// A skipped backend may later be recovered by a plugin reload.
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origViewReadOnlyErr)
+				}
 				if backend == nil {
 					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
-				}
-				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
-					view.setReadOnlyErr(origViewReadOnlyErr)
 				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{
