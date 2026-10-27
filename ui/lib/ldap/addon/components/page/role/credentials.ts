@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -15,9 +15,18 @@ interface Args {
   breadcrumbs: Array<Breadcrumb>;
 }
 
+// Vault returns Go's zero time (0001-01-01T00:00:00Z) for a static role that has never been rotated.
+const isZeroTime = (timestamp?: string | null) => !!timestamp && new Date(timestamp).getUTCFullYear() <= 1;
+
 export default class LdapRoleCredentialsPageComponent extends Component<Args> {
   staticFields = [
-    { label: 'Last Vault rotation', key: 'last_vault_rotation', formatDate: 'MMM d yyyy, h:mm:ss aaa' },
+    {
+      label: 'Last Vault rotation',
+      key: 'last_vault_rotation',
+      formatDate: 'MMM d yyyy, h:mm:ss aaa',
+      alwaysRender: true,
+      defaultShown: 'Never',
+    },
     { label: 'Password', key: 'password', hasBlock: 'masked' },
     { label: 'Username', key: 'username' },
     { label: 'Rotation period', key: 'rotation_period', formatTtl: true },
@@ -33,5 +42,13 @@ export default class LdapRoleCredentialsPageComponent extends Component<Args> {
   ];
   get fields() {
     return this.args.credentials.type === 'dynamic' ? this.dynamicFields : this.staticFields;
+  }
+
+  get displayCredentials() {
+    const { credentials } = this.args;
+    if (credentials && 'last_vault_rotation' in credentials && isZeroTime(credentials.last_vault_rotation)) {
+      return { ...credentials, last_vault_rotation: null };
+    }
+    return credentials;
   }
 }
