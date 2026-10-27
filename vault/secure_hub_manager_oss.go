@@ -42,3 +42,6 @@ func NewSecureHubManager(c *Core) *SecureHubManager {
 func (c *SecureHubManager) WriteClusterCredentialsToStorage(ctx context.Context, key string, value []byte) error {
 	return fmt.Errorf("secure hub is only available in Vault Enterprise")
 }
+
+// UpsertNodeState is a no-op on CE builds; state tracking is ENT-only.
+func (c *SecureHubManager) UpsertNodeState(_ *SendSecureHubStateRequest) error { return nil }
