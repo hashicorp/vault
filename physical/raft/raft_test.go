@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package raft
@@ -30,6 +30,14 @@ import (
 	"github.com/stretchr/testify/require"
 	bolt "go.etcd.io/bbolt"
 )
+
+// TestUsesRaftWAL_Uninitialized verifies WAL detection is safe before a store is opened.
+func TestUsesRaftWAL_Uninitialized(t *testing.T) {
+	t.Parallel()
+
+	backend := &RaftBackend{}
+	require.False(t, backend.UsesRaftWAL(), "an unopened store must not report WAL usage")
+}
 
 func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string)) {
 	t.Helper()
@@ -202,6 +210,7 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 	return nil
 }
 
+// TestRaft_Backend verifies storage operations and detection of the active WAL or BoltDB backend.
 func TestRaft_Backend(t *testing.T) {
 	t.Parallel()
 
@@ -212,6 +221,7 @@ func TestRaft_Backend(t *testing.T) {
 		}
 
 		b, _ := GetRaftWithConfig(t, true, true, conf)
+		require.Equal(t, useRaftWal == "true", b.UsesRaftWAL(), "WAL detection must match the opened backend")
 		physical.ExerciseBackend(t, b)
 	})
 }
@@ -219,6 +229,8 @@ func TestRaft_Backend(t *testing.T) {
 // TestRaft_SwitchFromBoltDBToRaftWal is testing that we don't use raft-wal, even if configured to do so,
 // if there is an existing raft.db file on disk (meaning BoltDB was previously in use).
 func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
+	t.Parallel()
+
 	tmpDir := t.TempDir()
 
 	// configured to use raft-wal
@@ -245,10 +257,14 @@ func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	backend, err := NewRaftBackend(conf, hclog.NewNullLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
+	require.False(t, backend.(*RaftBackend).UsesRaftWAL(), "existing BoltDB storage must override raft_wal=true")
+	t.Cleanup(func() {
+		require.NoError(t, backend.(*RaftBackend).Close())
+	})
 
 	// Check to see if $tmpDir/raft/raft-wal exists. It should not, because we only create that if raft-wal is in use.
 	// And since raft.db already existed, we should've skipped all the raft-wal setup code.
