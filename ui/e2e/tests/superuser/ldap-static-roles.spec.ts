@@ -163,6 +163,18 @@ test('ldap self-managed static role workflow', async ({ page, playwright }, test
     await basePage.dismissFlashMessages();
   });
 
+  await test.step('credentials show the role has never been rotated', async () => {
+    await page.getByRole('link', { name: 'Get credentials' }).click();
+
+    // Vault reports Go's zero time (year 0001) until the first rotation.
+    const lastRotation = page.locator('.info-table-row').filter({ hasText: 'Last Vault rotation' });
+    await expect(lastRotation).toContainText('Never');
+    await expect(lastRotation).not.toContainText('0001');
+
+    await page.getByRole('button', { name: 'Done' }).click();
+    await expect(page).toHaveURL(new RegExp(`/roles/static/${ROLE_NAME}/details`));
+  });
+
   await test.step('details page hides the password until it is revealed', async () => {
     await expect(page.locator('.info-table-row').filter({ hasText: 'Password' })).toBeVisible();
     // The credential is only fetched on reveal, so it must not be in the document beforehand.
@@ -292,6 +304,14 @@ test('ldap root-managed mounts are unaffected', async ({ page }) => {
 
   await test.step('the password row is absent when no password is managed', async () => {
     await expect(page.locator('.info-table-row').filter({ hasText: 'Username' })).toBeVisible();
+  });
+
+  await test.step('credentials show the role has never been rotated', async () => {
+    await page.getByRole('link', { name: 'Get credentials' }).click();
+
+    const lastRotation = page.locator('.info-table-row').filter({ hasText: 'Last Vault rotation' });
+    await expect(lastRotation).toContainText('Never');
+    await expect(lastRotation).not.toContainText('0001');
   });
 
   await test.step('dynamic roles can still be created', async () => {
