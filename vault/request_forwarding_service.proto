@@ -80,9 +80,36 @@ message SendSecureHubCredentialsRequest {
 
 message SendSecureHubCredentialsResponse {}
 
+// SecureHubStreamStatus carries the last-known health of a single Secure Hub
+// data channel as observed by the reporting node.
+message SecureHubStreamStatus {
+  string type = 1;
+  bool enabled = 2;
+  bool healthy = 3;
+  // RFC 3339 timestamps; empty string when not yet attempted.
+  string last_attempted_at = 4;
+  string last_succeeded_at = 5;
+  string last_failure = 6;
+}
+
+// SendSecureHubStateRequest is sent from every node to the active node every
+// SecureHubReportInterval so the active node can build a full per-node picture
+// for the sys/secure-hub/status endpoint.
+message SendSecureHubStateRequest {
+  string node_id = 1;
+  string ha_state = 2;
+  bool node_connected = 3;
+  repeated SecureHubStreamStatus streams = 4;
+}
+
+message SendSecureHubStateResponse {}
+
 service RequestForwarding {
   rpc ForwardRequest(forwarding.Request) returns (forwarding.Response) {}
   rpc Echo(EchoRequest) returns (EchoReply) {}
   rpc PerformanceStandbyElectionRequest(PerfStandbyElectionInput) returns (stream PerfStandbyElectionResponse) {}
   rpc SendSecureHubCredentials(SendSecureHubCredentialsRequest) returns (SendSecureHubCredentialsResponse) {}
+  // SendSecureHubState is called by every node to push its Secure Hub
+  // connection and stream health to the active node.
+  rpc SendSecureHubState(SendSecureHubStateRequest) returns (SendSecureHubStateResponse) {}
 }
