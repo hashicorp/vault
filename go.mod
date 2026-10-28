@@ -175,7 +175,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.27.0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.18.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.18.1
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.15.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.4
@@ -239,7 +239,7 @@ require (
 	go.uber.org/atomic v1.12.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597
-	golang.org/x/net v0.60.0
+	golang.org/x/net v0.61.0
 	golang.org/x/oauth2 v0.37.0
 	golang.org/x/sync v0.24.0
 	golang.org/x/sys v0.49.0
