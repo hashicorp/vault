@@ -213,6 +213,61 @@ func TestWorkspace_SelectModules(t *testing.T) {
 	require.ErrorContains(t, err, "nope is not a module in /ws/go.work")
 }
 
+// TestGoWorkGoModPaths verifies that the go.mod paths come from the use
+// directives in go.work order, relative to the go.work directory, with "." as
+// the root go.mod, and that repeated directories are listed once. It reads
+// only the go.work data, so none of the modules exist on disk.
+func TestGoWorkGoModPaths(t *testing.T) {
+	t.Parallel()
+
+	paths, err := GoWorkGoModPaths("go.work", []byte(
+		"go 1.21\n\nuse (\n\t.\n\t./sdk\n\t./api/auth/approle\n\t./sdk/\n)\n\nuse tools/pipeline\n",
+	))
+	require.NoError(t, err)
+	require.Equal(t, []string{
+		"go.mod",
+		"sdk/go.mod",
+		"api/auth/approle/go.mod",
+		"tools/pipeline/go.mod",
+	}, paths)
+
+	paths, err = GoWorkGoModPaths("go.work", []byte("go 1.21\n"))
+	require.NoError(t, err)
+	require.Empty(t, paths)
+}
+
+// TestGoWorkGoModPaths_Errors verifies that a go.work that doesn't parse, or
+// that uses a directory outside its own, is rejected. The paths are used to
+// read files from a git branch, where they can only be inside the repository.
+func TestGoWorkGoModPaths_Errors(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		data   string
+		errHas string
+	}{
+		"invalid syntax": {
+			data:   "use (\n",
+			errHas: "parsing go.work",
+		},
+		"parent directory": {
+			data:   "go 1.21\n\nuse ../other\n",
+			errHas: "not inside",
+		},
+		"absolute directory": {
+			data:   "go 1.21\n\nuse /other\n",
+			errHas: "not inside",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			_, err := GoWorkGoModPaths("go.work", []byte(test.data))
+			require.ErrorContains(t, err, test.errHas)
+		})
+	}
+}
+
 // TestNormalizeTags verifies that tag lists from workflow inputs, which may
 // have leading commas or spaces, become a clean, ordered, de-duplicated list.
 func TestNormalizeTags(t *testing.T) {

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	libgithub "github.com/google/go-github/v83/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/golang"
 	"github.com/stretchr/testify/require"
 )
 
@@ -109,6 +110,67 @@ func Test_renderEmbeddedTemplate_copyPRMessage(t *testing.T) {
 				test.origin,
 				test.targetRef,
 				test.error,
+			})
+			require.NoError(t, err)
+			for _, c := range test.expectContains {
+				require.Containsf(t, got, c, got)
+			}
+			for _, nc := range test.expectNotContains {
+				require.NotContainsf(t, got, nc, got)
+			}
+		})
+	}
+}
+
+// Test_renderEmbeddedTemplate_syncGoModPRMessage verifies that the sync go-mod
+// PR body renders when the workspace wasn't synced (nil result), and that a
+// failure to sync the workspace is called out as a warning, since the PR would
+// otherwise look complete.
+func Test_renderEmbeddedTemplate_syncGoModPRMessage(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		expectContains    []string
+		expectNotContains []string
+		hasErrors         bool
+		goWorkSum         *golang.GoWorkSumSyncResult
+	}{
+		"workspace not synced": {
+			expectContains:    []string{"go: sync go.mod from hashicorp/vault-enterprise/main to ce/main"},
+			expectNotContains: []string{"go.work.sum"},
+		},
+		"workspace synced": {
+			expectContains:    []string{"go: sync go.mod from hashicorp/vault-enterprise/main to ce/main"},
+			expectNotContains: []string{"go.work.sum"},
+			goWorkSum:         &golang.GoWorkSumSyncResult{Updated: true},
+		},
+		"workspace sync failed": {
+			expectContains: []string{"Warning", "#### Workspace", "Workspace sync error: download failed"},
+			hasErrors:      true,
+			goWorkSum:      &golang.GoWorkSumSyncResult{Error: "download failed"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := renderEmbeddedTemplate("sync-go-mod-pr-message.tmpl", struct {
+				Ticket      string
+				AOwner      string
+				ARepo       string
+				ABranch     string
+				BBranch     string
+				ToBranch    string
+				PathResults []*golang.GoModPathSyncResult
+				HasErrors   bool
+				GoWorkSum   *golang.GoWorkSumSyncResult
+			}{
+				AOwner:    "hashicorp",
+				ARepo:     "vault-enterprise",
+				ABranch:   "main",
+				BBranch:   "ce/main",
+				ToBranch:  "main-into-ce-main",
+				HasErrors: test.hasErrors,
+				GoWorkSum: test.goWorkSum,
 			})
 			require.NoError(t, err)
 			for _, c := range test.expectContains {
