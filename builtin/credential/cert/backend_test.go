@@ -8,7 +8,9 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
+	"crypto/sha1"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -961,6 +963,29 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		certhelpers.IsCA(true),
 		certhelpers.SelfSign(),
 	)
+
+	testRegisteredNonCA_CRL(t, b, storage, leafCert)
+}
+
+func TestBackend_RegisteredNonCA_CRL_MLDSA(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Generate a self-signed certificate that can sign CRLs (needs to be a CA for CRL signing)
+	selfSigned := newMLDSATestCert(t, mldsa.MLDSA65(), "cert.example.com", true, nil)
+
+	testRegisteredNonCA_CRL(t, b, storage, selfSigned)
+}
+
+func testRegisteredNonCA_CRL(t *testing.T, b logical.Backend, storage logical.Storage, leafCert certhelpers.Certificate) {
+	t.Helper()
+
 	leafCertPEM := strings.TrimSpace(string(leafCert.Pem))
 
 	// Register the Non-CA certificate of the client key pair
@@ -1015,7 +1040,7 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 				RevocationTime: time.Now(),
 			},
 		},
-	}, leafCert.Template, leafCert.PrivKey.PrivKey)
+	}, leafCert.Template, leafCert.TLSCert.PrivateKey.(crypto.Signer))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1327,15 +1352,20 @@ func TestBackend_CertWrites(t *testing.T) {
 	}
 	ca3PEM := pem.EncodeToMemory(ca3PEMBlock)
 
+	mldsaCA := newMLDSATestCert(t, mldsa.MLDSA44(), "test-ca", true, nil)
+	mldsaLeaf := newMLDSATestCert(t, mldsa.MLDSA65(), "test-client", false, &mldsaCA)
+
 	tc := logicaltest.TestCase{
 		CredentialBackend: testFactory(t),
 		Steps: []logicaltest.TestStep{
 			testAccStepCert(t, "aaa", ca1Cert.Pem, "foo", allowed{}, false),
 			testAccStepCert(t, "bbb", ca2Cert.Pem, "foo", allowed{}, false),
 			testAccStepCert(t, "ccc", ca3PEM, "foo", allowed{}, true),
+			testAccStepCert(t, "ddd", mldsaCA.Pem, "foo", allowed{}, false),
+			testAccStepCert(t, "eee", mldsaLeaf.Pem, "foo", allowed{}, false),
 		},
 	}
-	tc.Steps = append(tc.Steps, testAccStepListCerts(t, []string{"aaa", "bbb"})...)
+	tc.Steps = append(tc.Steps, testAccStepListCerts(t, []string{"aaa", "bbb", "ddd", "eee"})...)
 	logicaltest.Test(t, tc)
 }
 
@@ -1384,6 +1414,44 @@ func TestBackend_basic_CA(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 		},
 	})
+}
+
+func TestBackend_MLDSA_basic_CA(t *testing.T) {
+	t.Parallel()
+
+	for name, params := range mldsaTestParameters {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ca := newMLDSATestCert(t, params, "test-ca", true, nil)
+			clientCert := newMLDSATestCert(t, params, "test-client", false, &ca)
+
+			rootCAs := x509.NewCertPool()
+			require.True(t, rootCAs.AppendCertsFromPEM(ca.Pem))
+
+			connState, err := testConnStateWithCert(clientCert.TLSCert, rootCAs)
+			require.NoError(t, err)
+
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps: []logicaltest.TestStep{
+					testAccStepCert(t, "web", ca.Pem, "foo", allowed{}, false),
+					testAccStepLogin(t, connState),
+					testAccStepCertLease(t, "web", ca.Pem, "foo"),
+					testAccStepCertTTL(t, "web", ca.Pem, "foo"),
+					testAccStepLogin(t, connState),
+					testAccStepCertMaxTTL(t, "web", ca.Pem, "foo"),
+					testAccStepLogin(t, connState),
+					testAccStepCertNoLease(t, "web", ca.Pem, "foo"),
+					testAccStepLoginDefaultLease(t, connState),
+					testAccStepCert(t, "web", ca.Pem, "foo", allowed{names: "*.example.com"}, false),
+					testAccStepLogin(t, connState),
+					testAccStepCert(t, "web", ca.Pem, "foo", allowed{names: "*.invalid.com"}, false),
+					testAccStepLoginInvalid(t, connState),
+				},
+			})
+		})
+	}
 }
 
 // Test CRL behavior
@@ -1529,6 +1597,40 @@ func TestBackend_Basic_CRLs(t *testing.T) {
 	})
 }
 
+func TestBackend_MLDSA_Basic_CRLs(t *testing.T) {
+	t.Parallel()
+
+	for name, params := range mldsaTestParameters {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ca := newMLDSATestCert(t, params, "test-ca", true, nil)
+			clientCert := newMLDSATestCert(t, params, "test-client", false, &ca)
+
+			rootCAs := x509.NewCertPool()
+			require.True(t, rootCAs.AppendCertsFromPEM(ca.Pem))
+
+			connState, err := testConnStateWithCert(clientCert.TLSCert, rootCAs)
+			require.NoError(t, err)
+
+			crlPEM := newMLDSATestCRL(t, ca, true, clientCert.Template.SerialNumber)
+
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps: []logicaltest.TestStep{
+					testAccStepCertNoLease(t, "web", ca.Pem, "foo"),
+					testAccStepLoginDefaultLease(t, connState),
+					testAccStepAddCRL(t, crlPEM, connState),
+					testAccStepReadCRLWithSerial(t, connState, clientCert.Template.SerialNumber.String()),
+					testAccStepLoginInvalid(t, connState),
+					testAccStepDeleteCRL(t, connState),
+					testAccStepLoginDefaultLease(t, connState),
+				},
+			})
+		})
+	}
+}
+
 // Test a self-signed client (root CA) that is trusted
 func TestBackend_basic_singleCert(t *testing.T) {
 	// Generate self-signed CA certificate that will also be used as client cert
@@ -1562,6 +1664,38 @@ func TestBackend_basic_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 		},
 	})
+}
+
+func TestBackend_MLDSA_basic_singleCert(t *testing.T) {
+	t.Parallel()
+
+	for name, params := range mldsaTestParameters {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ca := newMLDSATestCert(t, params, "example.com", true, nil)
+
+			rootCAs := x509.NewCertPool()
+			require.True(t, rootCAs.AppendCertsFromPEM(ca.Pem))
+
+			connState, err := testConnStateWithCert(ca.TLSCert, rootCAs)
+			require.NoError(t, err)
+
+			logicaltest.Test(t, logicaltest.TestCase{
+				CredentialBackend: testFactory(t),
+				Steps: []logicaltest.TestStep{
+					testAccStepCert(t, "web", ca.Pem, "foo", allowed{}, false),
+					testAccStepLogin(t, connState),
+					testAccStepCert(t, "web", ca.Pem, "foo", allowed{names: "example.com"}, false),
+					testAccStepLogin(t, connState),
+					testAccStepCert(t, "web", ca.Pem, "foo", allowed{names: "invalid"}, false),
+					testAccStepLoginInvalid(t, connState),
+					testAccStepCert(t, "web", ca.Pem, "foo", allowed{ext: "1.2.3.4:invalid"}, false),
+					testAccStepLoginInvalid(t, connState),
+				},
+			})
+		})
+	}
 }
 
 func TestBackend_common_name_singleCert(t *testing.T) {
@@ -3923,4 +4057,94 @@ func createCertAndKey(t *testing.T) (caTLS tls.Certificate, leafTLS tls.Certific
 	leafTLS.Leaf = leafCert
 
 	return caTLS, leafTLS, caPEM
+}
+
+func newMLDSATestCert(t *testing.T, params mldsa.Parameters, cn string, isCA bool, parent *certhelpers.Certificate) certhelpers.Certificate {
+	t.Helper()
+
+	key, err := mldsa.GenerateKey(params)
+	require.NoError(t, err)
+
+	serial, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
+	require.NoError(t, err)
+
+	// CreateRevocationList requires the issuer to carry a subject key ID.
+	pubDER, err := x509.MarshalPKIXPublicKey(key.PublicKey())
+	require.NoError(t, err)
+	subjectKeyID := sha1.Sum(pubDER)
+
+	template := &x509.Certificate{
+		SerialNumber:          serial,
+		SubjectKeyId:          subjectKeyID[:],
+		Subject:               pkix.Name{CommonName: cn},
+		NotBefore:             time.Now().Add(-1 * time.Hour),
+		NotAfter:              time.Now().Add(1 * time.Hour),
+		BasicConstraintsValid: true,
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+	if isCA {
+		template.IsCA = true
+		template.KeyUsage = x509.KeyUsageCertSign | x509.KeyUsageCRLSign
+	} else {
+		template.KeyUsage = x509.KeyUsageDigitalSignature
+		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth}
+		template.DNSNames = []string{"*.example.com"}
+	}
+
+	signerTemplate, signerKey := template, crypto.Signer(key)
+	if parent != nil {
+		signerTemplate, signerKey = parent.Template, parent.TLSCert.PrivateKey.(crypto.Signer)
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, template, signerTemplate, key.PublicKey(), signerKey)
+	require.NoError(t, err)
+
+	parsed, err := x509.ParseCertificate(der)
+	require.NoError(t, err)
+	require.Equal(t, x509.MLDSA, parsed.PublicKeyAlgorithm, "certificate should carry an ML-DSA public key")
+
+	// The signature algorithm is dictated by the signer's parameter set, which
+	// differs from this cert's own when a parent signed it.
+	signerParams, issuer := params, parsed
+	if parent != nil {
+		parentKey, ok := parent.TLSCert.PrivateKey.(*mldsa.PrivateKey)
+		require.True(t, ok, "parent must have an ML-DSA key")
+		signerParams, issuer = parentKey.PublicKey().Parameters(), parent.TLSCert.Leaf
+	}
+	var expectedSigAlg x509.SignatureAlgorithm
+	switch signerParams {
+	case mldsa.MLDSA44():
+		expectedSigAlg = x509.MLDSA44
+	case mldsa.MLDSA65():
+		expectedSigAlg = x509.MLDSA65
+	case mldsa.MLDSA87():
+		expectedSigAlg = x509.MLDSA87
+	}
+	require.Equal(t, expectedSigAlg, parsed.SignatureAlgorithm, "certificate should be signed with the signer's ML-DSA parameter set")
+	require.NoError(t, issuer.CheckSignature(parsed.SignatureAlgorithm, parsed.RawTBSCertificate, parsed.Signature),
+		"certificate signature should verify against its issuer")
+
+	keyDER, err := x509.MarshalPKCS8PrivateKey(key)
+	require.NoError(t, err)
+
+	return certhelpers.Certificate{
+		PrivKey: certhelpers.KeyWrapper{
+			Pem: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: keyDER}),
+		},
+		Template: template,
+		TLSCert: tls.Certificate{
+			Certificate: [][]byte{der},
+			PrivateKey:  key,
+			Leaf:        parsed,
+		},
+		RawCert: der,
+		Pem:     pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
+		IsCA:    isCA,
+	}
+}
+
+var mldsaTestParameters = map[string]mldsa.Parameters{
+	"ML-DSA-44": mldsa.MLDSA44(),
+	"ML-DSA-65": mldsa.MLDSA65(),
+	"ML-DSA-87": mldsa.MLDSA87(),
 }
