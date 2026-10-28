@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package git
@@ -14,7 +14,8 @@ import (
 )
 
 // TestSyncGoModReq_Validate_EmptySourceBranch verifies that validate returns an
-// error when SourceBranch is empty.
+// error when a branch is empty or both are the same, and when paths are given
+// together with workspace modules.
 func TestSyncGoModReq_Validate_EmptySourceBranch(t *testing.T) {
 	t.Parallel()
 
@@ -46,11 +47,28 @@ func TestSyncGoModReq_Validate_EmptySourceBranch(t *testing.T) {
 			},
 			true,
 		},
-		"empty paths": {
+		"empty paths default to go.mod": {
 			&SyncGoModReq{
 				SourceBranch: "feature",
 				DestBranch:   "main",
 				Paths:        []string{},
+			},
+			false,
+		},
+		"workspace modules": {
+			&SyncGoModReq{
+				SourceBranch:     "feature",
+				DestBranch:       "main",
+				WorkspaceModules: true,
+			},
+			false,
+		},
+		"workspace modules with paths": {
+			&SyncGoModReq{
+				SourceBranch:     "feature",
+				DestBranch:       "main",
+				Paths:            []string{"go.mod"},
+				WorkspaceModules: true,
 			},
 			true,
 		},
@@ -172,7 +190,7 @@ func TestSyncGoModRes_ToString_WithResults(t *testing.T) {
 		SourceBranch: "feature",
 		DestBranch:   "main",
 		NewBranch:    "feature-into-main",
-		Results: []*GoModPathSyncResult{
+		Results: []*golang.GoModPathSyncResult{
 			{
 				SyncModRes: &golang.SyncModRes{
 					Path: "go.mod",
@@ -212,7 +230,7 @@ func TestSyncGoModRes_ToString_WithErrors(t *testing.T) {
 	res := &SyncGoModRes{
 		SourceBranch: "feature",
 		DestBranch:   "main",
-		Results: []*GoModPathSyncResult{
+		Results: []*golang.GoModPathSyncResult{
 			{
 				SyncModRes: syncRes,
 				TidyRan:    true,
@@ -245,7 +263,7 @@ func TestSyncGoModRes_ToMarkdown_WithResults(t *testing.T) {
 	res := &SyncGoModRes{
 		SourceBranch: "feature",
 		DestBranch:   "main",
-		Results: []*GoModPathSyncResult{
+		Results: []*golang.GoModPathSyncResult{
 			{
 				SyncModRes: &golang.SyncModRes{
 					Path: "go.mod",
@@ -282,7 +300,7 @@ func TestSyncGoModRes_ToJSON_Roundtrip(t *testing.T) {
 		DestBranch:   "main",
 		NewBranch:    "feature-into-main",
 		CommitSHA:    "abc123def456",
-		Results: []*GoModPathSyncResult{
+		Results: []*golang.GoModPathSyncResult{
 			{
 				SyncModRes: &golang.SyncModRes{
 					Path: "go.mod",
@@ -362,7 +380,7 @@ func TestPathSyncResult_JSONMarshal_TidyFields(t *testing.T) {
 	t.Run("tidy_ran true with tidy_error", func(t *testing.T) {
 		t.Parallel()
 
-		pr := &GoModPathSyncResult{
+		pr := &golang.GoModPathSyncResult{
 			SyncModRes: &golang.SyncModRes{Path: "go.mod"},
 			TidyRan:    true,
 			TidyError:  "go mod tidy failed: exit status 1",
@@ -380,7 +398,7 @@ func TestPathSyncResult_JSONMarshal_TidyFields(t *testing.T) {
 	t.Run("tidy_ran false omits tidy_error", func(t *testing.T) {
 		t.Parallel()
 
-		pr := &GoModPathSyncResult{
+		pr := &golang.GoModPathSyncResult{
 			SyncModRes: &golang.SyncModRes{Path: "go.mod"},
 			TidyRan:    false,
 		}
@@ -398,7 +416,7 @@ func TestPathSyncResult_JSONMarshal_TidyFields(t *testing.T) {
 	t.Run("TidyErr unexported from JSON", func(t *testing.T) {
 		t.Parallel()
 
-		pr := &GoModPathSyncResult{
+		pr := &golang.GoModPathSyncResult{
 			SyncModRes: &golang.SyncModRes{Path: "go.mod"},
 			TidyRan:    true,
 			TidyError:  "some error",
@@ -444,4 +462,105 @@ func TestSyncGoModReq_BranchName_LongTicketIsTruncated(t *testing.T) {
 	// full = 50 + 1 + 100 + "-into-" + 100 = 257 chars; must be capped at 240
 	got := req.branchName()
 	require.LessOrEqual(t, len(got), 240)
+}
+
+// TestSyncGoModReq_Validate_Paths verifies that we sync the go.mod in the
+// working directory when we're not given a path, that the paths we're given are
+// used as they are, and that in workspace mode we have no paths because we get
+// them from the go.work, so they can't be given as well.
+func TestSyncGoModReq_Validate_Paths(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		paths            []string
+		workspaceModules bool
+		want             []string
+		errHas           string
+	}{
+		"nil paths":         {want: []string{"go.mod"}},
+		"empty paths":       {paths: []string{}, want: []string{"go.mod"}},
+		"given paths":       {paths: []string{"go.mod", "sdk/go.mod"}, want: []string{"go.mod", "sdk/go.mod"}},
+		"workspace modules": {workspaceModules: true},
+		"workspace modules with paths": {
+			paths:            []string{"go.mod"},
+			workspaceModules: true,
+			errHas:           "cannot be combined with workspace-modules",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			req := &SyncGoModReq{
+				SourceBranch:     "main",
+				DestBranch:       "ce/main",
+				Paths:            test.paths,
+				WorkspaceModules: test.workspaceModules,
+			}
+
+			err := req.validate()
+			if test.errHas != "" {
+				require.ErrorContains(t, err, test.errHas)
+
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, test.want, req.Paths)
+		})
+	}
+}
+
+// TestSyncGoModRes_GoWorkSum verifies that syncing the workspace is shown as a
+// go.work.sum row in the table, only when we tried to sync it, with a change
+// when it was updated and the reason when it failed, and that it's in the JSON.
+func TestSyncGoModRes_GoWorkSum(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		goWorkSum *golang.GoWorkSumSyncResult
+		wantRow   string // what the row has after the path, empty when there is no row
+		wantJSON  string
+	}{
+		"not synced": {},
+		"unchanged": {
+			goWorkSum: &golang.GoWorkSumSyncResult{},
+			wantRow:   "go.work.sum 0 no",
+			wantJSON:  `"go_work_sum":{"updated":false}`,
+		},
+		"updated": {
+			goWorkSum: &golang.GoWorkSumSyncResult{Updated: true},
+			wantRow:   "go.work.sum 1 no",
+			wantJSON:  `"go_work_sum":{"updated":true}`,
+		},
+		"failed": {
+			goWorkSum: &golang.GoWorkSumSyncResult{Error: "download failed"},
+			wantRow:   "go.work.sum 0 no download failed",
+			wantJSON:  `"go_work_sum":{"updated":false,"error":"download failed"}`,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			res := &SyncGoModRes{
+				SourceBranch: "main",
+				DestBranch:   "ce/main",
+				Results: []*golang.GoModPathSyncResult{
+					{SyncModRes: &golang.SyncModRes{Path: "go.mod"}},
+				},
+				GoWorkSum: test.goWorkSum,
+			}
+
+			out := strings.Join(strings.Fields(res.ToString()), " ")
+			b, err := res.ToJSON()
+			require.NoError(t, err)
+
+			if test.goWorkSum == nil {
+				require.NotContains(t, out, "go.work.sum")
+				require.NotContains(t, string(b), "go_work_sum")
+
+				return
+			}
+			require.Contains(t, out, test.wantRow)
+			require.Contains(t, string(b), test.wantJSON)
+		})
+	}
 }
