@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package git
@@ -9,8 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -24,8 +22,19 @@ import (
 type SyncGoModReq struct {
 	SourceBranch string
 	DestBranch   string
-	Paths        []string
-	DiffOpts     *golang.DiffOpts
+
+	// Paths are the go.mod paths to sync. Paths are relative to the working
+	// directory. When empty and WorkspaceModules isn't set, the go.mod in the
+	// working directory is synced.
+	Paths []string
+
+	// WorkspaceModules syncs the go.mod of every module in the go.work at the
+	// root of SourceBranch instead of Paths, which are then relative to the root
+	// of the repository whichever directory we run in. Once they're synced it
+	// tidies every module in the go.work of DestBranch with GOWORK=off.
+	WorkspaceModules bool
+
+	DiffOpts *golang.DiffOpts
 
 	// NewBranch is the name for the intermediate branch. If empty we auto-generate
 	// one in the form <source>-into-<dest> (slashes replaced with dashes).
@@ -38,31 +47,28 @@ type SyncGoModReq struct {
 	Ticket        string // bare ticket ID, e.g. "VAULT-1234"
 }
 
-// GoModPathSyncResult wraps golang.SyncModRes with tidy metadata from this layer.
-type GoModPathSyncResult struct {
-	*golang.SyncModRes
-	TidyRan   bool   `json:"tidy_ran"`
-	TidyError string `json:"tidy_error,omitempty"`
-	TidyErr   error  `json:"-"`
-}
-
 // SyncGoModRes is the result of a local-branch go.mod sync operation.
 type SyncGoModRes struct {
-	SourceBranch string                 `json:"source_branch"`
-	DestBranch   string                 `json:"dest_branch"`
-	NewBranch    string                 `json:"new_branch"`
-	CommitSHA    string                 `json:"commit_sha,omitempty"`
-	Results      []*GoModPathSyncResult `json:"results,omitempty"`
+	SourceBranch string                        `json:"source_branch"`
+	DestBranch   string                        `json:"dest_branch"`
+	NewBranch    string                        `json:"new_branch"`
+	CommitSHA    string                        `json:"commit_sha,omitempty"`
+	Results      []*golang.GoModPathSyncResult `json:"results,omitempty"`
+	// GoWorkSum is set when we tried to sync the workspace.
+	GoWorkSum *golang.GoWorkSumSyncResult `json:"go_work_sum,omitempty"`
 }
 
 // Run forks a new branch from DestBranch, reads source go.mod files from
 // SourceBranch via git show, applies golang.SyncModReq per path, runs go mod
-// tidy for any path with changes, and optionally commits the result.
+// tidy for the modules that changed, and optionally commits the result. In
+// workspace mode it syncs every module of the go.work of SourceBranch, tidies
+// every module of the go.work of DestBranch with GOWORK=off.
 func (r *SyncGoModReq) Run(ctx context.Context, git *libgit.Client) (*SyncGoModRes, error) {
 	slog.Default().DebugContext(ctx, "starting git sync go-mod",
 		slog.String("source_branch", r.SourceBranch),
 		slog.String("dest_branch", r.DestBranch),
 		slog.Int("paths", len(r.Paths)),
+		slog.Bool("workspace-modules", r.WorkspaceModules),
 	)
 
 	if err := r.validate(); err != nil {
@@ -78,6 +84,28 @@ func (r *SyncGoModReq) Run(ctx context.Context, git *libgit.Client) (*SyncGoModR
 		return nil, errors.New(
 			"working tree has uncommitted changes; commit, stash, or discard them first",
 		)
+	}
+
+	// The go.mod paths to sync, and the directory they're relative to. A path
+	// from the user is relative to the working directory. The modules of a go.work
+	// are relative to the root of the repository, which isn't always where we
+	// run, so in workspace mode we work from the root without changing directory.
+	// We list the modules before we create the branch so that a source without a
+	// usable go.work leaves nothing behind. A failure is fatal so that we never
+	// fall back to syncing only the root go.mod.
+	paths := r.Paths
+	dir := "."
+	if r.WorkspaceModules {
+		topRes, err := git.RevParse(ctx, &libgit.RevParseOpts{ShowTopLevel: true})
+		if err != nil {
+			return nil, fmt.Errorf("finding the root of the repository: %w", err)
+		}
+		dir = strings.TrimSuffix(string(topRes.Stdout), "\n")
+
+		paths, err = WorkspaceGoModPathsFromRef(ctx, git, r.SourceBranch)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	newBranch, err := r.resolveBranchName(ctx, git)
@@ -104,17 +132,29 @@ func (r *SyncGoModReq) Run(ctx context.Context, git *libgit.Client) (*SyncGoModR
 		NewBranch:    newBranch,
 	}
 
+	// A collection of errors. We do this so that our sync is best effort for each
+	// go.mod. We'll bubble up any issues we run into along the way.
 	var errs []error
-	var stageFiles []string
 
-	for _, p := range r.Paths {
-		pathRes, stageList, pathErr := r.syncGoModPath(ctx, git, p)
+	// Sync the directives of every module before we tidy any of them, as tidying
+	// a module needs the modules it depends on to be synced.
+	for _, p := range paths {
+		pathRes, pathErr := SyncGoModFromRef(ctx, git, r.SourceBranch, dir, p, r.DiffOpts)
 		res.Results = append(res.Results, pathRes)
 		if pathErr != nil {
 			errs = append(errs, pathErr)
 		}
-		stageFiles = append(stageFiles, stageList...)
 	}
+
+	// Tidy the modules until they settle, and bring the workspace in line when
+	// we're syncing the workspace.
+	tidyRes, tidyErr := golang.TidySyncedModules(ctx, dir, res.Results, r.WorkspaceModules)
+	res.Results = tidyRes.Results
+	res.GoWorkSum = tidyRes.GoWorkSum
+	if tidyErr != nil {
+		errs = append(errs, tidyErr)
+	}
+	stageFiles := tidyRes.Stage
 
 	// Stage and commit when requested and there's something to commit.
 	if r.Commit && len(stageFiles) > 0 {
@@ -139,7 +179,7 @@ func (r *SyncGoModReq) Run(ctx context.Context, git *libgit.Client) (*SyncGoModR
 	}
 
 	slog.Default().DebugContext(ctx, "completed git sync go-mod",
-		slog.Int("paths", len(r.Paths)),
+		slog.Int("paths", len(paths)),
 		slog.Int("errors", len(errs)),
 	)
 
@@ -191,6 +231,16 @@ func (r *SyncGoModRes) ToTable() table.Writer {
 		t.AppendRow(table.Row{path, changes, tidyStr, errStr})
 	}
 
+	// go.work.sum is a file we changed when we synced the workspace. It has one
+	// change when it was updated, and the reason when we couldn't sync it.
+	if r.GoWorkSum != nil {
+		changes := 0
+		if r.GoWorkSum.Updated {
+			changes = 1
+		}
+		t.AppendRow(table.Row{"go.work.sum", changes, "no", r.GoWorkSum.Error})
+	}
+
 	return t
 }
 
@@ -235,9 +285,16 @@ func (r *SyncGoModReq) validate() error {
 	if r.SourceBranch == r.DestBranch {
 		return fmt.Errorf("source and dest branches must differ: both are %q", r.SourceBranch)
 	}
-	if len(r.Paths) == 0 {
-		return errors.New("at least one path is required")
+	if r.WorkspaceModules && len(r.Paths) > 0 {
+		return errors.New("paths cannot be combined with workspace-modules")
 	}
+
+	// Without workspace modules we sync the go.mod in the working directory unless
+	// told otherwise.
+	if !r.WorkspaceModules && len(r.Paths) == 0 {
+		r.Paths = []string{"go.mod"}
+	}
+
 	return nil
 }
 
@@ -285,76 +342,4 @@ func (r *SyncGoModReq) commitSubject() string {
 		return fmt.Sprintf("[%s] go: sync go.mod from %s to %s", r.Ticket, r.SourceBranch, r.DestBranch)
 	}
 	return fmt.Sprintf("go: sync go.mod from %s to %s", r.SourceBranch, r.DestBranch)
-}
-
-// syncGoModPath processes a single go.mod path. We read source bytes via git
-// show and dest bytes from the working tree, run golang.SyncModReq to apply
-// the diff, then tidy and collect files to stage.
-func (r *SyncGoModReq) syncGoModPath(
-	ctx context.Context,
-	git *libgit.Client,
-	p string,
-) (*GoModPathSyncResult, []string, error) {
-	slog.Default().DebugContext(ctx, "reading source go.mod from branch",
-		slog.String("branch", r.SourceBranch),
-		slog.String("path", p),
-	)
-	showRes, err := git.Show(ctx, &libgit.ShowOpts{
-		Object: fmt.Sprintf("%s:%s", r.SourceBranch, p),
-	})
-	if err != nil {
-		syncRes := &golang.SyncModRes{
-			Path:  p,
-			Error: fmt.Sprintf("git show %s:%s: %v", r.SourceBranch, p, err),
-		}
-		syncRes.Err = errors.New(syncRes.Error)
-		return &GoModPathSyncResult{SyncModRes: syncRes}, nil, syncRes.Err
-	}
-	sourceBytes := showRes.Stdout
-
-	slog.Default().DebugContext(ctx, "reading dest go.mod from working tree",
-		slog.String("path", p),
-	)
-	destBytes, err := os.ReadFile(p)
-	if err != nil {
-		syncRes := &golang.SyncModRes{
-			Path:  p,
-			Error: fmt.Sprintf("reading %s: %v", p, err),
-		}
-		syncRes.Err = errors.New(syncRes.Error)
-		return &GoModPathSyncResult{SyncModRes: syncRes}, nil, syncRes.Err
-	}
-
-	syncReq := &golang.SyncModReq{
-		A:        &golang.ModSource{Name: p, Data: sourceBytes},
-		B:        &golang.ModSource{Name: p, Data: destBytes},
-		DiffOpts: r.DiffOpts,
-	}
-	syncRes, err := syncReq.Run(ctx)
-	if err != nil {
-		return &GoModPathSyncResult{SyncModRes: syncRes}, nil, err
-	}
-
-	pathRes := &GoModPathSyncResult{SyncModRes: syncRes}
-
-	var toStage []string
-
-	// Tidy when changes were applied; collect files to stage on success.
-	if len(syncRes.Changes) > 0 {
-		tidyErr := golang.RunGoModTidy(ctx, p)
-		pathRes.TidyRan = true
-		if tidyErr != nil {
-			pathRes.TidyErr = tidyErr
-			pathRes.TidyError = tidyErr.Error()
-		} else {
-			// Only stage when tidy succeeded.
-			dir := filepath.Dir(p)
-			toStage = append(toStage,
-				filepath.Join(dir, "go.mod"),
-				filepath.Join(dir, "go.sum"),
-			)
-		}
-	}
-
-	return pathRes, toStage, pathRes.TidyErr
 }
