@@ -816,6 +816,25 @@ func TestOptsStringers(t *testing.T) {
 			(*AddOpts)(nil),
 			"",
 		},
+		"init": {
+			&InitOpts{
+				Bare:          true,
+				InitialBranch: "main",
+				Quiet:         true,
+				Directory:     "/path/to/repo.git",
+			},
+			"--bare --initial-branch main --quiet -- /path/to/repo.git",
+		},
+		"init in the working directory": {
+			&InitOpts{
+				InitialBranch: "ce/main",
+			},
+			"--initial-branch ce/main",
+		},
+		"init nil opts": {
+			(*InitOpts)(nil),
+			"",
+		},
 		"rm": {
 			&RmOpts{
 				Cached:          true,
