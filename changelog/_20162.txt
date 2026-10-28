@@ -1,0 +1,3 @@
+```release-note:change
+pkcs7: Remove the certificate-transparency-go dependency from the pkcs7 helper and migrate InTune AKI extension parser fix to ent only, CE uses the standard library x509 parser.
+```
