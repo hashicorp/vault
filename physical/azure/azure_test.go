@@ -5,6 +5,7 @@ package azure
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
+	"github.com/Azure/go-autorest/autorest/adal"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers/azurite"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -242,4 +244,32 @@ func TestAzureBackend_validateAccountName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAzureBackend_tokenExpiryInSeconds(t *testing.T) {
+	t.Parallel()
+
+	// A token carrying ExpiresIn uses it directly.
+	exp, err := tokenExpiryInSeconds(adal.Token{ExpiresIn: json.Number("3600")})
+	require.NoError(t, err)
+	require.Equal(t, int64(3600), exp)
+
+	// A token carrying only ExpiresOn falls back to the absolute timestamp.
+	future := time.Now().Add(2 * time.Hour).Unix()
+	exp, err = tokenExpiryInSeconds(adal.Token{ExpiresOn: json.Number(strconv.FormatInt(future, 10))})
+	require.NoError(t, err)
+	require.Greater(t, exp, int64(7000))
+	require.LessOrEqual(t, exp, int64(7200))
+
+	// ExpiresIn takes precedence when both are present.
+	exp, err = tokenExpiryInSeconds(adal.Token{
+		ExpiresIn: json.Number("100"),
+		ExpiresOn: json.Number(strconv.FormatInt(future, 10)),
+	})
+	require.NoError(t, err)
+	require.Equal(t, int64(100), exp)
+
+	// A token with neither claim is an error rather than a silent zero.
+	_, err = tokenExpiryInSeconds(adal.Token{})
+	require.Error(t, err)
 }
