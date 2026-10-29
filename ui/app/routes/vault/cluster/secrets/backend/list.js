@@ -51,7 +51,6 @@ export default Route.extend({
   api: service(),
   capabilitiesService: service('capabilities'),
   templateName: 'vault/cluster/secrets/backend/list',
-  pathHelp: service('path-help'),
   router: service(),
 
   queryParams: {
@@ -74,7 +73,6 @@ export default Route.extend({
   beforeModel() {
     const secret = this.secretParam();
     const backend = getEnginePathParam(this);
-    const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     const secretEngine = this.modelFor('vault.cluster.secrets.backend');
     const type = secretEngine?.engineType;
     const effectiveType = getEffectiveEngineType(type);
@@ -102,8 +100,7 @@ export default Route.extend({
       // if it's KV v2 but not registered as an addon, it's type generic
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
-    const modelType = this.getModelType(effectiveType, tab);
-    // Keymgmt, TOTP, SSH, and Transform routes use API-backed forms instead of Ember Data models, so skip model hydration.
+    // API-backed routes do not use the legacy capabilities records.
     if (
       effectiveType === 'keymgmt' ||
       effectiveType === 'totp' ||
@@ -113,9 +110,8 @@ export default Route.extend({
       return resolve();
     }
 
-    return this.pathHelp.hydrateModel(modelType, backend).then(() => {
-      this.store.unloadAll('capabilities');
-    });
+    this.store.unloadAll('capabilities');
+    return resolve();
   },
 
   getModelType(type, tab) {
