@@ -206,6 +206,10 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		}
 	}
 
+	if _, ok := d.GetOk("key_usages"); ok {
+		warning = "key_usages is derived from the key type and cannot be changed; the supplied value was ignored"
+	}
+
 	autoRotatePeriodRaw, ok, err := d.GetOkErr("auto_rotate_period")
 	if err != nil {
 		return nil, err
