@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { FEATURE_VERSIONS } from 'vault/utils/feature-versions';
+import Sinon from 'sinon';
 
 module('Unit | Service | version', function (hooks) {
   setupTest(hooks);
@@ -32,6 +33,143 @@ module('Unit | Service | version', function (hooks) {
     service.type = 'enterprise';
     service.version = '1.4.7+ent';
     assert.strictEqual(service.versionDisplay, 'v1.4.7');
+  });
+
+  test('fetchVersion stores seal status data and only fetches it once', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    const api = service.api;
+    const response = { version: '1.2.3+ent', cluster_name: 'test-cluster' };
+    const sealStatus = Sinon.stub(api.sys, 'sealStatusRaw').resolves({
+      raw: new Response(JSON.stringify(response)),
+    });
+
+    await service.fetchVersion();
+
+    assert.strictEqual(service.version, response.version, 'stores the Vault version');
+    assert.strictEqual(service.clusterName, response.cluster_name, 'stores the cluster name');
+    assert.deepEqual(
+      sealStatus.firstCall.args[0],
+      { headers: api.buildHeaders({ namespace: '' }).headers },
+      'requests seal status in the root namespace with the current token'
+    );
+
+    await service.fetchVersion();
+
+    assert.true(sealStatus.calledOnce, 'does not fetch seal status again after the version is loaded');
+  });
+
+  test('fetchType derives and caches the enterprise type from health status', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    const api = service.api;
+    const health = Sinon.stub(api.sys, 'readHealthStatus').resolves({ enterprise: true });
+
+    await service.fetchType();
+
+    assert.strictEqual(service.type, 'enterprise', 'uses the enterprise value from health status');
+    assert.true(service.isEnterprise, 'exposes the enterprise classification');
+    const initOverrides = health.firstCall.args[0];
+    const requestContext = { context: { query: {} }, init: {} };
+    const init = await initOverrides(requestContext);
+    assert.deepEqual(
+      requestContext.context.query,
+      {
+        standbycode: 200,
+        sealedcode: 200,
+        uninitcode: 200,
+        drsecondarycode: 200,
+        performancestandbycode: 200,
+      },
+      'preserves health status query parameters'
+    );
+    assert.deepEqual(
+      init.headers,
+      api.buildHeaders({ token: '', namespace: '' }).headers,
+      'reads health status without a token in the root namespace'
+    );
+
+    await service.fetchType();
+
+    assert.true(health.calledOnce, 'does not fetch health status again after the type is loaded');
+  });
+
+  test('fetchType derives the community type from health status', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    Sinon.stub(service.api.sys, 'readHealthStatus').resolves({ enterprise: false });
+
+    await service.fetchType();
+
+    assert.strictEqual(service.type, 'community', 'uses the community value from health status');
+    assert.true(service.isCommunity, 'exposes the community classification');
+  });
+
+  test('fetchType treats a chroot namespace health response as enterprise', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    Sinon.stub(service.api.sys, 'readHealthStatus').resolves({ has_chroot_namespace: true });
+
+    await service.fetchType();
+
+    assert.strictEqual(
+      service.type,
+      'enterprise',
+      'preserves enterprise classification for chroot namespaces'
+    );
+  });
+
+  test('fetchType treats a failed health request as enterprise for chroot namespaces', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    Sinon.stub(service.api.sys, 'readHealthStatus').rejects(new Error('health unavailable'));
+
+    await service.fetchType();
+
+    assert.strictEqual(service.type, 'enterprise', 'preserves the chroot namespace fallback');
+  });
+
+  test('fetchFeatures stores and caches license features', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    const api = service.api;
+    const features = ['Namespaces', 'Control Groups'];
+    const fetchFeatures = Sinon.stub(api.request, 'get').resolves(new Response(JSON.stringify({ features })));
+    service.type = 'enterprise';
+
+    await service.fetchFeatures();
+
+    assert.deepEqual(service.features, features, 'stores the features returned by the backend');
+    assert.true(service.hasNamespaces, 'derives namespace availability from the returned features');
+    assert.true(service.hasControlGroups, 'derives control group availability from the returned features');
+    assert.strictEqual(
+      fetchFeatures.firstCall.args[0],
+      'sys/license/features',
+      'reads license features from the root endpoint'
+    );
+    assert.deepEqual(
+      fetchFeatures.firstCall.args[1],
+      api.buildHeaders({ token: '', namespace: '' }).headers,
+      'reads license features without a token in the root namespace'
+    );
+
+    await service.fetchFeatures();
+
+    assert.true(fetchFeatures.calledOnce, 'does not fetch features again after they are loaded');
+  });
+
+  test('fetchFeatures does not request license features for community Vault', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    const fetchFeatures = Sinon.stub(service.api.request, 'get');
+    service.type = 'community';
+
+    await service.fetchFeatures();
+
+    assert.true(fetchFeatures.notCalled, 'skips the license feature request for community Vault');
+  });
+
+  test('fetchFeatures keeps the route usable when the license request fails', async function (assert) {
+    const service = this.owner.lookup('service:version');
+    Sinon.stub(service.api.request, 'get').rejects(new Error('license features unavailable'));
+    service.type = 'enterprise';
+
+    await service.fetchFeatures();
+
+    assert.deepEqual(service.features, [], 'keeps an empty feature list when the request fails');
   });
 
   test('hasPerfReplication', function (assert) {
