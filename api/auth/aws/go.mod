@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.37
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.6
 	github.com/hashicorp/go-hclog v1.6.3
-	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.2
+	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.3
 	github.com/hashicorp/go-uuid v1.0.4
 	github.com/hashicorp/vault/api v1.23.0
 )
@@ -44,7 +44,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
-	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
