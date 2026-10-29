@@ -1,13 +1,9 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/*
-  This service is used to pull an OpenAPI document describing the
-  shape of data at a specific path to hydrate a model with attrs it
-  has less (or no) information about.
-*/
+/** @module path-help Runtime OpenAPI discovery and form metadata for mounted plugins. */
 import Model, { attr } from '@ember-data/model';
 import Service from '@ember/service';
 import { getOwner } from '@ember/owner';
@@ -20,12 +16,13 @@ import {
   filterPathsByItemType,
   pathToHelpUrlSegment,
   reducePathsByPathName,
-  getHelpUrlForModel,
   combineOpenApiAttrs,
   expandOpenApiProps,
 } from 'vault/utils/openapi-helpers';
 import GeneratedItemModel from 'vault/models/generated-item';
 import GeneratedItemListAdapter from 'vault/adapters/generated-item-list';
+import FormField from 'vault/utils/forms/field';
+import FormFieldGroup from 'vault/utils/forms/field-group';
 
 export default class PathHelpService extends Service {
   ajax(url, options = {}) {
@@ -79,36 +76,7 @@ export default class PathHelpService extends Service {
   }
 
   /**
-   * hydrateModel instantiates models which use OpenAPI partially
-   * @param {string} modelType path for model, eg pki/role
-   * @param {string} backend path, which will be used for the generated helpUrl
-   * @returns void - as side effect, re-registers model via upgradeModelSchema
-   */
-  async hydrateModel(modelType, backend) {
-    const owner = getOwner(this);
-    const helpUrl = getHelpUrlForModel(modelType, backend);
-    const store = owner.lookup('service:store');
-    const Klass = store.modelFor(modelType);
-
-    if (Klass?.merged || !helpUrl) {
-      // if the model is already merged, we don't need to do anything
-      return resolve();
-    }
-    debug(`Hydrating model ${modelType} at backend ${backend}`);
-
-    // fetch props from openAPI
-    const props = await this.getProps(helpUrl);
-    // combine existing attributes with openAPI data
-    const { attrs, newFields } = combineOpenApiAttrs(Klass.attributes, props);
-    debug(`${modelType} has ${newFields.length} new fields: ${newFields.join(', ')}`);
-
-    // hydrate model
-    const HydratedKlass = this._upgradeModelSchema(Klass, attrs, newFields);
-
-    this._registerModel(owner, HydratedKlass, modelType);
-  }
-
-  /**
+   * Temporary compatibility bridge for generated-item consumers until VAULT-49929.
    * getNewModel instantiates models which use OpenAPI to generate the model fully
    * @param {string} modelType
    * @param {string} backend
@@ -128,7 +96,7 @@ export default class PathHelpService extends Service {
 
       if (!modelFactory.class.merged) {
         // no merged flag means this model was not previously generated
-        debug(`Model exists for ${modelType} -- use hydrateModel instead`);
+        debug(`Model exists for ${modelType} -- using its existing schema`);
       }
       return resolve();
     }
@@ -196,10 +164,12 @@ export default class PathHelpService extends Service {
     });
   }
 
-  // Makes a call to grab the OpenAPI document.
-  // Returns relevant information from OpenAPI
-  // as determined by the expandOpenApiProps util
-  getProps(helpUrl) {
+  /**
+   * Fetches runtime schema properties; legacy consumers retain camelCase model metadata.
+   * @param {string} helpUrl
+   * @param {'model' | 'form'} outputFormat
+   */
+  getProps(helpUrl, outputFormat = 'model') {
     // add name of thing you want
     debug(`Fetching schema properties from ${helpUrl}`);
 
@@ -208,6 +178,10 @@ export default class PathHelpService extends Service {
       // for the scope we're in
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
       const pathInfo = help.openapi.paths[path];
+      const schema = pathInfo?.post?.requestBody?.content?.['application/json']?.schema;
+      if (!schema) {
+        throw new Error(`OpenAPI request schema not found for ${helpUrl}`);
+      }
       const params = pathInfo.parameters;
       const paramProp = {};
 
@@ -227,22 +201,46 @@ export default class PathHelpService extends Service {
         };
       }
 
-      let props = {};
-      const schema = pathInfo?.post?.requestBody?.content['application/json'].schema;
+      let props;
       if (schema.$ref) {
         // $ref will be shaped like `#/components/schemas/MyResponseType
         // which maps to the location of the item within the openApi response
         const loc = schema.$ref.replace('#/', '').split('/');
-        props = loc.reduce((prev, curr) => {
-          return prev[curr] || {};
-        }, help.openapi).properties;
+        props = loc.reduce((prev, curr) => prev?.[curr], help.openapi)?.properties;
       } else if (schema.properties) {
         props = schema.properties;
       }
+      if (!props) {
+        throw new Error(`OpenAPI request properties not found for ${helpUrl}`);
+      }
       // put url params (e.g. {name}, {role}) at the front of the props list
       const newProps = { ...paramProp, ...props };
-      return expandOpenApiProps(newProps);
+      return expandOpenApiProps(newProps, outputFormat);
     });
+  }
+
+  /**
+   * Returns snake_case fields and ordered groups without registering a model or adapter.
+   * @param {string} helpUrl Runtime help URL for a plugin's create endpoint.
+   * @returns {Promise<import('vault/services/path-help').FormMetadata>}
+   */
+  async getFormMetadata(helpUrl) {
+    const props = await this.getProps(helpUrl, 'form');
+    const formFields = [];
+    const groups = new Map([['default', []]]);
+    for (const [name, prop] of Object.entries(props)) {
+      // Path identifiers bind to their own form data, not Ember Data's mutableId.
+      // eslint-disable-next-line no-unused-vars
+      const { type, fieldGroup, fieldValue, readOnly, ...options } = prop;
+      const field = new FormField(name, type, options);
+      formFields.push(field);
+      if (!groups.has(fieldGroup)) {
+        groups.set(fieldGroup, []);
+      }
+      groups.get(fieldGroup).push(field);
+    }
+    const formFieldGroups = [...groups].map(([name, fields]) => new FormFieldGroup(name, fields));
+    return { formFields, formFieldGroups };
   }
 
   getNewAdapter(pathInfo, itemType) {

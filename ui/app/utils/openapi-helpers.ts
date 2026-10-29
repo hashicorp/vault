@@ -204,22 +204,6 @@ export function filterPathsByItemType(pathInfo: PathInfo, itemType: string): Pat
   });
 }
 
-// Maps model names to the openAPI path used for Ember Data hydration.
-// Currently empty — all models that used it (auth-configs, PKI, KMIP, SSH) have been migrated
-// to API-backed Form classes. Other engine types (transform, database, identity) call hydrateModel
-// but were never in this map and don't rely on it — those calls are already no-ops.
-// TODO: To fully delete this and getHelpUrlForModel, we also need to clean up the hydrateModel call sites
-// in secrets/backend/list.js and secret-edit.js.
-const OPENAPI_POWERED_MODELS: Record<string, (backend: string) => string> = {};
-
-export function getHelpUrlForModel(modelType: string, backend?: string) {
-  if (modelType in OPENAPI_POWERED_MODELS && backend) {
-    const urlFn = OPENAPI_POWERED_MODELS[modelType];
-    return urlFn?.(backend) ?? null;
-  }
-  return null;
-}
-
 export const expandOpenApiProps = function (
   props: OpenApiProps,
   outputFormat: 'model' | 'form' = 'model'
