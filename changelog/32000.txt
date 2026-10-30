@@ -1,0 +1,3 @@
+```release-note:improvement
+identity/oidc: Omit claims with a null or empty string value from OIDC provider ID tokens and UserInfo responses, in line with the OIDC specification. Empty lists and objects are preserved.
+```
