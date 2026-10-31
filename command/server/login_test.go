@@ -84,7 +84,10 @@ func TestCustomPath(t *testing.T) {
 	expected := "Success! You are now authenticated."
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 	if !strings.Contains(combined, expected) {
-		t.Errorf("expected %q to be %q", combined, expected)
+		t.Errorf("expected %q to contain %q", combined, expected)
+	}
+	if strings.Contains(combined, "You do NOT need to run \"vault login\" again.") {
+		t.Errorf("expected login output not to contain misleading re-login guidance: %q", combined)
 	}
 
 	storedToken, err := tokenHelper.Get()
