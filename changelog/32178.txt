@@ -1,0 +1,3 @@
+```release-note:bug
+cli: clarify the vault login success message so it does not imply that users never need to log in again
+```

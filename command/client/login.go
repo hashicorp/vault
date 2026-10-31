@@ -356,7 +356,7 @@ func (c *LoginCommand) Run(args []string) int {
 	if base.Format(c.UI) == "table" {
 		c.UI.Output(base.WrapAtLength(
 			"Success! You are now authenticated. The token information displayed "+
-"below is already stored in the token helper. Future Vault requests "+
+				"below is already stored in the token helper. Future Vault requests "+
 				"will automatically use this token.") + "\n")
 	}
 
