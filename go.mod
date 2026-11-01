@@ -160,7 +160,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-jwt v0.27.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.18.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.1
-	github.com/hashicorp/vault-plugin-auth-oci v0.22.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.22.2-0.20261101002612-bb9bbf1157b8
 	github.com/hashicorp/vault-plugin-database-couchbase v0.17.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1
@@ -518,7 +518,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.3.6 // indirect
-	github.com/oracle/oci-go-sdk/v65 v65.123.0 // indirect
+	github.com/oracle/oci-go-sdk/v65 v65.128.0 // indirect
 	github.com/packethost/packngo v0.1.1-0.20180711074735-b9cb5096f54c // indirect
 	github.com/petermattis/goid v0.0.0-20260716134002-a9b348f0a2b9 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
