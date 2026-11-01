@@ -166,7 +166,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1
 	github.com/hashicorp/vault-plugin-database-redis v0.9.1
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.1
-	github.com/hashicorp/vault-plugin-database-snowflake v0.17.1
+	github.com/hashicorp/vault-plugin-database-snowflake v0.17.2-0.20261101001822-4a24825b10ab
 	github.com/hashicorp/vault-plugin-secrets-ad v0.23.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.23.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.25.1
@@ -537,7 +537,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/smartystreets/assertions v1.13.1 // indirect
-	github.com/snowflakedb/gosnowflake v1.19.0 // indirect
+	github.com/snowflakedb/gosnowflake v1.19.1 // indirect
 	github.com/softlayer/softlayer-go v1.2.1 // indirect
 	github.com/softlayer/xmlrpc v0.0.0-20200409220501-5f089df7cb7e // indirect
 	github.com/sony/gobreaker/v2 v2.4.0 // indirect
