@@ -125,7 +125,7 @@ require (
 	github.com/hashicorp/go-plugin v1.8.0
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/hashicorp/go-rootcerts v1.0.2
+	github.com/hashicorp/go-rootcerts v1.1.0
 	github.com/hashicorp/go-secure-stdlib/awsutil/v2 v2.1.3
 	github.com/hashicorp/go-secure-stdlib/base62 v0.1.2
 	github.com/hashicorp/go-secure-stdlib/gatedwriter v0.1.1
@@ -162,7 +162,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.22.1
 	github.com/hashicorp/vault-plugin-database-couchbase v0.17.1
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.1
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.2-0.20261101003536-b090f9836d24
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1
 	github.com/hashicorp/vault-plugin-database-redis v0.9.1
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.1
