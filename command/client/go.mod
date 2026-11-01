@@ -71,7 +71,7 @@ require (
 	golang.org/x/text v0.43.0
 	google.golang.org/api v0.299.0
 	google.golang.org/grpc v1.85.0
-	k8s.io/utils v0.0.0-20251002143259-bc988d571ff4
+	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 )
 
 require (
@@ -145,7 +145,7 @@ require (
 	github.com/gammazero/workerpool v1.2.1 // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.7 // indirect
 	github.com/go-ldap/ldap/v3 v3.4.13 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
