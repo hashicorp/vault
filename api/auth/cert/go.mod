@@ -3,7 +3,7 @@ module github.com/hashicorp/vault/api/auth/cert
 go 1.26.0
 
 require (
-	github.com/hashicorp/go-rootcerts v1.0.2
+	github.com/hashicorp/go-rootcerts v1.1.0
 	github.com/hashicorp/vault/api v1.23.0
 )
 
