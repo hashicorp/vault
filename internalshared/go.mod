@@ -27,7 +27,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.6
 	github.com/coder/websocket v1.8.14
 	github.com/gammazero/workerpool v1.2.1
-	github.com/go-test/deep v1.1.1
+	github.com/go-test/deep v1.1.2
 	github.com/golang/protobuf v1.5.4
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/cli v1.1.7
