@@ -22,9 +22,11 @@
   <nav class="tabs sub-nav" aria-label="navigation for managing identity alias">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType "alias") as |tab|}}
-        <LinkTo @route="vault.cluster.access.identity.entities.aliases.show" @models={{array this.model.id tab}}>
-          {{capitalize tab}}
-        </LinkTo>
+        <li>
+          <LinkTo @route="vault.cluster.access.identity.entities.aliases.show" @models={{array this.model.id tab}}>
+            {{capitalize tab}}
+          </LinkTo>
+        </li>
       {{/each}}
     </ul>
   </nav>

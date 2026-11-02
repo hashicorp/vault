@@ -62,7 +62,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
       .dom('[data-test-component="search-select"]#search-input-role')
       .exists('renders search select component by default');
     assert
-      .dom('[data-test-component="search-select"]#search-input-role')
+      .dom(GENERAL.searchSelect.trigger('search-input-role'))
       .hasText('Search for a role...', 'renders placeholder text passed to search select');
     await clickTrigger();
     await selectChoose('', 'my-role');

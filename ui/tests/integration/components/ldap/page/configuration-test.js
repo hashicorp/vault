@@ -44,7 +44,6 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
       rules: {
         // TODO: fix ConfirmAction rendered in toolbar not a list item
         list: { enabled: false },
-        'scrollable-region-focusable': { enabled: false },
       },
     });
   });

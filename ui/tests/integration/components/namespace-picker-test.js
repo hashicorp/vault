@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, fillIn, findAll, click, find } from '@ember/test-helpers';
+import { render, fillIn, findAll, click, find, triggerEvent } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -54,7 +54,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(GENERAL.button('namespace-picker'));
     assert
       .dom(GENERAL.button(this.nsService.path))
-      .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
+      .hasAttribute('aria-current', 'true', 'the current namespace path is selected');
     assert.dom(`${GENERAL.button(this.nsService.path)} ${GENERAL.icon('check')}`).exists();
   });
 
@@ -88,6 +88,43 @@ module('Integration | Component | namespace-picker', function (hooks) {
       3,
       'Three namespaces are displayed after clearing the search input'
     );
+  });
+
+  test('it preserves search focus and restores namespaces after no results', async function (assert) {
+    await render(hbs`<NamespacePicker />`);
+    await click(GENERAL.button('namespace-picker'));
+    await fillIn(GENERAL.inputByAttr('Search namespaces'), 'no matching namespace');
+
+    assert
+      .dom('[data-test-help-text="no namespaces"]')
+      .hasText('No matching namespaces found. Try searching for a different namespace.');
+    assert.dom(GENERAL.inputByAttr('Search namespaces')).isFocused('empty results preserve search focus');
+
+    await fillIn(GENERAL.inputByAttr('Search namespaces'), '');
+    for (const namespace of INITIALIZED_NAMESPACES) {
+      assert.dom(GENERAL.button(namespace)).exists(`restores namespace "${namespace}"`);
+    }
+    assert
+      .dom(GENERAL.button(this.nsService.path))
+      .hasAttribute('aria-current', 'true', 'restored results identify the current namespace');
+  });
+
+  test('it loads more namespaces when the options list is scrolled to the bottom', async function (assert) {
+    this.server.get('/sys/internal/ui/namespaces', () => ({
+      data: { keys: Array.from({ length: 201 }, (_, index) => `namespace-${index}/`) },
+    }));
+
+    await render(hbs`<NamespacePicker />`);
+    await click(GENERAL.button('namespace-picker'));
+    assert.dom(`[data-test-namespace-options] ${GENERAL.button()}`).exists({ count: 200 });
+
+    const options = find('[data-test-namespace-options]');
+    options.scrollTop = options.scrollHeight;
+    await triggerEvent(options, 'scroll');
+
+    assert
+      .dom(`[data-test-namespace-options] ${GENERAL.button()}`)
+      .exists({ count: 202 }, 'scrolling loads the remaining namespaces, including root');
   });
 
   module('capabilities', function (hooks) {
@@ -181,8 +218,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(GENERAL.button('namespace-picker'));
     assert
       .dom(GENERAL.button(this.nsService.path))
-      .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
-    assert.dom('[aria-selected="true"]').exists({ count: 1 }, 'only one option is selected');
+      .hasAttribute('aria-current', 'true', 'the current namespace path is selected');
+    assert.dom('[aria-current="true"]').exists({ count: 1 }, 'only one namespace is current');
     assert.dom(GENERAL.icon('check')).exists({ count: 1 }, 'only one check mark renders');
   });
 });

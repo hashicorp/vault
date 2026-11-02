@@ -6,7 +6,6 @@
 import { waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -77,12 +76,6 @@ module('Acceptance | init', function (hooks) {
   setupMirage(hooks);
 
   test('cloud seal init', async function (assert) {
-    // continue button is disabled, violating color-contrast
-    setRunOptions({
-      rules: {
-        'color-contrast': { enabled: false },
-      },
-    });
     assert.expect(6);
     this.server.put('/sys/init', (schema, req) => {
       assertRequest(req, assert, true);

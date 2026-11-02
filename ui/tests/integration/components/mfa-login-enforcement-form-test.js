@@ -37,7 +37,6 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         label: { enabled: false },
         // TODO: add labels to enforcement targets key/value style inputs
         'select-name': { enabled: false },
-        'aria-prohibited-attr': { enabled: false },
       },
     });
   });

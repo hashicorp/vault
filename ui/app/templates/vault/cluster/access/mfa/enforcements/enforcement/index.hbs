@@ -19,22 +19,26 @@
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs" aria-label="Enforcement tabs">
     <ul>
-      <LinkTo
-        @route="vault.cluster.access.mfa.enforcements.enforcement"
-        @query={{hash tab="targets"}}
-        data-test-tab="targets"
-        @model={{@model.name}}
-      >
-        Targets
-      </LinkTo>
-      <LinkTo
-        @route="vault.cluster.access.mfa.enforcements.enforcement"
-        @query={{hash tab="methods"}}
-        data-test-tab="methods"
-        @model={{@model.name}}
-      >
-        Methods
-      </LinkTo>
+      <li>
+        <LinkTo
+          @route="vault.cluster.access.mfa.enforcements.enforcement"
+          @query={{hash tab="targets"}}
+          data-test-tab="targets"
+          @model={{@model.name}}
+        >
+          Targets
+        </LinkTo>
+      </li>
+      <li>
+        <LinkTo
+          @route="vault.cluster.access.mfa.enforcements.enforcement"
+          @query={{hash tab="methods"}}
+          data-test-tab="methods"
+          @model={{@model.name}}
+        >
+          Methods
+        </LinkTo>
+      </li>
     </ul>
   </nav>
 </div>

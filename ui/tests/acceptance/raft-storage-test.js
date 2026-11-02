@@ -48,7 +48,7 @@ module('Acceptance | raft storage', function (hooks) {
   });
 
   test('it should remove raft peer', async function (assert) {
-    assert.expect(3);
+    assert.expect(6);
 
     this.server.get('/sys/storage/raft/configuration', () => this.config);
     this.server.post('/sys/storage/raft/remove-peer', (schema, req) => {
@@ -66,7 +66,14 @@ module('Acceptance | raft storage', function (hooks) {
     await visit('/vault/storage/raft');
     assert.dom('[data-raft-row]').exists({ count: 2 }, '2 raft peers render in table');
     await click(`${row} button`);
+    assert
+      .dom(`${row} ul > li > ${GENERAL.confirmTrigger}`)
+      .hasText('Remove Peer', 'Remove peer action is a direct item in the dropdown list');
     await click(`${row} ${GENERAL.confirmTrigger}`);
+    assert
+      .dom(GENERAL.confirmTitle)
+      .hasText(`Remove ${this.config.data.config.servers[1].node_id}?`, 'Confirmation identifies the peer');
+    assert.dom(`ul ${GENERAL.confirmButton}`).doesNotExist('Confirmation renders outside the dropdown list');
     await click(GENERAL.confirmButton);
     assert.dom('[data-raft-row]').exists({ count: 1 }, 'Raft peer successfully removed');
   });

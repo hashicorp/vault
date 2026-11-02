@@ -78,11 +78,9 @@ module('Integration | Component | oidc/client-form', function (hooks) {
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
         'aria-valid-attr-value': { enabled: false },
-        'nested-interactive': { enabled: false },
         // TODO: Fix SearchSelect component
         'aria-required-attr': { enabled: false },
         label: { enabled: false },
-        'color-contrast': { enabled: false },
       },
     });
   });

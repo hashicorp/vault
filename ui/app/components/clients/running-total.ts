@@ -189,6 +189,13 @@ export default class RunningTotal extends Component<Args> {
   }
 
   /**
+   * Month labels for every month in the range, including months with no data
+   */
+  get monthLabels(): string[] {
+    return this.runningTotalData.map((monthData) => parseAPITimestamp(monthData.timestamp, 'M/yy'));
+  }
+
+  /**
    * Transforms monthly data into simple bar chart format
    */
   get simpleChartData(): ChartDataPoint[] {
@@ -196,15 +203,18 @@ export default class RunningTotal extends Component<Args> {
       return [];
     }
 
-    return this.runningTotalData.map((monthData) => {
+    const label = toLabel([this.dataKey]);
+    // Months without data are omitted because Carbon uses the bar value as its aria-label,
+    // so a null value renders an unnamed graphics-symbol (axe svg-img-alt).
+    // The x-axis domain keeps those months visible.
+    return this.runningTotalData.flatMap((monthData) => {
       const value = (monthData as unknown as Record<string, number | string>)[this.dataKey];
-      const month = parseAPITimestamp(monthData.timestamp, 'M/yy');
-      const label = toLabel([this.dataKey]);
+      if (typeof value !== 'number') return [];
 
       return {
         group: label,
-        key: month,
-        value: typeof value === 'number' ? value : null,
+        key: parseAPITimestamp(monthData.timestamp, 'M/yy'),
+        value,
         legendX: parseAPITimestamp(monthData.timestamp, 'MMMM yyyy'),
       };
     });
@@ -290,6 +300,7 @@ export default class RunningTotal extends Component<Args> {
         bottom: {
           mapsTo: 'key',
           scaleType: ScaleTypes.LABELS,
+          domain: this.monthLabels,
         },
       },
       legend: {
@@ -310,20 +321,11 @@ export default class RunningTotal extends Component<Args> {
           if (!data || data.length === 0) return '';
 
           const firstPoint = data[0];
-          if (!firstPoint) return '';
+          if (!firstPoint || firstPoint.value === null) return '';
 
           const month = firstPoint.legendX || firstPoint.key;
           const value = firstPoint.value;
           const label = toLabel([this.dataKey]);
-
-          if (value === null) {
-            return `
-              <div class="cds--tooltip cds--tooltip--shown carbon-chart-tooltip">
-                <p class="tooltip-month">${month}</p>
-                <p class="tooltip-value">No data</p>
-              </div>
-            `;
-          }
 
           return `
             <div class="cds--tooltip cds--tooltip--shown carbon-chart-tooltip">

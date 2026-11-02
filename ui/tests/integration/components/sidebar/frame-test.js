@@ -20,8 +20,6 @@ module('Integration | Component | sidebar-frame', function (hooks) {
       rules: {
         // This is an issue with Hds::AppHeader::HomeLink
         'aria-prohibited-attr': { enabled: false },
-        // TODO: fix use Dropdown on user-menu
-        'nested-interactive': { enabled: false },
       },
     });
   });
@@ -62,13 +60,6 @@ module('Integration | Component | sidebar-frame', function (hooks) {
   });
 
   test('it should render logo and actions in app header', async function (assert) {
-    setRunOptions({
-      rules: {
-        'aria-prohibited-attr': { enabled: false },
-        'nested-interactive': { enabled: false },
-        label: { enabled: false },
-      },
-    });
     this.owner.lookup('service:currentCluster').setCluster({ name: 'vault' });
 
     await render(hbs`
@@ -87,14 +78,6 @@ module('Integration | Component | sidebar-frame', function (hooks) {
   });
 
   test('it should render a submit feedback link in the help menu', async function (assert) {
-    setRunOptions({
-      rules: {
-        'aria-prohibited-attr': { enabled: false },
-        'nested-interactive': { enabled: false },
-        label: { enabled: false },
-      },
-    });
-
     await render(hbs`
       <Sidebar::Frame @showSidebar={{true}} />
     `);

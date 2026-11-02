@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
@@ -49,13 +48,6 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       dns_resolver: 'resolver',
       max_ttl: '72h',
     };
-    // Fails on #ember-testing-container
-    setRunOptions({
-      rules: {
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
-
     this.renderComponent = () =>
       render(
         hbs`

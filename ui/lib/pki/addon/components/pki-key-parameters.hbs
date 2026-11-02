@@ -11,14 +11,9 @@
         for={{field.name}}
         @label={{capitalize (or field.options.label (humanize (dasherize field.name)))}}
         @subText={{field.options.subText}}
+        @helpText={{unless @form.data.key_type "Choose a key type before specifying bit length."}}
       />
-
-      <div
-        class="select is-fullwidth"
-        {{! these extra parentheses are necessary to conditionally apply the modifier }}
-        {{! TODO: refactor this component and avoid this conditional modifier pattern }}
-        {{(unless @form.data.key_type (modifier "hds-tooltip" "Choose a key type before specifying bit length."))}}
-      >
+      <div class="select is-fullwidth">
         <select
           id={{field.name}}
           name={{field.name}}

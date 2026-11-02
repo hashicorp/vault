@@ -23,12 +23,14 @@
       {{#let (this.valueForField fieldName) as |value|}}
         {{#if (this.linkForField fieldName)}}
           <InfoTableRow @label={{this.detailLabel fieldName}} @addCopyButton={{true}}>
-            <LinkTo
-              @route={{this.linkForField fieldName}}
-              @models={{array this.secretMountPath.currentPath (get this.config fieldName)}}
-            >
-              {{value}}
-            </LinkTo>
+            {{#if value}}
+              <LinkTo
+                @route={{this.linkForField fieldName}}
+                @models={{array this.secretMountPath.currentPath (get this.config fieldName)}}
+              >
+                {{value}}
+              </LinkTo>
+            {{/if}}
           </InfoTableRow>
         {{else if (this.isCertificateField fieldName)}}
           <InfoTableRow @label={{this.detailLabel fieldName}}>

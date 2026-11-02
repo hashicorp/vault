@@ -37,21 +37,31 @@
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-oidc-tabs>
       <nav class="tabs" aria-label="navigation for managing Open ID Connect">
         <ul>
-          <LinkTo @route="vault.cluster.access.oidc.clients" data-test-tab="clients">
-            Applications
-          </LinkTo>
-          <LinkTo @route="vault.cluster.access.oidc.keys" data-test-tab="keys">
-            Keys
-          </LinkTo>
-          <LinkTo @route="vault.cluster.access.oidc.assignments" data-test-tab="assignments">
-            Assignments
-          </LinkTo>
-          <LinkTo @route="vault.cluster.access.oidc.providers" data-test-tab="providers">
-            Providers
-          </LinkTo>
-          <LinkTo @route="vault.cluster.access.oidc.scopes" data-test-tab="scopes">
-            Scopes
-          </LinkTo>
+          <li>
+            <LinkTo @route="vault.cluster.access.oidc.clients" data-test-tab="clients">
+              Applications
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.access.oidc.keys" data-test-tab="keys">
+              Keys
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.access.oidc.assignments" data-test-tab="assignments">
+              Assignments
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.access.oidc.providers" data-test-tab="providers">
+              Providers
+            </LinkTo>
+          </li>
+          <li>
+            <LinkTo @route="vault.cluster.access.oidc.scopes" data-test-tab="scopes">
+              Scopes
+            </LinkTo>
+          </li>
         </ul>
       </nav>
     </div>

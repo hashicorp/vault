@@ -202,6 +202,10 @@ module('Integration | Component | page/namespaces | Namespace Wizard', function 
     await click(GENERAL.button('add namespace'));
     await fillIn(`${SELECTORS.inputRow(1)} ${GENERAL.inputByAttr('global-1')}`, 'global2');
     assert.dom(SELECTORS.tree).exists('Tree chart shows with multiple globals');
+    assert
+      .dom(SELECTORS.tree)
+      .hasAttribute('role', 'group')
+      .hasAttribute('aria-label', 'Namespace structure preview', 'preview has an accessible name');
 
     // Remove second global - tree is hidden again
     await click(`${SELECTORS.inputRow(1)} ${GENERAL.button('delete namespace')}`);
