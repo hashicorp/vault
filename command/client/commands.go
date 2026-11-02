@@ -4,6 +4,7 @@
 package command
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,17 +22,137 @@ func Run(args []string) int {
 
 // RunCustom allows passing in base run options (e.g. a custom token helper).
 func RunCustom(args []string, runOpts *base.RunOptions) int {
-	return base.RunCustomWithCommandsFn(args, runOpts, initClientBinaryCommands, "server")
+	return base.RunCustomWithCommandsFn(args, runOpts, InitClientBinaryCommands, unavailableClientCommands...)
 }
 
 // serverInstallURL is where users can obtain the vault binary, which includes
 // the server that vault-client leaves out.
 const serverInstallURL = "https://developer.hashicorp.com/vault/install"
 
-// initClientBinaryCommands keeps client branding and the server placeholder out of
-// InitClientCommands so we don't override commands in the full vault binary.
+// UnavailableCommand points users to the full Vault binary for commands we
+// don't include in vault-client.
+type UnavailableCommand struct {
+	ui   cli.Ui
+	name string
+}
+
+var _ cli.Command = (*UnavailableCommand)(nil)
+
+func (c *UnavailableCommand) Synopsis() string {
+	return "Not included in this binary"
+}
+
+func (c *UnavailableCommand) Help() string {
+	return c.message()
+}
+
+func (c *UnavailableCommand) Run(_ []string) int {
+	c.ui.Error(c.message())
+	return 1
+}
+
+func (c *UnavailableCommand) message() string {
+	return fmt.Sprintf("%q is not available in vault-client v%s.\n"+
+		"This command requires the full Vault Server image.\n"+
+		"Obtain the full Vault binary: %s",
+		c.name, version.GetVersion().VersionNumber(), serverInstallURL)
+}
+
+// Hide these commands from help and completion. Keep them out of
+// InitClientCommands so we don't replace real commands in the vault binary.
+// The operator key-status, rotate, and unseal commands are supported client
+// commands (PRD VLT-2015 AC-1.3), so they must not be listed here.
+var unavailableClientCommands = []string{
+	"audit",
+	"audit disable",
+	"audit enable",
+	"audit list",
+	"debug",
+	"events",
+	"events subscribe",
+	"events subscriptions",
+	"events subscriptions create",
+	"events subscriptions delete",
+	"events subscriptions get",
+	"events subscriptions list",
+	"license",
+	"license get",
+	"license inspect",
+	"monitor",
+	"operator diagnose",
+	"operator generate-root",
+	"operator import",
+	"operator init",
+	"operator members",
+	"operator migrate",
+	"operator raft",
+	"operator raft autopilot",
+	"operator raft autopilot get-config",
+	"operator raft autopilot set-config",
+	"operator raft autopilot state",
+	"operator raft join",
+	"operator raft list-peers",
+	"operator raft remove-peer",
+	"operator raft snapshot",
+	"operator raft snapshot inspect",
+	"operator raft snapshot load",
+	"operator raft snapshot restore",
+	"operator raft snapshot save",
+	"operator raft snapshot unload",
+	"operator rekey",
+	"operator seal",
+	"operator step-down",
+	"operator usage",
+	"operator utilization",
+	"pki",
+	"pki health-check",
+	"pki issue",
+	"pki list-intermediates",
+	"pki reissue",
+	"pki verify-sign",
+	"plugin",
+	"plugin deregister",
+	"plugin info",
+	"plugin list",
+	"plugin register",
+	"plugin reload",
+	"plugin reload-status",
+	"plugin runtime",
+	"plugin runtime deregister",
+	"plugin runtime info",
+	"plugin runtime list",
+	"plugin runtime register",
+	"policy",
+	"policy delete",
+	"policy fmt",
+	"policy list",
+	"policy read",
+	"policy write",
+	"server",
+	"transform",
+	"transform import",
+	"transform import-version",
+	"transit",
+	"transit envelope",
+	"transit envelope decrypt",
+	"transit envelope encrypt",
+	"transit envelope header",
+	"transit import",
+	"transit import-version",
+	"version-history",
+}
+
+// InitClientBinaryCommands is like InitClientCommands only it adds overrides
+// and placeholder shims commands that ought to only exist in the vault-client
+// binary. Use InitClientCommands for all of the real Client commands.
+func InitClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]cli.CommandFactory {
+	return initClientBinaryCommands(ui, serverCmdUi, runOpts)
+}
+
 func initClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]cli.CommandFactory {
 	commands := InitClientCommands(ui, serverCmdUi, runOpts)
+
+	// Override version so that it shows Vault Client instead of Vault.
 	commands["version"] = func() (cli.Command, error) {
 		versionInfo := version.GetVersion()
 		versionInfo.BinaryName = "Vault Client"
@@ -40,33 +161,16 @@ func initClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) 
 			BaseCommand: base.NewBaseCommand(ui, runOpts),
 		}, nil
 	}
-	commands["server"] = func() (cli.Command, error) {
-		return &serverNotIncludedCommand{ui: ui}, nil
+
+	// Add unavailable command shims for commands that exist in server but
+	// do not exist in client.
+	for _, name := range unavailableClientCommands {
+		commands[name] = func() (cli.Command, error) {
+			return &UnavailableCommand{ui: ui, name: name}, nil
+		}
 	}
+
 	return commands
-}
-
-// serverNotIncludedCommand is the hidden server command of vault-client.
-type serverNotIncludedCommand struct {
-	ui cli.Ui
-}
-
-func (c *serverNotIncludedCommand) Synopsis() string {
-	return "Not included in this binary"
-}
-
-func (c *serverNotIncludedCommand) Help() string {
-	return c.message()
-}
-
-func (c *serverNotIncludedCommand) Run(_ []string) int {
-	c.ui.Error(c.message())
-	return 1
-}
-
-func (c *serverNotIncludedCommand) message() string {
-	return "This binary does not include the Vault server. To run a Vault " +
-		"server, obtain the vault binary from " + serverInstallURL
 }
 
 // InitClientCommands returns the set of CLI commands for the client binary,
