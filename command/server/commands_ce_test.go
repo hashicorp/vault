@@ -18,6 +18,24 @@ import (
 // entServerOnlyCommands is empty in CE: enterprise-only commands are not built.
 var entServerOnlyCommands []string
 
+var entClientBinaryRealCommands []string
+
+// These commands aren't built in CE, but vault-client should still explain why
+// they're unavailable.
+var entClientBinaryExtraAliases = []string{
+	"events subscriptions",
+	"events subscriptions create",
+	"events subscriptions delete",
+	"events subscriptions get",
+	"events subscriptions list",
+	"license",
+	"license get",
+	"license inspect",
+	"operator import",
+	"operator raft snapshot load",
+	"operator raft snapshot unload",
+}
+
 // TestInitCommands_CE verifies that the CE vault server binary registers
 // exactly the commands it registered before server-only commands moved out
 // of command/client, so the move did not drop or add any command.
