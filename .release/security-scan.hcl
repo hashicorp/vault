@@ -10,21 +10,10 @@ binary {
   triage {
     suppress {
       vulnerabilities = [
-        // GO-2022-0635 is valid. We will remove this when the ongoing migration
-        // to github.com/aws/aws-sdk-go/v2 has been completed.
-        "GO-2022-0635",
-
         // GO-2026-5932 appears to be a false positive as it only relates to
         // golang.org/x/crypto/openpgp, which is not in use in the project.
         // https://pkg.go.dev/vuln/GO-2026-5932
         "GO-2026-5932",
-
-        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
-        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
-        // those versions.
-        // https://pkg.go.dev/vuln/GO-2026-5856
-        // https://pkg.go.dev/vuln/GO-2026-4970
-        "GO-2026-5856", "GO-2026-4970",
 
         // GO-2026-5298 appears to be a false positive as the associated
         // Github Security Advisory shows that v0.6.1 contains the fix.
@@ -35,31 +24,16 @@ binary {
         // https://github.com/golang/vulndb/issues/5795
         "GO-2026-5298",
 
-        // https://hashicorp.atlassian.net/browse/PSP-3913
-        // Exempt these until the scanner can handle the boringcrypto suffix for
-        // the FIPS 140-3 builds.
-        "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
-        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942",
-        "GO-2026-6600", "GO-2026-6607", "GO-2026-6608", "GO-2026-6613",
-        "GO-2026-6604", "GO-2026-6609", "GO-2026-6612", "GO-2026-6605",
-        "GO-2026-6603", "GO-2026-6617", "GO-2026-6599", "GO-2026-6610",
-        "GO-2026-6611", "GO-2026-6809",
-
-
-        // google.golang.org/grpc@v1.84.0
-        // This isn't actually a problem because we do a replace to a version
-        // that isn't 1.84.0, however, the scanner still trips. After we cut
-        // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
-        // that doesn't depend on 1.84.0 we can update all of our Go modules
-        // and remove this exemption.
-        "GO-2026-6443",
-
         // https://github.com/advisories/GHSA-qqj6-54q6-cxv6
         // https://pkg.go.dev/vuln/GO-2026-6665
         // gosnowflake v1 does not currently have patch for the issue, nor is
         // clear if v1 is still actively maintained. We'll want to migrate to
         // v2 ASAP.
         "GHSA-qqj6-54q6-cxv6", "GO-2026-6665",
+
+        // github.com/go-jose/go-jose/v3 is EOL and has several open advisories.
+        // Temporarily suppress them until we've fully migrated to v4.
+        "GHSA-mgcc-cww5-fp2q", "GHSA-vvm8-gf78-28g4", "GHSA-4w3g-jfj2-cw2q",
       ]
     }
   }
@@ -76,21 +50,10 @@ container {
   triage {
     suppress {
       vulnerabilities = [
-        // GO-2022-0635 is valid. We will remove this when the ongoing migration
-        // to github.com/aws/aws-sdk-go/v2 has been completed.
-        "GO-2022-0635",
-
         // GO-2026-5932 appears to be a false positive as it only relates to
         // golang.org/x/crypto/openpgp, which is not in use in the project.
         // https://pkg.go.dev/vuln/GO-2026-5932
         "GO-2026-5932",
-
-        // GO-2026-5856 and GO-2026-4970 appear to be false positives as we're
-        // currently on Go >= 1.26.5 and >= 1.25.12 and these were fixed in
-        // those versions
-        // https://pkg.go.dev/vuln/GO-2026-5856
-        // https://pkg.go.dev/vuln/GO-2026-4970
-        "GO-2026-5856", "GO-2026-4970",
 
         // GO-2026-5298 appears to be a false positive as the associated
         // Github Security Advisory shows that v0.6.1 contains the fix.
@@ -101,30 +64,16 @@ container {
         // https://github.com/golang/vulndb/issues/5795
         "GO-2026-5298",
 
-        // https://hashicorp.atlassian.net/browse/PSP-3913
-        // Exempt these until the scanner can handle the boringcrypto suffix for
-        // the FIPS 140-3 builds.
-        "GO-2026-6091", "GO-2026-6088", "GO-2026-5972", "GO-2026-6218",
-        "GO-2026-6090", "GO-2026-5026", "GO-2026-6089", "GO-2026-5942",
-        "GO-2026-6600", "GO-2026-6607", "GO-2026-6608", "GO-2026-6613",
-        "GO-2026-6604", "GO-2026-6609", "GO-2026-6612", "GO-2026-6605",
-        "GO-2026-6603", "GO-2026-6617", "GO-2026-6599", "GO-2026-6610",
-        "GO-2026-6611", "GO-2026-6809",
-
-        // google.golang.org/grpc@v1.84.0
-        // This isn't actually a problem because we do a replace to a version
-        // that isn't 1.84.0, however, the scanner still trips. After we cut
-        // a new version of github.com/hashicorp/vault-plugin-secrets-pki-external-ca
-        // that doesn't depend on 1.84.0 we can update all of our Go modules
-        // and remove this exemption.
-        "GO-2026-6443",
-
         // https://github.com/advisories/GHSA-qqj6-54q6-cxv6
         // https://pkg.go.dev/vuln/GO-2026-6665
         // gosnowflake v1 does not currently have patch for the issue, nor is
         // clear if v1 is still actively maintained. We'll want to migrate to
         // v2 ASAP.
         "GHSA-qqj6-54q6-cxv6", "GO-2026-6665",
+
+        // github.com/go-jose/go-jose/v3 is EOL and has several open advisories.
+        // Temporarily suppress them until we've fully migrated to v4.
+        "GHSA-mgcc-cww5-fp2q", "GHSA-vvm8-gf78-28g4", "GHSA-4w3g-jfj2-cw2q",
       ]
 
       // The OSV scanner will trip on several packages that are included in the
