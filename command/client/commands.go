@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -28,13 +28,18 @@ func RunCustom(args []string, runOpts *base.RunOptions) int {
 // the server that vault-client leaves out.
 const serverInstallURL = "https://developer.hashicorp.com/vault/install"
 
-// initClientBinaryCommands adds a hidden server command to the client command
-// set. Users used to running `vault server` get a pointer to the vault binary
-// instead of a generic unknown command error. It is not part of
-// InitClientCommands because the vault binary builds on that set and
-// registers the real server command.
+// initClientBinaryCommands keeps client branding and the server placeholder out of
+// InitClientCommands so we don't override commands in the full vault binary.
 func initClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]cli.CommandFactory {
 	commands := InitClientCommands(ui, serverCmdUi, runOpts)
+	commands["version"] = func() (cli.Command, error) {
+		versionInfo := version.GetVersion()
+		versionInfo.BinaryName = "Vault Client"
+		return &VersionCommand{
+			VersionInfo: versionInfo,
+			BaseCommand: base.NewBaseCommand(ui, runOpts),
+		}, nil
+	}
 	commands["server"] = func() (cli.Command, error) {
 		return &serverNotIncludedCommand{ui: ui}, nil
 	}
