@@ -27,7 +27,7 @@ func TestGetItemIDReq_Run(t *testing.T) {
 
 	const (
 		// The queries that Run() should be sending for the different cases
-		boardQuery  = `query ($boardId:ID!){boards(ids:[$boardId]){items_page(limit:100){items{id,name}}}}`
+		boardQuery  = `query ($boardId:ID!$queryParams:ItemsQuery!){boards(ids:[$boardId]){items_page(limit:100, query_params:$queryParams){items{id,name}}}}`
 		parentQuery = `query ($parentId:ID!){items(ids:[$parentId]){subitems{id,name,board{id}}}}`
 
 		// The responses Run() should receive from Monday for the different cases
@@ -76,7 +76,17 @@ func TestGetItemIDReq_Run(t *testing.T) {
 	parentReq := func(itemName string) *GetItemIDReq {
 		return &GetItemIDReq{ParentID: "5050606", ItemName: itemName}
 	}
-	boardVars := map[string]any{"boardId": "1010222"}
+
+	boardVars := func(itemName string) map[string]any {
+		return map[string]any{
+			"boardId": "1010222",
+			"queryParams": map[string]any{"rules": []any{map[string]any{
+				"column_id":     "name",
+				"compare_value": []any{itemName},
+				"operator":      "any_of",
+			}}},
+		}
+	}
 	parentVars := map[string]any{"parentId": "5050606"}
 
 	for name, tc := range map[string]struct {
@@ -91,35 +101,39 @@ func TestGetItemIDReq_Run(t *testing.T) {
 	}{
 		"board: matching item": {
 			req: boardReq("Other item"), status: 200, body: boardResponse,
-			wantQuery: boardQuery, wantVars: boardVars, wantItem: "111", wantBoard: "1010222",
+			wantQuery: boardQuery, wantVars: boardVars("Other item"), wantItem: "111", wantBoard: "1010222",
 		},
 		"board: duplicate names return first match": {
 			req: boardReq("Release Checklist"), status: 200, body: boardResponse,
-			wantQuery: boardQuery, wantVars: boardVars, wantItem: "222", wantBoard: "1010222",
+			wantQuery: boardQuery, wantVars: boardVars("Release Checklist"), wantItem: "222", wantBoard: "1010222",
 		},
 		"board: item not found": {
 			req: boardReq("Missing"), status: 200, body: boardResponse,
-			wantQuery: boardQuery, wantVars: boardVars, wantErr: "couldn't find id for item Missing",
+			wantQuery: boardQuery, wantVars: boardVars("Missing"), wantErr: "couldn't find id for item Missing",
 		},
 		"board: different whitespace does not match": {
 			req: boardReq("Release  Checklist"), status: 200, body: boardResponse,
-			wantQuery: boardQuery, wantVars: boardVars, wantErr: "couldn't find id for item Release  Checklist",
+			wantQuery: boardQuery, wantVars: boardVars("Release  Checklist"), wantErr: "couldn't find id for item Release  Checklist",
+		},
+		"board: server near-miss is rejected by exact match": {
+			req: boardReq("release checklist"), status: 200, body: boardResponse,
+			wantQuery: boardQuery, wantVars: boardVars("release checklist"), wantErr: "couldn't find id for item release checklist",
 		},
 		"board: board not found": {
-			req: boardReq("Release Checklist"), status: 200, body: `{"data":{"boards":[]}}`,
-			wantQuery: boardQuery, wantVars: boardVars, wantErr: "board 1010222 not found",
+			req: boardReq("Release Checklist"), status: 200, body: missingBoardResponse,
+			wantQuery: boardQuery, wantVars: boardVars("Release Checklist"), wantErr: "board 1010222 not found",
 		},
 		"board: graphql error in 200 response": {
 			req: boardReq("Release Checklist"), status: 200, body: `{"errors":[{"message":"Not authenticated"}]}`,
-			wantQuery: boardQuery, wantVars: boardVars, wantErr: "Not authenticated",
+			wantQuery: boardQuery, wantVars: boardVars("Release Checklist"), wantErr: "Not authenticated",
 		},
 		"board: HTTP 401": {
-			req: boardReq("Release Checklist"), status: 401, body: `{}`,
-			wantQuery: boardQuery, wantVars: boardVars, wantErr: "querying item by item-name",
+			req: boardReq("Release Checklist"), status: 401, body: unauthorizedResponse,
+			wantQuery: boardQuery, wantVars: boardVars("Release Checklist"), wantErr: "querying item by item-name",
 		},
 		"board: HTTP 500": {
 			req: boardReq("Release Checklist"), status: 500, body: `{}`,
-			wantQuery: boardQuery, wantVars: boardVars, wantErr: "querying item by item-name",
+			wantQuery: boardQuery, wantVars: boardVars("Release Checklist"), wantErr: "querying item by item-name",
 		},
 		"parent: matching subitem": {
 			req: parentReq("Another subitem"), status: 200, body: parentResponse,
