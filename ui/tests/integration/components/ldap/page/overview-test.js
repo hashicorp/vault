@@ -52,8 +52,6 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
         // TODO: Fix SearchSelect component
         'aria-required-attr': { enabled: false },
         label: { enabled: false },
-        // Disable color contrast check for navigation tabs
-        'color-contrast': { enabled: false },
       },
     });
   });

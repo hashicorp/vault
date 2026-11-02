@@ -5,9 +5,8 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render, settled, triggerKeyEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 const TREE_DATA = [
   {
@@ -62,13 +61,6 @@ module('Integration | Component | tree-chart', function (hooks) {
     this.options = TREE_OPTIONS;
     this.title = 'Test';
 
-    setRunOptions({
-      rules: {
-        // "Show as table", "Make fullscreen", "More options" violate this rule
-        'nested-interactive': { enabled: false },
-      },
-    });
-
     this.renderComponent = async () => {
       await render(hbs`
           <TreeChart @data={{this.data}} @options={{this.options}} @title={{this.title}}/>
@@ -78,9 +70,36 @@ module('Integration | Component | tree-chart', function (hooks) {
 
   test('it renders carbon tree chart', async function (assert) {
     await this.renderComponent();
+    assert
+      .dom(SELECTORS.tree(this.title))
+      .hasAttribute('role', 'group')
+      .hasAttribute('aria-label', this.title);
     assert.dom(SELECTORS.tree(this.title)).containsText(TREE_OPTIONS.title, 'title is rendered');
     assert.dom(SELECTORS.tree()).containsText(TREE_OPTIONS.tree.rootTitle, 'root node title is rendered');
     assert.dom(SELECTORS.tree()).hasTextContaining('Secrets', 'nodes are rendered');
+  });
+
+  test('it preserves toolbar controls and keyboard access to the overflow menu', async function (assert) {
+    await this.renderComponent();
+    assert
+      .dom(`${SELECTORS.tree()} .toolbar-control`)
+      .doesNotHaveAttribute('role', 'toolbar wrappers are not interactive');
+    assert
+      .dom(`${SELECTORS.tree()} button[aria-label="Show as table"]`)
+      .hasAttribute('aria-disabled', 'false', 'table view remains available');
+    assert.dom(`${SELECTORS.tree()} button[aria-label="Make fullscreen"]`).exists();
+
+    await click(`${SELECTORS.tree()} button[aria-label="More options"]`);
+    assert
+      .dom(`${SELECTORS.tree()} button[aria-label="More options"]`)
+      .hasAttribute('aria-expanded', 'true', 'overflow menu opens');
+    assert
+      .dom(`${SELECTORS.tree()} button[role="menuitem"]`)
+      .isFocused('export action receives keyboard focus');
+    await triggerKeyEvent(`${SELECTORS.tree()} button[role="menuitem"]`, 'keydown', 'Escape');
+    assert
+      .dom(`${SELECTORS.tree()} button[aria-label="More options"]`)
+      .hasAttribute('aria-expanded', 'false', 'Escape closes the overflow menu');
   });
 
   test('it handles data updates', async function (assert) {
@@ -96,8 +115,16 @@ module('Integration | Component | tree-chart', function (hooks) {
         ],
       },
     ]);
+    await settled();
 
     assert.dom(SELECTORS.tree()).hasTextContaining('Updated', 'new node is rendered');
     assert.dom(SELECTORS.tree()).doesNotHaveTextContaining('Secrets', 'old nodes are not rendered');
+    assert
+      .dom(`${SELECTORS.tree()} .toolbar-control`)
+      .doesNotHaveAttribute('role', 'toolbar semantics remain valid after updating data');
+    await click(`${SELECTORS.tree()} button[aria-label="More options"]`);
+    assert
+      .dom(`${SELECTORS.tree()} button[role="menuitem"]`)
+      .isFocused('overflow menu remains accessible after updating data');
   });
 });

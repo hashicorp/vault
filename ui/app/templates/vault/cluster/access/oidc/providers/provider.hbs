@@ -19,20 +19,24 @@
   <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
     <nav class="tabs" aria-label="tabs">
       <ul>
-        <LinkTo
-          data-test-oidc-provider-details
-          @route="vault.cluster.access.oidc.providers.provider.details"
-          @model={{this.model.provider.name}}
-        >
-          Details
-        </LinkTo>
-        <LinkTo
-          data-test-oidc-provider-clients
-          @route="vault.cluster.access.oidc.providers.provider.clients"
-          @model={{this.model.provider.name}}
-        >
-          Applications
-        </LinkTo>
+        <li>
+          <LinkTo
+            data-test-oidc-provider-details
+            @route="vault.cluster.access.oidc.providers.provider.details"
+            @model={{this.model.provider.name}}
+          >
+            Details
+          </LinkTo>
+        </li>
+        <li>
+          <LinkTo
+            data-test-oidc-provider-clients
+            @route="vault.cluster.access.oidc.providers.provider.clients"
+            @model={{this.model.provider.name}}
+          >
+            Applications
+          </LinkTo>
+        </li>
       </ul>
     </nav>
   </div>

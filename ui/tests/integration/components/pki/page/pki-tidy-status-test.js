@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -83,6 +83,25 @@ module('Integration | Component | Page::PkiTidyStatus', function (hooks) {
     this.tidyStatus.state = 'Cancelled';
     await this.renderComponent();
     assert.dom(PKI_TIDY.hdsAlertTitle).hasText('Tidy operation cancelled');
+  });
+
+  test('shows tidy choices nested within the first numbered instruction', async function (assert) {
+    this.enabled = false;
+    await this.renderComponent();
+    await click(PKI_TIDY.tidyConfigureModal.tidyOptionsModal);
+
+    const instructions = '[data-test-tidy-instructions]';
+    assert.dom(instructions).hasTagName('ol', 'Tidy instructions are numbered');
+    assert.dom(`${instructions} > li`).exists({ count: 2 }, 'There are two numbered steps');
+    assert.dom(`${instructions} > li:first-child`).includesText('Select a tidy operation:');
+    assert
+      .dom(`${instructions} > li:first-child > ul > li`)
+      .exists({ count: 2 }, 'Both tidy choices belong to the first numbered step');
+    assert.dom(`${instructions} > li:first-child > ul > li:first-child`).includesText('Automatic tidy');
+    assert.dom(`${instructions} > li:first-child > ul > li:last-child`).includesText('Manual tidy');
+    assert
+      .dom(`${instructions} > li:last-child`)
+      .hasText('Configure the parameters that determine how to tidy and run the operation.');
   });
 
   test('shows the fields even if the data returns null values', async function (assert) {

@@ -202,7 +202,13 @@
   {{#if this.shouldShowTreeChart}}
     <LG.Item @colspan={{4}}>
       <Hds::Text::Display @tag="h3" @size="300" class="has-bottom-padding-s">Namespace Structure Preview</Hds::Text::Display>
-      <TreeChart @data={{this.treeData}} @options={{this.treeChartOptions}} class="tree has-padding-m" data-test-tree />
+      <TreeChart
+        @data={{this.treeData}}
+        @options={{this.treeChartOptions}}
+        @title="Namespace structure preview"
+        class="tree has-padding-m"
+        data-test-tree
+      />
     </LG.Item>
   {{/if}}
 

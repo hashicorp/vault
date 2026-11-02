@@ -50,18 +50,26 @@
         <B.Td @align="right">
           <Hds::Dropdown @isInline={{true}} data-test-raft-actions as |dd|>
             <dd.ToggleIcon @icon="more-horizontal" @text="Raft server actions" @hasChevron={{false}} />
-            <dd.Generic>
-              <ConfirmAction
-                @isInDropdown={{true}}
-                @onConfirmAction={{action "removePeer" server}}
-                @buttonText="Remove Peer"
-                @confirmTitle="Remove {{server.node_id}}?"
-                @confirmMessage="This will remove the server from the raft cluster."
-              />
-            </dd.Generic>
+            <dd.Interactive
+              @color="critical"
+              {{on "click" (fn (mut this.peerToRemove) server)}}
+              data-test-confirm-action-trigger
+            >
+              Remove Peer
+            </dd.Interactive>
           </Hds::Dropdown>
         </B.Td>
       </B.Tr>
     {{/each}}
   </:body>
 </Hds::Table>
+
+{{#if this.peerToRemove}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.peerToRemove) null}}
+    @onConfirm={{action "removePeer" this.peerToRemove}}
+    @confirmTitle="Remove {{this.peerToRemove.node_id}}?"
+    @confirmMessage="This will remove the server from the raft cluster."
+  />
+{{/if}}

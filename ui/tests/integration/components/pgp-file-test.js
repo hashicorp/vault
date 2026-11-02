@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, fillIn, triggerEvent, waitUntil, find } from '@ember/test-helpers';
+import { render, click, fillIn, triggerEvent, waitUntil, find, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -92,6 +92,31 @@ module('Integration | Component | pgp file', function (hooks) {
     assert.dom(GENERAL.textareaByAttr('pgp-key')).exists({ count: 1 }, 'renders the textarea on toggle');
 
     fillIn(GENERAL.textareaByAttr('pgp-key'), text);
+  });
+
+  test('each text-entry label targets its own textarea', async function (assert) {
+    this.set('keys', [{ value: '' }, { value: '' }]);
+
+    await render(hbs`
+      {{#each this.keys as |key index|}}
+        <PgpFile @index={{index}} @key={{key}} />
+      {{/each}}
+    `);
+
+    const components = findAll('[data-test-pgp-file]');
+    assert.strictEqual(components.length, 2, 'renders both PGP inputs');
+
+    for (const component of components) {
+      await click(component.querySelector(GENERAL.textToggle));
+
+      const textarea = component.querySelector(GENERAL.textareaByAttr('pgp-key'));
+      const label = component.querySelector('[data-test-pgp-label]');
+      assert.dom(textarea).exists('text-entry mode renders a textarea');
+      assert.strictEqual(label.control, textarea, "the visible label targets this instance's textarea");
+    }
+
+    const ids = components.map((component) => component.querySelector(GENERAL.textareaByAttr('pgp-key')).id);
+    assert.notEqual(ids[0], ids[1], 'textarea IDs are unique across component instances');
   });
 
   test('toggling back and forth', async function (assert) {

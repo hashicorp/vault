@@ -232,6 +232,16 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     dropdownItems = findAll('li button');
     await waitUntil(() => dropdownItems.length === 0);
     assert.dom('ul').hasText('No matching months');
+
+    assert
+      .dom(FILTERS.dropdownSearch(ClientFilters.MONTH))
+      .isFocused('search keeps focus when no results match');
+    await fillIn(FILTERS.dropdownSearch(ClientFilters.MONTH), '');
+    assert.dom(FILTERS.dropdownItem()).exists({ count: 4 }, 'clearing search restores the month actions');
+    await click(FILTERS.dropdownItem('2025-02-01T00:00:00Z'));
+    assert
+      .dom(FILTERS.tag(ClientFilters.MONTH, '2025-02-01T00:00:00Z'))
+      .exists('a restored result can be selected');
   });
 
   test('it renders no items to filter if dropdown is empty', async function (assert) {
@@ -299,7 +309,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     assert.dom(FILTERS.tag()).exists({ count: 1 }, '1 filter tag renders');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
     await click(GENERAL.dropdownToggle(ClientFilters.NAMESPACE));
-    assert.dom(FILTERS.dropdownItem('admin/')).hasAttribute('aria-selected', 'true');
+    assert.dom(FILTERS.dropdownItem('admin/')).hasAttribute('aria-current', 'true');
     assert.dom(`${FILTERS.dropdownItem('admin/')} ${GENERAL.icon('check')}`).exists();
 
     // select mount path
@@ -309,7 +319,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     assert.dom(FILTERS.tag()).exists({ count: 2 }, '2 filter tags render');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
     await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_PATH));
-    assert.dom(FILTERS.dropdownItem('auth/userpass-root/')).hasAttribute('aria-selected', 'true');
+    assert.dom(FILTERS.dropdownItem('auth/userpass-root/')).hasAttribute('aria-current', 'true');
     assert.dom(`${FILTERS.dropdownItem('auth/userpass-root/')} ${GENERAL.icon('check')}`).exists();
 
     // select mount type
@@ -319,7 +329,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     assert.dom(FILTERS.tag()).exists({ count: 3 }, '3 filter tags render');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
     await click(GENERAL.dropdownToggle(ClientFilters.MOUNT_TYPE));
-    assert.dom(FILTERS.dropdownItem('token/')).hasAttribute('aria-selected', 'true');
+    assert.dom(FILTERS.dropdownItem('token/')).hasAttribute('aria-current', 'true');
     assert.dom(`${FILTERS.dropdownItem('token/')} ${GENERAL.icon('check')}`).exists();
 
     // select month
@@ -329,7 +339,7 @@ module('Integration | Component | clients/filter-toolbar', function (hooks) {
     assert.dom(FILTERS.tag()).exists({ count: 4 }, '4 filter tags render');
     // dropdown should close after an item is selected, reopen to assert the correct item is selected
     await click(GENERAL.dropdownToggle(ClientFilters.MONTH));
-    assert.dom(FILTERS.dropdownItem('2025-02-01T00:00:00Z')).hasAttribute('aria-selected', 'true');
+    assert.dom(FILTERS.dropdownItem('2025-02-01T00:00:00Z')).hasAttribute('aria-current', 'true');
     assert.dom(`${FILTERS.dropdownItem('2025-02-01T00:00:00Z')} ${GENERAL.icon('check')}`).exists();
   });
 

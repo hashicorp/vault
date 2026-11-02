@@ -90,17 +90,17 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
   });
 
   test('it yields custom trigger component', async function (assert) {
-    await render(hbs`<Hds::Dropdown as |D|>
-      <D.ToggleButton @text="Toolbox" data-test-dropdown="Toolbox" />
-      <CodeGenerator::Policy::Flyout>
-        <:customTrigger as |openFlyout|>
+    await render(hbs`<CodeGenerator::Policy::Flyout>
+      <:customTrigger as |openFlyout|>
+        <Hds::Dropdown as |D|>
+          <D.ToggleButton @text="Toolbox" data-test-dropdown="Toolbox" />
           <D.Interactive @icon="shield-check" {{on "click" openFlyout}} data-test-button="Make me a policy!">
             Make me a policy!
           </D.Interactive>
-        </:customTrigger>
-      </CodeGenerator::Policy::Flyout>
-      <D.Interactive @icon="wand" data-test-button="Magic stuff">Magic stuff</D.Interactive>
-    </Hds::Dropdown>`);
+          <D.Interactive @icon="wand" data-test-button="Magic stuff">Magic stuff</D.Interactive>
+        </Hds::Dropdown>
+      </:customTrigger>
+    </CodeGenerator::Policy::Flyout>`);
     await click(GENERAL.dropdownToggle('Toolbox'));
     assert.dom(GENERAL.flyout).doesNotExist();
     assert
@@ -109,6 +109,7 @@ module('Integration | Component | code-generator/policy/flyout', function (hooks
       .hasText('Make me a policy!', 'custom trigger renders');
     await click(GENERAL.button('Make me a policy!'));
     assert.dom(GENERAL.flyout).exists('flyout opens after clicking custom trigger');
+    assert.dom(`ul ${GENERAL.flyout}`).doesNotExist('flyout content is outside the dropdown list');
   });
 
   // This test is to demonstrate how to implement closing the dropdown when the flyout trigger is a dropdown element
