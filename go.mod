@@ -93,7 +93,7 @@ require (
 	github.com/go-jose/go-jose/v3 v3.0.5
 	github.com/go-ldap/ldap/v3 v3.4.13
 	github.com/go-sql-driver/mysql v1.10.0
-	github.com/go-test/deep v1.1.1
+	github.com/go-test/deep v1.1.2
 	github.com/go-zookeeper/zk v1.0.3
 	github.com/gocql/gocql v1.0.0
 	github.com/golang-jwt/jwt/v4 v4.5.2
@@ -173,7 +173,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.25.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.25.1
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.14.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.27.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.27.2-0.20261101001438-9fbc13fcdbc9
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.18.1
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.15.1

@@ -514,8 +514,8 @@ github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg78
 github.com/go-task/slim-sprig/v3 v3.0.0 h1:sUs3vkvUymDpBKi3qH1YSqBQk9+9D/8M2mN1vB6EwHI=
 github.com/go-task/slim-sprig/v3 v3.0.0/go.mod h1:W848ghGpv3Qj3dhTPRyJypKRiqCdHZiAzKg9hl15HA8=
 github.com/go-test/deep v1.0.2/go.mod h1:wGDj63lr65AM2AQyKZd/NYHGb0R+1RLqB8NKt3aSFNA=
-github.com/go-test/deep v1.1.1 h1:0r/53hagsehfO4bzD2Pgr/+RgHqhmf+k1Bpse2cTu1U=
-github.com/go-test/deep v1.1.1/go.mod h1:5C2ZWiW0ErCdrYzpqxLbTX7MG14M9iiw8DgHncVwcsE=
+github.com/go-test/deep v1.1.2 h1:JUuyv17rKrqYfLFnP9A4Yh6hw0635ugB93bMg2bwuDQ=
+github.com/go-test/deep v1.1.2/go.mod h1:lwVFiFFWPjydTsV3xGJ/YTQsnWwi8zxBFM+gOVcwINE=
 github.com/go-viper/mapstructure/v2 v2.5.0 h1:vM5IJoUAy3d7zRSVtIwQgBj7BiWtMPfmPEgAXnvj1Ro=
 github.com/go-viper/mapstructure/v2 v2.5.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
 github.com/go-zookeeper/zk v1.0.3 h1:7M2kwOsc//9VeeFiPtf+uSJlVpU66x9Ba5+8XK7/TDg=
@@ -864,8 +864,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.25.1 h1:ZYlY9mNMZVr6oFIapGbb
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.25.1/go.mod h1:q0JLxfHgFkj9836IGEJ3B8M8zZ4lvd2L4iZ4bSA9zkw=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.14.0 h1:eP+E/VESv9inuOE3K867eqPlW2AbVgYF1S5RATAiPjg=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.14.0/go.mod h1:jF3oCBAg0r4ntmMxokYrqjqTSt2qlS2M+HaQP043kys=
-github.com/hashicorp/vault-plugin-secrets-kv v0.27.0 h1:/CxBmHBGyxgxUgmb+j6/Imk1OkEI+Ou4eeno8nIFJ4M=
-github.com/hashicorp/vault-plugin-secrets-kv v0.27.0/go.mod h1:rJkdQEpw/5e0+n+qPT8+RDYkt/8qIru9gXBD0diKazU=
+github.com/hashicorp/vault-plugin-secrets-kv v0.27.2-0.20261101001438-9fbc13fcdbc9 h1:AVPPlLB3+ycRx8PRTWsKVMY3nNWDUBcCkasj/Sc8Z5I=
+github.com/hashicorp/vault-plugin-secrets-kv v0.27.2-0.20261101001438-9fbc13fcdbc9/go.mod h1:5YhQQNRg2HNKM1c7QPTGHu33cFoZ8uZUwWLEtXN6LL4=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.18.1 h1:1FqS7HhcUtVpwUjaWpaFB7IuVCb9i3qjapLiOxy0irQ=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.18.1/go.mod h1:iDDcmy9PjEfQvTgMUy8jUSW0NVpfi2+2WJpmOjKkVlE=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.19.0 h1:i8FKItWscn4D/f2KwZkVlNQ7DqX5nwu40bM2H9ReZ28=
