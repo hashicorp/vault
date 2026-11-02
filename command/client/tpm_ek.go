@@ -30,7 +30,7 @@ func (c *TPMEkCommand) Help() string {
 Usage: ` + c.BinaryName + ` tpm ek
 
   Reads the endorsement key (EK) from the local TPM device and prints its
-  public key in PEM format (type "PUBLIC KEY") along with the TPM ID.
+  public key in PEM format (type "PUBLIC KEY") along with the TPM ID. 
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
