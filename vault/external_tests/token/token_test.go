@@ -5,6 +5,7 @@ package token
 
 import (
 	"encoding/base64"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -18,7 +19,17 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
+
+const tokenCreateSudoPolicy = `
+path "auth/token/create" {
+  capabilities = ["create", "update", "sudo"]
+}
+path "auth/token/create/*" {
+  capabilities = ["create", "update", "sudo"]
+}
+`
 
 func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	t.Parallel()
@@ -340,6 +351,71 @@ func TestTokenStore_IdentityPolicies(t *testing.T) {
 	secret, err = client.Auth().Token().Renew(token4829, 10)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestTokenStore_NonRootCreateRejectsRootPolicyAliases verifies a non-root
+// caller with sudo access cannot request root-equivalent aliases at
+// auth/token/create.
+func TestTokenStore_NonRootCreateRejectsRootPolicyAliases(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	rootClient := cluster.Cores[0].Client
+
+	require.NoError(t, rootClient.Sys().PutPolicy("token-create-sudo", tokenCreateSudoPolicy))
+
+	parentSecret, err := rootClient.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"token-create-sudo"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, parentSecret)
+	require.NotNil(t, parentSecret.Auth)
+	require.NotEmpty(t, parentSecret.Auth.ClientToken)
+
+	sudoClient, err := rootClient.Clone()
+	require.NoError(t, err)
+	sudoClient.SetToken(parentSecret.Auth.ClientToken)
+
+	tokenAccessorCount := func(t *testing.T, client *api.Client) int {
+		t.Helper()
+
+		secret, err := client.Logical().List("auth/token/accessors")
+		require.NoError(t, err)
+		if secret == nil || secret.Data == nil {
+			return 0
+		}
+
+		rawKeys, ok := secret.Data["keys"]
+		if !ok || rawKeys == nil {
+			return 0
+		}
+
+		switch keys := rawKeys.(type) {
+		case []interface{}:
+			return len(keys)
+		case []string:
+			return len(keys)
+		default:
+			require.FailNowf(t, "unexpected keys type", "unexpected keys type: %T", rawKeys)
+		}
+
+		return 0
+	}
+
+	rootAliases := []string{"./root", "/root", "a/../root", "./RoOt", " ./root "}
+	for i, alias := range rootAliases {
+		before := tokenAccessorCount(t, rootClient)
+		resp, err := sudoClient.Logical().Write("auth/token/create", map[string]interface{}{
+			"display_name": fmt.Sprintf("root-alias-%d", i),
+			"policies": []string{
+				alias,
+			},
+		})
+		require.Error(t, err)
+		require.Nil(t, resp)
+		require.ErrorContains(t, err, "policies cannot contain root policy aliases")
+		require.Equal(t, before, tokenAccessorCount(t, rootClient))
 	}
 }
 

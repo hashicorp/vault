@@ -287,8 +287,15 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	// Update the policies if supplied
 	policiesRaw, ok := d.GetOk("policies")
 	if ok {
-		validatedPolicies := make([]string, 0, len(policiesRaw.([]string)))
-		for _, policy := range policiesRaw.([]string) {
+		rawPolicies := policiesRaw.([]string)
+		for _, policy := range rawPolicies {
+			if isReservedRootPolicy(policy) {
+				return logical.ErrorResponse("policies cannot contain root"), nil
+			}
+		}
+
+		validatedPolicies := make([]string, 0, len(rawPolicies))
+		for _, policy := range rawPolicies {
 			canonicalPolicy, err := policyutil.ValidatePolicyName(policy)
 			if err != nil {
 				return logical.ErrorResponse(fmt.Sprintf("invalid policy name %q: %s", policy, err)), nil
@@ -302,8 +309,10 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		group.Policies = dedupedPolicies
 	}
 
-	if strutil.StrListContainsCaseInsensitive(group.Policies, "root") {
-		return logical.ErrorResponse("policies cannot contain root"), nil
+	for _, policy := range group.Policies {
+		if isReservedRootPolicy(policy) {
+			return logical.ErrorResponse("policies cannot contain root"), nil
+		}
 	}
 
 	groupTypeRaw, ok := d.GetOk("type")
