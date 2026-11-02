@@ -81,6 +81,7 @@ func TestInitClientCommands(t *testing.T) {
 		"secrets list",
 		"secrets move",
 		"secrets tune",
+		"ssh",
 		"status",
 		"token",
 		"token capabilities",
