@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -849,6 +850,104 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 			"token_type":   "service",
 		},
 	)
+}
+
+func requireLoginCreateTokenRootAliasRejected(t *testing.T, core *Core, ctx context.Context, auth *logical.Auth) {
+	t.Helper()
+	loginResp := &logical.Response{Auth: auth}
+
+	leaseGenerated, rejectionResp, err := core.LoginCreateToken(
+		ctx,
+		namespace.RootNamespace,
+		"auth/token/create",
+		"auth/token/",
+		"",
+		loginResp,
+	)
+	require.False(t, leaseGenerated)
+	require.ErrorIs(t, err, logical.ErrInvalidRequest)
+	require.NotNil(t, rejectionResp)
+	require.True(t, rejectionResp.IsError())
+	require.ErrorContains(t, rejectionResp.Error(), "auth methods cannot create root tokens")
+	require.Empty(t, auth.ClientToken)
+}
+
+func createEntityWithPersistedPolicies(t *testing.T, core *Core, ctx context.Context, policies []string) string {
+	t.Helper()
+
+	entity, err := core.identityStore.CreateEntity(ctx)
+	require.NoError(t, err)
+
+	entity.Policies = policies
+	require.NoError(t, core.identityStore.upsertEntity(ctx, entity, nil, true))
+
+	return entity.ID
+}
+
+func createGroupWithPersistedPolicies(t *testing.T, core *Core, ctx context.Context, memberEntityID string, policies []string, idx int) {
+	t.Helper()
+
+	group := &identity.Group{
+		Name:            fmt.Sprintf("root-alias-group-%d", idx),
+		Type:            groupTypeInternal,
+		Policies:        policies,
+		MemberEntityIDs: []string{memberEntityID},
+	}
+	require.NoError(t, core.identityStore.sanitizeAndUpsertGroup(ctx, group, nil, nil))
+}
+
+// TestRequestHandling_LoginCreateToken_RejectsRootAliasesFromIdentityPolicies
+// verifies LoginCreateToken rejects root-equivalent aliases if they already
+// exist in persisted identity policies.
+func TestRequestHandling_LoginCreateToken_RejectsRootAliasesFromIdentityPolicies(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}, nil)
+	core := cluster.Cores[0].Core
+	ctx := namespace.RootContext(t.Context())
+
+	aliases := []string{"./root", "a/../root", "/root", "./RoOt", " ./root "}
+
+	for _, alias := range aliases {
+		entityID := createEntityWithPersistedPolicies(t, core, ctx, []string{alias})
+		requireLoginCreateTokenRootAliasRejected(t, core, ctx, &logical.Auth{
+			DisplayName: "userpass",
+			Policies:    []string{"default"},
+			EntityID:    entityID,
+		})
+	}
+}
+
+// TestRequestHandling_LoginCreateToken_RejectsRootAliasesFromGroupPolicies
+// verifies LoginCreateToken rejects root-equivalent aliases if they already
+// exist in persisted group-derived policies.
+func TestRequestHandling_LoginCreateToken_RejectsRootAliasesFromGroupPolicies(t *testing.T) {
+	t.Parallel()
+
+	cluster := NewTestCluster(t, &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}, nil)
+	core := cluster.Cores[0].Core
+	ctx := namespace.RootContext(t.Context())
+
+	aliases := []string{"./root", "a/../root", "/root", "./RoOt", " ./root "}
+
+	for idx, alias := range aliases {
+		entityID := createEntityWithPersistedPolicies(t, core, ctx, nil)
+		createGroupWithPersistedPolicies(t, core, ctx, entityID, []string{alias}, idx)
+
+		requireLoginCreateTokenRootAliasRejected(t, core, ctx, &logical.Auth{
+			DisplayName: "userpass",
+			Policies:    []string{"default"},
+			EntityID:    entityID,
+		})
+	}
 }
 
 func TestRequestHandling_SecretLeaseMetric(t *testing.T) {

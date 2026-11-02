@@ -2759,6 +2759,15 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
 
 	policies := d.Get("policies").([]string)
+	// Reject only root-equivalent aliases (for example "./root" and "a/../root")
+	// and allow canonical "root" to continue to the explicit root-token
+	// guardrails below. Replication workflows (DR and performance) legitimately
+	// call auth/token/create and inherit canonical root via the caller token.
+	for _, policy := range policies {
+		if isReservedRootPolicyAlias(policy) {
+			return logical.ErrorResponse("policies cannot contain root policy aliases"), logical.ErrInvalidRequest
+		}
+	}
 	if err := validatePolicyNameSet(policies, "policies"); err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
@@ -2785,8 +2794,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			return logical.ErrorResponse("root or sudo privileges required to directly generate a token in a child namespace"), logical.ErrInvalidRequest
 		}
 
-		if strutil.StrListContains(policies, "root") {
-			return logical.ErrorResponse("root tokens may not be created from a parent namespace"), logical.ErrInvalidRequest
+		for _, policy := range policies {
+			if isReservedRootPolicy(policy) {
+				return logical.ErrorResponse("root tokens may not be created from a parent namespace"), logical.ErrInvalidRequest
+			}
 		}
 	}
 
@@ -3150,6 +3161,13 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		addDefault = !noDefaultPolicy
 	}
 
+	// Policy materialization: Sanitize and add default policies.
+	// Note: SanitizePolicies calls CanonicalizePolicyName on each policy,
+	// which normalizes any path-like aliases (e.g., "./root", "a/../root")
+	// to their canonical forms (e.g., "root"). This means any aliases that
+	// survived entry-point validation are normalized here, and the post-expansion
+	// alias rejection check below will catch any that somehow remain in an
+	// aliased form (which should never happen after canonicalization).
 	te.Policies = policyutil.SanitizePolicies(policies, addDefault)
 
 	// Yes, this is a little inefficient to do it like this, but meh
@@ -3161,6 +3179,15 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	for _, policy := range te.Policies {
 		if strutil.StrListContains(nonAssignablePolicies, policy) {
 			return logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), nil
+		}
+	}
+
+	// Keep alias rejection after final policy materialization so role/default
+	// expansions are covered, while canonical "root" still uses root-specific
+	// checks below.
+	for _, policy := range te.Policies {
+		if isReservedRootPolicyAlias(policy) {
+			return logical.ErrorResponse("policies cannot contain root policy aliases"), logical.ErrInvalidRequest
 		}
 	}
 
