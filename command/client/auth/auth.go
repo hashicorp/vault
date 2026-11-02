@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package auth
@@ -32,6 +32,10 @@ type AuthMethod interface {
 	NewCreds() chan struct{}
 	CredSuccess()
 	Shutdown()
+}
+
+type AuthMethodReady interface {
+	WaitForCreds(context.Context) error
 }
 
 // AuthMethodWithClient is an extended interface that can return an API client
@@ -255,6 +259,20 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		var header http.Header
 		var isTokenFileMethod bool
 
+		if readyMethod, ok := am.(AuthMethodReady); ok {
+			if err = readyMethod.WaitForCreds(ctx); err != nil {
+				ah.logger.Error("credentials not ready for authentication call", "error", err, "backoff", backoffCfg)
+				metrics.IncrCounter([]string{ah.metricsSignifier, "auth", "failure"}, 1)
+				metrics.SetGauge([]string{ah.metricsSignifier, "authenticated"}, 0)
+
+				if backoffSleep(ctx, backoffCfg) {
+					continue
+				}
+
+				return err
+			}
+		}
+
 		switch am.(type) {
 		case AuthMethodWithClient:
 			clientToUse, err = am.(AuthMethodWithClient).AuthClient(ah.client)
@@ -445,15 +463,31 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				return err
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
-			ah.OutputCh <- string(wrappedResp)
+			select {
+			case ah.OutputCh <- string(wrappedResp):
+			case <-ctx.Done():
+				return nil
+			}
 			if ah.enableTemplateTokenCh {
-				ah.TemplateTokenCh <- string(wrappedResp)
+				select {
+				case ah.TemplateTokenCh <- string(wrappedResp):
+				case <-ctx.Done():
+					return nil
+				}
 			}
 			if ah.enableExecTokenCh {
-				ah.ExecTokenCh <- string(wrappedResp)
+				select {
+				case ah.ExecTokenCh <- string(wrappedResp):
+				case <-ctx.Done():
+					return nil
+				}
 			}
 			if ah.enablePKIExternalCATokenCh {
-				ah.PKIExternalCATokenCh <- string(wrappedResp)
+				select {
+				case ah.PKIExternalCATokenCh <- string(wrappedResp):
+				case <-ctx.Done():
+					return nil
+				}
 			}
 
 			am.CredSuccess()
@@ -511,15 +545,31 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 				}
 				ah.logger.Info("authentication successful, sending token to sinks")
 
-				ah.OutputCh <- token
+				select {
+				case ah.OutputCh <- token:
+				case <-ctx.Done():
+					return nil
+				}
 				if ah.enableTemplateTokenCh {
-					ah.TemplateTokenCh <- token
+					select {
+					case ah.TemplateTokenCh <- token:
+					case <-ctx.Done():
+						return nil
+					}
 				}
 				if ah.enableExecTokenCh {
-					ah.ExecTokenCh <- token
+					select {
+					case ah.ExecTokenCh <- token:
+					case <-ctx.Done():
+						return nil
+					}
 				}
 				if ah.enablePKIExternalCATokenCh {
-					ah.PKIExternalCATokenCh <- token
+					select {
+					case ah.PKIExternalCATokenCh <- token:
+					case <-ctx.Done():
+						return nil
+					}
 				}
 
 				tokenType := secret.Data["type"].(string)
@@ -552,15 +602,31 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 				leaseDuration = secret.LeaseDuration
 				ah.logger.Info("authentication successful, sending token to sinks")
-				ah.OutputCh <- secret.Auth.ClientToken
+				select {
+				case ah.OutputCh <- secret.Auth.ClientToken:
+				case <-ctx.Done():
+					return nil
+				}
 				if ah.enableTemplateTokenCh {
-					ah.TemplateTokenCh <- secret.Auth.ClientToken
+					select {
+					case ah.TemplateTokenCh <- secret.Auth.ClientToken:
+					case <-ctx.Done():
+						return nil
+					}
 				}
 				if ah.enableExecTokenCh {
-					ah.ExecTokenCh <- secret.Auth.ClientToken
+					select {
+					case ah.ExecTokenCh <- secret.Auth.ClientToken:
+					case <-ctx.Done():
+						return nil
+					}
 				}
 				if ah.enablePKIExternalCATokenCh {
-					ah.PKIExternalCATokenCh <- secret.Auth.ClientToken
+					select {
+					case ah.PKIExternalCATokenCh <- secret.Auth.ClientToken:
+					case <-ctx.Done():
+						return nil
+					}
 				}
 			}
 
