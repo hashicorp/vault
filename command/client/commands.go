@@ -292,6 +292,11 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"ssh": func() (cli.Command, error) {
+			return &SSHCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"status": func() (cli.Command, error) {
 			return &StatusCommand{
 				BaseCommand: getBaseCommand(),

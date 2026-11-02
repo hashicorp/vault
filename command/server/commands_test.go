@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -100,7 +100,6 @@ var serverOnlyCommands = []string{
 	"policy list",
 	"policy read",
 	"policy write",
-	"ssh",
 	"transform",
 	"transform import",
 	"transform import-version",
