@@ -438,8 +438,8 @@ github.com/go-jose/go-jose/v4 v4.1.5 h1:RjgjO2LOtWOJKUC5wpwY9LR3B3vwVAz6JS2YHfYU
 github.com/go-jose/go-jose/v4 v4.1.5/go.mod h1:x4oUasVrzR7071A4TnHLGSPpNOm2a21K9Kf04k1rs08=
 github.com/go-kit/kit v0.8.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
 github.com/go-kit/kit v0.9.0/go.mod h1:xBxKIO96dXMWWy0MnWVtmwkA9/13aqxPnvrjFYMA2as=
-github.com/go-ldap/ldap/v3 v3.4.13 h1:+x1nG9h+MZN7h/lUi5Q3UZ0fJ1GyDQYbPvbuH38baDQ=
-github.com/go-ldap/ldap/v3 v3.4.13/go.mod h1:LxsGZV6vbaK0sIvYfsv47rfh4ca0JXokCoKjZxsszv0=
+github.com/go-ldap/ldap/v3 v3.4.15 h1:eRB4f4Ecn1POL1mO86+uUDlecmyWsdiJwh60bAUS4UY=
+github.com/go-ldap/ldap/v3 v3.4.15/go.mod h1:jeD0c98EdZQCKKKKe4kTWs5aCf6y+j8KuYsYLznZSQk=
 github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92 h1:Eu8/ko8bvygFvum/PWUg5JrGQuWYNahEph8r3SErkSM=
 github.com/go-ldap/ldif v0.0.0-20250910174327-aa3bc3095c92/go.mod h1:F640vUoSS6Qg4nmesnVfHeZSJ0ArdMJ9eb0xB7wcitU=
 github.com/go-logfmt/logfmt v0.3.0/go.mod h1:Qt1PoO58o5twSAckw1HlFXLmHsOX5/0LbT9GBnD5lWE=
@@ -834,8 +834,8 @@ github.com/hashicorp/vault-plugin-auth-gcp v0.24.1 h1:jS8nrgSuCHd5DaLBYsM/Iu+adW
 github.com/hashicorp/vault-plugin-auth-gcp v0.24.1/go.mod h1:ZNVDIwKVxUxePEAjpn2pcKmB8joMYgDr0DUM3ZmsYzY=
 github.com/hashicorp/vault-plugin-auth-jwt v0.27.2 h1:/1l31rYjc7FJ2fXkeHI2EagvfEwHExD9/pD3UM55CPg=
 github.com/hashicorp/vault-plugin-auth-jwt v0.27.2/go.mod h1:p50iZajVi+F/DdegVVV18cMceF14fpFSwvcbcnDvKTg=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.18.1 h1:53Vth8Kmnw7iUfjc65NW23xUOsxSGYVNAs3Hif/hhwI=
-github.com/hashicorp/vault-plugin-auth-kerberos v0.18.1/go.mod h1:h4V+/E+C/4ijT78rsCooG3iTcBzwGh4Not47Gd4JXfU=
+github.com/hashicorp/vault-plugin-auth-kerberos v0.18.2-0.20261101002927-5a0c1af35fd6 h1:aStBzkba2Rrj8G8CpKTeLnpZnf35FogU9MGi0FKmwC4=
+github.com/hashicorp/vault-plugin-auth-kerberos v0.18.2-0.20261101002927-5a0c1af35fd6/go.mod h1:QvGFjpognDlW73/rOfBbOzVOm5+MEXNMGWxTY6aMFMk=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.1 h1:lJwWhwe++aOWjOhYlKl878ZFVC29Hmp7ELwq5yExq6Q=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.25.1/go.mod h1:NlAw9bcKipqTDjeAV0yh0CGARSbjdUF4d3tyB6Bew40=
 github.com/hashicorp/vault-plugin-auth-oci v0.22.1 h1:tN2/PE+g9O7WRq2BFyIzL/lDYEMYGfjIe2O6O75CWGk=
