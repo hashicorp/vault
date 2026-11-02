@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package config
@@ -51,6 +51,8 @@ type Config struct {
 	Templates []*ctconfig.TemplateConfig `hcl:"templates"`
 	// PKIExternalCAs stores parsed pki_external_ca blocks available to templates.
 	PKIExternalCAs []*PKIExternalCA `hcl:"-"`
+	// TPMCerts stores parsed tpm_cert blocks.
+	TPMCerts []*TPMCert `hcl:"-"`
 	// DisableIdleConns holds the raw disable_idle_connections subsystem names from HCL.
 	DisableIdleConns []string `hcl:"disable_idle_connections"`
 	// DisableIdleConnsAPIProxy is true when idle HTTP connections are disabled for caching or proxying.
@@ -199,6 +201,45 @@ type ExecConfig struct {
 	ChildProcessStderr     string    `mapstructure:"child_process_stderr"`
 }
 
+type TPMCert struct {
+	Name string `hcl:"-"`
+
+	Namespace string      `hcl:"namespace,optional"`
+	MountPath string      `hcl:"mount_path"`
+	RoleName  string      `hcl:"role_name"`
+	CSR       *TPMCertCSR `hcl:"csr,optional"`
+
+	TPM         *TPMCertTPM         `hcl:"tpm,optional"`
+	Renew       *TPMCertRenew       `hcl:"renew,optional"`
+	Destination *TPMCertDestination `hcl:"destination"`
+
+	LineNumber int
+}
+
+type TPMCertCSR struct {
+	CommonName string `hcl:"CN,optional"`
+	Country    string `hcl:"C,optional"`
+	State      string `hcl:"ST,optional"`
+	Locality   string `hcl:"L,optional"`
+	Org        string `hcl:"O,optional"`
+	OrgUnit    string `hcl:"OU,optional"`
+}
+
+type TPMCertTPM struct {
+	DevicePath string `hcl:"device_path,optional"`
+}
+
+type TPMCertRenew struct {
+	PercentRenewBeforeExpiry *int   `hcl:"percent_renew_before_expiry,optional"`
+	MinBackoff               string `hcl:"min_backoff,optional"`
+	MaxBackoff               string `hcl:"max_backoff,optional"`
+}
+
+type TPMCertDestination struct {
+	Path  string `hcl:"path"`
+	Umask string `hcl:"umask,optional"`
+}
+
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
@@ -325,6 +366,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PKIExternalCAs = append(result.PKIExternalCAs, pkiExternalCA)
 	}
 
+	for _, tpmCert := range c.TPMCerts {
+		result.TPMCerts = append(result.TPMCerts, tpmCert)
+	}
+
+	for _, tpmCert := range c2.TPMCerts {
+		result.TPMCerts = append(result.TPMCerts, tpmCert)
+	}
+
 	return result
 }
 
@@ -396,6 +445,14 @@ func (c *Config) ValidateConfig(logger hclog.Logger) error {
 	}
 
 	if err := c.validatePKIExternalCAConfig(logger); err != nil {
+		return err
+	}
+
+	if err := c.validateTPMCertConfig(logger); err != nil {
+		return err
+	}
+
+	if err := c.validateAutoAuthTPMCertReferences(); err != nil {
 		return err
 	}
 
@@ -694,6 +751,14 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if err := parsePKIExternalCA(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'pki_external_ca': %w", err)
+	}
+
+	if err := parseTPMCert(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'tpm_cert': %w", err)
+	}
+
+	if err := result.configureTPMAutoAuth(); err != nil {
+		return nil, fmt.Errorf("error configuring TPM: %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
@@ -1118,6 +1183,7 @@ var autoAuthMethodKeys = map[string][]string{
 	"kubernetes": {""},
 	"oci":        {""},
 	"token_file": {""},
+	"tpm":        {""},
 }
 
 // normalizeAutoAuthMethod takes a storage name, a configuration key

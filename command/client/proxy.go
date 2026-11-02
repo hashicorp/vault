@@ -352,7 +352,15 @@ func (c *ProxyCommand) Run(args []string) int {
 			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
-		method, err = agentproxyshared.GetAutoAuthMethodFromConfig(config.AutoAuth.Method.Type, authConfig, config.Vault.Address)
+		tlsCfg := &api.TLSConfig{
+			CACert:        c.config.Vault.CACert,
+			CAPath:        c.config.Vault.CAPath,
+			ClientCert:    c.config.Vault.ClientCert,
+			ClientKey:     c.config.Vault.ClientKey,
+			TLSServerName: c.config.Vault.TLSServerName,
+			Insecure:      c.config.Vault.TLSSkipVerify,
+		}
+		method, err = agentproxyshared.GetAutoAuthMethodFromConfig(config.AutoAuth.Method.Type, authConfig, config.Vault.Address, tlsCfg)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating %s auth method: %v", config.AutoAuth.Method.Type, err))
 			return 1
