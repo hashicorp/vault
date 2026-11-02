@@ -162,14 +162,15 @@ type LoginHandler interface {
 type CommandInitFn func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory
 
 // RunCustomWithCommandsFn is like RunCustom but allows the caller to supply a
-// custom command init function.
-func RunCustomWithCommandsFn(args []string, runOpts *RunOptions, initFn CommandInitFn) int {
-	return runCustomInternal(args, runOpts, initFn)
+// custom command init function. Any hiddenCommands are runnable but left out
+// of help output and autocomplete.
+func RunCustomWithCommandsFn(args []string, runOpts *RunOptions, initFn CommandInitFn, hiddenCommands ...string) int {
+	return runCustomInternal(args, runOpts, initFn, hiddenCommands)
 }
 
 // runCustomInternal allows passing in a base command template to pass to other
 // commands. Currently, this is only used for setting a custom token helper.
-func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn) int {
+func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn, extraHidden []string) int {
 	if runOpts == nil {
 		runOpts = &RunOptions{}
 	}
@@ -255,7 +256,7 @@ func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn)
 
 	commands := initFn(ui, serverCmdUi, runOpts)
 
-	hiddenCommands := []string{"version"}
+	hiddenCommands := append([]string{"version"}, extraHidden...)
 
 	cliApp := &cli.CLI{
 		Name:     runOpts.BinaryName,

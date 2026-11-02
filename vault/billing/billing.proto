@@ -6,6 +6,7 @@ syntax = "proto3";
 package billing;
 
 import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/hashicorp/vault/vault/billing";
 
@@ -17,6 +18,8 @@ message PluginBillingDataRequest {
 
   // Map of plugin type to attribution data (e.g., "transit" -> MountAttributionData)
   map<string, google.protobuf.Any> attribution_data = 2;
+
+  google.protobuf.Timestamp sent_at = 3;
 }
 
 // MountAttributionData contains mount/namespace attribution for a specific plugin type

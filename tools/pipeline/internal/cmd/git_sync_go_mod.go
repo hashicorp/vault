@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -25,7 +25,17 @@ func newGitSyncGoModCmd() *cobra.Command {
 
 We read the source go.mod files via git, compute what differs from the
 working-tree copies on <dest-branch>, and apply the source directives in-place.
-We then run 'go mod tidy' for any file with changes and commit the result.
+We sync every go.mod before we tidy any of them, because tidying a module depends
+on the go.mod of the local modules it replaces. We then run 'go mod tidy' for any
+file with changes and commit the result.
+
+The go.mod files to sync come from --path, relative to the working directory, or
+from every module in the go.work at the root of <source-branch> with
+--workspace-modules. In workspace mode we tidy every module in the go.work of
+<dest-branch> with GOWORK=off. The go.mod and go.sum files that change are committed.
+We work from the root of the repository wherever you run the command from. The
+go commands use your environment, so set GOPRIVATE, GONOSUMDB, and GOFLAGS as you
+would for go mod tidy.
 
 A new forked intermediate branch from <dest-branch> is created with the changes
 and we never touch dest directly.
@@ -37,27 +47,19 @@ Examples:
 # With a ticket ID (creates VAULT-1234-main-into-ce-main).
   pipeline git sync go-mod main ce/main --ticket VAULT-1234
 
-# Stage changes without committing.
+# Leave the changes in the working tree without committing them.
   pipeline git sync go-mod main ce/main --commit=false
 
-# Sync multiple paths with excluded modules and a ticket. This represents
-# something much closer to what we would actually do if we triggered the
-# sync from local branches.
+# Sync only specific modules, relative to the working directory.
+  pipeline git sync go-mod main ce/main -p go.mod -p api/go.mod -p sdk/go.mod
+
+# Sync every module in the go.work of main, with the modules that only exist
+# in enterprise excluded. This represents something much closer to what we
+# would actually do if we triggered the sync from local branches.
   GOPRIVATE=github.com/hashicorp pipeline git sync go-mod main ce/main \
+    --workspace-modules \
     --strict-replace=false \
     --strict-require=false \
-    -p ../../go.mod \
-    -p ../../api/go.mod \
-    -p ../../api/auth/approle/go.mod \
-    -p ../../api/auth/aws/go.mod \
-    -p ../../api/auth/azure/go.mod \
-    -p ../../api/auth/cert/go.mod \
-    -p ../../api/auth/gcp/go.mod \
-    -p ../../api/auth/kubernetes/go.mod \
-    -p ../../api/auth/ldap/go.mod \
-    -p ../../api/auth/userpass/go.mod \
-    -p go.mod \
-    -p ../../sdk/go.mod \
     --exclude-require github.com/hashicorp/vault-plugin-auth-azure \
     --exclude-require github.com/hashicorp/vault-plugin-secrets-azure \
     --exclude-require github.com/hashicorp/vault-plugin-secrets-openldap \
@@ -67,8 +69,9 @@ Examples:
 		Args: cobra.ExactArgs(2),
 	}
 
-	// Path flag
-	cmd.PersistentFlags().StringArrayVarP(&gitSyncGoModReq.Paths, "path", "p", []string{"go.mod"}, "repeatable. Path to a go.mod file to sync.")
+	// Path flags
+	cmd.PersistentFlags().StringArrayVarP(&gitSyncGoModReq.Paths, "path", "p", nil, "repeatable. Path to a go.mod file to sync, relative to the working directory. Defaults to go.mod unless --workspace-modules is set.")
+	cmd.PersistentFlags().BoolVar(&gitSyncGoModReq.WorkspaceModules, "workspace-modules", false, "sync the go.mod of every module in the go.work at the root of the source branch instead of --path, then tidy every module in the go.work of the dest branch with GOWORK=off and commit the go.mod and go.sum files that change.")
 
 	// Branch / commit flags
 	cmd.PersistentFlags().StringVar(&gitSyncGoModReq.NewBranch, "branch", "", "intermediate branch name (one is created when omitted)")

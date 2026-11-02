@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cmd
@@ -81,9 +81,15 @@ func TestGithubSyncGoModCmd_FlagDefaults(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, pr)
 
+	// The root go.mod is the default path unless --workspace-modules is set. The
+	// request applies that default, so the flag itself has none.
 	paths, err := cmd.PersistentFlags().GetStringArray("path")
 	require.NoError(t, err)
-	require.Equal(t, []string{"go.mod"}, paths)
+	require.Empty(t, paths)
+
+	workspaceModules, err := cmd.PersistentFlags().GetBool("workspace-modules")
+	require.NoError(t, err)
+	require.False(t, workspaceModules)
 
 	requireFlag, err := cmd.PersistentFlags().GetBool("require")
 	require.NoError(t, err)
@@ -143,4 +149,28 @@ func TestGithubSyncGoModCmd_PositionalArgsRejected(t *testing.T) {
 	err := cmd.Execute()
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unknown command")
+}
+
+// TestGithubSyncGoModCmd_WorkspaceModules verifies that --workspace-modules
+// reaches the request and that it can't be combined with go.mod paths, which
+// the request rejects before it clones anything.
+func TestGithubSyncGoModCmd_WorkspaceModules(t *testing.T) {
+	githubSyncGoModReq = &githubpkg.SyncGoModReq{
+		DiffOpts:    golang.DefaultSyncDiffOpts(),
+		Commit:      true,
+		PullRequest: true,
+	}
+
+	cmd := newGithubSyncGoModCmd()
+	suppressOutput(t, cmd)
+	cmd.SetArgs([]string{
+		"--a-branch", "main",
+		"--b-branch", "ce/main",
+		"--workspace-modules",
+		"-p", "sdk/go.mod",
+	})
+	err := cmd.Execute()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "cannot be combined with workspace-modules")
+	require.True(t, githubSyncGoModReq.WorkspaceModules)
 }

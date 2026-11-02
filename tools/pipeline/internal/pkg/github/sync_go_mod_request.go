@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package github
@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	libgithub "github.com/google/go-github/v83/github"
 	gitpkg "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
@@ -50,8 +51,14 @@ type SyncGoModReq struct {
 	// Repo isolation — if empty a temp dir is created and cleaned up on exit.
 	RepoDir string
 
-	// go.mod paths to sync.
+	// go.mod paths to sync, relative to the repository root. When empty and
+	// WorkspaceModules isn't set, the root go.mod is synced.
 	Paths []string
+
+	// WorkspaceModules syncs the go.mod of every module in the go.work at the
+	// root of the A branch instead of Paths. Once they're synced it tidies every
+	// module in the go.work of the clone with GOWORK=off.
+	WorkspaceModules bool
 
 	// Options governing which directives to compare and sync.
 	DiffOpts *golang.DiffOpts
@@ -80,7 +87,9 @@ type SyncGoModRes struct {
 	ToBranch    string                        `json:"to_branch"`
 	CommitSHA   string                        `json:"commit_sha,omitempty"`
 	PullRequest *libgithub.PullRequest        `json:"pull_request,omitempty"`
-	Results     []*gitpkg.GoModPathSyncResult `json:"results,omitempty"`
+	Results     []*golang.GoModPathSyncResult `json:"results,omitempty"`
+	// GoWorkSum is set when we tried to sync the workspace.
+	GoWorkSum *golang.GoWorkSumSyncResult `json:"go_work_sum,omitempty"`
 }
 
 // Run forks a new branch from B, syncs go.mod files from A into it, pushes to
@@ -98,11 +107,16 @@ func (r *SyncGoModReq) Run(
 		slog.String("b-repo", r.BRepo),
 		slog.String("b-branch", r.BBranch),
 		slog.Int("mod-count", len(r.Paths)),
+		slog.Bool("workspace-modules", r.WorkspaceModules),
 	)
 
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
+
+	// The go.mod paths to sync. In workspace mode we derive them from the A branch
+	// once we've fetched it.
+	paths := r.Paths
 
 	// Save the initial working directory so we can restore it on exit.
 	initialDir, err := os.Getwd()
@@ -115,7 +129,7 @@ func (r *SyncGoModReq) Run(
 	// os.Chdir into the clone the CWD is the repo root, so the same path works
 	// for git show <ref>:<path>, os.ReadFile, and go mod tidy. We reject absolute
 	// paths here — they can't be used as git object paths.
-	for _, p := range r.Paths {
+	for _, p := range paths {
 		if filepath.IsAbs(p) {
 			return nil, fmt.Errorf("path %q must be repo-root-relative, not absolute", p)
 		}
@@ -133,6 +147,20 @@ func (r *SyncGoModReq) Run(
 	// Initialize the repo — reuse an existing clone or create a fresh one from B.
 	_, statErr := os.Stat(filepath.Join(repoDir, ".git"))
 	if statErr == nil {
+		// Check before pulling or checking out, so neither autostash nor staging
+		// can carry pre-existing edits into the branch we publish.
+		repoGit := *git
+		repoGit.Dir = repoDir
+		slog.Default().DebugContext(ctx, "checking reused repository working tree")
+		statusRes, statusErr := repoGit.Status(ctx, &libgit.StatusOpts{
+			Porcelain: true, UntrackedFiles: libgit.UntrackedFilesAll,
+		})
+		if statusErr != nil {
+			return nil, fmt.Errorf("git status: %w\n%s", statusErr, statusRes.String())
+		}
+		if len(statusRes.Stdout) > 0 {
+			return nil, errors.New("working tree has uncommitted changes; commit, stash, or discard them first")
+		}
 		err = initializeExistingRepo(ctx, git, repoDir, r.BOrigin, r.BBranch)
 	} else {
 		err = initializeNewRepo(ctx, git, repoDir, r.BOwner, r.BRepo, r.BOrigin, r.BBranch)
@@ -200,6 +228,16 @@ func (r *SyncGoModReq) Run(
 		}
 	}
 
+	// Derive the modules to sync from the A branch's go.work, so we sync the
+	// modules that A has rather than whichever go.work is in the working tree. A
+	// failure is fatal so that we never fall back to syncing only the root go.mod.
+	if r.WorkspaceModules {
+		paths, err = gitpkg.WorkspaceGoModPathsFromRef(ctx, git, r.AOrigin+"/"+r.ABranch)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	toBranch, err := r.resolveToBranch(ctx, git)
 	if err != nil {
 		return nil, fmt.Errorf("resolving to branch name: %w", err)
@@ -233,17 +271,30 @@ func (r *SyncGoModReq) Run(
 	// A collection of errors. We do this so that our sync is best effort for each
 	// go.mod. We'll bubble up any issues we run into along the way.
 	var errs []error
-	var stageFiles []string
 
-	// Synchronize each Go module.
-	for _, p := range r.Paths {
-		pathRes, stageList, err := r.syncGoModPath(ctx, git, p)
+	// Sync the directives of every Go module before we tidy any of them. Tidying
+	// a module reads the go.mod of the local modules it replaces, so a module that
+	// we tidy before the modules it depends on are synced is tidied against stale
+	// requirements and needs another pass.
+	for _, p := range paths {
+		pathRes, err := gitpkg.SyncGoModFromRef(ctx, git, r.AOrigin+"/"+r.ABranch, ".", p, r.DiffOpts)
 		res.Results = append(res.Results, pathRes)
 		if err != nil {
 			errs = append(errs, err)
 		}
-		stageFiles = append(stageFiles, stageList...)
 	}
+
+	// Tidy the modules until they settle, and bring the workspace in line when
+	// we're syncing the workspace. In workspace mode the modules to tidy come from
+	// the go.work in the clone, which is the B branch's rather than A's. A clone
+	// without a go.work has no workspace modules.
+	tidyRes, err := golang.TidySyncedModules(ctx, ".", res.Results, r.WorkspaceModules)
+	res.Results = tidyRes.Results
+	res.GoWorkSum = tidyRes.GoWorkSum
+	if err != nil {
+		errs = append(errs, err)
+	}
+	stageFiles := tidyRes.Stage
 
 	// Stage and commit changed files.
 	stageAndCommitFiles := func() error {
@@ -258,16 +309,27 @@ func (r *SyncGoModReq) Run(
 
 		slog.Default().DebugContext(ctx, "staging files", slog.Int("count", len(stageFiles)))
 
-		_, err := git.Add(ctx, &libgit.AddOpts{PathSpec: stageFiles})
+		addRes, err := git.Add(ctx, &libgit.AddOpts{PathSpec: stageFiles})
 		if err != nil {
-			return fmt.Errorf("git add: %w", err)
+			return fmt.Errorf("git add: %w\n%s", err, addRes.String())
+		}
+
+		// Tidy can undo every synced directive, leaving no net changes to commit.
+		slog.Default().DebugContext(ctx, "checking staged changes")
+		diffRes, err := git.Diff(ctx, &libgit.DiffOpts{Cached: true, NameOnly: true})
+		if err != nil {
+			return fmt.Errorf("git diff --cached: %w\n%s", err, diffRes.String())
+		}
+		if len(diffRes.Stdout) == 0 {
+			slog.Default().DebugContext(ctx, "skipping commit, no staged changes")
+			return nil
 		}
 
 		subject := r.commitSubject()
 		slog.Default().DebugContext(ctx, "committing changes", slog.String("subject", subject))
-		_, err = git.Commit(ctx, &libgit.CommitOpts{Message: subject})
+		commitRes, err := git.Commit(ctx, &libgit.CommitOpts{Message: subject})
 		if err != nil {
-			return fmt.Errorf("git commit: %w", err)
+			return fmt.Errorf("git commit: %w\n%s", err, commitRes.String())
 		}
 
 		slog.Default().DebugContext(ctx, "capturing commit SHA") //nolint:govet
@@ -306,7 +368,7 @@ func (r *SyncGoModReq) Run(
 	if r.PullRequest && res.CommitSHA != "" {
 		prTitle := r.prTitle()
 
-		hasPathErrors := func(results []*gitpkg.GoModPathSyncResult) bool {
+		hasPathErrors := func(results []*golang.GoModPathSyncResult) bool {
 			for _, pr := range results {
 				if pr == nil {
 					continue
@@ -328,8 +390,9 @@ func (r *SyncGoModReq) Run(
 			ABranch     string
 			BBranch     string
 			ToBranch    string
-			PathResults []*gitpkg.GoModPathSyncResult
+			PathResults []*golang.GoModPathSyncResult
 			HasErrors   bool
+			GoWorkSum   *golang.GoWorkSumSyncResult
 		}{
 			Ticket:      r.Ticket,
 			AOwner:      r.AOwner,
@@ -338,7 +401,9 @@ func (r *SyncGoModReq) Run(
 			BBranch:     r.BBranch,
 			ToBranch:    toBranch,
 			PathResults: res.Results,
-			HasErrors:   hasPathErrors(res.Results),
+			HasErrors: hasPathErrors(res.Results) ||
+				(res.GoWorkSum != nil && res.GoWorkSum.Error != ""),
+			GoWorkSum: res.GoWorkSum,
 		})
 
 		if err != nil {
@@ -379,7 +444,7 @@ func (r *SyncGoModReq) Run(
 	}
 
 	slog.Default().DebugContext(ctx, "completed github sync go-mod",
-		slog.Int("paths", len(r.Paths)),
+		slog.Int("paths", len(paths)),
 		slog.Int("errors", len(errs)),
 	)
 
@@ -441,8 +506,13 @@ func (r *SyncGoModReq) validate() error {
 	if r.BBranch == "" {
 		return errors.New("b-branch is required")
 	}
-	if len(r.Paths) == 0 {
-		return errors.New("at least one go.mod path is required")
+	if r.WorkspaceModules && len(r.Paths) > 0 {
+		return errors.New("paths cannot be combined with workspace-modules")
+	}
+
+	// Without workspace modules we sync the root go.mod unless told otherwise.
+	if !r.WorkspaceModules && len(r.Paths) == 0 {
+		r.Paths = []string{"go.mod"}
 	}
 
 	// TO-side defaults from B.
@@ -488,6 +558,15 @@ func (r *SyncGoModReq) validate() error {
 		r.ToOrigin = r.BOrigin
 	}
 
+	// We use an explicit to-branch as it is, so one that GitHub won't accept
+	// has to be an error rather than something we quietly shorten.
+	if len(r.ToBranch) > maxBranchNameBytes {
+		return fmt.Errorf(
+			"to-branch is %d bytes long, but GitHub limits a branch name to %d bytes",
+			len(r.ToBranch), maxBranchNameBytes,
+		)
+	}
+
 	// PRBase defaults to the B branch.
 	if r.PRBase == "" {
 		r.PRBase = r.BBranch
@@ -504,19 +583,50 @@ func (r *SyncGoModReq) validate() error {
 	return nil
 }
 
+// maxBranchNameBytes is the longest branch name we'll create. GitHub limits a
+// ref name to 255 bytes, and that includes the refs/heads/ prefix.
+const maxBranchNameBytes = 255 - len("refs/heads/")
+
+// branchName returns the auto-generated intermediate branch name, in the form
+// go-mod-sync-[<ticket>-]<a-branch>-into-<b-branch> with slashes replaced by
+// dashes. It's never longer than maxBranchNameBytes.
+func (r *SyncGoModReq) branchName() string {
+	name := "go-mod-sync-"
+	if r.Ticket != "" {
+		name += r.Ticket + "-"
+	}
+	name += strings.ReplaceAll(r.ABranch, "/", "-") + "-into-" + strings.ReplaceAll(r.BBranch, "/", "-")
+
+	return truncateBranchName(name, maxBranchNameBytes)
+}
+
+// truncateBranchName cuts name on a UTF-8 boundary, dropping trailing separators
+// and .lock suffixes that Git rejects. A name that already fits is unchanged.
+func truncateBranchName(name string, limit int) string {
+	if len(name) <= limit {
+		return name
+	}
+
+	// name[limit] is the first byte we drop. If it's a continuation byte then
+	// the cut would split a character, so move it back to where it starts.
+	for limit > 0 && !utf8.RuneStart(name[limit]) {
+		limit--
+	}
+
+	name = strings.TrimRight(name[:limit], "-./")
+	for strings.HasSuffix(name, ".lock") {
+		name = strings.TrimRight(strings.TrimSuffix(name, ".lock"), "-./")
+	}
+	return name
+}
+
 // resolveToBranch returns the intermediate branch name. If ToBranch is already
 // set it's used as-is. Otherwise we auto-generate one and append a unix timestamp
 // suffix when that name already exists locally.
 func (r *SyncGoModReq) resolveToBranch(ctx context.Context, git *libgit.Client) (string, error) {
 	name := r.ToBranch
 	if name == "" {
-		base := strings.ReplaceAll(r.ABranch, "/", "-") + "-into-" + strings.ReplaceAll(r.BBranch, "/", "-")
-		if r.Ticket != "" {
-			full := r.Ticket + "-" + base
-			name = full[:min(len(full), 240)]
-		} else {
-			name = base[:min(len(base), 240)]
-		}
+		name = r.branchName()
 	}
 
 	_, err := git.RevParse(ctx, &libgit.RevParseOpts{
@@ -529,75 +639,10 @@ func (r *SyncGoModReq) resolveToBranch(ctx context.Context, git *libgit.Client) 
 	}
 
 	// Branch already exists, append a unix timestamp to make the name unique.
-	// Make sure to truncate it small enough to handle Github max branch name
-	// length constraints.
-	return name[:min(len(name), 230)] + "-" + strconv.FormatInt(time.Now().Unix(), 10), nil
-}
+	// Make room for the suffix so we stay within GitHub's limit on branch names.
+	suffix := "-" + strconv.FormatInt(time.Now().Unix(), 10)
 
-// syncGoModPath processes a single go.mod path. p must be repo-root-relative
-// (e.g. "go.mod", "sdk/go.mod") — after os.Chdir into the clone it works for
-// both git show <ref>:<p> and os.ReadFile/go mod tidy.
-func (r *SyncGoModReq) syncGoModPath(
-	ctx context.Context,
-	git *libgit.Client,
-	p string,
-) (*gitpkg.GoModPathSyncResult, []string, error) {
-	showObject := fmt.Sprintf("%s/%s:%s", r.AOrigin, r.ABranch, p)
-	slog.Default().DebugContext(ctx, "reading source go.mod from a-branch",
-		slog.String("object", showObject),
-	)
-	showRes, err := git.Show(ctx, &libgit.ShowOpts{Object: showObject})
-	if err != nil {
-		syncRes := &golang.SyncModRes{
-			Path:  p,
-			Error: fmt.Sprintf("git show %s: %v", showObject, err),
-		}
-		syncRes.Err = errors.New(syncRes.Error)
-		return &gitpkg.GoModPathSyncResult{SyncModRes: syncRes}, nil, syncRes.Err
-	}
-	sourceBytes := showRes.Stdout
-
-	slog.Default().DebugContext(ctx, "reading dest go.mod from working tree", slog.String("path", p))
-	destBytes, err := os.ReadFile(p)
-	if err != nil {
-		syncRes := &golang.SyncModRes{
-			Path:  p,
-			Error: fmt.Sprintf("reading %s: %v", p, err),
-		}
-		syncRes.Err = errors.New(syncRes.Error)
-		return &gitpkg.GoModPathSyncResult{SyncModRes: syncRes}, nil, syncRes.Err
-	}
-
-	syncReq := &golang.SyncModReq{
-		A:        &golang.ModSource{Name: p, Data: sourceBytes},
-		B:        &golang.ModSource{Name: p, Data: destBytes},
-		DiffOpts: r.DiffOpts,
-	}
-	syncRes, err := syncReq.Run(ctx)
-	if err != nil {
-		return &gitpkg.GoModPathSyncResult{SyncModRes: syncRes}, nil, err
-	}
-
-	pathRes := &gitpkg.GoModPathSyncResult{SyncModRes: syncRes}
-
-	var toStage []string
-
-	if len(syncRes.Changes) > 0 {
-		tidyErr := golang.RunGoModTidy(ctx, p)
-		pathRes.TidyRan = true
-		if tidyErr != nil {
-			pathRes.TidyErr = tidyErr
-			pathRes.TidyError = tidyErr.Error()
-		} else {
-			dir := filepath.Dir(p)
-			toStage = append(toStage,
-				filepath.Join(dir, "go.mod"),
-				filepath.Join(dir, "go.sum"),
-			)
-		}
-	}
-
-	return pathRes, toStage, pathRes.TidyErr
+	return truncateBranchName(name, maxBranchNameBytes-len(suffix)) + suffix, nil
 }
 
 // commitSubject returns the auto-generated commit subject line.
@@ -645,6 +690,9 @@ func (r *SyncGoModRes) metaTable(err error) table.Writer {
 	}
 	if r.PullRequest != nil {
 		t.AppendRow(table.Row{"pr", r.PullRequest.GetHTMLURL()})
+	}
+	if r.GoWorkSum != nil {
+		t.AppendRow(table.Row{"go.work.sum", r.GoWorkSum.Status()})
 	}
 	if err != nil {
 		t.AppendRow(table.Row{"error", err.Error()})

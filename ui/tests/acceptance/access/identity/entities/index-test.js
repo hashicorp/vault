@@ -20,7 +20,18 @@ module('Acceptance | /access/identity/entities', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    // HDS table/dropdown observers can emit a benign "ResizeObserver loop" error that QUnit fails on.
+    this._originalResizeObserver = window.ResizeObserver;
+    window.ResizeObserver = class ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    };
     return login();
+  });
+
+  hooks.afterEach(function () {
+    window.ResizeObserver = this._originalResizeObserver;
   });
 
   test('it renders the entities page', async function (assert) {

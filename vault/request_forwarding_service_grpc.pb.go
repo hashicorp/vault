@@ -27,6 +27,7 @@ const (
 	RequestForwarding_Echo_FullMethodName                              = "/vault.RequestForwarding/Echo"
 	RequestForwarding_PerformanceStandbyElectionRequest_FullMethodName = "/vault.RequestForwarding/PerformanceStandbyElectionRequest"
 	RequestForwarding_SendSecureHubCredentials_FullMethodName          = "/vault.RequestForwarding/SendSecureHubCredentials"
+	RequestForwarding_SendSecureHubState_FullMethodName                = "/vault.RequestForwarding/SendSecureHubState"
 )
 
 // RequestForwardingClient is the client API for RequestForwarding service.
@@ -37,6 +38,9 @@ type RequestForwardingClient interface {
 	Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoReply, error)
 	PerformanceStandbyElectionRequest(ctx context.Context, in *PerfStandbyElectionInput, opts ...grpc.CallOption) (grpc.ServerStreamingClient[PerfStandbyElectionResponse], error)
 	SendSecureHubCredentials(ctx context.Context, in *SendSecureHubCredentialsRequest, opts ...grpc.CallOption) (*SendSecureHubCredentialsResponse, error)
+	// SendSecureHubState is called by every node to push its Secure Hub
+	// connection and stream health to the active node.
+	SendSecureHubState(ctx context.Context, in *SendSecureHubStateRequest, opts ...grpc.CallOption) (*SendSecureHubStateResponse, error)
 }
 
 type requestForwardingClient struct {
@@ -96,6 +100,16 @@ func (c *requestForwardingClient) SendSecureHubCredentials(ctx context.Context, 
 	return out, nil
 }
 
+func (c *requestForwardingClient) SendSecureHubState(ctx context.Context, in *SendSecureHubStateRequest, opts ...grpc.CallOption) (*SendSecureHubStateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SendSecureHubStateResponse)
+	err := c.cc.Invoke(ctx, RequestForwarding_SendSecureHubState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RequestForwardingServer is the server API for RequestForwarding service.
 // All implementations must embed UnimplementedRequestForwardingServer
 // for forward compatibility.
@@ -104,6 +118,9 @@ type RequestForwardingServer interface {
 	Echo(context.Context, *EchoRequest) (*EchoReply, error)
 	PerformanceStandbyElectionRequest(*PerfStandbyElectionInput, grpc.ServerStreamingServer[PerfStandbyElectionResponse]) error
 	SendSecureHubCredentials(context.Context, *SendSecureHubCredentialsRequest) (*SendSecureHubCredentialsResponse, error)
+	// SendSecureHubState is called by every node to push its Secure Hub
+	// connection and stream health to the active node.
+	SendSecureHubState(context.Context, *SendSecureHubStateRequest) (*SendSecureHubStateResponse, error)
 	mustEmbedUnimplementedRequestForwardingServer()
 }
 
@@ -125,6 +142,9 @@ func (UnimplementedRequestForwardingServer) PerformanceStandbyElectionRequest(*P
 }
 func (UnimplementedRequestForwardingServer) SendSecureHubCredentials(context.Context, *SendSecureHubCredentialsRequest) (*SendSecureHubCredentialsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendSecureHubCredentials not implemented")
+}
+func (UnimplementedRequestForwardingServer) SendSecureHubState(context.Context, *SendSecureHubStateRequest) (*SendSecureHubStateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendSecureHubState not implemented")
 }
 func (UnimplementedRequestForwardingServer) mustEmbedUnimplementedRequestForwardingServer() {}
 func (UnimplementedRequestForwardingServer) testEmbeddedByValue()                           {}
@@ -212,6 +232,24 @@ func _RequestForwarding_SendSecureHubCredentials_Handler(srv interface{}, ctx co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RequestForwarding_SendSecureHubState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendSecureHubStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RequestForwardingServer).SendSecureHubState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RequestForwarding_SendSecureHubState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RequestForwardingServer).SendSecureHubState(ctx, req.(*SendSecureHubStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RequestForwarding_ServiceDesc is the grpc.ServiceDesc for RequestForwarding service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -230,6 +268,10 @@ var RequestForwarding_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendSecureHubCredentials",
 			Handler:    _RequestForwarding_SendSecureHubCredentials_Handler,
+		},
+		{
+			MethodName: "SendSecureHubState",
+			Handler:    _RequestForwarding_SendSecureHubState_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

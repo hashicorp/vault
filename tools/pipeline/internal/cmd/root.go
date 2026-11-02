@@ -62,6 +62,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(newGithubCmd())
 	rootCmd.AddCommand(newGoCmd())
 	rootCmd.AddCommand(newHCPCmd())
+	rootCmd.AddCommand(newMondayCmd())
 	rootCmd.AddCommand(newReleasesCmd())
 	rootCmd.AddCommand(newSarifCmd())
 	rootCmd.AddCommand(newSlackCmd())

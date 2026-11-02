@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package rafttests
@@ -13,6 +13,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -1400,6 +1402,84 @@ func TestRaft_Join_InitStatus(t *testing.T) {
 	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	for i := range cluster.Cores {
 		verifyInitStatus(i, true)
+	}
+}
+
+// TestRaft_Join_DoesNotForwardEnvironmentCredentials verifies that an
+// unauthenticated join cannot send process credentials to a caller-selected leader.
+func TestRaft_Join_DoesNotForwardEnvironmentCredentials(t *testing.T) {
+	t.Parallel()
+
+	// Run in a subprocess so the fake credentials don't affect other tests.
+	const subprocessEnv = "VAULT_TEST_RAFT_JOIN_CREDENTIALS"
+	if os.Getenv(subprocessEnv) != "1" {
+		executable, err := os.Executable()
+		require.NoError(t, err)
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Minute)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, executable,
+			"-test.run=^TestRaft_Join_DoesNotForwardEnvironmentCredentials$", "-test.timeout=90s")
+		for _, entry := range os.Environ() {
+			key, _, _ := strings.Cut(entry, "=")
+			switch key {
+			case api.EnvVaultToken, api.EnvVaultHeaders, api.EnvVaultNamespace, subprocessEnv:
+				continue
+			}
+			cmd.Env = append(cmd.Env, entry)
+		}
+		cmd.Env = append(cmd.Env,
+			subprocessEnv+"=1",
+			api.EnvVaultToken+"=harmless-environment-token",
+			api.EnvVaultHeaders+`={"Authorization":"Bearer harmless-authorization","X-Test-Credential":"harmless-custom-credential"}`,
+			api.EnvVaultNamespace+"=environment-namespace")
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "isolated credential regression failed:\n%s", output)
+		return
+	}
+
+	// Capture the challenge request without completing the join.
+	requests := make(chan *http.Request, 1)
+	leader := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests <- r.Clone(t.Context())
+		http.Error(w, "not a raft leader", http.StatusBadRequest)
+	}))
+	defer leader.Close()
+
+	// Leave a follower sealed and uninitialized so it can accept a join request.
+	conf, opts := raftClusterBuilder(t, &RaftClusterOpts{
+		InmemCluster:         true,
+		DisableFollowerJoins: true,
+		NumCores:             2,
+	})
+	cluster := vault.NewTestCluster(t, conf, &opts)
+	client, err := cluster.Cores[1].Client.Clone()
+	require.NoError(t, err)
+	// The incoming join request must be unauthenticated, regardless of the environment.
+	client.ClearToken()
+	client.SetHeaders(http.Header{api.RequestHeaderName: {"true"}})
+
+	initialized, err := client.Sys().InitStatus()
+	require.NoError(t, err)
+	require.False(t, initialized, "the follower must be eligible for an unauthenticated join")
+	status, err := client.Sys().SealStatus()
+	require.NoError(t, err)
+	require.True(t, status.Sealed, "an integrated-storage follower must be sealed before joining")
+
+	_, err = client.Sys().RaftJoin(&api.RaftJoinRequest{LeaderAPIAddr: leader.URL})
+	require.Error(t, err, "the capture server must not complete a raft join")
+
+	// The outgoing request should keep the required headers, but none of the credentials.
+	select {
+	case request := <-requests:
+		require.Equal(t, http.MethodPut, request.Method)
+		require.Equal(t, "/v1/sys/storage/raft/bootstrap/challenge", request.URL.Path)
+		require.Empty(t, request.Header.Get("X-Vault-Token"), "the environment token must not reach the leader")
+		require.Empty(t, request.Header.Get("Authorization"), "environment authorization must not reach the leader")
+		require.Empty(t, request.Header.Get("X-Test-Credential"), "custom environment headers must not reach the leader")
+		require.Equal(t, "true", request.Header.Get(api.RequestHeaderName))
+		require.Empty(t, request.Header.Get(api.NamespaceHeaderName), "the operator namespace must override the environment")
+	default:
+		require.FailNow(t, "the eligible follower did not request a bootstrap challenge")
 	}
 }
 

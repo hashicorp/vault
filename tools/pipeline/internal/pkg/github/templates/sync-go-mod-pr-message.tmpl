@@ -2,7 +2,7 @@
 
 {{ if .HasErrors }}
 :rotating_light:
-> **Warning** one or more go.mod files encountered errors during sync or tidy.
+> **Warning** one or more go.mod files encountered errors during sync or tidy, or the workspace could not be synced.
 > See the details below. Manual intervention may be required.
 {{ end }}
 
@@ -23,3 +23,7 @@ No changes.
 {{ end }}
 {{ if .TidyError }}> :warning: Tidy error: {{ .TidyError }}{{ end }}
 {{ end }}
+{{ with .GoWorkSum }}{{ if .Error }}
+#### Workspace
+> :warning: Workspace sync error: {{ .Error }}
+{{ end }}{{ end }}

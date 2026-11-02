@@ -8,7 +8,6 @@ import {
   _getPathParam,
   combineOpenApiAttrs,
   expandOpenApiProps,
-  getHelpUrlForModel,
   pathToHelpUrlSegment,
 } from 'vault/utils/openapi-helpers';
 import Model, { attr } from '@ember-data/model';
@@ -41,21 +40,6 @@ module('Unit | Utility | OpenAPI helper utils', function (hooks) {
       { path: undefined, result: false },
     ].forEach((test) => {
       assert.strictEqual(_getPathParam(test.path), test.result, `returns first param for ${test.path}`);
-    });
-  });
-
-  test(`getHelpUrlForModel`, function (assert) {
-    [
-      { modelType: 'does-not-exist', result: null },
-      { modelType: 4, result: null },
-      { modelType: '', result: null },
-      { modelType: undefined, result: null },
-    ].forEach((test) => {
-      assert.strictEqual(
-        getHelpUrlForModel(test.modelType, 'foobar'),
-        test.result,
-        `returns first param for ${test.path}`
-      );
     });
   });
 

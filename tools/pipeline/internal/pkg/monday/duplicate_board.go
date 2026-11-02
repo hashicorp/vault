@@ -25,6 +25,9 @@ type DuplicateBoardReq struct {
 	// DuplicateType controls what is copied from the template.
 	// Defaults to DuplicateBoardWithStructure when zero.
 	DuplicateType DuplicateBoardType
+
+	// retryDelay overrides the delay between retries. Zero uses defaultRetryDelay.
+	retryDelay time.Duration
 }
 
 // DuplicateBoardRes is the result of a DuplicateBoardReq.
@@ -81,7 +84,7 @@ func (r *DuplicateBoardReq) Run(ctx context.Context, client *graphql.Client) (*D
 			return nil
 		},
 		retry.Attempts(5),
-		retry.Delay(5*time.Second),
+		retry.Delay(retryDelayOrDefault(r.retryDelay)),
 		retry.DelayType(retry.FixedDelay),
 		retry.Context(ctx),
 		retry.RetryIf(isRetryableError),

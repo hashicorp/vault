@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -14,7 +14,7 @@ import { compareVersions } from 'vault/utils/version-utils';
  */
 
 export default class VersionService extends Service {
-  @service store;
+  @service api;
   @service flags;
   @tracked features = [];
   @tracked version = null;
@@ -85,22 +85,40 @@ export default class VersionService extends Service {
   @task({ drop: true })
   *getVersion() {
     if (this.version) return;
-    // Fetch seal status with token to get version
-    const response = yield this.store.adapterFor('cluster').sealStatus(false);
-    this.version = response?.version;
-    this.clusterName = response?.cluster_name;
+    // seal-status returns fields at the top level (no `data` wrapper), so the typed sealStatus() resolves to undefined.
+    const { raw } = yield this.api.sys.sealStatusRaw({
+      headers: this.api.buildHeaders({ namespace: '' }).headers,
+    });
+    const sealStatus = yield raw.json();
+    this.version = sealStatus?.version;
+    this.clusterName = sealStatus?.cluster_name;
   }
 
   @task
   *getType() {
     if (this.type !== null) return;
-    const response = yield this.store.adapterFor('cluster').health();
-    if (response.has_chroot_namespace) {
-      // chroot_namespace feature is only available in enterprise
+    try {
+      const health = yield this.api.sys.readHealthStatus(async (requestContext) => {
+        await this.api.addQueryParams(requestContext, {
+          standbycode: 200,
+          sealedcode: 200,
+          uninitcode: 200,
+          drsecondarycode: 200,
+          performancestandbycode: 200,
+        });
+        return {
+          ...requestContext.init,
+          headers: this.api.buildHeaders({ token: '', namespace: '' }).headers,
+        };
+      });
+      if (health.has_chroot_namespace) {
+        this.type = 'enterprise';
+        return;
+      }
+      this.type = health.enterprise ? 'enterprise' : 'community';
+    } catch {
       this.type = 'enterprise';
-      return;
     }
-    this.type = response.enterprise ? 'enterprise' : 'community';
   }
 
   @keepLatestTask
@@ -109,8 +127,12 @@ export default class VersionService extends Service {
       return;
     }
     try {
-      const response = yield this.store.adapterFor('cluster').features();
-      this.features = response.features;
+      const response = yield this.api.request.get(
+        'sys/license/features',
+        this.api.buildHeaders({ token: '', namespace: '' }).headers
+      );
+      const features = yield response.json();
+      this.features = features.features;
       return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it

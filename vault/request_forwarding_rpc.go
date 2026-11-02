@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -152,6 +153,24 @@ func (s *forwardedRequestRPCServer) SendSecureHubCredentials(ctx context.Context
 	}
 }
 
+// SendSecureHubState receives a node's Secure Hub connection and stream health
+// report and stores it in the active node's per-node cache so it can be served
+// by the sys/secure-hub/status endpoint. Failures are logged on this (active)
+// node and returned to the sending node, which logs them as well.
+func (s *forwardedRequestRPCServer) SendSecureHubState(ctx context.Context, in *SendSecureHubStateRequest) (*SendSecureHubStateResponse, error) {
+	secureHubManager := s.core.GetSecureHubManager()
+	if secureHubManager == nil {
+		err := errors.New("secure hub manager is not initialized on the active node")
+		s.core.logger.Error("failed to record secure hub state reported by node", "node_id", in.GetNodeID(), "error", err)
+		return &SendSecureHubStateResponse{}, err
+	}
+	if err := secureHubManager.UpsertNodeState(in); err != nil {
+		s.core.logger.Error("failed to record secure hub state reported by node", "node_id", in.GetNodeID(), "error", err)
+		return &SendSecureHubStateResponse{}, fmt.Errorf("active node failed to record secure hub state: %w", err)
+	}
+	return &SendSecureHubStateResponse{}, nil
+}
+
 type forwardingClient struct {
 	RequestForwardingClient
 	core        *Core
@@ -165,6 +184,15 @@ func (c *forwardingClient) SendSecureHubCredentials(ctx context.Context, id stri
 		Value: value,
 	})
 	return err
+}
+
+// SendSecureHubState forwards this node's Secure Hub connection and stream
+// health to the active node.
+func (c *forwardingClient) SendSecureHubState(ctx context.Context, req *SendSecureHubStateRequest) error {
+	if _, err := c.RequestForwardingClient.SendSecureHubState(ctx, req); err != nil {
+		return fmt.Errorf("failed to send secure hub state to the active node: %w", err)
+	}
+	return nil
 }
 
 // NOTE: we also take advantage of gRPC's keepalive bits, but as we send data

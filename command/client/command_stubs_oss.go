@@ -12,3 +12,5 @@ import (
 
 func entInitCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions, commands map[string]cli.CommandFactory) {
 }
+
+func entExtendLoginHandlers(handlers map[string]base.LoginHandler) {}

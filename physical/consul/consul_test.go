@@ -45,7 +45,7 @@ func TestConsul_newConsulBackend(t *testing.T) {
 			redirectAddr:    "http://127.0.0.1:8200",
 			path:            "vault/",
 			service:         "vault",
-			address:         "127.0.0.1:8500",
+			address:         "localhost:8500",
 			scheme:          "http",
 			token:           "",
 			max_parallel:    4,

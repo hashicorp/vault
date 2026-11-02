@@ -15,8 +15,7 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
-	"github.com/hashicorp/vault/command/client/healthcheck"
+	"github.com/hashicorp/vault/command/server/healthcheck"
 	"github.com/stretchr/testify/require"
 )
 
@@ -279,11 +278,11 @@ func TestPKIHC_NoPerm(t *testing.T) {
 	validateExpectedPKIHC(t, expectedNoPerm, results)
 }
 
-func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PKIHealthCheckCommand) {
+func testPKIHealthCheckCommand(tb testing.TB) (*cli.MockUi, *PKIHealthCheckCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PKIHealthCheckCommand{
+	return ui, &PKIHealthCheckCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

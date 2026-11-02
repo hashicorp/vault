@@ -82,6 +82,9 @@
 
 # Cryptosec
 /api/auth/cert/                                      @hashicorp/vault-crypto
+# Override the Go updates, we don't need to be gating those
+/api/auth/cert/go.mod                                @hashicorp/vault
+/api/auth/cert/go.sum                                @hashicorp/vault
 /builtin/logical/pki/                                @hashicorp/vault-crypto
 /builtin/logical/pkiext/                             @hashicorp/vault-crypto
 /website/content/docs/secrets/pki/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers
@@ -96,7 +99,7 @@
 /builtin/logical/transit/                            @hashicorp/vault-crypto
 /website/content/docs/secrets/transit/               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/api-docs/secret/transit.mdx         @hashicorp/vault-crypto @hashicorp/vault-education-approvers
-/helper/random/                                      @hashicorp/vault-crypto
+/internalshared/random/                              @hashicorp/vault-crypto
 /sdk/helper/certutil/                                @hashicorp/vault-crypto
 /sdk/helper/cryptoutil/                              @hashicorp/vault-crypto
 /sdk/helper/kdf/                                     @hashicorp/vault-crypto
