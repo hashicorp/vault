@@ -61,6 +61,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
 	github.com/oklog/run v1.2.0
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
+	github.com/pkg/errors v0.9.1
 	github.com/posener/complete v1.2.3
 	github.com/stretchr/testify v1.12.1
 	go.uber.org/atomic v1.12.0
@@ -267,7 +268,6 @@ require (
 	github.com/petermattis/goid v0.0.0-20260716134002-a9b348f0a2b9 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.70.1 // indirect

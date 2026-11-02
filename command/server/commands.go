@@ -374,12 +374,6 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]c
 		}, nil
 	}
 	// Server-only per PRD VLT-2015; could be a client command.
-	commands["ssh"] = func() (cli.Command, error) {
-		return &SSHCommand{
-			BaseCommand: getBaseCommand(),
-		}, nil
-	}
-	// Server-only per PRD VLT-2015; could be a client command.
 	commands["transform"] = func() (cli.Command, error) {
 		return &TransformCommand{
 			BaseCommand: getBaseCommand(),
