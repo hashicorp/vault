@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -9,11 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
@@ -126,11 +128,11 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	entry.NamespaceID = ns.ID
 	entry.namespace = ns
 
-	if entry.Type == "file" {
-		if prefix, ok := entry.Options[audit.OptionPrefix]; ok && prefix != "" && !c.allowAuditLogPrefixing {
-			return errors.New("audit prefixing is not enabled in configuration, audit prefixing may not be configured for file sinks")
-		}
+	if err := c.validateAuditPrefix(entry.Options); err != nil {
+		return err
+	}
 
+	if entry.Type == "file" {
 		if c.pluginDirectory != "" {
 			// Validate that the audit log file is not in the plugin directory
 			auditPath := entry.Options["file_path"]
@@ -496,6 +498,13 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	var successCount int
 
 	for _, entry := range c.audit.Entries {
+		backendOptions := entry.Options
+		if err := c.validateAuditPrefix(entry.Options); err != nil {
+			c.logger.Warn("ignoring invalid prefix for persisted audit device", "path", entry.Path, "error", err)
+			backendOptions = maps.Clone(entry.Options)
+			delete(backendOptions, audit.OptionPrefix)
+		}
+
 		// Create a barrier view using the UUID
 		viewPath := entry.ViewPath()
 		view := NewBarrierView(c.barrier, viewPath)
@@ -509,7 +518,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		})
 
 		// Initialize the backend
-		backend, err := c.newAuditBackend(entry, view, entry.Options)
+		backend, err := c.newAuditBackend(entry, view, backendOptions)
 		if err != nil {
 			c.logger.Error("failed to create audit entry", "path", entry.Path, "error", err)
 			continue
@@ -537,14 +546,15 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		return errLoadAuditFailed
 	}
 
-	// When at least one device successfully initialized, clear flag
+	// When at least one device successfully initialized, clear flag.
 	c.auditConfigFailed.Store(false)
 
 	c.AddLogger(brokerLogger)
 	return nil
 }
 
-// newAuditBackendWithFormatter creates a backend with the supplied formatter for preflight validation
+// newAuditBackendWithFormatter creates a backend with the supplied formatter
+// for preflight validation.
 func (c *Core) newAuditBackendWithFormatter(entry *MountEntry, view logical.Storage, conf map[string]string, formatter audit.HeaderFormatter) (audit.Backend, error) {
 	if audit.HasInvalidOptions(entry.Options) {
 		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
@@ -574,14 +584,15 @@ func (c *Core) newAuditBackendWithFormatter(entry *MountEntry, view logical.Stor
 	return be, nil
 }
 
-// preflightHeaderFormatter is used to validate file audit backends before they are fully initialized
+// preflightHeaderFormatter is used to validate file audit backends before they
+// are fully initialized.
 type preflightHeaderFormatter struct{}
 
 func (preflightHeaderFormatter) ApplyConfig(_ context.Context, _ map[string][]string, _ audit.Salter) (map[string][]string, error) {
 	return map[string][]string{}, nil
 }
 
-// validateAuditDevices checks configured file audit devices before setupAudits
+// validateAuditDevices checks configured file audit devices before setupAudits.
 func (c *Core) validateAuditDevices(ctx context.Context) error {
 	var entries []*MountEntry
 	for _, storagePath := range []string{coreAuditConfigPath, coreLocalAuditConfigPath} {
@@ -607,7 +618,7 @@ func (c *Core) validateAuditDevices(ctx context.Context) error {
 	var fileBackendCount int
 	var successCount int
 
-	// Make a preflight check for each file audit backend
+	// Make a preflight check for each file audit backend.
 	formatter := &preflightHeaderFormatter{}
 	for _, entry := range entries {
 		if entry.Type != audit.TypeFile {
@@ -615,36 +626,53 @@ func (c *Core) validateAuditDevices(ctx context.Context) error {
 		}
 		fileBackendCount++
 
-		// Validate the file audit device by attempting to create a backend and closing it immediately
+		// Validate the file audit device by attempting to create a backend and
+		// closing it immediately.
 		view := NewBarrierView(c.barrier, entry.ViewPath())
 		backend, err := c.newAuditBackendWithFormatter(entry, view, entry.Options, formatter)
 		if err != nil {
-			c.logger.Error("audit device not accessible at startup",
-				"mount", entry.Path, "type", entry.Type, "error", err)
+			c.logger.Error("audit device not accessible at startup", "mount", entry.Path, "type", entry.Type, "error", err)
 			continue
 		}
 
-		// Backend created successfully, now attempt to close it to validate the device
+		// Backend created successfully; close it to validate the device.
 		closer, ok := backend.(io.Closer)
 		if !ok {
 			c.logger.Error("file audit backend does not support cleanup after startup validation", "mount", entry.Path)
 			continue
 		}
 		if err := closer.Close(); err != nil {
-			c.logger.Error("failed to close file audit backend after startup validation",
-				"mount", entry.Path, "error", err)
+			c.logger.Error("failed to close file audit backend after startup validation", "mount", entry.Path, "error", err)
 			continue
 		}
 		successCount++
 	}
 
-	// If there are file audit backends configured but none of them could be successfully validated
+	// If there are file audit backends configured but none of them could be
+	// successfully validated.
 	if fileBackendCount > 0 && successCount == 0 {
 		c.auditConfigFailed.Store(true)
 		return errLoadAuditFailed
 	}
 
 	c.auditConfigFailed.Store(false)
+	return nil
+}
+
+func (c *Core) validateAuditPrefix(options map[string]string) error {
+	prefix, ok := options[audit.OptionPrefix]
+	if !ok || prefix == "" {
+		return nil
+	}
+	if !c.allowAuditLogPrefixing {
+		return errors.New("audit prefixing is not enabled in configuration")
+	}
+	if strings.IndexFunc(prefix, func(r rune) bool {
+		// make sure prefix does not include a control character, or line/paragraph separators
+		return unicode.IsControl(r) || unicode.In(r, unicode.Zl, unicode.Zp)
+	}) >= 0 {
+		return errors.New("audit prefix may not contain control characters or line separators")
+	}
 	return nil
 }
 
