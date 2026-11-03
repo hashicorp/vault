@@ -16,7 +16,6 @@ import (
 
 	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	"github.com/mitchellh/mapstructure"
@@ -515,11 +514,16 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
-	apServerStates := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
-	serverIDs := make([]string, 0, len(servers))
+	serverSuffrage := make(map[string]raft.ServerSuffrage, len(servers))
 	for _, server := range servers {
-		serverIDs = append(serverIDs, string(server.ID))
+		serverSuffrage[string(server.ID)] = server.Suffrage
+	}
+	var autopilotServerStates map[raft.ServerID]*autopilot.ServerState
+	if d.autopilot != nil {
+		if autopilotState := d.autopilot.GetState(); autopilotState != nil {
+			autopilotServerStates = autopilotState.Servers
+		}
 	}
 
 	d.followerStates.l.RLock()
@@ -532,7 +536,8 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	for id, state := range d.followerStates.followers {
 		// If the server is not in raft configuration, even if we received a follower
 		// heartbeat, it shouldn't be a known server for autopilot.
-		if !strutil.StrListContains(serverIDs, id) {
+		suffrage, inRaft := serverSuffrage[id]
+		if !inRaft {
 			continue
 		}
 
@@ -547,27 +552,26 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			state.RedundancyZone = redundancyZone
 		}
 
-		server := &autopilot.Server{
-			ID:          currentServerID,
-			Name:        id,
-			RaftVersion: raft.ProtocolVersionMax,
-			Meta:        d.meta(state),
-			Version:     followerVersion,
-			Ext:         d.autopilotServerExt(state),
+		// A voter stays eligible unless it explicitly requests non-voter status
+		var shouldBeVoter bool
+		var cachedNodeType autopilot.NodeType
+		if suffrage == raft.Voter {
+			// Only demote when the node explicitly requests non-voter. A voter that has gone silent keeps its current status
+			// and autopilot's isHealthy check handles unhealthy voters through the normal health and stabilization path
+			shouldBeVoter = state.DesiredSuffrage != "non-voter"
+			if shouldBeVoter {
+				if serverState, ok := autopilotServerStates[currentServerID]; ok && serverState != nil {
+					cachedNodeType = serverState.Server.NodeType
+				}
+			}
+		} else {
+			// Only promote when the node explicitly requests voter. Autopilot's IsStable (which requires isHealthy)
+			// guards against promoting a non-voter that has not been recently heard from, so no freshness check
+			// is needed here.
+			shouldBeVoter = state.DesiredSuffrage == "voter"
 		}
 
-		// As KnownServers is a delegate called by autopilot let's check if we already
-		// had this data in the correct format and use it. If we don't (which sounds a
-		// bit sad, unless this ISN'T a voter) then as a fail-safe, let's try what we've
-		// done elsewhere in code to check the desired suffrage and manually set NodeType
-		// based on whether that's a voter or not. If we don't  do either of these
-		// things, NodeType isn't set which means technically it's not a voter.
-		// It shouldn't be a voter and end up in this state.
-		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
-			server.NodeType = apServerState.Server.NodeType
-		} else if state.DesiredSuffrage == "voter" {
-			server.NodeType = autopilot.NodeVoter
-		}
+		server := d.knownServer(currentServerID, id, followerVersion, *state, shouldBeVoter, cachedNodeType)
 
 		switch state.IsDead.Load() {
 		case true:
