@@ -19,7 +19,14 @@
 </Toolbar>
 
 {{#if this.data}}
-  <ListTable @data={{this.data}} @columns={{this.columns}}>
+  <ListTable
+    @data={{this.data}}
+    @columns={{this.columns}}
+    @page={{@page}}
+    @pageSize={{@pageSize}}
+    @onPageChange={{this.onPageChange}}
+    @onPageSizeChange={{this.onPageSizeChange}}
+  >
     <:customTableItem as |data column|>
       {{#let (get data column.key) as |value|}}
         {{#if value}}

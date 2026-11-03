@@ -16,6 +16,8 @@ import type { Alias, Entity } from 'vault/vault/identity';
 
 interface Args {
   model: Entity[];
+  page?: number;
+  pageSize?: number;
   onClickEntity?: (entity: Entity) => void;
   onClickAlias?: (entity: Entity, alias: Alias) => void;
 }
@@ -127,6 +129,20 @@ export default class IdentityEntitiesTableComponent extends Component<Args> {
 
   formatDate(date?: string) {
     return date ? dateFormat([date, 'MMM dd, yyyy hh:mm:ss a'], { withTimeZone: true }) : '/';
+  }
+
+  @action
+  onPageChange(page: number) {
+    this.router.transitionTo('vault.cluster.access.identity.entities.index', {
+      queryParams: { page },
+    });
+  }
+
+  @action
+  onPageSizeChange(pageSize: number) {
+    this.router.transitionTo('vault.cluster.access.identity.entities.index', {
+      queryParams: { page: 1, pageSize },
+    });
   }
 
   @action
