@@ -8,6 +8,7 @@ will see the backported commits up to, _but not including_, the commit where
 the merge conflict occurred.
 
 The person who merged in the original PR is: @{{ .OriginPullRequest.GetMergedBy.GetLogin }}
+The merge commit SHA of the original PR is: `{{ .OriginPullRequest.GetMergeCommitSHA }}`
 This person should resolve the merge-conflict(s) by either:
 * Manually completing the backports into this branch
 * Creating a new branch and manually backporting all commits
