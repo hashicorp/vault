@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/client/agentproxyshared"
+	"github.com/hashicorp/vault/command/client/agentproxyshared/tpmconfig"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -52,7 +53,7 @@ type Config struct {
 	// PKIExternalCAs stores parsed pki_external_ca blocks available to templates.
 	PKIExternalCAs []*PKIExternalCA `hcl:"-"`
 	// TPMCerts stores parsed tpm_cert blocks.
-	TPMCerts []*TPMCert `hcl:"-"`
+	TPMCerts []*tpmconfig.TPMCert `hcl:"-"`
 	// DisableIdleConns holds the raw disable_idle_connections subsystem names from HCL.
 	DisableIdleConns []string `hcl:"disable_idle_connections"`
 	// DisableIdleConnsAPIProxy is true when idle HTTP connections are disabled for caching or proxying.
@@ -199,45 +200,6 @@ type ExecConfig struct {
 	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
 	ChildProcessStdout     string    `mapstructure:"child_process_stdout"`
 	ChildProcessStderr     string    `mapstructure:"child_process_stderr"`
-}
-
-type TPMCert struct {
-	Name string `hcl:"-"`
-
-	Namespace string      `hcl:"namespace,optional"`
-	MountPath string      `hcl:"mount_path"`
-	RoleName  string      `hcl:"role_name"`
-	CSR       *TPMCertCSR `hcl:"csr,optional"`
-
-	TPM         *TPMCertTPM         `hcl:"tpm,optional"`
-	Renew       *TPMCertRenew       `hcl:"renew,optional"`
-	Destination *TPMCertDestination `hcl:"destination"`
-
-	LineNumber int
-}
-
-type TPMCertCSR struct {
-	CommonName string `hcl:"CN,optional"`
-	Country    string `hcl:"C,optional"`
-	State      string `hcl:"ST,optional"`
-	Locality   string `hcl:"L,optional"`
-	Org        string `hcl:"O,optional"`
-	OrgUnit    string `hcl:"OU,optional"`
-}
-
-type TPMCertTPM struct {
-	DevicePath string `hcl:"device_path,optional"`
-}
-
-type TPMCertRenew struct {
-	PercentRenewBeforeExpiry *int   `hcl:"percent_renew_before_expiry,optional"`
-	MinBackoff               string `hcl:"min_backoff,optional"`
-	MaxBackoff               string `hcl:"max_backoff,optional"`
-}
-
-type TPMCertDestination struct {
-	Path  string `hcl:"path"`
-	Umask string `hcl:"umask,optional"`
 }
 
 func NewConfig() *Config {
@@ -448,12 +410,16 @@ func (c *Config) ValidateConfig(logger hclog.Logger) error {
 		return err
 	}
 
-	if err := c.validateTPMCertConfig(logger); err != nil {
+	if err := c.validateTPMCertConfig(); err != nil {
 		return err
 	}
 
 	if err := c.validateAutoAuthTPMCertReferences(); err != nil {
 		return err
+	}
+
+	if err := c.configureTPMAutoAuth(); err != nil {
+		return fmt.Errorf("error configuring TPM: %w", err)
 	}
 
 	return c.validateEnvTemplateConfig()
@@ -755,10 +721,6 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if err := parseTPMCert(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'tpm_cert': %w", err)
-	}
-
-	if err := result.configureTPMAutoAuth(); err != nil {
-		return nil, fmt.Errorf("error configuring TPM: %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {

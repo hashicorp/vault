@@ -30,6 +30,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
 	"github.com/hashicorp/vault/command/client/agentproxyshared"
+	"github.com/hashicorp/vault/command/client/agentproxyshared/tpmattest"
 	"github.com/hashicorp/vault/command/client/auth"
 	proxyConfig "github.com/hashicorp/vault/command/client/proxy/config"
 	"github.com/hashicorp/vault/command/client/winsvc"
@@ -550,6 +551,7 @@ func (c *ProxyCommand) Run(args []string) int {
 	invalidTokenErrCh := make(chan error)
 	var ah *auth.AuthHandler
 	var ss *sink.SinkServer
+	var tpmas tpmattest.RunnableClient
 	if method != nil {
 		// Auth Handler is going to set its own retry values, so we want to
 		// work on a copy of the client to not affect other subsystems.
@@ -593,6 +595,17 @@ func (c *ProxyCommand) Run(args []string) int {
 			Client:        ahClient,
 			ExitAfterAuth: config.ExitAfterAuth,
 		})
+	}
+
+	if len(config.TPMCerts) > 0 {
+		tpmas, err = tpmattest.NewServer(&tpmattest.ServerConfig{
+			Logger:   c.logger.Named("tpmattest.server"),
+			TPMCerts: config.TPMCerts,
+		})
+		if err != nil {
+			c.logger.Error("could not create tpm attestation server", "error", err)
+			return 1
+		}
 	}
 
 	var listeners []net.Listener
@@ -802,6 +815,18 @@ func (c *ProxyCommand) Run(args []string) int {
 				leaseCache.SetShuttingDown(true)
 			}
 			cancelFunc()
+		})
+	}
+
+	if tpmas != nil {
+		g.Add(func() error {
+			return tpmas.Run(ctx, c.ClientDirect())
+		}, func(error) {
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
+			cancelFunc()
+			tpmas.Stop()
 		})
 	}
 
