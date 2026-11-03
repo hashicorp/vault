@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package config
@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/client/agentproxyshared"
+	"github.com/hashicorp/vault/command/client/agentproxyshared/tpmconfig"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/namespace"
 )
@@ -40,6 +41,9 @@ type Config struct {
 	DisableKeepAlives         []string  `hcl:"disable_keep_alives"`
 	DisableKeepAlivesAPIProxy bool      `hcl:"-"`
 	DisableKeepAlivesAutoAuth bool      `hcl:"-"`
+
+	// TPMCerts stores parsed tpm_cert blocks.
+	TPMCerts []*tpmconfig.TPMCert `hcl:"-"`
 }
 
 const (
@@ -224,6 +228,9 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PidFile = c2.PidFile
 	}
 
+	result.TPMCerts = append(result.TPMCerts, c.TPMCerts...)
+	result.TPMCerts = append(result.TPMCerts, c2.TPMCerts...)
+
 	return result
 }
 
@@ -269,6 +276,22 @@ func (c *Config) ValidateConfig() error {
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	inheritedNamespace := ""
+	if c.Vault != nil {
+		inheritedNamespace = c.Vault.Namespace
+	}
+	if err := tpmconfig.Validate(c.TPMCerts, inheritedNamespace); err != nil {
+		return err
+	}
+	if c.AutoAuth != nil && c.AutoAuth.Method != nil {
+		if err := tpmconfig.ValidateAutoAuthReference(c.AutoAuth.Method.Type, c.AutoAuth.Method.Config, c.TPMCerts); err != nil {
+			return err
+		}
+		if err := tpmconfig.ConfigureAutoAuth(c.AutoAuth.Method.Type, c.AutoAuth.Method.Config, c.TPMCerts); err != nil {
+			return fmt.Errorf("error configuring TPM: %w", err)
+		}
 	}
 
 	if c.Cache != nil && c.Cache.StaticSecretTokenCapabilityRefreshBehaviour != "" {
@@ -440,6 +463,14 @@ func LoadConfigFile(path string) (*Config, error) {
 	err = parseVault(result, list)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing 'vault':%w", err)
+	}
+
+	tpmCerts, err := tpmconfig.Parse(list)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing 'tpm_cert': %w", err)
+	}
+	if len(tpmCerts) > 0 {
+		result.TPMCerts = tpmCerts
 	}
 
 	if result.Vault != nil {
@@ -837,6 +868,7 @@ var autoAuthMethodKeys = map[string][]string{
 	"kubernetes": {""},
 	"oci":        {""},
 	"token_file": {""},
+	"tpm":        {""},
 }
 
 // normalizeAutoAuthMethod takes a storage name, a configuration key
