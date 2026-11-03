@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	metrics "github.com/hashicorp/go-metrics/compat"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/internalshared/metricsutil"
@@ -233,7 +233,7 @@ DONELISTHANDLING:
 			c.logger.Error("failed to create JWT builder", "error", err)
 			return nil, ErrInternalError
 		}
-		ser, err := jwt.Signed(sig).Claims(claims).Claims(priClaims).CompactSerialize()
+		ser, err := jwt.Signed(sig).Claims(claims).Claims(priClaims).Serialize()
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to serialize JWT", "error", err)
@@ -410,7 +410,7 @@ func (c *Core) validateWrappingToken(ctx context.Context, req *logical.Request) 
 	// Check for it being a JWT. If it is, and it is valid, we extract the
 	// internal client token from it and use that during lookup.
 	if IsJWT(token) {
-		parsedJWT, err := jwt.ParseSigned(token)
+		parsedJWT, err := jwt.ParseSigned(token, []jose.SignatureAlgorithm{jose.ES512})
 		if err != nil {
 			return false, fmt.Errorf("wrapping token could not be parsed: %w", err)
 		}

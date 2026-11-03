@@ -17,7 +17,6 @@ import type WizardService from 'vault/services/wizard';
 import type { Entity, Group, ListEntity } from 'vault/vault/identity';
 import type { AggregatePolicy } from 'vault/utils/policy-aggregator';
 import type { Breadcrumb } from 'vault/vault/app-types';
-import type { PaginatedMetadata } from 'core/utils/paginate-list';
 
 export type EntityFlyoutData = {
   entity: Entity;
@@ -33,11 +32,12 @@ export type EntitiesRouteModel = (ListEntity & {
   canEdit: boolean;
   canAddAlias: boolean;
   canDelete: boolean;
-})[] &
-  PaginatedMetadata;
+})[];
 
 export type IdentityEntitiesIndexModel = {
   entities: EntitiesRouteModel;
+  page?: number;
+  pageSize?: number;
   canCreateEntity: boolean;
   canMergeEntities: boolean;
 };
@@ -57,7 +57,7 @@ export default class IdentityPageEntitiesComponent extends Component<Args> {
   wizardId = WIZARD_ID_MAP.identityEntities;
 
   get isInitialState() {
-    return !this.args.model.entities?.meta?.total;
+    return !this.args.model.entities.length;
   }
 
   get showWizard() {

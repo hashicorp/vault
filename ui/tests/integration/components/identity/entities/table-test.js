@@ -115,6 +115,26 @@ module('Integration | Component | identity/entities/table', function (hooks) {
     });
   });
 
+  test('it updates the URL when paginating more than 100 entities', async function (assert) {
+    this.model = Array.from({ length: 125 }, (_, index) => ({
+      id: `entity-${index + 1}`,
+      name: `test-entity-${index + 1}`,
+      aliases: [],
+    }));
+    const transitionStub = sinon.stub(this.router, 'transitionTo');
+
+    await this.renderComponent();
+    assert.dom(GENERAL.paginationInfo).includesText('125', 'pagination includes the full entity count');
+    await click(GENERAL.nextPage);
+
+    assert.true(
+      transitionStub.calledWith('vault.cluster.access.identity.entities.index', {
+        queryParams: { page: 2 },
+      }),
+      'changing pages updates the entities page query parameter'
+    );
+  });
+
   test('it displays entity data correctly', async function (assert) {
     await this.renderComponent();
     const parentRowIds = findAllParentRowIds();
