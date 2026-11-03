@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add auto auth SPIFFE method.
+```
