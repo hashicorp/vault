@@ -34,8 +34,8 @@ import (
 	"github.com/hashicorp/vault/command/client/agent/exec"
 	"github.com/hashicorp/vault/command/client/agent/pkiexternalca"
 	"github.com/hashicorp/vault/command/client/agent/template"
-	"github.com/hashicorp/vault/command/client/agent/tpmattest"
 	"github.com/hashicorp/vault/command/client/agentproxyshared"
+	"github.com/hashicorp/vault/command/client/agentproxyshared/tpmattest"
 	"github.com/hashicorp/vault/command/client/auth"
 	"github.com/hashicorp/vault/command/client/winsvc"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache"
@@ -663,8 +663,8 @@ func (c *AgentCommand) Run(args []string) int {
 
 	if len(config.TPMCerts) > 0 {
 		tpmas, err = tpmattest.NewServer(&tpmattest.ServerConfig{
-			Logger:      c.logger.Named("tpmattest.server"),
-			AgentConfig: c.config,
+			Logger:   c.logger.Named("tpmattest.server"),
+			TPMCerts: config.TPMCerts,
 		})
 		if err != nil {
 			c.logger.Error("could not create tpm attestation server", "error", err)
