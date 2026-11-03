@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentRouteName, currentURL, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/index';
@@ -41,6 +41,52 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       'vault.cluster.access.identity.entities.index',
       'navigates to the correct route'
     );
+  });
+
+  test('it paginates beyond 100 entities and restores pagination from the URL', async function (assert) {
+    const entities = Array.from({ length: 125 }, (_, index) => ({
+      id: `entity-${index + 1}`,
+      name: `pagination-entity-${index + 1}`,
+      aliases: [],
+    }));
+    this.server.get('/identity/entity/id', () => ({
+      data: {
+        keys: entities.map((entity) => entity.id),
+        key_info: Object.fromEntries(entities.map((entity) => [entity.id, entity])),
+      },
+    }));
+
+    await visit('/vault/access/identity/entities');
+    assert.dom(GENERAL.paginationInfo).includesText('125', 'all entities are available to pagination');
+    await click(GENERAL.nextPage);
+    assert.strictEqual(
+      currentURL(),
+      '/vault/access/identity/entities?page=2',
+      'page is reflected in the URL'
+    );
+    assert.dom(GENERAL.button('entity pagination-entity-11')).exists('the second page displays its entities');
+
+    await fillIn(GENERAL.paginationSizeSelector, '100');
+    assert.strictEqual(
+      currentURL(),
+      '/vault/access/identity/entities?pageSize=100',
+      'changing page size resets to the first page'
+    );
+    await click(GENERAL.nextPage);
+    const lastPageURL = '/vault/access/identity/entities?page=2&pageSize=100';
+    assert.strictEqual(currentURL(), lastPageURL, 'page and page size are reflected in the URL');
+    assert
+      .dom(GENERAL.tableParentRow)
+      .exists({ count: 25 }, 'the final page shows the remaining 25 entities');
+    assert.dom(GENERAL.button('entity pagination-entity-101')).exists('entities beyond 100 are accessible');
+    assert.dom(GENERAL.button('entity pagination-entity-125')).exists('the final entity is accessible');
+
+    await visit('/vault/dashboard');
+    await visit(lastPageURL);
+    assert
+      .dom(GENERAL.button('entity pagination-entity-101'))
+      .exists('a direct URL restores the selected page');
+    assert.dom(GENERAL.tableParentRow).exists({ count: 25 }, 'a direct URL restores the selected page size');
   });
 
   test('it renders the groups page', async function (assert) {

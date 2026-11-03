@@ -11,6 +11,13 @@ export default Controller.extend(ListController, {
   flashMessages: service(),
   api: service(),
 
+  queryParams: {
+    page: 'page',
+    pageFilter: 'pageFilter',
+    pageSize: 'pageSize',
+  },
+  pageSize: 10,
+
   entityToDisable: null,
   itemToDelete: null,
 

@@ -50,9 +50,11 @@
 {{/if}}
 
 {{#if this.showContent}}
-  {{#if @model.entities.meta.total}}
+  {{#if @model.entities}}
     <Identity::Entities::Table
       @model={{@model.entities}}
+      @page={{@model.page}}
+      @pageSize={{@model.pageSize}}
       @onClickEntity={{this.openEntityFlyout}}
       @onClickAlias={{this.openAliasFlyout}}
     />
