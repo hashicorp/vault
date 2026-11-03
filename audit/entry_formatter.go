@@ -13,7 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-jose/go-jose/v3/jwt"
+	jose "github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	nshelper "github.com/hashicorp/vault/internalshared/namespace"
@@ -220,7 +221,13 @@ func parseVaultTokenFromJWT(token string) *string {
 		return nil
 	}
 
-	parsedJWT, err := jwt.ParseSigned(token)
+	parsedJWT, err := jwt.ParseSigned(token, []jose.SignatureAlgorithm{
+		jose.EdDSA,
+		jose.RS256, jose.RS384, jose.RS512,
+		jose.PS256, jose.PS384, jose.PS512,
+		jose.ES256, jose.ES384, jose.ES512,
+		jose.HS256, jose.HS384, jose.HS512,
+	})
 	if err != nil {
 		return nil
 	}
