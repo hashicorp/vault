@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 import Ember from 'ember';
 import { resolve } from 'rsvp';
 import { service } from '@ember/service';
@@ -17,8 +17,8 @@ import { isValidProvider } from 'vault/utils/keymgmt-provider-utils';
 import KeymgmtKeyForm from 'vault/forms/keymgmt/key';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 import TotpKeyForm from 'vault/forms/totp/key';
-import clamp from 'vault/utils/clamp';
 import TransitKeyForm from 'vault/forms/transit/key';
+import TransitKeyResource from 'vault/resources/transit/key';
 
 import SshRoleForm from 'vault/forms/ssh/role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
@@ -30,50 +30,6 @@ import {
   SecretsApiKeyManagementListKmsProvidersForKeyListEnum,
   SecretsApiTransformListRolesListEnum,
 } from '@hashicorp/vault-client-typescript';
-
-// TODO: Move this into a util file or class
-const ACTION_VALUES = {
-  encrypt: {
-    isSupported: 'supports_encryption',
-    description: 'Looks up wrapping properties for the given token.',
-    glyph: 'lock-fill',
-  },
-  decrypt: {
-    isSupported: 'supports_decryption',
-    description: 'Decrypts the provided ciphertext using this key.',
-    glyph: 'mail-open',
-  },
-  datakey: {
-    isSupported: 'supports_encryption',
-    description: 'Generates a new key and value encrypted with this key.',
-    glyph: 'key',
-  },
-  rewrap: {
-    isSupported: 'supports_encryption',
-    description: 'Rewraps the ciphertext using the latest version of the named key.',
-    glyph: 'reload',
-  },
-  sign: {
-    isSupported: 'supports_signing',
-    description: 'Get the cryptographic signature of the given data.',
-    glyph: 'pencil-tool',
-  },
-  hmac: {
-    isSupported: true,
-    description: 'Generate a data digest using a hash algorithm.',
-    glyph: 'shuffle',
-  },
-  verify: {
-    isSupported: true,
-    description: 'Validate the provided signature for the given data.',
-    glyph: 'check-circle',
-  },
-  export: {
-    isSupported: 'exportable',
-    description: 'Get the named key.',
-    glyph: 'external-link',
-  },
-};
 
 /**
  * @type Class
@@ -293,21 +249,11 @@ export default Route.extend({
   async fetchTransitKey(name, backend) {
     const res = await this.api.secrets.transitReadKey(name, backend);
 
-    const transitModel = {
+    return new TransitKeyResource({
       backend,
       id: name,
       ...res,
-      ...this.transitEncryptionKeyVersions(
-        res.keys,
-        res.min_decryption_version,
-        res.min_encryption_version,
-        res.latest_version,
-        res.supports_signing,
-        res.supports_encryption
-      ),
-    };
-
-    return transitModel;
+    });
   },
 
   async fetchTransitKeyCapabilities(backend, name, secretModel) {
@@ -322,70 +268,6 @@ export default Route.extend({
       canUpdate: capabilities[keyPath]?.canUpdate,
       canDelete: capabilities[keyPath]?.canDelete !== false && secretModel.deletion_allowed !== false, // check deletion_allowed from the model in addition to the capability since both are required to allow deletion
     };
-  },
-
-  // TODO: Move these into separate classes or utils
-  transitEncryptionKeyVersions(
-    keys,
-    minDecryptionVersion,
-    minEncryptionVersion,
-    latestVersion,
-    supportsSigning,
-    supportsEncryption
-  ) {
-    const validKeys = Object.keys(keys);
-    const keyVersions = [];
-    const keysForEncryption = [];
-
-    // get keyVersions
-    let maxVersion = Math.max(...validKeys);
-    while (maxVersion > 0) {
-      keyVersions.unshift(maxVersion);
-      maxVersion--;
-    }
-
-    // get encryptionKeyVersions using keyVersions
-    const encryptionKeyVersions = keyVersions
-      .filter((version) => {
-        return version >= minDecryptionVersion;
-      })
-      .reverse();
-
-    // get keysForEncryption
-    const minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
-    while (latestVersion > minVersion) {
-      keysForEncryption.push(latestVersion);
-      latestVersion--;
-    }
-
-    // get exportKeyTypes
-    const exportKeyTypes = ['hmac'];
-    if (supportsSigning) {
-      exportKeyTypes.unshift('signing');
-    }
-    if (supportsEncryption) {
-      exportKeyTypes.unshift('encryption');
-    }
-
-    return {
-      encryptionKeyVersions,
-      keyVersions,
-      keysForEncryption,
-      exportKeyTypes,
-      validKeyVersions: Object.keys(keys),
-    };
-  },
-
-  transitSupportedActions(secretModel) {
-    return Object.keys(ACTION_VALUES)
-      .filter((name) => {
-        const { isSupported } = ACTION_VALUES[name];
-        return typeof isSupported === 'boolean' || get(secretModel, isSupported);
-      })
-      .map((name) => {
-        const { description, glyph } = ACTION_VALUES[name];
-        return { name, description, glyph };
-      });
   },
 
   async fetchKeymgmtKey(backend, name) {
@@ -655,9 +537,9 @@ export default Route.extend({
     } else if (modelType === 'transit-key') {
       secretModel = await this.fetchTransitKey(secret, backend);
       capabilities = await this.fetchTransitKeyCapabilities(backend, secret, secretModel);
-      secretModel.supportedActions = this.transitSupportedActions(secretModel);
-      // replace secretModel with form
-      secretModel = new TransitKeyForm(secretModel, { isNew: false });
+      if (this.routeName.split('.').pop() === 'edit') {
+        secretModel = new TransitKeyForm(secretModel, { isNew: false });
+      }
     } else if (modelType === 'keymgmt/key') {
       secretModel = await this.fetchKeymgmtKey(backend, secret);
       capabilities = await this.fetchKeymgmtKeyCapabilities(backend, secret);
@@ -714,7 +596,7 @@ export default Route.extend({
     // Form-based models (keymgmt, TOTP, SSH, transform sub-types) use Form class instances which
     // don't have the Ember Data setProperties method.
     const isFormModel = model.secret instanceof Form;
-    if (!isFormModel) {
+    if (!isFormModel && !(model.secret instanceof TransitKeyResource)) {
       model.secret.setProperties({ backend });
     }
 

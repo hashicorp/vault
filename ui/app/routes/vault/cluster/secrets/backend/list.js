@@ -27,6 +27,7 @@ import {
   SecretsApiTransformListRolesListEnum,
   SecretsApiTransformListTemplatesListEnum,
   SecretsApiTransformListAlphabetsListEnum,
+  SecretsApiTransitListKeysListEnum,
 } from '@hashicorp/vault-client-typescript';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
@@ -105,6 +106,7 @@ export default Route.extend({
       effectiveType === 'keymgmt' ||
       effectiveType === 'totp' ||
       effectiveType === 'ssh' ||
+      effectiveType === 'transit' ||
       effectiveType === 'transform'
     ) {
       return resolve();
@@ -116,6 +118,33 @@ export default Route.extend({
 
   getModelType(type, tab) {
     return getModelTypeForEngine(type, { tab });
+  },
+
+  async fetchTransitKeys(backend, page, pageFilter) {
+    let response;
+    try {
+      response = await this.api.secrets.transitListKeys(backend, SecretsApiTransitListKeysListEnum.TRUE);
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return paginate([], { page });
+      }
+      throw error;
+    }
+
+    const keys = response.keys || [];
+    const paths = keys.map((name) => this.capabilitiesService.pathFor('transitKey', { backend, name }));
+    const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+    const items = keys.map((name) => {
+      const path = this.capabilitiesService.pathFor('transitKey', { backend, name });
+      return {
+        id: name,
+        backend,
+        canRead: capabilities[path]?.canRead === true,
+        canEdit: capabilities[path]?.canUpdate === true,
+      };
+    });
+    return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
   },
 
   async fetchTotpKeys(backend, page, pageFilter) {
@@ -463,9 +492,12 @@ export default Route.extend({
     const effectiveType = getEffectiveEngineType(backendModel.engineType);
     const modelType = this.getModelType(effectiveType, params.tab);
 
-    // Handle TOTP, keymgmt and ssh resources with API service
+    // API-backed resources bypass legacy model adapters and store pagination.
     let secrets;
-    if (effectiveType === 'totp') {
+    if (effectiveType === 'transit') {
+      secrets = await this.fetchTransitKeys(backend, getValidPage(params.page), params.pageFilter);
+      this.set('has404', false);
+    } else if (effectiveType === 'totp') {
       const page = getValidPage(params.page);
       secrets = await this.fetchTotpKeys(backend, page, params.pageFilter);
       this.set('has404', false);

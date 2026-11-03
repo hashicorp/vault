@@ -35,7 +35,7 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   test('it renders: signature_algorithm field', async function (assert) {
-    this.set('key', { backend: 'transit', supportsSigning: true, supportedActions: ['sign', 'verify'] });
+    this.set('key', { backend: 'transit', supports_signing: true, supportedActions: ['sign', 'verify'] });
     this.set('selectedAction', 'sign');
     await render(hbs`
     <TransitKeyActions @selectedAction={{this.selectedAction}} @key={{this.key}} />`);
@@ -50,7 +50,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('selectedAction', 'sign');
     this.set('key', {
       type: 'rsa-2048',
-      supportsSigning: true,
+      supports_signing: true,
       backend: 'transit',
       supportedActions: ['sign', 'verify'],
     });
@@ -182,7 +182,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     };
     const keyattrs = {
       keysForEncryption: [3, 2, 1],
-      latestVersion: 3,
+      latest_version: 3,
     };
 
     const key = { ...keyDefaults, ...keyattrs };
@@ -250,13 +250,45 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('key', {
       backend: 'transit',
       id: 'akey',
-      supportedActions: ['export'],
+      supportedActions: [{ name: 'export' }],
       exportKeyTypes: ['encryption'],
       validKeyVersions: [1],
     });
     await render(hbs`
     <TransitKeyActions @key={{this.key}} />`);
   };
+
+  test('switching to export initializes defaults without changing either dropdown', async function (assert) {
+    const exportStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitExportKey').resolves({
+      wrap_info: { token: 'wrapped-token' },
+    });
+    const versionStub = sinon
+      .stub(this.owner.lookup('service:api').secrets, 'transitExportKeyVersion')
+      .resolves({ wrap_info: { token: 'wrapped-version-token' } });
+    this.key = {
+      backend: 'transit',
+      id: 'signing-key',
+      type: 'ed25519',
+      supports_signing: true,
+      supportedActions: [{ name: 'sign' }, { name: 'verify' }, { name: 'export' }],
+      exportKeyTypes: ['signing', 'hmac'],
+      validKeyVersions: ['1', '2'],
+    };
+    this.selectedAction = 'verify';
+    await render(hbs`<TransitKeyActions @key={{this.key}} @selectedAction={{this.selectedAction}} />`);
+    this.set('selectedAction', 'export');
+    await click(GENERAL.submitButton);
+    assert.strictEqual(exportStub.firstCall.args[1], 'signing-key', 'default signing export reaches the API');
+    assert.dom('#transit-export-modal').exists('export succeeds without changing the displayed default');
+    await click('#transit-export-modal button');
+    await click('#exportVersion');
+    await click(GENERAL.submitButton);
+    assert.deepEqual(
+      versionStub.firstCall.args.slice(0, 4),
+      ['signing-key', 'signing-key', '2', 'transit'],
+      'single-version export defaults to the latest retained version'
+    );
+  });
 
   test('it can export a key:default behavior', async function (assert) {
     const exportStub = sinon.stub(this.owner.lookup('service:api').secrets, 'transitExportKey').resolves({
