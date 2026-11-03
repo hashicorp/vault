@@ -247,7 +247,7 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
@@ -332,7 +332,7 @@ func (c *Sys) DeregisterPluginWithContext(ctx context.Context, i *DeregisterPlug
 	req := c.c.NewRequest(http.MethodDelete, path)
 	req.Params.Set("version", i.Version)
 	resp, err := c.c.rawRequestWithContext(ctx, req)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
 	return err
