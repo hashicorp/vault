@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -29,11 +29,11 @@ func (c *OperatorRaftSnapshotRestoreCommand) Synopsis() string {
 
 func (c *OperatorRaftSnapshotRestoreCommand) Help() string {
 	helpText := `
-Usage: vault operator raft snapshot restore <snapshot_file>
+Usage: ` + c.BinaryName + ` operator raft snapshot restore <snapshot_file>
 
   Installs the provided snapshot, returning the cluster to the state defined in it.
 
-	  $ vault operator raft snapshot restore raft.snap
+	  $ ` + c.BinaryName + ` operator raft snapshot restore raft.snap
 
 ` + c.Flags().Help()
 

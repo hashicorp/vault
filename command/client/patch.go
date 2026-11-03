@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -54,7 +54,7 @@ Usage: ` + c.BinaryName + ` patch [options] PATH [DATA K=V...]
 
   Or it can be read from stdin using the "-" symbol:
 
-      $ echo "example.com" | vault patch pki/roles/example allowed_domains=-
+      $ echo "example.com" | ` + c.BinaryName + ` patch pki/roles/example allowed_domains=-
 
   For a full list of examples and paths, please see the documentation that
   corresponds to the secret engines in use.

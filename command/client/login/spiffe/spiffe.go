@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package spiffe
@@ -17,7 +17,10 @@ const operationPrefixSpiffe = "spiffe"
 // alternative to passing the sensitive value.
 const envSVIDToken = "VAULT_SPIFFE_SVID_TOKEN"
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount := operationPrefixSpiffe
@@ -76,27 +79,31 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 }
 
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login -method=spiffe [CONFIG K=V...]
+Usage: ` + binaryName + ` login -method=spiffe [CONFIG K=V...]
 
   The SPIFFE auth method allows authentication using a SVID.
 
   Authenticate using a local x.509 SVID. The -client-cert and -client-key
-  flags are included with the "vault login" command, NOT as configuration to the
+  flags are included with the "` + binaryName + ` login" command, NOT as configuration to the
   auth method.
 
-      $ vault login \
+      $ ` + binaryName + ` login \
           -client-cert=/path/to/svid.pem \
           -client-key=/path/to/svid.key \
           -method=spiffe type=cert
 
   Authenticate using a JWT-SVID stored in a file:
 
-      $ vault login -method=spiffe type=jwt svid_token_file=/run/secrets/svid.jwt
+      $ ` + binaryName + ` login -method=spiffe type=jwt svid_token_file=/run/secrets/svid.jwt
 
   Authenticate using a JWT-SVID stored in an environment variable:
 
-      $ VAULT_SPIFFE_SVID_TOKEN=<jwt-svid> vault login -method=spiffe type=jwt
+      $ VAULT_SPIFFE_SVID_TOKEN=<jwt-svid> ` + binaryName + ` login -method=spiffe type=jwt
 
 Configuration:
 

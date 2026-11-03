@@ -1,11 +1,10 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -36,7 +35,7 @@ func (c *EventsSubscribeCommands) Synopsis() string {
 
 func (c *EventsSubscribeCommands) Help() string {
 	helpText := `
-Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterExpression] eventType
+Usage: ` + c.BinaryName + ` events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterExpression] eventType
 
   Subscribe to events of the given event type (topic), which may be a glob
   pattern (with "*" treated as a wildcard). The events will be sent to
@@ -174,7 +173,7 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 			url = resp.Header.Get("Location")
 			continue
 		case resp.StatusCode == http.StatusNotFound:
-			return errors.New("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
+			return fmt.Errorf("events endpoint not found; check `%s read sys/experiments` to see if an events experiment is available but disabled", c.BinaryName)
 		default:
 			return err
 		}
