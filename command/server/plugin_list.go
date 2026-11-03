@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -30,7 +30,7 @@ func (c *PluginListCommand) Synopsis() string {
 
 func (c *PluginListCommand) Help() string {
 	helpText := `
-Usage: vault plugin list [options] [TYPE]
+Usage: ` + c.BinaryName + ` plugin list [options] [TYPE]
 
   Lists available plugins registered in the catalog. This does not list whether
   plugins are in use, but rather just their availability. The last argument of
@@ -38,15 +38,15 @@ Usage: vault plugin list [options] [TYPE]
 
   List all available plugins in the catalog:
 
-      $ vault plugin list
+      $ ` + c.BinaryName + ` plugin list
 
   List all available database plugins in the catalog:
 
-      $ vault plugin list database
+      $ ` + c.BinaryName + ` plugin list database
 
   List all available plugins with detailed output:
 
-      $ vault plugin list -detailed
+      $ ` + c.BinaryName + ` plugin list -detailed
 
 ` + c.Flags().Help()
 

@@ -177,17 +177,19 @@ func initClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) 
 // as defined by PRD VLT-2015. The vault server binary registers these and
 // adds server-only commands on top of them.
 func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]cli.CommandFactory {
-	loginHandlers := LoginHandlers()
-
 	getBaseCommand := func() *base.BaseCommand {
 		return base.NewBaseCommand(ui, runOpts)
 	}
+
+	binaryName := getBaseCommand().BinaryName
+	loginHandlers := LoginHandlers(binaryName)
 
 	commands := map[string]cli.CommandFactory{
 		"agent": func() (cli.Command, error) {
 			return &AgentCommand{
 				BaseCommand: &base.BaseCommand{
-					UI: serverCmdUi,
+					UI:         serverCmdUi,
+					BinaryName: binaryName,
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
@@ -344,7 +346,8 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 		"proxy": func() (cli.Command, error) {
 			return &ProxyCommand{
 				BaseCommand: &base.BaseCommand{
-					UI: serverCmdUi,
+					UI:         serverCmdUi,
+					BinaryName: binaryName,
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
@@ -572,19 +575,34 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 	}
 
 	entInitCommands(ui, serverCmdUi, runOpts, commands)
-	InitHCPCommands(ui, commands)
+	InitHCPCommands(ui, commands, binaryName)
 
 	return commands
 }
 
 // InitHCPCommands adds HCP-specific commands to the given commands map.
 // It checks for conflicts and only adds a command if it doesn't already exist.
-func InitHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory) {
+// Their help and hcp connect's output name binaryName instead of "vault".
+func InitHCPCommands(ui cli.Ui, commands map[string]cli.CommandFactory, binaryName string) {
 	for cmd, cmdFactory := range hcpvlib.InitHCPCommand(ui) {
 		// check for conflicts and only put command in the map in case it doesn't conflict with existing one
 		_, ok := commands[cmd]
 		if !ok {
-			commands[cmd] = cmdFactory
+			commands[cmd] = func() (cli.Command, error) {
+				command, err := cmdFactory()
+				if err != nil || binaryName == "" || binaryName == "vault" {
+					return command, err
+				}
+				switch c := command.(type) {
+				case *hcpvlib.HCPConnectCommand:
+					c.Ui = &hcpConnectUi{Ui: c.Ui, BinaryName: binaryName}
+					return &hcpConnectCommand{HCPConnectCommand: c, BinaryName: binaryName}, nil
+				case *hcpvlib.HCPDisconnectCommand:
+					return &hcpDisconnectCommand{HCPDisconnectCommand: c, BinaryName: binaryName}, nil
+				default:
+					return command, nil
+				}
+			}
 		} else {
 			ui.Error("Failed to initialize HCP commands.")
 			break

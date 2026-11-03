@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -124,6 +124,8 @@ func (c *AuthHelpCommand) Run(args []string) int {
 		}
 	}
 
-	c.UI.Output(authHandler.Help())
+	// The auth plugins hard-code "vault login" in their help. See VAULT-51873
+	// in help.go.
+	c.UI.Output(renameVaultInvocations(vaultInvocation, authHandler.Help(), c.BinaryName))
 	return 0
 }

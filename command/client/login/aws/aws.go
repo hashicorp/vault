@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package aws
@@ -14,7 +14,10 @@ import (
 	awsutilint "github.com/hashicorp/vault/internalshared/awsutil"
 )
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
@@ -93,8 +96,12 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 }
 
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login -method=aws [CONFIG K=V...]
+Usage: ` + binaryName + ` login -method=aws [CONFIG K=V...]
 
   The AWS auth method allows users to authenticate with AWS IAM
   credentials. The AWS IAM credentials, and optionally the AWS region, may be 
@@ -110,11 +117,11 @@ Usage: vault login -method=aws [CONFIG K=V...]
 
   Authenticate using locally stored credentials:
 
-      $ vault login -method=aws
+      $ ` + binaryName + ` login -method=aws
 
   Authenticate by passing keys:
 
-      $ vault login -method=aws aws_access_key_id=... aws_secret_access_key=...
+      $ ` + binaryName + ` login -method=aws aws_access_key_id=... aws_secret_access_key=...
 
 Configuration:
 
@@ -132,7 +139,7 @@ Configuration:
 
   mount=<string>
       Path where the AWS credential method is mounted. This is usually provided
-      via the -path flag in the "vault login" command, but it can be specified
+      via the -path flag in the "` + binaryName + ` login" command, but it can be specified
       here as well. If specified here, it takes precedence over the value for
       -path. The default value is "aws".
 

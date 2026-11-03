@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -31,7 +31,7 @@ func (c *PluginRuntimeDeregisterCommand) Synopsis() string {
 
 func (c *PluginRuntimeDeregisterCommand) Help() string {
 	helpText := `
-Usage: vault plugin runtime deregister [options] NAME
+Usage: ` + c.BinaryName + ` plugin runtime deregister [options] NAME
 
   Deregister an existing plugin runtime in the catalog with the given name. If
   any registered plugin references the plugin runtime, an error is returned. If
@@ -40,7 +40,7 @@ Usage: vault plugin runtime deregister [options] NAME
 
   Deregister a plugin runtime:
 
-      $ vault plugin runtime deregister -type=container my-plugin-runtime
+      $ ` + c.BinaryName + ` plugin runtime deregister -type=container my-plugin-runtime
 
 ` + c.Flags().Help()
 

@@ -31,7 +31,7 @@ func (c *TransitDecryptCommand) Synopsis() string {
 
 func (c *TransitDecryptCommand) Help() string {
 	helpText := `
-Usage: vault transit envelope decrypt transit-key-path [options...] [filenames...]
+Usage: ` + c.BinaryName + ` transit envelope decrypt transit-key-path [options...] [filenames...]
 
   Using a Transit encryption key, decrypt one or more files or a stream from STDIN
   with envelope encryption.  In this mode, the client requests Vault to decrypt an Encrypted Data Key
