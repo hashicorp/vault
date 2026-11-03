@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/command/client/auth/kubernetes"
 	"github.com/hashicorp/vault/command/client/auth/ldap"
 	"github.com/hashicorp/vault/command/client/auth/oci"
+	"github.com/hashicorp/vault/command/client/auth/spiffe"
 	token_file "github.com/hashicorp/vault/command/client/auth/token-file"
 	"github.com/hashicorp/vault/command/client/auth/tpm"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache"
@@ -69,6 +70,8 @@ func GetAutoAuthMethodFromConfig(autoAuthMethodType string, authConfig *auth.Aut
 		return cf.NewCFAuthMethod(authConfig)
 	case "ldap":
 		return ldap.NewLdapAuthMethod(authConfig)
+	case "spiffe":
+		return spiffe.NewSpiffeAuthMethod(authConfig, tlsCfg)
 	default:
 		return nil, errors.New(fmt.Sprintf("unknown auth method %q", autoAuthMethodType))
 	}
