@@ -31,7 +31,7 @@ func sanitizeDisplayName(displayName string) string {
 func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "creds/" + framework.GenericNameRegex("name"),
+			Pattern: "creds/" + framework.GenericNameWithAtRegex("name"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
@@ -54,7 +54,7 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 			HelpDescription: pathCredsCreateReadHelpDesc,
 		},
 		{
-			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
+			Pattern: "static-creds/" + framework.GenericNameWithAtRegex("name"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
