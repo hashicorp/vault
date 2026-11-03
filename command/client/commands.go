@@ -1,9 +1,10 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,15 +22,163 @@ func Run(args []string) int {
 
 // RunCustom allows passing in base run options (e.g. a custom token helper).
 func RunCustom(args []string, runOpts *base.RunOptions) int {
-	return base.RunCustomWithCommandsFn(args, runOpts, InitClientCommands)
+	return base.RunCustomWithCommandsFn(args, runOpts, InitClientBinaryCommands, unavailableClientCommands...)
 }
 
-// InitClientCommands returns the set of CLI commands for the client binary.
-// It registers all commands that interact with a running Vault cluster via the
-// API, plus vault agent and vault proxy. It does not include vault server or
-// any commands that require server-side internals (operator diagnose, operator
-// migrate, operator raft snapshot inspect, policy fmt).
+// serverInstallURL is where users can obtain the vault binary, which includes
+// the server that vault-client leaves out.
+const serverInstallURL = "https://developer.hashicorp.com/vault/install"
+
+// UnavailableCommand points users to the full Vault binary for commands we
+// don't include in vault-client.
+type UnavailableCommand struct {
+	ui   cli.Ui
+	name string
+}
+
+var _ cli.Command = (*UnavailableCommand)(nil)
+
+func (c *UnavailableCommand) Synopsis() string {
+	return "Not included in this binary"
+}
+
+func (c *UnavailableCommand) Help() string {
+	return c.message()
+}
+
+func (c *UnavailableCommand) Run(_ []string) int {
+	c.ui.Error(c.message())
+	return 1
+}
+
+func (c *UnavailableCommand) message() string {
+	return fmt.Sprintf("%q is not available in vault-client v%s.\n"+
+		"This command requires the full Vault Server image.\n"+
+		"Obtain the full Vault binary: %s",
+		c.name, version.GetVersion().VersionNumber(), serverInstallURL)
+}
+
+// Hide these commands from help and completion. Keep them out of
+// InitClientCommands so we don't replace real commands in the vault binary.
+// The operator key-status, rotate, and unseal commands are supported client
+// commands (PRD VLT-2015 AC-1.3), so they must not be listed here.
+var unavailableClientCommands = []string{
+	"audit",
+	"audit disable",
+	"audit enable",
+	"audit list",
+	"debug",
+	"events",
+	"events subscribe",
+	"events subscriptions",
+	"events subscriptions create",
+	"events subscriptions delete",
+	"events subscriptions get",
+	"events subscriptions list",
+	"license",
+	"license get",
+	"license inspect",
+	"monitor",
+	"operator diagnose",
+	"operator generate-root",
+	"operator import",
+	"operator init",
+	"operator members",
+	"operator migrate",
+	"operator raft",
+	"operator raft autopilot",
+	"operator raft autopilot get-config",
+	"operator raft autopilot set-config",
+	"operator raft autopilot state",
+	"operator raft join",
+	"operator raft list-peers",
+	"operator raft remove-peer",
+	"operator raft snapshot",
+	"operator raft snapshot inspect",
+	"operator raft snapshot load",
+	"operator raft snapshot restore",
+	"operator raft snapshot save",
+	"operator raft snapshot unload",
+	"operator rekey",
+	"operator seal",
+	"operator step-down",
+	"operator usage",
+	"operator utilization",
+	"pki",
+	"pki health-check",
+	"pki issue",
+	"pki list-intermediates",
+	"pki reissue",
+	"pki verify-sign",
+	"plugin",
+	"plugin deregister",
+	"plugin info",
+	"plugin list",
+	"plugin register",
+	"plugin reload",
+	"plugin reload-status",
+	"plugin runtime",
+	"plugin runtime deregister",
+	"plugin runtime info",
+	"plugin runtime list",
+	"plugin runtime register",
+	"policy",
+	"policy delete",
+	"policy fmt",
+	"policy list",
+	"policy read",
+	"policy write",
+	"server",
+	"transform",
+	"transform import",
+	"transform import-version",
+	"transit",
+	"transit envelope",
+	"transit envelope decrypt",
+	"transit envelope encrypt",
+	"transit envelope header",
+	"transit import",
+	"transit import-version",
+	"version-history",
+}
+
+// InitClientBinaryCommands is like InitClientCommands only it adds overrides
+// and placeholder shims commands that ought to only exist in the vault-client
+// binary. Use InitClientCommands for all of the real Client commands.
+func InitClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]cli.CommandFactory {
+	return initClientBinaryCommands(ui, serverCmdUi, runOpts)
+}
+
+func initClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]cli.CommandFactory {
+	commands := InitClientCommands(ui, serverCmdUi, runOpts)
+
+	// Override version so that it shows Vault Client instead of Vault.
+	commands["version"] = func() (cli.Command, error) {
+		versionInfo := version.GetVersion()
+		versionInfo.BinaryName = "Vault Client"
+		return &VersionCommand{
+			VersionInfo: versionInfo,
+			BaseCommand: base.NewBaseCommand(ui, runOpts),
+		}, nil
+	}
+
+	// Add unavailable command shims for commands that exist in server but
+	// do not exist in client.
+	for _, name := range unavailableClientCommands {
+		commands[name] = func() (cli.Command, error) {
+			return &UnavailableCommand{ui: ui, name: name}, nil
+		}
+	}
+
+	return commands
+}
+
+// InitClientCommands returns the set of CLI commands for the client binary,
+// as defined by PRD VLT-2015. The vault server binary registers these and
+// adds server-only commands on top of them.
 func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]cli.CommandFactory {
+	loginHandlers := LoginHandlers()
+
 	getBaseCommand := func() *base.BaseCommand {
 		return base.NewBaseCommand(ui, runOpts)
 	}
@@ -47,26 +196,6 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 		},
 		"agent generate-config": func() (cli.Command, error) {
 			return &AgentGenerateConfigCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"audit": func() (cli.Command, error) {
-			return &AuditCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"audit disable": func() (cli.Command, error) {
-			return &AuditDisableCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"audit enable": func() (cli.Command, error) {
-			return &AuditEnableCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"audit list": func() (cli.Command, error) {
-			return &AuditListCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -93,6 +222,7 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 		"auth help": func() (cli.Command, error) {
 			return &AuthHelpCommand{
 				BaseCommand: getBaseCommand(),
+				Handlers:    loginHandlers,
 			}, nil
 		},
 		"auth list": func() (cli.Command, error) {
@@ -105,19 +235,8 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"debug": func() (cli.Command, error) {
-			return &DebugCommand{
-				BaseCommand: getBaseCommand(),
-				ShutdownCh:  MakeShutdownCh(),
-			}, nil
-		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"events subscribe": func() (cli.Command, error) {
-			return &EventsSubscribeCommands{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -149,6 +268,7 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 		"login": func() (cli.Command, error) {
 			return &LoginCommand{
 				BaseCommand: getBaseCommand(),
+				Handlers:    loginHandlers,
 			}, nil
 		},
 		"namespace": func() (cli.Command, error) {
@@ -196,73 +316,8 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator generate-root": func() (cli.Command, error) {
-			return &OperatorGenerateRootCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator init": func() (cli.Command, error) {
-			return &OperatorInitCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"operator key-status": func() (cli.Command, error) {
 			return &OperatorKeyStatusCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft": func() (cli.Command, error) {
-			return &OperatorRaftCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft autopilot get-config": func() (cli.Command, error) {
-			return &OperatorRaftAutopilotGetConfigCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft autopilot set-config": func() (cli.Command, error) {
-			return &OperatorRaftAutopilotSetConfigCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft autopilot state": func() (cli.Command, error) {
-			return &OperatorRaftAutopilotStateCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft list-peers": func() (cli.Command, error) {
-			return &OperatorRaftListPeersCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft join": func() (cli.Command, error) {
-			return &OperatorRaftJoinCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft remove-peer": func() (cli.Command, error) {
-			return &OperatorRaftRemovePeerCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft snapshot": func() (cli.Command, error) {
-			return &OperatorRaftSnapshotCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft snapshot restore": func() (cli.Command, error) {
-			return &OperatorRaftSnapshotRestoreCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator raft snapshot save": func() (cli.Command, error) {
-			return &OperatorRaftSnapshotSaveCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator rekey": func() (cli.Command, error) {
-			return &OperatorRekeyCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -271,33 +326,8 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"operator seal": func() (cli.Command, error) {
-			return &OperatorSealCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator step-down": func() (cli.Command, error) {
-			return &OperatorStepDownCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator usage": func() (cli.Command, error) {
-			return &OperatorUsageCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator utilization": func() (cli.Command, error) {
-			return &OperatorUtilizationCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"operator unseal": func() (cli.Command, error) {
 			return &OperatorUnsealCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"operator members": func() (cli.Command, error) {
-			return &OperatorMembersCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -311,94 +341,6 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"pki": func() (cli.Command, error) {
-			return &PKICommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"pki health-check": func() (cli.Command, error) {
-			return &PKIHealthCheckCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"pki issue": func() (cli.Command, error) {
-			return &PKIIssueCACommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"pki list-intermediates": func() (cli.Command, error) {
-			return &PKIListIntermediateCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"pki reissue": func() (cli.Command, error) {
-			return &PKIReIssueCACommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"pki verify-sign": func() (cli.Command, error) {
-			return &PKIVerifySignCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin": func() (cli.Command, error) {
-			return &PluginCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin deregister": func() (cli.Command, error) {
-			return &PluginDeregisterCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin info": func() (cli.Command, error) {
-			return &PluginInfoCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin list": func() (cli.Command, error) {
-			return &PluginListCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin register": func() (cli.Command, error) {
-			return NewPluginRegisterCommand(getBaseCommand()), nil
-		},
-		"plugin reload": func() (cli.Command, error) {
-			return &PluginReloadCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin reload-status": func() (cli.Command, error) {
-			return &PluginReloadStatusCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin runtime": func() (cli.Command, error) {
-			return &PluginRuntimeCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin runtime register": func() (cli.Command, error) {
-			return &PluginRuntimeRegisterCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin runtime deregister": func() (cli.Command, error) {
-			return &PluginRuntimeDeregisterCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin runtime info": func() (cli.Command, error) {
-			return &PluginRuntimeInfoCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"plugin runtime list": func() (cli.Command, error) {
-			return &PluginRuntimeListCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"proxy": func() (cli.Command, error) {
 			return &ProxyCommand{
 				BaseCommand: &base.BaseCommand{
@@ -407,31 +349,6 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
 				SigUSR2Ch:  MakeSigUSR2Ch(),
-			}, nil
-		},
-		"policy": func() (cli.Command, error) {
-			return &PolicyCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"policy delete": func() (cli.Command, error) {
-			return &PolicyDeleteCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"policy list": func() (cli.Command, error) {
-			return &PolicyListCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"policy read": func() (cli.Command, error) {
-			return &PolicyReadCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"policy write": func() (cli.Command, error) {
-			return &PolicyWriteCommand{
-				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"print": func() (cli.Command, error) {
@@ -489,36 +406,6 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
-		"transform": func() (cli.Command, error) {
-			return &TransformCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"transform import": func() (cli.Command, error) {
-			return &TransformImportCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"transform import-version": func() (cli.Command, error) {
-			return &TransformImportVersionCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"transit": func() (cli.Command, error) {
-			return &TransitCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"transit import": func() (cli.Command, error) {
-			return &TransitImportCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"transit import-version": func() (cli.Command, error) {
-			return &TransitImportVersionCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
 		"token": func() (cli.Command, error) {
 			return &TokenCommand{
 				BaseCommand: getBaseCommand(),
@@ -557,11 +444,6 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 		"version": func() (cli.Command, error) {
 			return &VersionCommand{
 				VersionInfo: version.GetVersion(),
-				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"version-history": func() (cli.Command, error) {
-			return &VersionHistoryCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -643,12 +525,6 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 		"kv metadata delete": func() (cli.Command, error) {
 			return &KVMetadataDeleteCommand{
 				BaseCommand: getBaseCommand(),
-			}, nil
-		},
-		"monitor": func() (cli.Command, error) {
-			return &MonitorCommand{
-				BaseCommand: getBaseCommand(),
-				ShutdownCh:  MakeShutdownCh(),
 			}, nil
 		},
 	}

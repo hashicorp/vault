@@ -72,4 +72,6 @@ runs:
     - name: Build UI
       if: ${{ steps.cache-ui-assets.outputs.cache-hit != 'true' }}
       shell: bash
+      env:
+        GOWORK: "off"
       run: make ci-build-ui

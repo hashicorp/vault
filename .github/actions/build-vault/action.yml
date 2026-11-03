@@ -10,6 +10,11 @@ description: |
   both repositories.
 
 inputs:
+  build-source:
+    description: |
+      The Go package of the entrypoint to build. Set vault-binary-name too when building a package
+      other than the default, as entrypoints in cmd directories would otherwise be named cmd.
+    default: "."
   github-token:
     description: An elevated Github token to access private Go modules if necessary.
     default: ""
@@ -41,6 +46,9 @@ inputs:
   package-name:
     description: The name to use for the linux packages.
     default: ${{ github.event.repository.name }}
+  remove-symbols:
+    description: Strip the symbol table and DWARF information from the binary.
+    default: "false"
   vault-binary-name:
     description: The name of the vault binary.
     default: vault
@@ -64,7 +72,8 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
     - uses: ./.github/actions/install-tools # sets env.VAULT_TOOLS_PATH
-    - name: Restore UI from cache
+    - if: contains(inputs.go-tags, 'ui')
+      name: Restore UI from cache
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         # Restore the UI asset from the UI build workflow. Never use a partial restore key.
@@ -118,12 +127,15 @@ runs:
     - if: inputs.cgo-enabled == '0' && inputs.vault-edition == 'ce'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:
+        BIN_NAME: ${{ inputs.vault-binary-name }}
+        BUILD_SOURCE: ${{ inputs.build-source }}
         CGO_ENABLED: 0
         GO_TAGS: ${{ inputs.go-tags }}
         GOARCH: ${{ inputs.goarch }}
         GOARM: ${{ inputs.goarm }}
         GOOS: ${{ inputs.goos }}
         GOEXPERIMENT: ${{ inputs.goexperiment }}
+        REMOVE_SYMBOLS: ${{ inputs.remove-symbols == 'true' && '1' || '' }}
         # Skip go generate. Generated code should be checked in.
         SKIP_GEN: "1"
         VERSION: ${{ inputs.vault-version }}
@@ -133,6 +145,8 @@ runs:
     - if: inputs.cgo-enabled == '0' && inputs.vault-edition != 'ce'
       name: ${{ steps.metadata.outputs.build-step-name }}
       env:
+        BIN_NAME: ${{ inputs.vault-binary-name }}
+        BUILD_SOURCE: ${{ inputs.build-source }}
         CGO_ENABLED: 0
         GO_TAGS: ${{ inputs.go-tags }}
         GOARCH: ${{ inputs.goarch }}
@@ -140,6 +154,7 @@ runs:
         GOOS: ${{ inputs.goos }}
         GOEXPERIMENT: ${{ inputs.goexperiment }}
         GOPRIVATE: github.com/hashicorp/*
+        REMOVE_SYMBOLS: ${{ inputs.remove-symbols == 'true' && '1' || '' }}
         # Skip go generate. Generated code should be checked in.
         SKIP_GEN: "1"
         VERSION: ${{ inputs.vault-version }}
@@ -216,6 +231,8 @@ runs:
           -v ${VAULT_TOOLS_PATH}:/opt/tools/bin \
           -v $(go env GOMODCACHE):/go-mod-cache \
             --env GITHUB_TOKEN='${{ inputs.github-token }}' \
+            --env BIN_NAME='${{ inputs.vault-binary-name }}' \
+            --env BUILD_SOURCE='${{ inputs.build-source }}' \
             --env CGO_ENABLED=1 \
             --env GO_TAGS='${{ inputs.go-tags }}' \
             --env GOARCH='${{ inputs.goarch }}' \
@@ -223,6 +240,7 @@ runs:
             --env GOEXPERIMENT='${{ inputs.goexperiment }}' \
             --env GOMODCACHE=/go-mod-cache \
             --env GOOS='${{ inputs.goos }}' \
+            --env REMOVE_SYMBOLS='${{ inputs.remove-symbols == 'true' && '1' || '' }}' \
             --env SKIP_GEN=1 \
             --env VERSION='${{ inputs.vault-version }}' \
             --env VERSION_METADATA='${{ inputs.vault-edition }}' \
@@ -305,5 +323,6 @@ runs:
         goarch: ${{ inputs.goarch }}
         goos: ${{ inputs.goos }}
         vault-binary-path: ${{ steps.metadata.outputs.binary-path }}
+        vault-binary-name: ${{ inputs.vault-binary-name }}
         vault-edition: ${{ inputs.vault-edition }}
         vault-version: ${{ inputs.vault-version }}

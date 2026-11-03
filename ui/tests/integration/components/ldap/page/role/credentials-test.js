@@ -95,6 +95,38 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
     );
   });
 
+  test('it should render "Never" for last Vault rotation when a static role has not been rotated', async function (assert) {
+    const staticCreds = {
+      type: 'static',
+      username: 'foobar',
+      password: 'secret',
+      rotation_period: 0,
+      ttl: 0,
+    };
+    // Vault returns Go's zero time for a static role that has never been rotated.
+    const neverRotated = [
+      ['zero time', '0001-01-01T00:00:00Z'],
+      ['null', null],
+      ['missing', undefined],
+    ];
+
+    for (const [description, lastVaultRotation] of neverRotated) {
+      this.creds = { ...staticCreds, last_vault_rotation: lastVaultRotation };
+
+      await render(
+        hbs`<Page::Role::Credentials @credentials={{this.creds}} @breadcrumbs={{this.breadcrumbs}} />`,
+        { owner: this.engine }
+      );
+
+      assert
+        .dom(GENERAL.infoRowLabel('Last Vault rotation'))
+        .exists(`Last Vault rotation row renders when value is ${description}`);
+      assert
+        .dom(GENERAL.infoRowValue('Last Vault rotation'))
+        .hasText('Never', `Last Vault rotation renders Never when value is ${description}`);
+    }
+  });
+
   test('it should render fields for dynamic role', async function (assert) {
     const fields = [
       { label: 'Distinguished Name', value: () => this.creds.distinguished_names.join(', ') },

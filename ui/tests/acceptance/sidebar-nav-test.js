@@ -9,7 +9,6 @@ import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { WIZARD_ID_MAP } from 'vault/utils/constants/wizard';
 
@@ -31,12 +30,6 @@ module('Acceptance | sidebar navigation', function (hooks) {
       return modifyPassthroughResponse(req, { storage_type: 'raft' });
     });
     this.server.get('/sys/storage/raft/configuration', () => this.server.create('configuration', 'withRaft'));
-    setRunOptions({
-      rules: {
-        // TODO: fix use Dropdown on user-menu
-        'nested-interactive': { enabled: false },
-      },
-    });
     await login();
     // dismiss wizard
     this.owner.lookup('service:wizard').dismiss(WIZARD_ID_MAP.authMethods);

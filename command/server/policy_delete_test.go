@@ -10,14 +10,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testPolicyDeleteCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PolicyDeleteCommand) {
+func testPolicyDeleteCommand(tb testing.TB) (*cli.MockUi, *PolicyDeleteCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PolicyDeleteCommand{
+	return ui, &PolicyDeleteCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

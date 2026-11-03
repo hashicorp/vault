@@ -247,8 +247,79 @@ func TestPublishedModules(t *testing.T) {
 	}
 }
 
+// TestExcludedModuleDirs verifies that we normalize and dedupe excluded directories, and that we
+// reject any exclusion that would quietly do nothing or hide real problems: the root module,
+// directories the go command ignores, directories without a committed go.mod, and published
+// modules.
+func TestExcludedModuleDirs(t *testing.T) {
+	t.Parallel()
+
+	goMods := []string{
+		"go.mod",
+		"api/go.mod",
+		"api/auth/approle/go.mod",
+		"sdk/go.mod",
+		"tools/pipeline/go.mod",
+		"sdk/helper/testdata/go.mod",
+	}
+
+	for name, test := range map[string]struct {
+		dirs      []string
+		published []string
+		want      []string
+		err       string
+	}{
+		"none": {
+			want: []string{},
+		},
+		"normalized and deduped": {
+			dirs: []string{"./tools/pipeline/", "tools/pipeline"},
+			want: []string{"tools/pipeline"},
+		},
+		"root": {
+			dirs: []string{"./"},
+			err:  "invalid excluded module: .: the root module can't be excluded",
+		},
+		"ignored by go": {
+			dirs: []string{"sdk/helper/testdata"},
+			err:  "invalid excluded module: sdk/helper/testdata: the go command already ignores it",
+		},
+		"no committed go.mod": {
+			dirs: []string{"tools/pipelin"},
+			err:  "invalid excluded module: tools/pipelin: no committed go.mod in /ws",
+		},
+		"published": {
+			dirs:      []string{"sdk"},
+			published: []string{"sdk"},
+			err:       "invalid excluded module: sdk: it's also published",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			ws := checkWorkspaceFixture()
+			published, err := publishedModules(ws, test.published)
+			require.NoError(t, err)
+
+			excluded, err := excludedModuleDirs(ws, goMods, published, test.dirs)
+			if test.err != "" {
+				require.EqualError(t, err, test.err)
+				return
+			}
+			require.NoError(t, err)
+
+			got := []string{}
+			for dir := range excluded {
+				got = append(got, dir)
+			}
+			require.ElementsMatch(t, test.want, got)
+		})
+	}
+}
+
 // TestFindUnregisteredModules verifies that committed go.mod files outside
-// go.work are reported, except in directories the go command ignores.
+// go.work are reported, except in directories the go command ignores and in
+// directories that we've excluded.
 func TestFindUnregisteredModules(t *testing.T) {
 	t.Parallel()
 
@@ -259,11 +330,12 @@ func TestFindUnregisteredModules(t *testing.T) {
 		"api/auth/approle/go.mod",
 		"sdk/go.mod",
 		"tools/new/go.mod",
+		"tools/pipeline/go.mod",
 		"sdk/helper/testdata/go.mod",
 		"vendor/example.com/x/go.mod",
 		".github/go.mod",
 		"internal/_fixture/go.mod",
-	})
+	}, map[string]struct{}{"tools/pipeline": {}})
 
 	require.Equal(t, []*WorkspaceViolation{{
 		Kind:   WorkspaceViolationUnregisteredModule,
@@ -395,4 +467,75 @@ func TestCheckWorkspaceReq_Run_Published(t *testing.T) {
 		Published: []string{"sdk", "api/auth"},
 	}).Run(t.Context())
 	require.ErrorContains(t, err, `published module pattern "api/auth" matches no module`)
+}
+
+// TestCheckWorkspaceReq_Run_Excluded verifies how we keep modules with private requirements out of
+// go.work on CE branches. An excluded module that's not in go.work passes, an excluded module that's
+// in go.work is reported, and an excluded directory without a committed go.mod is an error so that a
+// typo doesn't quietly exclude nothing.
+func TestCheckWorkspaceReq_Run_Excluded(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"go.work":               "go 1.21\n\nuse (\n\t.\n\t./api\n\t./tools/other\n)\n",
+		"go.mod":                "module example.com/vault\n\ngo 1.21\n",
+		"api/go.mod":            "module example.com/vault/api\n\ngo 1.21\n",
+		"tools/pipeline/go.mod": "module example.com/vault/tools/pipeline\n\ngo 1.21\n",
+		"tools/other/go.mod":    "module example.com/vault/tools/other\n\ngo 1.21\n",
+	})
+	gitCommitAll(t, root)
+	goWork := filepath.Join(root, "go.work")
+
+	res, err := (&CheckWorkspaceReq{GoWork: goWork, Excluded: []string{"./tools/pipeline/"}}).Run(t.Context())
+	require.NoError(t, err)
+	require.True(t, res.Success(), res.ToTable())
+
+	res, err = (&CheckWorkspaceReq{GoWork: goWork, Excluded: []string{"tools/pipeline", "tools/other"}}).Run(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, []*WorkspaceViolation{{
+		Kind:   WorkspaceViolationExcludedModule,
+		Module: "tools/other",
+		Detail: "tools/other is excluded but it's in go.work; remove it with 'go work edit -dropuse=./tools/other'",
+	}}, res.Violations)
+
+	// If we don't exclude it we'll report it as unregistered like before.
+	res, err = (&CheckWorkspaceReq{GoWork: goWork}).Run(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, []*WorkspaceViolation{{
+		Kind:   WorkspaceViolationUnregisteredModule,
+		Module: "tools/pipeline",
+		Detail: "tools/pipeline/go.mod is committed but go.work has no 'use ./tools/pipeline'",
+	}}, res.Violations)
+
+	_, err = (&CheckWorkspaceReq{GoWork: goWork, Excluded: []string{"tools/pipelin"}}).Run(t.Context())
+	require.ErrorContains(t, err, "invalid excluded module: tools/pipelin: no committed go.mod")
+}
+
+// TestCheckWorkspaceReq_Run_ExcludedSkipsReplaces verifies that we only report the excluded-module
+// problem for an excluded module that's in go.work. We don't also report its replace problems since
+// the fix is to remove it from go.work, which makes those problems go away.
+func TestCheckWorkspaceReq_Run_ExcludedSkipsReplaces(t *testing.T) {
+	t.Parallel()
+
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		"go.work":    "go 1.21\n\nuse (\n\t.\n\t./api\n\t./tools/pipeline\n)\n",
+		"go.mod":     "module example.com/vault\n\ngo 1.21\n",
+		"api/go.mod": "module example.com/vault/api\n\ngo 1.21\n",
+		// Requires api without a local replace.
+		"tools/pipeline/go.mod": "module example.com/vault/tools/pipeline\n\ngo 1.21\n\nrequire example.com/vault/api v1.0.0\n",
+	})
+	gitCommitAll(t, root)
+
+	res, err := (&CheckWorkspaceReq{
+		GoWork:   filepath.Join(root, "go.work"),
+		Excluded: []string{"tools/pipeline"},
+	}).Run(t.Context())
+	require.NoError(t, err)
+	require.Equal(t, []*WorkspaceViolation{{
+		Kind:   WorkspaceViolationExcludedModule,
+		Module: "tools/pipeline",
+		Detail: "tools/pipeline is excluded but it's in go.work; remove it with 'go work edit -dropuse=./tools/pipeline'",
+	}}, res.Violations)
 }

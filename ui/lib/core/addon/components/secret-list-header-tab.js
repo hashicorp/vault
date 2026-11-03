@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -45,9 +45,12 @@ export default class SecretListHeaderTab extends Component {
     // For now only check capabilities for the Database Secrets Engine
     if (this.args.displayName === 'Database') {
       const { path, id: backend } = this.args;
-      const pathKey = path === 'config' ? 'databaseConfig' : 'databaseRoles';
-      const { canList, canCreate, canUpdate } = await this.capabilities.for(pathKey, { backend });
-      this.dontShowTab = !canList && !canCreate && !canUpdate;
+      const pathKeys = path === 'config' ? ['databaseConfig'] : ['databaseRoles', 'databaseStaticRoles'];
+      const paths = this.capabilities.pathsForList(pathKeys, { backend });
+      const capabilities = await this.capabilities.fetch(paths);
+      this.dontShowTab = !Object.values(capabilities).some(
+        ({ canList, canCreate, canUpdate }) => canList || canCreate || canUpdate
+      );
     }
   }
 }

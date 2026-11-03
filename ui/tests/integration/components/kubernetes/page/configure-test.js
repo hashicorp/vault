@@ -52,7 +52,6 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       rules: {
         // TODO: fix RadioCard component (replace with HDS)
         'aria-valid-attr-value': { enabled: false },
-        'nested-interactive': { enabled: false },
       },
     });
     this.renderComponent = () =>

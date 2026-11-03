@@ -31,6 +31,7 @@ interface CarbonTreeChartSignature {
 // https://charts.carbondesignsystem.com/api/classes/treechart
 export default class CarbonTreeChart extends Component<CarbonTreeChartSignature> {
   @tracked chart: TreeChart | null = null;
+  private toolbarObserver: MutationObserver | null = null;
 
   @action
   setupChart(element: HTMLDivElement): void {
@@ -38,6 +39,38 @@ export default class CarbonTreeChart extends Component<CarbonTreeChartSignature>
     this.chart = new TreeChart(element, {
       data: this.args.data,
       options: this.args.options,
+    });
+    this.toolbarObserver = new MutationObserver(() => this.updateToolbarAccessibility(element));
+    this.toolbarObserver.observe(element, { childList: true, subtree: true });
+    this.updateToolbarAccessibility(element);
+  }
+
+  // Carbon 1.27 wraps native buttons in interactive roles, including in its dynamically rendered overflow menu.
+  private updateToolbarAccessibility(element: HTMLElement): void {
+    element.querySelectorAll('.toolbar-control[role="button"]').forEach((control) => {
+      const button = control.querySelector('button');
+      if (button) {
+        const disabled = control.getAttribute('aria-disabled');
+        if (disabled !== null) {
+          button.setAttribute('aria-disabled', disabled);
+        }
+        control.removeAttribute('role');
+        control.removeAttribute('aria-disabled');
+        control.removeAttribute('aria-label');
+      }
+    });
+    element.querySelectorAll('.cds--overflow-menu-options [role="menu"] > li').forEach((item) => {
+      const button = item.querySelector('button');
+      if (button) {
+        button.setAttribute('role', 'menuitem');
+        const disabled = item.getAttribute('aria-disabled');
+        if (disabled !== null) {
+          button.setAttribute('aria-disabled', disabled);
+        }
+        item.setAttribute('role', 'none');
+        item.removeAttribute('tabindex');
+        item.removeAttribute('aria-disabled');
+      }
     });
   }
 
@@ -51,6 +84,8 @@ export default class CarbonTreeChart extends Component<CarbonTreeChartSignature>
 
   @action
   destroyChart(): void {
+    this.toolbarObserver?.disconnect();
+    this.toolbarObserver = null;
     if (this.chart) {
       this.chart.destroy();
       this.chart = null;

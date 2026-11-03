@@ -69,10 +69,15 @@
         replication or change primaries on the secondary cluster.
       </p>
       <div class="box is-shadowless is-fullwidth is-sideless">
-        <h2 class="title is-6">Activation token</h2>
+        <h2 class="title is-6" id="token-textarea-label">Activation token</h2>
         <div class="copy-text level">
           <div class="is-fullwidth">
-            <textarea readonly value={{this.token}} id="token-textarea" class="textarea level-left"></textarea>
+            <textarea
+              readonly
+              value={{this.token}}
+              class="textarea level-left"
+              aria-labelledby="token-textarea-label"
+            ></textarea>
           </div>
         </div>
         <div class="has-top-margin-xl has-bottom-margin-s">

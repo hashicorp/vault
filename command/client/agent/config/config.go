@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package config
@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/client/agentproxyshared"
+	"github.com/hashicorp/vault/command/client/agentproxyshared/tpmconfig"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
@@ -51,6 +52,8 @@ type Config struct {
 	Templates []*ctconfig.TemplateConfig `hcl:"templates"`
 	// PKIExternalCAs stores parsed pki_external_ca blocks available to templates.
 	PKIExternalCAs []*PKIExternalCA `hcl:"-"`
+	// TPMCerts stores parsed tpm_cert blocks.
+	TPMCerts []*tpmconfig.TPMCert `hcl:"-"`
 	// DisableIdleConns holds the raw disable_idle_connections subsystem names from HCL.
 	DisableIdleConns []string `hcl:"disable_idle_connections"`
 	// DisableIdleConnsAPIProxy is true when idle HTTP connections are disabled for caching or proxying.
@@ -325,6 +328,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PKIExternalCAs = append(result.PKIExternalCAs, pkiExternalCA)
 	}
 
+	for _, tpmCert := range c.TPMCerts {
+		result.TPMCerts = append(result.TPMCerts, tpmCert)
+	}
+
+	for _, tpmCert := range c2.TPMCerts {
+		result.TPMCerts = append(result.TPMCerts, tpmCert)
+	}
+
 	return result
 }
 
@@ -397,6 +408,18 @@ func (c *Config) ValidateConfig(logger hclog.Logger) error {
 
 	if err := c.validatePKIExternalCAConfig(logger); err != nil {
 		return err
+	}
+
+	if err := c.validateTPMCertConfig(); err != nil {
+		return err
+	}
+
+	if err := c.validateAutoAuthTPMCertReferences(); err != nil {
+		return err
+	}
+
+	if err := c.configureTPMAutoAuth(); err != nil {
+		return fmt.Errorf("error configuring TPM: %w", err)
 	}
 
 	return c.validateEnvTemplateConfig()
@@ -694,6 +717,10 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if err := parsePKIExternalCA(result, list); err != nil {
 		return nil, fmt.Errorf("error parsing 'pki_external_ca': %w", err)
+	}
+
+	if err := parseTPMCert(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'tpm_cert': %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
@@ -1118,6 +1145,7 @@ var autoAuthMethodKeys = map[string][]string{
 	"kubernetes": {""},
 	"oci":        {""},
 	"token_file": {""},
+	"tpm":        {""},
 }
 
 // normalizeAutoAuthMethod takes a storage name, a configuration key

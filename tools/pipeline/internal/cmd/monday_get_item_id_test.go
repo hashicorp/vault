@@ -21,28 +21,48 @@ func TestMondayGetItemIDCmd_FlagParsing(t *testing.T) {
 
 	for name, tc := range map[string]struct {
 		args             []string
+		wantParentID     string
 		wantBoardID      string
 		wantItemName     string
 		wantGithubOutput bool
 		wantErr          bool
 	}{
-		"required --board-id missing returns error": {
+		"--board-id and --parent-id missing returns error": {
 			args:    []string{"--item-name", "Release Checklist"},
 			wantErr: true,
 		},
-		"required --item-name missing returns error": {
+		"--board-id and --parent-id both set returns error": {
+			args:    []string{"--board-id", "1010222", "--parent-id", "2020444", "--item-name", "Release Checklist"},
+			wantErr: true,
+		},
+		"required --item-name missing with --board-id returns error": {
 			args:    []string{"--board-id", "1010222"},
 			wantErr: true,
 		},
-		"all required flags set": {
+		"required --item-name missing with --parent-id returns error": {
+			args:    []string{"--parent-id", "2020444"},
+			wantErr: true,
+		},
+		"--board-id and --item-name set": {
 			args:         []string{"--board-id", "1010222", "--item-name", "Release Checklist"},
 			wantBoardID:  "1010222",
 			wantItemName: "Release Checklist",
 		},
-		"--github-output flag is set": {
+		"--parent-id and --item-name set": {
+			args:         []string{"--parent-id", "2020444", "--item-name", "Go Version Update check"},
+			wantParentID: "2020444",
+			wantItemName: "Go Version Update check",
+		},
+		"--github-output flag is set with --board-id": {
 			args:             []string{"--board-id", "1010222", "--item-name", "Release Checklist", "--github-output"},
 			wantBoardID:      "1010222",
 			wantItemName:     "Release Checklist",
+			wantGithubOutput: true,
+		},
+		"--github-output flag is set with --parent-id": {
+			args:             []string{"--parent-id", "2020444", "--item-name", "Go Version Update check", "--github-output"},
+			wantParentID:     "2020444",
+			wantItemName:     "Go Version Update check",
 			wantGithubOutput: true,
 		},
 	} {
@@ -59,6 +79,10 @@ func TestMondayGetItemIDCmd_FlagParsing(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+
+			parentID, err := cmd.Flags().GetString("parent-id")
+			require.NoError(t, err)
+			require.Equal(t, tc.wantParentID, parentID)
 
 			boardID, err := cmd.Flags().GetString("board-id")
 			require.NoError(t, err)
@@ -81,11 +105,13 @@ func TestMondayGetItemIDRes_ToTable(t *testing.T) {
 	t.Parallel()
 
 	res := &monday.GetItemIDRes{
-		ItemID: "9876543",
+		ItemID:  "9876543",
+		BoardID: "1122334",
 	}
 
 	output := res.ToTable().Render()
 	require.Contains(t, output, "9876543")
+	require.Contains(t, output, "1122334")
 }
 
 // TestMondayGetItemIDRes_ToJSON verifies that ToJSON produces valid JSON
@@ -94,7 +120,8 @@ func TestMondayGetItemIDRes_ToJSON(t *testing.T) {
 	t.Parallel()
 
 	res := &monday.GetItemIDRes{
-		ItemID: "9876543",
+		ItemID:  "9876543",
+		BoardID: "1122334",
 	}
 
 	b, err := res.ToJSON()
@@ -103,4 +130,5 @@ func TestMondayGetItemIDRes_ToJSON(t *testing.T) {
 	var got map[string]string
 	require.NoError(t, json.NewDecoder(bytes.NewReader(b)).Decode(&got))
 	require.Equal(t, "9876543", got["item_id"])
+	require.Equal(t, "1122334", got["board_id"])
 }

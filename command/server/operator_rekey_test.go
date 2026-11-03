@@ -15,15 +15,14 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 )
 
-func testOperatorRekeyCommand(tb testing.TB) (*cli.MockUi, *clientcmd.OperatorRekeyCommand) {
+func testOperatorRekeyCommand(tb testing.TB) (*cli.MockUi, *OperatorRekeyCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.OperatorRekeyCommand{
+	return ui, &OperatorRekeyCommand{
 		BaseCommand: base.NewBaseCommand(ui, nil),
 	}
 }

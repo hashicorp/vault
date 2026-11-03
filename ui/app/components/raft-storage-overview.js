@@ -15,6 +15,7 @@ export default Component.extend({
   router: service(),
 
   useServiceWorker: null,
+  peerToRemove: null,
 
   async init() {
     this._super(...arguments);

@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -24,15 +24,16 @@
           <D.Separator />
           {{#let (this.searchDropdown dropdownItems searchProperty) as |matchingItems|}}
             {{#each matchingItems as |item|}}
-              <D.Checkmark
+              <D.Interactive
                 {{! Select dropdown item and set as tracked property to update URL query params }}
                 {{on "click" (fn this.handleFilterSelect filterProperty item D.close)}}
                 {{! (get this filterProperty) returns the tracked filter value }}
-                @selected={{eq item (get this filterProperty)}}
+                @trailingIcon={{if (eq item (get this filterProperty)) "check"}}
+                aria-current={{if (eq item (get this filterProperty)) "true"}}
                 data-test-dropdown-item={{item}}
               >
                 {{if (eq filterProperty "month") (this.formatTimestamp item) item}}
-              </D.Checkmark>
+              </D.Interactive>
             {{else}}
               <D.Description
                 class="has-top-padding-xs"

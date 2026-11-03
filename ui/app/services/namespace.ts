@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -114,7 +114,11 @@ export default class NamespaceService extends Service {
      *   | 'parent'       | 'parent'       |
      *   | 'parent/child' | 'parent/child' |
      */
-    const options = (this.accessibleNamespaces || []).map((ns: string) => ({ path: ns, label: ns }));
+    const options = (this.accessibleNamespaces || []).map((ns: string) => ({
+      path: ns,
+      // CE API returns the root namespace as an empty string, so we need to explicitly label it as 'root' for accessibility.
+      label: ns === ROOT_NAMESPACE ? 'root' : ns,
+    }));
 
     // Add the user's root namespace because `sys/internal/ui/namespaces` does not include it.
     // this.userRootNamespace is guaranteed to be defined due to the fallback in the getter.

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -211,13 +211,25 @@ export default class SearchSelect extends Component {
    * The @models argument is deprecated and the remaining usages need to be converted to fetch options from the route and pass them via the @options arg
    */
   async fetchWithApiClient(modelType, backend) {
+    if (modelType === 'database/role') {
+      // The legacy database role query merged both lists even when one endpoint failed.
+      const [staticRoles, dynamicRoles] = await Promise.allSettled([
+        this.api.secrets.databaseListStaticRoles(backend, true),
+        this.api.secrets.databaseListRoles(backend, true),
+      ]);
+      if (staticRoles.status === 'rejected' && dynamicRoles.status === 'rejected') {
+        throw dynamicRoles.reason;
+      }
+      const keys = [...(staticRoles.value?.keys || []), ...(dynamicRoles.value?.keys || [])];
+      return keys.map((key) => ({ id: key, name: key }));
+    }
+
     const apiServicePath = {
       transform: 'secrets.transformListTransformations',
       'transform/alphabet': 'secrets.transformListAlphabets',
       'transform/template': 'secrets.transformListTemplates',
       'transform/role': 'secrets.transformListRoles',
       'database/connection': 'secrets.databaseListConnections',
-      'database/role': 'secrets.databaseListRoles',
       'identity/group': 'identity.groupListByName',
       'identity/entity': 'identity.entityListByName',
       'mfa-method': 'sys.systemListMfaMethod',

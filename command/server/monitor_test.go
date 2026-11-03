@@ -11,14 +11,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testMonitorCommand(tb testing.TB) (*cli.MockUi, *clientcmd.MonitorCommand) {
+func testMonitorCommand(tb testing.TB) (*cli.MockUi, *MonitorCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.MonitorCommand{
+	return ui, &MonitorCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

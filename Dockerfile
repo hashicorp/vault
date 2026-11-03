@@ -94,7 +94,7 @@ RUN addgroup ${NAME} && adduser -S -G ${NAME} ${NAME}
 # user. Install dumb-init to use as the entrypoint PID 1 to handle reaping
 # zombie processes. Update our timezone database. Upgrade zlib to handle
 # CVE-2026-85091 until a new base image is cut.
-RUN apk update && apk add --upgrade --no-cache su-exec dumb-init tzdata zlib
+RUN apk update && apk add --upgrade --no-cache su-exec dumb-init tzdata zlib && apk upgrade --no-cache
 
 COPY dist/$TARGETOS/$TARGETARCH/${BIN_NAME} /bin/${BIN_NAME}
 
@@ -184,6 +184,17 @@ RUN microdnf update -y --nobest && \
   microdnf install -y tzdata shadow-utils util-linux tar procps && \
   rm -rf /var/cache/yum && \
   microdnf clean all
+
+# Until there is a new CA Cert bundle for the UBI image we'll explicitly disable
+# the compromised eMudhra CA root CA
+RUN d=/etc/pki/ca-trust/source/blocklist; [ -d $d ] || d=/etc/pki/ca-trust/source/blacklist && \
+  trust extract --overwrite --format=pem-bundle \
+    --filter='pkcs11:object=emSign%20ECC%20Root%20CA%20-%20G3;type=cert' \
+    $d/emSign_ECC_Root_CA_-_G3.pem && \
+  trust extract --overwrite --format=pem-bundle \
+    --filter='pkcs11:object=Comodo%20AAA%20Services%20root;type=cert' \
+    $d/Comodo_AAA_Services_root.pem && \
+  update-ca-trust
 
 # Create a non-root user to run the software.
 RUN groupadd --gid 1000 vault && \

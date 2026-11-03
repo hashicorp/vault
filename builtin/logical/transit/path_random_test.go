@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/internalshared/random"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 

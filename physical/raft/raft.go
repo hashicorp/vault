@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package raft
@@ -2339,6 +2339,16 @@ func (b *RaftBackend) ReloadConfig(config raft.ReloadableConfig) error {
 		}
 	}
 	return nil
+}
+
+// UsesRaftWAL reports whether the underlying store is raft-wal, regardless of
+// log cache or verifier wrappers.
+func (b *RaftBackend) UsesRaftWAL() bool {
+	if b.stableStore == nil {
+		return false
+	}
+	_, ok := b.stableStore.(*raftwal.WAL)
+	return ok
 }
 
 // GetStorageConfig returns a map with the raft configuration from the storage stanza in the config file.

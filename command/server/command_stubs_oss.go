@@ -6,7 +6,9 @@
 package command
 
 import (
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-hclog"
+	base "github.com/hashicorp/vault/command/base"
 	server "github.com/hashicorp/vault/helper/serverconfig"
 	"github.com/hashicorp/vault/vault"
 )
@@ -32,3 +34,5 @@ func entCheckListenerConfig(_ hclog.Logger, core *vault.Core, config *server.Con
 }
 
 func entAugmentInfoKeys(config *server.Config, info map[string]string, infoKeys []string) {}
+
+func entInitServerOnlyCommands(_ cli.Ui, _ *base.RunOptions, _ map[string]cli.CommandFactory) {}

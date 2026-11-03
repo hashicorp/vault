@@ -37,7 +37,7 @@ func (b *backend) pathCreateCsr() *framework.Path {
 			"version": {
 				Type:        framework.TypeInt,
 				Required:    false,
-				Description: "Optional version of key, 'latest' if not set",
+				Description: "Optional version of key, '0' if not set",
 			},
 			"csr": {
 				Type:     framework.TypeString,
@@ -76,7 +76,7 @@ func (b *backend) pathImportCertChain() *framework.Path {
 			"version": {
 				Type:        framework.TypeInt,
 				Required:    false,
-				Description: "Optional version of key, 'latest' if not set",
+				Description: "Optional version of key, '0' if not set",
 			},
 			"certificate_chain": {
 				Type:     framework.TypeString,

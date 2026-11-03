@@ -57,6 +57,61 @@ func TestPolicyStore_Root(t *testing.T) {
 	})
 }
 
+// TestIsReservedRootPolicy verifies root-policy alias detection for reserved
+// root names and confirms non-equivalent names are not treated as root.
+func TestIsReservedRootPolicy(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		policyName string
+		reserved   bool
+		alias      bool
+	}{
+		{name: "root", policyName: "root", reserved: true, alias: false},
+		{name: "root-uppercase", policyName: "ROOT", reserved: true, alias: false},
+		{name: "root-surrounding-space", policyName: " root ", reserved: true, alias: false},
+		{name: "dot-root", policyName: "./root", reserved: true, alias: true},
+		{name: "dot-dot-root", policyName: "././root", reserved: true, alias: true},
+		{name: "single-traversal", policyName: "a/../root", reserved: true, alias: true},
+		{name: "double-traversal", policyName: "a/b/../../root", reserved: true, alias: true},
+		{name: "leading-slash", policyName: "/root", reserved: true, alias: true},
+		{name: "double-leading-slash", policyName: "//root", reserved: true, alias: true},
+		{name: "slash-dot-root", policyName: "/./root", reserved: true, alias: true},
+		{name: "trailing-dot-segment", policyName: "root/.", reserved: true, alias: true},
+		{name: "root-parent-root", policyName: "root/../root", reserved: true, alias: true},
+		{name: "mixed-case-alias", policyName: "./RoOt", reserved: true, alias: true},
+		{name: "surrounding-space-alias", policyName: " ./root ", reserved: true, alias: true},
+		{name: "whitespace-and-case", policyName: " \t./RoOt\n ", reserved: true, alias: true},
+		{name: "empty", policyName: "", reserved: false, alias: false},
+		{name: "whitespace-only", policyName: " \t\n ", reserved: false, alias: false},
+		{name: "root2", policyName: "root2", reserved: false, alias: false},
+		{name: "myroot", policyName: "myroot", reserved: false, alias: false},
+		{name: "root-policy", policyName: "root-policy", reserved: false, alias: false},
+		{name: "parent-traversal", policyName: "../root", reserved: true, alias: true},
+		{name: "absolute-parent-traversal", policyName: "/../root", reserved: true, alias: true},
+		{name: "root-parent", policyName: "root/..", reserved: false, alias: false},
+		{name: "root-parent-other", policyName: "root/../other", reserved: false, alias: false},
+		{name: "a-root", policyName: "a/root", reserved: false, alias: false},
+		{name: "root-child", policyName: "./root/child", reserved: false, alias: false},
+		{name: "dot", policyName: ".", reserved: false, alias: false},
+		{name: "slash", policyName: "/", reserved: false, alias: false},
+		{name: "dot-dot", policyName: "..", reserved: false, alias: false},
+		{name: "backslash-name", policyName: "root\\alias", reserved: false, alias: false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			reserved := isReservedRootPolicy(tc.policyName)
+			alias := isReservedRootPolicyAlias(tc.policyName)
+			require.Equal(t, tc.reserved, reserved)
+			require.Equal(t, tc.alias, alias)
+		})
+	}
+}
+
 func testPolicyRoot(t *testing.T, ps *PolicyStore, ns *namespace.Namespace, expectFound bool) {
 	// Get should return a special policy
 	ctx := namespace.ContextWithNamespace(context.Background(), ns)
@@ -346,6 +401,74 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 	testLayeredACL(t, acl, ns)
 }
 
+// TestPolicyStore_CacheKeyDistinctPolicyNames verifies cache/index keys do not
+// collapse path-equivalent policy names.
+func TestPolicyStore_CacheKeyDistinctPolicyNames(t *testing.T) {
+	t.Parallel()
+
+	ps := &PolicyStore{}
+	rootKey := ps.cacheKey(namespace.RootNamespace, "root")
+	aliases := []string{
+		"./root",
+		"a/../root",
+		"/root",
+		"root/.",
+	}
+
+	for _, alias := range aliases {
+		aliasKey := ps.cacheKey(namespace.RootNamespace, ps.sanitizeName(alias))
+		require.NotEqual(t, rootKey, aliasKey)
+	}
+
+	otherNS := &namespace.Namespace{ID: "ns-different-root"}
+	require.NotEqual(t, rootKey, ps.cacheKey(otherNS, "root"))
+}
+
+// TestPolicyStore_RootAliasLookupDoesNotResolveRoot is a whitebox regression
+// test for cache collision behavior in PolicyStore. Assignment validation now
+// blocks alias creation at API boundaries, so reproducing warm/cold cache
+// behavior requires direct policy-store access from a real test cluster core.
+func TestPolicyStore_RootAliasLookupDoesNotResolveRoot(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name      string
+		primeRoot bool
+	}{
+		{name: "cold-cache", primeRoot: false},
+		{name: "primed-cache", primeRoot: true},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			cluster := NewTestCluster(t, &CoreConfig{}, &TestClusterOptions{NumCores: 1})
+			ps := cluster.Cores[0].policyStore
+			ctx := namespace.RootContext(context.Background())
+			alias := "./root"
+
+			if tc.primeRoot {
+				rootPolicy, err := ps.GetPolicy(ctx, "root", PolicyTypeToken)
+				require.NoError(t, err)
+				require.NotNil(t, rootPolicy)
+				require.Equal(t, "root", rootPolicy.Name)
+			}
+
+			aliasPolicy, err := ps.GetPolicy(ctx, alias, PolicyTypeToken)
+			require.NoError(t, err)
+			require.Nil(t, aliasPolicy)
+
+			acl, err := ps.ACL(ctx, nil, map[string][]string{
+				namespace.RootNamespaceID: {alias},
+			})
+			require.NoError(t, err)
+			require.NotNil(t, acl)
+			require.False(t, acl.root)
+		})
+	}
+}
+
 func TestDefaultPolicy(t *testing.T) {
 	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
 
@@ -552,6 +675,17 @@ func TestPolicyStore_CacheKey_NoCollisionsForTraversalLikeSiblingAndRoot(t *test
 	rootKey := policyCacheKey("root", "admin")
 	siblingAttemptKey := policyCacheKey("sibling", "../root/admin")
 	require.NotEqual(t, rootKey, siblingAttemptKey)
+}
+
+// TestPolicyStore_CacheKey_String_NoSeparatorAmbiguity verifies the rendered
+// cache key string is unambiguous even when namespace IDs and names contain
+// separators.
+func TestPolicyStore_CacheKey_String_NoSeparatorAmbiguity(t *testing.T) {
+	t.Parallel()
+
+	left := policyCacheKey("a", "b:c")
+	right := policyCacheKey("a:b", "c")
+	require.NotEqual(t, left, right)
 }
 
 // TestPolicyStore_GetNonEGPPolicyType_UsesSharedCacheKeyFormat verifies

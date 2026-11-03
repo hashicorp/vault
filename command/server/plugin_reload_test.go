@@ -11,29 +11,28 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/stretchr/testify/require"
 )
 
-func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginReloadCommand) {
+func testPluginReloadCommand(tb testing.TB) (*cli.MockUi, *PluginReloadCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PluginReloadCommand{
+	return ui, &PluginReloadCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},
 	}
 }
 
-func testPluginReloadStatusCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginReloadStatusCommand) {
+func testPluginReloadStatusCommand(tb testing.TB) (*cli.MockUi, *PluginReloadStatusCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PluginReloadStatusCommand{
+	return ui, &PluginReloadStatusCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

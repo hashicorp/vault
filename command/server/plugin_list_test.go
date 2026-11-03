@@ -10,14 +10,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testPluginListCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PluginListCommand) {
+func testPluginListCommand(tb testing.TB) (*cli.MockUi, *PluginListCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PluginListCommand{
+	return ui, &PluginListCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

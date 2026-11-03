@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strings"
 )
 
 // PKCS7 Represents a PKCS7 structure
@@ -235,17 +234,6 @@ func (raw rawCertificates) Parse() ([]*x509.Certificate, error) {
 
 	var val asn1.RawValue
 	if _, err := asn1.Unmarshal(raw.Raw, &val); err != nil {
-		return nil, err
-	}
-
-	stdlibCerts, err := x509.ParseCertificates(val.Bytes)
-	if err == nil {
-		// If the parsing was successful, return the stdlib certs and don't worry about
-		// our workarounds
-		return stdlibCerts, nil
-	}
-
-	if !strings.Contains(err.Error(), "authority key identifier incorrectly marked critical") {
 		return nil, err
 	}
 

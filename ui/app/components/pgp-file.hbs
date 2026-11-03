@@ -1,11 +1,11 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <div class="level is-mobile">
   <div class="level-left">
-    <label class="has-text-weight-bold" data-test-pgp-label>
+    <label class="has-text-weight-bold" id="pgp-label" for="pgp-key-{{this.elementId}}" data-test-pgp-label>
       {{#if this.label}}
         {{this.label}}
       {{else}}
@@ -34,7 +34,7 @@
 <div class="field">
   {{#if this.key.enterAsText}}
     <div class="control">
-      <Hds::Form::Textarea::Field name="pgp-key" @value={{this.key.value}} as |F|>
+      <Hds::Form::Textarea::Field @id="pgp-key-{{this.elementId}}" name="pgp-key" @value={{this.key.value}} as |F|>
         <F.HelperText>{{or this.textareaHelpText "Enter a base64-encoded key"}}</F.HelperText>
       </Hds::Form::Textarea::Field>
     </div>

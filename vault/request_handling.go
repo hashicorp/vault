@@ -2691,6 +2691,11 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	// policy data does not block login.
 	validatedTokenPolicies := make([]string, 0, len(auth.Policies))
 	for _, policyName := range auth.Policies {
+		if isReservedRootPolicy(policyName) {
+			return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+		}
+	}
+	for _, policyName := range auth.Policies {
 		validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
 		if err != nil {
 			c.Logger().Debug(
@@ -2708,12 +2713,33 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	// authentication. We drop only malformed names and continue with remaining
 	// valid policy names (plus the default policy when enabled), so stale stored
 	// policy data does not block login.
-	_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+	entity, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 	if err != nil {
 		return false, nil, ErrInternalError
 	}
+
+	if entity != nil {
+		groupPolicies, err := c.identityStore.groupPoliciesByEntityID(entity.ID)
+		if err != nil {
+			c.logger.Error("failed to fetch group policies", "error", err)
+			return false, nil, ErrInternalError
+		}
+		for _, policyNames := range groupPolicies {
+			for _, policyName := range policyNames {
+				if isReservedRootPolicy(policyName) {
+					return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+				}
+			}
+		}
+	}
+
 	validatedIdentityPolicies := make(map[string][]string, len(identityPolicies))
 	for nsID, policyNames := range identityPolicies {
+		for _, policyName := range policyNames {
+			if isReservedRootPolicy(policyName) {
+				return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+			}
+		}
 		validatedPolicyNames := make([]string, 0, len(policyNames))
 		for _, policyName := range policyNames {
 			validatedPolicyName, err := policyutil.ValidatePolicyName(policyName)
@@ -2741,7 +2767,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	// this on auth.Policies including derived ones from Identity before
 	// actually making the token.
 	for _, policy := range allPolicies {
-		if policy == "root" {
+		if isReservedRootPolicy(policy) {
 			return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
 		}
 		if strutil.StrListContains(nonAssignablePolicies, policy) {

@@ -145,6 +145,43 @@ func LoadWorkspace(ctx context.Context, goWork string) (*Workspace, error) {
 	return ws, nil
 }
 
+// GoWorkGoModPaths returns the go.mod path of every module in the use
+// directives of go.work, in go.work order, as slash-separated paths relative to
+// the directory containing go.work, e.g. "go.mod" and "sdk/go.mod".
+//
+// Unlike LoadWorkspace it reads nothing from disk, so it works on a go.work
+// that only exists as data, such as one read from a git branch. It doesn't
+// check that the modules exist. name is only used in errors.
+func GoWorkGoModPaths(name string, data []byte) ([]string, error) {
+	workFile, err := modfile.ParseWork(name, data, nil)
+	if err != nil {
+		return nil, fmt.Errorf("parsing %s: %w", name, err)
+	}
+
+	paths := []string{}
+	seen := map[string]struct{}{}
+	for _, use := range workFile.Use {
+		native := filepath.FromSlash(use.Path)
+		dir := filepath.ToSlash(filepath.Clean(native))
+		if filepath.IsAbs(native) || dir == ".." || strings.HasPrefix(dir, "../") {
+			return nil, fmt.Errorf("%s uses %s, which is not inside its directory", name, use.Path)
+		}
+
+		if _, ok := seen[dir]; ok {
+			continue
+		}
+		seen[dir] = struct{}{}
+
+		goMod := "go.mod"
+		if dir != "." {
+			goMod = dir + "/go.mod"
+		}
+		paths = append(paths, goMod)
+	}
+
+	return paths, nil
+}
+
 // LoadWorkspaceOrFind loads goWork, or the go.work found by FindGoWork from
 // the current working directory when goWork is empty.
 func LoadWorkspaceOrFind(ctx context.Context, goWork string) (*Workspace, error) {

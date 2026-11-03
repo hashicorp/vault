@@ -22,7 +22,6 @@ import (
 	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,10 +53,19 @@ func (debugNoHCPTokenHelper) GetHCPToken(string) (*hcpvlib.HCPToken, error) {
 	return nil, nil
 }
 
-func testDebugCommand(tb testing.TB, client *api.Client) (*cli.MockUi, *clientcmd.DebugCommand) {
+func testDebugCommand(tb testing.TB, client *api.Client) (*cli.MockUi, *DebugCommand) {
 	tb.Helper()
 
-	return clientcmd.MakeTestDebugCommand(client)
+	ui := cli.NewMockUi()
+	bc := &base.BaseCommand{UI: ui}
+	bc.SetHCPTokenHelper(debugNoHCPTokenHelper{})
+	if client != nil {
+		bc.SetClient(client)
+	}
+	return ui, &DebugCommand{
+		BaseCommand:      bc,
+		SkipTimingChecks: true,
+	}
 }
 
 // TestDebugCommand_Run verifies successful capture, argument validation, and
@@ -520,7 +528,7 @@ func TestDebugCommand_TimingChecks(t *testing.T) {
 			}()
 
 			ui := cli.NewMockUi()
-			cmd := &clientcmd.DebugCommand{
+			cmd := &DebugCommand{
 				BaseCommand: base.NewBaseCommand(ui, &base.RunOptions{
 					Client:         client,
 					HCPTokenHelper: debugNoHCPTokenHelper{},

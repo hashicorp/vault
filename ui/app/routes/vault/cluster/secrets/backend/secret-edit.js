@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -81,7 +81,6 @@ const ACTION_VALUES = {
 export default Route.extend({
   store: service(),
   router: service(),
-  pathHelp: service('path-help'),
   api: service(),
   capabilitiesService: service('capabilities'),
 
@@ -135,10 +134,10 @@ export default Route.extend({
 
   templateName: 'vault/cluster/secrets/backend/secretEditLayout',
 
-  beforeModel({ to: { queryParams } }) {
+  beforeModel() {
     const secret = this.secretParam();
     const secretEngine = this.modelFor('vault.cluster.secrets.backend');
-    return this.buildModel(secret, queryParams).then(() => {
+    return resolve().then(() => {
       const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
       // for kv v2, redirect users from the old url to the new engine url (1.15.0 +)
@@ -175,23 +174,6 @@ export default Route.extend({
         return;
       }
     });
-  },
-
-  buildModel(secret, queryParams) {
-    const backend = getEnginePathParam(this);
-    const modelType = this.modelType(backend, secret, { queryParams });
-    // TODO: Remove buildModel once all remaining engine types (e.g. database, transit) are migrated
-    // to API-backed Form instances — none will need hydrateModel and this function becomes redundant.
-    const skipHydration =
-      modelType === 'secret' ||
-      modelType.startsWith('keymgmt/') ||
-      modelType.startsWith('transform') ||
-      modelType === 'totp-key' ||
-      modelType === 'role-ssh';
-    if (skipHydration) {
-      return resolve();
-    }
-    return this.pathHelp.hydrateModel(modelType, backend);
   },
 
   modelType(backend, secret, options = {}) {

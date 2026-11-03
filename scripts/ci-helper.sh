@@ -114,6 +114,14 @@ function build() {
   : "${BIN_PATH:="dist/"}" #if not run by actions-go-build (enos local) then set this explicitly
   : "${GO_TAGS:=""}"
   : "${REMOVE_SYMBOLS:=""}"
+  # BUILD_SOURCE selects the entrypoint package. BIN_NAME must be set for
+  # entrypoints in cmd directories, otherwise the binary would be named cmd.
+  : "${BUILD_SOURCE:="."}"
+  : "${BIN_NAME:=""}"
+  # go build only adds the .exe suffix itself when -o is a directory.
+  if [ -n "$BIN_NAME" ] && [ "$(go env GOOS)" = "windows" ]; then
+    BIN_NAME="${BIN_NAME}.exe"
+  fi
 
   # Generate code but make sure we don't slurp in cross compilation env vars. CI sets SKIP_GEN=1
   # because generated code is committed and the check-go job in ci.yml verifies it's current.
@@ -193,7 +201,7 @@ function build() {
   mkdir -p out
   set -x
   go env
-  go build -v -buildvcs=false -tags "$GO_TAGS" -ldflags "$ldflags" -o dist/
+  go build -v -buildvcs=false -tags "$GO_TAGS" -ldflags "$ldflags" -o "dist/${BIN_NAME}" "$BUILD_SOURCE"
   set +x
   popd
 }

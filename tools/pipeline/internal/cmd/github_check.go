@@ -16,6 +16,7 @@ func newGithubCheckCmd() *cobra.Command {
 	checkCmd.AddCommand(newGithubCheckCommitStatusCmd())
 	checkCmd.AddCommand(newGithubCheckGoModDiffCmd())
 	checkCmd.AddCommand(newGithubCheckWorkflowRunCmd())
+	checkCmd.AddCommand(newGithubCheckVersionTagsCmd())
 
 	return checkCmd
 }

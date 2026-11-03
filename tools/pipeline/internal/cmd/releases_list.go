@@ -16,6 +16,8 @@ func newReleasesListCmd() *cobra.Command {
 	listCmd.AddCommand(newReleasesListBinaryVersionsCmd())
 	listCmd.AddCommand(newReleasesListActiveVersionsCmd())
 	listCmd.AddCommand(newReleasesListUpdatedVersionsCmd())
+	listCmd.AddCommand(newReleasesSanitizeSortVersionsCmd())
+	listCmd.AddCommand(newReleasesCheckVersionViolationsCmd())
 
 	return listCmd
 }

@@ -9,14 +9,13 @@ import (
 
 	"github.com/hashicorp/cli"
 	base "github.com/hashicorp/vault/command/base"
-	clientcmd "github.com/hashicorp/vault/command/client"
 )
 
-func testPolicyReadCommand(tb testing.TB) (*cli.MockUi, *clientcmd.PolicyReadCommand) {
+func testPolicyReadCommand(tb testing.TB) (*cli.MockUi, *PolicyReadCommand) {
 	tb.Helper()
 
 	ui := cli.NewMockUi()
-	return ui, &clientcmd.PolicyReadCommand{
+	return ui, &PolicyReadCommand{
 		BaseCommand: &base.BaseCommand{
 			UI: ui,
 		},

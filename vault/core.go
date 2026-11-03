@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
@@ -421,6 +422,11 @@ type Core struct {
 	// auditBroker is used to ingest the audit events and fan
 	// out into the configured audit backends
 	auditBroker *audit.Broker
+
+	// auditConfigFailed is set to true when at least one audit device is configured but all
+	// failed to initialize (setupAudits returned errLoadAuditFailed, or invalidateAuditTable
+	// failed to enable a replicated device).
+	auditConfigFailed atomic.Bool
 
 	// auditedHeaders is used to configure which http headers
 	// can be output in the audit logs
@@ -2372,6 +2378,15 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 			c.logger.Warn("failed to load cluster info for standby metrics", "error", err)
 		}
 
+		// Validate configured audit devices before entering the standby loop
+		// We also skip DR secondaries because they don't set up audit device until promotion
+		if !c.IsDRSecondary() {
+			err := c.validateAuditDevices(ctx)
+			if err != nil {
+				c.logger.Error("audit device validation failed; this node will remain a non-voter until the issue is resolved", "error", err)
+			}
+		}
+
 		// Go to standby mode, wait until we are active to unseal
 		c.standbyDoneCh = make(chan struct{})
 		c.manualStepDownCh = make(chan struct{}, 1)
@@ -2985,7 +3000,7 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			if c.agentRegistry == nil {
 				return nil
 			}
-			return c.agentRegistry.loadRegistrations(ctx, isActive)
+			return c.agentRegistry.loadArtifacts(ctx, isActive)
 		})
 	}
 
@@ -3243,9 +3258,13 @@ func (c *Core) preSeal() error {
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 
-	// Clear any rekey progress
+	// Clear any rekey progress. rekeyLock guards these fields against
+	// concurrent readers such as the secure hub cluster state worker, which is
+	// not stopped until entPreSeal runs.
+	c.rekeyLock.Lock()
 	c.barrierRekeyConfig = nil
 	c.recoveryRekeyConfig = nil
+	c.rekeyLock.Unlock()
 
 	if c.metricsCh != nil {
 		close(c.metricsCh)
@@ -4751,10 +4770,24 @@ func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint str
 func (c *Core) DetermineRoleFromLoginRequestFromReader(ctx context.Context, mountPoint string, reader io.Reader, conn *logical.Connection, header http.Header) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
-	data := make(map[string]interface{})
-	err := jsonutil.DecodeJSONFromReader(reader, &data)
-	if err != nil {
+
+	body, err := io.ReadAll(reader)
+	if err != nil || len(bytes.TrimSpace(body)) == 0 {
 		return ""
+	}
+
+	data := make(map[string]interface{})
+	jsonErr := jsonutil.DecodeJSONFromReader(bytes.NewReader(body), &data)
+	// We weren't able to decode the body as JSON, try parsing as form-data now.
+	if jsonErr != nil {
+		form, formErr := url.ParseQuery(string(body))
+		if formErr != nil {
+			return ""
+		}
+		data = make(map[string]interface{}, len(form))
+		for k, v := range form {
+			data[k] = strings.Join(v, ",")
+		}
 	}
 	return c.doResolveRoleLocked(ctx, mountPoint, data, conn, header)
 }

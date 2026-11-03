@@ -31,11 +31,8 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     setRunOptions({
       rules: {
-        // something strange happening here
-        'link-name': { enabled: false },
         // TODO: fix RadioCard component (replace with HDS)
         'aria-valid-attr-value': { enabled: false },
-        'nested-interactive': { enabled: false },
       },
     });
   });

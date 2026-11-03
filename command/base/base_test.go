@@ -106,7 +106,7 @@ func TestPredict_SetClient(t *testing.T) {
 
 // TestClient_HCPConfiguration tests that the HCP configuration is applied correctly when it exists in cache.
 func TestClient_HCPConfiguration(t *testing.T) {
-	t.Parallel()
+	t.Setenv("HCP_CACHE_TEST_MODE", "true")
 
 	cases := map[string]struct {
 		Valid        bool
@@ -124,7 +124,6 @@ func TestClient_HCPConfiguration(t *testing.T) {
 
 	for n, tst := range cases {
 		t.Run(n, func(t *testing.T) {
-			t.Parallel()
 			bc := &BaseCommand{
 				hcpTokenHelper: &hcpvlib.TestingHCPTokenHelper{ValidCache: tst.Valid},
 			}

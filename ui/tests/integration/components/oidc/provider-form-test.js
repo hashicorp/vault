@@ -52,7 +52,6 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
         label: { enabled: false },
         // TODO: fix RadioCard component (replace with HDS)
         'aria-valid-attr-value': { enabled: false },
-        'nested-interactive': { enabled: false },
       },
     });
   });
