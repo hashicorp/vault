@@ -1,0 +1,3 @@
+```release-note:bug
+builtin/logical/pki: don't return error for valid CA Key Usages on validation
+```
