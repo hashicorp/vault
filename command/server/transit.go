@@ -22,7 +22,7 @@ func (c *TransitCommand) Synopsis() string {
 
 func (c *TransitCommand) Help() string {
 	helpText := `
-Usage: vault transit <subcommand> [options] [args]
+Usage: ` + c.BinaryName + ` transit <subcommand> [options] [args]
 
   This command has subcommands for interacting with Vault's Transit Secrets
   Engine. Here are some simple examples, and more detailed examples are
@@ -30,7 +30,11 @@ Usage: vault transit <subcommand> [options] [args]
 
   To import a key into the specified Transit mount:
 
-  $ vault transit import transit/keys/newly-imported @path/to/key type=rsa-2048
+  $ ` + c.BinaryName + ` transit import transit/keys/newly-imported @path/to/key type=rsa-2048
+
+  To encrypt a file using envelope encryption (Enterprise only),:
+
+  $ ` + c.BinaryName + ` transit envelope encrypt transit/keys/kek myfile.txt
 
   Please see the individual subcommand help for detailed usage information.
 `

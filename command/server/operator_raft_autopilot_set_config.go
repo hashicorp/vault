@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -36,7 +36,7 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Synopsis() string {
 
 func (c *OperatorRaftAutopilotSetConfigCommand) Help() string {
 	helpText := `
-Usage: vault operator raft autopilot set-config [options]
+Usage: ` + c.BinaryName + ` operator raft autopilot set-config [options]
 
   Modify the configuration of the autopilot subsystem under integrated storage.
 ` + c.Flags().Help()

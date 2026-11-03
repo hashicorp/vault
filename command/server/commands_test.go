@@ -36,7 +36,7 @@ func Test_Commands_HCPInit(t *testing.T) {
 			mockUi := cli.NewMockUi()
 			commands := initCommands(mockUi, nil, nil)
 			if tst.expectError {
-				clientcmd.InitHCPCommands(mockUi, commands)
+				clientcmd.InitHCPCommands(mockUi, commands, "vault")
 				errMsg := mockUi.ErrorWriter.String()
 				require.NotEmpty(t, errMsg)
 				require.Contains(t, errMsg, tst.expectedErrorMsg)
