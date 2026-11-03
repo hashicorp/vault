@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -530,10 +531,120 @@ func (c *Core) setupAudits(ctx context.Context) error {
 	}
 
 	if len(c.audit.Entries) > 0 && successCount == 0 {
+		// All configured devices failed to initialize. Mark the node as unfit
+		// for promotion and unblock the heartbeat so it can advertise "non-voter".
+		c.auditConfigFailed.Store(true)
 		return errLoadAuditFailed
 	}
 
+	// When at least one device successfully initialized, clear flag
+	c.auditConfigFailed.Store(false)
+
 	c.AddLogger(brokerLogger)
+	return nil
+}
+
+// newAuditBackendWithFormatter creates a backend with the supplied formatter for preflight validation
+func (c *Core) newAuditBackendWithFormatter(entry *MountEntry, view logical.Storage, conf map[string]string, formatter audit.HeaderFormatter) (audit.Backend, error) {
+	if audit.HasInvalidOptions(entry.Options) {
+		return nil, fmt.Errorf("enterprise-only options supplied: %w", audit.ErrInvalidParameter)
+	}
+	f, ok := c.auditBackends[entry.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown backend type: %q: %w", entry.Type, audit.ErrInvalidParameter)
+	}
+	saltConfig := &salt.Config{
+		HMAC:     sha256.New,
+		HMACType: "hmac-sha256",
+		Location: salt.DefaultLocation,
+	}
+	be, err := f(&audit.BackendConfig{
+		SaltView:   view,
+		SaltConfig: saltConfig,
+		Config:     conf,
+		MountPath:  entry.Path,
+		Logger:     c.baseLogger.Named("audit"),
+	}, formatter)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create new audit backend: %w", err)
+	}
+	if be == nil {
+		return nil, fmt.Errorf("nil backend returned from %q factory function: %w", entry.Type, audit.ErrInternal)
+	}
+	return be, nil
+}
+
+// preflightHeaderFormatter is used to validate file audit backends before they are fully initialized
+type preflightHeaderFormatter struct{}
+
+func (preflightHeaderFormatter) ApplyConfig(_ context.Context, _ map[string][]string, _ audit.Salter) (map[string][]string, error) {
+	return map[string][]string{}, nil
+}
+
+// validateAuditDevices checks configured file audit devices before setupAudits
+func (c *Core) validateAuditDevices(ctx context.Context) error {
+	var entries []*MountEntry
+	for _, storagePath := range []string{coreAuditConfigPath, coreLocalAuditConfigPath} {
+		raw, err := c.barrier.Get(ctx, storagePath)
+		if err != nil {
+			return err
+		}
+		if raw == nil {
+			continue
+		}
+		tbl := &MountTable{}
+		if err := jsonutil.DecodeJSON(raw.Value, tbl); err != nil {
+			return err
+		}
+		entries = append(entries, tbl.Entries...)
+	}
+
+	if len(entries) == 0 {
+		c.auditConfigFailed.Store(false)
+		return nil
+	}
+
+	var fileBackendCount int
+	var successCount int
+
+	// Make a preflight check for each file audit backend
+	formatter := &preflightHeaderFormatter{}
+	for _, entry := range entries {
+		if entry.Type != audit.TypeFile {
+			continue
+		}
+		fileBackendCount++
+
+		// Validate the file audit device by attempting to create a backend and closing it immediately
+		view := NewBarrierView(c.barrier, entry.ViewPath())
+		backend, err := c.newAuditBackendWithFormatter(entry, view, entry.Options, formatter)
+		if err != nil {
+			c.logger.Error("audit device not accessible at startup",
+				"mount", entry.Path, "type", entry.Type, "error", err)
+			continue
+		}
+
+		// Backend created successfully, now attempt to close it to validate the device
+		closer, ok := backend.(io.Closer)
+		if !ok {
+			c.logger.Error("file audit backend does not support cleanup after startup validation", "mount", entry.Path)
+			continue
+		}
+		if err := closer.Close(); err != nil {
+			c.logger.Error("failed to close file audit backend after startup validation",
+				"mount", entry.Path, "error", err)
+			continue
+		}
+		successCount++
+	}
+
+	// If there are file audit backends configured but none of them could be successfully validated
+	if fileBackendCount > 0 && successCount == 0 {
+		c.auditConfigFailed.Store(true)
+		return errLoadAuditFailed
+	}
+
+	c.auditConfigFailed.Store(false)
 	return nil
 }
 
