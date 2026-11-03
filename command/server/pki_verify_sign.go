@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -33,7 +33,7 @@ func (c *PKIVerifySignCommand) Synopsis() string {
 
 func (c *PKIVerifySignCommand) Help() string {
 	helpText := `
-Usage: vault pki verify-sign POSSIBLE-ISSUER POSSIBLE-ISSUED
+Usage: ` + c.BinaryName + ` pki verify-sign POSSIBLE-ISSUER POSSIBLE-ISSUED
 
   Verifies whether the listed issuer has signed the listed issued certificate.
 

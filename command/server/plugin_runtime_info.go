@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -31,7 +31,7 @@ func (c *PluginRuntimeInfoCommand) Synopsis() string {
 
 func (c *PluginRuntimeInfoCommand) Help() string {
 	helpText := `
-Usage: vault plugin runtime info [options] NAME
+Usage: ` + c.BinaryName + ` plugin runtime info [options] NAME
 
   Displays information about a plugin runtime in the catalog with the given name. If
   the plugin runtime does not exist, an error is returned. The -type flag
@@ -39,7 +39,7 @@ Usage: vault plugin runtime info [options] NAME
 
   Get info about a plugin runtime:
 
-      $ vault plugin runtime info -type=container my-plugin-runtime
+      $ ` + c.BinaryName + ` plugin runtime info -type=container my-plugin-runtime
 
 ` + c.Flags().Help()
 

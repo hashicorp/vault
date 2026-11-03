@@ -47,9 +47,10 @@ type captureErrorMirror struct {
 	Timestamp   time.Time `json:"timestamp"`
 }
 
-type debugNoHCPTokenHelper struct{}
+// noHCPTokenHelper keeps commands from reading the user's HCP cache.
+type noHCPTokenHelper struct{}
 
-func (debugNoHCPTokenHelper) GetHCPToken(string) (*hcpvlib.HCPToken, error) {
+func (noHCPTokenHelper) GetHCPToken(string) (*hcpvlib.HCPToken, error) {
 	return nil, nil
 }
 
@@ -58,7 +59,7 @@ func testDebugCommand(tb testing.TB, client *api.Client) (*cli.MockUi, *DebugCom
 
 	ui := cli.NewMockUi()
 	bc := &base.BaseCommand{UI: ui}
-	bc.SetHCPTokenHelper(debugNoHCPTokenHelper{})
+	bc.SetHCPTokenHelper(noHCPTokenHelper{})
 	if client != nil {
 		bc.SetClient(client)
 	}
@@ -531,7 +532,7 @@ func TestDebugCommand_TimingChecks(t *testing.T) {
 			cmd := &DebugCommand{
 				BaseCommand: base.NewBaseCommand(ui, &base.RunOptions{
 					Client:         client,
-					HCPTokenHelper: debugNoHCPTokenHelper{},
+					HCPTokenHelper: noHCPTokenHelper{},
 				}),
 			}
 			cmd.ShutdownCh = shutdownCh

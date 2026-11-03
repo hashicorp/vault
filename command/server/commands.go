@@ -478,6 +478,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[string]c
 			BaseCommand: base.NewBaseCommand(serverCmdUi, &base.RunOptions{
 				TokenHelper: runOpts.TokenHelper,
 				Address:     runOpts.Address,
+				BinaryName:  runOpts.BinaryName,
 			}),
 			AuditBackends:        handlers.auditBackends,
 			CredentialBackends:   handlers.credentialBackends,

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package ldap
@@ -12,7 +12,10 @@ import (
 	"github.com/hashicorp/vault/api"
 )
 
-type CLIHandler struct{}
+type CLIHandler struct {
+	// BinaryName is the executable shown in help. It defaults to "vault".
+	BinaryName string
+}
 
 func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, error) {
 	mount, ok := m["mount"]
@@ -58,20 +61,24 @@ func (h *CLIHandler) Auth(c *api.Client, m map[string]string) (*api.Secret, erro
 }
 
 func (h *CLIHandler) Help() string {
+	binaryName := h.BinaryName
+	if binaryName == "" {
+		binaryName = "vault"
+	}
 	help := `
-Usage: vault login -method=ldap [CONFIG K=V...]
+Usage: ` + binaryName + ` login -method=ldap [CONFIG K=V...]
 
   The LDAP auth method allows users to authenticate using LDAP or
   Active Directory.
 
   Authenticate as "sally":
 
-      $ vault login -method=ldap username=sally
+      $ ` + binaryName + ` login -method=ldap username=sally
       Password (will be hidden):
 
   Authenticate as "bob":
 
-      $ vault login -method=ldap username=bob password=password
+      $ ` + binaryName + ` login -method=ldap username=bob password=password
 
 Configuration:
 
