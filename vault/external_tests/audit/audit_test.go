@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package audit
@@ -9,23 +9,542 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/api/auth/userpass"
+	vaultaudit "github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
+
+func restartCoreWithAuditPrefixing(t *testing.T, cluster *vault.TestCluster, allow bool) {
+	t.Helper()
+
+	cluster.StopCore(t, 0)
+	cluster.Cores[0].CoreConfig.AllowAuditLogPrefixing = allow
+	cluster.StartCore(t, 0, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+		DefaultHandlerProperties: vault.HandlerProperties{
+			ListenerConfig: &configutil.Listener{},
+		},
+	}, false)
+	cluster.UnsealCores(t)
+}
+
+// TestAuditPrefixConfiguration_File verifies that file audit devices reject
+// prefixes when disabled
+func TestAuditPrefixConfiguration_File(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		allowAuditLogPrefixing bool
+		prefix                 string
+		errContains            string
+	}{
+		{
+			name:                   "prefix forbidden but included",
+			allowAuditLogPrefixing: false,
+			prefix:                 "MY-TEST-PREFIX",
+			errContains:            "audit prefixing is not enabled",
+		},
+		{
+			name:                   "prefix allowed but contains newline",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\n",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains carriage return",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\r",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains null byte",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\x00",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode line separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2028",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode paragraph separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2029",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed and not included",
+			allowAuditLogPrefixing: true,
+		},
+		{
+			name:                   "prefix forbidden and not included",
+			allowAuditLogPrefixing: false,
+		},
+		{
+			name:                   "prefix allowed and included",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// start cluster with audit log prefixing enabled or disabled
+			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+				AllowAuditLogPrefixing: tc.allowAuditLogPrefixing,
+			})
+			if tc.allowAuditLogPrefixing {
+				restartCoreWithAuditPrefixing(t, cluster, true)
+			}
+			client := cluster.Cores[0].Client
+
+			auditLogPath := filepath.Join(t.TempDir(), "audit.log")
+			require.NoError(t, os.WriteFile(auditLogPath, nil, 0o600))
+
+			options := map[string]any{
+				"file_path": auditLogPath,
+			}
+			if tc.prefix != "" {
+				options["prefix"] = tc.prefix
+			}
+
+			_, err := client.Logical().Write("sys/audit/test", map[string]any{
+				"type":    vaultaudit.TypeFile,
+				"options": options,
+			})
+
+			if tc.errContains != "" {
+				// validate request fails and no probe writes sneak through
+				require.ErrorContains(t, err, tc.errContains)
+				devices, listErr := client.Sys().ListAudit()
+				require.NoError(t, listErr)
+				require.NotContains(t, devices, "test/")
+				auditFile, readErr := os.ReadFile(auditLogPath)
+				require.NoError(t, readErr)
+				require.Empty(t, auditFile)
+				return
+			}
+
+			// validate request succeeds and file contains prefix
+			require.NoError(t, err)
+			auditFile, readErr := os.ReadFile(auditLogPath)
+			require.NoError(t, readErr)
+			require.NotEmpty(t, auditFile)
+			if tc.prefix != "" {
+				require.True(t, strings.HasPrefix(string(auditFile), tc.prefix))
+			}
+		})
+	}
+}
+
+// TestAuditPrefixConfiguration_PersistedPrefix verifies that a persisted audit
+// device remains available without its prefix when prefixing is later disabled.
+func TestAuditPrefixConfiguration_PersistedPrefix(t *testing.T) {
+	t.Parallel()
+
+	// start vault with prefixing allowed
+	config := &vault.CoreConfig{AllowAuditLogPrefixing: true}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	}
+	cluster := vault.NewTestCluster(t, config, opts)
+	restartCoreWithAuditPrefixing(t, cluster, true)
+	client := cluster.Cores[0].Client
+
+	auditLogPath := filepath.Join(t.TempDir(), "audit.log")
+	prefix := "MY-TEST-PREFIX"
+	require.NoError(t, client.Sys().EnableAuditWithOptions("test", &api.EnableAuditOptions{
+		Type: vaultaudit.TypeFile,
+		Options: map[string]string{
+			"file_path":             auditLogPath,
+			vaultaudit.OptionPrefix: prefix,
+		},
+	}))
+
+	// confirm audit log entries contain MY-TEST-PREFIX
+	auditFile, err := os.ReadFile(auditLogPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, auditFile)
+	require.True(t, strings.HasPrefix(string(auditFile), prefix))
+
+	// stop vault, delete audit log contents
+	cluster.StopCore(t, 0)
+	require.NoError(t, os.Truncate(auditLogPath, 0))
+
+	// start vault with prefixing prohibited
+	cluster.Cores[0].CoreConfig.AllowAuditLogPrefixing = false
+	cluster.StartCore(t, 0, opts, false)
+	cluster.UnsealCores(t)
+
+	client = cluster.Cores[0].Client
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Contains(t, devices, "test/")
+
+	auditFile, err = os.ReadFile(auditLogPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, auditFile)
+	require.False(t, strings.HasPrefix(string(auditFile), prefix))
+}
+
+// TestAuditPrefixConfiguration_PersistedInvalidControlPrefix verifies that a
+// persisted audit device with a control-character prefix is still loaded, with
+// the invalid prefix ignored at setup time.
+func TestAuditPrefixConfiguration_PersistedInvalidControlPrefix(t *testing.T) {
+	t.Parallel()
+
+	config := &vault.CoreConfig{
+		AllowAuditLogPrefixing: true,
+		EnableRaw:              true,
+	}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
+	}
+	cluster := vault.NewTestCluster(t, config, opts)
+	restartCoreWithAuditPrefixing(t, cluster, true)
+	client := cluster.Cores[0].Client
+
+	auditLogPath := filepath.Join(t.TempDir(), "audit.log")
+	require.NoError(t, client.Sys().EnableAuditWithOptions("test", &api.EnableAuditOptions{
+		Type: vaultaudit.TypeFile,
+		Options: map[string]string{
+			"file_path":             auditLogPath,
+			vaultaudit.OptionPrefix: "MY-TEST-PREFIX",
+		},
+	}))
+
+	const invalidPrefix = "MY-TEST-PREFIX\n"
+	rawAuditTable, err := client.Logical().Read("sys/raw/core/audit")
+	require.NoError(t, err)
+	require.NotNil(t, rawAuditTable)
+
+	rawValue, ok := rawAuditTable.Data["value"].(string)
+	require.True(t, ok)
+
+	var auditTable vault.MountTable
+	require.NoError(t, json.Unmarshal([]byte(rawValue), &auditTable))
+
+	var updated bool
+	for _, entry := range auditTable.Entries {
+		if entry.Path != "test/" {
+			continue
+		}
+		entry.Options[vaultaudit.OptionPrefix] = invalidPrefix
+		updated = true
+	}
+	require.True(t, updated)
+
+	updatedAuditTable, err := json.Marshal(auditTable)
+	require.NoError(t, err)
+	_, err = client.Logical().Write("sys/raw/core/audit", map[string]any{
+		"value": string(updatedAuditTable),
+	})
+	require.NoError(t, err)
+
+	cluster.StopCore(t, 0)
+	require.NoError(t, os.Truncate(auditLogPath, 0))
+
+	cluster.StartCore(t, 0, opts, false)
+	cluster.UnsealCores(t)
+	client = cluster.Cores[0].Client
+
+	devices, err := client.Sys().ListAudit()
+	require.NoError(t, err)
+	require.Contains(t, devices, "test/")
+
+	_, err = client.Logical().Read("auth/token/lookup-self")
+	require.NoError(t, err)
+
+	auditFile, err := os.ReadFile(auditLogPath)
+	require.NoError(t, err)
+	require.NotEmpty(t, auditFile)
+	require.False(t, strings.HasPrefix(string(auditFile), "MY-TEST-PREFIX"))
+}
+
+// TestAuditPrefixConfiguration_Socket verifies that socket audit devices reject
+// prefixes when disabled
+func TestAuditPrefixConfiguration_Socket(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		allowAuditLogPrefixing bool
+		prefix                 string
+		errContains            string
+	}{
+		{
+			name:                   "prefix forbidden but included",
+			allowAuditLogPrefixing: false,
+			prefix:                 "MY-TEST-PREFIX",
+			errContains:            "audit prefixing is not enabled",
+		},
+		{
+			name:                   "prefix allowed but contains newline",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\n",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains carriage return",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\r",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains null byte",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\x00",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode line separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2028",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode paragraph separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2029",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed and not included",
+			allowAuditLogPrefixing: true,
+		},
+		{
+			name:                   "prefix forbidden and not included",
+			allowAuditLogPrefixing: false,
+		},
+		{
+			name:                   "prefix allowed and included",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX",
+		},
+	}
+
+	socketTimeout := 2 * time.Second
+	if !testhelpers.IsLocalOrRegressionTests() {
+		socketTimeout = 5 * time.Second
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// configure vault cluster with audit prefixing enabled or disabled
+			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+				AllowAuditLogPrefixing: tc.allowAuditLogPrefixing,
+			})
+			if tc.allowAuditLogPrefixing {
+				restartCoreWithAuditPrefixing(t, cluster, true)
+			}
+			client := cluster.Cores[0].Client
+
+			// start tcp listener
+			socketListener, err := net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1")})
+			require.NoError(t, err)
+			require.NoError(t, socketListener.SetDeadline(time.Now().Add(socketTimeout)))
+			t.Cleanup(func() {
+				require.NoError(t, socketListener.Close())
+			})
+
+			socketCh := make(chan net.Conn, 1)
+			socketErrCh := make(chan error, 1)
+			// separate go routine that waits for vault to make connection with tcp listener
+			go func() {
+				conn, acceptErr := socketListener.Accept()
+				if acceptErr != nil {
+					socketErrCh <- acceptErr
+					return
+				}
+				socketCh <- conn
+			}()
+
+			options := map[string]any{
+				"address":     socketListener.Addr().String(),
+				"socket_type": "tcp",
+			}
+			if tc.prefix != "" {
+				options["prefix"] = tc.prefix
+			}
+
+			_, err = client.Logical().Write("sys/audit/test", map[string]any{
+				"type":    vaultaudit.TypeSocket,
+				"options": options,
+			})
+
+			if tc.errContains != "" {
+				// validate request fails and socket receives no probes
+				require.ErrorContains(t, err, tc.errContains)
+				devices, listErr := client.Sys().ListAudit()
+				require.NoError(t, listErr)
+				require.NotContains(t, devices, "test/")
+				select {
+				case conn := <-socketCh:
+					require.NoError(t, conn.Close())
+					require.FailNow(t, "rejected socket audit device received a test probe")
+				case acceptErr := <-socketErrCh:
+					// a timeout confirms that vault did not connect to the audit device
+					var netErr net.Error
+					require.ErrorAs(t, acceptErr, &netErr)
+					require.True(t, netErr.Timeout())
+				}
+				return
+			}
+
+			// validate request succeeds and socket includes prefix
+			require.NoError(t, err)
+			select {
+			case conn := <-socketCh:
+				t.Cleanup(func() {
+					require.NoError(t, conn.Close())
+				})
+				// add timeout so that ReadFull doesn't wait indefinitely
+				require.NoError(t, conn.SetReadDeadline(time.Now().Add(socketTimeout)))
+				if tc.prefix != "" {
+					socketPrefix := make([]byte, len(tc.prefix))
+					_, readErr := io.ReadFull(conn, socketPrefix)
+					require.NoError(t, readErr)
+					require.Equal(t, tc.prefix, string(socketPrefix))
+					return
+				}
+
+				auditEntry := make([]byte, 1)
+				_, readErr := io.ReadFull(conn, auditEntry)
+				require.NoError(t, readErr)
+			case acceptErr := <-socketErrCh:
+				require.NoError(t, acceptErr)
+			}
+		})
+	}
+}
+
+// TestAuditPrefixConfiguration_Syslog verifies that syslog audit devices reject
+// prefixes when disabled
+func TestAuditPrefixConfiguration_Syslog(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		allowAuditLogPrefixing bool
+		prefix                 string
+		errContains            string
+	}{
+		{
+			name:                   "prefix forbidden but included",
+			allowAuditLogPrefixing: false,
+			prefix:                 "MY-TEST-PREFIX",
+			errContains:            "audit prefixing is not enabled",
+		},
+		{
+			name:                   "prefix allowed but contains newline",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\n",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains carriage return",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\r",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains null byte",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\x00",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode line separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2028",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed but contains Unicode paragraph separator",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX\u2029",
+			errContains:            "audit prefix may not contain control characters",
+		},
+		{
+			name:                   "prefix allowed and not included",
+			allowAuditLogPrefixing: true,
+		},
+		{
+			name:                   "prefix forbidden and not included",
+			allowAuditLogPrefixing: false,
+		},
+		{
+			name:                   "prefix allowed and included",
+			allowAuditLogPrefixing: true,
+			prefix:                 "MY-TEST-PREFIX",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			// configure vault cluster with audit prefixing allowed or disallowed
+			cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+				AllowAuditLogPrefixing: tc.allowAuditLogPrefixing,
+			})
+			if tc.allowAuditLogPrefixing {
+				restartCoreWithAuditPrefixing(t, cluster, true)
+			}
+			client := cluster.Cores[0].Client
+
+			options := map[string]any{
+				"facility": "LOCAL0",
+			}
+			if tc.prefix != "" {
+				options["prefix"] = tc.prefix
+			}
+
+			_, err := client.Logical().Write("sys/audit/test", map[string]any{
+				"type":    vaultaudit.TypeSyslog,
+				"options": options,
+			})
+
+			if tc.errContains != "" {
+				require.ErrorContains(t, err, tc.errContains)
+				devices, listErr := client.Sys().ListAudit()
+				require.NoError(t, listErr)
+				require.NotContains(t, devices, "test/")
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
 
 // TestAudit_HMACFields verifies that all appropriate fields in audit
 // request and response entries are HMACed properly. The fields in question are:
