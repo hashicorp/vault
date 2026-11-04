@@ -1183,6 +1183,10 @@ func (i *IdentityStore) mergeEntity(ctx context.Context, txn *memdb.Txn, toEntit
 	}
 
 	for _, group := range fromEntityGroups {
+		// Only the agent registry cohort that owns a group manages its members.
+		if group.GetAgentRegistryCohort() != nil {
+			continue
+		}
 		group.MemberEntityIDs = append(group.MemberEntityIDs, toEntity.ID)
 		err = i.UpsertGroupInTxn(ctx, txn, group, persist && !isPerfSecondaryOrStandby)
 		if err != nil {
