@@ -84,8 +84,13 @@ type MockTokenVerifierProxier struct {
 
 func (p *MockTokenVerifierProxier) Send(ctx context.Context, req *SendRequest) (*SendResponse, error) {
 	p.currentToken = req.Token
-	resp := NewTestSendResponse(http.StatusOK,
-		`{"data": {"id": "`+p.currentToken+`"}}`)
+	body, err := json.Marshal(map[string]map[string]string{
+		"data": {"id": p.currentToken},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode mock token response: %w", err)
+	}
+	resp := NewTestSendResponse(http.StatusOK, string(body))
 
 	return resp, nil
 }
