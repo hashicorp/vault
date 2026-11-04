@@ -27,7 +27,7 @@
   {{else}}
     <div class="control-group">
       <div data-test-requestor-text>
-        {{#if this.model.requestEntity.canRead}}
+        {{#if (get @canReadEntity this.model.requestEntity.id)}}
           <LinkTo
             @route="vault.cluster.access.identity.entities.show"
             @models={{array this.model.requestEntity.id "details"}}
@@ -76,7 +76,7 @@
           </span>
           Already approved by
           {{#each this.model.authorizations as |authorization index|}}
-            {{~#if authorization.canRead~}}
+            {{~#if (get @canReadEntity authorization.id)~}}
               <LinkTo @route="vault.cluster.access.identity.entities.show" @models={{array authorization.id "details"}}>
                 {{authorization.name}}
               </LinkTo>
