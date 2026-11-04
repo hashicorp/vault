@@ -7,31 +7,33 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import { handlePartialUpdate, refreshIdentityShow } from 'vault/utils/identity-helpers';
 
 export default class IdentityPopupMetadata extends Component {
   @service flashMessages;
+  @service api;
+  @service router;
   @tracked showConfirmModal = false;
 
   onSuccess(key) {
     if (this.args.onSuccess) {
       this.args.onSuccess();
     }
+    refreshIdentityShow({ router: this.router, model: this.args.model });
     this.flashMessages.success(`Successfully removed '${key}' from metadata`);
   }
-  onError(err, key) {
+  async onError(err, key) {
     if (this.args.onError) {
       this.args.onError();
     }
-    const error = errorMessage(err);
+    const { message: error } = await this.api.parseError(err);
     this.flashMessages.danger(`There was a problem removing '${key}' from the metadata - ${error}`);
   }
 
   transaction() {
-    const metadata = this.args.model.metadata;
-    delete metadata[this.args.key];
-    this.args.model.metadata = { ...metadata };
-    return this.args.model.save();
+    const { model, key } = this.args;
+    const metadata = Object.fromEntries(Object.entries(model.metadata).filter(([k]) => k !== key));
+    return handlePartialUpdate({ api: this.api, model, fields: { metadata } });
   }
 
   @action
@@ -41,7 +43,7 @@ export default class IdentityPopupMetadata extends Component {
       await this.transaction();
       this.onSuccess(key);
     } catch (e) {
-      this.onError(e, key);
+      await this.onError(e, key);
     }
   }
 }

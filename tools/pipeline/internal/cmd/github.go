@@ -4,10 +4,12 @@
 package cmd
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	gh "github.com/google/go-github/v83/github"
 	ghpkg "github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
@@ -84,13 +86,25 @@ func writeToGithubOutput(key string, bytes []byte) error {
 		return fmt.Errorf("failed to expand $GITHUB_OUTPUT path: %w", err)
 	}
 
-	dev, err := os.OpenFile(expanded, os.O_APPEND|os.O_WRONLY, 0o644)
+	dev, err := os.OpenFile(expanded, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to open $GITHUB_OUTPUT for writing: %w", err)
 	}
 	defer func() { _ = dev.Close() }()
 
-	_, err = dev.Write(append(append([]byte(key+"="), bytes...), []byte("\n")...))
+	var payload []byte
+	if strings.Contains(string(bytes), "\n") {
+		delimBytes := make([]byte, 16)
+		if _, err := rand.Read(delimBytes); err != nil {
+			delimBytes = []byte("ghadelimiter")
+		}
+		delim := fmt.Sprintf("ghadelimiter_%x", delimBytes)
+		payload = []byte(fmt.Sprintf("%s<<%s\n%s\n%s\n", key, delim, string(bytes), delim))
+	} else {
+		payload = append(append([]byte(key+"="), bytes...), []byte("\n")...)
+	}
+
+	_, err = dev.Write(payload)
 	if err != nil {
 		return fmt.Errorf("failed to write key %s to $GITHUB_OUTPUT: %w", key, err)
 	}

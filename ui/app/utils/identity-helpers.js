@@ -259,6 +259,33 @@ export async function handleUpdate({ api, model, data }) {
 }
 
 /**
+ * Update only the given fields of an entity or group. Vault treats update-by-id as a partial update,
+ * so fields that are not sent keep their stored value (an empty array or object clears just that field).
+ * @param {Object} params - Parameters object
+ * @param {Object} params.api - The API service instance
+ * @param {Object} params.model - The show-route model (expects `id` and `identityType`)
+ * @param {Object} params.fields - The fields to change, e.g. `{ policies: ['default'] }`
+ * @returns {Promise<Object>} API response
+ */
+export async function handlePartialUpdate({ api, model, fields }) {
+  const method = model.identityType === 'group' ? 'groupUpdateById' : 'entityUpdateById';
+  return await api.identity[method](model.id, fields);
+}
+
+/**
+ * Refresh the entity/group show route so the tab re-fetches after a partial update. The refresh is scoped to
+ * this route because a bare `router.refresh()` also re-renders `vault.cluster`, which destroys the flash
+ * message that was just queued.
+ * @param {Object} params - Parameters object
+ * @param {Object} params.router - The router service instance
+ * @param {Object} params.model - The show-route model (expects `identityType`)
+ */
+export function refreshIdentityShow({ router, model }) {
+  const section = model.identityType === 'group' ? 'groups' : 'entities';
+  return router.refresh(`vault.cluster.access.identity.${section}.show`);
+}
+
+/**
  * Handle entity/group creation
  * @param {Object} params - Parameters object
  * @param {Object} params.api - The API service instance
