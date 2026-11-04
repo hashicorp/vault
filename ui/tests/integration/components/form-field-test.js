@@ -15,8 +15,10 @@ import { format, startOfDay } from 'date-fns';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import AuthMethodForm from 'vault/forms/auth/method';
 import Form from 'vault/forms/form';
+import FormField from 'vault/utils/forms/field';
 
 const component = create(formFields);
 
@@ -243,6 +245,49 @@ module('Integration | Component | form field', function (hooks) {
     const expectedSeconds = `${3 * 3600}s`;
     assert.strictEqual(model.get('foo'), expectedSeconds);
     assert.ok(spy.calledWith('foo', expectedSeconds), 'onChange called with correct args');
+  });
+
+  test('it shows the TTL picker max error for a model that is not a Form', async function (assert) {
+    await setup.call(this, createAttr('foo', null, { editType: 'ttl', hideToggle: true, label: 'Max TTL' }));
+    await fillIn(TTL_PICKER.valueInputByLabel('Max TTL'), '9223372037');
+
+    assert
+      .dom(TTL_PICKER.error)
+      .hasText(
+        'Max TTL is too large. Maximum allowed value is 106,751 days.',
+        'picker reports the error live'
+      );
+  });
+
+  test('it shows a single max error for a TTL field on a Form', async function (assert) {
+    class TtlForm extends Form {
+      formFields = [new FormField('foo', undefined, { editType: 'ttl', hideToggle: true, label: 'Max TTL' })];
+    }
+    this.model = new TtlForm({});
+    this.attr = this.model.formFields[0];
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} />`
+    );
+    await fillIn(TTL_PICKER.valueInputByLabel('Max TTL'), '9223372037');
+
+    // Pages that never render form validation (e.g. PKI tidy) still need the live message.
+    assert
+      .dom(TTL_PICKER.error)
+      .hasText(
+        'Max TTL is too large. Maximum allowed value is 106,751 days.',
+        'picker reports the error live'
+      );
+    assert.strictEqual(this.model.data.foo, '9223372037s', 'the value is still set on the form');
+
+    const { state } = this.model.toJSON();
+    this.set('modelValidations', state);
+    assert.dom(TTL_PICKER.error).doesNotExist('the picker defers to the form validation once it renders');
+    assert
+      .dom(GENERAL.validationErrorByAttr('foo'))
+      .hasText(
+        'Max TTL is too large. Maximum allowed value is 106,751 days.',
+        'form validation message renders once'
+      );
   });
 
   test('it renders: editType stringArray', async function (assert) {
