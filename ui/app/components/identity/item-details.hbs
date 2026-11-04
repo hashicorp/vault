@@ -9,11 +9,11 @@
       <A.Title>Attention</A.Title>
       <A.Description>
         This
-        {{@model.identity_type}}
+        {{@model.identityType}}
         is disabled. All associated tokens cannot be used, but are not revoked.
       </A.Description>
       {{#if @model.canEdit}}
-        <A.Button data-test-enable-identity @text="Enable" @color="secondary" {{on "click" (action "enable" @model)}} />
+        <A.Button data-test-enable-identity @text="Enable" @color="secondary" {{on "click" this.enable}} />
       {{/if}}
     </Hds::Alert>
   {{/if}}
@@ -34,9 +34,9 @@
       {{date-format @model.creation_time "MMM dd, yyyy hh:mm:ss a" withTimeZone=true}}
     </time>
   </InfoTableRow>
-  <InfoTableRow @label="Last Updated" @value={{this.model.last_update_time}}>
-    <time datetime={{this.model.last_update_time}} title={{this.model.last_update_time}}>
-      {{date-format this.model.last_update_time "MMM dd, yyyy hh:mm:ss a" withTimeZone=true}}
+  <InfoTableRow @label="Last Updated" @value={{@model.last_update_time}}>
+    <time datetime={{@model.last_update_time}} title={{@model.last_update_time}}>
+      {{date-format @model.last_update_time "MMM dd, yyyy hh:mm:ss a" withTimeZone=true}}
     </time>
   </InfoTableRow>
 </div>

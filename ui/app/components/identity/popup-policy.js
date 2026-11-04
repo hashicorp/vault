@@ -6,31 +6,34 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
-import errorMessage from 'vault/utils/error-message';
+import { handlePartialUpdate, refreshIdentityShow } from 'vault/utils/identity-helpers';
 import { tracked } from '@glimmer/tracking';
 
 export default class IdentityPopupPolicy extends Component {
   @service flashMessages;
+  @service api;
+  @service router;
   @tracked showConfirmModal = false;
 
   onSuccess(policyName, modelId) {
     if (this.args.onSuccess) {
       this.args.onSuccess();
     }
+    refreshIdentityShow({ router: this.router, model: this.args.model });
     this.flashMessages.success(`Successfully removed '${policyName}' policy from ${modelId}`);
   }
-  onError(err, policyName) {
+  async onError(err, policyName) {
     if (this.args.onError) {
       this.args.onError();
     }
-    const error = errorMessage(err);
+    const { message: error } = await this.api.parseError(err);
     this.flashMessages.danger(`There was a problem removing '${policyName}' policy - ${error}`);
   }
 
   transaction() {
-    const policies = this.args.model.policies;
-    this.args.model.policies = policies.without(this.args.policyName);
-    return this.args.model.save();
+    const { model, policyName } = this.args;
+    const policies = model.policies.filter((name) => name !== policyName);
+    return handlePartialUpdate({ api: this.api, model, fields: { policies } });
   }
 
   @action
@@ -43,7 +46,7 @@ export default class IdentityPopupPolicy extends Component {
       await this.transaction();
       this.onSuccess(policyName, id);
     } catch (e) {
-      this.onError(e, policyName);
+      await this.onError(e, policyName);
     }
   }
 }

@@ -40,7 +40,7 @@ export default class IdentityShowRoute extends Route {
         : data.aliases;
 
     return hash({
-      model: { ...data, aliases, identityType: 'entity', canAddAlias, canEditEntity },
+      model: { ...data, aliases, identityType: 'entity', canAddAlias, canEditEntity, canEdit: canEditEntity },
       section,
     });
   }
