@@ -162,6 +162,15 @@ func initClientBinaryCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) 
 		}, nil
 	}
 
+	// Override operator so its examples don't advertise the unavailable
+	// operator subcommands.
+	commands["operator"] = func() (cli.Command, error) {
+		return &OperatorCommand{
+			BaseCommand: base.NewBaseCommand(ui, runOpts),
+			clientHelp:  true,
+		}, nil
+	}
+
 	// Add unavailable command shims for commands that exist in server but
 	// do not exist in client.
 	for _, name := range unavailableClientCommands {
