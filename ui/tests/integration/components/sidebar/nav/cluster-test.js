@@ -147,10 +147,8 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide client counts link in chroot namespace', async function (assert) {
     this.owner.lookup('service:permissions').setPaths({
-      data: {
-        chroot_namespace: 'admin',
-        root: true,
-      },
+      chroot_namespace: 'admin',
+      root: true,
     });
     this.owner.lookup('service:currentCluster').setCluster({
       id: 'foo',
