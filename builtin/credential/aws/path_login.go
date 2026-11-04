@@ -1039,6 +1039,7 @@ func (b *backend) pathLoginUpdateEc2(ctx context.Context, req *logical.Request, 
 			"instance_id": identityDocParsed.InstanceID,
 			"region":      identityDocParsed.Region,
 			"account_id":  identityDocParsed.AccountID,
+			"auth_type":   ec2AuthType,
 		},
 	}
 	roleEntry.PopulateTokenAuth(auth)
@@ -1145,8 +1146,11 @@ func (b *backend) handleRoleTagLogin(ctx context.Context, s logical.Storage, rol
 
 // pathLoginRenew is used to renew an authenticated token
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	authType, ok := req.Auth.Metadata["auth_type"]
-	if !ok {
+	// auth_type is stored in InternalData so renewal does not depend on the
+	// iam_metadata/ec2_metadata configuration; fall back to Metadata for leases
+	// issued before that.
+	authType, err := getMetadataValue(req.Auth, "auth_type")
+	if err != nil {
 		// backwards compatibility for clients that have leases from before we added auth_type
 		authType = ec2AuthType
 	}
@@ -1512,6 +1516,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 			"inferred_aws_region": roleEntry.InferredAWSRegion,
 			"account_id":          entity.AccountNumber,
 			"inferred_hostname":   inferredHostname,
+			"auth_type":           iamAuthType,
 		},
 		DisplayName: entity.FriendlyName,
 		Alias: &logical.Alias{
