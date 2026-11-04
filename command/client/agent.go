@@ -277,7 +277,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// We don't exit on error here, as this is not worth stopping Agent over
 		serverVersion := serverHealth.Version
 		agentVersion := version.GetVersion().VersionNumber()
-		if serverVersion != agentVersion {
+		if !IsCompatibleVersion(agentVersion, serverVersion) {
 			c.UI.Info("==> Note: Vault Agent version does not match Vault server version. " +
 				fmt.Sprintf("Vault Agent version: %s, Vault server version: %s", agentVersion, serverVersion))
 		}
