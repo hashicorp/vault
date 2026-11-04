@@ -14,7 +14,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 import { ClientFilters, flattenMounts } from 'core/utils/client-counts/helpers';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import {
   destructureClientCounts,
   formatByMonths,
@@ -26,13 +25,6 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    setRunOptions({
-      rules: {
-        // Carbon Charts renders path.bar elements with role="graphics-symbol" without aria-label.
-        // This is a known Carbon Charts library limitation; the rule is suppressed here.
-        'svg-img-alt': { enabled: false },
-      },
-    });
     this.server.get('sys/internal/counters/activity', () => {
       return {
         request_id: 'some-activity-id',

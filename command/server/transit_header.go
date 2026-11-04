@@ -27,7 +27,7 @@ func (c *TransitEnvHeaderCommand) Synopsis() string {
 
 func (c *TransitEnvHeaderCommand) Help() string {
 	helpText := `
-Usage: vault transit envelope header [filenames...]
+Usage: ` + c.BinaryName + ` transit envelope header [filenames...]
 
   Displays the headers of one or more envelope encrypted files/streams.  Note that this does not validate the authenticity
 of the header, as this requires at least partial decryption.

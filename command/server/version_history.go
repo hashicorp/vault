@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -29,13 +29,13 @@ func (c *VersionHistoryCommand) Synopsis() string {
 
 func (c *VersionHistoryCommand) Help() string {
 	helpText := `
-Usage: vault version-history
+Usage: ` + c.BinaryName + ` version-history
 
   Prints the version history of the target Vault server.
 
   Print the version history:
 
-      $ vault version-history
+      $ ` + c.BinaryName + ` version-history
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
 }

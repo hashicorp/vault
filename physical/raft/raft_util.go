@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/hashicorp/raft"
 	autopilot "github.com/hashicorp/raft-autopilot"
 )
 
@@ -41,4 +42,30 @@ func (d *Delegate) autopilotServerExt(_ *FollowerState) interface{} {
 
 func (d *Delegate) meta(_ *FollowerState) map[string]string {
 	return nil
+}
+
+func (d *Delegate) autopilotServerExtNonVoter(_ *FollowerState) interface{} {
+	return nil
+}
+
+func (d *Delegate) metaWithoutZone(_ *FollowerState) map[string]string {
+	return nil
+}
+
+func (d *Delegate) knownServer(id raft.ServerID, name, version string, state FollowerState, isVoter bool, cachedNodeType autopilot.NodeType) *autopilot.Server {
+	nodeType := cachedNodeType
+	if !isVoter {
+		nodeType = ""
+	} else if cachedNodeType == "" {
+		nodeType = autopilot.NodeVoter
+	}
+	return &autopilot.Server{
+		ID:          id,
+		Name:        name,
+		RaftVersion: raft.ProtocolVersionMax,
+		Meta:        d.meta(&state),
+		Version:     version,
+		NodeType:    nodeType,
+		Ext:         d.autopilotServerExtNonVoter(&state),
+	}
 }

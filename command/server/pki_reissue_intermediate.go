@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -32,7 +32,7 @@ func (c *PKIReIssueCACommand) Synopsis() string {
 
 func (c *PKIReIssueCACommand) Help() string {
 	helpText := `
-Usage: vault pki reissue PARENT TEMPLATE CHILD_MOUNT options
+Usage: ` + c.BinaryName + ` pki reissue PARENT TEMPLATE CHILD_MOUNT options
 `
 	return strings.TrimSpace(helpText)
 }

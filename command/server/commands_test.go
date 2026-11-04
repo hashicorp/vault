@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -36,7 +36,7 @@ func Test_Commands_HCPInit(t *testing.T) {
 			mockUi := cli.NewMockUi()
 			commands := initCommands(mockUi, nil, nil)
 			if tst.expectError {
-				clientcmd.InitHCPCommands(mockUi, commands)
+				clientcmd.InitHCPCommands(mockUi, commands, "vault")
 				errMsg := mockUi.ErrorWriter.String()
 				require.NotEmpty(t, errMsg)
 				require.Contains(t, errMsg, tst.expectedErrorMsg)
@@ -100,7 +100,6 @@ var serverOnlyCommands = []string{
 	"policy list",
 	"policy read",
 	"policy write",
-	"ssh",
 	"transform",
 	"transform import",
 	"transform import-version",

@@ -19,13 +19,15 @@
   <nav class="tabs sub-nav" aria-label="navigation for managing {{this.model.identityType}}">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType this.model.type) as |tab|}}
-        <LinkTo
-          @route="vault.cluster.access.identity.entities.show"
-          @models={{array this.model.id tab}}
-          data-test-tab-subnav={{tab}}
-        >
-          {{capitalize (humanize tab)}}
-        </LinkTo>
+        <li>
+          <LinkTo
+            @route="vault.cluster.access.identity.entities.show"
+            @models={{array this.model.id tab}}
+            data-test-tab-subnav={{tab}}
+          >
+            {{capitalize (humanize tab)}}
+          </LinkTo>
+        </li>
       {{/each}}
     </ul>
   </nav>

@@ -105,6 +105,13 @@ func (b *EntityBuilder) WithPolicies(policies []string) *EntityBuilder {
 	if b.err != nil {
 		return b
 	}
+	for _, policy := range policies {
+		if isReservedRootPolicy(policy) {
+			b.err = fmt.Errorf("policies cannot contain root")
+			return b
+		}
+	}
+
 	validatedPolicies := make([]string, 0, len(policies))
 	for _, policy := range policies {
 		canonicalPolicy, err := policyutil.ValidatePolicyName(policy)

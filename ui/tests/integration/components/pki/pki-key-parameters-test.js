@@ -5,11 +5,12 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, fillIn } from '@ember/test-helpers';
+import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import PkiRoleForm from 'vault/forms/secrets/pki/role';
+import PkiKeyForm from 'vault/forms/secrets/pki/key';
 
 module('Integration | Component | pki key parameters', function (hooks) {
   setupRenderingTest(hooks);
@@ -89,5 +90,28 @@ module('Integration | Component | pki key parameters', function (hooks) {
       '0',
       'sets the default value for signature_bits on the model.'
     );
+  });
+
+  test('it shows a key_bits tooltip until a key_type is chosen', async function (assert) {
+    this.form = new PkiKeyForm({}, { isNew: true });
+    this.fields = this.form.formFieldGroups.find((g) => g['Key parameters'])['Key parameters'];
+    await this.renderComponent();
+
+    const keyBitsTooltip = `${GENERAL.fieldByAttr('key_bits')} ${GENERAL.tooltip('form field label')}`;
+    assert.dom(GENERAL.inputByAttr('key_bits')).isDisabled('key_bits is disabled without a key_type');
+    await click(keyBitsTooltip);
+    assert
+      .dom(GENERAL.tooltipText)
+      .hasText(
+        'Choose a key type before specifying bit length.',
+        'tooltip explains why key_bits is disabled'
+      );
+
+    await fillIn(GENERAL.inputByAttr('key_type'), 'rsa');
+    assert.dom(GENERAL.inputByAttr('key_bits')).isEnabled('key_bits is enabled');
+    assert.dom(keyBitsTooltip).doesNotExist('tooltip is removed once a key_type is chosen');
+    assert
+      .dom('[aria-controls^="container-"], [aria-describedby^="container-"]')
+      .doesNotExist('no dangling tooltip ARIA references remain');
   });
 });

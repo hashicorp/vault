@@ -85,7 +85,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await click(GENERAL.button('namespace-picker'));
 
     // Verify that the root namespace is selected by default
-    assert.dom(GENERAL.button('root')).hasAttribute('aria-selected', 'true', 'root is selected by default');
+    assert.dom(GENERAL.button('root')).hasAttribute('aria-current', 'true', 'root is selected by default');
     assert
       .dom(`${GENERAL.button('root')} svg${GENERAL.icon('check')}`)
       .exists('The root namespace has a check icon indicating it is selected');

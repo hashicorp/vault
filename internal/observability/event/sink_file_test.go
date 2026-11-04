@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package event
@@ -376,4 +376,17 @@ func TestFileSink_log_timeoutWhileWaitingForPermit(t *testing.T) {
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("sink.log did not return promptly while waiting on permit")
 	}
+}
+
+// TestFileSink_Close verifies that Close releases the open file descriptor
+func TestFileSink_Close(t *testing.T) {
+	t.Parallel()
+
+	sink, err := NewFileSink(filepath.Join(t.TempDir(), "audit.log"), "json")
+	require.NoError(t, err)
+	require.NotNil(t, sink.file)
+
+	require.NoError(t, sink.Close())
+	require.Nil(t, sink.file)
+	require.NoError(t, sink.Close())
 }

@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -35,15 +35,15 @@ func (c *OperatorUsageCommand) Synopsis() string {
 
 func (c *OperatorUsageCommand) Help() string {
 	helpText := `
-Usage: vault operator usage
+Usage: ` + c.BinaryName + ` operator usage
 
   List the client counts for the default reporting period.
 
-	  $ vault operator usage
+	  $ ` + c.BinaryName + ` operator usage
 
   List the client counts for a specific time period.
 
-          $ vault operator usage -start-time=2020-10 -end-time=2020-11
+          $ ` + c.BinaryName + ` operator usage -start-time=2020-10 -end-time=2020-11
 
 ` + c.Flags().Help()
 

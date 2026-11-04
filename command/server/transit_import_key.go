@@ -39,7 +39,7 @@ func (c *TransitImportCommand) Synopsis() string {
 
 func (c *TransitImportCommand) Help() string {
 	helpText := `
-Usage: vault transit import PATH KEY [options...]
+Usage: ` + c.BinaryName + ` transit import PATH KEY [options...]
 
   Using the Transit key wrapping system, imports key material from
   the base64 encoded KEY (either directly on the CLI or via @path notation),

@@ -561,7 +561,7 @@ func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyTyp
 
 	policyType, ok := pt.(PolicyType)
 	if !ok {
-		return nil, fmt.Errorf("unknown policy type for: %v", index)
+		return nil, fmt.Errorf("unknown policy type for: %s", index)
 	}
 
 	return &policyType, nil
@@ -1073,8 +1073,45 @@ func policyCacheKey(nsID, name string) string {
 	return strconv.Itoa(len(nsID)) + ":" + nsID + ":" + name
 }
 
+// cacheKey creates a structured cache key without path normalization.
 func (ps *PolicyStore) cacheKey(ns *namespace.Namespace, name string) string {
 	return policyCacheKey(ns.ID, name)
+}
+
+// isReservedRootPolicy returns true when name resolves to the reserved root
+// policy, including the canonical "root" name and root-equivalent aliases
+// such as "./root" or "/root".
+func isReservedRootPolicy(name string) bool {
+	canonicalName := policyutil.CanonicalizePolicyName(name)
+	if canonicalName == "" {
+		return false
+	}
+
+	segments := []string{namespace.RootNamespaceID}
+	for _, segment := range strings.Split(canonicalName, "/") {
+		switch segment {
+		case "", ".":
+			continue
+		case "..":
+			if len(segments) == 1 {
+				continue
+			}
+			segments = segments[:len(segments)-1]
+		default:
+			segments = append(segments, segment)
+		}
+	}
+
+	return len(segments) == 2 && segments[0] == namespace.RootNamespaceID && segments[1] == "root"
+}
+
+func isReservedRootPolicyAlias(name string) bool {
+	canonicalName := policyutil.CanonicalizePolicyName(name)
+	if canonicalName == "" || canonicalName == "root" {
+		return false
+	}
+
+	return isReservedRootPolicy(canonicalName)
 }
 
 // logDeniedParamWarning logs a warning if the given policy uses allowed_parameters or denied_parameters

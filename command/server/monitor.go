@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -35,7 +35,7 @@ func (c *MonitorCommand) Synopsis() string {
 
 func (c *MonitorCommand) Help() string {
 	helpText := `
-Usage: vault monitor [options]
+Usage: ` + c.BinaryName + ` monitor [options]
 
 	Stream log messages of a Vault server. The monitor command lets you listen
 	for log levels that may be filtered out of the server logs. For example,

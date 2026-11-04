@@ -27,6 +27,19 @@ type GetItemIDRes struct {
 	BoardID string `json:"board_id"`
 }
 
+// ItemsQuery mirrors Monday's ItemsQuery input type
+type ItemsQuery struct {
+	Rules []ItemsQueryRule `json:"rules"`
+}
+
+// ItemsQueryRule mirrors Monday's ItemsQueryRule input type. It filters
+// the ColumnID's against CompareValue to satisfy the Operator.
+type ItemsQueryRule struct {
+	ColumnID     string   `json:"column_id"`
+	CompareValue []string `json:"compare_value"`
+	Operator     string   `json:"operator"`
+}
+
 func (r *GetItemIDReq) Run(ctx context.Context, client *graphql.Client) (*GetItemIDRes, error) {
 	slog.Default().DebugContext(ctx, "Getting Monday board item_id",
 		slog.String("board_id", r.BoardID),
@@ -41,7 +54,8 @@ func (r *GetItemIDReq) Run(ctx context.Context, client *graphql.Client) (*GetIte
 	return r.getByBoard(ctx, client)
 }
 
-// getByBoard returns the first item on the board whose name matches ItemName.
+// getByBoard returns the first item on the board whose name matches ItemName exactly.
+// The server narrows it down by name, and the client checks for the exact name match.
 // The result's BoardID is the requested BoardID.
 func (r *GetItemIDReq) getByBoard(ctx context.Context, client *graphql.Client) (*GetItemIDRes, error) {
 	var query struct {
@@ -51,12 +65,19 @@ func (r *GetItemIDReq) getByBoard(ctx context.Context, client *graphql.Client) (
 					ID   graphql.ID `graphql:"id"`
 					Name string     `graphql:"name"`
 				}
-			} `graphql:"items_page(limit:100)"`
+			} `graphql:"items_page(limit:100, query_params:$queryParams)"`
 		} `graphql:"boards(ids:[$boardId])"`
 	}
 
 	vars := map[string]any{
 		"boardId": graphql.ID(r.BoardID),
+		"queryParams": ItemsQuery{
+			Rules: []ItemsQueryRule{{
+				ColumnID:     "name",
+				CompareValue: []string{r.ItemName},
+				Operator:     "any_of",
+			}},
+		},
 	}
 
 	err := client.Query(ctx, &query, vars)

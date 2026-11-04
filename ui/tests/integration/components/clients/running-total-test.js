@@ -16,7 +16,6 @@ import timestamp from 'core/utils/timestamp';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import {
   destructureClientCounts,
   formatByMonths,
@@ -30,13 +29,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    setRunOptions({
-      rules: {
-        // Carbon Charts renders path.bar elements with role="graphics-symbol" without aria-label.
-        // This is a known Carbon Charts library limitation; the rule is suppressed here.
-        'svg-img-alt': { enabled: false },
-      },
-    });
     this.flags = this.owner.lookup('service:flags');
     this.version = this.owner.lookup('service:version');
     this.flags.activatedFlags = ['secrets-sync'];
@@ -132,9 +124,14 @@ module('Integration | Component | clients/running-total', function (hooks) {
         parseAPITimestamp(this.byMonthClients[0].timestamp, 'M/yy'),
         'first x-axis tick shows the first month'
       );
+    const monthsWithData = this.byMonthClients.filter((m) => typeof m.clients === 'number');
+    assert.true(monthsWithData.length < this.byMonthClients.length, 'fixture includes months without data');
     assert
       .dom(CHARTS.carbonBar('Client usage by month (simple)'))
-      .exists({ count: this.byMonthClients.length }, 'renders one bar per month');
+      .exists({ count: monthsWithData.length }, 'renders one bar per month with data');
+    findAll(CHARTS.carbonBar('Client usage by month (simple)')).forEach((bar) => {
+      assert.dom(bar).hasAttribute('aria-label', /\d+/, 'bar has an accessible name');
+    });
   });
 
   test('it toggles to split chart by client type', async function (assert) {

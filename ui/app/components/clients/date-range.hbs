@@ -9,7 +9,7 @@
     {{#if (and @billingStartTime this.version.isEnterprise)}}
       <Hds::Dropdown class="has-left-margin-xs" as |D|>
         <D.ToggleButton @text={{this.formatDate @startTimestamp}} @color="secondary" data-test-date-range-edit />
-        <D.Description @text="Current period" />
+        <D.Description @text="Current period" role="none" />
         <D.Checkmark
           {{! Pass an empty string to reset query param because the current billing period is the default }}
           {{on "click" (fn this.updateEnterpriseDateRange "" D.close)}}
@@ -20,7 +20,7 @@
         </D.Checkmark>
         {{#if this.historicalBillingPeriods.length}}
           <D.Separator class="has-bottom-margin-xs" />
-          <D.Description @text="Historical periods" />
+          <D.Description @text="Historical periods" role="none" />
           {{#each this.historicalBillingPeriods as |period idx|}}
             <D.Checkmark
               {{on "click" (fn this.updateEnterpriseDateRange period D.close)}}

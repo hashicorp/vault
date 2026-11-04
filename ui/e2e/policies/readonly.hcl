@@ -45,3 +45,7 @@ path "readonly-kv/*" {
 path "readonly-ldap/*" {
   capabilities = ["read", "list"]
 }
+
+path "readonly-transit/*" {
+  capabilities = ["read", "list"]
+}

@@ -423,6 +423,11 @@ type Core struct {
 	// out into the configured audit backends
 	auditBroker *audit.Broker
 
+	// auditConfigFailed is set to true when at least one audit device is configured but all
+	// failed to initialize (setupAudits returned errLoadAuditFailed, or invalidateAuditTable
+	// failed to enable a replicated device).
+	auditConfigFailed atomic.Bool
+
 	// auditedHeaders is used to configure which http headers
 	// can be output in the audit logs
 	auditedHeaders *audit.HeadersConfig
@@ -2371,6 +2376,15 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 			// A warn is sufficient here since this is a best-effort enrichment of metric
 			// labels on a standby node. Aborting the unseal over this is unnecessary.
 			c.logger.Warn("failed to load cluster info for standby metrics", "error", err)
+		}
+
+		// Validate configured audit devices before entering the standby loop
+		// We also skip DR secondaries because they don't set up audit device until promotion
+		if !c.IsDRSecondary() {
+			err := c.validateAuditDevices(ctx)
+			if err != nil {
+				c.logger.Error("audit device validation failed; this node will remain a non-voter until the issue is resolved", "error", err)
+			}
 		}
 
 		// Go to standby mode, wait until we are active to unseal

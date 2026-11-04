@@ -19,9 +19,11 @@
   <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
     <nav class="tabs" aria-label="tabs">
       <ul>
-        <LinkTo @route="vault.cluster.access.oidc.scopes.scope.details" @model={{scope.name}} data-test-oidc-scope-details>
-          Details
-        </LinkTo>
+        <li>
+          <LinkTo @route="vault.cluster.access.oidc.scopes.scope.details" @model={{scope.name}} data-test-oidc-scope-details>
+            Details
+          </LinkTo>
+        </li>
       </ul>
     </nav>
   </div>

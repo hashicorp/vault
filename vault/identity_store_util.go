@@ -166,10 +166,12 @@ func (i *IdentityStore) loadArtifacts(ctx context.Context, isActive bool) error 
 		return err
 	}
 
-	// Also reset the conflict resolver so that we report potential duplicates to
-	// be resolved before it's safe to return to case-insensitive mode.
+	// Use a temporary resolver to collect a complete report while loading in
+	// case-sensitive mode.
+	originalResolver := i.conflictResolver
 	reporterResolver := newDuplicateReportingErrorResolver(i.logger)
 	i.conflictResolver = reporterResolver
+	defer func() { i.conflictResolver = originalResolver }()
 
 	// Attempt to load identity artifacts once more after memdb is reset to
 	// accept case sensitive names

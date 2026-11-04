@@ -131,19 +131,20 @@
           Documentation.
         </DocLink>
       </p>
-      <p class="has-text-grey">
-        <ol class="has-left-margin-m has-bottom-margin-s">
-          <li>Select a tidy operation:</li>
-          <ul class="bullet has-bottom-margin-xs">
-            <li><strong>Automatic tidy</strong>
-              periodically runs a tidy operation with saved configuration settings after waiting the specified interval
-              duration between tidies
-            </li>
-            <li><strong>Manual tidy</strong> runs a tidy operation once</li>
-          </ul>
+      <div class="has-text-grey">
+        <ol class="has-left-margin-m has-bottom-margin-s" data-test-tidy-instructions>
+          <li>Select a tidy operation:
+            <ul class="bullet has-bottom-margin-xs">
+              <li><strong>Automatic tidy</strong>
+                periodically runs a tidy operation with saved configuration settings after waiting the specified interval
+                duration between tidies
+              </li>
+              <li><strong>Manual tidy</strong> runs a tidy operation once</li>
+            </ul>
+          </li>
           <li>Configure the parameters that determine how to tidy and run the operation.</li>
         </ol>
-      </p>
+      </div>
       <div class="has-top-margin-l has-padding">
         <img src={{img-path "~/pki-tidy.png"}} alt="tidy operation diagram" />
       </div>

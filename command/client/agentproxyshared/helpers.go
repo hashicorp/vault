@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/client/auth"
 	"github.com/hashicorp/vault/command/client/auth/alicloud"
 	"github.com/hashicorp/vault/command/client/auth/approle"
@@ -25,7 +26,9 @@ import (
 	"github.com/hashicorp/vault/command/client/auth/kubernetes"
 	"github.com/hashicorp/vault/command/client/auth/ldap"
 	"github.com/hashicorp/vault/command/client/auth/oci"
+	"github.com/hashicorp/vault/command/client/auth/spiffe"
 	token_file "github.com/hashicorp/vault/command/client/auth/token-file"
+	"github.com/hashicorp/vault/command/client/auth/tpm"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cacheboltdb"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache/cachememdb"
@@ -35,7 +38,7 @@ import (
 // GetAutoAuthMethodFromConfig Calls the appropriate NewAutoAuthMethod function, initializing
 // the auto-auth method, based on the auto-auth method type. Returns an error if one happens or
 // the method type is invalid.
-func GetAutoAuthMethodFromConfig(autoAuthMethodType string, authConfig *auth.AuthConfig, vaultAddress string) (auth.AuthMethod, error) {
+func GetAutoAuthMethodFromConfig(autoAuthMethodType string, authConfig *auth.AuthConfig, vaultAddress string, tlsCfg *api.TLSConfig) (auth.AuthMethod, error) {
 	switch autoAuthMethodType {
 	case "alicloud":
 		return alicloud.NewAliCloudAuthMethod(authConfig)
@@ -61,10 +64,14 @@ func GetAutoAuthMethodFromConfig(autoAuthMethodType string, authConfig *auth.Aut
 		return oci.NewOCIAuthMethod(authConfig, vaultAddress)
 	case "token_file":
 		return token_file.NewTokenFileAuthMethod(authConfig)
+	case "tpm":
+		return tpm.NewTPMAuthMethod(authConfig, tlsCfg)
 	case "pcf": // Deprecated.
 		return cf.NewCFAuthMethod(authConfig)
 	case "ldap":
 		return ldap.NewLdapAuthMethod(authConfig)
+	case "spiffe":
+		return spiffe.NewSpiffeAuthMethod(authConfig, tlsCfg)
 	default:
 		return nil, errors.New(fmt.Sprintf("unknown auth method %q", autoAuthMethodType))
 	}

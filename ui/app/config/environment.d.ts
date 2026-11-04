@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -17,6 +17,7 @@ declare const config: {
     POLLING_URLS: string[];
     NAMESPACE_ROOT_URLS: string[];
     DEFAULT_PAGE_SIZE: number;
+    DARK_THEME_AUDIT?: boolean;
     LOG_TRANSITIONS?: boolean;
     LOG_ACTIVE_GENERATION?: boolean;
     LOG_VIEW_LOOKUPS?: boolean;

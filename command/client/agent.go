@@ -35,6 +35,7 @@ import (
 	"github.com/hashicorp/vault/command/client/agent/pkiexternalca"
 	"github.com/hashicorp/vault/command/client/agent/template"
 	"github.com/hashicorp/vault/command/client/agentproxyshared"
+	"github.com/hashicorp/vault/command/client/agentproxyshared/tpmattest"
 	"github.com/hashicorp/vault/command/client/auth"
 	"github.com/hashicorp/vault/command/client/winsvc"
 	"github.com/hashicorp/vault/internalshared/agentproxyshared/cache"
@@ -288,7 +289,7 @@ func (c *AgentCommand) Run(args []string) int {
 		// A customer could have a listener defined but only be using e.g. the cache-clear API,
 		// even though the API proxy is something they have available.
 		c.UI.Warn("==> Note: Vault Agent will be deprecating API proxy functionality in a future " +
-			"release, and this functionality has moved to a new subcommand, vault proxy. If you rely on this " +
+			"release, and this functionality has moved to a new subcommand, " + c.BinaryName + " proxy. If you rely on this " +
 			"functionality, plan to move to Vault Proxy instead.")
 	}
 
@@ -382,7 +383,15 @@ func (c *AgentCommand) Run(args []string) int {
 			MountPath: config.AutoAuth.Method.MountPath,
 			Config:    config.AutoAuth.Method.Config,
 		}
-		method, err = agentproxyshared.GetAutoAuthMethodFromConfig(config.AutoAuth.Method.Type, authConfig, config.Vault.Address)
+		tlsCfg := &api.TLSConfig{
+			CACert:        c.config.Vault.CACert,
+			CAPath:        c.config.Vault.CAPath,
+			ClientCert:    c.config.Vault.ClientCert,
+			ClientKey:     c.config.Vault.ClientKey,
+			TLSServerName: c.config.Vault.TLSServerName,
+			Insecure:      c.config.Vault.TLSSkipVerify,
+		}
+		method, err = agentproxyshared.GetAutoAuthMethodFromConfig(config.AutoAuth.Method.Type, authConfig, config.Vault.Address, tlsCfg)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error creating %s auth method: %v", config.AutoAuth.Method.Type, err))
 			return 1
@@ -559,6 +568,7 @@ func (c *AgentCommand) Run(args []string) int {
 	var ts *template.Server
 	var es *exec.Server
 	var ps *pkiexternalca.Server
+	var tpmas tpmattest.RunnableClient
 	if method != nil {
 		// When PKI external CA is configured, the fan-out goroutine below
 		// delivers tokens to both the PKI server and the template server via
@@ -647,6 +657,17 @@ func (c *AgentCommand) Run(args []string) int {
 		})
 		if err != nil {
 			c.logger.Error("could not create exec server", "error", err)
+			return 1
+		}
+	}
+
+	if len(config.TPMCerts) > 0 {
+		tpmas, err = tpmattest.NewServer(&tpmattest.ServerConfig{
+			Logger:   c.logger.Named("tpmattest.server"),
+			TPMCerts: config.TPMCerts,
+		})
+		if err != nil {
+			c.logger.Error("could not create tpm attestation server", "error", err)
 			return 1
 		}
 	}
@@ -932,6 +953,18 @@ func (c *AgentCommand) Run(args []string) int {
 			})
 		}
 
+	}
+
+	if tpmas != nil {
+		g.Add(func() error {
+			return tpmas.Run(ctx, c.ClientDirect())
+		}, func(err error) {
+			if leaseCache != nil {
+				leaseCache.SetShuttingDown(true)
+			}
+			cancelFunc()
+			tpmas.Stop()
+		})
 	}
 
 	// Server configuration output

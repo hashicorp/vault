@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -61,7 +61,7 @@ func (c *SSHCommand) Synopsis() string {
 
 func (c *SSHCommand) Help() string {
 	helpText := `
-Usage: vault ssh [options] username@ip [ssh options]
+Usage: ` + c.BinaryName + ` ssh [options] username@ip [ssh options]
 
   Establishes an SSH connection with the target machine.
 
@@ -71,15 +71,15 @@ Usage: vault ssh [options] username@ip [ssh options]
 
   SSH using the OTP mode (requires sshpass for full automation):
 
-      $ vault ssh -mode=otp -role=my-role user@1.2.3.4
+      $ ` + c.BinaryName + ` ssh -mode=otp -role=my-role user@1.2.3.4
 
   SSH using the CA mode:
 
-      $ vault ssh -mode=ca -role=my-role user@1.2.3.4
+      $ ` + c.BinaryName + ` ssh -mode=ca -role=my-role user@1.2.3.4
 
   SSH using CA mode with host key verification:
 
-      $ vault ssh \
+      $ ` + c.BinaryName + ` ssh \
           -mode=ca \
           -role=my-role \
           -host-key-mount-point=host-signer \

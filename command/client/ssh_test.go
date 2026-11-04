@@ -1,14 +1,17 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
 
 import (
-	"strings"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/api"
 	base "github.com/hashicorp/vault/command/base"
+	"github.com/stretchr/testify/require"
 )
 
 func testSSHCommand(tb testing.TB) (*cli.MockUi, *SSHCommand) {
@@ -22,15 +25,11 @@ func testSSHCommand(tb testing.TB) (*cli.MockUi, *SSHCommand) {
 	}
 }
 
-func TestSSHCommand_Run(t *testing.T) {
-	t.Parallel()
-	t.Skip("Need a way to setup target infrastructure")
-}
-
+// TestParseSSHCommand preserves SSH username/port precedence and stops parsing
+// at the remote command, whose flags must not affect Vault's credential request.
 func TestParseSSHCommand(t *testing.T) {
 	t.Parallel()
 
-	_, cmd := testSSHCommand(t)
 	tests := []struct {
 		name     string
 		args     []string
@@ -167,27 +166,22 @@ func TestParseSSHCommand(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, cmd := testSSHCommand(t)
 			hostname, username, port, err := cmd.parseSSHCommand(test.args)
-			if err != test.err {
-				t.Errorf("got error: %q want %q", err, test.err)
-			}
-			if hostname != test.hostname {
-				t.Errorf("got hostname: %q want %q", hostname, test.hostname)
-			}
-			if username != test.username {
-				t.Errorf("got username: %q want %q", username, test.username)
-			}
-			if port != test.port {
-				t.Errorf("got port: %q want %q", port, test.port)
-			}
+			require.Equal(t, test.err, err, "SSH argument parsing error")
+			require.Equal(t, test.hostname, hostname, "SSH destination")
+			require.Equal(t, test.username, username, "SSH username precedence")
+			require.Equal(t, test.port, port, "SSH port precedence")
 		})
 	}
 }
 
+// TestIsSingleSSHArg verifies that valueless SSH options do not consume the
+// destination as an option value.
 func TestIsSingleSSHArg(t *testing.T) {
 	t.Parallel()
 
-	_, cmd := testSSHCommand(t)
 	tests := []struct {
 		name string
 		arg  string
@@ -212,25 +206,33 @@ func TestIsSingleSSHArg(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			_, cmd := testSSHCommand(t)
 			got := cmd.isSingleSSHArg(test.arg)
-			if got != test.want {
-				t.Errorf("arg %q got %v want %v", test.arg, got, test.want)
-			}
+			require.Equal(t, test.want, got, "SSH option %q", test.arg)
 		})
 	}
 }
 
-// TestSSHCommandOmitFlagWarning checks if flags warning messages are printed
-// in the output of the CLI command or not. If so, it will fail.
+// TestSSHCommandOmitFlagWarning verifies that remote flags are not mistaken for
+// misplaced Vault flags, without reading a user's SSH keys or contacting Vault.
 func TestSSHCommandOmitFlagWarning(t *testing.T) {
 	t.Parallel()
 
 	ui, cmd := testSSHCommand(t)
-
-	_ = cmd.Run([]string{"-mode", "ca", "-role", "otp_key_role", "user@1.2.3.4", "-extraFlag", "bug"})
+	client, err := api.NewClient(&api.Config{Address: "http://127.0.0.1:1"})
+	require.NoError(t, err, "construct an unused client")
+	cmd.SetClient(client)
+	cmd.SetHCPTokenHelper(testHCPTokenHelper{})
+	publicKeyPath := filepath.Join(t.TempDir(), "missing.pub")
+	_, err = os.Stat(publicKeyPath)
+	require.ErrorIs(t, err, os.ErrNotExist, "the failure must not depend on a user's keys")
+	require.Equal(t, 1, cmd.Run([]string{
+		"-mode=ca", "-role=test-role", "-public-key-path=" + publicKeyPath,
+		"user@127.0.0.1", "-extraFlag", "bug",
+	}), "a missing test-local public key must fail before any API request")
 
 	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
-	if strings.Contains(combined, "Command flags must be provided before positional arguments. The following arguments will not be parsed as flags") {
-		t.Fatalf("ssh command displayed flag warnings")
-	}
+	require.Contains(t, combined, "failed to read public key", "confirm the controlled failure")
+	require.NotContains(t, combined, "Command flags must be provided before positional arguments", "remote flags are not Vault flags")
 }

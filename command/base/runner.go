@@ -26,8 +26,9 @@ import (
 // VaultUI is the CLI UI type used by all vault commands.
 type VaultUI struct {
 	cli.Ui
-	Format   string
-	detailed bool
+	Format     string
+	detailed   bool
+	binaryName string
 }
 
 const (
@@ -233,8 +234,9 @@ func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn,
 				ErrorWriter: uiErrWriter,
 			},
 		},
-		Format:   format,
-		detailed: detailed,
+		Format:     format,
+		detailed:   detailed,
+		binaryName: runOpts.BinaryName,
 	}
 
 	serverCmdUi := &VaultUI{
@@ -246,7 +248,8 @@ func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn,
 				Writer: runOpts.Stdout,
 			},
 		},
-		Format: format,
+		Format:     format,
+		binaryName: runOpts.BinaryName,
 	}
 
 	if _, ok := Formatters[format]; !ok {
@@ -273,14 +276,24 @@ func runCustomInternal(args []string, runOpts *RunOptions, initFn CommandInitFn,
 		AutocompleteNoDefaultFlags: true,
 	}
 
-	exitCode, err := cliApp.Run()
+	// Save the last output errors so we don't reuse output from a previous command.
+	var previousOutputStringError *api.OutputStringError
+	var previousOutputPolicyError *api.OutputPolicyError
 	if outputCurlString {
-		return generateCurlString(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
+		previousOutputStringError = api.LastOutputStringError
 	} else if outputPolicy {
-		return generatePolicy(exitCode, runOpts, uiErrWriter.(*bytes.Buffer))
-	} else if err != nil {
+		previousOutputPolicyError = api.LastOutputPolicyError
+	}
+
+	exitCode, err := cliApp.Run()
+	if err != nil {
 		fmt.Fprintf(runOpts.Stderr, "Error executing CLI: %s\n", err.Error())
 		return 1
+	}
+	if outputCurlString {
+		return generateCurlString(exitCode, runOpts, uiErrWriter.(*bytes.Buffer), previousOutputStringError, api.LastOutputStringError)
+	} else if outputPolicy {
+		return generatePolicy(exitCode, runOpts, uiErrWriter.(*bytes.Buffer), previousOutputPolicyError, api.LastOutputPolicyError)
 	}
 
 	return exitCode
@@ -347,16 +360,13 @@ func printCommand(w io.Writer, name string, cmdFn cli.CommandFactory) {
 	fmt.Fprintf(w, "    %s\t%s\n", name, cmd.Synopsis())
 }
 
-func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.Buffer) int {
+func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.Buffer, previous, current *api.OutputStringError) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate cURL command")
 		return 1
 	}
 
-	// When we actually return from client.rawRequestWithContext(), this value should be set to the OutputStringError
-	// that contains the data/context required to output the actual string, so it's doubtful this chunk of code will
-	// ever run, but I'm guessing it's a defense in depth thing.
-	if api.LastOutputStringError == nil {
+	if current == nil || current == previous {
 		if exitCode == 127 {
 			// Usage, just pass it through
 			return exitCode
@@ -366,7 +376,7 @@ func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *byt
 		return exitCode
 	}
 
-	cs, err := api.LastOutputStringError.CurlString()
+	cs, err := curlString(current, runOpts.BinaryName)
 	if err != nil {
 		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error creating request string: %s\n", err)))
 		return 1
@@ -376,13 +386,60 @@ func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *byt
 	return 0
 }
 
-func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.Buffer) int {
+// curlString is like current.CurlString, but the token header runs
+// "<binaryName> print token" instead of "vault print token". It renders the
+// request without its token header rather than editing the output, so a body
+// or header that contains the same text is left alone.
+//
+// TODO - VAULT-51873: Give api.OutputStringError a binary name so this can
+// call CurlString directly, which also keeps the token header in its usual
+// place, and delete TestClientNaming_CurlStringFields.
+// https://hashicorp.atlassian.net/browse/VAULT-51873
+func curlString(current *api.OutputStringError, binaryName string) (string, error) {
+	if binaryName == "" || binaryName == "vault" {
+		return current.CurlString()
+	}
+
+	request := current.Request.WithContext(current.Request.Context())
+	request.Header = request.Header.Clone()
+	var tokenHeaders strings.Builder
+	for key, values := range request.Header {
+		if !strings.EqualFold(key, api.AuthHeaderName) {
+			continue
+		}
+		for range values {
+			fmt.Fprintf(&tokenHeaders, "-H \"%s: $(%s print token)\" ", key, binaryName)
+		}
+		delete(request.Header, key)
+	}
+	if tokenHeaders.Len() == 0 {
+		return current.CurlString()
+	}
+
+	// Build a new error rather than copying current, which may already hold
+	// a cached curl string with the vault placeholder in it. This must copy
+	// every exported field of api.OutputStringError.
+	cs, err := (&api.OutputStringError{
+		Request:       request,
+		TLSSkipVerify: current.TLSSkipVerify,
+		ClientCACert:  current.ClientCACert,
+		ClientCAPath:  current.ClientCAPath,
+		ClientCert:    current.ClientCert,
+		ClientKey:     current.ClientKey,
+	}).CurlString()
+	if err != nil {
+		return "", err
+	}
+	return "curl " + tokenHeaders.String() + strings.TrimPrefix(cs, "curl "), nil
+}
+
+func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.Buffer, previous, current *api.OutputPolicyError) int {
 	if exitCode == 0 {
 		fmt.Fprint(runOpts.Stderr, "Could not generate policy")
 		return 1
 	}
 
-	if api.LastOutputPolicyError == nil {
+	if current == nil || current == previous {
 		if exitCode == 127 {
 			// Usage, just pass it through
 			return exitCode
@@ -392,7 +449,7 @@ func generatePolicy(exitCode int, runOpts *RunOptions, preParsingErrBuf *bytes.B
 		return exitCode
 	}
 
-	hcl, err := api.LastOutputPolicyError.HCLString()
+	hcl, err := current.HCLString()
 	if err != nil {
 		runOpts.Stderr.Write([]byte(fmt.Sprintf("Error assembling policy HCL: %s\n", err)))
 		return 1

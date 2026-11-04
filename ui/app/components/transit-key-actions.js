@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -101,10 +101,17 @@ export default class TransitKeyActions extends Component {
     super(...arguments);
     assert('@key is required for TransitKeyActions components', this.args.key);
 
-    if (this.firstSupportedAction === 'export' || this.args.selectedAction === 'export') {
-      this.props.exportKeyType = this.args.key.exportKeyTypes[0];
-      this.props.exportKeyVersion = this.args.key.validKeyVersions.lastObject;
+    this.props = { ...STARTING_TRANSIT_PROPS, ...this.exportDefaults };
+  }
+
+  get exportDefaults() {
+    if ((this.args.selectedAction || this.firstSupportedAction) !== 'export') {
+      return {};
     }
+    return {
+      exportKeyType: this.args.key.exportKeyTypes[0],
+      exportKeyVersion: this.args.key.validKeyVersions.at(-1),
+    };
   }
 
   get keyIsRSA() {
@@ -113,7 +120,7 @@ export default class TransitKeyActions extends Component {
   }
 
   get firstSupportedAction() {
-    return this.args.key.supportedActions[0];
+    return this.args.key.supportedActions[0]?.name;
   }
 
   handleSuccess(resp, options, action) {
@@ -149,7 +156,7 @@ export default class TransitKeyActions extends Component {
       (obj, key) => ({ ...obj, [key]: this.props[key] }),
       {}
     );
-    this.props = { ...STARTING_TRANSIT_PROPS, ...transferredProps };
+    this.props = { ...STARTING_TRANSIT_PROPS, ...transferredProps, ...this.exportDefaults };
   }
 
   compactData(data) {

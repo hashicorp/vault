@@ -5,6 +5,7 @@ package command
 
 import (
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -81,6 +82,7 @@ func TestInitClientCommands(t *testing.T) {
 		"secrets list",
 		"secrets move",
 		"secrets tune",
+		"ssh",
 		"status",
 		"token",
 		"token capabilities",
@@ -122,5 +124,65 @@ func TestInitClientCommands(t *testing.T) {
 		if bc, ok := cmd.(interface{ Stdin() io.Reader }); ok && name != "agent" && name != "proxy" {
 			require.Same(t, stdin, bc.Stdin(), name)
 		}
+	}
+}
+
+// TestInitClientBinaryCommands checks that commands we leave out get placeholders
+// without changing the shared commands or stdin wiring. It also checks that the
+// supported operator subcommands (AC-1.3) keep their real implementations.
+func TestInitClientBinaryCommands(t *testing.T) {
+	t.Parallel()
+
+	ui := cli.NewMockUi()
+	stdin := strings.NewReader("")
+	opts := &base.RunOptions{Stdin: stdin}
+	shared := InitClientCommands(ui, ui, opts)
+	binary := InitClientBinaryCommands(ui, ui, opts)
+	expectedKeys := make(map[string]bool)
+	for name := range shared {
+		expectedKeys[name] = true
+	}
+	for _, name := range unavailableClientCommands {
+		expectedKeys[name] = true
+	}
+	require.ElementsMatch(t, slices.Collect(maps.Keys(expectedKeys)), slices.Collect(maps.Keys(binary)))
+
+	for name, factory := range binary {
+		cmd, err := factory()
+		require.NoError(t, err, name)
+		require.NotNil(t, cmd, name)
+		if slices.Contains(unavailableClientCommands, name) {
+			require.IsType(t, &UnavailableCommand{}, cmd, name)
+			unavailable := cmd.(*UnavailableCommand)
+			require.Equal(t, name, unavailable.name)
+			require.Same(t, ui, unavailable.ui, name)
+			next, nextErr := factory()
+			require.NoError(t, nextErr, name)
+			require.NotSame(t, cmd, next, name)
+			require.Equal(t, "Not included in this binary", cmd.Synopsis(), name)
+			require.Contains(t, cmd.Help(), `"`+name+`"`, name)
+			require.Empty(t, ui.OutputWriter.String(), "help must not write to the UI")
+			require.Empty(t, ui.ErrorWriter.String(), "help must not write to the UI")
+			continue
+		}
+		sharedCmd, sharedErr := shared[name]()
+		require.NoError(t, sharedErr, name)
+		require.IsType(t, sharedCmd, cmd, name)
+		if bc, ok := cmd.(interface{ Stdin() io.Reader }); ok && name != "agent" && name != "proxy" {
+			require.Same(t, stdin, bc.Stdin(), name)
+		}
+	}
+
+	for name, want := range map[string]cli.Command{
+		"operator":            &OperatorCommand{},
+		"operator key-status": &OperatorKeyStatusCommand{},
+		"operator rotate":     &OperatorRotateCommand{},
+		"operator unseal":     &OperatorUnsealCommand{},
+	} {
+		factory, ok := binary[name]
+		require.True(t, ok, name)
+		cmd, err := factory()
+		require.NoError(t, err, name)
+		require.IsType(t, want, cmd, name)
 	}
 }

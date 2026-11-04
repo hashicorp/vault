@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package event
@@ -6,6 +6,7 @@ package event
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -166,6 +167,24 @@ func (s *FileSink) Reopen() error {
 	return s.open()
 }
 
+// Close releases the file descriptor held by the sink
+func (s *FileSink) Close() error {
+	if err := s.acquirePermit(context.Background()); err != nil {
+		return err
+	}
+	defer s.releasePermit()
+
+	file := s.file
+	s.file = nil
+	if file == nil {
+		return nil
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("unable to close file for sink %q: %w", s.path, err)
+	}
+	return nil
+}
+
 // Type describes the type of this node (sink).
 func (s *FileSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
@@ -198,11 +217,16 @@ func (s *FileSink) open() error {
 		if s.fileMode != 0 {
 			err = os.Chmod(s.path, s.fileMode)
 			if err != nil {
-				return fmt.Errorf("unable to change file permissions '%v' for sink %q: %w", s.fileMode, s.path, err)
+				chmodErr := fmt.Errorf("unable to change file permissions '%v' for sink %q: %w", s.fileMode, s.path, err)
+				closeErr := s.file.Close()
+				s.file = nil
+				if closeErr != nil {
+					return errors.Join(chmodErr, fmt.Errorf("unable to close file for sink %q: %w", s.path, closeErr))
+				}
+				return chmodErr
 			}
 		}
 	}
-
 	return nil
 }
 

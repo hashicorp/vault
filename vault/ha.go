@@ -562,6 +562,13 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			continue
 		}
 
+		if c.auditConfigFailed.Load() {
+			c.logger.Warn("audit device configuration failed, skipping HA lock acquisition to prevent leadership flapping")
+			c.heldHALock = nil
+			lock.Unlock()
+			continue
+		}
+
 		// If the backend is a FencingHABackend, register the lock with it so it can
 		// correctly fence all writes from now on  (i.e. assert that we still hold
 		// the lock atomically with each write).

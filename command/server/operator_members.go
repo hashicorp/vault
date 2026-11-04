@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package command
@@ -28,11 +28,11 @@ func (c *OperatorMembersCommand) Synopsis() string {
 
 func (c *OperatorMembersCommand) Help() string {
 	helpText := `
-Usage: vault operator members
+Usage: ` + c.BinaryName + ` operator members
 
   Provides the details of all the nodes in the cluster.
 
-	  $ vault operator members
+	  $ ` + c.BinaryName + ` operator members
 
 ` + c.Flags().Help()
 

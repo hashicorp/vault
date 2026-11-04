@@ -8,14 +8,20 @@ import FormField from 'vault/utils/forms/field';
 import type { TransitCreateKeyRequest } from '@hashicorp/vault-client-typescript';
 import { Validations } from 'vault/vault/app-types';
 import { durationToSeconds } from 'core/utils/duration-utils';
+import TransitKeyResource, { TransitKeyData } from 'vault/resources/transit/key';
 
-type TransitKeyData = TransitCreateKeyRequest & {
-  backend?: string;
-  id?: string;
-  name?: string;
-};
+type TransitKeyFormData = Omit<TransitCreateKeyRequest, 'auto_rotate_period'> &
+  Partial<Omit<TransitKeyData, 'type'>>;
 
-export default class TransitKeyForm extends Form<TransitKeyData> {
+export default class TransitKeyForm extends Form<TransitKeyFormData> {
+  get keyVersions() {
+    return new TransitKeyResource({ backend: '', id: '', ...this.data }).keyVersions;
+  }
+
+  get encryptionKeyVersions() {
+    return new TransitKeyResource({ backend: '', id: '', ...this.data }).encryptionKeyVersions;
+  }
+
   // these set funcs just exist on edit
   set convergentEncryptionValue(val: boolean | undefined) {
     if (val === true) {
@@ -105,13 +111,12 @@ export default class TransitKeyForm extends Form<TransitKeyData> {
     name: [{ type: 'presence', message: 'Name is required' }],
     auto_rotate_period: [
       {
-        validator(data: TransitKeyData) {
+        validator(data: TransitKeyFormData) {
           const { auto_rotate_period } = data;
           if (auto_rotate_period === undefined) {
             return true;
           } else {
-            const duration = durationToSeconds(auto_rotate_period);
-            // regardless of generateSigningKey, if one key is set they both need to be set.
+            const duration = durationToSeconds(String(auto_rotate_period));
             return duration === 0 || duration >= 3600;
           }
         },

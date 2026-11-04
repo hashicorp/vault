@@ -208,6 +208,9 @@ func (c *forwardingClient) startHeartbeat() {
 		}
 		var echoDuration time.Duration
 		var serverTimeDelta int64
+		// heldBackForAudit tracks whether we are currently advertising non-voter
+		// because of audit failure
+		var heldBackForAudit bool
 		tick := func() {
 			labels := make([]metrics.Label, 0, 1)
 			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
@@ -227,6 +230,23 @@ func (c *forwardingClient) startHeartbeat() {
 				req.RaftNodeID = raftBackend.NodeID()
 				req.RaftTerm = raftBackend.Term()
 				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
+
+				// Override to "non-voter" when the node is not ready to serve requests
+				auditFailed := c.core.auditConfigFailed.Load()
+				if req.RaftDesiredSuffrage == "voter" && auditFailed {
+					req.RaftDesiredSuffrage = "non-voter"
+				}
+
+				// Only log on state transitions between audit failure and recovery
+				switch {
+				case auditFailed && !heldBackForAudit:
+					c.core.logger.Warn("audit devices failed to initialize, signal non-voter so autopilot will not promote this node until audit is fixed")
+					heldBackForAudit = true
+				case !auditFailed && heldBackForAudit:
+					c.core.logger.Info("audit devices successfully initialized, resuming voter signal so autopilot can promote this node")
+					heldBackForAudit = false
+				}
+
 				req.RaftRedundancyZone = raftBackend.RedundancyZone()
 				req.RaftUpgradeVersion = raftBackend.UpgradeVersion()
 				labels = append(labels, metrics.Label{Name: "peer_id", Value: raftBackend.NodeID()})
