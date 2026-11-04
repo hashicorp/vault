@@ -95,6 +95,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		mountLister:                     core,
 		syntheticAliasAccessorValidator: core,
 		billingCounter:                  core,
+		cohortChecker:                   core,
 		mfaBackend:                      core.loginMFABackend,
 		aliasLocks:                      locksutil.CreateLocks(),
 		activationManager:               core.FeatureActivationFlags,

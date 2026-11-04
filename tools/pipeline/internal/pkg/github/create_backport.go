@@ -91,6 +91,9 @@ type CreateBackportReq struct {
 	// when one or more backport attempts fail. E.g. "backport-failed". When
 	// empty, no label is applied.
 	BackportFailedLabel string
+
+	// WorkflowURL is the URL of the GitHub Actions workflow run triggering the backport.
+	WorkflowURL string
 }
 
 // NewCreateBackportReqOpt is a functional option to set fields when calling
@@ -746,7 +749,8 @@ func (r *CreateBackportReq) backportRef(
 	prBody, err := renderEmbeddedTemplate(templateName, struct {
 		OriginPullRequest *libgithub.PullRequest
 		Attempt           *CreateBackportAttempt
-	}{pr, res})
+		WorkflowURL       string
+	}{pr, res, r.WorkflowURL})
 	if err != nil {
 		res.Error = fmt.Errorf("creating backport pull request body %w", err)
 		return res

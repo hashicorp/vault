@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -303,7 +304,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 			validatedPolicies = append(validatedPolicies, canonicalPolicy)
 		}
 		dedupedPolicies := strutil.RemoveDuplicatesStable(validatedPolicies, false)
-		if !strutil.EquivalentSlices(dedupedPolicies, group.Policies) {
+		if !equivalentStringSets(dedupedPolicies, group.Policies) {
 			modifiedFields = append(modifiedFields, "policies")
 		}
 		group.Policies = dedupedPolicies
@@ -381,7 +382,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		if group.Type == groupTypeExternal {
 			return logical.ErrorResponse("member entities can't be set manually for external groups"), nil
 		}
-		if !strutil.EquivalentSlices(group.MemberEntityIDs, memberEntityIDsRaw.([]string)) {
+		if !equivalentStringSets(group.MemberEntityIDs, memberEntityIDsRaw.([]string)) {
 			modifiedFields = append(modifiedFields, "member_entity_ids")
 		}
 		group.MemberEntityIDs = memberEntityIDsRaw.([]string)
@@ -395,6 +396,16 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		}
 		memberGroupIDs = memberGroupIDsRaw.([]string)
 		modifiedFields = append(modifiedFields, "member_group_ids")
+	}
+
+	if err := i.checkCohortGroupUpdate(ctx, group, modifiedFields, memberGroupIDs); err != nil {
+		// Return rejections as error responses so clients see the plain message
+		// instead of core's multierror wrapping.
+		var rejection logical.HTTPCodedError
+		if errors.As(err, &rejection) {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		return nil, err
 	}
 
 	// Build the list of fields being modified by this request.
@@ -422,6 +433,15 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 	return &logical.Response{
 		Data: respData,
 	}, nil
+}
+
+// equivalentStringSets reports whether a and b contain the same strings,
+// treating nil and empty as equal since stored groups don't distinguish them.
+func equivalentStringSets(a, b []string) bool {
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	return strutil.EquivalentSlices(a, b)
 }
 
 func (i *IdentityStore) pathGroupIDRead() framework.OperationFunc {
@@ -489,6 +509,13 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	respData["namespace_id"] = group.NamespaceID
 
 	respData["scim_client_id"] = group.ScimClientID
+	if owner := group.GetAgentRegistryCohort(); owner != nil {
+		respData["agent_registry_cohort"] = map[string]interface{}{
+			"provider_type": owner.ProviderType,
+			"provider_name": owner.ProviderName,
+			"cohort_name":   owner.CohortName,
+		}
+	}
 
 	aliasMap := map[string]interface{}{}
 	if group.Alias != nil {
@@ -588,6 +615,16 @@ func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string,
 	scimID := scimClientIDFromContext(ctx)
 	if scimID != group.ScimClientID {
 		return logical.ErrorResponse("SCIM-managed resources must be modified through SCIM"), logical.ErrPermissionDenied
+	}
+
+	if err := i.checkCohortGroupDelete(ctx, group); err != nil {
+		// Return rejections as error responses so clients see the plain message
+		// instead of core's multierror wrapping.
+		var rejection logical.HTTPCodedError
+		if errors.As(err, &rejection) {
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		}
+		return nil, err
 	}
 
 	// Delete group alias from memdb
