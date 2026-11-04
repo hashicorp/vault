@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	awsutilint "github.com/hashicorp/vault/internal/awsutil/v2"
+	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 )
@@ -565,6 +566,94 @@ func TestBackend_pathLogin_IAMHeaders(t *testing.T) {
 				t.Errorf("expected metadata (%#v) to match (%#v)", expectedAuthMetadata, resp.Auth.Alias.Metadata)
 			}
 		})
+	}
+}
+
+// TestBackend_pathLoginRenew_IAMWithoutAuthTypeMetadata verifies that an IAM
+// token can still be renewed when auth_type is left out of iam_metadata.
+func TestBackend_pathLoginRenew_IAMWithoutAuthTypeMetadata(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	config := logical.TestBackendConfig()
+	config.StorageView = storage
+	config.System = &testSystemView{}
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ts := setupIAMTestServer()
+	defer ts.Close()
+
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/client",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"iam_server_id_header_value": testVaultHeaderValue,
+			"sts_endpoint":               ts.URL,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/identity",
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"iam_alias":    "role_id",
+			"iam_metadata": []string{"account_id"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	roleEntry := &awsRoleEntry{
+		RoleID:   "foo",
+		Version:  currentRoleStorageVersion,
+		AuthType: iamAuthType,
+	}
+	if err := b.setRole(context.Background(), storage, testValidRoleName, roleEntry); err != nil {
+		t.Fatalf("failed to set entry: %s", err)
+	}
+
+	loginData, err := defaultLoginData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation:  logical.UpdateOperation,
+		Path:       "login",
+		Storage:    storage,
+		Data:       loginData,
+		Connection: &logical.Connection{},
+	})
+	if err != nil || resp == nil || resp.IsError() {
+		t.Fatalf("unexpected failed login: resp: %#v, err: %v", resp, err)
+	}
+	if _, ok := resp.Auth.Metadata["auth_type"]; ok {
+		t.Fatalf("auth_type should not be in token metadata: %#v", resp.Auth.Metadata)
+	}
+
+	renewReq := generateRenewRequest(storage, resp.Auth)
+	emptyLoginFd := &framework.FieldData{
+		Raw:    map[string]interface{}{},
+		Schema: b.pathLogin().Fields,
+	}
+	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
+	if err != nil {
+		t.Fatalf("unexpected renew error: %v", err)
+	}
+	if resp == nil || resp.IsError() {
+		t.Fatalf("unexpected renew response: %#v", resp)
 	}
 }
 
