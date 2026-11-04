@@ -140,6 +140,8 @@ export interface TtlEvent {
   seconds: number;
   timeString: string;
   goSafeTimeString: string;
+  /** False when an enabled value is longer than Vault supports. */
+  isValid: boolean;
 }
 
 export interface EngineOwner extends Owner {

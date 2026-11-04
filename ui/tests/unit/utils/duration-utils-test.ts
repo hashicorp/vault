@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { MAX_DURATION_SECONDS, isDurationOverMax } from 'core/utils/duration-utils';
+import { MAX_DURATION_SECONDS, isDurationOverMax, maxDurationMessage } from 'core/utils/duration-utils';
 
 module('Unit | Util | duration-utils', function () {
   test('MAX_DURATION_SECONDS matches the largest duration Vault accepts', function (assert) {
@@ -53,6 +53,28 @@ module('Unit | Util | duration-utils', function () {
   test('isDurationOverMax leaves values it cannot parse to the API', function (assert) {
     ['abc', 'off', '5x'].forEach((value) => {
       assert.false(isDurationOverMax(value), `"${value}" is not reported as over the max`);
+    });
+  });
+
+  test('isDurationOverMax accepts a custom maximum', function (assert) {
+    assert.false(isDurationOverMax('2h', 7200), 'a value equal to the custom max is allowed');
+    assert.true(isDurationOverMax('121m', 7200), 'a value over the custom max is rejected');
+    assert.false(isDurationOverMax('106751d'), 'the default max still applies when none is passed');
+  });
+
+  test('maxDurationMessage derives the limit from the maximum it is given', function (assert) {
+    assert.strictEqual(
+      maxDurationMessage('TTL'),
+      'TTL is too large. Maximum allowed value is 106,751 days.',
+      'default message is built from MAX_DURATION_SECONDS'
+    );
+    [
+      [7200, 'TTL is too large. Maximum allowed value is 2 hours.'],
+      [86400, 'TTL is too large. Maximum allowed value is 1 day.'],
+      [90, 'TTL is too large. Maximum allowed value is 1 minute.'],
+      [45, 'TTL is too large. Maximum allowed value is 45 seconds.'],
+    ].forEach(([max, expected]) => {
+      assert.strictEqual(maxDurationMessage('TTL', max as number), expected, `formats a ${max}s maximum`);
     });
   });
 });

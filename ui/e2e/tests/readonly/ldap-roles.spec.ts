@@ -4,7 +4,7 @@
  */
 
 import { expect } from '@playwright/test';
-import { test } from '../../fixtures/demo';
+import { holdForVideo, test } from '../../fixtures/demo';
 import { ensureMount, rootApi } from '../../fixtures/root-api';
 import { isVideoEnabled } from '../../video-config';
 
@@ -59,7 +59,7 @@ test('read-only user is not offered the Manage menu on LDAP role details', async
       if (getCredentials) {
         await page.mouse.move(getCredentials.x - 70, getCredentials.y + getCredentials.height / 2);
       }
-      if (isVideoEnabled) await page.waitForTimeout(1_500);
+      await holdForVideo(page);
       await expect(page.getByRole('button', { name: 'Manage' })).toHaveCount(0);
 
       await page.getByRole('link', { name: 'Roles' }).click();

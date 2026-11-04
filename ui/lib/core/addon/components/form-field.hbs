@@ -519,6 +519,7 @@
             @initialEnabled={{if (eq initialValue "0s") false initialValue}}
             @hideToggle={{@attr.options.hideToggle}}
             @emptyMeansZero={{@attr.options.emptyMeansZero}}
+            @validateMax={{this.showTtlMaxError}}
           />
         {{/let}}
       </div>
