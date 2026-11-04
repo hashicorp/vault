@@ -112,6 +112,40 @@ module('Integration | Component | control group', function (hooks) {
     assert.dom(CONTROL_GROUP.successComponent).exists('renders control group success');
   });
 
+  test('entity links render only for entities the user can read', async function (assert) {
+    const { model, authData } = setup(
+      {
+        authorizations: [
+          { id: 'manager-1', name: 'manager 1' },
+          { id: 'manager-2', name: 'manager 2' },
+        ],
+      },
+      { entityId: 'manager' }
+    );
+    this.set('model', model);
+    this.set('auth.authData', authData);
+    this.set('canReadEntity', { requestor: true, 'manager-1': true, 'manager-2': false });
+    await render(hbs`<ControlGroup @model={{this.model}} @canReadEntity={{this.canReadEntity}} />`);
+
+    assert.dom(`${CONTROL_GROUP.requestorText} a`).hasText('entity8509', 'requestor links to entity');
+    assert.dom(`${CONTROL_GROUP.authorizations} a`).exists({ count: 1 }, 'only readable approver is linked');
+    assert.dom(`${CONTROL_GROUP.authorizations} a`).hasText('manager 1');
+  });
+
+  test('entity links do not render without read capability', async function (assert) {
+    const { model, authData } = setup(
+      { authorizations: [{ id: 'manager-1', name: 'manager 1' }] },
+      { entityId: 'manager' }
+    );
+    this.set('model', model);
+    this.set('auth.authData', authData);
+    this.set('canReadEntity', { requestor: false, 'manager-1': false });
+    await render(hbs`<ControlGroup @model={{this.model}} @canReadEntity={{this.canReadEntity}} />`);
+
+    assert.dom(`${CONTROL_GROUP.requestorText} a`).doesNotExist();
+    assert.dom(`${CONTROL_GROUP.authorizations} a`).doesNotExist();
+  });
+
   test('authorizer rendering', async function (assert) {
     const { model, authData } = setup({ canAuthorize: true }, { entityId: 'manager' });
 

@@ -3,15 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import ApplicationSerializer from './application';
 
-export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
-  attrs: {
-    requestEntity: { embedded: 'always' },
-    authorizations: { embedded: 'always' },
-  },
-
+export default ApplicationSerializer.extend({
   normalizeResponse(store, primaryModelClass, payload) {
     const entity = payload?.data?.request_entity;
     if (Array.isArray(payload.data.authorizations)) {
