@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package cache
@@ -25,6 +25,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const restrictiveCSP = "sandbox; default-src 'none'; base-uri 'none'; form-action 'none'"
+
 func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inmemSink sink.Sink, forceAutoAuthToken bool, useAutoAuthToken bool, authInProgress *atomic.Bool, invalidTokenErrCh chan error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger.Info("received request", "method", r.Method, "path", r.URL.Path)
@@ -48,6 +50,7 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 		reqBody, err := io.ReadAll(r.Body)
 		if err != nil {
 			logger.Error("failed to read request body")
+			setProxySecurityHeaders(w, nil)
 			logical.RespondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
 			return
 		}
@@ -66,9 +69,7 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 			// If this is an api.Response error, don't wrap the response.
 			if resp != nil && resp.Response.Error() != nil {
 				responseErrMessage := resp.Response.Error()
-				copyHeader(w.Header(), resp.Response.Header)
-				w.WriteHeader(resp.Response.StatusCode)
-				io.Copy(w, resp.Response.Body)
+				writeProxyResponse(w, resp, logger)
 				metrics.IncrCounter([]string{"agent", "proxy", "client_error"}, 1)
 				// Re-trigger auto auth if the token is the same as the auto auth token
 				if resp.Response.StatusCode == 403 && strings.Contains(responseErrMessage.Error(), logical.ErrInvalidToken.Error()) &&
@@ -83,17 +84,20 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 				}
 			} else {
 				metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
+				setProxySecurityHeaders(w, nil)
 				logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			}
 			return
 		} else if resp == nil {
 			metrics.IncrCounter([]string{"agent", "proxy", "error"}, 1)
+			setProxySecurityHeaders(w, nil)
 			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to get the response: %w", err))
 			return
 		}
 
 		err = sanitizeAutoAuthTokenResponse(ctx, logger, inmemSink, req, resp)
 		if err != nil {
+			setProxySecurityHeaders(w, nil)
 			logical.RespondError(w, http.StatusInternalServerError, fmt.Errorf("failed to process token lookup response: %w", err))
 			return
 		}
@@ -109,13 +113,18 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 			}
 		}
 
-		// Set headers
-		setHeaders(w, resp)
-
-		// Set response body
-		io.Copy(w, resp.Response.Body)
-		return
+		writeProxyResponse(w, resp, logger)
 	})
+}
+
+// writeProxyResponse writes the response from the upstream server to the client
+func writeProxyResponse(w http.ResponseWriter, resp *SendResponse, logger hclog.Logger) {
+	setHeaders(w, resp)
+	if resp.Response.Body != nil {
+		if _, err := io.Copy(w, resp.Response.Body); err != nil {
+			logger.Error("failed to write proxy response", "status", resp.Response.StatusCode)
+		}
+	}
 }
 
 // setHeaders is a helper that sets the header values based on SendResponse. It
@@ -124,6 +133,9 @@ func ProxyHandler(ctx context.Context, logger hclog.Logger, proxier Proxier, inm
 func setHeaders(w http.ResponseWriter, resp *SendResponse) {
 	// Set header values
 	copyHeader(w.Header(), resp.Response.Header)
+
+	setProxySecurityHeaders(w, resp)
+
 	if resp.CacheMeta != nil {
 		xCacheVal := "MISS"
 
@@ -143,6 +155,20 @@ func setHeaders(w http.ResponseWriter, resp *SendResponse) {
 
 	// Set status code
 	w.WriteHeader(resp.Response.StatusCode)
+}
+
+// setProxySecurityHeaders sets the security headers for the response
+func setProxySecurityHeaders(w http.ResponseWriter, resp *SendResponse) {
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+
+	requestPath := ""
+	if resp != nil && resp.Response != nil && resp.Response.Request != nil && resp.Response.Request.URL != nil {
+		requestPath = resp.Response.Request.URL.Path
+	}
+	isUI := requestPath == "/ui" || strings.HasPrefix(requestPath, "/ui/")
+	if !isUI {
+		w.Header().Set("Content-Security-Policy", restrictiveCSP)
+	}
 }
 
 // sanitizeAutoAuthTokenResponse checks if the request was a lookup or renew
