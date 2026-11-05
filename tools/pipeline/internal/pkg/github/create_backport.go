@@ -756,14 +756,10 @@ func (r *CreateBackportReq) backportRef(
 		return res
 	}
 	limitedPRBody := limitCharacters(prBody)
-	res.PullRequest, _, err = github.PullRequests.Create(
-		ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
-			Title:    &prTitle,
-			Head:     &branchName,
-			HeadRepo: &r.Repo,
-			Base:     &ref,
-			Body:     &limitedPRBody,
-		},
+
+	// Open as a draft if there was an error, or else proceed normally
+	res.PullRequest, err = r.createBackportPullRequest(
+		ctx, github, prTitle, branchName, ref, limitedPRBody, res.Error != nil,
 	)
 	if err != nil {
 		res.Error = fmt.Errorf("creating backport pull request %w", err)
@@ -815,6 +811,51 @@ func (r *CreateBackportReq) backportRef(
 	}
 
 	return res
+}
+
+// createBackportPullRequest opens the backport pull request. When draft is
+// true the pull request is opened as a draft.
+func (r *CreateBackportReq) createBackportPullRequest(
+	ctx context.Context,
+	github *libgithub.Client,
+	title string,
+	head string,
+	base string,
+	body string,
+	draft bool,
+) (*libgithub.PullRequest, error) {
+	pr, _, err := github.PullRequests.Create(ctx, r.Owner, r.Repo, &libgithub.NewPullRequest{
+		Title:    &title,
+		Head:     &head,
+		HeadRepo: &r.Repo,
+		Base:     &base,
+		Body:     &body,
+		Draft:    &draft,
+	})
+
+	return pr, err
+}
+
+// backportReviewers returns the logins to request reviews from on a backport
+// pull request. We usually request the author of the original pull request.
+// When the original pull request was opened by the same account that opens the
+// backport, e.g. automated plugin updates, GitHub won't allow that account to
+// review its own pull request. In that case we request the people the backport
+// is assigned to instead: the original assignee and whoever merged it.
+func backportReviewers(pr *libgithub.PullRequest, backportAuthor string) []string {
+	author := pr.GetUser().GetLogin()
+	if author != backportAuthor {
+		return []string{author}
+	}
+
+	reviewers := []string{}
+	for _, login := range []string{pr.GetAssignee().GetLogin(), pr.GetMergedBy().GetLogin()} {
+		if login != "" && login != backportAuthor && !slices.Contains(reviewers, login) {
+			reviewers = append(reviewers, login)
+		}
+	}
+
+	return reviewers
 }
 
 // backportCECommitWithPatch backports a commit to the currently checked out

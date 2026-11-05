@@ -1,6 +1,8 @@
 ## Backport Enterprise PR #{{ .OriginPullRequest.Number }}{{ if .Attempt.TargetRef }} into {{ .Attempt.TargetRef }} {{ end }}
 
 {{ if .Attempt.Error }}
+**This pull request was opened as a draft because the automatic backport failed.**
+
 :rotating_light:
 >**Warning** automatic backport of commits failed. If the first commit failed,
 you will see a blank no-op commit below. If at least one commit succeeded, you
@@ -29,6 +31,7 @@ To continue the backport process, please follow the instructions below:
   1. Remove any CE only files if the backport target branch is to ce
   1. Push the changes to this branch
 1. Update the PR description to reflect the new commit(s)
+1. Mark this pull request as ready for review. It was opened as a draft so that the no-op commit is not approved by mistake
 
 {{ end }}
 
