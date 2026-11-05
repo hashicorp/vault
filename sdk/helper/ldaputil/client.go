@@ -37,7 +37,7 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 	for _, uut := range urls {
 		u, err := url.Parse(uut)
 		if err != nil {
-			retErr = multierror.Append(retErr, fmt.Errorf(fmt.Sprintf("error parsing url %q: {{err}}", uut), err))
+			retErr = multierror.Append(retErr, fmt.Errorf("error parsing url %q: %w", uut, err))
 			continue
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -104,7 +104,7 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			retErr = nil
 			break
 		}
-		retErr = multierror.Append(retErr, fmt.Errorf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
+		retErr = multierror.Append(retErr, fmt.Errorf("error connecting to host %q: %w", uut, err))
 	}
 	if retErr != nil {
 		return nil, retErr
@@ -453,21 +453,21 @@ func sidBytesToString(b []byte) (string, error) {
 	var identifierAuthorityParts [3]uint16
 
 	if err := binary.Read(reader, binary.LittleEndian, &revision); err != nil {
-		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading Revision: {{err}}", b), err)
+		return "", fmt.Errorf("SID %#v convert failed reading Revision: %w", b, err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &subAuthorityCount); err != nil {
-		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading SubAuthorityCount: {{err}}", b), err)
+		return "", fmt.Errorf("SID %#v convert failed reading SubAuthorityCount: %w", b, err)
 	}
 
 	if err := binary.Read(reader, binary.BigEndian, &identifierAuthorityParts); err != nil {
-		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading IdentifierAuthority: {{err}}", b), err)
+		return "", fmt.Errorf("SID %#v convert failed reading IdentifierAuthority: %w", b, err)
 	}
 	identifierAuthority := (uint64(identifierAuthorityParts[0]) << 32) + (uint64(identifierAuthorityParts[1]) << 16) + uint64(identifierAuthorityParts[2])
 
 	subAuthority := make([]uint32, subAuthorityCount)
 	if err := binary.Read(reader, binary.LittleEndian, &subAuthority); err != nil {
-		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading SubAuthority: {{err}}", b), err)
+		return "", fmt.Errorf("SID %#v convert failed reading SubAuthority: %w", b, err)
 	}
 
 	result := fmt.Sprintf("S-%d-%d", revision, identifierAuthority)
