@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { expect, test } from '@playwright/test';
+import { expect, test } from 'e2e/fixtures/demo';
 
 test('mfa workflow', async ({ page }) => {
   await page.goto('dashboard');

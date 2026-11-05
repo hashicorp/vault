@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -12,6 +12,7 @@ import type { MfaWriteLoginEnforcementRequest } from '@hashicorp/vault-client-ty
 
 type MfaLoginEnforcementFormData = MfaWriteLoginEnforcementRequest & {
   name: string;
+  mfa_methods?: Array<string>;
 };
 
 export default class MfaLoginEnforcementForm extends Form<MfaLoginEnforcementFormData> {
