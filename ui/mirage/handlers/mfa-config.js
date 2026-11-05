@@ -6,6 +6,7 @@
 import { Response } from 'miragejs';
 
 export default function (server) {
+  server.namespace = 'v1';
   const methods = ['totp', 'duo', 'okta', 'pingid'];
   const required = {
     totp: ['issuer'],
@@ -38,19 +39,38 @@ export default function (server) {
     let records = [];
     if (isMethod) {
       methods.forEach((method) => {
-        records = [...records, ...schema.db[dbKeyFromType(method)].where({})];
+        const col = schema.db[dbKeyFromType(method)];
+        if (col) {
+          records = [...records, ...col.where({})];
+        }
       });
     } else {
-      records = schema.db.mfaLoginEnforcements.where({});
+      const col = schema.db.mfaLoginEnforcements;
+      if (col) {
+        records = col.where({});
+      }
     }
     // seed the db with a few records if none exist
     if (!records.length) {
       if (isMethod) {
         methods.forEach((type) => {
-          records.push(server.create(`mfa-${type}-method`));
+          server.create(`mfa-${type}-method`, {
+            id: (Math.random() + 1).toString(36).substring(2),
+          });
+        });
+        records = [];
+        methods.forEach((method) => {
+          const col = schema.db[dbKeyFromType(method)];
+          if (col) {
+            records = [...records, ...col.where({})];
+          }
         });
       } else {
-        records = server.createList('mfa-login-enforcement', 4);
+        server.createList('mfa-login-enforcement', 4);
+        const col = schema.db.mfaLoginEnforcements;
+        if (col) {
+          records = col.where({});
+        }
       }
     }
     const dataKey = isMethod ? 'id' : 'name';
@@ -62,8 +82,10 @@ export default function (server) {
           record.id = key;
           record.name = key;
         }
-        resp.key_info[key] = record;
-        resp.keys.push(key);
+        if (key) {
+          resp.key_info[key] = record;
+          resp.keys.push(key);
+        }
         return resp;
       },
       {
@@ -78,13 +100,19 @@ export default function (server) {
   server.get('/identity/mfa/method/', (schema) => {
     return generateListResponse(schema, true);
   });
+  server.get('/identity/mfa/method', (schema) => {
+    return generateListResponse(schema, true);
+  });
   // fetch method by id
   server.get('/identity/mfa/method/:id', (schema, { params: { id } }) => {
     let record;
     for (const method of methods) {
-      record = schema.db[dbKeyFromType(method)].find(id);
-      if (record) {
-        break;
+      const col = schema.db[dbKeyFromType(method)];
+      if (col) {
+        record = col.find(id);
+        if (record) {
+          break;
+        }
       }
     }
     // inconvenient when testing edit route to return a 404 on refresh since mirage memory is cleared
@@ -92,7 +120,10 @@ export default function (server) {
     const shouldError = false;
     // create a new record so data is always returned
     if (!record && !shouldError) {
-      return { data: server.create('mfa-totp-method') };
+      const model = server.create('mfa-totp-method', {
+        id: (Math.random() + 1).toString(36).substring(2),
+      });
+      return { data: schema.db.mfaTotpMethods.find(model.id) };
     }
     return !record ? new Response(404, {}, { errors: [] }) : { data: record };
   });
@@ -100,7 +131,8 @@ export default function (server) {
   server.post('/identity/mfa/method/:type', (schema, { params: { type }, requestBody }) => {
     const data = JSON.parse(requestBody);
     return validate(type, data, () => {
-      const record = server.create(`mfa-${type}-method`, data);
+      const id = data.id || (Math.random() + 1).toString(36).substring(2);
+      const record = server.create(`mfa-${type}-method`, { ...data, id });
       return { data: { method_id: record.id } };
     });
   });
@@ -120,6 +152,9 @@ export default function (server) {
     });
   });
   // list enforcements
+  server.get('/identity/mfa/login-enforcement/', (schema) => {
+    return generateListResponse(schema);
+  });
   server.get('/identity/mfa/login-enforcement', (schema) => {
     return generateListResponse(schema);
   });
@@ -131,7 +166,8 @@ export default function (server) {
     const shouldError = false;
     // create a new record so data is always returned
     if (!record && !shouldError) {
-      return { data: server.create('mfa-login-enforcement', { name }) };
+      const model = server.create('mfa-login-enforcement', { name });
+      return { data: schema.db.mfaLoginEnforcements.find(model.id) };
     }
     return !record ? new Response(404, {}, { errors: [] }) : { data: record };
   });
@@ -181,33 +217,41 @@ export default function (server) {
     return {};
   });
   // endpoints for target selection
-  server.get('/identity/group/id', () => ({
-    data: {
+  const groupListHandler = () => {
+    const data = {
       key_info: { '34db6b52-591e-bc22-8af0-4add5e167326': { name: 'test-group' } },
       keys: ['34db6b52-591e-bc22-8af0-4add5e167326'],
-    },
-  }));
+    };
+    return { data, ...data };
+  };
+  server.get('/identity/group/id', groupListHandler);
+  server.get('/identity/group/id/', groupListHandler);
   server.get('/identity/group/id/:id', () => ({
     data: {
       id: '34db6b52-591e-bc22-8af0-4add5e167326',
       name: 'test-group',
     },
   }));
-  server.get('/identity/entity/id', () => ({
-    data: {
+  const entityListHandler = () => {
+    const data = {
       key_info: { 'f831667b-7392-7a1c-c0fc-33d48cb1c57d': { name: 'test-entity' } },
       keys: ['f831667b-7392-7a1c-c0fc-33d48cb1c57d'],
-    },
-  }));
+    };
+    return { data, ...data };
+  };
+  server.get('/identity/entity/id', entityListHandler);
+  server.get('/identity/entity/id/', entityListHandler);
   server.get('/identity/entity/id/:id', () => ({
     data: {
       id: 'f831667b-7392-7a1c-c0fc-33d48cb1c57d',
       name: 'test-entity',
     },
   }));
-  server.get('/sys/auth', () => ({
+  const authHandler = () => ({
     data: {
       'userpass/': { accessor: 'auth_userpass_bb95c2b1', type: 'userpass' },
     },
-  }));
+  });
+  server.get('/sys/auth', authHandler);
+  server.get('/sys/auth/', authHandler);
 }

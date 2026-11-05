@@ -6,6 +6,7 @@
 import { Factory } from 'miragejs';
 
 export default Factory.extend({
+  id: () => (Math.random() + 1).toString(36).substring(2),
   algorithm: 'SHA1',
   digits: 6,
   issuer: 'Vault',

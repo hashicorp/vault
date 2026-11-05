@@ -292,10 +292,15 @@ export default class ApiService extends Service {
     }
   );
 
-  // accepts a list response as { key_info, keys } and returns a flat array of the key_info datum
+  // accepts a list response as { key_info, keys } (or { data: { key_info, keys } }) and returns a flat array of the key_info datum
   // to preserve the keys (unique identifiers) the value will be set on the datum as the provided uuidKey or id
   keyInfoToArray<T = Record<string, unknown>>(response: unknown = {}, uuidKey = 'id'): T[] {
-    const { key_info, keys } = response as { key_info?: Record<string, unknown>; keys?: string[] };
+    const raw =
+      (response as { data?: { key_info?: Record<string, unknown>; keys?: string[] } })?.data?.key_info !==
+      undefined
+        ? (response as { data: { key_info?: Record<string, unknown>; keys?: string[] } }).data
+        : response;
+    const { key_info, keys } = raw as { key_info?: Record<string, unknown>; keys?: string[] };
     if (!key_info || !keys) {
       return [];
     }

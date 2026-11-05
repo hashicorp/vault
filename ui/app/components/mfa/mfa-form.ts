@@ -15,7 +15,7 @@ import errorMessage from 'vault/utils/error-message';
 import MfaConstraint from 'vault/resources/mfa/constraint';
 
 import type AuthService from 'vault/vault/services/auth';
-import type Store from '@ember-data/store';
+import type ApiService from 'vault/services/api';
 import type VersionService from 'vault/services/version';
 import type { AuthSuccessResponse } from 'vault/vault/services/auth';
 import type { Task } from 'ember-concurrency';
@@ -47,7 +47,7 @@ interface Args {
 
 export default class MfaForm extends Component<Args> {
   @service declare readonly auth: AuthService;
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
   @service declare readonly version: VersionService;
 
   @tracked constraints: MfaConstraint[] = [];
@@ -148,13 +148,13 @@ export default class MfaForm extends Component<Args> {
       // Self-enrollment is an enterprise only feature
       if (this.version.isCommunity) return;
 
-      const adapter = this.store.adapterFor('application');
       const { mfaRequirement } = this.args.authData;
       try {
-        const { data } = await adapter.ajax('/v1/identity/mfa/method/totp/self-enroll', 'POST', {
-          unauthenticated: true,
-          data: { mfa_method_id, mfa_request_id: mfaRequirement.mfa_request_id },
-        });
+        const response = (await this.api.identity.mfaSelfEnroll({
+          mfa_method_id,
+          mfa_request_id: mfaRequirement.mfa_request_id,
+        })) as { data?: { url?: string } };
+        const data = response?.data;
         if (data?.url) {
           // Set QR code which recomputes currentSelfEnrollConstraint and renders it for the user to scan
           constraint.qrCode = data.url;
@@ -165,7 +165,8 @@ export default class MfaForm extends Component<Args> {
         // Not sure it's realistic to get here without the endpoint throwing an error, but just in case!
         this.error = 'There was a problem generating the QR code. Please try again.';
       } catch (error) {
-        this.error = errorMessage(error);
+        const parsed = await this.api.parseError(error);
+        this.error = parsed.message;
       }
     })
   );
