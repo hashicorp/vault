@@ -959,6 +959,32 @@ func (c *TestClusterCore) TriggerRollbacks() {
 	c.rollback.triggerRollbacks()
 }
 
+// TriggerRaftTLSRotation backdates the active Raft TLS key and restarts the
+// rotation worker so that it rotates immediately.
+func (c *TestClusterCore) TriggerRaftTLSRotation(ctx context.Context) error {
+	c.stateLock.Lock()
+	defer c.stateLock.Unlock()
+	c.stopPeriodicRaftTLSRotate()
+	keyring, err := c.raftReadTLSKeyring(ctx)
+	if err != nil {
+		return err
+	}
+	keyring.GetActive().CreatedTime = time.Now().Add(-raftTLSRotationPeriod)
+	entry, err := logical.StorageEntryJSON(raftTLSStoragePath, keyring)
+	if err != nil {
+		return err
+	}
+	if err := c.barrier.Put(ctx, entry); err != nil {
+		return err
+	}
+	return c.startPeriodicRaftTLSRotate(ctx)
+}
+
+// RefreshRaftTLSKeyring runs the standby's periodic Raft TLS keyring check.
+func (c *TestClusterCore) RefreshRaftTLSKeyring(ctx context.Context) error {
+	return c.checkRaftTLSKeyUpgrades(ctx)
+}
+
 func (c *TestClusterCore) TLSConfig() *tls.Config {
 	return c.tlsConfig.Clone()
 }

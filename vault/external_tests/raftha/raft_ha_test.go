@@ -4,6 +4,8 @@
 package raftha
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -15,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	consulstorage "github.com/hashicorp/vault/helper/testhelpers/teststorage/consul"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
@@ -385,4 +388,87 @@ func TestRaftHACluster_Removed_ReAdd(t *testing.T) {
 
 	_, err = follower.Client.Sys().RaftJoin(joinReq)
 	require.Error(t, err)
+}
+
+// TestRaftHA_TLSRotation_Join verifies that a node joining after the active
+// node rotates its Raft TLS key receives Raft traffic from the leader.
+func TestRaftHA_TLSRotation_Join(t *testing.T) {
+	t.Run("file", func(t *testing.T) {
+		t.Parallel()
+		testRaftHATLSRotationJoin(t, teststorage.MakeFileBackend)
+	})
+
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
+		testRaftHATLSRotationJoin(t, teststorage.MakeInmemBackend)
+	})
+}
+
+func testRaftHATLSRotationJoin(t *testing.T, bundler teststorage.PhysicalBackendBundler) {
+	ctx := context.Background()
+	var conf vault.CoreConfig
+	opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+	teststorage.RaftHASetup(&conf, &opts, bundler)
+	cluster := vault.NewTestCluster(t, &conf, &opts)
+	leader := cluster.Cores[0]
+
+	leaderLock, err := leader.UnderlyingHAStorage.(*raft.RaftBackend).Get(ctx, vault.CoreLockPath)
+	require.NoError(t, err)
+	require.NotNil(t, leaderLock)
+
+	join := func(core *vault.TestClusterCore) {
+		t.Helper()
+		resp, err := core.Client.Sys().RaftJoin(&api.RaftJoinRequest{
+			LeaderCACert: string(cluster.CACertPEM),
+		})
+		require.NoError(t, err)
+		require.True(t, resp.Joined)
+	}
+
+	// Joining nodes get the peer list from the bootstrap answer, so only the HA
+	// lock in the local FSM proves that the leader is replicating to them.
+	waitForReplication := func(core *vault.TestClusterCore, peers int) {
+		t.Helper()
+		storage := core.UnderlyingHAStorage.(*raft.RaftBackend)
+		require.Eventually(t, func() bool {
+			config, err := storage.GetConfiguration(ctx)
+			if err != nil || len(config.Servers) != peers {
+				return false
+			}
+			lock, err := storage.Get(ctx, vault.CoreLockPath)
+			return err == nil && lock != nil && bytes.Equal(lock.Value, leaderLock.Value)
+		}, 20*time.Second, 100*time.Millisecond, "%s did not receive Raft state", core.Name())
+	}
+
+	activeKeyID := func() string {
+		t.Helper()
+		entry, err := leader.LogicalStorage().Get(ctx, "core/raft/tls")
+		require.NoError(t, err)
+		require.NotNil(t, entry)
+		var keyring raft.TLSKeyring
+		require.NoError(t, entry.DecodeJSON(&keyring))
+		return keyring.ActiveKeyID
+	}
+
+	join(cluster.Cores[1])
+	waitForReplication(cluster.Cores[1], 2)
+
+	original := activeKeyID()
+	require.NoError(t, leader.TriggerRaftTLSRotation(ctx))
+	require.Eventually(t, func() bool { return activeKeyID() != original },
+		5*time.Second, 50*time.Millisecond, "raft TLS key was not rotated")
+
+	// Refresh the existing standby now rather than waiting for its 10s poll,
+	// which can lose the leader's quorum.
+	require.NoError(t, cluster.Cores[1].RefreshRaftTLSKeyring(ctx))
+
+	// The new node only learns the rotated key, so the leader must be using it.
+	join(cluster.Cores[2])
+	waitForReplication(cluster.Cores[2], 3)
+	waitForReplication(cluster.Cores[1], 3)
+
+	// A leadership change would install the new key and mask a stale leader.
+	standby, err := leader.Standby()
+	require.NoError(t, err)
+	require.False(t, standby, "leader lost leadership during the test")
 }
