@@ -94,8 +94,8 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 	}
 	backup := resp.Data["backup"]
 
-	// Try to restore the key without deleting it. Expect error due to
-	// conflicting key names.
+	// Try to restore the key without deleting it. Expect an error response
+	// (HTTP 400) due to conflicting key names.
 	restoreReq := &logical.Request{
 		Path:      "restore",
 		Operation: logical.UpdateOperation,
@@ -105,11 +105,11 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 		},
 	}
 	resp, err = b.HandleRequest(context.Background(), restoreReq)
-	if resp != nil && resp.IsError() {
-		t.Fatalf("resp: %#v\nerr: %v", resp, err)
+	if err != nil {
+		t.Fatalf("expected an error response, got raw error: %v", err)
 	}
-	if err == nil {
-		t.Fatalf("expected an error")
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected an error response, got resp: %#v", resp)
 	}
 
 	plaintextB64 := "dGhlIHF1aWNrIGJyb3duIGZveA==" // "the quick brown fox"
