@@ -237,10 +237,22 @@ func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[st
 	return c.write(ctx, path, r)
 }
 
+// WriteRaw attempts to write the given bytes to the given Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use WriteRawWithContext
+// instead and set the timeout through context.WithTimeout or context.WithDeadline.
 func (c *Logical) WriteRaw(path string, data []byte) (*Response, error) {
 	return c.WriteRawWithContext(context.Background(), path, data)
 }
 
+// WriteRawWithContext attempts to write the given bytes to the given Vault
+// path (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
 func (c *Logical) WriteRawWithContext(ctx context.Context, path string, data []byte) (*Response, error) {
 	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
 	r.BodyBytes = data
@@ -300,10 +312,22 @@ func (c *Logical) addExtraHeaders(r *Request, headers http.Header) error {
 	return nil
 }
 
+// PatchRaw attempts to patch the given bytes to the given Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use PatchRawWithContext
+// instead and set the timeout through context.WithTimeout or context.WithDeadline.
 func (c *Logical) PatchRaw(path string, data []byte) (*Response, error) {
 	return c.PatchRawWithContext(context.Background(), path, data)
 }
 
+// PatchRawWithContext attempts to patch the given bytes to the given Vault
+// path (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
 func (c *Logical) PatchRawWithContext(ctx context.Context, path string, data []byte) (*Response, error) {
 	r := c.c.NewRequest(http.MethodPatch, "/v1/"+path)
 	r.Headers.Set("Content-Type", "application/scim+json")
@@ -378,11 +402,7 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 }
 
 func (c *Logical) writeRaw(ctx context.Context, request *Request) (*Response, error) {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
-	resp, err := c.c.rawRequestWithContext(ctx, request)
-	return resp, err
+	return c.c.RawRequestWithContext(ctx, request)
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {
