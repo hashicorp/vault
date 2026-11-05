@@ -44,6 +44,9 @@ const (
 	ec2AuthType                   = "ec2"
 	ec2EntityType                 = "ec2_instance"
 
+	// limit signature size to something that only blocks malicious values, in bytes
+	maxPKCS7SignatureSize = 16 * 1024
+
 	// Retry configuration
 	retryWaitMin = 500 * time.Millisecond
 	retryWaitMax = 30 * time.Second
@@ -550,6 +553,10 @@ func (b *backend) verifyInstanceIdentitySignature(ctx context.Context, s logical
 // signature. After verification, extracts the instance identity document from the
 // signature, parses it and returns it.
 func (b *backend) parseIdentityDocument(ctx context.Context, s logical.Storage, pkcs7B64 string) (*identityDocument, error) {
+	if len(pkcs7B64) > maxPKCS7SignatureSize {
+		return nil, fmt.Errorf("PKCS#7 signature exceeds maximum size of %d bytes", maxPKCS7SignatureSize)
+	}
+
 	// Insert the header and footer for the signature to be able to pem decode it
 	pkcs7B64 = fmt.Sprintf("-----BEGIN PKCS7-----\n%s\n-----END PKCS7-----", pkcs7B64)
 
