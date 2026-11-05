@@ -33,7 +33,7 @@ export async function addSecondary(secondaryName, mountFilterMode = null) {
   await fillIn('[data-test-input="Secondary ID"]', secondaryName);
 
   if (mountFilterMode) {
-    await click(`#${mountFilterMode}`);
+    await click(`[data-test-filter-mode="${mountFilterMode}"]`);
     await clickTrigger();
     await searchSelect.options.objectAt(0).click();
   }
