@@ -309,7 +309,7 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
   for (const domain in DOMAIN_PROVIDER_MAP) {
     const provider = DOMAIN_PROVIDER_MAP[domain];
 
-    test(`${provider}: it renders provider icon and name`, async function (assert) {
+    test(`${provider} (${domain}): it renders provider icon and name`, async function (assert) {
       // parseUrl uses the actual window origin, so stub the util's return instead of authUrl
       const parseURLStub = sinon.stub(parseURL, 'default').returns({ hostname: domain });
       await this.renderComponent();
