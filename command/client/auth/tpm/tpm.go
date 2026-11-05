@@ -221,6 +221,10 @@ func (t *tpmMethod) AuthClient(client *api.Client) (*api.Client, error) {
 	if !ok {
 		return nil, fmt.Errorf("unsupported HTTPClient transport type %T", config.HttpClient.Transport)
 	}
+
+	// Propagate InsecureSkipVerify
+	tlsConf.InsecureSkipVerify = transport.TLSClientConfig.InsecureSkipVerify || t.tlsCfg.Insecure
+
 	transport.TLSClientConfig = tlsConf
 
 	// set last hash if load it successfully
