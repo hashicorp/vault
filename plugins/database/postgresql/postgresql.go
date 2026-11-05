@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/go-multierror"
@@ -75,6 +76,7 @@ func new() *PostgreSQL {
 	db := &PostgreSQL{
 		SQLConnectionProducer:  connProducer,
 		passwordAuthentication: passwordAuthenticationPassword,
+		scramIterations:        scram.DefaultIterations,
 	}
 
 	return db
@@ -89,6 +91,7 @@ type PostgreSQL struct {
 
 	usernameProducer       template.StringTemplate
 	passwordAuthentication passwordAuthentication
+	scramIterations        int
 }
 
 func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
@@ -178,6 +181,26 @@ func (p *PostgreSQL) Initialize(ctx context.Context, req dbplugin.InitializeRequ
 		}
 
 		p.passwordAuthentication = pwAuthentication
+	}
+
+	scramIterationsRaw, err := strutil.GetString(req.Config, "scram_iterations")
+	if err != nil {
+		return dbplugin.InitializeResponse{}, fmt.Errorf("failed to retrieve scram_iterations: %w", err)
+	}
+
+	if scramIterationsRaw != "" {
+		if p.passwordAuthentication != passwordAuthenticationSCRAMSHA256 {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("scram_iterations requires password_authentication to be %q", passwordAuthenticationSCRAMSHA256)
+		}
+		scramIterations, err := strconv.Atoi(scramIterationsRaw)
+		if err != nil || scramIterations < 1 {
+			return dbplugin.InitializeResponse{}, fmt.Errorf("scram_iterations must be a positive integer, got: %s", scramIterationsRaw)
+		}
+		p.scramIterations = scramIterations
+	} else if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
+		if serverIterations, err := p.queryServerSCRAMIterations(ctx); err == nil {
+			p.scramIterations = serverIterations
+		}
 	}
 
 	resp := dbplugin.InitializeResponse{
@@ -279,7 +302,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 			}
 
 			if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
-				hashedPassword, err := scram.Hash(password)
+				hashedPassword, err := scram.Hash(password, p.scramIterations)
 				if err != nil {
 					return fmt.Errorf("unable to scram-sha256 password: %w", err)
 				}
@@ -305,7 +328,7 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 			}
 
 			if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
-				hashedPassword, err := scram.Hash(password)
+				hashedPassword, err := scram.Hash(password, p.scramIterations)
 				if err != nil {
 					return fmt.Errorf("unable to scram-sha256 password: %w", err)
 				}
@@ -426,7 +449,7 @@ func (p *PostgreSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (
 	}
 
 	if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
-		hashedPassword, err := scram.Hash(req.Password)
+		hashedPassword, err := scram.Hash(req.Password, p.scramIterations)
 		if err != nil {
 			return dbplugin.NewUserResponse{}, fmt.Errorf("unable to scram-sha256 password: %w", err)
 		}
@@ -629,6 +652,25 @@ func (p *PostgreSQL) defaultDeleteUser(ctx context.Context, username string) err
 	}
 
 	return nil
+}
+
+func (p *PostgreSQL) queryServerSCRAMIterations(ctx context.Context) (int, error) {
+	db, err := p.getConnection(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	var iterationsStr string
+	if err := db.QueryRowContext(ctx, "SHOW scram_iterations").Scan(&iterationsStr); err != nil {
+		return 0, err
+	}
+
+	iterations, err := strconv.Atoi(iterationsStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return iterations, nil
 }
 
 func (p *PostgreSQL) secretValues() map[string]string {
