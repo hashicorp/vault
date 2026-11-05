@@ -10,7 +10,6 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
@@ -29,13 +28,6 @@ module('Integration | Component | get-credentials-card', function (hooks) {
 
     this.set('title', 'Get Credentials');
     this.set('searchLabel', 'Role to use');
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   hooks.afterEach(function () {

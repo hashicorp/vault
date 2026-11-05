@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { stubFeaturesAndPermissions } from 'vault/tests/helpers/components/sidebar-nav';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { allFeatures } from 'core/utils/all-features';
 
@@ -25,12 +24,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   hooks.beforeEach(function () {
     this.flags = this.owner.lookup('service:flags');
-    setRunOptions({
-      rules: {
-        // This is an issue with Hds::AppHeader::HomeLink
-        'aria-prohibited-attr': { enabled: false },
-      },
-    });
+    this.owner.lookup('service:currentCluster').setCluster({ name: 'vault' });
   });
 
   test('it should render nav headings', async function (assert) {
@@ -152,6 +146,7 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     });
     this.owner.lookup('service:currentCluster').setCluster({
       id: 'foo',
+      name: 'vault',
       anyReplicationEnabled: true,
       usingRaft: true,
       hasChrootNamespace: true,

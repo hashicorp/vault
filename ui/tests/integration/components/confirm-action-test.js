@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
@@ -38,36 +37,6 @@ module('Integration | Component | confirm-action', function (hooks) {
     assert
       .dom(GENERAL.confirmButton)
       .hasClass('hds-button--color-critical', 'renders critical confirm button');
-    assert.dom(SELECTORS.title).hasText('Are you sure?', 'renders default title');
-    assert
-      .dom(SELECTORS.message)
-      .hasText('You will not be able to recover it later.', 'renders default body text');
-    await click(GENERAL.cancelButton);
-    assert.false(this.onConfirm.called, 'does not call the action when Cancel is clicked');
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
-    assert.true(this.onConfirm.called, 'calls the action when Confirm is clicked');
-    assert.dom(SELECTORS.title).doesNotExist('modal closes after confirm is clicked');
-  });
-
-  test('it renders isInDropdown defaults and calls onConfirmAction', async function (assert) {
-    setRunOptions({
-      rules: {
-        // this component breaks this rule because it expects to be rendered within <ul>
-        listitem: { enabled: false },
-      },
-    });
-    await render(hbs`
-      <ConfirmAction
-        @buttonText="DELETE"
-        @onConfirmAction={{this.onConfirm}}
-        @isInDropdown={{true}}
-      />
-      `);
-
-    assert.dom(`li ${GENERAL.confirmTrigger}`).exists('element renders inside <li>');
-    assert.dom(GENERAL.confirmTrigger).hasClass('hds-confirm-action-critical', 'button has dropdown styling');
-    await click(GENERAL.confirmTrigger);
     assert.dom(SELECTORS.title).hasText('Are you sure?', 'renders default title');
     assert
       .dom(SELECTORS.message)

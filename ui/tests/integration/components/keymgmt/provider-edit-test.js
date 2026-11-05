@@ -9,7 +9,6 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, settled, fillIn } from '@ember/test-helpers';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import KeymgmtProviderForm from 'vault/forms/keymgmt/provider';
 
@@ -44,14 +43,6 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       currentRouteName: 'secrets.keymgmt.provider.show',
       urlFor() {
         return '';
-      },
-    });
-
-    setRunOptions({
-      rules: {
-        // TODO: fix KMS provider-edit [data-test-kms-provider-delete] violates this rule
-        // see https://dequeuniversity.com/rules/axe/4.8/scrollable-region-focusable
-        'scrollable-region-focusable': { enabled: false },
       },
     });
   });
