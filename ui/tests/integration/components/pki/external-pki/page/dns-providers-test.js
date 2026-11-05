@@ -10,13 +10,14 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | pki | external-pki | ExternalPki::Page::DnsProviders', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 
   hooks.beforeEach(function () {
+    document.getElementById('ember-testing-container')?.setAttribute('tabindex', '0');
+
     this.setupModel = (dnsProviders = []) => {
       return {
         engine: new SecretsEngineResource({
@@ -27,13 +28,6 @@ module('Integration | Component | pki | external-pki | ExternalPki::Page::DnsPro
         dnsProviders,
       };
     };
-    // Fails on #ember-testing-container
-    setRunOptions({
-      rules: {
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
-
     this.renderComponent = () =>
       render(hbs`<ExternalPki::Page::DnsProviders @model={{this.model}} />`, { owner: this.engine });
   });

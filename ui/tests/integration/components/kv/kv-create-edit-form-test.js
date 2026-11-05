@@ -10,7 +10,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { fillIn, typeIn, render, click, waitFor, findAll } from '@ember/test-helpers';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import KvForm from 'vault/forms/secrets/kv';
 import sinon from 'sinon';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
@@ -61,13 +60,6 @@ module('Integration | Component | kv-v2 | KvCreateEditForm', function (hooks) {
     this.metadataWrite = sinon.stub(api.secrets, 'kvV2WriteMetadata').resolves();
 
     this.transitionTo = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
-    setRunOptions({
-      rules: {
-        // failing on .CodeMirror-scroll
-        'scrollable-region-focusable': { enabled: false },
-      },
-    });
   });
 
   test('it should render namespace reminder', async function (assert) {

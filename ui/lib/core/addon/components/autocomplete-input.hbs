@@ -1,29 +1,34 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <div {{did-insert this.setElement}} {{on "focusout" this.onFocusOut}} ...attributes>
   {{#if @label}}
-    <FormFieldLabel @label={{@label}} @subText={{@subText}} for={{dasherize @label}} />
+    <FormFieldLabel @label={{@label}} @subText={{@subText}} for={{this.inputId}} />
   {{/if}}
   <div class="control">
+    {{#unless @label}}
+      <label class="sr-only" for={{this.inputId}}>{{or @placeholder "Input"}}</label>
+    {{/unless}}
     <Input
+      id={{this.inputId}}
       @value={{@value}}
       autocomplete="off"
       spellcheck="false"
       placeholder={{@placeholder}}
       class="input"
       {{on "input" this.onInput}}
-      id={{dasherize @label}}
     />
     {{#if this.showOptions}}
-      <div class="autocomplete-input">
-        {{#each @options as |option|}}
+      <div class="autocomplete-input" role="listbox" aria-label="Available options">
+        {{#each @options as |option index|}}
           <div
             class="autocomplete-input-option"
-            role="button"
+            role="option"
+            aria-selected={{eq option.value @value}}
             tabindex="0"
+            id="{{this.inputId}}-option-{{index}}"
             {{on "click" (fn this.selectOption option.value)}}
           >
             {{option.label}}

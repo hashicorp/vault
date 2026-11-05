@@ -9,7 +9,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render, click, fillIn, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
@@ -81,13 +80,6 @@ module('Integration | Component | kv-v2 | Page::List', function (hooks) {
       );
 
     this.transitionTo = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
-    setRunOptions({
-      rules: {
-        // TODO: ConfirmAction renders modal within list when @isInDropdown
-        list: { enabled: false },
-      },
-    });
   });
 
   test('it should render page title and toolbar elements', async function (assert) {

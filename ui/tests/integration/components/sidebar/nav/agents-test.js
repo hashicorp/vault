@@ -7,19 +7,12 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | sidebar-nav-agents', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    setRunOptions({
-      rules: {
-        // This is an issue with Hds::AppHeader::HomeLink
-        'aria-prohibited-attr': { enabled: false },
-      },
-    });
-
+    this.owner.lookup('service:currentCluster').setCluster({ name: 'vault' });
     return render(hbs`
       <Sidebar::Frame @isVisible={{true}}>
         <Sidebar::Nav::Agents />

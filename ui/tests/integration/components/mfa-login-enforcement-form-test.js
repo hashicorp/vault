@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import MfaLoginEnforcementForm from 'vault/forms/mfa/login-enforcement';
 
@@ -30,15 +29,6 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
         keys: ['123456'],
       },
     }));
-    setRunOptions({
-      rules: {
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-        // TODO: add labels to enforcement targets key/value style inputs
-        'select-name': { enabled: false },
-      },
-    });
   });
 
   test('it should render correct fields', async function (assert) {

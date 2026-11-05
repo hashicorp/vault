@@ -13,7 +13,6 @@ import ss from 'vault/tests/pages/components/search-select';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { SELECTORS } from 'vault/tests/helpers/oidc-config';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import OidcClientForm from 'vault/forms/oidc/client';
@@ -73,16 +72,6 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         />
       `);
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it should save new client', async function (assert) {

@@ -1,12 +1,12 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <div
   {{did-insert (perform this.fetchOptions)}}
   {{did-update (perform this.fetchOptions) (or @options @models)}}
-  id={{@id}}
+  id={{this.effectiveId}}
   class="field search-select {{if @displayInherit 'display-inherit'}}"
   data-test-component="search-select"
   ...attributes
@@ -14,7 +14,7 @@
   {{#if this.shouldUseFallback}}
     {{component
       @fallbackComponent
-      id=@id
+      id=this.effectiveId
       label=@label
       subText=@subText
       onChange=@onChange
@@ -25,7 +25,7 @@
   {{else}}
     {{#if @label}}
       <div class="label-row">
-        <label for={{@id}} class={{@labelClass}} data-test-field-label>
+        <label for={{this.effectiveId}} id={{concat this.effectiveId "-label"}} class={{@labelClass}} data-test-field-label>
           {{@label}}
         </label>
         {{#if @helpText}}
@@ -55,7 +55,8 @@
         @renderInPlace={{true}}
         @verticalPosition="below"
         @disabled={{@disabled}}
-        @ariaLabel={{or @ariaLabel @label (humanize @id)}}
+        @ariaLabel={{or @ariaLabel @label (humanize this.effectiveId)}}
+        @ariaLabelledBy={{if @label (concat this.effectiveId "-label")}}
         as |option|
       >
         {{#if this.shouldRenderName}}
@@ -68,7 +69,7 @@
         {{/if}}
       </PowerSelect>
     {{/unless}}
-    <ul class="search-select-list">
+    <ul class="search-select-list" role="list" aria-labelledby={{if @label (concat this.effectiveId "-label")}}>
       {{#each this.selectedOptions as |selected index|}}
         <li class="search-select-list-item has-text-grey-light" data-test-selected-option={{index}}>
           {{#if (and this.shouldRenderName (get selected this.nameKey))}}

@@ -10,7 +10,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import OidcKeyForm from 'vault/forms/oidc/key';
 import sinon from 'sinon';
@@ -49,16 +48,6 @@ module('Integration | Component | oidc/key-form', function (hooks) {
         />
       `);
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-        // TODO: Fix SearchSelect component
-        'aria-required-attr': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   test('it should save new key', async function (assert) {
