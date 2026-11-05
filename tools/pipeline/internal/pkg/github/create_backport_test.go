@@ -5,6 +5,7 @@ package github
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"testing"
@@ -996,6 +997,46 @@ func Test_syncBackportFailedLabel(t *testing.T) {
 			}
 			require.Equal(t, test.expectAdd, addCalled, "add label API call expectation mismatch")
 			require.Equal(t, test.expectRemove, removeCalled, "remove label API call expectation mismatch")
+		})
+	}
+}
+
+// Test_createBackportPullRequest verifies that a backport pull request is
+// opened as a draft when requested, which we do for failed backports so that
+// the no-op commit is less likely to be approved by mistake, and is opened as
+// a regular pull request otherwise.
+func Test_createBackportPullRequest(t *testing.T) {
+	t.Parallel()
+
+	for name, test := range map[string]struct {
+		draft bool
+	}{
+		"draft":     {draft: true},
+		"not draft": {draft: false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			client, mux, teardown := setupTestClient(t)
+			defer teardown()
+
+			var got libgithub.NewPullRequest
+			mux.HandleFunc("/repos/test-owner/test-repo/pulls", func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewDecoder(r.Body).Decode(&got)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_, _ = w.Write([]byte(`{"number": 7}`))
+			})
+
+			req := &CreateBackportReq{Owner: "test-owner", Repo: "test-repo"}
+			pr, err := req.createBackportPullRequest(
+				context.Background(), client, "title", "backport/branch", "release/1.19.x", "body", test.draft,
+			)
+			require.NoError(t, err)
+			require.Equal(t, 7, pr.GetNumber())
+			require.Equal(t, test.draft, got.GetDraft())
+			require.Equal(t, "backport/branch", got.GetHead())
+			require.Equal(t, "release/1.19.x", got.GetBase())
 		})
 	}
 }
