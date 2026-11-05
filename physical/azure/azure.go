@@ -136,9 +136,9 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 				return 0
 			}
 
-			expIn, err := authToken.Token().ExpiresIn.Int64()
+			expIn, err := tokenExpiryInSeconds(authToken.Token())
 			if err != nil {
-				logger.Error("couldn't retrieve jwt claim for 'expiresIn' from refreshed token", "error", err)
+				logger.Error("couldn't retrieve token expiry from refreshed token", "error", err)
 				return 0
 			}
 
@@ -373,4 +373,18 @@ func getAuthTokenFromIMDS(resource string) (*adal.ServicePrincipalToken, error) 
 	}
 
 	return spt, nil
+}
+
+// tokenExpiryInSeconds returns how many seconds the given token remains
+// valid. Azure AD may report the lifetime either as a relative ExpiresIn
+// duration or as an absolute ExpiresOn timestamp; both are honored so the MSI
+// credential refresh can be scheduled in either case.
+func tokenExpiryInSeconds(token adal.Token) (int64, error) {
+	if expIn, err := token.ExpiresIn.Int64(); err == nil {
+		return expIn, nil
+	}
+	if expOn, err := token.ExpiresOn.Int64(); err == nil {
+		return expOn - time.Now().Unix(), nil
+	}
+	return 0, errors.New("unable to determine token expiry from ExpiresIn or ExpiresOn")
 }
