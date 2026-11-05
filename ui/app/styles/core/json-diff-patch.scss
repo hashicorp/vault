@@ -18,6 +18,15 @@
   background: var(--token-color-foreground-success-high-contrast);
 }
 
+.visual-diff > pre {
+  white-space: normal;
+}
+
+.jsondiffpatch-value pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .jsondiffpatch-property-name {
   color: var(--token-color-palette-neutral-300);
 }
