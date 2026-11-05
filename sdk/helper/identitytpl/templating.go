@@ -155,8 +155,13 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 	var subst bool
 	splitStr := strings.Split(p.String, "{{")
 
+	// json documents close nested objects with "}}", so in json mode only the
+	// first "}}" after an opener ends a directive and any other one is part
+	// of the document rather than an unbalanced directive
+	literalClose := p.Mode == JSONTemplating
+
 	if len(splitStr) >= 1 {
-		if strings.Contains(splitStr[0], "}}") {
+		if !literalClose && strings.Contains(splitStr[0], "}}") {
 			return false, "", ErrUnbalancedTemplatingCharacter
 		}
 		if len(splitStr) == 1 {
@@ -176,7 +181,11 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 			}
 			continue
 		}
-		splitPiece := strings.Split(str, "}}")
+		closeLimit := -1
+		if literalClose {
+			closeLimit = 2
+		}
+		splitPiece := strings.SplitN(str, "}}", closeLimit)
 		switch len(splitPiece) {
 		case 2:
 			subst = true
