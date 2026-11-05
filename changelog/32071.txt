@@ -1,0 +1,3 @@
+```release-note:bug
+api/auth/gcp: Return the metadata service error instead of its response body when a GCE identity token request fails, and honor the caller's context.
+```
