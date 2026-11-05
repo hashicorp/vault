@@ -1,85 +1,45 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
 <h4 class="title is-5">
   Filtered paths
 </h4>
-<div class="radio-card-selector">
-  <label for="no-filtering" class="radio-card {{unless this.config.mode ' is-selected'}}">
-    <div class="radio-card-row">
-      <Icon @name="file-text" @size="24" class="radio-card-icon" />
-      <div class="radio-card-message">
-        <h5 class="radio-card-message-title">
-          Include everything
-        </h5>
-        <p class="radio-card-message-body">
-          All namespaces and mounts in this cluster will be replicated
-        </p>
-      </div>
-    </div>
-    <div class="radio-card-radio-row">
-      <RadioButton
-        id="no-filtering"
-        name="config-mode"
-        class="radio"
-        @value={{null}}
-        @groupValue={{this.config.mode}}
-        @onChange={{fn (mut this.config.mode)}}
-      />
-      <label for="no-filtering"></label>
-    </div>
-  </label>
-  <label for="allow" class="radio-card {{if (eq this.config.mode 'allow') ' is-selected'}}">
-    <div class="radio-card-row">
-      <Icon @name="file-check" @size="24" class="radio-card-icon" />
-      <div class="radio-card-message">
-        <h5 class="radio-card-message-title">
-          Allow
-        </h5>
-        <p class="radio-card-message-body">
-          Only include the selected namespaces and mounts
-        </p>
-      </div>
-    </div>
-    <div class="radio-card-radio-row">
-      <RadioButton
-        id="allow"
-        name="config-mode"
-        class="radio"
-        @value="allow"
-        @groupValue={{this.config.mode}}
-        @onChange={{fn (mut this.config.mode)}}
-      />
-      <label for="allow"></label>
-    </div>
-  </label>
-  <label for="deny" class="radio-card {{if (eq this.config.mode 'deny') ' is-selected'}}">
-    <div class="radio-card-row">
-      <Icon @name="file-x" @size="24" class="radio-card-icon" />
-      <div class="radio-card-message">
-        <h5 class="radio-card-message-title">
-          Deny
-        </h5>
-        <p class="radio-card-message-body">
-          Do not include the selected namespaces and mounts
-        </p>
-      </div>
-    </div>
-    <div class="radio-card-radio-row">
-      <RadioButton
-        id="deny"
-        name="config-mode"
-        class="radio"
-        @value="deny"
-        @groupValue={{this.config.mode}}
-        @onChange={{fn (mut this.config.mode)}}
-      />
-      <label for="deny"></label>
-    </div>
-  </label>
-</div>
+<Hds::Form::RadioCard::Group @name="filtered-path-radio-group" @alignment="left" class="has-bottom-margin-m" as |G|>
+  <G.RadioCard
+    @checked={{not this.config.mode}}
+    {{on "change" (fn (mut this.config.mode) null)}}
+    data-test-filter-mode="none"
+    as |R|
+  >
+    <R.Icon @name="file-text" />
+    <R.Label>Include everything</R.Label>
+    <R.Description>All namespaces and mounts in this cluster will be replicated.</R.Description>
+  </G.RadioCard>
+  <G.RadioCard
+    @checked={{eq this.config.mode "allow"}}
+    @value="allow"
+    {{on "change" (fn (mut this.config.mode) "allow")}}
+    data-test-filter-mode="allow"
+    as |R|
+  >
+    <R.Icon @name="file-check" />
+    <R.Label>Allow</R.Label>
+    <R.Description>Only include the selected namespaces and mounts.</R.Description>
+  </G.RadioCard>
+  <G.RadioCard
+    @checked={{eq this.config.mode "deny"}}
+    @value="deny"
+    {{on "change" (fn (mut this.config.mode) "deny")}}
+    data-test-filter-mode="deny"
+    as |R|
+  >
+    <R.Icon @name="file-x" />
+    <R.Label>Deny</R.Label>
+    <R.Description>Do not include the selected namespaces and mounts.</R.Description>
+  </G.RadioCard>
+</Hds::Form::RadioCard::Group>
 {{#if (or (eq this.config.mode "allow") (eq this.config.mode "deny"))}}
   <SearchSelect
     @id="paths"

@@ -27,28 +27,38 @@
     </FormFieldGroups>
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
-  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xxl">
+  <div class="box is-sideless is-fullwidth is-marginless has-top-padding-xl">
     <Hds::Text::Display @tag="h2" @size="400">Allowed applications</Hds::Text::Display>
-    <div class="is-flex-row">
-      <RadioCard
-        data-test-oidc-radio="allow-all"
-        @title="Allow every application to use"
-        @description="All applications can use this provider for authentication requests."
-        @icon="globe"
+    <Hds::Form::RadioCard::Group
+      @name="allowed-applications-radio-group"
+      @alignment="left"
+      class="has-top-margin-s has-bottom-margin-m"
+      as |G|
+    >
+      <G.RadioCard
+        @checked={{eq this.radioCardGroupValue "allow_all"}}
+        {{on "change" (fn this.handleClientSelection "allow_all")}}
         @value="allow_all"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{this.handleClientSelection}}
-      />
-      <RadioCard
-        data-test-oidc-radio="limited"
-        @title="Limit access to selected application"
-        @description="Only selected applications can use this provider for authentication requests."
-        @icon="globe-private"
+        data-test-oidc-radio="allow-all"
+        as |R|
+      >
+        <R.Icon @name="globe" />
+        <R.Label>Allow every application to use</R.Label>
+        <R.Description>All applications can use this provider for authentication requests.</R.Description>
+      </G.RadioCard>
+      <G.RadioCard
+        @checked={{eq this.radioCardGroupValue "limited"}}
+        {{on "change" (fn this.handleClientSelection "limited")}}
         @value="limited"
-        @groupValue={{this.radioCardGroupValue}}
-        @onChange={{this.handleClientSelection}}
-      />
-    </div>
+        data-test-oidc-radio="limited"
+        as |R|
+      >
+        <R.Icon @name="globe-private" />
+        <R.Label>Limit access to selected application</R.Label>
+        <R.Description>Only selected applications can use this provider for authentication requests.</R.Description>
+      </G.RadioCard>
+    </Hds::Form::RadioCard::Group>
+
     {{#if (eq this.radioCardGroupValue "limited")}}
       {{! clients are fetched in route and passed into select component }}
       <SearchSelect

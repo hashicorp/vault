@@ -191,7 +191,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
     });
 
     test('it creates, rotates and deletes a key', async function (assert) {
-      assert.expect(10);
+      assert.expect(9);
       // mock client list so OIDC url does not redirect to landing page
       this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
       this.server.post('/identity/oidc/key/test-key/rotate', (schema, req) => {
@@ -213,11 +213,8 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await click('[data-test-input="rotation_period"]');
       await click('[data-test-input="verification_ttl"]');
       assert
-        .dom('[data-test-oidc-radio="limited"] input')
-        .isDisabled('limiting access radio button is disabled on create');
-      assert
         .dom('[data-test-oidc-radio="limited"]')
-        .hasClass('is-disabled', 'limited radio button label has disabled class');
+        .isDisabled('limiting access radio button is disabled on create');
       await click(SELECTORS.keySaveButton);
       assert.strictEqual(
         flashMessage.latestMessage,

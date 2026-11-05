@@ -13,7 +13,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 /**
@@ -29,12 +28,6 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.secretMountPath.currentPath = 'pki-component';
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-      },
-    });
   });
 
   test('it renders correct title before and after submit', async function (assert) {

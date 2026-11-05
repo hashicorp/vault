@@ -9,7 +9,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import sinon from 'sinon';
 import { hbs } from 'ember-cli-htmlbars';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import {
@@ -23,8 +22,8 @@ const SELECTORS = {
   toolbarCrossSign: '[data-test-pki-issuer-cross-sign]',
   toolbarSignInt: '[data-test-pki-issuer-sign-int]',
   toolbarDownload: '[data-test-issuer-download]',
-  oldRadioSelect: 'input#use-old-root-settings',
-  customRadioSelect: 'input#customize-new-root-certificate',
+  oldRadioSelect: '[data-test-radio="use-old-settings"]',
+  customRadioSelect: '[data-test-radio="customize"]',
   toggle: '[data-test-details-toggle]',
   validationError: '[data-test-pki-rotate-root-validation-error]',
   rotateRootForm: '[data-test-pki-rotate-old-settings-form]',
@@ -65,13 +64,6 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       key_name: 'my-key',
       serial_number: '3a:3c:17:..',
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-      },
-    });
 
     this.renderComponent = () =>
       render(

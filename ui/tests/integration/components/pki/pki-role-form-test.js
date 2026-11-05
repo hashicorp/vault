@@ -10,7 +10,6 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import PkiRoleForm from 'vault/forms/secrets/pki/role';
 
 module('Integration | Component | pki-role-form', function (hooks) {
@@ -42,13 +41,6 @@ module('Integration | Component | pki-role-form', function (hooks) {
       use_csr_common_name: true,
       use_csr_sans: true,
     };
-
-    setRunOptions({
-      rules: {
-        // TODO: fix RadioCard component (replace with HDS)
-        'aria-valid-attr-value': { enabled: false },
-      },
-    });
 
     this.renderComponent = () => {
       this.form = new PkiRoleForm(this.role, { isNew: !this.role });

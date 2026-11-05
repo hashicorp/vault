@@ -113,7 +113,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .dom('[data-test-input="name"]')
       .hasValue('test-provider', 'Name input is populated with model value');
     assert.dom('[data-test-selected-option]').hasText('test-scope', 'model scope is selected');
-    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"]').isChecked('Allow all radio button is selected');
     await click(SELECTORS.providerSaveButton);
 
     assert.true(this.onSave.called, 'onSave callback fires on save success');
