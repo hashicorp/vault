@@ -21,10 +21,11 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 		expectNotContains []string
 		origin            *libgithub.PullRequest
 		attempt           *CreateBackportAttempt
+		workflowURL       string
 	}{
 		"no error": {
 			expectContains:    []string{"original body"},
-			expectNotContains: []string{"error body", "abc123def456"},
+			expectNotContains: []string{"error body", "abc123def456", "View workflow run"},
 			origin: &libgithub.PullRequest{
 				Body:           libgithub.Ptr("original body"),
 				Number:         libgithub.Ptr(1234),
@@ -36,8 +37,9 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 				TargetRef: "release/1.19.x",
 			},
 		},
-		"error": {
-			expectContains: []string{"original body", "error body", "abc123def456"},
+		"error without workflow url": {
+			expectContains:    []string{"original body", "error body", "abc123def456"},
+			expectNotContains: []string{"View workflow run"},
 			origin: &libgithub.PullRequest{
 				Body:           libgithub.Ptr("original body"),
 				Number:         libgithub.Ptr(1234),
@@ -50,13 +52,34 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 				Error:     errors.New("error body"),
 			},
 		},
+		"error with workflow url": {
+			expectContains: []string{
+				"original body",
+				"error body",
+				"abc123def456",
+				"[View workflow run](https://github.com/hashicorp/vault-enterprise/actions/runs/12345)",
+			},
+			origin: &libgithub.PullRequest{
+				Body:           libgithub.Ptr("original body"),
+				Number:         libgithub.Ptr(1234),
+				HTMLURL:        libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
+				MergedBy:       &libgithub.User{Login: libgithub.Ptr("my-login")},
+				MergeCommitSHA: libgithub.Ptr("abc123def456"),
+			},
+			attempt: &CreateBackportAttempt{
+				TargetRef: "release/1.19.x",
+				Error:     errors.New("error body"),
+			},
+			workflowURL: "https://github.com/hashicorp/vault-enterprise/actions/runs/12345",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			got, err := renderEmbeddedTemplate("backport-pr-message.tmpl", struct {
 				OriginPullRequest *libgithub.PullRequest
 				Attempt           *CreateBackportAttempt
-			}{test.origin, test.attempt})
+				WorkflowURL       string
+			}{test.origin, test.attempt, test.workflowURL})
 			require.NoError(t, err)
 			for _, c := range test.expectContains {
 				require.Containsf(t, got, c, got)
