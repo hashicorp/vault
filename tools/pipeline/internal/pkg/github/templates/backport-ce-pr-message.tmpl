@@ -15,6 +15,10 @@ This person should resolve the merge-conflict(s) by either:
 
 Error(s) encountered while attempting the backport:
 > {{ .Attempt.Error }}
+{{- if .WorkflowURL }}
+
+[View workflow run]({{ .WorkflowURL }})
+{{- end }}
 
 To continue the backport process, please follow the instructions below:
 
