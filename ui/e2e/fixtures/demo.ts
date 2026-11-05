@@ -62,6 +62,70 @@ export const highlightText = async (page: Page, scope: Locator, fromText: string
   await page.waitForTimeout(1_800);
 };
 
+export const HIGHLIGHT_ID = '__demo_highlight';
+
+/**
+ * Briefly outlines a whole component so viewers can find a change that isn't text, such as a new
+ * field, toggle, or panel. No-op when not recording.
+ *
+ * It is drawn as part of the demo overlay, in the synthetic cursor's blue with a dashed border, so it
+ * can't be mistaken for app styling such as a focus ring or an error state.
+ */
+export const highlightElement = async (page: Page, target: Locator, ms = 1_800) => {
+  if (!isVideoEnabled) return;
+  await target.scrollIntoViewIfNeeded();
+  const box = await target.boundingBox();
+  if (!box) throw new Error('The element to highlight is not visible');
+
+  await page.evaluate(
+    ({ box, ms, id }) => {
+      document.getElementById(id)?.remove();
+      const pad = 6;
+      const outline = document.createElement('div');
+      outline.id = id;
+      // Inline styles and the Web Animations API, because Vault's CSP drops injected <style> tags.
+      Object.assign(outline.style, {
+        // `inset` undoes the [popover] UA styles and must precede left/top (see video-config.ts).
+        inset: 'auto',
+        margin: '0',
+        padding: '0',
+        position: 'fixed',
+        left: `${box.x - pad}px`,
+        top: `${box.y - pad}px`,
+        width: `${box.width + pad * 2}px`,
+        height: `${box.height + pad * 2}px`,
+        boxSizing: 'border-box',
+        border: '3px dashed #1c7dff',
+        borderRadius: '8px',
+        background: 'rgba(28,125,255,0.08)',
+        boxShadow: '0 0 0 2px rgba(255,255,255,0.9)',
+        pointerEvents: 'none',
+        zIndex: '2147483647',
+      });
+      document.body.appendChild(outline);
+      // HDS dropdowns and modals render in the top layer; join it so the outline isn't hidden.
+      if ('popover' in HTMLElement.prototype) {
+        try {
+          outline.setAttribute('popover', 'manual');
+          (outline as unknown as { showPopover: () => void }).showPopover();
+        } catch {
+          // the z-index still covers ordinary content
+        }
+      }
+      outline.animate(
+        [{ opacity: 0 }, { opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.85 }, { opacity: 0 }],
+        {
+          duration: ms,
+          easing: 'ease-in-out',
+        }
+      );
+      setTimeout(() => outline.remove(), ms);
+    },
+    { box, ms, id: HIGHLIGHT_ID }
+  );
+  await page.waitForTimeout(ms);
+};
+
 let clickPatched = false;
 
 /**
