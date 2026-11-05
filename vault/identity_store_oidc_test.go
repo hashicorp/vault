@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-jose/go-jose/v3"
-	"github.com/go-jose/go-jose/v3/jwt"
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
@@ -973,7 +973,11 @@ func TestOIDC_SignIDToken(t *testing.T) {
 		EntityID:  "test-entity-id",
 	})
 	expectSuccess(t, resp, err)
-	parsedToken, err := jwt.ParseSigned(resp.Data["token"].(string))
+	parsedToken, err := jwt.ParseSigned(resp.Data["token"].(string), []jose.SignatureAlgorithm{
+		jose.RS256, jose.RS384, jose.RS512,
+		jose.ES256, jose.ES384, jose.ES512,
+		jose.EdDSA,
+	})
 	if err != nil {
 		t.Fatalf("error parsing token: %s", err.Error())
 	}
