@@ -1,2 +1,4 @@
 !*.hcl
 /tmp
+# Temporary demo specs (playwright skill, `video-only` mode): they run in the persona projects but are never committed.
+*.tmp.spec.ts
