@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -74,9 +74,7 @@ module('Unit | Adapter | secret engine', function (hooks) {
         id: 'aws-wif',
         path: 'aws-wif',
         type: 'aws',
-        config: this.store.createRecord('mount-config', {
-          identityTokenKey: 'test-key',
-        }),
+        config: { identity_token_key: 'test-key', listing_visibility: 'hidden' },
         uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c2',
       };
       const record = this.store.createRecord('secret-engine', mountData);
@@ -101,9 +99,7 @@ module('Unit | Adapter | secret engine', function (hooks) {
         id: 'aws-wif',
         path: 'aws-wif',
         type: 'aws',
-        config: this.store.createRecord('mount-config', {
-          maxLeaseTtl: '125h',
-        }),
+        config: { max_lease_ttl: '125h', listing_visibility: 'hidden' },
         uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c2',
       };
       const record = this.store.createRecord('secret-engine', mountData);
@@ -128,10 +124,11 @@ module('Unit | Adapter | secret engine', function (hooks) {
         id: 'cubbyhole-test',
         path: 'cubbyhole-test',
         type: 'cubbyhole',
-        config: this.store.createRecord('mount-config', {
-          maxLeaseTtl: '125h',
+        config: {
+          max_lease_ttl: '125h',
           identity_token_key: 'test-key',
-        }),
+          listing_visibility: 'hidden',
+        },
         uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c4',
       };
       const record = this.store.createRecord('secret-engine', mountData);

@@ -1,19 +1,19 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model from '@ember-data/model';
 
 import type { ModelValidations, FormField, FormFieldGroups } from 'vault/app-types';
-import type MountConfigModel from 'vault/models/mount-config';
+import type { MountConfig } from 'vault/mount';
 
 export default class SecretEngineModel extends Model {
   id: string;
   path: string;
   type: string;
   description: string;
-  config: MountConfigModel;
+  config: MountConfig;
   local: boolean;
   sealWrap: boolean;
   externalEntropyAccess: boolean;
