@@ -38,7 +38,7 @@ export const FEATURE_SPOTLIGHT_CARDS: FeatureSpotlightCard[] = [
     title: 'Post-quantum certificate issuance with ML-DSA',
     description:
       "Vault's PKI secrets engine now supports ML-DSA for X.509 certificate issuance, giving you a low-friction path to begin migrating your CA hierarchy to post-quantum cryptography.",
-    link: '/vault/docs/secrets/pki/ml-dsa',
+    link: '/vault/docs/secrets/pki',
   },
   {
     title: 'Eliminate secret zero with TPM auth',
