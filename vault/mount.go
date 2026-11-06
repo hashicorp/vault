@@ -1804,6 +1804,7 @@ func (c *Core) unloadMounts(ctx context.Context) error {
 	c.mounts = nil
 	c.router.reset()
 	c.systemBarrierView = nil
+	c.agentRegistry = nil
 	return nil
 }
 
