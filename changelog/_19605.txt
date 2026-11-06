@@ -1,0 +1,3 @@
+```release-note:bug
+cli/login: Fix handle leak in `vault login -method=tpm` when using a raw tpm device like /dev/tpm0.
+```
