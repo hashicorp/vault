@@ -4,23 +4,12 @@
  */
 
 /** @module path-help Runtime OpenAPI discovery and form metadata for mounted plugins. */
-import Model, { attr } from '@ember-data/model';
 import Service from '@ember/service';
 import { getOwner } from '@ember/owner';
-import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { capitalize } from '@ember/string';
-import { computed } from '@ember/object'; // eslint-disable-line
 
-import {
-  filterPathsByItemType,
-  pathToHelpUrlSegment,
-  reducePathsByPathName,
-  combineOpenApiAttrs,
-  expandOpenApiProps,
-} from 'vault/utils/openapi-helpers';
-import GeneratedItemModel from 'vault/models/generated-item';
-import GeneratedItemListAdapter from 'vault/adapters/generated-item-list';
+import { reducePathsByPathName, expandOpenApiProps } from 'vault/utils/openapi-helpers';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
 
@@ -31,108 +20,6 @@ export default class PathHelpService extends Service {
     return appAdapter.ajax(url, 'GET', {
       data,
     });
-  }
-
-  /**
-   * Registers new ModelClass at specified model type, and busts cache
-   */
-  _registerModel(owner, NewKlass, modelType, isNew = false) {
-    const store = owner.lookup('service:store');
-    // bust cache in ember's registry
-    if (!isNew) {
-      owner.unregister('model:' + modelType);
-    }
-    owner.register('model:' + modelType, NewKlass);
-
-    // bust cache in EmberData's model lookup
-    delete store._modelFactoryCache[modelType];
-  }
-
-  /**
-   * upgradeModelSchema takes an existing ModelClass and hydrates it with the passed attributes
-   * @param {ModelClass} Klass model class retrieved with store.modelFor(modelType)
-   * @param {Attribute[]} attrs array of attributes {name, type, options}
-   * @returns new ModelClass extended from passed one, with the passed attributes added
-   */
-  _upgradeModelSchema(Klass, attrs, newFields) {
-    // extending the class will ensure that static schema lookups regenerate
-    const NewKlass = class extends Klass {};
-
-    for (const { name, type, options } of attrs) {
-      const decorator = attr(type, options);
-      const descriptor = decorator(NewKlass.prototype, name, {});
-      Object.defineProperty(NewKlass.prototype, name, descriptor);
-    }
-
-    // newFields is used in combineFieldGroups within various models
-    if (newFields) {
-      NewKlass.prototype.newFields = newFields;
-    }
-
-    // Ensure this class doesn't get re-hydrated
-    NewKlass.merged = true;
-
-    return NewKlass;
-  }
-
-  /**
-   * Temporary compatibility bridge for generated-item consumers until VAULT-49929.
-   * getNewModel instantiates models which use OpenAPI to generate the model fully
-   * @param {string} modelType
-   * @param {string} backend
-   * @param {string} apiPath this method will call getPaths and build submodels for item types
-   * @param {*} itemType (optional) used in getPaths for additional models
-   * @returns void - as side effect, registers model via registerNewModelWithAttrs
-   */
-  getNewModel(modelType, backend, apiPath, itemType) {
-    const owner = getOwner(this);
-    const modelName = `model:${modelType}`;
-
-    const modelFactory = owner.factoryFor(modelName);
-
-    if (modelFactory) {
-      // if the modelFactory already exists, it means either this model was already
-      // generated or the model exists in the code already. In either case resolve
-
-      if (!modelFactory.class.merged) {
-        // no merged flag means this model was not previously generated
-        debug(`Model exists for ${modelType} -- using its existing schema`);
-      }
-      return resolve();
-    }
-    debug(`Creating new Model for ${modelType}`);
-    let newModel = Model.extend({});
-
-    // use paths to dynamically create our openapi help url
-    // if we have a brand new model
-    return this.getPaths(apiPath, backend, itemType)
-      .then((pathInfo) => {
-        const adapterFactory = owner.factoryFor(`adapter:${modelType}`);
-        // if we have an adapter already use that, otherwise create one
-        if (!adapterFactory) {
-          debug(`Creating new adapter for ${modelType}`);
-          const adapter = this.getNewAdapter(pathInfo, itemType);
-          owner.register(`adapter:${modelType}`, adapter);
-        }
-        // if we have an item we want the create info for that itemType
-        const paths = itemType ? filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
-        const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
-        const path = pathToHelpUrlSegment(createPath.path);
-        if (!path) {
-          // TODO: we don't know if path will ever be falsey
-          // if it is never falsey we can remove this.
-          return reject();
-        }
-
-        const helpUrl = `/v1/${apiPath}${path.slice(1)}?help=true`;
-        pathInfo.paths = paths;
-        newModel = newModel.extend({ paths: pathInfo });
-        return this.registerNewModelWithAttrs(helpUrl, modelType);
-      })
-      .catch((err) => {
-        // TODO: we should handle the error better here
-        console.error(err); // eslint-disable-line
-      });
   }
 
   /**
@@ -221,6 +108,8 @@ export default class PathHelpService extends Service {
 
   /**
    * Returns snake_case fields and ordered groups without registering a model or adapter.
+   * The path identifier (e.g. `username`) is marked read-only and returned as `identifier`,
+   * since it is sent in the request URL rather than the body.
    * @param {string} helpUrl Runtime help URL for a plugin's create endpoint.
    * @returns {Promise<import('vault/services/path-help').FormMetadata>}
    */
@@ -228,11 +117,15 @@ export default class PathHelpService extends Service {
     const props = await this.getProps(helpUrl, 'form');
     const formFields = [];
     const groups = new Map([['default', []]]);
+    let identifier;
     for (const [name, prop] of Object.entries(props)) {
       // Path identifiers bind to their own form data, not Ember Data's mutableId.
       // eslint-disable-next-line no-unused-vars
       const { type, fieldGroup, fieldValue, readOnly, ...options } = prop;
-      const field = new FormField(name, type, options);
+      const field = new FormField(name, type, readOnly ? { ...options, readOnly } : options);
+      if (readOnly) {
+        identifier = name;
+      }
       formFields.push(field);
       if (!groups.has(fieldGroup)) {
         groups.set(fieldGroup, []);
@@ -240,43 +133,6 @@ export default class PathHelpService extends Service {
       groups.get(fieldGroup).push(field);
     }
     const formFieldGroups = [...groups].map(([name, fields]) => new FormFieldGroup(name, fields));
-    return { formFields, formFieldGroups };
-  }
-
-  getNewAdapter(pathInfo, itemType) {
-    // we need list and create paths to set the correct urls for actions
-    const paths = filterPathsByItemType(pathInfo, itemType);
-    const { apiPath } = pathInfo;
-    const getPath = paths.find((path) => path.operations.includes('get'));
-
-    // the action might be "Generate" or something like that so we'll grab the first post endpoint if there
-    // isn't one with "Create"
-    // TODO: look into a more sophisticated way to determine the create endpoint
-    const createPath = paths.find((path) => path.action === 'Create' || path.operations.includes('post'));
-    const deletePath = paths.find((path) => path.operations.includes('delete'));
-
-    return class NewAdapter extends GeneratedItemListAdapter {
-      apiPath = apiPath;
-
-      paths = {
-        createPath: createPath?.path,
-        deletePath: deletePath?.path,
-        getPath: getPath?.path,
-      };
-    };
-  }
-
-  /**
-   * registerNewModelWithAttrs takes the helpUrl of the given model type,
-   * fetches props, and registers the model hydrated with the provided attrs
-   * @param {string} helpUrl like /v1/auth/userpass2/users/example?help=true
-   * @param {string} modelType like generated-user-userpass
-   */
-  async registerNewModelWithAttrs(helpUrl, modelType) {
-    const owner = getOwner(this);
-    const props = await this.getProps(helpUrl);
-    const { attrs, newFields } = combineOpenApiAttrs(new Map(), props);
-    const NewKlass = this._upgradeModelSchema(GeneratedItemModel, attrs, newFields);
-    this._registerModel(owner, NewKlass, modelType, true);
+    return { formFields, formFieldGroups, identifier };
   }
 }

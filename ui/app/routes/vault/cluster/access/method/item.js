@@ -1,19 +1,21 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { singularize } from 'ember-inflector';
+import { generatedItemHelpUrl, generatedItemUrls } from 'vault/utils/generated-item-urls';
 
 export default Route.extend({
   pathHelp: service('path-help'),
 
-  beforeModel() {
-    const { apiPath, type, authMethodPath, itemType } = this.getMethodAndModelInfo();
-    const modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.pathHelp.getNewModel(modelType, authMethodPath, apiPath, itemType);
+  // Field metadata and URLs come from the mount's OpenAPI help, shared by the list, create, edit and show routes.
+  async model() {
+    const { apiPath, authMethodPath, itemType } = this.getMethodAndModelInfo();
+    const pathInfo = await this.pathHelp.getPaths(apiPath, authMethodPath, itemType);
+    const formMetadata = await this.pathHelp.getFormMetadata(generatedItemHelpUrl(pathInfo, itemType));
+    return { itemType, pathInfo, formMetadata, urls: generatedItemUrls(pathInfo, itemType) };
   },
 
   getMethodAndModelInfo() {
@@ -24,16 +26,14 @@ export default Route.extend({
     return { apiPath, type, authMethodPath, itemType };
   },
 
-  setupController(controller) {
+  setupController(controller, model) {
     this._super(...arguments);
-    const { apiPath, authMethodPath, itemType } = this.getMethodAndModelInfo();
+    const { itemType, pathInfo } = model;
     controller.set('itemType', itemType);
-    this.pathHelp.getPaths(apiPath, authMethodPath, itemType).then((paths) => {
-      const navigationPaths = paths.paths.filter((path) => path.navigation);
-      controller.set(
-        'paths',
-        navigationPaths.filter((path) => path.itemType.includes(itemType)).map((path) => path.path)
-      );
-    });
+    const navigationPaths = pathInfo.paths.filter((path) => path.navigation);
+    controller.set(
+      'paths',
+      navigationPaths.filter((path) => path.itemType.includes(itemType)).map((path) => path.path)
+    );
   },
 });

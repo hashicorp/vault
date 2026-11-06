@@ -6,8 +6,6 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import Sinon from 'sinon';
-import { reject } from 'rsvp';
 import { Response } from 'miragejs';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
@@ -60,11 +58,6 @@ module('Unit | Service | path-help', function (hooks) {
 
   hooks.beforeEach(function () {
     this.pathHelp = this.owner.lookup('service:path-help');
-    this.store = this.owner.lookup('service:store');
-  });
-
-  hooks.afterEach(function () {
-    Sinon.restore();
   });
 
   test('schema properties preserve identifiers, sensitivity, groups and legacy field names', async function (assert) {
@@ -179,9 +172,8 @@ module('Unit | Service | path-help', function (hooks) {
         },
       },
     }));
-    Sinon.spy(this.pathHelp, '_registerModel');
-
-    const { formFields, formFieldGroups } = await this.pathHelp.getFormMetadata('/v1/auth/schema/forms');
+    const { formFields, formFieldGroups, identifier } =
+      await this.pathHelp.getFormMetadata('/v1/auth/schema/forms');
     assert.deepEqual(
       formFields.map(({ name }) => name),
       ['username', 'token_policies', 'password', 'token_ttl', 'max_uses'],
@@ -220,7 +212,9 @@ module('Unit | Service | path-help', function (hooks) {
     assert.strictEqual(ttl.type, undefined, 'duration values are not coerced by a number transform');
     assert.strictEqual(maxUses.type, 'number', 'integer properties use number fields');
     assert.strictEqual(maxUses.options.defaultValue, 5, 'schema defaults are available to form consumers');
-    assert.true(this.pathHelp._registerModel.notCalled, 'metadata does not generate an Ember Data model');
+    assert.strictEqual(identifier, 'username', 'the path parameter is reported as the identifier');
+    assert.true(username.options.readOnly, 'the identifier is read-only and left out of request bodies');
+    assert.notOk(policies.options.readOnly, 'other fields stay editable');
   });
 
   test('inline and referenced schemas produce equivalent form metadata', async function (assert) {
@@ -270,68 +264,5 @@ module('Unit | Service | path-help', function (hooks) {
       /OpenAPI request properties not found/,
       'unresolved schema references fail explicitly'
     );
-  });
-
-  module('getNewModel', function (hooks) {
-    hooks.beforeEach(function () {
-      this.server.get('/auth/userpass/', () => openapiStub);
-      this.server.get('/auth/userpass/users/example', () => openapiStub);
-    });
-    test('it generates a model with mutableId', async function (assert) {
-      assert.expect(2);
-      this.server.post('/auth/userpass/users/test', () => {
-        assert.true(true, 'POST request made to correct endpoint');
-        return;
-      });
-
-      const modelType = 'generated-user-userpass';
-      await this.pathHelp.getNewModel(modelType, 'userpass', 'auth/userpass/', 'user');
-      const model = this.store.createRecord(modelType);
-      model.set('mutableId', 'test');
-      await model.save();
-      assert.strictEqual(model.get('id'), 'test', 'model id is set to mutableId value on save success');
-    });
-
-    test('generated fields serialize complete payloads without path identifiers or untouched values', async function (assert) {
-      this.server.post('/auth/userpass/users/payload-user', (schema, request) => {
-        assert.deepEqual(
-          JSON.parse(request.requestBody),
-          { password: 'disposable-password' },
-          'payload includes the edited password but not the path identifier'
-        );
-        return {};
-      });
-
-      await this.pathHelp.getNewModel('generated-user-userpass', 'userpass', 'auth/userpass/', 'user');
-      const model = this.store.createRecord('generated-user-userpass', {
-        password: 'disposable-password',
-      });
-      model.set('mutableId', 'payload-user');
-      await model.save();
-      assert.strictEqual(model.id, 'payload-user', 'successful create assigns the path identifier');
-    });
-
-    test('it only generates the model once', async function (assert) {
-      assert.expect(2);
-      Sinon.spy(this.pathHelp, 'getPaths');
-
-      const modelType = 'generated-user-userpass';
-      await this.pathHelp.getNewModel(modelType, 'userpass', 'auth/userpass/', 'user');
-      assert.true(this.pathHelp.getPaths.calledOnce, 'getPaths is called for new generated model');
-
-      await this.pathHelp.getNewModel(modelType, 'userpass2', 'auth/userpass/', 'user');
-      assert.true(this.pathHelp.getPaths.calledOnce, 'not called again even with different backend path');
-    });
-
-    test('it resolves without error if model already exists', async function (assert) {
-      Sinon.stub(this.pathHelp, 'getPaths').callsFake(() => {
-        assert.notOk(true, 'this method should not be called');
-        return reject();
-      });
-      const modelType = 'cluster';
-      await this.pathHelp.getNewModel(modelType, 'my-kv').then(() => {
-        assert.true(true, 'getNewModel resolves');
-      });
-    });
   });
 });
