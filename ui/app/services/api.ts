@@ -26,7 +26,7 @@ import type NamespaceService from 'vault/services/namespace';
 import type ControlGroupService from 'vault/services/control-group';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { HeaderMap, ApiErrorResponse, ApiParsedError, XVaultHeaders } from 'vault/api';
-import type { HTTPMethod } from '@hashicorp/vault-client-typescript';
+import type { FetchAPI, HTTPMethod } from '@hashicorp/vault-client-typescript';
 
 /** Maps namespace keys to their typed generated-client classes. */
 type ApiNamespaces = {
@@ -332,24 +332,35 @@ export default class ApiService extends Service {
 
   // interface for making raw fetch requests outside of the generated API methods
   // this should only be used in cases where it's not possible to use the client
+  // Runs the same middleware as the generated client so raw requests also get control group unwrapping and detection,
+  // response warnings and last-fetch tracking, not just headers.
   private async rawRequest(path: string, method: HTTPMethod, body?: unknown, headers?: HeadersInit) {
-    const context = {
-      url: `${this.configuration.basePath}${path.charAt(0) === '/' ? path : `/${path}`}`,
-      init: { method } as RequestInit,
-    };
+    let url = `${this.configuration.basePath}${path.charAt(0) === '/' ? path : `/${path}`}`;
+    let init: RequestInit = { method };
 
     if (body) {
-      context.init.body = JSON.stringify(body);
+      init.body = JSON.stringify(body);
     }
     if (headers) {
-      context.init.headers = headers;
+      init.headers = headers;
     }
 
-    const { url, init } = await this.setHeaders(context as RequestContext);
+    const fetch = this.configuration.fetchApi as FetchAPI;
+    for (const { pre } of this.configuration.middleware) {
+      if (pre) {
+        ({ url, init } = (await pre({ fetch, url, init })) || { url, init });
+      }
+    }
 
-    const response = await this.configuration.fetchApi?.(new Request(url, init));
-    if (!response?.ok) {
-      throw new ResponseError(response as Response);
+    let response = await fetch(url, init);
+    for (const { post } of this.configuration.middleware) {
+      if (post) {
+        response = (await post({ fetch, url, init, response: response.clone() })) || response;
+      }
+    }
+
+    if (!response.ok) {
+      throw new ResponseError(response);
     }
     // with various content types like application/pem-certificate-chain or application/pkix-cert for example,
     // return the response so the caller can read the body with the appropriate method (blob, text, json etc.)

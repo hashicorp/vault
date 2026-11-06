@@ -1,6 +1,12 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<GeneratedItem @mountPath={{this.method}} @model={{this.model}} @itemType={{this.itemType}} @mode="show" />
+<GeneratedItem
+  @form={{this.model}}
+  @urls={{this.urls}}
+  @mountPath={{this.method}}
+  @mode="show"
+  @itemType={{this.itemType}}
+/>

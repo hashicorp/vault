@@ -203,6 +203,113 @@ module('Unit | Service | api', function (hooks) {
     assert.deepEqual(listData, expectedResponse, 'List response is mapped to array');
   });
 
+  module('Raw requests', function (hooks) {
+    hooks.beforeEach(function () {
+      this.tokenForUrl.returns(null);
+      this.tokenToUnwrap.value(null);
+      this.isRequestedPathLocked.returns(false);
+      this.fetch = sinon.stub(window, 'fetch');
+      this.respond = (body, status = 200) =>
+        this.fetch.resolves(
+          new Response(body === undefined ? null : JSON.stringify(body), {
+            status,
+            headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+          })
+        );
+      this.lastRequest = () => {
+        const [url, init] = this.fetch.lastCall.args;
+        return { url, method: init.method, body: init.body, headers: new Headers(init.headers) };
+      };
+    });
+
+    hooks.afterEach(function () {
+      this.fetch.restore();
+    });
+
+    test('it sends the path, method, body and default headers', async function (assert) {
+      this.respond({ data: { ok: true } });
+      const response = await this.apiService.request.post('/auth/userpass/users/bob', { password: 'p' });
+
+      const { url, method, body, headers } = this.lastRequest();
+      assert.strictEqual(url, '/v1/auth/userpass/users/bob', 'path is prefixed with the API base path');
+      assert.strictEqual(method, 'POST', 'method is sent');
+      assert.strictEqual(body, JSON.stringify({ password: 'p' }), 'body is serialized');
+      assert.strictEqual(headers.get('X-Vault-Token'), 'foobar', 'token header is set');
+      assert.strictEqual(headers.get('X-Vault-Namespace'), 'another-ns', 'namespace header is set');
+      assert.deepEqual(await response.json(), { data: { ok: true } }, 'the raw response is returned');
+    });
+
+    test('it keeps headers passed by the caller', async function (assert) {
+      this.respond({ data: {} });
+      await this.apiService.request.put('/sys/unseal', { key: 'k' }, { 'X-Vault-Namespace': '' });
+      assert.strictEqual(this.lastRequest().headers.get('X-Vault-Namespace'), '', 'explicit header wins');
+    });
+
+    test('it throws a ResponseError for unsuccessful responses', async function (assert) {
+      this.respond({ errors: ['permission denied'] }, 403);
+      try {
+        await this.apiService.request.delete('/auth/userpass/users/bob');
+        assert.ok(false, 'request should reject');
+      } catch (error) {
+        const { status, message } = await this.apiService.parseError(error);
+        assert.strictEqual(status, 403, 'status is parsed');
+        assert.strictEqual(message, 'permission denied', 'message is parsed');
+      }
+    });
+
+    test('it sets the last fetch time', async function (assert) {
+      this.respond({ data: {} });
+      await this.apiService.request.get('/auth/userpass/users/bob');
+      assert.true(this.setLastFetch.calledOnce, 'last fetch is set for raw requests');
+    });
+
+    test('it shows response warnings', async function (assert) {
+      this.respond({ data: {}, warnings: ['token_period exceeds max TTL'] });
+      await this.apiService.request.post('/auth/cert/certs/web', { token_period: '100h' });
+      assert.true(this.info.calledOnceWith('token_period exceeds max TTL'), 'warning is flashed');
+    });
+
+    test('it tolerates empty successful responses', async function (assert) {
+      this.respond(undefined, 204);
+      const response = await this.apiService.request.delete('/auth/userpass/users/bob');
+      assert.strictEqual(response.status, 204, 'empty response resolves');
+      assert.true(this.info.notCalled, 'no warnings are flashed');
+    });
+
+    test('it turns a Control Group response into a control group error', async function (assert) {
+      this.isRequestedPathLocked.returns(true);
+      this.respond({ data: null, wrap_info: { ...this.wrapInfo, creation_path: 'auth/userpass/users/bob' } });
+      try {
+        await this.apiService.request.post('/auth/userpass/users/bob', { password: 'p' });
+        assert.ok(false, 'request should reject');
+      } catch (error) {
+        const { status, response } = await this.apiService.parseError(error);
+        assert.strictEqual(status, 403, 'locked request rejects with 403');
+        assert.true(response.isControlGroupError, 'response is flagged as a control group error');
+        assert.strictEqual(response.accessor, this.wrapInfo.accessor, 'wrap info is included');
+      }
+    });
+
+    test('it unwraps an approved Control Group token instead of repeating the request', async function (assert) {
+      this.tokenForUrl.returns(this.wrapInfo);
+      this.tokenToUnwrap.value(this.wrapInfo);
+      this.respond({ data: { token_policies: ['default'] } });
+      const response = await this.apiService.request.get('/auth/userpass/users/bob');
+
+      const { url, method, body, headers } = this.lastRequest();
+      assert.strictEqual(url, '/v1/sys/wrapping/unwrap', 'request is sent to the unwrap endpoint');
+      assert.strictEqual(method, 'POST', 'unwrap uses POST');
+      assert.strictEqual(body, JSON.stringify({ token: this.wrapInfo.token }), 'wrapped token is sent');
+      assert.strictEqual(headers.get('X-Vault-Token'), this.wrapInfo.token, 'wrapped token authenticates');
+      assert.true(this.deleteControlGroupToken.calledWith(this.wrapInfo.accessor), 'used token is deleted');
+      assert.deepEqual(
+        await response.json(),
+        { data: { token_policies: ['default'] } },
+        'unwrapped data is returned'
+      );
+    });
+  });
+
   module('Error parsing', function () {
     test('it should correctly parse message from error', async function (assert) {
       let e = await this.apiService.parseError(getErrorResponse(undefined, 400));

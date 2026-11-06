@@ -12,10 +12,11 @@ import type FormFieldGroup from 'vault/utils/forms/field-group';
 export interface FormMetadata {
   formFields: FormField[];
   formFieldGroups: FormFieldGroup[];
+  // name of the path parameter field (e.g. `username`), sent in the URL rather than the body
+  identifier?: string;
 }
 
 export default class PathHelpService extends Service {
   getPaths(apiPath: string, backend: string, itemType?: string, itemID?: string): Promise<PathInfo>;
   getFormMetadata(helpUrl: string): Promise<FormMetadata>;
-  getNewModel(modelType: string, backend: string, apiPath: string, itemType?: string): Promise<void>;
 }

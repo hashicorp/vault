@@ -1,35 +1,25 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
-import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
 import { singularize } from 'ember-inflector';
-import { service } from '@ember/service';
+import GeneratedItemForm from 'vault/forms/generated-item';
 
-export default Route.extend(UnsavedModelRoute, {
-  store: service(),
-
+export default Route.extend({
   model() {
-    const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
-    const methodModel = this.modelFor('vault.cluster.access.method');
-    const { type } = methodModel;
-    const { path: method } = this.paramsFor('vault.cluster.access.method');
-    const modelType = `generated-${singularize(itemType)}-${type}`;
-    return this.store.createRecord(modelType, {
-      itemType,
-      method,
-      adapterOptions: { path: `${method}/${itemType}` },
-    });
+    const { formMetadata } = this.modelFor('vault.cluster.access.method.item');
+    return new GeneratedItemForm(formMetadata, {}, { isNew: true });
   },
 
   setupController(controller) {
     this._super(...arguments);
-    const { item_type: itemType } = this.paramsFor('vault.cluster.access.method.item');
+    const { itemType, urls } = this.modelFor('vault.cluster.access.method.item');
     const { path: method } = this.paramsFor('vault.cluster.access.method');
     controller.set('itemType', singularize(itemType));
     controller.set('mode', 'create');
     controller.set('method', method);
+    controller.set('urls', urls);
   },
 });

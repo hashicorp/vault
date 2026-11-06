@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -44,6 +44,8 @@ export interface FieldOptions {
   maxRowsText?: string;
   addRowButtonText?: string;
   editDisabled?: boolean;
+  // read-only while editing an existing record, e.g. an auth method item's path identifier
+  readOnly?: boolean;
   sensitive?: boolean;
   noCopy?: boolean;
   docLink?: string;
