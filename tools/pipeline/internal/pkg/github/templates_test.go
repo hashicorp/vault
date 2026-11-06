@@ -24,8 +24,8 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 		workflowURL       string
 	}{
 		"no error": {
-			expectContains:    []string{"original body"},
-			expectNotContains: []string{"error body", "abc123def456", "View workflow run"},
+			expectContains:    []string{"original body", "abc123def456"},
+			expectNotContains: []string{"error body", "git cherry-pick", "View workflow run"},
 			origin: &libgithub.PullRequest{
 				Body:           libgithub.Ptr("original body"),
 				Number:         libgithub.Ptr(1234),
@@ -38,7 +38,7 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 			},
 		},
 		"error without workflow url": {
-			expectContains:    []string{"original body", "error body", "abc123def456"},
+			expectContains:    []string{"original body", "error body", "abc123def456", "git cherry-pick abc123def456"},
 			expectNotContains: []string{"View workflow run"},
 			origin: &libgithub.PullRequest{
 				Body:           libgithub.Ptr("original body"),
@@ -57,6 +57,7 @@ func Test_renderEmbeddedTemplate_backportPRMessage(t *testing.T) {
 				"original body",
 				"error body",
 				"abc123def456",
+				"git cherry-pick abc123def456",
 				"[View workflow run](https://github.com/hashicorp/vault-enterprise/actions/runs/12345)",
 			},
 			origin: &libgithub.PullRequest{

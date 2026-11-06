@@ -1,5 +1,7 @@
 ## Backport Enterprise PR #{{ .OriginPullRequest.Number }}{{ if .Attempt.TargetRef }} into {{ .Attempt.TargetRef }} {{ end }}
 
+The merge commit SHA of the original PR is: `{{ .OriginPullRequest.GetMergeCommitSHA }}`
+
 {{ if .Attempt.Error }}
 **This pull request was opened as a draft because the automatic backport failed.**
 
@@ -10,7 +12,6 @@ will see the backported commits up to, _but not including_, the commit where
 the merge conflict occurred.
 
 The person who merged in the original PR is: @{{ .OriginPullRequest.GetMergedBy.GetLogin }}
-The merge commit SHA of the original PR is: `{{ .OriginPullRequest.GetMergeCommitSHA }}`
 This person should resolve the merge-conflict(s) by either:
 * Manually completing the backports into this branch
 * Creating a new branch and manually backporting all commits
@@ -26,7 +27,7 @@ To continue the backport process, please follow the instructions below:
 
 1. Checkout the branch in this PR locally (or optionally create a new branch off {{ .OriginPullRequest.GetBase.GetRef }})
 1. Manually cherry-pick the missing commits from the original PR into this branch:
-  1. Cherry-pick the commits from the original PR into this branch `git cherry-pick <commit-hash>` (see Overview of unprocessed commits below for the list of commits to cherry-pick)
+  1. Cherry-pick the commits from the original PR into this branch `git cherry-pick {{ .OriginPullRequest.GetMergeCommitSHA }}`
   1. Resolve any conflicts that arise
   1. Remove any CE only files if the backport target branch is to ce
   1. Push the changes to this branch
