@@ -114,7 +114,7 @@ mod_download() {
   while IFS= read -r module_dir; do
     echo "--> Downloading Go modules for $module_dir/go.mod with GOWORK=off..."
     (cd "$module_dir" && GOOS=linux GOARCH=amd64 GOPRIVATE="$goprivate" GOWORK=off go mod download)
-  done < <(go list -m -f '{{.Dir}}')
+  done < <(GOWORK= go list -m -f '{{.Dir}}')
 }
 
 # Tidy all the go.mod's defined in the project.
@@ -124,7 +124,7 @@ mod_tidy() {
     pushd "$module_dir" > /dev/null || (echo "failed to push into module dir" && exit 1)
     GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp GOWORK=off go mod tidy
     popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
-  done < <(go list -m -f '{{.Dir}}')
+  done < <(GOWORK= go list -m -f '{{.Dir}}')
 }
 
 main() {

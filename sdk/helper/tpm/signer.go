@@ -24,15 +24,16 @@ type TPMSigner struct {
 var _ crypto.Signer = &TPMSigner{}
 
 // NewTPMSigner creates a new TPMSigner from key material.
-// If cfg.TestTPM is non-nil it is reused for every signing operation.
-// Otherwise the TPM is opened and closed on each operation using cfg.DevicePath.
+// The TPM is opened and closed on each operation using cfg.DevicePath.
 func NewTPMSigner(cfg TPMConfig, keyMaterial *TPMKeyMaterial) (*TPMSigner, error) {
 	ts := &TPMSigner{
 		cfg:         cfg,
 		keyMaterial: keyMaterial,
 	}
 
-	// Load the public key once and cache it
+	// Load the public key once to cache it, then flush the transient handle
+	// and close the TPM connection. key.Close must run before closer so that
+	// TPM2_FlushContext is sent while the connection is still open.
 	key, closer, err := ts.getKey()
 	if err != nil {
 		return nil, err
@@ -77,8 +78,12 @@ func (ts *TPMSigner) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts)
 	if err != nil {
 		return nil, err
 	}
-	defer key.Close()
+	// closer must be deferred before key.Close so that under LIFO ordering
+	// key.Close (TPM2_FlushContext) runs first while the connection is open,
+	// and closer (tpm.Close / fd close) runs second. Reversing this order
+	// causes the flush to fail silently, leaking the transient handle.
 	defer closer()
+	defer key.Close()
 
 	// Get the crypto.Signer from TPM key
 	pubKey := key.Public()
