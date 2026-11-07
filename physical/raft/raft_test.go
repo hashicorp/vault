@@ -887,7 +887,10 @@ func TestRaft_RemovedChecker_ReplayedPreJoinConfig(t *testing.T) {
 		// and becomes the latest configuration, and the FSM applies it as
 		// the leader's commit index advances past it. The raft instance is
 		// restarted so it picks the entry up from the log, as it would when
-		// the entry arrives through replication.
+		// the entry arrives through replication. The restart goes through
+		// TeardownCluster so the raft field is cleared under the backend
+		// lock; clearing it directly would race with the removed checker
+		// goroutine's GetConfiguration calls.
 		replayConfig := func(index uint64, config raft.Configuration) {
 			t.Helper()
 			entry := &raft.Log{
@@ -896,11 +899,8 @@ func TestRaft_RemovedChecker_ReplayedPreJoinConfig(t *testing.T) {
 				Type:  raft.LogConfiguration,
 				Data:  raft.EncodeConfiguration(config),
 			}
-			require.NoError(t, raft3.raft.Shutdown().Error())
+			require.NoError(t, raft3.TeardownCluster(nil))
 			require.NoError(t, raft3.logStore.StoreLog(entry))
-			raft3.raft = nil
-			// SetupCluster closes raftInitCh; recreate it like TeardownCluster does.
-			raft3.raftInitCh = make(chan struct{})
 			require.NoError(t, raft3.SetupCluster(context.Background(), SetupOpts{
 				RemovedCallback: removedCallback,
 			}))
