@@ -442,10 +442,16 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 
 		sig, err := p.SignWithOptions(psa.keyVersion, psa.keyContext, psa.input, &psa.options)
 		if err != nil {
-			if batchInputRaw != nil {
+			switch err.(type) {
+			case errutil.UserError:
 				response[i].Error = err.Error()
+				response[i].err = logical.ErrInvalidRequest
+			default:
+				if batchInputRaw != nil {
+					response[i].Error = err.Error()
+				}
+				response[i].err = err
 			}
-			response[i].err = err
 		} else if sig == nil {
 			response[i].err = fmt.Errorf("signature could not be computed")
 		} else {
