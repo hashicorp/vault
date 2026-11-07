@@ -1,23 +1,13 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import ApplicationSerializer from './application';
-import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
-export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
-  attrs: {
-    config: { embedded: 'always' },
-  },
-
+export default ApplicationSerializer.extend({
   normalize(modelClass, data) {
-    // embedded records need a unique value to be stored
-    // set id for config to uuid of secret engine
-    if (data.config && !data.config.id) {
-      data.config.id = data.uuid;
-    }
     // move version out of options so it can be defined on secret-engine model
     data.version = data.options ? data.options.version : null;
     return this._super(modelClass, data);
@@ -81,14 +71,13 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   serialize(snapshot) {
     const type = snapshot.record.engineType;
     const data = this._super(...arguments);
+    data.config = { ...data.config };
     // move version back to options
     data.options = data.version ? { version: data.version } : {};
     delete data.version;
 
     if (!engineDisplayData(type)?.isWIF) {
-      // only send identity_token_key if it's set on a WIF secret engine.
-      // because of issues with the model unloading with a belongsTo relationships
-      // identity_token_key can accidentally carry over if a user backs out of the form and changes the type from WIF to non-WIF.
+      // Only WIF engines accept identity_token_key.
       delete data.config.identity_token_key;
     }
 

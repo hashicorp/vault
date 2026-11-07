@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model, { attr, belongsTo } from '@ember-data/model';
+import Model, { attr } from '@ember-data/model';
 import { ALL_ENGINES, isAddonEngine } from 'core/utils/all-engines-metadata';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -39,7 +39,7 @@ export default class SecretEngineModel extends Model {
     editType: 'textarea',
   })
   description;
-  @belongsTo('mount-config', { async: false, inverse: null }) config;
+  @attr({ defaultValue: () => ({}) }) config;
 
   // Enterprise options (still available on OSS)
   @attr('boolean', {

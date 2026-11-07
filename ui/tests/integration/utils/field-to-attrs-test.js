@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -35,7 +35,28 @@ module('Integration | Util | field to attrs', function (hooks) {
   };
 
   hooks.beforeEach(function () {
-    this.model = this.owner.lookup('service:store').createRecord('test-form-model');
+    const configModel = {
+      modelName: 'test-config',
+      eachAttribute(callback) {
+        callback('defaultLeaseTtl', { ...DEFAULT_LEASE_ATTR, name: 'defaultLeaseTtl' });
+        callback('maxLeaseTtl', { ...MAX_LEASE_ATTR, name: 'maxLeaseTtl' });
+      },
+    };
+    this.model = {
+      modelName: 'test-form',
+      eachAttribute(callback) {
+        callback('path', PATH_ATTR);
+        callback('description', DESCRIPTION_ATTR);
+      },
+      belongsTo() {
+        return { type: 'test-config' };
+      },
+      store: {
+        modelFor() {
+          return configModel;
+        },
+      },
+    };
   });
 
   test('it extracts attrs', function (assert) {
