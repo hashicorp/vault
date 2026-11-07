@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "vault-mcp-server": {
+      "type": "stdio",
+      "command": "vault-mcp-server",
+      "args": ["stdio"],
+      "env": {
+        "VAULT_ADDR": "http://127.0.0.1:8200",
+        "VAULT_TOKEN": "root"
+      }
+    }
+  }
+}
