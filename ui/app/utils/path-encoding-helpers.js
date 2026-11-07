@@ -24,4 +24,8 @@ function normalizePath(path) {
     : '';
 }
 
-export { normalizePath, encodePath };
+function recoverEngineMountPath(backend) {
+  return backend?.includes('/') ? backend.split('/').join('%2F') : backend || '';
+}
+
+export { normalizePath, encodePath, recoverEngineMountPath };
