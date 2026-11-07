@@ -164,7 +164,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.17.1
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.21.1
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.18.1
-	github.com/hashicorp/vault-plugin-database-redis v0.9.1
+	github.com/hashicorp/vault-plugin-database-redis v0.9.2-0.20261101001848-b9c7f0458fc9
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.10.1
 	github.com/hashicorp/vault-plugin-database-snowflake v0.17.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.23.0
@@ -483,7 +483,7 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
-	github.com/mediocregopher/radix/v4 v4.1.4 // indirect
+	github.com/mediocregopher/radix/v4 v4.1.5 // indirect
 	github.com/microsoft/kiota-abstractions-go v1.11.0 // indirect
 	github.com/microsoft/kiota-authentication-azure-go v1.3.1 // indirect
 	github.com/microsoft/kiota-http-go v1.5.6 // indirect
