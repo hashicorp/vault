@@ -251,6 +251,16 @@ func InitClientCommands(ui, serverCmdUi cli.Ui, runOpts *base.RunOptions) map[st
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"events subscribe": func() (cli.Command, error) {
+			return &EventsSubscribeCommands{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"health": func() (cli.Command, error) {
+			return &HealthCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"lease": func() (cli.Command, error) {
 			return &LeaseCommand{
 				BaseCommand: getBaseCommand(),
