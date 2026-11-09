@@ -1,8 +1,6 @@
 name: Lint GitHub Actions Workflows
 on:
   pull_request:
-    paths:
-      - '.github/**'
     types: [opened, synchronize, reopened, ready_for_review]
 
 # cancel existing runs of the same workflow on the same ref
@@ -11,8 +9,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  setup:
+    name: Setup
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+      issues: read
+      pull-requests: read
+    outputs:
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/metadata
+        id: metadata
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@892a26828f195e65540a40b4768ae4571f51ebfc # v4.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+
   actionlint:
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-22.04-x64"]') }}
+    needs: setup
+    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'quality_actions')
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: "Run actionlint"
