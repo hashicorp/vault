@@ -9,7 +9,7 @@ go 1.26.0
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/go-jose/go-jose/v4 v4.1.5
+	github.com/go-jose/go-jose/v4 v4.1.6
 	github.com/go-test/deep v1.1.1
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
