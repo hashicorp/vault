@@ -27,6 +27,15 @@ func TestConfig_Decode(t *testing.T) {
 	// Verify changed file groups based on the changed_files stanza in the pipeline.hcl
 	for filename, groups := range map[string]changed.FileGroups{
 		".build/entrypoint.sh":                      {changed.FileGroup("pipeline")},
+		".agents/skills/go/SKILL.md":                {changed.FileGroup("enterprise")},
+		".bob/custom_modes.yaml":                    {changed.FileGroup("enterprise")},
+		".bob-review/.gitkeep":                      {changed.FileGroup("enterprise")},
+		".github/copilot-instructions.md":           {changed.FileGroup("enterprise"), changed.FileGroup("github")},
+		".github/instructions/index.md":             {changed.FileGroup("enterprise"), changed.FileGroup("github")},
+		".mcp.json":                                 {changed.FileGroup("enterprise")},
+		"AGENTS.md":                                 {changed.FileGroup("enterprise")},
+		"opencode.json":                             {changed.FileGroup("enterprise")},
+		"ui/.agents/skills/ui/SKILL.md":             {changed.FileGroup("enterprise"), changed.FileGroup("ui")},
 		".github/actions/changed-files/actions.yml": {changed.FileGroup("github"), changed.FileGroup("pipeline")},
 		".github/workflows/build.yml":               {changed.FileGroup("github"), changed.FileGroup("pipeline")},
 		".github/workflows/build-artifacts-ce.yml":  {changed.FileGroup("community"), changed.FileGroup("github"), changed.FileGroup("pipeline")},
@@ -106,6 +115,18 @@ func TestConfig_Decode(t *testing.T) {
 			require.Equal(t, groups, file.Groups)
 		})
 	}
+
+	// Verify our sync policies
+	policy, err := cfg.SyncPolicy("ce")
+	require.NoError(t, err)
+	require.Equal(t, &SyncPolicyConfig{
+		Name:             "ce",
+		DisallowedGroups: []string{"enterprise"},
+		ExemptFromDisallowedGroups: []string{
+			".github/copilot-instructions.md",
+			".github/instructions/index.md",
+		},
+	}, policy)
 }
 
 func TestDecodeFile_ErrorCases(t *testing.T) {

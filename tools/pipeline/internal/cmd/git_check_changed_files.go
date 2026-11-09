@@ -14,9 +14,9 @@ var checkGitChangedFiles = &git.CheckChangedFilesReq{}
 
 func newGitCheckChangedFilesCmd() *cobra.Command {
 	changedFilesCmd := &cobra.Command{
-		Use:   "changed-files (--branch <branch> | --range <range> | --commit <sha>) --disallowed-group <group>... [--pipeline-config .release/pipeline.hcl]",
+		Use:   "changed-files (--branch <branch> | --range <range> | --commit <sha>) (--sync-policy <policy> | --disallowed-groups <group>...) [--pipeline-config .release/pipeline.hcl]",
 		Short: "Check if any changed files are matching disallowed groups",
-		Long:  "Check if any changed files are matching disallowed groups. You must specify a path to a pipeline.hcl of enable auto recusive search for one.",
+		Long:  "Check if any changed files are matching disallowed groups. We check the changed files for disallowed groups from the --sync-policy in pipeline.hcl and any --disallowed-groups. Files that the sync policy exempts from disallowed groups are shown but won't fail the check. You must specify a path to a pipeline.hcl or enable auto recursive search for one.",
 		RunE:  runGitCheckChangedFilesCmd,
 		Args:  cobra.NoArgs,
 	}
@@ -24,7 +24,8 @@ func newGitCheckChangedFilesCmd() *cobra.Command {
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Branch, "branch", "b", "", "The branch to compare against")
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Range, "range", "r", "", "The commit range to compare (e.g., HEAD~5..HEAD)")
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Commit, "commit", "c", "", "The specific commit SHA to analyze")
-	changedFilesCmd.PersistentFlags().StringSliceVarP(&checkGitChangedFiles.DisallowedGroups, "disallowed-groups", "g", nil, "File group(s) to check changed files for")
+	changedFilesCmd.PersistentFlags().StringSliceVarP(&checkGitChangedFiles.DisallowedGroups, "disallowed-groups", "g", nil, "File group(s) to check changed files for. They're added to the disallowed groups of the sync policy")
+	changedFilesCmd.PersistentFlags().StringVar(&checkGitChangedFiles.SyncPolicy, "sync-policy", "", "The sync policy in pipeline.hcl to check changed files with")
 	changedFilesCmd.PersistentFlags().BoolVar(&checkGitChangedFiles.WriteToGithubOutput, "github-output", false, "Whether or not to write 'changed-files' to $GITHUB_OUTPUT")
 
 	return changedFilesCmd

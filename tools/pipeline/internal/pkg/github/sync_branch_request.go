@@ -38,6 +38,7 @@ type SyncBranchReq struct {
 	RepoDir    string
 	// Optional changed files checking
 	DisallowedGroups []string
+	SyncPolicy       string
 	// Mandatory pipeline configuration
 	DecodeRes *config.DecodeRes
 }
@@ -70,6 +71,7 @@ func (r *SyncBranchReq) Run(
 		slog.String("to-branch", r.ToBranch),
 		slog.String("repo-dir", r.RepoDir),
 		slog.String("disallowed-groups", disallowedGroupsStr),
+		slog.String("sync-policy", r.SyncPolicy),
 	), "synchronizing branches")
 
 	// Make sure we have required and valid fields
@@ -136,7 +138,7 @@ func (r *SyncBranchReq) Run(
 
 	// Verify that our local branch does not contain any files that are in
 	// disallowed changed files groups.
-	if len(r.DisallowedGroups) > 0 {
+	if r.shouldCheckChangedFiles() {
 		slog.Default().DebugContext(ctx, "checking branch history for changed files in disallowed groups")
 
 		checkChangedFiles := gitpkg.CheckChangedFilesReq{
@@ -145,19 +147,22 @@ func (r *SyncBranchReq) Run(
 			// disallowed files in the branch history.
 			Branch:              fromBranch,
 			DisallowedGroups:    r.DisallowedGroups,
+			SyncPolicy:          r.SyncPolicy,
 			DecodeRes:           r.DecodeRes,
 			WriteToGithubOutput: false,
 		}
 
 		checkChangedFilesRes, err := checkChangedFiles.Run(ctx, git)
 		if err != nil {
-			return res, fmt.Errorf("checking branch history for changed files: %s: %w", checkChangedFilesRes.String(), err)
+			return res, fmt.Errorf("checking branch history for changed files: %w", err)
 		}
 
 		if l := len(checkChangedFilesRes.MatchedFiles); l > 0 {
 			return res, fmt.Errorf(
 				"found %d files that matched disallowed-groups %s: %s",
-				l, disallowedGroupsStr, strings.Join(checkChangedFilesRes.MatchedFiles.Names(), ", "),
+				l,
+				checkChangedFilesRes.CheckedGroups.String(),
+				strings.Join(checkChangedFilesRes.MatchedFiles.Names(), ", "),
 			)
 		}
 	}
@@ -229,7 +234,7 @@ func (r *SyncBranchReq) Validate(ctx context.Context) error {
 		return errors.New("no github to branch has been provided")
 	}
 
-	if len(r.DisallowedGroups) > 0 {
+	if r.shouldCheckChangedFiles() {
 		// Check for decode and validation errors
 		if err := r.DecodeRes.Validate(ctx); err != nil {
 			return err
@@ -237,11 +242,17 @@ func (r *SyncBranchReq) Validate(ctx context.Context) error {
 
 		// Make sure tha we actually have configuration
 		if r.DecodeRes.Config == nil {
-			return errors.New("disallowed groups have been provided but no changed files config has been provided")
+			return errors.New("disallowed groups or a sync policy have been provided but no changed files config has been provided")
 		}
 	}
 
 	return nil
+}
+
+// shouldCheckChangedFiles returns whether or not we've been asked to check the
+// branch history for files in disallowed groups.
+func (r *SyncBranchReq) shouldCheckChangedFiles() bool {
+	return len(r.DisallowedGroups) > 0 || r.SyncPolicy != ""
 }
 
 // ToJSON marshals the response to JSON.
@@ -273,7 +284,7 @@ func (r *SyncBranchRes) ToTable(err error) table.Writer {
 		if err != nil {
 			row = append(row, err.Error())
 		} else {
-			row = append(row, nil)
+			row = append(row, "")
 		}
 		t.AppendRow(row)
 	}
