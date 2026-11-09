@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -103,6 +104,171 @@ func TestCreateItemReq_Run(t *testing.T) {
 
 		require.Equal(t, "987654", res.ItemID)
 		require.Equal(t, "New Item", res.ItemName)
+	})
+
+	// Without a status the request must be byte-for-byte what it was before
+	// the Status field existed: no column_values in the mutation or variables.
+	// The other success tests assert the same through wantMutation, so this
+	// one pins the legacy shape explicitly.
+	t.Run("empty status sends the legacy mutation without column_values", func(t *testing.T) {
+		t.Parallel()
+
+		const legacyMutation = `mutation ($boardId:ID!$groupId:String$itemName:String!){create_item(board_id: $boardId, group_id: $groupId, item_name: $itemName){id,name}}`
+
+		var reqs []wireRequest
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var got wireRequest
+			_ = json.NewDecoder(r.Body).Decode(&got)
+			reqs = append(reqs, got)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":{"create_item":{"id":"987654","name":"New Item"}}}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		client := graphql.NewClient(srv.URL, srv.Client())
+		req := &CreateItemReq{BoardID: "12345", ItemName: "New Item"}
+
+		_, err := req.Run(context.Background(), client)
+		require.NoError(t, err)
+		require.Len(t, reqs, 1)
+		require.Equal(t, legacyMutation, reqs[0].Query)
+		require.NotContains(t, reqs[0].Variables, "columnValues")
+	})
+
+	// A status is sent in a single call as column_values, a JSON string that
+	// sets the label on the "status" column.
+	t.Run("status is sent as column_values in a single call", func(t *testing.T) {
+		t.Parallel()
+
+		const statusMutation = `mutation ($boardId:ID!$columnValues:JSON!$groupId:String$itemName:String!){create_item(board_id: $boardId, group_id: $groupId, item_name: $itemName, column_values: $columnValues){id,name}}`
+
+		for name, tc := range map[string]struct {
+			groupID    string
+			status     string
+			wantGroup  any
+			wantValues string
+		}{
+			"label with group":              {groupID: "topics", status: "Not started", wantGroup: "topics", wantValues: `{"status":{"label":"Not started"}}`},
+			"label without group":           {status: "Not started", wantGroup: nil, wantValues: `{"status":{"label":"Not started"}}`},
+			"label case is preserved":       {status: "Not Started", wantGroup: nil, wantValues: `{"status":{"label":"Not Started"}}`},
+			"quotes in label are escaped":   {status: `Say "hi"`, wantGroup: nil, wantValues: `{"status":{"label":"Say \"hi\""}}`},
+			"backslash in label is escaped": {status: `a\b`, wantGroup: nil, wantValues: `{"status":{"label":"a\\b"}}`},
+		} {
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+
+				var reqs []wireRequest
+				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					var got wireRequest
+					_ = json.NewDecoder(r.Body).Decode(&got)
+					reqs = append(reqs, got)
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = w.Write([]byte(`{"data":{"create_item":{"id":"987654","name":"New Item"}}}`))
+				}))
+				t.Cleanup(srv.Close)
+
+				client := graphql.NewClient(srv.URL, srv.Client())
+				req := &CreateItemReq{BoardID: "12345", GroupID: tc.groupID, ItemName: "New Item", Status: tc.status}
+
+				res, err := req.Run(context.Background(), client)
+				require.NoError(t, err)
+				require.Len(t, reqs, 1, "expected a single call, not create then update")
+				require.Equal(t, statusMutation, reqs[0].Query)
+				require.Equal(t, map[string]any{
+					"boardId":      "12345",
+					"columnValues": tc.wantValues,
+					"groupId":      tc.wantGroup,
+					"itemName":     "New Item",
+				}, reqs[0].Variables)
+				require.Equal(t, "987654", res.ItemID)
+				require.Equal(t, "New Item", res.ItemName)
+			})
+		}
+	})
+
+	// Setting a status must not widen the retry policy: a gateway error can
+	// follow a committed create, and retrying would duplicate the item.
+	t.Run("HTTP 503 with a status is still not retried", func(t *testing.T) {
+		t.Parallel()
+
+		var attempts atomic.Int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			attempts.Add(1)
+			w.WriteHeader(http.StatusServiceUnavailable)
+		}))
+		t.Cleanup(srv.Close)
+
+		client := graphql.NewClient(srv.URL, srv.Client())
+		req := &CreateItemReq{BoardID: "12345", ItemName: "New Item", Status: "Not started", retryDelay: time.Millisecond}
+
+		res, err := req.Run(context.Background(), client)
+		require.Nil(t, res)
+		require.ErrorContains(t, err, "create_item mutation")
+		require.Equal(t, int32(1), attempts.Load(), "expected HTTP 503 to fail after 1 attempt")
+	})
+
+	// A rate limit is rejected before execution, so it is safe to retry, and
+	// every attempt must carry the same status.
+	t.Run("HTTP 429 with a status is retried and keeps the status", func(t *testing.T) {
+		t.Parallel()
+
+		var (
+			attempts atomic.Int32
+			mu       sync.Mutex
+			reqs     []wireRequest
+		)
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var got wireRequest
+			_ = json.NewDecoder(r.Body).Decode(&got)
+			mu.Lock()
+			reqs = append(reqs, got)
+			mu.Unlock()
+			if attempts.Add(1) < 3 {
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"data":{"create_item":{"id":"987654","name":"New Item"}}}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		client := graphql.NewClient(srv.URL, srv.Client())
+		req := &CreateItemReq{BoardID: "12345", ItemName: "New Item", Status: "Not started", retryDelay: time.Millisecond}
+
+		res, err := req.Run(context.Background(), client)
+		require.NoError(t, err)
+		require.Equal(t, "987654", res.ItemID)
+
+		mu.Lock()
+		defer mu.Unlock()
+		require.Len(t, reqs, 3)
+		for _, r := range reqs {
+			require.Equal(t, `{"status":{"label":"Not started"}}`, r.Variables["columnValues"])
+		}
+	})
+
+	// Monday.com rejects an unknown or wrong-case label with a GraphQL error
+	// (for example missingLabel). Retrying cannot fix it, so it must surface
+	// after a single attempt.
+	t.Run("rejected status label fails immediately without retrying", func(t *testing.T) {
+		t.Parallel()
+
+		var attempts atomic.Int32
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			attempts.Add(1)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"errors":[{"message":"missingLabel","extensions":{"code":"ColumnValueException"}}],"data":{"create_item":null}}`))
+		}))
+		t.Cleanup(srv.Close)
+
+		client := graphql.NewClient(srv.URL, srv.Client())
+		req := &CreateItemReq{BoardID: "12345", ItemName: "New Item", Status: "not started", retryDelay: time.Millisecond}
+
+		res, err := req.Run(context.Background(), client)
+		require.Nil(t, res)
+		require.ErrorContains(t, err, "create_item mutation")
+		require.ErrorContains(t, err, "missingLabel")
+		require.Equal(t, int32(1), attempts.Load())
 	})
 
 	t.Run("non-retryable graphql error fails immediately without retrying", func(t *testing.T) {

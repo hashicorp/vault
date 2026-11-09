@@ -12,8 +12,9 @@ import (
 
 // TestMondayCreateItemCmd_FlagParsing verifies that required flags are enforced,
 // that --board-id and --item-name are populated when provided, that the optional
-// --group-id is accepted and forwarded, and that --github-output is correctly
-// parsed when set.
+// --group-id is accepted and forwarded, that the optional --status label is
+// accepted and defaults to empty (status stays blank), and that --github-output
+// is correctly parsed when set.
 //
 // This test covers the CLI layer that CreateItemReq.Run tests cannot reach:
 // flag registration, MarkFlagRequired enforcement, and optional flag defaults.
@@ -28,6 +29,7 @@ func TestMondayCreateItemCmd_FlagParsing(t *testing.T) {
 		wantBoardID      string
 		wantItemName     string
 		wantGroupID      string
+		wantStatus       string
 		wantGithubOutput bool
 		wantErr          bool
 	}{
@@ -56,6 +58,37 @@ func TestMondayCreateItemCmd_FlagParsing(t *testing.T) {
 			wantBoardID:  "12345",
 			wantItemName: "Release Checklist",
 			wantGroupID:  "topics",
+		},
+
+		// --status is optional and empty by default, so existing call-sites keep
+		// creating items with a blank status.
+		"--status defaults to empty": {
+			args:         []string{"--board-id", "12345", "--item-name", "Release Checklist"},
+			wantBoardID:  "12345",
+			wantItemName: "Release Checklist",
+			wantStatus:   "",
+		},
+
+		// --status carries the label verbatim; Monday.com labels are case-sensitive.
+		"--status is respected": {
+			args:         []string{"--board-id", "12345", "--item-name", "Release Checklist", "--status", "Not started"},
+			wantBoardID:  "12345",
+			wantItemName: "Release Checklist",
+			wantStatus:   "Not started",
+		},
+
+		"--status combines with --group-id": {
+			args:         []string{"--board-id", "12345", "--item-name", "Release Checklist", "--group-id", "topics", "--status", "Not started"},
+			wantBoardID:  "12345",
+			wantItemName: "Release Checklist",
+			wantGroupID:  "topics",
+			wantStatus:   "Not started",
+		},
+
+		// The status column is fixed; there is deliberately no flag to change it.
+		"--status-column-id is not a flag": {
+			args:    []string{"--board-id", "12345", "--item-name", "Release Checklist", "--status", "Done", "--status-column-id", "status_1"},
+			wantErr: true,
 		},
 
 		// --github-output writes the new item-id to $GITHUB_OUTPUT; must be off by default.
@@ -98,6 +131,10 @@ func TestMondayCreateItemCmd_FlagParsing(t *testing.T) {
 			groupID, err := cmd.Flags().GetString("group-id")
 			require.NoError(t, err)
 			require.Equal(t, tc.wantGroupID, groupID)
+
+			status, err := cmd.Flags().GetString("status")
+			require.NoError(t, err)
+			require.Equal(t, tc.wantStatus, status)
 
 			githubOutput, err := cmd.Flags().GetBool("github-output")
 			require.NoError(t, err)

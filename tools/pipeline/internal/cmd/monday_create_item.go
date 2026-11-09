@@ -15,7 +15,7 @@ func newMondayCreateItemCmd() *cobra.Command {
 	var githubOutput bool
 
 	cmd := &cobra.Command{
-		Use:   "create-item --board-id <id> --item-name <name> [--group-id <id>]",
+		Use:   "create-item --board-id <id> --item-name <name> [--group-id <id>] [--status <label>]",
 		Short: "Create a new item on a Monday.com board",
 		Long:  "Create a new top-level item on a Monday.com board",
 		Args:  cobra.NoArgs,
@@ -52,6 +52,7 @@ func newMondayCreateItemCmd() *cobra.Command {
 	cmd.Flags().StringVar(&req.BoardID, "board-id", "", "Monday.com id for the board that receives the new item")
 	cmd.Flags().StringVar(&req.ItemName, "item-name", "", "The name of the item to create")
 	cmd.Flags().StringVar(&req.GroupID, "group-id", "", "Id of the group that receives the item. Defaults to the board's top group")
+	cmd.Flags().StringVar(&req.Status, "status", "", "Initial status label of the item, e.g. \"Not started\". Case-sensitive. When empty, the status stays blank")
 	cmd.Flags().BoolVar(&githubOutput, "github-output", false, "Write the new item's item-id to $GITHUB_OUTPUT")
 
 	_ = cmd.MarkFlagRequired("board-id")
