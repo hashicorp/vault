@@ -24,6 +24,7 @@ import (
 // Config represents the pipeline utilities configuration file.
 type Config struct {
 	ChangedFiles *changed.Config `hcl:"changed_files,block"`
+	Sync         *SyncConfig     `hcl:"sync,block"`
 }
 
 // DecodeReq contains the parameters for decoding a pipeline configuration.
@@ -130,6 +131,10 @@ func DecodeBytes(body []byte) (*Config, error) {
 	diags = diags.Extend(moreDiags)
 	if moreDiags.HasErrors() {
 		return nil, errors.Join(diags.Errs()...)
+	}
+
+	if err := spec.Sync.validate(); err != nil {
+		return nil, err
 	}
 
 	return spec, nil

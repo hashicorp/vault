@@ -437,7 +437,7 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 		"From", "To", "Skipped Merge Commits", "Error",
 	})
 
-	row := table.Row{nil, nil}
+	row := table.Row{"", "", ""}
 	if r.Request != nil {
 		from := r.Request.FromOwner + "/" + r.Request.FromRepo
 		if pr := r.OriginPullRequest; pr != nil {
@@ -452,7 +452,7 @@ func (r *CopyPullRequestRes) ToTable(err error) table.Writer {
 	if err != nil {
 		row = append(row, err.Error())
 	} else {
-		row = append(row, nil)
+		row = append(row, "")
 	}
 	t.AppendRow(row)
 

@@ -758,6 +758,58 @@ func TestCreateBackportRes_Err(t *testing.T) {
 	}
 }
 
+// TestCreateBackportRes_ToTable verifies that an attempt without a pull
+// request, like one we skipped, gets an empty URL cell rather than <nil>. The
+// empty cell lets us hide the URL column when no attempt has a pull request,
+// and keeps <nil> out of the comment we leave on the pull request.
+func TestCreateBackportRes_ToTable(t *testing.T) {
+	t.Parallel()
+
+	const prURL = "https://github.com/hashicorp/vault-enterprise/pull/1"
+
+	for name, test := range map[string]struct {
+		res          *CreateBackportRes
+		wantContains []string
+		wantMissing  []string
+	}{
+		"skipped attempt": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main": {BaseRef: "main", TargetRef: "ce/main", Skipped: true, SkippedReason: "no changes"},
+			}},
+			wantContains: []string{"ce/main", "no changes"},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;", "URL"},
+		},
+		"attempt with a pull request": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main": {BaseRef: "main", TargetRef: "ce/main", PullRequest: &libgithub.PullRequest{HTMLURL: libgithub.Ptr(prURL)}},
+			}},
+			wantContains: []string{"ce/main", "URL", prURL},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;"},
+		},
+		"skipped attempt next to one with a pull request": {
+			res: &CreateBackportRes{Attempts: map[string]*CreateBackportAttempt{
+				"ce/main":        {BaseRef: "main", TargetRef: "ce/main", PullRequest: &libgithub.PullRequest{HTMLURL: libgithub.Ptr(prURL)}},
+				"release/1.21.x": {BaseRef: "main", TargetRef: "release/1.21.x", Skipped: true, SkippedReason: "no changes"},
+			}},
+			wantContains: []string{"ce/main", "release/1.21.x", "URL", prURL, "no changes"},
+			wantMissing:  []string{"<nil>", "&lt;nil&gt;"},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			for _, got := range []string{test.res.ToTable().Render(), test.res.CommentBody()} {
+				for _, want := range test.wantContains {
+					require.Contains(t, got, want)
+				}
+				for _, missing := range test.wantMissing {
+					require.NotContains(t, got, missing)
+				}
+			}
+		})
+	}
+}
+
 // Test_filterNonBackportLabels tests the label filtering functionality
 func Test_filterNonBackportLabels(t *testing.T) {
 	t.Parallel()

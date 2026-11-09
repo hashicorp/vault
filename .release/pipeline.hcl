@@ -1,5 +1,52 @@
-# Copyright IBM Corp. 2016, 2025
-# SPDX-License-Identifier: BUSL-1.1
+// Copyright IBM Corp. 2016, 2026
+// SPDX-License-Identifier: BUSL-1.1
+
+// Configure our branch synchronization policies. Select a policy with the
+// `--sync-policy <name>` flag on `pipeline github sync branch` or
+// `pipeline git check changed-files`. We use the "ce" policy when we sync our
+// enterprise branches to hashicorp/vault and in our pre-push hook when pushing
+// to community edition branches.
+//
+// If you're modifying a policy you can verify it against the history of a
+// branch with `pipeline git check changed-files --branch <branch> --sync-policy <name>`.
+sync {
+  policy "ce" {
+    // Fail if any file in the history of the branch is in one of these groups.
+    // These are added to any groups that are passed with --disallowed-groups.
+    disallowed_groups = ["enterprise"]
+
+    // Don't fail the sync because they disallowed files exist. We know these
+    // are classified as enterprise but they exist on CE branches for one reason
+    // or another.
+    //
+    // Only exact paths are supported. We don't support matchers here on purpose
+    // so that new files in these directories will still fail the check.
+    exempt_from_disallowed_groups = [
+      // These exist on CE branches to please Github Actions.
+      joinpath(".github", "workflows", "build-artifacts-ent.yml"),
+      joinpath(".github", "workflows", "backport-automation-ent.yml"),
+      joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
+
+      // These files are enterprise only but they were merged and synced to CE
+      // before we classified them that way. We can't rewrite the history of CE
+      // branches so we exempt them from the disallowed groups check. They're
+      // still in their groups so we'll continue to exclude them from CE backports.
+      joinpath(".bob-review", ".gitkeep"),
+      joinpath(".bob", "enos-test-automation.md"),
+      joinpath(".github", "copilot-instructions.md"),
+      joinpath(".github", "instructions", "generic", "code_comments.instructions.md"),
+      joinpath(".github", "instructions", "generic", "ember_general.instructions.md"),
+      joinpath(".github", "instructions", "generic", "ember_hbs.instructions.md"),
+      joinpath(".github", "instructions", "generic", "ember_js.instructions.md"),
+      joinpath(".github", "instructions", "generic", "ember_styles.instructions.md"),
+      joinpath(".github", "instructions", "generic", "ember_tests.instructions.md"),
+      joinpath(".github", "instructions", "generic", "golang.instructions.md"),
+      joinpath(".github", "instructions", "generic", "golang_tests.instructions.md"),
+      joinpath(".github", "instructions", "generic", "testing.instructions.md"),
+      joinpath(".github", "instructions", "index.md"),
+    ]
+  }
+}
 
 // Configure our changed-files detection for the pipeline utility. Here we define
 // how we wish to group the files in the repository. We use this group metadata
@@ -70,17 +117,6 @@ changed_files {
     }
   }
 
-  // The "automation_ui" group tracks UI-related automation workflows.
-  group "automation_ui" {
-    match {
-      base_dir = [joinpath(".github", "workflows")]
-      base_name = [
-        "gen-diff-spec.yml",
-        "ui-client-update.yml",
-      ]
-    }
-  }
-
   // ----------------------------------------------------------------------------
   // Build
   // ----------------------------------------------------------------------------
@@ -109,6 +145,7 @@ changed_files {
       base_name = [
         "ci-helper.sh",
         "Dockerfile",
+        "Dockerfile-client-ent",
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
         "Makefile",
@@ -253,36 +290,21 @@ changed_files {
     }
   }
 
+  // Group membership is additive, but ignores apply within each block. Keep
+  // documentation separate so the CE filename exclusions below cannot expose
+  // vendored context such as auth-cert.md.
+  group "enterprise" {
+    match {
+      base_dir = ["docs-cms"]
+    }
+  }
+
   // The "enterprise" group tracks our files that ought to exist in only in the
   // enterprise endition. It is arguably the most important grouping
   // configuration in this repository. Among other things, this is how we
   // enforce that no enterprise files make it into CE branches or repositories
   // with out automated tooling.
   group "enterprise" {
-    // Ignore some files that would otherwise match our filters but exist in
-    // some fashion on enterprise branches for reasons we cannot control.
-    ignore {
-      file = [
-        # These exist on CE branches to please Github Actions.
-        joinpath(".github", "workflows", "build-artifacts-ent.yml"),
-        joinpath(".github", "workflows", "backport-automation-ent.yml"),
-        joinpath(".github", "workflows", "test-run-enos-scenario-cloud.yml"),
-        # These were merged and synced before we had bob/copilot/agents classified
-        # as ent only.
-        joinpath(".bob", "enos-test-automation.md"),
-        joinpath(".github", "instructions", "generic", "code_comments.instructions.md"),
-        joinpath(".github", "instructions", "generic", "ember_general.instructions.md"),
-        joinpath(".github", "instructions", "generic", "ember_hbs.instructions.md"),
-        joinpath(".github", "instructions", "generic", "ember_js.instructions.md"),
-        joinpath(".github", "instructions", "generic", "ember_styles.instructions.md"),
-        joinpath(".github", "instructions", "generic", "ember_tests.instructions.md"),
-        joinpath(".github", "instructions", "generic", "golang.instructions.md"),
-        joinpath(".github", "instructions", "generic", "golang_tests.instructions.md"),
-        joinpath(".github", "instructions", "generic", "testing.instructions.md"),
-        joinpath(".github", "instructions", "index.md"),
-      ]
-    }
-
     // Ignore whole directories where no enterprise only code should ever exist.
     ignore {
       base_dir = [
@@ -332,12 +354,14 @@ changed_files {
     match {
       base_dir = [
         "vault_ent",
+        joinpath("command", "client", "cmd"),
         joinpath("scripts", "dev", "hsm"),
         joinpath("scripts", "testing"),
         joinpath("specs"),
         joinpath(".release", "ibm-pao"),
         // Internal developer tooling that must not sync to CE
         ".bob",
+        ".bob-review",
         ".opencode",
         ".agents",
         joinpath("ui", ".agents"),
@@ -349,11 +373,13 @@ changed_files {
 
     match {
       base_name = [
+        "Dockerfile-client-ent",
         "Dockerfile-ent",
         "Dockerfile-ent-hsm",
         "AGENTS.md",
         "opencode.json",
         ".mcp.json",
+        "copilot-instructions.md",
       ]
     }
 

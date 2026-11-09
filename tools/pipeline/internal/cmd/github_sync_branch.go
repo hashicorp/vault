@@ -31,6 +31,7 @@ func newSyncGithubBranchCmd() *cobra.Command {
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToBranch, "to-branch", "", "The name of the branch we want to sync to")
 	syncBranchCmd.PersistentFlags().StringVarP(&syncGithubBranchReq.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
 	syncBranchCmd.PersistentFlags().StringSliceVarP(&syncGithubBranchReq.DisallowedGroups, "disallowed-groups", "g", nil, "Enable changed file group and disallow if any files match the given groups")
+	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.SyncPolicy, "sync-policy", "", "Enable changed file checking with the given sync policy in pipeline.hcl. Its disallowed groups are added to any --disallowed-groups")
 
 	err := syncBranchCmd.MarkPersistentFlagRequired("from-branch")
 	if err != nil {
