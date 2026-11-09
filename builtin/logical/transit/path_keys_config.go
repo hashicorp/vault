@@ -107,6 +107,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	originalDeletionAllowed := p.DeletionAllowed
 	originalExportable := p.Exportable
 	originalAllowPlaintextBackup := p.AllowPlaintextBackup
+	originalAutoRotatePeriod := p.AutoRotatePeriod
 
 	defer func() {
 		if retErr != nil || (resp != nil && resp.IsError()) {
@@ -115,6 +116,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 			p.DeletionAllowed = originalDeletionAllowed
 			p.Exportable = originalExportable
 			p.AllowPlaintextBackup = originalAllowPlaintextBackup
+			p.AutoRotatePeriod = originalAutoRotatePeriod
 		}
 	}()
 
