@@ -597,14 +597,6 @@ changed_files {
   // Security
   // ----------------------------------------------------------------------------
 
-  // The "security_scanner" group tracks general security scanning workflows.
-  group "security_scanner" {
-    match {
-      base_dir  = [joinpath(".github", "workflows")]
-      base_name = ["security-scan.yml"]
-    }
-  }
-
   // The "security_zap" group tracks OWASP ZAP security scanning.
   group "security_zap" {
     match {
