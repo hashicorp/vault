@@ -24,6 +24,11 @@ type CreateItemReq struct {
 	GroupID string
 	// ItemName is the name of the new item.
 	ItemName string
+	// Status is the initial status label of the new item, for example
+	// "Not started". Labels are case-sensitive and must match a label on the
+	// board's status column. Optional: when empty, behavior is unchanged and
+	// the status stays blank.
+	Status string
 
 	// retryDelay overrides the delay between retries. Zero uses defaultRetryDelay.
 	retryDelay time.Duration
@@ -37,7 +42,9 @@ type CreateItemRes struct {
 	ItemName string `json:"item_name"`
 }
 
-// Run executes the create_item mutation against the Monday.com API.
+// Run executes the create_item mutation against the Monday.com API. The
+// column_values argument is only sent when Status is set, so a request
+// without a status sends the same mutation as before.
 // Transient errors (rate limits, complexity budget) are retried with a fixed
 // delay for up to 5 attempts. 5xx gateway errors are not retried because
 // Monday.com may have already committed the item before the gateway failed —
@@ -47,14 +54,8 @@ func (r *CreateItemReq) Run(ctx context.Context, client *graphql.Client) (*Creat
 		slog.String("board_id", r.BoardID),
 		slog.String("group_id", r.GroupID),
 		slog.String("item_name", r.ItemName),
+		slog.String("status", r.Status),
 	)
-
-	var mutation struct {
-		CreateItem struct {
-			ID   graphql.ID `graphql:"id"`
-			Name string     `graphql:"name"`
-		} `graphql:"create_item(board_id: $boardId, group_id: $groupId, item_name: $itemName)"`
-	}
 
 	// An empty GroupID is sent as null instead of "", so Monday.com leaves
 	// group_id unset and uses the board's top group.
@@ -70,18 +71,51 @@ func (r *CreateItemReq) Run(ctx context.Context, client *graphql.Client) (*Creat
 		"itemName": graphql.String(r.ItemName),
 	}
 
+	// The mutation text is chosen by whether a status is set. Without one the
+	// request is identical to the pre-status mutation, so existing callers are
+	// unaffected. With one, column_values carries the label in the same call.
 	var res *CreateItemRes
 	err := retry.Do(
 		func() error {
-			if err := client.Mutate(ctx, &mutation, vars); err != nil {
+			var (
+				id   graphql.ID
+				name string
+				err  error
+			)
+			if r.Status == "" {
+				var mutation struct {
+					CreateItem struct {
+						ID   graphql.ID `graphql:"id"`
+						Name string     `graphql:"name"`
+					} `graphql:"create_item(board_id: $boardId, group_id: $groupId, item_name: $itemName)"`
+				}
+				err = client.Mutate(ctx, &mutation, vars)
+				id, name = mutation.CreateItem.ID, mutation.CreateItem.Name
+			} else {
+				var mutation struct {
+					CreateItem struct {
+						ID   graphql.ID `graphql:"id"`
+						Name string     `graphql:"name"`
+					} `graphql:"create_item(board_id: $boardId, group_id: $groupId, item_name: $itemName, column_values: $columnValues)"`
+				}
+				statusVars := map[string]any{
+					"boardId":      vars["boardId"],
+					"groupId":      vars["groupId"],
+					"itemName":     vars["itemName"],
+					"columnValues": statusColumnValues(r.Status),
+				}
+				err = client.Mutate(ctx, &mutation, statusVars)
+				id, name = mutation.CreateItem.ID, mutation.CreateItem.Name
+			}
+			if err != nil {
 				slog.Default().DebugContext(ctx, "create_item mutation failed",
 					slog.String("error", err.Error()),
 				)
 				return err
 			}
 			res = &CreateItemRes{
-				ItemID:   fmt.Sprintf("%v", mutation.CreateItem.ID),
-				ItemName: mutation.CreateItem.Name,
+				ItemID:   fmt.Sprintf("%v", id),
+				ItemName: name,
 			}
 			return nil
 		},
