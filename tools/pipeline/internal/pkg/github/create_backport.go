@@ -586,7 +586,7 @@ func (r *CreateBackportRes) ToTable() table.Writer {
 		if values.PullRequest != nil {
 			row = append(row, values.PullRequest.GetHTMLURL())
 		} else {
-			row = append(row, nil)
+			row = append(row, "")
 		}
 		valErr := ""
 		if values.Error != nil {
