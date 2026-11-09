@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"reflect"
 	"slices"
@@ -37,6 +38,14 @@ type ACL struct {
 	prefixRules *radix.Tree
 
 	segmentWildcardPaths map[string]interface{}
+
+	// foldedDeny indexes only the explicit deny rules, with their paths
+	// lowercased, so a deny also applies to case variants of its path, making
+	// explicit denies case-insensitive.
+	// It is nil when no policy has a deny rule. Only the rule trees and
+	// segmentWildcardPaths are populated; it exists to reuse the matching
+	// helpers and must not be used as a general ACL.
+	foldedDeny *ACL
 
 	// root is enabled if the "root" named policy is present
 	root bool
@@ -304,7 +313,135 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			}
 		}
 	}
+
+	a.buildFoldedDenyIndex()
 	return a, nil
+}
+
+// buildFoldedDenyIndex populates a.foldedDeny from the merged rules that
+// carry an explicit deny, keyed by their lowercased path.
+func (a *ACL) buildFoldedDenyIndex() {
+	folded := &ACL{
+		exactRules:           radix.New(),
+		prefixRules:          radix.New(),
+		segmentWildcardPaths: make(map[string]interface{}),
+	}
+	hasDeny := false
+
+	// safely check if a rule carries an explicit deny.
+	isDeny := func(raw interface{}) bool {
+		perms, ok := raw.(*ACLPermissions)
+		return ok && perms != nil && perms.CapabilitiesBitmap&DenyCapabilityInt > 0
+	}
+
+	copyDenies := func(from, to *radix.Tree) {
+		from.Walk(func(path string, raw interface{}) bool {
+			if isDeny(raw) {
+				to.Insert(strings.ToLower(path), raw)
+				hasDeny = true
+			}
+			return false
+		})
+	}
+	copyDenies(a.exactRules, folded.exactRules)
+	copyDenies(a.prefixRules, folded.prefixRules)
+	for path, raw := range a.segmentWildcardPaths {
+		if isDeny(raw) {
+			folded.segmentWildcardPaths[strings.ToLower(path)] = raw
+			hasDeny = true
+		}
+	}
+
+	if hasDeny {
+		a.foldedDeny = folded
+	}
+}
+
+// foldedDenyOverride returns the permissions of the most specific explicit
+// deny that matches path only after lowercasing both sides, provided it is at
+// least as specific as the rule that matched the request as written. winner
+// is the permissions AllowOperation selected for path. It returns nil when no
+// such deny exists. A less specific deny must not override a more specific
+// allow, so the usual specificity ordering still applies.
+func (a *ACL) foldedDenyOverride(path string, op logical.Operation, winner *ACLPermissions) *ACLPermissions {
+	f := a.foldedDeny
+	if f == nil {
+		return nil
+	}
+
+	// The deny index is small, so check it first and only work out which rule
+	// won when a deny actually matches.
+	deny, ok := highestPriorityDescr(f.matchingRuleDescrs(strings.ToLower(path), op))
+	if !ok {
+		return nil
+	}
+
+	// Every candidate's perms is a distinct object owned by its rule, so
+	// pointer identity finds the descriptor of the rule that won.
+	for _, d := range a.matchingRuleDescrs(path, op) {
+		if d.perms == winner {
+			if wildcardPathDescriptorComparePriority(deny, foldDescr(d)) {
+				return nil
+			}
+			return deny.perms
+		}
+	}
+
+	// The winner is always among its own candidates; failing closed keeps a
+	// future divergence from silently allowing a denied path.
+	return deny.perms
+}
+
+// matchingRuleDescrs returns every exact, prefix, and segment-wildcard rule of a
+// matching path. For LIST requests it also considers the slash-stripped form,
+// mirroring the lookups in AllowOperation.
+func (a *ACL) matchingRuleDescrs(path string, op logical.Operation) []wcPathDescr {
+	var formsBuf [2]string
+	forms := append(formsBuf[:0], path)
+	if op == logical.ListOperation && strings.HasSuffix(path, "/") {
+		forms = append(forms, strings.TrimSuffix(path, "/"))
+	}
+
+	var descrs []wcPathDescr
+	for _, form := range forms {
+		if raw, ok := a.exactRules.Get(form); ok {
+			descrs = append(descrs, exactRuleDescr(form, raw.(*ACLPermissions)))
+		}
+		descrs = a.prefixAndWCCandidatesForPath(form, descrs)
+	}
+	return descrs
+}
+
+// foldDescr returns d with its path lowercased, matching the form used by the
+// folded deny index so that specificity comparisons are not skewed by case.
+func foldDescr(d wcPathDescr) wcPathDescr {
+	// Lowercasing can change byte lengths for some non-ASCII characters, so
+	// the wildcard/glob offset must be recomputed rather than copied.
+	if d.firstWCOrGlob >= 0 && d.firstWCOrGlob <= len(d.wcPath) {
+		d.firstWCOrGlob = len(strings.ToLower(d.wcPath[:d.firstWCOrGlob]))
+	}
+	d.wcPath = strings.ToLower(d.wcPath)
+	return d
+}
+
+// exactRuleDescr describes an exact-match rule. Exact rules outrank every
+// prefix and segment-wildcard rule, which firstWCOrGlob encodes.
+func exactRuleDescr(path string, perms *ACLPermissions) wcPathDescr {
+	return wcPathDescr{firstWCOrGlob: math.MaxInt, wcPath: path, perms: perms}
+}
+
+// highestPriorityDescr returns the most specific descriptor in descrs.
+func highestPriorityDescr(descrs []wcPathDescr) (wcPathDescr, bool) {
+	if len(descrs) == 0 {
+		return wcPathDescr{}, false
+	}
+	best := descrs[0]
+	for _, d := range descrs[1:] {
+		if wildcardPathDescriptorComparePriority(best, d) {
+			best = d
+		}
+	}
+	return best, true
 }
 
 func (a *ACL) CapabilitiesAndSubscribeEventTypes(ctx context.Context, path string) (pathCapabilities []string, subscribeEventTypes []string) {
@@ -482,6 +619,14 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 	return
 
 CHECK:
+	// An explicit deny applies to case variants of its path, even when a
+	// broader allow rule matched the original casing.
+	if capabilities&DenyCapabilityInt == 0 {
+		if deny := a.foldedDenyOverride(path, op, permissions); deny != nil {
+			permissions = deny
+			capabilities = DenyCapabilityInt
+		}
+	}
 	// Check if the minimum permissions are met
 	// If "deny" has been explicitly set, only deny will be in the map, so we
 	// only need to check for the existence of other values
