@@ -5,8 +5,11 @@ package event
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
@@ -15,11 +18,21 @@ import (
 
 var _ eventlogger.Node = (*SyslogSink)(nil)
 
+const (
+	// syslogSocketLimit is the max bytes per Unix datagram write.
+	syslogSocketLimit = 2048
+
+	// syslogFramingOverheadFixed is the fixed overhead go-syslog adds before
+	syslogFramingOverheadFixed = 33
+)
+
 // SyslogSink is a sink node which handles writing events to syslog.
 type SyslogSink struct {
 	requiredFormat string
 	syslogger      gsyslog.Syslogger
 	logger         hclog.Logger
+	// chunkSize is the max payload per write: socket limit minus framing and tag.
+	chunkSize int
 }
 
 // NewSyslogSink should be used to create a new SyslogSink.
@@ -44,12 +57,14 @@ func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
 		requiredFormat: format,
 		syslogger:      logger,
 		logger:         opts.withLogger,
+		chunkSize:      syslogSocketLimit - syslogFramingOverheadFixed - len(opts.withTag),
 	}
 
 	return syslog, nil
 }
 
 // Process handles writing the event to the syslog.
+// Large payloads are split into chunks to avoid EMSGSIZE on the syslog socket.
 func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (_ *eventlogger.Event, retErr error) {
 	select {
 	case <-ctx.Done():
@@ -75,13 +90,60 @@ func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (_ *even
 		return nil, fmt.Errorf("unable to retrieve event formatted as %q: %w", s.requiredFormat, ErrInvalidParameter)
 	}
 
-	_, err := s.syslogger.Write(formatted)
-	if err != nil {
+	if err := s.writeChunked(formatted); err != nil {
 		return nil, fmt.Errorf("error writing to syslog: %w", err)
 	}
 
 	// return nil for the event to indicate the pipeline is complete.
 	return nil, nil
+}
+
+// writeChunked writes b to syslog, splitting into chunkSize segments if needed.
+// ENOBUFS is retried since it clears quickly once syslogd drains the buffer.
+func (s *SyslogSink) writeChunked(b []byte) error {
+	if len(b) <= s.chunkSize {
+		return s.writeWithRetry(b)
+	}
+
+	total := len(b)
+	chunks := (total + s.chunkSize - 1) / s.chunkSize
+	for i := range chunks {
+		start := i * s.chunkSize
+		end := start + s.chunkSize
+		if end > total {
+			end = total
+		}
+		if err := s.writeWithRetry(b[start:end]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeWithRetry writes b, retrying up to maxRetries times on ENOBUFS.
+func (s *SyslogSink) writeWithRetry(b []byte) error {
+	const maxRetries = 5
+	wait := 2 * time.Millisecond
+
+	for attempt := range maxRetries + 1 {
+		_, err := s.syslogger.Write(b)
+		if err == nil {
+			return nil
+		}
+		if attempt < maxRetries && isErrNoBuf(err) {
+			time.Sleep(wait)
+			wait *= 2
+			continue
+		}
+		return err
+	}
+	return nil
+}
+
+// isErrNoBuf reports whether err wraps ENOBUFS.
+func isErrNoBuf(err error) bool {
+	var errno syscall.Errno
+	return errors.As(err, &errno) && errno == syscall.ENOBUFS
 }
 
 // Reopen is a no-op for a syslog sink.
