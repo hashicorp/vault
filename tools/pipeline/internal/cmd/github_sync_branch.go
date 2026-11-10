@@ -7,11 +7,15 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
 	"github.com/spf13/cobra"
 )
 
-var syncGithubBranchReq = github.SyncBranchReq{}
+var (
+	syncGithubBranchReq              = github.SyncBranchReq{}
+	syncGithubBranchDisallowedGroups []string
+)
 
 func newSyncGithubBranchCmd() *cobra.Command {
 	syncBranchCmd := &cobra.Command{
@@ -30,7 +34,7 @@ func newSyncGithubBranchCmd() *cobra.Command {
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToRepo, "to-repo", "vault", "The Github repository to sync to")
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToBranch, "to-branch", "", "The name of the branch we want to sync to")
 	syncBranchCmd.PersistentFlags().StringVarP(&syncGithubBranchReq.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
-	syncBranchCmd.PersistentFlags().StringSliceVarP(&syncGithubBranchReq.DisallowedGroups, "disallowed-groups", "g", nil, "Enable changed file group and disallow if any files match the given groups")
+	syncBranchCmd.PersistentFlags().StringSliceVarP(&syncGithubBranchDisallowedGroups, "disallowed-groups", "g", nil, "Enable changed file group and disallow if any files match the given groups")
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.SyncPolicy, "sync-policy", "", "Enable changed file checking with the given sync policy in pipeline.hcl. Its disallowed groups are added to any --disallowed-groups")
 
 	err := syncBranchCmd.MarkPersistentFlagRequired("from-branch")
@@ -49,6 +53,10 @@ func runSyncGithubBranchCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
 	syncGithubBranchReq.DecodeRes = rootCfg.configDecodeRes
+	for _, group := range syncGithubBranchDisallowedGroups {
+		syncGithubBranchReq.DisallowedGroups = syncGithubBranchReq.DisallowedGroups.Add(changed.FileGroup(group))
+	}
+
 	res, err := syncGithubBranchReq.Run(cmd.Context(), githubCmdState.GithubV3, rootCfg.git)
 
 	switch rootCfg.format {

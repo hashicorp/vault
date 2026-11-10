@@ -6,6 +6,7 @@ package config
 import (
 	"testing"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/stretchr/testify/require"
 )
 
@@ -18,7 +19,7 @@ func TestConfig_SyncPolicy(t *testing.T) {
 	for name, test := range map[string]struct {
 		hcl        string
 		policy     string
-		want       *SyncPolicyConfig
+		want       *SyncPolicy
 		errHas     string
 		wantNoSync bool
 	}{
@@ -32,9 +33,9 @@ sync {
 }
 `,
 			policy: "ce",
-			want: &SyncPolicyConfig{
+			want: &SyncPolicy{
 				Name:                       "ce",
-				DisallowedGroups:           []string{"enterprise"},
+				DisallowedGroups:           changed.FileGroups{"enterprise"},
 				ExemptFromDisallowedGroups: []string{".github/copilot-instructions.md"},
 			},
 		},
@@ -51,9 +52,9 @@ sync {
 }
 `,
 			policy: "docs",
-			want: &SyncPolicyConfig{
+			want: &SyncPolicy{
 				Name:             "docs",
-				DisallowedGroups: []string{"enterprise", "changelog"},
+				DisallowedGroups: changed.FileGroups{"enterprise", "changelog"},
 			},
 		},
 		"policy with only exempt files": {
@@ -65,7 +66,7 @@ sync {
 }
 `,
 			policy: "ce",
-			want: &SyncPolicyConfig{
+			want: &SyncPolicy{
 				Name:                       "ce",
 				ExemptFromDisallowedGroups: []string{"AGENTS.md"},
 			},
@@ -114,6 +115,122 @@ changed_files {
 			}
 			require.NoError(t, err)
 			require.Equal(t, test.want, policy)
+		})
+	}
+}
+
+// TestConfig_DisallowedGroups tests that we combine the groups we're given with
+// those of the sync policies, and that we fail if any of them aren't changed
+// file groups since a typo would never match anything and quietly pass.
+func TestConfig_DisallowedGroups(t *testing.T) {
+	t.Parallel()
+
+	const pipelineHCL = `
+changed_files {
+  group "changelog" {
+    match {
+      base_dir = ["changelog"]
+    }
+  }
+
+  group "enterprise" {
+    match {
+      base_dir = ["vault_ent"]
+    }
+  }
+}
+`
+
+	ce := &SyncPolicy{
+		Name:                       "ce",
+		DisallowedGroups:           changed.FileGroups{"enterprise"},
+		ExemptFromDisallowedGroups: []string{"AGENTS.md"},
+	}
+	exemptOnly := &SyncPolicy{
+		Name:                       "exempt-only",
+		ExemptFromDisallowedGroups: []string{"AGENTS.md"},
+	}
+
+	for name, test := range map[string]struct {
+		hcl      string
+		groups   changed.FileGroups
+		policies []*SyncPolicy
+		want     changed.FileGroups
+		errHas   string
+	}{
+		"groups only": {
+			groups: changed.FileGroups{"enterprise", "changelog"},
+			want:   changed.FileGroups{"changelog", "enterprise"},
+		},
+		"sync policy only": {
+			policies: []*SyncPolicy{ce},
+			want:     changed.FileGroups{"enterprise"},
+		},
+		"groups are added to the sync policy groups": {
+			groups:   changed.FileGroups{"changelog", "enterprise"},
+			policies: []*SyncPolicy{ce},
+			want:     changed.FileGroups{"changelog", "enterprise"},
+		},
+		"many sync policies": {
+			policies: []*SyncPolicy{
+				ce,
+				{Name: "changelog", DisallowedGroups: changed.FileGroups{"changelog", "enterprise"}},
+			},
+			want: changed.FileGroups{"changelog", "enterprise"},
+		},
+		"nil sync policies are ignored": {
+			groups:   changed.FileGroups{"enterprise"},
+			policies: []*SyncPolicy{nil},
+			want:     changed.FileGroups{"enterprise"},
+		},
+		"sync policy with only exempt files and groups": {
+			groups:   changed.FileGroups{"enterprise"},
+			policies: []*SyncPolicy{exemptOnly},
+			want:     changed.FileGroups{"enterprise"},
+		},
+		"sync policy with only exempt files": {
+			policies: []*SyncPolicy{exemptOnly},
+			errHas:   "no disallowed groups have been configured",
+		},
+		"nothing": {
+			errHas: "no disallowed groups have been configured",
+		},
+		"unknown group": {
+			groups: changed.FileGroups{"enterprse"},
+			errHas: "disallowed group enterprse is not a changed file group in pipeline.hcl",
+		},
+		"unknown group in the sync policy": {
+			policies: []*SyncPolicy{{Name: "typo", DisallowedGroups: changed.FileGroups{"enterprse"}}},
+			errHas:   "disallowed group enterprse is not a changed file group in pipeline.hcl",
+		},
+		"no changed files config": {
+			hcl:    `sync {}`,
+			groups: changed.FileGroups{"enterprise"},
+			errHas: "no changed file grouping config was found in pipeline.hcl",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			hcl := pipelineHCL
+			if test.hcl != "" {
+				hcl = test.hcl
+			}
+			cfg, err := DecodeBytes([]byte(hcl))
+			require.NoError(t, err)
+
+			groups, err := cfg.DisallowedGroups(
+				WithDisallowedGroupsGroups(test.groups),
+				WithDisallowedGroupsSyncPolicies(test.policies...),
+			)
+			if test.errHas != "" {
+				require.ErrorContains(t, err, test.errHas)
+				require.Nil(t, groups)
+
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, test.want, groups)
 		})
 	}
 }
