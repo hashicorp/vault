@@ -1,4 +1,4 @@
-// Copyright IBM Corp. 2016, 2025
+// Copyright IBM Corp. 2016, 2026
 // SPDX-License-Identifier: BUSL-1.1
 
 package vault
@@ -1006,12 +1006,12 @@ func (c *Core) getRaftChallenge(leaderInfo *raft.LeaderJoinInfo) (*raftInformati
 	if err != nil {
 		return nil, fmt.Errorf("failed to create api client: %w", err)
 	}
+	// The caller-selected leader must not receive credentials inherited from the environment.
+	apiClient.ClearToken()
+	apiClient.SetHeaders(http.Header{api.RequestHeaderName: {"true"}})
 	apiClient.SetNamespace(c.OperatorNamespacePath())
 
 	// Attempt to join the leader by requesting for the bootstrap challenge
-	// NOTE: We have investigated this as an SSRF vector and determined that it
-	// is not a risk. Any attacker would already need network access to this Vault node.
-	// An attacker would gain negligable information from a response.
 	secret, err := apiClient.Logical().Write("sys/storage/raft/bootstrap/challenge", map[string]interface{}{
 		"server_id": c.getRaftBackend().NodeID(),
 	})
