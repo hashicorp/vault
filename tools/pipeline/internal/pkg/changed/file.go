@@ -155,3 +155,33 @@ func (f Files) EachHasAnyGroup(groups FileGroups) bool {
 
 	return true
 }
+
+// Disallowed takes disallowed groups and exempt file paths and returns the files
+// that are in any of the groups, the groups that they matched, and the files
+// that matched but are exempt. Exempt files don't count toward the matched
+// groups.
+func (f Files) Disallowed(groups FileGroups, exempt []string) (Files, FileGroups, Files) {
+	exemptFiles := map[string]struct{}{}
+	for _, file := range exempt {
+		exemptFiles[file] = struct{}{}
+	}
+
+	var matched, exempted Files
+	var matchedGroups FileGroups
+	for _, file := range f {
+		fileGroups := file.Groups.Intersection(groups)
+		if len(fileGroups) < 1 {
+			continue
+		}
+
+		if _, ok := exemptFiles[file.Name()]; ok {
+			exempted = append(exempted, file)
+			continue
+		}
+
+		matched = append(matched, file)
+		matchedGroups = matchedGroups.Add(fileGroups...)
+	}
+
+	return matched, matchedGroups, exempted
+}

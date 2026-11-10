@@ -7,11 +7,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/github"
 	"github.com/spf13/cobra"
 )
 
-var listGithubChangedFiles = &github.ListChangedFilesReq{}
+var (
+	listGithubChangedFiles                 = &github.ListChangedFilesReq{}
+	listGithubChangedFilesDisallowedGroups []string
+)
 
 func newGithubListChangedFilesCmd() *cobra.Command {
 	changedFilesCmd := &cobra.Command{
@@ -27,6 +31,8 @@ func newGithubListChangedFilesCmd() *cobra.Command {
 	changedFilesCmd.PersistentFlags().IntVarP(&listGithubChangedFiles.PullNumber, "pr", "p", 0, "The pull request to use as a changed file source")
 	changedFilesCmd.PersistentFlags().BoolVarP(&listGithubChangedFiles.GroupFiles, "group", "g", true, "Whether or not to determine changed file groups")
 	changedFilesCmd.PersistentFlags().BoolVar(&listGithubChangedFiles.WriteToGithubOutput, "github-output", false, "Whether or not to write 'changed-files' to $GITHUB_OUTPUT")
+	changedFilesCmd.PersistentFlags().StringSliceVar(&listGithubChangedFilesDisallowedGroups, "disallowed-groups", nil, "File group(s) to check changed files for. They're added to the disallowed groups of the sync policy. We only report on matches, use 'github check changed-files' if you want to fail")
+	changedFilesCmd.PersistentFlags().StringVar(&listGithubChangedFiles.SyncPolicy, "sync-policy", "", "The sync policy in pipeline.hcl to check changed files with. We only report on matches, use 'github check changed-files' if you want to fail")
 
 	return changedFilesCmd
 }
@@ -35,6 +41,10 @@ func runListGithubChangedFilesCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
 	listGithubChangedFiles.DecodeRes = rootCfg.configDecodeRes
+	for _, group := range listGithubChangedFilesDisallowedGroups {
+		listGithubChangedFiles.DisallowedGroups = listGithubChangedFiles.DisallowedGroups.Add(changed.FileGroup(group))
+	}
+
 	res, err := listGithubChangedFiles.Run(context.TODO(), githubCmdState.GithubV3)
 	if err != nil {
 		return fmt.Errorf("listing changed files: %w", err)

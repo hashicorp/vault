@@ -159,27 +159,31 @@ jobs:
           if [ -n "${INSTANA_ENDPOINT_URL}" ]; then
             echo "INSTANA_ENDPOINT_URL=${INSTANA_ENDPOINT_URL}" >> "$GITHUB_ENV"
           fi
-      # Determine the changed files
+      # Determine the changed files. If we're on a pull request against a ce/* branch we'll also
+      # check them against the "ce" sync policy in .release/pipeline.hcl.
       - uses: ./.github/actions/changed-files
         id: changed-files
         with:
           github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          sync-policy: ${{ steps.metadata.outputs.is-ent-repo == 'true' && steps.metadata.outputs.workflow-trigger == 'pull_request' && startsWith(github.event.pull_request.base.ref, 'ce/') && 'ce' || '' }}
       # Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
       # We do this here because we have the information, there's absolutely no reason to go
       # further until we've resolved the issue, and we want to fail a required workflow if this
-      # issue is present.
+      # issue is present. We check disallowed_groups rather than groups because the "ce" sync policy
+      # exempts some files that we classify as enterprise but that already exist on ce/* branches.
+      # We still want to be able to change or remove them.
       - if: |
           steps.metadata.outputs.is-ent-repo == 'true' &&
           steps.metadata.outputs.workflow-trigger == 'pull_request' &&
           startsWith(github.event.pull_request.base.ref, 'ce/') &&
-          contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'enterprise')
+          contains(fromJSON(steps.changed-files.outputs.changed-files).disallowed_groups, 'enterprise')
         name: Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
         id: ce-ent-changed-file-check
         run: |
           echo "The pull request has changed files that are in enterprise groups!"
-          echo "If you believe this to be in error you will want to update the changed files checks in tools/pipeline/internal/pkg/changed"
-          echo "on our enterprise branches and backport them to ce/* before continuing with this pull request."
-          echo "See the 'changed-files' step above for a list of changed files and their associated metadata groups."
+          echo "If you believe this to be in error you will want to update the changed file groups or the 'ce' sync policy"
+          echo "in .release/pipeline.hcl on our enterprise branches and backport them to ce/* before continuing with this pull request."
+          echo "See the 'changed-files' step above for a list of changed files and which ones are disallowed or exempt."
           exit 1
       # Make sure all required Go modules are cached at this point. We don't want all of the Go
       # tests and build jobs to download modules and race to upload them to the cache.
