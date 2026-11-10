@@ -22,6 +22,18 @@ func (d dynamicSystemView) TPMByID(ctx context.Context, id string) (*logical.TPM
 	return nil, fmt.Errorf("enterprise only feature")
 }
 
+func (d dynamicSystemView) TPMByName(ctx context.Context, name string) (*logical.TPM, error) {
+	return nil, fmt.Errorf("enterprise only feature")
+}
+
+func (d dynamicSystemView) TPMGroupByID(ctx context.Context, id string) (*logical.TPMGroup, error) {
+	return nil, fmt.Errorf("enterprise only feature")
+}
+
+func (d dynamicSystemView) TPMGroupByName(ctx context.Context, name string) (*logical.TPMGroup, error) {
+	return nil, fmt.Errorf("enterprise only feature")
+}
+
 func (d dynamicSystemView) GroupsForTPM(ctx context.Context, id string) ([]*logical.TPMGroup, error) {
 	return nil, fmt.Errorf("enterprise only feature")
 }
