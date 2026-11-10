@@ -18,11 +18,13 @@ import { getKeymgmtProviderIcon } from 'vault/utils/keymgmt-provider-utils';
 import { getModelTypeForEngine } from 'vault/utils/model-helpers/secret-engine-helpers';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { resolve } from 'rsvp';
+import RoleAwsResource from 'vault/resources/aws-role';
 import {
   SecretsApiKeyManagementListKeysListEnum,
   SecretsApiKeyManagementListKmsProvidersListEnum,
   SecretsApiTotpListKeysListEnum,
   SecretsApiSshListRolesListEnum,
+  SecretsApiAwsListRolesListEnum,
   SecretsApiTransformListTransformationsListEnum,
   SecretsApiTransformListRolesListEnum,
   SecretsApiTransformListTemplatesListEnum,
@@ -106,6 +108,7 @@ export default Route.extend({
       effectiveType === 'keymgmt' ||
       effectiveType === 'totp' ||
       effectiveType === 'ssh' ||
+      effectiveType === 'aws' ||
       effectiveType === 'transit' ||
       effectiveType === 'transform'
     ) {
@@ -341,6 +344,35 @@ export default Route.extend({
     }
   },
 
+  async fetchAwsRoles(backend, page, pageFilter) {
+    try {
+      const response = await this.api.secrets.awsListRoles(backend, SecretsApiAwsListRolesListEnum.TRUE);
+      const names = response.keys || [];
+      const paths = names.flatMap((name) => [`${backend}/roles/${name}`, `${backend}/creds/${name}`]);
+      const capabilities = paths.length ? await this.capabilitiesService.fetch(paths) : {};
+      const roles = names.map((name) => {
+        const role = capabilities[`${backend}/roles/${name}`];
+        const credentials = capabilities[`${backend}/creds/${name}`];
+        return new RoleAwsResource(
+          {
+            name,
+            backend,
+            canRead: role?.canRead || false,
+            canEdit: role?.canUpdate || false,
+            canDelete: role?.canDelete || false,
+            canGenerate: credentials?.canUpdate || false,
+          },
+          this
+        );
+      });
+      return paginate(roles, { page, filter: pageFilter, filterKey: 'name' });
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) return [];
+      throw error;
+    }
+  },
+
   async fetchTransformTransformations(backend, page, pageFilter) {
     try {
       const resp = await this.api.secrets.transformListTransformations(
@@ -509,6 +541,9 @@ export default Route.extend({
           ? await this.fetchKeymgmtProviders(backend, page, filter)
           : await this.fetchKeymgmtKeys(backend, page, filter);
 
+      this.set('has404', false);
+    } else if (effectiveType === 'aws') {
+      secrets = await this.fetchAwsRoles(backend, getValidPage(params.page), params.pageFilter);
       this.set('has404', false);
     } else if (effectiveType === 'ssh') {
       const page = getValidPage(params.page);

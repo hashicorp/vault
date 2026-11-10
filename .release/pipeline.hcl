@@ -2,10 +2,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 // Configure our branch synchronization policies. Select a policy with the
-// `--sync-policy <name>` flag on `pipeline github sync branch` or
-// `pipeline git check changed-files`. We use the "ce" policy when we sync our
-// enterprise branches to hashicorp/vault and in our pre-push hook when pushing
-// to community edition branches.
+// `--sync-policy <name>` flag on `pipeline github sync branch`,
+// `pipeline git check changed-files`, `pipeline github check changed-files`, or
+// `pipeline github list changed-files`. We use the "ce" policy when we sync our
+// enterprise branches to hashicorp/vault, in our pre-push hook when pushing to
+// community edition branches, and in our build workflow on pull requests
+// against community edition branches.
 //
 // If you're modifying a policy you can verify it against the history of a
 // branch with `pipeline git check changed-files --branch <branch> --sync-policy <name>`.

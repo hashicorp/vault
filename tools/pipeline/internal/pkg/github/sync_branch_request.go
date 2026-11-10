@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	libgithub "github.com/google/go-github/v83/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	gitpkg "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	gitclient "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git/client"
@@ -37,7 +38,7 @@ type SyncBranchReq struct {
 	ToBranch   string
 	RepoDir    string
 	// Optional changed files checking
-	DisallowedGroups []string
+	DisallowedGroups changed.FileGroups
 	SyncPolicy       string
 	// Mandatory pipeline configuration
 	DecodeRes *config.DecodeRes
@@ -58,7 +59,6 @@ func (r *SyncBranchReq) Run(
 	var err error
 	res := &SyncBranchRes{Request: r}
 
-	disallowedGroupsStr := strings.Join(r.DisallowedGroups, ", ")
 	slog.Default().DebugContext(slogctx.Append(
 		ctx,
 		slog.String("from-owner", r.FromOwner),
@@ -70,7 +70,7 @@ func (r *SyncBranchReq) Run(
 		slog.String("to-origin", r.ToOrigin),
 		slog.String("to-branch", r.ToBranch),
 		slog.String("repo-dir", r.RepoDir),
-		slog.String("disallowed-groups", disallowedGroupsStr),
+		slog.String("disallowed-groups", r.DisallowedGroups.String()),
 		slog.String("sync-policy", r.SyncPolicy),
 	), "synchronizing branches")
 
