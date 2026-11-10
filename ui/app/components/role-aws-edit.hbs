@@ -6,34 +6,36 @@
 <Page::Header @title={{this.title}} @subtitle={{this.subtitle}}>
   <:breadcrumbs>
     <KeyValueHeader
-      @baseKey={{this.model}}
+      @baseKey={{this.form}}
       @path="vault.cluster.secrets.backend.list"
-      @mode={{this.mode}}
+      @mode={{@mode}}
       @root={{this.breadcrumbs}}
       @showCurrent={{true}}
     />
   </:breadcrumbs>
 </Page::Header>
 
-{{#if (eq this.mode "show")}}
+<MessageError @errorMessage={{this.errorMessage}} />
+
+{{#if (eq @mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.model.canDelete}}
+      {{#if @capabilities.canDelete}}
         <ConfirmAction
           @buttonText="Delete role"
           class="toolbar-button"
           @buttonColor="secondary"
-          @onConfirmAction={{action "delete"}}
+          @onConfirmAction={{this.delete}}
         />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.model.canGenerate}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="credentials" data-test-backend-credentials>
+      {{#if @capabilities.canGenerate}}
+        <ToolbarSecretLink @secret={{this.form.data.name}} @mode="credentials" data-test-backend-credentials>
           Generate credentials
         </ToolbarSecretLink>
       {{/if}}
-      {{#if this.model.canEdit}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @replace={{true}}>
+      {{#if @capabilities.canEdit}}
+        <ToolbarSecretLink @secret={{this.form.data.name}} @mode="edit" @replace={{true}}>
           Edit role
         </ToolbarSecretLink>
       {{/if}}
@@ -41,42 +43,35 @@
   </Toolbar>
 {{/if}}
 
-{{#if (or (eq this.mode "edit") (eq this.mode "create"))}}
-  <form onsubmit={{action "createOrUpdate" "create"}}>
+{{#if (or (eq @mode "edit") (eq @mode "create"))}}
+  <form {{on "submit" this.save}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <MessageError @model={{this.model}} />
-      <NamespaceReminder @mode={{this.mode}} @noun="AWS role" />
-      {{#if (gt this.model.credentialTypes.length 1)}}
-        <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
-          <A.Title>Warning</A.Title>
-          <A.Description>
-            This role has more than one
-            <code>credential_type</code>, currently:
-            {{join ", " this.model.credentialTypes}}. Multiple credential types is deprecated and you must choose one in
-            order to save this role.
-          </A.Description>
-        </Hds::Alert>
-      {{/if}}
-      {{#each (if (eq this.mode "edit") (drop 1 (or this.model.fields (array))) this.model.fields) as |attr|}}
-        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+      <NamespaceReminder @mode={{@mode}} @noun="AWS role" />
+      {{#each (if (eq @mode "edit") (drop 1 this.form.formFields) this.form.formFields) as |attr|}}
+        <FormField @attr={{attr}} @model={{this.form}} data-test-field={{true}} />
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
-        <Hds::Button @text={{if (eq this.mode "create") "Create role" "Save"}} type="submit" data-test-submit />
-        {{#if (eq this.mode "create")}}
+        <Hds::Button
+          @text={{if (eq @mode "create") "Create role" "Save"}}
+          type="submit"
+          disabled={{this.isSaving}}
+          data-test-submit
+        />
+        {{#if (eq @mode "create")}}
           <Hds::Button
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.list-root"
-            @model={{this.model.backend}}
+            @model={{this.form.data.backend}}
           />
         {{else}}
           <Hds::Button
             @text="Cancel"
             @color="secondary"
             @route="vault.cluster.secrets.backend.show"
-            @models={{array this.model.backend this.model.id}}
+            @models={{array this.form.data.backend this.form.data.name}}
           />
         {{/if}}
       </Hds::ButtonSet>
@@ -84,29 +79,18 @@
   </form>
 {{else}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#if (gt this.model.credentialTypes.length 1)}}
-      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
-        <A.Title>Warning</A.Title>
-        <A.Description>
-          This role has more than one
-          <code>credential_type</code>, currently:
-          {{join ", " this.model.credentialTypes}}. When you next edit this role, you will have to choose a single credential
-          type.
-        </A.Description>
-      </Hds::Alert>
-    {{/if}}
-    {{#each this.model.fields as |attr|}}
-      {{#if (eq attr.name "policyDocument")}}
+    {{#each this.form.formFields as |attr|}}
+      {{#if (eq attr.name "policy_document")}}
         <InfoTableRow
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{this.model.policyDocument}}
+          @value={{this.form.data.policy_document}}
         >
-          <pre><code class="is-paddingless">{{stringify (jsonify this.model.policyDocument)}}</code></pre>
+          <pre><code class="is-paddingless">{{stringify (jsonify this.form.data.policy_document)}}</code></pre>
         </InfoTableRow>
       {{else}}
         <InfoTableRow
           @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}
+          @value={{get this.form.data attr.name}}
         />
       {{/if}}
     {{/each}}

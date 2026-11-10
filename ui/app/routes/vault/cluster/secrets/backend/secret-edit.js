@@ -21,6 +21,7 @@ import TransitKeyForm from 'vault/forms/transit/key';
 import TransitKeyResource from 'vault/resources/transit/key';
 
 import SshRoleForm from 'vault/forms/ssh/role';
+import RoleAwsForm from 'vault/forms/aws-role';
 import AlphabetForm from 'vault/forms/transform/alphabet';
 import TemplateForm from 'vault/forms/transform/template';
 import RoleForm from 'vault/forms/transform/role';
@@ -364,6 +365,23 @@ export default Route.extend({
     }
   },
 
+  async fetchAwsRole(backend, name) {
+    const data = await this.api.secrets.awsReadRole(name, backend);
+    return new RoleAwsForm({ ...data, name, backend }, { isNew: false });
+  },
+
+  async fetchAwsRoleCapabilities(backend, name) {
+    const rolePath = `${backend}/roles/${name}`;
+    const credentialsPath = `${backend}/creds/${name}`;
+    const capabilities = await this.capabilitiesService.fetch([rolePath, credentialsPath]);
+    return {
+      canRead: capabilities[rolePath]?.canRead,
+      canEdit: capabilities[rolePath]?.canUpdate,
+      canDelete: capabilities[rolePath]?.canDelete,
+      canGenerate: capabilities[credentialsPath]?.canUpdate,
+    };
+  },
+
   async fetchSshRoleCapabilities(backend, name) {
     try {
       const rolePath = this.capabilitiesService.pathFor('sshRole', { backend, id: name });
@@ -549,6 +567,9 @@ export default Route.extend({
     } else if (modelType === 'role-ssh') {
       secretModel = await this.fetchSshRole(backend, secret);
       capabilities = await this.fetchSshRoleCapabilities(backend, secret);
+    } else if (modelType === 'role-aws') {
+      secretModel = await this.fetchAwsRole(backend, secret);
+      capabilities = await this.fetchAwsRoleCapabilities(backend, secret);
     } else if (modelType === 'transform/alphabet') {
       secretModel = await this.fetchTransformAlphabet(backend, secret);
       capabilities = await this.fetchTransformAlphabetCapabilities(backend, secret);
@@ -593,8 +614,7 @@ export default Route.extend({
     // mode will be 'show', 'edit', 'create'
     const mode = this.routeName.split('.').pop().replace('-root', '');
 
-    // Form-based models (keymgmt, TOTP, SSH, transform sub-types) use Form class instances which
-    // don't have the Ember Data setProperties method.
+    // Form-based models do not have Ember Data's setProperties method.
     const isFormModel = model.secret instanceof Form;
     if (!isFormModel && !(model.secret instanceof TransitKeyResource)) {
       model.secret.setProperties({ backend });

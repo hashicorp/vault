@@ -98,6 +98,15 @@ export default Controller.extend(ListController, BackendCrumbMixin, {
           const { message } = await this.api.parseError(e);
           this.flashMessages.danger(message);
         }
+      } else if (this.backendType === 'aws') {
+        try {
+          await this.api.secrets.awsDeleteRole(name, item.backend);
+          this.flashMessages.success(`${name} was successfully deleted.`);
+          this.send('reload');
+        } catch (e) {
+          const { message } = await this.api.parseError(e);
+          this.flashMessages.danger(message);
+        }
       } else if (this.backendType === 'ssh') {
         try {
           await this.api.secrets.sshDeleteRole(name, item.backend);

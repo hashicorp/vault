@@ -15,6 +15,21 @@ module('Unit | Decorators | model-expanded-attributes', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.spy = sinon.spy(console, 'error');
+    @withExpandedAttributes()
+    class ExpandedAttrsModel extends Model {
+      @attr('string', { label: 'Role ARN', helpText: 'A test role ARN.' }) roleArn;
+      @attr({
+        defaultValue: '3600s',
+        editType: 'ttl',
+        helpText: 'A test TTL.',
+        label: 'TTL',
+        setDefault: true,
+        ttlOffValue: '',
+      })
+      ttl;
+      @attr('string') leaseId;
+    }
+    this.owner.register('model:test-expanded-groups', ExpandedAttrsModel);
   });
   hooks.afterEach(function () {
     this.spy.restore();
@@ -51,7 +66,7 @@ module('Unit | Decorators | model-expanded-attributes', function (hooks) {
   });
 
   test('_expandGroups helper works correctly', function (assert) {
-    const model = this.store.modelFor('aws-credential');
+    const model = this.store.modelFor('test-expanded-groups');
     const result = model.prototype._expandGroups([
       { default: ['roleArn'] },
       { 'Other options': ['ttl', 'leaseId'] },
@@ -62,8 +77,7 @@ module('Unit | Decorators | model-expanded-attributes', function (hooks) {
           {
             name: 'roleArn',
             options: {
-              helpText:
-                'The ARN of the role to assume if credential_type on the Vault role is assumed_role. Optional if the role has a single role ARN; required otherwise.',
+              helpText: 'A test role ARN.',
               label: 'Role ARN',
             },
             type: 'string',
@@ -77,8 +91,7 @@ module('Unit | Decorators | model-expanded-attributes', function (hooks) {
             options: {
               defaultValue: '3600s',
               editType: 'ttl',
-              helpText:
-                'Specifies the TTL for the use of the STS token. Valid only when credential_type is assumed_role, federation_token, or session_token.',
+              helpText: 'A test TTL.',
               label: 'TTL',
               setDefault: true,
               ttlOffValue: '',
@@ -97,7 +110,7 @@ module('Unit | Decorators | model-expanded-attributes', function (hooks) {
 
   test('_expandGroups throws assertion when incorrect inputs', function (assert) {
     assert.expect(1);
-    const model = this.store.modelFor('aws-credential');
+    const model = this.store.modelFor('test-expanded-groups');
     try {
       model.prototype._expandGroups({ foo: ['bar'] });
     } catch (e) {
