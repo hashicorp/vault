@@ -6,11 +6,15 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/spf13/cobra"
 )
 
-var checkGitChangedFiles = &git.CheckChangedFilesReq{}
+var (
+	checkGitChangedFiles                 = &git.CheckChangedFilesReq{}
+	checkGitChangedFilesDisallowedGroups []string
+)
 
 func newGitCheckChangedFilesCmd() *cobra.Command {
 	changedFilesCmd := &cobra.Command{
@@ -24,7 +28,7 @@ func newGitCheckChangedFilesCmd() *cobra.Command {
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Branch, "branch", "b", "", "The branch to compare against")
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Range, "range", "r", "", "The commit range to compare (e.g., HEAD~5..HEAD)")
 	changedFilesCmd.PersistentFlags().StringVarP(&checkGitChangedFiles.Commit, "commit", "c", "", "The specific commit SHA to analyze")
-	changedFilesCmd.PersistentFlags().StringSliceVarP(&checkGitChangedFiles.DisallowedGroups, "disallowed-groups", "g", nil, "File group(s) to check changed files for. They're added to the disallowed groups of the sync policy")
+	changedFilesCmd.PersistentFlags().StringSliceVarP(&checkGitChangedFilesDisallowedGroups, "disallowed-groups", "g", nil, "File group(s) to check changed files for. They're added to the disallowed groups of the sync policy")
 	changedFilesCmd.PersistentFlags().StringVar(&checkGitChangedFiles.SyncPolicy, "sync-policy", "", "The sync policy in pipeline.hcl to check changed files with")
 	changedFilesCmd.PersistentFlags().BoolVar(&checkGitChangedFiles.WriteToGithubOutput, "github-output", false, "Whether or not to write 'changed-files' to $GITHUB_OUTPUT")
 
@@ -35,6 +39,10 @@ func runGitCheckChangedFilesCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
 	checkGitChangedFiles.DecodeRes = rootCfg.configDecodeRes
+	for _, group := range checkGitChangedFilesDisallowedGroups {
+		checkGitChangedFiles.DisallowedGroups = checkGitChangedFiles.DisallowedGroups.Add(changed.FileGroup(group))
+	}
+
 	res, err := checkGitChangedFiles.Run(cmd.Context(), rootCfg.git)
 	if err != nil {
 		return fmt.Errorf("checking changed files: %w", err)
@@ -57,7 +65,9 @@ func runGitCheckChangedFilesCmd(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
-		return writeToGithubOutput("changed-files", output)
+		if err := writeToGithubOutput("changed-files", output); err != nil {
+			return err
+		}
 	}
 
 	if len(res.MatchedGroups) > 0 {

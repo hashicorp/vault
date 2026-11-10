@@ -21,14 +21,14 @@ func TestCheckChangedFilesReq_validate(t *testing.T) {
 	t.Parallel()
 
 	for name, test := range map[string]struct {
-		disallowedGroups []string
+		disallowedGroups changed.FileGroups
 		errHas           string
 	}{
 		"known groups": {
-			disallowedGroups: []string{"changelog", "enterprise"},
+			disallowedGroups: changed.FileGroups{"changelog", "enterprise"},
 		},
 		"unknown group": {
-			disallowedGroups: []string{"enterprise", "enterprse"},
+			disallowedGroups: changed.FileGroups{"enterprise", "enterprse"},
 			errHas:           "disallowed group enterprse is not a changed file group in pipeline.hcl",
 		},
 		"no groups": {
@@ -119,7 +119,7 @@ sync {
 		add              []string
 		remove           []string
 		useRange         bool
-		disallowedGroups []string
+		disallowedGroups changed.FileGroups
 		syncPolicy       string
 		wantMatched      []string
 		wantMatchedGrps  changed.FileGroups
@@ -159,7 +159,7 @@ sync {
 		},
 		"disallowed groups are added to the policy groups": {
 			add:              []string{".github/instructions/index.md", "changelog/1.txt"},
-			disallowedGroups: []string{"changelog"},
+			disallowedGroups: changed.FileGroups{"changelog"},
 			syncPolicy:       "ce",
 			wantMatched:      []string{"changelog/1.txt"},
 			wantMatchedGrps:  changed.FileGroups{"changelog"},
@@ -168,14 +168,14 @@ sync {
 		},
 		"exempt from every disallowed group": {
 			add:              []string{".github/instructions/index.md"},
-			disallowedGroups: []string{"docs"},
+			disallowedGroups: changed.FileGroups{"docs"},
 			syncPolicy:       "ce",
 			wantExempt:       []string{".github/instructions/index.md"},
 			wantChecked:      changed.FileGroups{"docs", "enterprise"},
 		},
 		"policy with only exempt files": {
 			add:              []string{"changelog/1.txt", "changelog/2.txt"},
-			disallowedGroups: []string{"changelog"},
+			disallowedGroups: changed.FileGroups{"changelog"},
 			syncPolicy:       "exempt-changelog",
 			wantMatched:      []string{"changelog/2.txt"},
 			wantMatchedGrps:  changed.FileGroups{"changelog"},
@@ -184,7 +184,7 @@ sync {
 		},
 		"no sync policy means no exempt files": {
 			add:              []string{".github/instructions/index.md"},
-			disallowedGroups: []string{"enterprise"},
+			disallowedGroups: changed.FileGroups{"enterprise"},
 			wantMatched:      []string{".github/instructions/index.md"},
 			wantMatchedGrps:  changed.FileGroups{"enterprise"},
 			wantChecked:      changed.FileGroups{"enterprise"},

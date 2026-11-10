@@ -7,6 +7,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/config"
 	"github.com/stretchr/testify/require"
 )
@@ -18,14 +19,14 @@ func TestSyncBranchReq_Validate(t *testing.T) {
 	t.Parallel()
 
 	for name, test := range map[string]struct {
-		disallowedGroups []string
+		disallowedGroups changed.FileGroups
 		syncPolicy       string
 		decodeRes        *config.DecodeRes
 		errHas           string
 	}{
 		"no changed file checks": {},
 		"disallowed groups without config": {
-			disallowedGroups: []string{"enterprise"},
+			disallowedGroups: changed.FileGroups{"enterprise"},
 			errHas:           "pipeline.hcl decode response is unitialized",
 		},
 		"sync policy without config": {

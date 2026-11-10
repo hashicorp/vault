@@ -10,10 +10,18 @@ description: |
 inputs:
   github-token:
     description: A preferred Github token to access private modules if necessary.
+  sync-policy:
+    description: |
+      The name of a sync policy in .release/pipeline.hcl. If set we'll also include any changed files
+      that the policy disallows in the changed-files output. We won't fail if there are any. That's
+      up to the caller.
 
 outputs:
   changed-files:
-    description: All of the files that changed.
+    description: |
+      All of the files that changed and their groups as JSON, e.g. {"files": [], "groups": []}. If a
+      sync-policy is set we'll also include "disallowed_files" and "disallowed_groups" if any changed
+      files are disallowed.
     value: ${{ steps.changed-files.outputs.changed-files }}
 
 runs:
@@ -36,11 +44,13 @@ runs:
             --owner hashicorp \
             --repo '${{ github.event.pull_request.head.repo.name }}' \
             --pr '${{ github.event.pull_request.number }}' \
+            ${{ inputs.sync-policy && format('--sync-policy {0}', inputs.sync-policy) }} \
             --github-output
         else
           pipeline github list changed-files ${{ runner.debug && '--log debug' }}\
             --owner hashicorp \
             --repo '${{ github.event.repository.name }}' \
             --commit '${{ github.event.after && github.event.after || github.event.push.after && github.event.push.after || github.sha }}' \
+            ${{ inputs.sync-policy && format('--sync-policy {0}', inputs.sync-policy) }} \
             --github-output
         fi

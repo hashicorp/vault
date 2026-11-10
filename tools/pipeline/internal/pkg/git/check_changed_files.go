@@ -34,7 +34,7 @@ type CheckChangedFilesReq struct {
 	WriteToGithubOutput bool
 	// DisallowedGroups specifies the file groups that must not have changed.
 	// They're added to the disallowed groups of the sync policy.
-	DisallowedGroups []string
+	DisallowedGroups changed.FileGroups
 	// SyncPolicy is the name of a sync policy in pipeline.hcl. We add its
 	// disallowed groups to ours and won't fail on the files it exempts.
 	SyncPolicy string
@@ -43,11 +43,11 @@ type CheckChangedFilesReq struct {
 // CheckChangedFilesRes represents the response from checking changed files
 type CheckChangedFilesRes struct {
 	// Inputs
-	ChangedConfig *changed.Config          `json:"changed_config,omitempty"`
-	ChangedFiles  changed.Files            `json:"changed_files,omitempty"`
-	ChangedGroups changed.FileGroups       `json:"changed_groups,omitempty"`
-	CheckedGroups changed.FileGroups       `json:"checked_groups,omitempty"`
-	SyncPolicy    *config.SyncPolicyConfig `json:"sync_policy,omitempty"`
+	ChangedConfig *changed.Config    `json:"changed_config,omitempty"`
+	ChangedFiles  changed.Files      `json:"changed_files,omitempty"`
+	ChangedGroups changed.FileGroups `json:"changed_groups,omitempty"`
+	CheckedGroups changed.FileGroups `json:"checked_groups,omitempty"`
+	SyncPolicy    *config.SyncPolicy `json:"sync_policy,omitempty"`
 	// Outputs
 	MatchedFiles  changed.Files      `json:"matched_files,omitempty"`
 	MatchedGroups changed.FileGroups `json:"matched_groups,omitempty"`
@@ -94,28 +94,13 @@ func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (
 		SyncPolicy:    syncPolicy,
 	}
 
-	exemptFiles := map[string]struct{}{}
+	exempt := []string{}
 	if syncPolicy != nil {
-		for _, file := range syncPolicy.ExemptFromDisallowedGroups {
-			exemptFiles[file] = struct{}{}
-		}
+		exempt = syncPolicy.ExemptFromDisallowedGroups
 	}
 
 	slog.Default().DebugContext(ctx, "checking changed files for disallowed groups")
-	for _, file := range listRes.Files {
-		matchedGroups := file.Groups.Intersection(disallowedGroups)
-		if len(matchedGroups) < 1 {
-			continue
-		}
-
-		if _, ok := exemptFiles[file.Name()]; ok {
-			res.ExemptFiles = append(res.ExemptFiles, file)
-			continue
-		}
-
-		res.MatchedFiles = append(res.MatchedFiles, file)
-		res.MatchedGroups = res.MatchedGroups.Add(matchedGroups...)
-	}
+	res.MatchedFiles, res.MatchedGroups, res.ExemptFiles = listRes.Files.Disallowed(disallowedGroups, exempt)
 
 	if len(res.ExemptFiles) > 0 {
 		slog.Default().DebugContext(slogctx.Append(
@@ -135,31 +120,6 @@ func (g *CheckChangedFilesReq) Run(ctx context.Context, client *libgit.Client) (
 	return res, nil
 }
 
-// disallowedGroups returns the sync policy, if we've been given one, and all of
-// the groups that we disallow. That's our disallowed groups plus those of the
-// sync policy.
-func (g *CheckChangedFilesReq) disallowedGroups() (*config.SyncPolicyConfig, changed.FileGroups, error) {
-	groups := changed.FileGroups{}
-	for _, group := range g.DisallowedGroups {
-		groups = groups.Add(changed.FileGroup(group))
-	}
-
-	if g.SyncPolicy == "" {
-		return nil, groups, nil
-	}
-
-	policy, err := g.DecodeRes.Config.SyncPolicy(g.SyncPolicy)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, group := range policy.DisallowedGroups {
-		groups = groups.Add(changed.FileGroup(group))
-	}
-
-	return policy, groups, nil
-}
-
 func (g *CheckChangedFilesReq) validate(ctx context.Context) error {
 	if g == nil {
 		return errors.New("uninitialized")
@@ -173,34 +133,32 @@ func (g *CheckChangedFilesReq) validate(ctx context.Context) error {
 		return err
 	}
 
-	if g.DecodeRes.Config.ChangedFiles == nil {
-		return errors.New("no changed file grouping config was found in pipeline.hcl")
-	}
+	_, _, err := g.disallowedGroups()
 
-	_, disallowedGroups, err := g.disallowedGroups()
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	// A sync policy doesn't have to disallow any groups, but if it doesn't and
-	// we weren't given any either then we've got nothing to check.
-	if len(disallowedGroups) < 1 {
-		return errors.New("no disallowed groups have been configured")
-	}
-
-	// Make sure every disallowed group exists. A misspelled group would never
-	// match anything and would quietly pass the check.
-	configuredGroups := changed.FileGroups{}
-	for _, group := range g.DecodeRes.Config.ChangedFiles.Groups {
-		configuredGroups = configuredGroups.Add(changed.FileGroup(group.Name))
-	}
-	for _, group := range disallowedGroups {
-		if _, ok := configuredGroups.In(group); !ok {
-			return fmt.Errorf("disallowed group %s is not a changed file group in pipeline.hcl", group)
+// disallowedGroups returns our sync policy, if we've been given one, and all of
+// the groups that we disallow.
+func (g *CheckChangedFilesReq) disallowedGroups() (*config.SyncPolicy, changed.FileGroups, error) {
+	var policy *config.SyncPolicy
+	if g.SyncPolicy != "" {
+		var err error
+		policy, err = g.DecodeRes.Config.SyncPolicy(g.SyncPolicy)
+		if err != nil {
+			return nil, nil, err
 		}
 	}
 
-	return nil
+	groups, err := g.DecodeRes.Config.DisallowedGroups(
+		config.WithDisallowedGroupsGroups(g.DisallowedGroups),
+		config.WithDisallowedGroupsSyncPolicies(policy),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return policy, groups, nil
 }
 
 // ToJSON marshals the response to JSON.

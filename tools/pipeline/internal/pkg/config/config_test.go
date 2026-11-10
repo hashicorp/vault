@@ -119,9 +119,9 @@ func TestConfig_Decode(t *testing.T) {
 	// Verify our sync policies
 	policy, err := cfg.SyncPolicy("ce")
 	require.NoError(t, err)
-	require.Equal(t, &SyncPolicyConfig{
+	require.Equal(t, &SyncPolicy{
 		Name:             "ce",
-		DisallowedGroups: []string{"enterprise"},
+		DisallowedGroups: changed.FileGroups{"enterprise"},
 		ExemptFromDisallowedGroups: []string{
 			".github/copilot-instructions.md",
 			".github/instructions/index.md",
