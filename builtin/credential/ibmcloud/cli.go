@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 )
@@ -69,7 +70,8 @@ func resolveToken(m map[string]string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// 1. Explicit compute resource token provided
 	if crToken := m["cr_token"]; crToken != "" {

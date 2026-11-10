@@ -6,6 +6,7 @@ package ibmcloud
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -468,18 +469,23 @@ func (r *ibmCloudRole) matchesTrustedProfileIdentity(identity *IdentityInfo) err
 
 // matchCRNPattern checks if a CRN matches a pattern (supports wildcards)
 func matchCRNPattern(crn, pattern string) bool {
-	// Simple wildcard matching - can be enhanced with more sophisticated pattern matching
 	if pattern == "*" {
 		return true
 	}
 
-	// Replace * with .* for regex matching
-	pattern = strings.ReplaceAll(pattern, "*", ".*")
-	pattern = "^" + pattern + "$"
+	// Split pattern by "*" and escape all non-wildcard parts to be regex-safe
+	parts := strings.Split(pattern, "*")
+	for i, part := range parts {
+		parts[i] = regexp.QuoteMeta(part)
+	}
 
-	// For now, do simple string matching
-	// In production, use regexp.MatchString
-	return strings.Contains(crn, strings.ReplaceAll(pattern, ".*", ""))
+	// Rejoin segments with ".*" and enforce exact start and end matching
+	regexPattern := "^" + strings.Join(parts, ".*") + "$"
+	matched, err := regexp.MatchString(regexPattern, crn)
+	if err != nil {
+		return false
+	}
+	return matched
 }
 
 // extractResourceType extracts the resource type from CRN or compute resource ID

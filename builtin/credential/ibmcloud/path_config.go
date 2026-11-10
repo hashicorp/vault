@@ -70,7 +70,7 @@ func (b *backend) pathConfigIBMCloud() *framework.Path {
 			},
 			"service_id": {
 				Type:        framework.TypeString,
-				Description: "Service ID that owns the API key. Required when api_key is set.",
+				Description: "Service ID that owns the API key. Optional; only required for root rotation (config/rotate-root).",
 			},
 			"account_id": {
 				Type:        framework.TypeString,
@@ -217,14 +217,10 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 		config.AccountID = accountID.(string)
 	}
 
-	// Validate that if api_key is set, both service_id and account_id must also be set
-	if config.APIKey != "" {
-		if config.ServiceID == "" {
-			return logical.ErrorResponse("service_id is required when api_key is set"), nil
-		}
-		if config.AccountID == "" {
-			return logical.ErrorResponse("account_id is required when api_key is set"), nil
-		}
+	// Validate that if api_key is set, account_id must also be set. service_id
+	// is optional: it is only needed for root rotation, which checks for it.
+	if config.APIKey != "" && config.AccountID == "" {
+		return logical.ErrorResponse("account_id is required when api_key is set"), nil
 	}
 
 	// Validate that if account_id is set, api_key must also be set
@@ -313,13 +309,15 @@ Configuration Parameters:
   * api_key (string, optional)
       Admin API key for account verification and root credential rotation.
       Required for proper account and access group verification during authentication.
-      When set, both service_id and account_id must also be provided.
+      When set, account_id must also be provided.
 
   * service_id (string, optional)
-      Service ID that owns the API key. Required when api_key is set.
+      Service ID that owns the API key. Only required for root credential
+      rotation (config/rotate-root); not needed for authentication.
 
   * account_id (string, optional)
-      IBM Cloud account ID for authentication verification. Required when api_key is set.
+      IBM Cloud account ID for authentication verification. Required when api_key is set,
+      and api_key is required when account_id is set.
       Used to verify that authenticating users/service IDs belong to this account.
 
 Example (minimal configuration):
@@ -328,6 +326,13 @@ Example (minimal configuration):
       iam_endpoint="https://iam.cloud.ibm.com"
 
 Example (with admin credentials for verification):
+
+  $ vault write auth/ibmcloud/config \
+      iam_endpoint="https://iam.cloud.ibm.com" \
+      api_key="<admin-api-key>" \
+      account_id="abc123def456"
+
+Example (also enabling root rotation):
 
   $ vault write auth/ibmcloud/config \
       iam_endpoint="https://iam.cloud.ibm.com" \

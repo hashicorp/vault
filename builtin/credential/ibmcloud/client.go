@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -23,6 +24,12 @@ type IBMCloudIAMClient struct {
 	httpClient  *http.Client
 	logger      hclog.Logger
 	jwks        *jwksVerifier
+
+	// Caches to mitigate Rate-Limiting & DoS on external API calls
+	tokenCache       *ttlCache
+	serviceIDCache   *ttlCache
+	userAccountCache *ttlCache
+	accessGroupCache *ttlCache
 }
 
 // NewIBMCloudIAMClient creates a new IBM Cloud IAM client
@@ -34,10 +41,14 @@ func NewIBMCloudIAMClient(iamEndpoint string, logger hclog.Logger) (*IBMCloudIAM
 		Timeout: 30 * time.Second,
 	}
 	return &IBMCloudIAMClient{
-		iamEndpoint: iamEndpoint,
-		httpClient:  httpClient,
-		logger:      logger,
-		jwks:        newJWKSVerifier(iamEndpoint, httpClient),
+		iamEndpoint:      iamEndpoint,
+		httpClient:       httpClient,
+		logger:           logger,
+		jwks:             newJWKSVerifier(iamEndpoint, httpClient),
+		tokenCache:       newTTLCache(),
+		serviceIDCache:   newTTLCache(),
+		userAccountCache: newTTLCache(),
+		accessGroupCache: newTTLCache(),
 	}, nil
 }
 
@@ -108,8 +119,9 @@ func (c *IBMCloudIAMClient) AuthenticateWithAPIKey(ctx context.Context, apiKey s
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		c.logger.Error("IAM API error response", "status_code", resp.StatusCode, "body", string(body))
-		return nil, fmt.Errorf("authentication failed with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		c.logger.Error("IAM API error response", "status_code", resp.StatusCode, "error", sanitized)
+		return nil, fmt.Errorf("authentication failed with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	var tokenResp IAMTokenResponse
@@ -150,7 +162,8 @@ func (c *IBMCloudIAMClient) AuthenticateWithCRToken(ctx context.Context, crToken
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("authentication failed with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		return nil, fmt.Errorf("authentication failed with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	var tokenResp IAMTokenResponse
@@ -198,7 +211,8 @@ func (c *IBMCloudIAMClient) ExchangeVPCMetadata(ctx context.Context, metadataEnd
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("metadata identity token request failed with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		return nil, fmt.Errorf("metadata identity token request failed with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	var identityTokenResp struct {
@@ -251,10 +265,11 @@ func (c *IBMCloudIAMClient) ExchangeVPCMetadata(ctx context.Context, metadataEnd
 
 	if iamResp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(iamResp.Body)
+		sanitized := sanitizeErrorBody(body)
 		if trustedProfileID == "" {
-			return nil, fmt.Errorf("metadata IAM token exchange failed with status %d: %s (if the instance does not have a default trusted profile, specify trusted_profile_id)", iamResp.StatusCode, string(body))
+			return nil, fmt.Errorf("metadata IAM token exchange failed with status %d: %s (if the instance does not have a default trusted profile, specify trusted_profile_id)", iamResp.StatusCode, sanitized)
 		}
-		return nil, fmt.Errorf("metadata IAM token exchange failed with status %d: %s", iamResp.StatusCode, string(body))
+		return nil, fmt.Errorf("metadata IAM token exchange failed with status %d: %s", iamResp.StatusCode, sanitized)
 	}
 
 	var iamTokenResp IAMTokenResponse
@@ -281,6 +296,11 @@ func (c *IBMCloudIAMClient) VerifyToken(ctx context.Context, token string) (*Ide
 // ValidateToken introspects an IAM token and returns identity information.
 // It returns an error wrapping errInvalidToken if IAM reports the token as inactive.
 func (c *IBMCloudIAMClient) ValidateToken(ctx context.Context, token string) (*IdentityInfo, error) {
+	if cachedVal, ok := c.tokenCache.get(token); ok {
+		c.logger.Debug("using cached identity info for token")
+		return cachedVal.(*IdentityInfo), nil
+	}
+
 	apiURL := c.iamEndpoint + "/identity/introspect"
 	c.logger.Debug("IBM Cloud IAM API call", "method", "POST", "url", apiURL, "endpoint", "introspect")
 
@@ -308,13 +328,14 @@ func (c *IBMCloudIAMClient) ValidateToken(ctx context.Context, token string) (*I
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		c.logger.Error("IAM API error response", "status_code", resp.StatusCode, "body", string(body))
+		sanitized := sanitizeErrorBody(body)
+		c.logger.Error("IAM API error response", "status_code", resp.StatusCode, "error", sanitized)
 		// IAM rejects tokens it considers invalid with 400/401; those are the
 		// caller's problem, not an IAM outage.
 		if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnauthorized {
 			return nil, fmt.Errorf("%w: introspect rejected token with status %d", errInvalidToken, resp.StatusCode)
 		}
-		return nil, fmt.Errorf("token validation failed with status %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("token validation failed with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -330,6 +351,9 @@ func (c *IBMCloudIAMClient) ValidateToken(ctx context.Context, token string) (*I
 	if !info.Active {
 		return nil, fmt.Errorf("%w: token is not active", errInvalidToken)
 	}
+
+	// Cache successful validation (only if token is active)
+	c.tokenCache.set(token, &info, 2*time.Minute)
 
 	// IBM Cloud IAM returns account in nested structure: account.bss
 	// Copy it to AccountID for easier access
@@ -379,7 +403,8 @@ func (c *IBMCloudIAMClient) CreateAPIKey(ctx context.Context, iamToken, serviceI
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to create API key with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		return nil, fmt.Errorf("failed to create API key with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	var apiKeyResp APIKeyResponse
@@ -407,7 +432,8 @@ func (c *IBMCloudIAMClient) DeleteAPIKey(ctx context.Context, iamToken, apiKeyID
 
 	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("failed to delete API key with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		return fmt.Errorf("failed to delete API key with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	return nil
@@ -431,7 +457,8 @@ func (c *IBMCloudIAMClient) GetAPIKeyDetails(ctx context.Context, iamToken, apiK
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("failed to get API key details with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		return nil, fmt.Errorf("failed to get API key details with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	var apiKeyResp APIKeyResponse
@@ -453,6 +480,11 @@ type ServiceIDInfo struct {
 // GetServiceID retrieves service ID details using admin token
 // This verifies that the service ID belongs to the configured account
 func (c *IBMCloudIAMClient) GetServiceID(ctx context.Context, adminToken, serviceIDIAMID string) (*ServiceIDInfo, error) {
+	if cachedVal, ok := c.serviceIDCache.get(serviceIDIAMID); ok {
+		c.logger.Debug("using cached service ID info", "iam_id", serviceIDIAMID)
+		return cachedVal.(*ServiceIDInfo), nil
+	}
+
 	// Extract service ID from IAM ID (format: iam-ServiceId-<uuid>)
 	// IBM Cloud API expects the full ServiceId-<uuid> format, not just the UUID
 	serviceID := strings.TrimPrefix(serviceIDIAMID, "iam-")
@@ -480,8 +512,9 @@ func (c *IBMCloudIAMClient) GetServiceID(ctx context.Context, adminToken, servic
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		c.logger.Error("IAM API error response", "status_code", resp.StatusCode, "body", string(body))
-		return nil, fmt.Errorf("failed to get service ID with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		c.logger.Error("IAM API error response", "status_code", resp.StatusCode, "error", sanitized)
+		return nil, fmt.Errorf("failed to get service ID with status %d: %s", resp.StatusCode, sanitized)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -498,12 +531,19 @@ func (c *IBMCloudIAMClient) GetServiceID(ctx context.Context, adminToken, servic
 
 	c.logger.Debug("service ID info retrieved", "account_id", serviceIDInfo.AccountID, "name", serviceIDInfo.Name)
 
+	c.serviceIDCache.set(serviceIDIAMID, &serviceIDInfo, 5*time.Minute)
 	return &serviceIDInfo, nil
 }
 
 // CheckUserAccount verifies that a user has access to the specified account
 // Uses admin token to check user's account membership
 func (c *IBMCloudIAMClient) CheckUserAccount(ctx context.Context, adminToken, userIAMID, accountID string) (bool, error) {
+	cacheKey := userIAMID + ":" + accountID
+	if cachedVal, ok := c.userAccountCache.get(cacheKey); ok {
+		c.logger.Debug("using cached user account membership decision", "user_iam_id", userIAMID, "account_id", accountID)
+		return cachedVal.(bool), nil
+	}
+
 	// Use IAM Users API to verify user belongs to account
 	// GET /v2/accounts/{account_id}/users/{user_id}
 	req, err := http.NewRequestWithContext(ctx, "GET",
@@ -524,12 +564,15 @@ func (c *IBMCloudIAMClient) CheckUserAccount(ctx context.Context, adminToken, us
 	// 200 = user has access, 404 = user not in account, other = error
 	switch resp.StatusCode {
 	case http.StatusOK:
+		c.userAccountCache.set(cacheKey, true, 5*time.Minute)
 		return true, nil
 	case http.StatusNotFound:
+		c.userAccountCache.set(cacheKey, false, 5*time.Minute)
 		return false, nil
 	default:
 		body, _ := io.ReadAll(resp.Body)
-		return false, fmt.Errorf("failed to check user account with status %d: %s", resp.StatusCode, string(body))
+		sanitized := sanitizeErrorBody(body)
+		return false, fmt.Errorf("failed to check user account with status %d: %s", resp.StatusCode, sanitized)
 	}
 }
 
@@ -551,31 +594,40 @@ func (c *IBMCloudIAMClient) CheckAccessGroupMembership(ctx context.Context, user
 		return true, nil // No groups required
 	}
 
-	// Get user's access group memberships
-	// GET /v2/groups?account_id={account_id}&iam_id={iam_id}
-	reqURL := fmt.Sprintf("%s/v2/groups?account_id=%s&iam_id=%s", c.iamEndpoint, url.QueryEscape(accountID), url.QueryEscape(iamID))
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
-	if err != nil {
-		return false, fmt.Errorf("failed to create request: %w", err)
-	}
+	cacheKey := iamID + ":" + accountID
+	var membership *AccessGroupMembership
+	if cachedVal, ok := c.accessGroupCache.get(cacheKey); ok {
+		c.logger.Debug("using cached access group membership", "iam_id", iamID, "account_id", accountID)
+		membership = cachedVal.(*AccessGroupMembership)
+	} else {
+		// Get user's access group memberships
+		// GET /v2/groups?account_id={account_id}&iam_id={iam_id}
+		reqURL := fmt.Sprintf("%s/v2/groups?account_id=%s&iam_id=%s", c.iamEndpoint, url.QueryEscape(accountID), url.QueryEscape(iamID))
+		req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+		if err != nil {
+			return false, fmt.Errorf("failed to create request: %w", err)
+		}
 
-	req.Header.Set("Authorization", "Bearer "+userToken)
-	req.Header.Set("Accept", "application/json")
+		req.Header.Set("Authorization", "Bearer "+userToken)
+		req.Header.Set("Accept", "application/json")
 
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return false, fmt.Errorf("failed to check access group membership: %w", err)
-	}
-	defer resp.Body.Close()
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			return false, fmt.Errorf("failed to check access group membership: %w", err)
+		}
+		defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return false, fmt.Errorf("failed to check access group membership with status %d: %s", resp.StatusCode, string(body))
-	}
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			sanitized := sanitizeErrorBody(body)
+			return false, fmt.Errorf("failed to check access group membership with status %d: %s", resp.StatusCode, sanitized)
+		}
 
-	var membership AccessGroupMembership
-	if err := json.NewDecoder(resp.Body).Decode(&membership); err != nil {
-		return false, fmt.Errorf("failed to decode access group membership: %w", err)
+		membership = &AccessGroupMembership{}
+		if err := json.NewDecoder(resp.Body).Decode(membership); err != nil {
+			return false, fmt.Errorf("failed to decode access group membership: %w", err)
+		}
+		c.accessGroupCache.set(cacheKey, membership, 5*time.Minute)
 	}
 
 	// Build set of user's group IDs
@@ -592,6 +644,81 @@ func (c *IBMCloudIAMClient) CheckAccessGroupMembership(ctx context.Context, user
 	}
 
 	return true, nil
+}
+
+type cacheEntry struct {
+	value      interface{}
+	expiration time.Time
+}
+
+type ttlCache struct {
+	mu    sync.RWMutex
+	items map[string]cacheEntry
+}
+
+func newTTLCache() *ttlCache {
+	return &ttlCache{
+		items: make(map[string]cacheEntry),
+	}
+}
+
+func (c *ttlCache) get(key string) (interface{}, bool) {
+	if c == nil {
+		return nil, false
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	item, ok := c.items[key]
+	if !ok {
+		return nil, false
+	}
+	if time.Now().After(item.expiration) {
+		return nil, false
+	}
+	return item.value, true
+}
+
+func (c *ttlCache) set(key string, value interface{}, ttl time.Duration) {
+	if c == nil {
+		return
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.items[key] = cacheEntry{
+		value:      value,
+		expiration: time.Now().Add(ttl),
+	}
+}
+
+func sanitizeErrorBody(body []byte) string {
+	if len(body) == 0 {
+		return "empty response"
+	}
+	var errObj struct {
+		ErrorCode    string `json:"errorCode"`
+		ErrorMessage string `json:"errorMessage"`
+		ErrorDetails string `json:"errorDetails"`
+		Error        string `json:"error"`
+		Description  string `json:"error_description"`
+	}
+	if err := json.Unmarshal(body, &errObj); err == nil {
+		if errObj.ErrorMessage != "" {
+			return fmt.Sprintf("%s (%s)", errObj.ErrorMessage, errObj.ErrorCode)
+		}
+		if errObj.Description != "" {
+			return errObj.Description
+		}
+		if errObj.Error != "" {
+			return errObj.Error
+		}
+	}
+	s := string(body)
+	if len(s) > 200 {
+		s = s[:200] + "..."
+	}
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", "")
+	return s
 }
 
 // Made with Bob

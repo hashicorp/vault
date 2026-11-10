@@ -242,3 +242,70 @@ func TestRoleTypeForSubjectType(t *testing.T) {
 		t.Fatal("expected error for unsupported sub_type")
 	}
 }
+
+func TestMatchCRNPattern(t *testing.T) {
+	cases := []struct {
+		name    string
+		crn     string
+		pattern string
+		want    bool
+	}{
+		{
+			name:    "Exact match",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-12345",
+			pattern: "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-12345",
+			want:    true,
+		},
+		{
+			name:    "Wildcard at end",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-12345",
+			pattern: "crn:v1:bluemix:public:is:us-south:a/abc123::instance:*",
+			want:    true,
+		},
+		{
+			name:    "Wildcard in middle",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-12345",
+			pattern: "crn:v1:*:public:is:us-south:a/abc123::instance:i-12345",
+			want:    true,
+		},
+		{
+			name:    "Global wildcard",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-12345",
+			pattern: "*",
+			want:    true,
+		},
+		{
+			name:    "Mismatch exact",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-12345",
+			pattern: "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-54321",
+			want:    false,
+		},
+		{
+			name:    "Mismatch wildcard prefix",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instance:i-12345",
+			pattern: "crn:v2:*",
+			want:    false,
+		},
+		{
+			name:    "Special regex chars handled as literals",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instance+foo:i-12345",
+			pattern: "crn:v1:bluemix:public:is:us-south:a/abc123::instance+foo:*",
+			want:    true,
+		},
+		{
+			name:    "Special regex dots handled as literals (no wildcard bypass)",
+			crn:     "crn:v1:bluemix:public:is:us-south:a/abc123::instanceXfoo:i-12345",
+			pattern: "crn:v1:bluemix:public:is:us-south:a/abc123::instance.foo:*",
+			want:    false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := matchCRNPattern(tc.crn, tc.pattern)
+			if got != tc.want {
+				t.Errorf("matchCRNPattern(%q, %q) = %v; want %v", tc.crn, tc.pattern, got, tc.want)
+			}
+		})
+	}
+}
