@@ -552,14 +552,27 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 
 	// Find an exact matching rule, look for prefix if no match
 	var capabilities uint32
+	var primaryDescrs []wcPathDescr
 	raw, ok := a.exactRules.Get(path)
 	if ok {
 		permissions = raw.(*ACLPermissions)
 		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
 	}
-	if op == logical.ListOperation {
+	// Exact-rule lookups must be slash-form-agnostic: a deny written as
+	// "sys/mounts/protected" must fire on a request for "sys/mounts/protected/"
+	// and vice-versa, because destructive system handlers normalise the path
+	// after ACL evaluation. Try the opposite slash form when the first lookup
+	// misses.
+	if strings.HasSuffix(path, "/") {
 		raw, ok = a.exactRules.Get(strings.TrimSuffix(path, "/"))
+		if ok {
+			permissions = raw.(*ACLPermissions)
+			capabilities = permissions.CapabilitiesBitmap
+			goto CHECK
+		}
+	} else {
+		raw, ok = a.exactRules.Get(path + "/")
 		if ok {
 			permissions = raw.(*ACLPermissions)
 			capabilities = permissions.CapabilitiesBitmap
@@ -608,7 +621,33 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		// to the "no match" return below.
 		return
 	}
-	permissions = a.CheckAllowedFromNonExactPaths(path, false)
+	// A trailing slash creates an extra empty segment that breaks segment-wildcard
+	// matching. Also check the alternate slash form for segment-wildcard denies,
+	// but only promote a deny if it is at least as specific as the best primary
+	// result — preserving the "most-specific wins" semantics.
+	primaryDescrs = a.prefixAndWCCandidatesForPath(path, nil)
+	if len(primaryDescrs) > 0 {
+		sort.Slice(primaryDescrs, wildcardPathSpecificityLess(primaryDescrs))
+		permissions = primaryDescrs[len(primaryDescrs)-1].perms
+	}
+	if permissions == nil || permissions.CapabilitiesBitmap&DenyCapabilityInt == 0 {
+		altPath := strings.TrimSuffix(path, "/")
+		if altPath == path {
+			altPath = path + "/"
+		}
+		altDescrs := a.prefixAndWCCandidatesForPath(altPath, nil)
+		for i := range altDescrs {
+			pd := altDescrs[i]
+			if pd.isPrefix || pd.perms.CapabilitiesBitmap&DenyCapabilityInt == 0 {
+				continue
+			}
+			// Skip if less specific than the best primary result.
+			if len(primaryDescrs) == 0 || !wildcardPathDescriptorComparePriority(pd, primaryDescrs[len(primaryDescrs)-1]) {
+				permissions = pd.perms
+				break
+			}
+		}
+	}
 	if permissions != nil {
 		capabilities = permissions.CapabilitiesBitmap
 		goto CHECK
