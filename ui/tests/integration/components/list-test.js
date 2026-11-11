@@ -50,12 +50,12 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     this.uid = uuidv4();
     // generate a model of cubbyhole, kv, and nomad
     this.secretEngineModels = [
-      createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole-test'),
-      createSecretsEngine(undefined, 'kv', 'kv-test'),
-      createSecretsEngine(undefined, 'aws', 'aws-1', 'v1.0.0'),
-      createSecretsEngine(undefined, 'aws', 'aws-2', 'v2.0.0'),
-      createSecretsEngine(undefined, 'nomad', 'nomad-test'),
-      createSecretsEngine(undefined, 'badType', 'external-test'),
+      createSecretsEngine('cubbyhole', 'cubbyhole-test'),
+      createSecretsEngine('kv', 'kv-test'),
+      createSecretsEngine('aws', 'aws-1', 'v1.0.0'),
+      createSecretsEngine('aws', 'aws-2', 'v2.0.0'),
+      createSecretsEngine('nomad', 'nomad-test'),
+      createSecretsEngine('badType', 'external-test'),
     ];
   });
 
@@ -197,7 +197,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
 
     test('it shows the intro page when only default engines are enabled', async function (assert) {
       // Only cubbyhole engine exists (default engine)
-      const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+      const defaultEngines = [createSecretsEngine('cubbyhole', 'cubbyhole')];
       this.secretEngineModels = defaultEngines;
 
       await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
@@ -223,7 +223,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     });
 
     test('it can show the intro modal after dismissal', async function (assert) {
-      const defaultEngines = [createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole')];
+      const defaultEngines = [createSecretsEngine('cubbyhole', 'cubbyhole')];
       this.secretEngineModels = defaultEngines;
 
       await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);

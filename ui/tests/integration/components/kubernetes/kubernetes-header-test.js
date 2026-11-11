@@ -11,6 +11,7 @@ import { click, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | kubernetes | KubernetesHeader', function (hooks) {
   setupRenderingTest(hooks);
@@ -18,16 +19,11 @@ module('Integration | Component | kubernetes | KubernetesHeader', function (hook
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kubernetes_f3400dee',
-        path: 'kubernetes-test/',
-        type: 'kubernetes',
-      },
+    this.model = new SecretsEngineResource({
+      accessor: 'kubernetes_f3400dee',
+      path: 'kubernetes-test/',
+      type: 'kubernetes',
     });
-    this.model = this.store.peekRecord('secret-engine', 'kubernetes-test');
     this.mount = this.model.path.slice(0, -1);
     this.breadcrumbs = [{ label: 'Secrets', route: 'secrets', linkExternal: true }, { label: this.mount }];
     this.handleSearch = sinon.spy();

@@ -12,13 +12,12 @@ import SecretsEngineResource from 'vault/resources/secrets/engine';
 import type Controller from '@ember/controller';
 import type RouterService from '@ember/routing/router-service';
 import type Transition from '@ember/routing/transition';
-import type SecretEngineModel from 'vault/models/secret-engine';
 import type ApiService from 'vault/services/api';
 import type PluginCatalogService from 'vault/services/plugin-catalog';
 import type UnsavedChangesService from 'vault/services/unsaved-changes';
 
 interface RouteModel {
-  secretsEngine: SecretEngineModel;
+  secretsEngine: SecretsEngineResource;
   versions: string[];
   config: Record<string, unknown>;
   pinnedVersion: string | null;
