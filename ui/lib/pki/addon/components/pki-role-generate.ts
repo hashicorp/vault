@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -16,6 +16,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type DownloadService from 'vault/services/download';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type PkiCertificateForm from 'vault/forms/secrets/pki/certificate';
+import type { ValidationMap } from 'vault/app-types';
 import type CapabilitiesService from 'vault/services/capabilities';
 import type {
   PkiIssueWithRoleRequest,
@@ -41,6 +42,7 @@ export default class PkiRoleGenerate extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
+  @tracked modelValidations: ValidationMap | null = null;
   @tracked declare certData: PkiIssueWithRoleResponse | PkiSignWithRoleResponse;
   @tracked canRevoke = false;
 
@@ -51,7 +53,11 @@ export default class PkiRoleGenerate extends Component<Args> {
       const { role, form, mode, onSuccess } = this.args;
 
       try {
-        const { data } = form.toJSON();
+        const { isValid, state, invalidFormMessage, data } = form.toJSON();
+        this.modelValidations = isValid ? null : state;
+        this.invalidFormAlert = invalidFormMessage;
+        if (!isValid) return;
+
         if (mode === 'generate') {
           this.certData = await this.api.secrets.pkiIssueWithRole(
             role,

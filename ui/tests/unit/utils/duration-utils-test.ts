@@ -44,6 +44,11 @@ module('Unit | Util | duration-utils', function () {
       [9223372037, 'one second over as a number'],
       ['9223372037', 'one second over as plain digits'],
       ['Infinitys', 'the overflow value the TTL picker produces for very long digit input'],
+      ['Infinityh', 'the same overflow value in hours, as the Go-safe string the TTL picker sends'],
+      ['Infinitym', 'the same overflow value in minutes'],
+      ['Infinityd', 'the same overflow value in days'],
+      ['1e+21h', 'exponent notation in hours'],
+      ['1e+21m', 'exponent notation in minutes'],
       [Infinity, 'infinity as a number'],
     ].forEach(([value, label]) => {
       assert.true(isDurationOverMax(value), `${label} is over the max`);

@@ -1,5 +1,5 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki/pki-selectors';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
@@ -287,5 +288,25 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       assert.dom('h2').exists({ count: 2 }, 'two H2 titles are visible on page load');
       assert.dom(PKI_GENERATE_ROOT.urlSectionTitle).hasText('Issuer URLs');
     });
+  });
+
+  test('it blocks a Not valid after TTL longer than Vault supports', async function (assert) {
+    assert.expect(4);
+    this.generateStub.resolves({ certificate: CERTIFICATES.loadedCert });
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('type'), 'internal');
+    await fillIn(GENERAL.inputByAttr('common_name'), 'foo');
+    await fillIn(PKI_NOT_VALID_AFTER.ttlTimeInput, '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL_PICKER.error).hasText('TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.true(this.generateStub.notCalled, 'no root is generated');
+
+    await fillIn(PKI_NOT_VALID_AFTER.ttlTimeInput, '106751');
+    await click(GENERAL.submitButton);
+    assert.true(this.generateStub.calledOnce, 'the root is generated once the TTL is valid');
+    assert.strictEqual(this.generateStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
   });
 });
