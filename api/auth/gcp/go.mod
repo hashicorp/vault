@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/api/auth/gcp
 
-go 1.26.0
+go 1.26.11
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.1
