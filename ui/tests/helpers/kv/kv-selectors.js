@@ -76,6 +76,9 @@ export const PAGE = {
   create: {
     metadataSection: '[data-test-metadata-section]',
   },
+  configuration: {
+    editBtn: '[data-test-secret-backend-configure]',
+  },
   paths: {
     codeSnippet: (section) => `[data-test-code-block="${section}"] code`,
     snippetCopy: (section) => `[data-test-code-block="${section}"] button`,
