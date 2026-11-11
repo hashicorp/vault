@@ -19,7 +19,6 @@
         (array
           (if @setupTime (hash text=(concat "Setup time: " @setupTime)))
           (if @isOptional (hash text="Optional" type="outlined"))
-          (if @isBeta (hash text="Beta"))
           (if @isEnterprise (hash text="Enterprise" color="highlight"))
         )
       )
