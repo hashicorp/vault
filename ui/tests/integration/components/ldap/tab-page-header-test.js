@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | ldap | LdapHeader', function (hooks) {
   setupRenderingTest(hooks);
@@ -17,16 +18,11 @@ module('Integration | Component | ldap | LdapHeader', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'ldap_64e858b1',
-        path: 'ldap-test/',
-        type: 'ldap',
-      },
+    this.model = new SecretsEngineResource({
+      accessor: 'ldap_64e858b1',
+      path: 'ldap-test/',
+      type: 'ldap',
     });
-    this.model = this.store.peekRecord('secret-engine', 'ldap-test');
     this.mount = this.model.path.slice(0, -1);
     this.breadcrumbs = [{ label: 'Secrets', route: 'secrets', linkExternal: true }, { label: this.mount }];
   });

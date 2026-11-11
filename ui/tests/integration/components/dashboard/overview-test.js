@@ -12,6 +12,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { CLUSTER_STARTUP_CHECKLIST } from 'vault/utils/constants/checklist';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 module('Integration | Component | dashboard/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,30 +22,16 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     this.flags = this.owner.lookup('service:flags');
     this.namespace = this.owner.lookup('service:namespace');
     this.permissions = this.owner.lookup('service:permissions');
-    this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
     this.isRootNamespace = true;
     this.replication = {
       dr: { clusterId: '123', state: 'running' },
       performance: { clusterId: 'abc-1', state: 'running', isPrimary: true },
     };
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kv_f3400dee',
-        path: 'kv-test/',
-        type: 'kv',
-      },
-    });
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'kv_f3300dee',
-        path: 'kv-1/',
-        type: 'kv',
-      },
-    });
-    this.secretsEngines = this.store.peekAll('secret-engine', {});
+    this.secretsEngines = [
+      new SecretsEngineResource({ accessor: 'kv_f3400dee', path: 'kv-test/', type: 'kv' }),
+      new SecretsEngineResource({ accessor: 'kv_f3300dee', path: 'kv-1/', type: 'kv' }),
+    ];
     this.vaultConfiguration = {
       api_addr: 'http://127.0.0.1:8200',
       default_lease_ttl: 0,

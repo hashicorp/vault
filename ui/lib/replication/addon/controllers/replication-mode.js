@@ -51,11 +51,6 @@ export default class ReplicationModeBaseController extends Controller {
         mode: 'bootstrapping',
       })
     );
-    if (clusterMode === 'secondary' && replicationMode === 'performance') {
-      // if we're enabing a secondary, there could be mount filtering,
-      // so we should unload all of the backends
-      this.store.unloadAll('secret-engine');
-    }
     try {
       await cluster.reload();
     } catch (e) {

@@ -19,27 +19,12 @@ export async function createSecret(path, key, value) {
   return;
 }
 
-export const createSecretsEngine = (store, type, path, version) => {
-  if (store) {
-    store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      id: path,
-      path: `${path}/`,
-      type: type,
-      running_plugin_version: version,
-      data: {
-        type: type,
-      },
-    });
-    return store.peekRecord('secret-engine', path);
-  }
-
-  return new SecretsEngineResource({
+export const createSecretsEngine = (type, path, version = '') =>
+  new SecretsEngineResource({
     path: `${path}/`,
     type,
     running_plugin_version: version,
   });
-};
 /* Create configurations methods
  * for each configuration we create the record and then push it to the store.
  */
