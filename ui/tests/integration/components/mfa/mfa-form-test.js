@@ -142,7 +142,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     this.owner.lookup('service:auth').reopen({
       // override to avoid authSuccess method since it expects an auth payload
       async totpValidate({ mfaRequirement }) {
-        await this.clusterAdapter().mfaValidate(mfaRequirement);
+        await this.mfaValidate(mfaRequirement);
         return 'test response';
       },
     });
@@ -196,7 +196,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         );
         assert.dom(GENERAL.button('Verify')).isDisabled('Button is disabled while loading');
         assert.deepEqual(authData, expectedAuthData, 'Mfa auth data passed to validate method');
-        await this.clusterAdapter().mfaValidate(authData.mfaRequirement);
+        await this.mfaValidate(authData.mfaRequirement);
         return 'test response';
       },
     });

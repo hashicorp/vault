@@ -282,13 +282,19 @@ module('Acceptance | mfa-login', function (hooks) {
     assert
       .dom(`${MFA_SELECTORS.select(0)} option:nth-child(2)`)
       .hasText('TOTP passcode (supports self-enrollment)', 'TOTP is pre-selected for the first constraint');
+    // The api service waits for the final validation and the login redirect before helpers settle,
+    // so the pending state is asserted while the second validation request is in flight.
+    this.server.post('/sys/mfa/validate', async (schema, req) => {
+      await waitUntil(() => find(MFA_SELECTORS.verifyForm));
+      // On second selection we are redirected
+      assert.dom(GENERAL.title).hasText('Verify your identity');
+      assert.dom(MFA_SELECTORS.verifyForm).exists('it renders mfa validation form');
+      assert.dom(MFA_SELECTORS.select(0)).isDisabled();
+      assert.dom(MFA_SELECTORS.verifyBadge('TOTP passcode')).exists('pending verification badge exists');
+      assert.dom(MFA_SELECTORS.select(1)).isNotDisabled();
+      return validationHandler(schema, req);
+    });
     await this.select(1, 2);
-    // On second selection we are redirected
-    assert.dom(GENERAL.title).hasText('Verify your identity');
-    assert.dom(MFA_SELECTORS.verifyForm).exists('it renders mfa validation form');
-    assert.dom(MFA_SELECTORS.select(0)).isDisabled();
-    assert.dom(MFA_SELECTORS.verifyBadge('TOTP passcode')).exists('pending verification badge exists');
-    assert.dom(MFA_SELECTORS.select(1)).isNotDisabled();
     await didLogin(assert);
   });
 
