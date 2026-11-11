@@ -47,7 +47,8 @@ export default function (server) {
 
   // UNAUTHENTICATED READ ONLY for login form display logic
   server.get('sys/internal/ui/default-auth-methods', (schema, req) => {
-    const nsHeader = req.requestHeaders['X-Vault-Namespace'];
+    // Header names are case-insensitive; fetch-based requests send them lowercased.
+    const nsHeader = req.requestHeaders['x-vault-namespace'] ?? req.requestHeaders['X-Vault-Namespace'];
     const findRule = (ns) => schema.db['loginRules'].findBy({ namespace_path: ns });
     // the namespace header shouldn't have a trailing slash, but sanitize just in case
     //  if no namespace is passed then it's the root namespace (which does not have a trailing slash)

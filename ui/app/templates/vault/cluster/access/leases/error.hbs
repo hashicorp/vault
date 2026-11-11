@@ -22,7 +22,7 @@
 {{#if (eq this.model.httpStatus 400)}}
   <Hds::Alert @type="inline" @color="critical" class="has-bottom-margin-s" as |A|>
     <A.Title>Error</A.Title>
-    <A.Description>{{this.model.keyId}} is not a valid lease ID.</A.Description>
+    <A.Description data-test-lease-error>{{this.model.keyId}} is not a valid lease ID.</A.Description>
   </Hds::Alert>
 {{else if (eq this.model.httpStatus 404)}}
   <Hds::ApplicationState class="top-padding-32 is-marginless" as |A|>

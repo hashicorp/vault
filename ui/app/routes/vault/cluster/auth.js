@@ -22,7 +22,6 @@ export default class AuthRoute extends Route {
   @service flashMessages;
   @service namespace;
   @service router;
-  @service store;
   @service version;
 
   beforeModel() {
@@ -91,12 +90,7 @@ export default class AuthRoute extends Route {
 
   async fetchLoginSettings() {
     try {
-      const adapter = this.store.adapterFor('application');
-      const response = await adapter.ajax(
-        '/v1/sys/internal/ui/default-auth-methods',
-        'GET',
-        this.api.buildHeaders({ token: '' })
-      );
+      const response = await this.api.sys.uiLoginDefaultAuthMethodsRead(this.api.buildHeaders({ token: '' }));
 
       if (response?.data) {
         const { default_auth_type, backup_auth_types } = response.data;

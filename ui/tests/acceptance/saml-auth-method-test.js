@@ -79,9 +79,9 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     });
     this.server.get('/auth/token/lookup-self', (schema, req) => {
       assert.ok(true, 'request made to auth/token/lookup-self after oidc callback');
-      assert.deepEqual(
-        req.requestHeaders,
-        { 'X-Vault-Token': 'root' },
+      assert.strictEqual(
+        req.requestHeaders['x-vault-token'],
+        'root',
         'calls lookup-self with returned client token after login'
       );
       return req.passthrough();

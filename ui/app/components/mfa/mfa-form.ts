@@ -11,7 +11,6 @@ import type { TrackedSet } from 'tracked-built-ins';
 import { action } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
 import MfaConstraint from 'vault/resources/mfa/constraint';
 
 import type AuthService from 'vault/vault/services/auth';
@@ -127,7 +126,7 @@ export default class MfaForm extends Component<Args> {
     } catch (error) {
       // Reset enrolled methods if there's an error
       this.enrolledMethods.clear();
-      const errorMsg = errorMessage(error);
+      const { message: errorMsg } = await this.api.parseError(error);
       const codeUsed = errorMsg.includes('code already used');
       const rateLimit = errorMsg.includes('maximum TOTP validation attempts');
       const delayMessage = codeUsed || rateLimit ? errorMsg : null;
