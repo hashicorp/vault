@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/tools/pipeline
 
-go 1.26.8
+go 1.26.11
 
 // We have test modules in here but they ought to be completely ignored
 ignore internal/pkg/golang/fixtures

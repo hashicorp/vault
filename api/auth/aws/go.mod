@@ -1,6 +1,6 @@
 module github.com/hashicorp/vault/api/auth/aws
 
-go 1.26.0
+go 1.26.11
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.43.6
