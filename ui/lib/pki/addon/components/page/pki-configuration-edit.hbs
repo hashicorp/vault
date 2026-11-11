@@ -49,7 +49,12 @@
       </h2>
       {{#if @capabilities.canSetAcme}}
         {{#each @acmeForm.formFields as |field|}}
-          <FormField @attr={{field}} @model={{@acmeForm}} @showHelpText={{false}} />
+          <FormField
+            @attr={{field}}
+            @model={{@acmeForm}}
+            @modelValidations={{this.acmeValidations}}
+            @showHelpText={{false}}
+          />
         {{/each}}
       {{else}}
         <Hds::ApplicationState class="top-padding-32 bottom-padding-32 is-marginless" as |A|>

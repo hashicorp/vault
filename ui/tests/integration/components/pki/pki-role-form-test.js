@@ -9,6 +9,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { TTL_PICKER } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import sinon from 'sinon';
 import PkiRoleForm from 'vault/forms/secrets/pki/role';
 
@@ -171,5 +172,23 @@ module('Integration | Component | pki-role-form', function (hooks) {
       'Correct endpoint is called to save role'
     );
     assert.true(this.onSave.calledWith('test-role'), 'onSave called with role name after successful save');
+  });
+
+  test('it blocks a Not valid after TTL longer than Vault supports', async function (assert) {
+    assert.expect(4);
+
+    await this.renderComponent();
+    await fillIn(GENERAL.inputByAttr('name'), 'test-role');
+    await fillIn(GENERAL.ttl.input('TTL'), '9999999999');
+    await fillIn(TTL_PICKER.unitInputByLabel('TTL'), 'd');
+    await click(GENERAL.submitButton);
+
+    assert.dom(TTL_PICKER.error).hasText('TTL is too large. Maximum allowed value is 106,751 days.');
+    assert.true(this.writeStub.notCalled, 'the role is not saved');
+
+    await fillIn(GENERAL.ttl.input('TTL'), '106751');
+    await click(GENERAL.submitButton);
+    assert.true(this.writeStub.calledOnce, 'the role saves once the TTL is valid');
+    assert.strictEqual(this.writeStub.firstCall.args[2].ttl, '2562024h', 'the maximum whole days is sent');
   });
 });

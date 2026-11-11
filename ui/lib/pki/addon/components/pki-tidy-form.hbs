@@ -1,5 +1,5 @@
 {{!
-  Copyright IBM Corp. 2016, 2025
+  Copyright IBM Corp. 2016, 2026
   SPDX-License-Identifier: BUSL-1.1
 }}
 
@@ -35,7 +35,11 @@
       {{#each (tidy-groups "auto") as |fieldGroup|}}
         {{#each-in fieldGroup as |group fields|}}
           {{#each fields as |field|}}
-            <FormField @attr={{find-by "name" field @form.formFields}} @model={{@form}} />
+            <FormField
+              @attr={{find-by "name" field @form.formFields}}
+              @model={{@form}}
+              @modelValidations={{this.modelValidations}}
+            />
           {{/each}}
         {{/each-in}}
       {{/each}}
@@ -63,7 +67,11 @@
           {{else}}
             {{! tidy_acme is set via the TtlPicker change event above }}
             {{#if (not-eq field "tidy_acme")}}
-              <FormField @attr={{find-by "name" field @form.formFields}} @model={{@form}} />
+              <FormField
+                @attr={{find-by "name" field @form.formFields}}
+                @model={{@form}}
+                @modelValidations={{this.modelValidations}}
+              />
             {{/if}}
           {{/if}}
         {{/each}}
@@ -90,7 +98,12 @@
   </Hds::ButtonSet>
   {{#if this.invalidFormAlert}}
     <div class="control">
-      <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+      <AlertInline
+        @type="danger"
+        class="has-top-padding-s"
+        @message={{this.invalidFormAlert}}
+        data-test-invalid-form-message
+      />
     </div>
   {{/if}}
 </form>
