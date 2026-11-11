@@ -46,7 +46,7 @@ require (
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.24.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.24.1
-	github.com/hashicorp/vault-plugin-auth-gcp v0.24.1
+	github.com/hashicorp/vault-plugin-auth-gcp v0.24.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.27.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.18.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.22.1
@@ -189,7 +189,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.22 // indirect
 	github.com/googleapis/gax-go/v2 v2.24.1 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
-	github.com/hashicorp/cap v0.13.0 // indirect
+	github.com/hashicorp/cap v0.15.0 // indirect
 	github.com/hashicorp/cap/ldap v0.0.0-20250911140431-44d01434c285 // indirect
 	github.com/hashicorp/consul/api v1.34.4 // indirect
 	github.com/hashicorp/cronexpr v1.1.3 // indirect
