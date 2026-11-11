@@ -413,7 +413,7 @@ module('Acceptance | replication routes', function (hooks) {
     test('removing the path filter config deletes it and returns to the secondaries list', async function (assert) {
       await this.mockReplication({ performance: 'primary' });
       await visit('/vault/replication/performance/secondaries/config/edit/filtered-secondary');
-      await click('#no-filtering');
+      await click('[data-test-filter-mode="none"]');
       await click('[data-test-config-save]');
       await waitUntil(() => currentURL().endsWith('/secondaries'));
 

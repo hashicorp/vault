@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
- Copyright IBM Corp. 2016, 2025
+ Copyright IBM Corp. 2016, 2026
  SPDX-License-Identifier: BUSL-1.1
 -->
 
@@ -16,6 +16,13 @@
     <link rel="stylesheet" href="{{rootURL}}assets/vendor.css" />
     <link rel="stylesheet" href="{{rootURL}}assets/vault.css" />
     <link rel="stylesheet" href="{{rootURL}}assets/test-support.css" />
+    <style>
+      /* axe-core does not model the popover top layer, so an open HDS dropdown can be audited
+      against content rendered beneath it. An explicit z-index matches what the browser paints. */
+      .hds-dropdown__content:popover-open {
+        z-index: 1;
+      }
+    </style>
 
     {{content-for "head-footer"}} {{content-for "test-head-footer"}}
   </head>
