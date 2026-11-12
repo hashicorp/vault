@@ -102,23 +102,12 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 
 	var warning string
 
-	originalMinDecryptionVersion := p.MinDecryptionVersion
-	originalMinEncryptionVersion := p.MinEncryptionVersion
-	originalDeletionAllowed := p.DeletionAllowed
-	originalExportable := p.Exportable
-	originalAllowPlaintextBackup := p.AllowPlaintextBackup
-	originalAutoRotatePeriod := p.AutoRotatePeriod
-
-	defer func() {
-		if retErr != nil || (resp != nil && resp.IsError()) {
-			p.MinDecryptionVersion = originalMinDecryptionVersion
-			p.MinEncryptionVersion = originalMinEncryptionVersion
-			p.DeletionAllowed = originalDeletionAllowed
-			p.Exportable = originalExportable
-			p.AllowPlaintextBackup = originalAllowPlaintextBackup
-			p.AutoRotatePeriod = originalAutoRotatePeriod
-		}
-	}()
+	targetMinDecryptionVersion := p.MinDecryptionVersion
+	targetMinEncryptionVersion := p.MinEncryptionVersion
+	targetDeletionAllowed := p.DeletionAllowed
+	targetExportable := p.Exportable
+	targetAllowPlaintextBackup := p.AllowPlaintextBackup
+	targetAutoRotatePeriod := p.AutoRotatePeriod
 
 	persistNeeded := false
 
@@ -140,7 +129,7 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 				return logical.ErrorResponse(
 					fmt.Sprintf("cannot set min decryption version of %d, latest key version is %d", minDecryptionVersion, p.LatestVersion)), nil
 			}
-			p.MinDecryptionVersion = minDecryptionVersion
+			targetMinDecryptionVersion = minDecryptionVersion
 			persistNeeded = true
 		}
 	}
@@ -158,24 +147,24 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 				return logical.ErrorResponse(
 					fmt.Sprintf("cannot set min encryption version of %d, latest key version is %d", minEncryptionVersion, p.LatestVersion)), nil
 			}
-			p.MinEncryptionVersion = minEncryptionVersion
+			targetMinEncryptionVersion = minEncryptionVersion
 			persistNeeded = true
 		}
 	}
 
 	// Check here to get the final picture after the logic on each
 	// individually. MinDecryptionVersion will always be 1 or above.
-	if p.MinEncryptionVersion > 0 &&
-		p.MinEncryptionVersion < p.MinDecryptionVersion {
+	if targetMinEncryptionVersion > 0 &&
+		targetMinEncryptionVersion < targetMinDecryptionVersion {
 		return logical.ErrorResponse(
-			fmt.Sprintf("cannot set min encryption/decryption values; min encryption version of %d must be greater than or equal to min decryption version of %d", p.MinEncryptionVersion, p.MinDecryptionVersion)), nil
+			fmt.Sprintf("cannot set min encryption/decryption values; min encryption version of %d must be greater than or equal to min decryption version of %d", targetMinEncryptionVersion, targetMinDecryptionVersion)), nil
 	}
 
 	allowDeletionInt, ok := d.GetOk("deletion_allowed")
 	if ok {
 		allowDeletion := allowDeletionInt.(bool)
 		if allowDeletion != p.DeletionAllowed {
-			p.DeletionAllowed = allowDeletion
+			targetDeletionAllowed = allowDeletion
 			persistNeeded = true
 		}
 	}
@@ -183,8 +172,8 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	// Add this as a guard here before persisting since we now require the min
 	// decryption version to start at 1; even if it's not explicitly set here,
 	// force the upgrade
-	if p.MinDecryptionVersion == 0 {
-		p.MinDecryptionVersion = 1
+	if targetMinDecryptionVersion == 0 {
+		targetMinDecryptionVersion = 1
 		persistNeeded = true
 	}
 
@@ -192,8 +181,8 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	if ok {
 		exportable := exportableRaw.(bool)
 		// Don't unset the already set value
-		if exportable && !p.Exportable {
-			p.Exportable = exportable
+		if exportable && !targetExportable {
+			targetExportable = exportable
 			persistNeeded = true
 		}
 	}
@@ -202,8 +191,8 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	if ok {
 		allowPlaintextBackup := allowPlaintextBackupRaw.(bool)
 		// Don't unset the already set value
-		if allowPlaintextBackup && !p.AllowPlaintextBackup {
-			p.AllowPlaintextBackup = allowPlaintextBackup
+		if allowPlaintextBackup && !targetAllowPlaintextBackup {
+			targetAllowPlaintextBackup = allowPlaintextBackup
 			persistNeeded = true
 		}
 	}
@@ -220,11 +209,11 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 		}
 
 		if autoRotatePeriod != p.AutoRotatePeriod {
-			p.AutoRotatePeriod = autoRotatePeriod
+			targetAutoRotatePeriod = autoRotatePeriod
 			persistNeeded = true
 		}
 
-		if p.KeyVersionType(p.LatestVersion) == keysutil.KeyType_MANAGED_KEY && autoRotatePeriod != 0 {
+		if p.KeyVersionType(p.LatestVersion) == keysutil.KeyType_MANAGED_KEY && targetAutoRotatePeriod != 0 {
 			return logical.ErrorResponse("Auto rotation can not be set for managed keys"), nil
 		}
 	}
@@ -241,13 +230,34 @@ func (b *backend) pathKeysConfigWrite(ctx context.Context, req *logical.Request,
 	}
 
 	switch {
-	case p.MinAvailableVersion > p.MinEncryptionVersion:
+	case p.MinAvailableVersion > targetMinEncryptionVersion:
 		return logical.ErrorResponse("min encryption version should not be less than min available version"), nil
-	case p.MinAvailableVersion > p.MinDecryptionVersion:
+	case p.MinAvailableVersion > targetMinDecryptionVersion:
 		return logical.ErrorResponse("min decryption version should not be less then min available version"), nil
 	}
 
+	origMinDecryptionVersion := p.MinDecryptionVersion
+	origMinEncryptionVersion := p.MinEncryptionVersion
+	origDeletionAllowed := p.DeletionAllowed
+	origExportable := p.Exportable
+	origAllowPlaintextBackup := p.AllowPlaintextBackup
+	origAutoRotatePeriod := p.AutoRotatePeriod
+
+	// Set copied values to p right before persisting
+	p.MinDecryptionVersion = targetMinDecryptionVersion
+	p.MinEncryptionVersion = targetMinEncryptionVersion
+	p.DeletionAllowed = targetDeletionAllowed
+	p.Exportable = targetExportable
+	p.AllowPlaintextBackup = targetAllowPlaintextBackup
+	p.AutoRotatePeriod = targetAutoRotatePeriod
+
 	if err := p.Persist(ctx, req.Storage); err != nil {
+		p.MinDecryptionVersion = origMinDecryptionVersion
+		p.MinEncryptionVersion = origMinEncryptionVersion
+		p.DeletionAllowed = origDeletionAllowed
+		p.Exportable = origExportable
+		p.AllowPlaintextBackup = origAllowPlaintextBackup
+		p.AutoRotatePeriod = origAutoRotatePeriod
 		return nil, err
 	}
 
