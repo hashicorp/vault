@@ -3,6 +3,62 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 2.2.2
+### November 12, 2026
+
+SECURITY:
+
+* core/acl: Harden explicit deny rule evaluation by matching requested paths case-insensitively.
+
+CHANGES:
+
+* auth/alicloud: Update plugin to [v0.24.1](https://github.com/hashicorp/vault-plugin-auth-alicloud/releases/tag/v0.24.1)
+* auth/cf: Update plugin to [v0.24.1](https://github.com/hashicorp/vault-plugin-auth-cf/releases/tag/v0.24.1)
+* auth/jwt: Update plugin to [v0.27.2](https://github.com/hashicorp/vault-plugin-auth-jwt/releases/tag/v0.27.2)
+* auth/kerberos: Update plugin to [v0.18.1](https://github.com/hashicorp/vault-plugin-auth-kerberos/releases/tag/v0.18.1)
+* auth/oci: Update plugin to [v0.22.1](https://github.com/hashicorp/vault-plugin-auth-oci/releases/tag/v0.22.1)
+* core: Bump Go version to 1.27.4
+* core/acl: Fix an issue where explicit deny policy rules were not enforced against case variants of the denied path. Explicit deny rules now also match the requested path case-insensitively, subject to the usual rule specificity. For example, a deny on `secret/data/example` now also denies requests to `secret/data/EXAMPLE`.
+* database/couchbase: Update plugin to [v0.17.1](https://github.com/hashicorp/vault-plugin-database-couchbase/releases/tag/v0.17.1)
+* database/elasticsearch: Update plugin to [v0.21.1](https://github.com/hashicorp/vault-plugin-database-elasticsearch/releases/tag/v0.21.1)
+* database/mongodbatlas: Update plugin to [v0.18.1](https://github.com/hashicorp/vault-plugin-database-mongodbatlas/releases/tag/v0.18.1)
+* database/redis: Update plugin to [v0.9.1](https://github.com/hashicorp/vault-plugin-database-redis/releases/tag/v0.9.1)
+* database/snowflake: Update plugin to [v0.17.1](https://github.com/hashicorp/vault-plugin-database-snowflake/releases/tag/v0.17.1)
+* proxy/agent: Custom plugins or integrations that return interactive HTML through Agent or Proxy will no longer render interactively in a browser.
+* secrets/alicloud: Update plugin to [v0.23.1](https://github.com/hashicorp/vault-plugin-secrets-alicloud/releases/tag/v0.23.1)
+* secrets/azure: Update plugin to [v0.28.5+ent](https://github.com/hashicorp/vault-plugin-secrets-azure/releases/tag/v0.28.5+ent)
+* secrets/keymgmt: Update plugin to [v0.20.2+ent](https://github.com/hashicorp/vault-plugin-secrets-keymgmt/releases/tag/v0.20.2+ent)
+* secrets/mongodbatlas: Update plugin to [v0.18.1](https://github.com/hashicorp/vault-plugin-secrets-mongodbatlas/releases/tag/v0.18.1)
+* secrets/terraform: Update plugin to [v0.15.1](https://github.com/hashicorp/vault-plugin-secrets-terraform/releases/tag/v0.15.1)
+
+IMPROVEMENTS:
+
+* core: Include the namespace ID in mount setup failure logs
+* core: Update github.com/go-jose/go-jose/v4 to v4.1.6 and golang.org/x/net to v0.62.0
+* ui: Show "Never" as the last Vault rotation on the LDAP role credentials page when a static role has not been rotated, instead of a date in year 0001.
+
+BUG FIXES:
+
+* Transit (enterprise): Fix cache bug that led to non-zero `auto_rotate_period` values being written to the cache with managed keys
+* agent/pki-external-ca (enterprise): Fix premature certificate reissuance on auto-auth re-authentication so certificate renewal respects `percent_renew_before_expiry` instead of being triggered by token updates.
+* audit: Fixed a bug where Vault returned HTTP 500 when a large response (e.g. a PKI ?help=1 request) could not be written to a syslog audit device due to the OS Unix datagram socket size limit (EMSGSIZE / ENOBUFS). The syslog sink now splits oversized audit payloads into safe-sized chunks and retries transiently full socket buffers.
+* audit: Fixes a panic that can occur when audit broker not initialized during teardown.
+* auth/approle: Reject expired SecretIDs during login instead of relying on periodic tidy cleanup.
+* auth/spiffe (enterprise): Fix an issue where renewable tokens were not being renewed
+* core (enterprise): Fix a panic and partial namespace creation when the root agent-registry mount is unavailable
+* core/census (enterprise): Fix the `previous_month_complete` census gauge reporting 0 in the first month after the billing start date auto-rolls, so the previous billing cycle's final client count is reported.
+* core/plugin: Fix an issue where external secrets engine and auth plugins remained read-only after failing to load during startup or unseal. Operators can now restore the missing binary or registration and reload the plugin to resume writes without restarting Vault.
+* core: Fix an issue where policy path matching could be inconsistent for requests that differ only by a trailing slash.
+* identity: Use the reporting conflict resolver only while reloading in case-sensitive mode, to avoid collecting duplicates after unseal.
+* pki-external-ca: Fix premature deletion of revoked certificate records during tidy; revoked orders are now retained until the certificate's NotAfter date rather than the ACME order expiry
+* secrets/azure: Continue permanent application cleanup when the active application is already absent, allowing later cleanup attempts to retry the purge.
+* secrets/azure: Retry transient Microsoft Graph 403/404 errors when adding newly created service principals to Azure groups.
+* secrets/kv: Fixed an issue in KV v1 where writing a secret path containing consecutive slashes caused list operations to return "/" as a directory entry, producing an infinite loop in the Vault UI breadcrumb.
+* tpm: tpm auth now respects the InsecureSkipVerify option
+* ui: Fix the database overview page to list both dynamic and static roles and allow credential generation, and restore the Roles tab for users with only static-role permissions
+* ui: fixes pagination on entities list table
+* vault proxy: Support tpm method in the auto_auth block to match parity with agent.
+
 ## 2.2.1
 ### October 22, 2026
 
@@ -1331,6 +1387,35 @@ BUG FIXES:
 * ui: Update LDAP library count to reflect the total number of nodes instead of number of directories
 * ui: fix renew token button rendering for denied renew-self.
 * ui: remove unnecessary 'credential type' form input when generating AWS secrets
+
+* ## 1.21.14 Enterprise
+### November 12, 2026
+
+SECURITY:
+
+* core/acl: Harden explicit deny rule evaluation by matching requested paths case-insensitively.
+
+CHANGES:
+
+* core/acl: Fix an issue where explicit deny policy rules were not enforced against case variants of the denied path. Explicit deny rules now also match the requested path case-insensitively, subject to the usual rule specificity. For example, a deny on `secret/data/example` now also denies requests to `secret/data/EXAMPLE`.
+* core: Bump Go version to 1.26.11
+* proxy/agent: Custom plugins or integrations that return interactive HTML through Agent or Proxy will no longer render interactively in a browser.
+
+IMPROVEMENTS:
+
+* core: Update github.com/go-jose/go-jose/v4 to v4.1.6 and golang.org/x/net to v0.62.0
+
+BUG FIXES:
+
+* Transit (enterprise): Fix cache bug that led to non-zero `auto_rotate_period` values being written to the cache with managed keys
+* audit: Fixed a bug where Vault returned HTTP 500 when a large response (e.g. a PKI ?help=1 request) could not be written to a syslog audit device due to the OS Unix datagram socket size limit (EMSGSIZE / ENOBUFS). The syslog sink now splits oversized audit payloads into safe-sized chunks and retries transiently full socket buffers.
+* audit: Fixes a panic that can occur when audit broker not initialized during teardown.
+* auth/approle: Reject expired SecretIDs during login instead of relying on periodic tidy cleanup.
+* core/plugin: Fix an issue where external secrets engine and auth plugins remained read-only after failing to load during startup or unseal. Operators can now restore the missing binary or registration and reload the plugin to resume writes without restarting Vault.
+* core: Fix an issue where policy path matching could be inconsistent for requests that differ only by a trailing slash.
+* identity: Use the reporting conflict resolver only while reloading in case-sensitive mode, to avoid collecting duplicates after unseal.
+* sdk/ldaputil: Fix malformed error messages that embedded the literal `{{err}}` placeholder and a `%!(EXTRA ...)` marker, and wrap the underlying error so `errors.Is`/`errors.As` work.
+* secrets/kv: Fixed an issue in KV v1 where writing a secret path containing consecutive slashes caused list operations to return "/" as a directory entry, producing an infinite loop in the Vault UI breadcrumb.
 
 ## 1.21.13 Enterprise
 ### October 22, 2026
@@ -2807,6 +2892,36 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.25 Enterprise
+### November 12, 2026
+
+SECURITY:
+
+* core/acl: Harden explicit deny rule evaluation by matching requested paths case-insensitively.
+
+CHANGES:
+
+* core/acl: Fix an issue where explicit deny policy rules were not enforced against case variants of the denied path. Explicit deny rules now also match the requested path case-insensitively, subject to the usual rule specificity. For example, a deny on `secret/data/example` now also denies requests to `secret/data/EXAMPLE`.
+* core: Bump Go version to 1.26.11
+* proxy/agent: Custom plugins or integrations that return interactive HTML through Agent or Proxy will no longer render interactively in a browser.
+
+IMPROVEMENTS:
+
+* ui: `unsafe-inline` is no longer included in the `style-src` CSP directive.
+
+BUG FIXES:
+
+* Transit (enterprise): Fix cache bug that led to non-zero `auto_rotate_period` values being written to the cache with managed keys
+* audit: Fixed a bug where Vault returned HTTP 500 when a large response (e.g. a PKI ?help=1 request) could not be written to a syslog audit device due to the OS Unix datagram socket size limit (EMSGSIZE / ENOBUFS). The syslog sink now splits oversized audit payloads into safe-sized chunks and retries transiently full socket buffers.
+* audit: Fixes a panic that can occur when audit broker not initialized during teardown.
+* auth/approle: Reject expired SecretIDs during login instead of relying on periodic tidy cleanup.
+* core (enterprise): Fix crash when seal HSM is disconnected
+* core/plugin: Fix an issue where external secrets engine and auth plugins remained read-only after failing to load during startup or unseal. Operators can now restore the missing binary or registration and reload the plugin to resume writes without restarting Vault.
+* core: Fix an issue where policy path matching could be inconsistent for requests that differ only by a trailing slash.
+* identity: Use the reporting conflict resolver only while reloading in case-sensitive mode, to avoid collecting duplicates after unseal.
+* sdk/ldaputil: Fix malformed error messages that embedded the literal `{{err}}` placeholder and a `%!(EXTRA ...)` marker, and wrap the underlying error so `errors.Is`/`errors.As` work.
+* secrets/kv: Fixed an issue in KV v1 where writing a secret path containing consecutive slashes caused list operations to return "/" as a directory entry, producing an infinite loop in the Vault UI breadcrumb.
 
 ## 1.19.24 Enterprise
 ### October 22, 2026
