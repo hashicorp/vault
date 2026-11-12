@@ -7,7 +7,7 @@ of the `build` workflow. While intended to be executed via Github Actions using
 the results of the `build` workflow, scenarios are also executable from a developer
 machine that has the requisite dependencies and configuration.
 
-Refer to the [Enos documentation](https://github.com/hashicorp/Enos-Docs)
+Refer to the [Enos documentation](https://hashicorp.atlassian.net/wiki/x/GQCKOwE)
 for further information regarding installation, execution or composing Enos scenarios.
 
 ## When to use Enos
