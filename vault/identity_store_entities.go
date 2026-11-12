@@ -1217,11 +1217,13 @@ type entityIntegrityCheck struct {
 	// The entity has duplicate aliases by ID. This is _not_ the same as same-case
 	// duplicates.
 	duplicateAliases map[string][]*identity.Alias
+	// The entity has aliases with different IDs but same factors (name and mount accessor)
+	duplicateFactorsAliases []*identity.Alias
 }
 
 // checkEntityIntegrity inspects the internal state of the entity and any
 // associated aliases. It returns an entityIntegrityCheck which includes details
-// about any issues that may have been discovered. An error is return if any
+// about any issues that may have been discovered. An error is returned if any
 // integrity errors are discovered.
 //
 // NOTE: We currently only check the integrity of the aliases associated with
@@ -1232,13 +1234,15 @@ func checkEntityIntegrity(entity *identity.Entity) (*entityIntegrityCheck, error
 	}
 
 	results := &entityIntegrityCheck{
-		entity:          entity,
-		hasNilAliases:   false,
-		danglingAliases: []*identity.Alias{},
+		entity:                  entity,
+		hasNilAliases:           false,
+		danglingAliases:         []*identity.Alias{},
+		duplicateFactorsAliases: []*identity.Alias{},
 	}
 
 	hasDuplicateAliases := false
 	hasDanglingAliases := false
+	hasDuplicateFactorsAliases := false
 	seenAliases := map[string][]*identity.Alias{}
 
 	for alias := range slices.Values(entity.Aliases) {
@@ -1260,6 +1264,29 @@ func checkEntityIntegrity(entity *identity.Entity) (*entityIntegrityCheck, error
 		}
 	}
 
+	// Vault recognizes that aliases with the same name and mount accessor BUT different IDs are duplicates.
+	// This will set off the hasDuplicateFactorsAliases flag and add the alias to duplicateFactorsAliases,
+	// which will be logged in identity_store_util.go
+	if len(entity.Aliases) > 1 {
+		for i := 0; i < len(entity.Aliases)-1; i++ {
+			if entity.Aliases[i] == nil {
+				continue
+			}
+			for n := i + 1; n < len(entity.Aliases); n++ {
+				if entity.Aliases[n] == nil {
+					continue
+				}
+				if entity.Aliases[n].Name == entity.Aliases[i].Name && entity.Aliases[n].MountAccessor == entity.Aliases[i].MountAccessor {
+					if entity.Aliases[n].ID != entity.Aliases[i].ID {
+						// Log duplicate, do not remove
+						hasDuplicateFactorsAliases = true
+						results.duplicateFactorsAliases = append(results.duplicateFactorsAliases, entity.Aliases[n])
+					}
+				}
+			}
+		}
+	}
+
 	if hasDuplicateAliases {
 		// Delete any seen aliases that don't have duplicates instances
 		maps.DeleteFunc(seenAliases, func(k string, v []*identity.Alias) bool {
@@ -1268,7 +1295,7 @@ func checkEntityIntegrity(entity *identity.Entity) (*entityIntegrityCheck, error
 		results.duplicateAliases = seenAliases
 	}
 
-	if results.hasNilAliases || hasDanglingAliases || hasDuplicateAliases {
+	if results.hasNilAliases || hasDanglingAliases || hasDuplicateAliases || hasDuplicateFactorsAliases {
 		return results, errors.New("failed entity integrity check")
 	}
 
@@ -1303,7 +1330,7 @@ func (i *entityIntegrityCheck) repair(log hclog.Logger) error {
 	}
 
 	// Now associate any dangling aliases that we might have. As associating and
-	// and resolving duplicate updates our modified time we always do this after
+	// resolving duplicate updates our modified time we always do this after
 	// deleting duplicates instances as that may use the unaltered modified time
 	// in determining which instance wins.
 	//
@@ -1334,7 +1361,7 @@ func (i *entityIntegrityCheck) repair(log hclog.Logger) error {
 func (i *entityIntegrityCheck) deleteDuplicateAliasInstances(log hclog.Logger, aliases []*identity.Alias) error {
 	switch {
 	case i == nil:
-		return errors.New("entity integrity check unitialized")
+		return errors.New("entity integrity check uninitialized")
 	case aliases == nil:
 		return errors.New("no reference to aliases was given")
 	case len(aliases) < 2:

@@ -1633,15 +1633,16 @@ func TestIdentityStore_ProcessLocalAliasWithSameIssuerAndExternalId(t *testing.T
 }
 
 // TestIdentityStore_checkAndRepairEntityIntegrity tests the
-// checkEntityIntegrity and entityIntegrityCheck's abiltiy to repair what it
+// checkEntityIntegrity and entityIntegrityCheck's ability to repair what it
 // found.
 func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 	tests := map[string]struct {
-		setupEntity      func(t *testing.T) *identity.Entity
-		expectCheckError bool
-		expectNilAlias   bool
-		expectDangling   int
-		expectDuplicate  int
+		setupEntity            func(t *testing.T) *identity.Entity
+		expectCheckError       bool
+		expectNilAlias         bool
+		expectDuplicateFactors int
+		expectDangling         int
+		expectDuplicate        int
 	}{
 		"valid entity with no issues": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1659,10 +1660,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: false,
-			expectNilAlias:   false,
-			expectDangling:   0,
-			expectDuplicate:  0,
+			expectCheckError:       false,
+			expectNilAlias:         false,
+			expectDuplicateFactors: 0,
+			expectDangling:         0,
+			expectDuplicate:        0,
 		},
 		"entity with nil alias": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1681,10 +1683,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   true,
-			expectDangling:   0,
-			expectDuplicate:  0,
+			expectCheckError:       true,
+			expectNilAlias:         true,
+			expectDuplicateFactors: 0,
+			expectDangling:         0,
+			expectDuplicate:        0,
 		},
 		"entity with multiple nil aliases": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1705,10 +1708,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   true,
-			expectDangling:   0,
-			expectDuplicate:  0,
+			expectCheckError:       true,
+			expectNilAlias:         true,
+			expectDuplicateFactors: 0,
+			expectDangling:         0,
+			expectDuplicate:        0,
 		},
 		"entity with dangling alias": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1726,10 +1730,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   false,
-			expectDangling:   1,
-			expectDuplicate:  0,
+			expectCheckError:       true,
+			expectNilAlias:         false,
+			expectDuplicateFactors: 0,
+			expectDangling:         1,
+			expectDuplicate:        0,
 		},
 		"entity with multiple dangling aliases": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1757,10 +1762,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   false,
-			expectDangling:   3,
-			expectDuplicate:  0,
+			expectCheckError:       true,
+			expectNilAlias:         false,
+			expectDuplicateFactors: 0,
+			expectDangling:         3,
+			expectDuplicate:        0,
 		},
 		"entity with duplicate alias instances same ID": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1786,10 +1792,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   false,
-			expectDangling:   0,
-			expectDuplicate:  1,
+			expectCheckError:       true,
+			expectNilAlias:         false,
+			expectDuplicateFactors: 0,
+			expectDangling:         0,
+			expectDuplicate:        1,
 		},
 		"entity with multiple duplicate alias instances": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1821,10 +1828,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   false,
-			expectDangling:   0,
-			expectDuplicate:  1,
+			expectCheckError:       true,
+			expectNilAlias:         false,
+			expectDuplicateFactors: 0,
+			expectDangling:         0,
+			expectDuplicate:        1,
 		},
 		"entity with dangling and duplicate aliases": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1856,10 +1864,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   false,
-			expectDangling:   1,
-			expectDuplicate:  1,
+			expectCheckError:       true,
+			expectNilAlias:         false,
+			expectDuplicateFactors: 0,
+			expectDangling:         1,
+			expectDuplicate:        1,
 		},
 		"entity with nil, dangling, and duplicate aliases": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1893,10 +1902,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   true,
-			expectDangling:   1,
-			expectDuplicate:  1,
+			expectCheckError:       true,
+			expectNilAlias:         true,
+			expectDuplicateFactors: 0,
+			expectDangling:         1,
+			expectDuplicate:        1,
 		},
 		"entity with dangling duplicate aliases same mount and name": {
 			setupEntity: func(t *testing.T) *identity.Entity {
@@ -1924,10 +1934,11 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 					},
 				}
 			},
-			expectCheckError: true,
-			expectNilAlias:   false,
-			expectDangling:   2,
-			expectDuplicate:  0,
+			expectCheckError:       true,
+			expectNilAlias:         false,
+			expectDuplicateFactors: 1,
+			expectDangling:         2,
+			expectDuplicate:        0,
 		},
 	}
 
@@ -1951,6 +1962,7 @@ func TestIdentityStore_checkAndRepairEntityIntegrity(t *testing.T) {
 			require.Equal(t, test.expectNilAlias, check.hasNilAliases, "hasNilAliases mismatch")
 			require.Len(t, check.danglingAliases, test.expectDangling, "danglingAliases count mismatch")
 			require.Len(t, check.duplicateAliases, test.expectDuplicate, "duplicateAliases count mismatch")
+			require.Len(t, check.duplicateFactorsAliases, test.expectDuplicateFactors, "duplicateFactorsAliases count mismatch")
 
 			// If there are issues, test repair
 			if test.expectCheckError {
