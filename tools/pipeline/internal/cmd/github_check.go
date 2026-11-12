@@ -14,6 +14,7 @@ func newGithubCheckCmd() *cobra.Command {
 		Long:  "Github check commands",
 	}
 	checkCmd.AddCommand(newGithubCheckChangedFilesCmd())
+	checkCmd.AddCommand(newGithubCheckBackportLabelsCmd())
 	checkCmd.AddCommand(newGithubCheckCommitStatusCmd())
 	checkCmd.AddCommand(newGithubCheckGoModDiffCmd())
 	checkCmd.AddCommand(newGithubCheckWorkflowRunCmd())
