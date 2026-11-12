@@ -229,7 +229,7 @@ func (i *IdentityStore) activateDeduplication() error {
 		reloadCtx := namespace.RootContext(context.Background())
 
 		// If we fail to load from storage, we'll end up with a broken
-		// IdentityStore, so we're better of just sealing and letting another node
+		// IdentityStore, so we're better off just sealing and letting another node
 		// take over!
 		if err := i.loadArtifacts(reloadCtx, i.localNode.HAStateWithLock() == consts.Active); err != nil {
 			i.logger.Error("failed to activate identity deduplication, shutting down")
@@ -656,7 +656,7 @@ LOOP:
 					}
 
 					// Check and repair any integrity issues in the entity. Issues here
-					// ought to be extremely rare but have been seen in clusters where
+					// ought to be extremely rare but have been seen in clusters
 					// where bugs in older versions of Vault might have persisted
 					// corrupted entities. These corrupted entities may have duplicate
 					// and/or dangling aliases that need to be cleaned up before we
@@ -672,10 +672,20 @@ LOOP:
 							"has_nil_aliases", integrityCheck.hasNilAliases,
 							"dangling_aliases", integrityCheck.danglingAliases,
 							"aliases_with_duplicate_instances", slices.Sorted(maps.Keys(integrityCheck.duplicateAliases)),
+							"aliases_with_duplicate_factors", integrityCheck.duplicateFactorsAliases,
 						)
 
 						if integrityCheck == nil {
 							return fmt.Errorf("identity entity integrity check failed; no plan to repair was generated: %w", err)
+						}
+
+						if len(integrityCheck.duplicateFactorsAliases) > 0 {
+							for _, alias := range integrityCheck.duplicateFactorsAliases {
+								i.logger.Warn("duplicate factors alias detected in entity", entity.ID,
+									"duplicate alias id", alias.ID,
+									"duplicate name", alias.Name,
+									"duplicate mount accessor", alias.MountAccessor)
+							}
 						}
 
 						if err = integrityCheck.repair(i.logger); err != nil {
