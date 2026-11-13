@@ -231,3 +231,64 @@ func TestWriteConfig_HelpfulErrorMessageWhenBuiltinOverridden(t *testing.T) {
 		t.Fatalf("expected overridden error but got: %s", resp.Error())
 	}
 }
+
+// TestReadConfig_RedactsSecrets checks that reading a connection config doesn't
+// return the secrets that plugins store in the connection details.
+func TestReadConfig_RedactsSecrets(t *testing.T) {
+	_, sys := getCluster(t)
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Cleanup(context.Background())
+
+	secrets := []string{"password", "private_key", "service_account_json", "client_secret"}
+
+	data := map[string]interface{}{
+		"connection_url":    "test",
+		"plugin_name":       "hana-database-plugin",
+		"verify_connection": false,
+		"client_id":         "test-client-id",
+	}
+	for _, field := range secrets {
+		data[field] = "test-" + field
+	}
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	details := resp.Data["connection_details"].(map[string]interface{})
+	for _, field := range secrets {
+		if _, ok := details[field]; ok {
+			t.Errorf("%s should not be returned in the connection details", field)
+		}
+	}
+
+	// Non-secret fields are still returned.
+	if details["client_id"] != "test-client-id" {
+		t.Errorf("expected client_id to be returned, got %#v", details["client_id"])
+	}
+}
