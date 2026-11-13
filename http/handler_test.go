@@ -16,8 +16,10 @@ import (
 	"net/url"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
@@ -728,6 +730,42 @@ func TestHandler_ui_enabled(t *testing.T) {
 		t.Fatalf("err: %s", err)
 	}
 	testResponseStatus(t, resp, 200)
+}
+
+// TestHandleUI_NonceContentLength checks over a real HTTP server, which
+// enforces Content-Length, that the page rewritten with the CSP nonce arrives
+// complete, with a Content-Length matching what is sent, and that a Range
+// request gets the whole rewritten page.
+func TestHandleUI_NonceContentLength(t *testing.T) {
+	page := "<!DOCTYPE html><html><head><title>Vault</title></head><body>" + strings.Repeat("x", 4096) + "</body></html>"
+	ui := handleUI(http.FileServer(http.FS(fstest.MapFS{"index.html": {Data: []byte(page)}})))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), cspNonceContextKey{}, "test-nonce")
+		ui.ServeHTTP(w, r.WithContext(ctx))
+	}))
+	defer srv.Close()
+
+	for name, rangeHeader := range map[string]string{"full": "", "range": "bytes=0-9"} {
+		t.Run(name, func(t *testing.T) {
+			req, err := http.NewRequest(http.MethodGet, srv.URL+"/", nil)
+			require.NoError(t, err)
+			if rangeHeader != "" {
+				req.Header.Set("Range", rangeHeader)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Equal(t, strconv.Itoa(len(body)), resp.Header.Get("Content-Length"))
+			require.Contains(t, string(body), `<head>
+    <meta name="csp-nonce" content="test-nonce">`)
+			require.True(t, strings.HasSuffix(string(body), "</body></html>"))
+		})
+	}
 }
 
 func TestHandler_error(t *testing.T) {
