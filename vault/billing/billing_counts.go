@@ -111,9 +111,7 @@ const (
 var BillingMonthStorageFormat = "%s%d/%02d/%s" // e.g replicated/2026/01/maxKvCounts/
 
 type ConsumptionBilling struct {
-	// BillingStorageLock controls access to the billing storage paths
-	BillingStorageLock sync.RWMutex
-
+	MetricLocks           MetricLocks
 	BillingConfig         BillingConfig
 	SecretEngineCounts    SecretEngineCounts
 	Logger                log.Logger
@@ -122,6 +120,13 @@ type ConsumptionBilling struct {
 	// KmipSeenEnabledThisMonth tracks whether KMIP has been enabled during the current billing month.
 	// This is used to avoid scanning all mounts every 10 minutes for KMIP billing detection.
 	KmipSeenEnabledThisMonth atomic.Bool
+}
+
+// MetricLocks maintains one read/write lock per billing metric key and
+// is ready to use at its zero value.
+type MetricLocks struct {
+	mu    sync.Mutex
+	locks map[string]*sync.RWMutex
 }
 
 type BillingConfig struct {
@@ -351,4 +356,24 @@ func (s *ConsumptionBilling) GetParentNamespaceID(nsPath string) string {
 		return ""
 	}
 	return s.ParentNamespaceIDFunc(nsPath)
+}
+
+// LockForMetric returns the lock guarding the given billing metric, creating
+// it on first use. Metrics prefixed with RoleHWMCountsHWM share one lock.
+func (r *MetricLocks) LockForMetric(metric string) *sync.RWMutex {
+	// Role attribution sub-types (e.g. "maxRoleCounts/aws_dynamic") are protected
+	// by the parent role lock ("maxRoleCounts/").
+	if strings.HasPrefix(metric, RoleHWMCountsHWM) {
+		metric = RoleHWMCountsHWM
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.locks == nil {
+		r.locks = make(map[string]*sync.RWMutex)
+	}
+	if r.locks[metric] == nil {
+		r.locks[metric] = &sync.RWMutex{}
+	}
+	return r.locks[metric]
 }

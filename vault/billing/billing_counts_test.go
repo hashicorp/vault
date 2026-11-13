@@ -6,6 +6,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -111,4 +112,72 @@ func TestAccumulateMountAttributions_MetadataUpdate(t *testing.T) {
 	// Count must be accumulated across both calls.
 	require.Equal(t, fmt.Sprintf("%v", 15.0), fmt.Sprintf("%v", entry.Count), "count should accumulate: 10 + 5 = 15")
 	require.Empty(t, entry.ParentNamespaceID)
+}
+
+// TestMetricLocks_ConcurrentAccess verifies that LockForMetric allows concurrent
+// operations on different metric keys while properly serializing operations on the
+// same metric key under race detection.
+func TestMetricLocks_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
+
+	var ml MetricLocks
+
+	const (
+		metricA = "transit"
+		metricB = "oidc"
+	)
+
+	// Ensure locks for distinct metrics are separate instances
+	lockA := ml.LockForMetric(metricA)
+	lockB := ml.LockForMetric(metricB)
+	require.NotNil(t, lockA)
+	require.NotNil(t, lockB)
+	require.NotSame(t, lockA, lockB, "different metrics must have different lock instances")
+
+	// Ensure calling LockForMetric with the same key returns the identical lock instance
+	require.Same(t, lockA, ml.LockForMetric(metricA))
+
+	// Ensure role subtypes resolve to the parent RoleHWMCountsHWM lock
+	roleParentLock := ml.LockForMetric(RoleHWMCountsHWM)
+	roleDynamicLock := ml.LockForMetric(RoleHWMCountsHWM + AWSDynamicRoles)
+	roleStaticLock := ml.LockForMetric(RoleHWMCountsHWM + AzureStaticRoles)
+	require.Same(t, roleParentLock, roleDynamicLock, "role dynamic subtype must resolve to parent role lock")
+	require.Same(t, roleParentLock, roleStaticLock, "role static subtype must resolve to parent role lock")
+
+	// Ensure SSH cert and OTP metrics remain independent locks
+	sshCertLock := ml.LockForMetric(SSHCertificateMetric)
+	sshOtpLock := ml.LockForMetric(SSHOTPMetric)
+	require.NotSame(t, sshCertLock, sshOtpLock, "SSH cert and SSH OTP metrics must have separate locks")
+	require.Same(t, sshCertLock, ml.LockForMetric(SSHCertificateMetric))
+	require.Same(t, sshOtpLock, ml.LockForMetric(SSHOTPMetric))
+
+	// Verify parallel concurrent lock acquisition across different metrics
+	const goroutines = 20
+	const iterations = 50
+
+	var wg sync.WaitGroup
+	wg.Add(goroutines * 2)
+
+	for i := 0; i < goroutines; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				lock := ml.LockForMetric(metricA)
+				lock.Lock()
+				// Simulate quick locked work
+				lock.Unlock()
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			for j := 0; j < iterations; j++ {
+				lock := ml.LockForMetric(metricB)
+				lock.Lock()
+				// Simulate quick locked work
+				lock.Unlock()
+			}
+		}()
+	}
+
+	wg.Wait()
 }

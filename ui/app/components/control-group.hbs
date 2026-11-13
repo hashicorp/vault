@@ -4,7 +4,7 @@
 }}
 
 <div class="box is-fullwidth is-bottomless is-sideless">
-  <MessageError @model={{this.model}} />
+  <MessageError @errorMessage={{this.errorMessage}} />
   <div class="control-group-header {{if this.isSuccess 'is-success'}}">
     <p>
       <Icon @name={{if this.isSuccess "check-circle-fill" "lock-fill"}} />

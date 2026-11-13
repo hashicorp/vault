@@ -10,7 +10,7 @@ import clearModelCache from 'vault/utils/shared-model-boundary';
 export default class AccessRoute extends Route {
   @service store;
 
-  modelTypes = ['capabilities', 'control-group'];
+  modelTypes = ['capabilities'];
 
   model() {
     return {};

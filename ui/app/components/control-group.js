@@ -11,7 +11,9 @@ import { task } from 'ember-concurrency';
 
 export default Component.extend({
   tagName: '',
+  api: service(),
   auth: service(),
+  router: service(),
   controlGroup: service(),
 
   // public API
@@ -79,18 +81,22 @@ export default Component.extend({
 
   refresh: task(function* () {
     try {
-      yield this.model.reload();
+      this.set('errorMessage', null);
+      yield this.router.refresh();
     } catch (e) {
-      this.set('errors', e);
+      const { message } = yield this.api.parseError(e);
+      this.set('errorMessage', message);
     }
   }).drop(),
 
   authorize: task(function* () {
     try {
-      yield this.model.save();
-      yield this.refresh.perform();
+      this.set('errorMessage', null);
+      yield this.api.sys.systemWriteControlGroupAuthorize({ accessor: this.model.id });
+      yield this.router.refresh();
     } catch (e) {
-      this.set('errors', e);
+      const { message } = yield this.api.parseError(e);
+      this.set('errorMessage', message);
     }
   }).drop(),
 });

@@ -590,9 +590,10 @@ func TestSystemBackend_BillingOverview_MetricTypeFormat(t *testing.T) {
 	require.NoError(t, err)
 
 	// Write GCP KMS count directly to storage
-	c.consumptionBilling.BillingStorageLock.Lock()
+	mu := c.consumptionBilling.MetricLocks.LockForMetric(billing.GcpKmsDataProtectionCallCountsPrefix)
+	mu.Lock()
 	err = c.storeGcpKmsCallCountsLocked(ctx, uint64(5), billing.LocalPrefix, currentMonth)
-	c.consumptionBilling.BillingStorageLock.Unlock()
+	mu.Unlock()
 	require.NoError(t, err)
 
 	// Make a request to the billing overview endpoint
@@ -771,9 +772,10 @@ func TestSystemBackend_BillingOverview_HistoricalMonths(t *testing.T) {
 	previousMonth := timeutil.StartOfPreviousMonth(now)
 
 	// Manually store some counts for previous month
-	c.consumptionBilling.BillingStorageLock.Lock()
+	kvMu := c.consumptionBilling.MetricLocks.LockForMetric(billing.KvHWMCountsHWM)
+	kvMu.Lock()
 	err := c.storeMaxKvCountsLocked(ctx, 5, "local/", previousMonth)
-	c.consumptionBilling.BillingStorageLock.Unlock()
+	kvMu.Unlock()
 	require.NoError(t, err)
 
 	// Store metrics last update timestamp for previous month so it's detected as having data
@@ -1410,9 +1412,10 @@ func TestSystemBackend_BillingOverview_PreviousMonth_WithError(t *testing.T) {
 
 	// Store counts but intentionally do NOT store the metrics last update timestamp
 	// This simulates a scenario where data exists but timestamp retrieval might fail
-	c.consumptionBilling.BillingStorageLock.Lock()
+	kvMu := c.consumptionBilling.MetricLocks.LockForMetric(billing.KvHWMCountsHWM)
+	kvMu.Lock()
 	err := c.storeMaxKvCountsLocked(ctx, 5, "local/", previousMonth)
-	c.consumptionBilling.BillingStorageLock.Unlock()
+	kvMu.Unlock()
 	require.NoError(t, err)
 
 	// Make a request to the billing overview endpoint
