@@ -135,8 +135,8 @@ module('Acceptance | leases show — revokeLease / renewLease actions', function
     await visit(`/vault/access/leases/show/${this.leaseId}`);
   });
 
-  test('revokeLease sends POST to /sys/leases/revoke with the lease_id and redirects to list-root', async function (assert) {
-    assert.expect(2);
+  test('revokeLease sends POST, shows success, and redirects to list-root', async function (assert) {
+    assert.expect(3);
 
     this.server.post('/sys/leases/revoke', (_, req) => {
       const body = JSON.parse(req.requestBody);
@@ -147,11 +147,43 @@ module('Acceptance | leases show — revokeLease / renewLease actions', function
     await click('[data-test-lease-revoke]');
     await click(GENERAL.confirmButton);
 
+    assert.dom('[data-test-flash-message]').exists('success flash confirms the lease was revoked');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.list-root',
       'redirects to list-root after revoke'
     );
+  });
+
+  test('revokeLease does not show a failure when navigation is aborted after revocation', async function (assert) {
+    const api = this.owner.lookup('service:api');
+    const router = this.owner.lookup('service:router');
+    const flashMessages = this.owner.lookup('service:flash-messages');
+    const transitionError = new Error('TransitionAborted');
+    transitionError.name = 'TransitionAborted';
+
+    const revokeLease = sinon.stub(api.sys, 'leasesRevokeLease').resolves();
+    const parseError = sinon.stub(api, 'parseError').resolves({ message: transitionError.message });
+    const danger = sinon.spy(flashMessages, 'danger');
+    const success = sinon.spy(flashMessages, 'success');
+    sinon.stub(router, 'transitionTo').rejects(transitionError);
+
+    const controller = this.owner.lookup('controller:vault.cluster.access.leases.show');
+    await controller.actions.revokeLease.call(controller, { id: this.leaseId });
+
+    assert.true(revokeLease.calledOnce, 'the lease revoke request succeeds');
+    assert.false(parseError.called, 'transition errors are not parsed as API errors');
+    assert.false(danger.called, 'no revoke failure is shown after success');
+    assert.true(success.calledOnce, 'a successful revoke is confirmed despite aborted navigation');
+  });
+
+  test('revokeLease shows a danger flash when the server returns an error', async function (assert) {
+    this.server.post('/sys/leases/revoke', () => overrideResponse(403, { errors: ['permission denied'] }));
+
+    await click('[data-test-lease-revoke]');
+    await click(GENERAL.confirmButton);
+
+    assert.dom('[data-test-flash-message]').exists('a revoke failure is shown when the server denies it');
   });
 
   test('renewLease sends POST to /sys/leases/renew with the correct lease_id', async function (assert) {

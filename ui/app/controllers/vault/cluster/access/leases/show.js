@@ -33,16 +33,19 @@ export default Controller.extend({
 
   actions: {
     revokeLease(model) {
-      return this.api.sys
-        .leasesRevokeLease({ lease_id: model.id })
-        .then(() => {
-          return this.router.transitionTo('vault.cluster.access.leases.list-root');
-        })
-        .catch((e) => {
-          this.api.parseError(e).then(({ message }) => {
-            this.flashMessages.danger(`There was an error revoking the lease: ${message}`);
+      return this.api.sys.leasesRevokeLease({ lease_id: model.id }).then(
+        () => {
+          this.flashMessages.success(`The lease ${model.id} was successfully revoked.`);
+          return this.router.transitionTo('vault.cluster.access.leases.list-root').catch((error) => {
+            if (error?.name === 'TransitionAborted') return;
+            throw error;
           });
-        });
+        },
+        (error) =>
+          this.api.parseError(error).then(({ message }) => {
+            this.flashMessages.danger(`There was an error revoking the lease: ${message}`);
+          })
+      );
     },
 
     renewLease(model, increment) {
