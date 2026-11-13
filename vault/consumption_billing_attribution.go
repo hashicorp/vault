@@ -15,7 +15,7 @@ import (
 )
 
 // storeAttributionDataLocked writes attribution data to the given view.
-// Must be called with BillingStorageLock held.
+// Must be called with the appropriate metric lock held.
 func storeAttributionDataLocked(ctx context.Context, view logical.Storage, localPathPrefix string, month time.Time, attributionMetricName string, data *logical.MetricTypeAttribution) error {
 	billingPath := billing.GetAttributionMaxPath(localPathPrefix, month, attributionMetricName)
 
@@ -28,7 +28,7 @@ func storeAttributionDataLocked(ctx context.Context, view logical.Storage, local
 }
 
 // getStoredAttributionDataLocked reads attribution data from the given view.
-// Must be called with BillingStorageLock held.
+// Must be called with the appropriate metric lock held.
 func getStoredAttributionDataLocked(ctx context.Context, view logical.Storage, localPathPrefix string, month time.Time, attributionMetricName string) (*logical.MetricTypeAttribution, error) {
 	billingPath := billing.GetAttributionMaxPath(localPathPrefix, month, attributionMetricName)
 
@@ -63,14 +63,15 @@ func (c *Core) GetStoredAttributionData(ctx context.Context, localPathPrefix str
 		return nil, errors.New("error reading attribution data: billing subview not available")
 	}
 
-	cb.BillingStorageLock.RLock()
-	defer cb.BillingStorageLock.RUnlock()
+	mu := cb.MetricLocks.LockForMetric(attributionMetricName)
+	mu.RLock()
+	defer mu.RUnlock()
 
 	return getStoredAttributionDataLocked(ctx, view, localPathPrefix, month, attributionMetricName)
 }
 
-// StoreAttributionData stores attribution data for the given metric. It acquires the billing
-// storage lock internally; internal callers that already hold the lock should use storeAttributionDataLocked.
+// StoreAttributionData stores attribution data for the given metric. It acquires the metric-specific
+// lock internally; internal callers that already hold the lock should use storeAttributionDataLocked.
 func (c *Core) StoreAttributionData(ctx context.Context, localPathPrefix string, month time.Time, attributionMetricName string, data *logical.MetricTypeAttribution) error {
 	c.consumptionBillingLock.RLock()
 	cb := c.consumptionBilling
@@ -85,8 +86,9 @@ func (c *Core) StoreAttributionData(ctx context.Context, localPathPrefix string,
 		return errors.New("billing subview not available")
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(attributionMetricName)
+	mu.Lock()
+	defer mu.Unlock()
 
 	return storeAttributionDataLocked(ctx, view, localPathPrefix, month, attributionMetricName, data)
 }
@@ -116,14 +118,15 @@ func (c *Core) StoreCertAttribution(ctx context.Context, metricName string, coun
 		return errors.New("billing subview not available")
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(metricName)
+	mu.Lock()
+	defer mu.Unlock()
 
 	return storeCertAttributionLocked(ctx, view, billing.LocalPrefix, metricName, countDelta, incomingMounts, currentMonth)
 }
 
 // storeCertAttributionLocked merges incomingMounts into the existing MetricTypeAttribution
-// for metricName, then writes the result. Must be called with BillingStorageLock held.
+// for metricName, then writes the result. Must be called with the appropriate metric lock held.
 func storeCertAttributionLocked(ctx context.Context, view logical.Storage, localPathPrefix string, metricName string, countDelta float64, incomingMounts map[string]logical.MountAttribution, currentMonth time.Time) error {
 	existing, err := getStoredAttributionDataLocked(ctx, view, localPathPrefix, currentMonth, metricName)
 	if err != nil {
@@ -194,8 +197,9 @@ func (c *Core) UpdateMountAttribution(ctx context.Context, tracker *billing.Attr
 		return errors.New("error updating mount attribution: billing subview not available")
 	}
 
-	cb.BillingStorageLock.Lock()
-	defer cb.BillingStorageLock.Unlock()
+	mu := cb.MetricLocks.LockForMetric(mountTypePrefix)
+	mu.Lock()
+	defer mu.Unlock()
 
 	// Retrieve the attributions already stored for this month.
 	stored, err := getStoredAttributionDataLocked(ctx, view, billing.LocalPrefix, currentMonth, mountTypePrefix)
