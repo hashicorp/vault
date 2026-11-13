@@ -1,0 +1,3 @@
+```release-note:change
+core: Disable Multipath TCP (MPTCP) on listeners by default to reduce exposure to CVE-2026-98432. Set `GODEBUG=multipathtcp=2` to re-enable.
+```

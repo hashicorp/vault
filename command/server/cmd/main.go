@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 
 //go:debug cryptocustomrand=1
+//go:debug multipathtcp=0
 
 package main // import "github.com/hashicorp/vault/command/server/cmd"
 
