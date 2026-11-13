@@ -1,23 +1,28 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import UnloadModel from 'vault/mixins/unload-model-route';
 
-export default Route.extend(UnloadModel, {
-  store: service(),
-  version: service(),
+export default class ControlGroupsRoute extends Route {
+  @service api;
+  @service capabilities;
+  @service version;
 
-  beforeModel() {
-    return this.version.fetchFeatures().then(() => {
-      return this._super(...arguments);
-    });
-  },
+  async beforeModel() {
+    await this.version.fetchFeatures();
+    return super.beforeModel(...arguments);
+  }
 
-  model() {
-    return this.version.hasControlGroups ? this.store.createRecord('control-group') : null;
-  },
-});
+  async model() {
+    if (!this.version.hasControlGroups) return null;
+    const { canUpdate } = await this.capabilities.for('controlGroupConfig');
+    return { canConfigure: canUpdate };
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) controller.accessor = '';
+  }
+}
