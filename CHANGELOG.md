@@ -2893,6 +2893,17 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
 
+## 1.19.26 Enterprise
+### November 13, 2026
+
+SECURITY:
+
+* core: Login MFA now limits pending MFA requests to 100 per entity, 1,000 per source IP and 100,000 globally, and rejects expired MFA requests at validation.
+
+BUG FIXES:
+
+* identity: Fixed an issue where two aliases with the same name and mount accessor but different IDs were not detected. Vault will now detect and log a warning for these duplicates.
+
 ## 1.19.25 Enterprise
 ### November 12, 2026
 

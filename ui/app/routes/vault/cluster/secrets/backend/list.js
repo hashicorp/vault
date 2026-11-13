@@ -169,7 +169,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -214,7 +214,7 @@ export default Route.extend({
   async fetchKeymgmtKeys(backend, page, pageFilter) {
     try {
       const { keysList } = await this.fetchKeysWithCapabilities(backend);
-      return paginate(keysList, { page, filter: pageFilter });
+      return paginate(keysList, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -268,7 +268,7 @@ export default Route.extend({
   async fetchKeymgmtProviders(backend, page, pageFilter) {
     try {
       const { providersList } = await this.fetchProvidersWithCapabilities(backend);
-      return paginate(providersList, { page, filter: pageFilter });
+      return paginate(providersList, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -334,7 +334,7 @@ export default Route.extend({
   async fetchSshRoles(backend, page, pageFilter) {
     try {
       const roles = await this.fetchSshRolesWithCapabilities(backend);
-      return paginate(roles, { page, filter: pageFilter });
+      return paginate(roles, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -398,7 +398,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -433,7 +433,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -470,7 +470,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
@@ -507,7 +507,7 @@ export default Route.extend({
         };
       });
 
-      return paginate(items, { page, filter: pageFilter });
+      return paginate(items, { page, filter: pageFilter, filterKey: 'id' });
     } catch (error) {
       const { status } = await this.api.parseError(error);
       if (status === 404) {
