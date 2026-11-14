@@ -1,0 +1,3 @@
+```release-note:bug
+sdk/ldaputil: Fix EscapeLDAPValue escaping `#` at every position instead of only as the leading character.
+```
