@@ -74,6 +74,14 @@ func NewACMEState() *acmeState {
 }
 
 func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
+	if err := a.initializeConfig(sc); err != nil {
+		return err
+	}
+	a.startChallengeEngine(b, sc)
+	return nil
+}
+
+func (a *acmeState) initializeConfig(sc *storageContext) error {
 	// Initialize the nonce service.
 	if err := a.nonces.Initialize(); err != nil {
 		return fmt.Errorf("failed to initialize the ACME nonce service: %w", err)
@@ -84,19 +92,19 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	if err != nil {
 		return fmt.Errorf("error initializing ACME engine: %w", err)
 	}
+	return nil
+}
 
+func (a *acmeState) startChallengeEngine(b *backend, sc *storageContext) {
 	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary | consts.ReplicationPerformanceStandby) {
 		// It is assumed, that if the node does become the active node later
 		// the plugin is re-initialized, so this is safe. It also spares the node
 		// from loading the existing queue into memory for no reason.
 		b.Logger().Debug("Not on an active node, skipping starting ACME challenge validation engine")
-		return nil
+		return
 	}
 	// Kick off our ACME challenge validation engine.
 	go a.validator.Run(b, a, sc)
-
-	// All good.
-	return nil
 }
 
 func (a *acmeState) Shutdown(b *backend) {

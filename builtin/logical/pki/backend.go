@@ -292,6 +292,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
 	b.storage = conf.StorageView
 	b.backendUUID = conf.BackendUUID
+	b.initialization.shutdownContext, b.initialization.shutdown = context.WithCancel(context.Background())
 
 	b.pkiStorageVersion.Store(0)
 
@@ -374,6 +375,8 @@ type backend struct {
 	mountStartup time.Time
 
 	pkiObserver observe.PkiObserver
+
+	initialization initializationState
 }
 
 // BackendOps a bridge/legacy interface until we can further
@@ -462,25 +465,38 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 	}
 }
 
-// initialize is used to perform a possible PKI storage migration if needed
-func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequest) error {
+// initializePrerequisites performs the work that must complete before workers
+// or ancillary initialization start. The bool reports whether a failure can be
+// retried without replaying a possibly partially written storage migration.
+func (b *backend) initializePrerequisites(ctx context.Context) (bool, error) {
 	sc := b.makeStorageContext(ctx, b.storage)
 	if err := b.CrlBuilder().reloadConfigIfRequired(sc); err != nil {
-		return err
+		return true, err
 	}
 
-	err := b.initializePKIIssuersStorage(ctx)
+	retryable, err := b.initializePKIIssuersStorage(ctx)
 	if err != nil {
-		return err
+		return retryable, err
 	}
 
-	err = b.GetAcmeState().Initialize(b, sc)
-	if err != nil {
-		return err
-	}
+	return true, b.GetAcmeState().initializeConfig(sc)
+}
+
+// initializeRemaining runs once after the critical prerequisites succeed.
+// In particular, retrying an initialization failure must not duplicate ACME
+// workers, add certificate counts twice, or replay enterprise startup effects.
+func (b *backend) initializeRemaining(ctx context.Context, ir *logical.InitializationRequest) error {
+	// Retain the caller's normal lifetime for enterprise startup; a rollback
+	// must still be interruptible on active-node teardown before Cleanup runs.
+	// Do not cancel on return: an enterprise initializer may start workers.
+	ctx, cancel := context.WithCancel(ctx)
+	context.AfterFunc(b.initialization.shutdownContext, cancel)
+	sc := b.makeStorageContext(ctx, b.storage)
+	lifetimeSC := b.makeStorageContext(b.initializationLifetimeContext(ctx), b.storage)
+	b.GetAcmeState().startChallengeEngine(b, lifetimeSC)
 
 	// Initialize also needs to populate our certificate and revoked certificate count
-	err = b.initializeStoredCertificateCounts(ctx)
+	err := b.initializeStoredCertificateCounts(ctx)
 	if err != nil {
 		// Don't block/err initialize/startup for metrics.  Context on this call can time out due to number of certificates.
 		b.Logger().Error("Could not initialize stored certificate counts", "error", err)
@@ -520,6 +536,12 @@ func (b *backend) initializeLastTidyFromStorage(sc *storageContext) {
 }
 
 func (b *backend) cleanup(ctx context.Context) {
+	// Cancel a retry before waiting for its lock, so a blocked storage operation
+	// cannot prevent cleanup or continue after this backend is unloaded.
+	b.initialization.shutdown()
+	b.initialization.Lock()
+	defer b.initialization.Unlock()
+
 	sc := b.makeStorageContext(ctx, b.storage)
 
 	b.GetAcmeState().Shutdown(b)
@@ -527,30 +549,32 @@ func (b *backend) cleanup(ctx context.Context) {
 	b.cleanupEnt(sc)
 }
 
-func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
+func (b *backend) initializePKIIssuersStorage(ctx context.Context) (bool, error) {
 	// Grab the lock prior to the updating of the storage lock preventing us flipping
 	// the storage flag midway through the request stream of other requests.
 	b.issuersLock.Lock()
 	defer b.issuersLock.Unlock()
 
 	// Load up our current pki storage state, no matter the host type we are on.
-	b.updatePkiStorageVersion(ctx, false)
+	if err := b.updatePkiStorageVersion(ctx, false); err != nil {
+		return true, err
+	}
 
 	// Early exit if not a primary cluster or performance secondary with a local mount.
 	if b.System().ReplicationState().HasState(consts.ReplicationDRSecondary|consts.ReplicationPerformanceStandby) ||
 		(!b.System().LocalMount() && b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
 		b.Logger().Debug("skipping PKI migration as we are not on primary or secondary with a local mount")
-		return nil
+		return true, nil
 	}
 
 	if err := migrateStorage(ctx, b, b.storage); err != nil {
 		b.Logger().Error("Error during migration of PKI mount: " + err.Error())
-		return err
+		// A migration can have written some issuer state before failing. Do not
+		// automatically replay it: its partial effects require operator review.
+		return false, err
 	}
 
-	b.updatePkiStorageVersion(ctx, false)
-
-	return nil
+	return true, b.updatePkiStorageVersion(ctx, false)
 }
 
 func (b *backend) BackendUUID() string {
@@ -602,11 +626,10 @@ func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
 	return managedKeyView, nil
 }
 
-func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock bool) {
+func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock bool) error {
 	info, err := getMigrationInfo(ctx, b.storage)
 	if err != nil {
-		b.Logger().Error(fmt.Sprintf("Failed loading PKI migration status, staying in legacy mode: %v", err))
-		return
+		return fmt.Errorf("failed loading PKI migration status: %w", err)
 	}
 
 	// If this method is called outside the initialize function, like say an
@@ -625,6 +648,7 @@ func (b *backend) updatePkiStorageVersion(ctx context.Context, grabIssuersLock b
 	} else {
 		b.pkiStorageVersion.Store(1)
 	}
+	return nil
 }
 
 func (b *backend) invalidate(ctx context.Context, key string) {
@@ -639,7 +663,10 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		// within updatePkiStorageVersion.
 		go func() {
 			b.Logger().Info("Detected a migration completed, resetting pki storage version")
-			b.updatePkiStorageVersion(ctx, true)
+			if err := b.updatePkiStorageVersion(ctx, true); err != nil {
+				b.Logger().Error("Failed updating PKI storage version after invalidation", "error", err)
+				return
+			}
 			b.CrlBuilder().requestRebuildIfActiveNode(b)
 		}()
 	case strings.HasPrefix(key, issuerPrefix):
@@ -696,6 +723,11 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
+	ready, err := b.retryInitialization(ctx)
+	if err != nil || !ready {
+		return err
+	}
+
 	sc := b.makeStorageContext(ctx, request.Storage)
 
 	doCRL := func() error {
