@@ -62,7 +62,7 @@ to continue your learning.
 For examples of how to interact with Vault from inside your application in different programming languages, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo. An out-of-the-box [sample application](https://github.com/hashicorp/hello-vault-go) is also available.
 
 Show off your Vault knowledge by passing a certification exam. Visit the
-[certification page](https://www.hashicorp.com/certification/#hashicorp-certified-vault-associate)
+[certification page](https://developer.hashicorp.com/certifications/security-automation#vault-associate-(002)-details)
 for information about exams and find [study materials](https://learn.hashicorp.com/collections/vault/certification)
 on HashiCorp's learning platform.
 
@@ -73,7 +73,7 @@ If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine.
 
 For local dev first make sure Go is properly installed, including setting up a
-[GOPATH](https://golang.org/doc/code.html#GOPATH), then setting the 
+[GOPATH](https://pkg.go.dev/cmd/go#hdr-GOPATH_and_Modules), then setting the 
 [GOBIN](https://pkg.go.dev/cmd/go#hdr-Environment_variables) variable to `$GOPATH/bin`. 
 Ensure that `$GOPATH/bin` is in your path as some distributions bundle the old version 
 of build tools. 
