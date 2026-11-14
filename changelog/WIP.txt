@@ -1,0 +1,3 @@
+```release-note:improvement
+api: Add client-side CRL checking of the Vault server certificate via the new `CRL`, `CRLBytes`, `CRLPath`, `CRLRefreshInterval`, `CRLProvider` and `DisableCRL` fields on `TLSConfig`, the `VAULT_CRL`, `VAULT_CRL_BYTES` and `VAULT_CRL_PATH` environment variables, and the `-crl` and `-crl-path` CLI flags
+```
