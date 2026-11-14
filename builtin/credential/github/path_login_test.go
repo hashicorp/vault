@@ -6,8 +6,12 @@ package github
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
+	"github.com/google/go-github/v83/github"
+	"github.com/google/go-github/v83/github"
 	"github.com/hashicorp/vault/internalshared/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
@@ -187,3 +191,4 @@ func TestGitHub_Login_NoOrgID(t *testing.T) {
 	// the ID should be set, we grab it from the GET /orgs API
 	assert.Equal(t, int64(12345), resp.Data["organization_id"])
 }
+
