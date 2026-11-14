@@ -6,6 +6,7 @@ package audit
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -266,4 +267,51 @@ func hasEnterpriseAuditOptions(options map[string]string) bool {
 	}
 
 	return false
+}
+
+// backendComparer describes the methods required for a backend to be comparable.
+type backendComparer interface {
+	Options(key string) string
+	Path() string
+	Type() string
+}
+
+// IsDistinct checks some basic properties to determine if the proposed backend is
+// distinct amongst another (existing) backend, initially by the backend's path.
+// Depending on the type of audit backend, it will examine a specific option to
+// ensure devices with different paths cannot use the same sink.
+func IsDistinct(proposed backendComparer, existing backendComparer) (bool, error) {
+	// Examples:
+	// existing: 'sql/mysql/', new: 'sql/mysql/' or
+	// existing: 'sql/mysql/', new: 'sql/' or
+	// existing: 'sql/', new: 'sql/mysql/'
+	if strings.EqualFold(proposed.Path(), existing.Path()) ||
+		strings.HasPrefix(proposed.Path(), existing.Path()) ||
+		strings.HasPrefix(existing.Path(), proposed.Path()) {
+		return false, fmt.Errorf("path %q already in use: %w", existing.Path(), ErrExternalOptions)
+	}
+
+	// Depending on which audit device type we have, check the relevant option
+	// to ensure it doesn't already exist.
+	var opt string
+	switch proposed.Type() {
+	case TypeFile:
+		opt = optionFilePath
+	case TypeSocket:
+		opt = optionAddress
+	case TypeSyslog:
+		opt = optionFacility
+	default:
+		// Not an audit entry
+		return false, fmt.Errorf("unexpected 'type' for audit: %q: %w", proposed.Type(), ErrInvalidParameter)
+	}
+
+	opt1 := proposed.Options(opt)
+	opt2 := existing.Options(opt)
+
+	if isMatch := strings.EqualFold(opt1, opt2); isMatch {
+		return false, fmt.Errorf("%q %q already in use on device: %q: %w", opt, opt1, existing.Path(), ErrExternalOptions)
+	}
+
+	return true, nil
 }
