@@ -1507,6 +1507,18 @@ func (b *RaftBackend) StartRemovedChecker(ctx context.Context) {
 				if !removed {
 					hasBeenPresent = true
 				}
+				// A joining node can temporarily report itself missing from the
+				// configuration while its committed logs are still being replayed.
+				// Do not persist that transient view as a removal decision until
+				// the FSM has caught up with the local Raft log.
+				if removed && hasBeenPresent {
+					b.l.RLock()
+					raft := b.raft
+					b.l.RUnlock()
+					if raft != nil && b.AppliedIndex() < raft.CommitIndex() {
+						continue
+					}
+				}
 				// the node must have been previously present in the config,
 				// only then should we consider it removed and shutdown
 				if removed && hasBeenPresent {

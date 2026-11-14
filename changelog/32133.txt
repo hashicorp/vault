@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Delay self-removal until committed logs have been applied locally
+```
