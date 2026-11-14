@@ -49,7 +49,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.24.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.27.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.18.1
-	github.com/hashicorp/vault-plugin-auth-oci v0.22.1
+	github.com/hashicorp/vault-plugin-auth-oci v0.22.2-0.20261101002612-bb9bbf1157b8
 	github.com/hashicorp/vault/api v1.23.0
 	github.com/hashicorp/vault/command/base v0.0.0-00010101000000-000000000000
 	github.com/hashicorp/vault/internalshared v0.0.0
@@ -263,7 +263,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	github.com/opencontainers/runc v1.3.6 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
-	github.com/oracle/oci-go-sdk/v65 v65.123.0 // indirect
+	github.com/oracle/oci-go-sdk/v65 v65.128.0 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/petermattis/goid v0.0.0-20260716134002-a9b348f0a2b9 // indirect
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
