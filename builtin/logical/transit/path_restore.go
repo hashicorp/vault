@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -63,6 +64,13 @@ func (b *backend) pathRestoreUpdate(ctx context.Context, req *logical.Request, d
 
 	restoredKeyName, err := b.lm.RestorePolicy(ctx, req.Storage, keyName, backupB64, force)
 	if err != nil {
+		// Restoring over an existing key without force is a client error, not
+		// a server failure. Report it as a 400-level error response: a raw
+		// error surfaces as HTTP 500, which makes API clients retry a request
+		// that can never succeed.
+		if errors.Is(err, keysutil.ErrKeyAlreadyExists) {
+			return logical.ErrorResponse(err.Error()), nil
+		}
 		return nil, err
 	}
 	b.TryRecordObservationWithRequest(ctx, req, ObservationTypeTransitKeyRestore, map[string]interface{}{
