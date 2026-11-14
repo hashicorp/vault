@@ -134,6 +134,12 @@ export default class DatabaseConnectionEdit extends Component {
     const secret = this.args.model;
     const backend = secret.backend;
     secret.destroyRecord().then(() => {
+      // #31852: list delete can leave the page/list overflow locked until reload.
+      if (typeof document !== 'undefined' && document.body) {
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+      }
+
       this.transitionToRoute(LIST_ROOT_ROUTE, backend);
     });
   }
