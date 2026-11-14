@@ -644,7 +644,7 @@ func EscapeLDAPValue(input string) string {
 	for i := 0; i < inputLen; i++ {
 		char := input[i]
 		switch {
-		case i == 0 && char == ' ' || char == '#':
+		case i == 0 && (char == ' ' || char == '#'):
 			// leading space or hash.
 			escFn(char)
 			continue
