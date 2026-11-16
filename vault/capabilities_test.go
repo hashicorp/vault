@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -227,5 +228,149 @@ func TestCapabilities(t *testing.T) {
 	expected = []string{"create", "read", "sudo"}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: got\n%#v\nexpected\n%#v\n", actual, expected)
+	}
+}
+
+// TestSystemBackend_Capabilities_ManyPaths checks that asking about several
+// paths in one request returns the same capabilities as asking about each path
+// on its own.
+func TestSystemBackend_Capabilities_ManyPaths(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+
+	policy, err := ParseACLPolicy(namespace.RootNamespace, `
+path "sys/capabilities-self" { capabilities = ["update"] }
+path "secret/data/app/*" { capabilities = ["read", "list"] }
+path "secret/data/app/locked" { capabilities = ["deny"] }
+path "secret/+/team/*" { capabilities = ["create"] }
+path "kv/exact" { capabilities = ["read", "update"] }
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy.Name = "many-paths"
+	if err := c.policyStore.SetPolicy(ctx, policy); err != nil {
+		t.Fatal(err)
+	}
+	testMakeServiceTokenViaBackend(t, c.tokenStore, root, "manypathstoken", "", []string{"many-paths"})
+	testMakeTokenDirectly(t, c.tokenStore, &logical.TokenEntry{
+		ID:   "nopolicytoken",
+		Path: "testpath",
+		TTL:  time.Hour,
+	})
+
+	paths := []string{
+		"secret/data/app/one",
+		"secret/data/app/locked",
+		"secret/metadata/team/two",
+		"kv/exact",
+		"kv/other",
+		"sys/capabilities-self",
+		"kv/exact",
+	}
+
+	for _, token := range []string{root, "manypathstoken", "nopolicytoken"} {
+		expected := map[string]interface{}{}
+		for _, path := range paths {
+			caps, err := c.Capabilities(ctx, token, path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			expected[path] = caps
+		}
+
+		for _, endpoint := range []string{"sys/capabilities", "sys/capabilities-self"} {
+			req := &logical.Request{
+				ClientToken: root,
+				Path:        endpoint,
+				Operation:   logical.UpdateOperation,
+				Data:        map[string]interface{}{"paths": paths, "token": token},
+			}
+			if endpoint == "sys/capabilities-self" {
+				if token == "nopolicytoken" {
+					// This token is not allowed to call sys/capabilities-self.
+					continue
+				}
+				req.ClientToken = token
+				delete(req.Data, "token")
+			}
+			resp, err := c.HandleRequest(ctx, req)
+			if err != nil || resp == nil || resp.IsError() {
+				t.Fatalf("%s with token %q: resp: %#v, err: %v", endpoint, token, resp, err)
+			}
+			if !reflect.DeepEqual(resp.Data, expected) {
+				t.Fatalf("%s with token %q:\ngot      %#v\nexpected %#v", endpoint, token, resp.Data, expected)
+			}
+		}
+	}
+
+	// An empty path anywhere in the list is still rejected.
+	req := &logical.Request{
+		ClientToken: "manypathstoken",
+		Path:        "sys/capabilities-self",
+		Operation:   logical.UpdateOperation,
+		Data:        map[string]interface{}{"paths": []string{"kv/exact", ""}},
+	}
+	if _, err := c.HandleRequest(ctx, req); err == nil || !strings.Contains(err.Error(), "missing path") {
+		t.Fatalf("expected a missing path error, got: %v", err)
+	}
+}
+
+// BenchmarkSystemBackend_CapabilitiesSelf measures sys/capabilities-self for a
+// token with many policies when one request asks about many paths.
+func BenchmarkSystemBackend_CapabilitiesSelf(b *testing.B) {
+	c, _, root := TestCoreUnsealed(b)
+	ctx := namespace.RootContext(nil)
+
+	const numPolicies = 40
+	var policyNames []string
+	for i := 0; i < numPolicies; i++ {
+		name := fmt.Sprintf("bench-%d", i)
+		policyNames = append(policyNames, name)
+		raw := `path "sys/capabilities-self" { capabilities = ["update"] }` + "\n"
+		for j := 0; j < 20; j++ {
+			raw += fmt.Sprintf("path \"engine%d/+/team%d/*\" { capabilities = [\"read\", \"list\"] }\n", i, j)
+			raw += fmt.Sprintf("path \"engine%d/data/team%d/app/secret\" { capabilities = [\"read\", \"update\"] }\n", i, j)
+		}
+		p, err := ParseACLPolicy(namespace.RootNamespace, raw)
+		if err != nil {
+			b.Fatal(err)
+		}
+		p.Name = name
+		if err := c.policyStore.SetPolicy(ctx, p); err != nil {
+			b.Fatal(err)
+		}
+	}
+	testMakeServiceTokenViaBackend(b, c.tokenStore, root, "benchtoken", "", policyNames)
+
+	for _, numPaths := range []int{1, 10, 100} {
+		paths := make([]string, numPaths)
+		for i := range paths {
+			if i%2 == 0 {
+				// Matches an exact path rule.
+				paths[i] = fmt.Sprintf("engine%d/data/team%d/app/secret", i%numPolicies, i%20)
+			} else {
+				// Matches a "+" and "*" wildcard rule.
+				paths[i] = fmt.Sprintf("engine%d/metadata/team%d/app%d", i%numPolicies, i%20, i)
+			}
+		}
+		b.Run(fmt.Sprintf("paths=%d", numPaths), func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				req := &logical.Request{
+					ClientToken: "benchtoken",
+					Path:        "sys/capabilities-self",
+					Operation:   logical.UpdateOperation,
+					Data:        map[string]interface{}{"paths": paths},
+				}
+				resp, err := c.HandleRequest(ctx, req)
+				if err != nil || resp == nil || resp.IsError() {
+					b.Fatalf("bad: resp: %#v err: %v", resp, err)
+				}
+				if got := resp.Data[paths[0]]; !reflect.DeepEqual(got, []string{"read", "update"}) {
+					b.Fatalf("unexpected capabilities: %#v", got)
+				}
+			}
+		})
 	}
 }
