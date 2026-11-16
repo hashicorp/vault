@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Improve the performance of `sys/capabilities`, `sys/capabilities-self` and `sys/capabilities-accessor` when many paths are checked in one request.
+```
