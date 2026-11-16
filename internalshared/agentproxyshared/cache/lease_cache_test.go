@@ -4,6 +4,7 @@
 package cache
 
 import (
+	"bytes"
 	"context"
 	"encoding/hex"
 	"fmt"
@@ -755,6 +756,268 @@ func TestLeaseCache_SendNonCacheable(t *testing.T) {
 	if diff := deep.Equal(resp.Response, responses[3].Response); diff != nil {
 		t.Fatalf("expected getting proxied response: got %v", diff)
 	}
+}
+
+// TestLeaseCache_SendLeaseRenewalNotCached verifies that lease renewal
+// responses are always forwarded to the proxier instead of replayed from the
+// cache, so clients never see a stale lease_duration or a growing Age.
+func TestLeaseCache_SendLeaseRenewalNotCached(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{
+		"/v1/sys/leases/renew",
+		"/v1/sys/renew",
+		"/v1/sys/leases/renew/database/creds/role/abc",
+		"/v1/ns1/sys/leases/renew",
+	} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
+			responses := []*SendResponse{
+				NewTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "lease_duration": 60}`),
+				NewTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "lease_duration": 30}`),
+			}
+			lc := testNewLeaseCache(t, responses)
+			// Without a managed token, lease responses are never cached and
+			// this test would pass regardless of the renewal handling.
+			require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+			for _, want := range responses {
+				req := &SendRequest{
+					Token:   "autoauthtoken",
+					Request: httptest.NewRequest("PUT", "http://example.com"+path, strings.NewReader(`{"lease_id": "foo"}`)),
+				}
+				resp, err := lc.Send(context.Background(), req)
+				require.NoError(t, err)
+				require.True(t, resp.CacheMeta == nil || !resp.CacheMeta.Hit)
+				require.Equal(t, want.ResponseBody, resp.ResponseBody)
+			}
+
+			_, err := lc.db.Get(cachememdb.IndexNameLease, "foo")
+			require.ErrorIs(t, err, cachememdb.ErrCacheItemNotFound)
+		})
+	}
+}
+
+// TestLeaseCache_SendTokenRenewalNotCached verifies that token renewal
+// responses are forwarded to the proxier instead of replayed from the cache,
+// for the same reason lease renewals are: a replayed response reports a stale
+// lease_duration and a growing Age.
+func TestLeaseCache_SendTokenRenewalNotCached(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{
+		"/v1/auth/token/renew-self",
+		"/v1/auth/token/renew",
+		"/v1/auth/token/renew-accessor",
+		"/v1/ns1/auth/token/renew-self",
+	} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
+			responses := []*SendResponse{
+				NewTestSendResponse(http.StatusOK, `{"auth": {"client_token": "child", "accessor": "acc", "renewable": true, "lease_duration": 60}}`),
+				NewTestSendResponse(http.StatusOK, `{"auth": {"client_token": "child", "accessor": "acc", "renewable": true, "lease_duration": 30}}`),
+			}
+			lc := testNewLeaseCache(t, responses)
+			// Without a managed parent token, auth responses are never cached
+			// and this test would pass regardless of the renewal handling.
+			require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+			for _, want := range responses {
+				req := &SendRequest{
+					Token:   "autoauthtoken",
+					Request: httptest.NewRequest("PUT", "http://example.com"+path, strings.NewReader(`{"increment": "60s"}`)),
+				}
+				resp, err := lc.Send(context.Background(), req)
+				require.NoError(t, err)
+				require.True(t, resp.CacheMeta == nil || !resp.CacheMeta.Hit, "token renewal was served from the cache")
+				require.Equal(t, want.ResponseBody, resp.ResponseBody)
+			}
+		})
+	}
+}
+
+// TestIsRenewalRequest verifies that lease and token renewal endpoints are
+// detected when namespaced, suffixed with a lease ID, or using the legacy
+// alias, and that similar-looking and unrelated paths are not matched.
+func TestIsRenewalRequest(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"/v1/sys/leases/renew", true},
+		{"/v1/sys/leases/renew/aws/creds/my-role/abc123", true},
+		{"/v1/ns1/sys/leases/renew", true},
+		{"/v1/ns1/ns2/sys/leases/renew/database/creds/r/xyz", true},
+		{"/v1/sys/renew", true},
+		{"/v1/sys/renew/my-lease-id", true},
+		{"/v1/ns1/sys/renew", true},
+		{"/v1/auth/token/renew", true},
+		{"/v1/auth/token/renew-self", true},
+		{"/v1/auth/token/renew-accessor", true},
+		{"/v1/ns1/auth/token/renew", true},
+		{"/v1/sys/renewal", false},
+		{"/v1/auth/token/renew-foo", false},
+		{"/v1/sys/leases/revoke", false},
+		{"/v1/sys/leases/lookup", false},
+		{"/v1/auth/token/lookup", false},
+		{"/v1/auth/token/create", false},
+		{"/v1/secret/data/foo", false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.path, func(t *testing.T) {
+			t.Parallel()
+
+			req := httptest.NewRequest(http.MethodPut, "http://example.com"+tc.path, nil)
+			require.Equal(t, tc.want, isRenewalRequest(req))
+		})
+	}
+}
+
+// TestLeaseCache_SendNonRenewalPathStillCached verifies that paths which only
+// resemble a lease renewal are cached as usual.
+func TestLeaseCache_SendNonRenewalPathStillCached(t *testing.T) {
+	t.Parallel()
+
+	for _, path := range []string{
+		"/v1/sys/renewal",
+		"/v1/secret/creds/role",
+	} {
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+
+			responses := []*SendResponse{
+				NewTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "lease_duration": 60}`),
+				NewTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "lease_duration": 30}`),
+			}
+			lc := testNewLeaseCache(t, responses)
+			require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+			var hits []bool
+			for range responses {
+				req := &SendRequest{
+					Token:   "autoauthtoken",
+					Request: httptest.NewRequest("GET", "http://example.com"+path, nil),
+				}
+				resp, err := lc.Send(context.Background(), req)
+				require.NoError(t, err)
+				hits = append(hits, resp.CacheMeta != nil && resp.CacheMeta.Hit)
+			}
+			require.Equal(t, []bool{false, true}, hits)
+		})
+	}
+}
+
+// testStaleRenewalIndex returns a lease index shaped like the ones older
+// versions cached for renewal requests: the response is an hour old, so
+// replaying it would report an Age far beyond its lease_duration.
+func testStaleRenewalIndex(t *testing.T, id, lease, path, token string) *cachememdb.Index {
+	t.Helper()
+
+	stale := NewTestSendResponse(http.StatusOK, `{"lease_id": "`+lease+`", "renewable": true, "lease_duration": 60}`)
+	stale.Response.Header.Set("Date", time.Now().Add(-time.Hour).UTC().Format(http.TimeFormat))
+	var buf bytes.Buffer
+	require.NoError(t, stale.Response.Write(&buf))
+
+	return &cachememdb.Index{
+		ID:            id,
+		Type:          cacheboltdb.LeaseType,
+		Namespace:     "root/",
+		RequestPath:   path,
+		RequestMethod: http.MethodPut,
+		RequestToken:  token,
+		Lease:         lease,
+		LeaseToken:    token,
+		LastRenewed:   time.Now().UTC(),
+		Response:      buf.Bytes(),
+	}
+}
+
+// TestLeaseCache_SendIgnoresExistingRenewalEntry verifies that a renewal
+// request is forwarded to the proxier even when the cache already holds an
+// entry for it, such as one restored from a persistent cache written by an
+// older version.
+func TestLeaseCache_SendIgnoresExistingRenewalEntry(t *testing.T) {
+	t.Parallel()
+
+	upstream := NewTestSendResponse(http.StatusOK, `{"lease_id": "foo", "renewable": true, "lease_duration": 60}`)
+	lc := testNewLeaseCache(t, []*SendResponse{upstream})
+	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+	newReq := func() *SendRequest {
+		return &SendRequest{
+			Token:   "autoauthtoken",
+			Request: httptest.NewRequest("PUT", "http://example.com/v1/sys/leases/renew", strings.NewReader(`{"lease_id": "foo"}`)),
+		}
+	}
+	id, err := computeIndexID(newReq())
+	require.NoError(t, err)
+
+	index := testStaleRenewalIndex(t, id, "foo", "/v1/sys/leases/renew", "autoauthtoken")
+	index.RenewCtxInfo = lc.createCtxInfo(nil)
+	require.NoError(t, lc.db.Set(index))
+
+	resp, err := lc.Send(context.Background(), newReq())
+	require.NoError(t, err)
+	require.True(t, resp.CacheMeta == nil || !resp.CacheMeta.Hit, "renewal was served from the cache")
+	require.Equal(t, upstream.ResponseBody, resp.ResponseBody)
+}
+
+// TestLeaseCacheRestore_DiscardsRenewalEntries verifies that Restore drops
+// renewal responses persisted by older versions, from both the in-memory cache
+// and bolt, while still restoring ordinary leases.
+func TestLeaseCacheRestore_DiscardsRenewalEntries(t *testing.T) {
+	t.Parallel()
+
+	responses := []*SendResponse{
+		NewTestSendResponse(http.StatusOK, `{"lease_id": "secret-lease", "renewable": true, "data": {"value": "foo"}, "lease_duration": 600}`),
+	}
+
+	tempDir, boltStorage := setupBoltStorage(t)
+	defer os.RemoveAll(tempDir)
+	defer boltStorage.Close()
+	lc := testNewLeaseCacheWithPersistence(t, responses, boltStorage)
+	require.NoError(t, lc.RegisterAutoAuthToken("autoauthtoken"))
+
+	// An ordinary lease that must survive the restore.
+	resp, err := lc.Send(context.Background(), &SendRequest{
+		Token:   "autoauthtoken",
+		Request: httptest.NewRequest("GET", "http://example.com/v1/sample/api", strings.NewReader(`{"value": "input"}`)),
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp.CacheMeta)
+
+	// Entries as an older version would have persisted them for lease and
+	// token renewals.
+	ctx := context.Background()
+	for _, stale := range []*cachememdb.Index{
+		testStaleRenewalIndex(t, "stale-lease-renewal", "renew-lease", "/v1/sys/leases/renew", "autoauthtoken"),
+		testStaleRenewalIndex(t, "stale-token-renewal", "renew-token", "/v1/ns1/auth/token/renew-self", "autoauthtoken"),
+	} {
+		stale.RenewCtxInfo = lc.createCtxInfo(nil)
+		require.NoError(t, lc.Set(ctx, stale))
+	}
+
+	persisted, err := boltStorage.GetByType(ctx, cacheboltdb.LeaseType)
+	require.NoError(t, err)
+	require.Len(t, persisted, 3)
+
+	restored := testNewLeaseCache(t, nil)
+	require.NoError(t, restored.Restore(ctx, boltStorage))
+
+	for _, id := range []string{"stale-lease-renewal", "stale-token-renewal"} {
+		_, err := restored.db.Get(cachememdb.IndexNameID, id)
+		require.ErrorIs(t, err, cachememdb.ErrCacheItemNotFound, id)
+	}
+	_, err = restored.db.Get(cachememdb.IndexNameLease, "secret-lease")
+	require.NoError(t, err)
+
+	persisted, err = boltStorage.GetByType(ctx, cacheboltdb.LeaseType)
+	require.NoError(t, err)
+	require.Len(t, persisted, 1)
 }
 
 func TestLeaseCache_SendNonCacheableNonTokenLease(t *testing.T) {
