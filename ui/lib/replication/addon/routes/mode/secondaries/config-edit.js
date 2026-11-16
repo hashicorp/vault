@@ -1,20 +1,21 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { hash } from 'rsvp';
+import PathFilterConfigForm from 'vault/forms/path-filter-config';
 import Base from '../../replication-base';
 
-export default Base.extend({
-  modelPath: 'model.config',
-
-  model(params) {
-    return hash({
+/** Keeps unsaved filter edits separate from subsequent reads. */
+export default class ConfigEditRoute extends Base {
+  async model(params) {
+    const id = params.secondary_id;
+    const { data } = await this.api.sys.systemReadReplicationPerformancePrimaryPathsFilterId(id);
+    return {
       cluster: this.modelFor('mode.secondaries'),
-      config: this.store.findRecord('path-filter-config', params.secondary_id),
-    });
-  },
+      config: new PathFilterConfigForm({ ...data, id }),
+    };
+  }
 
   redirect(model) {
     const cluster = model.cluster;
@@ -27,5 +28,5 @@ export default Base.extend({
     ) {
       return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
-  },
-});
+  }
+}

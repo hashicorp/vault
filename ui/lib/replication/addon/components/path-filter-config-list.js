@@ -14,7 +14,7 @@ export default Component.extend({
   'data-test-component': 'path-filter-config',
   attributeBindings: ['data-test-component'],
   namespace: service(),
-  store: service(),
+  api: service(),
   config: null,
   namespaces: readOnly('namespace.accessibleNamespaces'),
   lastOptions: null,
@@ -31,15 +31,14 @@ export default Component.extend({
   },
 
   fetchMountsForNamespace: task(function* (ns) {
-    const adapter = this.store.adapterFor('application');
     const secret = [];
     const auth = [];
-    const mounts = ns
-      ? yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns })
-      : yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
+    const mounts = yield this.api.sys.internalUiListEnabledVisibleMounts(
+      ns ? this.api.buildHeaders({ namespace: ns }) : undefined
+    );
 
     ['secret', 'auth'].forEach((key) => {
-      for (const [id, info] of Object.entries(mounts.data[key])) {
+      for (const [id, info] of Object.entries(mounts[key])) {
         let longId;
         if (key === 'auth') {
           longId = ns ? `${ns}/auth/${id}` : `auth/${id}`;
@@ -126,7 +125,6 @@ export default Component.extend({
 
   actions: {
     async pathsChanged(paths) {
-      // set paths on the model
       set(this.config, 'paths', paths);
 
       // if dropdown is empty or has options without groupName, re-fetch

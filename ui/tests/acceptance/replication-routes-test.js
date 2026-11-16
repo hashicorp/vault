@@ -11,11 +11,13 @@ import {
   currentRouteName,
   currentURL,
   fillIn,
+  findAll,
   settled,
   visit,
   waitUntil,
   waitFor,
 } from '@ember/test-helpers';
+import { Response } from 'miragejs';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ALL_FEATURES, mockReplication } from 'vault/tests/helpers/replication-mocks';
@@ -426,5 +428,98 @@ module('Acceptance | replication routes', function (hooks) {
         'after deleting the config'
       );
     });
+  });
+
+  module('path filter mutation outcomes', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.server.get('/sys/internal/ui/mounts', () => ({
+        data: {
+          secret: { 'kv-one/': { type: 'kv', accessor: 'kv-one' } },
+          auth: {},
+        },
+      }));
+      await this.mockReplication({ performance: 'primary' });
+      // Exclude the root-login warning from mutation error assertions.
+      this.owner.lookup('service:flash-messages').clearMessages();
+    });
+
+    test('creating a filter sends only its mode and selected paths', async function (assert) {
+      await visit('/vault/replication/performance/secondaries/config/create/unfiltered-secondary');
+      await click('[data-test-filter-mode="allow"]');
+      await click('[data-test-component="search-select"] [role="combobox"]');
+      const option = findAll('[role="option"]').find((item) => item.textContent.trim() === 'kv-one/');
+      await click(option);
+      await click('[data-test-config-save]');
+
+      const request = this.state.requests.find((request) => request.url.endsWith('/unfiltered-secondary'));
+      assert.deepEqual(request.body, { mode: 'allow', paths: ['kv-one/'] }, 'only filter fields are sent');
+      assert.deepEqual(
+        this.state.pathFilters['unfiltered-secondary'],
+        request.body,
+        'the backend fixture stores the submitted values'
+      );
+      await visit('/vault/replication/performance/secondaries/config/show/unfiltered-secondary');
+      assert.dom('[data-test-mount-config-mode]').includesText('allow', 'the saved mode is rendered');
+      assert.dom('[data-test-mount-config-paths]').includesText('kv-one/', 'the saved path is rendered');
+    });
+
+    test('updating a filter preserves its paths in the request', async function (assert) {
+      await visit('/vault/replication/performance/secondaries/config/edit/filtered-secondary');
+      await click('[data-test-filter-mode="deny"]');
+      await click('[data-test-config-save]');
+
+      const request = this.state.requests.find((request) => request.url.endsWith('/filtered-secondary'));
+      assert.deepEqual(
+        request.body,
+        { mode: 'deny', paths: ['kv-one/', 'kv-two/'] },
+        'the changed mode and all existing paths are sent'
+      );
+      await visit('/vault/replication/performance/secondaries/config/show/filtered-secondary');
+      assert.dom('[data-test-mount-config-mode]').includesText('deny', 'the saved mode is rendered');
+      assert.dom('[data-test-mount-config-paths]').includesText('kv-two/', 'existing paths remain visible');
+    });
+
+    test('a new unfiltered configuration does not send a filter mutation', async function (assert) {
+      await visit('/vault/replication/performance/secondaries/config/create/unfiltered-secondary');
+      await click('[data-test-config-save]');
+
+      assert.strictEqual(this.state.requests.length, 0, 'there is no persisted filter to delete');
+      assertRoute(
+        assert,
+        '/vault/replication/performance/secondaries',
+        `${ROUTE_PREFIX}.mode.secondaries.index`,
+        'after leaving filtering disabled'
+      );
+    });
+
+    test.each(
+      'a failed filter mutation reports the error without losing saved data',
+      ['save', 'delete'],
+      async function (assert, operation) {
+        const reject = () => new Response(403, {}, { errors: ['Path filter permission denied'] });
+        this.server.put('/sys/replication/performance/primary/paths-filter/:id', reject);
+        this.server.post('/sys/replication/performance/primary/paths-filter/:id', reject);
+        this.server.delete('/sys/replication/performance/primary/paths-filter/:id', reject);
+        const original = structuredClone(this.state.pathFilters['filtered-secondary']);
+
+        await visit('/vault/replication/performance/secondaries/config/edit/filtered-secondary');
+        await click(`[data-test-filter-mode="${operation === 'delete' ? 'none' : 'deny'}"]`);
+        await click('[data-test-config-save]');
+
+        assert
+          .dom(GENERAL.flashMessage)
+          .includesText('Path filter permission denied', 'the API error is shown');
+        assert.deepEqual(
+          this.state.pathFilters['filtered-secondary'],
+          original,
+          'saved values are unchanged'
+        );
+        assert.strictEqual(
+          currentURL(),
+          '/vault/replication/performance/secondaries/config/edit/filtered-secondary',
+          'the failed operation does not leave the form'
+        );
+      }
+    );
   });
 });

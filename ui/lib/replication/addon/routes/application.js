@@ -8,7 +8,6 @@ import Route from '@ember/routing/route';
 
 export default class ApplicationRoute extends Route {
   @service version;
-  @service store;
   @service auth;
   @service('app-router') router;
   @service capabilities;

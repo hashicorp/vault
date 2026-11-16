@@ -1,45 +1,33 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { hash } from 'rsvp';
 import { service } from '@ember/service';
+import PathFilterConfigForm from 'vault/forms/path-filter-config';
 import Base from '../../replication-base';
 
-export default Base.extend({
-  flashMessages: service(),
-  router: service('app-router'),
+/** Uses a fresh form for absent filters, without reserving an Ember Data record ID. */
+export default class ConfigCreateRoute extends Base {
+  @service flashMessages;
 
-  modelPath: 'model.config',
-
-  findOrCreate(id) {
-    const flash = this.flashMessages;
-    return this.store
-      .findRecord('path-filter-config', id)
-      .then(() => {
-        // if we find a record, transition to the edit view
-        return this.router
-          .transitionTo('vault.cluster.replication.mode.secondaries.config-edit', id)
-          .followRedirects()
-          .then(() => {
-            flash.info(
-              `${id} already had a path filter config, so we loaded the config edit screen for you.`
-            );
-          });
-      })
-      .catch((e) => {
-        if (e.httpStatus === 404) {
-          return this.store.createRecord('path-filter-config', {
-            id,
-            mode: null,
-            paths: [],
-          });
-        } else {
-          throw e;
-        }
-      });
-  },
+  async findOrCreate(id) {
+    try {
+      await this.api.sys.systemReadReplicationPerformancePrimaryPathsFilterId(id);
+    } catch (error) {
+      const { status } = await this.api.parseError(error);
+      if (status === 404) {
+        return new PathFilterConfigForm({ id }, { isNew: true });
+      }
+      throw error;
+    }
+    await this.router
+      .transitionTo('vault.cluster.replication.mode.secondaries.config-edit', id)
+      .followRedirects();
+    this.flashMessages.info(
+      `${id} already had a path filter config, so we loaded the config edit screen for you.`
+    );
+  }
 
   redirect(model) {
     const cluster = model.cluster;
@@ -52,12 +40,12 @@ export default Base.extend({
     ) {
       return this.router.transitionTo('vault.cluster.replication.mode', replicationMode);
     }
-  },
+  }
 
-  model(params) {
-    return hash({
+  async model(params) {
+    return {
       cluster: this.modelFor('mode'),
-      config: this.findOrCreate(params.secondary_id),
-    });
-  },
-});
+      config: await this.findOrCreate(params.secondary_id),
+    };
+  }
+}

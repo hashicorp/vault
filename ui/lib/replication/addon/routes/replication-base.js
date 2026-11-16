@@ -1,21 +1,18 @@
 /**
- * Copyright IBM Corp. 2016, 2025
+ * Copyright IBM Corp. 2016, 2026
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { alias } from '@ember/object/computed';
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import UnloadModelRouteMixin from 'vault/mixins/unload-model-route';
 
-/**
- * @type Class
- */
-export default Route.extend(UnloadModelRouteMixin, {
-  router: service('app-router'),
-  store: service(),
-  version: service(),
-  rm: service('replication-mode'),
-  modelPath: 'model.config',
-  replicationMode: alias('rm.mode'),
-});
+export default class ReplicationBaseRoute extends Route {
+  @service('app-router') router;
+  @service api;
+  @service version;
+  @service('replication-mode') rm;
+
+  get replicationMode() {
+    return this.rm.mode;
+  }
+}

@@ -39,12 +39,11 @@ module('Integration | Component | path filter config list', function (hooks) {
 
   hooks.beforeEach(function () {
     this.context = { owner: this.engine }; // this.engine set by setupEngine
-    const ajaxStub = sinon.stub();
-    ajaxStub.withArgs('/v1/sys/internal/ui/mounts', 'GET').resolves(MOUNTS_RESPONSE);
-    ajaxStub
-      .withArgs('/v1/sys/internal/ui/mounts', 'GET', { namespace: 'ns1' })
-      .resolves(NAMESPACE_MOUNTS_RESPONSE);
-    this.set('ajaxStub', ajaxStub);
+    const api = this.engine.lookup('service:api');
+    this.mountsStub = sinon
+      .stub(api.sys, 'internalUiListEnabledVisibleMounts')
+      .resolves(MOUNTS_RESPONSE.data);
+    this.mountsStub.withArgs(api.buildHeaders({ namespace: 'ns1' })).resolves(NAMESPACE_MOUNTS_RESPONSE.data);
     const namespaceServiceStub = Service.extend({
       init() {
         this._super(...arguments);
@@ -52,15 +51,11 @@ module('Integration | Component | path filter config list', function (hooks) {
       },
     });
 
-    const storeServiceStub = Service.extend({
-      adapterFor() {
-        return {
-          ajax: ajaxStub,
-        };
-      },
-    });
     this.engine.register('service:namespace', namespaceServiceStub);
-    this.engine.register('service:store', storeServiceStub);
+  });
+
+  hooks.afterEach(function () {
+    this.mountsStub.restore();
   });
 
   test('it renders', async function (assert) {
